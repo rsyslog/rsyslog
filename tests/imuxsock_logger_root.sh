@@ -12,7 +12,7 @@ add_conf '
 $ModLoad ../plugins/imuxsock/.libs/imuxsock
 
 $template outfmt,"%msg:%\n"
-*.=notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+*.=notice      action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 # send a message with trailing LF

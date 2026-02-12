@@ -44,7 +44,8 @@ sparseArray
 
 The value to be looked up is an integer value, but there may be gaps inside the
 set of values (usually there are large gaps). A typical use case would be the
-matching of IPv4 address information.
+matching of IPv4 address information (requires converting IP to integer, e.g. using ``ipv42num()``).
+See :ref:`ipv4_subnet_matching` for a detailed example.
 
 **Match criterion**: A match happens on the first index that is less than or equal to the looked-up key.
 
@@ -113,6 +114,8 @@ This is a sample of how an ip-to-office mapping may look like:
 
 
 Note: In the example above, if a different IP comes in, the value "unk" is returned thanks to the nomatch parameter in the first line.
+
+Note: The example above uses ``string`` type which requires exact matches. For matching subnets or ranges, ``sparseArray`` is preferred. See :ref:`ipv4_subnet_matching`.
 
 This is how a simple regex table looks. Each entry contains a ``regex`` and a
 ``tag`` field. The ``tag`` of the **first** matching entry is returned:
@@ -252,7 +255,10 @@ key     return
 100     baz
 ======  ==============
 
-**IPv4 Subnet Matching with sparseArray**:
+.. _ipv4_subnet_matching:
+
+IPv4 Subnet Matching with sparseArray
+-------------------------------------
 
 A common use case for ``sparseArray`` is matching IPv4 subnets. To do this,
 you must convert the IPv4 address to its integer representation using the
@@ -293,6 +299,8 @@ Any IP between ``10.0.1.0`` and ``10.0.1.255`` will match "Guest".
 Any IP greater than or equal to ``10.0.2.0`` will match "Lab" (unless another
 entry follows). Be sure to define the start of "gaps" if you want them to
 return a different value or fallback to a default.
+
+Note: For simple subnet matching without the need for a lookup table (e.g., just checking if an IP is in a specific subnet), the :ref:`is_in_subnet() <rs-is_in_subnet>` function may be a more intuitive alternative.
 
 **regex table**:
 

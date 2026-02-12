@@ -23,6 +23,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef _GNU_SOURCE
+    #define _GNU_SOURCE /* for timegm */
+#endif
+#define _XOPEN_SOURCE 700 /* for strptime */
 #include "config.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -33,6 +37,8 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
+#include <time.h>
+#include <sys/time.h>
 #include <librdkafka/rdkafka.h>
 #include "rsyslog.h"
 #include "conf.h"
@@ -50,19 +56,34 @@
 #include "cfsysline.h"
 #include "msg.h"
 #include "dirty.h"
+#include "datetime.h"
 
 /* If your build already injects the header, you may omit this include.
    Otherwise, prefer the canonical libfastjson path: */
 // #include <json.h>
 #include <libfastjson/json.h>
+#include <libfastjson/json_tokener.h>
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imkafka")
 
+/* =============================================================================
+ * Concurrency & Locking
+ * =============================================================================
+ * - Each instance processes messages sequentially in its worker thread
+ *   (imkafkawrkr). Messages are consumed via librdkafka's consumer API
+ *   which handles thread-safety internally.
+ * - JSON splitting (splitJsonRecords) operates on a per-message basis with
+ *   no shared mutable state. Each split record is submitted independently
+ *   to the rsyslog core, which handles its own queuing and threading.
+ * - No additional locking required beyond existing instance-level processing
+ *   and librdkafka's internal thread-safety guarantees.
+ * ============================================================================= */
+
 /* static data */
 DEF_IMOD_STATIC_DATA;
-DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(glbl) DEFobjCurrIf(statsobj)
+DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(glbl) DEFobjCurrIf(statsobj) DEFobjCurrIf(datetime)
 
     /* =============================================================================
      * Stats (module-global + per-instance) — parity with omkafka, adapted for consumer
@@ -137,6 +158,7 @@ typedef struct instanceConf_s {
     int partition;
     int bIsSubscribed;
     int nMsgParsingFlags;
+    int bSplitJsonRecords; /* if enabled, split {"records":[...]} into individual messages */
     struct instanceConf_s *next;
     /* per-instance stats object + counters */
     statsobj_t *stats;
@@ -185,6 +207,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 static struct cnfparamdescr inppdescr[] = {
     {"topic", eCmdHdlrString, CNFPARAM_REQUIRED}, {"broker", eCmdHdlrArray, 0},   {"confparam", eCmdHdlrArray, 0},
     {"consumergroup", eCmdHdlrString, 0},         {"ruleset", eCmdHdlrString, 0}, {"parsehostname", eCmdHdlrBinary, 0},
+    {"split.json.records", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
@@ -314,8 +337,209 @@ static void errorCallback(rd_kafka_t __attribute__((unused)) * rk,
 }
 
 /* enqueue the kafka message. The provided string is
- * not freed - thuis must be done by the caller.
+ * not freed - this must be done by the caller.
  */
+
+/**
+ * Helper: extract timestamp from JSON record's "time" field if present
+ * Returns timestamp in UNIX epoch format, or 0 if not found/invalid
+ */
+static time_t extractJsonTimestamp(struct fjson_object *record) {
+    struct fjson_object *time_obj;
+    const char *time_str;
+    struct tm tm;
+
+    if (record == NULL) {
+        return 0;
+    }
+
+    time_obj = get_object(record, "time");
+    if (time_obj == NULL) {
+        return 0;
+    }
+
+    time_str = fjson_object_get_string(time_obj);
+    if (time_str == NULL) {
+        return 0;
+    }
+
+    /* Parse ISO 8601 timestamp: 2025-02-20T03:19:34.655Z
+     * Note: milliseconds (.655) are not parsed by strptime and will be lost */
+    memset(&tm, 0, sizeof(tm));
+
+    /* Parse timestamp; strptime will stop at non-matching characters like '.' or 'Z' */
+    if (strptime(time_str, "%Y-%m-%dT%H:%M:%S", &tm) != NULL) {
+        /* Convert to UTC time */
+        return timegm(&tm);
+    }
+
+    return 0;
+}
+
+/**
+ * Submit a single JSON record as a message to rsyslog
+ * This is used both for normal messages and split records
+ */
+static rsRetVal submitJsonRecord(instanceConf_t *const __restrict__ inst,
+                                 const char *payload,
+                                 size_t len,
+                                 const char *key,
+                                 size_t key_len,
+                                 time_t timestamp) {
+    DEFiRet;
+    smsg_t *pMsg;
+
+    if (inst == NULL || payload == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (len == 0) {
+        /* we do not process empty records */
+        STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
+        INST_STATSCOUNTER_INC(inst, inst->ctrKafkaFail, inst->mutCtrKafkaFail);
+        FINALIZE;
+    }
+
+    DBGPRINTF("imkafka: submitJsonRecord: Msg: %.*s\n", (int)len, payload);
+    CHKiRet(msgConstruct(&pMsg));
+    MsgSetInputName(pMsg, pInputName);
+    MsgSetRawMsg(pMsg, (char *)payload, (int)len);
+    MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+    MsgSetRuleset(pMsg, inst->pBindRuleset);
+    pMsg->msgFlags = inst->nMsgParsingFlags;
+
+    /* Set timestamp if extracted from JSON */
+    if (timestamp > 0) {
+        struct timeval tv;
+        tv.tv_sec = timestamp;
+        tv.tv_usec = 0;
+        datetime.timeval2syslogTime(&tv, &pMsg->tRcvdAt, TIME_IN_UTC);
+        memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
+    }
+
+    /* Optional Fields */
+    if (key_len > 0 && key != NULL) {
+        DBGPRINTF("imkafka: submitJsonRecord: Key: %.*s\n", (int)key_len, key);
+        MsgSetTAG(pMsg, (const uchar *)key, (int)key_len);
+    }
+    MsgSetMSGoffs(pMsg, 0); /* we do not have a header... */
+    CHKiRet(submitMsg2(pMsg));
+
+    /* submitted successfully */
+    STATSCOUNTER_INC(ctrSubmitted, mutCtrSubmitted);
+    INST_STATSCOUNTER_INC(inst, inst->ctrSubmitted, inst->mutCtrSubmitted);
+finalize_it:
+    RETiRet;
+}
+
+/**
+ * Split JSON batch format {"records":[...]} into individual messages
+ * Returns RS_RET_OK if splitting succeeded, error otherwise
+ */
+static rsRetVal splitJsonRecords(instanceConf_t *const __restrict__ inst,
+                                 rd_kafka_message_t *const __restrict__ rkmessage) {
+    DEFiRet;
+    struct fjson_object *root = NULL;
+    struct fjson_object *records_array = NULL;
+    int record_count = 0;
+    int submitted_count = 0;
+    int i;
+
+    if (inst == NULL || rkmessage == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (rkmessage->payload == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    /* Parse JSON using fjson_tokener_parse_ex to avoid malloc/free on hot path.
+     * This works with non-null-terminated payloads by specifying length. */
+    {
+        struct fjson_tokener *tok = fjson_tokener_new();
+        if (tok == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        root = fjson_tokener_parse_ex(tok, (const char *)rkmessage->payload, (int)rkmessage->len);
+        enum fjson_tokener_error tok_err = fjson_tokener_get_error(tok);
+        fjson_tokener_free(tok);
+        if (tok_err != fjson_tokener_success || root == NULL) {
+            if (root != NULL) {
+                fjson_object_put(root);
+                root = NULL;
+            }
+            LogMsg(0, NO_ERRCODE, LOG_WARNING, "imkafka: splitJsonRecords: failed to parse JSON, forwarding as-is");
+            ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+        }
+    }
+
+    /* Look for "records" array */
+    records_array = get_object(root, "records");
+    if (records_array == NULL) {
+        /* No "records" field - treat as single message (not an error, just not applicable) */
+        DBGPRINTF("imkafka: splitJsonRecords: no 'records' field found, treating as single message\n");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    if (!fjson_object_is_type(records_array, fjson_type_array)) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "imkafka: splitJsonRecords: 'records' is not an array, forwarding as-is");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    record_count = fjson_object_array_length(records_array);
+    DBGPRINTF("imkafka: splitJsonRecords: found %d records in batch\n", record_count);
+
+    if (record_count == 0) {
+        /* Empty array - forward original message (not an error, just no records to split) */
+        DBGPRINTF("imkafka: splitJsonRecords: empty records array, forwarding as-is\n");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    /* Process each record */
+    for (i = 0; i < record_count; i++) {
+        struct fjson_object *record = fjson_object_array_get_idx(records_array, i);
+        time_t timestamp;
+        const char *record_str;
+        rsRetVal local_ret;
+
+        if (record == NULL) {
+            continue;
+        }
+
+        /* Extract timestamp if present */
+        timestamp = extractJsonTimestamp(record);
+
+        /* Convert record back to JSON string */
+        record_str = fjson_object_to_json_string_ext(record, FJSON_TO_STRING_PLAIN);
+        if (record_str == NULL) {
+            LogMsg(0, NO_ERRCODE, LOG_WARNING, "imkafka: splitJsonRecords: failed to serialize record %d, skipping", i);
+            continue;
+        }
+
+        /* Submit individual record */
+        local_ret = submitJsonRecord(inst, record_str, strlen(record_str), (const char *)rkmessage->key,
+                                     rkmessage->key_len, timestamp);
+        if (local_ret == RS_RET_OK) {
+            submitted_count++;
+        } else {
+            DBGPRINTF("imkafka: splitJsonRecords: failed to submit record %d\n", i);
+        }
+    }
+
+    /* If no records were successfully submitted, return error to trigger fallback */
+    if (submitted_count == 0) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING,
+               "imkafka: splitJsonRecords: failed to submit any records, forwarding batch as-is");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+finalize_it:
+    if (root != NULL) {
+        fjson_object_put(root);
+    }
+    RETiRet;
+}
+
 static rsRetVal enqMsg(instanceConf_t *const __restrict__ inst, rd_kafka_message_t *const __restrict__ rkmessage) {
     DEFiRet;
     smsg_t *pMsg;
@@ -328,6 +552,18 @@ static rsRetVal enqMsg(instanceConf_t *const __restrict__ inst, rd_kafka_message
         FINALIZE;
     }
 
+    /* If JSON record splitting is enabled, try to split the message */
+    if (inst->bSplitJsonRecords) {
+        rsRetVal split_ret = splitJsonRecords(inst, rkmessage);
+        if (split_ret == RS_RET_OK) {
+            /* Successfully split and submitted all records */
+            FINALIZE;
+        }
+        /* If splitting failed, fall through to process as single message */
+        DBGPRINTF("imkafka: enqMsg: JSON splitting failed or not applicable, processing as single message\n");
+    }
+
+    /* Normal single message processing */
     DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage->payload);
     CHKiRet(msgConstruct(&pMsg));
     MsgSetInputName(pMsg, pInputName);
@@ -451,6 +687,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
     inst->bReportErrs = 1; /* Fixed for now */
     inst->nMsgParsingFlags = NEEDS_PARSING;
+    inst->bSplitJsonRecords = 0; /* disabled by default */
     inst->bIsConnected = 0;
     inst->bIsSubscribed = 0;
     /* Kafka objects */
@@ -701,6 +938,8 @@ BEGINnewInpInst
             } else {
                 inst->nMsgParsingFlags = NEEDS_PARSING;
             }
+        } else if (!strcmp(inppblk.descr[i].name, "split.json.records")) {
+            inst->bSplitJsonRecords = pvals[i].val.d.n;
         } else {
             dbgprintf("imkafka: program error, non-handled param '%s'\n", inppblk.descr[i].name);
         }
@@ -943,6 +1182,7 @@ BEGINmodExit
     objRelease(ruleset, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 BEGINisCompatibleWithFeature
@@ -970,6 +1210,7 @@ BEGINmodInit()
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
     /* initialize "read-only" thread attributes */
     pthread_attr_init(&wrkrThrdAttr);

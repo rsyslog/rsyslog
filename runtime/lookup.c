@@ -940,13 +940,13 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal ATTR_NONNULL() lookupDoReload(lookup_ref_t *pThis) {
+static rsRetVal ATTR_NONNULL(1) lookupDoReload(lookup_ref_t *pThis, uchar *stub_val) {
     DEFiRet;
     iRet = lookupReloadOrStub(pThis, NULL);
-    if ((iRet != RS_RET_OK) && (pThis->stub_value_for_reload_failure != NULL)) {
-        iRet = lookupDoStub(pThis, pThis->stub_value_for_reload_failure);
+    if ((iRet != RS_RET_OK) && (stub_val != NULL)) {
+        iRet = lookupDoStub(pThis, stub_val);
     }
-    freeStubValueForReloadFailure(pThis);
+    free(stub_val);
     RETiRet;
 }
 
@@ -957,8 +957,12 @@ void *lookupTableReloader(void *self) {
         if (pThis->do_stop) {
             break;
         } else if (pThis->do_reload) {
-            lookupDoReload(pThis);
+            uchar *stub_val = pThis->stub_value_for_reload_failure;
+            pThis->stub_value_for_reload_failure = NULL;
             pThis->do_reload = 0;
+            pthread_mutex_unlock(&pThis->reloader_mut);
+            lookupDoReload(pThis, stub_val);
+            pthread_mutex_lock(&pThis->reloader_mut);
         } else {
             pthread_cond_wait(&pThis->run_reloader, &pThis->reloader_mut);
         }

@@ -6,56 +6,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "doc",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Syslog Explorer",
-      "tooltip": "View syslog logs",
-      "type": "link",
-      "url": "/d/logs-explore-like-v4"
-    },
-    {
-      "asDropdown": false,
-      "icon": "search-plus",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Analysis",
-      "tooltip": "Log analysis and patterns",
-      "type": "link",
-      "url": "/d/syslog-deep-dive"
-    },
-    {
-      "asDropdown": false,
-      "icon": "bell",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Alerting",
-      "tooltip": "View alerts overview",
-      "type": "link",
-      "url": "/d/alerting-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "dashboard",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Host Metrics",
-      "tooltip": "CPU, memory, disk, network metrics",
-      "type": "link",
-      "url": "/d/node-overview"
-    }
-  ],
   "panels": [
     {
       "datasource": {

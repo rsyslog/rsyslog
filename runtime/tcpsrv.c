@@ -96,6 +96,7 @@ DEFobjCurrIf(netstrms);
 DEFobjCurrIf(netstrm);
 DEFobjCurrIf(prop);
 DEFobjCurrIf(statsobj);
+DEFobjCurrIf(regexp);
 
 #define NSPOLL_MAX_EVENTS_PER_WAIT 128
 
@@ -350,6 +351,25 @@ finalize_it:
 
 #endif /* event notification compile time selection */
 
+static void freeLstnParams(tcpLstnParams_t *cnf_params) {
+    if (cnf_params == NULL) {
+        return;
+    }
+
+    if (cnf_params->pInputName != NULL) {
+        prop.Destruct(&cnf_params->pInputName);
+    }
+    free((void *)cnf_params->pszInputName);
+    free((void *)cnf_params->pszPort);
+    free((void *)cnf_params->pszAddr);
+    free((void *)cnf_params->pszLstnPortFileName);
+    free((void *)cnf_params->pszNetworkNamespace);
+    free((void *)cnf_params->pszStrmDrvrName);
+    free((void *)cnf_params->pszStartRegex);
+    free((void *)cnf_params->pszRatelimitName);
+    free(cnf_params);
+}
+
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
@@ -370,12 +390,33 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
     pEntry->pSrv = pThis;
 
+#ifdef FEATURE_REGEXP
+    if (cnf_params->pszStartRegex != NULL) {
+        const int errcode = regexp.regcomp(&pEntry->start_preg, (char *)cnf_params->pszStartRegex, REG_EXTENDED);
+        if (errcode != 0) {
+            char errbuff[512];
+            regexp.regerror(errcode, &pEntry->start_preg, errbuff, sizeof(errbuff));
+            LogError(0, RS_RET_ERR, "imtcp: error in framing.delimiter.regex expansion: %s", errbuff);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        pEntry->bHasStartRegex = 1;
+    }
+#else
+    if (cnf_params->pszStartRegex != NULL) {
+        LogError(0, RS_RET_ERR, "imtcp: framing.delimiter.regex set, but regexp support not available");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+#endif
 
     /* support statistics gathering */
-    CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
-    ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    if (pEntry->cnf_params->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&(pEntry->ratelimiter), runConf, (char *)pEntry->cnf_params->pszRatelimitName,
+                                       "tcpsrv", NULL));
+    } else {
+        CHKiRet(ratelimitNew(&(pEntry->ratelimiter), "tcpsrv", NULL));
+        ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    }
     ratelimitSetThreadSafe(pEntry->ratelimiter);
-
     CHKiRet(statsobj.Construct(&(pEntry->stats)));
     snprintf((char *)statname, sizeof(statname), "%s(%s)", cnf_params->pszInputName, cnf_params->pszPort);
     statname[sizeof(statname) - 1] = '\0'; /* just to be on the save side... */
@@ -393,15 +434,17 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pEntry != NULL) {
-            if (pEntry->cnf_params->pInputName != NULL) {
-                prop.Destruct(&pEntry->cnf_params->pInputName);
-            }
             if (pEntry->ratelimiter != NULL) {
                 ratelimitDestruct(pEntry->ratelimiter);
             }
             if (pEntry->stats != NULL) {
                 statsobj.Destruct(&pEntry->stats);
             }
+#ifdef FEATURE_REGEXP
+            if (pEntry->bHasStartRegex) {
+                regexp.regfree(&pEntry->start_preg);
+            }
+#endif
             free(pEntry);
         }
     }
@@ -417,6 +460,7 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
     assert(cnf_params->pszPort != NULL);
     int i;
+    sbool added = 0;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -430,11 +474,15 @@ static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstn
 
     if (i >= 0 && i <= 65535) {
         CHKiRet(addNewLstnPort(pThis, cnf_params));
+        added = 1;
     } else {
         LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", cnf_params->pszPort);
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK || !added) {
+        freeLstnParams(cnf_params);
+    }
     RETiRet;
 }
 
@@ -531,13 +579,12 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
     /* free list of tcp listen ports */
     pEntry = pThis->pLstnPorts;
     while (pEntry != NULL) {
-        prop.Destruct(&pEntry->cnf_params->pInputName);
-        free((void *)pEntry->cnf_params->pszInputName);
-        free((void *)pEntry->cnf_params->pszPort);
-        free((void *)pEntry->cnf_params->pszAddr);
-        free((void *)pEntry->cnf_params->pszLstnPortFileName);
-        free((void *)pEntry->cnf_params->pszNetworkNamespace);
-        free((void *)pEntry->cnf_params);
+#ifdef FEATURE_REGEXP
+        if (pEntry->bHasStartRegex) {
+            regexp.regfree(&pEntry->start_preg);
+        }
+#endif
+        freeLstnParams(pEntry->cnf_params);
         ratelimitDestruct(pEntry->ratelimiter);
         statsobj.Destruct(&(pEntry->stats));
         pDel = pEntry;
@@ -2324,6 +2371,7 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+    objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcpsrv)
 
 
@@ -2342,6 +2390,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

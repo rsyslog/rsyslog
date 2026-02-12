@@ -30,6 +30,45 @@ printf 'a quick glimpse at journal content at rsyslog startup:\n'
 journalctl -n 20 --no-pager
 printf '\n\n'
 
+# If journal activity is extremely high, this test can become flaky due to
+# heavy contention/rotation churn outside the test's control. We retry to
+# absorb short bursts before deciding to skip.
+NOISE_WINDOW_SEC=${RSTB_JOURNAL_NOISE_WINDOW_SEC:-5}
+NOISE_MAX_LINES=${RSTB_JOURNAL_NOISE_MAX_LINES:-20000}
+NOISE_RETRIES=${RSTB_JOURNAL_NOISE_RETRIES:-2}
+NOISE_RETRY_SLEEP_MS=${RSTB_JOURNAL_NOISE_RETRY_SLEEP_MS:-1500}
+noise_try=0
+while true; do
+	noise_since=$(( $(date +%s) - NOISE_WINDOW_SEC ))
+	journal_noise_lines=$(journalctl --since "@$noise_since" --no-pager 2>/dev/null | wc -l)
+	if [ "$journal_noise_lines" -le "$NOISE_MAX_LINES" ]; then
+		break
+	fi
+	if [ "$noise_try" -ge "$NOISE_RETRIES" ]; then
+		printf 'SKIP: journal too noisy (%d lines in last %ds, limit %d) after %d retries\n' \
+			"$journal_noise_lines" "$NOISE_WINDOW_SEC" "$NOISE_MAX_LINES" "$NOISE_RETRIES"
+		shutdown_when_empty
+		wait_shutdown
+		exit 77
+	fi
+	printf 'journal noisy (%d lines in last %ds, limit %d), retrying (%d/%d)\n' \
+		"$journal_noise_lines" "$NOISE_WINDOW_SEC" "$NOISE_MAX_LINES" "$((noise_try+1))" "$NOISE_RETRIES"
+	$TESTTOOL_DIR/msleep "$NOISE_RETRY_SLEEP_MS"
+	(( noise_try=noise_try+1 ))
+done
+
+# Make sure imjournal has passed initial positioning (IgnorePreviousMessages)
+# before sending the actual test payload.
+READYMSG="TestBenCH-RSYSLog imjournal readiness probe - $(date +%s) - $RSYSLOG_DYNNAME"
+./journal_print "$READYMSG"
+journal_write_state=$?
+if [ $journal_write_state -ne 0 ]; then
+	printf 'SKIP: journal_print returned state %d writing readiness probe: %s\n' "$journal_write_state" "$READYMSG"
+	printf 'skipping test, journal probably not working\n'
+	exit 77
+fi
+content_check_with_count "$READYMSG" 1 120
+
 printf '++++++++++++++++++++++ Printing to the journal! +++++++++++++++++++++++++\n'
 # inject message into journal and check that it is recorded
 ./journal_print "$TESTMSG"

@@ -2,7 +2,7 @@
  *
  * This implements rulesets within rsyslog.
  *
- * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -71,7 +71,8 @@ ENDinterface(ruleset)
 
 
 /* prototypes */
-PROTOTYPEObj(ruleset);
+PROTOTYPEObjFull(ruleset);
+PROTOTYPEObjDebugPrint(ruleset);
 
 /* TODO: remove these -- currently done dirty for config file
  * redo -- rgerhards, 2011-04-19

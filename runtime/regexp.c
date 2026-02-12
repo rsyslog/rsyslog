@@ -355,6 +355,7 @@ ENDObjClassExit(regexp)
 
 BEGINmodExit
     CODESTARTmodExit;
+    regexpClassExit();
 ENDmodExit
 
 

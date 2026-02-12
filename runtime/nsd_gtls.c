@@ -1444,7 +1444,6 @@ ENDobjConstruct(nsd_gtls)
 
 
 /* destructor for the nsd_gtls object */
-PROTOTYPEobjDestruct(nsd_gtls);
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(nsd_gtls);
     if (pThis->iMode == 1) {

@@ -2447,7 +2447,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 }
 
 
-BEGINmodInit(Fwd)
+BEGINmodInitNoPredecl(Fwd)
     CODESTARTmodInit;
     INITLegCnfVars;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */

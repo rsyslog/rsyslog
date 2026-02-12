@@ -1,0 +1,123 @@
+{
+  "id": null,
+  "uid": "rsyslog-impstats",
+  "title": "rsyslog impstats (VictoriaMetrics)",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Action failed (rate)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_action_.*_failed_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Action processed (rate)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_action_.*_processed_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Resource usage utime (rate)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(impstats_resource_usage_utime_total[5m])",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue size (gauge example)",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "{__name__=~\"core_queue_.*_size_total\"}",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue enqueued (rate)",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_queue_.*_enqueued_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue discarded (rate)",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_queue_.*_discarded_full_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_queue_.*_discarded_nf_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue full (rate)",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (__name__) (rate({__name__=~\"core_queue_.*_full_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue max size (gauge)",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "{__name__=~\"core_queue_.*_maxqsize_total\"}",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "All rsyslog metrics (names)",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "label_values({__name__=~\"(core|impstats|im|om|main|action|queue).*\"}, __name__)",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

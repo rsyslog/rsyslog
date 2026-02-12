@@ -333,7 +333,7 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i) {
 
     rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), i));
+    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t)i));
 
     iRet = rsCStrAppendStr(pThis, szBuf);
 finalize_it:

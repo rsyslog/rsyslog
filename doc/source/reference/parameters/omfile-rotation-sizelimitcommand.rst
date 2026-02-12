@@ -29,6 +29,10 @@ Description
 This sets the command executed when a file hits the configured size limit.
 Use together with :ref:`param-omfile-rotation-sizelimit`.
 
+By default, the current file name is passed as the last argument. Disable
+this behavior with :ref:`param-omfile-rotation-sizelimitcommandpassfilename`
+if your script expects no additional arguments.
+
 Action usage
 ------------
 

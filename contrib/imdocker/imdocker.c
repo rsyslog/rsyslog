@@ -62,8 +62,6 @@ MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imdocker")
 
-extern int Debug;
-
 #define USE_MULTI_LINE
 #undef ENABLE_DEBUG_BYTE_BUFFER
 

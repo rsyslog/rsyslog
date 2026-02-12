@@ -1,6 +1,6 @@
 /* The rsconf object. It models a complete rsyslog configuration.
  *
- * Copyright 2011-2023 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -29,6 +29,7 @@
 #include "dynstats.h"
 #include "perctile_stats.h"
 #include "timezones.h"
+#include "ratelimit.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -271,6 +272,7 @@ struct rsconf_s {
          */
         timezones_t timezones;
         qqueue_t *pMsgQueue; /* the main message queue */
+        ratelimit_cfgs_t ratelimit_cfgs;
 };
 
 
@@ -286,8 +288,7 @@ ENDinterface(rsconf)
 
 
 /* prototypes */
-PROTOTYPEObj(rsconf);
-
+PROTOTYPEObjFull(rsconf);
 /* globally-visible external data */
 extern rsconf_t *runConf; /* the currently running config */
 extern rsconf_t *loadConf; /* the config currently being loaded (no concurrent config load supported!) */

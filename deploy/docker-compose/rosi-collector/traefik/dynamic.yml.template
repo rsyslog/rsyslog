@@ -23,6 +23,14 @@ http:
         customResponseHeaders:
           server: ""
 
+    # Grafana: high limits (dashboards trigger many parallel API calls: annotations, panels, vars)
+    rate-limit-grafana:
+      rateLimit:
+        average: 600
+        burst: 300
+        period: 1m
+
+    # Prometheus/other: stricter limits for API protection
     rate-limit:
       rateLimit:
         average: 100

@@ -136,6 +136,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/omhttp-batch-maxbytes.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omhttp-replymaxbytes`
+     - .. include:: ../../reference/parameters/omhttp-replymaxbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omhttp-template`
      - .. include:: ../../reference/parameters/omhttp-template.rst
         :start-after: .. summary-start
@@ -230,6 +234,7 @@ Input Parameters
    ../../reference/parameters/omhttp-batch-format
    ../../reference/parameters/omhttp-batch-maxsize
    ../../reference/parameters/omhttp-batch-maxbytes
+   ../../reference/parameters/omhttp-replymaxbytes
    ../../reference/parameters/omhttp-template
    ../../reference/parameters/omhttp-retry
    ../../reference/parameters/omhttp-retry-ruleset

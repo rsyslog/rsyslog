@@ -87,7 +87,7 @@ struct nsd_mbedtls_s {
 #define nsd_mbedtlsCURR_IF_VERSION nsdCURR_IF_VERSION
 
 /* prototypes */
-PROTOTYPEObj(nsd_mbedtls);
+PROTOTYPEObjFull(nsd_mbedtls);
 
 /* the name of our library binary */
 #define LM_NSD_MBEDTLS_FILENAME "lmnsd_mbedtls"

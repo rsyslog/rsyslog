@@ -1,7 +1,160 @@
 ---------------------------------------------------------------------------------------
-Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
+- NEW DEPENDENCES: names vary by distribution
+  - libyaml-dev
+  - libprotobuf-c-dev   (module dependency)
+  - libsnappy-dev       (module dependency)
+  - protobuf-c-compiler (build dependency)
+- DEFAULT CHANGE: internal ratelimiter now by default set to
+  500 messages/5s vs previous default of 100 messages/60s. This
+  is to prevent spamming the log to much in extreme cases. For some
+  users, this may be too low and need to be adjusted. We excect this
+  to be an exotic case, thus the change of default.
+
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-12: runtime: iterate ptcp addresses and validate bind device
+  Some connect failures were caused by stopping after the first resolved
+  address and by repeating unsupported SO_BINDTODEVICE handling per address.
+  This made retries less robust and error reporting less clear.
+  Ptcp connect now tries all resolved addresses and fails fast with a
+  specific unsupported-value error when a bind device is configured on
+  platforms without SO_BINDTODEVICE.
+  closes https://github.com/rsyslog/rsyslog/pull/5305
+- 2026-02-08: CI: added test for VictoriaLogs via omhttp
+  This also verifies that current rsyslog can actually push to
+  VictoriaLogs via their native interface. The new test also sets
+  stage for upcoming enhancements and ensure omhttp changes will not
+  break the VictoriaLogs functionality.
+- 2026-02-08: curl modules: pass long literal to CURLOPT_POST
+  Why:
+  Debian builds against newer curl headers fail with -Werror because
+  CURLOPT_POST requires a long argument and int literals trigger
+  attribute warnings.
+  Impact:
+  Fixes compile failures in omhttp, omelasticsearch, and omclickhouse
+  with strict warning settings.
+  closes https://github.com/rsyslog/rsyslog/issues/6516
+- 2026-02-07: omhttp: reuse reply buffer with cap and safer sizing
+  This improves performance by avoiding frequent alloc/free of the
+  response buffer and bounding memory use. It also advances overall
+  maintainability by using size-safe types and curl's large size API.
+  Impact: adds 'replymaxbytes' (default 1 MiB). Large replies may be
+  truncated and the transfer aborted, which can change retry behavior.
+- 2026-02-07: build: normalize object prototypes and remove decl noise
+  Keep strict warning builds useful without relying on broad
+  diagnostic suppressions.
+- 2026-02-04: ratelimit: add named policies; wire into imtcp/imptcp
+  Centralize and reuse rate-limit definitions so admins can apply
+  consistent policies across listeners. This is part of an
+  ongoing series to improve rate limiting and its manageability.
+  Before: inputs set per-listener interval/burst ad hoc.
+  After: inputs can reference a named ratelimit() policy shared across
+  listeners; per-listener values remain as fallback.
+  Impact: New ratelimit() object and RateLimit.Name param for imtcp/imptcp.
+  If a policy file is configured but libyaml is unavailable, config fails.
+  Technical details:
+  - Add top-level ratelimit() Rainerscript object. Parsed in rsconf and
+    stored in a central registry (hashtable + rwlock) on rsconf.
+  - New runtime API: ratelimitAddConfig(), ratelimitNewFromConfig(), plus
+    cfgs init/destruct on rsconf lifecycle.
+  - imtcp/imptcp accept RateLimit.Name; when set, tcpsrv/imptcp build the
+    ratelimiter from the named policy; otherwise legacy interval/burst is
+    used. Thread-safety retained via ratelimitSetThreadSafe().
+  - tcpsrv gains ownership helpers for listener params and frees them on
+    errors; imtcp explicitly transfers ownership and nulls the pointer.
+  - Optional libyaml: detected at configure; runtime parser loads simple
+    key/value policy files (interval, burst, severity).
+  - Docs: new ratelimit object page; imtcp/imptcp parameter references and
+    module docs updated; design-decisions note added for libyaml.
+  - Tests: add ratelimit_name.sh (guarded for imtcp+imptcp) to validate
+    named policy application and observable throttling.
+  Refs: https://github.com/rsyslog/rsyslog/issues/6201
+  Refs: https://github.com/rsyslog/rsyslog/issues/6201
+- 2026-02-04: runtime: lower internal message rate defaults
+  Reduce default internal log spam during error loops while keeping
+  visibility for operators.
+  Impact: Default internal message rate limiting is tighter.
+  Before/After: 500 messages/5s -> 100 messages/60s by default.
+- 2026-02-03: runtime: fix potentially wrong lookup in DNS cache
+  Link-local IPv6 sources can share an address but differ by scope,
+  which can collide in the DNS cache and mix hostnames, this could
+  cause misrouting for IPv6 link-local senders.
+  Root cause: DNS cache treated link-local IPv6 addresses as identical.
+  closes https://github.com/rsyslog/rsyslog/issues/5645
+- 2026-02-03: nsd_ossl: fix potential memory leak on failed handshakes
+  Avoid keeping failed TLS handshakes alive when probes hit TLS listeners,
+  which can contribute to memory growth.
+  closes https://github.com/rsyslog/rsyslog/issues/4017.
+- 2026-02-03: Fix lookup table reload race condition (Device or resource busy)
+  Previously, the `lookupTableReloader` thread held the `reloader_mut` mutex
+  for the entire duration of the reload operation (`lookupDoReload`). Since
+  reloading a lookup table involves file I/O and parsing, it can take a
+  significant amount of time. If a SIGHUP (or other reload trigger) occurred
+  while a reload was in progress, the main thread (executing `lookupReload`)
+  would fail to acquire the mutex via `pthread_mutex_trylock`, resulting in
+  the error "Device or resource busy" and the reload request being dropped.
+  This commit modifies `lookupTableReloader` to release the mutex before
+  calling `lookupDoReload` and re-acquire it afterwards. This allows
+  `lookupReload` to successfully acquire the mutex, queue a new reload request
+  (by setting `do_reload = 1`), and update the stub value if necessary.
+  To ensure thread safety, `lookupDoReload` now accepts the `stub_val` as an
+  argument (instead of accessing the shared `stub_value_for_reload_failure`
+  member directly) and takes ownership of it (freeing it upon completion).
+  `lookupTableReloader` extracts the stub value to a local variable while
+  holding the lock before passing it to `lookupDoReload`.
+  The `ATTR_NONNULL` attribute on `lookupDoReload` was updated to `ATTR_NONNULL(1)`
+  to allow the `stub_val` argument to be NULL, fixing a build failure with
+  `-Werror`.
+  closes https://github.com/rsyslog/rsyslog/issues/5628
+- 2026-02-03: doc: document pcre_match function
+- 2026-01-31: imtcp: add MultiLine and regex framing support
+  Non-technical: improves operator ergonomics and closes a feature gap
+  with imptcp. Enables regex-based start-of-frame detection and optional
+  multi-line message handling on TCP inputs.
+  Impact: New config params; defaults keep existing behavior unchanged.
+  Before: imtcp framed messages via octet-counting or LF delimiter only.
+  After: imtcp can treat lines not starting a new frame as continuations
+  (MultiLine) and can split frames on a regex start pattern.
+  Adds imtcp params: MultiLine (bool) and framing.delimiter.regex (string).
+  closes https://github.com/rsyslog/rsyslog/issues/5637
+- 2026-01-30: omfile: avoid rare close/open race
+  ... and prevent lock-order inversion when internal logging runs
+  during open failures.
+  Closes https://github.com/rsyslog/rsyslog/issues/3404
+- 2026-01-29: omfile: pass size-limit file to rotate cmd
+  Some rotation scripts need the target file name to act without
+  external logrotate and to retain existing args.
+  To support this, new action param rotation.sizeLimitCommandPassFileName
+  has been added.
+  closes https://github.com/rsyslog/rsyslog/issues/6435
+- 2026-01-29: configure: fix xxhash library check missing error action
+  When --enable-fmhash-xxhash is specified but libxxhash is not
+  found, configure should fail with a clear error message instead
+  of silently continuing and reporting success. This has now been fixed
+  and a proper error message is emitted.
+  closes https://github.com/rsyslog/rsyslog/issues/2816
+- 2026-01-29: queue: fix slow drain of disk-assisted queues
+  Disk-assisted queues were taking days to drain after recovery
+  because the DA worker only activated when the in-memory queue
+  reached the high watermark, creating a catch-22 when starting
+  with an empty memory queue but full disk queue.
+  Impact:
+  This fix enables proper recovery from backlogs and prevents data
+  loss from queues that cannot drain. Existing behavior for normal
+  operations is preserved.
+  closes https://github.com/rsyslog/rsyslog/issues/2646
+- 2026-01-27: imfile: add inode generation check for file rotation detection
+  This commit adds a check for inode generation number in the imfile module.
+  This addresses an issue where file rotation is not detected when a new file
+  reuses the same inode number as the old one (which can happen on some
+  filesystems or scenarios).
+  The check is implemented by using `FS_IOC_GETVERSION` ioctl on Linux.
+  It is guarded by `HAVE_FS_IOC_GETVERSION` and `HAVE_LINUX_FS_H`.
+  To minimize performance impact, the check is only performed if `st_ctime`
+  has changed while the inode number remains the same.
+  This also updates the state file format to include `inode_gen` to detect
+  inode reuse across rsyslog restarts.
 - 2026-01-25: Add support healthchecktimedelay into omhttp
   This PR add the possibility to set up a time to delay the check
   of an "API health URL" to avoid multi request to an API.

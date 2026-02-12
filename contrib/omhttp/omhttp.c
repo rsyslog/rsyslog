@@ -545,7 +545,6 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
     size_t newlen;
 
     PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
-    
     if (size_add > SIZE_MAX - pWrkrData->replyLen) {
         LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
         pWrkrData->replyLen = 0;
@@ -575,7 +574,6 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
         pWrkrData->reply = buf;
     }
     memcpy(pWrkrData->reply + pWrkrData->replyLen, p, size_add);
-    
     pWrkrData->replyLen = newlen;
     if (pWrkrData->replyBufLen > 0) {
         pWrkrData->reply[pWrkrData->replyLen] = '\0';
@@ -664,6 +662,7 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         DBGPRINTF("omhttp: checkConn no health check uri configured skipping it\n");
         FINALIZE;
     }
+
     pWrkrData->replyLen = 0;
 
     for (i = 0; i < pData->numServers; ++i) {

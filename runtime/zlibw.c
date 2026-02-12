@@ -204,11 +204,18 @@ BEGINAbstractObjClassInit(zlibw, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 ENDObjClassInit(zlibw)
 
 
+/* Exit the class. */
+BEGINObjClassExit(zlibw, OBJ_IS_LOADABLE_MODULE) /* class, version */
+    CODESTARTObjClassExit(zlibw);
+ENDObjClassExit(zlibw)
+
+
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
 
 
 BEGINmodExit
     CODESTARTmodExit;
+    zlibwClassExit();
 ENDmodExit
 
 

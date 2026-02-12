@@ -87,6 +87,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imkafka-ruleset.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imkafka-split-json-records`
+     - .. include:: ../../reference/parameters/imkafka-split-json-records.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imkafka-topic`
      - .. include:: ../../reference/parameters/imkafka-topic.rst
         :start-after: .. summary-start
@@ -100,6 +104,7 @@ Input Parameters
    ../../reference/parameters/imkafka-consumergroup
    ../../reference/parameters/imkafka-parsehostname
    ../../reference/parameters/imkafka-ruleset
+   ../../reference/parameters/imkafka-split-json-records
    ../../reference/parameters/imkafka-topic
 
 Statistic Counters

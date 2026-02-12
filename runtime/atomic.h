@@ -11,6 +11,22 @@
  *
  * THESE MACROS MUST ONLY BE USED WITH WORD-SIZED DATA TYPES!
  *
+ * Usage guidance (important for portability and static analysis tools):
+ * - Operations are provided as macros or inline functions. Prefer simple lvalues
+ *   for the "data" argument to avoid double-evaluation surprises.
+ * - The "phlpmut" argument is a helper mutex used when atomics are unavailable.
+ *   If atomics are supported, these helper mutex macros become no-ops.
+ *   Callers must still pass a valid pointer where required to keep signatures
+ *   uniform across platforms.
+ * - Some macros are "best effort" (PREFER_*). They may degrade to non-atomic
+ *   operations when no atomic support is available. Use them only for
+ *   statistics or counters where occasional lost updates are acceptable.
+ * - The remaining ATOMIC_* helpers provide true atomicity when available and
+ *   fall back to mutex-based critical sections when not.
+ * - Mixing atomic loads/stores with plain reads/writes to the same variable is
+ *   undefined on modern compilers. If you use ATOMIC_* on a variable, access it
+ *   exclusively via these helpers (or other synchronized paths).
+ *
  * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.

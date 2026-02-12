@@ -782,6 +782,18 @@
         DEFiRet;                                                                                               \
         rsRetVal (*pObjGetObjInterface)(obj_if_t * pIf);
 
+/*
+ * Variant for modules that already publish modInit prototypes in headers.
+ * This avoids duplicate declarations while preserving missing-prototype
+ * coverage for modules that still rely on BEGINmodInit's local predecl.
+ */
+#define BEGINmodInitNoPredecl(uniqName)                                                                        \
+    rsRetVal __attribute__((unused)) modInit##uniqName(                                                        \
+        int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(),      \
+        rsRetVal (*pHostQueryEtryPt)(uchar *, rsRetVal(**)()), modInfo_t __attribute__((unused)) * pModInfo) { \
+        DEFiRet;                                                                                               \
+        rsRetVal (*pObjGetObjInterface)(obj_if_t * pIf);
+
 #define CODESTARTmodInit                                                               \
     assert(pHostQueryEtryPt != NULL);                                                  \
     iRet = pHostQueryEtryPt((uchar *)"objGetObjInterface", &pObjGetObjInterface);      \

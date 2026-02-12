@@ -59,6 +59,8 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 
+extern int yylineno;
+
 PRAGMA_IGNORE_Wswitch_enum
 
     DEFobjCurrIf(obj) DEFobjCurrIf(regexp) DEFobjCurrIf(datetime)
@@ -1665,7 +1667,14 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
             } else {
                 DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n", iOffs,
                           (int)(iOffs + pmatch[0].rm_eo), iTry);
-                iOffs += pmatch[0].rm_eo;
+                if (pmatch[0].rm_eo == 0) {
+                    if (str[iOffs] == '\0') {
+                        break;
+                    }
+                    iOffs++;
+                } else {
+                    iOffs += pmatch[0].rm_eo;
+                }
                 ++iTry;
             }
         } else {
@@ -4686,8 +4695,6 @@ static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
 
-void cnfstmtDestructLst(struct cnfstmt *root);
-
 static void cnfIteratorDestruct(struct cnfitr *itr);
 
 /* delete a single stmt */
@@ -5672,6 +5679,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     glob_t cfgFiles;
     int ret = 0;
     struct stat fileInfo;
+    struct stat linkInfo;
     char errStr[1024];
     char nameBuf[MAXFNAME + 1];
     char cwdBuf[MAXFNAME + 1];
@@ -5720,7 +5728,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
      */
     for (i = cfgFiles.gl_pathc - 1; i >= 0; i--) {
         cfgFile = cfgFiles.gl_pathv[i];
-        if (stat(cfgFile, &fileInfo) != 0) {
+        if (lstat(cfgFile, &linkInfo) != 0) {
             if (optional == 0) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
                 if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
@@ -5729,8 +5737,27 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                     "[cwd: %s]: %s",
                     cfgFile, cwdBuf, errStr);
                 ret = 1;
+                goto done;
             }
-            goto done;
+            continue;
+        }
+
+        if (S_ISLNK(linkInfo.st_mode)) {
+            if (stat(cfgFile, &fileInfo) != 0) {
+                if (optional == 0) {
+                    rs_strerror_r(errno, errStr, sizeof(errStr));
+                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                    parser_errmsg(
+                        "error accessing config file or directory '%s' "
+                        "[cwd: %s]: %s",
+                        cfgFile, cwdBuf, errStr);
+                    ret = 1;
+                    goto done;
+                }
+                continue;
+            }
+        } else {
+            fileInfo = linkInfo;
         }
 
         if (S_ISREG(fileInfo.st_mode)) { /* config file */

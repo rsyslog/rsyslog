@@ -19,7 +19,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -105,7 +105,7 @@ ENDtryResume
 BEGINdoAction
     CODESTARTdoAction;
     dbgprintf("\n");
-    if (execProg((uchar *)pWrkrData->pData->progName, 1, ppString[0]) == 0)
+    if (execProg((uchar *)pWrkrData->pData->progName, 1, (uchar *)ppString[0], NULL) == 0)
         LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char *)pWrkrData->pData->progName);
 ENDdoAction
 
@@ -149,7 +149,7 @@ BEGINqueryEtryPt
 ENDqueryEtryPt
 
 
-BEGINmodInit(Shell)
+BEGINmodInitNoPredecl(Shell)
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr

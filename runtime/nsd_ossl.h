@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2023 Adiscon GmbH.
+ * Copyright 2018-2026 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -71,8 +71,7 @@ struct nsd_ossl_s {
 #define nsd_osslCURR_IF_VERSION nsdCURR_IF_VERSION
 
 /* prototypes */
-PROTOTYPEObj(nsd_ossl);
-
+PROTOTYPEObjFull(nsd_ossl);
 /* some prototypes for things used by our nsdsel_ossl helper class */
 uchar *osslStrerror(int error);
 rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis);

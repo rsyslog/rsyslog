@@ -70,6 +70,10 @@ MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("improg")
 
+#if defined(__sun)
+extern char **environ;
+#endif
+
 struct instanceConf_s {
     uchar *pszBinary; /* name of external program to call */
     char **aParams; /* optional parameters to pass to external program */
@@ -117,7 +121,7 @@ static instanceConf_t *confRoot = NULL;
 static fd_set rfds;
 static int nfds = 0;
 
-extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
+#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *pInst) {
     LogError(0, NO_ERRCODE,
@@ -125,8 +129,6 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
              "using default ruleset instead",
              pInst->pszBindRuleset, pInst->pszBinary);
 }
-
-#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */

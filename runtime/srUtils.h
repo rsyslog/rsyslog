@@ -85,7 +85,7 @@ int makeFileParentDirs(const uchar *const szFile,
                        const uid_t uid,
                        const gid_t gid,
                        const int bFailOnChown);
-int execProg(uchar *program, int bWait, uchar *arg);
+int execProg(uchar *program, int bWait, uchar *arg1, uchar *arg2);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(
     uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName, size_t lenFName, int64_t lNum, int lNumDigits);

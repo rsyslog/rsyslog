@@ -1,6 +1,6 @@
 /* Definitions for generic OpenSSL include stuff.
  *
- * Copyright 2023 Andre Lorbach and Adiscon GmbH.
+ * Copyright 2023-2026 Andre Lorbach and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -171,7 +171,7 @@ void osslGlblExit(void);
 /*-----------------------------------------------------------------------------*/
 
 /* prototypes */
-PROTOTYPEObj(net_ossl);
+PROTOTYPEObjFull(net_ossl);
 
 /* the name of our library binary */
 // #define LM_NET_OSSL_FILENAME "lmnet_ossl"

@@ -155,7 +155,7 @@ static void aix_close_it(int i) {
 DEFobjCurrIf(obj) DEFobjCurrIf(prop) DEFobjCurrIf(parser) DEFobjCurrIf(ruleset) DEFobjCurrIf(net) DEFobjCurrIf(rsconf)
     DEFobjCurrIf(module) DEFobjCurrIf(datetime) DEFobjCurrIf(glbl)
 
-        extern int yydebug; /* interface to flex */
+        extern int yydebug; /* interface to parser */
 
 
 /* forward definitions */
@@ -665,6 +665,11 @@ static void printVersion(void) {
     printf("\tsystemd support:\t\t\tYes\n");
 #else
     printf("\tsystemd support:\t\t\tNo\n");
+#endif
+#ifdef ENABLE_IMPSTATS_PUSH
+    printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tYes\n");
+#else
+    printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tNo\n");
 #endif
     /* we keep the following message to so that users don't need
      * to wonder.
@@ -2025,6 +2030,8 @@ static void doHUP(void) {
     modDoHUP();
     DBGPRINTF("doHUP: doing lookup tables\n");
     lookupDoHUP();
+    DBGPRINTF("doHUP: doing ratelimits\n");
+    ratelimitDoHUP();
     DBGPRINTF("doHUP: doing errmsgs\n");
     errmsgDoHUP();
 }

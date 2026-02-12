@@ -28,23 +28,25 @@ This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
    **EXPERIMENTAL FEATURE**
 
-   This feature is experimental and has known limitations that can impact
-   rsyslog processing and security:
+   This feature is experimental and new in 8.2602.0. It is intended to be
+   production-ready, but it has limited real-world practice and may expose
+   operational edge cases. Review the details below and test in your
+   environment before enabling it broadly.
 
-   * **Blocking I/O**: OCSP requests use blocking network operations during
-     TLS handshake, which **delays message processing** and can cause latency
-     of up to 5 seconds per OCSP responder.
+   * **Bounded I/O**: OCSP uses non-blocking connect with socket timeouts for
+     send/receive, but each responder can still add latency (up to
+     ``OCSP_TIMEOUT`` seconds).
 
    * **DoS Attack Vector**: Malicious certificates can contain multiple OCSP
      responder URLs pointing to slow or unresponsive servers, causing
-     prolonged blocking and potential denial of service.
+     cumulative latency and potential denial of service.
 
-   * **Thread Blocking**: Under load, blocked threads waiting for OCSP responses
-     can exhaust the thread pool and stall message processing.
+   * **Thread Blocking**: Timeouts limit the duration, but under load, slow
+     responders can still reduce throughput.
 
-   Only enable this feature if you fully understand these implications and have
-   tested the impact on your rsyslog deployment. Consider network timeout
-   configurations and monitor for increased latency.
+   * **Cache behavior**: OCSP responses are cached with expiry based on
+     ``nextUpdate`` when available (or a default TTL). This reduces repeated
+     network I/O but still depends on network availability for cache misses.
 
 Description
 -----------
@@ -62,10 +64,10 @@ GnuTLS or WolfSSL drivers.
   default for backward compatibility and to avoid potential performance
   impacts.
 
-* **Blocking I/O**: OCSP checks perform blocking network operations (DNS
-  resolution, HTTP requests) during the TLS handshake, which can introduce
-  latency of up to 5 seconds per OCSP responder. This may impact throughput
-  and cause connection delays.
+* **Bounded I/O**: OCSP checks use non-blocking connect and socket timeouts
+  during the TLS handshake. Each responder can still add latency (up to
+  ``OCSP_TIMEOUT`` seconds) which may impact throughput and cause connection
+  delays.
 
 * **Network requirements**: OCSP checks require outbound network connectivity
   to OCSP responder servers specified in the certificate's Authority
@@ -74,6 +76,10 @@ GnuTLS or WolfSSL drivers.
 * **Certificate requirements**: Certificates must contain OCSP responder URLs.
   Certificates with only CRL (Certificate Revocation List) distribution points
   are not supported and will fail revocation checks.
+
+* **Caching**: OCSP responses are cached with an expiry based on the response
+  ``nextUpdate`` value when available, or a default TTL. This reduces repeat
+  lookups but does not eliminate network dependency for cache misses.
 
 When enabled (``"on"``), the TLS handshake will fail if:
 
@@ -129,4 +135,3 @@ Example: Disabled (default)
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.
-

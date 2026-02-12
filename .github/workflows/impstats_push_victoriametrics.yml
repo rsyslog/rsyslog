@@ -1,0 +1,167 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: impstats push to VictoriaMetrics
+
+'on':
+  pull_request:
+    paths:
+      - 'plugins/impstats/**'
+      - 'tests/impstats-push*.sh'
+      - 'configure.ac'
+      - '.github/workflows/impstats_push_victoriametrics.yml'
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event.pull_request.number ||
+    github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test_push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      victoriametrics:
+        image: victoriametrics/victoria-metrics:v1.134.0
+        ports:
+          - 8428:8428
+
+    steps:
+      - name: checkout project
+        uses: actions/checkout@v4
+
+      - name: wait for VictoriaMetrics to be ready
+        run: |
+          echo "Waiting for VictoriaMetrics to be ready..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8428/ > /dev/null 2>&1; then
+              echo "✓ VictoriaMetrics is ready"
+              exit 0
+            fi
+            echo "Attempt $i: waiting..."
+            sleep 2
+          done
+          echo "VictoriaMetrics failed to become ready"
+          exit 1
+
+      - name: run impstats push test
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+          RSYSLOG_TESTBENCH_EXTERNAL_VM_URL: http://host.docker.internal:8428
+          DOCKER_RUN_EXTRA_OPTS: --add-host=host.docker.internal:host-gateway
+          RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
+            --enable-testbench --enable-omstdout --enable-imdiag
+            --enable-impstats --enable-impstats-push
+            --disable-imfile --disable-imfile-tests --disable-fmhttp
+            --enable-valgrind --disable-default-tests
+            --disable-imtcp-tests
+          CI_MAKE_OPT: -j20
+          CI_MAKE_CHECK_OPT: -j8
+          CI_CHECK_CMD: check
+          ABORT_ALL_ON_TEST_FAIL: 'NO'
+          CI_VALGRIND_SUPPRESSIONS: ubuntu22.04.supp
+          RSYSLOG_STATSURL: >-
+            http://build.rsyslog.com/testbench-failedtest.php
+          USE_AUTO_DEBUG: 'off'
+          VERBOSE: '1'
+        run: |
+          chmod -R go+rw .
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: validate data in VictoriaMetrics
+        run: |
+          echo "=== Checking for metrics in VictoriaMetrics ==="
+
+          # Wait for rsyslog to start, generate stats, and push
+          # (impstats interval is 1 second, needs a few cycles)
+          echo "Waiting 10 seconds for data to be generated and pushed..."
+          sleep 10
+
+          # First, check if VM is accessible and has ANY data
+          echo "=== Debugging: Check VM status ==="
+          curl -sf http://localhost:8428/health && \
+            echo "✓ VM health check OK" || echo "✗ VM not responding"
+
+          # List ALL metric names (not just filtered)
+          echo ""
+          echo "=== All metrics in VM ==="
+          all_metric_names=$(curl -s \
+            "http://localhost:8428/api/v1/label/__name__/values" | jq '.')
+          echo "$all_metric_names"
+
+          total_metrics=$(echo "$all_metric_names" | \
+            jq -r '.data | length')
+          echo ""
+          echo "Total metrics count: $total_metrics"
+
+          # Query for a known metric (resource-usage is always present)
+          echo ""
+          echo "=== Querying for resource_usage_utime_total ==="
+          response=$(curl -s \
+            "http://localhost:8428/api/v1/query?query=resource_usage_utime_total")
+
+          echo "Response: $response"
+
+          # Check if we got data
+          if echo "$response" | \
+              jq -e '.data.result | length > 0' > /dev/null; then
+            echo "✓ Found metrics in VictoriaMetrics"
+            echo "Metric count: \
+              $(echo "$response" | jq '.data.result | length')"
+            echo "Sample metric:"
+            echo "$response" | jq -r '.data.result[0]'
+
+            # Validate value is a number
+            value=$(echo "$response" | jq -r '.data.result[0].value[1]')
+            if [[ "$value" =~ ^[0-9]+$ ]]; then
+              echo "✓ Metric value is numeric: $value"
+            else
+              echo "✗ Metric value is not numeric: $value"
+              exit 1
+            fi
+          else
+            echo "✗ No specific metric found, checking for any rsyslog metrics"
+
+            # Query for multiple metrics to verify different
+            # stats are being pushed
+            rsyslog_metrics=$(echo "$all_metric_names" | \
+              jq -r '.data[]' | \
+              grep -E "resource.usage|imdiag|action.*omfile|main" || true)
+            metric_count=$(echo "$rsyslog_metrics" | wc -l)
+            echo "Found $metric_count rsyslog-related metrics:"
+            echo "$rsyslog_metrics"
+
+            if [ "$metric_count" -ge 5 ]; then
+              echo "✓ Found rsyslog metrics (just different naming)"
+            else
+              echo "✗ No rsyslog metrics found at all"
+              echo "Full response: $response"
+              exit 1
+            fi
+          fi
+
+      - name: show error logs (if we errored)
+        if: ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log || echo "No failed-tests.log found"
+          echo "=== VictoriaMetrics logs ==="
+          docker logs $(docker ps -q \
+            -f ancestor=victoriametrics/victoria-metrics:v1.134.0) || \
+            echo "Could not get VM logs"

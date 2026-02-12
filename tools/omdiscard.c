@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-24 by RGerhards
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -148,7 +148,7 @@ BEGINqueryEtryPt
 ENDqueryEtryPt
 
 
-BEGINmodInit(Discard)
+BEGINmodInitNoPredecl(Discard)
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr

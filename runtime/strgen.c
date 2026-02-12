@@ -155,7 +155,6 @@ finalize_it:
     RETiRet;
 }
 
-PROTOTYPEobjDestruct(strgen);
 BEGINobjDestruct(strgen) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(strgen);
     dbgprintf("destructing strgen '%s'\n", pThis->pName);

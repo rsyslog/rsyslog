@@ -47,6 +47,8 @@
     #include <getopt.h>
 #endif
 
+#define EDBUF_SIZE (500 * 1024)
+
 int main(int argc, char *argv[]) {
     FILE *fp;
     int val;
@@ -64,9 +66,12 @@ int main(int argc, char *argv[]) {
     int increment = 1;
     int reachedEOF;
     int edLen; /* length of extra data */
-    static char edBuf[500 * 1024]; /* buffer for extra data (pretty large to be on the save side...) */
+    static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the save side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
+    char extraFmt[64];
     char *file = NULL;
+
+    snprintf(extraFmt, sizeof(extraFmt), "%%d,%%d,%%%zus\n", sizeof(edBuf) - 1);
 
     while ((opt = getopt(argc, argv, "i:e:f:ds:vm:ET")) != EOF) {
         switch ((char)opt) {
@@ -127,12 +132,14 @@ int main(int argc, char *argv[]) {
 
     for (i = start; i <= end; i += increment) {
         if (bHaveExtraData) {
+            edLen = 0;
+            edBuf[0] = '\0';
             if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                 scanfOK = 0;
             } else {
-                scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+                scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
             }
-            if (edLen != (int)strlen(edBuf)) {
+            if (scanfOK && edLen != (int)strlen(edBuf)) {
                 if (bAnticipateTruncation == 1) {
                     if (edLen < (int)strlen(edBuf)) {
                         printf(
@@ -192,12 +199,14 @@ int main(int argc, char *argv[]) {
             i = end;
             while (!feof(fp)) {
                 if (bHaveExtraData) {
+                    edLen = 0;
+                    edBuf[0] = '\0';
                     if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                         scanfOK = 0;
                     } else {
-                        scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+                        scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
                     }
-                    if (edLen != (int)strlen(edBuf)) {
+                    if (scanfOK && edLen != (int)strlen(edBuf)) {
                         if (bAnticipateTruncation == 1) {
                             if (edLen < (int)strlen(edBuf)) {
                                 printf(

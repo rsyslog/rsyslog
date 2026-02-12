@@ -1,6 +1,6 @@
 /* Definition of the queue support module.
  *
- * Copyright 2008-2025 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -266,6 +266,8 @@ PROTOTYPEpropSetMeth(qqueue, pAction, action_t *);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
+PROTOTYPEpropSetMeth(qqueue, iMinDeqBatchSize, int);
+PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 #define qqueueGetID(pThis) ((unsigned long)pThis)
 
 #ifdef ENABLE_IMDIAG

@@ -29,7 +29,7 @@ for use_special_parser in on off; do
   template(name="outfmt" type="string" string="%msg:%\n")
 
   ruleset(name="testruleset") {
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
   }
   '
   startup

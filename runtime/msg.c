@@ -70,9 +70,6 @@
 
 #define DEV_DEBUG 0 /* set to 1 to enable very verbose developer debugging messages */
 
-/* inlines */
-extern void msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri);
-
 /* TODO: move the global variable root to the config object - had no time to to it
  * right now before vacation -- rgerhards, 2013-07-22
  */

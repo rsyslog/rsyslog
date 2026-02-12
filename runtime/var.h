@@ -1,6 +1,6 @@
 /* The var object.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -58,6 +58,7 @@ ENDinterface(var)
 
 
 /* prototypes */
-PROTOTYPEObj(var);
+PROTOTYPEObjFull(var);
+PROTOTYPEObjDebugPrint(var);
 
 #endif /* #ifndef INCLUDED_VAR_H */

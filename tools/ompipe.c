@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -417,7 +417,7 @@ BEGINqueryEtryPt
 ENDqueryEtryPt
 
 
-BEGINmodInit(Pipe)
+BEGINmodInitNoPredecl(Pipe)
     CODESTARTmodInit;
     INITLegCnfVars;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */

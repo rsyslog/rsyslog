@@ -19,7 +19,7 @@ input(type="imuxsock" Socket="'$RSYSLOG_DYNNAME'-testbench_socket" RateLimit.Int
 
 if $msg contains "msgnum:" then {
 	:msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file=`echo $RSYSLOG_OUT_LOG`)
+			         file="'$RSYSLOG_OUT_LOG'")
 }
 '
 startup

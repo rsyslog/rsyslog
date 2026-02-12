@@ -214,6 +214,9 @@ fi
 "$PREFIX/venv/bin/python" -m pip install --upgrade pip
 "$PREFIX/venv/bin/python" -m pip install -r "$PREFIX/requirements.txt"
 
+# Service runs as RUN_USER; venv must be readable/executable by that user
+chown -R "$RUN_USER:$RUN_GROUP" "$PREFIX"
+
 cat > /etc/systemd/system/rsyslog-exporter.service <<EOF
 [Unit]
 Description=rsyslog Prometheus Exporter

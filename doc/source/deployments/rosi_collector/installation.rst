@@ -77,9 +77,16 @@ This script will:
 - Create Docker network
 - Set up systemd service
 - Install CLI management tools (``rosi-monitor``, ``prometheus-target``)
+- Install node_exporter on the server and add it to Prometheus targets
+- Optionally configure server syslog forwarding to the local collector
+- Optionally install the impstats sidecar on the server (prompts interactively)
 
 **Custom Grafana password**: Add ``GRAFANA_ADMIN_PASSWORD=your-password``
 to the command.
+
+**Non-interactive mode** (for automation): Set ``SERVER_SYSLOG_FORWARDING=true``
+to enable server log forwarding, and ``SERVER_IMPSTATS_SIDECAR=true`` to install
+the impstats sidecar on the server without prompts.
 
 **Configuration Persistence**: Your chosen install directory is saved to
 ``~/.config/rsyslog/rosi-collector.conf`` and automatically used for future
@@ -103,6 +110,20 @@ Optional settings in ``.env``:
      - Description
    * - ``WRITE_JSON_FILE``
      - Write logs to JSON file in addition to Loki (``on``/``off``, default: ``off``)
+
+.. list-table:: Server Monitoring (Non-interactive Mode)
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Variable
+     - Description
+   * - ``SERVER_SYSLOG_FORWARDING``
+     - Enable server syslog forwarding to collector (``true``/``false``). When
+       ``true``, the server's own logs are forwarded to local Loki.
+   * - ``SERVER_IMPSTATS_SIDECAR``
+     - Install impstats sidecar on the collector server for Syslog Health
+       dashboard (``true``/``false``). Requires ``python3-venv``; init prompts
+       to install it on Debian/Ubuntu when missing.
 
 .. list-table:: Email Alerting Configuration
    :header-rows: 1

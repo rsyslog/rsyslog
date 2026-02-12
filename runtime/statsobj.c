@@ -650,6 +650,74 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * getAllCounters() - Native counter iteration API
+ *
+ * Iterates through all statsobj instances and their counters, invoking the callback
+ * with raw counter values. This eliminates text serialization/parsing overhead.
+ *
+ * @param cb  Callback function invoked for each counter
+ * @param ctx User context passed to callback
+ * @return RS_RET_OK on success, error code on failure
+ */
+static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
+    DEFiRet;
+    statsobj_t *o;
+    ctr_t *ctr;
+
+    if (cb == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    /* Iterate through all statsobj instances */
+    for (o = objRoot; o != NULL; o = o->next) {
+        /* Iterate through all counters in this object */
+        pthread_mutex_lock(&o->mutCtr);
+        for (ctr = o->ctrRoot; ctr != NULL; ctr = ctr->next) {
+            uint64_t value;
+
+            /* Read counter value based on type */
+            switch (ctr->ctrType) {
+                case ctrType_IntCtr:
+                    /* Atomic uint64 - safe to read directly */
+                    value = *(ctr->val.pIntCtr);
+                    break;
+
+                case ctrType_Int:
+                    /* Plain int - read without lock. This matches GetAllStatsLines()
+                     * behavior. Value may be stale but acceptable for monitoring.
+                     * Most ctrType_Int counters are gauges (queue size, open files)
+                     * protected by application-level mutexes. */
+                    value = (uint64_t)(*(ctr->val.pInt));
+                    break;
+
+                default:
+                    value = 0;
+                    break;
+            }
+
+            /* Invoke callback with counter metadata and value.
+             * Keep mutCtr locked to prevent list modification during iteration.
+             * Callback must not call back into statsobj or deadlock may occur. */
+            rsRetVal localRet = cb(ctx, o->name, o->origin, ctr->name, ctr->ctrType, value, ctr->flags);
+
+            if (localRet != RS_RET_OK) {
+                pthread_mutex_unlock(&o->mutCtr);
+                ABORT_FINALIZE(localRet);
+            }
+        }
+        pthread_mutex_unlock(&o->mutCtr);
+
+        /* Call read notifier after counters are read (e.g., for percentile stats) */
+        if (o->read_notifier != NULL) {
+            o->read_notifier(o, o->read_notifier_ctx);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Enable statistics gathering. currently there is no function to disable it
  * again, as this is right now not needed.
  */
@@ -798,6 +866,7 @@ BEGINobjQueryInterface(statsobj)
     pIf->SetReportingNamespace = setReportingNamespace;
     pIf->SetStatsObjFlags = setStatsObjFlags;
     pIf->GetAllStatsLines = getAllStatsLines;
+    pIf->GetAllCounters = getAllCounters;
     pIf->AddCounter = addCounter;
     pIf->AddManagedCounter = addManagedCounter;
     pIf->AddPreCreatedCtr = addPreCreatedCounter;

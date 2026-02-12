@@ -148,7 +148,6 @@ static rsRetVal _new_handler(
     pn_handler_t **handler, pn_reactor_t *reactor, dispatch_t *dispatcher, configSettings_t *config, threadIPC_t *ipc);
 static void _del_handler(pn_handler_t *handler);
 static rsRetVal _launch_protocol_thread(instanceData *pData);
-static rsRetVal _shutdown_thread(instanceData *pData);
 static rsRetVal _issue_command(threadIPC_t *ipc, pn_reactor_t *reactor, commands_t command, pn_message_t *message);
 static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type);
 

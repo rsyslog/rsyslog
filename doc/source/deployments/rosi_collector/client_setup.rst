@@ -25,7 +25,8 @@ Client configuration involves:
 
 1. **rsyslog** - Forward logs to the collector (TCP port 10514)
 2. **node_exporter** - Expose metrics for Prometheus (port 9100)
-3. **Collector registration** - Add client to Prometheus targets
+3. **impstats sidecar** (optional) - Expose rsyslog internal metrics (port 9898) for the Syslog Health dashboard
+4. **Collector registration** - Add client to Prometheus targets (node and/or impstats)
 
 Quick Setup (Automated)
 -----------------------
@@ -305,24 +306,47 @@ Register Client on Collector
 ----------------------------
 
 After configuring the client, add it to Prometheus targets on your
-ROSI Collector server using the ``prometheus-target`` CLI tool:
+ROSI Collector server using the ``prometheus-target`` CLI tool.
+
+.. note::
+   The collector server itself is automatically added to node_exporter
+   and impstats targets by ``init.sh`` (impstats only when the sidecar
+   is installed on the server).
+
+**Node exporter only** (port 9100):
 
 .. code-block:: bash
 
    # SSH to your ROSI Collector, then:
-   prometheus-target add CLIENT_IP:9100 host=CLIENT_HOSTNAME role=ROLE [network=NETWORK]
+   prometheus-target add CLIENT_IP:9100 host=CLIENT_HOSTNAME [role=ROLE] [network=NETWORK]
+
+**Node exporter and impstats sidecar** (ports 9100 and 9898) in one step:
+
+.. code-block:: bash
+
+   prometheus-target add-client CLIENT_IP host=CLIENT_HOSTNAME [role=ROLE] [network=NETWORK]
+
+**Impstats only** (when the client runs the impstats sidecar on port 9898):
+
+.. code-block:: bash
+
+   prometheus-target --job impstats add CLIENT_IP:9898 host=CLIENT_HOSTNAME [role=ROLE] [network=NETWORK]
 
 Example:
 
 .. code-block:: bash
 
    prometheus-target add 10.0.0.50:9100 host=webserver-01 role=web network=production
+   # Or both node and impstats:
+   prometheus-target add-client 10.0.0.50 host=webserver-01 role=web network=internal
 
 Available commands:
 
 .. code-block:: bash
 
    prometheus-target add <IP:PORT> host=<name> [role=<value>] [network=<value>]
+   prometheus-target --job impstats add <IP:9898> host=<name> role=rsyslog [network=<value>]
+   prometheus-target add-client <IP> host=<name> [role=<value>] [network=<value>]
    prometheus-target list
    prometheus-target remove <IP:PORT>      # Remove by IP:port
    prometheus-target remove <hostname>     # Remove by hostname
@@ -366,9 +390,9 @@ Verification
 
 **Test Metrics Collection**
 
-1. Go to Grafana → Node Overview dashboard
+1. Go to Grafana → Host Metrics Overview dashboard
 2. Select your client from the host dropdown
-3. Verify CPU, memory, and disk metrics appear
+3. Verify CPU, memory, and disk metrics appear (Syslog Health shows impstats when the client runs the sidecar)
 
 **Check Connection Status**
 
