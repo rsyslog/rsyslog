@@ -99,10 +99,10 @@ Quick Start
    
    - Prompt for installation directory (default: ``/opt/rosi-collector``)
    - Generate ``.env`` with secure passwords
-   - Copy all configuration files
-   - Install and configure node_exporter for server self-monitoring
+   - Copy config files, create Docker network, and systemd service
+   - Install node_exporter on the server and add to Prometheus
+   - Optionally configure server syslog forwarding and impstats sidecar
    - Configure firewall rules for Docker container access
-   - Create Docker network and systemd service
 
 3. **Start the stack**::
 

@@ -247,6 +247,8 @@ is `node` (node_exporter). For the rsyslog impstats sidecar exporter, use the
 
 ```bash
 # Impstats only (sidecar on port 9898)
+# Note: init.sh can install the impstats sidecar on the server interactively
+# (or use SERVER_IMPSTATS_SIDECAR=true for non-interactive).
 sudo prometheus-target --job impstats add 127.0.0.1:9898 host=rosi-collector role=rsyslog network=internal
 sudo prometheus-target --job impstats list
 
@@ -475,11 +477,89 @@ Modify `loki-config.yml` to adjust retention settings.
 
 ## Troubleshooting
 
+When a service fails to start or becomes unhealthy after installation, follow this diagnostic flow.
+
+### Step 1: Run the health check
+
+```bash
+rosi-monitor health
+```
+
+This reports which containers are running and which endpoints are accessible. If the health check fails for a specific service, use the per-service section below.
+
+### Step 2: Per-service diagnostics
+
+| Symptom | Commands to run |
+|---------|-----------------|
+| **Container restarting / unhealthy** | `docker inspect <container> --format '{{.State.Health.Status}}'` |
+| **Grafana web interface not accessible** | See [Grafana troubleshooting](#grafana-not-starting-or-not-accessible) |
+| **429 Too Many Requests on dashboard reload** | See [429 rate limit](#429-too-many-requests) |
+| **Loki not ready** | `curl http://localhost:3100/ready` then `docker compose logs loki --tail 100` |
+| **Prometheus targets down** | `docker exec prometheus-central wget -qO- http://localhost:9090/api/v1/targets` |
+| **Logs not in Grafana** | See [Logs not appearing](#logs-not-appearing-in-grafana) |
+| **Traefik / HTTPS 502** | `docker compose logs traefik --tail 50` |
+| **Downloads URL returns 404** | See [Downloads 404](#downloads-url-returns-404) |
+
+For interactive debugging: `rosi-monitor debug` (menu with status, logs, shell access, restart).
+
+### Grafana not starting or not accessible
+
+If `rosi-monitor health` reports "Grafana web interface is not accessible" or the Grafana container is unhealthy:
+
+> **Note:** Container names use the project name (e.g. `rosi-collector-grafana-1` for `/opt/rosi-collector`). Use `docker compose ps` to see your actual container names.
+
+1. **Check container status:**
+   ```bash
+   docker inspect rosi-collector-grafana-1 --format '{{.State.Health.Status}}'
+   docker logs rosi-collector-grafana-1 --tail 80
+   ```
+
+2. **Permission denied on dashboards (crash-loop):** Grafana runs as UID 472 and needs read access to the provisioning directory. Fix with:
+   ```bash
+   cd /opt/rosi-collector   # or your INSTALL_DIR
+   chmod -R o+rX grafana/provisioning
+   docker compose restart grafana
+   ```
+
+3. **Test Grafana API locally:**
+   ```bash
+   curl -s http://127.0.0.1:3000/api/health
+   ```
+   Expect JSON with `"database":"ok"`. If connection refused, Grafana is not listening yet.
+
+4. **HTTPS returns 404:** Ensure you access `https://YOUR_TRAEFIK_DOMAIN/` (not a subdomain) and that `GF_SERVER_ROOT_URL` in the container matches your URL. Check: `docker exec rosi-collector-grafana-1 env | grep GF_SERVER`
+
+### 429 Too Many Requests
+
+If you see `429 Too Many Requests` when reloading Grafana dashboards (especially on `/api/annotations` or panel queries), Traefik's rate limiter is triggering. A dashboard reload sends many parallel API calls.
+
+The stack uses a separate, more permissive limit for Grafana (600 req/min, burst 300). To apply the fix:
+
+1. Re-run `init.sh` to regenerate `traefik/dynamic.yml`
+2. If you have `docker-compose.override.yml`, ensure Grafana uses `rate-limit-grafana@file` (not `rate-limit@file`)
+3. Restart Traefik: `docker compose restart traefik`
+
+### Container won't start
+
+```bash
+# Check container logs (replace <service> with grafana, loki, prometheus, rsyslog, traefik)
+docker compose logs <service> --tail 100
+
+# Verify disk space
+df -h /opt/rosi-collector
+
+# Check Docker status
+systemctl status docker
+
+# If container is restarting, inspect exit reason
+docker inspect rosi-collector-grafana-1 --format '{{.State.Status}} {{.State.Error}}'
+```
+
 ### Logs not appearing in Grafana
 
 1. Check rsyslog is receiving logs:
    ```bash
-   docker compose logs rsyslog
+   docker compose logs rsyslog --tail 50
    ```
 
 2. Verify rsyslog omhttp is sending to Loki:
@@ -492,18 +572,10 @@ Modify `loki-config.yml` to adjust retention settings.
    curl http://localhost:3100/ready
    ```
 
-### Container won't start
-
-```bash
-# Check container logs
-docker compose logs <service-name>
-
-# Verify disk space
-df -h
-
-# Check Docker status
-systemctl status docker
-```
+4. Test log flow with the monitor:
+   ```bash
+   rosi-monitor health  # Includes "Log flow (rsyslog -> omhttp -> Loki)" check
+   ```
 
 ### Prometheus can't scrape node_exporter (server target down)
 
@@ -540,6 +612,31 @@ The node_exporter on the server must bind to the Docker bridge gateway IP for Pr
 5. Test from Prometheus container:
    ```bash
    docker exec prometheus-central wget -q -O - --timeout=3 http://172.20.0.1:9100/metrics | head -3
+   ```
+
+### Downloads URL returns 404
+
+**Symptom**: `https://YOUR_DOMAIN/downloads/install-rsyslog-client.sh` returns 404.
+
+1. **Check downloads container is running:**
+   ```bash
+   docker compose ps downloads
+   ```
+
+2. **Verify file exists:**
+   ```bash
+   ls -la /opt/rosi-collector/downloads/install-rsyslog-client.sh
+   ```
+   If missing, run `init.sh` to populate downloads, then restart:
+   ```bash
+   cd /path/to/rsyslog/deploy/docker-compose/rosi-collector
+   sudo ./scripts/init.sh
+   cd /opt/rosi-collector && docker compose up -d
+   ```
+
+3. **Test from inside the container:**
+   ```bash
+   docker exec downloads-central wget -qO- http://127.0.0.1/downloads/install-rsyslog-client.sh | head -5
    ```
 
 ### High memory usage

@@ -308,6 +308,11 @@ Register Client on Collector
 After configuring the client, add it to Prometheus targets on your
 ROSI Collector server using the ``prometheus-target`` CLI tool.
 
+.. note::
+   The collector server itself is automatically added to node_exporter
+   and impstats targets by ``init.sh`` (impstats only when the sidecar
+   is installed on the server).
+
 **Node exporter only** (port 9100):
 
 .. code-block:: bash
