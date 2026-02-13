@@ -13,30 +13,71 @@ REQ_FILE="${DOC_DIR}/requirements.txt"
 OUTPUT_DIR="${DOC_DIR}/build"
 
 usage() {
-  echo "Usage: $(basename "$0") [--clean] [--strict] [--format html|epub] [--extra \"<opts>\"]" >&2
+  echo "Usage: $(basename "$0") [--clean] [--strict] [--format html|epub] [--jobs N] [--extra \"<opts>\"]" >&2
   echo "  --clean      Remove previous build directory before building" >&2
   echo "  --strict     Treat Sphinx warnings as errors (-W)" >&2
   echo "  --format     Build format (default: html)" >&2
+  echo "  --jobs       Sphinx parallel jobs (default: detected CPU threads)" >&2
   echo "  --extra      Additional options passed to sphinx-build" >&2
 }
 
 CLEAN=0
 STRICT=0
 FORMAT="html"
+JOBS=""
 EXTRA_OPTS=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --clean) CLEAN=1; shift ;;
     --strict) STRICT=1; shift ;;
-    --format) FORMAT="${2:-html}"; shift 2 ;;
-    --extra) EXTRA_OPTS="${2:-}"; shift 2 ;;
+    --format)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "Missing value for --format" >&2
+        usage
+        exit 2
+      fi
+      FORMAT="$2"
+      shift 2
+      ;;
+    --jobs)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "Missing value for --jobs" >&2
+        usage
+        exit 2
+      fi
+      JOBS="$2"
+      shift 2
+      ;;
+    --extra)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --extra" >&2
+        usage
+        exit 2
+      fi
+      EXTRA_OPTS="$2"
+      shift 2
+      ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 2 ;;
   esac
 done
 
 command -v python3 >/dev/null 2>&1 || { echo "python3 is required" >&2; exit 1; }
+
+detect_jobs() {
+  local jobs=""
+  if command -v nproc >/dev/null 2>&1; then
+    jobs="$(nproc)"
+  elif command -v getconf >/dev/null 2>&1; then
+    jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)"
+  fi
+
+  if [[ -z "${jobs}" || ! "${jobs}" =~ ^[0-9]+$ || "${jobs}" -lt 1 ]]; then
+    jobs=1
+  fi
+  echo "${jobs}"
+}
 
 # On Debian/Ubuntu/Red Hat, python3-venv may be separate; fallback to virtualenv if venv unavailable.
 create_venv() {
@@ -96,8 +137,15 @@ if [[ ${STRICT} -eq 1 ]]; then
   SPHINXOPTS="-W ${SPHINXOPTS}"
 fi
 
-echo "Building docs: format=${FORMAT} output=${OUTPUT_DIR}"
-sphinx-build ${SPHINXOPTS} -b "${FORMAT}" "${DOC_DIR}/source" "${OUTPUT_DIR}"
+if [[ -z "${JOBS}" ]]; then
+  JOBS="$(detect_jobs)"
+fi
+if [[ ! "${JOBS}" =~ ^[0-9]+$ || "${JOBS}" -lt 1 ]]; then
+  echo "Invalid --jobs value: ${JOBS}" >&2
+  exit 2
+fi
+
+echo "Building docs: format=${FORMAT} output=${OUTPUT_DIR} jobs=${JOBS}"
+sphinx-build -j "${JOBS}" ${SPHINXOPTS} -b "${FORMAT}" "${DOC_DIR}/source" "${OUTPUT_DIR}"
 
 echo "Done. Open ${OUTPUT_DIR}/index.html for HTML builds."
-

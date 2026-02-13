@@ -11,6 +11,7 @@ FAQ
    imudp-packet-loss
    common-config-mistakes
    imtcp-tls-gibberish
+   impstats-push-mode
    etl_tool
    vespa-ai-integration
    does-rsyslog-run-under-windows
