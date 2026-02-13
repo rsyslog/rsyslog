@@ -47,6 +47,39 @@ Notable Features
 ================
 
 - :ref:`impstats-statistic-counter`
+- :ref:`impstats-push-mode`
+
+
+.. _impstats-push-mode:
+
+Push Mode (VictoriaMetrics / Prometheus Remote Write)
+=====================================================
+
+impstats can push counters directly to VictoriaMetrics (and other
+Prometheus Remote Write compatible backends) on every impstats interval.
+This is enabled by setting :ref:`param-impstats-push-url` to a Remote Write
+endpoint such as ``http://localhost:8428/api/v1/write``.
+
+When push mode is enabled, impstats reads internal counters directly from
+stats objects and sends them as Prometheus Remote Write payloads
+(``application/x-protobuf`` with ``snappy`` compression) over HTTP.
+
+Push mode is independent of local emission format and destination. You can
+still use syslog/file output and any supported ``format`` for local records
+while push mode runs in parallel.
+
+If a push attempt fails, impstats logs the error and retries on the next
+interval. There is no cross-interval buffering.
+
+Build and runtime notes:
+
+- Push mode is available only in builds configured with ``--enable-impstats-push``.
+- Project-provided rsyslog packages are built with impstats push support.
+  For package library locations, see |RsyslogPackageDownloads|_ on rsyslog.com.
+- TLS options (``push.tls.*``) apply only when ``push.url`` uses ``https://``.
+- ``push.tls.certfile`` and ``push.tls.keyfile`` must be configured together.
+- Optional batch controls (``push.batch.maxBytes`` and ``push.batch.maxSeries``)
+  split large Remote Write payloads.
 
 
 
@@ -227,7 +260,7 @@ emission is large. If you must use log.syslog, it's recommended to monitor
 pstats for truncation and increase $MaxMessageSize at the top of your
 main rsyslog configuration file.
 
-Options: json/json-elasticsearch/cee/legacy/zabbix
+Options: json/json-elasticsearch/cee/legacy/prometheus/zabbix
 
 
 Caveats/Known Bugs
@@ -262,12 +295,12 @@ Load module, format the output to Zabbix, and output to a local file
 
 .. code-block:: rsyslog
 
-   module(loadf="impstats"
-   interval="60"
-   severity="7"
-   format="zabbix"
-   logSyslog="off"
-   logFile="/var/log/stats.log")
+   module(load="impstats"
+          interval="60"
+          severity="7"
+          format="zabbix"
+          logSyslog="off"
+          logFile="/var/log/stats.log")
 
 
 Load module, send stats data to local file
@@ -301,6 +334,24 @@ server:
           logFile="/path/to/local/stats.log")
 
    syslog.=debug @central.example.net
+
+
+Load module with Remote Write push mode (VictoriaMetrics)
+---------------------------------------------------------
+
+This keeps local output and additionally pushes the same interval counters to
+VictoriaMetrics using Prometheus Remote Write:
+
+.. code-block:: rsyslog
+
+   module(load="impstats"
+          interval="30"
+          format="json"
+          logFile="/var/log/rsyslog-stats.log"
+          push.url="http://localhost:8428/api/v1/write"
+          push.labels=["env=prod", "cluster=edge"]
+          push.label.origin="on"
+          push.label.name="on")
 
 
 Explanation of output
@@ -353,3 +404,16 @@ See Also
    ../../reference/parameters/impstats-log-file-overwrite
    ../../reference/parameters/impstats-ruleset
    ../../reference/parameters/impstats-bracketing
+   ../../reference/parameters/impstats-push-url
+   ../../reference/parameters/impstats-push-labels
+   ../../reference/parameters/impstats-push-timeout-ms
+   ../../reference/parameters/impstats-push-label-instance
+   ../../reference/parameters/impstats-push-label-job
+   ../../reference/parameters/impstats-push-label-origin
+   ../../reference/parameters/impstats-push-label-name
+   ../../reference/parameters/impstats-push-batch-maxbytes
+   ../../reference/parameters/impstats-push-batch-maxseries
+   ../../reference/parameters/impstats-push-tls-cafile
+   ../../reference/parameters/impstats-push-tls-certfile
+   ../../reference/parameters/impstats-push-tls-keyfile
+   ../../reference/parameters/impstats-push-tls-insecureskipverify
