@@ -1143,9 +1143,9 @@ BEGINactivateCnf
     STATSCOUNTER_INIT(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("recovery_attempts"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &(statsCounter.ctrRecoveryAttempts)));
-    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("ratelimit_discarded_in_interval"), ctrType_Int,
+    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("ratelimit_discarded_in_interval"), ctrType_IntCtr,
                                 CTR_FLAG_NONE, &(statsCounter.ratelimitDiscardedInInterval)));
-    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("disk_usage_bytes"), ctrType_Int, CTR_FLAG_NONE,
+    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("disk_usage_bytes"), ctrType_IntCtr, CTR_FLAG_NONE,
                                 &(statsCounter.diskUsageBytes)));
     CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
     /* end stats counter */
