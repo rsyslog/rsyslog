@@ -15,6 +15,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 . ${srcdir:=.}/diag.sh init
+require_netns_capable
 check_command_available timeout
 
 uname

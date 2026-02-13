@@ -134,6 +134,21 @@ rsyslog_testbench_test_url_access() {
     fi
 }
 
+# Probe whether network namespace creation works (may fail under QEMU user-mode
+# emulation even with SYS_ADMIN because the mount syscall is not properly emulated).
+# Exits with 77 (skip) if ip netns add fails.
+# Uses subshell + trap so the probe namespace is always cleaned up, including on interrupt.
+require_netns_capable() {
+    (
+        local _probe_ns="rsyslog_netns_probe_$$"
+        trap 'ip netns delete "$_probe_ns" >/dev/null 2>&1' EXIT
+        ip netns add "$_probe_ns" >/dev/null 2>&1
+    ) || {
+        echo "ip netns add failed (likely no mount permission) - skipping test"
+        exit 77
+    }
+}
+
 # function to skip a test on a specific platform
 # $1 is what we check in uname, $2 (optional) is a reason message
 skip_platform() {
@@ -158,6 +173,36 @@ skip_TSAN() {
         echo skip:_TSAN, CFLAGS $CFLAGS
         if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
                 printf 'test incompatible with TSAN because of %s\n' "$1"
+                exit 77
+        fi
+}
+
+# function to skip a test on ARM (armhf/arm64)
+# $1 is the reason why ARM is not supported
+# Prefer ARCH env var (set by arm_CI workflow); fallback to uname -m
+skip_ARM() {
+	reason="$1"
+	for arch in "$ARCH" "$GITHUB_RUNNER_ARCH" "$(uname -m 2>/dev/null)" "$(dpkg --print-architecture 2>/dev/null)"; do
+		[ -z "$arch" ] && continue
+		arch=$(printf '%s' "$arch" | tr '[:upper:]' '[:lower:]')
+		case "$arch" in
+			arm64|aarch64|armhf|armv7l*|armv7*|armv6l*|armv6*|arm*)
+				printf 'test skipped on ARM (%s): %s\n' "$arch" "$reason"
+				exit 77
+				;;
+		esac
+	done
+	return 0
+}
+
+# function to skip a test if ASan is enabled
+# This is necessary for tests that use LD_PRELOAD: ASan must be loaded first,
+# but LD_PRELOAD injects another library before ASan, causing load-order failure.
+# $1 is the reason why ASan is not supported
+skip_ASAN() {
+        echo skip:_ASAN, CFLAGS $CFLAGS
+        if [[ "$CFLAGS" == *"sanitize=address"* ]]; then
+                printf 'test incompatible with ASan because of %s\n' "$1"
                 exit 77
         fi
 }
@@ -1275,7 +1320,7 @@ check_journal_testmsg_received() {
 # there is or is not, depending on the calling mode,
 # a link with the specified suffix in the target name
 check_fd_for_pid() {
-  local pid="$1" mode="$2" suffix="$3" target seen
+  local pid="$1" mode="$2" suffix="$3" target seen i=0
   seen="false"
   for fd in $(echo /proc/$pid/fd/*); do
     target="$(readlink -m "$fd")"
@@ -1285,6 +1330,7 @@ check_fd_for_pid() {
     if ((i % 10 == 0)); then
       echo "INFO: check target='$target'"
     fi
+    ((i++))
     if [[ "$target" == *$suffix ]]; then
       seen="true"
       if [[ "$mode" == "exists" ]]; then

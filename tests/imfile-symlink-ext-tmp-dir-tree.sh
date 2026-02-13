@@ -10,7 +10,8 @@
 # #define FILE_DELETE_DELAY 5 /* how many seconds to wait before finally deleting a gone file */
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="log"
-export TEST_TIMEOUT=30
+# Allow longer on ARM/slow CI for fd cleanup after symlink deletion
+export TEST_TIMEOUT=60
 
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).

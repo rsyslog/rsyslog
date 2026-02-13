@@ -1377,7 +1377,7 @@ jobs:
           chmod -R go+rw .
           set +e
           devtools/devcontainer.sh --rm devtools/run-static-analyzer.sh 2>&1 | tee clang-analyzer.log
-          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Upload clang static analyzer report
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
@@ -1392,8 +1392,8 @@ jobs:
       - name: Show clang static analyzer report link
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         run: |
-          artifact=${{ steps.upload-report.outputs.artifact-url }}
-          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          artifact="${{ steps.upload-report.outputs.artifact-url }}"
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           Clang static analyzer HTML report (download):
           $artifact
           EOF
@@ -1482,3 +1482,182 @@ jobs:
       - name: Skip kafka distcheck CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping kafka distcheck CI."
+
+  arm_CI:
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: armhf
+            runs_on: ubuntu-24.04
+            platform: linux/arm/v7
+            qemu_platform: arm
+            use_qemu: true
+          - arch: arm64
+            runs_on: ubuntu-24.04-arm
+            platform: linux/arm64
+            qemu_platform: aarch64
+            use_qemu: false
+    name: ${{ matrix.arch }} CI (${{ matrix.use_qemu && 'QEMU' || 'native, asan' }})${{ matrix.arch == 'arm64' && ', asan' || '' }}
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: fetch upstream (for changed-files diff)
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+
+      - name: Check for code changes
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
+            devtools/ci/Dockerfile.arm
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Set up QEMU for ${{ matrix.arch }} emulation
+        if: steps.code_changes.outputs.any_changed == 'true' && matrix.use_qemu
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.qemu_platform }}
+
+      - name: Set up Docker Buildx
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.arch }} dev image (cached)
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: devtools/ci/Dockerfile.arm
+          platforms: ${{ matrix.platform }}
+          tags: rsyslog-arm-dev:${{ matrix.arch }}
+          load: true
+          cache-from: type=gha,scope=arm-dev-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=arm-dev-${{ matrix.arch }}
+
+      - name: Run ${{ matrix.arch }} build and testbench
+        if: steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          chmod -R go+rw .
+          docker run --rm --platform ${{ matrix.platform }} \
+            -e ARCH=${{ matrix.arch }} \
+            --cap-add SYS_ADMIN \
+            --cap-add SYS_PTRACE \
+            --security-opt seccomp=unconfined \
+            -v "${{ github.workspace }}:/rsyslog" \
+            -w /rsyslog \
+            rsyslog-arm-dev:${{ matrix.arch }} bash -c '
+              set -e
+              export CFLAGS="-g -O1 -fno-omit-frame-pointer"
+              export CC=gcc
+              export TEST_MAX_RUNTIME=1200
+              autoreconf -fvi
+              if [ "$ARCH" = "armhf" ]; then
+                ./configure --enable-silent-rules --enable-testbench \
+                  --enable-imdiag --disable-imdocker --disable-imfile \
+                  --disable-default-tests --disable-impstats \
+                  --disable-imptcp \
+                  --disable-mmanon --disable-mmaudit \
+                  --disable-mmfields --disable-mmjsonparse \
+                  --disable-mmpstrucdata --disable-mmsequence \
+                  --disable-mmutf8fix --disable-mail \
+                  --disable-omprog --disable-improg \
+                  --disable-omruleset \
+                  --enable-omstdout --disable-omuxsock \
+                  --disable-pmaixforwardedfrom --disable-pmciscoios \
+                  --disable-pmcisconames --disable-pmlastmsg \
+                  --disable-pmsnare \
+                  --disable-libgcrypt --disable-mmnormalize \
+                  --disable-omudpspoof --disable-relp \
+                  --disable-mmsnmptrapd \
+                  --enable-gnutls --enable-usertools \
+                  --disable-mysql \
+                  --disable-valgrind --disable-mmkubernetes \
+                  --disable-omkafka --disable-imkafka \
+                  --disable-ommongodb --disable-omrabbitmq \
+                  --disable-mmdarwin \
+                  --disable-helgrind --disable-uuid \
+                  --disable-fmhttp
+              else
+                export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
+                export LDFLAGS="-fsanitize=address"
+                export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
+                ./configure --enable-silent-rules --enable-testbench \
+                  --enable-imdiag --disable-imdocker \
+                  --enable-imfile --disable-imfile-tests \
+                  --enable-impstats --enable-imptcp \
+                  --enable-mmanon --enable-mmaudit \
+                  --enable-mmfields --enable-mmjsonparse \
+                  --enable-mmpstrucdata --enable-mmsequence \
+                  --enable-mmutf8fix --enable-mail \
+                  --enable-omprog --enable-improg \
+                  --enable-omruleset --enable-omstdout \
+                  --enable-omuxsock \
+                  --disable-pmnormalize \
+                  --enable-pmaixforwardedfrom --enable-pmciscoios \
+                  --enable-pmcisconames --enable-pmlastmsg \
+                  --enable-pmsnare --enable-libgcrypt \
+                  --disable-mmnormalize --disable-omudpspoof \
+                  --enable-relp --enable-mmsnmptrapd \
+                  --enable-gnutls --enable-usertools \
+                  --disable-mysql \
+                  --disable-valgrind --disable-mmkubernetes \
+                  --disable-omkafka --disable-imkafka \
+                  --disable-ommongodb --disable-omrabbitmq \
+                  --disable-mmdarwin \
+                  --disable-helgrind --enable-uuid \
+                  --disable-fmhttp \
+                  --disable-elasticsearch-tests \
+                  --disable-kafka-tests --disable-snmp-tests
+              fi
+              make -j8
+              make -j3 check
+            '
+
+      - name: Collect test logs
+        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
+        run: devtools/gather-check-logs.sh || true
+
+      - name: Upload ${{ matrix.arch }} test logs
+        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}-test-logs
+          path: |
+            tests/test-suite.log
+            failed-tests.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: show error logs (if we errored)
+        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
+
+      - name: Skip ${{ matrix.arch }} CI, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping ${{ matrix.arch }} CI."

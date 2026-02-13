@@ -2,6 +2,7 @@
 # addd 2017-03-01 by RGerhards, released under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
+skip_ASAN "omfile read-only error message format differs under ASan"
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
