@@ -38,8 +38,11 @@ RUN 	apt-get update && \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	protobuf-c-compiler \
 	libpcap-dev \
+	libprotobuf-c-dev \
 	librabbitmq-dev \
+	libsnappy-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -47,6 +50,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libsnappy-dev \
 	libzstd-dev \
 	logrotate \
 	lsof \

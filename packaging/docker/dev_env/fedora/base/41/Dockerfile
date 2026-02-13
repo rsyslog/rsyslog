@@ -60,6 +60,8 @@ RUN	dnf -y install \
 	python3-docutils \
 	python3-pysnmp \
 	python-sphinx \
+	protobuf-c \
+	protobuf-c-devel \
 	qpid-proton-c-devel \
 	redhat-rpm-config \
 	snappy-devel \
@@ -84,8 +86,8 @@ ENV	TCL_INCLUDE_SPEC=-I/usr/include
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz && \
-	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
+	wget -nv https://archive.apache.org/dist/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz && \
+	wget -nv https://archive.apache.org/dist/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.

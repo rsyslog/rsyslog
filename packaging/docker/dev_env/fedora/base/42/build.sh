@@ -1,7 +1,12 @@
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_fedora:42 .
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:\n"
-docker run -ti rsyslog/rsyslog_dev_base_fedora:42 bash -c  "
+DOCKER_TTY_FLAGS=""
+if [ -t 0 ] && [ -t 1 ]; then
+	DOCKER_TTY_FLAGS="-ti"
+fi
+
+docker run $DOCKER_TTY_FLAGS rsyslog/rsyslog_dev_base_fedora:42 bash -c  "
 set -e && \
 git clone https://github.com/rsyslog/rsyslog.git && \
 cd rsyslog && \

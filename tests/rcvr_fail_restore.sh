@@ -73,7 +73,6 @@ ls -l ${RSYSLOG_DYNNAME}.spool
 
 #
 # Step 3: restart receiver, wait that the sender drains its queue
-$InputTCPServerRun '$PORT_RCVR'
 #
 echo step 3
 #export RSYSLOG_DEBUGLOG="log2"

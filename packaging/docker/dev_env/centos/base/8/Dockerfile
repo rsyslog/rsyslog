@@ -3,6 +3,10 @@
 # Note: this image currently uses in-container git checkouts to
 # build the "rsyslog libraries" - we do not have packages for them
 FROM	centos:8
+# CentOS 8 is EOL; use vault repos instead of mirrorlist.
+RUN	sed -i -e 's|^mirrorlist=|#mirrorlist=|g' \
+		-e 's|^#baseurl=http://mirror.centos.org/\$contentdir/\$releasever|baseurl=http://vault.centos.org/\$contentdir/\$releasever|g' \
+		/etc/yum.repos.d/CentOS-*.repo
 # search for packages that contain <file>: yum whatprovides <file>
 RUN	dnf -y update
 RUN	dnf -y install epel-release && \
@@ -52,6 +56,8 @@ RUN	dnf -y install \
 	python3-devel \
 	python3-docutils \
 	python3-pip \
+	protobuf-c \
+	protobuf-c-devel \
 	qpid-proton-c-devel \
 	redhat-rpm-config \
 	sudo \
@@ -88,7 +94,7 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.5" \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
+RUN	wget -nv https://archive.apache.org/dist/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
 RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -231,6 +237,7 @@ RUN	cd helper-projects && \
 RUN	cd helper-projects && \
 	git clone https://github.com/edenhill/librdkafka && \
 	cd librdkafka && \
+	git checkout v1.5.3 && \
 	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib64 --CFLAGS="-g" ; make -j) && \
 	make install && \
 	cd .. && \

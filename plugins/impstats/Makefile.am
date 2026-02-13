@@ -34,7 +34,7 @@ if ENABLE_IMPSTATS_PUSH
 BUILT_SOURCES = remote.pb-c.c remote.pb-c.h
 
 remote.pb-c.c remote.pb-c.h: remote.proto
-	$(PROTOC_C) --c_out=. $<
+	$(PROTOC_C) --proto_path=$(srcdir) --c_out=. $<
 
 CLEANFILES = remote.pb-c.c remote.pb-c.h
 endif

@@ -69,6 +69,9 @@ RUN     dnf -y install \
         pkgconf-pkg-config \
         postgresql \
         postgresql-devel \
+        protobuf-c \
+        protobuf-c-devel \
+        snappy-devel \
         python3 \
         python3-devel \
         python3-docutils \

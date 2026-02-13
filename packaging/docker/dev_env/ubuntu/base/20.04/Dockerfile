@@ -38,13 +38,17 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	protobuf-c-compiler \
+	libprotobuf-c-dev \
 	librabbitmq-dev \
+	libsnappy-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libyaml-dev \
 	libzstd-dev \
 	logrotate \
 	lsof \
@@ -78,9 +82,6 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 	liblogging-stdlog-dev \
 	liblognorm-dev
 # 0mq (currently not needed, but we keep it in just in case)
-#RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-#	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
-#	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
 RUN	apt-get update -y && \
 	apt-get install -y  \
 	libczmq-dev \
@@ -112,13 +113,6 @@ RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco main" > /etc/apt/s
 	apt-get update -y && \
 	apt-get install -y clang-10 clang-tools-10 clang-10-doc libclang-common-10-dev libclang-10-dev libclang1-10 clang-format-10 python-clang clangd-10
 
-# create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
-RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
-RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
-RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
