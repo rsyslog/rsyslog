@@ -6,5 +6,6 @@ RUN apt-get update \
        pkg-config flex bison python3-docutils \
        libgnutls28-dev libestr-dev libfastjson-dev zlib1g-dev \
        libgcrypt20-dev librelp-dev uuid-dev libyaml-dev \
+       libcurl4-gnutls-dev libprotobuf-c-dev protobuf-c-compiler libsnappy-dev \
        iproute2 \
     && rm -rf /var/lib/apt/lists/*

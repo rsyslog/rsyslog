@@ -1583,6 +1583,7 @@ jobs:
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker --disable-imfile \
                   --disable-default-tests --disable-impstats \
+                  --disable-impstats-push \
                   --disable-imptcp \
                   --disable-mmanon --disable-mmaudit \
                   --disable-mmfields --disable-mmjsonparse \
