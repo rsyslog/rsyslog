@@ -44,6 +44,7 @@ Options:
 * ``cee``
 * ``legacy``
 * ``prometheus``
+* ``zabbix``
 
 .. note::
 
