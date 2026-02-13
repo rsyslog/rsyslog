@@ -339,6 +339,7 @@ EXTRA_DIST = \
     source/faq/etl_tool.rst \
     source/faq/faq_overall.rst \
     source/faq/imtcp-tls-gibberish.rst \
+    source/faq/impstats-push-mode.rst \
     source/faq/imudp-packet-loss.rst \
     source/faq/index.rst \
     source/faq/vespa-ai-integration.rst \

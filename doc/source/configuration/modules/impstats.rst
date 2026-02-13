@@ -81,6 +81,29 @@ Build and runtime notes:
 - Optional batch controls (``push.batch.maxBytes`` and ``push.batch.maxSeries``)
   split large Remote Write payloads.
 
+Naming and labels:
+
+- Metric names are generated as ``<origin>_<name>_<counter>_total``.
+  If ``name`` is empty, it is omitted.
+- Name components are sanitized to Prometheus-safe characters (for example,
+  ``-`` and ``.`` become ``_``).
+- ``push.labels`` provides static labels.
+- Dynamic labels are optional:
+  ``push.label.instance``, ``push.label.job``, ``push.label.origin``,
+  and ``push.label.name``.
+- If the same label key already exists in ``push.labels``, impstats does not
+  override it with a dynamic label.
+
+Current limitations:
+
+- Push is synchronous inside the impstats interval worker.
+- Failed pushes are retried only on the next interval.
+- No cross-interval buffering is performed for failed pushes.
+- No built-in HTTP authentication parameters are currently available for push.
+
+For troubleshooting-oriented questions, see
+:doc:`../../faq/impstats-push-mode`.
+
 
 
 
