@@ -48,6 +48,10 @@ For more examples and step-by-step guides, visit:
 
 :doc:`../tutorials/index`
 
+For impstats metrics push setup, see:
+
+:doc:`../tutorials/impstats_push_victoriametrics`
+
 Community and AI Assistant
 --------------------------
 

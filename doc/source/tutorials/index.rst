@@ -15,6 +15,7 @@ These tutorials cover specific rsyslog features and use cases.
    failover_syslog_server
    log_rotation_fix_size
    gelf_forwarding
+   impstats_push_victoriametrics
    log_sampling
    random_sampling
    hash_sampling
