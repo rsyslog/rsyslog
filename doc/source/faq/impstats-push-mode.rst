@@ -138,6 +138,7 @@ See also
 --------
 
 - :doc:`../configuration/modules/impstats`
+- :doc:`../tutorials/impstats_push_victoriametrics`
 - :doc:`../reference/parameters/impstats-push-url`
 - :doc:`../reference/parameters/impstats-push-labels`
 - :doc:`../reference/parameters/impstats-push-timeout-ms`

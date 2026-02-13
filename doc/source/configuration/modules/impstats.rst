@@ -413,6 +413,7 @@ See Also
 -  `impstats delayed or
    lost <http://www.rsyslog.com/impstats-delayed-or-lost/>`_ - cause and
    cure
+-  :doc:`../../tutorials/impstats_push_victoriametrics`
 
 .. toctree::
    :hidden:
