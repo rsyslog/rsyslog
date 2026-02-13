@@ -50,6 +50,22 @@ Notable Features
 - :ref:`impstats-push-mode`
 
 
+Choose Your Mode
+================
+
+impstats supports three common operating modes:
+
+- Local emission only (syslog and/or file)
+- Push mode only (Remote Write endpoint)
+- Local emission and push mode together
+
+Use this page for module reference and parameters. For task-oriented
+workflows and troubleshooting, use:
+
+- :doc:`../../tutorials/impstats_push_victoriametrics`
+- :doc:`../../faq/impstats-push-mode`
+
+
 .. _impstats-push-mode:
 
 Push Mode (VictoriaMetrics / Prometheus Remote Write)
@@ -68,10 +84,7 @@ Push mode is independent of local emission format and destination. You can
 still use syslog/file output and any supported ``format`` for local records
 while push mode runs in parallel.
 
-If a push attempt fails, impstats logs the error and retries on the next
-interval. There is no cross-interval buffering.
-
-Build and runtime notes:
+Key notes:
 
 - Push mode is available only in builds configured with ``--enable-impstats-push``.
 - Project-provided rsyslog packages are built with impstats push support.
@@ -80,29 +93,9 @@ Build and runtime notes:
 - ``push.tls.certfile`` and ``push.tls.keyfile`` must be configured together.
 - Optional batch controls (``push.batch.maxBytes`` and ``push.batch.maxSeries``)
   split large Remote Write payloads.
-
-Naming and labels:
-
-- Metric names are generated as ``<origin>_<name>_<counter>_total``.
-  If ``name`` is empty, it is omitted.
-- Name components are sanitized to Prometheus-safe characters (for example,
-  ``-`` and ``.`` become ``_``).
-- ``push.labels`` provides static labels.
-- Dynamic labels are optional:
-  ``push.label.instance``, ``push.label.job``, ``push.label.origin``,
-  and ``push.label.name``.
-- If the same label key already exists in ``push.labels``, impstats does not
-  override it with a dynamic label.
-
-Current limitations:
-
-- Push is synchronous inside the impstats interval worker.
-- Failed pushes are retried only on the next interval.
-- No cross-interval buffering is performed for failed pushes.
-- No built-in HTTP authentication parameters are currently available for push.
-
-For troubleshooting-oriented questions, see
-:doc:`../../faq/impstats-push-mode`.
+- For naming, labels, retries, and limitations details, see
+  :doc:`../../faq/impstats-push-mode` and
+  :doc:`../../tutorials/impstats_push_victoriametrics`.
 
 
 
@@ -110,8 +103,7 @@ For troubleshooting-oriented questions, see
 Configuration Parameters
 ========================
 
-The configuration parameters for this module are designed for tailoring
-the method and process for outputting the rsyslog statistics to file.
+The configuration parameters are grouped below by use case.
 
 .. note::
 
@@ -122,8 +114,8 @@ the method and process for outputting the rsyslog statistics to file.
    This module supports module parameters, only.
 
 
-Module Parameters
------------------
+Core Module Parameters (Local Emission)
+---------------------------------------
 
 .. list-table::
    :widths: 30 70
@@ -171,6 +163,17 @@ Module Parameters
      - .. include:: ../../reference/parameters/impstats-bracketing.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+
+
+Push Mode Parameters (Remote Write)
+-----------------------------------
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
    * - :ref:`param-impstats-push-url`
      - .. include:: ../../reference/parameters/impstats-push-url.rst
         :start-after: .. summary-start
