@@ -1527,7 +1527,11 @@ static rsRetVal openKafka(instanceData *const __restrict__ pData) {
     }
 
     pData->bIsOpen = 1;
-    CHKiRet(startPollCallbackThread(pData));
+    /* callback poll thread is best-effort and must not prevent action open */
+    if (startPollCallbackThread(pData) != RS_RET_OK) {
+        LogMsg(0, RS_RET_ERR, LOG_WARNING,
+               "omkafka: proceeding without callback poll thread; callbacks are only drained on active writes");
+    }
 finalize_it:
     if (iRet == RS_RET_OK) {
         pData->bReportErrs = 1;
