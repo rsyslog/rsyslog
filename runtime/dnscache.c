@@ -320,7 +320,7 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        strcpy(szIP, "?error.obtaining.ip?");
+        snprintf(szIP, sizeof(szIP), "%s", "?error.obtaining.ip?");
         error = 1; /* trigger hostname copies below! */
     }
 
