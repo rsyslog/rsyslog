@@ -247,7 +247,7 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
     int error;
     sigset_t omask, nmask;
     struct addrinfo hints, *res;
-    char szIP[80]; /* large enough for IPv6 */
+    char szIP[NI_MAXHOST];
     char fqdnBuf[NI_MAXHOST];
     rs_size_t fqdnLen;
     rs_size_t i;
@@ -320,7 +320,9 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        strcpy(szIP, "?error.obtaining.ip?");
+        const char mockip[] = "?error.obtaining.ip?";
+        assert(sizeof(szIP) > sizeof(mockip));
+        strcpy(szIP, mockip);
         error = 1; /* trigger hostname copies below! */
     }
 
