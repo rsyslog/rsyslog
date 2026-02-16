@@ -1,4 +1,4 @@
----------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 - NEW DEPENDENCES: names vary by distribution
   - libyaml-dev
@@ -10,6 +10,9 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
   is to prevent spamming the log to much in extreme cases. For some
   users, this may be too low and need to be adjusted. We excect this
   to be an exotic case, thus the change of default.
+- NEW DOC generation now via autotools integrated Makefile.am. This may
+  require changes to the doc build system (not in all cases, but it needs
+  to be checked).
 
 - overall improved documentation via a large set of topic updates.
 
@@ -108,6 +111,12 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
   `-Werror`.
   closes https://github.com/rsyslog/rsyslog/issues/5628
 - 2026-02-03: doc: document pcre_match function
+- 2026-01-31: impstats: add VictoriaMetrics push via Remote Write
+  Adds first-class integration with VictoriaMetrics to simplify ops
+  dashboards and move toward project-supported telemetry without
+  sidecar collectors.
+  New optional feature (oin by default). No behavior change unless configured
+  via push.* parameters. Also relevant doc and CI enhancements added.
 - 2026-01-31: imtcp: add MultiLine and regex framing support
   Non-technical: improves operator ergonomics and closes a feature gap
   with imptcp. Enables regex-based start-of-frame detection and optional
