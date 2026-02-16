@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
+Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-17
 - NEW DEPENDENCES: names vary by distribution
   - libyaml-dev
   - libprotobuf-c-dev   (module dependency)
