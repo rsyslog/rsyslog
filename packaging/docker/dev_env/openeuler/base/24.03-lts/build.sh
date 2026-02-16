@@ -2,7 +2,12 @@ OPEN_EULER_VERSION=24.03-lts
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_openeuler:$OPEN_EULER_VERSION . --progress=plain
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:\n"
-docker run -ti -u $(id -u):$(id -g) rsyslog/rsyslog_dev_base_openeuler:$OPEN_EULER_VERSION bash -c  "
+DOCKER_TTY_FLAGS=""
+if [ -t 0 ] && [ -t 1 ]; then
+        DOCKER_TTY_FLAGS="-ti"
+fi
+
+docker run $DOCKER_TTY_FLAGS -u $(id -u):$(id -g) rsyslog/rsyslog_dev_base_openeuler:$OPEN_EULER_VERSION bash -c  "
 set -e && \
 git clone https://github.com/rsyslog/rsyslog.git && \
 cd rsyslog && \

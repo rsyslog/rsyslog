@@ -73,7 +73,7 @@ jobs:
           autoreconf -fvi
           ./configure --enable-silent-rules --disable-testbench \
              --disable-imdiag --disable-imdocker --disable-imfile \
-             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-default-tests --disable-impstats --disable-impstats-push --disable-imptcp \
              --disable-mmanon --disable-mmaudit --disable-mmfields \
              --disable-mmjsonparse --disable-mmpstrucdata \
              --disable-mmsequence --disable-mmutf8fix --disable-mail \
@@ -125,7 +125,7 @@ jobs:
           cd doc-builder
           ./configure --enable-silent-rules --disable-testbench \
              --disable-imdiag --disable-imdocker --disable-imfile \
-             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-default-tests --disable-impstats --disable-impstats-push --disable-imptcp \
              --disable-mmanon --disable-mmaudit --disable-mmfields \
              --disable-mmjsonparse --disable-mmpstrucdata \
              --disable-mmsequence --disable-mmutf8fix --disable-mail \

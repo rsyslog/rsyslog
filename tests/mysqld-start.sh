@@ -44,6 +44,37 @@ test_error_exit_handler() {
 	$SUDO cat /var/log/mysql/error.log
 }
 
+init_mysqld_datadir_if_missing() {
+	# MySQL 8 images may ship without an initialized datadir in CI.
+	# Initialize it on demand so mysqld_safe can start reliably.
+	if $SUDO test -d /var/lib/mysql/mysql; then
+		return 0
+	fi
+
+	printf 'initializing mysqld data directory...\n'
+	$SUDO mkdir -p /var/lib/mysql /var/run/mysqld
+	$SUDO chown -R mysql:mysql /var/lib/mysql /var/run/mysqld
+	# Clean stale partial content from previous failed startup/init attempts.
+	$SUDO sh -c 'find /var/lib/mysql -mindepth 1 -maxdepth 1 | grep -q . && rm -rf /var/lib/mysql/* || true'
+
+	if command -v mysqld >/dev/null 2>&1; then
+		if $SUDO mysqld --verbose --help 2>/dev/null | grep -q -- '--initialize-insecure'; then
+			$SUDO mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
+			return $?
+		fi
+	fi
+
+	if command -v mysql_install_db >/dev/null 2>&1; then
+		$SUDO mysql_install_db --user=mysql --datadir=/var/lib/mysql
+		return $?
+	fi
+
+	printf 'ABORT: no supported mysql datadir initialization command found\n'
+	return 1
+}
+
+init_mysqld_datadir_if_missing
+
 printf 'starting mysqld...\n'
 ensure_mysqld_datadir
 $MYSQLD_START_CMD &

@@ -39,7 +39,9 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	libprotobuf-c-dev \
 	librabbitmq-dev \
+	libsnappy-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -56,6 +58,7 @@ RUN 	apt-get update && \
 	python-docutils  \
 	python-pip \
 	python-pysnmp4 \
+	protobuf-c-compiler \
 	software-properties-common \
 	sudo \
 	uuid-dev \
@@ -84,8 +87,9 @@ RUN	apt-get update -y && \
 	tcl-dev \
 	libsodium-dev
 # clickhouse
-RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+RUN	echo "deb https://packages.clickhouse.com/deb stable main" > /etc/apt/sources.list.d/clickhouse.list && \
 	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
+	apt-key adv --keyserver keyserver.ubuntu.com --recv 3E4AD4719DDE9A38 && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
 	apt-get update -y && \
 	apt-get install -y  \
@@ -94,8 +98,6 @@ RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sou
 # clang devel version
 RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/apt/sources.list.d/llvm8.list && \
 	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" >> /etc/apt/sources.list.d/llvm8.list && \
-	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
-	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
 	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
 	apt-get update -y && \
 	apt-get install -y \
@@ -107,7 +109,7 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/a
 RUN	mkdir /local_dep_cache
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
 RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
+RUN	wget -nv https://archive.apache.org/dist/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
 RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 
 # tell tests which are the newester versions, so they can be checked without the need
