@@ -222,7 +222,6 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-17
   suitable for all applications. See documentation for full details.
   Upcoming work is expected to improve the state.
   Thanks to Daniel Gollub for the patch.
-- 2026-01-19:
 - 2026-01-17: make mmutf8fix work also on tags
   Thanks to Jan Jeroným Zvánovec for the base patch, which we improved a bit.
 - 2026-01-16: queue: harden disk recovery after invalid .qi
@@ -261,6 +260,33 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-17
   Note that the ossl driver can either be build for wolfssl, libressl, or
   openssl. This needs to be decided at build time.
   Thanks to Hayden Roche for the contribution.
+- 2026-01-15: observability: add ROSI Collector centralized log collection stack
+  Add production-ready Docker Compose stack for centralized log collection
+  and monitoring, migrated from rsyslog-do-infra/central-intern.
+  ROSI (RSyslog Operations Stack Initiative) Collector provides:
+  - rsyslog log receiver with omhttp output to Loki
+  - Grafana Loki for log storage (30-day retention)
+  - Grafana with 5 pre-built dashboards
+  - Prometheus for metrics collection
+  - Traefik reverse proxy with automatic Let's Encrypt TLS
+  - TLS/mTLS syslog reception on port 6514 (RFC 5425)
+  TLS support features:
+  - Optional TLS profile activated via: docker compose --profile tls up -d
+  - Environment variable configuration (ENABLE_TLS, TLS_CA_FILE, etc.)
+  - Auth modes: anon, x509/certvalid, x509/name
+  - generate-ca.sh: Create CA and server certificates
+  - generate-client-cert.sh: Generate client certs with secure one-time
+    download packages, migration handling, and syslog user ownership
+  - Automatic UFW firewall configuration for port 6514
+  Management scripts installed to /usr/local/bin:
+  - rosi-monitor: Stack health monitoring and debugging
+  - rosi-generate-ca: Generate CA and server TLS certificates
+  - rosi-generate-client-cert: Generate client TLS certificates
+  - prometheus-target: Manage node exporter scrape targets
+  Configuration persistence via XDG-compliant config files:
+  - System: /etc/rsyslog/rosi-collector.conf
+  - User: ~/.config/rsyslog/rosi-collector.conf
+  closes: https://github.com/rsyslog/rsyslog/issues/6323
 - 2026-01-13: rainerscript: add append_json() function
   Thanks to github user 20syldev for the patch.
 - 2026-01-12: imfile: ensure state files are deleted correctly on log rotation
