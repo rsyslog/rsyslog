@@ -13,6 +13,7 @@
 
 import json
 import os
+import re
 import sys
 from urllib.parse import urljoin
 
@@ -391,6 +392,10 @@ if tags.has('with_sitemap'):
 # Enable Google Analytics tracking when a tracking ID is provided via
 # the GOOGLE_ANALYTICS_ID environment variable.
 _ga_id = os.environ.get('GOOGLE_ANALYTICS_ID', '')
+if _ga_id and not re.match(r'^(UA-\d+-\d+|G-[A-Za-z0-9]+)$', _ga_id):
+    print("Warning: Invalid GOOGLE_ANALYTICS_ID format: '%s'. "
+          "Disabling GA." % _ga_id, file=sys.stderr)
+    _ga_id = ''
 _ga_use_extension = False
 if _ga_id:
     try:
