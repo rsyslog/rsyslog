@@ -143,16 +143,6 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-17
   of silently continuing and reporting success. This has now been fixed
   and a proper error message is emitted.
   closes https://github.com/rsyslog/rsyslog/issues/2816
-- 2026-01-29: queue: fix slow drain of disk-assisted queues
-  Disk-assisted queues were taking days to drain after recovery
-  because the DA worker only activated when the in-memory queue
-  reached the high watermark, creating a catch-22 when starting
-  with an empty memory queue but full disk queue.
-  Impact:
-  This fix enables proper recovery from backlogs and prevents data
-  loss from queues that cannot drain. Existing behavior for normal
-  operations is preserved.
-  closes https://github.com/rsyslog/rsyslog/issues/2646
 - 2026-01-27: imfile: add inode generation check for file rotation detection
   This commit adds a check for inode generation number in the imfile module.
   This addresses an issue where file rotation is not detected when a new file
