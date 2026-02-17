@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2025 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -456,17 +456,24 @@ static void get_socket_info(const int sockfd, char *const connInfo) {
     char remote_port_str[8];
     struct sockaddr_in local_addr;
     socklen_t local_addr_len = sizeof(local_addr);
+    const char questMark[] = "?";
 
     struct sockaddr_in remote_addr;
     socklen_t remote_addr_len = sizeof(remote_addr);
 
+    /* ensure and tell AI/analyzers that buffers are sufficiently large for fallback case */
+    assert(sizeof(local_ip_str) >= sizeof(questMark));
+    assert(sizeof(remote_ip_str) >= sizeof(questMark));
+    assert(sizeof(local_port_str) >= sizeof(questMark));
+    assert(sizeof(remote_port_str) >= sizeof(questMark));
+
     /* local system info */
     local_addr.sin_port = 0; /* just to keep clang static analyzer happy */
     if (getsockname(sockfd, (struct sockaddr *)&local_addr, &local_addr_len) == -1) {
-        strcpy(local_ip_str, "?");
+        strcpy(local_ip_str, questMark);
     } else {
         if (inet_ntop(AF_INET, &local_addr.sin_addr, local_ip_str, INET_ADDRSTRLEN) == NULL) {
-            strcpy(local_ip_str, "?");
+            strcpy(local_ip_str, questMark);
         }
         local_port = ntohs(local_addr.sin_port);
     }
@@ -474,22 +481,22 @@ static void get_socket_info(const int sockfd, char *const connInfo) {
     /* remote system info */
     remote_addr.sin_port = 0; /* just to keep clang static analyzer happy */
     if (getpeername(sockfd, (struct sockaddr *)&remote_addr, &remote_addr_len) == -1) {
-        strcpy(remote_ip_str, "?");
+        strcpy(remote_ip_str, questMark);
     } else {
         if (inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str, INET_ADDRSTRLEN) == NULL) {
-            strcpy(remote_ip_str, "?");
+            strcpy(remote_ip_str, questMark);
         }
         remote_port = ntohs(remote_addr.sin_port);
     }
 
     if (local_port == -1) {
-        strcpy(local_port_str, "?");
+        strcpy(local_port_str, questMark);
     } else {
         snprintf(local_port_str, 7, "%d", local_port);
         local_port_str[7] = '\0'; /* be on safe side */
     }
     if (remote_port == -1) {
-        strcpy(remote_port_str, "?");
+        strcpy(remote_port_str, questMark);
     } else {
         snprintf(remote_port_str, 7, "%d", remote_port);
         remote_port_str[7] = '\0'; /* be on safe side */
