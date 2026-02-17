@@ -388,14 +388,33 @@ if tags.has('with_sitemap'):
         sitemap_localtolinks = False
         sitemap_filename = "sitemap.xml"
 
-# Google Analytics tracking ID – read from the environment.  The actual
-# script injection happens in setup() via context['metatags'] so that it
-# works correctly with the Furo theme.
+# Google Analytics tracking ID – read from the environment.
 _ga_id = os.environ.get('GOOGLE_ANALYTICS_ID', '')
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'furo'
+
+# Themes where sphinxcontrib.googleanalytics injects correctly.
+# Furo does not render the extension's script tag, so it needs the
+# metatags fallback wired in setup() below.
+_GA_EXTENSION_THEMES = frozenset(('alabaster', 'default', 'basic',
+                                  'classic', 'sphinxdoc', 'nature',
+                                  'pyramid', 'haiku', 'traditional',
+                                  'bizstyle', 'sphinx_rtd_theme'))
+
+_ga_use_extension = False
+if _ga_id and html_theme in _GA_EXTENSION_THEMES:
+    try:
+        import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
+    except ImportError:
+        # Extension not installed – fall back to metatags injection.
+        pass
+    else:
+        extensions.append('sphinxcontrib.googleanalytics')
+        googleanalytics_id = _ga_id
+        googleanalytics_enabled = True
+        _ga_use_extension = True
 #html_theme = 'default'
 #html_theme = 'basic'
 #html_style = 'rsyslog.css'
@@ -590,8 +609,9 @@ def setup(app):
     if ENABLE_JSON_LD:
         app.connect('html-page-context', _add_json_ld_to_context)
 
-    # Google Analytics: inject gtag script when GOOGLE_ANALYTICS_ID is set
-    if _ga_id:
+    # Google Analytics: inject gtag script via metatags when the
+    # sphinxcontrib.googleanalytics extension is not handling it.
+    if _ga_id and not _ga_use_extension:
         def _inject_ga(app, pagename, templatename, context, doctree):
             if app.builder.format == 'html':
                 m = context.get('metatags', '')
