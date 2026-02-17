@@ -4,4 +4,3 @@ sphinx>=4.5.0
 furo
 sphinxcontrib.mermaid
 sphinx-sitemap
-sphinxcontrib-googleanalytics

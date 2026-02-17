@@ -388,19 +388,10 @@ if tags.has('with_sitemap'):
         sitemap_localtolinks = False
         sitemap_filename = "sitemap.xml"
 
-# Enable Google Analytics tracking when a tracking ID is provided via
-# the GOOGLE_ANALYTICS_ID environment variable.
+# Google Analytics tracking ID – read from the environment.  The actual
+# script injection happens in setup() via context['metatags'] so that it
+# works correctly with the Furo theme.
 _ga_id = os.environ.get('GOOGLE_ANALYTICS_ID', '')
-if _ga_id:
-    try:
-        import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
-    except ImportError:
-        # Optional extension - analytics skipped if not installed
-        pass
-    else:
-        extensions.append('sphinxcontrib.googleanalytics')
-        googleanalytics_id = _ga_id
-        googleanalytics_enabled = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -598,6 +589,24 @@ def setup(app):
 
     if ENABLE_JSON_LD:
         app.connect('html-page-context', _add_json_ld_to_context)
+
+    # Google Analytics: inject gtag script when GOOGLE_ANALYTICS_ID is set
+    if _ga_id:
+        def _inject_ga(app, pagename, templatename, context, doctree):
+            if app.builder.format == 'html':
+                m = context.get('metatags', '')
+                m += (
+                    '\n<script async src="https://www.googletagmanager.com/'
+                    'gtag/js?id=%s"></script>\n'
+                    '<script>\n'
+                    'window.dataLayer = window.dataLayer || [];\n'
+                    'function gtag(){dataLayer.push(arguments);}\n'
+                    'gtag("js", new Date());\n'
+                    'gtag("config", "%s");\n'
+                    '</script>\n'
+                ) % (_ga_id, _ga_id)
+                context['metatags'] = m
+        app.connect('html-page-context', _inject_ga)
 
 
 def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
