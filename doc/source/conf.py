@@ -388,6 +388,20 @@ if tags.has('with_sitemap'):
         sitemap_localtolinks = False
         sitemap_filename = "sitemap.xml"
 
+# Enable Google Analytics tracking when a tracking ID is provided via
+# the GOOGLE_ANALYTICS_ID environment variable.
+_ga_id = os.environ.get('GOOGLE_ANALYTICS_ID', '')
+if _ga_id:
+    try:
+        import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
+    except ImportError:
+        # Optional extension - analytics skipped if not installed
+        pass
+    else:
+        extensions.append('sphinxcontrib.googleanalytics')
+        googleanalytics_id = _ga_id
+        googleanalytics_enabled = True
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'furo'
