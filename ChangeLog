@@ -1,5 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2025-02-18: build: fix linking issue with libyaml
+  When building rsyslogd with libyaml support, the library was not being
+  explicitly linked. This implementation adds $(LIBYAML_LIBS) to
+  rsyslogd_LDADD to resolve undefined references during linking,
+  particularly in static or cross-compilation scenarios.
+  Thanks to Rudi Heitbaum for bringing up this isuse and suggesting the fix.
+ Fixes https://github.com/rsyslog/rsyslog/issues/6563
 - 2025-02-18: doc: add support for optionally using Google Analytics
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-17
