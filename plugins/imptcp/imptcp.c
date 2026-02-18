@@ -739,8 +739,8 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
         error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if (error) {
             DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
-            strcpy((char *)szHname, "???");
-            strcpy((char *)szIP, "???");
+            RS_COPY_LITERAL(szHname, "???");
+            RS_COPY_LITERAL(szIP, "???");
             ABORT_FINALIZE(RS_RET_INVALID_HNAME);
         }
 

@@ -1122,13 +1122,13 @@ static rsRetVal getLocalHostname(rsconf_t *const pConf, uchar **ppName) {
     int empty_hostname = 1;
 
     if (gethostname(hnbuf, sizeof(hnbuf)) != 0) {
-        strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
+        RS_COPY_LITERAL(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
     } else {
         /* now guard against empty hostname
          * see https://github.com/rsyslog/rsyslog/issues/1040
          */
         if (hnbuf[0] == '\0') {
-            strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
+            RS_COPY_LITERAL(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
         } else {
             empty_hostname = 0;
             hnbuf[sizeof(hnbuf) - 1] = '\0'; /* be on the safe side... */

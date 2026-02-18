@@ -238,7 +238,7 @@ static void sendwallmsg(const char *tty, uchar *pMsg) {
     int wrRet;
 
     /* compute the device name */
-    strcpy(p, _PATH_DEV);
+    RS_COPY_LITERAL(p, _PATH_DEV);
     size_t base_len = strlen(p);
     size_t avail = sizeof(p) - base_len - 1;
     size_t ttylen = strnlen(tty, avail);
