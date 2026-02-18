@@ -17,6 +17,7 @@ RUN	apt-get install -y \
 	wget \
 	python3-docutils  \
 	python3-pip \
+	python3-venv \
 	python3-pysnmp4
 RUN	apt-get install -y \
 	texlive-base \
@@ -29,6 +30,11 @@ RUN	apt-get install -y \
 	texlive-luatex \
 	texlive-xetex \
 	latexmk
+# Pre-built venv for doc build (used when running as -u uid:gid; repo mounts at /rsyslog)
+COPY doc/requirements.txt /tmp/doc-requirements.txt
+RUN python3 -m venv /opt/rsyslog-doc-venv \
+	&& /opt/rsyslog-doc-venv/bin/pip install --no-cache-dir -r /tmp/doc-requirements.txt \
+	&& rm /tmp/doc-requirements.txt
 RUN	pip install sphinx sphinx_rtd_theme rst2pdf furo sphinxcontrib-mermaid
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
