@@ -240,6 +240,8 @@ if _env_version and _env_release_type:
     version = _env_version
     release_type = _env_release_type
     release = f"{version} daily {release_type}"
+    if release_type == 'dev':
+        release_string_detail = 'simple'
     rst_prolog = rst_prolog.format(
         doc_build=release,
         doc_commit='N/A',

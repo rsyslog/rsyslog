@@ -6,8 +6,7 @@ name: Deploy documentation to GitHub Pages
 
 on:
   push:
-    # pr/publish-doc: for testing before merge; remove before final merge
-    branches: [main, master, pr/publish-doc]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
