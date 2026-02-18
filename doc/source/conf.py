@@ -13,6 +13,7 @@
 
 import json
 import os
+import re
 import sys
 from urllib.parse import urljoin
 
@@ -391,16 +392,22 @@ if tags.has('with_sitemap'):
 # Enable Google Analytics tracking when a tracking ID is provided via
 # the GOOGLE_ANALYTICS_ID environment variable.
 _ga_id = os.environ.get('GOOGLE_ANALYTICS_ID', '')
+if _ga_id and not re.match(r'^(UA-\d+-\d+|G-[A-Za-z0-9]+)$', _ga_id):
+    print("Warning: Invalid GOOGLE_ANALYTICS_ID format: '%s'. "
+          "Disabling GA." % _ga_id, file=sys.stderr)
+    _ga_id = ''
+_ga_use_extension = False
 if _ga_id:
     try:
         import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
     except ImportError:
-        # Optional extension - analytics skipped if not installed
+        # Extension not installed – fall back to metatags injection in setup().
         pass
     else:
         extensions.append('sphinxcontrib.googleanalytics')
         googleanalytics_id = _ga_id
         googleanalytics_enabled = True
+        _ga_use_extension = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -598,6 +605,25 @@ def setup(app):
 
     if ENABLE_JSON_LD:
         app.connect('html-page-context', _add_json_ld_to_context)
+
+    # Google Analytics: inject gtag script via metatags when the
+    # sphinxcontrib.googleanalytics extension is not handling it.
+    if _ga_id and not _ga_use_extension:
+        def _inject_ga(app, pagename, templatename, context, doctree):
+            if app.builder.format == 'html':
+                m = context.get('metatags', '')
+                m += (
+                    '\n<script async src="https://www.googletagmanager.com/'
+                    'gtag/js?id=%s"></script>\n'
+                    '<script>\n'
+                    'window.dataLayer = window.dataLayer || [];\n'
+                    'function gtag(){dataLayer.push(arguments);}\n'
+                    'gtag("js", new Date());\n'
+                    'gtag("config", "%s");\n'
+                    '</script>\n'
+                ) % (_ga_id, _ga_id)
+                context['metatags'] = m
+        app.connect('html-page-context', _inject_ga)
 
 
 def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
