@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /doc/
+Disallow: /
+
+# Sitemap URL is injected by the doc_deploy_main workflow from github.repository

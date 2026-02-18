@@ -1,0 +1,88 @@
+name: Deploy documentation to GitHub Pages
+
+# Builds docs with Google Analytics and deploys to https://<site>/doc/
+# Uses rsyslog/rsyslog_dev_doc_base_ubuntu:22.04 Docker container for the Sphinx build.
+# Add GOOGLE_ANALYTICS_ID as a repository secret before use.
+
+on:
+  push:
+    # pr/publish-doc: for testing before merge; remove before final merge
+    branches: [main, master, pr/publish-doc]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: doc-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build documentation in Docker container
+        env:
+          GOOGLE_ANALYTICS_ID: ${{ secrets.GOOGLE_ANALYTICS_ID }}
+        run: |
+          chmod +x doc/tools/inside_docker_doc_html.sh
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -e GOOGLE_ANALYTICS_ID \
+            -e PYTHONUNBUFFERED=1 \
+            -v "$(pwd)":/rsyslog \
+            --entrypoint /rsyslog/doc/tools/inside_docker_doc_html.sh \
+            rsyslog/rsyslog_dev_doc_base_ubuntu:22.04
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-html
+          path: doc/build/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download built docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-html
+          path: preview-site
+
+      - name: Prepare Pages artifact with /doc/ subdirectory
+        run: |
+          set -e
+          mkdir -p pages-deployment/doc
+          rsync -a --delete preview-site/ pages-deployment/doc/
+          cp doc/tools/pages-root-index.html pages-deployment/index.html
+          # robots.txt: allow only /doc/, sitemap URL from github.repository
+          REPO="${{ github.repository }}"
+          BASE="https://${REPO%/*}.github.io/${REPO#*/}"
+          {
+            sed '/^# Sitemap/d' doc/tools/pages-robots.txt
+            echo "Sitemap: ${BASE}/doc/sitemap.xml"
+          } > pages-deployment/robots.txt
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to Pages (artifact)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-deployment
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

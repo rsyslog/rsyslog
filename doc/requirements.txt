@@ -2,6 +2,8 @@
 # Align with conf.py needs_sphinx requirement
 sphinx>=4.5.0
 furo
+sphinx_rtd_theme
+rst2pdf
 sphinxcontrib.mermaid
 sphinx-sitemap
 sphinxcontrib-googleanalytics

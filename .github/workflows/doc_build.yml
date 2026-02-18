@@ -322,30 +322,3 @@ jobs:
               });
             }
 
-  cleanup_pr_preview:
-    name: Cleanup PR preview (on close)
-    runs-on: ubuntu-latest
-    if: >-
-      ${{ github.event_name=='pull_request'&&github.event.action=='closed'}}
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-
-      - name: Remove pr folder and push
-        run: |
-          set -e
-          dir="pr-${{ github.event.pull_request.number }}"
-          if [ -d "$dir" ]; then
-            git config user.name "github-actions"
-            git config user.email "github-actions@github.com"
-            git rm -r "$dir"
-            git commit -m "chore(docs): remove PR preview $dir"
-            git push
-          else
-            echo "No preview folder $dir to remove"
-          fi

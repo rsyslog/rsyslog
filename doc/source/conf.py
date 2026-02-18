@@ -233,10 +233,21 @@ version = '8.2604'
 #release = '8.2604.0'
 release = version + ' daily stable'
 
+# Allow override from environment (e.g. Docker/CI builds without .git)
+_env_version = os.environ.get('RSYSLOG_DOC_VERSION')
+_env_release_type = os.environ.get('RSYSLOG_DOC_RELEASE_TYPE')
+if _env_version and _env_release_type:
+    version = _env_version
+    release_type = _env_release_type
+    release = f"{version} daily {release_type}"
+    rst_prolog = rst_prolog.format(
+        doc_build=release,
+        doc_commit='N/A',
+        doc_branch='N/A')
 # For this to be true, it means that we are not attempting to build from
 # a release tarball, as otherwise the values above would have been replaced
 # with official stable release values.
-if version == '8':
+elif version == '8':
 
     # Confirm that a .git folder is available. If not, skip all
     # following steps intended to generate daily stable build values for
