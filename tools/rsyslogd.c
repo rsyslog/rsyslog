@@ -125,7 +125,7 @@ int len;
 
     reply.svrreply.rtncode = msgno;
     /* AIXPORT :  srv was corrected to syslogd */
-    strcpy(reply.svrreply.objname, "syslogd");
+    RS_COPY_LITERAL(reply.svrreply.objname, "syslogd");
     snprintf(reply.svrreply.rtnmsg, SRCMIN(sizeof(reply.svrreply.rtnmsg) - 1, strlen(txt)), "%s", txt);
     srchdr = srcrrqs((char *)&srcpacket);
     srcsrpy(srchdr, (char *)&reply, len, cont);
@@ -576,7 +576,7 @@ static int forkRsyslog(void) {
     if (retval == -1)
         rs_strerror_r(errno, err, sizeof(err));
     else
-        strcpy(err, "OK");
+        RS_COPY_LITERAL(err, "OK");
     dbgprintf("rsyslogd: select() returns %d: %s\n", retval, err);
     if (retval == -1) {
         fprintf(stderr, "rsyslog startup failure, select() failed: %s\n", err);

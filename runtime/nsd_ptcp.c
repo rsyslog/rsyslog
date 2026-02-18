@@ -463,10 +463,10 @@ static void get_socket_info(const int sockfd, char *const connInfo) {
     /* local system info */
     local_addr.sin_port = 0; /* just to keep clang static analyzer happy */
     if (getsockname(sockfd, (struct sockaddr *)&local_addr, &local_addr_len) == -1) {
-        strcpy(local_ip_str, "?");
+        RS_COPY_LITERAL(local_ip_str, "?");
     } else {
         if (inet_ntop(AF_INET, &local_addr.sin_addr, local_ip_str, INET_ADDRSTRLEN) == NULL) {
-            strcpy(local_ip_str, "?");
+            RS_COPY_LITERAL(local_ip_str, "?");
         }
         local_port = ntohs(local_addr.sin_port);
     }
@@ -474,22 +474,22 @@ static void get_socket_info(const int sockfd, char *const connInfo) {
     /* remote system info */
     remote_addr.sin_port = 0; /* just to keep clang static analyzer happy */
     if (getpeername(sockfd, (struct sockaddr *)&remote_addr, &remote_addr_len) == -1) {
-        strcpy(remote_ip_str, "?");
+        RS_COPY_LITERAL(remote_ip_str, "?");
     } else {
         if (inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str, INET_ADDRSTRLEN) == NULL) {
-            strcpy(remote_ip_str, "?");
+            RS_COPY_LITERAL(remote_ip_str, "?");
         }
         remote_port = ntohs(remote_addr.sin_port);
     }
 
     if (local_port == -1) {
-        strcpy(local_port_str, "?");
+        RS_COPY_LITERAL(local_port_str, "?");
     } else {
         snprintf(local_port_str, 7, "%d", local_port);
         local_port_str[7] = '\0'; /* be on safe side */
     }
     if (remote_port == -1) {
-        strcpy(remote_port_str, "?");
+        RS_COPY_LITERAL(remote_port_str, "?");
     } else {
         snprintf(remote_port_str, 7, "%d", remote_port);
         remote_port_str[7] = '\0'; /* be on safe side */

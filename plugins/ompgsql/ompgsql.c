@@ -360,8 +360,8 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->trans_commit = 100;
     pData->trans_age = 60;
     pData->port = 5432;
-    strcpy(pData->user, "postgres");
-    strcpy(pData->pass, "postgres");
+    RS_COPY_LITERAL(pData->user, "postgres");
+    RS_COPY_LITERAL(pData->pass, "postgres");
 }
 
 BEGINnewActInst

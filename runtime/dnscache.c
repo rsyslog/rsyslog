@@ -320,9 +320,7 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        const char mockip[] = "?error.obtaining.ip?";
-        assert(sizeof(szIP) > sizeof(mockip));
-        strcpy(szIP, mockip);
+        RS_COPY_LITERAL(szIP, "?error.obtaining.ip?");
         error = 1; /* trigger hostname copies below! */
     }
 

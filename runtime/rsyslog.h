@@ -96,6 +96,7 @@
 /* src end */
 
 #include <pthread.h>
+#include <string.h>
 #include "typedefs.h"
 
 #if defined(__GNUC__)
@@ -784,6 +785,36 @@ enum rsRetVal_ {
 #define FINALIZE goto finalize_it;
 #define DEFiRet rsRetVal iRet = RS_RET_OK
 #define RETiRet return iRet
+
+#define RS_CONCAT_(a, b) a##b
+#define RS_CONCAT(a, b) RS_CONCAT_(a, b)
+
+/**
+ * @brief Compile-time assertion with a pre-C11 fallback.
+ *
+ * Uses C11 `_Static_assert` when available and otherwise falls back
+ * to a typedef-size check.
+ */
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+    #define RS_STATIC_ASSERT(condition, message) _Static_assert((condition), message)
+#else
+    #define RS_STATIC_ASSERT(condition, message) \
+        typedef char RS_CONCAT(rs_static_assertion_line_, __LINE__)[(condition) ? 1 : -1] ATTR_UNUSED
+#endif
+
+/**
+ * @brief Copy a string literal into a fixed-size destination buffer.
+ *
+ * The macro enforces at compile time that `dst` is large enough for
+ * `lit` (including the trailing NUL) and then performs a `memcpy`.
+ *
+ * @note Intended for true fixed-size arrays, not pointer destinations.
+ */
+#define RS_COPY_LITERAL(dst, lit)                                                     \
+    do {                                                                              \
+        RS_STATIC_ASSERT(sizeof(dst) >= sizeof(lit), "destination buffer too small"); \
+        memcpy((dst), (lit), sizeof(lit));                                            \
+    } while (0)
 
 #define ABORT_FINALIZE(errCode) \
     do {                        \
