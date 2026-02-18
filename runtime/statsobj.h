@@ -171,7 +171,45 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*GetAllStatsLines)(rsRetVal (*cb)(void *, const char *), void *usrptr, statsFmtType_t fmt,
                                  int8_t bResetCtr);
     rsRetVal (*GetAllCounters)(statsobj_counter_cb_t cb, void *ctx);
+    /**
+     * @brief Register a counter value with a stats object.
+     *
+     * The counter name is duplicated internally; the caller retains ownership
+     * of @p ctrName and may free/modify it after this call returns.
+     *
+     * @param pThis    target stats object
+     * @param ctrName  counter name (copied internally)
+     * @param ctrType  counter type
+     * @param flags    counter flags
+     * @param pCtr     pointer to caller-owned counter storage
+     *
+     * @note The storage referenced by @p pCtr must remain valid for at least
+     * the lifetime of the registered counter entry in @p pThis.
+     */
     rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
+    /**
+     * @brief Register a managed counter entry and optionally link it into
+     * the stats object's counter list.
+     *
+     * The counter name is duplicated internally; the caller retains ownership
+     * of @p ctrName and may free/modify it after this call returns.
+     *
+     * On success, @p ref receives the created entry handle, which can be used
+     * with `DestructCounter()` (if linked) or `DestructUnlinkedCounter()`
+     * (if not linked) according to the chosen lifecycle.
+     *
+     * @param pThis    target stats object
+     * @param ctrName  counter name (copied internally)
+     * @param ctrType  counter type
+     * @param flags    counter flags
+     * @param pCtr     pointer to caller-owned counter storage
+     * @param ref      out: created counter entry handle
+     * @param linked   if non-zero, entry is linked into @p pThis and follows
+     *                 object lifecycle unless explicitly destructed
+     *
+     * @note The storage referenced by @p pCtr must remain valid for at least
+     * the lifetime of the created counter entry.
+     */
     rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags,
                                   void *pCtr, ctr_t **ref, int8_t linked);
     void (*AddPreCreatedCtr)(statsobj_t *pThis, ctr_t *ctr);

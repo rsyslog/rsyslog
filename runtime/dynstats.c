@@ -172,55 +172,98 @@ static void dynstats_destroyBucket(dynstats_bucket_t *b) {
     free(b);
 }
 
+/**
+ * @brief Build one bucket meta-counter name and register it.
+ *
+ * Uses the caller-provided `metric_name_buff` layout:
+ * `"<bucket-name>.<suffix>"`, where `metric_suffix` points right after
+ * the separator. The suffix copy is bounded and explicitly NUL-terminated.
+ *
+ * @param global_stats      global dynstats stats object that owns the entry
+ * @param metric_name_buff  mutable full-name buffer reused across calls
+ * @param metric_suffix     write position for the suffix inside the buffer
+ * @param suffix_literal    counter suffix to append (e.g. "ops_overflow")
+ * @param counter           caller-owned counter storage to register
+ * @param counter_ref       out: created stats counter handle
+ *
+ * @note `statsobj.AddManagedCounter()` duplicates the counter name, so
+ * `metric_name_buff` only needs to remain valid for the duration of this call.
+ */
+static rsRetVal dynstats_addBucketMetaCounter(statsobj_t *global_stats,
+                                              uchar *metric_name_buff,
+                                              uchar *metric_suffix,
+                                              const uchar *suffix_literal,
+                                              intctr_t *counter,
+                                              ctr_t **counter_ref) {
+    ustrncpy(metric_suffix, suffix_literal, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    /* Clamp at fixed boundary in case source length reaches/exceeds max copy width. */
+    metric_suffix[DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH] = '\0';
+    return statsobj.AddManagedCounter(global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE, counter,
+                                      counter_ref, 1);
+}
+
+/**
+ * @brief Register the built-in meta counters for one dynstats bucket.
+ *
+ * This creates and registers counters like `ops_overflow`, `new_metric_add`,
+ * and related operational metrics under the global dynstats stats object.
+ *
+ * @param bkts  dynstats bucket collection that owns the global stats object
+ * @param b     bucket that owns the counter storage and resulting refs
+ * @param name  bucket name used as metric-name prefix
+ *
+ * @note Counter names are generated once during bucket creation time.
+ */
 static rsRetVal dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const uchar *name) {
     uchar *metric_name_buff, *metric_suffix;
-    const uchar *suffix_litteral;
-    int name_len;
+    const uchar *suffix_literal;
+    size_t name_len;
     DEFiRet;
 
     name_len = ustrlen(name);
-    CHKmalloc(metric_name_buff = malloc((name_len + DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH + 1) * sizeof(uchar)));
+    /* Layout: "<name>" + '.' + <suffix up to MAX> + '\0' => +2 avoids off-by-one overflow. */
+    CHKmalloc(metric_name_buff = malloc(name_len + DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH + 2));
 
-    strcpy((char *)metric_name_buff, (char *)name);
+    /* Name generation algorithm:
+     * 1) Seed reusable buffer with "<bucket-name>\0".
+     * 2) Move to the end and append '.' once.
+     * 3) For each suffix, overwrite only the suffix segment and terminate.
+     * This avoids repeated full-string formatting and keeps bounds explicit.
+     */
+    memcpy(metric_name_buff, name, name_len + 1);
     metric_suffix = metric_name_buff + name_len;
     *metric_suffix = DYNSTATS_METRIC_NAME_SEPARATOR;
     metric_suffix++;
 
-    suffix_litteral = UCHAR_CONSTANT("ops_overflow");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("ops_overflow");
     STATSCOUNTER_INIT(b->ctrOpsOverflow, b->mutCtrOpsOverflow);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrOpsOverflow), &b->pOpsOverflowCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrOpsOverflow), &b->pOpsOverflowCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("new_metric_add");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("new_metric_add");
     STATSCOUNTER_INIT(b->ctrNewMetricAdd, b->mutCtrNewMetricAdd);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrNewMetricAdd), &b->pNewMetricAddCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrNewMetricAdd), &b->pNewMetricAddCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("no_metric");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("no_metric");
     STATSCOUNTER_INIT(b->ctrNoMetric, b->mutCtrNoMetric);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrNoMetric), &b->pNoMetricCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrNoMetric), &b->pNoMetricCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("metrics_purged");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("metrics_purged");
     STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("ops_ignored");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("ops_ignored");
     STATSCOUNTER_INIT(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("purge_triggered");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+    suffix_literal = UCHAR_CONSTANT("purge_triggered");
     STATSCOUNTER_INIT(b->ctrPurgeTriggered, b->mutCtrPurgeTriggered);
-    CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                       &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr, 1));
+    CHKiRet(dynstats_addBucketMetaCounter(bkts->global_stats, metric_name_buff, metric_suffix, suffix_literal,
+                                          &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr));
 
 finalize_it:
     free(metric_name_buff);
@@ -462,6 +505,21 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Create and initialize a dynstats bucket from configuration values.
+ *
+ * The function allocates bucket state, initializes runtime/stat structures,
+ * registers per-bucket meta counters, optionally loads persisted state, and
+ * links the bucket into the active dynstats list.
+ *
+ * @param name                     bucket name
+ * @param resettable               whether bucket counters are resettable
+ * @param maxCardinality           maximum tracked metric keys in bucket
+ * @param unusedMetricLife         metric TTL in seconds
+ * @param persistStateInterval     persist after this many updates (0 disables)
+ * @param persistStateTimeInterval persist after this many seconds (0 disables)
+ * @param stateFileDirectory       optional directory for state files
+ */
 static rsRetVal dynstats_newBucket(const uchar *name,
                                    uint8_t resettable,
                                    uint32_t maxCardinality,
@@ -563,6 +621,14 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Process one `dyn_stats` config object and create the bucket.
+ *
+ * Parses config parameters, applies defaults, and forwards the normalized
+ * values to `dynstats_newBucket()`.
+ *
+ * @param o parsed config object for dynstats bucket creation
+ */
 rsRetVal dynstats_processCnf(struct cnfobj *o) {
     struct cnfparamvals *pvals;
     short i;
