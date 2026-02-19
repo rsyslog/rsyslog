@@ -1,4 +1,5 @@
 .. _param-mmjsontransform-policy:
+.. _mmjsontransform-policy:
 .. _mmjsontransform.parameter.input.policy:
 
 policy
