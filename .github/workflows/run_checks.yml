@@ -1725,6 +1725,8 @@ jobs:
         run: |
           chmod -R go+rw .
           docker run --rm --platform linux/arm64 \
+            -e HOST_UID="$(id -u)" \
+            -e HOST_GID="$(id -g)" \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -1732,6 +1734,7 @@ jobs:
             -w /rsyslog \
             rsyslog-arm-debug:arm64 bash -c '
               set -e
+              umask 022
               apt-get update
               apt-get install -y --no-install-recommends gdb procps
               rm -rf /var/lib/apt/lists/*
@@ -1739,7 +1742,7 @@ jobs:
               export LDFLAGS="-fsanitize=address"
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
               export TEST_MAX_RUNTIME=1200
-              export USE_AUTO_DEBUG=on
+              export USE_AUTO_DEBUG=off
               export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
               export RSYSLOG_DEBUGLOG="arm64-diskqueue.debuglog"
               ulimit -c unlimited
@@ -1772,7 +1775,23 @@ jobs:
                 --disable-elasticsearch-tests \
                 --disable-kafka-tests --disable-snmp-tests
               make -j8
+              set +e
               ./tests/diskqueue-oncorruption-missing-segment.sh
+              test_rc=$?
+              set -e
+              find tests -maxdepth 1 -type f \
+                \( -name "arm64-diskqueue.debuglog" \
+                -o -name "rstb_*" \
+                -o -name "core*" \
+                -o -name "failed-tests.log" \) \
+                -exec chown "$HOST_UID:$HOST_GID" {} + || true
+              find tests -maxdepth 1 -type f \
+                \( -name "arm64-diskqueue.debuglog" \
+                -o -name "rstb_*" \
+                -o -name "core*" \
+                -o -name "failed-tests.log" \) \
+                -exec chmod a+r {} + || true
+              exit "$test_rc"
             '
 
       - name: Collect test logs
