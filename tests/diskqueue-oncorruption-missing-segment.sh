@@ -64,7 +64,10 @@ create_missing_middle_segment() {
 }
 
 wait_shutdown_or_kill() {
-	local timeout_sec="${1:-${TB_TEST_TIMEOUT:-90}}"
+	# In full-suite ASAN runs on slower CI machines, shutdown in ignore mode can
+	# legitimately exceed the generic 90s testbench timeout. Use a dedicated,
+	# more conservative ceiling for this mode to avoid false negatives.
+	local timeout_sec="${1:-${RSTB_IGNORE_SHUTDOWN_TIMEOUT:-240}}"
 	local instance="${2:-}"
 	local pid_file="$RSYSLOG_PIDBASE${instance}.pid.save"
 	local pid

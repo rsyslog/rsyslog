@@ -1616,7 +1616,7 @@ jobs:
               else
                 export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
                 export LDFLAGS="-fsanitize=address"
-                export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
+                export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker \
                   --enable-imfile --disable-imfile-tests \
@@ -1746,7 +1746,7 @@ jobs:
               umask 022
               export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
               export LDFLAGS="-fsanitize=address"
-              export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
+              export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
               export TEST_MAX_RUNTIME=1200
               export USE_AUTO_DEBUG=off
               ulimit -c unlimited
