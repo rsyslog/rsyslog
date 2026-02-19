@@ -111,6 +111,9 @@ static rsRetVal doSubmitToActionQComplex(action_t *const pAction, wti_t *const p
 static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *const pWti, smsg_t *);
 static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWti);
 static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti);
+static inline int wtiShutdownImmediate(const wti_t *const pWti) {
+    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
+}
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj) DEFobjCurrIf(datetime) DEFobjCurrIf(module) DEFobjCurrIf(statsobj) DEFobjCurrIf(ruleset)
@@ -822,7 +825,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
     assert(pThis != NULL);
 
     iRetries = 0;
-    while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+    while ((wtiShutdownImmediate(pWti) == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
         if (actionIsDisabled(pThis)) {
             break;
         }
@@ -865,7 +868,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                     pThis->pszName, pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp,
                     iRetries);
                 srSleep(pThis->iResumeInterval, 0);
-                if (*pWti->pbShutdownImmediate) {
+                if (wtiShutdownImmediate(pWti)) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
             }
@@ -895,7 +898,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
 
     DBGPRINTF("actionDoRetry_extFile: enter, actionState: %d\n", getActionState(pWti, pThis));
     iRetries = 0;
-    while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+    while ((wtiShutdownImmediate(pWti) == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
         if (actionIsDisabled(pThis)) {
             break;
         }
@@ -926,7 +929,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
             } else {
                 ++iRetries;
                 srSleep(pThis->iResumeInterval, 0);
-                if (*pWti->pbShutdownImmediate) {
+                if (wtiShutdownImmediate(pWti)) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
             }
@@ -1784,7 +1787,7 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
         ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
     }
 
-    for (i = 0; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate; ++i) {
+    for (i = 0; i < batchNumMsgs(pBatch) && !wtiShutdownImmediate(pWti); ++i) {
         if (batchIsValidElem(pBatch, i)) {
             /* we do not check error state below, because aborting would be
              * more harmful than continuing.

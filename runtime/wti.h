@@ -75,6 +75,7 @@ struct wti_s {
         int bIsRunning; /* is this thread currently running? (must be int for atomic op!) */
         sbool bAlwaysRunning; /* should this thread always run? */
         int *pbShutdownImmediate; /* end processing of this batch immediately if set to 1 */
+        pthread_mutex_t *pmutShutdownImmediate; /* helper mutex for pbShutdownImmediate atomic access */
         wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
         batch_t batch; /* pointer to an object array meaningful for current user
                   pointer (e.g. queue pUsr data elemt) */

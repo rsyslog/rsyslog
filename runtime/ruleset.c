@@ -50,6 +50,7 @@
 #include "modules.h"
 #include "wti.h"
 #include "dirty.h" /* for main ruleset queue creation */
+#include "atomic.h"
 
 
 /* static data */
@@ -64,6 +65,9 @@ static struct cnfparamblk rspblk = {CNFPARAMBLK_VERSION, sizeof(rspdescr) / size
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
 static rsRetVal scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti);
+static inline int wtiShutdownImmediate(const wti_t *const pWti) {
+    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
+}
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -504,7 +508,7 @@ static rsRetVal ATTR_NONNULL(2, 3) scriptExec(struct cnfstmt *const root, smsg_t
     DEFiRet;
 
     for (stmt = root; stmt != NULL; stmt = stmt->next) {
-        if (*pWti->pbShutdownImmediate) {
+        if (wtiShutdownImmediate(pWti)) {
             DBGPRINTF(
                 "scriptExec: ShutdownImmediate set, "
                 "force terminating\n");
@@ -574,7 +578,7 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
     wtiResetExecState(pWti, pBatch);
 
     /* execution phase */
-    for (i = 0; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate); ++i) {
+    for (i = 0; i < batchNumMsgs(pBatch) && !wtiShutdownImmediate(pWti); ++i) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
         pRuleset = (pMsg->pRuleset == NULL) ? runConf->rulesets.pDflt : pMsg->pRuleset;

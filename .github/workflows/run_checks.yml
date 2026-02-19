@@ -1666,3 +1666,142 @@ jobs:
       - name: Skip ${{ matrix.arch }} CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping ${{ matrix.arch }} CI."
+
+  arm64_diskqueue_debug:
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    name: arm64 diskqueue debug
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: fetch upstream (for changed-files diff)
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+
+      - name: Check for relevant changes
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            tests/diskqueue-oncorruption-missing-segment.sh
+            tests/diag.sh
+            **/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
+            devtools/ci/Dockerfile.arm
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Set up Docker Buildx
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build arm64 debug image (cached)
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: devtools/ci/Dockerfile.arm
+          platforms: linux/arm64
+          tags: rsyslog-arm-debug:arm64
+          load: true
+          cache-from: type=gha,scope=arm-debug-arm64
+          cache-to: type=gha,mode=max,scope=arm-debug-arm64
+
+      - name: Run arm64 diskqueue debug testcase
+        if: steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          chmod -R go+rw .
+          docker run --rm --platform linux/arm64 \
+            --cap-add SYS_ADMIN \
+            --cap-add SYS_PTRACE \
+            --security-opt seccomp=unconfined \
+            -v "${{ github.workspace }}:/rsyslog" \
+            -w /rsyslog \
+            rsyslog-arm-debug:arm64 bash -c '
+              set -e
+              apt-get update
+              apt-get install -y --no-install-recommends gdb procps
+              rm -rf /var/lib/apt/lists/*
+              export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
+              export LDFLAGS="-fsanitize=address"
+              export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
+              export TEST_MAX_RUNTIME=1200
+              export USE_AUTO_DEBUG=on
+              export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+              export RSYSLOG_DEBUGLOG="arm64-diskqueue.debuglog"
+              ulimit -c unlimited
+              autoreconf -fvi
+              ./configure --enable-silent-rules --enable-testbench \
+                --enable-imdiag --disable-imdocker \
+                --enable-imfile --disable-imfile-tests \
+                --enable-impstats --enable-imptcp \
+                --enable-mmanon --enable-mmaudit \
+                --enable-mmfields --enable-mmjsonparse \
+                --enable-mmpstrucdata --enable-mmsequence \
+                --enable-mmutf8fix --enable-mail \
+                --enable-omprog --enable-improg \
+                --enable-omruleset --enable-omstdout \
+                --enable-omuxsock \
+                --disable-pmnormalize \
+                --enable-pmaixforwardedfrom --enable-pmciscoios \
+                --enable-pmcisconames --enable-pmlastmsg \
+                --enable-pmsnare --enable-libgcrypt \
+                --disable-mmnormalize --disable-omudpspoof \
+                --enable-relp --enable-mmsnmptrapd \
+                --enable-gnutls --enable-usertools \
+                --disable-mysql \
+                --disable-valgrind --disable-mmkubernetes \
+                --disable-omkafka --disable-imkafka \
+                --disable-ommongodb --disable-omrabbitmq \
+                --disable-mmdarwin \
+                --disable-helgrind --enable-uuid \
+                --disable-fmhttp \
+                --disable-elasticsearch-tests \
+                --disable-kafka-tests --disable-snmp-tests
+              make -j8
+              ./tests/diskqueue-oncorruption-missing-segment.sh
+            '
+
+      - name: Collect test logs
+        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
+        run: devtools/gather-check-logs.sh || true
+
+      - name: Upload arm64 diskqueue debug artifacts
+        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm64-diskqueue-debug-logs
+          path: |
+            tests/failed-tests.log
+            failed-tests.log
+            tests/arm64-diskqueue.debuglog
+            tests/rstb_*.log
+            tests/rstb_*.rsyslogd.log
+            tests/rstb_*.debuglog
+            tests/rstb_*.started
+            tests/core*
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: show error logs (if we errored)
+        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
+
+      - name: Skip arm64 diskqueue debug, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping arm64 diskqueue debug."
