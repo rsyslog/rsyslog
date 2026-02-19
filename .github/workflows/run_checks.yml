@@ -1743,8 +1743,6 @@ jobs:
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
               export TEST_MAX_RUNTIME=1200
               export USE_AUTO_DEBUG=off
-              export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-              export RSYSLOG_DEBUGLOG="arm64-diskqueue.debuglog"
               ulimit -c unlimited
               autoreconf -fvi
               ./configure --enable-silent-rules --enable-testbench \
@@ -1781,12 +1779,14 @@ jobs:
               set -e
               find tests -maxdepth 1 -type f \
                 \( -name "arm64-diskqueue.debuglog" \
+                -o -name "log" \
                 -o -name "rstb_*" \
                 -o -name "core*" \
                 -o -name "failed-tests.log" \) \
                 -exec chown "$HOST_UID:$HOST_GID" {} + || true
               find tests -maxdepth 1 -type f \
                 \( -name "arm64-diskqueue.debuglog" \
+                -o -name "log" \
                 -o -name "rstb_*" \
                 -o -name "core*" \
                 -o -name "failed-tests.log" \) \
@@ -1806,6 +1806,7 @@ jobs:
           path: |
             tests/failed-tests.log
             failed-tests.log
+            tests/log
             tests/arm64-diskqueue.debuglog
             tests/rstb_*.log
             tests/rstb_*.rsyslogd.log
@@ -1820,6 +1821,10 @@ jobs:
         run: |
           devtools/gather-check-logs.sh
           cat failed-tests.log
+          if [ -f tests/log ]; then
+            echo "===== tail -n 2000 tests/log ====="
+            tail -n 2000 tests/log
+          fi
 
       - name: Skip arm64 diskqueue debug, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
