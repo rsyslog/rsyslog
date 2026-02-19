@@ -1568,6 +1568,7 @@ jobs:
           chmod -R go+rw .
           docker run --rm --platform ${{ matrix.platform }} \
             -e ARCH=${{ matrix.arch }} \
+            --privileged \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -1578,6 +1579,12 @@ jobs:
               export CFLAGS="-g -O1 -fno-omit-frame-pointer"
               export CC=gcc
               export TEST_MAX_RUNTIME=1200
+              ulimit -c unlimited
+              if [ "$ARCH" = "arm64" ]; then
+                sysctl -w kernel.core_pattern=/rsyslog/tests/core.%e.%p
+                sysctl -w kernel.core_uses_pid=1
+                echo "core_pattern=$(cat /proc/sys/kernel/core_pattern)"
+              fi
               autoreconf -fvi
               if [ "$ARCH" = "armhf" ]; then
                 ./configure --enable-silent-rules --enable-testbench \
@@ -1654,6 +1661,7 @@ jobs:
           path: |
             tests/test-suite.log
             failed-tests.log
+            tests/core*
           retention-days: 7
           if-no-files-found: ignore
 
@@ -1727,6 +1735,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -e HOST_UID="$(id -u)" \
             -e HOST_GID="$(id -g)" \
+            --privileged \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
@@ -1735,15 +1744,15 @@ jobs:
             rsyslog-arm-debug:arm64 bash -c '
               set -e
               umask 022
-              apt-get update
-              apt-get install -y --no-install-recommends gdb procps
-              rm -rf /var/lib/apt/lists/*
               export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
               export LDFLAGS="-fsanitize=address"
               export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0"
               export TEST_MAX_RUNTIME=1200
               export USE_AUTO_DEBUG=off
               ulimit -c unlimited
+              sysctl -w kernel.core_pattern=/rsyslog/tests/core.%e.%p
+              sysctl -w kernel.core_uses_pid=1
+              echo "core_pattern=$(cat /proc/sys/kernel/core_pattern)"
               autoreconf -fvi
               ./configure --enable-silent-rules --enable-testbench \
                 --enable-imdiag --disable-imdocker \
