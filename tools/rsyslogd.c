@@ -84,6 +84,10 @@ static int emitTZWarning = 0;
 static int emitTZWarning = 1;
 #endif
 static pthread_t mainthread = 0;
+#ifdef HAVE_LIBSYSTEMD
+static int systemdWatchdogEnabled = 0;
+static uint64_t systemdWatchdogUsec = 0;
+#endif
 
 #if defined(_AIX)
     /* AIXPORT : start
@@ -2093,6 +2097,23 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
 
     tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
     tvSelectTimeout.tv_nsec = 0;
+#ifdef HAVE_LIBSYSTEMD
+    if (systemdWatchdogEnabled && systemdWatchdogUsec > 0) {
+        const uint64_t watchdogWaitUsec = systemdWatchdogUsec / 2;
+        time_t watchdogSec = watchdogWaitUsec / 1000000;
+        long watchdogNsec = (watchdogWaitUsec % 1000000) * 1000;
+
+        if (watchdogSec == 0 && watchdogNsec == 0) {
+            watchdogNsec = 1000000; /* 1ms minimum to avoid a busy loop */
+        }
+
+        if (watchdogSec < tvSelectTimeout.tv_sec ||
+            (watchdogSec == tvSelectTimeout.tv_sec && watchdogNsec < tvSelectTimeout.tv_nsec)) {
+            tvSelectTimeout.tv_sec = watchdogSec;
+            tvSelectTimeout.tv_nsec = watchdogNsec;
+        }
+    }
+#endif
 
 #ifdef _AIX
     if (!src_exists) {
@@ -2264,6 +2285,12 @@ static void mainloop(void) {
         wait_timeout(&origmask);
         pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
 
+#ifdef HAVE_LIBSYSTEMD
+        if (systemdWatchdogEnabled) {
+            sd_notify(0, "WATCHDOG=1");
+        }
+#endif
+
         janitorRun();
 
         assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
@@ -2432,6 +2459,10 @@ int main(int argc, char **argv) {
 
     initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
+    if (sd_watchdog_enabled(0, &systemdWatchdogUsec) > 0) {
+        systemdWatchdogEnabled = 1;
+        dbgprintf("systemd watchdog enabled with interval %llu usec\n", (unsigned long long)systemdWatchdogUsec);
+    }
     sd_notify(0, "READY=1");
     dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
