@@ -2099,18 +2099,16 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
     tvSelectTimeout.tv_nsec = 0;
 #ifdef HAVE_LIBSYSTEMD
     if (systemdWatchdogEnabled && systemdWatchdogUsec > 0) {
-        const uint64_t watchdogWaitUsec = systemdWatchdogUsec / 2;
-        time_t watchdogSec = watchdogWaitUsec / 1000000;
-        long watchdogNsec = (watchdogWaitUsec % 1000000) * 1000;
+        uint64_t watchdogWaitUsec = systemdWatchdogUsec / 2;
+        const uint64_t janitorTimeoutUsec = (uint64_t)tvSelectTimeout.tv_sec * 1000000 + tvSelectTimeout.tv_nsec / 1000;
 
-        if (watchdogSec == 0 && watchdogNsec == 0) {
-            watchdogNsec = 1000000; /* 1ms minimum to avoid a busy loop */
+        if (watchdogWaitUsec == 0) {
+            watchdogWaitUsec = 1000; /* 1ms minimum to avoid a busy loop */
         }
 
-        if (watchdogSec < tvSelectTimeout.tv_sec ||
-            (watchdogSec == tvSelectTimeout.tv_sec && watchdogNsec < tvSelectTimeout.tv_nsec)) {
-            tvSelectTimeout.tv_sec = watchdogSec;
-            tvSelectTimeout.tv_nsec = watchdogNsec;
+        if (watchdogWaitUsec < janitorTimeoutUsec) {
+            tvSelectTimeout.tv_sec = watchdogWaitUsec / 1000000;
+            tvSelectTimeout.tv_nsec = (watchdogWaitUsec % 1000000) * 1000;
         }
     }
 #endif
