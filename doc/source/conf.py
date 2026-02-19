@@ -380,9 +380,11 @@ suppress_warnings = ['epub.unknown_project_files']
 # -- Options for HTML output ---------------------------------------------------
 
 # The base URL which points to the root of the HTML documentation.
-# It is used to indicate the location of document like canonical_url.
-RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
-html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
+# It is used to indicate the location of document like canonical_url and sitemap.
+# DOC_BASE_URL env (e.g. https://docs.rsyslog.com) overrides when set (CI deploy).
+RSYSLOG_BASE_URL = 'https://docs.rsyslog.com'
+_doc_base = os.environ.get('DOC_BASE_URL', '').rstrip('/')
+html_baseurl = f'{_doc_base}/doc/' if _doc_base else f'{RSYSLOG_BASE_URL}/doc/'
 
 DISABLE_JSON_LD = os.environ.get('DISABLE_JSON_LD', '').lower() in ('1', 'true', 'yes')
 ENABLE_JSON_LD = not DISABLE_JSON_LD
