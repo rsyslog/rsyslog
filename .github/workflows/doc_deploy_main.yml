@@ -3,6 +3,7 @@ name: Deploy documentation to GitHub Pages
 # Builds docs with Google Analytics and deploys to https://<site>/doc/
 # Uses rsyslog/rsyslog_dev_doc_base_ubuntu:22.04 Docker container for the Sphinx build.
 # Add GOOGLE_ANALYTICS_ID as a repository secret before use.
+# Set DOC_BASE_URL repository variable (e.g. https://docs.rsyslog.com) for Sitemap base; otherwise uses github.io URL.
 
 on:
   push:
@@ -28,11 +29,13 @@ jobs:
       - name: Build documentation in Docker container
         env:
           GOOGLE_ANALYTICS_ID: ${{ secrets.GOOGLE_ANALYTICS_ID }}
+          DOC_BASE_URL: ${{ vars.DOC_BASE_URL }}
         run: |
           chmod +x doc/tools/inside_docker_doc_html.sh
           docker run --rm \
             -u "$(id -u):$(id -g)" \
             -e GOOGLE_ANALYTICS_ID \
+            -e DOC_BASE_URL \
             -e PYTHONUNBUFFERED=1 \
             -v "$(pwd)":/rsyslog \
             --entrypoint /rsyslog/doc/tools/inside_docker_doc_html.sh \
@@ -61,14 +64,17 @@ jobs:
           path: preview-site
 
       - name: Prepare Pages artifact with /doc/ subdirectory
+        env:
+          DOC_BASE_URL: ${{ vars.DOC_BASE_URL }}
         run: |
           set -e
           mkdir -p pages-deployment/doc
           rsync -a --delete preview-site/ pages-deployment/doc/
           cp doc/tools/pages-root-index.html pages-deployment/index.html
-          # robots.txt: allow only /doc/, sitemap URL from github.repository
+          # robots.txt: allow only /doc/, sitemap URL from DOC_BASE_URL or github.repository
           REPO="${{ github.repository }}"
-          BASE="https://${REPO%/*}.github.io/${REPO#*/}"
+          DEFAULT_BASE="https://${REPO%/*}.github.io/${REPO#*/}"
+          BASE="${DOC_BASE_URL:-$DEFAULT_BASE}"
           {
             sed '/^# Sitemap/d' doc/tools/pages-robots.txt
             echo "Sitemap: ${BASE}/doc/sitemap.xml"
