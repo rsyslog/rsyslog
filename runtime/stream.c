@@ -712,7 +712,7 @@ static rsRetVal strmReadBuf(strm_t *pThis, int *padBytes) {
         }
         iLenRead = read(pThis->fd, pThis->pIOBuf, toRead);
         DBGOPRINT((obj_t *)pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
-        DBGOPRINT((obj_t *)pThis, "file %d read %*s\n", pThis->fd, (unsigned)iLenRead, (char *)pThis->pIOBuf);
+        DBGOPRINT((obj_t *)pThis, "file %d read %.*s\n", pThis->fd, (int)iLenRead, (char *)pThis->pIOBuf);
         /* end crypto */
         if (iLenRead == 0) {
             CHKiRet(strmHandleEOF(pThis));

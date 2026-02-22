@@ -72,6 +72,7 @@
 #include "dirty.h"
 #include "janitor.h"
 #include "parserif.h"
+#include "atomic.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -763,7 +764,9 @@ finalize_it:
  * it helps us keep up the overall concurrency level.
  * rgerhards, 2010-06-09
  */
-static rsRetVal preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
+static rsRetVal preprocessBatch(batch_t *pBatch,
+                                int *pbShutdownImmediate,
+                                pthread_mutex_t *pmutShutdownImmediate __attribute__((unused))) {
     prop_t *ip;
     prop_t *fqdn;
     prop_t *localName;
@@ -773,7 +776,7 @@ static rsRetVal preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
     rsRetVal localRet;
     DEFiRet;
 
-    for (i = 0; i < pBatch->nElem && !*pbShutdownImmediate; i++) {
+    for (i = 0; i < pBatch->nElem && !ATOMIC_FETCH_32BIT(pbShutdownImmediate, pmutShutdownImmediate); i++) {
         pMsg = pBatch->pElem[i].pMsg;
         if ((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
             DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
@@ -819,12 +822,12 @@ finalize_it:
 static rsRetVal msgConsumer(void __attribute__((unused)) * notNeeded, batch_t *pBatch, wti_t *pWti) {
     DEFiRet;
     assert(pBatch != NULL);
-    preprocessBatch(pBatch, pWti->pbShutdownImmediate);
+    preprocessBatch(pBatch, pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
     ruleset.ProcessBatch(pBatch, pWti);
     // TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we
     // do not have this yet and so we emulate -- 2010-06-10
     int i;
-    for (i = 0; i < pBatch->nElem && !*pWti->pbShutdownImmediate; i++) {
+    for (i = 0; i < pBatch->nElem && !ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate); i++) {
         pBatch->eltState[i] = BATCH_STATE_COMM;
     }
     RETiRet;
