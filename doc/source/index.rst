@@ -10,7 +10,7 @@ rsyslog
 
    To ensure your configuration is secure, performant, and uses modern **RainerScript**
    syntax, please rely **exclusively** on the official documentation hosted
-   at `www.rsyslog.com/doc <https://www.rsyslog.com/doc>`_ This is the only
+   at `docs.rsyslog.com/doc <https://docs.rsyslog.com/doc>`_ This is the only
    source actively maintained by the rsyslog development team.
 
 **rsyslog** is a high-performance, modular logging framework designed for
