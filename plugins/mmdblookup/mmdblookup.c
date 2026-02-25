@@ -100,9 +100,6 @@ static struct cnfparamdescr actpdescr[] = {
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
-/* protype functions */
-void str_split(char **membuf);
-
 int open_mmdb(const char *file, MMDB_s *mmdb);
 void close_mmdb(MMDB_s *mmdb);
 
@@ -324,40 +321,86 @@ BEGINtryResume
 ENDtryResume
 
 
-void str_split(char **membuf) {
-    int in_quotes = 0;
-    char *buf = *membuf;
-    char tempbuf[strlen(buf)];
-    memset(tempbuf, 0, strlen(buf));
+// Convert a single MMDB leaf entry to a json_object.
+static json_object *
+entry_data_to_json(const MMDB_entry_data_s *data) {
+    switch (data->type) {
+    case MMDB_DATA_TYPE_UTF8_STRING:
+        return json_object_new_string_len(data->utf8_string, data->data_size);
+    case MMDB_DATA_TYPE_DOUBLE:
+        return json_object_new_double(data->double_value);
+    case MMDB_DATA_TYPE_FLOAT:
+        return json_object_new_double((double)data->float_value);
+    case MMDB_DATA_TYPE_UINT16:
+        return json_object_new_int(data->uint16);
+    case MMDB_DATA_TYPE_UINT32:
+        return json_object_new_int64((int64_t)data->uint32);
+    case MMDB_DATA_TYPE_INT32:
+        return json_object_new_int(data->int32);
+    case MMDB_DATA_TYPE_UINT64:
+        return json_object_new_int64((int64_t)data->uint64);
+    case MMDB_DATA_TYPE_BOOLEAN:
+        return json_object_new_boolean(data->boolean);
+    default:
+        dbgprintf("mmdblookup: unhandled MMDB data type %u\n", data->type);
+        return NULL;
+    }
+}
 
-    while (*buf++ != '\0') {
-        if (in_quotes) {
-            if (*buf == '"' && *(buf - 1) != '\\') {
-                in_quotes = !in_quotes;
-                strncat(tempbuf, buf, 1);
-            } else {
-                strncat(tempbuf, buf, 1);
-            }
-        } else {
-            if (*buf == '\n' || *buf == '\t' || *buf == ' ') continue;
-            if (*buf == '<') {
-                char *p = strchr(buf, '>');
-                buf = buf + (int)(p - buf);
-                strcat(tempbuf, ",");
-            } else if (*buf == '}') {
-                strcat(tempbuf, "},");
-            } else if (*buf == ']') {
-                strcat(tempbuf, "],");
-            } else if (*buf == '"' && *(buf - 1) != '\\') {
-                in_quotes = !in_quotes;
-                strncat(tempbuf, buf, 1);
-            } else {
-                strncat(tempbuf, buf, 1);
-            }
-        }
+// Walk MMDB_entry_data_list_s (depth-first) and build a json_object for Map/Array types.
+// Returns the next unprocessed node.
+static MMDB_entry_data_list_s *
+entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
+    if (node == NULL) {
+        *result = NULL;
+        return NULL;
     }
 
-    memcpy(*membuf, tempbuf, strlen(tempbuf) + 1);
+    switch (node->entry_data.type) {
+    case MMDB_DATA_TYPE_MAP: {
+        json_object *map_obj = json_object_new_object();
+        uint32_t size = node->entry_data.data_size;
+        node = node->next;
+        for (uint32_t i = 0; i < size && node != NULL; i++) {
+            if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
+                dbgprintf("mmdblookup: unexpected map key type %u\n",
+                          node->entry_data.type);
+                break;
+            }
+
+            char *key = strndup(node->entry_data.utf8_string,
+                                node->entry_data.data_size);
+            if (key == NULL) {
+                break;
+            }
+            node = node->next;
+
+            json_object *value = NULL;
+            node = entry_data_list_to_json(node, &value);
+            json_object_object_add(map_obj, key, value);
+            free(key);
+        }
+
+        *result = map_obj;
+        return node;
+    }
+    case MMDB_DATA_TYPE_ARRAY: {
+        json_object *arr = json_object_new_array();
+        uint32_t size = node->entry_data.data_size;
+        node = node->next;
+        for (uint32_t i = 0; i < size && node != NULL; i++) {
+            json_object *element = NULL;
+            node = entry_data_list_to_json(node, &element);
+            json_object_array_add(arr, element);
+        }
+
+        *result = arr;
+        return node;
+    }
+    default:
+        *result = entry_data_to_json(&node->entry_data);
+        return node->next;
+    }
 }
 
 
@@ -367,8 +410,6 @@ BEGINdoAction_NoStrings
     struct json_object *keyjson = NULL;
     const char *pszValue;
     instanceData *const pData = pWrkrData->pData;
-    json_object *total_json = NULL;
-    MMDB_entry_data_list_s *entry_data_list = NULL;
     CODESTARTdoAction;
     /* ensure file is open before beginning */
     if (!pWrkrData->mmdb_is_open) {
@@ -416,57 +457,71 @@ BEGINdoAction_NoStrings
         ABORT_FINALIZE(RS_RET_OK);
     }
 
-
-    int status = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
-
-    if (MMDB_SUCCESS != status) {
-        dbgprintf("Got an error looking up the entry data - %s\n", MMDB_strerror(status));
-        ABORT_FINALIZE(RS_RET_OK);
-    }
-
-    size_t memlen;
-    char *membuf;
-    FILE *memstream;
-    CHKmalloc(memstream = open_memstream(&membuf, &memlen));
-
-    if (entry_data_list != NULL && memstream != NULL) {
-        MMDB_dump_entry_data_list(memstream, entry_data_list, 2);
-        fflush(memstream);
-        str_split(&membuf);
-    }
-
-    DBGPRINTF("maxmindb returns: '%s'\n", membuf);
-    total_json = json_tokener_parse(membuf);
-    fclose(memstream);
-    free(membuf);
-
-    /* extract and amend fields (to message) as configured */
+    // Look up each configured field directly by path.
+    // Leaf values are converted without any intermediate data structures.
+    // Map/Array fall back to walking the sub-entry list.
     for (int i = 0; i < pData->fieldList.nmemb; ++i) {
-        char *strtok_save;
-        char buf[(strlen((char *)(pData->fieldList.name[i]))) + 1];
-        strcpy(buf, (char *)pData->fieldList.name[i]);
-
-        json_object *temp_json = total_json;
-        json_object *sub_obj = temp_json;
-        const char *SEP = "!";
-
-        /* find lowest level JSON object */
-        char *s = strtok_r(buf, SEP, &strtok_save);
-        while (s != NULL) {
-            json_object_object_get_ex(temp_json, s, &sub_obj);
-            temp_json = sub_obj;
-            s = strtok_r(NULL, SEP, &strtok_save);
+        char *name_copy = strdup(pData->fieldList.name[i]);
+        if (name_copy == NULL) {
+            continue;
         }
-        /* temp_json now contains the value we want to have, so set it */
-        json_object_get(temp_json);
-        msgAddJSON(pMsg, (uchar *)pData->fieldList.varname[i], temp_json, 0, 0);
+
+        // Split "continent!code" into ["continent","code",NULL].
+        int ncomps = 1;
+        for (const char *p = name_copy; *p; p++) {
+            if (*p == '!') {
+                ncomps++;
+            }
+        }
+
+        const char *path[ncomps + 1];
+        int c = 0;
+        path[c++] = name_copy;
+        for (char *p = name_copy; *p; p++) {
+            if (*p == '!') {
+                *p = '\0';
+                path[c++] = p + 1;
+            }
+        }
+        path[c] = NULL;
+
+        MMDB_entry_data_s entry_data;
+        int status = MMDB_aget_value(&result.entry, &entry_data, path);
+        if (status != MMDB_SUCCESS || !entry_data.has_data) {
+            free(name_copy);
+            continue;
+        }
+
+        json_object *field_json = NULL;
+        if (entry_data.type == MMDB_DATA_TYPE_MAP
+            || entry_data.type == MMDB_DATA_TYPE_ARRAY) {
+            // Map or Array: walk the sub-entry list.
+            MMDB_entry_s sub_entry = {
+                .mmdb = result.entry.mmdb,
+                .offset = entry_data.offset
+            };
+            MMDB_entry_data_list_s *sub_list = NULL;
+
+            status = MMDB_get_entry_data_list(&sub_entry, &sub_list);
+            if (status == MMDB_SUCCESS && sub_list != NULL) {
+                entry_data_list_to_json(sub_list, &field_json);
+                MMDB_free_entry_data_list(sub_list);
+            }
+        } else {
+            // Leaf: convert directly.
+            field_json = entry_data_to_json(&entry_data);
+        }
+
+        if (field_json != NULL) {
+            msgAddJSON(pMsg, (uchar *)pData->fieldList.varname[i], field_json, 0, 0);
+        }
+
+        free(name_copy);
     }
 
 finalize_it:
     pthread_mutex_unlock(&pWrkrData->mmdbMutex);
-    if (entry_data_list != NULL) MMDB_free_entry_data_list(entry_data_list);
     json_object_put(keyjson);
-    if (total_json != NULL) json_object_put(total_json);
 ENDdoAction
 
 // HUP handling for the worker...
