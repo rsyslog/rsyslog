@@ -164,6 +164,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/omhttp-ratelimit-burst.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omhttp-ratelimit-name`
+     - .. include:: ../../reference/parameters/omhttp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omhttp-errorfile`
      - .. include:: ../../reference/parameters/omhttp-errorfile.rst
         :start-after: .. summary-start
@@ -241,6 +245,7 @@ Input Parameters
    ../../reference/parameters/omhttp-retry-addmetadata
    ../../reference/parameters/omhttp-ratelimit-interval
    ../../reference/parameters/omhttp-ratelimit-burst
+   ../../reference/parameters/omhttp-ratelimit-name
    ../../reference/parameters/omhttp-errorfile
    ../../reference/parameters/omhttp-compress
    ../../reference/parameters/omhttp-compress-level

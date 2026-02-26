@@ -90,6 +90,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imuxsock-syssock-ratelimit-severity.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-ratelimit-name`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imuxsock-syssock-usesystimestamp`
      - .. include:: ../../reference/parameters/imuxsock-syssock-usesystimestamp.rst
         :start-after: .. summary-start
@@ -150,6 +154,10 @@ Input Parameters
         :end-before: .. summary-end
    * - :ref:`param-imuxsock-ratelimit-severity`
      - .. include:: ../../reference/parameters/imuxsock-ratelimit-severity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ratelimit-name`
+     - .. include:: ../../reference/parameters/imuxsock-ratelimit-name.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imuxsock-usepidfromsystem`
@@ -539,6 +547,7 @@ system log socket.
    ../../reference/parameters/imuxsock-syssock-ratelimit-interval
    ../../reference/parameters/imuxsock-syssock-ratelimit-burst
    ../../reference/parameters/imuxsock-syssock-ratelimit-severity
+   ../../reference/parameters/imuxsock-syssock-ratelimit-name
    ../../reference/parameters/imuxsock-syssock-usesystimestamp
    ../../reference/parameters/imuxsock-syssock-annotate
    ../../reference/parameters/imuxsock-syssock-parsetrusted
@@ -552,6 +561,7 @@ system log socket.
    ../../reference/parameters/imuxsock-ratelimit-interval
    ../../reference/parameters/imuxsock-ratelimit-burst
    ../../reference/parameters/imuxsock-ratelimit-severity
+   ../../reference/parameters/imuxsock-ratelimit-name
    ../../reference/parameters/imuxsock-usepidfromsystem
    ../../reference/parameters/imuxsock-usesystimestamp
    ../../reference/parameters/imuxsock-createpath

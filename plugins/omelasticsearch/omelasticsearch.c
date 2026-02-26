@@ -165,8 +165,9 @@ typedef struct instanceConf_s {
     uchar *myPrivKeyFile;
     es_write_ops_t writeOperation;
     sbool retryFailures;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    uchar *pszRatelimitName;
     /* for retries */
     ratelimit_t *ratelimiter;
     uchar *retryRulesetName;
@@ -240,6 +241,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"retryfailures", eCmdHdlrBinary, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"retryruleset", eCmdHdlrString, 0},
                                            {"rebindinterval", eCmdHdlrInt, 0},
                                            {"esversion.major", eCmdHdlrPositiveInt, 0}};
@@ -351,6 +353,7 @@ BEGINfreeInstance
     free(pData->retryRulesetName);
     free(pData->detectedVersionString);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
+    free(pData->pszRatelimitName);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -2178,9 +2181,10 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->myPrivKeyFile = NULL;
     pData->writeOperation = ES_WRITE_INDEX;
     pData->retryFailures = 0;
-    pData->ratelimitBurst = 20000;
-    pData->ratelimitInterval = 600;
+    pData->ratelimitBurst = -1;
+    pData->ratelimitInterval = -1;
     pData->ratelimiter = NULL;
+    pData->pszRatelimitName = NULL;
     pData->retryRulesetName = NULL;
     pData->retryRuleset = NULL;
     pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
@@ -2309,9 +2313,11 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "retryfailures")) {
             pData->retryFailures = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
-            pData->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            pData->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
-            pData->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            pData->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
+            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "retryruleset")) {
             pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "rebindinterval")) {
@@ -2324,6 +2330,19 @@ BEGINnewActInst
                      "non-handled param '%s'",
                      actpblk.descr[i].name);
         }
+    }
+
+    if (pData->pszRatelimitName != NULL) {
+        if (pData->ratelimitInterval != -1 || pData->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omelasticsearch: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+        pData->ratelimitInterval = 0;
+        pData->ratelimitBurst = 0;
+    } else {
+        if (pData->ratelimitInterval == -1) pData->ratelimitInterval = 600;
+        if (pData->ratelimitBurst == -1) pData->ratelimitBurst = 20000;
     }
 
     if (pData->apiKey != NULL && (pData->uid != NULL || pData->pwd != NULL)) {
@@ -2474,8 +2493,14 @@ BEGINnewActInst
     }
 
     if (pData->retryFailures) {
-        CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
-        ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
+        if (pData->pszRatelimitName != NULL) {
+            CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
+                                           "omelasticsearch", NULL));
+        } else {
+            CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
+            ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval,
+                                  (unsigned)pData->ratelimitBurst);
+        }
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
 

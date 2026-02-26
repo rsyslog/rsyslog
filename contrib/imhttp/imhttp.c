@@ -110,8 +110,9 @@ struct instanceConf_s {
     uchar *pszBasicAuthFile; /* file containing basic auth users/pass */
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
     ratelimit_t *ratelimiter;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    uchar *pszRatelimitName;
     uchar *pszInputName; /* value for inputname property, NULL is OK and handled by core engine */
     prop_t *pInputName;
     sbool flowControl;
@@ -162,6 +163,7 @@ static struct cnfparamdescr inppdescr[] = {{"endpoint", eCmdHdlrString, 0},
                                            {"name", eCmdHdlrString, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"addmetadata", eCmdHdlrBinary, 0}};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -218,8 +220,9 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ratelimiter = NULL;
     inst->pszInputName = NULL;
     inst->pInputName = NULL;
-    inst->ratelimitBurst = 10000; /* arbitrary high limit */
-    inst->ratelimitInterval = 0; /* off */
+    inst->ratelimitBurst = -1;
+    inst->ratelimitInterval = -1;
+    inst->pszRatelimitName = NULL;
     inst->flowControl = 1;
     inst->bDisableLFDelim = 0;
     inst->bSuppOctetFram = 0;
@@ -1069,9 +1072,11 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
             inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             inst->flowControl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -1088,13 +1093,31 @@ BEGINnewInpInst
         }
     }
 
+    if (inst->pszRatelimitName != NULL) {
+        if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imhttp: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+        inst->ratelimitInterval = 0;
+        inst->ratelimitBurst = 0;
+    } else {
+        if (inst->ratelimitInterval == -1) inst->ratelimitInterval = 0;
+        if (inst->ratelimitBurst == -1) inst->ratelimitBurst = 10000;
+    }
+
     if (inst->pszInputName) {
         CHKiRet(prop.Construct(&inst->pInputName));
         CHKiRet(prop.SetString(inst->pInputName, inst->pszInputName, ustrlen(inst->pszInputName)));
         CHKiRet(prop.ConstructFinalize(inst->pInputName));
     }
-    CHKiRet(ratelimitNew(&inst->ratelimiter, "imphttp", NULL));
-    ratelimitSetLinuxLike(inst->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    if (inst->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&inst->ratelimiter, loadModConf->pConf, (char *)inst->pszRatelimitName, "imhttp",
+                                       NULL));
+    } else {
+        CHKiRet(ratelimitNew(&inst->ratelimiter, "imhttp", NULL));
+        ratelimitSetLinuxLike(inst->ratelimiter, (unsigned)inst->ratelimitInterval, (unsigned)inst->ratelimitBurst);
+    }
 
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
@@ -1336,6 +1359,7 @@ BEGINfreeCnf
         free(inst->pszBasicAuthFile);
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
+        free(inst->pszRatelimitName);
 
         del = inst;
         inst = inst->next;

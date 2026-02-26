@@ -99,7 +99,8 @@ static struct cnfparamdescr modpdescr[] = {{"ruleset", eCmdHdlrString, 0},
                                            {"keepkerneltimestamp", eCmdHdlrBinary, 0},
                                            {"internalmsgfacility", eCmdHdlrFacility, 0},
                                            {"ratelimitinterval", eCmdHdlrInt, 0},
-                                           {"ratelimitburst", eCmdHdlrInt, 0}};
+                                           {"ratelimitburst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 static prop_t *pInputName = NULL;
@@ -316,8 +317,9 @@ BEGINbeginCnfLoad
     pModConf->iFacilIntMsg = klogFacilIntMsg();
     loadModConf->configSetViaV2Method = 0;
     pModConf->ratelimiter = NULL;
-    pModConf->ratelimitBurst = 10000; /* arbitrary high limit */
-    pModConf->ratelimitInterval = 0; /* off */
+    pModConf->ratelimitBurst = -1;
+    pModConf->ratelimitInterval = -1;
+    pModConf->pszRatelimitName = NULL;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config vars */
     initConfigSettings();
@@ -356,9 +358,11 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
             loadModConf->iFacilIntMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimitburst")) {
-            loadModConf->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            loadModConf->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimitinterval")) {
-            loadModConf->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            loadModConf->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
+            loadModConf->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
@@ -367,6 +371,17 @@ BEGINsetModCnf
                    "beginCnfLoad\n",
                    modpblk.descr[i].name);
         }
+    }
+
+    if (loadModConf->pszRatelimitName != NULL) {
+        if (loadModConf->ratelimitInterval != -1 || loadModConf->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imklog: ratelimit.name is mutually exclusive with "
+                     "ratelimitinterval and ratelimitburst - using ratelimit.name");
+        }
+    } else {
+        if (loadModConf->ratelimitInterval == -1) loadModConf->ratelimitInterval = 0;
+        if (loadModConf->ratelimitBurst == -1) loadModConf->ratelimitBurst = 10000;
     }
 
     /* disable legacy module-global config directives */
@@ -415,8 +430,14 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
     CODESTARTactivateCnf;
-    CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
-    ratelimitSetLinuxLike(runModConf->ratelimiter, runModConf->ratelimitInterval, runModConf->ratelimitBurst);
+    if (runModConf->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&runModConf->ratelimiter, runModConf->pConf,
+                                       (char *)runModConf->pszRatelimitName, "imklog", NULL));
+    } else {
+        CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
+        ratelimitSetLinuxLike(runModConf->ratelimiter, (unsigned)runModConf->ratelimitInterval,
+                              (unsigned)runModConf->ratelimitBurst);
+    }
 finalize_it:
 ENDactivateCnf
 
@@ -424,6 +445,7 @@ ENDactivateCnf
 BEGINfreeCnf
     CODESTARTfreeCnf;
     free(pModConf->pszBindRuleset);
+    free(pModConf->pszRatelimitName);
 ENDfreeCnf
 
 
@@ -436,7 +458,7 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
-    ratelimitDestruct(runModConf->ratelimiter);
+    if (runModConf->ratelimiter != NULL) ratelimitDestruct(runModConf->ratelimiter);
     iRet = klogAfterRun(runModConf);
 ENDafterRun
 

@@ -43,6 +43,7 @@ struct modConfData_s {
     ratelimit_t *ratelimiter;
     int ratelimitInterval;
     int ratelimitBurst;
+    uchar *pszRatelimitName;
     ruleset_t *pBindRuleset; /* ruleset to bind (use system default if unspecified) */
     uchar *pszBindRuleset;
 };

@@ -577,6 +577,27 @@ RateLimit.Burst
 Specifies the rate-limiting burst in number of messages.
 
 
+RateLimit.Name
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the name of the rate limit to use. This allows multiple actions to share
+the same rate limiting configuration (and state). The name refers to a global
+rate limit object defined in the configuration.
+
+This parameter is mutually exclusive with ``ratelimit.interval`` and
+``ratelimit.burst``. If ``ratelimit.name`` is specified, local per-action
+limits cannot be defined and any attempt to do so will result in an error.
+
+.. versionadded:: 8.2602.0
+
+
 StreamDriver
 ^^^^^^^^^^^^
 

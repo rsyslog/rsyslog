@@ -64,6 +64,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imklog-ratelimitburst.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imklog-ratelimit-name`
+     - .. include:: ../../reference/parameters/imklog-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Caveats/Known Bugs
@@ -136,5 +140,6 @@ Unsupported |FmtObsoleteName| directives
    ../../reference/parameters/imklog-logpath
    ../../reference/parameters/imklog-ratelimitinterval
    ../../reference/parameters/imklog-ratelimitburst
+   ../../reference/parameters/imklog-ratelimit-name
 
 

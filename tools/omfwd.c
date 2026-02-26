@@ -145,8 +145,9 @@ typedef struct _instanceData {
     uint8_t compressionMode;
     sbool strmCompFlushOnTxEnd; /* flush stream compression on transaction end? */
     unsigned poolResumeInterval;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    uchar *pszRatelimitName;
     ratelimit_t *ratelimiter;
     targetStats_t *target_stats;
 } instanceData;
@@ -259,7 +260,8 @@ static struct cnfparamdescr actpdescr[] = {
     {"template", eCmdHdlrGetWord, 0},
     {"pool.resumeinterval", eCmdHdlrPositiveInt, 0},
     {"ratelimit.interval", eCmdHdlrInt, 0},
-    {"ratelimit.burst", eCmdHdlrInt, 0}};
+    {"ratelimit.burst", eCmdHdlrInt, 0},
+    {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 struct modConfData_s {
@@ -862,6 +864,7 @@ BEGINfreeInstance
     free((void *)pData->pszStrmDrvrCRLFile);
     free((void *)pData->pszStrmDrvrKeyFile);
     free((void *)pData->pszStrmDrvrCertFile);
+    free(pData->pszRatelimitName);
     net.DestructPermittedPeers(&pData->pPermPeers);
     if (pData->ratelimiter != NULL) {
         ratelimitDestruct(pData->ratelimiter);
@@ -1848,8 +1851,9 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
     pData->poolResumeInterval = 30;
     pData->ratelimiter = NULL;
-    pData->ratelimitInterval = 0;
-    pData->ratelimitBurst = 200;
+    pData->ratelimitInterval = -1;
+    pData->ratelimitBurst = -1;
+    pData->pszRatelimitName = NULL;
 }
 
 
@@ -2113,13 +2117,28 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "pool.resumeinterval")) {
             pData->poolResumeInterval = (unsigned int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
-            pData->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            pData->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
-            pData->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            pData->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
+            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: program error, non-handled parameter '%s'",
                      actpblk.descr[i].name);
         }
+    }
+
+    if (pData->pszRatelimitName != NULL) {
+        if (pData->ratelimitInterval != -1 || pData->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omfwd: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+        pData->ratelimitInterval = 0;
+        pData->ratelimitBurst = 0;
+    } else {
+        if (pData->ratelimitInterval == -1) pData->ratelimitInterval = 0;
+        if (pData->ratelimitBurst == -1) pData->ratelimitBurst = 200;
     }
 
     if (pData->targetSrv != NULL && pData->target_name != NULL) {
@@ -2197,9 +2216,13 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter \"address\" not supported for tcp -- ignored");
     }
 
-    if (pData->ratelimitInterval > 0) {
+    if (pData->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
+                                       "omfwd", NULL));
+        ratelimitSetNoTimeCache(pData->ratelimiter);
+    } else if (pData->ratelimitInterval > 0) {
         CHKiRet(ratelimitNew(&pData->ratelimiter, "omfwd", NULL));
-        ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
+        ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval, (unsigned)pData->ratelimitBurst);
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
 

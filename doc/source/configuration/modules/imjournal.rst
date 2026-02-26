@@ -77,6 +77,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imjournal-ratelimit-burst.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imjournal-ratelimit-name`
+     - .. include:: ../../reference/parameters/imjournal-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imjournal-ignorepreviousmessages`
      - .. include:: ../../reference/parameters/imjournal-ignorepreviousmessages.rst
         :start-after: .. summary-start
@@ -143,6 +147,7 @@ Parameters specific to the input module.
    ../../reference/parameters/imjournal-statefile
    ../../reference/parameters/imjournal-ratelimit-interval
    ../../reference/parameters/imjournal-ratelimit-burst
+   ../../reference/parameters/imjournal-ratelimit-name
    ../../reference/parameters/imjournal-ignorepreviousmessages
    ../../reference/parameters/imjournal-defaultseverity
    ../../reference/parameters/imjournal-defaultfacility

@@ -213,9 +213,10 @@ struct instanceConf_s {
     sbool bWritePid; /* use credentials from recvmsg() and fixup PID in TAG */
     sbool bUseSysTimeStamp; /* use timestamp from system (instead of from message) */
     int bCreatePath; /* auto-create socket path? */
-    unsigned int ratelimitInterval; /* interval in seconds, 0 = off */
-    unsigned int ratelimitBurst; /* max nbr of messages in interval */
+    int ratelimitInterval; /* interval in seconds, 0 = off */
+    int ratelimitBurst; /* max nbr of messages in interval */
     int ratelimitSeverity;
+    uchar *pszRatelimitName;
     int bAnnotate; /* annotate trusted properties */
     int bParseTrusted; /* parse trusted properties */
     sbool bDiscardOwnMsgs; /* discard messages that originated from our own pid? */
@@ -231,9 +232,10 @@ struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     instanceConf_t *root, *tail;
     uchar *pLogSockName;
-    unsigned int ratelimitIntervalSysSock;
-    unsigned int ratelimitBurstSysSock;
+    int ratelimitIntervalSysSock;
+    int ratelimitBurstSysSock;
     int ratelimitSeveritySysSock;
+    uchar *pszRatelimitNameSysSock;
     int bAnnotateSysSock;
     int bParseTrusted;
     int bUseSpecialParser;
@@ -265,7 +267,8 @@ static struct cnfparamdescr modpdescr[] = {{"syssock.use", eCmdHdlrBinary, 0},
                                            {"syssock.usepidfromsystem", eCmdHdlrBinary, 0},
                                            {"syssock.ratelimit.interval", eCmdHdlrInt, 0},
                                            {"syssock.ratelimit.burst", eCmdHdlrInt, 0},
-                                           {"syssock.ratelimit.severity", eCmdHdlrInt, 0}};
+                                           {"syssock.ratelimit.severity", eCmdHdlrInt, 0},
+                                           {"syssock.ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* input instance parameters */
@@ -286,7 +289,8 @@ static struct cnfparamdescr inppdescr[] = {
     {"ruleset", eCmdHdlrString, 0},
     {"ratelimit.interval", eCmdHdlrInt, 0},
     {"ratelimit.burst", eCmdHdlrInt, 0},
-    {"ratelimit.severity", eCmdHdlrInt, 0}};
+    {"ratelimit.severity", eCmdHdlrInt, 0},
+    {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -305,9 +309,10 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pLogHostName = NULL;
     inst->pszBindRuleset = NULL;
     inst->pBindRuleset = NULL;
-    inst->ratelimitInterval = DFLT_ratelimitInterval;
-    inst->ratelimitBurst = DFLT_ratelimitBurst;
+    inst->ratelimitInterval = -1;
+    inst->ratelimitBurst = -1;
     inst->ratelimitSeverity = DFLT_ratelimitSeverity;
+    inst->pszRatelimitName = NULL;
     inst->bUseFlowCtl = 0;
     inst->bUseSpecialParser = DFLT_bUseSpecialParser;
     inst->bParseHost = UNSET;
@@ -398,7 +403,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
         CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
         CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
     }
-    if (inst->ratelimitInterval > 0) {
+    if (inst->pszRatelimitName != NULL || inst->ratelimitInterval > 0) {
         if ((listeners[nfd].ht =
                  create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))ratelimitDestruct)) == NULL) {
             /* in this case, we simply turn off rate-limiting */
@@ -406,6 +411,8 @@ static rsRetVal addListner(instanceConf_t *inst) {
                 "imuxsock: turning off rate limiting because we could not "
                 "create hash table\n");
             inst->ratelimitInterval = 0;
+            free(inst->pszRatelimitName);
+            inst->pszRatelimitName = NULL;
         }
     } else {
         listeners[nfd].ht = NULL;
@@ -418,7 +425,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].bCreatePath = inst->bCreatePath;
     listeners[nfd].sockName = ustrdup(inst->sockName);
     listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval ||
-                                inst->bAnnotate || inst->bUseSysTimeStamp)
+                                inst->pszRatelimitName || inst->bAnnotate || inst->bUseSysTimeStamp)
                                    ? 1
                                    : 0;
     listeners[nfd].bAnnotate = inst->bAnnotate;
@@ -429,9 +436,14 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
     listeners[nfd].bUseSpecialParser = inst->bUseSpecialParser;
     listeners[nfd].pRuleset = inst->pBindRuleset;
-    CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
-    ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter, listeners[nfd].ratelimitInterval,
-                          listeners[nfd].ratelimitBurst);
+    if (inst->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&listeners[nfd].dflt_ratelimiter, runModConf->pConf,
+                                       (char *)inst->pszRatelimitName, "imuxsock", NULL));
+    } else {
+        CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
+        ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter, listeners[nfd].ratelimitInterval,
+                              listeners[nfd].ratelimitBurst);
+    }
     ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter, listeners[nfd].ratelimitSev);
     nfd++;
 
@@ -1107,7 +1119,7 @@ static rsRetVal activateListeners(void) {
             }
         }
 #endif
-        if (runModConf->ratelimitIntervalSysSock > 0) {
+        if (runModConf->pszRatelimitNameSysSock != NULL || runModConf->ratelimitIntervalSysSock > 0) {
             if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
@@ -1126,11 +1138,11 @@ static rsRetVal activateListeners(void) {
         listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
         listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
         listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-        listeners[0].bUseCreds =
-            (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock ||
-             runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
-                ? 1
-                : 0;
+        listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock ||
+                                  runModConf->pszRatelimitNameSysSock || runModConf->bAnnotateSysSock ||
+                                  runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
+                                     ? 1
+                                     : 0;
         listeners[0].bWritePid = runModConf->bWritePidSysSock;
         listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
         listeners[0].bParseTrusted = runModConf->bParseTrusted;
@@ -1141,9 +1153,14 @@ static rsRetVal activateListeners(void) {
         listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
         listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
         listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-        CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
-        ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter, listeners[0].ratelimitInterval,
-                              listeners[0].ratelimitBurst);
+        if (runModConf->pszRatelimitNameSysSock != NULL) {
+            CHKiRet(ratelimitNewFromConfig(&listeners[0].dflt_ratelimiter, runModConf->pConf,
+                                           (char *)runModConf->pszRatelimitNameSysSock, "imuxsock", NULL));
+        } else {
+            CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
+            ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter, listeners[0].ratelimitInterval,
+                                  listeners[0].ratelimitBurst);
+        }
         ratelimitSetSeverity(listeners[0].dflt_ratelimiter, listeners[0].ratelimitSev);
     }
 
@@ -1196,9 +1213,10 @@ BEGINbeginCnfLoad
      */
     pModConf->bDiscardOwnMsgs = pConf->globals.bProcessInternalMessages;
     pModConf->bUnlink = 1;
-    pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
-    pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
+    pModConf->ratelimitIntervalSysSock = -1;
+    pModConf->ratelimitBurstSysSock = -1;
     pModConf->ratelimitSeveritySysSock = DFLT_ratelimitSeverity;
+    pModConf->pszRatelimitNameSysSock = NULL;
     bLegacyCnfModGlobalsPermitted = 1;
     /* reset legacy config vars */
     resetConfigVariables(NULL, NULL);
@@ -1249,17 +1267,30 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
             loadModConf->bWritePidSysSock = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
-            loadModConf->ratelimitIntervalSysSock = (unsigned int)pvals[i].val.d.n;
+            loadModConf->ratelimitIntervalSysSock = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.burst")) {
-            loadModConf->ratelimitBurstSysSock = (unsigned int)pvals[i].val.d.n;
+            loadModConf->ratelimitBurstSysSock = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.severity")) {
             loadModConf->ratelimitSeveritySysSock = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.name")) {
+            loadModConf->pszRatelimitNameSysSock = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "
                 "param '%s' in beginCnfLoad\n",
                 modpblk.descr[i].name);
         }
+    }
+
+    if (loadModConf->pszRatelimitNameSysSock != NULL) {
+        if (loadModConf->ratelimitIntervalSysSock != -1 || loadModConf->ratelimitBurstSysSock != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imuxsock: syssock.ratelimit.name is mutually exclusive with "
+                     "syssock.ratelimit.interval and syssock.ratelimit.burst - using syssock.ratelimit.name");
+        }
+    } else {
+        if (loadModConf->ratelimitIntervalSysSock == -1) loadModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
+        if (loadModConf->ratelimitBurstSysSock == -1) loadModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
     }
 
     /* disable legacy module-global config directives */
@@ -1322,11 +1353,13 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
             inst->ratelimitSeverity = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "
@@ -1334,6 +1367,18 @@ BEGINnewInpInst
                 inppblk.descr[i].name);
         }
     }
+
+    if (inst->pszRatelimitName != NULL) {
+        if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imuxsock: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+    } else {
+        if (inst->ratelimitInterval == -1) inst->ratelimitInterval = DFLT_ratelimitInterval;
+        if (inst->ratelimitBurst == -1) inst->ratelimitBurst = DFLT_ratelimitBurst;
+    }
+
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
@@ -1432,10 +1477,12 @@ BEGINfreeCnf
     instanceConf_t *inst, *del;
     CODESTARTfreeCnf;
     free(pModConf->pLogSockName);
+    free(pModConf->pszRatelimitNameSysSock);
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->sockName);
         free(inst->pszBindRuleset);
         free(inst->pLogHostName);
+        free(inst->pszRatelimitName);
         del = inst;
         inst = inst->next;
         free(del);

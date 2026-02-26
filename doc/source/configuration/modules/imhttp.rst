@@ -264,6 +264,26 @@ RateLimit.Burst
 Specifies the rate-limiting burst in number of messages.
 
 
+RateLimit.Name
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "none", "none"
+
+Sets the name of the rate limit to use. This allows multiple listeners to share
+the same rate limiting configuration (and state). The name refers to a global
+rate limit object defined in the configuration.
+
+This parameter is mutually exclusive with ``ratelimit.interval`` and
+``ratelimit.burst``. If ``ratelimit.name`` is specified, local per-listener
+limits cannot be defined and any attempt to do so will result in an error.
+
+.. versionadded:: 8.2602.0
+
 
 flowControl
 ^^^^^^^^^^^

@@ -238,6 +238,13 @@ TESTS_DEFAULT = \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
 	imudp_ratelimit_name.sh \
+	omfwd_ratelimit_name.sh \
+	omelasticsearch_ratelimit_name.sh \
+	omhttp_ratelimit_name.sh \
+	imhttp_ratelimit_name.sh \
+	imjournal_ratelimit_name.sh \
+	imklog_ratelimit_name.sh \
+	imuxsock_ratelimit_name.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
@@ -597,7 +604,11 @@ TESTS_IMTCP_VALGRIND = \
 TESTS_RATELIMIT = \
 	ratelimit_exclusivity.sh \
 	ratelimit_name.sh \
-	ratelimit_duplicate.sh
+	ratelimit_duplicate.sh \
+	omfwd_ratelimit_name.sh \
+	omelasticsearch_ratelimit_name.sh \
+	imklog_ratelimit_name.sh \
+	imuxsock_ratelimit_name.sh
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh
@@ -756,7 +767,8 @@ TESTS_OMHTTP_FLAKY_VALGRIND = \
 
 TESTS_IMJOURNAL = \
 	imjournal-basic.sh \
-	imjournal-statefile.sh
+	imjournal-statefile.sh \
+	imjournal_ratelimit_name.sh
 
 TESTS_IMJOURNAL_VALGRIND = \
 	imjournal-basic-vg.sh \
@@ -833,7 +845,8 @@ TESTS_OMHTTP = \
 	omhttp-httpheaderkey.sh \
 	omhttp-multiplehttpheaders.sh \
 	omhttp-dynrestpath.sh \
-	omhttp-batch-dynrestpath.sh
+	omhttp-batch-dynrestpath.sh \
+	omhttp_ratelimit_name.sh
 
 TESTS_OMHTTP_VALGRIND = \
         omhttp-auth-vg.sh \
@@ -916,7 +929,8 @@ TESTS_IMHTTP = \
 	imhttp-post-payload-compress.sh \
 	imhttp-getrequest-file.sh \
 	imhttp-healthcheck.sh \
-	imhttp-metrics.sh
+	imhttp-metrics.sh \
+	imhttp_ratelimit_name.sh
 
 TESTS_IMHTTP_VALGRIND = \
 	imhttp-post-payload-vg.sh \

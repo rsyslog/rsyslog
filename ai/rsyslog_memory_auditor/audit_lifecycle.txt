@@ -1,0 +1,15 @@
+You are a senior C security and performance auditor. Analyze the following rsyslog module code specifically for global and instance lifecycle symmetry.
+
+**Audit Focus: Lifecycle Symmetry**
+
+1. **Module Lifecycle**:
+   - Verify `modInit` and `modExit` balance global resource allocations (mutexes, global hashes, etc.).
+   - Ensure `createInstance` results in a fully initialized `pData` that `freeInstance` can safely clean up (even if only partially initialized).
+
+2. **Worker Symmetry**:
+   - Check that `createWrkrInstance` and `freeWrkrInstance` are balanced.
+   - Look for thread-local storage or resources that might not be cleaned up if a thread terminates unexpectedly.
+
+**Output**:
+- List any identified symmetry issues (e.g., "Mutex initialized in modInit but not destroyed in modExit").
+- Verify if `freeInstance` handles NULL pointers safely.

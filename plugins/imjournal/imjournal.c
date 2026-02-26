@@ -87,8 +87,9 @@ static struct configSettings_s {
     char *stateFile;
     int fCreateMode; /* default mode to use when creating new files, e.g. stateFile */
     int iPersistStateInterval;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    char *pszRatelimitName;
     int bIgnorePrevious;
     int bIgnoreNonValidStatefile;
     int iDfltSeverity;
@@ -108,6 +109,7 @@ static struct cnfparamdescr modpdescr[] = {{"statefile", eCmdHdlrGetWord, 0},
                                            {"filecreatemode", eCmdHdlrFileCreateMode, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"persiststateinterval", eCmdHdlrInt, 0},
                                            {"ignorepreviousmessages", eCmdHdlrBinary, 0},
                                            {"ignorenonvalidstatefile", eCmdHdlrBinary, 0},
@@ -1036,9 +1038,14 @@ static void stopSrvWrkr(journal_etry_t *const etry) {
 
 BEGINrunInput
     CODESTARTrunInput;
-    CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
-    dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", cs.ratelimitBurst, cs.ratelimitInterval);
-    ratelimitSetLinuxLike(ratelimiter, cs.ratelimitInterval, cs.ratelimitBurst);
+    if (cs.pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&ratelimiter, runModConf->pConf, cs.pszRatelimitName, "imjournal", NULL));
+    } else {
+        CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
+        dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", (unsigned)cs.ratelimitBurst,
+                  (unsigned)cs.ratelimitInterval);
+        ratelimitSetLinuxLike(ratelimiter, (unsigned)cs.ratelimitInterval, (unsigned)cs.ratelimitBurst);
+    }
     ratelimitSetNoTimeCache(ratelimiter);
 
     /* handling old "usepidfromsystem" option */
@@ -1076,8 +1083,9 @@ BEGINbeginCnfLoad
     cs.iPersistStateInterval = DFLT_persiststateinterval;
     cs.stateFile = NULL;
     cs.fCreateMode = 0644;
-    cs.ratelimitBurst = 20000;
-    cs.ratelimitInterval = 600;
+    cs.ratelimitBurst = -1;
+    cs.ratelimitInterval = -1;
+    cs.pszRatelimitName = NULL;
     cs.iDfltSeverity = DFLT_SEVERITY;
     cs.iDfltFacility = DFLT_FACILITY;
     cs.bUseJnlPID = -1;
@@ -1228,6 +1236,8 @@ BEGINfreeCnf
     free(cs.stateFile);
     free(cs.usePid);
     free(cs.dfltTag);
+    free(cs.pszRatelimitName);
+    cs.pszRatelimitName = NULL;
     statsobj.Destruct(&(statsCounter.stats));
 ENDfreeCnf
 
@@ -1266,6 +1276,8 @@ BEGINafterRun
     if (ratelimiter) {
         ratelimitDestruct(ratelimiter);
     }
+    free(cs.pszRatelimitName);
+    cs.pszRatelimitName = NULL;
 ENDafterRun
 
 
@@ -1311,9 +1323,12 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "filecreatemode")) {
             cs.fCreateMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
-            cs.ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            cs.ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
-            cs.ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            cs.ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
+            free(cs.pszRatelimitName);
+            cs.pszRatelimitName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
             cs.bIgnorePrevious = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
@@ -1347,6 +1362,17 @@ BEGINsetModCnf
                 "param '%s' in beginCnfLoad\n",
                 modpblk.descr[i].name);
         }
+    }
+
+    if (cs.pszRatelimitName != NULL) {
+        if (cs.ratelimitInterval != -1 || cs.ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imjournal: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+    } else {
+        if (cs.ratelimitInterval == -1) cs.ratelimitInterval = 600;
+        if (cs.ratelimitBurst == -1) cs.ratelimitBurst = 20000;
     }
 
 finalize_it:
