@@ -44,6 +44,7 @@
 #include "maxminddb.h"
 
 #define JSON_IPLOOKUP_NAME "!iplocation"
+#define MAX_MMDB_FIELD_DEPTH 16
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -475,19 +476,17 @@ BEGINdoAction_NoStrings
         }
 
         // Split "continent!code" into ["continent","code",NULL].
-        int ncomps = 1;
-        for (const char *p = name_copy; *p; p++) {
-            if (*p == '!') {
-                ncomps++;
-            }
-        }
-
-        const char *path[ncomps + 1];
+        const char *path[MAX_MMDB_FIELD_DEPTH + 1];
         int c = 0;
         path[c++] = name_copy;
         for (char *p = name_copy; *p; p++) {
             if (*p == '!') {
                 *p = '\0';
+                if (c >= MAX_MMDB_FIELD_DEPTH) {
+                    dbgprintf("mmdblookup: field path exceeds %d components\n",
+                              MAX_MMDB_FIELD_DEPTH);
+                    break;
+                }
                 path[c++] = p + 1;
             }
         }
