@@ -323,94 +323,93 @@ ENDtryResume
 
 
 // Convert a single MMDB leaf entry to a json_object.
-static json_object *
-entry_data_to_json(const MMDB_entry_data_s *data) {
+static json_object *entry_data_to_json(const MMDB_entry_data_s *data) {
     switch (data->type) {
-    case MMDB_DATA_TYPE_UTF8_STRING:
-        return json_object_new_string_len(data->utf8_string, data->data_size);
-    case MMDB_DATA_TYPE_DOUBLE:
-        return json_object_new_double(data->double_value);
-    case MMDB_DATA_TYPE_FLOAT:
-        return json_object_new_double((double)data->float_value);
-    case MMDB_DATA_TYPE_UINT16:
-        return json_object_new_int(data->uint16);
-    case MMDB_DATA_TYPE_UINT32:
-        return json_object_new_int64((int64_t)data->uint32);
-    case MMDB_DATA_TYPE_INT32:
-        return json_object_new_int(data->int32);
-    case MMDB_DATA_TYPE_UINT64:
-        return json_object_new_int64((int64_t)data->uint64);
-    case MMDB_DATA_TYPE_BOOLEAN:
-        return json_object_new_boolean(data->boolean);
-    default:
-        dbgprintf("mmdblookup: unhandled MMDB data type %u\n", data->type);
-        return NULL;
+        case MMDB_DATA_TYPE_UTF8_STRING:
+            return json_object_new_string_len(data->utf8_string, data->data_size);
+        case MMDB_DATA_TYPE_DOUBLE:
+            return json_object_new_double(data->double_value);
+        case MMDB_DATA_TYPE_FLOAT:
+            return json_object_new_double((double)data->float_value);
+        case MMDB_DATA_TYPE_UINT16:
+            return json_object_new_int(data->uint16);
+        case MMDB_DATA_TYPE_UINT32:
+            return json_object_new_int64((int64_t)data->uint32);
+        case MMDB_DATA_TYPE_INT32:
+            return json_object_new_int(data->int32);
+        case MMDB_DATA_TYPE_UINT64:
+            return json_object_new_int64((int64_t)data->uint64);
+        case MMDB_DATA_TYPE_BOOLEAN:
+            return json_object_new_boolean(data->boolean);
+        default:
+            dbgprintf("mmdblookup: unhandled MMDB data type %u\n", data->type);
+            return NULL;
     }
 }
 
 // Walk MMDB_entry_data_list_s (depth-first) and build a json_object for Map/Array types.
 // Returns the next unprocessed node.
-static MMDB_entry_data_list_s *
-entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
+static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
     if (node == NULL) {
         *result = NULL;
         return NULL;
     }
 
     switch (node->entry_data.type) {
-    case MMDB_DATA_TYPE_MAP: {
-        json_object *map_obj = json_object_new_object();
-        if (map_obj == NULL) {
-            *result = NULL;
-            return NULL;
-        }
-        uint32_t size = node->entry_data.data_size;
-        node = node->next;
-        for (uint32_t i = 0; i < size && node != NULL; i++) {
-            if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
-                dbgprintf("mmdblookup: unexpected map key type %u\n",
-                          node->entry_data.type);
-                node = NULL;
-                break;
+        case MMDB_DATA_TYPE_MAP: {
+            json_object *map_obj = json_object_new_object();
+            if (map_obj == NULL) {
+                *result = NULL;
+                return NULL;
             }
 
-            char *key = strndup(node->entry_data.utf8_string,
-                                node->entry_data.data_size);
-            if (key == NULL) {
-                node = NULL;
-                break;
-            }
+            uint32_t size = node->entry_data.data_size;
             node = node->next;
+            for (uint32_t i = 0; i < size && node != NULL; i++) {
+                if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
+                    dbgprintf("mmdblookup: unexpected map key type %u\n", node->entry_data.type);
+                    node = NULL;
+                    break;
+                }
 
-            json_object *value = NULL;
-            node = entry_data_list_to_json(node, &value);
-            json_object_object_add(map_obj, key, value);
-            free(key);
-        }
+                char *key = strndup(node->entry_data.utf8_string, node->entry_data.data_size);
+                if (key == NULL) {
+                    node = NULL;
+                    break;
+                }
 
-        *result = map_obj;
-        return node;
-    }
-    case MMDB_DATA_TYPE_ARRAY: {
-        json_object *arr = json_object_new_array();
-        if (arr == NULL) {
-            *result = NULL;
-            return NULL;
-        }
-        uint32_t size = node->entry_data.data_size;
-        node = node->next;
-        for (uint32_t i = 0; i < size && node != NULL; i++) {
-            json_object *element = NULL;
-            node = entry_data_list_to_json(node, &element);
-            json_object_array_add(arr, element);
-        }
+                node = node->next;
 
-        *result = arr;
-        return node;
-    }
-    default:
-        *result = entry_data_to_json(&node->entry_data);
-        return node->next;
+                json_object *value = NULL;
+                node = entry_data_list_to_json(node, &value);
+                json_object_object_add(map_obj, key, value);
+                free(key);
+            }
+
+            *result = map_obj;
+            return node;
+        }
+        case MMDB_DATA_TYPE_ARRAY: {
+            json_object *arr = json_object_new_array();
+            if (arr == NULL) {
+                *result = NULL;
+                return NULL;
+            }
+
+            uint32_t size = node->entry_data.data_size;
+            node = node->next;
+            for (uint32_t i = 0; i < size && node != NULL; i++) {
+                json_object *element = NULL;
+                node = entry_data_list_to_json(node, &element);
+                json_object_array_add(arr, element);
+            }
+
+            *result = arr;
+            return node;
+        }
+        default:
+            *result = entry_data_to_json(&node->entry_data);
+            return node->next;
     }
 }
 
@@ -485,8 +484,7 @@ BEGINdoAction_NoStrings
             if (*p == '!') {
                 *p = '\0';
                 if (c >= MAX_MMDB_FIELD_DEPTH) {
-                    dbgprintf("mmdblookup: field path exceeds %d components\n",
-                              MAX_MMDB_FIELD_DEPTH);
+                    dbgprintf("mmdblookup: field path exceeds %d components\n", MAX_MMDB_FIELD_DEPTH);
                     break;
                 }
                 path[c++] = p + 1;
@@ -502,13 +500,9 @@ BEGINdoAction_NoStrings
         }
 
         json_object *field_json = NULL;
-        if (entry_data.type == MMDB_DATA_TYPE_MAP
-            || entry_data.type == MMDB_DATA_TYPE_ARRAY) {
+        if (entry_data.type == MMDB_DATA_TYPE_MAP || entry_data.type == MMDB_DATA_TYPE_ARRAY) {
             // Map or Array: walk the sub-entry list.
-            MMDB_entry_s sub_entry = {
-                .mmdb = result.entry.mmdb,
-                .offset = entry_data.offset
-            };
+            MMDB_entry_s sub_entry = {.mmdb = result.entry.mmdb, .offset = entry_data.offset};
             MMDB_entry_data_list_s *sub_list = NULL;
 
             status = MMDB_get_entry_data_list(&sub_entry, &sub_list);
