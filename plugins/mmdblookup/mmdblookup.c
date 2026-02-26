@@ -370,12 +370,14 @@ entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
             if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
                 dbgprintf("mmdblookup: unexpected map key type %u\n",
                           node->entry_data.type);
+                node = NULL;
                 break;
             }
 
             char *key = strndup(node->entry_data.utf8_string,
                                 node->entry_data.data_size);
             if (key == NULL) {
+                node = NULL;
                 break;
             }
             node = node->next;
