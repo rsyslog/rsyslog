@@ -359,6 +359,10 @@ entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
     switch (node->entry_data.type) {
     case MMDB_DATA_TYPE_MAP: {
         json_object *map_obj = json_object_new_object();
+        if (map_obj == NULL) {
+            *result = NULL;
+            return NULL;
+        }
         uint32_t size = node->entry_data.data_size;
         node = node->next;
         for (uint32_t i = 0; i < size && node != NULL; i++) {
@@ -386,6 +390,10 @@ entry_data_list_to_json(MMDB_entry_data_list_s *node, json_object **result) {
     }
     case MMDB_DATA_TYPE_ARRAY: {
         json_object *arr = json_object_new_array();
+        if (arr == NULL) {
+            *result = NULL;
+            return NULL;
+        }
         uint32_t size = node->entry_data.data_size;
         node = node->next;
         for (uint32_t i = 0; i < size && node != NULL; i++) {
