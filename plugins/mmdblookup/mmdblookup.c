@@ -479,18 +479,24 @@ BEGINdoAction_NoStrings
         // Split "continent!code" into ["continent","code",NULL].
         const char *path[MAX_MMDB_FIELD_DEPTH + 1];
         int c = 0;
+        int is_truncated = 0;
         path[c++] = name_copy;
         for (char *p = name_copy; *p; p++) {
             if (*p == '!') {
                 *p = '\0';
                 if (c >= MAX_MMDB_FIELD_DEPTH) {
                     dbgprintf("mmdblookup: field path exceeds %d components\n", MAX_MMDB_FIELD_DEPTH);
+                    is_truncated = 1;
                     break;
                 }
                 path[c++] = p + 1;
             }
         }
         path[c] = NULL;
+        if (is_truncated) {
+            free(name_copy);
+            continue;
+        }
 
         MMDB_entry_data_s entry_data;
         int status = MMDB_aget_value(&result.entry, &entry_data, path);
