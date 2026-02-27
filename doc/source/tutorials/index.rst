@@ -18,7 +18,6 @@ These tutorials cover specific rsyslog features and use cases.
    impstats_push_victoriametrics
    log_sampling
    random_sampling
-   rosi_hetzner
    hash_sampling
 
 Related
@@ -28,4 +27,3 @@ For complete production deployment guides, see:
 
 - :doc:`../deployments/index` - Production-ready deployment stacks
 - :doc:`../deployments/rosi_collector/index` - ROSI Collector with Grafana dashboards
-- :doc:`rosi_hetzner` - Step-by-step Hetzner Cloud deployment

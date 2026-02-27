@@ -81,8 +81,6 @@ EXTRA_DIST = \
     source/_static/dashboard-node.png \
     source/_static/docker-logs.png \
     source/_static/rosi-overview.png \
-    source/_static/rosi-hetzner-docker-compose.png \
-    source/_static/rosi-hetzner-grafana.png \
     source/_static/rsyslog.css \
     source/_static/vendor/README.md \
     source/_static/vendor/d3/d3.min.js \
@@ -1191,7 +1189,6 @@ EXTRA_DIST = \
     source/tutorials/log_sampling.rst \
     source/tutorials/random_sampling.rst \
     source/tutorials/recording_pri.rst \
-    source/tutorials/rosi_hetzner.rst \
     source/tutorials/reliable_forwarding.rst \
     source/tutorials/tls.rst \
     source/tutorials/tls_cert.jpg \
