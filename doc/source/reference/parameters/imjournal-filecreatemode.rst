@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imjournal`.
 :Type: integer
 :Default: module=0644
 :Required?: no
-:Introduced: at least 8.x, possibly earlier
+:Introduced: 8.2306.0
 
 Description
 -----------
