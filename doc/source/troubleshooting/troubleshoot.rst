@@ -265,7 +265,7 @@ can also be controlled via some environment options. Please see
 
 In general, it is advisable to run rsyslogd in the foreground to obtain
 the log. To do so, make sure you know which options are usually used
-when you start rsyslogd as a background daemon. Let's assume "-c5" is
+when you start rsyslogd as a background daemon. Let's assume "-iNONE" is
 the only option used. Then, do the following:
 
 -  make sure rsyslogd as a daemon is stopped (verify with ps -ef\|grep
@@ -276,7 +276,7 @@ the only option used. Then, do the following:
    where "your options" is what you usually use. /sbin/rsyslogd is the
    full path to the rsyslogd binary (location different depending on
    distro). In our case, the command would be
-   ```/sbin/rsyslogd -c5 -dn > logfile```
+   ```/sbin/rsyslogd -iNONE -dn > logfile```
 -  press ctrl-C when you have sufficient data (e.g. a device logged a
    record)
    **NOTE: rsyslogd will NOT stop automatically - you need to ctrl-c out
