@@ -101,6 +101,9 @@ tools/logctl
 tools/rscryutil
 tools/rscryutil.1
 /bin/
+# RPM CI build output
+/build-result/
+
 # Coverage artifacts
 *.gcda
 *.gcno

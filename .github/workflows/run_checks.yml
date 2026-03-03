@@ -340,6 +340,99 @@ jobs:
           devtools/gather-check-logs.sh
           cat failed-tests.log
 
+  package_build_rpm:
+    name: package build (RPM)
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    container:
+      image: quay.io/rockylinux/rockylinux:8
+      options: --privileged
+    steps:
+      - name: Install git (before checkout so it can clone)
+        run: dnf install -y git
+
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: fetch upstream (for changed-files diff)
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+
+      - name: Check for code changes
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            packaging/rpm/**
+            devtools/run-rpm-build.sh
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: run RPM build
+        if: steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          chmod -R go+rw .
+          echo "== Install EPEL and mock =="
+          dnf install -y epel-release
+          dnf install -y mock dnf-utils
+          echo "== Install build tools for autoreconf/configure/make dist =="
+          dnf install -y autoconf automake libtool gcc make flex bison
+          echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
+          curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
+          {
+            echo '[adiscon]'
+            echo 'name=adiscon'
+            echo "baseurl=https://rpms.adiscon.com/v8-stable/epel-8/\$basearch"
+            echo 'enabled=1'
+            echo 'gpgcheck=1'
+            echo 'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon'
+          } > /etc/yum.repos.d/adiscon.repo
+          dnf install -y dnf-plugins-core
+          dnf config-manager --set-enabled powertools
+          dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
+          echo "== Copy mock configs =="
+          cp -v packaging/rpm/etc-mock/*.cfg /etc/mock/ || true
+          mkdir -p build-result /var/lib/mock
+          echo "== Run RPM build =="
+          bash devtools/run-rpm-build.sh
+
+      - name: Skip RPM build, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping RPM build."
+
+      - name: show error logs (if we errored)
+        if: ${{ failure() || cancelled() }}
+        run: |
+          tail -300 build-result/srpm/*.log 2>/dev/null || true
+          tail -300 build-result/rpms/*.log 2>/dev/null || true
+
+      - name: Upload RPM artifacts
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpms-epel-8-x86_64
+          path: build-result/
+          if-no-files-found: error
+
   macos_CI:
     needs: compile
     if: ${{ needs.compile.result == 'success' }}

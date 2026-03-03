@@ -28,6 +28,22 @@ For production docs where a sitemap is desired, opt in explicitly using either
 `make html-with-sitemap` or pass `-t with_sitemap` to `sphinx-build`.
 
 
+## RPM builds
+
+The RPM spec (`packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec`) builds
+Sphinx documentation during `%prep` using `pip3 install` rather than system
+packages. This is required because:
+
+-   `doc/source/conf.py` sets `needs_sphinx = '4.5.0'`.
+-   EPEL 8 provides `python3-sphinx` 1.7.x; EPEL 9 provides 3.4.x. Neither
+    satisfies the minimum version and the build fails.
+
+Using `pip3 install -U sphinx` and `pip3 install -r requirements.txt` ensures
+the correct Sphinx version and extensions (e.g. `sphinxcontrib.mermaid`) are
+available for the RPM build. A future improvement would be to pre-build docs
+and include them in the tarball so the spec does not need pip at build time.
+
+
 ## Generating release version of the docs
 
 These steps guide you through the steps necessary to build a version of the
