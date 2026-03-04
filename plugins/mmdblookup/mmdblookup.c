@@ -338,11 +338,7 @@ static json_object *entry_data_to_json(const MMDB_entry_data_s *data) {
         case MMDB_DATA_TYPE_INT32:
             return json_object_new_int(data->int32);
         case MMDB_DATA_TYPE_UINT64:
-#ifdef json_type_uint64
-            return json_object_new_uint64(data->uint64);
-#else
             return json_object_new_int64((int64_t)data->uint64);
-#endif
         case MMDB_DATA_TYPE_BOOLEAN:
             return json_object_new_boolean(data->boolean);
         default:
