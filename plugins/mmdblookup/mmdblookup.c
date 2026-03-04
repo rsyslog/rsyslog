@@ -368,14 +368,16 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
             for (uint32_t i = 0; i < size && node != NULL; i++) {
                 if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
                     dbgprintf("mmdblookup: unexpected map key type %u\n", node->entry_data.type);
-                    node = NULL;
-                    break;
+                    json_object_put(map_obj);
+                    *result = NULL;
+                    return NULL;
                 }
 
                 char *key = strndup(node->entry_data.utf8_string, node->entry_data.data_size);
                 if (key == NULL) {
-                    node = NULL;
-                    break;
+                    json_object_put(map_obj);
+                    *result = NULL;
+                    return NULL;
                 }
 
                 node = node->next;
