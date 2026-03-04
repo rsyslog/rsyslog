@@ -365,19 +365,19 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
 
             uint32_t size = node->entry_data.data_size;
             node = node->next;
-            for (uint32_t i = 0; i < size && node != NULL; i++) {
+            for (uint32_t i = 0; i < size; i++) {
+                if (node == NULL) {
+                    dbgprintf("mmdblookup: malformed map data, not enough entries\n");
+                    goto map_error;
+                }
                 if (node->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
                     dbgprintf("mmdblookup: unexpected map key type %u\n", node->entry_data.type);
-                    json_object_put(map_obj);
-                    *result = NULL;
-                    return NULL;
+                    goto map_error;
                 }
 
                 char *key = strndup(node->entry_data.utf8_string, node->entry_data.data_size);
                 if (key == NULL) {
-                    json_object_put(map_obj);
-                    *result = NULL;
-                    return NULL;
+                    goto map_error;
                 }
 
                 node = node->next;
@@ -390,6 +390,11 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
 
             *result = map_obj;
             return node;
+
+        map_error:
+            json_object_put(map_obj);
+            *result = NULL;
+            return NULL;
         }
         case MMDB_DATA_TYPE_ARRAY: {
             json_object *arr = json_object_new_array();
@@ -400,7 +405,11 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
 
             uint32_t size = node->entry_data.data_size;
             node = node->next;
-            for (uint32_t i = 0; i < size && node != NULL; i++) {
+            for (uint32_t i = 0; i < size; i++) {
+                if (node == NULL) {
+                    dbgprintf("mmdblookup: malformed array data, not enough entries\n");
+                    goto array_error;
+                }
                 json_object *element = NULL;
                 node = entry_data_list_to_json(node, &element);
                 json_object_array_add(arr, element);
@@ -408,6 +417,11 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
 
             *result = arr;
             return node;
+
+        array_error:
+            json_object_put(arr);
+            *result = NULL;
+            return NULL;
         }
         default:
             *result = entry_data_to_json(&node->entry_data);
