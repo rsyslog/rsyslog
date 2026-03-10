@@ -2768,6 +2768,17 @@ AC_ARG_ENABLE(omazureeventhubs_tests,
 )
 AM_CONDITIONAL(ENABLE_OMAZUREEVENTHUBS_TESTS, test x$enable_omazureeventhubs_tests = xyes)
 
+AC_ARG_ENABLE(omazuredce_tests,
+        [AS_HELP_STRING([--enable-omazuredce-tests],[Enable Omazuredce tests @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omazuredce_tests="yes" ;;
+          no) enable_omazuredce_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omazuredce-tests) ;;
+         esac],
+        [enable_omazuredce_tests=no]
+)
+AM_CONDITIONAL(ENABLE_OMAZUREDCE_TESTS, test x$enable_omazuredce_tests = xyes)
+
 AC_ARG_ENABLE(kafka_tests,
         [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -2882,6 +2893,26 @@ fi
 AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes -o x$enable_omkafka = xoptional)
 AM_CONDITIONAL(ENABLE_IMKAFKA, test x$enable_imkafka = xyes -o x$enable_imkafka = xoptional)
 
+# omazuredce support for output module
+AC_ARG_ENABLE(omazuredce,
+        [AS_HELP_STRING([--enable-omazuredce],[Compiles omazuredce output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omazuredce="yes" ;;
+          no) enable_omazuredce="no" ;;
+         optional) enable_omazuredce="optional" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omazuredce) ;;
+         esac],
+        [enable_omazuredce=no]
+)
+if test "x$enable_omazuredce" = "xyes" -o "x$enable_omazuredce" = "xoptional"; then
+	PKG_CHECK_MODULES([CURL], [libcurl], , [
+		AS_IF([test x$enable_omazuredce = xyes],
+			AC_MSG_FAILURE([omazuredce requires libcurl])
+		)
+		enable_omazuredce="no"
+	])
+fi
+AM_CONDITIONAL(ENABLE_OMAZUREDCE, test x$enable_omazuredce = xyes -o x$enable_omazuredce = xoptional)
 
 # omazureeventhubs support for output module
 AC_ARG_ENABLE(omazureeventhubs,
@@ -3467,6 +3498,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
 		plugins/omazureeventhubs/Makefile \
+		plugins/omazuredce/Makefile \
 		plugins/imdtls/Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
@@ -3584,6 +3616,7 @@ echo "    omtcl module will be compiled:            $enable_omtcl"
 echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omhiredis module will be compiled:        $enable_omhiredis"
 echo "    omazureeventhubs module will be compiled: $enable_omazureeventhubs"
+echo "    omazuredce module will be compiled:       $enable_omazuredce"
 echo "    omdtls module will be compiled:           $enable_omdtls"
 echo
 echo "---{ parser modules }---"
@@ -3661,6 +3694,7 @@ echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Redis Tests enabled:                      $enable_redis_tests"
 echo "    Omazureeventhubs Tests enabled:           $enable_omazureeventhubs_tests"
+echo "    Omazuredce Tests enabled:                 $enable_omazuredce_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
 echo "    imtcp tests enabled:                      $enable_imtcp_tests"
 echo "    gnutls tests enabled:                     $enable_gnutls_tests"
