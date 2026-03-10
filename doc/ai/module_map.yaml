@@ -26,6 +26,15 @@ omazureeventhubs:
       writer: rsyslog_worker
       reader: proton_thread
 
+omazuredce:
+  paths: ["plugins/omazuredce/"]
+  requires_serialization: true
+  locks:
+    - type: mutex
+      field: pWrkrData.batchLock
+  notes:
+    - Each worker owns its batch buffer and timer thread; access is serialized by batchLock.
+
 contrib_omhttp:
   paths: ["contrib/omhttp/"]
   requires_serialization: false
@@ -65,4 +74,3 @@ omotel:
   requires_serialization: false
   notes:
     - Transport resources are not yet active; introduce pData locking once they appear.
-

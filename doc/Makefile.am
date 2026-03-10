@@ -228,6 +228,7 @@ EXTRA_DIST = \
     source/configuration/modules/mmutf8fix.rst \
     source/configuration/modules/module_workflow.png \
     source/configuration/modules/omamqp1.rst \
+    source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omazureeventhubs.rst \
     source/configuration/modules/omclickhouse.rst \
     source/configuration/modules/omczmq.rst \
@@ -830,6 +831,15 @@ EXTRA_DIST = \
     source/reference/parameters/omazureeventhubs-eventproperties.rst \
     source/reference/parameters/omazureeventhubs-statsname.rst \
     source/reference/parameters/omazureeventhubs-template.rst \
+    source/reference/parameters/omazuredce-client_id.rst \
+    source/reference/parameters/omazuredce-client_secret.rst \
+    source/reference/parameters/omazuredce-dce_url.rst \
+    source/reference/parameters/omazuredce-dcr_id.rst \
+    source/reference/parameters/omazuredce-flush_timeout_ms.rst \
+    source/reference/parameters/omazuredce-max_batch_bytes.rst \
+    source/reference/parameters/omazuredce-table_name.rst \
+    source/reference/parameters/omazuredce-template.rst \
+    source/reference/parameters/omazuredce-tenant_id.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \
