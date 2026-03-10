@@ -1,2 +1,15 @@
-.github/workflows/*.yml @rgerhards
-.github/workflows/*.yaml @rgerhards
+# Security-sensitive repository metadata
+/.gitmodules @rgerhards @alorbach
+/.gitattributes @rgerhards @alorbach
+
+# CI workflows
+/.github/workflows/* @rgerhards @alorbach
+
+# Build and release tooling
+/autogen.sh @rgerhards @alorbach
+/configure.ac @rgerhards @alorbach
+/Makefile.am @rgerhards @alorbach
+/devtools/ @rgerhards @alorbach
+
+# Default ownership for the core source tree and all other repository paths
+* @rgerhards @alorbach
