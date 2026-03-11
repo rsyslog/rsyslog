@@ -1,0 +1,146 @@
+rsyslog (8.2512.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2512.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 09 Dec 2025 17:50:35 +0000
+rsyslog (8.2510.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2510.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 14 Oct 2025 12:47:59 +0000
+rsyslog (8.2508.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2508.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 26 Aug 2025 15:05:23 +0000
+rsyslog (8.2506.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2506.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 10 Jun 2025 12:21:21 +0000
+rsyslog (8.2504.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2504.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 28 Apr 2025 23:06:40 +0000
+rsyslog (8.2502.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2502.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Feb 2025 16:15:13 +0000
+rsyslog (8.2412.0-0adiscon1jammy5) jammy; urgency=low
+
+  * Packages for 8.2412.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 10 Feb 2025 11:29:44 +0000
+rsyslog (8.2412.0-0adiscon1jammy2) jammy; urgency=low
+
+  * Packages for 8.2412.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 10 Feb 2025 09:32:35 +0000
+rsyslog (8.2412.0-0adiscon1jammy1) jammy; urgency=low
+
+  * Packages for 8.2412.0 on jammy
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Wed, 04 Dec 2024 14:22:22 +0000
+rsyslog (8.2408.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2408.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 20 Aug 2024 13:29:59 +0000
+
+rsyslog (8.2404.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2404.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 02 Apr 2024 13:29:59 +0000
+
+rsyslog (8.2402.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2402.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Mon, 26 Feb 2024 13:29:59 +0000
+
+rsyslog (8.2312.0-0adiscon1bionic1) bionic; urgency=medium
+
+  * Packages for 8.2312.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 12 Dec 2023 13:29:59 +0000
+
+rsyslog (8.2312.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2312.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 12 Dec 2023 13:29:59 +0000
+
+rsyslog (8.2310.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2310.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 10 Oct 2023 13:29:59 +0000
+
+rsyslog (8.2308.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2308.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 15 Aug 2023 13:29:59 +0000
+
+rsyslog (8.2306.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2306.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 20 Jun 2023 13:29:59 +0000
+
+rsyslog (8.2304.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2304.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Apr 2023 13:29:59 +0000
+
+rsyslog (8.2302.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2302.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 21 Feb 2023 13:29:59 +0000
+
+rsyslog (8.2212.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2212.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 06 Dec 2022 13:29:59 +0000
+
+rsyslog (8.2210.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2210.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 18 Oct 2022 13:29:59 +0000
+
+rsyslog (8.2206.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2206.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 14 Jun 2022 13:29:59 +0000
+
+rsyslog (8.2204.1-0adiscon3jammy1) jammy; urgency=medium
+
+  * Packages for 8.2204.1
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 05 May 2022 13:29:59 +0000
+
+rsyslog (8.2204.0-0adiscon1jammy1) jammy; urgency=medium
+
+  * Packages for 8.2204.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 19 Apr 2022 13:15:02 +0000
+
+rsyslog (8.2202.0-0adiscon3jammy1) jammy; urgency=medium
+
+  * Disabled mmgrok for Jammy due to build error
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Fri, 25 Mar 2022 11:23:51 +0000
+
+rsyslog (8.2202.0-0adiscon2jammy1) jammy; urgency=medium
+
+  * Initial Packages for Ubuntu 22.04 Jammy
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Fri, 25 Mar 2022 10:46:13 +0000

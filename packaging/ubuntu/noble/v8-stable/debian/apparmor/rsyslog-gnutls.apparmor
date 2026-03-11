@@ -1,0 +1,3 @@
+# GnuTLS library rules
+
+  /etc/gnutls/config r,

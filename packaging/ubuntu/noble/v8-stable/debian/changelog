@@ -1,0 +1,4360 @@
+rsyslog (8.2512.0-0adiscon1noble8) noble; urgency=low
+
+  * Packages for 8.2512.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 16 Dec 2025 10:48:30 +0000
+rsyslog (8.2512.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2512.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 09 Dec 2025 17:51:10 +0000
+rsyslog (8.2510.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2510.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 14 Oct 2025 12:48:34 +0000
+rsyslog (8.2508.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2508.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 26 Aug 2025 15:06:02 +0000
+rsyslog (8.2506.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2506.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 10 Jun 2025 12:21:53 +0000
+rsyslog (8.2504.0-0adiscon1noble2) noble; urgency=low
+
+  * Packages for 8.2504.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 02 Jun 2025 12:55:59 +0000
+rsyslog (8.2504.0-0adiscon1noble2) noble; urgency=low
+
+  * Packages for 8.2504.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 27 May 2025 09:43:44 +0000
+rsyslog (8.2504.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2504.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 28 Apr 2025 23:07:09 +0000
+rsyslog (8.2502.0-0adiscon1noble3) noble; urgency=low
+
+  * Packages for 8.2502.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 03 Mar 2025 13:53:22 +0000
+rsyslog (8.2502.0-0adiscon1noble2) noble; urgency=low
+
+  * Packages for 8.2502.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Feb 2025 16:57:32 +0000
+rsyslog (8.2502.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2502.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Feb 2025 16:20:40 +0000
+rsyslog (8.2412.0-0adiscon1noble5) noble; urgency=low
+
+  * Packages for 8.2412.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 10 Feb 2025 12:27:10 +0000
+rsyslog (8.2412.0-0adiscon1noble4) noble; urgency=low
+
+  * Packages for 8.2412.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 10 Feb 2025 09:33:34 +0000
+rsyslog (8.2412.0-0adiscon1noble3) noble; urgency=low
+
+  * Packages for 8.2412.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Wed, 11 Dec 2024 17:35:32 +0000
+rsyslog (8.2412.0-0adiscon1noble2) noble; urgency=low
+
+  * Packages for 8.2412.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Wed, 11 Dec 2024 17:03:25 +0000
+rsyslog (8.2412.0-0adiscon1noble1) noble; urgency=low
+
+  * Packages for 8.2412.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 03 Dec 2024 13:17:30 +0000
+rsyslog (8.2410.0-0adiscon1noble2) noble; urgency=low
+
+  * Packages for 8.2410.0 on noble
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 04 Nov 2024 11:06:29 +0000
+rsyslog (8.2312.0-3ubuntu9) noble; urgency=high
+
+  * No change rebuild against libgnutls30t64, libssl3t64.
+
+ -- Julian Andres Klode <juliank@ubuntu.com>  Mon, 08 Apr 2024 16:49:24 +0200
+
+rsyslog (8.2312.0-3ubuntu8) noble; urgency=medium
+
+  * No-change rebuild for CVE-2024-3094
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sun, 31 Mar 2024 17:10:44 +0000
+
+rsyslog (8.2312.0-3ubuntu7) noble; urgency=medium
+
+  * debian/patches/rsyslog-time64-fix.patch: Fix time_t value formatting
+    in k8s support.
+
+ -- Zixing Liu <zixing.liu@canonical.com>  Thu, 21 Mar 2024 20:28:54 -0600
+
+rsyslog (8.2312.0-3ubuntu6) noble; urgency=medium
+
+  * No-change rebuild against libcurl4t64
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sat, 16 Mar 2024 06:58:55 +0000
+
+rsyslog (8.2312.0-3ubuntu5) noble; urgency=medium
+
+  * No-change rebuild against libgnutls30t64
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sun, 10 Mar 2024 02:12:46 +0000
+
+rsyslog (8.2312.0-3ubuntu4) noble; urgency=medium
+
+  * No-change rebuild against libssl3t64
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 04 Mar 2024 21:12:22 +0000
+
+rsyslog (8.2312.0-3ubuntu3) noble; urgency=medium
+
+  * ubuntu d/rsyslog.service ProtectHome=no (LP: #2051405)
+
+ -- Heinrich Schuchardt <heinrich.schuchardt@canonical.com>  Sat, 27 Jan 2024 10:34:41 +0100
+
+rsyslog (8.2312.0-3ubuntu2) noble; urgency=medium
+
+  * No-change rebuild against libhiredis1.1.0
+
+ -- Dan Bungert <daniel.bungert@canonical.com>  Fri, 26 Jan 2024 10:33:54 -0700
+
+rsyslog (8.2312.0-3ubuntu1) noble; urgency=medium
+
+  Merge with Debian unstable (LP: #2045033). Remaining changes:
+    - d/00rsyslog.conf, d/rsyslog.postinst, d/rsyslog.install: Install
+      tmpfiles.d snippet to ensure that the syslog group can write into
+      /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add AppArmor profile, enabled by default, with support for
+      AppArmor configuration snippets:
+      + d/rsyslog.install: install apparmor rule
+      + d/rsyslog.postinst: remove disabling of apparmor on upgrades if
+        we are upgrading from a version older than $now.
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3), Build-Depends on
+        dh-apparmor
+      + d/rsyslog.dirs: install /etc/apparmor.d/rsyslog.d
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+        profile for mysql plugin
+      + d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+        profile for postgresql plugin
+      + d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the gnutls plugin
+      + d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the openssl plugin
+      + New script to reload apparmor profile:
+        - d/rsyslog.service: reload apparmor profile in ExecStartPre and
+          set StandardError to journal so we can see errors from the
+          script
+        - d/rsyslog.install: install reload-apparmor-profile
+        - d/reload-apparmor-profile: script to reload the
+          rsyslogd apparmor profile
+      + d/NEWS: add info about apparmor changes in the Ubuntu packaging
+      + d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+        component of the rsyslog apparmor profile is applied
+      + d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+        README file in the apparmor include directory for rsyslog
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/rsyslog.install: remove mmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - d/dmesg.service, d/rsyslog.install: provide /var/log/dmesg.log as
+      non log-rotated log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - Add DEP8 tests (LP #1906333): + d/t/control, d/t/simple-logger:
+      simple logger test
+    + d/t/utils: common function(s)
+    + d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a MySQL server
+    + d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a PostgreSQL server
+    + d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d include mechanism used by the rsyslog apparmor profile
+    + ubuntu: update debian/rsyslog.logcheck.ignore.server
+    + Amend list of expected messages d/rsyslog.logcheck.ignore.server
+      to fix6 armhf autopkgtest (LP #2028935)
+    + ubuntu: add CAP_MAC_ADMIN, CAP_SETUID, CAP_SETGID
+    + ubuntu: adjust sandboxing
+    + d/p/omusrmsg-bugfix-potential-double-free-which-can-caus.patch
+
+  * New changes
+    + d/p/plugins-FromHost-must-be-63-characters-long.patch
+
+ -- Heinrich Schuchardt <heinrich.schuchardt@canonical.com>  Fri, 12 Jan 2024 13:27:29 +0100
+
+rsyslog (8.2312.0-3) unstable; urgency=medium
+
+  * Drop unused systemd Build-Depends.
+    Unfortunately, we can't run the journal related tests during build as
+    there typically is no journald available in the build environment. So
+    the systemd Build-Depends is not actually needed.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 11 Jan 2024 22:07:44 +0100
+
+rsyslog (8.2312.0-2ubuntu1) noble; urgency=medium
+
+  Merge with Debian unstable (LP: #2045033). Remaining changes:
+    - d/00rsyslog.conf, d/rsyslog.postinst, d/rsyslog.install: Install
+      tmpfiles.d snippet to ensure that the syslog group can write into
+      /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add AppArmor profile, enabled by default, with support for
+      AppArmor configuration snippets:
+      + d/rsyslog.install: install apparmor rule
+      + d/rsyslog.postinst: remove disabling of apparmor on upgrades if
+        we are upgrading from a version older than $now.
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3), Build-Depends on
+        dh-apparmor
+      + d/rsyslog.dirs: install /etc/apparmor.d/rsyslog.d
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+        profile for mysql plugin
+      + d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+        profile for postgresql plugin
+      + d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the gnutls plugin
+      + d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the openssl plugin
+      + New script to reload apparmor profile:
+        - d/rsyslog.service: reload apparmor profile in ExecStartPre and
+          set StandardError to journal so we can see errors from the
+          script
+        - d/rsyslog.install: install reload-apparmor-profile
+        - d/reload-apparmor-profile: script to reload the
+          rsyslogd apparmor profile
+      + d/NEWS: add info about apparmor changes in the Ubuntu packaging
+      + d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+        component of the rsyslog apparmor profile is applied
+      + d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+        README file in the apparmor include directory for rsyslog
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/rsyslog.install: remove mmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - d/dmesg.service, d/rsyslog.install: provide /var/log/dmesg.log as
+      non log-rotated log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - Add DEP8 tests (LP #1906333): + d/t/control, d/t/simple-logger:
+      simple logger test
+    + d/t/utils: common function(s)
+    + d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a MySQL server
+    + d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a PostgreSQL server
+    + d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d include mechanism used by the rsyslog apparmor profile
+    + ubuntu: update debian/rsyslog.logcheck.ignore.server
+    + Amend list of expected messages d/rsyslog.logcheck.ignore.server
+      to fix6 armhf autopkgtest (LP #2028935)
+
+  * New changes:
+    + ubuntu: add CAP_MAC_ADMIN, CAP_SETUID, CAP_SETGID
+    + ubuntu: adjust sandboxing
+    + d/p/omusrmsg-bugfix-potential-double-free-which-can-caus.patch
+
+  * Dropped changes, included in Debian:
+    + ubuntu: fix debian/tests/logcheck - apparmor restrictions
+
+ -- Heinrich Schuchardt <heinrich.schuchardt@canonical.com>  Wed, 03 Jan 2024 14:20:22 +0100
+
+rsyslog (8.2312.0-2) unstable; urgency=medium
+
+  * Add CAP_DAC_OVERRIDE to CapabilityBoundingSet in rsyslog.service.
+    It avoids problems when writing to log files by 3rd party programs that
+    are spawned via omprog. It also makes fileOwner/fileGroup work with
+    omfile. (Closes: #1059768)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 01 Jan 2024 11:20:43 +0100
+
+rsyslog (8.2312.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2312.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 12 Dec 2023 17:39:09 +0100
+
+rsyslog (8.2310.0-4) unstable; urgency=medium
+
+  * Drop BindPaths=-/dev/xconsole from rsyslog.service.
+    This needs to be removed after the switch to /run/xconsole.
+    (Closes: #1056066)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 27 Nov 2023 18:12:06 +0100
+
+rsyslog (8.2310.0-3) unstable; urgency=medium
+
+  * Drop unused --with-systemdsystemunitdir configure switch.
+    It's not actually used since we install debian/rsyslog.service via
+    dh_installsystemd.
+  * Recommend /run/xconsole for message forwarding to xconsole.
+    The recent sandboxing of rsyslog broke message forwarding to
+    /dev/xconsole. It is recommended to use /run/xconsole instead and
+    replace /dev/xconsole with a symlink pointing at /run/xconsole.
+    Update the example files and add a corresponding NEWS entry.
+    (Closes: #1056066)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 27 Nov 2023 08:23:12 +0100
+
+rsyslog (8.2310.0-2) unstable; urgency=medium
+
+  [ Richard Lewis ]
+  * Update autopkgtest now that rsyslog.service is hardened
+    Previously, rsyslog was told to put its entries in
+    /tmp/test-rsyslog-syslog.log which was then checked with logcheck.
+    But rsyslog.service now runs with PrivateTmp=true which means
+    test-rsyslog-syslog.log is not available after the service ends.
+    (Additionally, improve diagnostic messages when no output was detected)
+    (Closes: #1053898)
+
+  [ Michael Biebl ]
+  * Limit exposure to remote access.
+    Use `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` to limit the set
+    of socket address families accessible to rsyslog.
+    Thanks to Robert Edmonds <edmonds@debian.org>
+  * Make /dev/xconsole available in rsyslog.service.
+    This was broken by the recent hardening of the service. Make the
+    xconsole pipe available if enabled. (Closes: #1053913)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 15 Oct 2023 21:09:00 +0200
+
+rsyslog (8.2310.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2310.0
+  * Enable various systemd sandboxing and security hardening features in
+    rsyslog.service (Closes: #688889, #771636)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 11 Oct 2023 21:07:34 +0200
+
+rsyslog (8.2308.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2308.0
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 16 Aug 2023 08:03:33 +0200
+
+rsyslog (8.2306.0-2ubuntu2) mantic; urgency=medium
+
+  * Amend list of expected messages d/rsyslog.logcheck.ignore.server
+    to fix armhf autopkgtest (LP: #2028935)
+
+ -- Heinrich Schuchardt <heinrich.schuchardt@canonical.com>  Mon, 04 Sep 2023 15:33:45 +0200
+
+rsyslog (8.2306.0-2ubuntu1) mantic; urgency=medium
+
+  * Merge with Debian unstable (LP: #2028935)
+  * New change:
+    - d/test/logcheck: fix failures caused by apparmor and timing
+  * Remaining changes:
+    - d/00rsyslog.conf, d/rsyslog.postinst, d/rsyslog.install: Install
+      tmpfiles.d snippet to ensure that the syslog group can write into
+      /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add AppArmor profile, enabled by default, with support for
+      AppArmor configuration snippets:
+      + d/rsyslog.install: install apparmor rule
+      + d/rsyslog.postinst: remove disabling of apparmor on upgrades if
+        we are upgrading from a version older than $now.
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3), Build-Depends on
+        dh-apparmor
+      + d/rsyslog.dirs: install /etc/apparmor.d/rsyslog.d
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+        profile for mysql plugin
+      + d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+        profile for postgresql plugin
+      + d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the gnutls plugin
+      + d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the openssl plugin
+      + New script to reload apparmor profile:
+        - d/rsyslog.service: reload apparmor profile in ExecStartPre and
+          set StandardError to journal so we can see errors from the
+          script
+        - d/rsyslog.install: install reload-apparmor-profile
+        - d/reload-apparmor-profile: script to reload the
+          rsyslogd apparmor profile
+      + d/NEWS: add info about apparmor changes in the Ubuntu packaging
+      + d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+        component of the rsyslog apparmor profile is applied
+      + d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+        README file in the apparmor include directory for rsyslog
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/rsyslog.install: remove mmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - d/dmesg.service, d/rsyslog.install: provide /var/log/dmesg.log as non
+      log-rotated log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - Add DEP8 tests (LP #1906333):
+      + d/t/utils: common function(s)
+      + d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a
+        MySQL server
+      + d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a
+        PostgreSQL server
+      + d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d
+        include mechanism used by the rsyslog apparmor profile
+
+ -- Heinrich Schuchardt <heinrich.schuchardt@canonical.com>  Wed, 23 Aug 2023 11:26:01 +0200
+
+rsyslog (8.2306.0-2) unstable; urgency=medium
+
+  [ Richard Lewis ]
+  * Update logcheck rules for latest debian defaults.
+    New patterns cope with both
+    - The high precision timestamps which appear in syslog (rsyslog default
+      since bookworm).
+    - The inclusion of a pid after 'rsyslogd' which is logged in the journal
+      (checked by logcheck since bookworm). The first two 'kernel' messages
+      are not generated any more but systemd generates a message about a
+      socket which is now captured.
+    (Closes: #1038163)
+  * Add autopkgtests (for logcheck rules).
+    A simple test that checks that rsyslog's logcheck rules work.
+  * Add debian/salsa-ci.yml
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 10 Jul 2023 23:14:06 +0200
+
+rsyslog (8.2306.0-1ubuntu1) mantic; urgency=medium
+
+  * Merge with Debian unstable (LP: #2025678). Remaining changes:
+    - d/00rsyslog.conf, d/rsyslog.postinst, d/rsyslog.install: Install
+      tmpfiles.d snippet to ensure that the syslog group can write into
+      /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add AppArmor profile, enabled by default, with support for
+      AppArmor configuration snippets:
+      + d/rsyslog.install: install apparmor rule
+      + d/rsyslog.postinst: remove disabling of apparmor on upgrades if
+        we are upgrading from a version older than $now.
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3), Build-Depends on
+        dh-apparmor
+      + d/rsyslog.dirs: install /etc/apparmor.d/rsyslog.d
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+        profile for mysql plugin
+      + d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+        profile for postgresql plugin
+      + d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the gnutls plugin
+      + d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the openssl plugin
+      + New script to reload apparmor profile:
+        - d/rsyslog.service: reload apparmor profile in ExecStartPre and
+          set StandardError to journal so we can see errors from the
+          script
+        - d/rsyslog.install: install reload-apparmor-profile
+        - d/reload-apparmor-profile: script to reload the
+          rsyslogd apparmor profile
+      + d/NEWS: add info about apparmor changes in the Ubuntu packaging
+      + d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+        component of the rsyslog apparmor profile is applied
+      + d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+        README file in the apparmor include directory for rsyslog
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/rsyslog.install: remove mmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - d/dmesg.service, d/rsyslog.install: provide /var/log/dmesg.log as non
+      log-rotated log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - Add DEP8 tests (LP #1906333):
+      + d/t/control, d/t/simple-logger: simple logger test
+      + d/t/utils: common function(s)
+      + d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a
+        MySQL server
+      + d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a
+        PostgreSQL server
+      + d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d
+        include mechanism used by the rsyslog apparmor profile
+
+ -- Nick Rosbrook <nick.rosbrook@canonical.com>  Mon, 03 Jul 2023 14:04:04 -0400
+
+rsyslog (8.2306.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2306.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 20 Jun 2023 20:09:46 +0200
+
+rsyslog (8.2304.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2304.0
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 17 Jun 2023 18:44:36 +0200
+
+rsyslog (8.2302.0-1ubuntu3) lunar; urgency=medium
+
+  * d/usr.sbin.rsyslog: allow access to /dev/console on the AppArmor policy
+    (LP: #2009230)
+
+ -- Georgia Garcia <georgia.garcia@canonical.com>  Fri, 24 Mar 2023 11:28:25 -0300
+
+rsyslog (8.2302.0-1ubuntu2) lunar; urgency=medium
+
+  * d/t/simple-*, d/t/control: ignore aa-enforce error, which can happen
+    on armhf in the Ubuntu DEP8 infrastructure, and allow-stderr for
+    these tests (LP: #2008393)
+
+ -- Andreas Hasenack <andreas@canonical.com>  Thu, 23 Feb 2023 18:56:07 -0300
+
+rsyslog (8.2302.0-1ubuntu1) lunar; urgency=medium
+
+  * Merge with Debian unstable. Remaining changes:
+    - d/00rsyslog.conf, d/rsyslog.postinst, d/rsyslog.install: Install
+      tmpfiles.d snippet to ensure that the syslog group can write into
+      /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add AppArmor profile, enabled by default, with support for
+      AppArmor configuration snippets:
+      + d/rsyslog.install: install apparmor rule
+      + d/rsyslog.postinst: remove disabling of apparmor on upgrades if
+        we are upgrading from a version older than $now.
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3), Build-Depends on
+        dh-apparmor
+      + d/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local,
+        /etc/apparmor.d/rsyslog.d
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+        profile for mysql plugin
+      + d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+        profile for postgresql plugin
+      + d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the gnutls plugin
+      + d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+        apparmor profile for the openssl plugin
+      + New script to reload apparmor profile:
+        - d/rsyslog.service: reload apparmor profile in ExecStartPre and
+          set StandardError to journal so we can see errors from the
+          script
+        - d/rsyslog.install: install reload-apparmor-profile
+        - d/reload-apparmor-profile: script to reload the
+          rsyslogd apparmor profile
+      + d/NEWS: add info about apparmor changes in the Ubuntu packaging
+      + d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+        component of the rsyslog apparmor profile is applied
+      + d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+        README file in the apparmor include directory for rsyslog
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/rsyslog.install: remove mmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - d/dmesg.service, d/rsyslog.install: provide /var/log/dmesg.log as non
+      log-rotated log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - Add DEP8 tests (LP #1906333):
+      + d/t/control, d/t/simple-logger: simple logger test
+      + d/t/utils: common function(s)
+      + d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a
+        MySQL server
+      + d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a
+        PostgreSQL server
+      + d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d
+        include mechanism used by the rsyslog apparmor profile
+  * Added:
+    - d/rsyslog.dirs: no need to install force-complain, disable, and
+      local, under /etc/apparmor.d: "local" is handled by dh_apparmor,
+      and the others we don't use anymore because the profile is no
+      longer installed disabled
+
+ -- Andreas Hasenack <andreas@canonical.com>  Thu, 23 Feb 2023 13:58:38 -0300
+
+rsyslog (8.2302.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2302.0
+  * Bump Standards-Version to 4.6.2
+  * Add /usr/sbin to PATH when running test suite.
+    This ensures that the logrotate binary is found and we don't skip the
+    corresponding tests.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 22 Feb 2023 20:43:00 +0100
+
+rsyslog (8.2212.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2212.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 07 Dec 2022 13:58:48 +0100
+
+rsyslog (8.2210.0-3ubuntu2) lunar; urgency=medium
+
+  * Support apparmor profile snippets:
+    - d/usr.sbin.rsyslogd: add "include if exists" for the rsyslog.d
+      directory, and remove the now unnecessary  mysql and postgresql
+      sections
+    - d/rsyslog.preinst: don't disable the apparmor profile on install
+    - d/rsyslog.postinst: remove disabling of apparmor on upgrades if we
+      are upgrading from a version older than $now.
+    - d/rsyslog.dirs: install /etc/apparmor.d/rsyslog.d/
+    - d/{apparmor/rsyslog-mysql,rsyslog-mysql.install}: add apparmor
+      profile for mysql plugin
+    - d/{apparmor/rsyslog-pgsql,rsyslog-pgsql.install}: add apparmor
+      profile for postgresql plugin
+    - d/{apparmor/rsyslog-gnutls.apparmor,rsyslog-gnutls.install}: add
+      apparmor profile for the gnutls plugin
+    - d/{apparmor/rsyslog-openssl.apparmor,rsyslog-gnutls.install}: add
+      apparmor profile for the openssl plugin
+    - New script to reload apparmor profile:
+      + d/rsyslog.service: reload apparmor profile in ExecStartPre and
+        set StandardError to journal so we can see errors from the
+        script
+      + d/rsyslog.install: install reload-apparmor-profile
+      + d/reload-apparmor-profile: script to reload the
+        rsyslogd apparmor profile
+    - d/NEWS: add info about apparmor changes in the Ubuntu packaging
+    - d/rsyslog.docs, d/README.apparmor: explains how the dynamic
+      component of the rsyslog apparmor profile is applied
+    - d/README.apparmor.rsyslog.d, d/rsyslog.install: install a specific
+      README file in the apparmor include directory for rsyslog
+  * Add DEP8 tests (LP: #1906333):
+    - d/t/control, d/t/simple-logger: simple logger test
+    - d/t/utils: common function(s)
+    - d/t/control, d/t/simple-mysql: DEP8 test using rsyslog with a
+      MySQL server
+    - d/t/control, d/t/simple-pgsql: DEP8 test using rsyslog with a
+      PostgreSQL server
+    - d/t/apparmor-include-mechanism: DEP8 test for the rsyslog.d
+      include mechanism used by the rsyslog apparmor profile
+
+ -- Andreas Hasenack <andreas@canonical.com>  Fri, 17 Feb 2023 14:22:27 -0300
+
+rsyslog (8.2210.0-3ubuntu1) lunar; urgency=low
+
+  * Merge from Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/control: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 07 Nov 2022 13:08:41 -0800
+
+rsyslog (8.2210.0-3) unstable; urgency=medium
+
+  * Stop splitting up mail.*
+    This avoids having mail related messages duplicated in mail.log and
+    mail.{info,warn,err}. (Closes: #508376)
+  * Drop catch-all log files /var/log/{messages,debug}
+    Avoid unnecessary duplication as those log messages end up in
+    /var/log/syslog anyway. (Closes: #580552)
+  * Stop splitting lpr facility into its own log file.
+    The default printing system CUPS is not using this facility so its
+    basically unused nowadays.
+  * Stop splitting daemon facility into its own log file.
+    The daemon facility is too vaguely defined to be really useful and since
+    those log messages end up in /var/log/syslog anyway, stop duplicating
+    them.
+  * Split cron facility into its own log file /var/log/cron.log.
+    The cron facility is widely used and limited enough in scope to have it
+    split out separately. (Closes: #625483)
+  * Update comments in rsyslog.conf
+  * Enable high precision timestamps with timezone information.
+    Use the default rsyslog file format, which provides several benefits
+    like:
+    - sortable
+    - time zone information
+    - sub-second time resolution
+    (Closes: #475303)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 29 Oct 2022 22:54:41 +0200
+
+rsyslog (8.2210.0-2) unstable; urgency=medium
+
+  * core bugfix: local hostname invalid if no global() config object given
+    (Closes: #1022128)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 27 Oct 2022 18:02:12 +0200
+
+rsyslog (8.2210.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2210.0
+  * Demote priority to optional as per #1018788
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 19 Oct 2022 11:00:47 +0200
+
+rsyslog (8.2208.0-1ubuntu2) kinetic; urgency=medium
+
+  * Mark debian/rsyslog.install executable, lost on merge because of MoM 
+    bug.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Tue, 16 Aug 2022 03:15:29 +0000
+
+rsyslog (8.2208.0-1ubuntu1) kinetic; urgency=low
+
+  * Merge from Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as syslog:syslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/control: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 15 Aug 2022 18:07:45 -0700
+
+rsyslog (8.2208.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2208.0
+  * Enable support for log file compression via zstd
+  * Bump Standards-Version to 4.6.1
+  * Allow to run test suite in parallel
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 11 Aug 2022 09:17:48 +0200
+
+rsyslog (8.2206.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2206.0
+  * Switch from libcurl4-gnutls-dev to libcurl4-openssl-dev
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 14 Jun 2022 21:46:56 +0200
+
+rsyslog (8.2204.1-1) unstable; urgency=medium
+
+  * New upstream version 8.2204.1
+    - Fix potential heap buffer overflow in imptcp, imtcp, imgssapi and other
+      TCP syslog reception modules when octet-counted framing is used.
+      (CVE-2022-24903, Closes: #1010619)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 09 May 2022 15:44:08 +0200
+
+rsyslog (8.2204.0-1ubuntu1) kinetic; urgency=low
+
+  * Merge from Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+    - debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+      to adhere to new DMESG_RESTRICT restrictions.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sun, 01 May 2022 14:04:12 -0700
+
+rsyslog (8.2204.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2204.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 19 Apr 2022 20:26:20 +0200
+
+rsyslog (8.2202.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2202.0
+  * Update debian/watch to version 4
+  * Tweak long description for rsyslog-openssl and rsyslog-gnutls
+  * Don't install empty usr/share/man/man1 directory
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 16 Feb 2022 09:40:07 +0100
+
+rsyslog (8.2112.0-2ubuntu2) jammy; urgency=medium
+
+  * Re-add build-dependency on liblognorm-dev, also needed for
+    rsyslog-kubernetes.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 30 Dec 2021 07:22:05 +0000
+
+rsyslog (8.2112.0-2ubuntu1) jammy; urgency=low
+
+  * Merge from Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+    - debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+      to adhere to new DMESG_RESTRICT restrictions.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Wed, 29 Dec 2021 17:15:17 -0800
+
+rsyslog (8.2112.0-2) unstable; urgency=medium
+
+  * Enable SNMP output plugin (Closes: #604895)
+  * Enable Kubernetes message modification module (Closes: #911299)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 22 Dec 2021 23:41:40 +0100
+
+rsyslog (8.2112.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2112.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 19 Dec 2021 20:44:12 +0100
+
+rsyslog (8.2110.0-4ubuntu1) jammy; urgency=low
+
+  * Merge from Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+    - debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+      to adhere to new DMESG_RESTRICT restrictions.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 13 Dec 2021 23:16:46 -0800
+
+rsyslog (8.2110.0-4) unstable; urgency=medium
+
+  * mmanon: relax IPv6 detection - improve anonymization (Closes: #1000335)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 22 Nov 2021 16:25:17 +0100
+
+rsyslog (8.2110.0-3ubuntu2) jammy; urgency=medium
+
+  * No-change rebuild against libssl3
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 09 Dec 2021 00:16:44 +0000
+
+rsyslog (8.2110.0-3ubuntu1) jammy; urgency=medium
+
+  * Merge with Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop [mm|pm]normalize modules, depending on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize & --enable-pmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+    - debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+      to adhere to new DMESG_RESTRICT restrictions.
+
+ -- Lukas Märdian <slyon@ubuntu.com>  Tue, 16 Nov 2021 11:21:05 +0100
+
+rsyslog (8.2110.0-3) unstable; urgency=medium
+
+  * Enable pmciscoios parser module (Closes: #929608)
+  * Enable pmnormalize parser module (Closes: #999450)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 11 Nov 2021 14:46:15 +0100
+
+rsyslog (8.2110.0-2) unstable; urgency=medium
+
+  * Remove SysV init script
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 05 Nov 2021 23:29:45 +0100
+
+rsyslog (8.2110.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2110.0
+  * Rebase patches
+  * Mark iproute2 Build-Depends as linux-any
+  * testbench: skip omfwd_fast_imuxsock.sh if liblogging-stdlog is not
+    available
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 19 Oct 2021 23:50:27 +0200
+
+rsyslog (8.2108.0-2) unstable; urgency=medium
+
+  * build issue: handle undefined MAXPATHLEN, PATH_MAX (Closes: #900718)
+  * ratelimit: fix rate limiting for already parsed messages (Closes: #992869)
+  * Remove outdated section from debian/copyright
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 14 Oct 2021 16:13:50 +0200
+
+rsyslog (8.2108.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2108.0
+  * Bump Standards-Version to 4.6.0
+  * Use fail-missing.
+    Files we are not interested in are listed in debian/not-installed.
+  * Use ${env:DEB_HOST_MULTIARCH} substitution.
+    This facility is available since debhelper compat level 13.
+  * Remove no longer needed debian/rsyslog.lintian-overrides
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 18 Aug 2021 22:00:26 +0200
+
+rsyslog (8.2106.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2106.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 15 Aug 2021 19:41:55 +0200
+
+rsyslog (8.2102.0-2ubuntu2) impish; urgency=medium
+
+  * No-change rebuild to build packages with zstd compression.
+
+ -- Matthias Klose <doko@ubuntu.com>  Thu, 07 Oct 2021 12:24:00 +0200
+
+rsyslog (8.2102.0-2ubuntu1) hirsute; urgency=medium
+
+  * Merge with Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+    - debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+      to adhere to new DMESG_RESTRICT restrictions.
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Wed, 24 Feb 2021 18:30:21 +0100
+
+rsyslog (8.2102.0-2) unstable; urgency=medium
+
+  * testbench: changed tlscommands for librelp tls tests.
+    Pull fix from https://github.com/rsyslog/rsyslog/pull/4535 to make sure
+    librelp tlscommand tests run well with all librelp and OpenSSL versions.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 17 Feb 2021 19:04:30 +0100
+
+rsyslog (8.2102.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2102.0
+  * Bump Standards-Version to 4.5.1
+  * Update Homepage URL to use https://
+  * Set upstream metadata fields: Bug-Submit, Bug-Database, Repository,
+    Repository-Browse
+  * Remove some left-over news bits
+  * Merge logrotate rules.
+    We only want a single postrotate to avoid having a SIGHUP getting lost
+    due to race conditions, leading to files not being rotated properly.
+    (Closes: #720096)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 16 Feb 2021 20:23:15 +0100
+
+rsyslog (8.2012.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2012.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 08 Dec 2020 18:43:01 +0100
+
+rsyslog (8.2010.0-1ubuntu2) hirsute; urgency=medium
+
+  * debian/dmesg.service: Change /var/log/dmesg from 0644 to 0640
+    to adhere to new DMESG_RESTRICT restrictions. (LP: #1912122)
+
+ -- Matthew Ruffell <matthew.ruffell@canonical.com>  Mon, 18 Jan 2021 13:34:48 +1300
+
+rsyslog (8.2010.0-1ubuntu1) hirsute; urgency=medium
+
+  * Merge with Debian unstable. Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+    - d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>"
+      syntax.
+  * Dropped changes:
+    - d/p/Increase-timeouts-in-imfile-basic-2GB-file-and-imfile-tru.patch:
+      bump even further for riscv64
+      [ Accepted by Debian. ]
+
+ -- Sergio Durigan Junior <sergio.durigan@canonical.com>  Fri, 27 Nov 2020 14:43:28 -0500
+
+rsyslog (8.2010.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2010.0
+  * Add missing pem test certificates.
+    Required to successfully run the test suite.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 20 Oct 2020 21:45:26 +0200
+
+rsyslog (8.2008.0-1) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * New upstream version 8.2008.0
+  * Rebase patches
+  * Add debian/rsyslog.service.
+    No longer provided by upstream directly.
+
+  [ Christian Ehrhardt ]
+  * d/p/Increase-timeouts-in-imfile-basic-2GB-file-and-imfile-tru.patch: bump
+    even further for riscv64
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 31 Aug 2020 18:04:06 +0200
+
+rsyslog (8.2006.0-2ubuntu1) groovy; urgency=medium
+
+  [ Christian Ehrhardt ]
+  * Merge with Debian unstable (LP: #1885125). Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+  * Added changes
+    - d/p/Increase-timeouts-in-imfile-basic-2GB-file-and-imfile-tru.patch: bump
+      even further for riscv64 to avoid FTBFS
+
+  [ Simon Deziel ]
+  * d/usr.sbin.rsyslogd: apparmor: use preferred "profile <shortname>" syntax.
+
+ -- Christian Ehrhardt <christian.ehrhardt@canonical.com>  Thu, 25 Jun 2020 14:54:01 +0200
+
+rsyslog (8.2006.0-2) unstable; urgency=medium
+
+  * Revert upstream changes which caused /dev/log from journald being
+    overwritten (Closes: #963715)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 27 Jun 2020 13:29:13 +0200
+
+rsyslog (8.2006.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2006.0
+  * Bump debhelper-compat to 13
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 24 Jun 2020 12:54:55 +0200
+
+rsyslog (8.2004.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2004.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 28 Apr 2020 18:28:36 +0200
+
+rsyslog (8.2002.0-2) unstable; urgency=medium
+
+  * Increase timeouts in imfile-basic-2GB-file and imfile-truncate-2GB-file.
+    Those tests can take a long time, especially on slow architectures like
+    armhf, so bump the test timeouts considerably.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 28 Feb 2020 01:05:57 +0100
+
+rsyslog (8.2002.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2002.0
+  * Rebase patches
+  * Use ip instead of deprecated ifconfig when running the test suite.
+  * Add Build-Depends on curl.
+    This is required to run the test allowed-sender-tcp-hostname-fail.
+  * Enable extended test bench
+  * Bump Standards-Version to 4.5.0
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 26 Feb 2020 17:10:44 +0100
+
+rsyslog (8.2001.0-1ubuntu1) focal; urgency=medium
+
+  [ Christian Ehrhardt ]
+  * Merge with Debian unstable (LP: #1862762). Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+      + debian/50-default.conf: separated default rules
+      + d/rsyslog.install: install default rules
+      + d/rsyslog.postrm: clear default rules on purge
+      + d/rsyslog.postrm: remove conf file in postrm on purge. manage with ucf
+      + d/rsyslog.postinst: Adapt script to use ucf for Ubuntu's config files
+      + debian/control: Add Depends for ucf
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+      + d/rsyslog.install: install apparmor rule
+      + d/rules: use dh_apparmor to install profile before rsyslog is started
+      + d/control: suggests apparmor (>= 2.3)
+      + d/contrl: Build-Depends on dh-apparmor
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        /etc/apparmor.d/disable and /etc/apparmor.d/local
+      + d/usr.sbin.rsyslogd apparmor profile for rsyslogd
+      + debian/rsyslog.preinst: disable profile on clean installs.
+    - d/rules: Fix LDFLAGS to avoid segfault on receipt of first message
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+      + d/rules: drop --enable-mmnormalize
+      + d/control: drop build dependency on liblognorm-dev
+    - run as user syslog
+      + d/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+      + d/rsyslog.postinst: Create syslog user and add it to adm group
+      + d/rsyslog.postinst: Adapt privileges for /var/log
+      + debian/control: Add Depends for adduser
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+    - debian/clean: Delete some files left over by the test suite
+  * Dropped Changes:
+    - d/control: drop rsyslog-mongodb package from suggests
+      [ This part was forgotten to be droped in 8.32.0-1ubuntu1 ]
+    - d/rules: Build with --disable-silent-rules to get useful build logs.
+      [ was a no-op as verbose is the default ]
+    - d/rsyslog.postinst: Clean up temporary syslog.service symlink
+      [ Formerly missing in Changelog, now gone in Debian as well ]
+
+  [ Simon Deziel ]
+  * d/usr.sbin.rsyslogd: apparmor: fix typo in rule for (LP: #1827253).
+
+ -- Christian Ehrhardt <christian.ehrhardt@canonical.com>  Tue, 11 Feb 2020 16:25:29 +0100
+
+rsyslog (8.2001.0-1) unstable; urgency=medium
+
+  * New upstream version 8.2001.0
+  * Set PYTHON=/usr/bin/python3 in debian/rules
+  * Cherry-pick upstream patches which fix a couple of imfile issues
+  * Add missing test files
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 22 Jan 2020 17:56:45 +0100
+
+rsyslog (8.1911.0-1) unstable; urgency=medium
+
+  * New upstream version 8.1911.0
+  * Follow DEP-14 naming
+  * Rebase patches
+  * Bump Standards-Version to 4.4.1
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 12 Nov 2019 23:43:26 +0100
+
+rsyslog (8.1910.0-2) unstable; urgency=medium
+
+  * Fix file handle leak in omfile (Closes: #935300)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 24 Oct 2019 14:13:12 +0200
+
+rsyslog (8.1910.0-1) unstable; urgency=medium
+
+  * New upstream version 8.1910.0
+    - Support cross-platform build for mysql/mariadb
+      (Closes: #932068)
+    - Fix heap overflow in pmaixforwardedfrom module
+      (CVE-2019-17041, Closes: #942067)
+    - Fix heap overflow in pmcisconames module
+      (CVE-2019-17042, Closes: #942065)
+  * Use Python3 for running the test suite (Closes: #938417)
+  * Enable imfile tests
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 17 Oct 2019 01:42:10 +0200
+
+rsyslog (8.1908.0-1) unstable; urgency=medium
+
+  * New upstream version 8.1908.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 20 Aug 2019 15:40:03 +0200
+
+rsyslog (8.1907.0-2) unstable; urgency=medium
+
+  * Enable OpenSSL network stream driver.
+    Split the driver into a separate package named rsyslog-openssl and
+    update the Suggests accordingly to make it the preferred TLS driver.
+    (Closes: #930816)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 09 Jul 2019 23:42:07 +0200
+
+rsyslog (8.1907.0-1) unstable; urgency=medium
+
+  * New upstream version 8.1907.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 09 Jul 2019 22:11:42 +0200
+
+rsyslog (8.1905.0-4) unstable; urgency=medium
+
+  * Stop installing /etc/default/rsyslog and remove it on upgrades
+  * Upload to unstable
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 08 Jul 2019 14:38:18 +0200
+
+rsyslog (8.1905.0-3) experimental; urgency=medium
+
+  * Fix leading double space in rsyslog startup messages (Closes: #907755)
+  * Update URL in logcheck rule to use https instead of http (Closes: #927771)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 02 Jul 2019 17:09:03 +0200
+
+rsyslog (8.1905.0-2) experimental; urgency=medium
+
+  * Bump Build-Depends on librelp to (>= 1.4.0) for
+    relpEngineSetTLSLibByName()
+  * Add Build-Depends on logrotate and net-tools.
+    Those are required by the test suite: logrotate is used in the
+    imfile-logrotate* tests and ifconfig in sndrcv_tls_anon_ipv6.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 29 May 2019 12:17:37 +0200
+
+rsyslog (8.1905.0-1) experimental; urgency=medium
+
+  * New upstream version 8.1905.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 28 May 2019 20:06:53 +0200
+
+rsyslog (8.1904.0-1) experimental; urgency=medium
+
+  * New upstream version 8.1904.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 17 Apr 2019 11:36:23 +0200
+
+rsyslog (8.1903.0-4) experimental; urgency=medium
+
+  * Drop dependency on lsb-base.
+    It is only needed when booting with sysvinit and initscripts, but
+    initscripts already Depends on lsb-base (see #864999).
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 11 Apr 2019 11:12:50 +0200
+
+rsyslog (8.1903.0-3) experimental; urgency=medium
+
+  * Revert "Enlarged msg offset types for bigger structured messages"
+    Seems to break the test-suite on various architectures.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 26 Mar 2019 23:15:59 +0100
+
+rsyslog (8.1903.0-2) experimental; urgency=medium
+
+  * Properly respect the nocheck build option
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 26 Mar 2019 10:40:01 +0100
+
+rsyslog (8.1903.0-1) experimental; urgency=medium
+
+  * New upstream version 8.1903.0
+  * Rebase patches
+    - Drop Run-queue-encryption-tests-only-if-gcrypt-support-is-enab.patch,
+      merged upstream.
+    - Update Don-t-fail-test-suite-on-flaky-tests.patch to no longer treat
+      daqueue-dirty-shutdown as flaky. This test should work reliably now.
+      (Closes: #913984)
+  * Always dump test-suite.log to stdout.
+    In case of a flaky test which is skipped on failure we want to see the
+    test output.
+  * Remove migration code from pre-jessie
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 25 Mar 2019 22:47:54 +0100
+
+rsyslog (8.1901.0-1ubuntu4) eoan; urgency=medium
+
+  * No-change upload with strops.h and sys/strops.h removed in glibc.
+
+ -- Matthias Klose <doko@ubuntu.com>  Thu, 05 Sep 2019 11:08:26 +0000
+
+rsyslog (8.1901.0-1ubuntu3) eoan; urgency=medium
+
+  * No change rebuild for libmysqlclient21.
+
+ -- Robie Basak <robie.basak@ubuntu.com>  Mon, 12 Aug 2019 11:32:48 +0000
+
+rsyslog (8.1901.0-1ubuntu2) eoan; urgency=medium
+
+  [ Simon Deziel ]
+  * d/usr.sbin.rsyslogd: allow reading/mmap'ing rsyslog binary
+    This is required for usage inside containers (LP: #1827253)
+
+ -- Christian Ehrhardt <christian.ehrhardt@canonical.com>  Wed, 03 Jul 2019 16:34:41 +0200
+
+rsyslog (8.1901.0-1ubuntu1) eoan; urgency=low
+
+  * Merge from Debian unstable.  Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the
+      syslog group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile, debian/usr.sbin.rsyslogd
+    - debian/rules:
+      + use dh_apparmor to install profile before rsyslog is started
+      + Fix LDFLAGS to avoid segfault on receipt of first message
+      + Build with --disable-silent-rules to get useful build logs.
+    - debian/control:
+      + suggests apparmor (>= 2.3)
+      + Build-Depends on dh-apparmor
+      + Drop Build-Depends for Universe Packages [only liblognorm-dev now]
+      + Add Depends for adduser and ucf.
+    - debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+      /etc/apparmor.d/disable and /etc/apparmor.d/local
+    - debian/rsyslog.preinst: disable profile on clean installs.
+    - debian/rsyslog.postinst:
+      + Adapt script to use ucf for Ubuntu's config files
+      + fix ownership of /var/spool/rsyslog.
+      + Create syslog user and add it to adm group
+      + Adapt privileges for /var/log
+    - debian/rsyslog.postrm:
+      + Remove file in postrm on purge. manage with ucf.
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+    - debian/clean: Delete some files left over by the test suite
+    - debian/dmesg.service: provide /var/log/dmesg.log as non log-rotated
+      log for boot-time kernel messages.
+  * Dropped changes, included in Debian:
+    - Disable liblogging-stdlog
+    - Add versioned dependency on lsb-base for the use of init_is_upstart.
+  * Dropped changes:
+    - debian/rsyslog.logcheck.ignore.server: don't suppress warnings about
+      duplicate tmpfiles.d lines, the duplication has now been properly
+      fixed.
+    - drop pre-bionic maintainer script handling of dropped upstart units.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Fri, 03 May 2019 14:50:33 -0700
+
+rsyslog (8.1901.0-1) unstable; urgency=medium
+
+  * New upstream version 8.1901.0
+  * Use debhelper-compat (= 12) Build-Depends and drop debian/compat
+  * Rebase patches
+  * Fix reference to HTML documentation in rsyslog.conf (Closes: #920922)
+  * Bump Standards-Version to 4.3.0
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 26 Feb 2019 18:43:39 +0100
+
+rsyslog (8.40.0-1) unstable; urgency=medium
+
+  * New upstream version 8.40.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 11 Dec 2018 22:07:26 +0100
+
+rsyslog (8.39.0-3) unstable; urgency=medium
+
+  * Don't fail test-suite on flaky tests.
+    The tests daqueue-dirty-shutdown.sh and imfile-truncate.sh don't seem to
+    work reliably. We still want to execute them, but if they fail, return 77.
+    This way the test-runner considers them as skipped.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 06 Dec 2018 13:01:00 +0100
+
+rsyslog (8.39.0-2) unstable; urgency=medium
+
+  * Mark lsof Build-Depends as linux-any
+  * Switch to debhelper compat level 12 and dh_installsystemd
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 18 Nov 2018 19:34:45 +0100
+
+rsyslog (8.39.0-1) unstable; urgency=medium
+
+  [ Ondřej Nový ]
+  * d/copyright: Use https protocol in Format field
+  * d/changelog: Remove trailing whitespaces
+
+  [ Michael Biebl ]
+  * New upstream version 8.39.0
+  * Add Build-Depends on lsof.
+    Required by omprog-restart-terminated.sh and
+    omprog-restart-terminated-outfile.sh which are otherwise skipped when
+    running the test-suite.
+  * Drop lmstrmsrv.so module.
+    The module was removed upstream as it was no longer needed.
+  * Run queue-encryption-* tests only if gcrypt support is enabled
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 31 Oct 2018 10:45:39 +0100
+
+rsyslog (8.38.0-1) unstable; urgency=medium
+
+  * New upstream version 8.38.0
+  * Bump Standards-Version to 4.2.1
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 18 Sep 2018 19:46:09 +0200
+
+rsyslog (8.37.0-2) unstable; urgency=medium
+
+  * Bump Build-Depends on librelp to (>= 1.2.16)
+  * Simplify dh_auto_test override a bit
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 17 Aug 2018 02:44:37 +0200
+
+rsyslog (8.37.0-1) unstable; urgency=medium
+
+  * New upstream version 8.37.0
+  * Rebase patches
+  * Enable mmrm1stspace module
+  * Enable fmhash module
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 08 Aug 2018 09:49:32 +0200
+
+rsyslog (8.36.0-1) unstable; urgency=medium
+
+  * New upstream version 8.36.0
+  * Rebase patches
+  * Disable liblogging-stdlog support.
+    This functionality is scheduled to be removed upstream in one of the
+    upcoming releases.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 26 Jun 2018 19:29:08 +0200
+
+rsyslog (8.35.0-1) unstable; urgency=medium
+
+  * New upstream version 8.35.0
+  * Rebase patches
+  * Drop obsolete --disable-libcurl configure switch
+  * rsyslog.service: move LimitNOFILE to correct section
+  * Drop versioned init-system-helpers dependency.
+    The version in stable is recent enough and init-system-helpers is
+    Essential, so the dependency is no longer needed.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 06 Jun 2018 17:13:45 +0200
+
+rsyslog (8.34.0-1) unstable; urgency=medium
+
+  * New upstream version 8.34.0
+  * Fix configure switch for atomic operations
+  * Disable fmhttp function module.
+    http_requrest is now implemented as a loadable function module, but
+    since we disable libcurl support, disable fmhttp as well.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 06 Apr 2018 21:40:49 +0200
+
+rsyslog (8.33.1-1) unstable; urgency=medium
+
+  * New upstream version 8.33.1
+  * Rebase patches
+  * Drop old upgrade code from pre-jessie
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 06 Mar 2018 18:52:11 +0100
+
+rsyslog (8.32.0-1ubuntu7) disco; urgency=medium
+
+  * Install dmesg.service (LP: #1450588) to provide /var/log/dmesg.log
+    as non log-rotated log for boot time kernel messages.
+    - debian/dmesg.service: new service to write /var/log/dmesg
+    - debian/rsyslog.install: install dmesg.service with rsyslog
+
+ -- Christian Ehrhardt <christian.ehrhardt@canonical.com>  Thu, 07 Mar 2019 14:00:30 +0100
+
+rsyslog (8.32.0-1ubuntu6) disco; urgency=medium
+
+  * No-change rebuild against libhiredis0.14
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 12 Nov 2018 08:49:09 +0000
+
+rsyslog (8.32.0-1ubuntu5) cosmic; urgency=medium
+
+  * Sometimes, debootstrap in livecd-rootfs, and other builds shoes
+    failure to debootstrap, hinting that rsyslog is at fault. Make
+    configure step more resiliant, in case tmpfiles call fails to pepper
+    over this issue. A reproducer for the debootstrap failure is still
+    desired.
+
+ -- Dimitri John Ledkov 🌈 <xnox@ubuntu.com>  Tue, 03 Jul 2018 10:26:55 +0100
+
+rsyslog (8.32.0-1ubuntu4) bionic; urgency=medium
+
+  [ Jamie Strandboge ]
+  * debian/usr.sbin.rsyslogd: updates for bionic (LP: #1766600)
+    - allow rsyslog modules in multiarch directories
+    - allow writing temporary pidfile
+
+  [ Dimitri John Ledkov ]
+  * Tolerate installing rsyslog, on systems without systemd installed. LP:
+    #1766574
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 24 Apr 2018 15:47:41 +0100
+
+rsyslog (8.32.0-1ubuntu3) bionic; urgency=medium
+
+  * tmpfiles.d: Let var.conf to create /var/log with 'd' directive, and
+    only adjust the permissions of /var/log with 'z' directive, thus
+    avoiding warnings about duplicate lines for path /var/log. LP:
+    #1730028
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 09 Apr 2018 14:44:54 +0100
+
+rsyslog (8.32.0-1ubuntu2) bionic; urgency=medium
+
+  * Ensure correct permissions on files that rsyslog writes to. LP:
+    #1761630
+  * Drop upgrade scripts from pre-xenial.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 09 Apr 2018 13:17:34 +0100
+
+rsyslog (8.32.0-1ubuntu1) bionic; urgency=low
+
+  * Merge from Debian unstable.  Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the syslog
+      group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile:
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/usr.sbin.rsyslogd: allow 'w' on /run/systemd/notify
+    - debian/rules:
+      + use dh_apparmor to install profile before rsyslog is
+      + Fix LDFLAGS to avoid segfault on receipt of first message
+      + Disable liblogging-stdlog since liblogging-stdlog-dev is in Universe
+      + Build with --disable-silent-rules to get useful build logs.
+    - debian/control:
+      + suggests apparmor (>= 2.3)
+      + Build-Depends on dh-apparmor
+      + Drop Build-Depends for Universe Packages [only liblognorm-dev now]
+      + Add Depends for adduser, ucf and lsb-base.
+      + Add versioned dependency on lsb-base for the use of init_is_upstart.
+    - debian/rsyslog.install:
+      + install profile to /etc/apparmor.d
+      + Install default rules and tmpfiles.d config file
+      + Drop install for files in packages that are not built
+    - debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+      /etc/apparmor.d/disable and /etc/apparmor.d/local
+    - debian/rsyslog.preinst: disable profile on clean installs.
+    - debian/rsyslog.postinst:
+      + Adapt script to use ucf for Ubuntu's conffiles
+      + fix ownership of /var/spool/rsyslog.
+      + Create syslog user and add it to adm group
+      + Adapt privileges for /var/log
+    - debian/rsyslog.postrm:
+      + Remove file in postrm on purge. manage with ucf.
+    - debian/rsyslog.logcheck.ignore.server: Suppress warning about duplicate
+      tmpfiles.d line for /var/log, from our debian/00rsyslog.conf.
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+  * Dropped changes due to archive re-org, packages will be in universe:
+    - Drop rsyslog-mongodb package, depends on libmongo-client which is not
+      in main.
+    - Drop kafka package, depends on librdkafka from universe.
+    - Drop rsyslog-czmq, depends on libczmq-dev from universe.
+    - debian/control:
+      + Drop Suggests for unbuilt packages
+  * Dropped changes, applied in Debian:
+    - Cherry pick restart on configuration changes fix from Debian (LP: #1668639)
+  * Dropped changes, applied upstream:
+    - debian/patches/fix-permitnonkernelfacility-1703987.patch: Fix
+      hetting of permitnonkernelfacility with new style config.
+      (LP: #1703987)
+    - fix-tls-connection-errrors.patch: Resolve unexpected GnuTLS error -50.
+      (LP: #1673717)
+  * Drop xconsole integration in 50-defaults (LP: #1746012)
+  * debian/clean: Delete some files left over by test suite so we can
+    build the source package again after building binaries
+
+ -- Julian Andres Klode <juliank@ubuntu.com>  Tue, 30 Jan 2018 20:36:24 +0100
+
+rsyslog (8.32.0-1) unstable; urgency=medium
+
+  * New upstream version 8.32.0
+  * Bump Build-Depends as per configure.ac.
+    Bump libfastjson-dev to (>= 0.99.8) and libczmq-dev to (>= 3.0.2).
+  * Disable valgrind testbench again.
+    Those tests using valgrind turned out to be too brittle. (Closes: #884305)
+  * Disable libcurl support.
+    This means that the new http_request() functionality is not available
+    but avoids a dependency on libcurl in rsyslog core.
+  * Update Vcs-* to point to salsa.debian.org (gitlab)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 14 Jan 2018 12:48:11 +0100
+
+rsyslog (8.31.0-2) unstable; urgency=medium
+
+  * Add Build-Depends on systemd to allow journal related tests to run
+  * Extend list of architectures for valgrind Build-Depends.
+    Run valgrind related tests on all release architectures where valgrind
+    is available.
+  * Bump Standards-Version to 4.1.2
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 13 Dec 2017 13:09:35 +0100
+
+rsyslog (8.31.0-1) unstable; urgency=medium
+
+  * New upstream version 8.31.0
+  * Switch from libmongo-client to libmongoc
+  * Rebase patches
+  * Set Rules-Requires-Root to no
+  * Add Build-Depends on python for running the test suite
+  * Add Build-Depends on libfaketime and valgrind.
+    This allows more tests to run which would otherwise be skipped.
+    As valgrind is currently not available everywhere, restrict it to amd64
+    for now.
+  * Modernize config syntax for rsyslog-mysql and rsyslog-pgsql
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 30 Nov 2017 01:19:36 +0100
+
+rsyslog (8.30.0-3) unstable; urgency=medium
+
+  * Cherry-pick upstream patch to fix broken imjournal module (Closes: #882261)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 27 Nov 2017 01:52:56 +0100
+
+rsyslog (8.30.0-2) unstable; urgency=medium
+
+  * Add Build-Depends on flex for generating grammar/lexer.c.
+    This ensures we can build twice in a row. The pre-generated files in
+    grammar/ are removed on make clean.
+  * Revert "Use dh_auto_test instead of calling make check directly"
+    Somehow this broke the test suite and made lots of tests fail.
+  * Add Build-Depends on autoconf-archive for the AX_COMPILER_FLAGS macro
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 02 Nov 2017 11:48:02 +0100
+
+rsyslog (8.30.0-1) unstable; urgency=medium
+
+  * New upstream version 8.30.0
+  * Rebase patches
+  * Bump Build-Depends on libfastjson-dev to (>= 0.99.7) as per configure.ac
+  * Switch from dh_install --list-missing to dh_missing --list-missing
+  * Cherry-pick upstream patches to fix imgssapi build failures
+  * Bump Standards-Version to 4.1.1
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 01 Nov 2017 22:51:44 +0100
+
+rsyslog (8.29.0-2) unstable; urgency=medium
+
+  * Change priority of all extra packages to optional
+  * Bump Standards-Version to 4.0.1
+  * Cherry-pick upstream patch to fix build failures on platforms without
+    64-bit atomics (Closes: #872568)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 05 Sep 2017 19:09:49 +0200
+
+rsyslog (8.29.0-1) unstable; urgency=medium
+
+  * New upstream version 8.29.0
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 08 Aug 2017 21:35:12 +0200
+
+rsyslog (8.28.0-1) unstable; urgency=medium
+
+  * New upstream version 8.28.0
+  * Bump Build-Depends on librelp-dev to (>= 1.2.14) as per configure.ac
+  * Drop versioned Build-Depends on dpkg-dev (>= 1.17.14)
+    No longer required as even jessie ships a newer version.
+  * Bump Standards-Version to 4.0.0
+  * Enable mmfields module (Closes: #852269)
+  * Enable but do not install omstdout module.
+    This module is required to successfully run the test suite.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 09 Jul 2017 23:52:51 +0200
+
+rsyslog (8.27.0-4) unstable; urgency=medium
+
+  * Fix PID file to actually be /run/rsyslogd.pid (Closes: #865276)
+  * Don't rely on SysV init script in logrotate config.
+    Add a small helper to send SIGHUP to rsyslogd to close open log files.
+    Use systemctl directly if systemd is the active PID 1. Keep the SysV
+    init script as fallback only.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 25 Jun 2017 18:27:04 +0200
+
+rsyslog (8.27.0-3) unstable; urgency=medium
+
+  * Change PID file to use /run/rsyslog.pid instead of /var/run/rsyslog.pid
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 19 Jun 2017 00:46:43 +0200
+
+rsyslog (8.27.0-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 18 Jun 2017 18:17:40 +0200
+
+rsyslog (8.27.0-1) experimental; urgency=medium
+
+  * New upstream version 8.27.0
+  * Rebase patches
+  * Bump Build-Depends on liblognorm-dev to (>= 2.0.3)
+  * Enable imkafka input plugin
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 03 Jun 2017 22:18:39 +0200
+
+rsyslog (8.25.0-1) experimental; urgency=medium
+
+  * New upstream release
+  * Update Vcs-* following the latest recommendation
+  * Rebase patches
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 21 Feb 2017 18:08:16 +0100
+
+rsyslog (8.24.0-1) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * New upstream release.
+  * Rebase patches.
+  * Add Depends on init-system-helpers (>= 1.47~) to rsyslog.
+    This ensures we have a version of invoke-rc.d that supports try-restart.
+
+  [ Ondřej Nový ]
+  * Trigger restart on configuration changes.
+    Register a dpkg trigger on /etc/rsyslog.d that calls restart on
+    configuration changes. (Closes: #791337)
+  * Update dpkg trigger to use try-restart.
+    Add try-restart action to SysV initscript for that, systemd supports
+    this natively.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 18 Jan 2017 23:14:38 +0100
+
+rsyslog (8.23.0-2) unstable; urgency=medium
+
+  * Fix empty-hostname.sh test and change support for empty hostname
+    (Closes: #844914)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 24 Nov 2016 11:33:43 +0100
+
+rsyslog (8.23.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Rebase patches.
+  * Bump Build-Depends on libfastjson-dev to (>= 0.99.3).
+  * Use the new default-mysql-* metapackages.
+  * Remove logging rules for news.{crit,err,notice} (INN).
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 18 Nov 2016 07:43:24 +0100
+
+rsyslog (8.22.0-2) unstable; urgency=medium
+
+  * Bump debhelper compat level to 10.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 16 Oct 2016 01:13:12 +0200
+
+rsyslog (8.22.0-1) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * New upstream release.
+
+  [ Matt Zahorik ]
+  * Enable hiredis output plugin (Closes: #833535)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 04 Oct 2016 21:07:21 +0200
+
+rsyslog (8.21.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Rebase patches.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 23 Aug 2016 18:49:35 +0200
+
+rsyslog (8.20.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Rebase patches.
+  * Bump Standards-Version to 3.9.8.
+  * Switch from libjson-c-dev to libfastjson-dev.
+  * Bump Build-Depends on librelp-dev to (>= 1.2.12) as per configure.ac.
+  * Bump Build-Depends on liblognorm-dev to (>= 2.0.0) to ensure we have a
+    version which was built against libfastjson.
+  * Add Build-Depends on procps. The test suite requires the ps utility.
+  * Use dh-exec to install arch specific modules.
+  * Bump debhelper compatibility level to 9.
+  * Install module libraries into multiarch paths.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 12 Aug 2016 22:46:32 +0200
+
+rsyslog (8.16.0-1ubuntu10) bionic; urgency=medium
+
+  * fix-tls-connection-errrors.patch: Resolve unexpected GnuTLS error -50.
+    (LP: #1673717)
+
+ -- Brian Murray <brian@ubuntu.com>  Mon, 06 Nov 2017 15:05:10 -0800
+
+rsyslog (8.16.0-1ubuntu9) artful; urgency=medium
+
+  * Correct typpo.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 21 Aug 2017 00:49:39 +0100
+
+rsyslog (8.16.0-1ubuntu8) artful; urgency=medium
+
+  * Drop upstart system jobs.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Sat, 19 Aug 2017 20:51:36 +0100
+
+rsyslog (8.16.0-1ubuntu7) artful; urgency=medium
+
+  * Cherry pick restart on configuration changes fix from Debian (LP: #1668639)
+    - Trigger restart on configuration changes.
+      Register a dpkg trigger on /etc/rsyslog.d that calls restart on
+      configuration changes. (Closes: #791337)
+    - Update dpkg trigger to use try-restart.
+      Add try-restart action to SysV initscript for that, systemd supports
+      this natively.
+    - debian/control: Add Depends on init-system-helpers (>= 1.47~) to rsyslog.
+
+ -- Frode Nordahl <frode.nordahl@canonical.com>  Mon, 26 Jun 2017 06:29:30 +0000
+
+rsyslog (8.16.0-1ubuntu6) artful; urgency=medium
+
+  * debian/patches/fix-permitnonkernelfacility-1703987.patch: Fix
+    setting of permitnonkernelfacility with new style config.
+    (LP: #1703987)
+
+ -- Andreas Hasenack <andreas@canonical.com>  Wed, 12 Jul 2017 17:30:08 -0300
+
+rsyslog (8.16.0-1ubuntu5) yakkety; urgency=medium
+
+  * Use new syntax to enable non-kernel klog messages (LP: #1531622)
+
+ -- Simon Deziel <simon.deziel@gmail.com>  Thu, 08 Sep 2016 16:57:33 +0000
+
+rsyslog (8.16.0-1ubuntu4) yakkety; urgency=medium
+
+  * No-change rebuild against libjson-c3.
+
+ -- Graham Inggs <ginggs@ubuntu.com>  Thu, 28 Apr 2016 10:36:42 +0200
+
+rsyslog (8.16.0-1ubuntu3) xenial; urgency=medium
+
+  * Rebuild against libmysqlclient20.
+
+ -- Robie Basak <robie.basak@ubuntu.com>  Tue, 05 Apr 2016 13:01:12 +0000
+
+rsyslog (8.16.0-1ubuntu2) xenial; urgency=medium
+
+  * No-change rebuild for gnutls transition.
+
+ -- Matthias Klose <doko@ubuntu.com>  Wed, 17 Feb 2016 22:27:26 +0000
+
+rsyslog (8.16.0-1ubuntu1) xenial; urgency=low
+
+  * Merge from Debian unstable (LP: #1539483).  Remaining changes:
+    - debian/00rsyslog.conf Install tmpfiles.d snippet to ensure that the syslog
+      group can write into /var/log/.
+    - debian/50-default.conf: set of default rules for syslog
+    - debian/rsyslog.conf:
+      + enable $RepeatedMsgReduction to avoid bloating the syslog file.
+      + enable $KLogPermitNonKernelFacility for non-kernel klog messages
+      + Run as rsyslog:rsyslog, set $FileOwner to syslog
+      + Remove rules moved to 50-default.conf
+    - Add disabled by default AppArmor profile:
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/usr.sbin.rsyslogd: allow 'w' on /run/systemd/notify
+    - debian/rules:
+      + use dh_apparmor to install profile before rsyslog is
+      + Fix LDFLAGS to avoid segfault on receipt of first message
+      + Avoid buiding specific packages that rely on Universe deps restarted
+      + Disable liblogging-stdlog since liblogging-stdlog-dev is in Universe
+      + Build with --disable-silent-rules to get useful build logs.
+      + Disable build with dropped packages
+    - debian/control:
+      + suggests apparmor (>= 2.3)
+      + Build-Depends on dh-apparmor
+      + Drop Build-Depends for Universe Packages
+      + Drop Suggests for unbuilt packages
+      + Add Depends for adduser, ucf and lsb-base.
+      + Add versioned dependency on lsb-base for the use of init_is_upstart.
+    - debian/rsyslog.install:
+      + install profile to /etc/apparmor.d
+      + Install default rules and tmpfiles.d config file
+      + Drop install for files in packages that are not built
+    - debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+      /etc/apparmor.d/disable and /etc/apparmor.d/local
+    - debian/rsyslog.preinst: disable profile on clean installs.
+    - debian/rsyslog.postinst:
+      + Adapt script to use ucf for Ubuntu's conffiles
+      + fix ownership of /var/spool/rsyslog.
+      + Create syslog user and add it to adm group
+      + Adapt privileges for /var/log
+    - debian/rsyslog.postrm:
+      + Remove file in postrm on purge. manage with ucf.
+    - debian/rsyslog.logcheck.ignore.server: Suppress warning about duplicate
+      tmpfiles.d line for /var/log, from our debian/00rsyslog.conf.
+    - Drop rsyslog-mongodb package, depends on libmongo-client which is not
+      in main.
+    - Drop mmnormalize module, which depends on liblognorm from universe.
+    - Drop kafka package, depends on librdkafka from universe.
+    - Drop rsyslog-czmq, depends on libczmq-dev from universe.
+  * Dropped changes:
+    - debian/rsyslog.preinst: disable profile when upgrading from earlier than 
+      when we shipped the profile as such a condition no longer exists
+    - debian/rsyslog.init: Adjust rsyslog init script to detect upstart,
+      making the upstart patches upstreamable to Debian.
+    - debian/control: Drop ubuntu-specific lsb-base version dependancy since
+      init_is_upstart is no longer used.
+    - debian/rsyslog.logrotate: Drop "service rsyslog rotate" delta. 
+      invoke-rc.d is slightly better as it respects policy-rc.d
+
+ -- Louis Bouchard <louis.bouchard@ubuntu.com>  Tue, 02 Feb 2016 10:34:18 +0100
+
+rsyslog (8.16.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Rebase patches.
+  * Enable more hardening flags via DEB_BUILD_MAINT_OPTIONS = hardening=+all.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 27 Jan 2016 19:59:20 +0100
+
+rsyslog (8.15.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop debian/patches/Skip-broken-mmnormalize-tests.patch, fixed upstream.
+  * Add tests which are missing in the dist tarball and which are required to
+    run the test suite.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 20 Dec 2015 17:36:00 +0100
+
+rsyslog (8.14.0-2ubuntu2) xenial; urgency=medium
+
+  * debian/usr.sbin.rsyslogd: allow 'w' on /run/systemd/notify (LP: #1530483)
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Tue, 05 Jan 2016 09:51:20 -0600
+
+rsyslog (8.14.0-2ubuntu1) xenial; urgency=low
+
+  * Merge from Debian unstable (LP: #1521673).  Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction
+      to avoid bloating the syslog file.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - Add disabled by default AppArmor profile:
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/rules: use dh_apparmor to install profile before rsyslog is
+        restarted
+      + debian/control: suggests apparmor (>= 2.3)
+      + debian/rsyslog.install: install profile to /etc/apparmor.d
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        and /etc/apparmor.d/disable
+      + debian/rsyslog.preinst: disable profile on clean install or upgrades
+        from earlier than when we shipped the profile
+      + debian/control: Build-Depends on dh-apparmor
+    - debian/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+    - Adjust rsyslog init script to detect upstart, making the upstart
+      patches upstreamable to Debian.
+    - Add versioned dependency on lsb-base for the use of init_is_upstart.
+  * Dropped changes:
+    - debian/patches/fix-testbench-buffer-overflow-ftbs.patch : superseded upstream.
+  * debian/rules: filter out -Wl,-Bsymbolic-functions only, instead of
+    overriding all LDFLAGS.
+  * Drop rsyslog-mongodb package, depends on libmongo-client which is not
+    in main.
+  * Drop mmnormalize module, which depends on liblognorm from universe.
+  * Drop kafka package, depends on librdkafka from universe.
+  * Drop rsyslog-czmq, depends on libczmq-dev from universe.
+  * Build with --disable-liblogging-stdlog since liblogging-stdlog-dev is
+    in Universe
+  * Build with --disable-silent-rules to get useful build logs.
+
+ -- Louis Bouchard <louis.bouchard@ubuntu.com>  Wed, 02 Dec 2015 12:09:39 +0100
+
+rsyslog (8.14.0-2) unstable; urgency=medium
+
+  * Remove logging to /dev/xconsole from the default rsyslog configuration.
+    It is a rarely used feature and causes rsyslog to repeatedly retry if
+    there is noone reading from /dev/xconsole. Instead ship the configuration
+    as example files and add instructions to README.Debian how one can
+    re-enable support for xconsole. (Closes: #745492, #783687)
+  * Remove section about sysklogd from README.Debian, sysklogd is not really
+    relevant anymore nowadays.
+  * Ship an example file for logging to the console on tty8 which can be
+    dropped into /etc/rsyslog.d instead of having it as comment in
+    /etc/rsyslog.conf.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 12 Nov 2015 22:11:11 +0100
+
+rsyslog (8.14.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Rebase patches.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 07 Nov 2015 20:23:05 +0100
+
+rsyslog (8.13.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Bump Build-Depends on liblognorm-dev to (>= 1.1.2) as per configure.ac.
+  * Rebase patches.
+  * Skip tests which are currently broken by the liblognorm update. According
+    to upstream those failing tests point at a bug in liblognorm, not rsyslog
+    itself. (Closes: #800873)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 25 Oct 2015 22:14:41 +0100
+
+rsyslog (8.12.0-3) unstable; urgency=medium
+
+  [ Louis Bouchard ]
+  * Fix FTBFS on various architectures caused by a buffer overflow in tcpflood
+    when running the test suite.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 16 Sep 2015 18:09:49 +0200
+
+rsyslog (8.12.0-2) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * Drop versioned Depends on initscripts. This dependency was added for the
+    /run transition in wheezy and is no longer required.
+
+  [ Luca Boccassi ]
+  * Enable CZMQ plugins. (Closes: #798223)
+  * Fix NULL pointer dereference in imczmq and omczmq.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 15 Sep 2015 19:43:12 +0200
+
+rsyslog (8.12.0-1ubuntu3) xenial; urgency=medium
+
+  * debian/rsyslog.logcheck.ignore.server: Suppress warning about duplicate
+    tmpfiles.d line for /var/log, from our debian/00rsyslog.conf. Thanks to
+    sune-molgaard! (LP: #1484027).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 29 Oct 2015 21:42:12 +0100
+
+rsyslog (8.12.0-1ubuntu2) wily; urgency=medium
+
+  * debian/patches/fix-testbench-buffer-overflow-ftbs.patch
+    - Fix FTBS on i386 and powerpc caused by buffer overflow
+      detection while running rsyslog testbench.
+
+ -- Louis Bouchard <louis.bouchard@ubuntu.com>  Wed, 02 Sep 2015 14:41:01 +0200
+
+rsyslog (8.12.0-1ubuntu1) wily; urgency=low
+
+  * Merge from Debian unstable (LP: #1464201).  Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction
+      to avoid bloating the syslog file.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - Add disabled by default AppArmor profile:
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/rules: use dh_apparmor to install profile before rsyslog is
+        restarted
+      + debian/control: suggests apparmor (>= 2.3)
+      + debian/rsyslog.install: install profile to /etc/apparmor.d
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        and /etc/apparmor.d/disable
+      + debian/rsyslog.preinst: disable profile on clean install or upgrades
+        from earlier than when we shipped the profile
+      + debian/control: Build-Depends on dh-apparmor
+    - debian/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+    - Adjust rsyslog init script to detect upstart, making the upstart
+      patches upstreamable to Debian.
+    - Add versioned dependency on lsb-base for the use of init_is_upstart.
+  * Dropped changes:
+    - debian/patches/10-initgroups.patch : superseded upstream.
+    - debian/patches/11-fix-infinite-loop-openvz-vms.patch: superseded upstream.
+    - debian/patches/CVE-2014-3634.patch: superseded upstream.
+  * debian/rules: filter out -Wl,-Bsymbolic-functions only, instead of
+    overriding all LDFLAGS.
+  * Drop rsyslog-mongodb package, depends on libmongo-client which is not
+    in main.
+  * Drop mmnormalize module, which depends on liblognorm from universe.
+  * Drop kafka package, depends on librdkafka from universe.
+  * Build with --disable-liblogging-stdlog since liblogging-stdlog-dev is
+    in Universe
+  * Build with --disable-silent-rules to get useful build logs.
+
+ -- Louis Bouchard <louis.bouchard@ubuntu.com>  Mon, 31 Aug 2015 11:48:29 +0200
+
+rsyslog (8.12.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Refresh patches.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 16 Aug 2015 18:45:59 +0200
+
+rsyslog (8.11.0-2) unstable; urgency=medium
+
+  * Properly handle transactions in ompgsql. Patch cherry-picked from upstream
+    Git. (Closes: #788183)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 15 Jul 2015 02:49:48 +0200
+
+rsyslog (8.11.0-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 30 Jun 2015 17:57:45 +0200
+
+rsyslog (8.9.0-3) unstable; urgency=medium
+
+  * Upload to unstable.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 11 May 2015 23:13:31 +0200
+
+rsyslog (8.9.0-2) experimental; urgency=medium
+
+  [ Marc Fournier ]
+  * Build omkafka module which provides support for publishing log messages to
+    Apache Kafka. Split that module into a separate package called
+    rsyslog-kafka. (Closes: #780365)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 09 Apr 2015 15:34:25 +0200
+
+rsyslog (8.9.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Update gbp.conf to not use patch numbers to reduce the patch noise created
+    by gbp-pq.
+  * Rebase patches.
+  * Drop obsolete section about compatibility levels from README.Debian.
+  * Start modernizing rsyslog.conf and use the new style syntax.
+  * Add virtual-mysql-client and virtual-mysql-server as alternatives to
+    mysql-client and mysql-server. (Closes: #781972)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 07 Apr 2015 22:14:07 +0200
+
+rsyslog (8.8.0-4) experimental; urgency=medium
+
+  * Cherry-pick upstream patch which is supposed to fix $MaxMessageSize on
+    various architectures.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 25 Mar 2015 17:33:26 +0100
+
+rsyslog (8.8.0-3) experimental; urgency=medium
+
+  * Dump test-suite.log to stdout if test suite fails.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 11 Mar 2015 12:28:31 +0100
+
+rsyslog (8.8.0-2) experimental; urgency=medium
+
+  * Enable and run test suite during build.
+  * Add files from upstream Git repository which are missing in the dist
+    tarball and are necessary to run the test suite.
+  * Don't link tcpflood test binary against -lgcrypt. It's not necessary with
+    current versions of GnuTLS.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 10 Mar 2015 23:09:59 +0100
+
+rsyslog (8.8.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Bump Build-Depends on liblognorm-dev to (>= 1.0.2).
+  * Explicitly enable liblogging-stdlog feature, which is now optional.
+  * Remove obsolete --enable-pmrfc3164sd configure switch. This module has
+    been removed by upstream.
+  * Enable support for reading from and writing to the systemd journal
+    directly via the imjournal and omjournal module.
+    The default rsyslog configuration still uses the imuxsock module though,
+    which receives the syslog messages via a socket that is passed from
+    systemd to rsyslog.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 09 Mar 2015 22:18:14 +0100
+
+rsyslog (8.6.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Update Vcs-Browser URL to use cgit and https.
+  * Bump Standards-Version to 3.9.6. No further changes.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 29 Jan 2015 02:02:29 +0100
+
+rsyslog (8.4.2-1) unstable; urgency=high
+
+  * New upstream release.
+    - CVE-2014-3683: The fix for CVE-2014-3634 incomplete. It did not cover
+      cases where PRI values > MAX_INT caused integer overflows resulting in
+      negative values.
+  * Urgency high for the security fix.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 02 Oct 2014 15:27:25 +0200
+
+rsyslog (8.4.1-1) unstable; urgency=high
+
+  * New upstream release.
+    - CVE-2014-3634: Fix remote syslog vulnerability due to improper
+      handling of invalid PRI values.
+  * Drop patches which have been merged upstream.
+  * Urgency high for the security fix.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 30 Sep 2014 12:35:33 +0200
+
+rsyslog (8.4.0-2) unstable; urgency=medium
+
+  * Tweak rsyslog systemd service file. Add Documentation field and restart
+    the rsyslogd daemon on failures.
+  * Cherry-pick upstream patch to fix build failures on platforms without
+    atomic instructions.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 20 Aug 2014 19:36:33 +0200
+
+rsyslog (8.4.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update patches:
+    - Refresh 0001-Don-t-create-a-database.patch.
+    - Drop 0002-Fix-pidfile-location.patch, merged upstream.
+  * Add --disable-generate-man-pages to configure flags to avoid a build
+    dependency on python-docutils. We don't ship the generated man pages
+    anyway.
+  * Add support for external message modification modules which are bound via
+    the new native mmexternal module.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 18 Aug 2014 18:28:20 +0200
+
+rsyslog (8.2.2-5) unstable; urgency=medium
+
+  * Make sure to actually only create the temporary syslog.service symlink on
+    upgrades and avoid the usage of readlink.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 18 Aug 2014 02:43:31 +0200
+
+rsyslog (8.2.2-4) unstable; urgency=medium
+
+  * Fix wheezy → jessie upgrade failure when running under systemd due to the
+    syslog.service symlink temporarily being missing.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 18 Aug 2014 00:39:03 +0200
+
+rsyslog (8.2.2-3) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 29 Jun 2014 14:40:56 +0200
+
+rsyslog (8.2.2-2) experimental; urgency=medium
+
+  * Merge changes from unstable branch.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 23 Jun 2014 13:52:12 +0200
+
+rsyslog (8.2.2-1) experimental; urgency=medium
+
+  * New major upstream release.
+    - Rewritten core engine providing higher performance and better
+      scalability with complex configurations.
+    - Simplified script execution.
+    - Global variable support.
+    - Output part was revamped completely and required changes to all output
+      modules.
+    - Support for external plugins which can be written in any language.
+  * Switch watch file to track v8 stable branch.
+  * Update Build-Depends:
+    - Bump librelp-dev to (>= 1.2.5).
+    - Bump liblogging-stdlog-dev to (>= 1.0.3).
+    - Bump liblognorm-dev to (>= 1.0.0).
+    - Drop libee-dev.
+  * Drop the omruleset module which has been deprecated and replaced by the
+    much more efficient RainerScript "call" statement.
+  * Remove the rsyslog-doc package which is now built from a separate source
+    package.
+  * Fix pidfile location. The pidfile should be stored in /var/run, not /etc.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 09 Jun 2014 21:16:19 +0200
+
+rsyslog (7.6.3-3) unstable; urgency=medium
+
+  * Build against libgnutls28-dev. (Closes: #752304)
+  * Use canonical URIs for Vcs-* fields.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 23 Jun 2014 13:44:55 +0200
+
+rsyslog (7.6.3-2) unstable; urgency=medium
+
+  * Update Build-Depends:
+    - Bump librelp-dev to (>= 1.2.5).
+  * Build omelasticsearch module which provides support for logging to an
+    Elasticsearch server. Split that module into a separate package called
+    rsyslog-elasticsearch. (Closes: #744951)
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 16 May 2014 22:37:05 +0200
+
+rsyslog (7.6.3-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Fixes ompipe to properly handle retries and not cause unnecessary
+      suspension messages. (Closes: #742113)
+  * Update watch file, track v7 stable branch.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 28 Mar 2014 12:36:45 +0100
+
+rsyslog (7.6.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Update patches.
+  * Update Build-Depends:
+    - Bump librelp-dev to (>= 1.2.4).
+    - Add liblogging-stdlog-dev (>= 1.0.1).
+  * Fix typo in rsyslog.postrm: dissappear → disappear
+  * Drop useless "exit 0" from maintainer scripts.
+  * Enable and install the mmutf8fix, mmpstrucdata and mmsequence message
+    modification modules.
+  * Stop installing debian/sample.conf. Upstream ships a more up-to-date
+    example configuration file.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 17 Mar 2014 17:26:08 +0100
+
+rsyslog (7.4.8-1) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * New upstream release.
+  * Update Build-Depends:
+    - Bump libestr-dev to (>= 0.1.9).
+    - Tighten liblognorm-dev to (<< 1.0.0).
+    - Replace libjson0-dev with libjson-c-dev, we no longer need the
+      transitional package.
+  * Bump Standards-Version to 3.9.5. No further changes.
+
+  [ Daniel Pocock ]
+  * Make template parameter not mandatory in mongodb output plugin. Patch
+    cherry-picked from upstream Git. (Closes: #740869, #721277)
+  * Ensure JSON templates are NUL terminated. Patch cherry-picked from
+    upstream Git.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 11 Mar 2014 19:52:49 +0100
+
+rsyslog (7.4.4-1ubuntu14) vivid; urgency=medium
+
+  * Applied updated upstream patch fixing infinite loop on OpenVZ VMs.
+    (LP: #1366829)
+
+ -- Paul Donohue <ubuntu-rsyslog@PaulSD.com>  Fri, 09 Jan 2015 10:50:36 -0500
+
+rsyslog (7.4.4-1ubuntu13) vivid; urgency=medium
+
+  * Applied upstream patch fixing infinite loop on OpenVZ VMs. Thanks to Paul
+    Donohue for the patch. (LP: #1366829)
+
+ -- Brian Murray <brian@ubuntu.com>  Thu, 18 Dec 2014 15:20:23 -0800
+
+rsyslog (7.4.4-1ubuntu12) vivid; urgency=medium
+
+  * Install debian/00rsyslog.conf tmpfiles.d snippet to ensure that the syslog
+    group can write into /var/log/. (LP: #1401984)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 16 Dec 2014 14:33:34 +0100
+
+rsyslog (7.4.4-1ubuntu11) utopic; urgency=medium
+
+  * SECURITY UPDATE: denial of service and possible code execution via
+    invalid PRI value
+    - debian/patches/CVE-2014-3634.patch: limit PRI values in
+      grammar/rainerscript.h, plugins/imfile/imfile.c,
+      plugins/imklog/imklog.c, plugins/imkmsg/imkmsg.c,
+      plugins/imsolaris/imsolaris.c, plugins/imuxsock/imuxsock.c,
+      runtime/msg.c, runtime/parser.c, runtime/rsyslog.h,
+      runtime/srutils.c, runtime/syslogd-types.h, runtime/typedefs.h,
+      tools/syslogd.c.
+    - CVE-2014-3634
+    - CVE-2014-3683
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 09 Oct 2014 13:01:54 -0400
+
+rsyslog (7.4.4-1ubuntu10) utopic; urgency=medium
+
+  * debian/usr.sbin.rsyslog: allow 'rk' to /run/utmp (LP: #1366261)
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Tue, 09 Sep 2014 10:26:20 -0500
+
+rsyslog (7.4.4-1ubuntu9) utopic; urgency=medium
+
+  * debian/usr.sbin.rsyslog: update for abstract socket mediation
+    (LP: #1362199)
+  * debian/control: Suggests apparmor >= 2.8.96~2541-0ubuntu4~
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Thu, 04 Sep 2014 09:45:43 -0500
+
+rsyslog (7.4.4-1ubuntu7) utopic; urgency=medium
+
+  * Build depend on libgcrypt20-dev.
+  * Build depend on libgnutls28-dev.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Fri, 08 Aug 2014 11:12:31 +0100
+
+rsyslog (7.4.4-1ubuntu6) utopic; urgency=medium
+
+  * debian/rsyslog.logrotate: Call "rotate" action for rotation instead of
+    "reload". (LP: #1331891)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 31 Jul 2014 11:06:52 +0200
+
+rsyslog (7.4.4-1ubuntu5) utopic; urgency=medium
+
+  * Use "service" command in rsyslog's postrotate, since naked "reload"
+    fails under non-upstart init. (LP: #1331891)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 08 Jul 2014 09:24:53 +0100
+
+rsyslog (7.4.4-1ubuntu4) utopic; urgency=medium
+
+  * Enable non-kernel facility klog messages. (LP: #1274444) 
+
+ -- Chris J Arges <chris.j.arges@ubuntu.com>  Tue, 01 Jul 2014 14:59:40 -0500
+
+rsyslog (7.4.4-1ubuntu3) utopic; urgency=high
+
+  * No change rebuild against new dh_installinit, to call update-rc.d at
+    postinst.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 28 May 2014 10:42:05 +0100
+
+rsyslog (7.4.4-1ubuntu2) trusty; urgency=low
+
+  * debian/rsyslog.postinst: Make sure /var/log is owned by group syslog and
+    is group-writeable (LP: #1256695).
+  * Ensure that rsyslogd can create files in group adm, even when dropping
+    group privileges to syslog (LP: #484336):
+    - debian/patches/10-initgroups.patch: Try to set appropriate
+      supplementary groups before dropping UID.
+    - debian/rsyslog.postinst: Add syslog user to group adm.
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Wed, 04 Dec 2013 13:12:07 +0000
+
+rsyslog (7.4.4-1ubuntu1) trusty; urgency=low
+
+  * Merge from Debian unstable, remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction
+      to avoid bloating the syslog file.
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - Add disabled by default AppArmor profile:
+      + debian/rsyslog.upstart: add pre-start stanza to load profile
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/rules: use dh_apparmor to install profile before rsyslog is
+        restarted
+      + debian/control: suggests apparmor (>= 2.3)
+      + debian/rsyslog.install: install profile to /etc/apparmor.d
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        and /etc/apparmor.d/disable
+      + debian/rsyslog.preinst: disable profile on clean install or upgrades
+        from earlier than when we shipped the profile
+      + debian/control: Build-Depends on dh-apparmor
+    - debian/rsyslog.postrm: fixed typo "dissappear" to "disappear".
+    - debian/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+    - Adjust rsyslog init script to detect upstart, making the upstart
+      patches upstreamable to Debian.
+    - Add versioned dependency on lsb-base for the use of init_is_upstart.
+  * Dropped changes:
+    - debian/patches/04-fix_startup_deadlock.patch: superseded upstream.
+    - debian/patches/201-PreserveFQDN-not-working: originally from upstream.
+    - debian/patches/202-off-by-one-regression-1187808.patch: originally
+      from upstream.
+  * debian/rules: filter out -Wl,-Bsymbolic-functions only, instead of
+    overriding all LDFLAGS.
+  * Drop rsyslog-mongodb package, depends on libmongo-client which is not
+    in main.
+  * Drop mmnormalize module, which depends on liblognorm from universe.
+  * Build with --disable-silent-rules to get useful build logs.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 21 Oct 2013 15:31:38 -0700
+
+rsyslog (7.4.4-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 03 Sep 2013 22:42:49 +0200
+
+rsyslog (7.4.3-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 23 Jul 2013 01:01:40 +0200
+
+rsyslog (7.4.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 06 Jul 2013 00:14:19 +0200
+
+rsyslog (7.4.1-3) unstable; urgency=low
+
+  * Bump Build-Depends on dh-systemd to (>= 1.4) to ensure we have a recent
+    enough version of init-system-helpers which properly deals with a missing
+    state directory. (Closes: #714265)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 27 Jun 2013 19:21:04 +0200
+
+rsyslog (7.4.1-2) unstable; urgency=low
+
+  * Use dh-systemd to setup the systemd service properly.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 26 Jun 2013 21:13:33 +0200
+
+rsyslog (7.4.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 17 Jun 2013 23:38:51 +0200
+
+rsyslog (7.4.0-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 06 Jun 2013 18:51:11 +0200
+
+rsyslog (7.3.15-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 15 May 2013 18:21:02 +0200
+
+rsyslog (7.3.14-2) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 10 May 2013 01:41:23 +0200
+
+rsyslog (7.3.14-1) experimental; urgency=low
+
+  * New upstream release.
+  * Remove 02-fix-non-libgcrypt-build.patch, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 06 May 2013 23:44:17 +0200
+
+rsyslog (7.3.12-3) experimental; urgency=low
+
+  * Only build and install the imkmsg module on Linux.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 26 Apr 2013 16:46:19 +0200
+
+rsyslog (7.3.12-2) experimental; urgency=low
+
+  * Fix build when libgcrypt support is disabled to not pick up an unnecessary
+    libgcrypt dependency.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 25 Apr 2013 23:44:03 +0200
+
+rsyslog (7.3.12-1) experimental; urgency=low
+
+  * New upstream release.
+  * Disable log file encryption support for now.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 25 Apr 2013 15:14:37 +0200
+
+rsyslog (7.3.10-1) experimental; urgency=low
+
+  * New upstream release.
+  * Bump Build-Depends on librelp-dev to (>= 1.0.3).
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 10 Apr 2013 12:31:15 +0200
+
+rsyslog (7.3.9-1) experimental; urgency=low
+
+  * New upstream release.
+  * Remove patches which have been applied upstream.
+  * Bump Build-Depends on libestr-dev to (>= 0.1.5).
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 27 Mar 2013 13:14:44 +0100
+
+rsyslog (7.3.8-4) experimental; urgency=low
+
+  * Add Build-Depends on bison so we can build twice in a row. "make clean"
+    removes the generated grammar/grammer.[ch].
+  * Another patch to fix build failures on architectures where prctl is not
+    available. (Closes: #703429)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 21 Mar 2013 16:45:17 +0100
+
+rsyslog (7.3.8-3) experimental; urgency=low
+
+  * The previous fix was incomplete. Cherry-pick another upstream patch to fix
+    the build failure on non-Linux. (Closes: #703429)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 20 Mar 2013 11:44:10 +0100
+
+rsyslog (7.3.8-2) experimental; urgency=low
+
+  * Cherry pick patch from upstream which fixes the build on architectures
+    which don't have SYS_gettid. (Closes: #703429)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 19 Mar 2013 16:40:58 +0100
+
+rsyslog (7.3.8-1) experimental; urgency=low
+
+  * New upstream development release from the v7-devel branch.
+  * Update watch file to track development releases.
+  * The imrelp module now properly supports listening on IPv4 resp. IPv6 only.
+    This requires librelp >= 1.0.2, so bump the Build-Depends accordingly.
+    (Closes: #649355)
+  * Enable the mmanon module which adds support for anonymizing IPv4
+    addresses.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 18 Mar 2013 16:21:35 +0100
+
+rsyslog (7.2.6-1) experimental; urgency=low
+
+  * New upstream release.
+  * Bump Standards-Version to 3.9.4. No further changes.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 05 Mar 2013 17:36:18 +0100
+
+rsyslog (7.2.5-1) experimental; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 09 Jan 2013 00:04:39 +0100
+
+rsyslog (7.2.4-1) experimental; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 07 Dec 2012 16:01:00 +0100
+
+rsyslog (7.2.3-2) experimental; urgency=low
+
+  * Fix permissions of the spool/work directory. (Closes: #693099)
+  * Suggest rsyslog-mongodb.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 28 Nov 2012 22:16:33 +0100
+
+rsyslog (7.2.3-1) experimental; urgency=low
+
+  * New upstream release.
+  * Stop providing static start and stop priorities for dh_installinit. Those
+    are no longer tested and we rely on the dependency information in the LSB
+    header now to get a correct ordering when being run under sysvinit.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 21 Nov 2012 17:51:27 +0100
+
+rsyslog (7.2.2-1) experimental; urgency=low
+
+  * New upstream release.
+  * Drop patches which have been merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 16 Nov 2012 17:51:59 +0100
+
+rsyslog (7.2.1-2) experimental; urgency=low
+
+  * Disable imptcp on non-Linux plattforms as this module is Linux-specific.
+    Making it available everywhere would require more extensive porting work.
+  * debian/patches/02-imkmsg-includes.patch: Don't include <sys/klog.h> on
+    non-Linux plattforms.
+  * debian/patches/03-sysinfo.patch: Getting the uptime via sysinfo() is
+    Linux-specific, so only use that on architectures supporting it.
+  * Use dh-autoreconf to update the build system.
+  * Thanks Guillem Jover for the patches to make rsyslog compile on non-Linux.
+    (Closes: #692992)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 13 Nov 2012 22:56:58 +0100
+
+rsyslog (7.2.1-1) experimental; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 29 Oct 2012 16:30:14 +0100
+
+rsyslog (7.2.0-1) experimental; urgency=low
+
+  * New upstream release.
+    - Support for BSD-style blocks has been removed and the rsyslog.conf
+      man page was updated accordingly. (Closes: #585536)
+    - Fixes immark documentation wrt $MarkMessagePeriod. (Closes: #605831)
+    - No longer requires libgcrypt with newer GnuTLS versions.
+      (Closes: #638658)
+  * Track stable releases again.
+  * Remove unnecessary duplication from the init script and also drop the -c
+    compatibility mode option.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 23 Oct 2012 01:03:54 +0200
+
+rsyslog (7.1.12-1) experimental; urgency=low
+
+  * New major upstream release from the v7 beta branch. (Closes: #645640)
+    - Greatly improved configuration language and execution engine.
+    - Full support for structured logging and project lumberjack / CEE.
+    - More plugins - like support for MongoDB or the kernel's new structured
+      logging system.
+    - Higher performance - optimizations for script-based filters, enhanced
+      multithreaded TCP input plugin, DNS cache and more.
+  * Update watch file to track beta releases.
+  * Drop patches which have been merged upstream.
+  * Update Build-Depends:
+    - Add libestr-dev, libee-dev, libjson0-dev and uuid-dev.
+    - Bump librelp-dev to (>= 1.0.1).
+  * Build imkmsg module which provides support for reading structured kernel
+    log messages.
+  * Build imptcp module which provides less features then imtcp but is quite a
+    bit faster.
+  * Build message modification modules mmjsonparse and mmnormalize which
+    provide functionality related to structured logging/lumberjack/CEE. This
+    requires liblognorm.
+  * Build ommongodb module which provides support for logging to a MongoDB
+    database. Split that module into a separate package called
+    rsyslog-mongodb.
+  * Use --list-missing to show uninstalled files.
+  * Remove upgrade code from rsyslog.postinst which is no longer necessary.
+  * Remove the -c compatibility mode option from rsyslog.default. This option
+    has been obsoleted upstream. (Closes: #598713)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 21 Oct 2012 22:56:11 +0200
+
+rsyslog (5.8.11-3) unstable; urgency=low
+
+  * debian/patches/04-systemd_journal.patch: The journal has replaced
+    systemd-kmsg-syslogd and systemd-stdout-bridge. Stopping a non-existing
+    service will generate an error in newer versions of systemd, so remove
+    that from ExecStartPre.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 05 Mar 2013 23:06:57 +0100
+
+rsyslog (5.8.11-2ubuntu4) saucy; urgency=low
+
+  * Adjust rsyslog init script to detect upstart, making the upstart
+    patches upstreamable to Debian.
+  * Add versioned dependency on lsb-base for the use of init_is_upstart.
+  * debian/patches/202-off-by-one-regression-1187808.patch: upstream fix
+    for an off-by-one error introduced in the previous cherry-pick, causing
+    rsyslog to fail to start in some environments.  Closes LP: #1187808.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Wed, 05 Jun 2013 12:09:22 -0700
+
+rsyslog (5.8.11-2ubuntu3) saucy; urgency=low
+
+  * Fixes LP: #1022545 : $PreserveFQDN is not working properly
+    - Backport upstream fix
+
+ -- Louis Bouchard <louis.bouchard@canonical.com>  Thu, 25 Apr 2013 12:40:26 +0200
+
+rsyslog (5.8.11-2ubuntu2) raring-proposed; urgency=low
+
+  [ Pierre Carrier ]
+  * debian/patches/04-fix_startup_deadlock.patch: 
+    - Fixes deadlock during startup (LP: #1169740)
+
+ -- Adam Stokes <adam.stokes@ubuntu.com>  Wed, 17 Apr 2013 09:33:32 -0400
+
+rsyslog (5.8.11-2ubuntu1) raring; urgency=low
+
+  * Merge from Debian unstable.  Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction
+      to avoid bloating the syslog file.
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - debian/rules: build with LDFLAGS=""
+    - Add disabled by default AppArmor profile:
+      + debian/rsyslog.upstart: add pre-start stanza to load profile
+      + add debian/usr.sbin.rsyslogd profile
+      + debian/rules: use dh_apparmor to install profile before rsyslog is
+        restarted
+      + debian/control: suggests apparmor (>= 2.3)
+      + debian/rsyslog.install: install profile to /etc/apparmor.d
+      + debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+        and /etc/apparmor.d/disable
+      + debian/rsyslog.preinst: disable profile on clean install or upgrades
+        from earlier than when we shipped the profile
+      + debian/control: Build-Depends on dh-apparmor
+    - debian/rsyslog.postrm: fixed typo "dissappear" to "disappear".
+    - debian/rsyslog.postinst: fix ownership of /var/spool/rsyslog.
+  * Dropped:
+    - All Ubuntu specific patches; included upstream.
+    - debian/rsyslog.dirs: add /var/spool/rsyslog/.
+    - debian/rsyslog.conf: set $WorkDirectory to /var/spool/rsyslog.
+
+ -- James Page <james.page@ubuntu.com>  Fri, 07 Dec 2012 13:17:45 +0000
+
+rsyslog (5.8.11-2) unstable; urgency=low
+
+  * Disable omstdout module again. Upstream doesn't consider it viable for
+    production use but mainly for the internal testbench.
+  * debian/patches/03-fix_relp_dns_resolution.patch: When using RELP for
+    remote logging, correctly resolve the client hostname if the fromhost
+    property contains the client IP. (Closes: #682529)
+    Thanks to Apollon Oikonomopoulos for the patch.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 26 Sep 2012 20:36:09 +0200
+
+rsyslog (5.8.11-1) unstable; urgency=low
+
+  * New upstream release.
+  * Enable and install omuxsock and omstdout module.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 04 May 2012 22:38:00 +0200
+
+rsyslog (5.8.10-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 05 Apr 2012 18:46:00 +0200
+
+rsyslog (5.8.9-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 15 Mar 2012 13:38:35 +0100
+
+rsyslog (5.8.8-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix imuxsock to not truncate parts of the received message if it
+      did not contain a proper date. (Closes: #654429)
+    - Fix imuxsock example in rsyslog.conf(5) man page. (Closes: #655846)
+  * Fix versioned Build-Depends on dpkg-dev. The buildflags.mk snippet was
+    added in version 1.16.1, not 1.6.1. (Closes: #654894)
+  * Update watch file. Check download page for stable releases.
+  * Strip debian/tmp/ from .install files.
+  * Install tmpfiles.d snippet to create /dev/xconsole when running under
+    systemd. (Closes: #634978)
+  * debian/patches/02-path_max.patch
+    - Don't rely on PATH_MAX being defined. Patch cherry-picked from upstream
+      Git. (Closes: #651529)
+  * debian/rsyslog.init
+    - Use --exec instead of --name for start-stop-daemon. This is more
+      reliable and works better on GNU/Hurd. (Closes: #652575)
+    - Use /run/xconsole and a symlink /dev/xconsole on non-Linux systems.
+  * debian/rsyslog.default
+    - Update comments regarding available command line switches. Remove
+      deprecated options.
+  * debian/rsyslog.links
+    - Install syslog.service alias so rsyslog is properly socket activated
+      with newer versions of systemd.
+  * debian/copyright
+    - Use maschine-readable copyright format 1.0.
+    - Most parts of rsyslog have been relicensed under Apache license 2.0.
+  * Bump Standards-Version to 3.9.3.
+  * debian/rsyslog.conf
+    - Set $WorkDirectory to /var/spool/rsyslog, which is used for spool and
+      state files. When not configured it defaults to '/', which is
+      undesirable. (LP: #918947, Closes: #656535)
+  * debian/rsyslog.dirs
+    - Add /var/spool/rsyslog/.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 07 Mar 2012 00:42:56 +0100
+
+rsyslog (5.8.6-1ubuntu11) raring; urgency=low
+
+  * debian/patches/101-fix-rfc5424-instabilities.patch:
+    - bugfix: instabilities when using RFC5424 header fields (LP: #1059592)
+
+ -- Chris J Arges <chris.j.arges@canonical.com>  Tue, 04 Dec 2012 08:59:07 -0600
+
+rsyslog (5.8.6-1ubuntu10) raring; urgency=low
+
+  * debian/rsyslog.postinst: fix ownership of /var/spool/rsyslog (LP: #1075901)
+
+ -- Haw Loeung (hloeung) <haw.loeung@canonical.com>  Mon, 12 Nov 2012 12:57:23 +0100
+
+rsyslog (5.8.6-1ubuntu9) quantal; urgency=low
+
+  * Rebuild for new armel compiler default of ARMv5t.
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Tue, 02 Oct 2012 16:49:57 +0100
+
+rsyslog (5.8.6-1ubuntu8) precise; urgency=low
+
+  * debian/rsyslog.postrm: fixed typo "dissappear" to "disappear" (LP: #846818)
+
+ -- Aditya Vaidya <kroq.gar78@gmail.com>  Fri, 23 Mar 2012 19:31:37 -0500
+
+rsyslog (5.8.6-1ubuntu7) precise; urgency=low
+
+  * debian/rsyslog.conf: set $WorkDirectory to /var/spool/rsyslog, which is
+    the example location in documentation. When not configured it defaults to
+    '/', which is undesirable. (LP: #918947, Closes: #656535)
+  * debian/rsyslog.dirs: add /var/spool/rsyslog/
+  * debian/usr.sbin.rsyslogd:
+    - adjust for $WorkDirectory
+    - allow 'r' on /var/log/** too (for imfile)
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Wed, 07 Mar 2012 08:26:54 -0600
+
+rsyslog (5.8.6-1ubuntu6) precise; urgency=low
+
+  * debian/control: Build-Depends on dh-apparmor (LP: #948120)
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Tue, 06 Mar 2012 09:47:22 -0600
+
+rsyslog (5.8.6-1ubuntu5) precise; urgency=low
+
+  * Add disabled by default AppArmor profile (LP: #914820)
+    - debian/rsyslog.upstart: add pre-start stanza to load profile
+    - add debian/usr.sbin.rsyslogd profile
+    - debian/rules: use dh_apparmor to install profile before rsyslog is
+      restarted
+    - debian/control: suggests apparmor (>= 2.3)
+    - debian/rsyslog.install: install profile to /etc/apparmor.d
+    - debian/rsyslog.dirs: install /etc/apparmor.d/force-complain,
+      and /etc/apparmor.d/disable
+    - debian/rsyslog.preinst: disable profile on clean install or upgrades
+      from earlier than when we shipped the profile
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Wed, 11 Jan 2012 17:10:41 +0100
+
+rsyslog (5.8.6-1ubuntu4) precise; urgency=low
+
+  * debian/patches/100-imuxsock-allow-missing-date.patch
+    fix bug in imuxsock that truncated messages if they did not
+    contain a date field (LP: #905419).
+
+ -- Scott Moser <smoser@ubuntu.com>  Tue, 20 Dec 2011 11:55:11 -0500
+
+rsyslog (5.8.6-1ubuntu3) precise; urgency=low
+
+  * No-change rebuild to drop spurious libsfgcc1 dependency on armhf.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Fri, 02 Dec 2011 17:39:39 -0700
+
+rsyslog (5.8.6-1ubuntu2) precise; urgency=low
+
+  * Rebuild for libmysqlclient transition
+
+ -- Clint Byrum <clint@ubuntu.com>  Thu, 24 Nov 2011 00:23:23 -0800
+
+rsyslog (5.8.6-1ubuntu1) precise; urgency=low
+
+  * Resynchronise with Debian. Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction 
+      to avoid bloating the syslog file (LP #453444)
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - debian/rules: build with LDFLAGS=""
+  * Dropped:
+    - debian/patches/02-CVE-2011-3200.patch (fixed in upstream release)
+
+ -- Scott Moser <smoser@ubuntu.com>  Mon, 07 Nov 2011 13:54:56 -0500
+
+rsyslog (5.8.6-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix regression in imuxsock to ignore message-provided timestamp by
+      default which broke high precision timestamps. (Closes: #638147)
+  * debian/control:
+    - Wrap (build-)dependencies.
+  * Enable default hardening options from dpkg-buildflags. (Closes: #644303)
+    - Use buildflags.mk snippet in debian/rules.
+    - Add Build-Depends on dpkg-dev (>= 1.6.1).
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 02 Nov 2011 23:31:41 +0100
+
+rsyslog (5.8.5-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 01 Sep 2011 23:29:45 +0200
+
+rsyslog (5.8.4-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 30 Aug 2011 23:58:11 +0200
+
+rsyslog (5.8.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.conf: Use new ":omusrmsg:*" syntax (write to all) for
+    *.emerg messages in preparation for future config format changes.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 11 Jul 2011 12:33:27 +0200
+
+rsyslog (5.8.2-2) unstable; urgency=low
+
+  * Transition to /run/sendsigs.omit.d. (Closes: #633036)
+    - Use /run/sendsigs.omit.d/rsyslog in debian/rsyslog.init.
+    - Add Depends on initscripts (>= 2.88dsf-13.3) to ensure /run is usable.
+    - Remove /lib/init/rw/sendsigs.omit.d/rsyslog on upgrades.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 08 Jul 2011 01:36:20 +0200
+
+rsyslog (5.8.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 21 Jun 2011 16:26:54 +0200
+
+rsyslog (5.8.1-1ubuntu2) oneiric; urgency=low
+
+  * debian/patches/02-CVE-2011-3200.patch: fix denial of service via off by
+    two
+    - CVE-2011-3200
+
+ -- Jamie Strandboge <jamie@ubuntu.com>  Mon, 03 Oct 2011 12:13:42 -0500
+
+rsyslog (5.8.1-1ubuntu1) oneiric; urgency=low
+
+  * Resynchronise with Debian (LP: #794230).  Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction 
+      to avoid bloating the syslog file (LP #453444)
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160). remove file in postrm on purge. manage with ucf.
+    - debian/rules: build with LDFLAGS=""
+  * Dropped:
+    - debian/control: Bump build-dependency on debhelper
+      debian now depends on dh >= 8
+
+ -- Scott Moser <smoser@ubuntu.com>  Thu, 02 Jun 2011 15:17:32 -0400
+
+rsyslog (5.8.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Bump Standards-Version to 3.9.2. No further changes.
+  * Enable and install impstats module. (Closes: #620114)
+  * Update logcheck rule. (Closes: #616659)
+  * debian/rsyslog.init: Set correct compat level (5).
+  * The way rsyslog processes SIGHUP has changed. It no longer does a reload
+    of its configuration, but simply closes all open files. To apply a changed
+    configuration, rsyslogd needs to be restarted now.
+    - Drop "reload" action from debian/rsyslog.init, map "force-reload" to
+      "restart". (Closes: #580897)
+    - Add "rotate" action to debian/rsyslog.init which sends SIGHUP to
+      rsyslogd. Use that in debian/rsyslog.logrotate. (Closes: #626365)
+    - Update debian/rsyslog-mysql.postinst and rsyslog-pgsql.postinst to use
+      restart instead of reload.
+    - Add a NEWS file explaining the changed SIGHUP handling.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 30 May 2011 18:40:12 +0200
+
+rsyslog (5.8.0-1) unstable; urgency=low
+
+  * New upstream stable release.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 12 Apr 2011 14:34:57 +0200
+
+rsyslog (5.7.10-1) unstable; urgency=low
+
+  * New upstream release.
+    - Properly handle ANSI SQL strings in ompgsql. (Closes: #600479)
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 29 Mar 2011 18:41:28 +0200
+
+rsyslog (5.7.9-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/02-pmaixforwardedfrom_type_nokeep.patch
+    - Remove, merged upstream.
+  * debian/patches/03-epoll_create1-fallback.patch
+    - Remove, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 26 Mar 2011 19:31:28 +0100
+
+rsyslog (5.7.8-2) unstable; urgency=low
+
+  * debian/patches/03-epoll_create1-fallback.patch
+    - If epoll_create1() is not available during runtime, fall back to
+      epoll_create(). This fixes remote syslog when runnig rsyslog on a
+      lenny kernel. (Closes: #617996)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 14 Mar 2011 12:13:14 +0100
+
+rsyslog (5.7.8-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.links
+    - Create symlink for rsyslog.service in multi-user.target.wants so rsyslog
+      is enabled by default when using systemd.
+  * debian/patches/02-pmaixforwardedfrom_type_nokeep.patch
+    - Fix build failure in aixforwardedfrom parser module by setting the
+      module type to NOKEEP.
+  * debian/rsyslog.preinst
+    - Remove old rsyslog.socket symlink from sockets.target.wants on upgrades
+      as rsyslog uses syslog.socket now which is provided by systemd.
+  * debian/rsyslog.install
+    - Stop installing rsyslog.socket.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 10 Mar 2011 08:50:29 +0100
+
+rsyslog (5.7.6-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 25 Feb 2011 17:14:46 +0100
+
+rsyslog (5.7.5-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix regression in imuxsock plugin which did no longer sanitize received
+      messages. This makes 02-cleanup-trailing-lf.patch obsolete and also
+      fixes the SQL syntax errors in the mysql output if the input contained
+      NUL bytes. Closes: #614061
+  * Enable and install omprog output plugin. Closes: #552095
+  * Improve package description. Closes: #612948
+    Thanks to Justin B Rye for the patch.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 23 Feb 2011 12:03:06 +0100
+
+rsyslog (5.7.4-2) unstable; urgency=low
+
+  * debian/patches/02-cleanup-trailing-lf.patch
+    - Fix regression in imuxsock plugin which did not remove a trailing LF
+      anymore. Patch cherry-picked from upstream Git. Closes: #612829
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 21 Feb 2011 12:04:13 +0100
+
+rsyslog (5.7.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * Enable and install parser modules.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 19 Feb 2011 00:45:43 +0100
+
+rsyslog (5.7.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Upload to unstable.
+  * debian/patches/02-typo_fix_equation_sign.patch
+    - Removed, merged upstream.
+  * debian/patches/03-atomic_operations.patch
+    - Removed, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 09 Feb 2011 06:10:46 +0100
+
+rsyslog (5.7.2-2) experimental; urgency=low
+
+  * debian/patches/03-atomic_operations.patch
+    - Fix build failures on platforms which don't have 64 bit atomic
+      operations. Patch cherry-picked from upstream Git. Closes: #600930
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 01 Dec 2010 21:20:28 +0100
+
+rsyslog (5.7.2-1) experimental; urgency=low
+
+  * New upstream development release.
+  * Remove patches, merged upstream
+    - debian/patches/02-install_also_rsyslog_socket.patch
+    - debian/patches/02-tls_loop_fix.patch
+  * debian/patches/02-typo_fix_equation_sign.patch
+    - Fix small typo ("equation sign"). Closes: #575589
+  * debian/rsyslog.postinst
+    - Remove pre-lenny migration code to rotate old log files from sysklogd.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 30 Nov 2010 15:30:56 +0100
+
+rsyslog (5.7.1-1) experimental; urgency=low
+
+  * New upstream development release.
+  * debian/rsyslog.install
+    - Install omruleset.so plugin: http://www.rsyslog.com/doc/omruleset.html
+  * debian/rsyslog.default
+    - Start rsyslogd with native -c5 mode.
+  * Install systemd unit files which allow to run rsyslog in socket activation
+    mode when systemd is used.
+  * debian/patches/02-install_also_rsyslog_socket.patch
+    - When enabling rsyslog.service also enable rsyslog.socket. Patch
+      cherry-picked from upstream Git.
+  * Bump debhelper compatibility level to 8. Update Build-Depends accordingly.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 20 Oct 2010 01:48:39 +0200
+
+rsyslog (4.6.4-2ubuntu4) natty; urgency=low
+
+  * debian/50-default.conf: Disable redundant and non-synchronous log files by
+    default (this will only affect new installations), to reduce disk size
+    overhead and unnecessary wakeups and IO: daemon.log, lpr.log, user.log,
+    mail.{info,warn) (these are already in mail.log and syslog), debug,
+    messages.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 12 Jan 2011 15:43:14 -0600
+
+rsyslog (4.6.4-2ubuntu3) natty; urgency=low
+
+  * Instead of removing /etc/default/rsyslog, patch the upstart job to
+    parse it as the old init script used to (LP: #570103)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Mon, 06 Dec 2010 14:56:18 -0500
+
+rsyslog (4.6.4-2ubuntu2) natty; urgency=low
+
+  * Remove debian/rsyslog.default as the upstart init script doesn't read
+    /etc/default/rsyslog (LP: #570103)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Mon, 06 Dec 2010 14:47:32 -0500
+
+rsyslog (4.6.4-2ubuntu1) natty; urgency=low
+
+  * Resynchronise with Debian.  Remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/control: Bump build-dependency on debhelper for Upstart-aware 
+      dh_installinit
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction 
+      to avoid bloating the syslog file (LP #453444)
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160)
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Mon, 06 Dec 2010 14:33:42 +0000
+
+rsyslog (4.6.4-2) unstable; urgency=low
+
+  * debian/patches/02-tls_loop_fix.patch
+    - Fix bug in TLS handling which could cause rsyslog to loop in a tight
+      loop and eating up all CPU and RAM resources. Closes: #549168
+      Patch cherry-picked from upstream Git.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 30 Nov 2010 14:50:15 +0100
+
+rsyslog (4.6.4-1ubuntu2) natty; urgency=low
+
+  * Restore maintainer script code to install
+    /etc/rsyslog.d/50-default.conf, and refer to it again from rsyslog.conf.
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Fri, 19 Nov 2010 18:31:24 +0000
+
+rsyslog (4.6.4-1ubuntu1) natty; urgency=low
+
+  * Merge from debian unstable (LP: #671533), remaining changes:
+    - Run as rsyslog:rsyslog, set $FileOwner to syslog
+    - Replace init script with debian/rsyslog.upstart.
+    - debian/control: Bump build-dependency on debhelper for Upstart-aware 
+      dh_installinit
+    - debian/rsyslog.logrotate: Use reload command to restart rsyslog
+    - debian/rsyslog.conf: enable $RepeatedMsgReduction 
+      to avoid bloating the syslog file (LP #453444)
+    - Add debian/rsyslog.dmesg.upstart to save initial dmesg into a file.
+      Install it in debian/rules.
+    - debian/50-default.conf: set of default rules for syslog (forwarded to
+      Debian #603160)
+  * Dropped changes:
+    - debian/patches/deroot.patch: this patch was introduced to support
+      earlier kernels and we don't support running natty on pre-karmic
+      kernels
+    - sysklogd → rsyslog upgrade was done pre-lucid (LTS) so drop all
+      the upgrade handling
+    - Restore to reading from /proc/kmsg: rsyslog can read directly from
+      /proc/kmsg now; dropped init script changes as they're obsolete
+      (even when actually using the init script which we don't, we have
+      the upstart script)
+
+ -- Lorenzo De Liso <blackz@ubuntu.com>  Fri, 05 Nov 2010 15:52:21 +0100
+
+rsyslog (4.6.4-1) unstable; urgency=low
+
+  * New upstream release.
+    - bugfix: programname filter in ! configuration can not be reset.
+      Thanks to Kiss Gabor for the patch. Closes: #540807
+  * Bump Standards-Version to 3.9.1. No further changes.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 05 Aug 2010 18:35:37 +0200
+
+rsyslog (4.6.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/02-set-correct-default-for-buffered-writing.patch
+    - Removed, merged upstream.
+  * Switch to source format 3.0 (quilt).
+    - Add debian/source/format.
+    - Drop Build-Depends on quilt.
+    - Remove debian/README.source.
+    - Remove /usr/share/quilt/quilt.make include from debian/rules.
+  * Switch to dh v7.
+    - Bump Build-Depends on debhelper to (>= 7.0.50).
+    - Bump Build-Depends on autotools-dev to (>= 20100122.1) for the
+      autotools_dev dh addon.
+    - Convert debian/rules to dh.
+  * Bump Standards-Version to 3.9.0. Use Breaks instead of Conflicts as
+    recommended by the new policy.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 07 Jul 2010 19:07:03 +0200
+
+rsyslog (4.6.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/02-set-correct-default-for-buffered-writing.patch
+    - The default for $OMFileFlushOnTXEnd was wrong ("off"). Patch pulled from
+      upstream Git.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 07 Apr 2010 16:42:56 +0200
+
+rsyslog (4.6.1-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix error in rsyslog.conf(5) man page. The configuration variable
+      $InputUDPServerRun does not exist, it should be $UDPServerRun instead.
+      Thanks to Alexander Gerasiov for spotting this. Closes: #571202
+  * debian/rsyslog-doc.install
+    - Install png image files.
+  * debian/patches/doc_typo_fix.patch
+    - Removed, merged upstream.
+  * debian/patches/no_create_db.patch
+    - Refresh to apply cleanly.
+  * debian/control
+    - Bump Standards-Version to 3.8.4. No further changes.
+  * debian/rsyslog.install
+    - Install new lmstrmsrv.so and lmzlibw.so plugins.
+  * debian/rsyslog.lintian-overrides
+    - Add lintian override for init.d-script-missing-dependency-on-remote_fs
+      false positive. See also the corresponding lintian bug: #571280.
+  * debian/rules
+    - Add call to dh_lintian.
+  * debian/rsyslog.init
+    - GNU/kFreeBSD does not allow to create pipes in /dev. So for xconsole
+      create the pipe as /var/run/xconsole and a /dev/xconsole symlink.
+      Closes: #537170
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 05 Mar 2010 01:07:53 +0100
+
+rsyslog (4.4.2-2) unstable; urgency=low
+
+  * debian/control
+    - Demote mysql-server and postgresql from Recommends to Suggests. The
+      server packages are not strictly necessary for dbconfig-common's
+      autoconfiguration to work and one might want to use a remote server.
+    - Add Recommends: mysql-client for rsyslog-mysql.
+    - Add Recommends: postgresql-client for rsyslog-pgsql.
+  * debian/patches/doc_typo_fix.patch
+    - Fix a typo in the html documentation and man page regarding the syslog.h
+      header file and the syslog(3) man page. Closes: #559334
+      Thanks to Alexander Gerasiov for spotting this.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 18 Jan 2010 15:31:40 +0100
+
+rsyslog (4.4.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 10 Oct 2009 14:08:16 +0200
+
+rsyslog (4.4.1-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fix invalid double-quoted PRI in log messages. Closes: #543505
+  * debian/watch
+    - Only check for stable upstream releases.
+  * debian/patches/testbench-java.patch
+    - Removed, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 02 Sep 2009 17:19:05 +0200
+
+rsyslog (4.4.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * Removed patches
+    - debian/patches/manpage_pidfile.patch (merged upstream)
+    - debian/patches/close-stdout-stderr.patch (merged upstream)
+  * Bump Standards-Version to 3.8.3. No further changes.
+  * Disable testbench as it requires java.
+  * debian/patches/testbench-java.patch
+    - Move check_JAVA inside the ENABLE_TESTBENCH section so the tests are not
+      run unless the testbench is enabled.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 21 Aug 2009 23:08:45 +0200
+
+rsyslog (4.2.0-2ubuntu8) lucid; urgency=low
+
+  * debian/patches/deroot.patch:
+    - After opening /proc/kmsg, set the effective user to an unprivileged
+      one and attempt a zero-byte read from the file.  If this succeeds, we
+      know that this will work de-rooted; if this fails, we don't enable
+      kernel-message logging.  LP: #523610. 
+
+ -- Scott James Remnant <scott@ubuntu.com>  Wed, 24 Feb 2010 18:21:54 +0000
+
+rsyslog (4.2.0-2ubuntu7) lucid; urgency=low
+
+  * debian/rules:
+    - Forgot to commit this change as part of previous upload to not
+      call dh_installinit
+
+ -- Scott James Remnant <scott@ubuntu.com>  Wed, 17 Feb 2010 13:03:31 +0000
+
+rsyslog (4.2.0-2ubuntu6) lucid; urgency=low
+
+  * debian/rsyslog.rsyslog-kmsg.upstart:
+    - Drop this additional job; kernel changes have meant that rsyslog
+      may read from /proc/kmsg directly after dropping privileges.
+      LP: #517773
+  * debian/rsyslog.preinst:
+    - Remove on upgrade 
+  * debian/rsyslog.conf:
+    - Restore to reading from /proc/kmsg 
+
+ -- Scott James Remnant <scott@ubuntu.com>  Wed, 17 Feb 2010 12:23:01 +0000
+
+rsyslog (4.2.0-2ubuntu5.1) karmic-proposed; urgency=low
+
+  * debian/rsyslog.conf:
+    - enable $RepeatedMsgReduction to avoid bloating the syslog
+      file (LP: #453444)
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Fri, 23 Oct 2009 17:28:10 +0200
+
+rsyslog (4.2.0-2ubuntu5) karmic; urgency=low
+
+  Upstart fixups; LP: #430220
+  * debian/rsyslog.logrotate: Use start command to restart rsyslog
+  * debian/rsyslog.rsyslog-kmsg.upstart: Restore bs=1 parameter to dd
+  * debian/rsyslog.upstart: Move kmsg fifo creation/deletion to kmsg
+    upstart script.
+
+ -- Michael Terry <michael.terry@canonical.com>  Tue, 22 Sep 2009 16:10:24 -0700
+
+rsyslog (4.2.0-2ubuntu4) karmic; urgency=low
+
+  * debian/rsyslog.postrm: Don't delete syslog user
+  * debian/rsyslog.postinst: Stop sysklogd from deleting the syslog user
+    when removed.  LP: #401056
+
+ -- Michael Terry <michael.terry@canonical.com>  Mon, 21 Sep 2009 15:38:13 -0700
+
+rsyslog (4.2.0-2ubuntu3) karmic; urgency=low
+
+  FFE LP: #427356.
+
+  * Replace init script with multiple Upstart jobs.
+  * debian/control:
+    - Bump build-dependency on debhelper for Upstart-aware dh_installinit
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Sep 2009 03:26:43 +0100
+
+rsyslog (4.2.0-2ubuntu2) karmic; urgency=low
+
+  * Fix log file ownership issues when HUPing an unprivileged rsyslog
+    LP: #407862
+    - debian/rsyslog.conf: Set $FileOwner to syslog
+    - debian/patches/deroot.patch: Always chown output files, since we may
+      not be able to read them on a HUP otherwise.
+
+ -- Michael Terry <michael.terry@canonical.com>  Mon, 31 Aug 2009 14:58:50 -0400
+
+rsyslog (4.2.0-2ubuntu1) karmic; urgency=low
+
+  [ Michael Terry ]
+  * Merge from debian unstable (LP: #413023), remaining changes:
+    - Run as rsyslog:rsyslog
+    - Allow reading /proc/kmsg when non-root
+    - Cleanly upgrade from sysklogd
+  * debian/patches/deroot.patch: Don't allow using the klogctl function to
+    read klog messages.  Rather, allow /proc/kmsg or nothing, since we have
+    special support for reading /proc/kmsg while unprivileged.
+
+  [ Neil Wilson ]
+  * debian/rsyslog.init: Set blocksize for dd (LP: #407862) and restore
+    reload init argument to original lightweight reload
+
+ -- Michael Terry <michael.terry@canonical.com>  Thu, 13 Aug 2009 15:43:29 -0400
+
+rsyslog (4.2.0-2) unstable; urgency=low
+
+  * debian/rsyslog.logcheck.ignore.server
+    - Bring the logcheck rules up to date with the new SIGHUP log
+      message. Thanks to Frédéric Brière for the patch. Closes: #537324
+  * debian/patches/close-stdout-stderr.patch
+    - Close stdout/stderr after forking. Closes: #537182
+  * debian/control
+    - Change Build-Depends: libmysqlclient15-dev → libmysqlclient-dev.
+  * debian/rsyslog.postrm
+    - Cleanup /lib/init/rw/sendsigs.omit.d/rsyslog upon remove to avoid false
+      positives from piuparts. Closes: #539144
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 05 Aug 2009 01:12:09 +0200
+
+rsyslog (4.2.0-1ubuntu2) karmic; urgency=low
+
+  * Prefix Vcs-* fields with "XSBC-Original-" as we don't use git for the
+    Ubuntu packages.
+  * Strip local from rsyslog's postinst as it shouldn't be used outside of
+    functions; LP: #401060.
+
+ -- LoÃ¯c Minier <loic.minier@ubuntu.com>  Mon, 20 Jul 2009 14:30:14 +0200
+
+rsyslog (4.2.0-1ubuntu1) karmic; urgency=low
+
+  * Run as rsyslog:rsyslog (LP: #250827, LP: #388608)
+    - debian/control: Depend on adduser
+    - debian/rsyslog.postinst: Create syslog user
+    - debian/rsyslog.postrm: Delete syslog user on purge
+    - debian/rsyslog.conf: Use DropPriv config fields
+  * Allow reading /proc/kmsg when non-root
+    - debian/rsyslog.init: Spawn a dd instance that shovels the /proc/kmsg
+      data to a pipe that rsyslog can read (based on Martin Pitt's similar
+      change to sysklogd).
+    - debian/patches/deroot.patch: Support a KLogPath config field
+      to change where the klog plugin looks and only start input modules
+      after we drop privileges, as reading when root interferes with
+      future reads as syslog.
+    - debian/rsyslog.conf: Use KLogPath field to point to dd pipe
+  * Cleanly upgrade from sysklogd
+    - debian/default.conf, debian/rsyslog.conf:
+      Break out the default rules into their own config file
+    - debian/rsyslog.install: Install it in /usr/share/rsyslog
+    - debian/rsyslog.postinst: If present, copy /etc/syslog.conf into
+      /etc/rsyslog.d/default.conf.  Then merge our own default.conf
+
+ -- Michael Terry <michael.terry@canonical.com>  Mon, 29 Jun 2009 08:37:43 -0400
+
+rsyslog (4.2.0-1) unstable; urgency=low
+
+  * New upstream release of the now stable v4 branch.
+    - Fix warnings when /etc/rsyslog.d/ is empty. Closes: #530228
+  * debian/patches/imudp_multiple_udp_sockets.patch
+    - Removed, merged upstream.
+  * debian/rsyslog.default
+    - Set default compat mode to '4'.
+  * debian/rsyslog.logcheck.ignore.server
+    - Update logcheck rules files to also ignore rsyslogd and imklog stop
+      messages.
+  * debian/control
+    - Bump Standards-Version to 3.8.2. No further changes.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 23 Jun 2009 12:12:43 +0100
+
+rsyslog (3.22.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.init
+    - Pass proper return code to log_end_msg.
+  * debian/rsyslog.conf
+    - Set $Umask to 0022 to enforce that new log files or directories are
+      always created with the right permissions. Closes: #522297
+  * debian/patches/imudp_multiple_udp_sockets.patch
+    - Fix a segfault in imudp when multiple udp listeners are configured.
+      Patch cherry-picked from upstream git. Closes: #519073
+  * debian/patches/manpage_pidfile.patch
+    - Fix rsyslogd man page to point to the correct pid file. Closes: #526658
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 15 May 2009 23:25:14 +0200
+
+rsyslog (3.20.5-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.logcheck.ignore.server
+    - Install a logcheck ignore file for rsyslog (using dh_installlogcheck).
+      Thanks to Kim Holviala for the patch. Closes: #522164
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 08 Apr 2009 00:59:14 +0200
+
+rsyslog (3.20.4-3) unstable; urgency=low
+
+  * Enable RELP (reliable event logging protocol) support.
+  * debian/control
+    - Add librelp-dev and pkg-config to Build-Depends.
+    - Add new binary package rsyslog-relp.
+    - Add rsyslog-relp to rsyslog's list of suggested packages.
+  * debian/rules
+    - Add --enable-relp to configure flags.
+  * debian/rsyslog-relp.install
+    - Install relp input and output plugin.
+  * Bump Standards-Version to 3.8.1. No further changes.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 23 Mar 2009 09:19:44 +0100
+
+rsyslog (3.20.4-2) unstable; urgency=low
+
+  * Merge changes from experimental branch.
+  * Move Git repository to collab-maint. Update Vcs-* fields.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 15 Feb 2009 21:56:23 +0100
+
+rsyslog (3.20.4-1) experimental; urgency=low
+
+  * New upstream release.
+  * Merge changes from unstable branch.
+  * debian/patches/message_locking_fix.patch
+    - Removed, fixed upstream.
+  * debian/compat
+    - Bump to debhelper v7 compat mode.
+  * debian/control
+    - Bump debhelper build dependency to (>= 7.0.9).
+    - Add rsyslog-gnutls and rsyslog-gssapi to Suggests.
+    - Improve and update package description for rsyslog, rsyslog-gnutls and
+      rsyslog-gssapi.
+  * debian/rules
+    - Use new dh_installinit "-R" (restart-after-upgrade) option.
+    - Replace "dh_clean -k" with "dh_prep".
+  * debian/rsyslog.postinst
+    - Remove our custom code to stop/start rsyslog on upgrades. This is done
+      now automatically by dh_installinit.
+  * debian/rsyslog.docs
+    - Install AUTHORS file.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 10 Feb 2009 01:52:32 +0100
+
+rsyslog (3.20.3-1) experimental; urgency=low
+
+  * New upstream release.
+  * debian/patches/allowed_sender_reload.patch
+    - Removed, merged upstream.
+  * debian/patches/manpage_fixes.patch
+    - Removed, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 19 Jan 2009 13:52:31 +0100
+
+rsyslog (3.20.2-1) experimental; urgency=low
+
+  * New upstream release.
+  * Refresh all patches for the new upstream stable branch.
+  * Enable GSSAPI support
+    - Add libkrb5-dev to Build-Depends.
+    - Split files into a separate package named rsyslog-gssapi.
+    - Add --enable-gssapi-krb5 to configure flags.
+    Thanks to Ben Poliakoff for the patch. Closes: #493044
+  * Enable GnuTLS support
+    - Add libgnutls-dev to Build-Depends.
+    - Split files into a separate package named rsyslog-gnutls.
+    - Add --enable-gnutls to configure flags.
+  * debian/control
+    - Add ${misc:Depends} to rsyslog-doc.
+  * Let rsyslog collect messages as long as possible during shutdown or
+    reboot. As /usr may be mounted via NFS, the latest possible point is just
+    before umountnfs. Closes: #474498
+    - Update the stop priorities for runlevel 0 and 6 from K90 to S30 for
+      sysv-rc and migrate existing symlinks.
+    - Update LSB header to stop after sendsigs and before umountnfs.
+    - Use the sendsigs process omission interface to avoid being killed by
+      killall5.
+  * debian/rsyslog-doc.links
+    - There is an upstream index.html file now, so we no longer need to create
+      a symlink.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 16 Jan 2009 22:23:40 +0100
+
+rsyslog (3.18.6-4) unstable; urgency=medium
+
+  * debian/patches/message_locking_fix.patch
+    - Proper message locking on message destruct to avoid a race condition
+      which could lead to a segfault. Closes: #509292
+      Patch cherry-picked from upstream git.
+  * Urgency medium for the RC bug fix.
+  * Use the dbconfig-common template mechanism to generate the configuration
+    files for rsyslog-mysql and rsyslog-pgsql. This not only simplifies
+    postinst quite a bit, but also makes sure we don't read any unset debconf
+    values. Closes: #513589
+  * debian/README.Debian
+    - Add notes about the Debian specific configuration of rsyslog and outline
+      some of the changes between rsyslog and sysklogd which should ease the
+      migration. Closes: #484083
+    - Add instructions how to avoid doubled hostname entries when sending
+      syslog messages from rsyslog to a sysklogd server. Closes: #512663
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 08 Feb 2009 00:54:39 +0100
+
+rsyslog (3.18.6-3) unstable; urgency=medium
+
+  * debian/rsyslog.conf
+    - Create new directories with more sane permissions. Closes: #511054
+  * debian/rsyslog.init
+    - Update the LSB header to not provide the reserved 'syslog' facility. Use
+      'rsyslog' instead to avoid clashes. Thanks to Petter Reinholdtsen for
+      the hint.
+  * debian/patches/allowed_sender_reload.patch
+    - Fix segfault on reload when using $AllowedSender. Closes: #511562
+      Patch cherry picked from upstream git.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 15 Jan 2009 17:50:06 +0100
+
+rsyslog (3.18.6-2) unstable; urgency=low
+
+  * debian/rsyslog.postinst
+    - Use $(($var)) syntax for arithmetic expressions, as dash from etch is
+      not SUSv3 compliant in that regard which leads to failing dist upgrades
+      when dash is used as /bin/sh. Closes: #508943
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 17 Dec 2008 00:29:43 +0100
+
+rsyslog (3.18.6-1) unstable; urgency=high
+
+  * New upstream bugfix release.
+    - Fix "$AllowedSender" security bypass vulnerability. The "$AllowedSender"
+      configuration directive was not respected, allowing unrestricted network
+      access to the application. Closes: #508027
+      No CVE id yet.
+  * Urgency high for the security fix.
+  * debian/patches/manpage_fixes.patch
+    - Fix typos in rsyslogd man page. Closes: #506925
+      Thanks to Geoff Simmons for the patch.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 12 Dec 2008 17:36:02 +0100
+
+rsyslog (3.18.5-1) unstable; urgency=low
+
+  * New upstream bugfix release.
+    - Fix potential segfault in imfile on rsyslogd HUP (reload) and
+      termination (stop). Closes: #503940
+    - Disable input throttling for imuxsock as this can lead to denial of
+      service. Closes: #505991
+  * debian/rsyslog-{mysql,pgsql}.config
+    - Do not ignore errors in config maintainer scripts.
+  * debian/rsyslog.postinst
+    - Rotate old .0 log files when migrating from sysklogd. Closes: #491672
+  * debian/rules
+    - Exclude sample conf file from being compressed as it is referenced in
+      the html documentation with the non-compressed file name.
+    - Depend on $(QUILT_STAMPFN) instead of patch; patch is a phony target and
+      thus always out of date.
+    - Move $(QUILT_STAMPFN) dependency to config.status to avoid potential
+      issues with parallel make.
+  * debian/rsyslog-doc.links
+    - Add a symlink index.html pointing at manual.html. Closes: #494634
+  * debian/rsyslog.default
+    - Fix a few spelling errors.
+  * Disable the logrotate file when removing the package to avoid log
+    rotation failures. Closes: #500569
+    Thanks to Kobayashi Noritada for the patch
+  * debian/rsyslog.postrm
+    - Rename /etc/logrotate.d/rsyslog to /etc/logrotate.d/rsyslog.disabled
+      when removing the package.
+    - Remove /etc/logrotate.d/rsyslog.disabled when purging and replacing
+      the package.
+  * debian/rsyslog.preinst
+    - Rename /etc/logrotate.d/rsyslog.disabled to /etc/logrotate.d/rsyslog
+      when reinstalling.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 20 Nov 2008 14:09:10 +0100
+
+rsyslog (3.18.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.init
+    - Restore default SELinux security context when creating /dev/xconsole.
+      Closes: #493171
+    - Add "status" action.
+  * debian/control
+    - Bump dependency on lsb-base to >= 3.2-14, which provides status_of_proc.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 11 Aug 2008 00:25:33 +0200
+
+rsyslog (3.18.1-1) unstable; urgency=low
+
+  * New upstream release. Closes: #490445
+    - List Debian in doc/rsyslog_packages.html. Closes: #488870
+    - Fix compilation of imklog module on GNU/kFreeBSD. Closes: #491193
+  * debian/rsyslog-doc.install
+    - Install the example config file. Closes: #488860
+  * debian/rules
+    - Enable mail output plugin.
+    - Make sure all directories are created by calling dh_installdirs for both
+      binary-arch and binary-indep. Closes: #491459
+  * debian/rsyslog.install
+    - Install mail output plugin (ommail.so).
+  * debian/control
+    - Add Suggests www-browser to rsyslog-doc as the package contains mostly
+      html documents.
+    - Update feature list.
+    - Adjust priorities, set rsyslog priority to important.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 23 Jul 2008 02:22:32 +0200
+
+rsyslog (3.16.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 25 Jun 2008 15:41:21 +0200
+
+rsyslog (3.16.1-2) unstable; urgency=low
+
+  * debian/rules
+    - Build the doc package in binary-indep.
+  * Bump Standards-Version to 3.8.0.
+    - Add debian/README.source as recommended by the new policy.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 20 Jun 2008 07:11:24 +0200
+
+rsyslog (3.16.1-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fixes a segfault in the imklog input plugin. Closes: #479117
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 03 May 2008 09:59:59 +0200
+
+rsyslog (3.14.2-3) unstable; urgency=low
+
+  * debian/rsyslog-doc.install
+    - Fix a typo in the install path of the dia files. Closes: #477489
+      Thanks to Justin B Rye for the patch.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 23 Apr 2008 16:46:39 +0200
+
+rsyslog (3.14.2-2) unstable; urgency=low
+
+  * debian/rsyslog.conf
+    - Disable high precision timestamps until other affected packages have
+      been updated to support them. See bug #475303 for details.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 22 Apr 2008 20:02:28 +0200
+
+rsyslog (3.14.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 10 Apr 2008 08:32:23 +0200
+
+rsyslog (3.14.1-1) unstable; urgency=low
+
+  * First upstream release of the new stable v3 series.
+  * debian/copyright
+    - Update copyright notice as rsyslog has been relicensed under GPL3+.
+  * debian/rsyslog.init
+    - The kernel logging functionality is now implemented via an input plugin
+      and has replaced the separate rklogd binary. Remove all traces of rklogd
+      from the init script.
+    - General cleanup and simplification.
+  * debian/rsyslog.default
+    - Remove obsolete RKLOGD_OPTIONS configuration variable.
+    - Document deprecated command line options.
+    - Start rsyslogd in v3 compat mode, its native interface.
+  * debian/rsyslog.conf
+    - Load the input modules imuxsock (local system logging) and imklog
+      (kernel logging) by default.
+  * debian/rsyslog-doc.install
+    - Install jpeg images and dia files.
+  * debian/rsyslog.install
+    - Install input modules (im*.so) and library plugins (lm*.so).
+  * debian/rules
+    - Enable imfile input plugin.
+    - Use dh_installinit "-r" (no-restart-on-upgrade) option.
+  * debian/rsyslog.postinst
+    - Minimize downtime by restarting rsyslog in postinst instead of stop in
+      prerm and start in postinst. Closes: #471051
+  * debian/rsyslog.logrotate
+    - Group together related log files.
+    - Rotate daemon.log and kern.log weekly, to match sysklogd behaviour.
+    - Add options "missingok", "delaycompress" and "sharedscripts" as
+      suggested by Paul Slootman. Closes: #473546
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 06 Apr 2008 16:54:08 +0200
+
+rsyslog (2.0.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/control
+    - Add Vcs-Git and Vcs-Browser fields.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 29 Mar 2008 12:17:22 +0100
+
+rsyslog (2.0.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/man_page_format.patch
+    - Removed, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 13 Mar 2008 14:22:35 +0100
+
+rsyslog (2.0.2-2) unstable; urgency=low
+
+  * debian/rsyslog-doc.doc-base
+    - Update the Section: field to comply with the new doc-base Manual.
+  * debian/rules
+    - Don't install rfc3195d and its man page. The rfc3195d binary is
+      currently only a dummy.
+  * debian/rsyslog.conf
+    - Fix the path to the rsyslog documentation which is now in rsyslog-doc.
+    - Set the default permissions of new log files to 0640 and make them
+      readable by group adm.
+    - Include external config files at the beginning. This allows to drop log
+      messages before they end up in the standard log files.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 06 Mar 2008 02:49:17 +0100
+
+rsyslog (2.0.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rsyslog.init
+    - Make /dev/xconsole readable by group adm. Closes: #464695
+  * debian/control
+    - Fix a typo in the rsyslog-pgsql package description.
+  * debian/patches/man_page_format.patch
+    - Fix a few format errors in the man pages.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 12 Feb 2008 19:56:47 +0100
+
+rsyslog (2.0.1-2) unstable; urgency=low
+
+  * debian/control
+    - Drop Replaces: system-log-daemon, linux-kernel-log-daemon. There are no
+      conflicting files with other syslog packages so this line is not needed.
+    - Add new package rsyslog-doc.
+    - Add Suggests: rsyslog-doc to rsyslog.
+  * debian/rsyslog.install, debian/rsyslog-doc.install
+    - Move the html files from rsyslog to rsyslog-doc.
+  * debian/rsyslog-doc.doc-base
+    - Integrate the documentation with doc-base.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 02 Feb 2008 17:00:49 +0100
+
+rsyslog (2.0.1-1) unstable; urgency=low
+
+  * New upstream bug fix release.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 24 Jan 2008 18:35:20 +0100
+
+rsyslog (2.0.0-2) unstable; urgency=low
+
+  * debian/rsyslog.init
+    - Fix LSB init header. Use $remote_fs instead of $local_fs as the rsyslogd
+      daemon requires /usr to be mounted.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 10 Jan 2008 13:22:42 +0100
+
+rsyslog (2.0.0-1) unstable; urgency=low
+
+  * New upstream release of the stable branch of rsyslog v2.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 02 Jan 2008 15:39:19 +0100
+
+rsyslog (1.21.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 30 Dec 2007 02:11:58 +0100
+
+rsyslog (1.21.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 23 Dec 2007 19:02:11 +0100
+
+rsyslog (1.21.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/ignore_non_conf_files.patch
+    - Dropped. A more powerful alternative has been implemented upstream which
+      allows to include configuration files based on wildcards.
+  * debian/rsyslog.conf
+    - Include all configuration files matching /etc/rsyslog.d/*.conf.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 19 Dec 2007 09:54:18 +0100
+
+rsyslog (1.20.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/rules
+    - Enable the PostgreSQL database support.
+    - Use "install -D" to install the SQL schema file for MySQL and
+      PostgreSQL.
+  * debian/control
+    - Add a Build-Depends on libpq-dev for the PostgreSQL support.
+    - Add the binary package rsyslog-pgsql.
+  * debian/patches/no_create_db.patch
+    - Updated. Only setup the tables. Leave the database creation to
+      dbconfig-common.
+  * debian/rsyslog-pgsql.install
+    - Install the ompgsql.so plugin.
+  * debian/rsyslog-pgsql.config
+    - Preseed the default values for dbconfig-common, database name is
+      "Syslog", database user "rsyslog".
+  * debian/rsyslog-pgsql.{postinst,prerm,postrm}
+    - Use dbconfig-common to setup the PostgreSQL database.
+    - Generate a configuration file /etc/rsyslog.d/pgsql.conf with the values
+      provided by dbconfig-common and use ucf and ucfr to manage this file.
+  * debian/rsyslog-mysql.postinst
+    - Use the new ":ommysql:" output selector instead of ">".
+  * debian/rsyslog-mysql.install
+    - Only install the ommysql.so plugin.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 12 Dec 2007 20:54:41 +0100
+
+rsyslog (1.19.12-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/control
+    - Add Depends: lsb-base (>= 3.0-6) as the init script uses the LSB logging
+      functions.
+    - Bump Standards-Version to 3.7.3. No further changes required.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 03 Dec 2007 19:42:19 +0100
+
+rsyslog (1.19.10-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/man_page_format.patch
+    - Removed, merged upstream.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 19 Oct 2007 17:21:49 +0200
+
+rsyslog (1.19.9-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/udp_msg_reception.patch
+    - Deleted, merged upstream.
+  * The mysql output plugin is now in a separate subdirectory. Change the
+    path to the createDB.sql script accordingly.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 14 Oct 2007 11:55:12 +0200
+
+rsyslog (1.19.7-2) unstable; urgency=low
+
+  * debian/patches/udp_msg_reception.patch
+    - Pull patch from CVS which fixes broken UDP message reception.
+  * debian/control
+    - Use the new "Homepage:" field to specify the upstream URL.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 28 Sep 2007 15:30:06 +0200
+
+rsyslog (1.19.7-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/man_page_format.patch
+    - Fix a formatting glitch in the rsyslog.conf man page.
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 25 Sep 2007 22:54:04 +0200
+
+rsyslog (1.19.3-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 02 Sep 2007 20:15:02 +0200
+
+rsyslog (1.19.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+  * Enable the mysql output plugin and split it into a separate binary package
+    named rsyslog-mysql. Use the dbconfig-common framework to handle the
+    database administration. Generate a configuration file
+    /etc/rsyslog.d/mysql.conf with the values provided by dbconfig-common and
+    use ucf to manage this file.
+  * debian/control
+    - Add a build dependency on quilt and libmysqlclient15-dev.
+    - Add the binary package rsyslog-mysql.
+    - Add Suggests: rsyslog-mysql to the rsyslog package.
+  * debian/rules
+    - Include the quilt makefile and add calls to the patch/unpatch targets.
+    - Pass --enable-mysql to ./configure.
+    - Install the SQL schema file for dbconfig-common.
+  * debian/rsyslog-mysql.config
+    - Setup the default values for dbconfig-common.
+  * debian/rsyslog-mysql.{postinst,prerm,postrm}
+    - Include the dbconfig-common scripts and call the dbc_go function.
+    - Use ucf and ucfr to manage the generated configuration file mysql.conf.
+  * debian/patches/ignore_non_conf_files.patch
+    - Let rsyslog ignore all configuration files not ending with *.conf.
+  * debian/patches/no_create_db.patch
+    - The database creation is handled by dbconfig-common so we only need the
+      createDB.sql SQL schema file for setting up the tables.
+  * debian/patches/series
+    - Added, needed by quilt. Include the two patches above.
+  * debian/rsyslog-mysql.dirs
+    - Create the install directory for the SQL schema file.
+  * debian/rsyslog-mysql.install
+    - Install the mysql output plugin ommysql.so.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 02 Sep 2007 18:39:47 +0200
+
+rsyslog (1.19.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 27 Aug 2007 19:17:14 +0200
+
+rsyslog (1.18.2-1) unstable; urgency=low
+
+  * Initial release. Closes: #435884
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 13 Aug 2007 19:20:48 +0200

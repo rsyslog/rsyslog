@@ -1,0 +1,48 @@
+rsyslog for Ubuntu
+==================
+
+Configuration file(s)
+---------------------
+The default configuration file for rsyslog is /etc/rsyslog.conf.
+
+Its format is based on the standard syslog.conf format. As rsyslog
+has a lot more advanced features than sysklogd, it extends this format
+with special configuration directives which all start with the '$'
+prefix. See the rsyslogd(8) and rsyslog.conf(5) man pages for further
+information or install the rsyslog-doc package which provides much
+more detailed documentation.
+
+The Debian default configuration for rsyslog uses:
+
+ $IncludeConfig /etc/rsyslog.d/*.conf
+
+That means, all configuration files in /etc/rsyslog.d/ with a .conf file
+extension are read by rsyslog. This way the rsyslog configuration can be
+extended easily (either by package maintainers or local administrators).
+
+
+Log rotation
+------------
+Rsyslog uses the logrotate(8) utility to rotate the standard
+log files. The configuration file can be found at
+/etc/logrotate.d/rsyslog.
+
+The rotation cycle starts with .1, as this is the logrotate default.
+In contrast to sysklogd, which starts with .0.
+
+When upgrading from sysklogd, the postinst script will automatically
+rotate the existing standard Debian log files, if it is safe to do so
+(i.e. only if .0 is newer than .1).
+
+
+Logging to xconsole
+-------------------
+The default rsyslog configuration no longer forwards any log messages to
+/dev/xconsole. It is simple to re-enable support for xconsole though. For that,
+the rsyslog package ships example files in /usr/share/doc/rsyslog/examples.
+
+To create the /dev/xconsole pipe, copy examples/tmpfiles.d/xconsole.conf to
+/etc/tmpfiles.d/ and then run "systemd-tmpfiles --create xconsole.conf".
+
+And finally copy examples/rsyslog.d/xconsole.conf to /etc/rsyslog.d/ and
+restart the rsyslog service.

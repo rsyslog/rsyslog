@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+source debian/tests/utils
+
+# make sure we are confined and in enforce mode for this test, if supported
+try_enforce_apparmor
+
+message="logger-test-value=$(uuidgen)"
+
+echo "Logging message: ${message}"
+logger --id=$$ --priority user.notice "${message}"
+
+logs=$(tail -n 10 /var/log/syslog)
+if echo "${logs}" | grep -qE "${message}"; then
+    echo "Message correctly found in system logs"
+else
+    echo "Failed to find message \"${message}\" in /var/log/syslog"
+    echo "Last 5 lines are:"
+    echo "${logs}"
+    exit 1
+fi

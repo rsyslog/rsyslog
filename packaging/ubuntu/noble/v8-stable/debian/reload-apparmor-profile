@@ -1,0 +1,14 @@
+#!/bin/sh
+
+apparmor_profile="/etc/apparmor.d/usr.sbin.rsyslogd"
+include_dir="/etc/apparmor.d/rsyslog.d"
+
+[ -f "${apparmor_profile}" ] || exit 0
+[ -d "${include_dir}" ] || exit 0
+aa-status --enabled 2>/dev/null || exit 0
+
+apparmor_parser -r -W -T "${apparmor_profile}" || {
+    echo "Failed to reload the ${apparmor_profile} apparmor profile, continuing anyway" >&2
+}
+
+exit 0

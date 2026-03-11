@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+source debian/tests/utils
+
+# make sure we are confined and in enforce mode for this test, if supported
+try_enforce_apparmor
+
+# Installing rsyslog-mysql without having a mysql DB already configured on
+# localhost fails, because the dbconfig-common postinst runs before the mysql
+# postinst. A Depends cannot be used in the packaging because the database
+# might be remote.
+# Therefore we add mysql-server to the DEP8 dependency list in d/t/control, and
+# install rsyslog-mysql from inside the test. In this way, mysql is already
+# configured when we get here.
+DEBIAN_FRONTEND=noninteractive apt-get install -y rsyslog-mysql
+
+# Values from a default install of rsyslog-mysql
+DBNAME="Syslog"
+TABLE="SystemEvents"
+
+message="logger-test-value=$(uuidgen)"
+
+echo "Logging message: ${message}"
+logger --id=$$ --priority user.notice "${message}"
+
+check_db_for_message mysql "${message}"
