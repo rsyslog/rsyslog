@@ -1,0 +1,279 @@
+rsyslog (8.2512.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2512.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 09 Dec 2025 17:50:01 +0000
+rsyslog (8.2510.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2510.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 14 Oct 2025 12:47:20 +0000
+rsyslog (8.2508.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2508.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 26 Aug 2025 15:04:31 +0000
+rsyslog (8.2506.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2506.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 10 Jun 2025 12:20:54 +0000
+rsyslog (8.2504.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2504.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Mon, 28 Apr 2025 23:15:27 +0000
+rsyslog (8.2502.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2502.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Feb 2025 16:14:29 +0000
+rsyslog (8.2412.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2412.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Wed, 04 Dec 2024 14:30:25 +0000
+rsyslog (8.2410.0-0adiscon1focal1) focal; urgency=low
+
+  * Packages for 8.2410.0 on focal
+
+ -- Adiscon package maintainers <adiscon-pkg-maintainers@adiscon.com>  Tue, 29 Oct 2024 11:53:47 +0000
+rsyslog (8.2408.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2408.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 20 Aug 2024 13:29:59 +0000
+
+rsyslog (8.2404.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2404.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 02 Apr 2024 13:29:59 +0000
+
+rsyslog (8.2402.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2402.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Mon, 26 Feb 2024 13:29:59 +0000
+
+rsyslog (8.2312.0-0adiscon1bionic1) bionic; urgency=medium
+
+  * Packages for 8.2312.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 12 Dec 2023 13:29:59 +0000
+
+rsyslog (8.2312.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2312.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 12 Dec 2023 13:29:59 +0000
+
+rsyslog (8.2310.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2310.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 10 Oct 2023 13:29:59 +0000
+
+rsyslog (8.2308.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2308.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 15 Aug 2023 13:29:59 +0000
+
+rsyslog (8.2306.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2306.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 20 Jun 2023 13:29:59 +0000
+
+rsyslog (8.2304.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2304.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 18 Apr 2023 13:29:59 +0000
+
+rsyslog (8.2302.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2302.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 21 Feb 2023 13:29:59 +0000
+
+rsyslog (8.2212.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2212.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 06 Dec 2022 13:29:59 +0000
+
+rsyslog (8.2210.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2210.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 18 Oct 2022 13:29:59 +0000
+
+rsyslog (8.2206.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2206.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 14 Jun 2022 13:29:59 +0000
+
+rsyslog (8.2204.1-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2204.1
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 05 May 2022 13:29:59 +0000
+
+rsyslog (8.2204.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2204.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 19 Apr 2022 13:29:59 +0000
+
+rsyslog (8.2202.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2202.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Thu, 15 Feb 2022 13:29:59 +0000
+
+rsyslog (8.2112.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2112.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Thu, 16 Dec 2021 13:30:42 +0000
+
+rsyslog (8.2110.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2110.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 19 Oct 2021 10:17:34 +0000
+
+rsyslog (8.2108.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2108.0
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Tue, 17 Aug 2021 10:17:34 +0000
+
+rsyslog (8.2106.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2106.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 15 Jun 2021 10:18:09 +0000
+
+rsyslog (8.2104.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2104.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 08 Dec 2020 10:18:09 +0000
+
+rsyslog (8.2012.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2012.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 08 Dec 2020 10:18:09 +0000
+
+rsyslog (8.2010.0-0adiscon2focal1) focal; urgency=medium
+
+  * Rebuild for librelp 1.9.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 24 Nov 2020 15:53:54 +0000
+
+rsyslog (8.2010.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2010.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 20 Oct 2020 09:29:41 +0000
+
+rsyslog (8.2008.0-0adiscon2focal1) focal; urgency=medium
+
+  * Rebuild for librelp 1.8.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 29 Sep 2020 20:37:28 +0000
+
+rsyslog (8.2008.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2008.0
+
+ -- Rainer Gerhards <rgerhards@adiscon.com>  Thu, 27 Aug 2020 09:24:57 +0000
+
+rsyslog (8.2006.0-0adiscon2focal1) focal; urgency=medium
+
+  * new subpackages
+
+ -- Rainer Gerhards <adiscon-pkg-maintainers@adiscon.com>  Mon, 06 Jul 2020 09:24:57 +0000
+
+rsyslog (8.2006.0-0adiscon1focal1) focal; urgency=medium
+
+  * Packages for 8.2006.0
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Tue, 23 Jun 2020 13:58:19 +0000
+
+rsyslog (8.2004.0-0adiscon12focal1) focal; urgency=medium
+
+  * libdir and libexecdir absolute paths
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 25 May 2020 10:37:03 +0000
+
+rsyslog (8.2004.0-0adiscon11focal1) focal; urgency=medium
+
+  * Set libdir and libexecdir in rules
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 25 May 2020 10:24:28 +0000
+
+rsyslog (8.2004.0-0adiscon10focal1) focal; urgency=medium
+
+  * Fix test for rules file
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 25 May 2020 09:03:06 +0000
+
+rsyslog (8.2004.0-0adiscon9focal1) focal; urgency=medium
+
+  * Fix test for rules file
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 25 May 2020 08:36:30 +0000
+
+rsyslog (8.2004.0-0adiscon8focal1) focal; urgency=medium
+
+  * Upped debhelper required version to 12
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 15:10:28 +0000
+
+rsyslog (8.2004.0-0adiscon7focal1) focal; urgency=medium
+
+  * Removed debhelper compat, instead set compatibility mode
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 14:42:18 +0000
+
+rsyslog (8.2004.0-0adiscon6focal1) focal; urgency=medium
+
+  * Set debhelper-compat in Builddepends
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 14:37:57 +0000
+
+rsyslog (8.2004.0-0adiscon5focal1) focal; urgency=medium
+
+  * Changed debhelper level
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 14:17:17 +0000
+
+rsyslog (8.2004.0-0adiscon4focal1) focal; urgency=medium
+
+  * Disabled mmkubernetes
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 13:47:33 +0000
+
+rsyslog (8.2004.0-0adiscon3focal1) focal; urgency=medium
+
+  * Re-upload
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Wed, 20 May 2020 13:34:04 +0000
+
+rsyslog (8.2004.0-0adiscon2focal1) focal; urgency=medium
+
+  * Re-Upload
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 18 May 2020 13:18:09 +0000
+
+rsyslog (8.2004.0-0adiscon1focal1) focal; urgency=medium
+
+  * Initial package for Ubuntu 20.04
+
+ -- Florian Riedl <adiscon-pkg-maintainers@adiscon.com>  Mon, 18 May 2020 10:38:08 +0000

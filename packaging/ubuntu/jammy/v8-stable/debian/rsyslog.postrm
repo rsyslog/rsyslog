@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ]; then
+	[ -f /etc/logrotate.d/rsyslog ] && mv -f /etc/logrotate.d/rsyslog /etc/logrotate.d/rsyslog.disabled
+fi
+
+if [ "$1" = "abort-remove" ] || [ "$1" = "abort-deconfigure" ]; then
+	[ -f /etc/logrotate.d/rsyslog.disabled ] && mv -f /etc/logrotate.d/rsyslog.disabled /etc/logrotate.d/rsyslog
+fi
+
+if [ "$1" = "purge" ]; then
+	if which ucfr >/dev/null; then
+		ucfr --purge rsyslog /etc/rsyslog.d/50-default.conf
+	fi
+	if which ucf >/dev/null; then
+		ucf --purge /etc/rsyslog.d/50-default.conf
+	fi
+	if [ -d /etc/rsyslog.d ]; then
+		rm -f /etc/rsyslog.d/50-default.conf
+		rmdir --ignore-fail-on-non-empty /etc/rsyslog.d
+	fi
+fi
+
+if [ "$1" = "purge" -o "$1" = "disappear" ]; then
+	[ -f /etc/logrotate.d/rsyslog.disabled ] && rm -f /etc/logrotate.d/rsyslog.disabled
+fi
+
+if [ "$1" = "remove" ]; then
+	# Cleanup sendsigs omit file to avoid false positives from piuparts
+	rm -f /run/sendsigs.omit.d/rsyslog
+fi
+
+#DEBHELPER#
+
+exit 0

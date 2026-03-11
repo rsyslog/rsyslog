@@ -1,0 +1,17 @@
+rsyslog (5.8.1-1) unstable; urgency=low
+
+  The way rsyslog processes SIGHUP has changed. It no longer does a reload
+  of its configuration, but simply closes all open files, which is a much more
+  lightweight operation.
+  To apply a changed configuration, rsyslogd needs to be restarted now.
+  As a consequence, the reload action has been dropped from the init script.
+
+  A new action called "rotate" was added to the init script, which signals
+  rsyslogd to close all open files. This new action is used in the rsyslog
+  logrotate configuration file.
+
+  For more information, see:
+  http://www.rsyslog.com/doc/v4compatibility.html
+  http://www.rsyslog.com/doc/v5compatibility.html
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 30 May 2011 18:26:51 +0200

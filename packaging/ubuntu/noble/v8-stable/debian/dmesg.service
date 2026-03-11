@@ -1,0 +1,13 @@
+[Unit]
+Description=Save initial kernel messages after boot
+
+[Service]
+Type=idle
+StandardOutput=file:/var/log/dmesg
+ExecStartPre=-/usr/bin/savelog -m640 -q -p -n -c 5 /var/log/dmesg
+ExecStart=/bin/journalctl --boot 0 --dmesg --output short-monotonic --quiet --no-pager --no-hostname
+ExecStartPost=/bin/chgrp adm /var/log/dmesg
+ExecStartPost=/bin/chmod 0640 /var/log/dmesg
+
+[Install]
+WantedBy=multi-user.target

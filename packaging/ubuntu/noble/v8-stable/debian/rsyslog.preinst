@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "install" ] && [ -n "$2" ] ; then
+	[ -f /etc/logrotate.d/rsyslog.disabled ] && mv -f /etc/logrotate.d/rsyslog.disabled /etc/logrotate.d/rsyslog
+fi
+
+#DEBHELPER#

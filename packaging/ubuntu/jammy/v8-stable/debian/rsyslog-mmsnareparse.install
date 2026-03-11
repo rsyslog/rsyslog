@@ -1,0 +1,2 @@
+debian/tmp/usr/lib/rsyslog/mmsnareparse.so
+plugins/mmsnareparse/sysmon_definitions.json usr/share/rsyslog/mmsnareparse/
