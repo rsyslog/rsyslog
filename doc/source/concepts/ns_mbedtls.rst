@@ -86,3 +86,11 @@ PrioritizeSAN
 -  **on** - if you turn this option on, it will perform stricter name checking
    as per newer RFC 6125, where, if any SAN is found, contents of CN are
    completely ignored and name validity is decided based on SAN only.
+
+.. note::
+
+   When set to "on" and the certificate contains *no* SAN entries at all,
+   validation falls back to checking the CN — certificates are not rejected
+   simply for lacking SANs. Also, this setting only affects name-checking
+   auth modes (``x509/name``). It has no effect when using ``x509/certvalid``,
+   which does not perform name matching.

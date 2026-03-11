@@ -28,6 +28,14 @@ Description
 -----------
 Whether to use stricter SAN/CN matching. (driver-specific)
 
+When set to "on", if any SAN is found in the peer certificate, only the SAN is
+used for name validation and the CN is ignored (per RFC 6125). If the
+certificate contains *no* SAN entries at all, validation falls back to checking
+the CN — certificates are not rejected simply for lacking SANs.
+
+This setting only affects name-checking auth modes (``x509/name``). It has no
+effect when using ``x509/certvalid``, which does not perform name matching.
+
 The same-named input parameter can override this module setting.
 
 
