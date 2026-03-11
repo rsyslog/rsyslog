@@ -577,8 +577,10 @@ rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd) {
                         pszCmd, pszValue);
                 } else {
                     LogError(0, RS_RET_SYS_ERR,
-                             "Failed to added Command: %s:'%s' "
-                             "in net_ossl_apply_tlscgfcmd with error '%d'",
+                             "Failed to add OpenSSL command %s:'%s' "
+                             "in net_ossl_apply_tlscgfcmd with error '%d'. "
+                             "The command or value may be unsupported by "
+                             "this native OpenSSL build.",
                              pszCmd, pszValue, iConfErr);
                 }
 
@@ -594,7 +596,9 @@ rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd) {
         iConfErr = SSL_CONF_CTX_finish(cctx);
         if (!iConfErr) {
             LogError(0, RS_RET_SYS_ERR,
-                     "Error: setting openssl command parameters: %s"
+                     "Error: setting openssl command parameters: %s. "
+                     "Requested settings may be unavailable on this native "
+                     "OpenSSL build. "
                      "OpenSSL error info may follow in next messages",
                      tlscfgcmd);
             net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "net_ossl_apply_tlscgfcmd", "SSL_CONF_CTX_finish");

@@ -8,6 +8,7 @@ These tutorials cover specific rsyslog features and use cases.
 
    tls_cert_summary
    tls
+   post_quantum_tls
    database
    high_database_rate
    reliable_forwarding
