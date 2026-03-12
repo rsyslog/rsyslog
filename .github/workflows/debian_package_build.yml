@@ -1,0 +1,465 @@
+# Copyright 2024-2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: debian package build
+
+# Two modes:
+# 1) strict parity: fail on Debian build mismatches (required signal)
+# 2) diagnostics: always run to collect actionable findings and workarounds
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{
+    github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debian_parity_strict:
+    name: debian 13 strict parity build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: debian:trixie
+      options: --user root
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
+            autotools-dev \
+            bison \
+            ca-certificates \
+            devscripts \
+            dpkg-dev \
+            equivs \
+            flex \
+            g++ \
+            git \
+            libtool \
+            make \
+            pkg-config \
+            python3-docutils \
+            quilt
+
+      - name: Checkout rsyslog source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch official Debian packaging
+        run: |
+          cd /tmp
+          git clone --depth=1 --branch debian/master \
+            https://salsa.debian.org/debian/rsyslog.git \
+            debian-rsyslog
+
+          if [ ! -d debian-rsyslog/debian ]; then
+            echo "ERROR: Could not obtain Debian packaging files"
+            exit 1
+          fi
+
+          cp -r debian-rsyslog/debian /tmp/debian-packaging
+
+      - name: Install Debian build dependencies
+        run: |
+          apt-get install -y --no-install-recommends \
+            protobuf-c-compiler libprotobuf-c-dev
+
+          apt_tool="apt-get -o Debug::pkgProblemResolver=yes"
+          apt_tool="$apt_tool --no-install-recommends --yes"
+          mk-build-deps --install --remove \
+            --tool="$apt_tool" \
+            /tmp/debian-packaging/control
+
+      - name: Generate rsyslog dist tarball
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          autoreconf -fvi
+          ./configure --enable-silent-rules --disable-testbench \
+             --disable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats \
+             --disable-impstats-push --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --disable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --disable-gnutls --disable-usertools --disable-mysql \
+             --disable-valgrind --disable-omjournal --enable-libsystemd \
+             --disable-mmkubernetes --disable-imjournal \
+             --disable-omkafka --disable-imkafka --disable-ommongodb \
+             --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+          make dist
+
+          dist_tarball="$(ls -1 rsyslog-*.tar.gz | head -1)"
+          if [ -z "$dist_tarball" ]; then
+            echo "ERROR: make dist did not produce rsyslog-*.tar.gz"
+            exit 1
+          fi
+
+          echo "DIST_TARBALL=$dist_tarball" >> "$GITHUB_ENV"
+
+      - name: Unpack tarball and inject Debian packaging
+        run: |
+          rm -rf /tmp/debian-src
+          mkdir -p /tmp/debian-src
+          tar -xf "$GITHUB_WORKSPACE/$DIST_TARBALL" \
+            -C /tmp/debian-src --strip-components=1
+
+          cp -r /tmp/debian-packaging /tmp/debian-src/debian
+
+      - name: Build Debian package
+        run: |
+          cd /tmp/debian-src
+          export DEB_BUILD_OPTIONS="nocheck"
+          dpkg-buildpackage -b -uc -us -j"$(nproc)"
+
+      - name: Verify documentation was built
+        run: |
+          if [ -d /tmp/debian-src/debian/build ] \
+             && [ -f /tmp/debian-src/debian/build/index.html ]; then
+            echo "Documentation built by Debian build process"
+          else
+            echo "ERROR: documentation not found in debian/build"
+            exit 1
+          fi
+
+      - name: Upload strict build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-13-packages-strict
+          path: /tmp/*.deb
+          if-no-files-found: ignore
+          retention-days: 7
+
+  debian_parity_diagnostics:
+    name: debian 13 diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    needs: debian_parity_strict
+    if: always()
+    container:
+      image: debian:trixie
+      options: --user root
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
+            autotools-dev \
+            bison \
+            ca-certificates \
+            devscripts \
+            dpkg-dev \
+            equivs \
+            flex \
+            g++ \
+            git \
+            libtool \
+            make \
+            pkg-config \
+            python3-docutils \
+            quilt
+
+      - name: Checkout rsyslog source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize findings
+        run: |
+          : > /tmp/debian-ci-findings.md
+          {
+            echo "Debian diagnostics findings"
+            echo "=========================="
+            echo
+            echo "Strict job result: ${{ needs.debian_parity_strict.result }}"
+            echo
+          } >> /tmp/debian-ci-findings.md
+
+      - name: Fetch official Debian packaging
+        run: |
+          cd /tmp
+          git clone --depth=1 --branch debian/master \
+            https://salsa.debian.org/debian/rsyslog.git \
+            debian-rsyslog
+
+          if [ ! -d debian-rsyslog/debian ]; then
+            echo "ERROR: Could not obtain Debian packaging files"
+            exit 1
+          fi
+
+          cp -r debian-rsyslog/debian /tmp/debian-packaging
+
+      - name: Install Debian build dependencies
+        run: |
+          apt-get install -y --no-install-recommends \
+            protobuf-c-compiler libprotobuf-c-dev
+
+          apt_tool="apt-get -o Debug::pkgProblemResolver=yes"
+          apt_tool="$apt_tool --no-install-recommends --yes"
+          mk-build-deps --install --remove \
+            --tool="$apt_tool" \
+            /tmp/debian-packaging/control
+
+      - name: Generate rsyslog dist tarball
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          autoreconf -fvi
+          ./configure --enable-silent-rules --disable-testbench \
+             --disable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats \
+             --disable-impstats-push --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --disable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --disable-gnutls --disable-usertools --disable-mysql \
+             --disable-valgrind --disable-omjournal --enable-libsystemd \
+             --disable-mmkubernetes --disable-imjournal \
+             --disable-omkafka --disable-imkafka --disable-ommongodb \
+             --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+          make dist
+
+          dist_tarball="$(ls -1 rsyslog-*.tar.gz | head -1)"
+          if [ -z "$dist_tarball" ]; then
+            echo "ERROR: make dist did not produce rsyslog-*.tar.gz"
+            exit 1
+          fi
+
+          echo "DIST_TARBALL=$dist_tarball" >> "$GITHUB_ENV"
+
+      - name: Unpack tarball and inject Debian packaging
+        run: |
+          rm -rf /tmp/debian-src
+          mkdir -p /tmp/debian-src
+          tar -xf "$GITHUB_WORKSPACE/$DIST_TARBALL" \
+            -C /tmp/debian-src --strip-components=1
+
+          cp -r /tmp/debian-packaging /tmp/debian-src/debian
+
+          if ! grep -q "mmleefparse.so" \
+             /tmp/debian-src/debian/not-installed 2>/dev/null; then
+            echo "usr/lib/\${DEB_HOST_MULTIARCH}/rsyslog/mmleefparse.so" \
+              >> /tmp/debian-src/debian/not-installed
+            {
+              echo "- Added \`mmleefparse.so\` to \`debian/not-installed\`"
+              echo "  (temporary packaging compatibility workaround)."
+            } >> /tmp/debian-ci-findings.md
+          fi
+
+      - name: Resolve Debian patch series policy
+        run: |
+          cd /tmp/debian-src
+          excluded_file=/tmp/excluded-debian-patches.txt
+          report_file=/tmp/debian-patch-report.txt
+          : > "$excluded_file"
+          export QUILT_PATCHES=debian/patches
+
+          if [ ! -f debian/patches/series ] \
+             || [ ! -s debian/patches/series ]; then
+            {
+              echo "- No Debian patch series present in diagnostics precheck."
+            } >> /tmp/debian-ci-findings.md
+            exit 0
+          fi
+
+          while true; do
+            quilt pop -a >/dev/null 2>&1 || true
+
+            set +e
+            quilt push -a > /tmp/quilt-push.log 2>&1
+            rc=$?
+            set -e
+            cat /tmp/quilt-push.log
+
+            if grep -q "No series file found" /tmp/quilt-push.log; then
+              {
+                echo "- quilt reported \`No series file found\`."
+                echo "  Patch-precheck skipped in diagnostics path."
+              } >> /tmp/debian-ci-findings.md
+              break
+            fi
+
+            if [ "$rc" -eq 0 ]; then
+              break
+            fi
+
+            failed_patch="$(
+              sed -n 's/^Applying patch \(.*\)$/\1/p' /tmp/quilt-push.log \
+                | tail -1
+            )"
+            if [ -z "$failed_patch" ]; then
+              echo "ERROR: could not determine failing patch"
+              exit 1
+            fi
+
+            if grep -Fxq "$failed_patch" "$excluded_file"; then
+              echo "ERROR: patch resolution loop detected at $failed_patch"
+              exit 1
+            fi
+
+            awk -v p="$failed_patch" '
+              /^#/ {print; next}
+              NF == 0 {print; next}
+              $1 == p {removed = 1; next}
+              {print}
+              END {if (!removed) exit 9}
+            ' debian/patches/series > debian/patches/series.new
+            mv debian/patches/series.new debian/patches/series
+            echo "$failed_patch" >> "$excluded_file"
+          done
+
+          quilt pop -a >/dev/null 2>&1 || true
+
+          if [ -s "$excluded_file" ]; then
+            {
+              echo "- Excluded Debian patch(es) that did not apply cleanly:"
+              while read -r p; do
+                [ -n "$p" ] && echo "  - $p"
+              done < "$excluded_file"
+              echo
+              echo "Suggested debian/changelog note:"
+              echo "  * d/p: drop or refresh patch(es) already"
+              echo "    included upstream"
+              echo "    - Not applied in CI because they no longer"
+              echo "      match upstream"
+            } | tee "$report_file" >> /tmp/debian-ci-findings.md
+          fi
+
+      - name: Build Debian package (diagnostics)
+        run: |
+          cd /tmp/debian-src
+          export DEB_BUILD_OPTIONS="nocheck"
+          set +e
+          dpkg-buildpackage -b -uc -us -j"$(nproc)"
+          rc=$?
+          set -e
+          echo "DIAG_BUILD_RC=$rc" >> "$GITHUB_ENV"
+          if [ "$rc" -ne 0 ]; then
+            {
+              echo "- Diagnostics build failed with exit code $rc."
+            } >> /tmp/debian-ci-findings.md
+          fi
+
+      - name: Verify documentation was built (diagnostics)
+        run: |
+          if [ -d /tmp/debian-src/debian/build ] \
+             && [ -f /tmp/debian-src/debian/build/index.html ]; then
+            echo "Documentation built by Debian build process"
+          else
+            {
+              echo "- Documentation output missing: debian/build/index.html"
+              echo "  (this is a strict-fail condition)."
+            } >> /tmp/debian-ci-findings.md
+          fi
+
+      - name: Publish diagnostics findings
+        id: findings
+        if: always()
+        run: |
+          if [ -s /tmp/debian-ci-findings.md ]; then
+            {
+              echo "### Debian diagnostics findings"
+              echo
+              cat /tmp/debian-ci-findings.md
+            } >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo "has_findings=true"
+              echo "body<<EOF"
+              cat /tmp/debian-ci-findings.md
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_findings=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment PR with diagnostics findings
+        if: >-
+          ${{ github.event_name == 'pull_request' &&
+          steps.findings.outputs.has_findings == 'true' }}
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- debian-ci-findings -->';
+            const body = `${marker}
+
+            Debian diagnostics workflow findings:
+
+            ${process.env.FINDINGS_BODY}
+            `;
+            const issue_number = context.issue.number;
+            const {owner, repo} = context.repo;
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {owner, repo, issue_number, per_page: 100}
+            );
+            const existing = comments.find(
+              (c) => c.user?.login === 'github-actions[bot]' &&
+                c.body?.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body
+              });
+            }
+        env:
+          FINDINGS_BODY: ${{ steps.findings.outputs.body }}
+
+      - name: Upload diagnostics artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-13-packages-diagnostics
+          path: |
+            /tmp/*.deb
+            /tmp/debian-patch-report.txt
+            /tmp/debian-ci-findings.md
+          if-no-files-found: ignore
+          retention-days: 7
