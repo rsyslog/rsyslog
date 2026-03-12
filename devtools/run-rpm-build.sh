@@ -1,7 +1,7 @@
 #!/bin/bash
 # CI helper: build RPMs from current source via mock.
 # Run from repo root. Expects mock configs in /etc/mock/, epel-release and mock installed.
-# Env: MOCK_CONFIG (default: epel-8-x86_64)
+# Env: MOCK_CONFIG (default: epel-9-x86_64)
 #
 # Steps: autoreconf, configure, make dist; patch spec for local tarball; mock --buildsrpm; mock build.
 
@@ -10,7 +10,7 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-MOCK_CONFIG="${MOCK_CONFIG:-epel-8-x86_64}"
+MOCK_CONFIG="${MOCK_CONFIG:-epel-9-x86_64}"
 RPM_SPEC="${RPM_SPEC:-rsyslog-v8-stable}"
 RPM_DIR="$REPO_ROOT/packaging/rpm"
 RPM_SOURCES="$RPM_DIR/rpmbuild/SOURCES"

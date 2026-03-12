@@ -349,7 +349,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     container:
-      image: quay.io/rockylinux/rockylinux:8
+      image: quay.io/rockylinux/rockylinux:9
       options: --privileged
     steps:
       - name: Install git (before checkout so it can clone)
@@ -401,13 +401,13 @@ jobs:
           {
             echo '[adiscon]'
             echo 'name=adiscon'
-            echo "baseurl=https://rpms.adiscon.com/v8-stable/epel-8/\$basearch"
+            echo "baseurl=https://rpms.adiscon.com/v8-stable/epel-9/\$basearch"
             echo 'enabled=1'
             echo 'gpgcheck=1'
             echo 'gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon'
           } > /etc/yum.repos.d/adiscon.repo
           dnf install -y dnf-plugins-core
-          dnf config-manager --set-enabled powertools
+          dnf config-manager --set-enabled crb
           dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
           echo "== Copy mock configs =="
           cp -v packaging/rpm/etc-mock/*.cfg /etc/mock/ || true
@@ -429,7 +429,7 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rpms-epel-8-x86_64
+          name: rpms-epel-9-x86_64
           path: build-result/
           if-no-files-found: error
 
