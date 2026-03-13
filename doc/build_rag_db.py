@@ -8,7 +8,7 @@ import traceback
 from docutils import nodes
 
 # Configuration
-BUILD_DIR = "build/doctrees"
+BUILD_DIR = "build/.doctrees"
 OUTPUT_FILE = "build/rag/rsyslog_rag_db.json"
 MAX_CHUNK_CHARS = 2000
 MIN_CHUNK_CHARS = 15
