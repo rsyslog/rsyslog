@@ -1,0 +1,9 @@
+Document: rsyslog-doc
+Title: Rsyslog Documentation
+Author: Rainer Gerhards
+Abstract: This documentation covers the configuration of rsyslog.
+Section: System/Administration
+
+Format: HTML
+Index: /usr/share/doc/rsyslog-doc/html/index.html
+Files: /usr/share/doc/rsyslog-doc/html/*.html

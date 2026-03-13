@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+# Stop the socket on remove so rsyslog is not restarted via socket activation
+if [ -d /run/systemd/system ] && [ "$1" = remove ] ; then
+	systemctl stop syslog.socket || true
+fi
+
+#DEBHELPER#

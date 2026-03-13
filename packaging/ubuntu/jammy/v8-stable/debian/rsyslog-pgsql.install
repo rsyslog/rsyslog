@@ -1,0 +1,2 @@
+debian/tmp/usr/lib/rsyslog/ompgsql.so
+debian/rsyslog-pgsql.conf.template usr/share/rsyslog-pgsql/

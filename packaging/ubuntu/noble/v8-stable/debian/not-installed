@@ -1,0 +1,6 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imdiag.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/liboverride_getaddrinfo.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/liboverride_gethostname.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/liboverride_gethostname_nonfqdn.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/omtesting.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imdiag.so

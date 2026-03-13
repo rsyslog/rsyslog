@@ -340,6 +340,55 @@ jobs:
           devtools/gather-check-logs.sh
           cat failed-tests.log
 
+  package_build_ubuntu:
+    name: package build (Ubuntu, ${{ matrix.suite }})
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - suite: focal
+          - suite: jammy
+          - suite: noble
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: |
+          set -e
+          BASE_VER=$(sed -n 's/AC_INIT(\[rsyslog\],\[\([^]]*\)\].*/\1/p' configure.ac | sed 's/\.daily$//')
+          PR_NUM="${{ github.event.pull_request.number || '0' }}"
+          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+          VERSION="${BASE_VER}-${PR_NUM}-${TIMESTAMP}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "UBUNTU_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Using version: $VERSION"
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev lintian wget
+
+      - name: Build Ubuntu package
+        run: bash devtools/run-deb-ubuntu-build.sh ${{ matrix.suite }}
+
+      - name: List built packages
+        run: find . -maxdepth 2 -name "*.deb" -type f -exec ls -la {} \;
+
+      - name: Upload Ubuntu package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: debs-${{ matrix.suite }}
+          path: "*.deb"
+          if-no-files-found: error
+
   package_build_rpm:
     name: package build (RPM)
     needs: compile

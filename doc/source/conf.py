@@ -46,9 +46,9 @@ edit_on_github_branch = 'main'
 # Configure local copies of the JavaScript assets that power the Mermaid
 # diagrams so that the generated HTML does not fetch files from a CDN.
 # Use non-module builds to avoid CORS issues with file:// URLs
-MERMAID_JS_PATH = 'vendor/mermaid/mermaid.min.js'
-MERMAID_ELK_JS_PATH = 'vendor/mermaid/mermaid-layout-elk.esm.min.mjs'  # Keep ES module for ELK
-D3_JS_PATH = 'vendor/d3/d3.min.js'
+MERMAID_JS_PATH = 'vendor/mermaid/mermaid.js'
+MERMAID_ELK_JS_PATH = 'vendor/mermaid/mermaid-layout-elk.esm.mjs'  # Keep ES module for ELK
+D3_JS_PATH = 'vendor/d3/d3.js'
 
 mermaid_use_local = MERMAID_JS_PATH
 mermaid_elk_use_local = MERMAID_ELK_JS_PATH

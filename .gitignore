@@ -62,6 +62,9 @@ checklog
 logfile*
 *.conf
 !tests/testsuites/*.conf
+# packaging/ubuntu: exclude from *.conf and rsyslog.service
+!packaging/ubuntu/**/*.conf
+!packaging/ubuntu/**/rsyslog.service
 log
 /target
 tests/*.trs
@@ -103,6 +106,16 @@ tools/rscryutil.1
 /bin/
 # RPM CI build output
 /build-result/
+
+# Ubuntu package build output
+rsyslog-*-local-*/
+rsyslog_*.orig.tar.gz
+*.deb
+rsyslog_*-0adiscon1*.debian.tar.xz
+rsyslog_*-0adiscon1*.dsc
+rsyslog_*-0adiscon1*.changes
+rsyslog_*-0adiscon1*.buildinfo
+rsyslog_*-0adiscon1*.build
 
 # Coverage artifacts
 *.gcda

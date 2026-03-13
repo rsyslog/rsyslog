@@ -57,7 +57,7 @@ ROSI at a Glance
      class R1,R2,R3 rosi;
      class O1,O2,O3 outcome;
    </pre>
-   <script src="../_static/vendor/mermaid/mermaid.min.js"></script>
+  <script src="../_static/vendor/mermaid/mermaid.js"></script>
    <script>
    window.addEventListener("load", function () {
      if (typeof mermaid === "undefined") return;

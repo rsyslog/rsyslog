@@ -83,11 +83,10 @@ EXTRA_DIST = \
     source/_static/rosi-overview.png \
     source/_static/rsyslog.css \
     source/_static/vendor/README.md \
-    source/_static/vendor/d3/d3.min.js \
-    source/_static/vendor/mermaid/mermaid-layout-elk.esm.min.mjs \
-    source/_static/vendor/mermaid/mermaid-layout-elk.min.js \
+    source/_static/vendor/d3/d3.js \
+    source/_static/vendor/mermaid/mermaid-layout-elk.esm.mjs \
     source/_static/vendor/mermaid/mermaid.esm.min.mjs \
-    source/_static/vendor/mermaid/mermaid.min.js \
+    source/_static/vendor/mermaid/mermaid.js \
     source/_templates/sourcelink.html \
     source/_templates_minimal/README \
     source/_templates_minimal/footer.html \
