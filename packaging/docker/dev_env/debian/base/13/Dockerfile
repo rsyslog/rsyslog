@@ -19,6 +19,7 @@ RUN 	apt-get update && \
 	flex \
 	gdb \
 	git \
+	gnutls-bin \
 	libaprutil1-dev \
 	libcivetweb-dev \
 	libcurl4-gnutls-dev \

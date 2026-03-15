@@ -32,7 +32,10 @@
      */
     #pragma GCC diagnostic ignored "-Wstrict-prototypes"
     #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
-    #if __GNUC__ >= 8
+    #if __GNUC__ >= 8 || defined(__clang__)
+        #if defined(__clang__)
+            #pragma GCC diagnostic ignored "-Wunknown-warning-option"
+        #endif
         /* GCC, starting at least with version 8, is now really overdoing with it's
          * warning messages. We turn those off that either cause an enormous amount
          * of false positives or flag perfectly legal code as problematic.
@@ -115,6 +118,7 @@
     #define PRAGMA_IGNORE_Wmissing_noreturn _Pragma("GCC diagnostic ignored \"-Wmissing-noreturn\"")
     #define PRAGMA_IGNORE_Wexpansion_to_defined _Pragma("GCC diagnostic ignored \"-Wexpansion-to-defined\"")
     #define PRAGMA_IGNORE_Wunknown_warning_option _Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"")
+    #define PRAGMA_IGNORE_Wjump_misses_init _Pragma("GCC diagnostic ignored \"-Wjump-misses-init\"")
     #if !defined(__clang__)
         #define PRAGMA_IGNORE_Wunknown_attribute _Pragma("GCC diagnostic ignored \"-Wunknown-attribute\"")
     #else
@@ -146,6 +150,7 @@
     #define PRAGMA_IGNORE_Wexpansion_to_defined
     #define PRAGMA_IGNORE_Wunknown_attribute
     #define PRAGMA_IGNORE_Wunknown_warning_option
+    #define PRAGMA_IGNORE_Wjump_misses_init
     #define PRAGMA_DIAGNOSTIC_PUSH
     #define PRAGMA_DIAGNOSTIC_POP
 #endif

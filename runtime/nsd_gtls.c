@@ -2003,8 +2003,8 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
         if (gnutls_priority_set_direct(pNew->sess, (const char *)pNew->gnutlsPriorityString, &error_position) ==
             GNUTLS_E_INVALID_REQUEST) {
             LogError(0, RS_RET_GNUTLS_ERR,
-                     "Syntax Error in"
-                     " Priority String: \"%s\"\n",
+                     "Syntax error or unsupported option in "
+                     "Priority String near: \"%s\"\n",
                      error_position);
         }
     } else {
@@ -2334,8 +2334,8 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
         if (gnutls_priority_set_direct(pThis->sess, (const char *)pThis->gnutlsPriorityString, &error_position) ==
             GNUTLS_E_INVALID_REQUEST) {
             LogError(0, RS_RET_GNUTLS_ERR,
-                     "Syntax Error in"
-                     " Priority String: \"%s\"\n",
+                     "Syntax error or unsupported option in "
+                     "Priority String near: \"%s\"\n",
                      error_position);
         }
     } else {

@@ -902,6 +902,11 @@ OpenSSL Version 1.0.2 or higher is required for this feature.
 A list of possible commands and their valid values can be found in the documentation:
 https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
 
+Native post-quantum TLS depends on the distro-provided OpenSSL or GnuTLS
+version. Rsyslog currently supports native PQ only on newer distro baselines
+that already ship the required library support and does not add provider-mode
+compatibility for older versions.
+
 The setting can be single or multiline, each configuration command is separated by linefeed (\n).
 Command and value are separated by equal sign (=). Here are a few samples:
 
@@ -925,6 +930,26 @@ It will also set the minimum protocol to TLSv1.2
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
+
+Example 3
+---------
+
+Native OpenSSL hybrid post-quantum TLS on supported distro versions:
+
+.. code-block:: rsyslog
+
+   gnutlsPriorityString="MinProtocol=TLSv1.3
+   MaxProtocol=TLSv1.3
+   Groups=X25519MLKEM768"
+
+Example 4
+---------
+
+Native GnuTLS hybrid post-quantum TLS on supported distro versions:
+
+.. code-block:: rsyslog
+
+   gnutlsPriorityString="NORMAL:-GROUP-ALL:+GROUP-X25519-MLKEM768:+GROUP-X25519"
 
 
 

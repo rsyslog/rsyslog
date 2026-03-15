@@ -1305,6 +1305,7 @@ TESTS_GNUTLS = \
 	omfwd-tls-gtls-no-sni.sh \
 	omfwd-tls-gtls-auto-sni.sh \
 	omfwd-tls-gtls-configured-sni.sh \
+	sndrcv_tls_gtls_native_pq_group.sh \
 	imtcp-drvr-in-input-basic.sh \
 	imtcp-multi-drvr-basic.sh \
 	imtcp-multi-drvr-basic-parallel.sh
@@ -1375,6 +1376,7 @@ TESTS_OSSL_OPENSSL = \
 	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-error-key2.sh \
+	sndrcv_tls_ossl_native_pq_group.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \

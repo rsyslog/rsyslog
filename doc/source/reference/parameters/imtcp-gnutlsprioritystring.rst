@@ -50,6 +50,16 @@ In GNUTLS, this setting determines the handshake algorithms and options for the 
 
 This feature is compatible with OpenSSL Version 1.0.2 and above. It enables the passing of configuration commands to the OpenSSL library. You can find a comprehensive list of commands and their acceptable values in the `OpenSSL Documentation <https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/>`_.
 
+**Native post-quantum usage**
+
+Native post-quantum TLS is supported only on distro and library combinations
+that already ship it in their regular OpenSSL or GnuTLS packages. Rsyslog does
+not currently add provider-specific compatibility for older distro versions.
+
+At the time this support was added, the intended native baselines were Fedora
+43 or newer and Debian 13 or newer for OpenSSL 3.5-based hybrid groups, with
+GnuTLS hybrid support available on supported native GnuTLS builds.
+
 **General Configuration Guidelines**
 
 The configuration can be formatted as a single line or across multiple lines. Each command within the configuration is separated by a linefeed (``\n``). To differentiate between a command and its corresponding value, use an equal sign (``=``). Below are some examples to guide you in formatting these commands.
@@ -71,6 +81,26 @@ It will also set the minimum protocol to TLSv1.2
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
+
+Example 3
+---------
+
+Native OpenSSL hybrid post-quantum TLS on supported distro versions:
+
+.. code-block:: none
+
+   gnutlsPriorityString="MinProtocol=TLSv1.3
+   MaxProtocol=TLSv1.3
+   Groups=X25519MLKEM768"
+
+Example 4
+---------
+
+Native GnuTLS hybrid post-quantum TLS on supported distro versions:
+
+.. code-block:: none
+
+   gnutlsPriorityString="NORMAL:-GROUP-ALL:+GROUP-X25519-MLKEM768:+GROUP-X25519"
 
 The same-named input parameter can override this module setting.
 
@@ -96,4 +126,3 @@ Input usage
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.
-
