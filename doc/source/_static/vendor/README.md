@@ -30,7 +30,7 @@ The documentation is automatically fixed for offline viewing during the build
 process. If you need to run the fix manually:
 
 ```bash
-python3 tools/fix-mermaid-offline.py doc/build/html
+python3 tools/fix-mermaid-offline.py doc/build
 ```
 
 This script removes the `type="module"` attribute from Mermaid script tags

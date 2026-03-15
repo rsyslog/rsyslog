@@ -11,14 +11,14 @@ BUILDDIR      = build
 
 # However, to be safe and clean in Automake:
 html-local:
-	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@echo "Applying Mermaid offline fix..."
-	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
+	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)"
 
 html-with-sitemap:
-	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" -t with_sitemap $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)" -t with_sitemap $(SPHINXOPTS) $(O)
 	@echo "Applying Mermaid offline fix..."
-	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
+	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)"
 
 singlehtml:
 	@$(SPHINXBUILD) -M singlehtml "$(SOURCEDIR)" "$(BUILDDIR)" -t minimal_build $(SPHINXOPTS) -D rst_epilog='' $(O)

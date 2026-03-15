@@ -148,4 +148,9 @@ fi
 echo "Building docs: format=${FORMAT} output=${OUTPUT_DIR} jobs=${JOBS}"
 sphinx-build -j "${JOBS}" ${SPHINXOPTS} -b "${FORMAT}" "${DOC_DIR}/source" "${OUTPUT_DIR}"
 
+if [[ "${FORMAT}" == "html" ]]; then
+  echo "Running fix-mermaid-offline.py for file:// and GitHub Pages compatibility..."
+  python3 "${SCRIPT_DIR}/fix-mermaid-offline.py" "${OUTPUT_DIR}"
+fi
+
 echo "Done. Open ${OUTPUT_DIR}/index.html for HTML builds."
