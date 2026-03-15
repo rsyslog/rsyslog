@@ -363,6 +363,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-mysql \
 	--enable-mysql-tests \
 	--enable-omamqp1 \
+	--enable-omazuredce \
+	--enable-omazuredce-tests \
 	--enable-omczmq \
 	--enable-omhiredis \
 	--enable-omhiredis \
