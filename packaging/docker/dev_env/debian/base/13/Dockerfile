@@ -40,6 +40,7 @@ RUN 	apt-get update && \
 	libsasl2-dev \
 	libsnappy-dev \
 	libsnmp-dev \
+	libsodium-dev \
 	libssl-dev \
 	libsystemd-dev \
 	libtokyocabinet-dev \
@@ -80,8 +81,7 @@ RUN 	apt-get update && \
 RUN	apt-get update -y && \
 	apt-get install -y \
 	libestr-dev \
-	libfastjson-dev \
-	libsodium-dev && \
+	libfastjson-dev  && \
 	apt-get clean && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -244,6 +244,8 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmutf8fix \
 	--enable-mysql \
 	--disable-omamqp1 \
+	--enable-omazuredce \
+	--enable-omazuredce-tests \
 	--disable-omczmq \
 	--enable-omhiredis \
 	--enable-omhttp \

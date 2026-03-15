@@ -10,7 +10,7 @@ set -e && \
 git clone https://github.com/rsyslog/rsyslog.git && \
 cd rsyslog && \
 autoreconf -fi && \
-./configure $RSYSLOG_CONFIGURE_OPTIONS --enable-compile-warnings=yes  && \
+./configure \$RSYSLOG_CONFIGURE_OPTIONS --enable-compile-warnings=yes  && \
 make -j4
 "
 if [ $? -eq 0 ]; then
