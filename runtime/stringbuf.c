@@ -275,9 +275,9 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar *const psz, con
     rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
     assert(psz != NULL);
 
-    /* does the string fit? */
-    if (pThis->iStrLen + iStrLen >= pThis->iBufSize) {
-        CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
+    /* Keep one spare byte for cstrFinalize(), which appends the trailing NUL. */
+    if (pThis->iStrLen + iStrLen + 1 > pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, iStrLen + 1)); /* need more memory! */
     }
 
     /* ok, now we always have sufficient continues memory to do a memcpy() */
