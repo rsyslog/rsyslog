@@ -10,6 +10,8 @@ on:
   pull_request:
     paths:
       - ".github/workflows/repo-policy-focus-review.yml"
+      - "Makefile.am"
+      - "configure.ac"
       - "docs/repo-policy-focus-review.md"
       - "scripts/build_repo_policy_focus_input.py"
       - "scripts/evaluate_repo_policy_focus.py"
