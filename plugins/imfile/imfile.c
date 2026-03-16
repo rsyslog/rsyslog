@@ -198,6 +198,7 @@ struct act_obj_s {
     act_obj_t *prev;
     act_obj_t *next;
     fs_edge_t *edge; /* edge which this object belongs to */
+    fs_edge_t *deferred_parent_update; /* transient rescan target for deleted symlinks; see detect_updates() */
     char *name; /* full path name of active object */
     char *basename; /* only basename */  // TODO: remove when refactoring rename support
     char *source_name; /* if this object is target of a symlink, source_name is its name (else NULL) */
@@ -251,6 +252,7 @@ static rsRetVal ATTR_NONNULL(1) pollFile(act_obj_t *act);
 static int ATTR_NONNULL() getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path);
 static void act_obj_destroy(act_obj_t *const act, const int is_deleted);
 static void ATTR_NONNULL() act_obj_unlink_nodestroy(act_obj_t *act);
+static fs_edge_t *ATTR_NONNULL(1) find_symlink_parent_update(act_obj_t *const act);
 static void ATTR_NONNULL(1, 2) fs_node_walk(fs_node_t *const node, void (*f_usr)(fs_edge_t *const));
 static uchar *ATTR_NONNULL(1, 2) getStateFileName(const act_obj_t *, uchar *, const size_t);
 static int ATTR_NONNULL()
@@ -794,6 +796,7 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
         CHKmalloc(act->basename = strdup(basename));
     }
     act->edge = edge;
+    act->deferred_parent_update = NULL;
     act->ino = ino;
     act->fd = fd;
     struct stat stat_buf;
@@ -908,6 +911,14 @@ static void detect_updates(fs_edge_t *const edge) {
                         "detect_updates obj gone away, unlinking: "
                         "'%s', ttDelete: %" PRId64 "s, ttNow:%" PRId64 " isFile: %d\n",
                         act_name, (int64_t)ttNow - (act->time_to_delete + FILE_DELETE_DELAY), (int64_t)ttNow, is_file);
+                    /*
+                     * Deleted symlinks need one extra notification step: we must revisit
+                     * the target's parent tree so that helper watches created by
+                     * process_symlink() are retired in the same cleanup cycle. Record
+                     * that rescan target before unlinking so deferred destruction can stay
+                     * iterator-safe without losing the original cleanup semantics.
+                     */
+                    act->deferred_parent_update = find_symlink_parent_update(act);
                     act_obj_unlink_nodestroy(act);
                     act->next = pending_destroy;
                     pending_destroy = act;
@@ -925,6 +936,7 @@ static void detect_updates(fs_edge_t *const edge) {
                     "file '%s' inode changed from %llu to %llu, unlinking from "
                     "internal lists\n",
                     act_name, (long long unsigned)act->ino, (long long unsigned)fileInfo.st_ino);
+                act->deferred_parent_update = find_symlink_parent_update(act);
                 act_obj_unlink_nodestroy(act);
                 act->next = pending_destroy;
                 pending_destroy = act;
@@ -941,6 +953,7 @@ static void detect_updates(fs_edge_t *const edge) {
                         if (current_gen != act->inode_gen) {
                             DBGPRINTF("file '%s' inode generation changed from %u to %u (inode same), unlinking\n",
                                       act_name, act->inode_gen, current_gen);
+                            act->deferred_parent_update = find_symlink_parent_update(act);
                             act_obj_unlink_nodestroy(act);
                             act->next = pending_destroy;
                             pending_destroy = act;
@@ -959,6 +972,11 @@ static void detect_updates(fs_edge_t *const edge) {
         act_obj_t *const to_destroy = pending_destroy;
         pending_destroy = pending_destroy->next;
         to_destroy->next = NULL;
+        if (to_destroy->deferred_parent_update != NULL) {
+            DBGPRINTF("detect_updates: serving deferred parent rescan for deleted symlink '%s'\n", to_destroy->name);
+            detect_updates(to_destroy->deferred_parent_update);
+            to_destroy->deferred_parent_update = NULL;
+        }
         act_obj_destroy(to_destroy, 1);
     }
 }
@@ -1007,7 +1025,7 @@ static rsRetVal ATTR_NONNULL() process_symlink(fs_edge_t *const chld, const char
                 LogError(errno, RS_RET_ERR, "imfile: process_symlink: cannot stat directory '%s' - ignored", parent);
                 FINALIZE;
             }
-            if (chld->parent->root->edges) {
+            if (chld->parent != NULL && chld->parent->root != NULL && chld->parent->root->edges != NULL) {
                 DBGPRINTF("process_symlink: adding parent '%s' of target '%s'\n", parent, target);
                 act_obj_add(chld->parent->root->edges, parent, 0, fileInfo.st_ino, 0, NULL);
             }
@@ -1106,6 +1124,27 @@ static void in_doFallbackScan(void) {
 #endif
 
 
+static fs_edge_t *find_symlink_parent_update(act_obj_t *const act) {
+    if (!act->is_symlink) {
+        return NULL;
+    }
+
+    for (act_obj_t *target_act = act->edge->active; target_act != NULL; target_act = target_act->next) {
+        if (target_act->source_name && !strcmp(target_act->source_name, act->name)) {
+            DBGPRINTF("find_symlink_parent_update: queue parent rescan for target %s of %s symlink\n", target_act->name,
+                      act->name);
+            if (target_act->edge != NULL && target_act->edge->parent != NULL &&
+                target_act->edge->parent->root != NULL) {
+                return target_act->edge->parent->root->edges;
+            }
+            break;
+        }
+    }
+
+    return NULL;
+}
+
+
 /* destruct a single act_obj object */
 static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
     uchar *statefn = NULL;
@@ -1116,17 +1155,6 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
 
     DBGPRINTF("act_obj_destroy: act %p '%s' (source '%s'), wd %d, pStrm %p, is_deleted %d, in_move %d\n", act,
               act->name, act->source_name ? act->source_name : "---", act->wd, act->pStrm, is_deleted, act->in_move);
-    if (act->is_symlink && is_deleted) {
-        act_obj_t *target_act;
-        for (target_act = act->edge->active; target_act != NULL; target_act = target_act->next) {
-            if (target_act->source_name && !strcmp(target_act->source_name, act->name)) {
-                DBGPRINTF("act_obj_destroy: detect_updates for parent of target %s of %s symlink\n", target_act->name,
-                          act->name);
-                detect_updates(target_act->edge->parent->root->edges);
-                break;
-            }
-        }
-    }
     if (act->pStrm != NULL) {
         const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
         pollFile(act); /* get any left-over data */
