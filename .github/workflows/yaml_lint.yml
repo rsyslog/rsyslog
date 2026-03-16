@@ -37,6 +37,7 @@ jobs:
         id: changed
         uses: tj-actions/changed-files@v46
         with:
+          separator: "\n"
           files: |
             **/*.yml
             **/*.yaml
@@ -48,9 +49,12 @@ jobs:
       - name: Run yamllint
         if: steps.changed.outputs.any_changed == 'true'
         run: |
+          mapfile -t files <<'EOF'
+          ${{ steps.changed.outputs.all_changed_files }}
+          EOF
           yamllint \
             -d '{extends: relaxed, rules: {line-length: {max: 120}}}' \
-            ${{ steps.changed.outputs.all_changed_files }}
+            "${files[@]}"
 
       - name: Skip yamllint, no YAML changes
         if: steps.changed.outputs.any_changed != 'true'
