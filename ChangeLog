@@ -1,5 +1,52 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-16: rpm: packaging overhaul, CI job, and review fixes
+  - Add package_build_rpm CI job (Rocky Linux 8, mock, EPEL 8)
+  - Add devtools/run-rpm-build.sh for CI RPM builds via mock
+  - Add packaging/rpm/ with build-rpms.sh, config.sh, mock configs
+  - Add packaging/rpm/rpmbuild/ (SPECS, SOURCES) for rsyslog and deps
+  - Main spec: rsyslog-v8-stable.spec (EL8/EL9, RHEL 7 dropped)
+  - qpid-proton tarballs as Source5/Source6 with SHA256 checksums
+  - libfastjson4 Source0: GitHub refs/tags/v%{version} URL
+  - build-rpms.sh: atomic downloads, GPG --batch --pinentry-mode loopback
+  - Fix duplicate changelog NVR 8.2008.0-2 -> 8.2008.0-3 (Sep 29 2020)
+  - .gitignore: root-anchored /build-result/
+  - doc/BUILDS_README.md: document why pip is needed for RPM Sphinx build
+  closes: https://github.com/rsyslog/rsyslog/issues/6584
+- 2026-03-16: github: assign maintainers to CODEOWNERS coverage
+  Ensure GitHub code owner review applies consistently to repository
+  metadata, CI, build tooling, and the default source tree.
+  Security-sensitive paths now require review from the listed
+  maintainers when branch protection enforces code owner approval.
+- 2026-03-16: tls: add native post-quantum guidance and tests
+  Native post-quantum TLS support should be usable and testable on newer
+  distro baselines without adding provider-mode compatibility work for
+  older platforms.
+  Rsyslog now has native-PQ smoke tests, clearer TLS diagnostics, updated
+  CI baselines and helper images, and a new post-quantum tutorial for
+  supported distros.
+- 2026-03-16: ci: upgrade RPM CI from Rocky Linux 8 / EPEL-8 to Rocky Linux 9 / EPEL-9
+  Align CI with current Rocky Linux and EPEL versions for ongoing
+  support and security.
+  Impact:
+    RPM build job and mock defaults now target EL9; artifact names change.
+  Before: Rocky Linux 8 container, epel-8 repo, powertools, epel-8-x86_64.
+  After:  Rocky Linux 9 container, epel-9 repo, crb, epel-9-x86_64.
+- 2026-03-16: doc: Fix Mermaid diagrams and unify build output to build/
+  Mermaid diagrams fail on GitHub Pages PR previews and when opening
+  built HTML via file://. ES module imports use wrong paths and CORS
+  blocks file://. Two build paths (build/ vs build/html/) caused
+  confusion and inconsistent fix application.
+  Impact:
+    Doc build output path unified; Mermaid diagrams render in offline,
+    online, and RPM builds.
+- 2026-03-16: CI: added deterministic project policy checks
+  The idea is to identify bad patches that do not follow project best
+  practices. Among others, the hope is that this can identify "AI Slop" as it
+  often violates policies.
+  Note that we intentionally use deterministic (non-AI) checks. A similiar
+  check via AI is also added to the repo, but it is no artifact.
+  All of these checks are experimental.
 - 2026-02-27: ratelimit: wire ratelimit.name into remaining modules
   Why: Commit 3ee31a8d0 added shared named ratelimit support
   (ratelimit.name + ratelimitNewFromConfig) but only wired it
