@@ -1117,14 +1117,19 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
     DBGPRINTF("act_obj_destroy: act %p '%s' (source '%s'), wd %d, pStrm %p, is_deleted %d, in_move %d\n", act,
               act->name, act->source_name ? act->source_name : "---", act->wd, act->pStrm, is_deleted, act->in_move);
     if (act->is_symlink && is_deleted) {
-        act_obj_t *target_act;
-        for (target_act = act->edge->active; target_act != NULL; target_act = target_act->next) {
-            if (target_act->source_name && !strcmp(target_act->source_name, act->name)) {
-                DBGPRINTF("act_obj_destroy: detect_updates for parent of target %s of %s symlink\n", target_act->name,
-                          act->name);
-                detect_updates(target_act->edge->parent->root->edges);
-                break;
-            }
+        /* When a symlink is deleted we must trigger detect_updates on the parent
+         * directory edge so that the target's parent directory FD is released.
+         * The symlink's target is always added to the same edge (act->edge), so
+         * act->edge->parent->root->edges is equivalent to
+         * target_act->edge->parent->root->edges used in the old code.
+         * We cannot search act->edge->active for the target because it may
+         * already have been moved to pending_destroy in the same detect_updates
+         * pass, causing the active list search to find nothing and skip the
+         * necessary cleanup.
+         */
+        if (act->edge->parent != NULL && act->edge->parent->root != NULL && act->edge->parent->root->edges != NULL) {
+            DBGPRINTF("act_obj_destroy: detect_updates for parent edges of symlink '%s'\n", act->name);
+            detect_updates(act->edge->parent->root->edges);
         }
     }
     if (act->pStrm != NULL) {
