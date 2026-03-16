@@ -14,8 +14,8 @@ VENV=/opt/rsyslog-doc-venv
 export RSYSLOG_DOC_VERSION="${RSYSLOG_DOC_VERSION:-8}"
 export RSYSLOG_DOC_RELEASE_TYPE="${RSYSLOG_DOC_RELEASE_TYPE:-stable}"
 
-rm -rf build/html
+rm -rf build
 nice "$VENV/bin/sphinx-build" -j"$(nproc)" -t with_sitemap -b html -D html_theme=furo \
-  -W --keep-going source build/html
+  -W --keep-going source build
 
-"$VENV/bin/python3" tools/fix-mermaid-offline.py build/html
+"$VENV/bin/python3" tools/fix-mermaid-offline.py build

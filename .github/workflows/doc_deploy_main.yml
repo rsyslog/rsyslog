@@ -46,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docs-html
-          path: doc/build/html
+          path: doc/build
 
   deploy:
     needs: build

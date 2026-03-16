@@ -193,7 +193,7 @@ If you prefer the manual route instead of the helper script above:
     -   `make -C doc epub`
     -   Fallback: `sphinx-build -b epub source build`
 3.  Review generated contents:
-    -   Makefile builds: open `rsyslog/doc/build/html/index.html`.
+    -   Makefile builds: open `rsyslog/doc/build/index.html`.
     -   Direct Sphinx builds: open `rsyslog/doc/build/index.html`.
     -   Use any EPUB reader to view `rsyslog/doc/build/rsyslog.epub`.
 
