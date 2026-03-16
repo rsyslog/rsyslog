@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -16,6 +17,7 @@ DOC_AGENTS = ROOT_DIR / "doc" / "AGENTS.md"
 TESTS_AGENTS = ROOT_DIR / "tests" / "AGENTS.md"
 PLUGINS_AGENTS = ROOT_DIR / "plugins" / "AGENTS.md"
 CONTRIB_AGENTS = ROOT_DIR / "contrib" / "AGENTS.md"
+PARAMETER_RE = re.compile(r'\{\s*"([^"]+)"\s*,\s*eCmdHdlr')
 
 
 def parse_args() -> argparse.Namespace:
@@ -91,6 +93,25 @@ def limited_diff(base: str, head: str, paths: list[str]) -> str:
     if not unique_paths:
         return ""
     return run_git(["diff", "--unified=12", base, head, "--", *unique_paths])
+
+
+def manifest_contains_subdir(manifest: str, module_dir: str) -> bool:
+    pattern = re.compile(rf"(?<![A-Za-z0-9_./-]){re.escape(module_dir)}(?![A-Za-z0-9_./-])")
+    return bool(pattern.search(manifest))
+
+
+def configure_lists_makefile(configure_text: str, module_dir: str) -> bool:
+    needle = f"{module_dir}/Makefile"
+    pattern = re.compile(rf"(?<![A-Za-z0-9_./-]){re.escape(needle)}(?![A-Za-z0-9_./-])")
+    return bool(pattern.search(configure_text))
+
+
+def slugify_parameter_name(name: str) -> str:
+    return re.sub(r"[^a-z0-9_-]+", "-", name.lower().replace(".", "-")).strip("-")
+
+
+def extract_parameter_names(content: str) -> set[str]:
+    return {match.group(1) for match in PARAMETER_RE.finditer(content)}
 
 
 def build_tests_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
@@ -281,13 +302,106 @@ def build_module_check(name_status: list[dict[str, object]], base: str, head: st
     }
 
 
+def build_module_build_wiring_check(module_check: dict[str, object], base: str, head: str) -> dict[str, object]:
+    # New modules must be wired into the top-level automake/autoconf files or
+    # they will never participate in normal builds and dist checks.
+    new_modules = module_check["facts"]["new_modules"]
+    applicable = bool(new_modules)
+    top_makefile = read_file_at_ref(head, "Makefile.am") if applicable else ""
+    configure_ac = read_file_at_ref(head, "configure.ac") if applicable else ""
+    wiring = []
+    for module in new_modules:
+        module_dir = str(module["dir"])
+        wiring.append(
+            {
+                "dir": module_dir,
+                "makefile_listed": manifest_contains_subdir(top_makefile, module_dir),
+                "configure_listed": configure_lists_makefile(configure_ac, module_dir),
+            }
+        )
+
+    relevant_paths = ["Makefile.am", "configure.ac", *[item["dir"] for item in new_modules]]
+    return {
+        "id": "module-build-wiring",
+        "title": "Module build wiring",
+        "applicable": applicable,
+        "facts": {
+            "new_modules": wiring,
+            "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
+        },
+    }
+
+
+def build_parameter_doc_check(
+    name_status: list[dict[str, object]], base: str, head: str
+) -> dict[str, object]:
+    # New module parameters should come with matching parameter reference docs.
+    changed_sources = []
+    parameter_docs = []
+    for entry in name_status:
+        path = str(entry.get("path", ""))
+        base_path = str(entry.get("old_path", path))
+        parts = Path(path).parts
+        if len(parts) < 3:
+            continue
+        if parts[0] not in {"plugins", "contrib"}:
+            continue
+        if not path.endswith((".c", ".h")):
+            continue
+        if not file_exists_at_ref(head, path):
+            continue
+
+        head_params = extract_parameter_names(read_file_at_ref(head, path))
+        base_params = set()
+        if file_exists_at_ref(base, base_path):
+            base_params = extract_parameter_names(read_file_at_ref(base, base_path))
+        new_params = sorted(head_params - base_params)
+        if not new_params:
+            continue
+
+        changed_sources.append(path)
+        module_name = parts[1]
+        for param in new_params:
+            doc_path = (
+                f"doc/source/reference/parameters/{module_name}-{slugify_parameter_name(param)}.rst"
+            )
+            parameter_docs.append(
+                {
+                    "module": module_name,
+                    "source_file": path,
+                    "parameter": param,
+                    "doc_path": doc_path,
+                    "has_doc": file_exists_at_ref(head, doc_path),
+                }
+            )
+
+    applicable = bool(parameter_docs)
+    relevant_paths = changed_sources + [
+        item["doc_path"] for item in parameter_docs if item["has_doc"]
+    ]
+    return {
+        "id": "parameter-doc-sync",
+        "title": "Parameter documentation sync",
+        "applicable": applicable,
+        "facts": {
+            "new_parameters": parameter_docs,
+            "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
+        },
+    }
+
+
 def collect_repo_guidance(checks: list[dict[str, object]]) -> dict[str, str]:
     guidance = {"AGENTS.md": TOP_LEVEL_AGENTS.read_text(encoding="utf-8")}
-    if checks[0]["applicable"]:
+    is_applicable = {str(check["id"]): bool(check["applicable"]) for check in checks}
+    if is_applicable.get("tests-registration"):
         guidance["tests/AGENTS.md"] = TESTS_AGENTS.read_text(encoding="utf-8")
-    if checks[1]["applicable"]:
+    if is_applicable.get("doc-dist-sync") or is_applicable.get("parameter-doc-sync"):
         guidance["doc/AGENTS.md"] = DOC_AGENTS.read_text(encoding="utf-8")
-    if checks[2]["applicable"]:
+    if (
+        is_applicable.get("module-onboarding")
+        or is_applicable.get("module-build-wiring")
+        or is_applicable.get("parameter-doc-sync")
+    ):
         guidance["plugins/AGENTS.md"] = PLUGINS_AGENTS.read_text(encoding="utf-8")
         guidance["contrib/AGENTS.md"] = CONTRIB_AGENTS.read_text(encoding="utf-8")
     return guidance
@@ -300,10 +414,13 @@ def main() -> int:
 
     name_status = collect_name_status(base, head)
     changed_files = [str(entry.get("path", "")) for entry in name_status if entry.get("path")]
+    module_check = build_module_check(name_status, base, head)
     checks = [
         build_tests_check(name_status, base, head),
         build_doc_check(name_status, base, head),
-        build_module_check(name_status, base, head),
+        module_check,
+        build_module_build_wiring_check(module_check, base, head),
+        build_parameter_doc_check(name_status, base, head),
     ]
     applicable_count = sum(1 for check in checks if check["applicable"])
 

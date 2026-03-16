@@ -185,6 +185,95 @@ def evaluate_module_onboarding(check: dict[str, object]) -> dict[str, object]:
     }
 
 
+def evaluate_module_build_wiring(check: dict[str, object]) -> dict[str, object]:
+    # Build wiring is deterministic: new modules should appear in the top-level
+    # automake and autoconf manifests before they can be built in CI or distcheck.
+    facts = check["facts"]
+    issues: list[dict[str, object]] = []
+    for module in facts["new_modules"]:
+        if not module["makefile_listed"]:
+            issues.append(
+                build_issue(
+                    "Makefile.am",
+                    f"Missing SUBDIRS entry for '{module['dir']}'.",
+                )
+            )
+        if not module["configure_listed"]:
+            issues.append(
+                build_issue(
+                    "configure.ac",
+                    f"Missing AC_CONFIG_FILES entry for '{module['dir']}/Makefile'.",
+                )
+            )
+
+    if issues:
+        return {
+            "id": check["id"],
+            "status": "fail",
+            "confidence": "high",
+            "reason": "New module build wiring is incomplete.",
+            "issues": issues,
+        }
+
+    if facts["new_modules"]:
+        return {
+            "id": check["id"],
+            "status": "pass",
+            "confidence": "high",
+            "reason": "New modules are wired into the top-level build manifests.",
+            "issues": [],
+        }
+
+    return {
+        "id": check["id"],
+        "status": "not_applicable",
+        "confidence": "low",
+        "reason": "Check not applicable.",
+        "issues": [],
+    }
+
+
+def evaluate_parameter_doc_sync(check: dict[str, object]) -> dict[str, object]:
+    # This stays advisory for now because parameter extraction is deterministic,
+    # but doc coverage still relies on a filename convention rather than parsing
+    # the module reference pages end to end.
+    facts = check["facts"]
+    issues = [
+        build_issue(
+            item["source_file"],
+            f"New parameter '{item['parameter']}' is missing '{item['doc_path']}'.",
+        )
+        for item in facts["new_parameters"]
+        if not item["has_doc"]
+    ]
+
+    if issues:
+        return {
+            "id": check["id"],
+            "status": "warn",
+            "confidence": "medium",
+            "reason": "New parameters were detected without matching parameter reference docs.",
+            "issues": issues,
+        }
+
+    if facts["new_parameters"]:
+        return {
+            "id": check["id"],
+            "status": "pass",
+            "confidence": "high",
+            "reason": "New parameters have matching parameter reference docs.",
+            "issues": [],
+        }
+
+    return {
+        "id": check["id"],
+        "status": "not_applicable",
+        "confidence": "low",
+        "reason": "Check not applicable.",
+        "issues": [],
+    }
+
+
 def evaluate_check(check: dict[str, object]) -> dict[str, object]:
     # The workflow is intentionally closed over a small fixed rule set so each
     # check can carry its own deterministic semantics.
@@ -202,6 +291,10 @@ def evaluate_check(check: dict[str, object]) -> dict[str, object]:
         return evaluate_doc_dist_sync(check)
     if check["id"] == "module-onboarding":
         return evaluate_module_onboarding(check)
+    if check["id"] == "module-build-wiring":
+        return evaluate_module_build_wiring(check)
+    if check["id"] == "parameter-doc-sync":
+        return evaluate_parameter_doc_sync(check)
     return {
         "id": check["id"],
         "status": "warn",
