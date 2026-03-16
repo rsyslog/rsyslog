@@ -3,6 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test does not work on FreeBSD - problems with os utility option switches"
+skip_ARM "disk-assisted queue receiver restore timing is flaky on ARM CI"
 #
 # STEP1: start both instances and send 1000 messages.
 # Note: receiver is instance 1, sender instance 2.

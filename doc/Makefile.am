@@ -1187,6 +1187,7 @@ EXTRA_DIST = \
     source/tutorials/index.rst \
     source/tutorials/log_rotation_fix_size.rst \
     source/tutorials/log_sampling.rst \
+    source/tutorials/post_quantum_tls.rst \
     source/tutorials/random_sampling.rst \
     source/tutorials/recording_pri.rst \
     source/tutorials/reliable_forwarding.rst \
