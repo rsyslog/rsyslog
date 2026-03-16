@@ -1,0 +1,134 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
+---
+name: repo policy focus review
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/repo-policy-focus-review.yml"
+      - "docs/repo-policy-focus-review.md"
+      - "scripts/build_repo_policy_focus_input.py"
+      - "scripts/evaluate_repo_policy_focus.py"
+      - "scripts/score_repo_policy_focus.py"
+      - "tests/**"
+      - "doc/**"
+      - "plugins/**"
+      - "contrib/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-policy-focus-review:
+    name: repo policy focus review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build focused review package
+        run: |
+          mkdir -p out
+          python3 scripts/build_repo_policy_focus_input.py \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}" \
+            --output out/review-package.json
+
+      - name: Read applicability
+        id: package
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          with open("out/review-package.json", "r", encoding="utf-8") as fh:
+              package = json.load(fh)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"applicable_count={package['applicable_count']}\n")
+          PY
+
+      - name: Run deterministic evaluator
+        if: ${{ steps.package.outputs.applicable_count != '0' }}
+        run: |
+          python3 scripts/evaluate_repo_policy_focus.py \
+            --input out/review-package.json \
+            --output out/model-output.json
+
+      - name: Stamp evaluation mode
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("out/review-package.json")
+          package = json.loads(path.read_text(encoding="utf-8"))
+          if package["applicable_count"] == 0:
+              package["evaluation_mode"] = "not_needed"
+          elif Path("out/model-output.json").exists():
+              package["evaluation_mode"] = "deterministic"
+          else:
+              package["evaluation_mode"] = "unavailable"
+          path.write_text(json.dumps(package, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Score focused review result
+        run: |
+          if [ -f out/model-output.json ]; then
+            python3 scripts/score_repo_policy_focus.py \
+              --review-input out/review-package.json \
+              --model-output out/model-output.json \
+              --summary-md out/summary.md \
+              --summary-json out/summary.json
+          else
+            python3 scripts/score_repo_policy_focus.py \
+              --review-input out/review-package.json \
+              --summary-md out/summary.md \
+              --summary-json out/summary.json
+          fi
+
+      - name: Publish workflow summary
+        run: cat out/summary.md >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Enforce focused policy checks
+        run: |
+          python3 - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          summary = json.loads(Path("out/summary.json").read_text(encoding="utf-8"))
+          warnings = [check for check in summary["checks"] if check["status"] == "warn"]
+          failures = [check for check in summary["checks"] if check["status"] == "fail"]
+
+          if warnings:
+              print("Focused repo-policy warnings:")
+              for check in warnings:
+                  print(f"- {check['id']}: {check['reason']}")
+                  for issue in check["issues"]:
+                      location = issue["file"] or "(no file)"
+                      if issue["line"]:
+                          location = f"{location}:{issue['line']}"
+                      print(f"  * {location} - {issue['message']}")
+
+          if not failures:
+              print("Focused repo-policy checks passed.")
+              raise SystemExit(0)
+
+          print("Focused repo-policy checks failed:", file=sys.stderr)
+          for check in failures:
+              print(f"- {check['id']}: {check['reason']}", file=sys.stderr)
+              for issue in check["issues"]:
+                  location = issue["file"] or "(no file)"
+                  if issue["line"]:
+                      location = f"{location}:{issue['line']}"
+                  print(f"  * {location} - {issue['message']}", file=sys.stderr)
+          raise SystemExit(1)
+          PY
