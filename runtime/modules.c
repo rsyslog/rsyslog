@@ -156,7 +156,7 @@ static void modUsrDel(modInfo_t *pThis, const char *pszUsr) {
         } else {
             pPrev->pNext = pUsr->pNext;
         }
-        /* free ressources */
+        /* free resources */
         free(pUsr->pszFile);
         free(pUsr);
         pUsr = NULL; /* just to make sure... */

@@ -547,7 +547,7 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
 #endif
 
 
-/* De-Initialize TCP listner sockets.
+/* De-Initialize TCP listener sockets.
  * This function deinitializes everything, including freeing the
  * session table. No TCP listen receive operations are permitted
  * unless the subsystem is reinitialized.
@@ -1713,7 +1713,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     if (pThis->iLstnCurr == 0) {
-        dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
+        dbgprintf("tcpsrv: no listeners at all (probably init error), terminating\n");
         FINALIZE;
     }
 
@@ -2214,7 +2214,7 @@ static rsRetVal ATTR_NONNULL(1) SetDrvrTlsRevocationCheck(tcpsrv_t *pThis, int e
 }
 
 
-/* End of methods to shuffle autentication settings to the driver.;
+/* End of methods to shuffle authentication settings to the driver.;
 
  * -------------------------------------------------------------------------- */
 
@@ -2417,7 +2417,7 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(tcps_sessClassInit(pModInfo));
     CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

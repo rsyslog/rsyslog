@@ -163,7 +163,7 @@ finalize_it:
     }
     RETiRet;
 }
-/* destruction of caller's zlib ressources - a dummy for us */
+/* destruction of caller's zlib resources - a dummy for us */
 static rsRetVal zlib_Destruct(ATTR_UNUSED strm_t *pThis) {
     return RS_RET_OK;
 }
