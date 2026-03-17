@@ -1072,7 +1072,7 @@
  * only, but may be made available to other types of plugins in the future.
  * A plugin does not need to define this entry point. If if does, it gets
  * called when a HUP at the action level is to be done. A plugin should register
- * this function so that it can close files, connection or other ressources
+ * this function so that it can close files, connection or other resources
  * on HUP - if it can be assume the user wanted to do this as a part of HUP
  * processing. Note that the name "HUP" has historical reasons, it stems back
  * to the infamous SIGHUP which was sent to restart a syslogd. We still retain

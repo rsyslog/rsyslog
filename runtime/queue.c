@@ -484,8 +484,8 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
 
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
- * During a shutdown, this is typically not needed, as the OS frees up ressources and does
- * this much quicker than when we clean up ourselvs. -- rgerhards, 2008-10-21
+ * During a shutdown, this is typically not needed, as the OS frees up resources and does
+ * this much quicker than when we clean up ourselves. -- rgerhards, 2008-10-21
  * This function returns void, as it makes no sense to communicate an error back, even if
  * it happens.
  * This functions works "around" the regular deque mechanism, because it is only used to
@@ -663,7 +663,7 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     /* check if we already have a DA worker pool. If not, initiate one. Please note that the
      * pool is created on first need but never again destructed (until the queue is). This
      * is intentional. We assume that when we need it once, we may also need it on another
-     * occasion. Ressources used are quite minimal when no worker is running.
+     * occasion. Resources used are quite minimal when no worker is running.
      * rgerhards, 2008-01-24
      * NOTE: this is the DA worker *pool*, not the DA queue!
      */
@@ -1270,7 +1270,7 @@ finalize_it:
  * with all on-disk structures kept as-is as much as possible. However,
  * we do not really stop or destruct the in-memory disk queue object.
  * Practice has shown that this may cause races during destruction which
- * themselfs can lead to segfault. So we prefer to was some ressources by
+ * themselves can lead to segfault. So we prefer to was some resources by
  * keeping the queue active.
  * Instead, the queue is switched to direct mode, so that at least
  * some processing can happen. Of course, this may still have lots of
