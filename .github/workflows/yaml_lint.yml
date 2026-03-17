@@ -48,13 +48,15 @@ jobs:
 
       - name: Run yamllint
         if: steps.changed.outputs.any_changed == 'true'
+        env:
+          CHANGED_YAML_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
-          mapfile -t files <<'EOF'
-          ${{ steps.changed.outputs.all_changed_files }}
-          EOF
-          yamllint \
-            -d '{extends: relaxed, rules: {line-length: {max: 120}}}' \
-            "${files[@]}"
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            yamllint \
+              -d '{extends: relaxed, rules: {line-length: {max: 120}}}' \
+              "$file"
+          done <<< "$CHANGED_YAML_FILES"
 
       - name: Skip yamllint, no YAML changes
         if: steps.changed.outputs.any_changed != 'true'
