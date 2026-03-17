@@ -51,6 +51,10 @@ def run_git(args: list[str], check: bool = True) -> str:
     return result.stdout
 
 
+def merge_base(base: str, head: str) -> str:
+    return run_git(["merge-base", base, head]).strip()
+
+
 def file_exists_at_ref(ref: str, path: str) -> bool:
     result = subprocess.run(
         ["git", "cat-file", "-e", f"{ref}:{path}"],
@@ -114,6 +118,15 @@ def extract_parameter_names(content: str) -> set[str]:
     return {match.group(1) for match in PARAMETER_RE.finditer(content)}
 
 
+def wrapper_sources_base_script(content: str, base_script: str) -> bool:
+    pattern = re.compile(r"(?m)^\s*(?:\.|source)\s+(.*?)(\s*#.*)?$")
+    for match in pattern.finditer(content):
+        path = match.group(1).strip()
+        if path == base_script or path.endswith(f"/{base_script}"):
+            return True
+    return False
+
+
 def build_tests_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
     # This rule is strict: new or renamed shell tests must stay wired into
     # tests/Makefile.am, and lightweight -vg.sh wrappers should source the base
@@ -151,7 +164,7 @@ def build_tests_check(name_status: list[dict[str, object]], base: str, head: str
             continue
         content = read_file_at_ref(head, path)
         base_script = Path(path).name.replace("-vg.sh", ".sh")
-        sources_base = base_script in content and ". " in content
+        sources_base = wrapper_sources_base_script(content, base_script)
         vg_wrappers.append(
             {
                 "file": path,
@@ -411,21 +424,23 @@ def main() -> int:
     args = parse_args()
     base = resolve_ref(args.base, ("AI_REVIEW_BASE", "GITHUB_BASE_SHA"), "HEAD")
     head = resolve_ref(args.head, ("AI_REVIEW_HEAD", "GITHUB_HEAD_SHA"), "HEAD")
+    diff_base = merge_base(base, head)
 
-    name_status = collect_name_status(base, head)
+    name_status = collect_name_status(diff_base, head)
     changed_files = [str(entry.get("path", "")) for entry in name_status if entry.get("path")]
-    module_check = build_module_check(name_status, base, head)
+    module_check = build_module_check(name_status, diff_base, head)
     checks = [
-        build_tests_check(name_status, base, head),
-        build_doc_check(name_status, base, head),
+        build_tests_check(name_status, diff_base, head),
+        build_doc_check(name_status, diff_base, head),
         module_check,
-        build_module_build_wiring_check(module_check, base, head),
-        build_parameter_doc_check(name_status, base, head),
+        build_module_build_wiring_check(module_check, diff_base, head),
+        build_parameter_doc_check(name_status, diff_base, head),
     ]
     applicable_count = sum(1 for check in checks if check["applicable"])
 
     package = {
         "base": base,
+        "diff_base": diff_base,
         "head": head,
         "changed_files": changed_files,
         "applicable_count": applicable_count,
