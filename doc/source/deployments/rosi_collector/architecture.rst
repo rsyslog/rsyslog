@@ -3,6 +3,16 @@
 Architecture
 ============
 
+.. meta::
+   :description: Architecture overview of ROSI Collector, including rsyslog, Loki, Grafana, Prometheus, Traefik, and Windows client integration.
+   :keywords: rsyslog, ROSI Collector, architecture, Loki, Grafana, Prometheus, Windows Agent
+
+.. summary-start
+
+ROSI Collector combines rsyslog, Loki, Grafana, Prometheus, and Traefik, with Windows systems feeding the stack through rsyslog Windows Agent.
+
+.. summary-end
+
 .. index::
    pair: ROSI Collector; architecture
    single: Loki
@@ -12,6 +22,9 @@ Architecture
 ROSI Collector combines several components into a cohesive logging and
 monitoring stack. This page describes each component, how they interact,
 and the data flows through the system.
+Most examples in this guide use Linux clients, but the broader ROSI stack also
+includes official Windows-side components such as
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__.
 
 .. figure:: rosi-architecture.svg
    :alt: ROSI Collector Architecture Diagram
@@ -103,6 +116,11 @@ Log Data Flow
 3. **rsyslog omhttp** sends logs directly to Loki with labels
 4. **Loki** stores labeled log entries in compressed format
 5. **Grafana** queries Loki to display logs in dashboards and Explore
+
+For Windows systems, the client-side collector is typically
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__. It is an
+official ROSI Windows-side component and forwards Windows Event Log data,
+file-based logs, and relay traffic into the same collector-side pipeline.
 
 Metrics Data Flow
 ^^^^^^^^^^^^^^^^^
