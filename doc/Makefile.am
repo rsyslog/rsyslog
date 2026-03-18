@@ -1189,6 +1189,9 @@ EXTRA_DIST = \
     source/troubleshooting/troubleshoot.rst \
     source/tutorials/cert-script.tar.gz \
     source/tutorials/database.rst \
+    source/tutorials/deploy_rsyslog_rosi_stack.rst \
+    source/tutorials/rosi_stack_architecture.png \
+    source/tutorials/rosi_stack_grafana_dashboard.png \
     source/tutorials/failover_syslog_server.rst \
     source/tutorials/gelf_forwarding.rst \
     source/tutorials/hash_sampling.rst \
