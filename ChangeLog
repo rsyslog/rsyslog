@@ -1,5 +1,10 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-18: omazuredce: add Azure Monitor output module
+  This adds a documented Azure Monitor output path so rsyslog can
+  ship events to Azure-hosted observability workflows. It also makes
+  the module easier to review and iterate on as a project feature.
+  Thanks to Jan Kängsepp for implementing the new module.
 - 2026-03-16: rpm: packaging overhaul, CI job, and review fixes
   - Add package_build_rpm CI job (Rocky Linux 8, mock, EPEL 8)
   - Add devtools/run-rpm-build.sh for CI RPM builds via mock
