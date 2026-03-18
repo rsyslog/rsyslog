@@ -3,6 +3,16 @@
 Client Setup
 ============
 
+.. meta::
+   :description: Configure Linux and Windows clients to send logs to ROSI Collector, with Linux metrics collection and Windows forwarding guidance.
+   :keywords: rsyslog, ROSI Collector, client setup, Windows Agent, node_exporter, log forwarding
+
+.. summary-start
+
+Configure ROSI Collector clients for log forwarding, with Linux-specific metrics steps and Windows guidance via rsyslog Windows Agent.
+
+.. summary-end
+
 .. index::
    pair: ROSI Collector; client configuration
    single: rsyslog forwarding
@@ -52,6 +62,44 @@ Download and run the setup scripts from your ROSI Collector:
 
 Replace ``YOUR_COLLECTOR_DOMAIN`` with your ROSI Collector's base domain
 (the same value as ``TRAEFIK_DOMAIN`` in your ``.env`` file).
+
+Windows Clients
+---------------
+
+For Windows systems, use `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__
+as the official ROSI Windows-side collector/forwarder. The official rsyslog
+FAQ notes that rsyslog itself, including the Linux rsyslog collector/forwarder
+used elsewhere in this guide, does not run natively on Windows and points
+Windows users to the agent:
+`Does rsyslog run under Windows? <https://www.rsyslog.com/doc/faq/does-rsyslog-run-under-windows.html>`__.
+
+The agent is a commercial, closed-source Windows collector from the same team
+behind rsyslog. It is optimized to work with rsyslog-based backends, and its
+commercial support helps fund ongoing rsyslog development on Linux:
+`Windows Agent support <https://www.rsyslog.com/windows-agent/support-contract-windows-agent/>`__.
+
+From a ROSI Collector perspective, it fills the same client-side role as the
+Linux rsyslog forwarder: collect logs at the edge, buffer and process them
+efficiently, and forward them to the central collector. The product manual
+describes support for Windows Event Log collection, text log files, syslog
+relay, filtering, and forwarding over UDP, TCP, TLS, and RELP:
+`rsyslog Windows Agent manual <https://www.rsyslog.com/download/files/windows-agent-manual/index.rsyslog.html>`__.
+
+Within the broader ROSI stack, this fits the same general pattern as other
+supported components: use the part that best matches the source platform and
+operational need. That can include Adiscon-side components such as WinSyslog
+or EventReporter in some deployments, just as other ROSI profiles may combine
+rsyslog with Grafana, Elasticsearch, or Splunk where appropriate.
+
+The agent is built on `Adiscon <https://www.adiscon.com/>`__'s mature Windows
+log collection technology, which is designed for robust, resource-efficient
+event collection and is tuned to integrate well with rsyslog environments.
+For more background, see the `Windows Event Log format and technology background <https://www.rsyslog.com/windows-agent/event-log-format-windows-agent/>`__
+and `feature overview <https://www.rsyslog.com/download/files/windows-agent-manual/rsyslogwaspecific/features.html>`__.
+
+This Windows section covers log forwarding only. The ``node_exporter``,
+``impstats`` sidecar, and port ``9100`` metrics steps later in this page are
+Linux-oriented and do not apply to Windows hosts using rsyslog Windows Agent.
 
 Manual Setup: rsyslog
 ---------------------

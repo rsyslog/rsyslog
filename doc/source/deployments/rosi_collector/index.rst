@@ -3,6 +3,16 @@
 ROSI Collector
 ==============
 
+.. meta::
+   :description: ROSI Collector is the current container-based ROSI deployment profile for centralized logging, dashboards, metrics, and alerting.
+   :keywords: rsyslog, ROSI Collector, centralized logging, Grafana, Loki, Prometheus, Windows Agent
+
+.. summary-start
+
+ROSI Collector is the current container-based ROSI deployment profile, combining rsyslog, Loki, Grafana, Prometheus, and Traefik for centralized logging and monitoring.
+
+.. summary-end
+
 .. index::
    single: ROSI
    single: ROSI Collector
@@ -35,6 +45,13 @@ ROSI Collector is a Docker Compose stack that deploys:
 
 Together, these components provide centralized log management for any number
 of client hosts, with powerful search, visualization, and alerting capabilities.
+
+ROSI Collector is the current container-based ROSI deployment profile described
+in this guide. The broader ROSI stack also supports Windows clients via
+official components such as
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__. Other
+Adiscon components can also be integrated to meet specific operational
+requirements.
 
 .. note::
    The installation scripts have been tested on **Ubuntu 24.04 LTS**.
@@ -134,6 +151,11 @@ Data flows:
 
 1. **Logs**: Client rsyslog → Collector rsyslog → Loki → Grafana
 2. **Metrics**: Prometheus scrapes node_exporter on clients → Grafana
+
+For Windows senders, use
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__ as an
+official ROSI Windows-side component. The collector-side flow stays the same
+once events reach the ROSI Collector.
 
 All external access goes through Traefik, which handles TLS termination.
 
