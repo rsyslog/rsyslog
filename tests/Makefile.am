@@ -906,6 +906,20 @@ TESTS_OMAZUREEVENTHUBS_VALGRIND = \
 	omazureeventhubs-basic-vg.sh \
 	omazureeventhubs-interrupt-vg.sh
 
+TESTS_OMAZUREDCE = \
+	omazuredce-no-dcr-id.sh \
+	omazuredce-default-template.sh \
+	omazuredce-bad-template.sh \
+	omazuredce-good-template.sh \
+	omazuredce-basic.sh \
+	omazuredce-basic-url.sh \
+	omazuredce-batch.sh \
+	omazuredce-interrupt.sh \
+	omazuredce-timer.sh
+
+TESTS_OMAZUREDCE_VALGRIND = \
+	omazuredce-basic-vg.sh
+
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
@@ -1726,6 +1740,9 @@ EXTRA_DIST += $(TESTS_KAFKA)
 EXTRA_DIST += $(TESTS_KAFKA_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREEVENTHUBS)
 EXTRA_DIST += $(TESTS_OMAZUREEVENTHUBS_VALGRIND)
+EXTRA_DIST += $(TESTS_OMAZUREDCE)
+EXTRA_DIST += $(TESTS_OMAZUREDCE_VALGRIND)
+EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
 EXTRA_DIST += $(TESTS_IMHTTP)
@@ -2317,6 +2334,15 @@ if ENABLE_OMAZUREEVENTHUBS_TESTS
 TESTS += $(TESTS_OMAZUREEVENTHUBS)
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMAZUREEVENTHUBS_VALGRIND)
+endif
+endif
+endif
+
+if ENABLE_OMAZUREDCE
+if ENABLE_OMAZUREDCE_TESTS
+TESTS += $(TESTS_OMAZUREDCE)
+if HAVE_VALGRIND
+TESTS += $(TESTS_OMAZUREDCE_VALGRIND)
 endif
 endif
 endif

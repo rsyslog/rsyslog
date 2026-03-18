@@ -1,0 +1,27 @@
+support_status: core-supported
+maturity_level: fresh
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-03-17
+build_dependencies:
+  - libcurl development headers
+runtime_dependencies:
+  - Azure Monitor Logs Ingestion API reachable over HTTPS
+  - Microsoft Entra ID application credentials for the `https://monitor.azure.com/.default` scope
+  - Azure Data Collection Endpoint (DCE) and Data Collection Rule (DCR)
+ci_targets:
+  - omazuredce-no-dcr-id.sh
+  - omazuredce-default-template.sh
+  - omazuredce-bad-template.sh
+  - omazuredce-good-template.sh
+  - omazuredce-basic.sh
+  - omazuredce-basic-url.sh
+  - omazuredce-batch.sh
+  - omazuredce-interrupt.sh
+  - omazuredce-timer.sh
+  - omazuredce-basic-vg.sh
+documentation:
+  - doc/source/configuration/modules/omazuredce.rst
+notes:
+  - The module is newly added and tests require Azure credentials and variables in the environment.
+  - Integration tests depend on Azure credentials and endpoint details supplied through `tests/omazuredce-env.sh`.
+  - The module batches one JSON array per worker and serializes batch/timer access with `pWrkrData.batchLock`.

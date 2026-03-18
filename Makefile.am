@@ -231,6 +231,10 @@ if ENABLE_OMAZUREEVENTHUBS
 SUBDIRS += plugins/omazureeventhubs
 endif
 
+if ENABLE_OMAZUREDCE
+SUBDIRS += plugins/omazuredce
+endif
+
 if ENABLE_IMDTLS
 SUBDIRS += plugins/imdtls
 endif
@@ -579,6 +583,10 @@ endif
 
 if ENABLE_OMAZUREEVENTHUBS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omazureeventhubs
+endif
+
+if ENABLE_OMAZUREDCE
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omazuredce
 endif
 
 if ENABLE_IMDTLS
