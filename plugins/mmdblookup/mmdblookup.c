@@ -327,37 +327,35 @@ ENDtryResume
 void str_split(char **membuf) {
     int in_quotes = 0;
     char *buf = *membuf;
-    char tempbuf[strlen(buf)];
-    memset(tempbuf, 0, strlen(buf));
+    size_t len = strlen(buf);
+    char *tempbuf = malloc(len * 2 + 1);
+    if (!tempbuf) return;
+    char *out = tempbuf;
 
-    while (*buf++ != '\0') {
+    while (*buf != '\0') {
         if (in_quotes) {
-            if (*buf == '"' && *(buf - 1) != '\\') {
-                in_quotes = !in_quotes;
-                strncat(tempbuf, buf, 1);
-            } else {
-                strncat(tempbuf, buf, 1);
-            }
+            *out++ = *buf;
+            if (*buf == '"' && *(buf - 1) != '\\') in_quotes = !in_quotes;
         } else {
-            if (*buf == '\n' || *buf == '\t' || *buf == ' ') continue;
+            if (*buf == '\n' || *buf == '\t' || *buf == ' ') {
+                buf++; continue;
+            }
             if (*buf == '<') {
                 char *p = strchr(buf, '>');
-                buf = buf + (int)(p - buf);
-                strcat(tempbuf, ",");
-            } else if (*buf == '}') {
-                strcat(tempbuf, "},");
-            } else if (*buf == ']') {
-                strcat(tempbuf, "],");
-            } else if (*buf == '"' && *(buf - 1) != '\\') {
-                in_quotes = !in_quotes;
-                strncat(tempbuf, buf, 1);
+                if (p) buf = p;
+                *out++ = ',';
+            } else if (*buf == '}' || *buf == ']') {
+                *out++ = *buf; *out++ = ',';
             } else {
-                strncat(tempbuf, buf, 1);
+                *out++ = *buf;
+                if (*buf == '"' && (buf == *membuf || *(buf - 1) != '\\')) in_quotes = !in_quotes;
             }
         }
+        buf++;
     }
-
-    memcpy(*membuf, tempbuf, strlen(tempbuf) + 1);
+    *out = '\0';
+    free(*membuf); /* open_memstream string can be safely freed and replaced */
+    *membuf = tempbuf;
 }
 
 
