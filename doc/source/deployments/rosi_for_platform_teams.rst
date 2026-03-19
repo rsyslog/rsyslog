@@ -30,6 +30,21 @@ For platform teams, this means:
 - rsyslog-centered collection and routing as a stable control point
 - Freedom to adapt downstream storage and analytics over time
 
+Where ROSI Is Today
+-------------------
+
+The main packaged ROSI artifact today is :doc:`rosi_collector/index`. That is
+the recommended operational baseline because it is the most complete and
+ready-to-run profile.
+
+At the same time, ROSI is intentionally broader than ROSI Collector alone.
+Platform teams can already combine rsyslog-centered ingestion with additional
+destinations and side components. That is not new in itself: many teams have
+been doing this with rsyslog for years. What ROSI adds is a clearer
+formalization of those patterns, stronger guidance, and a growing set of
+artifacts that reduce setup effort. Those artifacts are not yet all equally
+turnkey, which is why ROSI Collector remains the main packaged baseline today.
+
 It also means optimizing for efficiency, not just feature count:
 
 - Lower operational overhead for small and medium environments
@@ -80,6 +95,20 @@ rsyslog already supports multiple output paths that help avoid hard coupling:
 
 This enables practical designs such as dual-write transitions, phased
 cutovers, and domain-specific routing.
+
+In ROSI terms, this means the current collector profile can coexist with
+additional destinations such as Splunk, VictoriaLogs, or other HTTP-accessible
+backends when platform requirements call for that.
+
+The broader ROSI picture can also include Windows-side components such as
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`_,
+`WinSyslog <https://www.winsyslog.com/>`_, `EventReporter <https://www.eventreporter.com/>`_,
+and `MonitorWare Agent <https://www.monitorware.com/>`_ where those products
+fit existing operational models.
+
+ROSI therefore helps in three ways at once: it preserves architectural freedom,
+it gives clearer guidance on how to use that freedom well, and it gradually
+adds more ready-made artifacts around proven rsyslog-based patterns.
 
 Using rsyslog on the edge can reduce central processing cost by shaping data
 before it reaches backends, which supports both FinOps and Green IT targets.

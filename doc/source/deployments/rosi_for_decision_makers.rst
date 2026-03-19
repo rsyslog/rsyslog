@@ -32,6 +32,26 @@ today and provides:
 
 See :doc:`rosi_collector/index` for implementation details.
 
+Current State and Broader Direction
+-----------------------------------
+
+ROSI Collector is the main visible and ready-to-run ROSI artifact today. It is
+the clearest starting point for teams that want immediate operational value.
+
+The broader ROSI direction is larger than that single deployment profile. It
+includes replaceable backend choices, mixed-component topologies, and
+Windows-side collection paths. Many of these implementation patterns have
+existed around rsyslog for a long time already. ROSI formalizes that operating
+model, provides clearer guidance, and adds progressively more turnkey artifacts.
+Those artifacts are not yet all equally mature, which is why ROSI Collector is
+the clearest starting point today.
+
+That broader space can include destinations such as Elasticsearch, OpenSearch,
+Splunk, VictoriaLogs, Kafka, and HTTP-based services, plus Windows-side
+components such as `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`_,
+`WinSyslog <https://www.winsyslog.com/>`_, `EventReporter <https://www.eventreporter.com/>`_,
+and `MonitorWare Agent <https://www.monitorware.com/>`_.
+
 Why This Matters Strategically
 ------------------------------
 
