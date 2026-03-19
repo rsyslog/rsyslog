@@ -102,6 +102,10 @@ Key Features
 Quick Start
 -----------
 
+If you want a guided end-to-end walkthrough before diving into the full
+deployment reference, start with
+:doc:`../../tutorials/deploy_rsyslog_rosi_stack`.
+
 1. **Clone the repository** and navigate to the deployment::
 
       cd rsyslog/deploy/docker-compose/rosi-collector
@@ -156,6 +160,8 @@ For Windows senders, use
 `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__ as an
 official ROSI Windows-side component. The collector-side flow stays the same
 once events reach the ROSI Collector.
+Windows integration here is focused on log ingestion; the ``node_exporter`` and
+``impstats`` metrics flow described above remains Linux-oriented.
 
 All external access goes through Traefik, which handles TLS termination.
 
@@ -175,6 +181,7 @@ Documentation Contents
 See Also
 --------
 
+- :doc:`../../tutorials/deploy_rsyslog_rosi_stack` - Guided ROSI stack walkthrough
 - :doc:`../../containers/collector` - The base collector container image
 - :doc:`../../tutorials/reliable_forwarding` - Reliable log forwarding concepts
 - :doc:`../../configuration/index` - rsyslog configuration reference

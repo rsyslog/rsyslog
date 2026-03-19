@@ -135,6 +135,8 @@ It combines rsyslog with Loki, Grafana, Prometheus, and Traefik to deliver a
 production-ready baseline quickly.
 
 This baseline solves immediate operational pain while preserving future options.
+If you want a hands-on walkthrough, follow
+:doc:`../tutorials/deploy_rsyslog_rosi_stack`.
 
 What to Read Next
 -----------------
