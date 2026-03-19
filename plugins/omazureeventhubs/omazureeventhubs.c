@@ -534,7 +534,7 @@ static rsRetVal writeProton(wrkrInstanceData_t *__restrict__ const pWrkrData,
     char szMsgID[64];
     pthread_mutex_lock(&pWrkrData->msgLock);
     lockHeld = 1;
-    sprintf(szMsgID, "%d", pWrkrData->iMsgSeq);
+    snprintf(szMsgID, sizeof(szMsgID), "%d", pWrkrData->iMsgSeq);
 
     const char *pszParamStr = (const char *)actParam(pParam, 1 /*pData->iNumTpls*/, iMsg, 0).param;
     size_t tzParamStrLen = actParam(pParam, 1 /*pData->iNumTpls*/, iMsg, 0).lenStr;
