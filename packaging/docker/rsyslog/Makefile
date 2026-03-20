@@ -13,8 +13,12 @@
 ORG_NAME = rsyslog
 
 # Default version for all images.
-# This can be overridden via command line: 'make VERSION=my-custom-tag <target>'
-VERSION ?= 2025-10
+# Keep the default obviously non-release so local `make all` does not produce
+# release-like tags by accident.
+DEFAULT_VERSION = dev-local
+# Override on the command line for release rehearsals, for example:
+#   make all VERSION=2026-03
+VERSION ?= $(DEFAULT_VERSION)
 
 # Default OCI metadata values for local builds.
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -59,7 +63,7 @@ ETL_IMAGE_TAG = $(strip $(ETL_IMAGE_NAME):$(VERSION))
         minimal standard collector dockerlogs etl \
         build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image \
         push_minimal push_standard push_collector push_dockerlogs push_etl \
-        rebuild_all
+        rebuild_all check_publish_version
 
 # Default target: Builds all functional images.
 # Assumed layering: minimal -> standard -> (collector, dockerlogs, etl)
@@ -153,24 +157,36 @@ build: all
 rebuild_all:
 	$(MAKE) all REBUILD=yes
 
+# Publishing must always use an explicit non-development version. This keeps
+# local smoke builds and CI validation tags from being pushed by mistake.
+check_publish_version:
+	@case "$(VERSION)" in \
+		""|$(DEFAULT_VERSION)|dev-*|ci-*) \
+			echo "ERROR: publish/tag targets require an explicit stable VERSION."; \
+			echo "Set VERSION to a release tag, for example: make VERSION=2026-03 all_push"; \
+			exit 1 ;; \
+		*) \
+			echo "Using publishable VERSION=$(VERSION)" ;; \
+	esac
+
 # --- Push Targets ---
-push_minimal: build_minimal_image
+push_minimal: check_publish_version build_minimal_image
 	@echo "--- Pushing minimal image: $(MINIMAL_IMAGE_TAG) ---"
 	docker push $(MINIMAL_IMAGE_TAG)
 
-push_standard: build_standard_image
+push_standard: check_publish_version build_standard_image
 	@echo "--- Pushing standard image: $(STANDARD_IMAGE_TAG) ---"
 	docker push $(STANDARD_IMAGE_TAG)
 
-push_collector: build_collector_image
+push_collector: check_publish_version build_collector_image
 	@echo "--- Pushing collector image: $(COLLECTOR_IMAGE_TAG) ---"
 	docker push $(COLLECTOR_IMAGE_TAG)
 
-push_dockerlogs: build_dockerlogs_image
+push_dockerlogs: check_publish_version build_dockerlogs_image
 	@echo "--- Pushing dockerlogs image: $(DOCKERLOGS_IMAGE_TAG) ---"
 	docker push $(DOCKERLOGS_IMAGE_TAG)
 
-push_etl: build_etl_image
+push_etl: check_publish_version build_etl_image
 	@echo "--- Pushing ETL image: $(ETL_IMAGE_TAG) ---"
 	docker push $(ETL_IMAGE_TAG)
 
@@ -179,7 +195,7 @@ all_push: push_minimal push_standard push_collector push_dockerlogs push_etl
 
 # --- Tagging Targets ---
 # Ensures all images are built before attempting to tag them.
-tag_latest: build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image
+tag_latest: check_publish_version build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image
 	@echo "--- Tagging images with 'latest' ---"
 	docker tag $(STANDARD_IMAGE_TAG) $(STANDARD_IMAGE_NAME):latest
 	docker tag $(MINIMAL_IMAGE_TAG) $(MINIMAL_IMAGE_NAME):latest
@@ -234,12 +250,14 @@ help:
 	@echo "Variables:"
 	@echo "  VERSION            - Override the default version (e.g., make VERSION=custom all)."
 	@echo "                       Current default: $(VERSION)"
+	@echo "                       The default is intentionally non-release for local builds."
+	@echo "                       Publish/tag targets reject development-like values."
 	@echo "  REBUILD            - Set to 'yes' to force a full rebuild, bypassing Docker build cache."
 	@echo "                       Example: make all REBUILD=yes"
 	@echo ""
 	@echo "Example Workflow:"
-	@echo "  1. Build a specific image: make standard"
-	@echo "  2. Build all images: make all"
+	@echo "  1. Local smoke build: make all"
+	@echo "  2. Local release rehearsal: make VERSION=2026-03 all"
 	@echo "  3. Force a full rebuild of all images: make rebuild_all"
-	@echo "  4. Push all versioned images: make all_push"
-	@echo "  5. Tag and push latest for all: make push_latest"
+	@echo "  4. Push all release-tagged images: make VERSION=2026-03 all_push"
+	@echo "  5. Tag and push latest for a release build: make VERSION=2026-03 push_latest"
