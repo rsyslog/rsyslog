@@ -5,16 +5,29 @@
 # Build arguments passed from the Makefile
 ARG UBUNTU_VERSION="24.04"
 ARG RSYSLOG_IMG_VERSION="unset" # New ARG to pick up version from Makefile
+ARG BUILD_DATE="unknown"
+ARG VCS_REF="unknown"
 
 FROM ubuntu:${UBUNTU_VERSION}
 
 # Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
+ARG BUILD_DATE
+ARG VCS_REF
 
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Minimal rsyslog container based on Ubuntu ${UBUNTU_VERSION} with Adiscon PPA for latest rsyslog. Optimized for size."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"
+LABEL org.opencontainers.image.title="rsyslog/rsyslog-minimal"
+LABEL org.opencontainers.image.description="Minimal rsyslog container based on Ubuntu ${UBUNTU_VERSION} with the Adiscon rsyslog packages."
+LABEL org.opencontainers.image.url="https://www.rsyslog.com/"
+LABEL org.opencontainers.image.documentation="https://www.rsyslog.com/doc/containers/minimal.html"
+LABEL org.opencontainers.image.source="https://github.com/rsyslog/rsyslog"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.version="${RSYSLOG_IMG_VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
 
 # Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -32,7 +45,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
         ca-certificates \
-        vim-tiny \
     && add-apt-repository -y ppa:adiscon/daily-stable \
     && apt-get update && \
     apt-get install -y --no-install-recommends rsyslog rsyslog-omstdout \

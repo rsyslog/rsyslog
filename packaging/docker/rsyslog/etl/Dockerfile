@@ -9,6 +9,8 @@ ARG BASE_IMAGE_TAG="rsyslog/rsyslog:latest"
 ARG UBUNTU_VERSION="24.04"
 # Version passed from Makefile for image metadata
 ARG RSYSLOG_IMG_VERSION="unset"
+ARG BUILD_DATE="unknown"
+ARG VCS_REF="unknown"
 
 # Use the rsyslog/rsyslog (standard) image as the base.
 # This ensures common modules, core rsyslog setup, and imhttp are inherited.
@@ -18,12 +20,23 @@ FROM ${BASE_IMAGE_TAG}
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
 ARG BASE_IMAGE_TAG
+ARG BUILD_DATE
+ARG VCS_REF
 
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Rsyslog collector container, based on the standard image, optimized for ETL. Ubuntu ${UBUNTU_VERSION}."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"
 # Explicitly label the base image used for traceability.
 LABEL com.adiscon.rsyslog.base.image="${BASE_IMAGE_TAG}"
+LABEL org.opencontainers.image.title="rsyslog/rsyslog-etl"
+LABEL org.opencontainers.image.description="Experimental rsyslog ETL image for receiving syslog and forwarding events to Vespa over HTTP."
+LABEL org.opencontainers.image.url="https://www.rsyslog.com/"
+LABEL org.opencontainers.image.documentation="https://www.rsyslog.com/doc/containers/etl.html"
+LABEL org.opencontainers.image.source="https://github.com/rsyslog/rsyslog"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.version="${RSYSLOG_IMG_VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
 
 # Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts during package installation.
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,8 +66,6 @@ ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
 ENV ENABLE_RELP=on
 ENV ENABLE_VESPA=on
-ENV WRITE_ALL_FILE=on
-ENV WRITE_JSON_FILE=on
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=collector

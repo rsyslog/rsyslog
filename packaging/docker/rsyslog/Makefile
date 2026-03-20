@@ -16,6 +16,12 @@ ORG_NAME = rsyslog
 # This can be overridden via command line: 'make VERSION=my-custom-tag <target>'
 VERSION ?= 2025-10
 
+# Default OCI metadata values for local builds.
+BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VCS_REF ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
+OCI_BUILD_ARGS = --build-arg BUILD_DATE="$(BUILD_DATE)" \
+                 --build-arg VCS_REF="$(VCS_REF)"
+
 # Variable to control cache busting. Set to 'yes' to force a rebuild from scratch for all targets.
 # Example: make all REBUILD=yes
 REBUILD ?= no
@@ -84,19 +90,21 @@ etl: build_etl_image
 build_minimal_image: ./minimal/Dockerfile ./minimal/rsyslog.conf
 	@echo "--- Building minimal image: $(MINIMAL_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
-	              -t $(MINIMAL_IMAGE_TAG) \
-	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
-	              -f ./minimal/Dockerfile ./minimal
+		              -t $(MINIMAL_IMAGE_TAG) \
+		              $(OCI_BUILD_ARGS) \
+		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+		              -f ./minimal/Dockerfile ./minimal
 
 # Build the standard rsyslog container.
 # Depends on 'build_minimal_image'. Assumes ./standard/Dockerfile exists.
 build_standard_image: build_minimal_image ./standard/Dockerfile # Add ./standard/rsyslog.conf if it exists
 	@echo "--- Building standard image: $(STANDARD_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
-	              -t $(STANDARD_IMAGE_TAG) \
-	              --build-arg BASE_IMAGE_TAG=$(MINIMAL_IMAGE_TAG) \
-	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
-	              -f ./standard/Dockerfile ./standard
+		              -t $(STANDARD_IMAGE_TAG) \
+		              --build-arg BASE_IMAGE_TAG=$(MINIMAL_IMAGE_TAG) \
+		              $(OCI_BUILD_ARGS) \
+		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+		              -f ./standard/Dockerfile ./standard
 
 # Build the collector rsyslog container.
 # Depends on 'build_standard_image'.
@@ -106,10 +114,11 @@ build_collector_image: build_standard_image \
                        ./collector/80-file-output.conf
 	@echo "--- Building collector image: $(COLLECTOR_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
-	              -t $(COLLECTOR_IMAGE_TAG) \
-	              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
-	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
-	              -f ./collector/Dockerfile ./collector
+		              -t $(COLLECTOR_IMAGE_TAG) \
+		              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
+		              $(OCI_BUILD_ARGS) \
+		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+		              -f ./collector/Dockerfile ./collector
 
 # Build the dockerlogs rsyslog container.
 # Depends on 'build_standard_image'. Dockerfile path assumed ./dockerlogs/
@@ -118,10 +127,11 @@ build_dockerlogs_image: build_standard_image \
                         ./dockerlogs/30-docker.conf
 	@echo "--- Building dockerlogs image: $(DOCKERLOGS_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
-	              -t $(DOCKERLOGS_IMAGE_TAG) \
-	              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
-	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
-	              -f ./dockerlogs/Dockerfile ./dockerlogs
+		              -t $(DOCKERLOGS_IMAGE_TAG) \
+		              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
+		              $(OCI_BUILD_ARGS) \
+		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+		              -f ./dockerlogs/Dockerfile ./dockerlogs
 
 # Build the etl rsyslog container.
 # Depends on 'build_standard_image'.
@@ -131,10 +141,11 @@ build_etl_image: build_standard_image \
                   ./etl/70-vespa_ai.conf
 	@echo "--- Building ETL image: $(ETL_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
-	              -t $(ETL_IMAGE_TAG) \
-	              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
-	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
-	              -f ./etl/Dockerfile ./etl
+		              -t $(ETL_IMAGE_TAG) \
+		              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
+		              $(OCI_BUILD_ARGS) \
+		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+		              -f ./etl/Dockerfile ./etl
 
 # Generic build target, alias for 'all'.
 build: all
