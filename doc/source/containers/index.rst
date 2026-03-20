@@ -3,6 +3,16 @@
 Rsyslog Containers
 ==================
 
+.. meta::
+   :description: Overview of rsyslog container images and related deployment profiles.
+   :keywords: rsyslog, containers, Docker, images, ROSI, collector
+
+.. summary-start
+
+This section covers the official rsyslog container images and points to higher-level deployment profiles built on top of them.
+
+.. summary-end
+
 .. index::
    single: containers
    single: Docker images
