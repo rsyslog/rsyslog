@@ -29,30 +29,30 @@ Rsyslog can deliver over one million messages per second to local destinations u
 Stay up to date with official rsyslog announcements and community insights:
 
 **Official Channels**
-* [Website](https://rsyslog.com/) – official news and documentation  
-* [RSS Feed](https://rsyslog.com/feed/)  
-* [Telegram](https://t.me/rsyslog_official)  
+* [Website](https://rsyslog.com/) – official news and documentation
+* [RSS Feed](https://rsyslog.com/feed/)
+* [Telegram](https://t.me/rsyslog_official)
 * [WhatsApp](https://whatsapp.com/channel/0029VbBJQLhCxoArVHjrL32E)
 
 **Maintainer Insights**
-Updates, technical commentary, and behind-the-scenes notes from  
+Updates, technical commentary, and behind-the-scenes notes from
 [Rainer Gerhards](https://www.linkedin.com/in/rgerhards/), rsyslog founder and maintainer:
-* [LinkedIn](https://www.linkedin.com/in/rgerhards/)  
-* [X (Twitter)](https://x.com/rgerhards)  
+* [LinkedIn](https://www.linkedin.com/in/rgerhards/)
+* [X (Twitter)](https://x.com/rgerhards)
 * [Blog – rainer-gerhards.net](https://rainer.gerhards.net/)
 
 ---
 
 ## 🤖 Rsyslog Assistant (Experimental AI Help)
 
-Need help with rsyslog configuration or troubleshooting?  
+Need help with rsyslog configuration or troubleshooting?
 Try the **[rsyslog Assistant](https://rsyslog.ai)** — your AI-powered support tool built by the rsyslog team.
 
 > ⚠️ *Experimental.* May occasionally generate incorrect config examples — always review before applying.
 
-✅ Trained on official docs and changelogs  
-✅ Covers both Linux rsyslog and Windows Agent  
-✅ Version-aware and best-practice focused  
+✅ Trained on official docs and changelogs
+✅ Covers both Linux rsyslog and Windows Agent
+✅ Version-aware and best-practice focused
 
 👉 Try it now: [rsyslog.ai](https://rsyslog.ai)
 
@@ -60,8 +60,8 @@ Try the **[rsyslog Assistant](https://rsyslog.ai)** — your AI-powered support 
 
 ## Getting Help (Other Sources)
 
-* **💬 GitHub Discussions:** [Ask questions or start a conversation](https://github.com/rsyslog/rsyslog/discussions)  
-* **📧 Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)  
+* **💬 GitHub Discussions:** [Ask questions or start a conversation](https://github.com/rsyslog/rsyslog/discussions)
+* **📧 Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
 * **🐛 GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
 
 ---
@@ -69,18 +69,18 @@ Try the **[rsyslog Assistant](https://rsyslog.ai)** — your AI-powered support 
 ## Installation
 
 ### Via Distribution Package Managers
-Rsyslog is available in most Linux distribution repositories and often is pre-installed. 
+Rsyslog is available in most Linux distribution repositories and often is pre-installed.
 
 ### Project-Provided Packages (Latest Versions)
-Distributions may lag behind in packaging the latest rsyslog releases.  
+Distributions may lag behind in packaging the latest rsyslog releases.
 Official builds for newer versions are available here:
 
-* [RPM-based systems](https://rsyslog.com/rhelcentos-rpms/)  
-* [Ubuntu](https://rsyslog.com/ubuntu-repository/)  
-* [Debian](https://rsyslog.com/debian-repository/)  
+* [RPM-based systems](https://rsyslog.com/rhelcentos-rpms/)
+* [Ubuntu](https://rsyslog.com/ubuntu-repository/)
+* [Debian](https://rsyslog.com/debian-repository/)
 * [Official Containers](packaging/docker/README.md)
 
-For users in regions where GitHub access is limited, see the  
+For users in regions where GitHub access is limited, see the
 [Global Accessibility and Collaboration](#global-accessibility-and-collaboration) section for alternative mirrors.
 
 <details>
@@ -89,25 +89,25 @@ For users in regions where GitHub access is limited, see the
 See: [Build Instructions](https://rsyslog.com/doc/v8-stable/installation/build_from_repo.html)
 
 #### Build Environment Requirements
-* `pkg-config`  
-* `libestr`  
+* `pkg-config`
+* `libestr`
 * `liblogging` (stdlog component, for testbench)
 
 Build support libraries from source if you're working with the latest git master.
 
 #### Branch Guidance
-The `master` branch tracks active development.  
+The `master` branch tracks active development.
 For production use, prefer the latest tagged release.
 
 #### OS-Specific Build Instructions
 Refer to the respective section in the original README for required packages on CentOS, Ubuntu, Debian, SUSE, etc.
 
 #### Development Containers & Testing
-Ready-to-use build environments are provided in `packaging/docker/dev_env`.  
-These images were previously built in the separate [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker) repository and are now maintained here.  
+Ready-to-use build environments are provided in `packaging/docker/dev_env`.
+These images were previously built in the separate [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker) repository and are now maintained here.
 See `packaging/docker/README.md` for details.
 
-Runtime container definitions are in `packaging/docker/rsyslog`.  
+Runtime container definitions are in `packaging/docker/rsyslog`.
 Run the test suite inside the container with:
 
 ```bash
@@ -122,30 +122,30 @@ make check -j4
 
 Rsyslog is a community-driven open-source project. Contributions are welcome and encouraged!
 
-* See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines  
-* Starter tasks: [Good First Issues](https://rsyslog.com/tool_good-first-issues)  
-* To develop new output plugins in Python or Perl, see [plugins/external/README.md](plugins/external/README.md)  
-* If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), see [AGENTS.md](AGENTS.md)  
+* See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
+* Starter tasks: [Good First Issues](https://rsyslog.com/tool_good-first-issues)
+* To develop new output plugins in Python or Perl, see [plugins/external/README.md](plugins/external/README.md)
+* If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), see [AGENTS.md](AGENTS.md)
 * Community: [Code of Conduct](CODE_OF_CONDUCT.md)
 
-If GitHub access is difficult in your region, please contact us or use one of the mirrors listed below;  
+If GitHub access is difficult in your region, please contact us or use one of the mirrors listed below;
 we will help route your patch for review.
 
-**Commit Assistant (recommended):**  
-Draft compliant commit messages with  
-[rsyslog Commit Assistant](https://rsyslog.com/tool_rsyslog-commit-assistant)  
-and follow rules in [CONTRIBUTING.md](CONTRIBUTING.md).  
+**Commit Assistant (recommended):**
+Draft compliant commit messages with
+[rsyslog Commit Assistant](https://rsyslog.com/tool_rsyslog-commit-assistant)
+and follow rules in [CONTRIBUTING.md](CONTRIBUTING.md).
 Put the substance into the **commit message** (amend before PR if needed).
 
 ---
 
 ### AI-Based Code Review (Experimental)
 
-We are currently testing AI-based code review for pull requests.  
+We are currently testing AI-based code review for pull requests.
 At this time, we use **Google Gemini** to automatically analyze code and provide comments on new PRs.
 
-* Reviews are **informational only**  
-* Every contribution is still **manually reviewed** by human experts  
+* Reviews are **informational only**
+* Every contribution is still **manually reviewed** by human experts
 * The goal is to evaluate how AI can support contributor feedback and code quality assurance
 
 Please report any issues, false positives, or suggestions about the AI review process.
@@ -154,17 +154,17 @@ Please report any issues, false positives, or suggestions about the AI review pr
 
 ## Documentation
 
-Documentation is located in the `doc/` directory of this repository.  
+Documentation is located in the `doc/` directory of this repository.
 Contributions to the documentation should be made there.
 
-Visit the latest version online:  
-* [rsyslog.com/doc](https://rsyslog.com/doc/)
+Visit the latest version online:
+* [docs.rsyslog.com/doc](https://docs.rsyslog.com/doc/)
 
 ---
 
 ## Project Philosophy
 
-Rsyslog development is driven by real-world use cases, open standards, and an active community.  
+Rsyslog development is driven by real-world use cases, open standards, and an active community.
 While sponsored primarily by Adiscon, technical decisions are made independently via consensus.
 
 All contributors are welcome — there is no formal membership beyond participation.
@@ -175,34 +175,34 @@ All contributors are welcome — there is no formal membership beyond participat
 
 Rsyslog aims to remain accessible worldwide. Different regions sometimes face network or platform limits, so we provide mirrors to ensure that everyone can obtain the source code and contribute on equal terms.
 
-- **GitHub (canonical):** https://github.com/rsyslog/rsyslog  
-- **European mirror (Germany, hosted on DigitalOcean):** https://github-mirror.rsyslog.com/rsyslog/rsyslog  
-- **Community mirror (China, maintained by Gitee):** https://gitee.com/mirrors_rsyslog  
+- **GitHub (canonical):** https://github.com/rsyslog/rsyslog
+- **European mirror (Germany, hosted on DigitalOcean):** https://github-mirror.rsyslog.com/rsyslog/rsyslog
+- **Community mirror (China, maintained by Gitee):** https://gitee.com/mirrors_rsyslog
 
-All pull requests ultimately flow through GitHub, where our CI and review infrastructure run.  
-If you experience access issues but can provide a patch, the rsyslog team will gladly assist in forwarding it to GitHub.  
-Our contribution workflow remains GitHub-based for now because CI and automated testing are tightly integrated there.  
+All pull requests ultimately flow through GitHub, where our CI and review infrastructure run.
+If you experience access issues but can provide a patch, the rsyslog team will gladly assist in forwarding it to GitHub.
+Our contribution workflow remains GitHub-based for now because CI and automated testing are tightly integrated there.
 Always verify releases and tags from the official GitHub repository before production use.
 
-> *Open source should have no borders.*  
-> (FR) Le code ouvert ne devrait pas avoir de frontières  
-> (ZH) 开源应该没有边界  
-> (JA) オープンソースに国境はない  
-> (ES) El código abierto no debe tener fronteras  
-> (HI) ओपन सोर्स की कोई सीमाएँ नहीं होनी चाहिए  
+> *Open source should have no borders.*
+> (FR) Le code ouvert ne devrait pas avoir de frontières
+> (ZH) 开源应该没有边界
+> (JA) オープンソースに国境はない
+> (ES) El código abierto no debe tener fronteras
+> (HI) ओपन सोर्स की कोई सीमाएँ नहीं होनी चाहिए
 > (AR) المصدر المفتوح يجب ألا يكون له حدود
 
 ---
 
 ## Sponsors
 
-The rsyslog project is proudly supported by organizations that help sustain its continuous development, infrastructure, and innovation.  
+The rsyslog project is proudly supported by organizations that help sustain its continuous development, infrastructure, and innovation.
 (See also [Project Philosophy](#project-philosophy).)
 
 ### Prime Sponsor
 
-**[Adiscon GmbH](https://www.adiscon.com/)**  
-Adiscon employs core rsyslog developers including Rainer Gerhards and provides ongoing engineering, infrastructure, and CI resources.  
+**[Adiscon GmbH](https://www.adiscon.com/)**
+Adiscon employs core rsyslog developers including Rainer Gerhards and provides ongoing engineering, infrastructure, and CI resources.
 Through its commercial Windows log management products — such as [WinSyslog](https://www.winsyslog.com/) and [Rsyslog Windows Agent](https://www.winsyslog.com/rsyslog-windows-agent/) — Adiscon helps fund rsyslog’s continued open-source development and ecosystem growth.
 
 ### Major Sponsor
@@ -213,7 +213,7 @@ Through its commercial Windows log management products — such as [WinSyslog](h
   </a>
 </p>
 
-**[DigitalOcean](https://www.digitalocean.com/)** powers key parts of rsyslog’s CI pipeline, package distribution network, and AI infrastructure as part of their [#DOforOpenSource](https://www.digitalocean.com/open-source) initiative.  
+**[DigitalOcean](https://www.digitalocean.com/)** powers key parts of rsyslog’s CI pipeline, package distribution network, and AI infrastructure as part of their [#DOforOpenSource](https://www.digitalocean.com/open-source) initiative.
 Their support enables fast, globally available builds and the next generation of AI-assisted rsyslog documentation and tooling.
 
 ### Additional Acknowledgments
@@ -222,7 +222,7 @@ rsyslog also benefits from various open-source infrastructure providers and comm
 
 ---
 
-_If your organization benefits from rsyslog and would like to contribute to its sustainability, please consider [sponsoring or contributing](https://github.com/sponsors/rsyslog)._  
+_If your organization benefits from rsyslog and would like to contribute to its sustainability, please consider [sponsoring or contributing](https://github.com/sponsors/rsyslog)._
 
 ---
 
