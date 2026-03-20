@@ -20,11 +20,28 @@ DEFAULT_VERSION = dev-local
 #   make all VERSION=2026-03
 VERSION ?= $(DEFAULT_VERSION)
 
+# Stable release targets derive the container tag from RSYSLOG_VERSION using
+# 8.yymm.0 -> 20yy-mm. Example: 8.2602.0 -> 2026-02.
+RELEASE_CHANNEL ?= stable
+RELEASE_VERSION = $(strip $(shell \
+	if [ "$(RELEASE_CHANNEL)" = "daily-stable" ]; then \
+		printf 'daily-stable\n'; \
+	elif printf '%s\n' "$(RSYSLOG_VERSION)" | grep -Eq '^8\.[0-9]{4}\.0$$'; then \
+		printf '%s\n' "$(RSYSLOG_VERSION)" | sed -E 's/^8\.([0-9]{2})([0-9]{2})\.0$$/20\1-\2/'; \
+	fi))
+
 # Default OCI metadata values for local builds.
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 VCS_REF ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 OCI_BUILD_ARGS = --build-arg BUILD_DATE="$(BUILD_DATE)" \
                  --build-arg VCS_REF="$(VCS_REF)"
+
+# Manual release publishing is downstream of PPA readiness. Operators must
+# provide the expected rsyslog release version explicitly before stable
+# release-tagged images are built or pushed. The readiness check keeps to
+# the minimum: confirm that the selected release channel exposes the
+# requested series.
+RELEASE_UBUNTU_VERSION ?= 24.04
 
 # Variable to control cache busting. Set to 'yes' to force a rebuild from scratch for all targets.
 # Example: make all REBUILD=yes
@@ -63,7 +80,8 @@ ETL_IMAGE_TAG = $(strip $(ETL_IMAGE_NAME):$(VERSION))
         minimal standard collector dockerlogs etl \
         build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image \
         push_minimal push_standard push_collector push_dockerlogs push_etl \
-        rebuild_all check_publish_version
+        rebuild_all check_publish_version check_release_inputs \
+        check_ppa_release_ready release_build release_push release_publish
 
 # Default target: Builds all functional images.
 # Assumed layering: minimal -> standard -> (collector, dockerlogs, etl)
@@ -169,6 +187,77 @@ check_publish_version:
 			echo "Using publishable VERSION=$(VERSION)" ;; \
 	esac
 
+check_release_inputs:
+	@if [ "$(RELEASE_CHANNEL)" = "stable" ] && [ -z "$(RSYSLOG_VERSION)" ]; then \
+		echo "ERROR: stable release targets require RSYSLOG_VERSION." >&2; \
+		echo "Example: make release_build RSYSLOG_VERSION=8.2602.0" >&2; \
+		exit 1; \
+	fi
+	@if [ -z "$(RELEASE_VERSION)" ]; then \
+		echo "ERROR: invalid release input for RELEASE_CHANNEL=$(RELEASE_CHANNEL)." >&2; \
+		echo "Stable example: make release_build RSYSLOG_VERSION=8.2602.0" >&2; \
+		echo "Daily example: make release_build RELEASE_CHANNEL=daily-stable" >&2; \
+		exit 1; \
+	fi
+	@if [ "$(VERSION)" != "$(DEFAULT_VERSION)" ] && [ "$(VERSION)" != "$(RELEASE_VERSION)" ]; then \
+		echo "ERROR: VERSION=$(VERSION) does not match derived release tag $(RELEASE_VERSION)." >&2; \
+		echo "Omit VERSION for release targets or set VERSION=$(RELEASE_VERSION)." >&2; \
+		exit 1; \
+	fi
+	@echo "Using release channel $(RELEASE_CHANNEL)"
+	@if [ -n "$(RSYSLOG_VERSION)" ]; then echo "Using rsyslog release version $(RSYSLOG_VERSION)"; fi
+	@echo "Derived container tag $(RELEASE_VERSION)"
+
+check_ppa_release_ready: check_release_inputs
+	@echo "--- Checking Adiscon PPA readiness for VERSION=$(RELEASE_VERSION) ---"
+	@docker run --rm ubuntu:$(RELEASE_UBUNTU_VERSION) bash -lc " \
+		set -e; \
+		export DEBIAN_FRONTEND=noninteractive; \
+		apt-get update >/dev/null; \
+		apt-get install -y --no-install-recommends ca-certificates software-properties-common >/dev/null; \
+		if [ \"$(RELEASE_CHANNEL)\" = \"daily-stable\" ]; then \
+			release_ppa=\"ppa:adiscon/daily-stable\"; \
+		else \
+			release_ppa=\"ppa:adiscon/v8-stable\"; \
+		fi; \
+		add-apt-repository -y \"\$$release_ppa\" >/dev/null; \
+		apt-get update >/dev/null; \
+		if [ \"$(RELEASE_CHANNEL)\" = \"daily-stable\" ]; then \
+			resolved_version=\"\$$(apt-cache madison rsyslog | awk 'NR==1 { print \$$3; exit }')\"; \
+		else \
+			resolved_version=\"\$$(apt-cache madison rsyslog | awk '\$$3 ~ /^$(RSYSLOG_VERSION)-/ { print \$$3; exit }')\"; \
+		fi; \
+		if [ -z \"\$$resolved_version\" ]; then \
+			if [ \"$(RELEASE_CHANNEL)\" = \"daily-stable\" ]; then \
+				echo \"ERROR: no rsyslog package is available in \$$release_ppa.\" >&2; \
+			else \
+				echo \"ERROR: no rsyslog package matching $(RSYSLOG_VERSION)-* is available in \$$release_ppa.\" >&2; \
+			fi; \
+			exit 1; \
+		fi; \
+		echo \"Resolved PPA package version \$$resolved_version from \$$release_ppa.\""
+	@if [ "$(RELEASE_CHANNEL)" = "daily-stable" ]; then \
+		echo "PPA is ready for daily-stable"; \
+	else \
+		echo "PPA is ready for rsyslog $(RSYSLOG_VERSION)"; \
+	fi
+
+release_build: check_ppa_release_ready
+	@echo "--- Manual release build for VERSION=$(RELEASE_VERSION) ---"
+	$(MAKE) all VERSION=$(RELEASE_VERSION)
+
+release_push: check_ppa_release_ready
+	@echo "--- Manual release push for VERSION=$(RELEASE_VERSION) ---"
+	$(MAKE) all_push VERSION=$(RELEASE_VERSION)
+
+release_publish: release_push
+	@if [ "$(PUSH_LATEST)" = "yes" ]; then \
+		echo "--- Updating latest tags for VERSION=$(RELEASE_VERSION) ---"; \
+		$(MAKE) push_latest VERSION=$(RELEASE_VERSION); \
+	else \
+		echo "Skipping latest tag update. Set PUSH_LATEST=yes to publish latest."; \
+	fi
+
 # --- Push Targets ---
 push_minimal: check_publish_version build_minimal_image
 	@echo "--- Pushing minimal image: $(MINIMAL_IMAGE_TAG) ---"
@@ -242,6 +331,10 @@ help:
 	@echo "  all_push           - Builds and pushes all versioned images."
 	@echo "  tag_latest         - Tags all built images with ':latest' in their respective repositories."
 	@echo "  push_latest        - Pushes all ':latest' tagged images."
+	@echo "  release_build      - Validates PPA readiness, then builds a release-tagged image set."
+	@echo "  release_push       - Validates PPA readiness, then pushes release-tagged images."
+	@echo "  release_publish    - Runs release_push and optionally updates ':latest'."
+	@echo "                       Use PUSH_LATEST=yes to move latest."
 	@echo ""
 	@echo "Utility Targets:"
 	@echo "  clean              - Removes all local built and ':latest' images."
@@ -252,6 +345,13 @@ help:
 	@echo "                       Current default: $(VERSION)"
 	@echo "                       The default is intentionally non-release for local builds."
 	@echo "                       Publish/tag targets reject development-like values."
+	@echo "  RSYSLOG_VERSION    - Expected rsyslog release version, for example 8.2602.0."
+	@echo "                       Required for RELEASE_CHANNEL=stable."
+	@echo "  RELEASE_CHANNEL    - Release source. Defaults to stable."
+	@echo "                       stable -> ppa:adiscon/v8-stable and 8.yymm.0 -> 20yy-mm"
+	@echo "                       daily-stable -> ppa:adiscon/daily-stable and tag daily-stable"
+	@echo "  PUSH_LATEST        - Set to 'yes' to let release_publish update ':latest'."
+	@echo "  RELEASE_UBUNTU_VERSION - Ubuntu base used for the PPA readiness check."
 	@echo "  REBUILD            - Set to 'yes' to force a full rebuild, bypassing Docker build cache."
 	@echo "                       Example: make all REBUILD=yes"
 	@echo ""
@@ -259,5 +359,7 @@ help:
 	@echo "  1. Local smoke build: make all"
 	@echo "  2. Local release rehearsal: make VERSION=2026-03 all"
 	@echo "  3. Force a full rebuild of all images: make rebuild_all"
-	@echo "  4. Push all release-tagged images: make VERSION=2026-03 all_push"
-	@echo "  5. Tag and push latest for a release build: make VERSION=2026-03 push_latest"
+	@echo "  4. Check PPA readiness: make check_ppa_release_ready RSYSLOG_VERSION=8.2602.0"
+	@echo "  5. Manual release push: make release_push RSYSLOG_VERSION=8.2602.0"
+	@echo "  6. Release push plus latest: make release_publish RSYSLOG_VERSION=8.2602.0 PUSH_LATEST=yes"
+	@echo "  7. Daily channel build: make release_build RELEASE_CHANNEL=daily-stable"
