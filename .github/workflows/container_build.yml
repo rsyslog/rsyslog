@@ -1,0 +1,60 @@
+---
+name: container image build
+
+on:
+  pull_request:
+    # Run on every PR so this workflow can be used in branch protection.
+    # The actual container build is gated below and becomes a no-op when the
+    # PR does not touch files related to the rsyslog container family.
+  push:
+    branches: [main, master]
+    paths:
+      - 'packaging/docker/rsyslog/**'
+      - '.github/workflows/container_build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event_name }}-${{
+    github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for container image changes
+        id: container_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            packaging/docker/rsyslog/**
+            .github/workflows/container_build.yml
+
+      - name: Build rsyslog container family
+        # Keep the workflow green for unrelated PRs while still exercising the
+        # full image family whenever container packaging inputs change.
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' ||
+          steps.container_changes.outputs.any_changed == 'true' }}
+        run: |
+          short_sha="$(git rev-parse --short=12 HEAD)"
+          make -C packaging/docker/rsyslog all VERSION="ci-${short_sha}"
+
+      - name: Skip container build, no relevant changes
+        # This step is intentionally successful so the workflow can participate
+        # in branch protection without forcing container rebuilds on unrelated
+        # changes.
+        if: >-
+          ${{ github.event_name != 'workflow_dispatch' &&
+          steps.container_changes.outputs.any_changed != 'true' }}
+        run: echo "No rsyslog container image changes detected; skipping build."
