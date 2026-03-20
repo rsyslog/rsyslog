@@ -50,8 +50,14 @@ ROSI Collector is the current container-based ROSI deployment profile described
 in this guide. The broader ROSI stack also supports Windows clients via
 official components such as
 `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__. Other
-Adiscon components can also be integrated to meet specific operational
-requirements.
+components such as `WinSyslog <https://www.winsyslog.com/>`_,
+`EventReporter <https://www.eventreporter.com/>`_, and
+`MonitorWare Agent <https://www.monitorware.com/>`_ can also be integrated to
+meet specific operational requirements. ROSI Collector is the primary packaged
+artifact today, while the broader ROSI idea extends beyond this single
+deployment profile. That broader model has long been possible through
+rsyslog-based integrations and parallel destinations; ROSI adds clearer
+guidance and progressively more turnkey artifacts around those practices.
 
 .. note::
    The installation scripts have been tested on **Ubuntu 24.04 LTS**.
@@ -101,6 +107,10 @@ Key Features
 
 Quick Start
 -----------
+
+If you want a guided end-to-end walkthrough before diving into the full
+deployment reference, start with
+:doc:`../../tutorials/deploy_rsyslog_rosi_stack`.
 
 1. **Clone the repository** and navigate to the deployment::
 
@@ -156,6 +166,8 @@ For Windows senders, use
 `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`__ as an
 official ROSI Windows-side component. The collector-side flow stays the same
 once events reach the ROSI Collector.
+Windows integration here is focused on log ingestion; the ``node_exporter`` and
+``impstats`` metrics flow described above remains Linux-oriented.
 
 All external access goes through Traefik, which handles TLS termination.
 
@@ -175,6 +187,7 @@ Documentation Contents
 See Also
 --------
 
+- :doc:`../../tutorials/deploy_rsyslog_rosi_stack` - Guided ROSI stack walkthrough
 - :doc:`../../containers/collector` - The base collector container image
 - :doc:`../../tutorials/reliable_forwarding` - Reliable log forwarding concepts
 - :doc:`../../configuration/index` - rsyslog configuration reference

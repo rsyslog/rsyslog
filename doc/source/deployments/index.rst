@@ -30,6 +30,24 @@ monitoring stack including:
 
 :doc:`Get started with ROSI Collector <rosi_collector/index>`
 
+ROSI Collector is the primary packaged ROSI deployment profile today. The
+broader ROSI direction is larger than this single stack and includes
+alternative destinations, mixed-component architectures, and Windows-side
+collection options. Many of those wider integration paths have existed in
+practice for years through rsyslog's open integration model. ROSI formalizes
+that long-standing approach, provides clearer guidance around it, and adds
+progressively more turnkey artifacts. Today, those artifacts are still uneven
+in maturity, with ROSI Collector as the clearest packaged starting point.
+
+Examples within that broader ROSI space include destinations such as
+Elasticsearch, OpenSearch, Splunk, VictoriaLogs, Kafka, and HTTP-based or cloud
+endpoints, as well as Windows-side components such as
+`rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`_,
+`WinSyslog <https://www.winsyslog.com/>`_, `EventReporter <https://www.eventreporter.com/>`_,
+and `MonitorWare Agent <https://www.monitorware.com/>`_. Some of these come
+from `Adiscon <https://www.adiscon.com/>`_, while others are third-party
+components that ROSI can integrate with.
+
 For the beginner-level ROSI rationale (freedom of choice and avoiding
 vendor lock-in), see :doc:`../getting_started/rosi_for_beginners`.
 
@@ -78,7 +96,8 @@ When to Use Each Option
 **Custom Stack**
    Build your own stack when you have specific requirements that aren't
    met by the provided deployments, or when integrating with enterprise
-   systems like Elasticsearch, Splunk, or cloud logging services.
+   systems like Elasticsearch, Splunk, VictoriaLogs, Kafka, or cloud logging
+   services.
 
 .. toctree::
    :maxdepth: 2

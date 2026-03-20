@@ -19,6 +19,14 @@ ROSI (Rsyslog Operations Stack Initiative) is the rsyslog approach to practical,
 modern observability: start with a concrete stack you can deploy now, but do not
 get trapped in one vendor or one fixed architecture.
 
+Today, the main ready-to-run ROSI artifact is :doc:`../deployments/rosi_collector/index`.
+That is the easiest way to get started, but ROSI itself is broader than that
+single profile. The larger ROSI picture includes additional backend choices,
+mixed-component deployments, and Windows-side collection options. Many of these
+architectures have been built with rsyslog for a long time already; what ROSI
+adds is a clearer formalization of that approach, better guidance, and a
+growing set of artifacts that make adoption easier.
+
 Why ROSI Exists
 ---------------
 
@@ -99,7 +107,22 @@ including modules such as:
 - :doc:`../configuration/modules/omfwd` for syslog forwarding
 
 Common destination examples include Loki, Elasticsearch, OpenSearch, Kafka,
-Splunk (HEC-style HTTP), and cloud endpoints exposed over HTTP or syslog.
+Splunk (HEC-style HTTP), VictoriaLogs, and cloud endpoints exposed over HTTP or
+syslog.
+
+ROSI can also include Windows-side collection components where they fit the
+operational need, such as `rsyslog Windows Agent <https://www.rsyslog.com/windows-agent/>`_,
+`WinSyslog <https://www.winsyslog.com/>`_, `EventReporter <https://www.eventreporter.com/>`_,
+and `MonitorWare Agent <https://www.monitorware.com/>`_. These complement the
+rsyslog-centered ingestion and routing model rather than replacing it.
+Some of these components come from `Adiscon <https://www.adiscon.com/>`_, while
+others are third-party tools that fit the same freedom-of-choice model.
+
+In other words, ROSI does not invent freedom-of-choice logging around rsyslog.
+Users have long connected rsyslog to destinations such as Elasticsearch,
+Splunk, Kafka, syslog receivers, and HTTP-based services, sometimes in
+parallel. ROSI formalizes that long-standing practice and provides clearer
+guidance and more reusable artifacts around it.
 
 As ROSI grows, additional pre-packaged stack profiles can be added without
 changing this core principle: keep architectures replaceable.
@@ -118,6 +141,12 @@ ROSI **is**:
 
 - A practical, rsyslog-backed observability approach
 - A concrete starter stack (ROSI Collector) for centralized logs and metrics
+- A formalization of long-standing rsyslog practices around replaceable
+  architectures and parallel destinations
+- A guidance layer that makes proven rsyslog-based patterns easier to choose
+  and operate well
+- A broader ecosystem direction that can incorporate additional backends and
+  Windows-side components, with more turnkey artifacts being added over time
 - A path that can grow with your infrastructure over time
 - Container-based today, with Kubernetes-oriented evolution as a next target
 
@@ -135,6 +164,8 @@ It combines rsyslog with Loki, Grafana, Prometheus, and Traefik to deliver a
 production-ready baseline quickly.
 
 This baseline solves immediate operational pain while preserving future options.
+If you want a hands-on walkthrough, follow
+:doc:`../tutorials/deploy_rsyslog_rosi_stack`.
 
 What to Read Next
 -----------------
