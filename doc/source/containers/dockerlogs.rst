@@ -4,12 +4,24 @@
 rsyslog/rsyslog-dockerlogs
 ==========================
 
+.. meta::
+   :description: Reference for the rsyslog Docker log forwarding image based on imdocker and omfwd.
+   :keywords: rsyslog, dockerlogs, imdocker, Docker, forwarding
+
+.. summary-start
+
+The ``rsyslog/rsyslog-dockerlogs`` image reads Docker log events with ``imdocker`` and forwards them to a central rsyslog collector over TCP.
+
+.. summary-end
+
 .. index::
    pair: containers; rsyslog/rsyslog-dockerlogs
    pair: Docker images; rsyslog/rsyslog-dockerlogs
 
 This variant includes the ``imdocker`` module to read logs from the
-Docker daemon and forward them to a central rsyslog instance.
+Docker daemon and forward them to a central rsyslog instance. The packaged
+configuration uses ``omfwd`` over TCP with an in-memory queue and infinite
+retry so temporary collector outages do not immediately drop events.
 
 Environment Variables
 ---------------------

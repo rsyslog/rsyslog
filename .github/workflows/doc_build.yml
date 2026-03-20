@@ -194,7 +194,8 @@ jobs:
     if: >-
       ${{ github.event_name=='pull_request'&&
       github.event.action!='closed'&&
-      needs.build_docs.outputs.docs_changed=='true'}}
+      needs.build_docs.outputs.docs_changed=='true'&&
+      github.event.pull_request.head.repo.full_name==github.repository}}
     permissions:
       issues: write
       pull-requests: write
