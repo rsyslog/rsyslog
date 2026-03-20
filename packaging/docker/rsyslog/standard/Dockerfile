@@ -7,6 +7,8 @@
 ARG BASE_IMAGE_TAG="rsyslog/rsyslog-minimal:latest" # Or a specific version
 ARG UBUNTU_VERSION="24.04" # Inherited from base, but good to keep for consistency/labels
 ARG RSYSLOG_IMG_VERSION="unset" # Version passed from Makefile for image metadata
+ARG BUILD_DATE="unknown"
+ARG VCS_REF="unknown"
 
 # Use the rsyslog/rsyslog-minimal image as the base.
 # This ensures all the core rsyslog setup (PPA, basic install, permissions) is inherited.
@@ -16,12 +18,23 @@ FROM ${BASE_IMAGE_TAG}
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
 ARG BASE_IMAGE_TAG
+ARG BUILD_DATE
+ARG VCS_REF
 
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Standard rsyslog container based on Ubuntu ${UBUNTU_VERSION} with Adiscon PPA. Includes common modules like imhttp and omhttp for general use."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"
 # Explicitly label the base image used for traceability.
 LABEL com.adiscon.rsyslog.base.image="${BASE_IMAGE_TAG}"
+LABEL org.opencontainers.image.title="rsyslog/rsyslog"
+LABEL org.opencontainers.image.description="General-purpose rsyslog container with common HTTP-capable modules."
+LABEL org.opencontainers.image.url="https://www.rsyslog.com/"
+LABEL org.opencontainers.image.documentation="https://www.rsyslog.com/doc/containers/standard.html"
+LABEL org.opencontainers.image.source="https://github.com/rsyslog/rsyslog"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.version="${RSYSLOG_IMG_VERSION}"
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
 
 # Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts during package installation.
 ENV DEBIAN_FRONTEND=noninteractive
