@@ -30,6 +30,7 @@ monitoring stack including:
 
 :doc:`Get started with ROSI Collector <rosi_collector/index>`
 
+<<<<<<< HEAD
 ROSI Collector is the primary packaged ROSI deployment profile today. The
 broader ROSI direction is larger than this single stack and includes
 alternative destinations, mixed-component architectures, and Windows-side
@@ -48,8 +49,8 @@ and `MonitorWare Agent <https://www.monitorware.com/>`_. Some of these come
 from `Adiscon <https://www.adiscon.com/>`_, while others are third-party
 components that ROSI can integrate with.
 
-For the beginner-level ROSI rationale (freedom of choice and avoiding
-vendor lock-in), see :doc:`../getting_started/rosi_for_beginners`.
+For the beginner-level ROSI rationale (freedom of choice and avoiding vendor
+lock-in), see :doc:`../getting_started/rosi_for_beginners`.
 
 For audience-specific ROSI follow-up guidance:
 
