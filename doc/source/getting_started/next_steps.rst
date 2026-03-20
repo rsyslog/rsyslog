@@ -8,7 +8,7 @@ Production Deployments
 ----------------------
 
 For a complete log collection stack with dashboards and alerting, see
-ROSI Collector (:doc:`Rsyslog Operations Stack Initiative <../deployments/rosi_for_decision_makers>`):
+ROSI Collector (:doc:`Rsyslog Operations Stack Initiative <rosi_for_beginners>`):
 
 :doc:`../deployments/rosi_collector/index`
 
