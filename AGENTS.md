@@ -31,6 +31,15 @@ Follow these three steps for a typical development task:
 - **Metadata**: Every module directory contains `MODULE_METADATA.yaml`.
 - **Knowledge Base**: `doc/ai/` contains canonical patterns for RAG ingestion.
 
+## Container Images
+
+- Runtime container definitions live in `packaging/docker/rsyslog`.
+- The container Makefile default version must stay clearly non-release.
+  Use explicit `VERSION=...` values for release-like local rehearsals and for
+  any publish automation.
+- AI agents must not introduce release-looking fallback tags such as
+  `2026-03` as the default local container build version.
+
 ## Context Discovery (Subtree Guides)
 
 Each major subtree contains a specialized `AGENTS.md` that points to area-specific context and requirements:

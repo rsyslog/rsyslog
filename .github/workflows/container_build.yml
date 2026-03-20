@@ -43,6 +43,8 @@ jobs:
       - name: Build rsyslog container family
         # Keep the workflow green for unrelated PRs while still exercising the
         # full image family whenever container packaging inputs change.
+        # CI intentionally uses a non-release `ci-<sha>` tag. Stable release
+        # workflows must inject their own explicit release version instead.
         if: >-
           ${{ github.event_name == 'workflow_dispatch' ||
           steps.container_changes.outputs.any_changed == 'true' }}
