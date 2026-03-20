@@ -37,6 +37,7 @@ ylwrap
 rg.conf*
 *.sw?
 *.sv?
+!packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog_history.svg
 *.cache
 # some common names I use during development
 utils

@@ -1,0 +1,66 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: dockerhub pull tracking
+
+'on':
+  schedule:
+    # Every day at 06:15 UTC.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh Docker Hub pull-count CSVs
+        run: packaging/docker/rsyslog/update-dockerhub-pull-counts.sh
+
+      - name: Commit updated pull-count history
+        run: |
+          if git diff --quiet -- \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog.csv \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog_history.csv \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog_history.svg; then
+            echo "No Docker Hub pull-count changes detected."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog.csv \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog_history.csv \
+            packaging/docker/rsyslog/dockerhub_pull_counts_rsyslog_history.svg
+          git commit -m \
+            "ci: refresh Docker Hub pull-count history"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

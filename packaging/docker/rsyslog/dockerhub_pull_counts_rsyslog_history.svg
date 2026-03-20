@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Docker Hub pull count progress for rsyslog container images</title>
+  <desc id="desc">Trend chart generated from timestamped Docker Hub pull count snapshots.</desc>
+  <rect width="1200" height="700" fill="#f7f5ef" />
+  <rect x="90" y="90" width="890" height="540" fill="#fffdf8" stroke="#d7dfd8" />
+  <text x="90" y="42" font-size="28" font-family="sans-serif" font-weight="700" fill="#1f2923">Docker Hub Pull Count Progress</text>
+  <text x="90" y="68" font-size="16" font-family="sans-serif" fill="#4f5b52">Current rsyslog user-facing container images tracked from 2026-03-20 to 2026-03-20</text>
+  <line x1="90" y1="630" x2="980" y2="630" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="635" text-anchor="end" font-size="14" fill="#4f5b52">0</text>
+  <line x1="90" y1="522" x2="980" y2="522" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="527" text-anchor="end" font-size="14" fill="#4f5b52">10,862</text>
+  <line x1="90" y1="414" x2="980" y2="414" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="419" text-anchor="end" font-size="14" fill="#4f5b52">21,724</text>
+  <line x1="90" y1="306" x2="980" y2="306" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="311" text-anchor="end" font-size="14" fill="#4f5b52">32,586</text>
+  <line x1="90" y1="198" x2="980" y2="198" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="203" text-anchor="end" font-size="14" fill="#4f5b52">43,448</text>
+  <line x1="90" y1="90" x2="980" y2="90" stroke="#d7dfd8" stroke-width="1" />
+  <text x="76" y="95" text-anchor="end" font-size="14" fill="#4f5b52">54,310</text>
+  <line x1="90" y1="630" x2="980" y2="630" stroke="#4f5b52" stroke-width="1.5" />
+  <line x1="90" y1="90" x2="90" y2="630" stroke="#4f5b52" stroke-width="1.5" />
+  <line x1="535" y1="630" x2="535" y2="638" stroke="#4f5b52" stroke-width="1" />
+  <text x="535" y="676" text-anchor="middle" font-size="14" fill="#4f5b52">2026-03-20</text>
+  <path d="M 535 90" fill="none" stroke="#0b6e4f" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="535" cy="90" r="4.5" fill="#0b6e4f"><title>rsyslog/rsyslog 2026-03-20: 54,310 pulls</title></circle>
+  <path d="M 535 537.3816976615724" fill="none" stroke="#c44536" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="535" cy="537.3816976615724" r="4.5" fill="#c44536"><title>rsyslog/rsyslog-collector 2026-03-20: 9,315 pulls</title></circle>
+  <path d="M 535 563.650893021543" fill="none" stroke="#1f4e79" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="535" cy="563.650893021543" r="4.5" fill="#1f4e79"><title>rsyslog/rsyslog-minimal 2026-03-20: 6,673 pulls</title></circle>
+  <path d="M 535 627.1960964831522" fill="none" stroke="#8a6d1d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="535" cy="627.1960964831522" r="4.5" fill="#8a6d1d"><title>rsyslog/rsyslog-dockerlogs 2026-03-20: 282 pulls</title></circle>
+  <text x="26" y="360" font-size="16" font-family="sans-serif" fill="#4f5b52" transform="rotate(-90 26 360)">Pull count</text>
+  <text x="535" y="694" text-anchor="middle" font-size="16" font-family="sans-serif" fill="#4f5b52">Snapshot day (UTC)</text>
+  <line x1="998" y1="90" x2="1032" y2="90" stroke="#0b6e4f" stroke-width="4" stroke-linecap="round" />
+  <text x="1042" y="95" font-size="15" fill="#1f2923">rsyslog (54,310)</text>
+  <line x1="998" y1="118" x2="1032" y2="118" stroke="#c44536" stroke-width="4" stroke-linecap="round" />
+  <text x="1042" y="123" font-size="15" fill="#1f2923">collector (9,315)</text>
+  <line x1="998" y1="146" x2="1032" y2="146" stroke="#1f4e79" stroke-width="4" stroke-linecap="round" />
+  <text x="1042" y="151" font-size="15" fill="#1f2923">minimal (6,673)</text>
+  <line x1="998" y1="174" x2="1032" y2="174" stroke="#8a6d1d" stroke-width="4" stroke-linecap="round" />
+  <text x="1042" y="179" font-size="15" fill="#1f2923">dockerlogs (282)</text>
+</svg>
