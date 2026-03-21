@@ -37,6 +37,13 @@ Follow these three steps for a typical development task:
 - The container Makefile default version must stay clearly non-release.
   Use explicit `VERSION=...` values for release-like local rehearsals and for
   any publish automation.
+- Release-tagged container images are downstream of package publishing.
+  AI agents must not add or use release container flows that bypass the
+  Adiscon PPA readiness check.
+- Manual release flows use two fixed channels:
+  `stable` maps `8.yymm.0` to `20yy-mm` via `ppa:adiscon/v8-stable`,
+  and `daily-stable` uses `ppa:adiscon/daily-stable` with the fixed tag
+  `daily-stable`.
 - AI agents must not introduce release-looking fallback tags such as
   `2026-03` as the default local container build version.
 
