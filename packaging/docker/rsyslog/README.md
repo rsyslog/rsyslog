@@ -9,6 +9,10 @@ container image family:
 - `rsyslog/rsyslog-dockerlogs`
 - `rsyslog/rsyslog-etl`
 
+These are the only published image variants in this subtree.
+The `host/` subdirectory contains auxiliary host-side forwarding
+material and is not a built or published container image target.
+
 Docker Hub descriptions for these repos can be maintained from this
 subtree with `sync_dockerhub_metadata.py` and `dockerhub_metadata.json`.
 The script reads credentials from `DOCKERHUB_USERNAME` /
