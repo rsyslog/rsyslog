@@ -12,6 +12,13 @@ The general-purpose image builds on ``rsyslog-minimal`` and adds commonly
 used modules such as ``imhttp`` and ``omhttp``. Use it when you need a
 ready-to-run rsyslog with HTTP ingestion or forwarding capabilities.
 
+Runtime Notes
+-------------
+
+Like :doc:`minimal`, this image runs as ``syslog:adm`` by default. That
+fits the packaged general-purpose role because the shipped configuration
+does not bind privileged ports.
+
 Environment Variables
 ---------------------
 

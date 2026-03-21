@@ -22,6 +22,11 @@ ARG BASE_IMAGE_TAG
 ARG BUILD_DATE
 ARG VCS_REF
 
+# The standard base image defaults to syslog:adm; switch back to root for
+# package installation in this derived image. Common dockerlogs deployments
+# also rely on Docker daemon or socket access that is root-scoped.
+USER root
+
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Rsyslog container specialized for Docker log collection using imdocker, based on the rsyslog/rsyslog (standard) image."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"

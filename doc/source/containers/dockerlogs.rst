@@ -23,6 +23,10 @@ Docker daemon and forward them to a central rsyslog instance. The packaged
 configuration uses ``omfwd`` over TCP with an in-memory queue and infinite
 retry so temporary collector outages do not immediately drop events.
 
+The packaged dockerlogs image still runs as root by default. Typical
+deployments rely on Docker daemon or socket access, which is commonly
+root-scoped.
+
 Environment Variables
 ---------------------
 

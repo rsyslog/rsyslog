@@ -66,8 +66,18 @@ jobs:
           tag="ci-${{ steps.build_containers.outputs.short_sha }}"
 
           docker run --rm \
+            --entrypoint id \
+            "rsyslog/rsyslog-minimal:${tag}" \
+            -u | grep -Fx 101
+
+          docker run --rm \
             "rsyslog/rsyslog-minimal:${tag}" \
             rsyslogd -N1 -f /etc/rsyslog.conf
+
+          docker run --rm \
+            --entrypoint id \
+            "rsyslog/rsyslog:${tag}" \
+            -u | grep -Fx 101
 
           docker run --rm \
             "rsyslog/rsyslog:${tag}" \
