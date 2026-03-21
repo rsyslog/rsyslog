@@ -9,6 +9,12 @@ container image family:
 - `rsyslog/rsyslog-dockerlogs`
 - `rsyslog/rsyslog-etl`
 
+Docker Hub descriptions for these repos can be maintained from this
+subtree with `sync_dockerhub_metadata.py` and `dockerhub_metadata.json`.
+The script reads credentials from `DOCKERHUB_USERNAME` /
+`DOCKERHUB_PASSWORD` or the local `~/.docker/config.json` and defaults
+to a dry run.
+
 ## Version and tag contract
 
 Local builds default to a non-release tag on purpose:
