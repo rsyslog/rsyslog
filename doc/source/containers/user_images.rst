@@ -31,8 +31,8 @@ Available variants include:
   centralized log collection, including RELP and optional TLS reception.
 * :doc:`rsyslog/rsyslog-dockerlogs <dockerlogs>` – includes ``imdocker``
   to process logs from the Docker daemon.
-* :doc:`rsyslog/rsyslog-etl <etl>` – receives syslog and forwards events
-  to a Vespa HTTP endpoint using ``omhttp``.
+* :doc:`rsyslog/rsyslog-etl <etl>` – experimental image that receives
+  syslog and forwards events to a Vespa HTTP endpoint using ``omhttp``.
 * ``rsyslog/rsyslog-debug`` – planned variant with troubleshooting tools.
 
 .. toctree::

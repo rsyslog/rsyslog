@@ -1,4 +1,7 @@
-## rsyslog official container for syslog ETL functionality
+## rsyslog experimental container for syslog ETL functionality
+
+This image is currently experimental and specialized for Vespa-oriented
+ETL pipelines.
 
 ## Env vars
 

@@ -31,6 +31,12 @@ This image is a concrete example of rsyslog being used as an ETL transport and
 delivery component. It is optimized for Vespa-oriented pipelines, not presented
 here as a generic all-destinations ETL appliance.
 
+.. warning::
+
+   ``rsyslog/rsyslog-etl`` is currently experimental. Treat it as a
+   specialized example image for Vespa-oriented ETL pipelines rather
+   than a broadly supported general-purpose container role.
+
 .. note::
 
    - **UDP (514/udp)** and **TCP (514/tcp)** are enabled by default.
