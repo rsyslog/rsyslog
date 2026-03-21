@@ -45,12 +45,52 @@ jobs:
         # full image family whenever container packaging inputs change.
         # CI intentionally uses a non-release `ci-<sha>` tag. Stable release
         # workflows must inject their own explicit release version instead.
+        id: build_containers
         if: >-
           ${{ github.event_name == 'workflow_dispatch' ||
           steps.container_changes.outputs.any_changed == 'true' }}
         run: |
           short_sha="$(git rev-parse --short=12 HEAD)"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
           make -C packaging/docker/rsyslog all VERSION="ci-${short_sha}"
+
+      - name: Smoke-test rsyslog container family
+        # Keep smoke coverage lightweight: validate the packaged startup and
+        # config contracts for each role without requiring external services.
+        # These runs are short-lived and use representative environment values
+        # for images whose entrypoint/config expects them.
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' ||
+          steps.container_changes.outputs.any_changed == 'true' }}
+        run: |
+          tag="ci-${{ steps.build_containers.outputs.short_sha }}"
+
+          docker run --rm \
+            "rsyslog/rsyslog-minimal:${tag}" \
+            rsyslogd -N1 -f /etc/rsyslog.conf
+
+          docker run --rm \
+            "rsyslog/rsyslog:${tag}" \
+            rsyslogd -N1 -f /etc/rsyslog.conf
+
+          docker run --rm \
+            -e ENABLE_RELP=on \
+            "rsyslog/rsyslog-collector:${tag}" \
+            rsyslogd -N1 -f /etc/rsyslog.conf
+
+          docker run --rm \
+            -e REMOTE_SERVER_NAME=collector \
+            -e REMOTE_SERVER_PORT=514 \
+            "rsyslog/rsyslog-dockerlogs:${tag}" \
+            rsyslogd -N1 -f /etc/rsyslog.conf
+
+          docker run --rm \
+            -e VESPA_NAMESPACE=default \
+            -e VESPA_DOCTYPE=logs \
+            -e VESPA_SERVER=vespa \
+            -e VESPA_PORT=8080 \
+            "rsyslog/rsyslog-etl:${tag}" \
+            rsyslogd -N1 -f /etc/rsyslog.conf
 
       - name: Skip container build, no relevant changes
         # This step is intentionally successful so the workflow can participate
