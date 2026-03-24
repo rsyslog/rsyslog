@@ -30,8 +30,8 @@ threads are utilized to pull data off the network. On a busy system,
 additional helper threads (but not more than there are CPUs/Cores)
 can help improving performance. The default value is two, which means
 there is a default thread count of three (the main input thread plus
-two helpers). No more than 16 threads can be set (if tried to,
-rsyslog always resorts to 16).
+two helpers). The maximum number of worker threads is bound only by
+system resources (CPU, memory).
 
 Module usage
 ------------
