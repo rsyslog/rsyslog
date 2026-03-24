@@ -79,6 +79,7 @@ struct nsd_gtls_s {
         uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
         int DrvrVerifyDepth; /* Verify Depth for certificate chains */
         int DrvrTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
+        time_t crlNextUpdate; /**< cached CRL nextUpdate for per-connection expiration check (0 = not set) */
         gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT]; /**< our certificate, if in client mode
                                 (unused in server mode) */
         unsigned int nOurCerts; /* number of certificates in our chain */

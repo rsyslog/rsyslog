@@ -1309,6 +1309,7 @@ TESTS_GNUTLS = \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	sndrcv_tls_certvalid_revoked.sh \
+	imtcp-tls-gtls-crl.sh \
 	sndrcv_tls_client_missing_cert.sh \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
@@ -1386,6 +1387,7 @@ TESTS_OSSL = \
 	imtcp-tls-ossl-error-key.sh
 
 TESTS_OSSL_OPENSSL = \
+	imtcp-tls-ossl-crl.sh \
 	imtcp-tls-ossl-basic.sh \
 	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
@@ -2838,6 +2840,7 @@ EXTRA_DIST += \
 	testsuites/x.509/client-revoked.csr \
 	testsuites/x.509/client-revoked.pem \
 	testsuites/x.509/crl.pem \
+	testsuites/x.509/crl-expired.pem \
 	testsuites/x.509/index.txt \
 	testsuites/x.509/index.txt.attr \
 	testsuites/x.509/newcerts/01.pem \
