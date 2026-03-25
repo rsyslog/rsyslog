@@ -791,19 +791,68 @@ static rsRetVal gtlsInitCred(nsd_gtls_t *const pThis) {
     if (crlfile == NULL) {
         dbgprintf("Certificate revocation list (CRL) file not set.");
     } else {
+        gnutls_datum_t crlData;
+        gnutls_x509_crl_t crl;
+
         dbgprintf("GTLS CRL file: '%s'\n", crlfile);
-        gnuRet = gnutls_certificate_set_x509_crl_file(pThis->xcred, (char *)crlfile, GNUTLS_X509_FMT_PEM);
-        if (gnuRet == GNUTLS_E_FILE_ERROR) {
+
+        gnuRet = gnutls_load_file((char *)crlfile, &crlData);
+        if (gnuRet < 0) {
             LogError(0, RS_RET_GNUTLS_ERR,
                      "error reading Certificate revocation list (CRL) '%s' - a common cause is that the "
-                     "file  does not exist",
+                     "file does not exist",
                      crlfile);
             ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-        } else if (gnuRet < 0) {
-            /* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+        }
+
+        gnuRet = gnutls_x509_crl_init(&crl);
+        if (gnuRet < 0) {
+            gnutls_free(crlData.data);
+            uchar *pErr = gtlsStrerror(gnuRet);
+            LogError(0, RS_RET_GNUTLS_ERR, "error initializing CRL object: %s", pErr);
+            free(pErr);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        }
+
+        gnuRet = gnutls_x509_crl_import(crl, &crlData, GNUTLS_X509_FMT_PEM);
+        if (gnuRet < 0) {
+            gnutls_x509_crl_deinit(crl);
+            gnutls_free(crlData.data);
+            uchar *pErr = gtlsStrerror(gnuRet);
+            LogError(0, RS_RET_GNUTLS_ERR, "error parsing Certificate revocation list (CRL) '%s': %s", crlfile, pErr);
+            free(pErr);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        }
+
+        /* Check CRL validity period. GnuTLS does not do this automatically. */
+        time_t now = time(NULL);
+        time_t thisUpdate = gnutls_x509_crl_get_this_update(crl);
+        time_t nextUpdate = gnutls_x509_crl_get_next_update(crl);
+        gnutls_x509_crl_deinit(crl);
+        pThis->crlNextUpdate = nextUpdate;
+
+        dbgprintf("GTLS CRL '%s': thisUpdate=%lld, nextUpdate=%lld, now=%lld\n", crlfile, (long long)thisUpdate,
+                  (long long)nextUpdate, (long long)now);
+
+        if (thisUpdate > 0 && now < thisUpdate) {
+            gnutls_free(crlData.data);
+            LogError(0, RS_RET_CRL_INVALID, "CRL '%s' is not yet valid (thisUpdate is in the future)", crlfile);
+            ABORT_FINALIZE(RS_RET_CRL_INVALID);
+        }
+        if (nextUpdate > 0 && now > nextUpdate) {
+            gnutls_free(crlData.data);
+            LogError(0, RS_RET_CRL_INVALID, "CRL '%s' has expired", crlfile);
+            ABORT_FINALIZE(RS_RET_CRL_INVALID);
+        }
+        dbgprintf("GTLS CRL '%s' validity check passed\n", crlfile);
+
+        /* Load CRL into credentials (using already-loaded data) */
+        gnuRet = gnutls_certificate_set_x509_crl_mem(pThis->xcred, &crlData, GNUTLS_X509_FMT_PEM);
+        gnutls_free(crlData.data);
+        if (gnuRet < 0) {
             uchar *pErr = gtlsStrerror(gnuRet);
             LogError(0, RS_RET_GNUTLS_ERR,
-                     "unexpected GnuTLS error reading Certificate revocation list (CRL) %d in %s:%d: %s\n", gnuRet,
+                     "unexpected GnuTLS error loading Certificate revocation list (CRL) %d in %s:%d: %s\n", gnuRet,
                      __FILE__, __LINE__, pErr);
             free(pErr);
             ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
@@ -1354,6 +1403,23 @@ finalize_it:
 }
 
 
+/* Check if the cached CRL has expired since startup.
+ * Called on each TLS handshake to match OpenSSL behavior.
+ */
+static rsRetVal gtlsChkCrlValidity(nsd_gtls_t *pThis) {
+    DEFiRet;
+    if (pThis->crlNextUpdate > 0 && time(NULL) > pThis->crlNextUpdate) {
+        uchar *fromHost = NULL;
+        nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+        LogError(0, RS_RET_CRL_INVALID, "CRL has expired (nextUpdate passed), rejecting peer '%s'", fromHost);
+        free(fromHost);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+finalize_it:
+    RETiRet;
+}
+
+
 /* check if it is OK to talk to the remote peer
  * rgerhards, 2008-05-21
  */
@@ -1361,6 +1427,8 @@ rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+    CHKiRet(gtlsChkCrlValidity(pThis));
 
     /* call the actual function based on current auth mode */
     switch (pThis->authMode) {
@@ -1975,6 +2043,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
     pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
     pNew->DrvrTlsRevocationCheck = pThis->DrvrTlsRevocationCheck;
+    pNew->crlNextUpdate = pThis->crlNextUpdate;
     pNew->dataTypeCheck = pThis->dataTypeCheck;
     pNew->bSANpriority = pThis->bSANpriority;
     pNew->pszCertFile = pThis->pszCertFile;
