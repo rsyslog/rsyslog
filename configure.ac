@@ -1624,12 +1624,17 @@ if test "x$enable_mmnormalize" = "xyes"; then
 	LIBS="$LIBS $LIBLOGNORM_LIBS"
 
 	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_REGEX_SUPPORTED,[lognorm_regex_supported="yes"],)
+	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_TURBO_SUPPORTED,[lognorm_turbo_supported="yes"],)
 
 	CFLAGS="$save_CFLAGS"
 	LIBS="$save_LIBS"
 fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
+AM_CONDITIONAL(LOGNORM_TURBO_SUPPORTED, test x$lognorm_turbo_supported = xyes)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
+if test "x$lognorm_turbo_supported" = "xyes"; then
+	AC_DEFINE(HAVE_LOGNORM_TURBO, 1, [liblognorm has turbo VM support])
+fi
 
 # mmleefparse
 AC_ARG_ENABLE(mmleefparse,
