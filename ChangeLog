@@ -1,5 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-25: gtls: check CRL expiration, reject connections with expired CRL
+  GnuTLS silently ignores expired CRLs -- it loads them into credentials
+  without checking the validity period. This means rsyslog kept accepting
+  TLS connections even when the configured CRL file had expired, unlike
+  the OpenSSL driver which rejects them via X509_V_ERR_CRL_HAS_EXPIRED
+  in the verify callback. This has now been fixed.
+  Thanks to Attila Lakatos for the patch.
 - 2026-03-18: omazuredce: add Azure Monitor output module
   This adds a documented Azure Monitor output path so rsyslog can
   ship events to Azure-hosted observability workflows. It also makes
