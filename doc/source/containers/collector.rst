@@ -31,6 +31,10 @@ other backends or reshape the pipeline.
 This image is the recommended starting point for building a log
 collector or relay service.
 
+The packaged collector still runs as root by default. Its shipped
+configuration binds privileged listener ports such as ``514`` and
+``6514`` and writes files under ``/var/log``.
+
 .. note::
 
    - **UDP (514/udp)** and **TCP (514/tcp)** are enabled by default.  

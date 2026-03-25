@@ -40,7 +40,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 #    - Install rsyslog with --no-install-recommends for minimal footprint.
 #    - Purge build-time-only dependencies (software-properties-common) and auto-remove any unused packages.
 #    - Clean apt caches and remove temporary files to minimize layer size.
-#    - Create essential runtime directories (/run for PID, /var/log for logs, /etc/rsyslog.d for config snippets).
+#    - Create the writable runtime paths used by the shipped config.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
@@ -52,9 +52,11 @@ RUN apt-get update && \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /etc/rsyslog.d/50-default.conf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && mkdir -p /etc/rsyslog.d /run /var/log /var/lib/rsyslog && \
-    chown root:syslog /var/log /var/lib/rsyslog && \
-    chmod g+w /var/log /var/lib/rsyslog
+    && mkdir -p /etc/rsyslog.d /var/log /var/spool/rsyslog \
+    && chown root:syslog /var/log \
+    && chmod 0775 /var/log \
+    && chown syslog:adm /var/spool/rsyslog \
+    && chmod 0700 /var/spool/rsyslog
 
 # Copy custom rsyslog configuration file into the container.
 # This file defines how rsyslog behaves (e.g., inputs, outputs, rules).
@@ -62,12 +64,16 @@ RUN apt-get update && \
 COPY rsyslog.conf /etc/rsyslog.conf
 COPY 01-main-queue.conf /etc/rsyslog.d/
 COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
+RUN chmod 0755 /usr/local/bin/start.sh
 # Set the entrypoint (this will run the script when the container starts)
 ENTRYPOINT ["/usr/local/bin/start.sh"]
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=minimal
+
+# The minimal image is safe to run as the packaged syslog user for
+# unprivileged container workloads.
+USER syslog:adm
 
 # Set the default command to run rsyslog in the foreground.
 # -n: Prevents rsyslog from forking (essential for Docker containers).

@@ -23,6 +23,11 @@ ARG BASE_IMAGE_TAG
 ARG BUILD_DATE
 ARG VCS_REF
 
+# The standard base image defaults to syslog:adm; collector installs extra
+# packages and still needs root at runtime for low default listener ports and
+# file output under /var/log.
+USER root
+
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Rsyslog collector container, based on the standard image, optimized for log collection. Ubuntu ${UBUNTU_VERSION}."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"

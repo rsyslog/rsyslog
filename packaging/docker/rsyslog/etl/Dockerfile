@@ -23,6 +23,11 @@ ARG BASE_IMAGE_TAG
 ARG BUILD_DATE
 ARG VCS_REF
 
+# The standard base image defaults to syslog:adm; switch back to root for
+# package installation in this derived image. ETL also stays root at runtime
+# because the packaged role binds privileged listener ports.
+USER root
+
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Rsyslog collector container, based on the standard image, optimized for ETL. Ubuntu ${UBUNTU_VERSION}."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"

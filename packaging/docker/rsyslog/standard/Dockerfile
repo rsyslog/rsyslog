@@ -21,6 +21,10 @@ ARG BASE_IMAGE_TAG
 ARG BUILD_DATE
 ARG VCS_REF
 
+# The base image defaults to syslog:adm; switch back to root for package
+# installation in this derived image.
+USER root
+
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
 LABEL description="Standard rsyslog container based on Ubuntu ${UBUNTU_VERSION} with Adiscon PPA. Includes common modules like imhttp and omhttp for general use."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"
@@ -54,6 +58,10 @@ RUN apt-get update && \
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=standard
+
+# The standard image remains non-root-capable by default because its
+# packaged behavior stays on unprivileged resources.
+USER syslog:adm
 
 # Inherit CMD from base image (rsyslogd -n -f /etc/rsyslog.conf), no need to set explicitly
 # unless specific default arguments for the standard role are needed.

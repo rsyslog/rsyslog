@@ -13,6 +13,16 @@ configuration that writes logs to standard output. It serves as the
 foundation for the other rsyslog images and is suitable when you want to
 add your own modules or configuration.
 
+Runtime Notes
+-------------
+
+The packaged default configuration uses ``/var/spool/rsyslog`` as the
+work directory and writes to standard output via ``omstdout``.
+
+The image runs as ``syslog:adm`` by default. That fits simple container
+deployments that use unprivileged ports and do not depend on privileged
+inputs such as host log sockets or other root-only resources.
+
 Environment Variables
 ---------------------
 
