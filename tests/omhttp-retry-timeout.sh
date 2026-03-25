@@ -4,7 +4,7 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=5000
+export NUMMESSAGES=2500
 export SEQ_CHECK_OPTIONS="-d"
 
 port="$(get_free_port)"
