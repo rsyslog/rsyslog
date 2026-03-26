@@ -23,6 +23,7 @@ int cnfSetLexFile(const char *);
 void parser_errmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);
+int cnfHasPendingBuffers(void);
 #ifndef IN_GRAMMAR_Y
 extern char *cnfcurrfn;
 extern FILE *fp_rs_full_conf_output;

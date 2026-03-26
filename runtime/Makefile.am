@@ -81,6 +81,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	ratelimit.c \
 	ratelimit.h \
+	yamlconf.c \
+	yamlconf.h \
 	lookup.c \
 	lookup.h \
 	cfsysline.c \

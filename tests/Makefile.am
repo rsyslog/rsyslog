@@ -556,7 +556,11 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
-	ratelimit_hup.sh
+	ratelimit_hup.sh \
+	yaml-basic.sh \
+	yaml-include.sh \
+	yaml-ruleset-script.sh \
+	yaml-error.sh
 
 TESTS_IMTCP = \
 	fromhost-port.sh \

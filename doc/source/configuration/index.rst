@@ -54,6 +54,7 @@ configuration.
    percentile_stats
    converting_to_new_format
    conf_formats
+   yaml_config
    sysklogd_format
 
 Additional Resources

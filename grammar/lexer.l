@@ -626,4 +626,12 @@ tellLexEndParsing(void)
 	free(cnfcurrfn);
 	cnfcurrfn= NULL;
 }
+
+/* Returns non-zero when there are config buffers queued for yyparse()
+ * to consume (e.g. script: blocks added by the YAML loader). */
+int
+cnfHasPendingBuffers(void)
+{
+	return currbs != NULL;
+}
 #endif // #ifndef __clang_analyzer__
