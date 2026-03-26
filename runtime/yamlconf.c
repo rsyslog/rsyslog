@@ -77,6 +77,9 @@ static rsRetVal parse_obj_sequence(yaml_parser_t *parser,
                                    enum cnfobjType objType, const char *fname);
 static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser,
                                        const char *fname);
+static rsRetVal parse_actions_sequence(yaml_parser_t *parser,
+                                       struct cnfstmt **head_out,
+                                       const char *fname);
 static rsRetVal parse_include_sequence(yaml_parser_t *parser,
                                        const char *fname);
 static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser,
@@ -517,6 +520,65 @@ finalize_it:
     RETiRet;
 }
 
+/* Parse an actions: sequence inside a ruleset mapping.
+ *
+ * Each item is a YAML mapping that mirrors an action() object: the "type"
+ * key names the output module and all other keys are passed as parameters.
+ * We build an nvlst for each item and call cnfstmtNewAct() directly, then
+ * chain the resulting cnfstmt nodes via ->next.
+ *
+ * The SEQUENCE_START event must already have been consumed by the caller.
+ * On success *head_out points to the first node of the chain (possibly NULL
+ * if the sequence was empty).  Ownership passes to the caller. */
+static rsRetVal
+parse_actions_sequence(yaml_parser_t *parser, struct cnfstmt **head_out,
+                       const char *fname)
+{
+    yaml_event_t ev;
+    struct cnfstmt *head = NULL, *tail = NULL;
+    DEFiRet;
+
+    *head_out = NULL;
+
+    while (1) {
+        CHKiRet(next_event(parser, &ev, fname));
+        if (ev.type == YAML_SEQUENCE_END_EVENT) {
+            yaml_event_delete(&ev);
+            break;
+        }
+        if (ev.type != YAML_MAPPING_START_EVENT) {
+            LogError(0, RS_RET_CONF_PARSE_ERROR,
+                     "yamlconf: %s: actions: item must be a mapping", fname);
+            yaml_event_delete(&ev);
+            ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+        }
+        yaml_event_delete(&ev);
+
+        struct nvlst *alst = NULL;
+        CHKiRet(build_nvlst_from_mapping(parser, &alst, fname));
+
+        /* cnfstmtNewAct() takes ownership of alst and frees it internally. */
+        struct cnfstmt *act = cnfstmtNewAct(alst);
+        if (act == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        if (head == NULL) {
+            head = tail = act;
+        } else {
+            tail->next = act;
+            tail = act;
+        }
+    }
+
+    *head_out = head;
+    head = NULL;
+
+finalize_it:
+    if (head != NULL) cnfstmtDestructLst(head);
+    RETiRet;
+}
+
 /* Parse the rulesets: sequence.
  *
  * Each item is a mapping with at least a "name" key.  The special "script"
@@ -530,7 +592,16 @@ finalize_it:
  * LIFO, the ruleset script is processed BEFORE those included .conf files.
  * Consequently, any templates or objects that a ruleset script references
  * must be defined in the YAML file's own templates:/global:/etc. sections
- * (processed immediately via cnfDoObj()), not in included .conf fragments. */
+ * (processed immediately via cnfDoObj()), not in included .conf fragments.
+ *
+ * Structured filter shortcut (Phase 2):
+ *   filter:  "<filter-string>"   # optional; "*.info" (PRI) or ":prop,op,val" (property)
+ *   actions:                     # mutually exclusive with script:
+ *     - type: omfile
+ *       file: /var/log/messages
+ * When filter: + actions: are used, cnfstmt nodes are built directly via
+ * cnfstmtNewPRIFILT / cnfstmtNewPROPFILT / cnfstmtNewAct and set on the
+ * cnfobj->script field before calling cnfDoObj() — no text buffer needed. */
 static rsRetVal
 parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
 {
@@ -552,11 +623,13 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
         }
         yaml_event_delete(&ev);
 
-        /* Collect all keys into nvlst, pull out "script" specially */
+        /* Collect all keys into nvlst, pull out "script"/"filter"/"actions" specially */
         struct nvlst *lst = NULL;
         char *script_str = NULL;
+        char *filter_str = NULL;       /* Phase 2: filter: "*.info" or ":prop,op,val" */
+        struct cnfstmt *actions = NULL; /* Phase 2: actions: [ {type:..., ...}, ... ] */
 
-        /* We parse the mapping manually here so we can intercept "script" */
+        /* We parse the mapping manually here so we can intercept special keys */
         while (1) {
             CHKiRet(next_event(parser, &ev, fname));
             if (ev.type == YAML_MAPPING_END_EVENT) {
@@ -568,7 +641,8 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                          "yamlconf: %s: expected scalar key in ruleset mapping",
                          fname);
                 yaml_event_delete(&ev);
-                free(script_str);
+                free(script_str); free(filter_str);
+                if (actions) cnfstmtDestructLst(actions);
                 nvlstDestruct(lst);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -576,7 +650,9 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             char *kname = strdup((char *)ev.data.scalar.value);
             yaml_event_delete(&ev);
             if (kname == NULL) {
-                free(script_str); nvlstDestruct(lst);
+                free(script_str); free(filter_str);
+                if (actions) cnfstmtDestructLst(actions);
+                nvlstDestruct(lst);
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
 
@@ -590,7 +666,9 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                              " (use a YAML block scalar '|' for multi-line)",
                              fname);
                     yaml_event_delete(&ev);
-                    free(kname); free(script_str); nvlstDestruct(lst);
+                    free(kname); free(script_str); free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
                     ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
                 }
                 free(script_str);
@@ -598,8 +676,53 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                 yaml_event_delete(&ev);
                 free(kname);
                 if (script_str == NULL) {
+                    free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
                     nvlstDestruct(lst);
                     ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+            } else if (!strcmp(kname, "filter")) {
+                /* filter: "<pri-filter>" or ":<property-filter>" */
+                if (ev.type != YAML_SCALAR_EVENT) {
+                    LogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: 'filter' value must be a scalar string",
+                             fname);
+                    yaml_event_delete(&ev);
+                    free(kname); free(script_str); free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
+                    ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+                }
+                free(filter_str);
+                filter_str = strdup((char *)ev.data.scalar.value);
+                yaml_event_delete(&ev);
+                free(kname);
+                if (filter_str == NULL) {
+                    free(script_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+            } else if (!strcmp(kname, "actions")) {
+                /* actions: [ {type: ..., ...}, ... ] */
+                if (ev.type != YAML_SEQUENCE_START_EVENT) {
+                    LogError(0, RS_RET_CONF_PARSE_ERROR,
+                             "yamlconf: %s: 'actions' value must be a sequence",
+                             fname);
+                    yaml_event_delete(&ev);
+                    free(kname); free(script_str); free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
+                    ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+                }
+                yaml_event_delete(&ev);
+                free(kname);
+                if (actions) cnfstmtDestructLst(actions);
+                rsRetVal ar = parse_actions_sequence(parser, &actions, fname);
+                if (ar != RS_RET_OK) {
+                    free(script_str); free(filter_str);
+                    nvlstDestruct(lst);
+                    ABORT_FINALIZE(ar);
                 }
             } else {
                 /* All other keys go into the header nvlst */
@@ -607,7 +730,9 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                 free(kname);
                 if (keyestr == NULL) {
                     yaml_event_delete(&ev);
-                    free(script_str); nvlstDestruct(lst);
+                    free(script_str); free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
                     ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                 }
 
@@ -616,13 +741,17 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                     es_str_t *val = scalar_to_estr((char *)ev.data.scalar.value);
                     yaml_event_delete(&ev);
                     if (val == NULL) {
-                        es_deleteStr(keyestr); free(script_str); nvlstDestruct(lst);
+                        es_deleteStr(keyestr); free(script_str); free(filter_str);
+                        if (actions) cnfstmtDestructLst(actions);
+                        nvlstDestruct(lst);
                         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                     }
                     node = nvlstNewStr(val);
                     if (node == NULL) {
                         es_deleteStr(keyestr); es_deleteStr(val);
-                        free(script_str); nvlstDestruct(lst);
+                        free(script_str); free(filter_str);
+                        if (actions) cnfstmtDestructLst(actions);
+                        nvlstDestruct(lst);
                         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                     }
                 } else if (ev.type == YAML_SEQUENCE_START_EVENT) {
@@ -630,17 +759,23 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                     struct cnfarray *arr = NULL;
                     rsRetVal arrRet = build_array_from_sequence(parser, &arr, fname);
                     if (arrRet != RS_RET_OK) {
-                        es_deleteStr(keyestr); free(script_str); nvlstDestruct(lst);
+                        es_deleteStr(keyestr); free(script_str); free(filter_str);
+                        if (actions) cnfstmtDestructLst(actions);
+                        nvlstDestruct(lst);
                         ABORT_FINALIZE(arrRet);
                     }
                     node = nvlstNewArray(arr);
                     if (node == NULL) {
-                        es_deleteStr(keyestr); free(script_str); nvlstDestruct(lst);
+                        es_deleteStr(keyestr); free(script_str); free(filter_str);
+                        if (actions) cnfstmtDestructLst(actions);
+                        nvlstDestruct(lst);
                         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                     }
                 } else {
                     yaml_event_delete(&ev);
-                    es_deleteStr(keyestr); free(script_str); nvlstDestruct(lst);
+                    es_deleteStr(keyestr); free(script_str); free(filter_str);
+                    if (actions) cnfstmtDestructLst(actions);
+                    nvlstDestruct(lst);
                     LogError(0, RS_RET_CONF_PARSE_ERROR,
                              "yamlconf: %s: unexpected value type in ruleset mapping",
                              fname);
@@ -653,11 +788,24 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             }
         } /* end per-ruleset key loop */
 
+        /* Sanity check: script: and actions: are mutually exclusive */
+        if (script_str != NULL && actions != NULL) {
+            LogError(0, RS_RET_CONF_PARSE_ERROR,
+                     "yamlconf: %s: ruleset cannot have both 'script' and 'actions';"
+                     " use one or the other", fname);
+            free(script_str); free(filter_str);
+            cnfstmtDestructLst(actions);
+            nvlstDestruct(lst);
+            ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+        }
+
         if (script_str != NULL && *script_str != '\0') {
             /* Synthesise a complete RainerScript  ruleset(...)  {  script  }
              * block and push it onto the flex buffer stack.  The bison parser
              * will call cnfDoObj() itself after parsing the whole block,
              * setting cnfobj->script correctly via rulesetProcessCnf(). */
+            free(filter_str);
+            filter_str = NULL;
             es_str_t *estr = NULL;
             rsRetVal br = build_ruleset_rainerscript(lst, script_str, &estr);
             nvlstDestruct(lst);
@@ -667,10 +815,46 @@ parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
             if (br != RS_RET_OK) ABORT_FINALIZE(br);
             /* cnfAddConfigBuffer() takes ownership of estr */
             cnfAddConfigBuffer(estr, fname);
+        } else if (actions != NULL) {
+            /* Phase 2 structured shortcut: build cnfstmt chain directly.
+             * If filter: was given, wrap the action chain in a filter node.
+             * Otherwise the actions run unconditionally (equivalent to *.*). */
+            struct cnfstmt *body = actions;
+            actions = NULL;
+            if (filter_str != NULL && *filter_str != '\0') {
+                struct cnfstmt *filt;
+                /* Property filters start with ':', PRI filters do not */
+                if (filter_str[0] == ':') {
+                    filt = cnfstmtNewPROPFILT(filter_str, body);
+                } else {
+                    filt = cnfstmtNewPRIFILT(filter_str, body);
+                }
+                if (filt == NULL) {
+                    cnfstmtDestructLst(body);
+                    nvlstDestruct(lst);
+                    free(filter_str);
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+                /* filter_str ownership taken by cnfstmt (printable field) */
+                filter_str = NULL;
+                body = filt;
+            }
+            free(filter_str);
+            filter_str = NULL;
+            struct cnfobj *obj = cnfobjNew(CNFOBJ_RULESET, lst);
+            lst = NULL;
+            if (obj == NULL) {
+                cnfstmtDestructLst(body);
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            obj->script = body;
+            cnfDoObj(obj);
         } else {
-            /* No script — emit just the ruleset header via cnfDoObj() as usual. */
+            /* No script or actions — emit just the ruleset header. */
             free(script_str);
             script_str = NULL;
+            free(filter_str);
+            filter_str = NULL;
             struct cnfobj *obj = cnfobjNew(CNFOBJ_RULESET, lst);
             lst = NULL;  /* cnfobjNew takes ownership */
             if (obj == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);

@@ -560,7 +560,8 @@ TESTS_LIBYAML = \
 	yaml-basic.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
-	yaml-error.sh
+	yaml-error.sh \
+	yaml-filter-actions.sh
 
 TESTS_IMTCP = \
 	fromhost-port.sh \

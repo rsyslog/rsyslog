@@ -140,17 +140,54 @@ parameters:
 **rulesets**
 
 Ruleset items specify a ``name`` and may carry queue parameters.  Rule
-logic (filters, actions, ``if/then``, ``set``, ``foreach``, etc.) is
-supplied as a RainerScript text block under the ``script:`` key.  See
-`Scripting`_ below.
+logic is expressed in one of two ways:
+
+1. **Structured shortcut** (``filter:`` + ``actions:``) — for simple
+   priority- or property-based routing without scripting.  See
+   `Structured Filter Shortcut`_ below.
+2. **Inline RainerScript** (``script:`` key) — for anything requiring
+   conditionals, loops, ``set``/``unset``, ``call``, ``stop``, etc.
+   See `Scripting`_ below.
+
+``filter:`` + ``actions:`` example:
 
 .. code-block:: yaml
 
    rulesets:
      - name: main
-       script: |
-         *.* action(type="omfile" file="/var/log/syslog")
+       filter: "*.*"
+       actions:
+         - type: omfile
+           file: "/var/log/syslog"
 
+     - name: errors
+       filter: "*.err"
+       actions:
+         - type: omfile
+           file: "/var/log/errors.log"
+         - type: omfwd
+           target: "logserver.example.com"
+           port: "514"
+           protocol: "tcp"
+
+     # Property filter — starts with ':'
+     - name: tag_filter
+       filter: ":syslogtag, startswith, \"myapp\""
+       actions:
+         - type: omfile
+           file: "/var/log/myapp.log"
+
+     # No filter — unconditional routing
+     - name: archive
+       actions:
+         - type: omfile
+           file: "/var/log/archive.log"
+
+``script:`` example (complex logic):
+
+.. code-block:: yaml
+
+   rulesets:
      - name: errors
        script: |
          if $syslogseverity <= 3 then {
@@ -191,6 +228,62 @@ glob result is not an error.  Files with a ``.yaml`` or ``.yml`` extension
 are loaded by the YAML loader; all other files are loaded by the
 RainerScript parser.
 
+.. _yaml_filter_shortcut:
+
+Structured Filter Shortcut
+--------------------------
+
+For common routing patterns (match by severity or message property, then
+write to one or more outputs) you do not need any RainerScript.  Use
+``filter:`` and ``actions:`` directly on a ruleset:
+
+``filter:``
+   Optional string.  Two forms are recognised:
+
+   * **Priority filter** — standard syslog selector syntax
+     (e.g. ``*.info``, ``kern.warn``, ``auth,authpriv.*``).
+   * **Property filter** — starts with ``:``
+     (e.g. ``:msg, contains, "error"``).
+
+   If ``filter:`` is absent, all messages match (unconditional routing).
+
+``actions:``
+   YAML sequence.  Each item maps directly to a ``action()`` call; the
+   ``type`` key names the output module and all remaining keys are
+   module-specific parameters.  Multiple actions are chained in order.
+
+.. code-block:: yaml
+
+   rulesets:
+     # Route *.info to syslog; *.err also to a dedicated error file
+     - name: main
+       filter: "*.info"
+       actions:
+         - type: omfile
+           file: "/var/log/syslog"
+
+     - name: errors
+       filter: "*.err"
+       actions:
+         - type: omfile
+           file: "/var/log/errors.log"
+         - type: omfwd
+           target: "logserver.example.com"
+           port: "514"
+           protocol: "tcp"
+
+     # Property filter
+     - name: myapp
+       filter: ":syslogtag, startswith, \"myapp\""
+       actions:
+         - type: omfile
+           file: "/var/log/myapp.log"
+
+.. note::
+   ``filter:`` and ``actions:`` are mutually exclusive with ``script:``.
+   If you need conditionals, loops, ``set``, ``call``, or ``stop``,
+   use ``script:`` instead.
+
 .. _yaml_scripting:
 
 Scripting
@@ -227,10 +320,10 @@ here.  Inline actions defined in the ``script:`` block do **not** need to
 be listed separately under an ``inputs:`` or ``actions:`` section.
 
 .. tip::
-   For simple routing (one filter, one action) the ``script:`` block is
-   often just a single ``action()`` line.  More complex conditional logic,
-   loops, and variable assignments work exactly as they do in a
-   RainerScript config.
+   For simple routing (one filter, one or more actions, no branching)
+   use the ``filter:`` + ``actions:`` shortcut described in
+   `Structured Filter Shortcut`_.  Reserve ``script:`` for conditional
+   logic, loops, and variable assignments.
 
 Complete Example
 ----------------
@@ -271,11 +364,28 @@ a typical ``/etc/rsyslog.conf``:
 
    rulesets:
      - name: main
-       script: |
-         auth,authpriv.* action(type="omfile" file="/var/log/auth.log")
-         *.*;auth,authpriv.none action(type="omfile" file="/var/log/syslog")
-         kern.*            action(type="omfile" file="/var/log/kern.log")
-         *.emerg           action(type="omusrmsg" users="*")
+       filter: "auth,authpriv.*"
+       actions:
+         - type: omfile
+           file: "/var/log/auth.log"
+
+     - name: main_all
+       filter: "*.*;auth,authpriv.none"
+       actions:
+         - type: omfile
+           file: "/var/log/syslog"
+
+     - name: kern
+       filter: "kern.*"
+       actions:
+         - type: omfile
+           file: "/var/log/kern.log"
+
+     - name: emerg
+       filter: "*.emerg"
+       actions:
+         - type: omusrmsg
+           users: "*"
 
    include:
      - path: "/etc/rsyslog.d/*.yaml"
@@ -303,9 +413,8 @@ Limitations (current implementation)
 
 - Nested YAML mappings inside parameter values are not supported.  Use a
   YAML scalar or sequence.
-- The ``script:`` key is the only way to express filter logic.  A future
-  version may introduce a structured ``filter:`` shortcut for simple
-  priority-based routing.
+- ``filter:`` + ``actions:`` support one flat filter level.  For nested
+  ``if/then/else`` chains or compound logic use ``script:``.
 - ``version:`` is accepted but not enforced; it is reserved for future
   schema evolution.
 
