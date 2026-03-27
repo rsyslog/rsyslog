@@ -70,6 +70,9 @@
 #include "template.h"
 #include "timezones.h"
 #include "ratelimit.h"
+#ifdef HAVE_LIBYAML
+    #include "yamlconf.h"
+#endif
 
 extern char *yytext;
 extern int yylineno;
@@ -1480,11 +1483,42 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(loadBuildInModules());
     CHKiRet(initLegacyConf());
 
-    /* open the configuration file */
-    r = cnfSetLexFile((char *)confFile);
-    if (r == 0) {
-        r = yyparse();
-        conf.GetNbrActActions(loadConf, &iNbrActions);
+    /* open the configuration file; route .yaml/.yml to the YAML loader */
+    {
+        const char *ext = strrchr((const char *)confFile, '.');
+        int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+#ifdef HAVE_LIBYAML
+        if (is_yaml) {
+            rsRetVal yr = yamlconf_load((const char *)confFile);
+            if (yr == RS_RET_OK) {
+                r = 0;
+            } else if (yr == RS_RET_CONF_FILE_NOT_FOUND) {
+                r = 2;
+            } else {
+                r = 1;
+            }
+            /* Flush any inline RainerScript script: blocks that were queued
+             * into the flex buffer stack by cnfAddConfigBuffer(). */
+            if (r == 0 && cnfHasPendingBuffers()) {
+                r = yyparse();
+            }
+        } else {
+#endif
+            r = cnfSetLexFile((char *)confFile);
+            if (r == 0) r = yyparse();
+#ifdef HAVE_LIBYAML
+        }
+#else
+        if (is_yaml) {
+            LogError(0, RS_RET_ERR,
+                     "YAML config file '%s' requested but rsyslog was built "
+                     "without libyaml support (install libyaml-dev and "
+                     "recompile)",
+                     confFile);
+            r = 1;
+        }
+#endif
+        if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
     }
 
     /* we run the optimizer even if we have an error, as it may spit out

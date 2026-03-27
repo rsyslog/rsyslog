@@ -58,6 +58,9 @@
 #include "wti.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
+#ifdef HAVE_LIBYAML
+    #include "yamlconf.h"
+#endif
 
 extern int yylineno;
 
@@ -5762,7 +5765,26 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
 
         if (S_ISREG(fileInfo.st_mode)) { /* config file */
             DBGPRINTF("requested to include config file '%s'\n", cfgFile);
-            cnfSetLexFile(cfgFile);
+            /* Route .yaml / .yml files to the YAML loader */
+            const char *ext = strrchr(cfgFile, '.');
+            int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+#ifdef HAVE_LIBYAML
+            if (is_yaml) {
+                if (yamlconf_load(cfgFile) != RS_RET_OK) ret = 1;
+            } else {
+                cnfSetLexFile(cfgFile);
+            }
+#else
+            if (is_yaml) {
+                LogError(0, RS_RET_ERR,
+                         "YAML include file '%s' requested but rsyslog was "
+                         "built without libyaml support",
+                         cfgFile);
+                ret = 1; /* treat as hard failure — config is incomplete */
+            } else {
+                cnfSetLexFile(cfgFile);
+            }
+#endif
         } else if (S_ISDIR(fileInfo.st_mode)) { /* config directory */
             DBGPRINTF("requested to include directory '%s'\n", cfgFile);
             cnfDoInclude(cfgFile, optional);

@@ -289,6 +289,7 @@ EXTRA_DIST = \
     source/configuration/sysklogd_format.rst \
     source/configuration/templates.rst \
     source/configuration/timezone.rst \
+    source/configuration/yaml_config.rst \
     source/containers/collector.rst \
     source/containers/development_images.rst \
     source/containers/dockerlogs.rst \
