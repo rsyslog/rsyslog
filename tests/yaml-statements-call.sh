@@ -27,7 +27,7 @@ templates:
 rulesets:
   - name: rs2
     statements:
-      - if: '$msg contains "msgnum:"'
+      - if: '$msg contains "msgnum:" and $.tag == "seen"'
         action:
           type: omfile
           template: outfmt

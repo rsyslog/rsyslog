@@ -1,4 +1,5 @@
-/* yamlconf.c - YAML configuration file loader for rsyslog
+/** @file yamlconf.c
+ * @brief YAML configuration file loader for rsyslog.
  *
  * Parses a .yaml/.yml rsyslog config file and drives the same processing
  * pipeline that the RainerScript lex/bison parser uses:
@@ -63,8 +64,10 @@
     #include "grammar/rainerscript.h"
     #include "grammar/parserif.h"
 
-    /* Maximum nesting depth we track (YAML spec allows arbitrary depth, but
-     * rsyslog config objects are shallow; 16 is more than enough). */
+    /* Maximum nesting depth tracked during YAML node skipping.
+     * rsyslog config objects are inherently shallow (2-3 levels); 16 guards
+     * against malformed or adversarial YAML without needing a full DFS. */
+    /** @brief Maximum YAML nesting depth allowed when skipping unknown nodes. */
     #define YAMLCONF_MAX_DEPTH 16
 
 /* --------------------------------------------------------------------------
@@ -80,6 +83,8 @@ static rsRetVal parse_actions_sequence(yaml_parser_t *parser, struct cnfstmt **h
 static rsRetVal parse_include_sequence(yaml_parser_t *parser, const char *fname);
 static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser, struct nvlst **out, const char *fname);
 static rsRetVal build_array_from_sequence(yaml_parser_t *parser, struct cnfarray **out, const char *fname);
+static rsRetVal yaml_value_to_nvlst_node(
+    yaml_parser_t *parser, const char *fname, yaml_event_t *ev, const char *key, struct nvlst **out);
 static rsRetVal build_stmts_rs(yaml_parser_t *parser, es_str_t **s, const char *fname);
 static rsRetVal expect_event(
     yaml_parser_t *parser, yaml_event_t *ev, yaml_event_type_t expected, const char *ctx, const char *fname);
@@ -328,6 +333,69 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Converts one YAML value event into a named nvlst node.
+ *
+ * The event @p ev must already have been pulled from the parser by the
+ * caller (the value event following a key scalar).  The event is always
+ * consumed before returning, regardless of success or failure.
+ *
+ * Callers that need to handle YAML_MAPPING_START_EVENT specially (e.g. to
+ * skip nested mappings with a warning) should check ev->type before calling
+ * and only invoke this function for SCALAR and SEQUENCE_START events.
+ *
+ * @param parser  libyaml parser; read-from only when ev is SEQUENCE_START.
+ * @param fname   Config file name used in diagnostic messages.
+ * @param ev      Pre-read value event; always consumed.
+ * @param key     Parameter key (C string); copied into the node's name field.
+ * @param out     Set to the new nvlst node on success; NULL on any error.
+ * @return RS_RET_OK, RS_RET_OUT_OF_MEMORY, or RS_RET_CONF_PARSE_ERROR.
+ */
+static rsRetVal yaml_value_to_nvlst_node(
+    yaml_parser_t *parser, const char *fname, yaml_event_t *ev, const char *key, struct nvlst **out) {
+    es_str_t *keyestr = NULL;
+    struct nvlst *node = NULL;
+    DEFiRet;
+
+    *out = NULL;
+    keyestr = scalar_to_estr(key);
+    if (keyestr == NULL) {
+        yaml_event_delete(ev);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+
+    if (ev->type == YAML_SCALAR_EVENT) {
+        es_str_t *val = scalar_to_estr((char *)ev->data.scalar.value);
+        yaml_event_delete(ev);
+        if (val == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        node = nvlstNewStr(val);
+        if (node == NULL) {
+            es_deleteStr(val);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    } else if (ev->type == YAML_SEQUENCE_START_EVENT) {
+        struct cnfarray *arr = NULL;
+        yaml_event_delete(ev);
+        CHKiRet(build_array_from_sequence(parser, &arr, fname));
+        node = nvlstNewArray(arr);
+        if (node == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    } else {
+        yaml_event_delete(ev);
+        LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unsupported value type for parameter '%s'", fname, key);
+        ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+    }
+
+    nvlstSetName(node, keyestr);
+    keyestr = NULL; /* owned by node */
+    *out = node;
+    node = NULL;
+
+finalize_it:
+    es_deleteStr(keyestr);
+    if (node != NULL) nvlstDestruct(node);
+    RETiRet;
+}
+
 /* Build a struct nvlst* from a YAML mapping.
  * The MAPPING_START event must already have been consumed by the caller.
  * Consumes up to and including the matching MAPPING_END event.
@@ -342,7 +410,6 @@ static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser, struct nvlst **o
     struct nvlst *lst = NULL;
     struct nvlst *node;
     char *key = NULL;
-    es_str_t *keyestr;
     DEFiRet;
 
     *out = NULL;
@@ -370,58 +437,16 @@ static rsRetVal build_nvlst_from_mapping(yaml_parser_t *parser, struct nvlst **o
         /* Now read the value */
         CHKiRet(next_event(parser, &ev, fname));
 
-        keyestr = scalar_to_estr(key);
-        if (keyestr == NULL) {
-            yaml_event_delete(&ev);
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-
-        if (ev.type == YAML_SCALAR_EVENT) {
-            es_str_t *val = scalar_to_estr((char *)ev.data.scalar.value);
-            yaml_event_delete(&ev);
-            if (val == NULL) {
-                es_deleteStr(keyestr);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
-            node = nvlstNewStr(val);
-            if (node == NULL) {
-                es_deleteStr(keyestr);
-                es_deleteStr(val);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
-        } else if (ev.type == YAML_SEQUENCE_START_EVENT) {
-            yaml_event_delete(&ev);
-            struct cnfarray *arr = NULL;
-            rsRetVal arrRet = build_array_from_sequence(parser, &arr, fname);
-            if (arrRet != RS_RET_OK) {
-                es_deleteStr(keyestr);
-                ABORT_FINALIZE(arrRet);
-            }
-            node = nvlstNewArray(arr);
-            if (node == NULL) {
-                es_deleteStr(keyestr);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
-        } else if (ev.type == YAML_MAPPING_START_EVENT) {
+        if (ev.type == YAML_MAPPING_START_EVENT) {
             /* Nested mappings are not part of the rsyslog parameter model.
              * Skip and warn so the user knows the key was ignored. */
             yaml_event_delete(&ev);
-            es_deleteStr(keyestr);
             LogError(0, RS_RET_CONF_PARSE_ERROR,
-                     "yamlconf: %s: nested mapping for key '%s' is not supported"
-                     " – ignoring",
-                     fname, key);
+                     "yamlconf: %s: nested mapping for key '%s' is not supported – ignoring", fname, key);
             skip_node(parser);
             continue;
-        } else {
-            yaml_event_delete(&ev);
-            es_deleteStr(keyestr);
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unexpected YAML event for value of key '%s'", fname,
-                     key);
-            ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
-
-        nvlstSetName(node, keyestr);
+        CHKiRet(yaml_value_to_nvlst_node(parser, fname, &ev, key, &node));
         /* Prepend; cnfDoObj() does not depend on order */
         node->next = lst;
         lst = node;
@@ -681,46 +706,8 @@ static rsRetVal parse_template_sequence(yaml_parser_t *parser, const char *fname
                 CHKiRet(parse_elements_sequence(parser, &subobjs, fname));
             } else {
                 /* Regular template param: add to nvlst */
-                es_str_t *keyestr = scalar_to_estr(kname);
-                if (keyestr == NULL) {
-                    yaml_event_delete(&ev);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
                 struct nvlst *node = NULL;
-                if (ev.type == YAML_SCALAR_EVENT) {
-                    es_str_t *val = scalar_to_estr((char *)ev.data.scalar.value);
-                    yaml_event_delete(&ev);
-                    if (val == NULL) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                    node = nvlstNewStr(val);
-                    if (node == NULL) {
-                        es_deleteStr(keyestr);
-                        es_deleteStr(val);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                } else if (ev.type == YAML_SEQUENCE_START_EVENT) {
-                    yaml_event_delete(&ev);
-                    struct cnfarray *arr = NULL;
-                    rsRetVal arrRet = build_array_from_sequence(parser, &arr, fname);
-                    if (arrRet != RS_RET_OK) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(arrRet);
-                    }
-                    node = nvlstNewArray(arr);
-                    if (node == NULL) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                } else {
-                    yaml_event_delete(&ev);
-                    es_deleteStr(keyestr);
-                    LogError(0, RS_RET_CONF_PARSE_ERROR,
-                             "yamlconf: %s: unexpected value type for template parameter '%s'", fname, kname);
-                    ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
-                }
-                nvlstSetName(node, keyestr);
+                CHKiRet(yaml_value_to_nvlst_node(parser, fname, &ev, kname, &node));
                 node->next = lst;
                 lst = node;
             }
@@ -1315,50 +1302,17 @@ static rsRetVal build_one_stmt_rs(yaml_parser_t *parser, es_str_t **s, const cha
             /* Unknown key at statement level: treat as action param (flat action form).
              * Collect into act_lst so we can emit action(...) at the end. */
             has_type = has_type || (!strcmp(kname, "type") ? 1 : 0);
-            es_str_t *keyestr = scalar_to_estr(kname);
-            free(kname);
-            if (keyestr == NULL) {
-                yaml_event_t vev;
-                if (next_event(parser, &vev, fname) == RS_RET_OK) yaml_event_delete(&vev);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
             yaml_event_t vev;
-            CHKiRet(next_event(parser, &vev, fname));
-            struct nvlst *node = NULL;
-            if (vev.type == YAML_SCALAR_EVENT) {
-                es_str_t *val = scalar_to_estr((char *)vev.data.scalar.value);
-                yaml_event_delete(&vev);
-                if (val == NULL) {
-                    es_deleteStr(keyestr);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-                node = nvlstNewStr(val);
-                if (node == NULL) {
-                    es_deleteStr(keyestr);
-                    es_deleteStr(val);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-            } else if (vev.type == YAML_SEQUENCE_START_EVENT) {
-                yaml_event_delete(&vev);
-                struct cnfarray *arr = NULL;
-                rsRetVal arrRet = build_array_from_sequence(parser, &arr, fname);
-                if (arrRet != RS_RET_OK) {
-                    es_deleteStr(keyestr);
-                    ABORT_FINALIZE(arrRet);
-                }
-                node = nvlstNewArray(arr);
-                if (node == NULL) {
-                    es_deleteStr(keyestr);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-            } else {
-                yaml_event_delete(&vev);
-                es_deleteStr(keyestr);
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "yamlconf: %s: unsupported value type for action parameter in statements:", fname);
-                ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+            rsRetVal next_ret = next_event(parser, &vev, fname);
+            if (next_ret != RS_RET_OK) {
+                free(kname);
+                ABORT_FINALIZE(next_ret);
             }
-            nvlstSetName(node, keyestr);
+            struct nvlst *node = NULL;
+            rsRetVal nret = yaml_value_to_nvlst_node(parser, fname, &vev, kname, &node);
+            free(kname);
+            kname = NULL;
+            if (nret != RS_RET_OK) ABORT_FINALIZE(nret);
             node->next = act_lst;
             act_lst = node;
         }
@@ -1649,48 +1603,8 @@ static rsRetVal parse_ruleset_sequence(yaml_parser_t *parser, const char *fname)
                 CHKiRet(parse_actions_sequence(parser, &actions, fname));
             } else {
                 /* All other keys go into the header nvlst */
-                es_str_t *keyestr = scalar_to_estr(kname);
-                if (keyestr == NULL) {
-                    yaml_event_delete(&ev);
-                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                }
-
                 struct nvlst *node = NULL;
-                if (ev.type == YAML_SCALAR_EVENT) {
-                    es_str_t *val = scalar_to_estr((char *)ev.data.scalar.value);
-                    yaml_event_delete(&ev);
-                    if (val == NULL) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                    node = nvlstNewStr(val);
-                    if (node == NULL) {
-                        es_deleteStr(keyestr);
-                        es_deleteStr(val);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                } else if (ev.type == YAML_SEQUENCE_START_EVENT) {
-                    yaml_event_delete(&ev);
-                    struct cnfarray *arr = NULL;
-                    rsRetVal arrRet = build_array_from_sequence(parser, &arr, fname);
-                    if (arrRet != RS_RET_OK) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(arrRet);
-                    }
-                    node = nvlstNewArray(arr);
-                    if (node == NULL) {
-                        es_deleteStr(keyestr);
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                } else {
-                    yaml_event_delete(&ev);
-                    es_deleteStr(keyestr);
-                    LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unexpected value type in ruleset mapping",
-                             fname);
-                    ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
-                }
-
-                nvlstSetName(node, keyestr);
+                CHKiRet(yaml_value_to_nvlst_node(parser, fname, &ev, kname, &node));
                 node->next = lst;
                 lst = node;
             }
@@ -2000,6 +1914,18 @@ finalize_it:
  * Public entry point
  * -------------------------------------------------------------------------- */
 
+/**
+ * @brief Load and process a YAML rsyslog configuration file.
+ *
+ * Opens @p fname, drives the libyaml event parser over the top-level
+ * mapping, and dispatches each section to the appropriate handler.
+ * All resulting config objects are committed to rsconf via cnfDoObj() or
+ * cnfAddConfigBuffer() before this function returns.
+ *
+ * @param fname  Absolute or relative path to the .yaml/.yml config file.
+ * @return RS_RET_OK on success; RS_RET_FILE_NOT_FOUND if @p fname cannot
+ *         be opened; RS_RET_CONF_PARSE_ERROR on any YAML or semantic error.
+ */
 rsRetVal yamlconf_load(const char *fname) {
     yaml_parser_t parser;
     yaml_event_t ev;

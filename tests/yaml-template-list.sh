@@ -79,9 +79,11 @@ if [ "$LINES" -ne "$NUMMESSAGES" ]; then
     cat "${RSYSLOG_DYNNAME}.list"
     exit 1
 fi
-# Each line must contain the msgnum: marker (property extraction worked)
-if ! grep -q "msgnum:" "${RSYSLOG_DYNNAME}.list"; then
-    echo "FAIL: list-template output missing expected 'msgnum:' content"
+# Every line must contain the msgnum: marker — check that ALL lines match,
+# not just some (property extraction must have worked for each message).
+MATCH=$(grep -c "msgnum:" "${RSYSLOG_DYNNAME}.list")
+if [ "$MATCH" -ne "$NUMMESSAGES" ]; then
+    echo "FAIL: expected all $NUMMESSAGES lines to contain 'msgnum:', got $MATCH"
     head -5 "${RSYSLOG_DYNNAME}.list"
     exit 1
 fi
