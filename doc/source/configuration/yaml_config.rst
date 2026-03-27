@@ -52,7 +52,7 @@ keys correspond to rsyslog configuration object types:
    parsers:  [ ... ]
    lookup_tables: [ ... ]
    dyn_stats: [ ... ]
-   perctile_stats: [ ... ]
+   perctile_stats: [ ... ]   # note: spelt "perctile" — matches rsyslog internal naming
    ratelimits: [ ... ]
    timezones: [ ... ]
 
@@ -140,13 +140,18 @@ parameters:
 **rulesets**
 
 Ruleset items specify a ``name`` and may carry queue parameters.  Rule
-logic is expressed in one of two ways:
+logic is expressed in one of three ways:
 
 1. **Structured shortcut** (``filter:`` + ``actions:``) — for simple
    priority- or property-based routing without scripting.  See
    `Structured Filter Shortcut`_ below.
-2. **Inline RainerScript** (``script:`` key) — for anything requiring
-   conditionals, loops, ``set``/``unset``, ``call``, ``stop``, etc.
+2. **YAML-native statements** (``statements:`` key) — for conditional
+   routing, ``if/then/else``, ``call``, ``call_indirect``, ``foreach``,
+   ``stop``, ``unset``, variable assignment — without writing any
+   RainerScript syntax.  See `YAML-Native Statements`_ below.
+   **Recommended for most configs.**
+3. **Inline RainerScript** (``script:`` key) — escape hatch for complex
+   metaprogramming or advanced RainerScript not covered by ``statements:``.
    See `Scripting`_ below.
 
 ``filter:`` + ``actions:`` example:
@@ -280,9 +285,113 @@ write to one or more outputs) you do not need any RainerScript.  Use
            file: "/var/log/myapp.log"
 
 .. note::
-   ``filter:`` and ``actions:`` are mutually exclusive with ``script:``.
+   ``filter:`` and ``actions:`` are mutually exclusive with ``script:`` and
+   ``statements:``.
    If you need conditionals, loops, ``set``, ``call``, or ``stop``,
-   use ``script:`` instead.
+   use ``statements:`` (recommended) or ``script:`` instead.
+
+.. _yaml_statements:
+
+YAML-Native Statements
+----------------------
+
+The ``statements:`` key is the recommended way to express conditional routing
+and control flow without writing raw RainerScript.  Each item in the sequence
+is a YAML mapping that represents one statement.  Only the *filter expression*
+inside ``if:`` remains as a RainerScript expression string — all structural
+elements and action parameters are expressed as YAML.
+
+``statements:`` is mutually exclusive with ``script:``, ``filter:``, and
+``actions:``.
+
+**If / action (single action shorthand)**
+
+.. code-block:: yaml
+
+   rulesets:
+     - name: main
+       statements:
+         - if: '$msg contains "error"'
+           action:
+             type: omfile
+             file: "/var/log/errors.log"
+           else:              # optional
+             - stop: true
+
+**If / then / else (multiple statements per branch)**
+
+.. code-block:: yaml
+
+   rulesets:
+     - name: main
+       statements:
+         - if: '$syslogseverity <= 3'
+           then:
+             - type: omfile
+               file: "/var/log/critical.log"
+             - type: omfwd
+               target: "logserver.example.com"
+               port: "514"
+               protocol: "tcp"
+           else:
+             - type: omfile
+               file: "/var/log/messages"
+
+**Control flow: stop, continue, call**
+
+.. code-block:: yaml
+
+         - stop: true        # stop processing this message
+         - continue: true    # continue (no-op, rarely needed)
+         - call: other_rs    # call another ruleset by name
+
+**Variable assignment**
+
+.. code-block:: yaml
+
+         - set:
+             var: "$.nbr"
+             expr: 'field($msg, 58, 2)'
+
+**Supported statement types**
+
++-------------+-----------------------------------------------------------------+
+| Type        | YAML form                                                       |
++=============+=================================================================+
+| Action      | ``{type: module, param: val, ...}`` — unconditional             |
++-------------+-----------------------------------------------------------------+
+| If/action   | ``{if: expr, action: {type: ..., ...}, else: [...]}``           |
++-------------+-----------------------------------------------------------------+
+| If/then     | ``{if: expr, then: [...], else: [...]}``                        |
++-------------+-----------------------------------------------------------------+
+| Stop        | ``{stop: true}``                                                |
++-------------+-----------------------------------------------------------------+
+| Continue    | ``{continue: true}``                                            |
++-------------+-----------------------------------------------------------------+
+| Call        | ``{call: rulesetname}``                                         |
++-------------+-----------------------------------------------------------------+
+| Set         | ``{set: {var: "$.x", expr: "rainerscript-expression"}}``        |
++-------------+-----------------------------------------------------------------+
+| Unset       | ``{unset: "$.x"}``                                              |
++-------------+-----------------------------------------------------------------+
+| call_indirect | ``{call_indirect: "$.varname"}``                              |
++-------------+-----------------------------------------------------------------+
+| foreach     | ``{foreach: {var: "$.i", in: "$!arr", do: [...]}}``             |
++-------------+-----------------------------------------------------------------+
+
+``foreach`` iterates over a JSON array.  The ``do:`` value is a sequence of
+statement items using the same syntax as ``statements:``.  Example:
+
+.. code-block:: yaml
+
+   statements:
+     - foreach:
+         var: "$.item"
+         in: "$!items"
+         do:
+           - type: omfile
+             file: /var/log/items.log
+             template: outfmt
 
 .. _yaml_scripting:
 
@@ -322,8 +431,10 @@ be listed separately under an ``inputs:`` or ``actions:`` section.
 .. tip::
    For simple routing (one filter, one or more actions, no branching)
    use the ``filter:`` + ``actions:`` shortcut described in
-   `Structured Filter Shortcut`_.  Reserve ``script:`` for conditional
-   logic, loops, and variable assignments.
+   `Structured Filter Shortcut`_.
+   For conditional routing, variable assignments, ``call``, and ``stop``
+   use the ``statements:`` block described in `YAML-Native Statements`_.
+   Reserve ``script:`` for ``foreach`` loops and advanced RainerScript.
 
 Complete Example
 ----------------
@@ -414,7 +525,7 @@ Limitations (current implementation)
 - Nested YAML mappings inside parameter values are not supported.  Use a
   YAML scalar or sequence.
 - ``filter:`` + ``actions:`` support one flat filter level.  For nested
-  ``if/then/else`` chains or compound logic use ``script:``.
+  ``if/then/else`` chains use ``statements:`` (recommended) or ``script:``.
 - ``version:`` is accepted but not enforced; it is reserved for future
   schema evolution.
 

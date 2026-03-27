@@ -10,6 +10,7 @@
 #
 # Added 2025 by contributors, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+require_plugin imtcp
 export NUMMESSAGES=50
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf

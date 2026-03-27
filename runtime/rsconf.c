@@ -71,7 +71,7 @@
 #include "timezones.h"
 #include "ratelimit.h"
 #ifdef HAVE_LIBYAML
-#include "yamlconf.h"
+    #include "yamlconf.h"
 #endif
 
 extern char *yytext;
@@ -1486,8 +1486,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     /* open the configuration file; route .yaml/.yml to the YAML loader */
     {
         const char *ext = strrchr((const char *)confFile, '.');
-        int is_yaml = (ext != NULL &&
-                       (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+        int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
 #ifdef HAVE_LIBYAML
         if (is_yaml) {
             rsRetVal yr = yamlconf_load((const char *)confFile);
@@ -1506,8 +1505,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
         } else {
 #endif
             r = cnfSetLexFile((char *)confFile);
-            if (r == 0)
-                r = yyparse();
+            if (r == 0) r = yyparse();
 #ifdef HAVE_LIBYAML
         }
 #else
@@ -1515,12 +1513,12 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
             LogError(0, RS_RET_ERR,
                      "YAML config file '%s' requested but rsyslog was built "
                      "without libyaml support (install libyaml-dev and "
-                     "recompile)", confFile);
+                     "recompile)",
+                     confFile);
             r = 1;
         }
 #endif
-        if (r == 0)
-            conf.GetNbrActActions(loadConf, &iNbrActions);
+        if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
     }
 
     /* we run the optimizer even if we have an error, as it may spit out

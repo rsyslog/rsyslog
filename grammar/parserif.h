@@ -23,6 +23,9 @@ int cnfSetLexFile(const char *);
 void parser_errmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);
+/* Returns non-zero when there are config buffers queued for yyparse() to
+ * consume.  Used by rsconf.c to run yyparse() after yamlconf_load() has pushed
+ * synthesised RainerScript script: blocks via cnfAddConfigBuffer(). */
 int cnfHasPendingBuffers(void);
 #ifndef IN_GRAMMAR_Y
 extern char *cnfcurrfn;
@@ -38,5 +41,12 @@ void cnfDoScript(struct cnfstmt *script);
 void cnfDoCfsysline(char *ln);
 void cnfDoBSDTag(char *ln);
 void cnfDoBSDHost(char *ln);
+/* Push a pre-built RainerScript text buffer onto the flex buffer stack so that
+ * yyparse() will process it after the current input is exhausted (LIFO order).
+ * cnfobjname is either the source file name or a descriptive label (e.g. the
+ * ruleset name) used in error messages.
+ * IMPORTANT: str must have two trailing NUL bytes appended (required by
+ * yy_scan_buffer()).  build_ruleset_rainerscript() in yamlconf.c does this.
+ * Ownership of str is transferred; it is freed when the buffer is popped. */
 int cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name);
 #endif

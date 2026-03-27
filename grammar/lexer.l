@@ -497,6 +497,10 @@ static void cnfPrintToken(const char *token)
  * text ("text" can also be replaced by something more intelligent
  * by the caller.
  * The provided string is freed.
+ * IMPORTANT: str must contain two trailing NUL bytes because yy_scan_buffer()
+ * requires them to mark the end of the buffer.  Callers that synthesise
+ * RainerScript text (e.g. yamlconf.c::build_ruleset_rainerscript) must ensure
+ * this before calling cnfAddConfigBuffer().
  */
 int ATTR_NONNULL()
 cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)

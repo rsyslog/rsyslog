@@ -1,10 +1,10 @@
 #!/bin/bash
-# Tests a ruleset with an inline RainerScript script: block in YAML.
-# The script uses an if/then filter expression and a stop statement,
-# verifying that cnfAddConfigBuffer() correctly re-enters the RainerScript
-# lex/parse pipeline from within the YAML loader.
+# Tests the property-filter (":"-prefixed) form of the YAML filter: shortcut.
+# A property filter matching on $msg routes messages that contain "msgnum:"
+# to the output file via the actions: shortcut.
+# Complements yaml-filter-actions.sh which tests PRI filters (e.g. *.*).
 #
-# Added 2025 by contributors, released under ASL 2.0
+# Added 2025, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 export NUMMESSAGES=50
@@ -14,7 +14,7 @@ add_conf '
 include(file="'${RSYSLOG_DYNNAME}'.yaml")
 '
 
-cat > "${RSYSLOG_DYNNAME}.yaml" << YAMLEOF
+cat > "${RSYSLOG_DYNNAME}.yaml" << 'YAMLEOF'
 modules:
   - load: "../plugins/imtcp/.libs/imtcp"
 
@@ -25,13 +25,11 @@ templates:
 
 rulesets:
   - name: main
-    script: |
-      if \$msg contains "msgnum:" then {
-        action(type="omfile" template="outfmt" file="${RSYSLOG_OUT_LOG}")
-      } else {
-        stop
-      }
-      stop
+    filter: ':msg, contains, "msgnum:"'
+    actions:
+      - type: omfile
+        template: outfmt
+        file: "${RSYSLOG_OUT_LOG}"
 YAMLEOF
 sed -i "s|\${RSYSLOG_OUT_LOG}|${RSYSLOG_OUT_LOG}|g" "${RSYSLOG_DYNNAME}.yaml"
 

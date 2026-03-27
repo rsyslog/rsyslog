@@ -59,7 +59,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 #ifdef HAVE_LIBYAML
-#include "yamlconf.h"
+    #include "yamlconf.h"
 #endif
 
 extern int yylineno;
@@ -5767,11 +5767,10 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
             DBGPRINTF("requested to include config file '%s'\n", cfgFile);
             /* Route .yaml / .yml files to the YAML loader */
             const char *ext = strrchr(cfgFile, '.');
-            int is_yaml = (ext != NULL &&
-                           (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+            int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
 #ifdef HAVE_LIBYAML
             if (is_yaml) {
-                yamlconf_load(cfgFile);
+                if (yamlconf_load(cfgFile) != RS_RET_OK) ret = 1;
             } else {
                 cnfSetLexFile(cfgFile);
             }
@@ -5779,7 +5778,9 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
             if (is_yaml) {
                 LogError(0, RS_RET_ERR,
                          "YAML include file '%s' requested but rsyslog was "
-                         "built without libyaml support", cfgFile);
+                         "built without libyaml support",
+                         cfgFile);
+                ret = 1; /* treat as hard failure — config is incomplete */
             } else {
                 cnfSetLexFile(cfgFile);
             }

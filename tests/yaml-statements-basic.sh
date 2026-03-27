@@ -1,20 +1,20 @@
 #!/bin/bash
-# Tests a ruleset with an inline RainerScript script: block in YAML.
-# The script uses an if/then filter expression and a stop statement,
-# verifying that cnfAddConfigBuffer() correctly re-enters the RainerScript
-# lex/parse pipeline from within the YAML loader.
+# Tests the YAML-native statements: block — basic if:/action: form.
+# Demonstrates clean separation: the filter condition is a RainerScript
+# expression string, but the action is expressed as a YAML mapping.
+# Equivalent to yaml-basic.sh but using statements: instead of script:.
 #
-# Added 2025 by contributors, released under ASL 2.0
+# Added 2025, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
-export NUMMESSAGES=50
+export NUMMESSAGES=100
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 include(file="'${RSYSLOG_DYNNAME}'.yaml")
 '
 
-cat > "${RSYSLOG_DYNNAME}.yaml" << YAMLEOF
+cat > "${RSYSLOG_DYNNAME}.yaml" << 'YAMLEOF'
 modules:
   - load: "../plugins/imtcp/.libs/imtcp"
 
@@ -25,13 +25,12 @@ templates:
 
 rulesets:
   - name: main
-    script: |
-      if \$msg contains "msgnum:" then {
-        action(type="omfile" template="outfmt" file="${RSYSLOG_OUT_LOG}")
-      } else {
-        stop
-      }
-      stop
+    statements:
+      - if: '$msg contains "msgnum:"'
+        action:
+          type: omfile
+          template: outfmt
+          file: "${RSYSLOG_OUT_LOG}"
 YAMLEOF
 sed -i "s|\${RSYSLOG_OUT_LOG}|${RSYSLOG_OUT_LOG}|g" "${RSYSLOG_DYNNAME}.yaml"
 
