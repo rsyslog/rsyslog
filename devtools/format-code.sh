@@ -7,10 +7,11 @@
 # It's intended to enforce the canonical code format for the repository.
 #
 # Usage:
-#   ./devtools/format-code-exec.sh [-h]
+#   ./devtools/format-code.sh [-h] [--git-changed]
 #
 # Options:
 #   -h, --help    Display this help message and exit.
+#   --git-changed Format only changed tracked .c/.h files known to Git.
 #
 # Description:
 #   This script performs an in-place reformatting of all C source (.c) and
@@ -30,6 +31,9 @@
 #   parentheses `\( ... \)` to ensure that `clang-format` is executed for
 #   both `.c` and `.h` files as intended.
 #
+#   With '--git-changed', the script limits formatting to changed tracked
+#   .c/.h files reported by Git. If no such files exist, it exits 0.
+#
 #   Before running, ensure 'clang-format-18' is installed on your system.
 #   It is highly recommended to commit your current changes or create a backup
 #   before executing this script, as it modifies files directly.
@@ -46,6 +50,7 @@ set -euo pipefail # Exit on error, unset variables, and pipefail
 
 # --- Configuration ---
 readonly CLANG_FORMAT="clang-format-18"  # Specify the clang-format version to use
+git_changed_only=0
 
 # --- Functions ---
 
@@ -60,6 +65,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help)
       show_help
+      ;;
+    --git-changed)
+      git_changed_only=1
       ;;
     *)
       echo "Error: Unknown option '$1'" >&2
@@ -93,26 +101,47 @@ echo "Note: '$CLANG_FORMAT' only modifies files that deviate from the specified 
 echo ""
 
 # --- Formatting Logic ---
-# Find all .c and .h files recursively and execute clang-format on them.
-# The '{} +' syntax passes multiple filenames to a single clang-format invocation,
-# which is more efficient.
-# The parentheses '\( ... \)' are crucial for correctly grouping the -name conditions.
-if ! find . \( -name "*.c" -o -name "*.h" \) -exec "$CLANG_FORMAT" -i -style=file {} +; then
-  echo "Error: The overall code formatting process failed." >&2
-  echo "Please review the output above for any specific clang-format errors." >&2
-  exit 2
-fi
+if [[ "$git_changed_only" -eq 1 ]]; then
+  if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+    echo "Error: '--git-changed' requires a Git working tree." >&2
+    exit 2
+  fi
 
-# Calculate total files found for summary
-# Update this find command as well to use the correct parentheses for consistency.
-TOTAL_FILES=$(find . \( -name "*.c" -o -name "*.h" \) | wc -l)
+  mapfile -t target_files < <(./devtools/list-git-changed-c-h-files.sh)
+
+  if [[ "${#target_files[@]}" -eq 0 ]]; then
+    echo "No changed .c/.h files detected. Nothing to format."
+    exit 0
+  fi
+
+  if ! "$CLANG_FORMAT" -i -style=file "${target_files[@]}"; then
+    echo "Error: The overall code formatting process failed." >&2
+    echo "Please review the output above for any specific clang-format errors." >&2
+    exit 2
+  fi
+
+  TOTAL_PROCESSED_FILES="${#target_files[@]}"
+else
+  # Find all .c and .h files recursively and execute clang-format on them.
+  # The '{} +' syntax passes multiple filenames to a single clang-format invocation,
+  # which is more efficient.
+  # The parentheses '\( ... \)' are crucial for correctly grouping the -name conditions.
+  if ! find . \( -name "*.c" -o -name "*.h" \) -exec "$CLANG_FORMAT" -i -style=file {} +; then
+    echo "Error: The overall code formatting process failed." >&2
+    echo "Please review the output above for any specific clang-format errors." >&2
+    exit 2
+  fi
+
+  # Calculate total files found for summary
+  # Update this find command as well to use the correct parentheses for consistency.
+  TOTAL_PROCESSED_FILES=$(find . \( -name "*.c" -o -name "*.h" \) | wc -l)
+fi
 
 echo ""
 echo "--- Formatting Summary ---"
-echo "Total .c/.h files found and processed: $TOTAL_FILES"
+echo "Total .c/.h files processed: $TOTAL_PROCESSED_FILES"
 echo "Code formatting completed successfully."
 echo "The number of files actually changed depends on their adherence to the style."
 echo "Please review changes using 'git diff' if in a Git repository."
 
 # --- Script End ---
-
