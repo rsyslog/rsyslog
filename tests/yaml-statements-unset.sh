@@ -68,6 +68,12 @@ wait_shutdown
 seq_check
 # Verify $.scratch was actually cleared by unset: — the pre-unset marker
 # must not appear in the verify file (each line should be empty after unset).
+# Explicitly fail when the file is absent so a missing write cannot produce
+# a false pass (grep exits 2 on read error, which would look like "no match").
+if [ ! -f "${RSYSLOG_DYNNAME}.scratch" ]; then
+    echo "FAIL: verify file '${RSYSLOG_DYNNAME}.scratch' was not created (unset write never ran)"
+    exit 1
+fi
 if grep -q "will be unset" "${RSYSLOG_DYNNAME}.scratch"; then
     echo "FAIL: unset: did not clear \$.scratch (marker 'will be unset' still present)"
     head -3 "${RSYSLOG_DYNNAME}.scratch"
