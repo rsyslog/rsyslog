@@ -446,6 +446,29 @@ wait_rsyslog_startup_pid() {
 	wait_startup_pid $RSYSLOG_PIDBASE$1.pid
 }
 
+# wait until the pid file for rsyslog instance $1 exists and is populated
+wait_rsyslog_instance_pid() {
+	local pidfile="$RSYSLOG_PIDBASE$1.pid"
+	local pid
+
+	while :; do
+		if [ -s "$pidfile" ]; then
+			# pid files may not end with a trailing newline, so shell `read`
+			# can report failure even when it consumed a valid pid.
+			pid=$(cat "$pidfile" 2>/dev/null)
+			if [[ "$pid" =~ ^[0-9]+$ ]]; then
+				break
+			fi
+		fi
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+			printf '%s ABORT! Timeout waiting on valid pid file %s after %d seconds\n' \
+				"$(tb_timestamp)" "$pidfile" $TB_STARTUP_MAX_RUNTIME >&2
+			error_exit 1
+		fi
+		$TESTTOOL_DIR/msleep 100
+	done
+}
+
 # wait for startup of an arbitrary process
 # $1 - pid file name
 # $2 - startup file name (optional, only checked if given)
@@ -1082,7 +1105,8 @@ get_mainqueuesize() {
 
 # get pid of rsyslog instance $1
 getpid() {
-		printf '%s' "$(cat $RSYSLOG_PIDBASE$1.pid)"
+	wait_rsyslog_instance_pid "$1"
+	printf '%s' "$(cat $RSYSLOG_PIDBASE$1.pid)"
 }
 
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
@@ -1382,6 +1406,7 @@ shutdown_when_empty() {
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		error_exit 1
 	fi
+	wait_rsyslog_instance_pid "$1"
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill $(cat $RSYSLOG_PIDBASE$1.pid) # note: we do not wait for the actual termination!
@@ -1390,6 +1415,7 @@ shutdown_when_empty() {
 # shut rsyslogd down without emptying the queue. $2 is the instance.
 shutdown_immediate() {
 	pidfile=$RSYSLOG_PIDBASE${1:-}.pid
+	wait_rsyslog_instance_pid "$1"
 	cp $pidfile $pidfile.save
 	kill $(cat $pidfile)
 }
@@ -1678,6 +1704,7 @@ issue_HUP() {
 	else
 		sleeptime=1000
 	fi
+	wait_rsyslog_instance_pid "$1"
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
 	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
 		$(cat $RSYSLOG_PIDBASE$1.pid)
