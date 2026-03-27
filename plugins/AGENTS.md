@@ -86,6 +86,13 @@ support expectations change.
   provide tests under `tests/` to cover the new behavior.
 - **Documentation**: Every new configuration parameter **must** be documented in
   `doc/source/reference/parameters/` and linked from the module's `.rst` file.
+  Include a YAML example alongside the RainerScript example so operators using
+  either format can understand the parameter.
+- **Config format parity**: New parameters are automatically available in YAML
+  (the YAML frontend uses the `nvlst` key name directly).  However, new
+  *statement types* or *block types* require changes to `runtime/yamlconf.c` as
+  well as the RainerScript grammar.  Consult the `rsyslog_config` skill before
+  touching `grammar/` or adding a new top-level config construct.
 
 ## Testing expectations
 - Prefer module-focused tests in `tests/` named after the module (e.g.

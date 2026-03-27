@@ -18,6 +18,15 @@ agents.
   helper functions (timeouts, Valgrind integration, rsyslogd launch helpers).
 - Prefer harness helpers such as `cmp_exact`, `command_deny`, and
   `require_plugin` over ad-hoc shell to keep diagnostics uniform.
+- **Config format coverage**: When a module parameter or config object is tested
+  via RainerScript, add a companion YAML test (or extend an existing
+  `yaml-<area>-*.sh`) that exercises the same parameter.  Both frontends share
+  the same backend, but bugs can exist in the YAML parser alone.  Name YAML
+  tests `yaml-<area>-<what>.sh` and use a `.yaml` extension for the config
+  fixture in `tests/testsuites/` so the YAML loader is triggered automatically.
+  Register the test in `tests/Makefile.am` under the same module conditionals
+  as its RainerScript counterpart.  See the `rsyslog_config` skill for full
+  conventions.
 - Name Valgrind-enabled wrappers with the `-vg.sh` suffix and toggle Valgrind by
   exporting `USE_VALGRIND` before sourcing the non-`vg` script. Use
   `tests/timereported-utc-vg.sh` as the reference layout: it sources the base
