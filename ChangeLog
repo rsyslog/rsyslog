@@ -1,5 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-26: feat: add YAML as an alternative configuration format
+  rsyslog now accepts .yaml / .yml files as a full alternative to
+  RainerScript configuration.  Whenever a .yaml or .yml file is
+  referenced (e.g. via $IncludeConfig or as the main config), it is
+  routed through the new yamlconf loader instead of the bison/flex
+  parser.  RainerScript and YAML configurations may coexist.
 - 2026-03-25: gtls: check CRL expiration, reject connections with expired CRL
   GnuTLS silently ignores expired CRLs -- it loads them into credentials
   without checking the validity period. This means rsyslog kept accepting
