@@ -126,16 +126,65 @@ parameters:
 
 **templates**
 
+Four template types are supported:
+
+*String template* — the most common type; a format string with ``%PROPERTY%``
+placeholders:
+
 .. code-block:: yaml
 
    templates:
      - name: myFormat
        type: string
        string: "%HOSTNAME% %syslogfacility-text%.%syslogseverity-text% %msg%\n"
-     - name: filePerHost
+     - name: filePerHost     # use with omfile dynafile: filePerHost
        type: string
        string: "/var/log/hosts/%HOSTNAME%.log"
-       options.dyn: "on"
+
+*Subtree template* — serialises a JSON sub-tree of the message object:
+
+.. code-block:: yaml
+
+   templates:
+     - name: jsonApp
+       type: subtree
+       subtree: "$!app"
+
+*List template* — assembles output from an explicit sequence of ``property``
+and ``constant`` items.  Each element maps to a ``property()`` or
+``constant()`` call; all parameters accepted by those RainerScript
+functions can be used:
+
+.. code-block:: yaml
+
+   templates:
+     - name: listFmt
+       type: list
+       elements:
+         - property:
+             name: timestamp
+             dateformat: rfc3339
+         - constant:
+             value: " "
+         - property:
+             name: hostname
+         - constant:
+             value: " "
+         - property:
+             name: msg
+             droplastlf: "on"
+         - constant:
+             value: "\n"
+
+*Plugin template* — delegates formatting to an external string-generator
+plugin (the ``type="plugin"`` form from RainerScript):
+
+.. code-block:: yaml
+
+   templates:
+     - name: myPlugin
+       type: plugin
+       plugin: strgen_addprimary
 
 **rulesets**
 
@@ -200,6 +249,57 @@ logic is expressed in one of three ways:
          }
          stop
 
+**parsers**
+
+Custom parser chains (loaded via ``lmregdups``, ``pmrfc3164``, etc.).
+Each item must contain a ``name`` key and the parser-specific parameters:
+
+.. code-block:: yaml
+
+   parsers:
+     - name: pmrfc3164.default
+       force.tagEndingByColon: "on"
+
+**lookup_tables**
+
+In-memory lookup tables loaded from JSON files.  The ``name`` and
+``filename`` keys are required.
+
+.. code-block:: yaml
+
+   lookup_tables:
+     - name: hostmap
+       filename: "/etc/rsyslog.d/hostmap.json"
+       reloadOnHUP: "on"
+
+**timezones**
+
+Named timezone definitions for use in template date formatting:
+
+.. code-block:: yaml
+
+   timezones:
+     - id: "CET"
+       offset: "+01:00"
+
+**dyn_stats, perctile_stats, ratelimits**
+
+These advanced sections follow the same key=value mapping pattern.
+Refer to the respective :doc:`module documentation <../index>` for
+available parameters.  Example:
+
+.. code-block:: yaml
+
+   dyn_stats:
+     - name: "msg_rate"
+       resetsIntervals: 60
+
+   ratelimits:
+     - name: "input_rl"
+       interval: 5
+       burst: 1000
+
+
 Arrays
 ------
 
@@ -232,6 +332,17 @@ If ``optional`` is ``on`` (or ``yes`` or ``1``) a missing file or empty
 glob result is not an error.  Files with a ``.yaml`` or ``.yml`` extension
 are loaded by the YAML loader; all other files are loaded by the
 RainerScript parser.
+
+.. note::
+   **Include ordering with mixed file types**: within one ``include:``
+   list, ``.yaml`` files are always loaded before ``.conf`` files,
+   regardless of their order in the list.  This is an architectural
+   constraint — YAML sub-files are processed immediately and recursively,
+   while ``.conf`` files are deferred to the RainerScript flex-buffer
+   stack.  If strict ordering between ``.yaml`` and ``.conf`` fragments
+   matters, use separate ``include:`` sections or consolidate to one
+   file type.  Multiple ``.conf`` entries within the same list ARE
+   processed in document order.
 
 .. _yaml_filter_shortcut:
 
@@ -355,29 +466,31 @@ elements and action parameters are expressed as YAML.
 
 **Supported statement types**
 
-+-------------+-----------------------------------------------------------------+
-| Type        | YAML form                                                       |
-+=============+=================================================================+
-| Action      | ``{type: module, param: val, ...}`` — unconditional             |
-+-------------+-----------------------------------------------------------------+
-| If/action   | ``{if: expr, action: {type: ..., ...}, else: [...]}``           |
-+-------------+-----------------------------------------------------------------+
-| If/then     | ``{if: expr, then: [...], else: [...]}``                        |
-+-------------+-----------------------------------------------------------------+
-| Stop        | ``{stop: true}``                                                |
-+-------------+-----------------------------------------------------------------+
-| Continue    | ``{continue: true}``                                            |
-+-------------+-----------------------------------------------------------------+
-| Call        | ``{call: rulesetname}``                                         |
-+-------------+-----------------------------------------------------------------+
-| Set         | ``{set: {var: "$.x", expr: "rainerscript-expression"}}``        |
-+-------------+-----------------------------------------------------------------+
-| Unset       | ``{unset: "$.x"}``                                              |
-+-------------+-----------------------------------------------------------------+
-| call_indirect | ``{call_indirect: "$.varname"}``                              |
-+-------------+-----------------------------------------------------------------+
-| foreach     | ``{foreach: {var: "$.i", in: "$!arr", do: [...]}}``             |
-+-------------+-----------------------------------------------------------------+
++----------------------+-------------------------------------------------------------+
+| Type                 | YAML form                                                   |
++======================+=============================================================+
+| Action               | ``{type: module, param: val, ...}`` — unconditional         |
++----------------------+-------------------------------------------------------------+
+| If/action            | ``{if: expr, action: {type: ..., ...}, else: [...]}``       |
++----------------------+-------------------------------------------------------------+
+| If/then              | ``{if: expr, then: [...], else: [...]}``                    |
++----------------------+-------------------------------------------------------------+
+| Stop                 | ``{stop: true}``                                            |
++----------------------+-------------------------------------------------------------+
+| Continue             | ``{continue: true}``                                        |
++----------------------+-------------------------------------------------------------+
+| Call                 | ``{call: rulesetname}``                                     |
++----------------------+-------------------------------------------------------------+
+| Set                  | ``{set: {var: "$.x", expr: "rainerscript-expression"}}``   |
++----------------------+-------------------------------------------------------------+
+| Unset                | ``{unset: "$.x"}``                                          |
++----------------------+-------------------------------------------------------------+
+| call_indirect        | ``{call_indirect: "$.varname"}``                            |
++----------------------+-------------------------------------------------------------+
+| foreach              | ``{foreach: {var: "$.i", in: "$!arr", do: [...]}}``         |
++----------------------+-------------------------------------------------------------+
+| reload_lookup_table  | ``{reload_lookup_table: {table: name, stub_value: val}}``   |
++----------------------+-------------------------------------------------------------+
 
 ``foreach`` iterates over a JSON array.  The ``do:`` value is a sequence of
 statement items using the same syntax as ``statements:``.  Example:
@@ -432,9 +545,12 @@ be listed separately under an ``inputs:`` or ``actions:`` section.
    For simple routing (one filter, one or more actions, no branching)
    use the ``filter:`` + ``actions:`` shortcut described in
    `Structured Filter Shortcut`_.
-   For conditional routing, variable assignments, ``call``, and ``stop``
-   use the ``statements:`` block described in `YAML-Native Statements`_.
-   Reserve ``script:`` for ``foreach`` loops and advanced RainerScript.
+   For conditional routing, variable assignments, ``call``, ``foreach``,
+   ``stop``, and ``reload_lookup_table`` use the ``statements:`` block
+   described in `YAML-Native Statements`_.  **Recommended for most configs.**
+   Reserve ``script:`` only for advanced RainerScript that cannot be
+   expressed through ``statements:``, such as complex nested legacy
+   priority/property filters or inline ``call_direct`` patterns.
 
 Complete Example
 ----------------
@@ -528,6 +644,9 @@ Limitations (current implementation)
   ``if/then/else`` chains use ``statements:`` (recommended) or ``script:``.
 - ``version:`` is accepted but not enforced; it is reserved for future
   schema evolution.
+- Within a single ``include:`` list, ``.yaml`` files are always processed
+  before ``.conf`` files regardless of document order (see
+  `Including Other Files`_).
 
 See Also
 --------
