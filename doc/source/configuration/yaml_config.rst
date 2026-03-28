@@ -72,7 +72,11 @@ keys correspond to rsyslog configuration object types:
    timezones: [ ... ]
 
 All section names are case-sensitive.  Unknown top-level keys are logged
-as errors and ignored.
+as errors and ignored.  Each top-level key **must appear at most once**;
+duplicate keys are undefined behaviour in the YAML specification and
+unsupported by rsyslog — a warning is logged if a duplicate is detected.
+To specify multiple items of the same type use a sequence under one key,
+or use ``include:`` for file-level composition.
 
 Singleton Sections
 ------------------
