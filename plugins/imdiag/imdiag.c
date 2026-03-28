@@ -64,7 +64,7 @@
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
-
+MODULE_CNFNAME("imdiag")
 /* static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
@@ -97,8 +97,21 @@ static pthread_t timeoutGuard_thrd; /* thread ID for timeoutGuard thread (if act
 
 /* config settings */
 struct modConfData_s {
-    EMPTY_STRUCT;
+    rsconf_t *pConf; /* our overall config object */
+    uchar *pszLstnPortFileName; /* port file name (module-level param) */
+    int abortTimeout; /* abort timeout in seconds, -1 = disabled */
+    int configSetViaV2Method; /* 1 if module() was used to configure */
 };
+
+static modConfData_t *loadModConf = NULL; /* modConf ptr for current load process */
+
+/* module-level parameters (module(...)) */
+static struct cnfparamdescr modpdescr[] = {{"listenportfilename", eCmdHdlrString, 0}, {"aborttimeout", eCmdHdlrInt, 0}};
+static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
+
+/* input-level parameters (input(...)) */
+static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQUIRED}};
+static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 static flowControl_t injectmsgDelayMode = eFLOWCTL_NO_DELAY;
 static int iTCPSessMax = 20; /* max number of sessions */
@@ -629,7 +642,11 @@ static rsRetVal addTCPListener(void __attribute__((unused)) * pVal, uchar *pNewV
     /* we support octect-counted frame (constant 1 below) */
     cnf_params->pszPort = pNewVal;
     cnf_params->bSuppOctetFram = 1;
-    CHKmalloc(cnf_params->pszLstnPortFileName = (const uchar *)strdup((const char *)pszLstnPortFileName));
+    if (pszLstnPortFileName != NULL) {
+        CHKmalloc(cnf_params->pszLstnPortFileName = ustrdup(pszLstnPortFileName));
+    } else {
+        cnf_params->pszLstnPortFileName = NULL;
+    }
     tcpsrv.configureTCPListen(pOurTcpsrv, cnf_params);
     cnf_params = NULL;
 
@@ -713,31 +730,112 @@ finalize_it:
 }
 
 
-#if 0 /* can be used to integrate into new config system */
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad;
+    CODESTARTbeginCnfLoad;
+    loadModConf = pModConf;
+    pModConf->pConf = pConf;
+    pModConf->pszLstnPortFileName = NULL;
+    pModConf->abortTimeout = -1;
+    pModConf->configSetViaV2Method = 0;
 ENDbeginCnfLoad
 
 
+BEGINsetModCnf
+    struct cnfparamvals *pvals = NULL;
+    int i;
+    CODESTARTsetModCnf;
+    pvals = nvlstGetParams(lst, &modpblk, NULL);
+    if (pvals == NULL) {
+        /* No module-level parameters provided — valid when imdiag is configured
+         * entirely via legacy $IMDiag* directives. */
+        FINALIZE;
+    }
+    if (Debug) {
+        dbgprintf("module (global) param blk for imdiag:\n");
+        cnfparamsPrint(&modpblk, pvals);
+    }
+    for (i = 0; i < modpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(modpblk.descr[i].name, "listenportfilename")) {
+            CHKmalloc(loadModConf->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "aborttimeout")) {
+            loadModConf->abortTimeout = (int)pvals[i].val.d.n;
+        } else {
+            dbgprintf("imdiag: program error, non-handled param '%s' in setModCnf\n", modpblk.descr[i].name);
+        }
+    }
+    loadModConf->configSetViaV2Method = 1;
+finalize_it:
+    if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
+
 BEGINendCnfLoad
-CODESTARTendCnfLoad;
+    CODESTARTendCnfLoad;
+    /* apply module-level params to globals only if not already set by legacy directives */
+    if (loadModConf->pszLstnPortFileName != NULL && pszLstnPortFileName == NULL) {
+        pszLstnPortFileName = loadModConf->pszLstnPortFileName;
+        loadModConf->pszLstnPortFileName = NULL; /* ownership transferred to global */
+    }
+    if (loadModConf->abortTimeout != -1 && abortTimeout == -1) {
+        CHKiRet(setAbortTimeout(NULL, loadModConf->abortTimeout));
+    }
+finalize_it:
+    loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf;
+    CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf;
+    CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf;
+    CODESTARTfreeCnf;
+    free(pModConf->pszLstnPortFileName);
 ENDfreeCnf
-#endif
+
+
+BEGINnewInpInst
+    struct cnfparamvals *pvals = NULL;
+    int i;
+    uchar *port = NULL;
+    CODESTARTnewInpInst;
+    DBGPRINTF("newInpInst (imdiag)\n");
+    pvals = nvlstGetParams(lst, &inppblk, NULL);
+    if (pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "imdiag: required parameters are missing\n");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+    if (Debug) {
+        dbgprintf("input param blk in imdiag:\n");
+        cnfparamsPrint(&inppblk, pvals);
+    }
+    for (i = 0; i < inppblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(inppblk.descr[i].name, "port")) {
+            CHKmalloc(port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else {
+            dbgprintf("imdiag: program error, non-handled param '%s' in newInpInst\n", inppblk.descr[i].name);
+        }
+    }
+    /* apply module-level listenportfilename to global before addTCPListener uses it */
+    if (loadModConf != NULL && loadModConf->pszLstnPortFileName != NULL && pszLstnPortFileName == NULL) {
+        pszLstnPortFileName = loadModConf->pszLstnPortFileName;
+        loadModConf->pszLstnPortFileName = NULL; /* ownership transferred */
+    }
+    CHKiRet(addTCPListener(NULL, port));
+    port = NULL; /* ownership transferred to tcpsrv */
+finalize_it:
+    free(port);
+    CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
+ENDnewInpInst
+
 
 /* This function is called to gather input.
  */
@@ -824,6 +922,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     free(pszInputName);
     free(pszLstnPortFileName);
     pszLstnPortFileName = NULL;
+    abortTimeout = -1;
     if (pszStrmDrvrAuthMode != NULL) {
         free(pszStrmDrvrAuthMode);
         pszStrmDrvrAuthMode = NULL;
@@ -841,6 +940,9 @@ ENDisCompatibleWithFeature
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
     CODEqueryEtryPt_STD_IMOD_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 

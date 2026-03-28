@@ -558,6 +558,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 TESTS_LIBYAML = \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
+	yaml-basic-yamlonly.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
 	yaml-error.sh \

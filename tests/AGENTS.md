@@ -156,7 +156,69 @@ This helps identify:
 - Whether the module parsed the message correctly
 - If fields are populated as expected
 
+## YAML-only test mode
+
+`generate_conf --yaml-only` creates a pure-YAML preamble (no RainerScript preamble)
+that is used as the rsyslogd startup configuration directly.  Use it when a test
+must validate YAML-loader behaviour or when no RainerScript is desired.
+
+### How it works
+- `generate_conf --yaml-only [instance]` writes `${TESTCONF_NM}[instance].yaml`
+  containing `version: 2`, `global:`, `mainqueue:`, and `modules:` (imdiag).
+  The `modules:` sequence is intentionally left open — no `inputs:` section is
+  written by the preamble.
+- Tests append additional module entries as **sequence continuation items**
+  (2-space indent, `  - load: ...`, no top-level `modules:` key) so YAML parsers
+  see a single, well-formed `modules:` list.  The sequence closes naturally when
+  the test adds a zero-indent key such as `inputs:`.
+- `add_yaml_conf 'fragment' [instance]` appends arbitrary YAML to the same file.
+- `add_yaml_imdiag_input [instance]` appends the imdiag input entry
+  (`  - type: imdiag / port: "0"`) inside an already-opened `inputs:` block.
+  **Tests must call this** (inside their `inputs:` section) so that startup
+  detection via the imdiag port file works correctly.
+- `startup_common` detects `RSYSLOG_YAML_ONLY=1` and passes the `.yaml` file
+  to rsyslogd instead of the usual `.conf` file.
+
+### Limitations
+The following testbench features are **not available** in yaml-only mode:
+
+| Feature | Reason | Workaround |
+|---------|--------|-----------|
+| `$MainmsgQueueTimeout*` directives | Legacy sysklogd syntax; no YAML equivalent at runtime via `add_yaml_conf` | Set `RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT` / `RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE` env vars *before* calling `generate_conf --yaml-only`; they are written into the `mainqueue:` section of the preamble |
+| `.started` marker file | The syslogtag-based filter rule requires RainerScript/legacy syntax | `wait_startup` requires the imdiag port file (not just the PID file) in yaml-only mode, confirming config loaded and inputs are active; it fast-fails if rsyslog exits before the port file appears |
+
+### Example test structure
+```bash
+. ${srcdir:=.}/diag.sh init
+require_plugin imtcp
+export NUMMESSAGES=100
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
+generate_conf --yaml-only
+# Continue the modules: sequence opened by the preamble (2-space indent, no modules: key)
+add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
+add_yaml_conf ''
+add_yaml_conf 'inputs:'
+add_yaml_imdiag_input           # required for startup detection
+add_yaml_conf "  - type: imtcp"
+add_yaml_conf "    port: \"0\""
+add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""
+add_yaml_conf "    ruleset: main"
+add_yaml_conf 'rulesets:'
+add_yaml_conf '  - name: main'
+add_yaml_conf '    script: |'
+add_yaml_conf "      action(type=\"omfile\" file=\"${RSYSLOG_OUT_LOG}\")"
+startup
+# ... test body ...
+exit_test
+```
+
+### Naming and registration
+- Name yaml-only tests `yaml-<area>-yamlonly.sh` (or append `-yamlonly` to an
+  existing test name) so they are easy to find.
+- Register them in `tests/Makefile.am` under `TESTS_LIBYAML`.
+
 ## Coordination
+
 - When adding tests for a plugin or runtime subsystem, mention them in the
   component’s `AGENTS.md` so future authors know smoke coverage exists.
 - Update `KNOWN_ISSUES` or module metadata if a test encodes a known bug or a
