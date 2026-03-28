@@ -3,11 +3,26 @@
 YAML Configuration Format
 =========================
 
+.. meta::
+   :description: rsyslog YAML configuration format reference: schema, activation, ruleset scripting, templates, and relationship to RainerScript.
+   :keywords: yaml, configuration, rsyslog, rainerscript, yamlconf, yaml config
+
+.. summary-start
+
+rsyslog supports YAML as an alternative configuration syntax for users comfortable with YAML. Every YAML key maps directly to the equivalent RainerScript parameter.
+
+.. summary-end
+
 rsyslog supports configuration via YAML files as an alternative to
-:doc:`RainerScript <../rainerscript/index>`.  The two formats are
-equivalent: every YAML configuration key maps directly to a RainerScript
-parameter of the same name, so all per-module documentation remains
-applicable unchanged.
+RainerScript.  It is one of the :doc:`supported configuration formats
+<conf_formats>` and is a good choice if you are more comfortable with
+YAML syntax than with RainerScript.
+
+The two formats are equivalent: every YAML configuration key maps
+directly to a RainerScript parameter of the same name, so all per-module
+documentation remains applicable unchanged.  You can also mix formats:
+a YAML main config may include RainerScript ``.conf`` fragments and vice
+versa.
 
 Activation
 ----------
@@ -666,6 +681,7 @@ Limitations (current implementation)
 See Also
 --------
 
+- :doc:`Configuration formats overview <conf_formats>`
 - :doc:`RainerScript reference <../rainerscript/index>`
 - :doc:`Basic configuration structure <basic_structure>`
 - :doc:`Converting legacy config <converting_to_new_format>`
