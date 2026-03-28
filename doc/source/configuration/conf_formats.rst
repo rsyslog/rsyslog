@@ -24,10 +24,10 @@ different configuration formats:
    recommended format for all non-trivial use cases. First available in rsyslog v6,
    it handles advanced filtering, forwarding, queueing, and custom actions.
 
--  **YAML format** - an alternative syntax for users who are more comfortable with
-   YAML than with RainerScript.  Every YAML key maps directly to the equivalent
+-  |FmtYamlName| - an alternative syntax for users more comfortable with
+   YAML than with RainerScript. Every YAML key maps directly to the equivalent
    RainerScript parameter, so both formats share the same feature set.
-   See :doc:`yaml_config` for details.
+   See :doc:`yaml_config` for full reference.
 
 -  |FmtObsoleteName| - previously known as the ``legacy`` format. This format is
    **obsolete** and must not be used in new configurations.
@@ -90,7 +90,7 @@ Example - Advanced Format
 Deprecated Format
 ~~~~~~~~~~~~~~~~~
 
-**Do not use |FmtObsoleteName| format. It is obsolete and will make your
+Do not use |FmtObsoleteName| format. **It is obsolete and will make your
 life difficult.** It exists solely for backward compatibility with very
 old configurations.
 
