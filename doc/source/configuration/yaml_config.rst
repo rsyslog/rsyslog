@@ -41,9 +41,16 @@ therefore valid to mix formats:  a YAML main config may include ``.conf``
 RainerScript fragments and vice versa.
 
 .. note::
-   YAML configuration support requires rsyslog to have been compiled with
-   libyaml (``yaml-0.1``).  If libyaml is absent at build time the daemon
-   will print an error and refuse to load a ``.yaml`` / ``.yml`` file.
+   YAML configuration support requires **rsyslog 8.2604.0 or later**.
+   Older distribution packages do not include this feature.  Up-to-date
+   packages for many platforms are available via `www.rsyslog.com
+   <https://www.rsyslog.com>`_.  The easiest option is often a
+   containerized build: the rsyslog team publishes ready-to-use images
+   documented in :doc:`../containers/index`.
+
+   In addition, rsyslog must have been compiled with libyaml
+   (``yaml-0.1``).  If libyaml is absent at build time the daemon will
+   print an error and refuse to load a ``.yaml`` / ``.yml`` file.
    Install the ``libyaml-dev`` (Debian/Ubuntu) or ``libyaml-devel``
    (RHEL/Fedora) package before compiling.
 
