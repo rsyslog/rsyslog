@@ -3,11 +3,26 @@
 YAML Configuration Format
 =========================
 
+.. meta::
+   :description: rsyslog YAML configuration format reference: schema, activation, ruleset scripting, templates, and relationship to RainerScript.
+   :keywords: yaml, configuration, rsyslog, rainerscript, yamlconf, yaml config
+
+.. summary-start
+
+rsyslog supports YAML as an alternative configuration syntax for users comfortable with YAML. Every YAML key maps directly to the equivalent RainerScript parameter.
+
+.. summary-end
+
 rsyslog supports configuration via YAML files as an alternative to
-:doc:`RainerScript <../rainerscript/index>`.  The two formats are
-equivalent: every YAML configuration key maps directly to a RainerScript
-parameter of the same name, so all per-module documentation remains
-applicable unchanged.
+RainerScript.  It is one of the :doc:`supported configuration formats
+<conf_formats>` and is a good choice if you are more comfortable with
+YAML syntax than with RainerScript.
+
+The two formats are equivalent: every YAML configuration key maps
+directly to a RainerScript parameter of the same name, so all per-module
+documentation remains applicable unchanged.  You can also mix formats:
+a YAML main config may include RainerScript ``.conf`` fragments and vice
+versa.
 
 Activation
 ----------
@@ -57,7 +72,11 @@ keys correspond to rsyslog configuration object types:
    timezones: [ ... ]
 
 All section names are case-sensitive.  Unknown top-level keys are logged
-as errors and ignored.
+as errors and ignored.  Each top-level key **must appear at most once**;
+duplicate keys are undefined behaviour in the YAML specification and
+unsupported by rsyslog — a warning is logged if a duplicate is detected.
+To specify multiple items of the same type use a sequence under one key,
+or use ``include:`` for file-level composition.
 
 Singleton Sections
 ------------------
@@ -623,8 +642,20 @@ a typical ``/etc/rsyslog.conf``:
 Relationship to RainerScript
 -----------------------------
 
-YAML configuration is a thin front-end over the same internal machinery
-that RainerScript uses.  In particular:
+YAML configuration is a thin translation front-end over the same internal
+machinery that RainerScript uses.  The YAML parser (``runtime/yamlconf.c``)
+converts each YAML block into ``cnfobj`` + ``nvlst`` structures — the identical
+intermediate representation that the RainerScript lex/bison grammar produces —
+and hands them to the shared ``cnfDoObj()`` dispatcher.  There is no independent
+YAML runtime; the shared back-end handles all validation, module initialisation,
+and execution.
+
+This approach deliberately minimises the change surface: the YAML-specific code
+is confined to one file with no runtime presence after configuration loading.
+It may be refactored in the future, but only when concrete requirements justify
+the additional maintenance surface.
+
+In practical terms:
 
 - Parameter names are identical; all per-module parameter documentation
   applies without change.
@@ -634,6 +665,9 @@ that RainerScript uses.  In particular:
   regardless of which format was used.
 - Template, ruleset, and lookup-table names are shared; a YAML-defined
   ruleset can be referenced from a RainerScript ``action()``.
+
+For a detailed description of the pipeline see
+:doc:`yaml_config_architecture <../development/yaml_config_architecture>`.
 
 Limitations (current implementation)
 --------------------------------------
@@ -651,6 +685,7 @@ Limitations (current implementation)
 See Also
 --------
 
+- :doc:`Configuration formats overview <conf_formats>`
 - :doc:`RainerScript reference <../rainerscript/index>`
 - :doc:`Basic configuration structure <basic_structure>`
 - :doc:`Converting legacy config <converting_to_new_format>`

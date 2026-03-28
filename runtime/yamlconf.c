@@ -1931,6 +1931,9 @@ rsRetVal yamlconf_load(const char *fname) {
     yaml_event_t ev;
     int parserInit = 0;
     FILE *fh = NULL;
+    #define YAMLCONF_MAX_TOPKEYS 32
+    char *seen_keys[YAMLCONF_MAX_TOPKEYS];
+    int seen_count = 0;
     DEFiRet;
 
     fh = fopen(fname, "r");
@@ -1956,6 +1959,10 @@ rsRetVal yamlconf_load(const char *fname) {
     CHKiRet(expect_event(&parser, &ev, YAML_MAPPING_START_EVENT, "top-level mapping", fname));
     yaml_event_delete(&ev);
 
+    /* Track seen top-level keys to warn on duplicates.  Duplicate keys are
+     * undefined behaviour in the YAML spec and unsupported by rsyslog; use
+     * sequences for multiple items or include: for file-level composition. */
+
     /* Walk the top-level key/value pairs */
     while (1) {
         CHKiRet(next_event(&parser, &ev, fname));
@@ -1974,11 +1981,30 @@ rsRetVal yamlconf_load(const char *fname) {
         yaml_event_delete(&ev);
         if (topkey == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
+        /* Warn on duplicate top-level key. */
+        for (int ki = 0; ki < seen_count; ++ki) {
+            if (!strcmp(seen_keys[ki], topkey)) {
+                LogError(0, RS_RET_CONF_PARSE_ERROR,
+                         "yamlconf: %s: duplicate top-level key '%s' - "
+                         "this is unsupported; use sequences for multiple items "
+                         "or include: for file-level composition",
+                         fname, topkey);
+                break;
+            }
+        }
+        int topkey_owned = 0; /* 1 if seen_keys owns topkey, 0 if we must free it */
+        if (seen_count < YAMLCONF_MAX_TOPKEYS) {
+            seen_keys[seen_count++] = topkey; /* ownership transferred to seen_keys */
+            topkey_owned = 1;
+        }
+        /* else: array full (>32 distinct top-level keys — highly unusual);
+         * duplicate detection skipped for this key; topkey freed below. */
+
         /* Consume the opening event of the value node before dispatching */
         yaml_event_t vev;
         rsRetVal vret = next_event(&parser, &vev, fname);
         if (vret != RS_RET_OK) {
-            free(topkey);
+            if (!topkey_owned) free(topkey);
             ABORT_FINALIZE(vret);
         }
 
@@ -1990,7 +2016,7 @@ rsRetVal yamlconf_load(const char *fname) {
             vev.type != YAML_SCALAR_EVENT) {
             LogError(0, RS_RET_CONF_PARSE_ERROR, "yamlconf: %s: unexpected value type for key '%s'", fname, topkey);
             yaml_event_delete(&vev);
-            free(topkey);
+            if (!topkey_owned) free(topkey);
             ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
         }
 
@@ -2007,7 +2033,7 @@ rsRetVal yamlconf_load(const char *fname) {
                 /* non-fatal */
             }
             yaml_event_delete(&vev);
-            free(topkey);
+            if (!topkey_owned) free(topkey);
             continue;
         }
 
@@ -2015,11 +2041,12 @@ rsRetVal yamlconf_load(const char *fname) {
         /* process_top_level() will now call the right parser which will consume
          * the rest of the value node (up to and including its END event). */
         rsRetVal pret = process_top_level(&parser, topkey, fname);
-        free(topkey);
+        if (!topkey_owned) free(topkey);
         if (pret != RS_RET_OK) ABORT_FINALIZE(pret);
     }
 
 finalize_it:
+    for (int ki = 0; ki < seen_count; ++ki) free(seen_keys[ki]);
     if (parserInit) yaml_parser_delete(&parser);
     if (fh) fclose(fh);
     RETiRet;

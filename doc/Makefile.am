@@ -317,6 +317,7 @@ EXTRA_DIST = \
     source/development/coding_practices/externalized_helper_contracts.rst \
     source/development/config_data_model.rst \
     source/development/debugging.rst \
+    source/development/design_decisions.rst \
     source/development/dev_action_threads.rst \
     source/development/dev_codestyle.rst \
     source/development/dev_oplugins.rst \
@@ -328,6 +329,7 @@ EXTRA_DIST = \
     source/development/generic_design.rst \
     source/development/index.rst \
     source/development/internal_tooling.rst \
+    source/development/yaml_config_architecture.rst \
     source/development/queueWorkerLogic.jpg \
     source/direct_queue0.png \
     source/direct_queue1.png \
