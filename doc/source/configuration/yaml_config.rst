@@ -648,7 +648,7 @@ In practical terms:
   ruleset can be referenced from a RainerScript ``action()``.
 
 For a detailed description of the pipeline see
-:doc:`../development/yaml_config_architecture`.
+:doc:`yaml_config_architecture <../development/yaml_config_architecture>`.
 
 Limitations (current implementation)
 --------------------------------------

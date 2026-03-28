@@ -328,6 +328,7 @@ EXTRA_DIST = \
     source/development/generic_design.rst \
     source/development/index.rst \
     source/development/internal_tooling.rst \
+    source/development/yaml_config_architecture.rst \
     source/development/queueWorkerLogic.jpg \
     source/direct_queue0.png \
     source/direct_queue1.png \
