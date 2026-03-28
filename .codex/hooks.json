@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/env bash \"$(git rev-parse --show-toplevel)/.codex/pre_commit_format_gate.sh\"",
+            "statusMessage": "Running pre-commit format gate"
+          }
+        ]
+      }
+    ]
+  }
+}

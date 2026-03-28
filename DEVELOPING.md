@@ -49,6 +49,7 @@ It captures the v8 worker model and locking rules that module code must follow.
 
 ## Coding style
 * US-ASCII, subject ≤ 65 chars (aim 62), see `COMMENTING_STYLE.md` and `CONTRIBUTING.md`.
+* Codex users: this repository includes repo-local setup in `.codex/`. If the repo is trusted, Codex loads `.codex/config.toml` and runs the pre-commit formatting hook described in `.codex/README.md`.
 
 ## Safe starter tasks for agents
 * Add a **“Concurrency & Locking”** comment block at the top of output modules.
