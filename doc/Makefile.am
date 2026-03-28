@@ -317,6 +317,7 @@ EXTRA_DIST = \
     source/development/coding_practices/externalized_helper_contracts.rst \
     source/development/config_data_model.rst \
     source/development/debugging.rst \
+    source/development/design_decisions.rst \
     source/development/dev_action_threads.rst \
     source/development/dev_codestyle.rst \
     source/development/dev_oplugins.rst \
