@@ -245,7 +245,62 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
     }
 
 
-def list_tree(ref: str, path: str) -> list[str]:
+def build_doc_xref_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
+    # Scan changed RST files for :doc: cross-references and verify each target
+    # is registered in doc/Makefile.am.  A reference that resolves to an
+    # unregistered file will cause a Sphinx "unknown document" warning (which CI
+    # treats as an error) but is invisible to the EXTRA_DIST check above.
+    doc_makefile = (ROOT_DIR / "doc" / "Makefile.am").read_text(encoding="utf-8")
+    doc_ref_re = re.compile(r":doc:`(?:[^`<]+\s*<)?([^`>]+)>?`")
+
+    changed_docs = [
+        str(entry.get("path", ""))
+        for entry in name_status
+        if str(entry.get("path", "")).startswith("doc/source/") and str(entry.get("path", "")).endswith(".rst")
+        and not str(entry.get("status", "")).startswith("D")
+    ]
+
+    broken_refs: list[dict[str, object]] = []
+    relevant_paths = list(changed_docs)
+
+    for doc_path in changed_docs:
+        try:
+            content = read_file_at_ref(head, doc_path)
+        except Exception:
+            continue
+        src_dir = Path(doc_path).parent  # e.g. doc/source/development
+        for ref_target in doc_ref_re.findall(content):
+            ref_target = ref_target.strip()
+            # Resolve relative to the source file's directory inside doc/source/
+            if ref_target.startswith("/"):
+                resolved = Path("doc/source") / ref_target.lstrip("/")
+            else:
+                resolved = src_dir / ref_target
+            # Normalize away any ../ components so the path can be matched
+            # against doc/Makefile.am entries (stored as source/.../.../file.rst)
+            rst_path = Path(os.path.normpath(str(resolved))).with_suffix(".rst")
+            # Normalise to doc/-relative string for Makefile.am lookup
+            try:
+                rel = str(rst_path.relative_to("doc"))
+            except ValueError:
+                rel = str(rst_path)
+            if rel not in doc_makefile:
+                broken_refs.append({"file": doc_path, "ref": ref_target, "resolved": rel})
+
+    applicable = bool(changed_docs)
+    return {
+        "id": "doc-xref-sync",
+        "title": "Documentation cross-reference sync",
+        "applicable": applicable,
+        "facts": {
+            "changed_docs": changed_docs,
+            "broken_refs": broken_refs,
+            "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
+        },
+    }
+
+
+
     output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
     return [line for line in output.splitlines() if line]
 
@@ -432,6 +487,7 @@ def main() -> int:
     checks = [
         build_tests_check(name_status, diff_base, head),
         build_doc_check(name_status, diff_base, head),
+        build_doc_xref_check(name_status, diff_base, head),
         module_check,
         build_module_build_wiring_check(module_check, diff_base, head),
         build_parameter_doc_check(name_status, diff_base, head),

@@ -126,7 +126,47 @@ def evaluate_doc_dist_sync(check: dict[str, object]) -> dict[str, object]:
     }
 
 
-def evaluate_module_onboarding(check: dict[str, object]) -> dict[str, object]:
+def evaluate_doc_xref_sync(check: dict[str, object]) -> dict[str, object]:
+    # Broken :doc: cross-references cause Sphinx build failures (CI treats
+    # warnings as errors), so this rule is fully blocking.
+    facts = check["facts"]
+    broken_refs = facts["broken_refs"]
+    issues = [
+        build_issue(
+            ref["file"],
+            f":doc:`{ref['ref']}` resolves to '{ref['resolved']}' which is not registered in doc/Makefile.am.",
+        )
+        for ref in broken_refs
+    ]
+
+    if issues:
+        return {
+            "id": check["id"],
+            "status": "fail",
+            "confidence": "high",
+            "reason": "One or more :doc: cross-references point to unregistered or missing RST files.",
+            "issues": issues,
+        }
+
+    if facts["changed_docs"]:
+        return {
+            "id": check["id"],
+            "status": "pass",
+            "confidence": "high",
+            "reason": "All :doc: cross-references in changed RST files resolve to registered targets.",
+            "issues": [],
+        }
+
+    return {
+        "id": check["id"],
+        "status": "not_applicable",
+        "confidence": "low",
+        "reason": "Check not applicable.",
+        "issues": [],
+    }
+
+
+
     # Missing metadata is a hard policy failure; missing docs stay advisory
     # until rsyslog has a stricter deterministic doc coverage rule.
     facts = check["facts"]
@@ -289,6 +329,8 @@ def evaluate_check(check: dict[str, object]) -> dict[str, object]:
         return evaluate_tests_registration(check)
     if check["id"] == "doc-dist-sync":
         return evaluate_doc_dist_sync(check)
+    if check["id"] == "doc-xref-sync":
+        return evaluate_doc_xref_sync(check)
     if check["id"] == "module-onboarding":
         return evaluate_module_onboarding(check)
     if check["id"] == "module-build-wiring":
