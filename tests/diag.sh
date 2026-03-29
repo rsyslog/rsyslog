@@ -940,6 +940,11 @@ wait_startup() {
 	local instance=$1
 	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
 	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
+	# Per-startup deadline: each rsyslog instance gets TB_STARTUP_MAX_RUNTIME
+	# seconds from the moment wait_startup() is called.  Using TB_STARTTEST
+	# (global test start) would exhaust the budget in tests that call startup()
+	# multiple times with message-processing phases in between.
+	local startup_deadline=$(( $(date +%s) + TB_STARTUP_MAX_RUNTIME ))
 	while :; do
 		if [ -s "$imdiag_port_file" ]; then
 			# port file seen — quick liveness check before trusting it
@@ -954,8 +959,8 @@ wait_startup() {
 			printf '%s ABORT! rsyslog exited during startup (config error?)\n' "$(tb_timestamp)"
 			error_exit 1 stacktrace
 		fi
-		# timeout check
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+		# per-startup timeout check
+		if [ $(date +%s) -gt $startup_deadline ]; then
 			[ -s "$imdiag_port_file" ] && break
 			printf '%s ABORT! Timeout waiting for imdiag port file (%s) after %d seconds\n' \
 				"$(tb_timestamp)" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
