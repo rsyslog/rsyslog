@@ -1866,7 +1866,7 @@ static rsRetVal process_top_level(yaml_parser_t *parser, const char *key, const 
         CHKiRet(parse_singleton_obj(parser, CNFOBJ_GLOBAL, fname));
     } else if (!strcmp(key, "mainqueue") || !strcmp(key, "main_queue")) {
         CHKiRet(parse_singleton_obj(parser, CNFOBJ_MAINQ, fname));
-    } else if (!strcmp(key, "modules")) {
+    } else if (!strcmp(key, "modules") || !strcmp(key, "testbench_modules")) {
         CHKiRet(parse_obj_sequence(parser, CNFOBJ_MODULE, fname));
     } else if (!strcmp(key, "inputs")) {
         CHKiRet(parse_obj_sequence(parser, CNFOBJ_INPUT, fname));

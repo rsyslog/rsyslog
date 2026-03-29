@@ -285,6 +285,10 @@ test_status() {
 
 setvar_RS_HOSTNAME() {
 	printf '### Obtaining HOSTNAME (prerequisite, not actual test) ###\n'
+	# This helper uses legacy RainerScript $template syntax to capture the
+	# hostname; always run it in RS mode regardless of RSYSLOG_YAML_ONLY.
+	local _saved_yaml_only="${RSYSLOG_YAML_ONLY}"
+	export RSYSLOG_YAML_ONLY=0
 	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
@@ -300,26 +304,35 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
+	export RSYSLOG_YAML_ONLY="${_saved_yaml_only}"
 }
 
 
 # begin a new testconfig
 #	2018-09-07:	Incremented inputs.timeout.shutdown to 60000 because kafka tests may not be
 #			finished under stress otherwise
-# $1 is the instance id, if given
+# $1 is the instance id, if given (or --yaml-only as first arg; see below)
+#
+# Queue timeout settings ($MainmsgQueueTimeoutEnqueue, $MainmsgQueueTimeoutShutdown,
+# inputs.timeout.shutdown and default.action.queue.*) are configured via imdiag
+# module parameters in the config preamble (module(load="imdiag" ...)).  This avoids
+# post-startup diagtalker round-trips and works identically for RainerScript and
+# YAML-only modes.  Tests that need a non-default value must set the relevant
+# RSTB_* variable before calling generate_conf.
+#
+# Startup detection relies on the imdiag port file in both RainerScript and
+# yaml-only modes; no .started marker file is used.
 generate_conf() {
-	if [ "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT" == "" ]; then
-		RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT="10000"
+	local yaml_only=0
+	if [ "$1" = "--yaml-only" ]; then
+		yaml_only=1
+		shift
 	fi
-	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
-		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
-	fi
-	if [ "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" == "" ]; then
-		RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN="20000"
-	fi
-	if [ "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" == "" ]; then
-		RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE="30000"
-	fi
+	: "${RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT:=10000}"
+	: "${RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT:=60000}"
+	: "${RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN:=20000}"
+	: "${RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE:=30000}"
+	: "${RSTB_MAIN_Q_TO_ENQUEUE:=30000}"
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
@@ -328,28 +341,63 @@ generate_conf() {
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		mkdir $RSYSLOG_DYNNAME.spool
 	fi
-	echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
-       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
-       default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
-       debug.abortOnProgramError="on")
-# use legacy-style for the following settings so that we can override if needed
-$MainmsgQueueTimeoutEnqueue '$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'
-$MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
+	if [ "$yaml_only" = "1" ]; then
+		export RSYSLOG_YAML_ONLY=1
+		export TESTCONF_EXT="yaml"
+		# Resolve net.ipprotocol before writing the preamble so it goes into the
+		# single global: section (avoids a duplicate-key warning from yamlconf).
+		if [ "$RSTB_FORCE_IPV4" = "1" ] && [ -z "$RSTB_NET_IPPROTO" ]; then
+			RSTB_NET_IPPROTO="ipv4-only"
+		fi
+		local ipproto_line=""
+		if [ -n "$RSTB_NET_IPPROTO" ]; then
+			ipproto_line="  net.ipprotocol: \"${RSTB_NET_IPPROTO}\""
+		fi
+		{
+			printf 'version: 2\n\nglobal:\n'
+			printf '  debug.abortOnProgramError: "on"\n'
+			[ -n "$ipproto_line" ] && printf '%s\n' "$ipproto_line"
+			printf '\ntestbench_modules:\n'
+			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
+			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
+			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
+			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
+			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
+			printf '    inputshutdowntimeout: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
+			printf '    defaultactionqueuetimeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
+			printf '    defaultactionqueuetimeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
+			printf '\n###### add modules:, inputs:, rulesets: etc. below\n'
+			printf '###### include imdiag input via add_yaml_imdiag_input\n'
+			printf '###### end of testbench instrumentation part, test conf follows:\n'
+		} > ${TESTCONF_NM}$1.yaml
+	else
+		export RSYSLOG_YAML_ONLY=0
+		export TESTCONF_EXT="conf"
+		echo 'module(load="../plugins/imdiag/.libs/imdiag"
+    mainmsgqueuetimeoutshutdown="'$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'"
+    mainmsgqueuetimeoutenqueue="'$RSTB_MAIN_Q_TO_ENQUEUE'"
+    inputshutdowntimeout="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
+    defaultactionqueuetimeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
+    defaultactionqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
+global(debug.abortOnProgramError="on")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
-
+# Capture rsyslogd own messages (startup, shutdown, errors) to the .started
+# file. Tests use this file to check for expected rsyslogd-internal messages.
+# This rule also ensures at least one output action exists in the default
+# ruleset, which is required by rsyslogd even when only inputs are configured.
 :syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
 ###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
-	# Optionally enforce IPv4 for this test instance.
-	# Set RSTB_FORCE_IPV4=1 to force, or set RSTB_NET_IPPROTO explicitly
-	# to one of: unspecified | ipv4-only | ipv6-only.
-	if [ "$RSTB_FORCE_IPV4" = "1" ] && [ -z "$RSTB_NET_IPPROTO" ]; then
-		RSTB_NET_IPPROTO="ipv4-only"
-	fi
-	if [ -n "$RSTB_NET_IPPROTO" ]; then
-		add_conf "global(net.ipprotocol=\"${RSTB_NET_IPPROTO}\")" "$1"
+		# Optionally enforce IPv4 for this test instance.
+		# Set RSTB_FORCE_IPV4=1 to force, or set RSTB_NET_IPPROTO explicitly
+		# to one of: unspecified | ipv4-only | ipv6-only.
+		if [ "$RSTB_FORCE_IPV4" = "1" ] && [ -z "$RSTB_NET_IPPROTO" ]; then
+			RSTB_NET_IPPROTO="ipv4-only"
+		fi
+		if [ -n "$RSTB_NET_IPPROTO" ]; then
+			add_conf "global(net.ipprotocol=\"${RSTB_NET_IPPROTO}\")" "$1"
+		fi
 	fi
 }
 
@@ -359,6 +407,19 @@ add_conf() {
 	printf '%s' "$1" >> ${TESTCONF_NM}$2.conf
 }
 
+# add YAML content to the yaml config file (yaml-only mode)
+# $1 is config fragment, $2 the instance id, if given
+add_yaml_conf() {
+	printf '%s\n' "$1" >> ${TESTCONF_NM}$2.yaml
+}
+
+# add the imdiag input entry inside an already-open inputs: section.
+# Call this as the first item after 'add_yaml_conf "inputs:"' so that
+# startup detection via the imdiag port file works correctly.
+# $1 is the instance id, if given
+add_yaml_imdiag_input() {
+	printf '  - type: imdiag\n    port: "0"\n' >> ${TESTCONF_NM}$1.yaml
+}
 
 rst_msleep() {
 	$TESTTOOL_DIR/msleep $1
@@ -393,20 +454,32 @@ cmp_exact() {
 # code common to all startup...() functions
 startup_common() {
 	instance=
-	if [ "$1" == "2" ]; then
-	    CONF_FILE="${TESTCONF_NM}2.conf"
-	    instance=2
-	elif [ "$1" == "" ] || [ "$1" == "1" ]; then
-	    CONF_FILE="${TESTCONF_NM}.conf"
+	if [ "$RSYSLOG_YAML_ONLY" = "1" ]; then
+		if [ "$1" == "2" ]; then
+		    CONF_FILE="${TESTCONF_NM}2.yaml"
+		    instance=2
+		elif [ "$1" == "" ] || [ "$1" == "1" ]; then
+		    CONF_FILE="${TESTCONF_NM}.yaml"
+		else
+		    CONF_FILE="$srcdir/testsuites/$1"
+		    instance=$2
+		fi
 	else
-	    CONF_FILE="$srcdir/testsuites/$1"
-	    instance=$2
+		if [ "$1" == "2" ]; then
+		    CONF_FILE="${TESTCONF_NM}2.conf"
+		    instance=2
+		elif [ "$1" == "" ] || [ "$1" == "1" ]; then
+		    CONF_FILE="${TESTCONF_NM}.conf"
+		else
+		    CONF_FILE="$srcdir/testsuites/$1"
+		    instance=$2
+		fi
 	fi
-	# we need to remove the imdiag port file as there are some
-	# tests that start multiple times. These may get the old port
-	# number if the file still exists AND timing is bad so that
-	# imdiag does not generate the port file quickly enough on
-	# startup.
+	# Remove stale pid and imdiag port files so that wait_startup()'s fast-fail
+	# check does not mistake a left-over pid file from a prior crashed run for the
+	# new rsyslog process.  The port file must also be removed so that a test that
+	# starts rsyslog multiple times does not pick up the old port number.
+	rm -f "$RSYSLOG_PIDBASE$instance.pid"
 	rm -f $RSYSLOG_DYNNAME.imdiag$instance.port
 	if [ ! -f $CONF_FILE ]; then
 	    echo "ERROR: config file '$CONF_FILE' not found!"
@@ -860,30 +933,43 @@ check_rsyslog_active() {
 }
 
 # wait for rsyslogd startup ($1 is the instance)
+# Startup is signalled by the imdiag port file appearing (written only after
+# the imdiag input is fully active).  This works for both RainerScript and
+# yaml-only modes.  Fast-fail if the process exits before the port file appears.
 wait_startup() {
 	local instance=$1
 	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
-	local started_file="${RSYSLOG_DYNNAME}$instance.started"
 	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
-	# Wait until any early startup indicator appears: pid file, started marker, or imdiag port file
+	# Per-startup deadline: each rsyslog instance gets TB_STARTUP_MAX_RUNTIME
+	# seconds from the moment wait_startup() is called.  Using TB_STARTTEST
+	# (global test start) would exhaust the budget in tests that call startup()
+	# multiple times with message-processing phases in between.
+	local startup_deadline=$(( $(date +%s) + TB_STARTUP_MAX_RUNTIME ))
 	while :; do
-		if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
+		if [ -s "$imdiag_port_file" ]; then
+			# port file seen — quick liveness check before trusting it
+			if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
+				printf '%s ABORT! rsyslog exited immediately after writing port file\n' "$(tb_timestamp)"
+				error_exit 1 stacktrace
+			fi
 			break
 		fi
-		# If we are exactly at/over timeout threshold, re-check once more before aborting
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
-			if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
-				break
-			fi
-			printf '%s ABORT! Timeout waiting startup indicator (%s or %s or %s) after %d seconds\n' "$(tb_timestamp)" "$pid_file" "$started_file" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
-			# show current file states for diagnostics
-			ls -l "$pid_file" "$started_file" "$imdiag_port_file" 2>/dev/null || true
-			# observed late creation on some CI runners; proceed softly and let subsequent waits validate
-			break
+		# fast-fail: PID written but process already gone (config error)
+		if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
+			printf '%s ABORT! rsyslog exited during startup (config error?)\n' "$(tb_timestamp)"
+			error_exit 1 stacktrace
+		fi
+		# per-startup timeout check
+		if [ $(date +%s) -gt $startup_deadline ]; then
+			[ -s "$imdiag_port_file" ] && break
+			printf '%s ABORT! Timeout waiting for imdiag port file (%s) after %d seconds\n' \
+				"$(tb_timestamp)" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
+			ls -l "$pid_file" "$imdiag_port_file" 2>/dev/null || true
+			error_exit 1 stacktrace
 		fi
 		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
 	done
-	# If we have a pid file, perform a quick liveness check
+	# quick liveness check
 	if [ -f "$pid_file" ]; then
 		$TESTTOOL_DIR/msleep 50
 		check_rsyslog_active $instance
@@ -909,10 +995,10 @@ wait_startup() {
 # reassign ports after rsyslog startup; must be called from all
 # functions that startup rsyslog
 reassign_ports() {
-	if grep -q 'listenPortFileName="'$RSYSLOG_DYNNAME'\.tcpflood_port"' $CONF_FILE; then
-		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
-	fi
-	if grep -q '$InputTCPServerListenPortFile.*\.tcpflood_port' $CONF_FILE; then
+	# Match any style: RainerScript (key="val"), YAML (key: "val", key: 'val', key: val),
+	# or legacy $InputTCPServerListenPortFile directive.
+	if grep -q "$RSYSLOG_DYNNAME"'\.tcpflood_port' $CONF_FILE || \
+	   grep -q '\$InputTCPServerListenPortFile.*\.tcpflood_port' $CONF_FILE; then
 		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 	fi
 }
@@ -2222,7 +2308,7 @@ exit_test() {
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-logdir stat-file1
 	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
-	rm -f ${TESTCONF_NM}.conf
+	rm -f ${TESTCONF_NM}.conf ${TESTCONF_NM}.yaml
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS

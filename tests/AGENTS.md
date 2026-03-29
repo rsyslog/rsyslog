@@ -156,7 +156,72 @@ This helps identify:
 - Whether the module parsed the message correctly
 - If fields are populated as expected
 
+## YAML-only test mode
+
+`generate_conf --yaml-only` creates a pure-YAML preamble (no RainerScript preamble)
+that is used as the rsyslogd startup configuration directly.  Use it when a test
+must validate YAML-loader behaviour or when no RainerScript is desired.
+
+### How it works
+- `generate_conf --yaml-only [instance]` writes `${TESTCONF_NM}[instance].yaml`
+  containing `version: 2`, `global:`, and `testbench_modules:` (imdiag setup).
+  `testbench_modules:` is a YAML key understood by rsyslogd as an alias for
+  `modules:` and is reserved for testbench infrastructure — it avoids any
+  conflict with the test's own `modules:` section.
+- Tests add their own `modules:` section (and `inputs:`, `rulesets:`, etc.)
+  via `add_yaml_conf`.
+- `add_yaml_conf 'fragment' [instance]` appends arbitrary YAML to the same file.
+- `add_yaml_imdiag_input [instance]` appends the imdiag input entry
+  (`  - type: imdiag / port: "0"`) inside an already-opened `inputs:` block.
+  **Tests must call this** (inside their `inputs:` section) so that startup
+  detection via the imdiag port file works correctly.
+- `startup_common` detects `RSYSLOG_YAML_ONLY=1` and passes the `.yaml` file
+  to rsyslogd instead of the usual `.conf` file.
+
+### Limitations
+The following testbench features are **not available** in yaml-only mode:
+
+| Feature | Reason | Workaround |
+|---------|--------|-----------|
+| Legacy `$` directives | Legacy syntax is not parsed by the YAML loader | Use v2 RainerScript (`module()`, `input()`) or YAML keys instead |
+
+> **Note**: Startup detection uses the imdiag port file in both RainerScript and
+> yaml-only modes.  The `.started` marker file mechanism has been removed; the
+> imdiag port file is the sole startup signal in all modes.
+
+### Example test structure
+```bash
+. ${srcdir:=.}/diag.sh init
+require_plugin imtcp
+export NUMMESSAGES=100
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
+generate_conf --yaml-only
+# Test-specific modules in their own modules: section (testbench_modules: is in preamble)
+add_yaml_conf 'modules:'
+add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
+add_yaml_conf ''
+add_yaml_conf 'inputs:'
+add_yaml_imdiag_input           # required for startup detection
+add_yaml_conf "  - type: imtcp"
+add_yaml_conf "    port: \"0\""
+add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""
+add_yaml_conf "    ruleset: main"
+add_yaml_conf 'rulesets:'
+add_yaml_conf '  - name: main'
+add_yaml_conf '    script: |'
+add_yaml_conf "      action(type=\"omfile\" file=\"${RSYSLOG_OUT_LOG}\")"
+startup
+# ... test body ...
+exit_test
+```
+
+### Naming and registration
+- Name yaml-only tests `yaml-<area>-yamlonly.sh` (or append `-yamlonly` to an
+  existing test name) so they are easy to find.
+- Register them in `tests/Makefile.am` under `TESTS_LIBYAML`.
+
 ## Coordination
+
 - When adding tests for a plugin or runtime subsystem, mention them in the
   component’s `AGENTS.md` so future authors know smoke coverage exists.
 - Update `KNOWN_ISSUES` or module metadata if a test encodes a known bug or a

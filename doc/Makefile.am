@@ -453,8 +453,14 @@ EXTRA_DIST = \
     source/rainerscript/variable_property_types.rst \
     source/reference/parameters/im3195-input3195listenport.rst \
     source/reference/parameters/imdiag-aborttimeout.rst \
+    source/reference/parameters/imdiag-defaultactionqueuetimeoutenqueue.rst \
+    source/reference/parameters/imdiag-defaultactionqueuetimeoutshutdown.rst \
     source/reference/parameters/imdiag-injectdelaymode.rst \
+    source/reference/parameters/imdiag-inputshutdowntimeout.rst \
     source/reference/parameters/imdiag-listenportfilename.rst \
+    source/reference/parameters/imdiag-listenportfilename-module.rst \
+    source/reference/parameters/imdiag-mainmsgqueuetimeoutenqueue.rst \
+    source/reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst \
     source/reference/parameters/imdiag-maxsessions.rst \
     source/reference/parameters/imdiag-serverinputname.rst \
     source/reference/parameters/imdiag-serverrun.rst \
