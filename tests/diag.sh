@@ -309,10 +309,11 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 # $1 is the instance id, if given (or --yaml-only as first arg; see below)
 #
 # Queue timeout settings ($MainmsgQueueTimeoutEnqueue, $MainmsgQueueTimeoutShutdown,
-# inputs.timeout.shutdown and default.action.queue.*) are now configured at
-# runtime via imdiag commands (set_queue_timeouts) after startup, not in the
-# config preamble.  This works identically for both RainerScript and YAML-only
-# modes, providing a single consistent mechanism.
+# inputs.timeout.shutdown and default.action.queue.*) are configured via imdiag
+# module parameters in the config preamble (module(load="imdiag" ...)).  This avoids
+# post-startup diagtalker round-trips and works identically for RainerScript and
+# YAML-only modes.  Tests that need a non-default value must set the relevant
+# RSTB_* variable before calling generate_conf.
 #
 # Also, the .started marker file is not written in yaml-only mode because the
 # syslogtag-based filter requires legacy/RainerScript syntax.  Startup detection relies
@@ -363,6 +364,11 @@ generate_conf() {
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
+			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
+			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
+			printf '    inputshutdowntimeout: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
+			printf '    defaultactionqueuetimeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
+			printf '    defaultactionqueuetimeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
 			# The modules: sequence is intentionally left open here.
 			# Tests append additional '  - load: ...' items (2-space indent, no modules: key)
 			# which YAML parsers treat as a continuation of this sequence.
@@ -376,7 +382,12 @@ generate_conf() {
 	else
 		export RSYSLOG_YAML_ONLY=0
 		export TESTCONF_EXT="conf"
-		echo 'module(load="../plugins/imdiag/.libs/imdiag")
+		echo 'module(load="../plugins/imdiag/.libs/imdiag"
+    mainmsgqueuetimeoutshutdown="'$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'"
+    mainmsgqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
+    inputshutdowntimeout="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
+    defaultactionqueuetimeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
+    defaultactionqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
 global(debug.abortOnProgramError="on")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
@@ -944,7 +955,14 @@ wait_startup() {
 		[ -s "$imdiag_port_file" ] && _imdiag_port_ready=1
 		if [ "$RSYSLOG_YAML_ONLY" = "1" ]; then
 			# yaml-only: imdiag port file is the definitive startup signal
-			[ "$_imdiag_port_ready" = "1" ] && break
+			if [ "$_imdiag_port_ready" = "1" ]; then
+				# port file seen — do a quick liveness check before trusting it
+				if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
+					printf '%s ABORT! rsyslog exited immediately after writing port file\n' "$(tb_timestamp)"
+					error_exit 1 stacktrace
+				fi
+				break
+			fi
 			# fast-fail: process wrote PID file but is already gone (config error)
 			if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
 				printf '%s ABORT! rsyslog exited during yaml-only startup (config error?)\n' "$(tb_timestamp)"
@@ -963,7 +981,11 @@ wait_startup() {
 			printf '%s ABORT! Timeout waiting startup indicator (%s or %s or %s) after %d seconds\n' "$(tb_timestamp)" "$pid_file" "$started_file" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
 			# show current file states for diagnostics
 			ls -l "$pid_file" "$started_file" "$imdiag_port_file" 2>/dev/null || true
-			# observed late creation on some CI runners; proceed softly and let subsequent waits validate
+			if [ "$RSYSLOG_YAML_ONLY" = "1" ]; then
+				# yaml-only: imdiag port file is required; no soft fallback
+				error_exit 1 stacktrace
+			fi
+			# non-yaml: observed late creation on some CI runners; proceed softly
 			break
 		fi
 		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
@@ -1002,26 +1024,6 @@ reassign_ports() {
 	fi
 }
 
-# Send queue and input timeout settings to rsyslog via imdiag after startup.
-# Using imdiag avoids the need for legacy $MainmsgQueueTimeout* directives and
-# works identically in both RainerScript and YAML-only modes.
-# $1 - instance (blank or 2)
-set_queue_timeouts() {
-	local instance="${1:-}"
-	local port_var="IMDIAG_PORT${instance}"
-	local PORT="${!port_var}"
-	echo "setmainmsgqueuetimeoutshutdown $RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT" \
-		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
-	echo "setmainmsgqueuetimeoutenqueue $RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" \
-		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
-	echo "setinputshutdowntimeout $RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" \
-		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
-	echo "setdefaultactionqueuetimeoutshutdown $RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" \
-		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
-	echo "setdefaultactionqueuetimeoutenqueue $RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" \
-		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
-}
-
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
 # RS_REDIR maybe set to redirect rsyslog output
@@ -1044,7 +1046,6 @@ startup() {
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE $RS_REDIR &
 	wait_startup $instance
 	reassign_ports
-	set_queue_timeouts "$instance"
 }
 
 
@@ -1139,7 +1140,6 @@ startup_vg() {
 		startup_vg_waitpid_only $1 $2
 		wait_startup $instance
 		reassign_ports
-		set_queue_timeouts "$instance"
 }
 
 # same as startup-vg, except that --leak-check is set to "none". This
@@ -1166,7 +1166,6 @@ startup_vgthread() {
 	startup_vgthread_waitpid_only $1 $2
 	wait_startup $2
 	reassign_ports
-	set_queue_timeouts "$2"
 }
 
 
