@@ -285,6 +285,10 @@ test_status() {
 
 setvar_RS_HOSTNAME() {
 	printf '### Obtaining HOSTNAME (prerequisite, not actual test) ###\n'
+	# This helper uses legacy RainerScript $template syntax to capture the
+	# hostname; always run it in RS mode regardless of RSYSLOG_YAML_ONLY.
+	local _saved_yaml_only="${RSYSLOG_YAML_ONLY}"
+	export RSYSLOG_YAML_ONLY=0
 	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
@@ -300,6 +304,7 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
+	export RSYSLOG_YAML_ONLY="${_saved_yaml_only}"
 }
 
 
@@ -308,34 +313,26 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 #			finished under stress otherwise
 # $1 is the instance id, if given (or --yaml-only as first arg; see below)
 #
-# YAML-ONLY MODE LIMITATION: In --yaml-only mode, $MainmsgQueueTimeoutEnqueue and
-# $MainmsgQueueTimeoutShutdown (legacy global directives) cannot be set because the
-# YAML format does not support sysklogd-style directives.  Instead, mainqueue timeout
-# settings are expressed via the mainqueue: section.  Tests requiring custom timeout
-# values should set RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT / RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN
-# / RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE env vars before calling generate_conf --yaml-only.
+# Queue timeout settings ($MainmsgQueueTimeoutEnqueue, $MainmsgQueueTimeoutShutdown,
+# inputs.timeout.shutdown and default.action.queue.*) are configured via imdiag
+# module parameters in the config preamble (module(load="imdiag" ...)).  This avoids
+# post-startup diagtalker round-trips and works identically for RainerScript and
+# YAML-only modes.  Tests that need a non-default value must set the relevant
+# RSTB_* variable before calling generate_conf.
 #
-# Also, the .started marker file is not written in yaml-only mode because the
-# syslogtag-based filter requires legacy/RainerScript syntax.  Startup detection relies
-# on the imdiag port file and the rsyslogd PID file instead.
+# Startup detection relies on the imdiag port file in both RainerScript and
+# yaml-only modes; no .started marker file is used.
 generate_conf() {
 	local yaml_only=0
 	if [ "$1" = "--yaml-only" ]; then
 		yaml_only=1
 		shift
 	fi
-	if [ "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT" == "" ]; then
-		RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT="10000"
-	fi
-	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
-		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
-	fi
-	if [ "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" == "" ]; then
-		RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN="20000"
-	fi
-	if [ "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" == "" ]; then
-		RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE="30000"
-	fi
+	: "${RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT:=10000}"
+	: "${RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT:=60000}"
+	: "${RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN:=20000}"
+	: "${RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE:=30000}"
+	: "${RSTB_MAIN_Q_TO_ENQUEUE:=30000}"
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
@@ -358,43 +355,38 @@ generate_conf() {
 		fi
 		{
 			printf 'version: 2\n\nglobal:\n'
-			printf '  inputs.timeout.shutdown: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
-			printf '  default.action.queue.timeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
-			printf '  default.action.queue.timeoutEnqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
 			printf '  debug.abortOnProgramError: "on"\n'
 			[ -n "$ipproto_line" ] && printf '%s\n' "$ipproto_line"
-			printf '\nmainqueue:\n'
-			printf '  timeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
-			printf '  timeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
-			printf '\nmodules:\n'
+			printf '\ntestbench_modules:\n'
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
-			# The modules: sequence is intentionally left open here.
-			# Tests append additional '  - load: ...' items (2-space indent, no modules: key)
-			# which YAML parsers treat as a continuation of this sequence.
-			# The sequence closes when the test adds a zero-indent key (inputs:, rulesets:, etc.).
-			# Tests MUST include the imdiag input in their inputs: section; use the
-			# add_yaml_imdiag_input helper to avoid boilerplate.
-			printf '\n###### append test modules as continuation items (  - load: ...)\n'
-			printf '###### then add inputs: (include imdiag via add_yaml_imdiag_input)\n'
+			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
+			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
+			printf '    inputshutdowntimeout: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
+			printf '    defaultactionqueuetimeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
+			printf '    defaultactionqueuetimeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
+			printf '\n###### add modules:, inputs:, rulesets: etc. below\n'
+			printf '###### include imdiag input via add_yaml_imdiag_input\n'
 			printf '###### end of testbench instrumentation part, test conf follows:\n'
 		} > ${TESTCONF_NM}$1.yaml
 	else
 		export RSYSLOG_YAML_ONLY=0
 		export TESTCONF_EXT="conf"
-		echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
-       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
-       default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
-       debug.abortOnProgramError="on")
-# use legacy-style for the following settings so that we can override if needed
-$MainmsgQueueTimeoutEnqueue '$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'
-$MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
+		echo 'module(load="../plugins/imdiag/.libs/imdiag"
+    mainmsgqueuetimeoutshutdown="'$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'"
+    mainmsgqueuetimeoutenqueue="'$RSTB_MAIN_Q_TO_ENQUEUE'"
+    inputshutdowntimeout="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
+    defaultactionqueuetimeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
+    defaultactionqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
+global(debug.abortOnProgramError="on")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
-
+# Capture rsyslogd own messages (startup, shutdown, errors) to the .started
+# file. Tests use this file to check for expected rsyslogd-internal messages.
+# This rule also ensures at least one output action exists in the default
+# ruleset, which is required by rsyslogd even when only inputs are configured.
 :syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
 ###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
 		# Optionally enforce IPv4 for this test instance.
@@ -941,47 +933,38 @@ check_rsyslog_active() {
 }
 
 # wait for rsyslogd startup ($1 is the instance)
+# Startup is signalled by the imdiag port file appearing (written only after
+# the imdiag input is fully active).  This works for both RainerScript and
+# yaml-only modes.  Fast-fail if the process exits before the port file appears.
 wait_startup() {
 	local instance=$1
 	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
-	local started_file="${RSYSLOG_DYNNAME}$instance.started"
 	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
-	# In yaml-only mode the .started marker is never written (the syslogtag filter
-	# requires RainerScript/legacy syntax).  The PID file alone is insufficient because
-	# rsyslogd writes it before activating inputs, so a YAML config error would appear
-	# as a successful startup.  Require the imdiag port file (written only after the
-	# input is fully active) instead, and fast-fail if the process exits before that.
-	local _imdiag_port_ready
 	while :; do
-		_imdiag_port_ready=0
-		[ -s "$imdiag_port_file" ] && _imdiag_port_ready=1
-		if [ "$RSYSLOG_YAML_ONLY" = "1" ]; then
-			# yaml-only: imdiag port file is the definitive startup signal
-			[ "$_imdiag_port_ready" = "1" ] && break
-			# fast-fail: process wrote PID file but is already gone (config error)
+		if [ -s "$imdiag_port_file" ]; then
+			# port file seen — quick liveness check before trusting it
 			if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
-				printf '%s ABORT! rsyslog exited during yaml-only startup (config error?)\n' "$(tb_timestamp)"
+				printf '%s ABORT! rsyslog exited immediately after writing port file\n' "$(tb_timestamp)"
 				error_exit 1 stacktrace
 			fi
-		else
-			{ [ -f "$pid_file" ] || [ -f "$started_file" ] || [ "$_imdiag_port_ready" = "1" ]; } \
-				&& break
+			break
 		fi
-		# If we are exactly at/over timeout threshold, re-check once more before aborting
+		# fast-fail: PID written but process already gone (config error)
+		if [ -s "$pid_file" ] && ! ps -p "$(cat "$pid_file" 2>/dev/null)" > /dev/null 2>&1; then
+			printf '%s ABORT! rsyslog exited during startup (config error?)\n' "$(tb_timestamp)"
+			error_exit 1 stacktrace
+		fi
+		# timeout check
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
 			[ -s "$imdiag_port_file" ] && break
-			if [ "$RSYSLOG_YAML_ONLY" != "1" ]; then
-				{ [ -f "$pid_file" ] || [ -f "$started_file" ]; } && break
-			fi
-			printf '%s ABORT! Timeout waiting startup indicator (%s or %s or %s) after %d seconds\n' "$(tb_timestamp)" "$pid_file" "$started_file" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
-			# show current file states for diagnostics
-			ls -l "$pid_file" "$started_file" "$imdiag_port_file" 2>/dev/null || true
-			# observed late creation on some CI runners; proceed softly and let subsequent waits validate
-			break
+			printf '%s ABORT! Timeout waiting for imdiag port file (%s) after %d seconds\n' \
+				"$(tb_timestamp)" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
+			ls -l "$pid_file" "$imdiag_port_file" 2>/dev/null || true
+			error_exit 1 stacktrace
 		fi
 		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
 	done
-	# If we have a pid file, perform a quick liveness check
+	# quick liveness check
 	if [ -f "$pid_file" ]; then
 		$TESTTOOL_DIR/msleep 50
 		check_rsyslog_active $instance
@@ -2320,7 +2303,7 @@ exit_test() {
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-logdir stat-file1
 	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
-	rm -f ${TESTCONF_NM}.conf
+	rm -f ${TESTCONF_NM}.conf ${TESTCONF_NM}.yaml
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS

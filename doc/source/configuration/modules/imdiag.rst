@@ -37,6 +37,30 @@ Module Parameters
      - .. include:: ../../reference/parameters/imdiag-aborttimeout.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imdiag-listenportfilename-module`
+     - .. include:: ../../reference/parameters/imdiag-listenportfilename-module.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdiag-mainmsgqueuetimeoutshutdown`
+     - .. include:: ../../reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdiag-mainmsgqueuetimeoutenqueue`
+     - .. include:: ../../reference/parameters/imdiag-mainmsgqueuetimeoutenqueue.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdiag-inputshutdowntimeout`
+     - .. include:: ../../reference/parameters/imdiag-inputshutdowntimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdiag-defaultactionqueuetimeoutshutdown`
+     - .. include:: ../../reference/parameters/imdiag-defaultactionqueuetimeoutshutdown.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdiag-defaultactionqueuetimeoutenqueue`
+     - .. include:: ../../reference/parameters/imdiag-defaultactionqueuetimeoutenqueue.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imdiag-injectdelaymode`
      - .. include:: ../../reference/parameters/imdiag-injectdelaymode.rst
         :start-after: .. summary-start
@@ -96,10 +120,49 @@ ephemeral port, and records the chosen port for the testbench to read.
          listenPortFileName="/var/run/rsyslog/imdiag.port"
          serverRun="0")
 
+YAML-only testbench configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In YAML-only mode the testbench preamble uses the ``testbench_modules:``
+key (an alias for ``modules:`` reserved for testbench infrastructure) so
+that it does not conflict with the test's own ``modules:`` section.
+
+.. code-block:: yaml
+
+   version: 2
+
+   global:
+     debug.abortOnProgramError: "on"
+
+   testbench_modules:
+     - load: "../plugins/imdiag/.libs/imdiag"
+       listenportfilename: "test.imdiag.port"
+       aborttimeout: "580"
+       mainmsgqueuetimeoutshutdown: "10000"
+       mainmsgqueuetimeoutenqueue: "30000"
+       inputshutdowntimeout: "60000"
+       defaultactionqueuetimeoutshutdown: "20000"
+       defaultactionqueuetimeoutenqueue: "30000"
+
+   modules:
+     - load: "../plugins/imtcp/.libs/imtcp"
+
+   inputs:
+     - type: imdiag
+       port: "0"
+     - type: imtcp
+       port: "0"
+
 .. toctree::
    :hidden:
 
    ../../reference/parameters/imdiag-aborttimeout
+   ../../reference/parameters/imdiag-listenportfilename-module
+   ../../reference/parameters/imdiag-mainmsgqueuetimeoutshutdown
+   ../../reference/parameters/imdiag-mainmsgqueuetimeoutenqueue
+   ../../reference/parameters/imdiag-inputshutdowntimeout
+   ../../reference/parameters/imdiag-defaultactionqueuetimeoutshutdown
+   ../../reference/parameters/imdiag-defaultactionqueuetimeoutenqueue
    ../../reference/parameters/imdiag-injectdelaymode
    ../../reference/parameters/imdiag-maxsessions
    ../../reference/parameters/imdiag-listenportfilename

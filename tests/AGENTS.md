@@ -164,13 +164,12 @@ must validate YAML-loader behaviour or when no RainerScript is desired.
 
 ### How it works
 - `generate_conf --yaml-only [instance]` writes `${TESTCONF_NM}[instance].yaml`
-  containing `version: 2`, `global:`, `mainqueue:`, and `modules:` (imdiag).
-  The `modules:` sequence is intentionally left open — no `inputs:` section is
-  written by the preamble.
-- Tests append additional module entries as **sequence continuation items**
-  (2-space indent, `  - load: ...`, no top-level `modules:` key) so YAML parsers
-  see a single, well-formed `modules:` list.  The sequence closes naturally when
-  the test adds a zero-indent key such as `inputs:`.
+  containing `version: 2`, `global:`, and `testbench_modules:` (imdiag setup).
+  `testbench_modules:` is a YAML key understood by rsyslogd as an alias for
+  `modules:` and is reserved for testbench infrastructure — it avoids any
+  conflict with the test's own `modules:` section.
+- Tests add their own `modules:` section (and `inputs:`, `rulesets:`, etc.)
+  via `add_yaml_conf`.
 - `add_yaml_conf 'fragment' [instance]` appends arbitrary YAML to the same file.
 - `add_yaml_imdiag_input [instance]` appends the imdiag input entry
   (`  - type: imdiag / port: "0"`) inside an already-opened `inputs:` block.
@@ -184,8 +183,11 @@ The following testbench features are **not available** in yaml-only mode:
 
 | Feature | Reason | Workaround |
 |---------|--------|-----------|
-| `$MainmsgQueueTimeout*` directives | Legacy sysklogd syntax; no YAML equivalent at runtime via `add_yaml_conf` | Set `RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT` / `RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE` env vars *before* calling `generate_conf --yaml-only`; they are written into the `mainqueue:` section of the preamble |
-| `.started` marker file | The syslogtag-based filter rule requires RainerScript/legacy syntax | `wait_startup` requires the imdiag port file (not just the PID file) in yaml-only mode, confirming config loaded and inputs are active; it fast-fails if rsyslog exits before the port file appears |
+| Legacy `$` directives | Legacy syntax is not parsed by the YAML loader | Use v2 RainerScript (`module()`, `input()`) or YAML keys instead |
+
+> **Note**: Startup detection uses the imdiag port file in both RainerScript and
+> yaml-only modes.  The `.started` marker file mechanism has been removed; the
+> imdiag port file is the sole startup signal in all modes.
 
 ### Example test structure
 ```bash
@@ -194,7 +196,8 @@ require_plugin imtcp
 export NUMMESSAGES=100
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf --yaml-only
-# Continue the modules: sequence opened by the preamble (2-space indent, no modules: key)
+# Test-specific modules in their own modules: section (testbench_modules: is in preamble)
+add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
 add_yaml_conf ''
 add_yaml_conf 'inputs:'

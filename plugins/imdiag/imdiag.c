@@ -57,6 +57,7 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "queue.h"
+#include "rsconf.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
@@ -106,7 +107,15 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL; /* modConf ptr for current load process */
 
 /* module-level parameters (module(...)) */
-static struct cnfparamdescr modpdescr[] = {{"listenportfilename", eCmdHdlrString, 0}, {"aborttimeout", eCmdHdlrInt, 0}};
+static struct cnfparamdescr modpdescr[] = {
+    {"listenportfilename", eCmdHdlrString, 0},
+    {"aborttimeout", eCmdHdlrInt, 0},
+    {"mainmsgqueuetimeoutshutdown", eCmdHdlrInt, 0},
+    {"mainmsgqueuetimeoutenqueue", eCmdHdlrInt, 0},
+    {"inputshutdowntimeout", eCmdHdlrInt, 0},
+    {"defaultactionqueuetimeoutshutdown", eCmdHdlrInt, 0},
+    {"defaultactionqueuetimeoutenqueue", eCmdHdlrInt, 0},
+};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* input-level parameters (input(...)) */
@@ -524,6 +533,20 @@ finalize_it:
     RETiRet;
 }
 
+/* Parse a non-negative long integer from a command argument string.
+ * Returns 1 on success (val set), 0 on parse error (non-numeric, negative, or overflow).
+ */
+static int parsePosLong(const uchar *const s, long *const val) {
+    char *endptr;
+    if (s == NULL || *s == '\0') return 0;
+    errno = 0;
+    *val = strtol((const char *)s, &endptr, 10);
+    if (errno != 0) return 0; /* overflow / underflow */
+    /* accept optional trailing newline/space but nothing else */
+    while (*endptr == ' ' || *endptr == '\r' || *endptr == '\n') ++endptr;
+    return (*endptr == '\0' && *val >= 0) ? 1 : 0;
+}
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -566,6 +589,50 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitHUPComplete(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
+        long val;
+        if (!parsePosLong(pszMsg, &val)) {
+            CHKiRet(sendResponse(pSess, "ERROR: invalid timeout value\n"));
+        } else if (runConf->pMsgQueue == NULL) {
+            CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        } else {
+            CHKiRet(qqueueSettoQShutdown(runConf->pMsgQueue, val));
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutenqueue"))) {
+        long val;
+        if (!parsePosLong(pszMsg, &val)) {
+            CHKiRet(sendResponse(pSess, "ERROR: invalid timeout value\n"));
+        } else if (runConf->pMsgQueue == NULL) {
+            CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        } else {
+            CHKiRet(qqueueSettoEnq(runConf->pMsgQueue, val));
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setinputshutdowntimeout"))) {
+        long val;
+        if (!parsePosLong(pszMsg, &val)) {
+            CHKiRet(sendResponse(pSess, "ERROR: invalid timeout value\n"));
+        } else {
+            runConf->globals.inputTimeoutShutdown = (int)val;
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setdefaultactionqueuetimeoutshutdown"))) {
+        long val;
+        if (!parsePosLong(pszMsg, &val)) {
+            CHKiRet(sendResponse(pSess, "ERROR: invalid timeout value\n"));
+        } else {
+            runConf->globals.actq_dflt_toQShutdown = (int)val;
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setdefaultactionqueuetimeoutenqueue"))) {
+        long val;
+        if (!parsePosLong(pszMsg, &val)) {
+            CHKiRet(sendResponse(pSess, "ERROR: invalid timeout value\n"));
+        } else {
+            runConf->globals.actq_dflt_toEnq = (int)val;
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
     } else {
         dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
         CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));
@@ -760,8 +827,19 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "aborttimeout")) {
             loadModConf->abortTimeout = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "mainmsgqueuetimeoutshutdown")) {
+            loadModConf->pConf->globals.mainQ.iMainMsgQtoQShutdown = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "mainmsgqueuetimeoutenqueue")) {
+            loadModConf->pConf->globals.mainQ.iMainMsgQtoEnq = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "inputshutdowntimeout")) {
+            loadModConf->pConf->globals.inputTimeoutShutdown = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "defaultactionqueuetimeoutshutdown")) {
+            loadModConf->pConf->globals.actq_dflt_toQShutdown = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "defaultactionqueuetimeoutenqueue")) {
+            loadModConf->pConf->globals.actq_dflt_toEnq = (int)pvals[i].val.d.n;
         } else {
             dbgprintf("imdiag: program error, non-handled param '%s' in setModCnf\n", modpblk.descr[i].name);
+            assert(0); /* should not happen */
         }
     }
     loadModConf->configSetViaV2Method = 1;
@@ -822,6 +900,7 @@ BEGINnewInpInst
             CHKmalloc(port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf("imdiag: program error, non-handled param '%s' in newInpInst\n", inppblk.descr[i].name);
+            assert(0); /* should not happen */
         }
     }
     /* apply module-level listenportfilename to global before addTCPListener uses it */
@@ -912,6 +991,7 @@ BEGINmodExit
             void *dummy;
             pthread_join(timeoutGuard_thrd, &dummy);
         }
+        abortTimeout = -1; /* mark cleaned up so resetConfigVariables won't double-cancel */
     }
 ENDmodExit
 
