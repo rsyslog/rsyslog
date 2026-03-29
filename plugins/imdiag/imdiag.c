@@ -57,6 +57,7 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "queue.h"
+#include "rsconf.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
@@ -566,6 +567,29 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitHUPComplete(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
+        if (runConf->pMsgQueue == NULL) {
+            CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        } else {
+            CHKiRet(qqueueSettoQShutdown(runConf->pMsgQueue, atol((char *)pszMsg)));
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutenqueue"))) {
+        if (runConf->pMsgQueue == NULL) {
+            CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        } else {
+            CHKiRet(qqueueSettoEnq(runConf->pMsgQueue, atol((char *)pszMsg)));
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        }
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setinputshutdowntimeout"))) {
+        runConf->globals.inputTimeoutShutdown = (int)atol((char *)pszMsg);
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setdefaultactionqueuetimeoutshutdown"))) {
+        runConf->globals.actq_dflt_toQShutdown = (int)atol((char *)pszMsg);
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setdefaultactionqueuetimeoutenqueue"))) {
+        runConf->globals.actq_dflt_toEnq = (int)atol((char *)pszMsg);
+        CHKiRet(sendResponse(pSess, "OK\n"));
     } else {
         dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
         CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));

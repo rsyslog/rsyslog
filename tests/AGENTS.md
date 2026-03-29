@@ -184,8 +184,13 @@ The following testbench features are **not available** in yaml-only mode:
 
 | Feature | Reason | Workaround |
 |---------|--------|-----------|
-| `$MainmsgQueueTimeout*` directives | Legacy sysklogd syntax; no YAML equivalent at runtime via `add_yaml_conf` | Set `RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT` / `RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE` env vars *before* calling `generate_conf --yaml-only`; they are written into the `mainqueue:` section of the preamble |
 | `.started` marker file | The syslogtag-based filter rule requires RainerScript/legacy syntax | `wait_startup` requires the imdiag port file (not just the PID file) in yaml-only mode, confirming config loaded and inputs are active; it fast-fails if rsyslog exits before the port file appears |
+
+> **Note**: Queue and input timeout settings (`$MainmsgQueueTimeout*`,
+> `inputs.timeout.shutdown`, `default.action.queue.*`) are no longer a
+> limitation.  They are configured at runtime via imdiag commands
+> (`set_queue_timeouts`) after startup — the same mechanism is used for both
+> RainerScript and yaml-only modes.
 
 ### Example test structure
 ```bash

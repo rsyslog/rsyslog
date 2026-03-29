@@ -308,12 +308,11 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 #			finished under stress otherwise
 # $1 is the instance id, if given (or --yaml-only as first arg; see below)
 #
-# YAML-ONLY MODE LIMITATION: In --yaml-only mode, $MainmsgQueueTimeoutEnqueue and
-# $MainmsgQueueTimeoutShutdown (legacy global directives) cannot be set because the
-# YAML format does not support sysklogd-style directives.  Instead, mainqueue timeout
-# settings are expressed via the mainqueue: section.  Tests requiring custom timeout
-# values should set RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT / RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN
-# / RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE env vars before calling generate_conf --yaml-only.
+# Queue timeout settings ($MainmsgQueueTimeoutEnqueue, $MainmsgQueueTimeoutShutdown,
+# inputs.timeout.shutdown and default.action.queue.*) are now configured at
+# runtime via imdiag commands (set_queue_timeouts) after startup, not in the
+# config preamble.  This works identically for both RainerScript and YAML-only
+# modes, providing a single consistent mechanism.
 #
 # Also, the .started marker file is not written in yaml-only mode because the
 # syslogtag-based filter requires legacy/RainerScript syntax.  Startup detection relies
@@ -358,14 +357,8 @@ generate_conf() {
 		fi
 		{
 			printf 'version: 2\n\nglobal:\n'
-			printf '  inputs.timeout.shutdown: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
-			printf '  default.action.queue.timeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
-			printf '  default.action.queue.timeoutEnqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
 			printf '  debug.abortOnProgramError: "on"\n'
 			[ -n "$ipproto_line" ] && printf '%s\n' "$ipproto_line"
-			printf '\nmainqueue:\n'
-			printf '  timeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
-			printf '  timeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '\nmodules:\n'
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
@@ -384,13 +377,7 @@ generate_conf() {
 		export RSYSLOG_YAML_ONLY=0
 		export TESTCONF_EXT="conf"
 		echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
-       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
-       default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
-       debug.abortOnProgramError="on")
-# use legacy-style for the following settings so that we can override if needed
-$MainmsgQueueTimeoutEnqueue '$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'
-$MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
+global(debug.abortOnProgramError="on")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
@@ -1015,6 +1002,26 @@ reassign_ports() {
 	fi
 }
 
+# Send queue and input timeout settings to rsyslog via imdiag after startup.
+# Using imdiag avoids the need for legacy $MainmsgQueueTimeout* directives and
+# works identically in both RainerScript and YAML-only modes.
+# $1 - instance (blank or 2)
+set_queue_timeouts() {
+	local instance="${1:-}"
+	local port_var="IMDIAG_PORT${instance}"
+	local PORT="${!port_var}"
+	echo "setmainmsgqueuetimeoutshutdown $RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT" \
+		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
+	echo "setmainmsgqueuetimeoutenqueue $RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" \
+		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
+	echo "setinputshutdowntimeout $RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" \
+		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
+	echo "setdefaultactionqueuetimeoutshutdown $RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" \
+		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
+	echo "setdefaultactionqueuetimeoutenqueue $RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" \
+		| $TESTTOOL_DIR/diagtalker -p$PORT || error_exit $?
+}
+
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
 # RS_REDIR maybe set to redirect rsyslog output
@@ -1037,6 +1044,7 @@ startup() {
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE $RS_REDIR &
 	wait_startup $instance
 	reassign_ports
+	set_queue_timeouts "$instance"
 }
 
 
@@ -1131,6 +1139,7 @@ startup_vg() {
 		startup_vg_waitpid_only $1 $2
 		wait_startup $instance
 		reassign_ports
+		set_queue_timeouts "$instance"
 }
 
 # same as startup-vg, except that --leak-check is set to "none". This
@@ -1157,6 +1166,7 @@ startup_vgthread() {
 	startup_vgthread_waitpid_only $1 $2
 	wait_startup $2
 	reassign_ports
+	set_queue_timeouts "$2"
 }
 
 
