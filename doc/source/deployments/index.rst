@@ -30,7 +30,6 @@ monitoring stack including:
 
 :doc:`Get started with ROSI Collector <rosi_collector/index>`
 
-<<<<<<< HEAD
 ROSI Collector is the primary packaged ROSI deployment profile today. The
 broader ROSI direction is larger than this single stack and includes
 alternative destinations, mixed-component architectures, and Windows-side
