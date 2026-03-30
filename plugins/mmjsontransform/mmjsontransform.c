@@ -77,6 +77,8 @@ typedef struct _instanceData {
     msgPropDescr_t *outputProp;
     mmjsontransformMode_t mode;
     char *policyPath;
+    sbool hasPolicyMode;
+    mmjsontransformMode_t policyMode;
     char **dropKeys;
     size_t nDropKeys;
     struct json_object *dropKeySet;
@@ -185,6 +187,7 @@ static void jsontransformConflictCleanup(jsontransformConflict_t *conflict);
  * @brief Allocate a dotted path string combining prefix and segment.
  */
 static rsRetVal jsontransformBuildPath(char **out, const char *prefix, const char *segment);
+static rsRetVal jsontransformParseModeValue(const char *mode, mmjsontransformMode_t *outMode);
 static const char *jsontransformTargetInContext(const char *target, const char *contextPath);
 static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,
                                               struct json_object **out,
@@ -246,6 +249,8 @@ BEGINcreateInstance
     pData->outputProp = NULL;
     pData->mode = MMJSONTRANSFORM_MODE_UNFLATTEN;
     pData->policyPath = NULL;
+    pData->hasPolicyMode = 0;
+    pData->policyMode = MMJSONTRANSFORM_MODE_UNFLATTEN;
     pData->dropKeys = NULL;
     pData->nDropKeys = 0;
     pData->dropKeySet = NULL;
@@ -417,11 +422,7 @@ BEGINnewActInst
             if (mode == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
-            if (strcasecmp(mode, "unflatten") == 0 || mode[0] == '\0') {
-                pData->mode = MMJSONTRANSFORM_MODE_UNFLATTEN;
-            } else if (strcasecmp(mode, "flatten") == 0) {
-                pData->mode = MMJSONTRANSFORM_MODE_FLATTEN;
-            } else {
+            if (jsontransformParseModeValue(mode, &pData->mode) != RS_RET_OK) {
                 parser_errmsg("mmjsontransform: mode '%s' is invalid; use 'unflatten' or 'flatten'", mode);
                 free(mode);
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
@@ -465,6 +466,7 @@ BEGINdoAction_NoStrings
     struct json_object *policyAdjusted = NULL;
     struct json_object *rewritten = NULL;
     jsontransformConflict_t conflict = {0, NULL};
+    mmjsontransformMode_t effectiveMode;
     rsRetVal localRet;
     CODESTARTdoAction;
 
@@ -490,16 +492,20 @@ BEGINdoAction_NoStrings
     }
 
     activeInput = input;
+    effectiveMode = pData->mode;
 
     if (pData->policyPath != NULL) {
         pthread_mutex_lock(&pData->policyLock);
         localRet = jsontransformApplyPolicyRules(activeInput, &policyAdjusted, pData, &conflict, NULL);
+        if (localRet == RS_RET_OK && pData->hasPolicyMode) {
+            effectiveMode = pData->policyMode;
+        }
         pthread_mutex_unlock(&pData->policyLock);
         CHKiRet(localRet);
         activeInput = policyAdjusted;
     }
 
-    if (pData->mode == MMJSONTRANSFORM_MODE_UNFLATTEN) {
+    if (effectiveMode == MMJSONTRANSFORM_MODE_UNFLATTEN) {
         CHKiRet(jsontransformRewriteObject(activeInput, &rewritten, &conflict, NULL));
     } else {
         CHKiRet(jsontransformFlattenObject(activeInput, &rewritten, &conflict));
@@ -527,6 +533,9 @@ ENDdoAction
 static void jsontransformFreePolicy(instanceData *pData) {
     size_t i;
 
+    pData->hasPolicyMode = 0;
+    pData->policyMode = MMJSONTRANSFORM_MODE_UNFLATTEN;
+
     for (i = 0; i < pData->nDropKeys; ++i) {
         free(pData->dropKeys[i]);
     }
@@ -547,6 +556,20 @@ static void jsontransformFreePolicy(instanceData *pData) {
     pData->renameMap = NULL;
 }
 
+static rsRetVal jsontransformParseModeValue(const char *mode, mmjsontransformMode_t *outMode) {
+    if (mode == NULL || mode[0] == '\0' || strcasecmp(mode, "unflatten") == 0) {
+        *outMode = MMJSONTRANSFORM_MODE_UNFLATTEN;
+        return RS_RET_OK;
+    }
+
+    if (strcasecmp(mode, "flatten") == 0) {
+        *outMode = MMJSONTRANSFORM_MODE_FLATTEN;
+        return RS_RET_OK;
+    }
+
+    return RS_RET_INVALID_PARAMS;
+}
+
 static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyPath) {
 #ifndef HAVE_LIBYAML
     LogError(0, RS_RET_CONF_PARAM_INVLD,
@@ -557,10 +580,13 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
     yaml_parser_t parser;
     yaml_event_t event;
     sbool parserInitialized = 0;
+    sbool eventInitialized = 0;
     char *currentKey = NULL;
     sbool inMap = 0;
     sbool inMapRename = 0;
     sbool inMapDrop = 0;
+    sbool newHasPolicyMode = 0;
+    mmjsontransformMode_t newPolicyMode = MMJSONTRANSFORM_MODE_UNFLATTEN;
     sbool renameExpectValue = 0;
     char *renameFrom = NULL;
     char **newDropKeys = NULL;
@@ -586,15 +612,22 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
     yaml_parser_set_input_file(&parser, fh);
 
     while (yaml_parser_parse(&parser, &event)) {
+        eventInitialized = 1;
         if (event.type == YAML_MAPPING_START_EVENT) {
             if (currentKey != NULL && !strcmp(currentKey, "map")) {
                 inMap = 1;
+                free(currentKey);
+                currentKey = NULL;
             } else if (inMap && currentKey != NULL && !strcmp(currentKey, "rename")) {
                 inMapRename = 1;
+                free(currentKey);
+                currentKey = NULL;
             }
         } else if (event.type == YAML_SEQUENCE_START_EVENT) {
             if (inMap && currentKey != NULL && !strcmp(currentKey, "drop")) {
                 inMapDrop = 1;
+                free(currentKey);
+                currentKey = NULL;
             }
         } else if (event.type == YAML_MAPPING_END_EVENT) {
             if (inMapRename) {
@@ -635,6 +668,19 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
                 newDropKeys = tmp;
                 CHKmalloc(newDropKeys[idx] = strdup(scalar));
                 nNewDropKeys++;
+            } else if (currentKey != NULL && !strcmp(currentKey, "mode")) {
+                if (jsontransformParseModeValue(scalar, &newPolicyMode) != RS_RET_OK) {
+                    yaml_event_delete(&event);
+                    eventInitialized = 0;
+                    LogError(0, RS_RET_CONF_PARAM_INVLD,
+                             "mmjsontransform: policy file '%s' has invalid mode '%s'; "
+                             "use 'unflatten' or 'flatten'",
+                             policyPath, scalar);
+                    ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                }
+                newHasPolicyMode = 1;
+                free(currentKey);
+                currentKey = NULL;
             } else {
                 free(currentKey);
                 currentKey = strdup(scalar);
@@ -644,9 +690,11 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
 
         if (event.type == YAML_STREAM_END_EVENT) {
             yaml_event_delete(&event);
+            eventInitialized = 0;
             break;
         }
         yaml_event_delete(&event);
+        eventInitialized = 0;
     }
 
     if (renameExpectValue) {
@@ -682,6 +730,8 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
     }
 
     jsontransformFreePolicy(pData);
+    pData->hasPolicyMode = newHasPolicyMode;
+    pData->policyMode = newPolicyMode;
     pData->dropKeys = newDropKeys;
     pData->nDropKeys = nNewDropKeys;
     pData->dropKeySet = newDropKeySet;
@@ -696,6 +746,7 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
     newRenameMap = NULL;
 
 finalize_it:
+    if (eventInitialized) yaml_event_delete(&event);
     free(renameFrom);
     free(currentKey);
     if (parserInitialized) yaml_parser_delete(&parser);

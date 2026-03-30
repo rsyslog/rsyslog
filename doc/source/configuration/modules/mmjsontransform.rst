@@ -43,8 +43,8 @@ Notable Features
   and nested containers.
 - :ref:`mmjsontransform-conflict-handling` — detailed conflict reporting to
   locate incompatible payloads quickly.
-- :ref:`mmjsontransform-policy` — optional YAML policy-based key renaming and
-  field dropping before flatten/unflatten processing.
+- :ref:`mmjsontransform-policy` — optional YAML policy-based mode selection,
+  key renaming, and field dropping before processing.
 
 Configuration Parameters
 ========================
@@ -86,8 +86,9 @@ Transformation modes
 ====================
 
 ``mmjsontransform`` supports two modes controlled by the :ref:`mode
-<param-mmjsontransform-mode>` parameter. Both modes rewrite the entire input
-object before assigning it to the configured output property.
+<param-mmjsontransform-mode>` parameter or, when configured, by the reloadable
+:ref:`policy <param-mmjsontransform-policy>` file. Both modes rewrite the
+entire input object before assigning it to the configured output property.
 
 .. _mmjsontransform-mode-unflatten:
 
