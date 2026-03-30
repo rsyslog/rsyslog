@@ -13,4 +13,4 @@ If we want to get 20% of these logs uniformly sampled we use random sampling.
     //send out
   }
 
-Above config will collect exactly 20% of logs generated.
+Above config will collect 20% of logs generated.
