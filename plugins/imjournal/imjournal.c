@@ -730,6 +730,9 @@ static rsRetVal pollJournal(struct journalContext_s *journalContext, char *state
             ABORT_FINALIZE(RS_RET_ERR);
         }
         CHKiRet(handleRotation(journalContext, stateFile));
+    } else if (err < 0) {
+        LogError(-err, RS_RET_ERR, "imjournal: sd_journal_wait() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
     }
 
 finalize_it:
