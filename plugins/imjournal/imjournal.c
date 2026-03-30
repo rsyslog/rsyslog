@@ -193,13 +193,15 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
     }
     if ((r = sd_journal_open(&journalContext->j, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY)) < 0) {
         LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
-        iRet = RS_RET_IO_ERROR;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     if ((r = sd_journal_set_data_threshold(journalContext->j, glbl.GetMaxLine(runModConf->pConf))) < 0) {
         LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_set_data_threshold() failed");
-        iRet = RS_RET_IO_ERROR;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     journalContext->atHead = 1;
+
+finalize_it:
     RETiRet;
 }
 
