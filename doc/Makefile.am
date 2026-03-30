@@ -47,7 +47,6 @@ help:
 .PHONY: html-local html-with-sitemap singlehtml json alljson rag-db json-formatter clean-local help
 
 EXTRA_DIST = \
-    .gitignore \
     AGENTS.md \
     BUILDS_README.md \
     CONTRIBUTING.md \

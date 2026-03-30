@@ -4,7 +4,6 @@ pkglib_LTLIBRARIES =
 pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
-    .gitignore \
 	README.md \
 	platform/README \
 	platform/freebsd/rsyslogd \
