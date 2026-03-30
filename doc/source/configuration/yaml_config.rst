@@ -9,20 +9,53 @@ YAML Configuration Format
 
 .. summary-start
 
-rsyslog supports YAML as an alternative configuration syntax for users comfortable with YAML. Every YAML key maps directly to the equivalent RainerScript parameter.
+rsyslog supports YAML as an additional configuration format for YAML-centric
+environments. YAML and RainerScript express the same core rsyslog model and
+share the same semantics.
 
 .. summary-end
 
-rsyslog supports configuration via YAML files as an alternative to
-RainerScript.  It is one of the :doc:`supported configuration formats
-<conf_formats>` and is a good choice if you are more comfortable with
-YAML syntax than with RainerScript.
+rsyslog supports configuration via YAML files as an additional format alongside
+RainerScript. It is one of the :doc:`supported configuration formats
+<conf_formats>` and is a good fit when rsyslog is part of a broader
+YAML-centric operational workflow.
 
-The two formats are equivalent: every YAML configuration key maps
+Typical examples include Kubernetes deployments, Ansible-managed systems,
+GitOps-style repositories, generated configuration, and AI-assisted
+infrastructure workflows. In those environments YAML support reduces
+integration friction because rsyslog can stay in the same format family as the
+surrounding tooling instead of relying on conversion steps or embedded
+RainerScript text.
+
+This is about workflow fit, not about replacing RainerScript. The two formats
+express the same core rsyslog concepts, including inputs, actions, rulesets,
+filters and routing, templates, and queues. Every YAML configuration key maps
 directly to a RainerScript parameter of the same name, so all per-module
-documentation remains applicable unchanged.  You can also mix formats:
-a YAML main config may include RainerScript ``.conf`` fragments and vice
-versa.
+documentation remains applicable unchanged. You can also mix formats: a YAML
+main config may include RainerScript ``.conf`` fragments and vice versa.
+
+Continuity with RainerScript
+----------------------------
+
+Existing RainerScript configurations remain fully valid and fully supported.
+You do not need to migrate them in order to use current rsyslog features.
+
+Existing RainerScript knowledge also transfers directly. YAML changes the
+surface syntax, but it does not introduce a separate rsyslog model or separate
+runtime semantics.
+
+When to Use YAML or RainerScript
+--------------------------------
+
+Choose the format that fits your environment and workflow:
+
+- Use YAML when rsyslog is part of a broader YAML-centric deployment or
+  automation workflow.
+- Use RainerScript when you already work effectively with it, when your team
+  authors rsyslog logic directly, or when it is simply the clearer fit for your
+  operational model.
+- Mix formats when that is practical. YAML and RainerScript can include each
+  other and share the same object names and parameter semantics.
 
 Activation
 ----------
@@ -222,11 +255,11 @@ logic is expressed in one of three ways:
    `Structured Filter Shortcut`_ below.
 2. **YAML-native statements** (``statements:`` key) — for conditional
    routing, ``if/then/else``, ``call``, ``call_indirect``, ``foreach``,
-   ``stop``, ``unset``, variable assignment — without writing any
-   RainerScript syntax.  See `YAML-Native Statements`_ below.
-   **Recommended for most configs.**
-3. **Inline RainerScript** (``script:`` key) — escape hatch for complex
-   metaprogramming or advanced RainerScript not covered by ``statements:``.
+   ``stop``, ``unset``, variable assignment — without writing raw
+   RainerScript blocks. See `YAML-Native Statements`_ below.
+   **Recommended for most YAML configs.**
+3. **Inline RainerScript** (``script:`` key) — intentional escape hatch for
+   advanced logic that is better expressed directly in RainerScript.
    See `Scripting`_ below.
 
 ``filter:`` + ``actions:`` example:
@@ -433,10 +466,10 @@ YAML-Native Statements
 ----------------------
 
 The ``statements:`` key is the recommended way to express conditional routing
-and control flow without writing raw RainerScript.  Each item in the sequence
-is a YAML mapping that represents one statement.  Only the *filter expression*
-inside ``if:`` remains as a RainerScript expression string — all structural
-elements and action parameters are expressed as YAML.
+and control flow for most YAML configs. Each item in the sequence is a YAML
+mapping that represents one statement. Only the *filter expression* inside
+``if:`` remains as a RainerScript expression string. All structural elements
+and action parameters are expressed as YAML.
 
 ``statements:`` is mutually exclusive with ``script:``, ``filter:``, and
 ``actions:``.
@@ -537,10 +570,15 @@ statement items using the same syntax as ``statements:``.  Example:
 Scripting
 ---------
 
+Use ``script:`` when a ruleset is better expressed directly in RainerScript,
+or when you need advanced logic that you intentionally want to keep in
+RainerScript form. For normal YAML configs, prefer ``statements:`` so the
+structure stays visible to YAML tooling, review, and generation workflows.
+
 RainerScript filter expressions and statement types (``if/then/else``,
 ``set``, ``unset``, ``foreach``, ``stop``, ``call``, legacy PRI-filters,
 property-filters, ``action()``) are all available inside a ``script:``
-block.  The value is an ordinary YAML scalar (use a
+block. The value is an ordinary YAML scalar (use a
 `YAML block scalar <https://yaml.org/spec/1.2.2/#81-block-scalar-styles>`_
 for multi-line content):
 
@@ -564,7 +602,7 @@ for multi-line content):
 
 The script content is passed verbatim to the RainerScript lexer/parser,
 so anything that is valid RainerScript in a ``ruleset() {}`` body is valid
-here.  Inline actions defined in the ``script:`` block do **not** need to
+here. Inline actions defined in the ``script:`` block do **not** need to
 be listed separately under an ``inputs:`` or ``actions:`` section.
 
 .. tip::
@@ -573,10 +611,11 @@ be listed separately under an ``inputs:`` or ``actions:`` section.
    `Structured Filter Shortcut`_.
    For conditional routing, variable assignments, ``call``, ``foreach``,
    ``stop``, and ``reload_lookup_table`` use the ``statements:`` block
-   described in `YAML-Native Statements`_.  **Recommended for most configs.**
-   Reserve ``script:`` only for advanced RainerScript that cannot be
-   expressed through ``statements:``, such as complex nested legacy
-   priority/property filters or inline ``call_direct`` patterns.
+   described in `YAML-Native Statements`_. **Recommended for most YAML
+   configs.**
+   Reserve ``script:`` for advanced logic that is better expressed directly in
+   RainerScript, such as complex nested legacy priority/property filters or
+   inline ``call_direct`` patterns.
 
 Complete Example
 ----------------
@@ -656,6 +695,10 @@ intermediate representation that the RainerScript lex/bison grammar produces —
 and hands them to the shared ``cnfDoObj()`` dispatcher.  There is no independent
 YAML runtime; the shared back-end handles all validation, module initialisation,
 and execution.
+
+That shared back-end is why RainerScript experience transfers directly.
+Whether you write YAML or RainerScript, you are still configuring the same
+rsyslog objects and execution model.
 
 This approach deliberately minimises the change surface: the YAML-specific code
 is confined to one file with no runtime presence after configuration loading.
