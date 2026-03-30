@@ -1,5 +1,9 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-30: distribution tarballs no longer ship .gitignore files
+  Source tarballs should not impose repository ignore rules on downstream
+  packaging trees. This was a problem e.g. in Debian packaging.
+  closes: https://github.com/rsyslog/rsyslog/issues/6575
 - 2026-03-30: omhttps: optimize connection handling
   This improves curl object handling and increases performance.
   Thanks to github user shinigami35 for the patch.
