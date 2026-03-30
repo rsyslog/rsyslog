@@ -220,7 +220,7 @@ TESTS_DEFAULT = \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
-	daqueue-dirty-shutdown.sh \
+	daqueue-dirty-shutdown-recovery.sh \
 	diskq-rfc5424.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
