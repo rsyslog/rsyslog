@@ -151,7 +151,7 @@ static rsRetVal buildInstance(instanceData *pData) {
 #ifdef HAVE_LOGNORM_TURBO
         /* Save rule string for per-worker cloning BEFORE it gets freed */
         if (pData->bTurbo) {
-            pData->ruleForClone = (uchar *)strdup((char *)pData->rule);
+            CHKmalloc(pData->ruleForClone = (uchar *)strdup((char *)pData->rule));
         }
 #endif
         if (ln_loadSamplesFromString(pData->ctxln, (char *)pData->rule) != 0) {
@@ -168,7 +168,7 @@ static rsRetVal buildInstance(instanceData *pData) {
 #ifdef HAVE_LOGNORM_TURBO
         /* Save rulebase path for per-worker cloning */
         if (pData->bTurbo) {
-            pData->rulebaseForClone = (uchar *)strdup((char *)pData->rulebase);
+            CHKmalloc(pData->rulebaseForClone = (uchar *)strdup((char *)pData->rulebase));
         }
 #endif
         if (ln_loadSamples(pData->ctxln, (char *)pData->rulebase) != 0) {
@@ -489,7 +489,9 @@ fast_result_to_json(const ln_fast_result_t *result) {
             while (next != NULL) {
                 struct json_object *child = NULL;
                 if (!json_object_object_get_ex(parent, tok,
-                                               &child)) {
+                                               &child)
+                    || !json_object_is_type(child,
+                                            json_type_object)) {
                     child = json_object_new_object();
                     json_object_object_add(parent, tok,
                                            child);
