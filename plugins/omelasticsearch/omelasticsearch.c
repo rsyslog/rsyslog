@@ -901,11 +901,13 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         free(healthUrl);
 
         if (res == CURLE_OK) {
-            DBGPRINTF(
-                "omelasticsearch: checkConn %s completed with success "
-                "on attempt %d\n",
-                serverUrl, i);
-            ABORT_FINALIZE(RS_RET_OK);
+            long httpStatus = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
+            if (httpStatus >= 200 && httpStatus <= 299) {
+                DBGPRINTF("omelasticsearch: checkConn %s completed with success on attempt %d\n", serverUrl, i);
+                ABORT_FINALIZE(RS_RET_OK);
+            }
+            DBGPRINTF("omelasticsearch: checkConn %s HTTP status %ld on attempt %d\n", serverUrl, httpStatus, i);
         }
 
         DBGPRINTF("omelasticsearch: checkConn %s failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));
