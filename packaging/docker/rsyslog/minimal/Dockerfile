@@ -47,7 +47,7 @@ RUN apt-get update && \
         ca-certificates \
     && add-apt-repository -y ppa:adiscon/daily-stable \
     && apt-get update && \
-    apt-get install -y --no-install-recommends rsyslog rsyslog-omstdout \
+    apt-get install -y --no-install-recommends tzdata rsyslog rsyslog-omstdout \
     && apt-get purge -y --auto-remove software-properties-common \
     && apt-get autoremove -y \
     && apt-get clean \
