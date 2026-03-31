@@ -3021,9 +3021,9 @@ fi
 AM_CONDITIONAL(ENABLE_OMDTLS, test x$enable_omdtls = xyes)
 # END OMDTLS INPUT
 
-if test "x$enable_wolfssl" = "xyes"; then
-	if test "x$enable_imdtls" = "xyes" -o "x$enable_omdtls" = "xyes"; then
-		AC_MSG_ERROR([DTLS modules (imdtls/omdtls) require OpenSSL; they cannot be built with wolfSSL enabled])
+if test "x$enable_imdtls" = "xyes" -o "x$enable_omdtls" = "xyes"; then
+	if test "x$enable_openssl" != "xyes"; then
+		AC_MSG_ERROR([DTLS modules (imdtls/omdtls) require OpenSSL support to be enabled (--enable-openssl)])
 	fi
 fi
 

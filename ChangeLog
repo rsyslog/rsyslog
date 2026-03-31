@@ -1,5 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-03-31: build: require --enable-openssl if imdtls or omdtls is used
+  The DTLS modules (imdtls and omdtls) depend on the OpenSSL network
+  stream driver. Previously, the build would succeed in a broken
+  state (missing lmnsd_ossl.la) if OpenSSL support was not also
+  explicitly enabled.
+  closes: https://github.com/rsyslog/rsyslog/issues/5339
 - 2026-03-30: mmjsontransform: add YAML policy preprocessing
   mmjsontransform can now load a YAML policy file to rename or drop JSON
   keys before flatten/unflatten processing. Policy files are documented
