@@ -1979,6 +1979,14 @@ static rsRetVal ATTR_NONNULL(1, 2)
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
+    if (pWrkrData->httpStatusCode >= 500 || pWrkrData->httpStatusCode == 429) {
+        STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+        STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
+        LogError(0, RS_RET_SUSPENDED, "omelasticsearch: server returned unexpected HTTP status code %ld",
+                 pWrkrData->httpStatusCode);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
     if (pWrkrData->pData->rebindInterval > -1) pWrkrData->nOperations++;
 
     if (pWrkrData->reply == NULL) {
