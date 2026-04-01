@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/omhiredis-dynakey.sh
+. ${srcdir:=.}/omhiredis-dynakey.sh

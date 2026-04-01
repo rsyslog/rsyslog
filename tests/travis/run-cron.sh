@@ -7,8 +7,8 @@ if [ "$TRAVIS_EVENT_TYPE" != "cron" ]; then
 	exit
 fi
 
-source tests/travis/install.sh
-source /etc/lsb-release
+. tests/travis/install.sh
+. /etc/lsb-release
 
 # download coverity tool
 mkdir coverity

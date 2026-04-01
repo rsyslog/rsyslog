@@ -19,9 +19,9 @@ echo "PWD:              $PWD"
 
 
 export PKG_CONFIG_PATH="/opt/rsyslog/lib/pkgconfig"
-source tests/CI/prep-liblogging.sh
-source tests/CI/prep-libestr.sh
-source tests/CI/prep-libfastjson.sh
+. tests/CI/prep-liblogging.sh
+. tests/CI/prep-libestr.sh
+. tests/CI/prep-libfastjson.sh
 
 echo "****************************** END PREP STEP ******************************"
 

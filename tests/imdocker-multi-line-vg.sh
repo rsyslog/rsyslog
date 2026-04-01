@@ -3,4 +3,4 @@
 
 #!/bin/bash
 export USE_VALGRIND="YES"
-source ${srcdir:-.}/imdocker-multi-line.sh
+. ${srcdir:-.}/imdocker-multi-line.sh

@@ -45,7 +45,7 @@ New tests MUST be registered using the "Define at Top, Distribute Unconditionall
     ```
 
 ### 3. Using diag.sh Helpers
-All tests source `tests/diag.sh`. You should use its standardized helpers:
+All tests include `tests/diag.sh` using the POSIX `.` command. You should use its standardized helpers:
 - `cmp_exact`: Verify file content matches.
 - `require_plugin`: Skip test if a module is not built.
 - `command_deny`: Ensure a specific command fails.
@@ -53,7 +53,7 @@ All tests source `tests/diag.sh`. You should use its standardized helpers:
 ### 4. Valgrind Testing
 For memory leak and race condition detection:
 - Use scripts ending in `-vg.sh`.
-- These are wrappers that set `USE_VALGRIND=1` and source the base test.
+- These are wrappers that set `USE_VALGRIND=1` and include the base test using the `.` command.
 
 ### 5. Debugging Failed Tests
 If a test fails, you can inspect logs by:

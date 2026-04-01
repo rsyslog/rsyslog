@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-source ${srcdir:-.}/imdocker-basic.sh
+. ${srcdir:-.}/imdocker-basic.sh

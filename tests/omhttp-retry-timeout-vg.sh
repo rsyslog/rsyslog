@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/omhttp-retry-timeout.sh
+. ${srcdir:=.}/omhttp-retry-timeout.sh

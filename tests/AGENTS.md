@@ -28,11 +28,12 @@ agents.
   as its RainerScript counterpart.  See the `rsyslog_config` skill for full
   conventions.
 - Name Valgrind-enabled wrappers with the `-vg.sh` suffix and toggle Valgrind by
-  exporting `USE_VALGRIND` before sourcing the non-`vg` script. Use
-  `tests/timereported-utc-vg.sh` as the reference layout: it sources the base
-  scenario instead of copying it and demonstrates paring back emitted messages
-  when the underlying test is slow—especially important under Valgrind. Older
-  wrappers still duplicate logic; prefer the modern pattern when touching them.
+  exporting `USE_VALGRIND` before including the non-`vg` script using the `.`
+  command. Use `tests/timereported-utc-vg.sh` as the reference layout: it
+  includes the base scenario using the `.` command instead of copying it and
+  demonstrates paring back emitted messages when the underlying test is
+  slow—especially important under Valgrind. Older wrappers still duplicate
+  logic; prefer the modern pattern when touching them.
 - Put auxiliary binaries next to their scripts (e.g. `*.c` programs compiled via
   the Automake harness) and list them in `tests/Makefile.am`.
 - Keep long-lived configuration snippets in `tests/testsuites/` and reuse them

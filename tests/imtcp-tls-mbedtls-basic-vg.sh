@@ -6,4 +6,4 @@ if [ "$(valgrind --version)" == "valgrind-3.11.0" ]; then
 fi
 export USE_VALGRIND="YES"
 export RSYSLOG_PRELOAD=$(find /usr -name libmbed\*.so | sed ':start;N;s/\n\//:\//;t start;P;D')
-source ${srcdir:-.}/imtcp-tls-mbedtls-basic.sh
+. ${srcdir:-.}/imtcp-tls-mbedtls-basic.sh

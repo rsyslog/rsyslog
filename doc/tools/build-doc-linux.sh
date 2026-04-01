@@ -107,7 +107,7 @@ if [[ ! -f "${VENV_DIR}/bin/activate" ]]; then
   create_venv
 fi
 
-source "${VENV_DIR}/bin/activate"
+. "${VENV_DIR}/bin/activate"
 
 # Ensure pip exists inside the venv; Debian/Ubuntu without ensurepip may lack it
 if ! python -m pip --version >/dev/null 2>&1; then

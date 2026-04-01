@@ -85,8 +85,9 @@ modifier or option, add the matching YAML key there and add a test case to
 
 - Name: `tests/yaml-<area>-<what>.sh` (e.g. `yaml-template-list.sh`,
   `yaml-global-ratelimit.sh`).
-- Source `diag.sh` and use the standard helpers (`startup`, `injectmsg`,
-  `wait_queueempty`, `shutdown_when_empty`, `wait_shutdown`).
+- Include `diag.sh` using the POSIX `.` command and use the standard helpers
+  (`startup`, `injectmsg`, `wait_queueempty`, `shutdown_when_empty`,
+  `wait_shutdown`).
 - Config file: `tests/testsuites/<testname>.yaml` (`.yaml` extension triggers
   the YAML loader).
 - Verify observable output — don't just check that rsyslog starts; assert that

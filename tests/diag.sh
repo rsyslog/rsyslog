@@ -34,7 +34,7 @@
 #		without the need to write it twice: just have a 2-liner -vg.sh which
 #		does:
 #			export USE_VALGRIND="YES"
-#			source original-test.sh
+#			. original-test.sh
 #		sample can be seen in imjournal-basic[.vg].sh
 #		You may also use USE_VALGRIND="YES-NOLEAK" to request valgrind without
 #		leakcheck (this sometimes is needed).
@@ -4257,7 +4257,7 @@ case $1 in
   'init')
     export srcdir # in case it was not yet in environment
     $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-		source set-envvars
+		. set-envvars
     # check for special test runs, via TEST_RUN_TYPE env var
     if [ "$TEST_RUN_TYPE" == "MOCK-OK" ]; then
       # used for mock distcheck, just to check all tests are present

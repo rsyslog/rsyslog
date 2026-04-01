@@ -53,7 +53,7 @@ def evaluate_tests_registration(check: dict[str, object]) -> dict[str, object]:
             issues.append(
                 build_issue(
                     wrapper["file"],
-                    f"Wrapper should source '{wrapper['base_script']}' instead of duplicating logic.",
+                    f"Wrapper should include '{wrapper['base_script']}' (using '.') instead of duplicating logic.",
                 )
             )
 

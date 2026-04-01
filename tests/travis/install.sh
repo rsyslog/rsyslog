@@ -1,6 +1,6 @@
 #!/bin/bash
 # this installs some components that we cannot install any other way
-source /etc/lsb-release
+. /etc/lsb-release
 
 if [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
 sudo add-apt-repository ppa:adiscon/$AD_PPA -y

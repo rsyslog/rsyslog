@@ -43,15 +43,15 @@ iteration, though Automake will not capture transcripts.
 
 ## Harness conventions
 
-- Source `diag.sh` at the top of every shell test: `. "$srcdir/diag.sh"`.
+- Include `diag.sh` at the top of every shell test using the POSIX `.` command: `. "$srcdir/diag.sh"`.
 - Prefer helpers such as `cmp_exact` and `require_plugin` over ad-hoc shell so
   diagnostics stay consistent. See `tests/AGENTS.md` for a longer checklist.
 - Name Valgrind-enabled wrappers with the `-vg.sh` suffix and Helgrind-enabled
   scripts with `-vgthread.sh`. `tests/timereported-utc-vg.sh` illustrates how to
-  source the base scenario rather than duplicating it and how to trim emitted
-  messages when a slow test would otherwise become prohibitively long under
-  Valgrind. Some legacy wrappers predate this pattern; follow the newer style
-  when adding or refactoring coverage.
+  include the base scenario using the `.` command rather than duplicating it and
+  how to trim emitted messages when a slow test would otherwise become
+  prohibitively long under Valgrind. Some legacy wrappers predate this pattern;
+  follow the newer style when adding or refactoring coverage.
 
 ## Environment setup snippets
 

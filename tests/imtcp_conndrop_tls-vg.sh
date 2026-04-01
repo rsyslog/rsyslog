@@ -3,4 +3,4 @@
 export USE_VALGRIND="YES"
 export TB_TEST_MAX_RUNTIME=1500
 export NUMMESSAGES=10000 # reduce for slower valgrind run
-source ${srcdir:-.}/imtcp_conndrop_tls.sh
+. ${srcdir:-.}/imtcp_conndrop_tls.sh
