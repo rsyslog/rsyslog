@@ -1,5 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-02: testbench: add some (new) unit tests and plumbing
+  There is an initial set, which can be expanded. The idea is to get a small
+  deterministic set of high-profile component unit tests which can aid local
+  agentic coding verification without the full testbench. Full testbench run
+  is very expensive, so catching issues early is useful.
+- 2026-04-02: portability: remove bash "source" bash-ism accross the project
 - 2026-03-31: build: require --enable-openssl if imdtls or omdtls is used
   The DTLS modules (imdtls and omdtls) depend on the OpenSSL network
   stream driver. Previously, the build would succeed in a broken
