@@ -11,7 +11,8 @@ EXTRA_DIST = \
 	proprepltest-nolimittag-udp.sh \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
-	proprepltest-rfctag.sh
+	proprepltest-rfctag.sh \
+	unit/README.md
 
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
@@ -1895,8 +1896,35 @@ liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 
 # TODO: reenable TESTRUNS = rt_init rscript
+check_PROGRAMS = runtime_unit_linkedlist
+TESTS = runtime_unit_linkedlist
+
+runtime_unit_linkedlist_SOURCES = \
+	unit/linkedlist_test.c
+
+runtime_unit_linkedlist_CPPFLAGS = \
+	-DSD_EXPORT_SYMBOLS \
+	-D_PATH_MODDIR=\"$(pkglibdir)/\" \
+	$(PTHREADS_CFLAGS) \
+	$(RSRT_CFLAGS) \
+	$(LIBUUID_CFLAGS) \
+	$(LIBFASTJSON_CFLAGS) \
+	${LIBESTR_CFLAGS} \
+	$(LIBYAML_CFLAGS) \
+	-I$(top_builddir) \
+	-I$(top_srcdir) \
+	-I$(top_srcdir)/grammar \
+	-I$(top_srcdir)/runtime \
+	-I$(top_srcdir)/tools
+
+runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+
+if ENABLE_LIBLOGGING_STDLOG
+runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+endif
+
 if ENABLE_TESTBENCH
-check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
+check_PROGRAMS += $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
 	mangle_qi \
@@ -1910,7 +1938,7 @@ if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
-TESTS = $(TESTRUNS)
+TESTS += $(TESTRUNS)
 
 
 

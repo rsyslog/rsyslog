@@ -337,7 +337,6 @@ lmtcpclt_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 lmtcpclt_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)
 endif
 
-
 #
 # support library for Guardtime KSI-LS12
 #
