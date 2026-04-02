@@ -59,6 +59,16 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
 - **Testbench**: [`tests/AGENTS.md`](./tests/AGENTS.md)
 - **Built-in Tools**: [`tools/AGENTS.md`](./tools/AGENTS.md)
 
+## Test Structure Rule
+
+- For this recursive Automake tree, keep `tests/` as the single recursive
+  test-owning subtree.
+- It is fine to organize sources under `tests/unit/`, `tests/helpers/`, or
+  similar folders, but register and run those tests from `tests/Makefile.am`.
+- Do not introduce additional recursive `tests/.../Makefile.am` test harnesses.
+  Top-level `make check TESTS=...` propagates into every subdirectory, and
+  multiple test-owning subdirs make targeted selection fragile.
+
 ## Agent Chat Keywords
 
 - `SETUP`: Triggers the `rsyslog_build` setup workflow.

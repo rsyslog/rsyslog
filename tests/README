@@ -9,6 +9,11 @@ Most scripts validate a single module, but complex end-to-end scenarios are
 welcome. For a minimal example, examine `rtinit.c`, which performs a simple
 runtime init/deinit cycle.
 
+The `tests/` subtree is the single Automake-owned test area for rsyslog. The
+shell-driven testbench remains here, and fast C unit-test sources for isolated
+helpers are organized in [`tests/unit/`](./unit/README.md) but are built and
+run by [`tests/Makefile.am`](./Makefile.am).
+
 ## Quickstart
 
 Bootstrap the build tree before attempting to run tests:
@@ -21,7 +26,8 @@ make check
 ```
 
 `make check` compiles the helper binaries, prepares fixtures, and then executes
-the entire suite. Use <kbd>Ctrl</kbd>+<kbd>C</kbd> to stop an ongoing run.
+the entire suite, including the unit tests sourced from `tests/unit/`. Use
+<kbd>Ctrl</kbd>+<kbd>C</kbd> to stop an ongoing run.
 
 ## Running individual scenarios
 
@@ -40,6 +46,13 @@ make check TESTS='imfile-basic.sh'
 
 You can also execute scripts directly (`./tests/imfile-basic.sh`) for quicker
 iteration, though Automake will not capture transcripts.
+
+To run the linkedlist unit test through the shared harness from the repository
+root:
+
+```
+make check TESTS='runtime_unit_linkedlist'
+```
 
 ## Harness conventions
 
