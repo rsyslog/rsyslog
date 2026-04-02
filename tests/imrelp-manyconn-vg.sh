@@ -6,4 +6,4 @@ if [ "$CI_ENV" == "Centos7VM" ]; then
 	exit 77
 fi
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/imrelp-manyconn.sh
+. ${srcdir:=.}/imrelp-manyconn.sh

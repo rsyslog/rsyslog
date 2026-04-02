@@ -14,7 +14,7 @@ fi
 #	export AZURE_KEY=""
 #	export AZURE_CONTAINER=""
 # ---
-source omazureeventhubs-env.sh
+. omazureeventhubs-env.sh
 
 export NUMMESSAGES=10000
 export NUMMESSAGESFULL=$NUMMESSAGES

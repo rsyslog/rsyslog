@@ -44,7 +44,7 @@ fi
 # Load environment if available
 if [[ -f "${ROSI_BASE}/.env" ]]; then
     # shellcheck source=/dev/null
-    source "${ROSI_BASE}/.env" 2>/dev/null || true
+    . "${ROSI_BASE}/.env" 2>/dev/null || true
 fi
 
 usage() {

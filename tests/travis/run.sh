@@ -10,8 +10,8 @@ echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 
-source tests/travis/install.sh
-source /etc/lsb-release
+. tests/travis/install.sh
+. /etc/lsb-release
 
 #
 # ACTUAL MAIN CI PART OF THE SCRIPT
@@ -29,7 +29,7 @@ if [ "$MERGE" == "YES" ]; then
     # we need to use source as we must exit on inability to merge!
     set +v
     set +e
-    source tests/CI/try_merge.sh --merge-only
+    . tests/CI/try_merge.sh --merge-only
     set -v
     set -e
 fi

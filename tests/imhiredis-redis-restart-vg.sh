@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/imhiredis-redis-restart.sh
+. ${srcdir:=.}/imhiredis-redis-restart.sh

@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-source ${srcdir:-.}/uxsock_simple_abstract.sh
+. ${srcdir:-.}/uxsock_simple_abstract.sh

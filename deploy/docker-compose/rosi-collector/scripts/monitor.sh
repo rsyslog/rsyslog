@@ -601,7 +601,7 @@ reset_grafana_password() {
     
     if [ -z "$new_password" ]; then
         if [ -f "${ENVFILE}" ]; then
-            source "${ENVFILE}"
+            . "${ENVFILE}"
             new_password="${GRAFANA_ADMIN_PASSWORD:-}"
         fi
         

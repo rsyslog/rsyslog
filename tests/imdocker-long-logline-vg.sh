@@ -3,4 +3,4 @@
 
 #!/bin/bash
 export USE_VALGRIND="YES"
-source ${srcdir:-.}/imdocker-long-logline.sh
+. ${srcdir:-.}/imdocker-long-logline.sh

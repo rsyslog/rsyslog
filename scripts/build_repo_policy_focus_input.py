@@ -119,7 +119,7 @@ def extract_parameter_names(content: str) -> set[str]:
 
 
 def wrapper_sources_base_script(content: str, base_script: str) -> bool:
-    pattern = re.compile(r"(?m)^\s*(?:\.|source)\s+(.*?)(\s*#.*)?$")
+    pattern = re.compile(r"(?m)^\s*\.\s+['\"]?(.*?)['\"]?(\s*#.*)?$")
     for match in pattern.finditer(content):
         path = match.group(1).strip()
         if path == base_script or path.endswith(f"/{base_script}"):
@@ -129,7 +129,7 @@ def wrapper_sources_base_script(content: str, base_script: str) -> bool:
 
 def build_tests_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
     # This rule is strict: new or renamed shell tests must stay wired into
-    # tests/Makefile.am, and lightweight -vg.sh wrappers should source the base
+    # tests/Makefile.am, and lightweight -vg.sh wrappers should include the base
     # scenario instead of cloning its logic.
     added_tests: list[str] = []
     renamed_tests: list[dict[str, str]] = []

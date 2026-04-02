@@ -5,10 +5,10 @@ if [ "$DEBUG" == "on" ]; then
 	set -x
 fi
 if [ -f tools/$1 ]; then
-	source tools/$1
+	. tools/$1
 else
 	echo "ERROR: command not known: $*"
 	echo
-	source tools/help
+	. tools/help
 	exit 1
 fi

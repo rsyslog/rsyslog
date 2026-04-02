@@ -9,4 +9,4 @@
 # trick. -- rgerhards, 2018-07-21
 #export RSYSLOG_DEBUG="debug"
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/mmkubernetes-cache-expire.sh
+. ${srcdir:=.}/mmkubernetes-cache-expire.sh
