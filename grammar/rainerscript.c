@@ -4904,7 +4904,11 @@ struct cnfstmt *cnfstmtNewUnset(char *var) {
 }
 
 struct cnfstmt *cnfstmtNewContinue(void) {
-    return cnfstmtNew(S_NOP);
+    struct cnfstmt *cnfstmt = cnfstmtNew(S_NOP);
+    if (cnfstmt != NULL) {
+        cnfstmt->printable = (uchar *)strdup("continue");
+    }
+    return cnfstmt;
 }
 
 struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {

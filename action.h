@@ -82,6 +82,7 @@ struct action_s {
     time_t tLastOccur; /* time last occurrence was seen (for timing them out) */
     struct modInfo_s *pMod; /* pointer to output module handling this selector */
     void *pModData; /* pointer to module data - content is module-specific */
+    struct nvlst *pSyntaxLst; /* cloned config syntax for translation/export */
     sbool bRepMsgHasMsg; /* "message repeated..." has msg fragment in it (0-no, 1-yes) */
     rsRetVal (*submitToActQ)(action_t *, wti_t *, smsg_t *); /* function submit message to action queue */
     rsRetVal (*qConstruct)(struct queue_s *pThis);

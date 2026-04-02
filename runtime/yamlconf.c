@@ -1935,6 +1935,9 @@ rsRetVal yamlconf_load(const char *fname) {
     char *seen_keys[YAMLCONF_MAX_TOPKEYS];
     int seen_count = 0;
     DEFiRet;
+    char *prev_cnfcurrfn = cnfcurrfn;
+
+    cnfcurrfn = (char *)fname;
 
     fh = fopen(fname, "r");
     if (fh == NULL) {
@@ -2049,6 +2052,7 @@ finalize_it:
     for (int ki = 0; ki < seen_count; ++ki) free(seen_keys[ki]);
     if (parserInit) yaml_parser_delete(&parser);
     if (fh) fclose(fh);
+    cnfcurrfn = prev_cnfcurrfn;
     RETiRet;
 }
 

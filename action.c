@@ -89,6 +89,7 @@
 #include "ruleset.h"
 #include "parserif.h"
 #include "statsobj.h"
+#include "runtime/translate.h"
 
 /* AIXPORT : cs renamed to legacy_cs as clashes with libpthreads variable in complete file*/
 #ifdef _AIX
@@ -302,6 +303,8 @@ rsRetVal actionDestruct(action_t *const pThis) {
 
     if (!strcmp((char *)modGetName(pThis->pMod), "builtin:omdiscard")) {
         /* discard actions will be optimized out */
+        nvlstDestruct(pThis->pSyntaxLst);
+        pThis->pSyntaxLst = NULL;
         FINALIZE;
     }
 
@@ -321,6 +324,7 @@ rsRetVal actionDestruct(action_t *const pThis) {
     free((void *)pThis->pszErrFile);
     free((void *)pThis->pszExternalStateFile);
     free(pThis->pszName);
+    nvlstDestruct(pThis->pSyntaxLst);
     free(pThis->ppTpl);
     free(pThis->peParamPassing);
     freeWrkrDataTable(pThis);
@@ -2217,6 +2221,9 @@ rsRetVal addAction(action_t **ppAction,
     CHKiRet(actionConstruct(&pAction)); /* create action object first */
     pAction->pMod = pMod;
     pAction->pModData = pModData;
+    if (rsconfTranslateEnabled() && lst != NULL && pAction->pSyntaxLst == NULL) {
+        pAction->pSyntaxLst = rsconfTranslateCloneNvlst(lst);
+    }
     if (actParams == NULL) { /* use legacy systemn */
         pAction->pszName = cs.pszActionName;
         pAction->iResumeInterval = cs.glbliActionResumeInterval;

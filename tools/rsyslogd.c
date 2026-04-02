@@ -66,6 +66,7 @@
 #include "srUtils.h"
 #include "rainerscript.h"
 #include "rsconf.h"
+#include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
 #include "operatingstate.h"
@@ -1431,6 +1432,8 @@ static void initAll(int argc, char **argv) {
     int iHelperUOpt;
     int bChDirRoot = 1; /* change the current working directory to "/"? */
     char *arg; /* for command line option processing */
+    char *configOutputPath = NULL;
+    enum rsconfTranslateFormat iTranslateFmt = RSCONF_TRANSLATE_NONE;
     char cwdbuf[128]; /* buffer to obtain/display current working directory */
     int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
     DEFiRet;
@@ -1453,15 +1456,16 @@ static void initAll(int argc, char **argv) {
      * before processing complex configurations that might depend on it.
      */
 #if defined(_AIX)
-    while ((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
+    while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
 #else
-    while ((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
+    while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
 #endif
         switch ((char)ch) {
             case '4':
             case '6':
             case 'A':
             case 'f': /* configuration file */
+            case 'F': /* translation output format */
             case 'i': /* pid file name */
             case 'n': /* don't fork */
             case 'N': /* enable config verify mode */
@@ -1580,36 +1584,27 @@ static void initAll(int argc, char **argv) {
             case 'N': /* enable config verify mode */
                 iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
                 break;
+            case 'F':
+                if (arg == NULL) {
+                    fprintf(stderr, "rsyslogd: -F requires a format argument\n");
+                    exit(1);
+                }
+                if (!strcasecmp(arg, "yaml")) {
+                    iTranslateFmt = RSCONF_TRANSLATE_YAML;
+                } else if (!strcasecmp(arg, "rainerscript")) {
+                    iTranslateFmt = RSCONF_TRANSLATE_RAINERSCRIPT;
+                } else {
+                    fprintf(stderr, "rsyslogd: unsupported translation format '%s'\n", arg);
+                    exit(1);
+                }
+                break;
             case 'o':
-                if (fp_rs_full_conf_output != NULL) {
-                    fprintf(stderr,
-                            "warning: -o option given multiple times. Now "
-                            "using value %s\n",
+                if (configOutputPath != NULL) {
+                    fprintf(stderr, "warning: -o option given multiple times. Now using value %s\n",
                             (arg == NULL) ? "-" : arg);
-                    fclose(fp_rs_full_conf_output);
-                    fp_rs_full_conf_output = NULL;
                 }
-                if (arg == NULL || !strcmp(arg, "-")) {
-                    fp_rs_full_conf_output = stdout;
-                } else {
-                    fp_rs_full_conf_output = fopen(arg, "w");
-                }
-                if (fp_rs_full_conf_output == NULL) {
-                    perror(arg);
-                    fprintf(stderr,
-                            "rsyslogd: cannot open config output file %s - "
-                            "-o option will be ignored\n",
-                            arg);
-                } else {
-                    time_t tTime;
-                    struct tm tp;
-                    datetime.GetTime(&tTime);
-                    localtime_r(&tTime, &tp);
-                    fprintf(fp_rs_full_conf_output,
-                            "## full conf created by rsyslog version %s at "
-                            "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d ##\n",
-                            VERSION, tp.tm_year + 1900, tp.tm_mon + 1, tp.tm_mday, tp.tm_hour, tp.tm_min, tp.tm_sec);
-                }
+                configOutputPath = arg;
+                arg = NULL;
                 break;
             case 'q': /* add hostname if DNS resolving has failed */
                 fprintf(stderr,
@@ -1680,6 +1675,38 @@ static void initAll(int argc, char **argv) {
     }
 
     if (iRet != RS_RET_END_OF_LINKEDLIST) FINALIZE;
+
+    if (iTranslateFmt != RSCONF_TRANSLATE_NONE) {
+        if (!iConfigVerify) {
+            fprintf(stderr, "rsyslogd: -F requires -N1 config validation mode\n");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        if (configOutputPath == NULL) {
+            fprintf(stderr, "rsyslogd: -F requires -o <path>\n");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        rsconfTranslateConfigure(iTranslateFmt);
+    } else if (configOutputPath != NULL) {
+        if (!strcmp(configOutputPath, "-")) {
+            fp_rs_full_conf_output = stdout;
+        } else {
+            fp_rs_full_conf_output = fopen(configOutputPath, "w");
+        }
+        if (fp_rs_full_conf_output == NULL) {
+            perror(configOutputPath);
+            fprintf(stderr, "rsyslogd: cannot open config output file %s - -o option will be ignored\n",
+                    configOutputPath);
+        } else {
+            time_t tTime;
+            struct tm tp;
+            datetime.GetTime(&tTime);
+            localtime_r(&tTime, &tp);
+            fprintf(fp_rs_full_conf_output,
+                    "## full conf created by rsyslog version %s at "
+                    "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d ##\n",
+                    VERSION, tp.tm_year + 1900, tp.tm_mon + 1, tp.tm_mday, tp.tm_hour, tp.tm_min, tp.tm_sec);
+        }
+    }
 
     if (iConfigVerify) {
         doFork = 0;
@@ -1825,6 +1852,12 @@ static void initAll(int argc, char **argv) {
     }
     CHKiRet(localRet);
 
+    if (iTranslateFmt != RSCONF_TRANSLATE_NONE) {
+        CHKiRet(rsconfTranslateWriteFile(configOutputPath));
+        iRet = RS_RET_VALIDATION_RUN;
+        FINALIZE;
+    }
+
     CHKiRet(rsyslogd_InitStdRatelimiters());
 
     if (bChDirRoot) {
@@ -1888,6 +1921,7 @@ static void initAll(int argc, char **argv) {
     }
 
 finalize_it:
+    rsconfTranslateCleanup();
     if (iRet == RS_RET_VALIDATION_RUN) {
         fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
         exit(0);
