@@ -6,7 +6,6 @@
 # This file is part of rsyslog.
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 modpath="../runtime/.libs:../.libs"
 
 cat > "${RSYSLOG_DYNNAME}.conf" <<'RS_EOF'

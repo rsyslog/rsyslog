@@ -603,7 +603,7 @@ popfile(void)
 	 */
 	dbgprintf("config parser: reached end of file %s\n", bs->fn);
 	yy_delete_buffer(bs->bs);
-	if(bs->prev != NULL)
+	if(bs->prev != NULL || cnfcurrfn != bs->fn)
 		free(bs->fn);
 	free(bs->estr);
 
