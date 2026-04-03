@@ -7,7 +7,6 @@
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
-export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 modpath="../runtime/.libs:../plugins/imtcp/.libs:../.libs"
 outlog="/tmp/${RSYSLOG_DYNNAME}.roundtrip.log"
 portfile="${RSYSLOG_DYNNAME}.tcpflood_port"
