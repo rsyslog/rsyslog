@@ -1,5 +1,5 @@
 #!/bin/bash
-# check translation warnings for traditional file action shorthand.
+# check translation of traditional file action shorthand into YAML filter/actions.
 #
 # Many distros still ship defaults like:
 #   user.* -/var/log/user.log
@@ -18,11 +18,20 @@ user.*				-/var/log/user.log
 RS_EOF
 
 ../tools/rsyslogd -N1 -f "${RSYSLOG_DYNNAME}.conf" -F yaml -o "${RSYSLOG_DYNNAME}.yaml" -M"$modpath" || error_exit $?
+cat -n "${RSYSLOG_DYNNAME}.yaml"
 
-content_check '# TRANSLATION WARNING: top-level statements normalized into explicit RSYSLOG_DefaultRuleset' "${RSYSLOG_DYNNAME}.yaml"
-content_check '# TRANSLATION WARNING: legacy action syntax preserved as script text' "${RSYSLOG_DYNNAME}.yaml"
-content_check 'name: "RSYSLOG_DefaultRuleset"' "${RSYSLOG_DYNNAME}.yaml"
-content_check 'user.* -/var/log/user.log' "${RSYSLOG_DYNNAME}.yaml"
+cat > "${RSYSLOG_DYNNAME}.expected.yaml" <<'YAML_EOF'
+version: 2
+
+rulesets:
+  # TRANSLATION WARNING: top-level statements normalized into explicit RSYSLOG_DefaultRuleset
+  - name: "RSYSLOG_DefaultRuleset"
+    filter: "user.*"
+    actions:
+      - type: "omfile"
+        file: "/var/log/user.log"
+YAML_EOF
+cmp_exact_file "${RSYSLOG_DYNNAME}.expected.yaml" "${RSYSLOG_DYNNAME}.yaml"
 
 echo SUCCESS: legacy file-action shorthand translation coverage
 exit_test

@@ -30,6 +30,8 @@ The translator is a semantic migration tool:
 - It flattens include trees into one generated file.
 - It may emit warning comments for constructs that are easy to misunderstand,
   especially legacy syntax.
+- It can normalize a limited set of common legacy selector/action lines into
+  structured YAML instead of falling back to raw RainerScript text.
 
 It is not a source-preserving formatter:
 
@@ -37,6 +39,10 @@ It is not a source-preserving formatter:
 - Output is normalized into one canonical file.
 - The generated YAML or RainerScript may look different from the original even
   when the behavior is unchanged.
+- Legacy coverage is intentionally limited. Common file actions
+  (``/var/log/...`` and ``-/var/log/...``) and ``:omusrmsg:...`` are
+  recognized, but many other legacy forms still fall back to warnings or
+  ``script: |`` output.
 
 Translate RainerScript to YAML
 ------------------------------
@@ -111,6 +117,47 @@ This is especially useful after reviewing or editing the generated output.
 For simple rulesets, translation emits structured YAML such as ``actions:`` or
 ``filter:`` + ``actions:``. More complex logic still falls back to a YAML
 ``script: |`` block so semantics remain explicit.
+
+Limited Legacy Translation
+--------------------------
+
+Common distro defaults written in traditional selector/action syntax can now be
+translated into native YAML structures.
+
+For example, this legacy input:
+
+.. code-block:: rsyslog
+
+   user.*                -/var/log/user.log
+   *.emerg               :omusrmsg:*
+
+is translated into YAML like:
+
+.. code-block:: yaml
+
+   version: 2
+
+   rulesets:
+     - name: "RSYSLOG_DefaultRuleset"
+       statements:
+         - if: "prifilt('user.*')"
+           action:
+             type: "omfile"
+             file: "/var/log/user.log"
+         - if: "prifilt('*.emerg')"
+           action:
+             type: "omusrmsg"
+             users: "*"
+
+Current legacy coverage is intentionally narrow:
+
+- file actions written as ``/path`` or ``-/path`` become ``omfile`` actions
+- ``:omusrmsg:user`` becomes ``omusrmsg`` with ``users: ...``
+- selector chains are normalized into YAML ``statements:``
+
+Do not expect all legacy constructs to be converted into structured YAML.
+Unsupported or ambiguous cases may still produce warning comments or fall back
+to ``script: |``.
 
 Translate YAML to RainerScript
 ------------------------------

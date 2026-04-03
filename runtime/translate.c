@@ -38,6 +38,10 @@ static char *translateVasprintf(const char *fmt, va_list ap);
 static void cnfarrayCloneDestruct(struct cnfarray *ar);
 static int preferredKeyRank(const struct nvlst *n);
 static int nvlstSortComesBefore(const struct nvlst *a, const struct nvlst *b);
+static int estrAppendCstr(es_str_t **s, const char *buf);
+static int estrAppendChar(es_str_t **s, char c);
+static int estrAppendQuoted(es_str_t **s, const char *buf);
+static int nvlstValueToRs(es_str_t **out, const struct nvlst *node);
 
 struct rsconfTranslateWarning_s {
     char *msg;
@@ -51,10 +55,17 @@ struct rsconfTranslateYamlAction_s {
     struct rsconfTranslateYamlAction_s *next;
 };
 
+struct rsconfTranslateYamlStatement_s {
+    char *if_expr;
+    struct rsconfTranslateYamlAction_s *actions;
+    struct rsconfTranslateYamlStatement_s *next;
+};
+
 enum rsconfTranslateYamlRulesetKind_e {
     RS_TRANSLATE_YAML_RULESET_NONE = 0,
     RS_TRANSLATE_YAML_RULESET_ACTIONS,
     RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS,
+    RS_TRANSLATE_YAML_RULESET_STATEMENTS,
 };
 
 struct rsconfTranslateItem_s {
@@ -68,6 +79,7 @@ struct rsconfTranslateItem_s {
     enum rsconfTranslateYamlRulesetKind_e yaml_ruleset_kind;
     char *yaml_filter;
     struct rsconfTranslateYamlAction_s *yaml_actions;
+    struct rsconfTranslateYamlStatement_s *yaml_statements;
     struct rsconfTranslateItem_s *next;
 };
 
@@ -123,6 +135,16 @@ static void yamlActionDestruct(struct rsconfTranslateYamlAction_s *act) {
     }
 }
 
+static void yamlStatementDestruct(struct rsconfTranslateYamlStatement_s *stmt) {
+    while (stmt != NULL) {
+        struct rsconfTranslateYamlStatement_s *n = stmt->next;
+        free(stmt->if_expr);
+        yamlActionDestruct(stmt->actions);
+        free(stmt);
+        stmt = n;
+    }
+}
+
 static void itemDestruct(struct rsconfTranslateItem_s *it) {
     while (it != NULL) {
         struct rsconfTranslateItem_s *n = it->next;
@@ -133,6 +155,7 @@ static void itemDestruct(struct rsconfTranslateItem_s *it) {
         warningsDestruct(it->warnings);
         free(it->yaml_filter);
         yamlActionDestruct(it->yaml_actions);
+        yamlStatementDestruct(it->yaml_statements);
         free(it);
         it = n;
     }
@@ -354,25 +377,183 @@ static struct objlst *cloneObjlst(const struct objlst *lst) {
 
 static int stmtListIsStructuredActionsOnly(const struct cnfstmt *stmt) {
     while (stmt != NULL) {
-        if (stmt->nodetype != S_ACT || stmt->d.act == NULL || stmt->d.act->pSyntaxLst == NULL) return 0;
-        stmt = stmt->next;
+        if (stmt->nodetype != S_ACT) return 0;
+        if (stmt->d.act != NULL && stmt->d.act->pSyntaxLst != NULL) {
+            stmt = stmt->next;
+            continue;
+        }
+        if (stmt->printable != NULL) {
+            const char *s = (const char *)stmt->printable;
+            while (*s == ' ' || *s == '\t') ++s;
+            if (*s == '/' || (*s == '-' && s[1] == '/') || !strncmp(s, ":omusrmsg:", 10)) {
+                stmt = stmt->next;
+                continue;
+            }
+        }
+        return 0;
     }
     return 1;
+}
+
+static struct nvlst *newStringNode(const char *name, const char *value) {
+    es_str_t *nm = NULL;
+    es_str_t *val = NULL;
+    struct nvlst *node = NULL;
+
+    nm = es_newStrFromCStr(name, strlen(name));
+    if (nm == NULL) goto done;
+    val = es_newStrFromCStr(value, strlen(value));
+    if (val == NULL) goto done;
+    node = nvlstSetName(nvlstNewStr(val), nm);
+    if (node == NULL) {
+        es_deleteStr(val);
+        es_deleteStr(nm);
+    }
+
+done:
+    return node;
+}
+
+static void yamlActionNodeAppend(struct nvlst **head, struct nvlst *node) {
+    struct nvlst *cur;
+
+    if (node == NULL) return;
+    node->next = NULL;
+    if (*head == NULL) {
+        *head = node;
+        return;
+    }
+    cur = *head;
+    while (cur->next != NULL) cur = cur->next;
+    cur->next = node;
+}
+
+static struct nvlst *legacyActionToNvlst(const char *printable, int *oom) {
+    const char *s = printable;
+    struct nvlst *lst = NULL;
+    struct nvlst *node;
+
+    if (printable == NULL) return NULL;
+    while (*s == ' ' || *s == '\t') ++s;
+
+    if (*s == '/' || (*s == '-' && s[1] == '/')) {
+        if (*s == '-') ++s;
+        node = newStringNode("type", "omfile");
+        if (node == NULL) goto oom_fail;
+        yamlActionNodeAppend(&lst, node);
+        node = newStringNode("file", s);
+        if (node == NULL) goto oom_fail;
+        yamlActionNodeAppend(&lst, node);
+        return lst;
+    }
+
+    if (!strncmp(s, ":omusrmsg:", 10)) {
+        node = newStringNode("type", "omusrmsg");
+        if (node == NULL) goto oom_fail;
+        yamlActionNodeAppend(&lst, node);
+        node = newStringNode("users", s + 10);
+        if (node == NULL) goto oom_fail;
+        yamlActionNodeAppend(&lst, node);
+        return lst;
+    }
+
+    return NULL;
+
+oom_fail:
+    *oom = 1;
+    nvlstDestruct(lst);
+    return NULL;
+}
+
+static char *buildPriFilterExpr(const char *selector) {
+    es_str_t *estr;
+    char *out;
+    const char *p;
+    int use_single = 1;
+
+    estr = es_newStr(64);
+    if (estr == NULL) return NULL;
+    for (p = selector; *p != '\0'; ++p) {
+        if (*p == '\'') {
+            use_single = 0;
+            break;
+        }
+    }
+    if (use_single) {
+        if (estrAppendCstr(&estr, "prifilt('") != 0) {
+            es_deleteStr(estr);
+            return NULL;
+        }
+    } else if (estrAppendCstr(&estr, "prifilt(") != 0 || estrAppendQuoted(&estr, selector) != 0 ||
+               estrAppendChar(&estr, ')') != 0) {
+        es_deleteStr(estr);
+        return NULL;
+    }
+    if (!use_single) {
+        out = es_str2cstr(estr, NULL);
+        es_deleteStr(estr);
+        return out;
+    }
+    for (p = selector; *p != '\0'; ++p) {
+        if (estrAppendChar(&estr, *p) != 0) {
+            es_deleteStr(estr);
+            return NULL;
+        }
+    }
+    if (estrAppendCstr(&estr, "')") != 0) {
+        es_deleteStr(estr);
+        return NULL;
+    }
+    out = es_str2cstr(estr, NULL);
+    es_deleteStr(estr);
+    return out;
+}
+
+static int appendActionNvlstSingleline(es_str_t **out, const struct nvlst *lst) {
+    const struct nvlst *n;
+    char *name;
+    int first = 1;
+    int rank;
+
+    if (estrAppendCstr(out, "action(") != 0) return -1;
+    for (rank = 0; rank < 4; ++rank) {
+        for (n = lst; n != NULL; n = n->next) {
+            if (preferredKeyRank(n) != rank) continue;
+            name = es_str2cstr(n->name, NULL);
+            if (name == NULL) return -1;
+            if (!first && estrAppendCstr(out, " ") != 0) {
+                free(name);
+                return -1;
+            }
+            first = 0;
+            if (estrAppendCstr(out, name) != 0 || estrAppendChar(out, '=') != 0 || nvlstValueToRs(out, n) != 0) {
+                free(name);
+                return -1;
+            }
+            free(name);
+        }
+    }
+    return estrAppendChar(out, ')');
 }
 
 static struct rsconfTranslateYamlAction_s *cloneYamlActions(const struct cnfstmt *stmt, int *oom) {
     struct rsconfTranslateYamlAction_s *head = NULL, *tail = NULL, *node;
 
     while (stmt != NULL) {
+        int legacy_oom = 0;
         node = calloc(1, sizeof(*node));
         if (node == NULL) {
             *oom = 1;
             yamlActionDestruct(head);
             return NULL;
         }
-        node->nvlst = rsconfTranslateCloneNvlst(stmt->d.act->pSyntaxLst);
+        if (stmt->d.act != NULL && stmt->d.act->pSyntaxLst != NULL) {
+            node->nvlst = rsconfTranslateCloneNvlst(stmt->d.act->pSyntaxLst);
+        } else {
+            node->nvlst = legacyActionToNvlst((const char *)stmt->printable, &legacy_oom);
+        }
         if (node->nvlst == NULL) {
-            *oom = 1;
+            *oom = legacy_oom;
             free(node);
             yamlActionDestruct(head);
             return NULL;
@@ -400,6 +581,142 @@ static void yamlActionsAppend(struct rsconfTranslateYamlAction_s **dst, struct r
     tail->next = src;
 }
 
+static struct rsconfTranslateYamlStatement_s *cloneYamlLegacyStatements(const struct cnfstmt *stmt, int *oom) {
+    struct rsconfTranslateYamlStatement_s *head = NULL, *tail = NULL, *node;
+
+    while (stmt != NULL) {
+        const struct cnfstmt *then_branch = NULL;
+        char *if_expr;
+
+        if (stmt->nodetype != S_PRIFILT || stmt->d.s_prifilt.t_else != NULL || stmt->printable == NULL) {
+            yamlStatementDestruct(head);
+            return NULL;
+        }
+
+        then_branch = stmt->d.s_prifilt.t_then;
+        if (!stmtListIsStructuredActionsOnly(then_branch)) {
+            yamlStatementDestruct(head);
+            return NULL;
+        }
+
+        if_expr = buildPriFilterExpr((const char *)stmt->printable);
+        if (if_expr == NULL) {
+            *oom = 1;
+            yamlStatementDestruct(head);
+            return NULL;
+        }
+
+        node = calloc(1, sizeof(*node));
+        if (node == NULL) {
+            free(if_expr);
+            *oom = 1;
+            yamlStatementDestruct(head);
+            return NULL;
+        }
+        node->if_expr = if_expr;
+        node->actions = cloneYamlActions(then_branch, oom);
+        if (node->actions == NULL) {
+            yamlStatementDestruct(node);
+            yamlStatementDestruct(head);
+            return NULL;
+        }
+
+        if (head == NULL) {
+            head = tail = node;
+        } else {
+            tail->next = node;
+            tail = node;
+        }
+        stmt = stmt->next;
+    }
+
+    return head;
+}
+
+static struct rsconfTranslateYamlStatement_s *newYamlStatement(char *if_expr,
+                                                               struct rsconfTranslateYamlAction_s *actions,
+                                                               int *oom) {
+    struct rsconfTranslateYamlStatement_s *node = calloc(1, sizeof(*node));
+    if (node == NULL) {
+        *oom = 1;
+        free(if_expr);
+        yamlActionDestruct(actions);
+        return NULL;
+    }
+    node->if_expr = if_expr;
+    node->actions = actions;
+    return node;
+}
+
+static void yamlStatementsAppend(struct rsconfTranslateYamlStatement_s **dst,
+                                 struct rsconfTranslateYamlStatement_s *src) {
+    struct rsconfTranslateYamlStatement_s *tail;
+    if (*dst == NULL) {
+        *dst = src;
+        return;
+    }
+    tail = *dst;
+    while (tail->next != NULL) tail = tail->next;
+    tail->next = src;
+}
+
+static int promoteSimpleYamlToStatements(struct rsconfTranslateItem_s *it, int *oom) {
+    char *if_expr;
+    struct rsconfTranslateYamlStatement_s *stmt;
+
+    if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_STATEMENTS) return 1;
+    if (it->yaml_ruleset_kind != RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS || it->yaml_filter == NULL ||
+        it->yaml_actions == NULL)
+        return 0;
+
+    if_expr = buildPriFilterExpr(it->yaml_filter);
+    if (if_expr == NULL) {
+        *oom = 1;
+        return 0;
+    }
+    stmt = newYamlStatement(if_expr, it->yaml_actions, oom);
+    if (stmt == NULL) return 0;
+
+    it->yaml_actions = NULL;
+    free(it->yaml_filter);
+    it->yaml_filter = NULL;
+    it->yaml_statements = stmt;
+    it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_STATEMENTS;
+    return 1;
+}
+
+static int appendYamlLegacyStatement(struct rsconfTranslateItem_s *it, const struct cnfstmt *script, int *oom) {
+    const struct cnfstmt *then_branch = NULL;
+    char *if_expr;
+    struct rsconfTranslateYamlAction_s *actions;
+    struct rsconfTranslateYamlStatement_s *stmt;
+
+    if (script == NULL || script->next != NULL || script->nodetype != S_PRIFILT || script->d.s_prifilt.t_else != NULL ||
+        script->printable == NULL)
+        return 0;
+    then_branch = script->d.s_prifilt.t_then;
+    if (!stmtListIsStructuredActionsOnly(then_branch)) return 0;
+
+    if (!promoteSimpleYamlToStatements(it, oom) || it->yaml_ruleset_kind != RS_TRANSLATE_YAML_RULESET_STATEMENTS) {
+        return 0;
+    }
+
+    if_expr = buildPriFilterExpr((const char *)script->printable);
+    if (if_expr == NULL) {
+        *oom = 1;
+        return 0;
+    }
+    actions = cloneYamlActions(then_branch, oom);
+    if (actions == NULL) {
+        free(if_expr);
+        return 0;
+    }
+    stmt = newYamlStatement(if_expr, actions, oom);
+    if (stmt == NULL) return 0;
+    yamlStatementsAppend(&it->yaml_statements, stmt);
+    return 1;
+}
+
 static void captureYamlRulesetBody(struct rsconfTranslateItem_s *it, const struct cnfstmt *script) {
     int oom = 0;
 
@@ -412,20 +729,27 @@ static void captureYamlRulesetBody(struct rsconfTranslateItem_s *it, const struc
             g_tx.fatal = 1;
             return;
         }
-        if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_NONE) {
+        if (actions == NULL) {
+            /* Unsupported legacy action shorthand, fall back below. */
+        } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_NONE) {
+            yamlStatementDestruct(it->yaml_statements);
+            it->yaml_statements = NULL;
             it->yaml_actions = actions;
             it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_ACTIONS;
+            return;
         } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_ACTIONS && it->yaml_filter == NULL) {
             yamlActionsAppend(&it->yaml_actions, actions);
+            return;
         } else {
             yamlActionDestruct(actions);
             free(it->yaml_filter);
             it->yaml_filter = NULL;
             yamlActionDestruct(it->yaml_actions);
             it->yaml_actions = NULL;
+            yamlStatementDestruct(it->yaml_statements);
+            it->yaml_statements = NULL;
             it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_NONE;
         }
-        return;
     }
 
     if (script->next == NULL && script->printable != NULL) {
@@ -451,7 +775,26 @@ static void captureYamlRulesetBody(struct rsconfTranslateItem_s *it, const struc
                 g_tx.fatal = 1;
                 return;
             }
-            it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS;
+            if (it->yaml_actions != NULL) {
+                yamlStatementDestruct(it->yaml_statements);
+                it->yaml_statements = NULL;
+                it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS;
+                return;
+            }
+            free(it->yaml_filter);
+            it->yaml_filter = NULL;
+        }
+    }
+
+    if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_NONE) {
+        it->yaml_statements = cloneYamlLegacyStatements(script, &oom);
+        if (oom) {
+            addWarning(&it->warnings, "translator: out of memory when capturing YAML statements");
+            g_tx.fatal = 1;
+            return;
+        }
+        if (it->yaml_statements != NULL) {
+            it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_STATEMENTS;
             return;
         }
     }
@@ -460,6 +803,8 @@ static void captureYamlRulesetBody(struct rsconfTranslateItem_s *it, const struc
     it->yaml_filter = NULL;
     yamlActionDestruct(it->yaml_actions);
     it->yaml_actions = NULL;
+    yamlStatementDestruct(it->yaml_statements);
+    it->yaml_statements = NULL;
     it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_NONE;
 }
 
@@ -692,36 +1037,25 @@ static int nvlstValueToRs(es_str_t **out, const struct nvlst *node) {
 static int emitActionSingleline(es_str_t **out,
                                 const struct cnfstmt *stmt,
                                 struct rsconfTranslateWarning_s **warnings) {
-    const struct nvlst *lst;
     char *name;
-    int first = 1;
 
     switch (stmt->nodetype) {
         case S_ACT:
             if (stmt->d.act != NULL && stmt->d.act->pSyntaxLst != NULL) {
-                int rank;
-                if (estrAppendCstr(out, "action(") != 0) return -1;
-                for (rank = 0; rank < 4; ++rank) {
-                    for (lst = stmt->d.act->pSyntaxLst; lst != NULL; lst = lst->next) {
-                        if (preferredKeyRank(lst) != rank) continue;
-                        name = es_str2cstr(lst->name, NULL);
-                        if (name == NULL) return -1;
-                        if (!first && estrAppendCstr(out, " ") != 0) {
-                            free(name);
-                            return -1;
-                        }
-                        first = 0;
-                        if (estrAppendCstr(out, name) != 0 || estrAppendChar(out, '=') != 0 ||
-                            nvlstValueToRs(out, lst) != 0) {
-                            free(name);
-                            return -1;
-                        }
-                        free(name);
-                    }
-                }
-                return estrAppendChar(out, ')');
+                return appendActionNvlstSingleline(out, stmt->d.act->pSyntaxLst);
             }
             if (stmt->printable != NULL) {
+                int oom = 0;
+                struct nvlst *legacy = legacyActionToNvlst((char *)stmt->printable, &oom);
+                if (legacy != NULL) {
+                    int ret = appendActionNvlstSingleline(out, legacy);
+                    nvlstDestruct(legacy);
+                    return ret;
+                }
+                if (oom) {
+                    addWarning(warnings, "translator: out of memory when converting legacy action syntax");
+                    return -1;
+                }
                 addWarning(warnings, "legacy action syntax preserved as script text");
                 return estrAppendCstr(out, (char *)stmt->printable);
             }
@@ -729,13 +1063,15 @@ static int emitActionSingleline(es_str_t **out,
             return -1;
         case S_STOP:
             return estrAppendCstr(out, "stop");
-        case S_CALL:
+        case S_CALL: {
+            int ret;
             if (estrAppendCstr(out, "call ") != 0) return -1;
             name = es_str2cstr(stmt->d.s_call.name, NULL);
             if (name == NULL) return -1;
-            first = estrAppendCstr(out, name);
+            ret = estrAppendCstr(out, name);
             free(name);
-            return first;
+            return ret;
+        }
         case S_CALL_INDIRECT:
             if (estrAppendCstr(out, "call_indirect ") != 0) return -1;
             if (exprToString(out, stmt->d.s_call_ind.expr, warnings) != 0) return -1;
@@ -1026,6 +1362,7 @@ void rsconfTranslateCaptureScript(const struct cnfstmt *script, const char *sour
     struct rsconfTranslateItem_s *it = g_tx.rulesets;
     es_str_t *estr;
     struct nvlst *nameNode;
+    int had_script;
 
     if (!rsconfTranslateEnabled() || script == NULL) return;
     while (it != NULL) {
@@ -1067,6 +1404,7 @@ void rsconfTranslateCaptureScript(const struct cnfstmt *script, const char *sour
             tail->next = it;
         }
     }
+    had_script = it->script != NULL;
     estr = es_newStr(256);
     if (estr == NULL || stmtListToString(&estr, script, 1, &it->warnings) != 0) {
         addWarning(&it->warnings, "translator: failed to serialize top-level script");
@@ -1101,7 +1439,25 @@ void rsconfTranslateCaptureScript(const struct cnfstmt *script, const char *sour
         free(more);
     }
     es_deleteStr(estr);
-    captureYamlRulesetBody(it, script);
+    if (had_script) {
+        int oom = 0;
+        if (!appendYamlLegacyStatement(it, script, &oom)) {
+            if (oom) {
+                addWarning(&it->warnings, "translator: out of memory when capturing YAML statements");
+                g_tx.fatal = 1;
+            } else {
+                free(it->yaml_filter);
+                it->yaml_filter = NULL;
+                yamlActionDestruct(it->yaml_actions);
+                it->yaml_actions = NULL;
+                yamlStatementDestruct(it->yaml_statements);
+                it->yaml_statements = NULL;
+                it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_NONE;
+            }
+        }
+    } else {
+        captureYamlRulesetBody(it, script);
+    }
 }
 
 static void writeWarningComments(FILE *fp, const struct rsconfTranslateWarning_s *w, int indent) {
@@ -1310,6 +1666,81 @@ static void writeYamlActions(FILE *fp, const struct rsconfTranslateYamlAction_s 
     }
 }
 
+static int yamlActionCount(const struct rsconfTranslateYamlAction_s *actions) {
+    int n = 0;
+    while (actions != NULL) {
+        ++n;
+        actions = actions->next;
+    }
+    return n;
+}
+
+static void writeYamlActionList(FILE *fp, const struct rsconfTranslateYamlAction_s *actions, int indent) {
+    const struct rsconfTranslateYamlAction_s *act;
+    int i;
+
+    for (act = actions; act != NULL; act = act->next) {
+        const struct nvlst *n;
+        const struct nvlst *firstNode = NULL;
+        int firstRank = 4;
+        for (n = act->nvlst; n != NULL; n = n->next) {
+            int rank = preferredKeyRank(n);
+            if (rank < firstRank) {
+                firstNode = n;
+                firstRank = rank;
+            }
+        }
+        if (firstNode != NULL) {
+            writeYamlEntry(fp, firstNode, indent, 1);
+        } else {
+            for (i = 0; i < indent; ++i) fputs("  ", fp);
+            fputs("-\n", fp);
+        }
+        writeYamlMappingExcept(fp, act->nvlst, indent + 1, firstNode);
+    }
+}
+
+static void writeYamlActionMapping(FILE *fp, const struct nvlst *lst, int indent) {
+    const struct nvlst *n;
+    const struct nvlst *firstNode = NULL;
+    int firstRank = 4;
+
+    for (n = lst; n != NULL; n = n->next) {
+        int rank = preferredKeyRank(n);
+        if (rank < firstRank) {
+            firstNode = n;
+            firstRank = rank;
+        }
+    }
+    if (firstNode != NULL) {
+        writeYamlEntry(fp, firstNode, indent, 0);
+    }
+    writeYamlMappingExcept(fp, lst, indent, firstNode);
+}
+
+static void writeYamlStatements(FILE *fp, const struct rsconfTranslateYamlStatement_s *stmts, int indent) {
+    const struct rsconfTranslateYamlStatement_s *stmt;
+    int i;
+
+    for (i = 0; i < indent; ++i) fputs("  ", fp);
+    fputs("statements:\n", fp);
+    for (stmt = stmts; stmt != NULL; stmt = stmt->next) {
+        for (i = 0; i < indent + 1; ++i) fputs("  ", fp);
+        fputs("- if: ", fp);
+        writeYamlQuoted(fp, stmt->if_expr == NULL ? "" : stmt->if_expr);
+        fputc('\n', fp);
+        if (yamlActionCount(stmt->actions) == 1) {
+            for (i = 0; i < indent + 2; ++i) fputs("  ", fp);
+            fputs("action:\n", fp);
+            writeYamlActionMapping(fp, stmt->actions->nvlst, indent + 3);
+        } else {
+            for (i = 0; i < indent + 2; ++i) fputs("  ", fp);
+            fputs("then:\n", fp);
+            writeYamlActionList(fp, stmt->actions, indent + 3);
+        }
+    }
+}
+
 static void writeYamlListSection(FILE *fp, const char *name, const struct rsconfTranslateItem_s *items) {
     const struct rsconfTranslateItem_s *it;
     if (items == NULL) return;
@@ -1350,6 +1781,8 @@ static void writeYamlListSection(FILE *fp, const char *name, const struct rsconf
             writeYamlActions(fp, it->yaml_actions, 2);
         } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_ACTIONS) {
             writeYamlActions(fp, it->yaml_actions, 2);
+        } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_STATEMENTS) {
+            writeYamlStatements(fp, it->yaml_statements, 2);
         } else if (it->script != NULL) {
             fputs("    script: |\n", fp);
             writeYamlBlockScalar(fp, it->script, 3);

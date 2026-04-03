@@ -559,6 +559,7 @@ TESTS_LIBGCRYPT_VALGRIND = \
 TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \
+	config-translate-legacy-debian-default.sh \
 	config-translate-legacy-file-action.sh \
 	config-translate-yaml-to-rs.sh \
 	ratelimit_hup.sh \

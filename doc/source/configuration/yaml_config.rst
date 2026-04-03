@@ -47,7 +47,9 @@ runtime semantics.
 If you want to migrate an existing RainerScript config into YAML, rsyslog can
 generate canonical YAML directly via ``rsyslogd -N1 -F yaml -o ...``. Simple
 rulesets are emitted as structured YAML such as ``actions:`` or ``filter:`` +
-``actions:``, while more complex bodies fall back to ``script: |``. See
+``actions:``, and a limited set of common legacy selector/action forms is
+normalized into structured YAML ``statements:``. More complex bodies still
+fall back to ``script: |``. See
 :doc:`../tutorials/config_format_translation` for the workflow and caveats.
 
 When to Use YAML or RainerScript
