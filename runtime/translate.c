@@ -403,8 +403,17 @@ static struct nvlst *newStringNode(const char *name, const char *value) {
     nm = es_newStrFromCStr(name, strlen(name));
     if (nm == NULL) goto done;
     val = es_newStrFromCStr(value, strlen(value));
-    if (val == NULL) goto done;
-    node = nvlstSetName(nvlstNewStr(val), nm);
+    if (val == NULL) {
+        es_deleteStr(nm);
+        goto done;
+    }
+    node = nvlstNewStr(val);
+    if (node == NULL) {
+        es_deleteStr(val);
+        es_deleteStr(nm);
+        goto done;
+    }
+    node = nvlstSetName(node, nm);
     if (node == NULL) {
         es_deleteStr(val);
         es_deleteStr(nm);
@@ -1384,7 +1393,20 @@ void rsconfTranslateCaptureScript(const struct cnfstmt *script, const char *sour
     if (it == NULL) {
         es_str_t *nm = es_newStrFromCStr("name", 4);
         es_str_t *val = es_newStrFromCStr("RSYSLOG_DefaultRuleset", strlen("RSYSLOG_DefaultRuleset"));
-        nameNode = nvlstSetName(nvlstNewStr(val), nm);
+        if (nm == NULL || val == NULL) {
+            es_deleteStr(nm);
+            es_deleteStr(val);
+            g_tx.fatal = 1;
+            return;
+        }
+        nameNode = nvlstNewStr(val);
+        if (nameNode == NULL) {
+            es_deleteStr(val);
+            es_deleteStr(nm);
+            g_tx.fatal = 1;
+            return;
+        }
+        nameNode = nvlstSetName(nameNode, nm);
         it = calloc(1, sizeof(*it));
         if (it == NULL) {
             nvlstDestruct(nameNode);
