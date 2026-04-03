@@ -67,6 +67,10 @@ Additional Resources
 - **Example configuration:** Download a sample configuration file:
   :download:`rsyslog-example.conf <rsyslog-example.conf>`.
 
+- **Format translation tutorial:** See
+  :doc:`../tutorials/config_format_translation` for translating between
+  canonical RainerScript and YAML.
+
 Compatibility Note
 ------------------
 

@@ -11,6 +11,17 @@ There are still a number of reasons to convert older formats:
 * ensure no side-effects accidentally occur
 * unify rsyslog.conf language
 
+For broader migrations, rsyslog can also translate supported configurations
+directly between canonical RainerScript and YAML. See
+:doc:`../tutorials/config_format_translation` for the built-in translation
+workflow.
+
+The built-in translator currently recognizes a limited subset of traditional
+selector/action syntax for structured YAML output. Common file actions
+(``/var/log/...`` and ``-/var/log/...``) and ``:omusrmsg:...`` are covered,
+but broader legacy syntax still requires review and may fall back to warnings
+or raw script output.
+
 Do not overdo conversion
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

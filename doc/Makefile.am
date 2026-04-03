@@ -1198,6 +1198,7 @@ EXTRA_DIST = \
     source/troubleshooting/selinux.rst \
     source/troubleshooting/troubleshoot.rst \
     source/tutorials/cert-script.tar.gz \
+    source/tutorials/config_format_translation.rst \
     source/tutorials/database.rst \
     source/tutorials/deploy_rsyslog_rosi_stack.rst \
     source/tutorials/rosi_stack_architecture.png \
