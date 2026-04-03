@@ -11,6 +11,11 @@ There are still a number of reasons to convert older formats:
 * ensure no side-effects accidentally occur
 * unify rsyslog.conf language
 
+For broader migrations, rsyslog can also translate supported configurations
+directly between canonical RainerScript and YAML. See
+:doc:`../tutorials/config_format_translation` for the built-in translation
+workflow.
+
 Do not overdo conversion
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

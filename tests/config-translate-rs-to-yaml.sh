@@ -7,13 +7,12 @@
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
-modpath="../runtime/.libs:../plugins/omstdout/.libs:../.libs"
+modpath="../runtime/.libs:../.libs"
 
 cat > "${RSYSLOG_DYNNAME}.conf" <<'RS_EOF'
-module(load="omstdout")
 main_queue(queue.type="Direct")
 ruleset(name="main") {
-  action(type="omstdout")
+  action(type="omfile" file="/var/log/sample.log")
 }
 RS_EOF
 
@@ -25,12 +24,11 @@ version: 2
 mainqueue:
   queue.type: "Direct"
 
-modules:
-  - load: "omstdout"
 rulesets:
   - name: "main"
-    script: |
-        action(type="omstdout")
+    actions:
+      - type: "omfile"
+        file: "/var/log/sample.log"
 YAML_EOF
 cmp_exact_file "${RSYSLOG_DYNNAME}.expected.yaml" "${RSYSLOG_DYNNAME}.yaml"
 

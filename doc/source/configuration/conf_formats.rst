@@ -56,6 +56,10 @@ The two formats are functionally equivalent for the base configuration model.
 You can also mix them: a YAML main config may include RainerScript ``.conf``
 fragments and vice versa.
 
+Built-in translation is available when you want to migrate or inspect a config
+in the other format. See :doc:`../tutorials/config_format_translation` for a
+practical workflow.
+
 Existing Configurations in Basic Format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -108,3 +112,6 @@ Use |FmtAdvancedName| for new configurations, or the :doc:`YAML format
 <yaml_config>` when rsyslog lives inside a YAML-centric workflow. The
 |FmtBasicName| format is acceptable for simple, existing configurations.
 Never use |FmtObsoleteName|.
+
+For step-by-step translation examples, see
+:doc:`../tutorials/config_format_translation`.

@@ -44,6 +44,12 @@ Existing RainerScript knowledge also transfers directly. YAML changes the
 surface syntax, but it does not introduce a separate rsyslog model or separate
 runtime semantics.
 
+If you want to migrate an existing RainerScript config into YAML, rsyslog can
+generate canonical YAML directly via ``rsyslogd -N1 -F yaml -o ...``. Simple
+rulesets are emitted as structured YAML such as ``actions:`` or ``filter:`` +
+``actions:``, while more complex bodies fall back to ``script: |``. See
+:doc:`../tutorials/config_format_translation` for the workflow and caveats.
+
 When to Use YAML or RainerScript
 --------------------------------
 

@@ -44,6 +44,19 @@ struct rsconfTranslateWarning_s {
     struct rsconfTranslateWarning_s *next;
 };
 
+static void addWarning(struct rsconfTranslateWarning_s **head, const char *fmt, ...);
+
+struct rsconfTranslateYamlAction_s {
+    struct nvlst *nvlst;
+    struct rsconfTranslateYamlAction_s *next;
+};
+
+enum rsconfTranslateYamlRulesetKind_e {
+    RS_TRANSLATE_YAML_RULESET_NONE = 0,
+    RS_TRANSLATE_YAML_RULESET_ACTIONS,
+    RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS,
+};
+
 struct rsconfTranslateItem_s {
     enum cnfobjType objType;
     struct nvlst *nvlst;
@@ -52,6 +65,9 @@ struct rsconfTranslateItem_s {
     char *source;
     int line;
     struct rsconfTranslateWarning_s *warnings;
+    enum rsconfTranslateYamlRulesetKind_e yaml_ruleset_kind;
+    char *yaml_filter;
+    struct rsconfTranslateYamlAction_s *yaml_actions;
     struct rsconfTranslateItem_s *next;
 };
 
@@ -98,6 +114,15 @@ static void warningsDestruct(struct rsconfTranslateWarning_s *w) {
     }
 }
 
+static void yamlActionDestruct(struct rsconfTranslateYamlAction_s *act) {
+    while (act != NULL) {
+        struct rsconfTranslateYamlAction_s *n = act->next;
+        nvlstDestruct(act->nvlst);
+        free(act);
+        act = n;
+    }
+}
+
 static void itemDestruct(struct rsconfTranslateItem_s *it) {
     while (it != NULL) {
         struct rsconfTranslateItem_s *n = it->next;
@@ -106,6 +131,8 @@ static void itemDestruct(struct rsconfTranslateItem_s *it) {
         free(it->script);
         free(it->source);
         warningsDestruct(it->warnings);
+        free(it->yaml_filter);
+        yamlActionDestruct(it->yaml_actions);
         free(it);
         it = n;
     }
@@ -323,6 +350,117 @@ static struct objlst *cloneObjlst(const struct objlst *lst) {
         lst = lst->next;
     }
     return head;
+}
+
+static int stmtListIsStructuredActionsOnly(const struct cnfstmt *stmt) {
+    while (stmt != NULL) {
+        if (stmt->nodetype != S_ACT || stmt->d.act == NULL || stmt->d.act->pSyntaxLst == NULL) return 0;
+        stmt = stmt->next;
+    }
+    return 1;
+}
+
+static struct rsconfTranslateYamlAction_s *cloneYamlActions(const struct cnfstmt *stmt, int *oom) {
+    struct rsconfTranslateYamlAction_s *head = NULL, *tail = NULL, *node;
+
+    while (stmt != NULL) {
+        node = calloc(1, sizeof(*node));
+        if (node == NULL) {
+            *oom = 1;
+            yamlActionDestruct(head);
+            return NULL;
+        }
+        node->nvlst = rsconfTranslateCloneNvlst(stmt->d.act->pSyntaxLst);
+        if (node->nvlst == NULL) {
+            *oom = 1;
+            free(node);
+            yamlActionDestruct(head);
+            return NULL;
+        }
+        if (head == NULL) {
+            head = tail = node;
+        } else {
+            tail->next = node;
+            tail = node;
+        }
+        stmt = stmt->next;
+    }
+
+    return head;
+}
+
+static void yamlActionsAppend(struct rsconfTranslateYamlAction_s **dst, struct rsconfTranslateYamlAction_s *src) {
+    struct rsconfTranslateYamlAction_s *tail;
+    if (*dst == NULL) {
+        *dst = src;
+        return;
+    }
+    tail = *dst;
+    while (tail->next != NULL) tail = tail->next;
+    tail->next = src;
+}
+
+static void captureYamlRulesetBody(struct rsconfTranslateItem_s *it, const struct cnfstmt *script) {
+    int oom = 0;
+
+    if (it == NULL || script == NULL) return;
+
+    if (stmtListIsStructuredActionsOnly(script)) {
+        struct rsconfTranslateYamlAction_s *actions = cloneYamlActions(script, &oom);
+        if (oom) {
+            addWarning(&it->warnings, "translator: out of memory when capturing YAML action list");
+            g_tx.fatal = 1;
+            return;
+        }
+        if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_NONE) {
+            it->yaml_actions = actions;
+            it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_ACTIONS;
+        } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_ACTIONS && it->yaml_filter == NULL) {
+            yamlActionsAppend(&it->yaml_actions, actions);
+        } else {
+            yamlActionDestruct(actions);
+            free(it->yaml_filter);
+            it->yaml_filter = NULL;
+            yamlActionDestruct(it->yaml_actions);
+            it->yaml_actions = NULL;
+            it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_NONE;
+        }
+        return;
+    }
+
+    if (script->next == NULL && script->printable != NULL) {
+        const struct cnfstmt *then_branch = NULL;
+
+        if (script->nodetype == S_PRIFILT && script->d.s_prifilt.t_else == NULL) {
+            then_branch = script->d.s_prifilt.t_then;
+        } else if (script->nodetype == S_PROPFILT && script->d.s_propfilt.t_else == NULL) {
+            then_branch = script->d.s_propfilt.t_then;
+        }
+
+        if (then_branch != NULL && stmtListIsStructuredActionsOnly(then_branch) &&
+            it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_NONE) {
+            it->yaml_filter = strdup((char *)script->printable);
+            if (it->yaml_filter == NULL) {
+                addWarning(&it->warnings, "translator: out of memory when capturing YAML filter");
+                g_tx.fatal = 1;
+                return;
+            }
+            it->yaml_actions = cloneYamlActions(then_branch, &oom);
+            if (oom) {
+                addWarning(&it->warnings, "translator: out of memory when capturing YAML action list");
+                g_tx.fatal = 1;
+                return;
+            }
+            it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS;
+            return;
+        }
+    }
+
+    free(it->yaml_filter);
+    it->yaml_filter = NULL;
+    yamlActionDestruct(it->yaml_actions);
+    it->yaml_actions = NULL;
+    it->yaml_ruleset_kind = RS_TRANSLATE_YAML_RULESET_NONE;
 }
 
 static int stmtListIsSelectorCompatible(const struct cnfstmt *stmt) {
@@ -868,7 +1006,12 @@ void rsconfTranslateCaptureObj(const struct cnfobj *o, const char *source, int l
         } else {
             it->script = es_str2cstr(estr, NULL);
             es_deleteStr(estr);
+            if (it->script == NULL) {
+                addWarning(&it->warnings, "translator: out of memory when capturing ruleset body");
+                g_tx.fatal = 1;
+            }
         }
+        captureYamlRulesetBody(it, o->script);
     }
     if (*list == NULL) {
         *list = it;
@@ -958,6 +1101,7 @@ void rsconfTranslateCaptureScript(const struct cnfstmt *script, const char *sour
         free(more);
     }
     es_deleteStr(estr);
+    captureYamlRulesetBody(it, script);
 }
 
 static void writeWarningComments(FILE *fp, const struct rsconfTranslateWarning_s *w, int indent) {
@@ -1139,6 +1283,33 @@ static void writeYamlBlockScalar(FILE *fp, const char *content, int indent) {
     }
 }
 
+static void writeYamlActions(FILE *fp, const struct rsconfTranslateYamlAction_s *actions, int indent) {
+    const struct rsconfTranslateYamlAction_s *act;
+    int i;
+
+    for (i = 0; i < indent; ++i) fputs("  ", fp);
+    fputs("actions:\n", fp);
+    for (act = actions; act != NULL; act = act->next) {
+        const struct nvlst *n;
+        const struct nvlst *firstNode = NULL;
+        int firstRank = 4;
+        for (n = act->nvlst; n != NULL; n = n->next) {
+            int rank = preferredKeyRank(n);
+            if (rank < firstRank) {
+                firstNode = n;
+                firstRank = rank;
+            }
+        }
+        if (firstNode != NULL) {
+            writeYamlEntry(fp, firstNode, indent + 1, 1);
+        } else {
+            for (i = 0; i < indent + 1; ++i) fputs("  ", fp);
+            fputs("-\n", fp);
+        }
+        writeYamlMappingExcept(fp, act->nvlst, indent + 2, firstNode);
+    }
+}
+
 static void writeYamlListSection(FILE *fp, const char *name, const struct rsconfTranslateItem_s *items) {
     const struct rsconfTranslateItem_s *it;
     if (items == NULL) return;
@@ -1172,7 +1343,14 @@ static void writeYamlListSection(FILE *fp, const char *name, const struct rsconf
                 writeYamlMapping(fp, obj->obj->nvlst, 4);
             }
         }
-        if (it->script != NULL) {
+        if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_FILTER_ACTIONS && it->yaml_filter != NULL) {
+            fputs("    filter: ", fp);
+            writeYamlQuoted(fp, it->yaml_filter);
+            fputc('\n', fp);
+            writeYamlActions(fp, it->yaml_actions, 2);
+        } else if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_ACTIONS) {
+            writeYamlActions(fp, it->yaml_actions, 2);
+        } else if (it->script != NULL) {
             fputs("    script: |\n", fp);
             writeYamlBlockScalar(fp, it->script, 3);
         }

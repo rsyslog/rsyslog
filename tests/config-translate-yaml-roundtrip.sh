@@ -35,8 +35,10 @@ templates:
     string: "%msg:F,58:2%\\n"
 rulesets:
   - name: "main"
-    script: |
-        action(type="omfile" file="${outlog}" template="outfmt")
+    actions:
+      - type: "omfile"
+        file: "${outlog}"
+        template: "outfmt"
 YAML_EOF
 
 ../tools/rsyslogd -N1 -f "${RSYSLOG_DYNNAME}.yaml" -F rainerscript -o "${RSYSLOG_DYNNAME}.roundtrip.conf" -M"$modpath" || error_exit $?
@@ -66,8 +68,10 @@ templates:
     string: "%msg:F,58:2%\\n"
 rulesets:
   - name: "main"
-    script: |
-        action(type="omfile" file="${outlog}" template="outfmt")
+    actions:
+      - type: "omfile"
+        file: "${outlog}"
+        template: "outfmt"
 YAML_EOF
 cmp_exact_file "${RSYSLOG_DYNNAME}.expected.yaml" "${RSYSLOG_DYNNAME}.roundtrip.yaml"
 
