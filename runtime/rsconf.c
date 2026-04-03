@@ -70,6 +70,7 @@
 #include "template.h"
 #include "timezones.h"
 #include "ratelimit.h"
+#include "translate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -596,7 +597,6 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
     int bDestructObj = 1;
     int bChkUnuse = 1;
     assert(o != NULL);
-
     dbgprintf("cnf:global:obj: ");
     cnfobjPrint(o);
 
@@ -607,6 +607,10 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
         return;
+    }
+
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateCaptureObj(o, cnfcurrfn, yylineno);
     }
 
     switch (o->objType) {
@@ -664,11 +668,18 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
+    }
     dbgprintf("cnf:global:script\n");
     ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
+                                      ln);
+    }
     DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
     /* the legacy system needs the "$" stripped */
     conf.cfsysline((uchar *)ln + 1);
@@ -676,6 +687,10 @@ void cnfDoCfsysline(char *ln) {
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
+                                      "BSD-style tag block '%s' is not supported by the translator", ln);
+    }
     DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
     LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
              "BSD-style blocks are no longer supported in rsyslog, "
@@ -686,6 +701,10 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
+                                      "BSD-style host block '%s' is not supported by the translator", ln);
+    }
     DBGPRINTF("cnf:global:BSD host: %s\n", ln);
     LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
              "BSD-style blocks are no longer supported in rsyslog, "
@@ -1557,7 +1576,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
      * If not, terminate. -- rgerhards, 2008-07-25
      * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
      */
-    if (iConfigVerify) {
+    if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;
         FINALIZE;
     }

@@ -451,6 +451,28 @@ cmp_exact() {
 	fi;
 }
 
+# compare two files for exact content
+# $1 is the expected file, $2 is the actual file
+cmp_exact_file() {
+	expected_file="$1"
+	actual_file="$2"
+	if [ "$expected_file" == "" ] || [ "$actual_file" == "" ]; then
+		printf 'Testbench ERROR, cmp_exact_file() needs expected and actual filenames!\n'
+		error_exit 100
+	fi
+	cmp "$expected_file" "$actual_file" > /dev/null
+	if [ $? -ne 0 ]; then
+		printf 'invalid response generated\n'
+		printf '################# %s is:\n' "$actual_file"
+		cat -n "$actual_file"
+		printf '################# %s is expected:\n' "$expected_file"
+		cat -n "$expected_file"
+		printf '\n#################### diff is:\n'
+		diff -u "$expected_file" "$actual_file"
+		error_exit 1
+	fi
+}
+
 # code common to all startup...() functions
 startup_common() {
 	instance=

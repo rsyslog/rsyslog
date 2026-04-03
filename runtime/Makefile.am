@@ -81,6 +81,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	ratelimit.c \
 	ratelimit.h \
+	translate.c \
+	translate.h \
 	yamlconf.c \
 	yamlconf.h \
 	lookup.c \
@@ -118,7 +120,7 @@ librsyslog_la_SOURCES = \
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar -I\$(top_builddir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS} $(LIBYAML_CFLAGS)

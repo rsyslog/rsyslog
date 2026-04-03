@@ -557,6 +557,8 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	config-translate-rs-to-yaml.sh \
+	config-translate-yaml-to-rs.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
@@ -1209,6 +1211,13 @@ TESTS_PMNULL = \
 TESTS_OMSTDOUT = \
 	omstdout-basic.sh
 
+TESTS_LIBYAML_IMTCP = \
+	config-translate-rs-roundtrip.sh \
+	config-translate-yaml-roundtrip.sh
+
+TESTS_LIBYAML_OMSTDOUT = \
+	config-translate-legacy-warning.sh
+
 TESTS_PMNORMALIZE = \
 	pmnormalize-basic.sh \
 	pmnormalize-invld-rulebase.sh \
@@ -1721,6 +1730,8 @@ EXTRA_DIST += $(TESTS_OSSL_WRONG_OPT)
 EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
+EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
+EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
 EXTRA_DIST += $(TESTS_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
@@ -2082,6 +2093,12 @@ endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 if HAVE_LIBYAML
 TESTS += $(TESTS_LIBYAML)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_LIBYAML_IMTCP)
+endif # ENABLE_IMTCP_TESTS
+if ENABLE_OMSTDOUT
+TESTS += $(TESTS_LIBYAML_OMSTDOUT)
+endif # ENABLE_OMSTDOUT
 endif # HAVE_LIBYAML
 endif # ENABLE_DEFAULT_TESTS
 
