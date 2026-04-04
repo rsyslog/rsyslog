@@ -1,0 +1,2 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imrelp.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/omrelp.so

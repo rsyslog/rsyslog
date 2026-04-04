@@ -1,0 +1,5 @@
+### Configuration file for rsyslog-pgsql
+### Changes are preserved
+
+module (load="ompgsql")
+*.* action(type="ompgsql" server="_DBC_DBSERVER_" port="_DBC_DBPORT_" db="_DBC_DBNAME_" uid="_DBC_DBUSER_" pwd="_DBC_DBPASS_")

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if [ -d /run/systemd/system ]; then
+    systemctl kill -s HUP rsyslog.service
+fi

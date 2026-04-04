@@ -1,0 +1,2 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/omczmq.so
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/imczmq.so

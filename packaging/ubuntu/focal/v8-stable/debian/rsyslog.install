@@ -1,0 +1,30 @@
+debian/rsyslog.conf /etc/
+debian/50-default.conf /usr/share/rsyslog
+debian/tmp/usr/sbin/
+debian/tmp/usr/share/man/
+usr/lib/*/rsyslog/imfile.so
+usr/lib/*/rsyslog/imklog.so
+usr/lib/*/rsyslog/immark.so
+usr/lib/*/rsyslog/impstats.so
+usr/lib/*/rsyslog/imtcp.so
+usr/lib/*/rsyslog/imudp.so
+usr/lib/*/rsyslog/imuxsock.so
+usr/lib/*/rsyslog/omuxsock.so
+usr/lib/*/rsyslog/imjournal.so
+usr/lib/*/rsyslog/lmnet.so
+usr/lib/*/rsyslog/lmnetstrms.so
+usr/lib/*/rsyslog/lmnsd_ptcp.so
+usr/lib/*/rsyslog/lmregexp.so
+usr/lib/*/rsyslog/lmtcpclt.so
+usr/lib/*/rsyslog/lmtcpsrv.so
+usr/lib/*/rsyslog/lmzlibw.so
+usr/lib/*/rsyslog/ommail.so
+usr/lib/*/rsyslog/omprog.so
+usr/lib/*/rsyslog/omjournal.so
+usr/lib/*/rsyslog/mmpstrucdata.so
+usr/lib/*/rsyslog/mmsequence.so
+usr/lib/*/rsyslog/mmexternal.so
+usr/lib/*/rsyslog/lmcry_gcry.so
+usr/lib/*/rsyslog/pm*.so
+debian/rsyslog.service lib/systemd/system/
+debian/usr.sbin.rsyslogd etc/apparmor.d/

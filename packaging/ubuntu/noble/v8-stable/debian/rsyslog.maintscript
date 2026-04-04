@@ -1,0 +1,2 @@
+rm_conffile /etc/default/rsyslog 8.1905.0-4~
+rm_conffile /etc/init.d/rsyslog 8.2110.0-2~

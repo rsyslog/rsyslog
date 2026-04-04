@@ -1,0 +1,20 @@
+# MySQL local server access
+
+include <abstractions/openssl>
+
+/etc/mysql/my.cnf r,
+/etc/mysql/mysql.cnf r,
+/etc/mysql/my.cnf.fallback r,
+
+/etc/mysql/conf.d/ r,
+/etc/mysql/conf.d/mysql.cnf r,
+/etc/mysql/conf.d/mysqldump.cnf r,
+
+/etc/mysql/mysql.conf.d/ r,
+/etc/mysql/mysql.conf.d/mysql.cnf r,
+/etc/mysql/mysql.conf.d/mysqld.cnf r,
+
+/usr/share/mysql/charsets/Index.xml r,
+
+/{,var/}run/mysqld/mysqld.sock rw,
+

@@ -1,0 +1,135 @@
+#!/usr/bin/make -f
+
+DPKG_EXPORT_BUILDFLAGS = 1
+# Do not quote DEB_BUILD_OPTIONS; buildflags.mk parses it and quoted values cause "parallel=4: not found"
+export DEB_BUILD_OPTIONS = parallel=4
+# the default LDFLAGS="-Wl,-Bsymbolic-functions" caused rsyslog to
+# segfault on receipt of first message (see LP: #794230)
+# Strip only that flag; keep other distro hardening flags
+export DEB_LDFLAGS_MAINT_STRIP = -Wl,-Bsymbolic-functions
+include /usr/share/dpkg/buildflags.mk
+include /usr/share/dpkg/architecture.mk
+
+# Build Debug Symbols | Append /usr/include/tirpc from libtirpc-dev which is needed 
+# for mmgrok since glibc >=2.32 because they dropped "--enable-obsolete-rpc"
+export DEB_CFLAGS_MAINT_APPEND = -g -I/usr/include/tirpc
+
+%:
+	dh $@ --parallel --with autoreconf
+#org	dh $@ --with autotools_dev
+
+override_dh_auto_configure: build-qpid-proton
+	PKG_CONFIG_PATH="$(CURDIR)/build-qpid/usr/lib/pkgconfig" \
+	LDFLAGS="-L$(CURDIR)/build-qpid/usr/lib" \
+	dh_auto_configure -- \
+		--libexecdir=/usr/lib/rsyslog \
+		--libdir=/usr/lib \
+		--enable-kmsg \
+		--enable-improg \
+		--enable-imdocker \
+		--enable-omrabbitmq \
+		--enable-imczmq \
+		--enable-omczmq \
+		--enable-omuxsock \
+		--enable-mysql \
+		--enable-pgsql \
+		--enable-mail \
+		--enable-imfile \
+		--enable-impcap \
+		--enable-impstats \
+		--enable-gnutls \
+		--enable-relp \
+		--enable-clickhouse \
+		--enable-pmaixforwardedfrom \
+		--enable-pmcisconames \
+		--enable-pmlastmsg \
+		--enable-pmrfc3164sd \
+		--enable-pmsnare \
+		--enable-omprog \
+		--enable-elasticsearch \
+		--enable-mmjsonparse \
+		--enable-imptcp \
+		--enable-mmnormalize \
+		--enable-mmanon \
+		--enable-ommongodb \
+		--enable-mmfields \
+		--enable-mmpstrucdata \
+		--enable-mmsequence \
+		--enable-mmutf8fix \
+		--enable-pmciscoios \
+		--enable-pmnormalize \
+		--enable-usertools \
+		--enable-omudpspoof \
+		--enable-imjournal \
+		--enable-omjournal \
+		--enable-mmrm1stspace \
+		--enable-pmnull \
+		--enable-omkafka \
+		--enable-imkafka \
+		--enable-omhiredis \
+		--enable-omstdout \
+		--enable-openssl \
+		--enable-mmkubernetes \
+		--enable-mmdblookup \
+		--enable-mmsnareparse \
+		--enable-mmleefparse \
+		--enable-omazureeventhubs \
+		--enable-omhttp \
+		--enable-qpidproton_static \
+		--enable-omsendertrack \
+		--enable-debug-symbols \
+		--enable-omhttp \
+		--enable-imhttp \
+		--enable-generate-man-pages \
+		--disable-testbench \
+		--disable-liblogging-stdlog \
+		--with-systemdsystemunitdir=/lib/systemd/system
+
+#
+#		--enable-omkafka \
+#		 --enable-guardtime \
+#		 --enable-gt-ksi \
+#                --enable-gssapi-krb5 \
+#                --enable-guardtime \
+#                --enable-ommongodb \
+#                --enable-mmnormalize \
+#                --enable-imzmq3 \
+#                --enable-omzmq3 \
+#		--enable-kafka-static \
+#		--enable-mmgrok \
+#override_dh_strip:
+#	dh_strip --dbg-package=rsyslog-debug
+
+# Doc build: doc/requirements.txt needs sphinx>=4.5.0; jammy has 4.3.x (too old).
+# PIP required: system python3-sphinx too old for doc build; Build-Depends: python3-pip.
+# Non-hermetic trade-off: pip installs from PyPI; reproducibility via requirements.txt.
+override_dh_auto_build:
+	dh_auto_build
+	cd doc && pip3 install -r requirements.txt && PATH="/usr/local/bin:$$PATH" make -j$$(nproc) html-local
+
+override_dh_auto_install:
+	dh_auto_install
+	install --mode=644 -D plugins/ommysql/createDB.sql debian/rsyslog-mysql/usr/share/dbconfig-common/data/rsyslog-mysql/install/mysql
+	install --mode=644 -D plugins/ompgsql/createDB.sql debian/rsyslog-pgsql/usr/share/dbconfig-common/data/rsyslog-pgsql/install/pgsql
+
+override_dh_install_rsyslog:
+	dh_install -Xrscryutil.1 -prsyslog
+
+override_dh_compress:
+	dh_compress -X rsyslog-example.conf
+
+override_dh_installinit:
+	dh_apparmor --profile-name=usr.sbin.rsyslogd -prsyslog
+	dh_installinit -R
+
+override_dh_auto_test:
+ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+	PATH=$$PATH:/usr/sbin make check -j4 || ( cat tests/test-suite.log; exit 1; )
+endif
+
+build-qpid-proton:
+	chmod +x debian/build-qpid-proton.sh
+	# Ensure pkg-config can find the locally built proton
+	export PKG_CONFIG_PATH="$(CURDIR)/build-qpid/qpid-proton/lib/pkgconfig:$$PKG_CONFIG_PATH"
+	# Set DESTDIR to a local build directory for configure-time access
+	DESTDIR="$(CURDIR)/build-qpid" debian/build-qpid-proton.sh

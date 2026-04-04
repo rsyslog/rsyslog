@@ -1,0 +1,85 @@
+rsyslog for Ubuntu
+==================
+
+Configuration file(s)
+---------------------
+The default configuration file for rsyslog is /etc/rsyslog.conf.
+
+Its format is based on the standard syslog.conf format. As rsyslog
+has a lot more advanced features than sysklogd, it extends this format
+with special configuration directives which all start with the '$'
+prefix. See the rsyslogd(8) and rsyslog.conf(5) man pages for further
+information or install the rsyslog-doc package which provides much
+more detailed documentation.
+
+The Debian default configuration for rsyslog uses:
+
+ $IncludeConfig /etc/rsyslog.d/*.conf
+
+That means, all configuration files in /etc/rsyslog.d/ with a .conf file
+extension are read by rsyslog. This way the rsyslog configuration can be
+extended easily (either by package maintainers or local administrators).
+
+
+Command line arguments, modules and compatibility levels
+--------------------------------------------------------
+With version 3, rsyslog became much more modular. A lot of
+functionality has been moved into loadable modules, e.g. udp reception,
+which must be loaded explicitly.
+To keep compatibility with sysklogd, rsyslog introduced the concept of
+compatibility modes, which can be selected with the -c command line
+argument. E.g. with -c0, rsyslog becomes command line compatible with
+sysklogd and loads a default set of modules automatically.
+
+The default is -c5, i.e. command line arguments like -r or
+-m 0 have no effect and instead have to be configured via special
+configuration directives in rsyslog.conf.
+
+The options that are passed to rsyslog can be changed easily by
+modifying the RSYSLOGD_OPTIONS variable in /etc/default/rsyslog.
+On current Ubuntu releases, rsyslog is started by systemd and
+/etc/default/rsyslog is not used. If you need to change rsyslogd
+options, use a systemd override for rsyslog.service.
+
+If you have an existing, customized syslog.conf, it is recommended that
+you migrate your custom logging rules to rsyslog.conf or into a separate
+configuration file in /etc/rsyslog.d (in most cases it should be as
+simple as copy&paste).
+
+To read more about this topic please see
+/usr/share/doc/rsyslog-doc/html/historical/v3compatibility.html or
+http://www.rsyslog.com/doc-v3compatibility.html.
+
+
+Log rotation
+------------
+Rsyslog uses the logrotate(8) utility to rotate the standard Debian
+log files. The configuration file can be found at
+/etc/logrotate.d/rsyslog.
+
+The rotation cycle starts with .1, as this is the logrotate default.
+In contrast to sysklogd, which starts with .0.
+
+When upgrading from sysklogd, the postinst script will automatically
+rotate the existing standard log files, if it is safe to do so
+(i.e. only if .0 is newer than .1).
+
+
+Forwarding messages to sysklogd
+-------------------------------
+If you are forwarding messages from a rsyslog client to a sysklogd
+server, it can lead to doubled hostnames in the syslog message on the
+server side. The reason is a limitation in sysklogd which does not parse
+the hostname in the syslog header (as defined by RFC 3164). See Debian bug #514051 for more details.
+
+A simple workaround in rsyslog is, to define a custom template, which
+does not include the hostname:
+
+ $template sysklogd,"<%PRI%>%TIMESTAMP% %syslogtag%%msg%"
+ *.* @remote-host;sysklogd
+
+This creates a template called "sysklogd" and assigns it to the forward
+rule when logging to "remote-host".
+
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 07 Feb 2009 18:54:37 +0100

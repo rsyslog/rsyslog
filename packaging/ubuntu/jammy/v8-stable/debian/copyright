@@ -1,0 +1,50 @@
+This package was debianized by Michael Biebl <biebl@debian.org> on
+Wed, 18 Jul 2007 16:22:23 +0200.
+
+It was downloaded from http://www.rsyslog.com
+
+Upstream Authors:
+
+    Rainer Gerhards <rgerhards@adiscon.com>, Adiscon GmbH
+    Michael Meckelein <mmeckelein@hq.adiscon.com>, Adiscon GmbH
+
+Copyright:
+
+    Copyright (C) 1995,1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
+    Copyright (C) 1996       Enjellic Systems Development
+    Copyright (C) 1995       Martin Schulze <Martin.Schulze@Linux.DE>
+    Copyright (C) 2003-2007  Rainer Gerhards and Adiscon GmbH
+
+License:
+
+    This package is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 3 of the License, or
+    (at your option) any later version.
+
+    This package is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this package; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+
+On Debian systems, the complete text of the GNU General
+Public License can be found in `/usr/share/common-licenses/GPL'.
+
+Files: runtime/zstdw.c runtime/conf.h runtime/objomsr.h runtime/librsksi_read.c
+       runtime/tcpsrv.h runtime/lookup.h runtime/ruleset.c tools/omshell.c
+       tools/gethostn.c contrib/omfile-hardened/omfile-hardened.c
+       contrib/imbatchreport/imbatchreport.c plugins/omprog/omprog.c
+Copyright: 2003-2026 Rainer Gerhards and Adiscon GmbH, and others
+License: Apache-2.0
+
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache version 2.0 license
+ can be found in "/usr/share/common-licenses/Apache-2.0".
+
+The Debian packaging is (C) 2007, Michael Biebl <biebl@debian.org> and
+is licensed under the GPL, see above.
+
