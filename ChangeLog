@@ -1,5 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-04: testbench: rewrite dirty shutdown recovery test
+  The old daqueue dirty-shutdown test depended on a narrow timing window
+  and treated an empty spool directory as the only valid recovery
+  outcome. That no longer matches current queue corruption handling, so
+  CI could fail even when rsyslog behaved correctly.
+  The test now accepts both successful replay and safe quarantine.
 - 2026-04-04: imfile/ci: enable imfile tests in ARM CI and fix arm64 fallout
   Enabling imfile coverage on ARM exposed two arm64 follow-up problems. The
   impstats crash in imfile-statistics was caused by a generic stringbuf off-by-one
