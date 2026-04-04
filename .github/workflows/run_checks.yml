@@ -1675,7 +1675,7 @@ jobs:
               autoreconf -fvi
               if [ "$ARCH" = "armhf" ]; then
                 ./configure --enable-silent-rules --enable-testbench \
-                  --enable-imdiag --disable-imdocker --disable-imfile \
+                  --enable-imdiag --disable-imdocker --enable-imfile \
                   --disable-default-tests --disable-impstats \
                   --disable-impstats-push \
                   --disable-imptcp \
@@ -1706,7 +1706,7 @@ jobs:
                 export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker \
-                  --enable-imfile --disable-imfile-tests \
+                  --enable-imfile \
                   --enable-impstats --enable-imptcp \
                   --enable-mmanon --enable-mmaudit \
                   --enable-mmfields --enable-mmjsonparse \
