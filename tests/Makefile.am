@@ -584,6 +584,9 @@ TESTS_LIBYAML = \
 	yaml-template-subtree.sh \
 	yaml-statements-reload-lookup.sh
 
+TESTS_LIBYAML_MMJSONPARSE_IMPTCP = \
+	yaml-statements-complex.sh
+
 TESTS_IMTCP = \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
@@ -1733,6 +1736,7 @@ EXTRA_DIST += $(TESTS_OSSL_WRONG_OPT)
 EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
+EXTRA_DIST += $(TESTS_LIBYAML_MMJSONPARSE_IMPTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -2102,6 +2106,11 @@ endif # ENABLE_IMTCP_TESTS
 if ENABLE_OMSTDOUT
 TESTS += $(TESTS_LIBYAML_OMSTDOUT)
 endif # ENABLE_OMSTDOUT
+if ENABLE_MMJSONPARSE
+if ENABLE_IMPTCP
+TESTS += $(TESTS_LIBYAML_MMJSONPARSE_IMPTCP)
+endif # ENABLE_IMPTCP
+endif # ENABLE_MMJSONPARSE
 endif # HAVE_LIBYAML
 endif # ENABLE_DEFAULT_TESTS
 
@@ -2988,6 +2997,7 @@ EXTRA_DIST += \
 	testsuites/tokenized_input \
 	testsuites/complex_replace_input \
 	testsuites/wrap3_input\
+	testsuites/yaml_complex_input \
 	testsuites/json_array_input \
 	testsuites/json_object_input \
 	testsuites/json_nonarray_input \
