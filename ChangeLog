@@ -1,5 +1,9 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-04: imjournal: fix for an exoctic bug that could lead to looping
+  Under some extreme conditions, imjournal could run in a 100% CPU load loop.
+  This has now been fixed. We assume very low practical relevance and never
+  had any bug reports even remoteloy showing into that direction.
 - 2026-04-02: testbench: add some (new) unit tests and plumbing
   There is an initial set, which can be expanded. The idea is to get a small
   deterministic set of high-profile component unit tests which can aid local
