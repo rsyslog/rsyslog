@@ -384,6 +384,10 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
 
                 json_object *value = NULL;
                 node = entry_data_list_to_json(node, &value);
+                if (value == NULL) {
+                    free(key);
+                    goto map_error;
+                }
                 json_object_object_add(map_obj, key, value);
                 free(key);
             }
@@ -412,6 +416,9 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
                 }
                 json_object *element = NULL;
                 node = entry_data_list_to_json(node, &element);
+                if (element == NULL) {
+                    goto array_error;
+                }
                 json_object_array_add(arr, element);
             }
 
