@@ -51,6 +51,38 @@ burst
 
 The maximum number of messages allowed within the ``interval``.
 
+.. _ratelimit_policywatch:
+
+policyWatch
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "boolean", "no", "off"
+
+Enable automatic reload of configured external policy files when they change.
+When watch support is available, rsyslog monitors the configured ``policy`` and
+``perSourcePolicy`` files and reloads them after the debounce interval. When
+watch support is unavailable in the current build or runtime environment,
+rsyslog logs a warning and continues with HUP-only reload behavior.
+
+.. _ratelimit_policywatchdebounce:
+
+policyWatchDebounce
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "time interval", "no", "5s"
+
+Quiet period applied to ``policyWatch`` reloads. Each new file event resets the
+timer, so rapid updates are coalesced into one reload. Supported suffixes are
+``ms``, ``s``, ``m``, and ``h``. Bare numbers are interpreted as seconds.
+
 .. _ratelimit_persource:
 
 perSource
@@ -137,6 +169,12 @@ Example
 
    # Define a strict rate limit for public facing ports
    ratelimit(name="strict" interval="1" burst="50")
+
+   # Define a watched YAML policy for automatic reload
+   ratelimit(name="watched"
+             policy="/etc/rsyslog/ratelimit.yaml"
+             policyWatch="on"
+             policyWatchDebounce="500ms")
 
    # Define per-source policy for TCP inputs
    ratelimit(name="per_source"

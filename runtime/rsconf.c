@@ -159,6 +159,8 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"burst", eCmdHdlrInt, 0},
                                                  {"severity", eCmdHdlrSeverity, 0},
                                                  {"policy", eCmdHdlrString, 0},
+                                                 {"policyWatch", eCmdHdlrBinary, 0},
+                                                 {"policyWatchDebounce", eCmdHdlrString, 0},
                                                  {"perSource", eCmdHdlrBinary, 0},
                                                  {"perSourcePolicy", eCmdHdlrString, 0},
                                                  {"perSourceKeyTpl", eCmdHdlrString, 0},
@@ -493,6 +495,8 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     int burst = 10000;
     int severity = -1; /* -1 means not set/all */
     uchar *policy = NULL;
+    int policy_watch = 0;
+    uchar *policy_watch_debounce = NULL;
     int per_source_enabled = 0;
     uchar *per_source_policy = NULL;
     uchar *per_source_key_tpl = NULL;
@@ -517,6 +521,10 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
             severity = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
             policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatch")) {
+            policy_watch = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatchDebounce")) {
+            policy_watch_debounce = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
             per_source_enabled = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
@@ -548,12 +556,14 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     }
 
     CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
-                               (char *)policy, per_source_enabled, (char *)per_source_policy,
-                               (char *)per_source_key_tpl, (unsigned)per_source_max_states, (unsigned)per_source_topn));
+                               (char *)policy, policy_watch, (char *)policy_watch_debounce, per_source_enabled,
+                               (char *)per_source_policy, (char *)per_source_key_tpl, (unsigned)per_source_max_states,
+                               (unsigned)per_source_topn));
 
 finalize_it:
     free(name);
     free(policy);
+    free(policy_watch_debounce);
     free(per_source_policy);
     free(per_source_key_tpl);
     cnfparamvalsDestruct(pvals, &ratelimitpblk);

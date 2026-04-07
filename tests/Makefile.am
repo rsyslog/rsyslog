@@ -584,6 +584,11 @@ TESTS_LIBYAML = \
 	yaml-template-subtree.sh \
 	yaml-statements-reload-lookup.sh
 
+TESTS_RATELIMIT_WATCH = \
+	ratelimit_policy_watch.sh \
+	ratelimit_policy_watch_debounce.sh \
+	yaml-ratelimit-policywatch.sh
+
 TESTS_IMTCP = \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
@@ -1733,6 +1738,7 @@ EXTRA_DIST += $(TESTS_OSSL_WRONG_OPT)
 EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
+EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -2096,6 +2102,9 @@ endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 if HAVE_LIBYAML
 TESTS += $(TESTS_LIBYAML)
+if ENABLE_INOTIFY
+TESTS += $(TESTS_RATELIMIT_WATCH)
+endif # ENABLE_INOTIFY
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
 endif # ENABLE_IMTCP_TESTS

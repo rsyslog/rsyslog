@@ -36,6 +36,8 @@ typedef struct ratelimit_shared_s {
     unsigned int burst;
     intTiny severity;
     char *policy_file;
+    sbool policy_watch;
+    unsigned int policy_watch_debounce_ms;
     pthread_mutex_t mut;
     sbool per_source_enabled;
     char *per_source_policy_file;
@@ -99,6 +101,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             unsigned int burst,
                             intTiny severity,
                             const char *policy_file,
+                            sbool policy_watch,
+                            const char *policy_watch_debounce,
                             sbool per_source_enabled,
                             const char *per_source_policy_file,
                             const char *per_source_key_tpl_name,
