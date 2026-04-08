@@ -91,11 +91,9 @@ Action Parameters
    :header-rows: 0
 
    * - **turbo**
-     - Enable TurboVM bytecode acceleration for normalization. Requires
-       liblognorm 2.1.0+ built with ``--enable-turbo``. When enabled,
-       each worker thread gets its own TurboVM context for lock-free,
-       SIMD-accelerated normalization. Falls back to standard normalization
-       automatically if bytecode compilation fails. Default: ``off``.
+     - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -106,36 +104,7 @@ Action Parameters
    ../../reference/parameters/mmnormalize-userawmsg
    ../../reference/parameters/mmnormalize-path
    ../../reference/parameters/mmnormalize-variable
-
-TurboVM Acceleration
-~~~~~~~~~~~~~~~~~~~~
-
-When liblognorm is built with ``--enable-turbo``, mmnormalize can use
-the TurboVM bytecode engine for significantly faster normalization.
-
-To enable, add ``turbo="on"`` to the action configuration::
-
-  action(type="mmnormalize"
-         rulebase="/etc/rsyslog.d/rules.rb"
-         turbo="on")
-
-**How it works:**
-
-- At startup, mmnormalize compiles the rulebase into bytecode.
-- Each rsyslog worker thread gets an independent TurboVM context,
-  ensuring thread-safe operation without mutexes on the hot path.
-- Normalized results are stored as opaque snapshots that support
-  zero-JSON field resolution: template access reads fields directly
-  from the snapshot without building a json-c object tree.
-- If bytecode compilation fails (e.g., unsupported parser types),
-  mmnormalize falls back to standard ``ln_normalize()`` automatically.
-- On HUP signal, per-worker TurboVM contexts are rebuilt.
-
-**Requirements:**
-
-- liblognorm >= 2.1.0 with ``--enable-turbo``
-- The ``lognorm-features.h`` header must define ``LOGNORM_TURBO_SUPPORTED``
-- rsyslog detects this automatically at configure time
+   ../../reference/parameters/mmnormalize-turbo
 
 See Also
 ~~~~~~~~

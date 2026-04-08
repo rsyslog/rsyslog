@@ -377,10 +377,14 @@ turbo_result_get_str_cb(void *result_ptr,
                         const uchar **val, rs_size_t *vlen) {
     const ln_fast_result_snapshot_t *snap =
         (const ln_fast_result_snapshot_t *)result_ptr;
+    const ln_fast_result_t *r;
+    char keybuf[MMNORM_MAX_FIELDNAME];
+    int keylen;
+
     if (snap == NULL)
         return -1;
 
-    const ln_fast_result_t *r = ln_fast_result_snapshot_get(snap);
+    r = ln_fast_result_snapshot_get(snap);
     if (r == NULL)
         return -1;
 
@@ -391,8 +395,7 @@ turbo_result_get_str_cb(void *result_ptr,
     if (nameLen < 2 || name[0] != '!')
         return -1;  /* bare "!" = full tree request, not a single field */
 
-    char keybuf[MMNORM_MAX_FIELDNAME];
-    int keylen = nameLen - 1;  /* skip leading '!' */
+    keylen = nameLen - 1;  /* skip leading '!' */
     if (keylen >= (int)sizeof(keybuf))
         return -1;
 
@@ -437,6 +440,9 @@ fast_result_to_json(const ln_fast_result_t *result) {
     struct json_object *root;
     int nfields;
     int i;
+    int ntags;
+    char namebuf[MMNORM_MAX_FIELDNAME];
+    size_t nl;
 
     root = json_object_new_object();
     if (root == NULL)
@@ -471,8 +477,7 @@ fast_result_to_json(const ln_fast_result_t *result) {
             continue;
 
         /* Null-terminate field name into stack buffer */
-        char namebuf[MMNORM_MAX_FIELDNAME];
-        size_t nl = f->name_len < (MMNORM_MAX_FIELDNAME - 1)
+        nl = f->name_len < (MMNORM_MAX_FIELDNAME - 1)
                     ? f->name_len : (MMNORM_MAX_FIELDNAME - 1);
         memcpy(namebuf, f->name, nl);
         namebuf[nl] = '\0';
@@ -507,7 +512,7 @@ fast_result_to_json(const ln_fast_result_t *result) {
     }
 
     /* Add tags at root level as JSON array (ECS standard) */
-    int ntags = ln_fast_result_tag_count(result);
+    ntags = ln_fast_result_tag_count(result);
     if (ntags > 0) {
         struct json_object *tags = json_object_new_array();
         for (i = 0; i < ntags; i++) {
