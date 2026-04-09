@@ -27,7 +27,7 @@ action(type=\"omfile\" file=\"${RSYSLOG_OUT_LOG}\")
 }
 
 long_symbolic="$(printf 'A%.0s' $(seq 1 160))"
-run_bad_severity_check 1 "${long_symbolic}" "${RSYSLOG_DYNNAME}.long.error.log"
+run_bad_severity_check "" "${long_symbolic}" "${RSYSLOG_DYNNAME}.long.error.log"
 run_bad_severity_check 2 "999999999999999999999999" "${RSYSLOG_DYNNAME}.overflow.error.log"
 
 exit_test
