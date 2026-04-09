@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -120,6 +121,7 @@ static rsRetVal TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int 
     TCPFRAMINGMODE framingToUse;
     int bIsCompressed;
     size_t len;
+    size_t frameSize;
     char *msg;
     char *buf = NULL; /* if this is non-NULL, it MUST be freed before return! */
 
@@ -154,6 +156,12 @@ static rsRetVal TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int 
     /* Build frame based on selected framing */
     if (framingToUse == TCP_FRAMING_OCTET_STUFFING) {
         if ((*(msg + len - 1) != pThis->tcp_framingDelimiter)) {
+            if (len > SIZE_MAX - 2) {
+                LogError(0, RS_RET_OUT_OF_MEMORY,
+                         "Error: TCP frame too large to append framing delimiter safely. Message is lost.");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+
             /* in the malloc below, we need to add 2 to the length. The
              * reason is that we a) add one character and b) len does
              * not take care of the '\0' byte. Up until today, it was just
@@ -201,15 +209,29 @@ static rsRetVal TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int 
 		 * consensus to do the octet count on the SYSLOG-MSG part only. I am
 		 * now changing the code to reflect this. Hopefully, it will not change
 		 * once again (there can no compatibility layer programmed for this).
-		 * To be on the save side, I just comment the code out. I mark these
+         * To be on the save side, I just comment the code out. I mark these
 		 * comments with "IETF20061218".
 		 * rgerhards, 2006-12-19
 		 */
+        if (len > (size_t)INT_MAX) {
+            LogError(0, RS_RET_OUT_OF_MEMORY,
+                     "Error: TCP frame too large for octet-counted framing header. Message is lost.");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf), "%d ", (int)len);
         /* IETF20061218 iLenBuf =
           snprintf(szLenBuf, sizeof(szLenBuf), "%d ", len + iLenBuf);*/
+        if (iLenBuf < 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        if (len > SIZE_MAX - (size_t)iLenBuf) {
+            LogError(0, RS_RET_OUT_OF_MEMORY,
+                     "Error: TCP frame too large to prepend octet-counted header safely. Message is lost.");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        frameSize = len + (size_t)iLenBuf;
 
-        if ((buf = malloc(len + iLenBuf)) == NULL) {
+        if ((buf = malloc(frameSize)) == NULL) {
             /* we are out of memory. This is an extreme situation. We do not
              * call any alarm handlers because they most likely run out of mem,
              * too. We are brave enough to call debug output, though. Other than
@@ -229,7 +251,7 @@ static rsRetVal TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int 
 
         memcpy(buf, szLenBuf, iLenBuf); /* header */
         memcpy(buf + iLenBuf, msg, len); /* message */
-        len += iLenBuf; /* new message size */
+        len = frameSize; /* new message size */
         msg = buf; /* set message buffer */
     }
 

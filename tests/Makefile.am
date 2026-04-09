@@ -110,6 +110,7 @@ TESTS_DEFAULT = \
 	glbl-internalmsg_severity-info-shown.sh \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \
+	glbl-internalmsg_severity-invalid-long.sh \
 	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
@@ -600,6 +601,7 @@ TESTS_IMTCP = \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp_framing_regex.sh \
+	imtcp_framing_regex_maxmsg_overflow.sh \
 	imtcp-multiline.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
