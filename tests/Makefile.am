@@ -104,6 +104,7 @@ TESTS_DEFAULT = \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
 	endswith-basic.sh \
+	contains-longer-needle.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-ruleset-queue-defaults.sh \
@@ -575,6 +576,7 @@ TESTS_LIBYAML = \
 	yaml-script-msgvar.sh \
 	yaml-imfile-basic.sh \
 	yaml-propfilt-basic.sh \
+	yaml-propfilt-contains-longer-needle.sh \
 	yaml-statements-basic.sh \
 	yaml-statements-stop.sh \
 	yaml-statements-call.sh \
@@ -1916,11 +1918,14 @@ liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = runtime_unit_linkedlist
-TESTS = runtime_unit_linkedlist
+check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf
+TESTS = runtime_unit_linkedlist runtime_unit_stringbuf
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
+
+runtime_unit_stringbuf_SOURCES = \
+	unit/stringbuf_test.c
 
 runtime_unit_linkedlist_CPPFLAGS = \
 	-DSD_EXPORT_SYMBOLS \
@@ -1937,10 +1942,15 @@ runtime_unit_linkedlist_CPPFLAGS = \
 	-I$(top_srcdir)/runtime \
 	-I$(top_srcdir)/tools
 
+runtime_unit_stringbuf_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 if ENABLE_TESTBENCH

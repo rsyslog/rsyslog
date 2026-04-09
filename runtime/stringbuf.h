@@ -31,6 +31,16 @@
 
 /**
  * The dynamic string buffer object.
+ *
+ * Contract notes:
+ * - The buffer stores counted bytes and may keep `pBuf == NULL` for empty
+ *   strings.
+ * - Constructors and mutating helpers do not guarantee a trailing NUL.
+ *   Callers must invoke `cstrFinalize()` before using any API that exposes the
+ *   buffer as a classic C string.
+ * - `cstrFinalize()` writes the trailing NUL but is not a hard state change in
+ *   release builds; appending after finalize remains invalid API usage even if
+ *   some call paths appear to tolerate it.
  */
 typedef struct cstr_s {
 #ifndef NDEBUG
@@ -44,7 +54,10 @@ typedef struct cstr_s {
 
 
 /**
- * Construct a rsCStr object.
+ * Construct an empty counted string.
+ *
+ * The resulting object is not finalized. Call `cstrFinalize()` before passing
+ * it to any consumer that expects a NUL-terminated string view.
  */
 rsRetVal cstrConstruct(cstr_t **ppThis);
 #define rsCStrConstruct(x) cstrConstruct((x))
@@ -66,8 +79,11 @@ void rsCStrDestruct(cstr_t **ppThis);
  */
 rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
 
-/* Finalize the string object. This must be called after all data is added to it
- * but before that data is used.
+/* Finalize the string object.
+ *
+ * This writes the trailing NUL expected by `cstrGetSzStrNoNULL()`, regex
+ * matching, and other C-string consumers. Call it after the last mutation and
+ * before any read that depends on classic NUL-terminated semantics.
  * rgerhards, 2009-06-16
  */
 #ifdef NDEBUG
@@ -99,6 +115,8 @@ void cstrTrimTrailingWhiteSpace(cstr_t *pThis);
  * use rsCStrAppenStrWithLen() if you know the length.
  *
  * \param psz pointer to string to be appended. Must not be NULL.
+ *
+ * The object remains non-finalized after this call.
  */
 rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar *psz);
 
@@ -107,6 +125,8 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar *psz);
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  * \param iStrLen the length of the string pointed to by psz
+ *
+ * The object remains non-finalized after this call.
  */
 rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar *psz, size_t iStrLen);
 
@@ -114,6 +134,8 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar *psz, size_t iStrLen)
  * Append a printf-style formated string to the buffer.
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
+ *
+ * The object remains non-finalized after this call.
  */
 rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
@@ -125,8 +147,19 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
 rsRetVal strExit(void);
+/* Return a borrowed NUL-terminated view of the internal buffer.
+ *
+ * The object must already be finalized. The returned pointer is owned by the
+ * cstr object and remains valid only until the next mutation or destruction.
+ * Empty strings are returned as `""`, never as NULL.
+ */
 uchar *cstrGetSzStrNoNULL(cstr_t *pThis);
 #define rsCStrGetSzStrNoNULL(x) cstrGetSzStrNoNULL(x)
+/* Replace the current contents from a classic NUL-terminated string.
+ *
+ * Passing `NULL` resets the object to an empty string and may leave
+ * `pBuf == NULL`. The setter does not finalize the object.
+ */
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
 int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2);
 int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz);
@@ -138,7 +171,12 @@ int rsCStrSzStrEndsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache);
 void rsCStrRegexDestruct(void *rc);
 
-/* new calling interface */
+/* Convert to an owned C string and destroy the counted-string object.
+ *
+ * Ownership of the returned buffer transfers to the caller, which must
+ * `free()` it unless `bRetNULL == 1` and the string was empty. `*ppThis` is
+ * always cleared on return.
+ */
 rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 

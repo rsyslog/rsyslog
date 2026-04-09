@@ -698,12 +698,13 @@ int ATTR_NONNULL(1, 2) rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
     assert(sz != NULL);
 
     if (pThis->iStrLen == 0) return 0;
+    if (pThis->iStrLen > len_sz) return -1;
 
     /* compute the largest index where a match could occur - after all,
      * the to-be-located string must be able to be present in the
      * searched string (it needs its size ;)).
      */
-    iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;
+    iMax = len_sz - pThis->iStrLen;
 
     bFound = 0;
     i = 0;
