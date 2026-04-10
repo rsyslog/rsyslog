@@ -28,6 +28,7 @@
  * limitations under the License.
  */
 #include "config.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -89,6 +90,8 @@ DEFobjCurrIf(parser)
 
 /* Standard-Constructor */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
+    size_t bufSize;
+
     pThis->iMsg = 0; /* just make sure... */
     pThis->iMaxLine = glbl.GetMaxLine(runConf);
     pThis->inputState = eAtStrtFram; /* indicate frame header expected */
@@ -105,7 +108,8 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
-    CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
+    bufSize = (size_t)pThis->iMaxLine + 1;
+    CHKmalloc(pThis->pMsg = (uchar *)malloc(bufSize));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -117,9 +121,18 @@ static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
     ISOBJ_TYPE_assert(pThis, tcps_sess);
 #ifdef FEATURE_REGEXP
     if (pThis->pLstnInfo->bHasStartRegex) {
+        size_t regexBufSize;
+
+        if (pThis->iMaxLine > (INT_MAX - 1) / 2) {
+            LogError(0, RS_RET_ERR,
+                     "imtcp: framing.delimiter.regex requires maxMessageSize <= %d to avoid session buffer overflow",
+                     (INT_MAX - 1) / 2);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        regexBufSize = ((size_t)pThis->iMaxLine * 2) + 1;
         /* in this case, we need a second buffer and a larger primary one */
-        CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, (2 * pThis->iMaxLine) + 1));
-        CHKmalloc(pThis->pMsg_save = (uchar *)malloc((2 * pThis->iMaxLine) + 1));
+        CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, regexBufSize));
+        CHKmalloc(pThis->pMsg_save = (uchar *)malloc(regexBufSize));
     }
 #endif
     if (pThis->pSrv->OnSessConstructFinalize != NULL) {

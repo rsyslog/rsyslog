@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <assert.h>
+#include <limits.h>
 #include <sys/wait.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -582,6 +583,8 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 int decodeSyslogName(uchar *name, syslogName_t *codetab) {
     register syslogName_t *c;
     register uchar *p;
+    char *end = NULL;
+    long val;
     uchar buf[80];
 
     assert(name != NULL);
@@ -590,9 +593,15 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab) {
     DBGPRINTF("symbolic name: %s", name);
     if (isdigit((int)*name)) {
         DBGPRINTF("\n");
-        return (atoi((char *)name));
+        errno = 0;
+        val = strtol((char *)name, &end, 10);
+        if (errno != 0 || end == (char *)name || *end != '\0' || val < INT_MIN || val > INT_MAX) {
+            return -1;
+        }
+        return (int)val;
     }
     strncpy((char *)buf, (char *)name, 79);
+    buf[sizeof(buf) - 1] = '\0';
     for (p = buf; *p; p++) {
         if (isupper((int)*p)) *p = tolower((int)*p);
     }
