@@ -34,6 +34,7 @@
 #include <sys/time.h>
 #include <json.h>
 #include <curl/curl.h>
+#include <zlib.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -44,6 +45,13 @@
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omazuredce")
+
+/* Concurrency & Locking:
+ * - instanceData is shared across workers; mutable accessToken is protected by accessTokenLock.
+ * - wrkrInstanceData_t is per worker and owns its batch buffer, timer thread, and pending flush state.
+ * - batchLock serializes batching, timer-driven flushes, retries, and compression so failed flushes can safely retry
+ *   the original uncompressed batch contents.
+ */
 
 /* The maximum size of an API call to the Azure Log Ingestion API is 1MB, which (I assume) means that the call itself
  * with the headers and so on must not exceed this size */
@@ -71,13 +79,19 @@ typedef struct _instanceData {
     sbool accessTokenLockInit;
     int maxBatchBytes;
     int flushTimeoutMs;
+    int compressionLevel;
+    char *requestURL;
+    size_t requestURLLen;
 } instanceData;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
+    CURL *curl;
     char *batchBuf; /* active JSON array, always starts with '[' */
     size_t batchLen;
     size_t recordCount;
+    unsigned char *compressedBuf;
+    size_t compressedBufCap;
     uint64_t lastMessageTimeMs;
     pthread_mutex_t batchLock;
     pthread_cond_t timerCond;
@@ -88,9 +102,10 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
-    {"template", eCmdHdlrGetWord, 0},  {"client_id", eCmdHdlrString, 0},    {"client_secret", eCmdHdlrString, 0},
-    {"tenant_id", eCmdHdlrString, 0},  {"dce_url", eCmdHdlrString, 0},      {"dcr_id", eCmdHdlrString, 0},
-    {"table_name", eCmdHdlrString, 0}, {"max_batch_bytes", eCmdHdlrInt, 0}, {"flush_timeout_ms", eCmdHdlrNonNegInt, 0}};
+    {"template", eCmdHdlrGetWord, 0},   {"client_id", eCmdHdlrString, 0},    {"client_secret", eCmdHdlrString, 0},
+    {"tenant_id", eCmdHdlrString, 0},   {"dce_url", eCmdHdlrString, 0},      {"dcr_id", eCmdHdlrString, 0},
+    {"table_name", eCmdHdlrString, 0},  {"max_batch_bytes", eCmdHdlrInt, 0}, {"flush_timeout_ms", eCmdHdlrNonNegInt, 0},
+    {"compression", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 struct modConfData_s {
@@ -100,6 +115,54 @@ static modConfData_t *runModConf = NULL;
 
 static inline const char *safeStr(const uchar *s) {
     return (s == NULL) ? "<unset>" : (const char *)s;
+}
+
+static inline const char *compressionModeName(const sbool useCompression) {
+    return useCompression ? "gzip" : "none";
+}
+
+static inline const char *compressionLevelName(const int compressionLevel) {
+    switch (compressionLevel) {
+        case Z_BEST_SPEED:
+            return "speed";
+        case Z_BEST_COMPRESSION:
+            return "size";
+        case Z_DEFAULT_COMPRESSION:
+        default:
+            return "default";
+    }
+}
+
+static rsRetVal parseCompressionMode(es_str_t *value, int *compressionLevel) {
+    uchar *modeName = NULL;
+    DEFiRet;
+
+    if (value == NULL || compressionLevel == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    modeName = (uchar *)es_str2cstr(value, NULL);
+    if (modeName == NULL) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+
+    if (!strcasecmp((char *)modeName, "off")) {
+        *compressionLevel = 0;
+    } else if (!strcasecmp((char *)modeName, "speed")) {
+        *compressionLevel = Z_BEST_SPEED;
+    } else if (!strcasecmp((char *)modeName, "default")) {
+        *compressionLevel = Z_DEFAULT_COMPRESSION;
+    } else if (!strcasecmp((char *)modeName, "size")) {
+        *compressionLevel = Z_BEST_COMPRESSION;
+    } else {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omazuredce: invalid compression '%s', expected one of: off, speed, default, size", modeName);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    free(modeName);
+    RETiRet;
 }
 
 typedef struct tokenRespBuf_s {
@@ -309,6 +372,46 @@ static uint64_t nowMs(void) {
     return ((uint64_t)tv.tv_sec * 1000ULL) + ((uint64_t)tv.tv_usec / 1000ULL);
 }
 
+static rsRetVal buildAzureRequestUrl(instanceData *pData) {
+    const char *slash;
+    const char *dce;
+    char *url = NULL;
+    size_t urlLen;
+    int n;
+    DEFiRet;
+
+    assert(pData != NULL);
+    if (pData == NULL || pData->dceURL == NULL || pData->dcrID == NULL || pData->tableName == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    dce = (const char *)pData->dceURL;
+    if (dce[0] != '\0' && dce[strlen(dce) - 1] == '/') {
+        slash = "";
+    } else {
+        slash = "/";
+    }
+
+    urlLen = strlen(dce) + strlen(slash) + strlen("dataCollectionRules/") + strlen((const char *)pData->dcrID) +
+             strlen("/streams/") + strlen((const char *)pData->tableName) + strlen("?api-version=2023-01-01") + 1;
+    CHKmalloc(url = malloc(urlLen));
+    n = snprintf(url, urlLen, "%s%sdataCollectionRules/%s/streams/%s?api-version=2023-01-01", dce, slash,
+                 (const char *)pData->dcrID, (const char *)pData->tableName);
+    if (n < 0 || (size_t)n >= urlLen) {
+        LogError(0, RS_RET_ERR, "omazuredce: failed building Azure DCE request URL");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    free(pData->requestURL);
+    pData->requestURL = url;
+    pData->requestURLLen = strlen(url);
+    url = NULL;
+
+finalize_it:
+    free(url);
+    RETiRet;
+}
+
 static size_t decimalDigits(size_t v) {
     size_t n = 1;
     while (v >= 10) {
@@ -318,43 +421,96 @@ static size_t decimalDigits(size_t v) {
     return n;
 }
 
-/* Estimate total HTTP request bytes (headers + body) for max_batch_bytes enforcement. */
-static size_t estimateHttpRequestBytes(instanceData *pData, size_t payloadLen) {
-    const char *dce = (const char *)pData->dceURL;
-    size_t dceLen = (dce == NULL) ? 0 : strlen(dce);
-    size_t slashLen = 0;
-    size_t dcrLen = (pData->dcrID == NULL) ? 0 : strlen((const char *)pData->dcrID);
-    size_t tableLen = (pData->tableName == NULL) ? 0 : strlen((const char *)pData->tableName);
-    size_t tokenLen = getAccessTokenLen(pData);
-    size_t urlLen;
-    size_t total;
-
-    if (dceLen > 0 && dce[dceLen - 1] != '/') {
-        slashLen = 1;
+static size_t estimatePayloadBytesForRequest(instanceData *pData, size_t payloadLen) {
+    if (pData->compressionLevel != 0) {
+        return (size_t)compressBound((uLong)payloadLen);
     }
 
-    urlLen = dceLen + slashLen + strlen("dataCollectionRules/") + dcrLen + strlen("/streams/") + tableLen +
-             strlen("?api-version=2023-01-01");
+    return payloadLen;
+}
 
-    total = payloadLen;
+static size_t estimateHttpRequestBytesForBody(instanceData *pData, size_t bodyLen) {
+    size_t tokenLen = getAccessTokenLen(pData);
+    size_t total;
+    size_t urlLen = pData->requestURLLen;
+
+    total = bodyLen;
     total += strlen("POST ") + urlLen + strlen(" HTTP/1.1\r\n");
     total += strlen("Host: ") + urlLen + strlen("\r\n");
     total += strlen("Content-Type: application/json\r\n");
+    if (pData->compressionLevel != 0) {
+        total += strlen("Content-Encoding: gzip\r\n");
+    }
     total += strlen("Authorization: Bearer ") + tokenLen + strlen("\r\n");
-    total += strlen("Content-Length: ") + decimalDigits(payloadLen) + strlen("\r\n");
+    total += strlen("Content-Length: ") + decimalDigits(bodyLen) + strlen("\r\n");
     total += strlen("\r\n");
     total += AZURE_HTTP_EXTRA_OVERHEAD;
 
     return total;
 }
 
+/* Estimate total HTTP request bytes (headers + body) for max_batch_bytes enforcement. */
+static size_t estimateHttpRequestBytes(instanceData *pData, size_t payloadLen) {
+    return estimateHttpRequestBytesForBody(pData, estimatePayloadBytesForRequest(pData, payloadLen));
+}
+
+static rsRetVal gzipCompressBuffer(const uint8_t *input,
+                                   size_t inputLen,
+                                   int compressionLevel,
+                                   uint8_t **buffer,
+                                   size_t *bufferCap,
+                                   uint8_t **out,
+                                   size_t *outLen) {
+    z_stream stream;
+    uint8_t *tmpBuf;
+    size_t bound;
+    int rc;
+    DEFiRet;
+
+    if (buffer == NULL || bufferCap == NULL || out == NULL || outLen == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    *out = NULL;
+    *outLen = 0;
+    bound = (size_t)compressBound((uLong)inputLen);
+    if (*bufferCap < bound) {
+        CHKmalloc(tmpBuf = (uint8_t *)realloc(*buffer, bound));
+        *buffer = tmpBuf;
+        *bufferCap = bound;
+    }
+
+    memset(&stream, 0, sizeof(stream));
+    rc = deflateInit2(&stream, compressionLevel, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+    if (rc != Z_OK) {
+        LogError(0, RS_RET_ZLIB_ERR, "omazuredce: deflateInit2 failed: %d", rc);
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    stream.next_in = (Bytef *)input;
+    stream.avail_in = (uInt)inputLen;
+    stream.next_out = *buffer;
+    stream.avail_out = (uInt)bound;
+
+    rc = deflate(&stream, Z_FINISH);
+    if (rc != Z_STREAM_END) {
+        LogError(0, RS_RET_ZLIB_ERR, "omazuredce: gzip compression failed: %d", rc);
+        deflateEnd(&stream);
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    *out = *buffer;
+    *outLen = stream.total_out;
+    deflateEnd(&stream);
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrData, size_t payloadLen) {
-    const char *slash;
-    char *url = NULL;
     char *authHeader = NULL;
-    char *dce = NULL;
-    size_t urlLen;
-    CURL *curl = NULL;
+    const unsigned char *payload = (const unsigned char *)pWrkrData->batchBuf;
+    size_t sendLen = payloadLen;
     CURLcode curlRes;
     long httpCode = 0;
     tokenRespBuf_t response = {NULL, 0};
@@ -363,7 +519,7 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
     int n;
     DEFiRet;
 
-    if (pData->dceURL == NULL || pData->dcrID == NULL || pData->tableName == NULL) {
+    if (pData->requestURL == NULL) {
         LogError(0, RS_RET_PARAM_ERROR, "omazuredce: cannot post batch, missing one of dce_url/dcr_id/table_name");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
@@ -377,35 +533,25 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
         }
     }
 
-    dce = (char *)pData->dceURL;
-    if (dce[0] != '\0' && dce[strlen(dce) - 1] == '/') {
-        slash = "";
-    } else {
-        slash = "/";
-    }
-    urlLen = strlen(dce) + strlen(slash) + strlen("/dataCollectionRules/") + strlen((char *)pData->dcrID) +
-             strlen("/streams/") + strlen((char *)pData->tableName) + strlen("?api-version=2023-01-01") + 1;
-    CHKmalloc(url = malloc(urlLen));
-    n = snprintf(url, urlLen, "%s%sdataCollectionRules/%s/streams/%s?api-version=2023-01-01", dce, slash,
-                 (char *)pData->dcrID, (char *)pData->tableName);
-    if (n < 0 || (size_t)n >= urlLen) {
-        LogError(0, RS_RET_ERR, "omazuredce: failed building Azure DCE request URL");
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
-
     {
         const size_t tokenLen = strlen(accessToken);
-        const size_t requestLen = estimateHttpRequestBytes(pData, payloadLen);
+        size_t requestLen;
+        if (pData->compressionLevel != 0) {
+            CHKiRet(gzipCompressBuffer((const uint8_t *)pWrkrData->batchBuf, payloadLen, pData->compressionLevel,
+                                       &pWrkrData->compressedBuf, &pWrkrData->compressedBufCap, (uint8_t **)&payload,
+                                       &sendLen));
+        }
+
+        requestLen = estimateHttpRequestBytesForBody(pData, sendLen);
         if (requestLen > (size_t)pData->maxBatchBytes) {
             LogError(0, RS_RET_ERR,
                      "omazuredce: batch exceeds max request size before send, payload_bytes=%zu "
                      "estimated_request_bytes=%zu max_batch_bytes=%d",
-                     payloadLen, requestLen, pData->maxBatchBytes);
+                     sendLen, requestLen, pData->maxBatchBytes);
             ABORT_FINALIZE(RS_RET_ERR);
         }
 
-        curl = curl_easy_init();
-        if (curl == NULL) {
+        if (pWrkrData->curl == NULL) {
             LogError(0, RS_RET_ERR, "omazuredce: curl_easy_init failed while posting batch");
             ABORT_FINALIZE(RS_RET_ERR);
         }
@@ -419,28 +565,30 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
         }
 
         headers = curl_slist_append(headers, "Content-Type: application/json");
+        if (pData->compressionLevel != 0) {
+            headers = curl_slist_append(headers, "Content-Encoding: gzip");
+        }
         headers = curl_slist_append(headers, authHeader);
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, pWrkrData->batchBuf);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)payloadLen);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tokenWriteCb);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L);
+        curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDS, payload);
+        curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, (long)sendLen);
+        curl_easy_setopt(pWrkrData->curl, CURLOPT_WRITEDATA, &response);
 
-        DBGPRINTF("omazuredce: posting batch url='%s' bytes=%zu\n", url, payloadLen);
-        curlRes = curl_easy_perform(curl);
+        DBGPRINTF("omazuredce: posting batch url='%s' payload_bytes=%zu sent_bytes=%zu compression=%s level=%s\n",
+                  pData->requestURL, payloadLen, sendLen, compressionModeName(pData->compressionLevel != 0),
+                  compressionLevelName(pData->compressionLevel));
+        curlRes = curl_easy_perform(pWrkrData->curl);
         if (curlRes != CURLE_OK) {
             LogError(0, RS_RET_SUSPENDED, "omazuredce: batch post failed: %s", curl_easy_strerror(curlRes));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+        curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &httpCode);
         if (httpCode >= 200 && httpCode < 300) {
             DBGPRINTF("omazuredce: batch post successful status=%ld response='%s'\n", httpCode,
                       response.data == NULL ? "" : response.data);
-            LogMsg(0, RS_RET_OK, LOG_INFO, "omazuredce: posted batch records=%zu stream=%s", pWrkrData->recordCount,
-                   safeStr(pData->tableName));
+            LogMsg(0, RS_RET_OK, LOG_INFO, "omazuredce: posted batch records=%zu stream=%s compression=%s",
+                   pWrkrData->recordCount, safeStr(pData->tableName),
+                   (pData->compressionLevel == 0) ? "off" : compressionLevelName(pData->compressionLevel));
             FINALIZE;
         }
         if (httpCode == 401) {
@@ -463,12 +611,12 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
     }
 
 finalize_it:
-    free(url);
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, NULL);
+    curl_slist_free_all(headers);
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDS, NULL);
     free(authHeader);
     free(accessToken);
     free(response.data);
-    if (headers != NULL) curl_slist_free_all(headers);
-    if (curl != NULL) curl_easy_cleanup(curl);
     RETiRet;
 }
 
@@ -739,8 +887,11 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->dcrID = NULL;
     pData->tableName = NULL;
     pData->accessToken = NULL;
+    pData->requestURL = NULL;
+    pData->requestURLLen = 0;
     pData->maxBatchBytes = AZURE_MAX_BATCH_BYTES;
     pData->flushTimeoutMs = 1000;
+    pData->compressionLevel = 0;
 }
 
 BEGINbeginCnfLoad
@@ -792,10 +943,22 @@ BEGINcreateWrkrInstance
     DBGPRINTF("omazuredce: createWrkrInstance[%p] maxBatchBytes=%d flushTimeoutMs=%d\n", pWrkrData,
               pWrkrData->pData->maxBatchBytes, pWrkrData->pData->flushTimeoutMs);
     pWrkrData->lastMessageTimeMs = nowMs();
+    pWrkrData->curl = NULL;
     pWrkrData->timerThreadRunning = 0;
     pWrkrData->stopTimerThread = 0;
     pWrkrData->pendingAsyncFlushRet = RS_RET_OK;
+    pWrkrData->compressedBuf = NULL;
+    pWrkrData->compressedBufCap = 0;
     CHKmalloc(pWrkrData->batchBuf = malloc((size_t)pWrkrData->pData->maxBatchBytes + 1));
+    pWrkrData->curl = curl_easy_init();
+    if (pWrkrData->curl == NULL) {
+        LogError(0, RS_RET_ERR, "omazuredce: curl_easy_init failed while creating worker");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_URL, pWrkrData->pData->requestURL);
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_WRITEFUNCTION, tokenWriteCb);
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_TIMEOUT, 20L);
     if (pthread_mutex_init(&pWrkrData->batchLock, NULL) != 0) {
         ABORT_FINALIZE(RS_RET_SYS_ERR);
     }
@@ -820,6 +983,13 @@ finalize_it:
         }
         if (condInit) pthread_cond_destroy(&pWrkrData->timerCond);
         if (mutexInit) pthread_mutex_destroy(&pWrkrData->batchLock);
+        if (pWrkrData->curl != NULL) {
+            curl_easy_cleanup(pWrkrData->curl);
+            pWrkrData->curl = NULL;
+        }
+        free(pWrkrData->compressedBuf);
+        pWrkrData->compressedBuf = NULL;
+        pWrkrData->compressedBufCap = 0;
         free(pWrkrData->batchBuf);
         pWrkrData->batchBuf = NULL;
     }
@@ -841,6 +1011,7 @@ BEGINfreeInstance
     free(pData->dcrID);
     free(pData->tableName);
     free(pData->accessToken);
+    free(pData->requestURL);
     if (pData->accessTokenLockInit) pthread_mutex_destroy(&pData->accessTokenLock);
     free(pData->templateName);
 ENDfreeInstance
@@ -858,6 +1029,8 @@ BEGINfreeWrkrInstance
 finalize_it:
     pthread_cond_destroy(&pWrkrData->timerCond);
     pthread_mutex_destroy(&pWrkrData->batchLock);
+    if (pWrkrData->curl != NULL) curl_easy_cleanup(pWrkrData->curl);
+    free(pWrkrData->compressedBuf);
     free(pWrkrData->batchBuf);
 ENDfreeWrkrInstance
 
@@ -872,6 +1045,8 @@ BEGINdbgPrintInstInfo
     dbgprintf("\ttable_name='%s'\n", safeStr(pData->tableName));
     dbgprintf("\tmax_batch_bytes='%d'\n", pData->maxBatchBytes);
     dbgprintf("\tflush_timeout_ms='%d'\n", pData->flushTimeoutMs);
+    dbgprintf("\tcompression='%s'\n",
+              (pData->compressionLevel == 0) ? "off" : compressionLevelName(pData->compressionLevel));
     dbgprintf("\taccess_token=%s\n", pData->accessToken == NULL ? "<unset>" : "<set>");
 ENDdbgPrintInstInfo
 
@@ -994,13 +1169,16 @@ BEGINnewActInst
             pData->maxBatchBytes = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "flush_timeout_ms")) {
             pData->flushTimeoutMs = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "compression")) {
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &pData->compressionLevel));
         }
     }
     DBGPRINTF(
         "omazuredce: parsed params template='%s' client_id='%s' tenant_id='%s' dce_url='%s' dcr_id='%s' "
-        "table_name='%s' max_batch_bytes=%d flush_timeout_ms=%d client_secret=%s\n",
+        "table_name='%s' max_batch_bytes=%d flush_timeout_ms=%d compression=%s client_secret=%s\n",
         safeStr(pData->templateName), safeStr(pData->clientID), safeStr(pData->tenantID), safeStr(pData->dceURL),
         safeStr(pData->dcrID), safeStr(pData->tableName), pData->maxBatchBytes, pData->flushTimeoutMs,
+        (pData->compressionLevel == 0) ? "off" : compressionLevelName(pData->compressionLevel),
         (pData->clientSecret == NULL) ? "<unset>" : "<set>");
 
     if (pData->maxBatchBytes <= 0 || pData->maxBatchBytes > AZURE_MAX_BATCH_BYTES) {
@@ -1032,6 +1210,7 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR, "omazuredce: parameter 'table_name' required but not specified");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
+    CHKiRet(buildAzureRequestUrl(pData));
 
     nTpls = 1;
     CODE_STD_STRING_REQUESTnewActInst(nTpls);

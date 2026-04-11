@@ -854,6 +854,7 @@ EXTRA_DIST = \
     source/reference/parameters/omazuredce-client_secret.rst \
     source/reference/parameters/omazuredce-dce_url.rst \
     source/reference/parameters/omazuredce-dcr_id.rst \
+    source/reference/parameters/omazuredce-compression.rst \
     source/reference/parameters/omazuredce-flush_timeout_ms.rst \
     source/reference/parameters/omazuredce-max_batch_bytes.rst \
     source/reference/parameters/omazuredce-table_name.rst \
