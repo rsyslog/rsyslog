@@ -1008,6 +1008,7 @@ static rsRetVal ATTR_NONNULL(1)
     while (state == RS_READING || state == RS_STARVATION) {
         switch (state) {
             case RS_READING:
+                /* maxReads==0 is intentional and documented: it disables starvation protection. */
                 while (state == RS_READING && (maxReads == 0 || read_calls < maxReads)) {
                     iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 

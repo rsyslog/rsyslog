@@ -1070,9 +1070,9 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     /* Store nsd_ossl_t* reference in SSL obj
      * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
      */
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 0, pThis->pTcp);
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 1, &pThis->permitExpiredCerts);
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 3, &pThis->DrvrTlsRevocationCheck);
+    SSL_set_ex_data(pNew->pNetOssl->ssl, 0, pNew->pTcp);
+    SSL_set_ex_data(pNew->pNetOssl->ssl, 1, &pNew->permitExpiredCerts);
+    SSL_set_ex_data(pNew->pNetOssl->ssl, 3, &pNew->DrvrTlsRevocationCheck);
 
     /* We now do the handshake */
     CHKiRet(osslHandshakeCheck(pNew));

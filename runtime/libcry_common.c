@@ -56,6 +56,10 @@ int cryGetKeyFromFile(const char *const fn, char **const key, unsigned *const ke
         errno = EMSGSIZE;
         goto done;
     }
+    if (sb.st_size == 0) {
+        errno = EINVAL;
+        goto done;
+    }
     if ((*key = malloc(sb.st_size)) == NULL) goto done;
     if (read(fd, *key, sb.st_size) != sb.st_size) goto done;
     *keylen = sb.st_size;

@@ -737,7 +737,6 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                          cnf_params->pszInputName, peerName, peerIP, peerPort, c);
             }
             if (pThis->iOctetsRemain < 1) {
-                /* TODO: handle the case where the octet count is 0! */
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
                          "peer: (hostname) %s, (ip) %s, (port) %s: invalid octet count %d.",
