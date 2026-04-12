@@ -89,7 +89,7 @@ static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
-/* default number of workes to configure. We choose 2, as this is probably good for
+/* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
  */
 #define DEFAULT_NUMWRKR 2
@@ -196,7 +196,7 @@ struct modConfData_s {
     char *pszNetworkNamespace; /**< default network namespace to use */
     uchar *pszStrmDrvrName; /* stream driver to use */
     uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
-    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handle expired certificates */
     uchar *pszStrmDrvrCAFile;
     uchar *pszStrmDrvrCRLFile;
     uchar *pszStrmDrvrKeyFile;
@@ -504,13 +504,11 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->iKeepAliveProbes = cs.iKeepAliveProbes;
     inst->iKeepAliveIntvl = cs.iKeepAliveIntvl;
     inst->iKeepAliveTime = cs.iKeepAliveTime;
-    inst->iKeepAliveTime = cs.iKeepAliveTime;
     inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
     inst->iTCPLstnMax = cs.iTCPLstnMax;
     inst->iTCPSessMax = cs.iTCPSessMax;
     inst->numWrkr = DEFAULT_NUMWRKR;
     inst->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
-    inst->iStrmDrvrMode = cs.iStrmDrvrMode;
 
 finalize_it:
     free(pNewVal);
