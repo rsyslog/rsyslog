@@ -1582,10 +1582,6 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
 
-    /* we are done checking the config - now validate if we should actually run or not.
-     * If not, terminate. -- rgerhards, 2008-07-25
-     * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
-     */
     if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;
         FINALIZE;
@@ -1593,7 +1589,10 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
 
     /* all OK, pass loaded conf to caller */
     *cnf = loadConf;
-    // TODO: enable this once all config code is moved to here!	loadConf = NULL;
+    /* Keep loadConf valid until activation. If the config system is ever
+     * extended beyond a single in-flight load and explicit config context is
+     * threaded through all load-time helpers, reconsider clearing it here.
+     */
 
     dbgprintf("rsyslog finished loading master config %p\n", loadConf);
     rsconfDebugPrint(loadConf);
