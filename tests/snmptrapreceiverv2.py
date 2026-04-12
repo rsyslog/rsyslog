@@ -1,6 +1,5 @@
 # call this via "python[3] script name"
 import sys
-import importlib.util
 import asyncio
 import os
 
