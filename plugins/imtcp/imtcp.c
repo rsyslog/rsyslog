@@ -81,6 +81,7 @@ DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(nets
 typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
     pthread_t tid; /* the worker's thread ID */
+    int thread_started;
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
 static tcpsrv_etry_t *tcpsrv_root = NULL;
@@ -296,6 +297,37 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
+
+#define MAX_FRAME_SIZE_LIMIT 200000000
+
+static rsRetVal validateMaxFrameSize(const int maxFrameSize) {
+    if (maxFrameSize < 1 || maxFrameSize > MAX_FRAME_SIZE_LIMIT) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for 'maxFrameSize' parameter given is %d, valid range is 1..%d", maxFrameSize,
+                 MAX_FRAME_SIZE_LIMIT);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    return RS_RET_OK;
+}
+
+static rsRetVal validateLegacySessionLimits(void) {
+    if (cs.iTCPSessMax < 1) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for legacy 'inputtcpmaxsessions' parameter given is %d, minimum is 1",
+                 cs.iTCPSessMax);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    if (cs.iTCPLstnMax < 1) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for legacy 'inputtcpmaxlisteners' parameter given is %d, minimum is 1",
+                 cs.iTCPLstnMax);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    return RS_RET_OK;
+}
 
 /* callbacks */
 /* this shall go into a specific ACL module! */
@@ -686,15 +718,8 @@ BEGINnewInpInst
             inst->iAddtlFrameDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
-            if (max <= 200000000) {
-                inst->maxFrameSize = max;
-            } else {
-                LogError(0, RS_RET_PARAM_ERROR,
-                         "imtcp: invalid value for 'maxFrameSize' "
-                         "parameter given is %d, max is 200000000",
-                         max);
-                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-            }
+            CHKiRet(validateMaxFrameSize(max));
+            inst->maxFrameSize = max;
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxlisteners")) {
@@ -835,15 +860,8 @@ BEGINsetModCnf
             loadModConf->iAddtlFrameDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
-            if (max <= 200000000) {
-                loadModConf->maxFrameSize = max;
-            } else {
-                LogError(0, RS_RET_PARAM_ERROR,
-                         "imtcp: invalid value for 'maxFrameSize' "
-                         "parameter given is %d, max is 200000000",
-                         max);
-                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-            }
+            CHKiRet(validateMaxFrameSize(max));
+            loadModConf->maxFrameSize = max;
         } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
             loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
@@ -923,6 +941,13 @@ ENDsetModCnf
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
     if (!loadModConf->configSetViaV2Method) {
+        iRet = validateLegacySessionLimits();
+        if (iRet != RS_RET_OK) {
+            free(cs.pszStrmDrvrAuthMode);
+            cs.pszStrmDrvrAuthMode = NULL;
+            loadModConf = NULL;
+            return iRet;
+        }
         /* persist module-specific settings from legacy config system */
         pModConf->iTCPSessMax = cs.iTCPSessMax;
         pModConf->iTCPLstnMax = cs.iTCPLstnMax;
@@ -1092,6 +1117,9 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
     if (r != 0) {
         LogError(r, NO_ERRCODE, "imtcp error creating server thread");
         /* we do NOT abort, as other servers may run - after all, we logged an error */
+        etry->thread_started = 0;
+    } else {
+        etry->thread_started = 1;
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
@@ -1100,9 +1128,14 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
 /* stop server worker thread
  */
 static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
+    if (!etry->thread_started) {
+        return;
+    }
+
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
+    etry->thread_started = 0;
     DBGPRINTF("input %p terminated\n", etry);
 }
 
