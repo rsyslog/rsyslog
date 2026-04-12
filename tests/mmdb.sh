@@ -16,11 +16,11 @@ module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
-ruleset(name="testing") {
-	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)
-	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields="city" )
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
-}'
+	ruleset(name="testing") {
+		action(type="mmnormalize" rulebase="'$srcdir/mmdb.rb'")
+		action(type="mmdblookup" mmdbfile="'$srcdir/test.mmdb'" key="$!ip" fields="city" )
+		action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+	}'
 startup
 tcpflood -m 1 -j "202.106.0.20\ "
 shutdown_when_empty

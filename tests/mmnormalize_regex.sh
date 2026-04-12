@@ -15,8 +15,8 @@ module(load="../plugins/mmnormalize/.libs/mmnormalize" allowRegex="on")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_regex.rulebase`)
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="hosts_and_ports")
+action(type="mmnormalize" rulebase="'$srcdir/testsuites/mmnormalize_regex.rulebase'")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="hosts_and_ports")
 '
 startup
 tcpflood -m 1 -I $srcdir/testsuites/regex_input
