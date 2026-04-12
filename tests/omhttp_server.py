@@ -151,7 +151,6 @@ if __name__ == '__main__':
     print('starting omhttp test server at {interface}:{port} with pid {pid}'
           .format(interface=args.interface, port=lstn_port, pid=pid))
     if args.port_file != '':
-        f = open(args.port_file, "w")
-        f.write(str(lstn_port))
-        f.close()
+        with open(args.port_file, "w") as f:
+            f.write(str(lstn_port))
     server.serve_forever()
