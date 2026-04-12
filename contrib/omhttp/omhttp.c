@@ -1268,12 +1268,17 @@ finalize_it:
  * memLevel: the memory optimization level 8 is default)
  * strategy: using Z_DEFAULT_STRATEGY is default
  */
-static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *message, unsigned len) {
+static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *message, size_t len) {
     int zRet;
     unsigned outavail;
     uchar zipBuf[32 * 1024];
 
     DEFiRet;
+
+    if (len > UINT_MAX) {
+        LogError(0, RS_RET_ERR, "omhttp: payload too large for gzip compression (%zu bytes)", len);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     if (!pWrkrData->bzInitDone) {
         pWrkrData->zstrm.zalloc = Z_NULL;
@@ -1294,7 +1299,7 @@ static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *messag
 
     /* now doing the compression */
     pWrkrData->zstrm.next_in = (Bytef *)message;
-    pWrkrData->zstrm.avail_in = len;
+    pWrkrData->zstrm.avail_in = (uInt)len;
     /* run deflate() on buffer until everything has been compressed */
     do {
         DBGPRINTF("omhttp: compressHttpPayload in deflate() loop, avail_in %d, total_in %ld\n",
@@ -1467,8 +1472,11 @@ finalize_it:
 #undef SAFE_APPEND
 
 
-static rsRetVal ATTR_NONNULL(1, 2) curlPost(
-    wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, const int nmsgs __attribute__((unused))) {
+static rsRetVal ATTR_NONNULL(1, 2) curlPost(wrkrInstanceData_t *pWrkrData,
+                                            uchar *message,
+                                            size_t msglen,
+                                            uchar **tpls,
+                                            const int nmsgs __attribute__((unused))) {
     CURLcode curlCode;
     CURL *curl = NULL;
     char errbuf[CURL_ERROR_SIZE] = "";
@@ -1509,7 +1517,7 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
             postData = (char *)pWrkrData->compressCtx.buf;
             postLen = pWrkrData->compressCtx.curLen;
             compressed = 1;
-            DBGPRINTF("omhttp: curlPost compressed %d to %zu bytes\n", msglen, postLen);
+            DBGPRINTF("omhttp: curlPost compressed %zu to %zu bytes\n", msglen, postLen);
         }
     }
 
