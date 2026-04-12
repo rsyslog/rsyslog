@@ -28,7 +28,7 @@ pollPeriod = 0.75 # the number of seconds between polling for new messages
 maxAtOnce = 1024  # max nbr of messages that are processed within one batch
 
 # App logic global variables
-outfile = "" # "define" global var that the app code needs
+outfile = None # "define" global var that the app code needs
 
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
@@ -57,7 +57,13 @@ def onExit():
         being called immediately before exiting.
     """
     global outfile
-    outfile.close()
+    if outfile is not None:
+        try:
+            outfile.close()
+        except Exception as e:
+            # Ignore close errors during shutdown, but report for diagnostics.
+            sys.stderr.write("onExit: failed to close outfile: %s\n" % e)
+        outfile = None
 
 
 """
@@ -73,22 +79,24 @@ important once we get to the point where the plugin does
 two-way conversations with rsyslog. Do NOT change this!
 See also: https://github.com/rsyslog/rsyslog/issues/22
 """
-onInit()
-keepRunning = 1
-while keepRunning == 1:
-    while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
-        msgs = []
-        msgsInBatch = 0
-        while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-            line = sys.stdin.readline()
-            if line:
-                msgs.append(line)
-            else: # an empty line means stdin has been closed
-                keepRunning = 0
-            msgsInBatch = msgsInBatch + 1
-            if msgsInBatch >= maxAtOnce:
-                break
-        if len(msgs) > 0:
-            onReceive(msgs)
-            sys.stdout.flush() # very important, Python buffers far too much!
-onExit()
+try:
+    onInit()
+    keepRunning = 1
+    while keepRunning == 1:
+        while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
+            msgs = []
+            msgsInBatch = 0
+            while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                line = sys.stdin.readline()
+                if line:
+                    msgs.append(line)
+                else: # an empty line means stdin has been closed
+                    keepRunning = 0
+                msgsInBatch = msgsInBatch + 1
+                if msgsInBatch >= maxAtOnce:
+                    break
+            if len(msgs) > 0:
+                onReceive(msgs)
+                sys.stdout.flush() # very important, Python buffers far too much!
+finally:
+    onExit()
