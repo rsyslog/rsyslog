@@ -203,20 +203,6 @@ else:
 
             # Increment counter
             nLineCount += 1
-
-    #       if nLineCount > 25:
-    #           break
-
-    #   if nMaxDataCount > 0:
-    #       # Check if we need to reduce the data amount
-    #       nTotalDataCount = len( aData[aFields[0]] )
-    #       nDataStepCount = nTotalDataCount / (nMaxDataCount)
-    #       if nTotalDataCount > nMaxDataCount:
-    #           for iDataNum in reversed(range(0, nTotalDataCount)):
-    #               # Remove all entries who
-    #               if iDataNum % nDataStepCount == 0:
-    #                   aMajorXData.append( aData[aFields[0]][iDataNum] )
-            
     # Import Style
 #   from pygal.style import LightSolarizedStyle
 #   from pygal.style import DefaultStyle
