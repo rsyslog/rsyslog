@@ -1051,6 +1051,11 @@ static rsRetVal ATTR_NONNULL()
         ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
     }
 
+    if (sb.st_size == 0) {
+        LogError(0, RS_RET_JSON_PARSE_ERR, "lookup table file '%s' is empty", filename);
+        ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+    }
+
     CHKmalloc(iobuf = malloc(sb.st_size));
 
     tokener = json_tokener_new();
