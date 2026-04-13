@@ -988,6 +988,12 @@ The statistic is named "target-port-protocol" where "target", "port", and
 The following properties are maintained for each action:
 
 -  **bytes.sent** - total number of bytes sent to the network
+-  **messages.sent** - total number of messages sent to the network
+-  **num.connects** - total number of successful TCP/TLS connections established
+
+The ``num.connects`` counter is updated only for connection-oriented
+forwarding actions. UDP actions do not establish sessions and therefore do not
+increment it.
 
 See Also
 ========

@@ -85,8 +85,10 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(netstrms) DEFobjCurrIf(netstrm
     statsobj_t *stats;
     intctr_t sentBytes;
     intctr_t sentMsgs;
+    intctr_t numConnects;
     DEF_ATOMIC_HELPER_MUT64(mut_sentBytes);
     DEF_ATOMIC_HELPER_MUT64(mut_sentMsgs);
+    DEF_ATOMIC_HELPER_MUT64(mut_numConnects);
 } targetStats_t;
 
 typedef struct _instanceData {
@@ -1286,6 +1288,8 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
         CHKiRet(netstrm.Connect(pTarget->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf), (uchar *)pTarget->port,
                                 (uchar *)pTarget->target_name, pData->device));
 
+        ATOMIC_INC_uint64(&pTarget->pTargetStats->numConnects, &pTarget->pTargetStats->mut_numConnects);
+
         /* set keep-alive if enabled */
         if (pData->bKeepAlive) {
             CHKiRet(netstrm.SetKeepAliveProbes(pTarget->pNetstrm, pData->iKeepAliveProbes));
@@ -1895,6 +1899,12 @@ static rsRetVal setupInstStatsCtrs(instanceData *const pData) {
         INIT_ATOMIC_HELPER_MUT64(pData->target_stats[i].mut_sentMsgs);
         CHKiRet(statsobj.AddCounter(pData->target_stats[i].stats, UCHAR_CONSTANT("messages.sent"), ctrType_IntCtr,
                                     CTR_FLAG_RESETTABLE, &(pData->target_stats[i].sentMsgs)));
+
+
+        pData->target_stats[i].numConnects = 0;
+        INIT_ATOMIC_HELPER_MUT64(pData->target_stats[i].mut_numConnects);
+        CHKiRet(statsobj.AddCounter(pData->target_stats[i].stats, UCHAR_CONSTANT("num.connects"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &(pData->target_stats[i].numConnects)));
 
         CHKiRet(statsobj.ConstructFinalize(pData->target_stats[i].stats));
     }
