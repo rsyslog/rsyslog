@@ -1,6 +1,6 @@
-****************************************
-pmlastmsg: last message repeated n times
-****************************************
+*************************************************
+pmlastmsg: "last message repeated n times" parser
+*************************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **pmlastmsg**
@@ -12,17 +12,16 @@ pmlastmsg: last message repeated n times
 Purpose
 =======
 
-Some syslogds are known to emit severity malformed messages with content
-"last message repeated n times". These messages can mess up message
-reception, as they lead to wrong interpretation with the standard
-RFC3164 parser. Rather than trying to fix this issue in pmrfc3164, we
-have created a new parser module specifically for these messages. The
-reason is that some processing overhead is involved in processing these
-messages (they must be recognized) and we would not like to place this
-toll on every user but only on those actually in need of the feature.
-Note that the performance toll is not large -- but if you expect a very
-high message rate with ten thousands of messages per second, you will
-notice a difference.
+Some syslog daemons are known to emit severity malformed messages with content
+"last message repeated n times". These messages can mess up message reception,
+as they lead to wrong interpretation with the standard RFC3164 parser. Rather
+than trying to fix this issue in pmrfc3164, we have created a new parser module
+specifically for these messages. The reason is that some processing overhead is
+involved in processing these messages (they must be recognized) and we would not
+like to place this toll on every user but only on those actually in need of the
+feature. Note that the performance toll is not large -- but if you expect a very
+high message rate with ten thousands of messages per second, you will notice a
+difference.
 
 This module should be loaded first inside :doc:`rsyslog's parser
 chain </concepts/messageparser>`. It processes all those messages that
@@ -36,11 +35,13 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
+Parser Parameters
+-----------------
 
-There do not currently exist any configuration parameters for this
-module.
+There are no configuration parameters for this module currently.
 
 
 Examples
