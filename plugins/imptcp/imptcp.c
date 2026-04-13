@@ -972,7 +972,8 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
         DBGPRINTF("imptcp: message discarded by ratelimit helper\n");
         iRet = RS_RET_OK;
     } else {
-        DBGPRINTF("imptcp: ratelimit helper returned error %d, continuing\n", localRet);
+        DBGPRINTF("imptcp: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
+        msgDestruct(&pMsg);
         iRet = RS_RET_OK;
     }
 

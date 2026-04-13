@@ -448,7 +448,8 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
         DBGPRINTF("tcps_sess: message discarded by ratelimit helper\n");
         iRet = RS_RET_OK;
     } else {
-        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, continuing\n", localRet);
+        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
+        msgDestruct(&pMsg);
         iRet = RS_RET_OK;
     }
 
