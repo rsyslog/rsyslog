@@ -43,7 +43,6 @@ override_dh_auto_configure: build-qpid-proton
 		--enable-pmaixforwardedfrom \
 		--enable-pmcisconames \
 		--enable-pmlastmsg \
-		--enable-pmrfc3164sd \
 		--enable-pmsnare \
 		--enable-omprog \
 		--enable-elasticsearch \

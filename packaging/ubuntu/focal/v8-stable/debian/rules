@@ -41,7 +41,6 @@ override_dh_auto_configure:
 		--enable-pmaixforwardedfrom \
 		--enable-pmcisconames \
 		--enable-pmlastmsg \
-		--enable-pmrfc3164sd \
 		--enable-pmsnare \
 		--enable-omprog \
 		--enable-elasticsearch \
