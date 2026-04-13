@@ -1,6 +1,6 @@
-*****************************************
-Kubernetes Metadata Module (mmkubernetes)
-*****************************************
+****************************************
+mmkubernetes: Kubernetes Metadata Module
+****************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **mmkubernetes**
@@ -50,38 +50,14 @@ and
 https://github.com/ViaQ/elasticsearch-templates/blob/master/namespaces/docker.yml
 for more details.
 
+
 Configuration Parameters
 ========================
 
-
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
-
-.. toctree::
-   :hidden:
-
-   ../../reference/parameters/mmkubernetes-annotation-match
-   ../../reference/parameters/mmkubernetes-allowunsignedcerts
-   ../../reference/parameters/mmkubernetes-busyretryinterval
-   ../../reference/parameters/mmkubernetes-cacheentryttl
-   ../../reference/parameters/mmkubernetes-cacheexpireinterval
-   ../../reference/parameters/mmkubernetes-containerrulebase
-   ../../reference/parameters/mmkubernetes-containerrules
-   ../../reference/parameters/mmkubernetes-de-dot
-   ../../reference/parameters/mmkubernetes-de-dot-separator
-   ../../reference/parameters/mmkubernetes-dstmetadatapath
-   ../../reference/parameters/mmkubernetes-filenamerulebase
-   ../../reference/parameters/mmkubernetes-filenamerules
-   ../../reference/parameters/mmkubernetes-kubernetesurl
-   ../../reference/parameters/mmkubernetes-skipverifyhost
-   ../../reference/parameters/mmkubernetes-srcmetadatapath
-   ../../reference/parameters/mmkubernetes-sslpartialchain
-   ../../reference/parameters/mmkubernetes-tls-cacert
-   ../../reference/parameters/mmkubernetes-tls-mycert
-   ../../reference/parameters/mmkubernetes-tls-myprivkey
-   ../../reference/parameters/mmkubernetes-token
-   ../../reference/parameters/mmkubernetes-tokenfile
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------
@@ -177,6 +153,31 @@ Action Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmkubernetes-annotation-match
+   ../../reference/parameters/mmkubernetes-allowunsignedcerts
+   ../../reference/parameters/mmkubernetes-busyretryinterval
+   ../../reference/parameters/mmkubernetes-cacheentryttl
+   ../../reference/parameters/mmkubernetes-cacheexpireinterval
+   ../../reference/parameters/mmkubernetes-containerrulebase
+   ../../reference/parameters/mmkubernetes-containerrules
+   ../../reference/parameters/mmkubernetes-de-dot
+   ../../reference/parameters/mmkubernetes-de-dot-separator
+   ../../reference/parameters/mmkubernetes-dstmetadatapath
+   ../../reference/parameters/mmkubernetes-filenamerulebase
+   ../../reference/parameters/mmkubernetes-filenamerules
+   ../../reference/parameters/mmkubernetes-kubernetesurl
+   ../../reference/parameters/mmkubernetes-skipverifyhost
+   ../../reference/parameters/mmkubernetes-srcmetadatapath
+   ../../reference/parameters/mmkubernetes-sslpartialchain
+   ../../reference/parameters/mmkubernetes-tls-cacert
+   ../../reference/parameters/mmkubernetes-tls-mycert
+   ../../reference/parameters/mmkubernetes-tls-myprivkey
+   ../../reference/parameters/mmkubernetes-token
+   ../../reference/parameters/mmkubernetes-tokenfile
+
 .. _mmkubernetes-statistic-counter:
 
 Statistic Counter
@@ -242,7 +243,7 @@ Parameters are:
    in the namespace metadata cache, and had to be requested from Kubernetes.
 
 Fields
-------
+======
 
 These are the fields added from the metadata in the json-file filename, or from
 the `CONTAINER_NAME` and `CONTAINER_ID_FULL` fields from the `imjournal` input:
@@ -267,7 +268,7 @@ defined in Kubernetes, and depending on the value of the directive
 More fields may be added in the future.
 
 Error Handling
---------------
+==============
 If the plugin encounters a `404 Not Found` in response to a request for
 namespace or pod metadata, that is, the pod or namespace is missing, the plugin
 will cache that result, and no metadata will be available for that pod or
@@ -298,10 +299,10 @@ the :ref:`mmkubernetes-statistic-counter` to monitor for problems getting data
 from the Kubernetes API service.
 
 Example
--------
+=======
 
-Assuming you have an `imfile` input reading from docker json-file container
-logs managed by Kubernetes, with `addmetadata="on"` so that mmkubernetes can
+Assuming you have an ``imfile`` input reading from docker json-file container
+logs managed by Kubernetes, with ``addmetadata="on"`` so that mmkubernetes can
 get the basic necessary Kubernetes metadata from the filename:
 
 .. code-block:: none
@@ -309,9 +310,9 @@ get the basic necessary Kubernetes metadata from the filename:
     input(type="imfile" file="/var/log/containers/*.log"
           tag="kubernetes" addmetadata="on")
 
-(Add `reopenOnTruncate="on"` if using Docker, not required by CRI-O).
+(Add ``reopenOnTruncate="on"`` if using Docker, not required by CRI-O).
 
-and/or an `imjournal` input for docker journald container logs annotated by
+and/or an ``imjournal`` input for docker journald container logs annotated by
 Kubernetes:
 
 .. code-block:: none
@@ -330,7 +331,7 @@ After this, you should have log records with fields described in the `Fields`
 section above.
 
 Credits
--------
+=======
 
 This work is based on
 https://github.com/fabric8io/fluent-plugin-kubernetes_metadata_filter
