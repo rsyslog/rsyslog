@@ -36,6 +36,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/stat.h>
@@ -65,6 +66,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "hashtable.h"
+#include "hashtable_itr.h"
 #include "ratelimit.h"
 
 
@@ -160,6 +162,11 @@ typedef struct lstn_s {
 } lstn_t;
 static lstn_t *listeners;
 
+static void removePidRatelimiter(lstn_t *pLstn, pid_t pid);
+static void prunePidRatelimiters(lstn_t *pLstn);
+static void enforcePidRatelimiterCap(lstn_t *pLstn);
+static void releasePidRatelimiterCache(lstn_t *pLstn);
+
 static prop_t *pLocalHostIP = NULL; /* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL; /* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
@@ -179,6 +186,11 @@ static int sd_fds = 0; /* number of systemd activated sockets */
 #define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
 #define DFLT_ratelimitSeverity 1 /* do not rate-limit emergency messages */
+/*
+ * Bound per-PID ratelimiter state so a stream of short-lived local senders
+ * cannot grow the cache without limit for the lifetime of the daemon.
+ */
+#define MAX_DYNAMIC_RATELIMITERS 4096U
 /* config vars for the legacy config system */
 static struct configSettings_s {
     int bOmitLocalLogging;
@@ -459,7 +471,7 @@ static rsRetVal discardLogSockets(void) {
     if (startIndexUxLocalSockets == 0) {
         /* Clean up rate limiting data for the system socket */
         if (listeners[0].ht != NULL) {
-            hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+            releasePidRatelimiterCache(&listeners[0]);
         }
         ratelimitDestruct(listeners[0].dflt_ratelimiter);
     }
@@ -474,7 +486,7 @@ static rsRetVal discardLogSockets(void) {
             prop.Destruct(&(listeners[i].hostName));
         }
         if (listeners[i].ht != NULL) {
-            hashtable_destroy(listeners[i].ht, 1); /* 1 => free all values automatically */
+            releasePidRatelimiterCache(&listeners[i]);
         }
         ratelimitDestruct(listeners[i].dflt_ratelimiter);
     }
@@ -610,6 +622,7 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
     int r;
     pid_t *keybuf;
     char pinfobuf[512];
+    char procName[256];
     DEFiRet;
 
     if (cred == NULL) FINALIZE;
@@ -626,22 +639,24 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
 
     rl = hashtable_search(pLstn->ht, &cred->pid);
     if (rl == NULL) {
+        prunePidRatelimiters(pLstn);
+        enforcePidRatelimiterCap(pLstn);
         /* we need to add a new ratelimiter, process not seen before! */
         DBGPRINTF("imuxsock: no ratelimiter for pid %lu, creating one\n", (unsigned long)cred->pid);
         STATSCOUNTER_INC(ctrNumRatelimiters, mutCtrNumRatelimiters);
         /* read process name from system  */
-        char procName[256]; /* enough for any sane process name  */
+        procName[0] = '\0';
+        snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu", (unsigned long)cred->pid);
         snprintf(procName, sizeof(procName), "/proc/%lu/cmdline", (unsigned long)cred->pid);
         FILE *f = fopen(procName, "r");
         if (f) {
             size_t len;
-            len = fread(procName, sizeof(char), 256, f);
+            len = fread(procName, sizeof(char), sizeof(procName) - 1, f);
             if (len > 0) {
+                procName[len] = '\0';
                 snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu, name: %s", (unsigned long)cred->pid, procName);
             }
             fclose(f);
-        } else {
-            snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu", (unsigned long)cred->pid);
         }
         pinfobuf[sizeof(pinfobuf) - 1] = '\0'; /* to be on safe side */
         CHKiRet(ratelimitNew(&rl, "imuxsock", pinfobuf));
@@ -660,6 +675,90 @@ finalize_it:
     if (rl != NULL) ratelimitDestruct(rl);
     if (*prl == NULL) *prl = pLstn->dflt_ratelimiter;
     RETiRet;
+}
+
+static void removePidRatelimiter(lstn_t *pLstn, pid_t pid) {
+    ratelimit_t *rl;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL) {
+        return;
+    }
+
+    rl = hashtable_remove(pLstn->ht, &pid);
+    if (rl != NULL) {
+        ratelimitDestruct(rl);
+        STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+    }
+}
+
+static void prunePidRatelimiters(lstn_t *pLstn) {
+    struct hashtable_itr *itr;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) == 0) {
+        return;
+    }
+
+    itr = hashtable_iterator(pLstn->ht);
+    if (itr == NULL) {
+        return;
+    }
+
+    while (itr->e != NULL) {
+        const pid_t pid = *((pid_t *)hashtable_iterator_key(itr));
+        ratelimit_t *rl = hashtable_iterator_value(itr);
+        const int is_alive = (kill(pid, 0) == 0 || errno == EPERM);
+
+        if (!is_alive) {
+            hashtable_iterator_remove(itr);
+            ratelimitDestruct(rl);
+            STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+        } else if (!hashtable_iterator_advance(itr)) {
+            break;
+        }
+    }
+
+    free(itr);
+}
+
+static void enforcePidRatelimiterCap(lstn_t *pLstn) {
+    struct hashtable_itr *itr;
+    pid_t pid;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) < MAX_DYNAMIC_RATELIMITERS) {
+        return;
+    }
+
+    itr = hashtable_iterator(pLstn->ht);
+    if (itr == NULL || itr->e == NULL) {
+        free(itr);
+        return;
+    }
+
+    pid = *((pid_t *)hashtable_iterator_key(itr));
+    free(itr);
+
+    DBGPRINTF("imuxsock: evicting pid %lu ratelimiter to keep cache bounded\n", (unsigned long)pid);
+    removePidRatelimiter(pLstn, pid);
+}
+
+static void releasePidRatelimiterCache(lstn_t *pLstn) {
+    unsigned int i;
+    unsigned int count;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL) {
+        return;
+    }
+
+    count = hashtable_count(pLstn->ht);
+    hashtable_destroy(pLstn->ht, 1);
+    pLstn->ht = NULL;
+    for (i = 0; i < count; ++i) {
+        STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+    }
 }
 
 
