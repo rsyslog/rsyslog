@@ -802,6 +802,8 @@ EXTRA_DIST = \
     source/reference/parameters/mmjsontransform-input.rst \
     source/reference/parameters/mmjsontransform-mode.rst \
     source/reference/parameters/mmjsontransform-policy.rst \
+    source/reference/parameters/mmjsontransform-policywatch.rst \
+    source/reference/parameters/mmjsontransform-policywatchdebounce.rst \
     source/reference/parameters/mmjsontransform-output.rst \
     source/reference/parameters/mmkubernetes-allowunsignedcerts.rst \
     source/reference/parameters/mmkubernetes-annotation-match.rst \

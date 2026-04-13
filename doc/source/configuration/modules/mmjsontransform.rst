@@ -45,6 +45,8 @@ Notable Features
   locate incompatible payloads quickly.
 - :ref:`mmjsontransform-policy` — optional YAML policy-based mode selection,
   key renaming, and field dropping before processing.
+- watched policy reloads — optional automatic policy refresh with debounce
+  when ``policyWatch`` is enabled.
 
 Configuration Parameters
 ========================
@@ -79,6 +81,14 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmjsontransform-policy.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policywatch`
+     - .. include:: ../../reference/parameters/mmjsontransform-policywatch.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policywatchdebounce`
+     - .. include:: ../../reference/parameters/mmjsontransform-policywatchdebounce.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _mmjsontransform-modes:
 
@@ -111,6 +121,21 @@ key paths (``{"nested": {"value": 1}}`` is rewritten to
 ``{"nested.value": 1}``), while arrays are preserved with their elements
 recursively flattened. If flattening would overwrite an existing scalar with a
 different value, the action fails and reports the mismatch.
+
+.. _mmjsontransform-policy-reload:
+
+Policy reloads
+==============
+
+When :ref:`policy <param-mmjsontransform-policy>` is configured,
+``mmjsontransform`` loads the YAML file during startup and reloads it on
+``HUP``. When :ref:`policyWatch <param-mmjsontransform-policywatch>` is enabled,
+rsyslog also watches the file for changes and reloads it after the configured
+:ref:`policyWatchDebounce <param-mmjsontransform-policywatchdebounce>` quiet
+period when watch support is available. If watched reloads are unavailable in
+the current build or runtime environment, rsyslog logs a warning and continues
+with ``HUP``-only reload behavior. Invalid updates are rejected and the
+previous in-memory policy remains active.
 
 .. _mmjsontransform-conflict-handling:
 
@@ -163,3 +188,5 @@ input property needs to be renamed or moved before retrying the transformation.
    ../../reference/parameters/mmjsontransform-output
    ../../reference/parameters/mmjsontransform-mode
    ../../reference/parameters/mmjsontransform-policy
+   ../../reference/parameters/mmjsontransform-policywatch
+   ../../reference/parameters/mmjsontransform-policywatchdebounce

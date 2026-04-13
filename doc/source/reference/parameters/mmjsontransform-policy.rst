@@ -29,8 +29,9 @@ Description
 -----------
 
 When set, ``mmjsontransform`` loads a YAML policy file during startup and
-re-checks it on ``HUP``. If the file's mtime changed, the module reloads it;
-when reload fails, the previous in-memory policy is kept. The current
+re-checks it on ``HUP``. When :ref:`policyWatch <param-mmjsontransform-policywatch>`
+is enabled, the same file can also be reloaded automatically after watched
+updates. If reload fails, the previous in-memory policy is kept. The current
 implementation supports these sections:
 
 ``mode``
@@ -64,6 +65,8 @@ Input usage
 
    action(type="mmjsontransform"
           policy="/etc/rsyslog/mmjsontransform-policy.yaml"
+          policyWatch="on"
+          policyWatchDebounce="500ms"
           input="$!raw" output="$!normalized")
 
 Example policy file

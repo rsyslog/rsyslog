@@ -77,6 +77,8 @@ librsyslog_la_SOURCES = \
 	queue.h \
 	ruleset.c \
 	ruleset.h \
+	rswatch.c \
+	rswatch.h \
 	prop.c \
 	prop.h \
 	ratelimit.c \
