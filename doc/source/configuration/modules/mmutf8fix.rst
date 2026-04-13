@@ -1,13 +1,15 @@
-Fix invalid UTF-8 Sequences (mmutf8fix)
-=======================================
+**************************************
+mmutf8fix: Fix invalid UTF-8 Sequences
+**************************************
 
-**Module Name:** mmutf8fix
+====================  =============================
+**Module Name:**      **mmutf8fix**
+**Author:**           Rainer Gerhards <rgerhards@adiscon.com>
+**Available since:**  7.5.4
+====================  =============================
 
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
-
-**Available since**: 7.5.4
-
-**Description**:
+Purpose
+=======
 
 The mmutf8fix module permits to fix invalid UTF-8 sequences. Most often,
 such invalid sequences result from syslog sources sending in non-UTF
@@ -24,7 +26,8 @@ future, depending on user demand. In the longer term it could also be
 evolved into an any-charset-to-UTF8 converter. But first let's see if it
 really gets into widespread enough use.
 
-**Proper Usage**:
+Proper Usage
+============
 
 Some notes are due for proper use of this module. This is a message
 modification module utilizing the action interface, which means you call
@@ -46,18 +49,20 @@ their incoming traffic, bind them to specific
 this ruleset.
 
 Configuration Parameters
-------------------------
+========================
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended
-   for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-**Module Parameters**
+Module parameters
+-----------------
 
 This module has no module parameters.
 
-**Input Parameters**
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -74,32 +79,34 @@ This module has no module parameters.
           :start-after: .. summary-start
           :end-before: .. summary-end
 
-**Samples:**
+Examples
+========
 
 In this snippet, we write one file without fixing UTF-8 and another one
 with the message fixed. Note that once mmutf8fix has run, access to the
 original message is no longer possible.
 
-::
+.. code-block:: none
 
-  module(load="mmutf8fix") action(type="omfile"
-  file="/path/to/non-fixed.log") action(type="mmutf8fix")
+  module(load="mmutf8fix")
+  action(type="omfile" file="/path/to/non-fixed.log")
+  action(type="mmutf8fix")
   action(type="omfile" file="/path/to/fixed.log")
 
 In this sample, we fix only message originating from host 10.0.0.1.
 
-::
+.. code-block:: none
 
-  module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
-  action(type="mmutf8fix") # all other actions here...
+  module(load="mmutf8fix")
+  if $fromhost-ip == "10.0.0.1" then action(type="mmutf8fix") # all other actions here...
 
 This is mostly the same as the previous sample, but uses
 "controlcharacters" processing mode.
 
-::
+.. code-block:: none
 
-  module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
-  action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
+  module(load="mmutf8fix")
+  if $fromhost-ip == "10.0.0.1" then action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
 
 .. toctree::
    :hidden:
