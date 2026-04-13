@@ -945,6 +945,7 @@ finalize_it:
 static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub) {
     smsg_t *pMsg;
     ptcpsrv_t *pSrv;
+    rsRetVal localRet;
     DEFiRet;
 
     if (pThis->iMsg == 0) {
@@ -964,9 +965,17 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
     MsgSetRuleset(pMsg, pSrv->pRuleset);
-    STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
-
-    ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    if (localRet == RS_RET_OK) {
+        STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
+    } else if (localRet == RS_RET_DISCARDMSG) {
+        DBGPRINTF("imptcp: message discarded by ratelimit helper\n");
+        iRet = RS_RET_OK;
+    } else {
+        DBGPRINTF("imptcp: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
+        msgDestruct(&pMsg);
+        iRet = RS_RET_OK;
+    }
 
 finalize_it:
     /* reset status variables */

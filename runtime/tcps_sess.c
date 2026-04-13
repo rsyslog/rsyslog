@@ -330,6 +330,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
                                        time_t ttGenTime,
                                        multi_submit_t *pMultiSub) {
     smsg_t *pMsg;
+    rsRetVal localRet;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -357,7 +358,6 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
-    STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
     if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
         const char *per_source_key = NULL;
         size_t per_source_key_len = 0;
@@ -436,10 +436,21 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
                     break;
             }
         }
-        ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
-                                 ttGenTime);
+        localRet = ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key,
+                                            per_source_key_len, ttGenTime);
     } else {
-        ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+        localRet = ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    }
+
+    if (localRet == RS_RET_OK) {
+        STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
+    } else if (localRet == RS_RET_DISCARDMSG) {
+        DBGPRINTF("tcps_sess: message discarded by ratelimit helper\n");
+        iRet = RS_RET_OK;
+    } else {
+        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
+        msgDestruct(&pMsg);
+        iRet = RS_RET_OK;
     }
 
 finalize_it:
