@@ -1,13 +1,14 @@
 .. _ref-mmjsontransform:
 
-JSON Dotted Key Transformer (mmjsontransform)
-=============================================
+********************************************
+mmjsontransform: JSON Dotted Key Transformer
+********************************************
 
-===========================  ==========================================================================
-**Module Name:**             **mmjsontransform**
-**Author:**                  `rsyslog project <https://github.com/rsyslog/rsyslog>`_
-**Available since:**         8.2410.0
-===========================  ==========================================================================
+====================  ==========================================================================
+**Module Name:**      **mmjsontransform**
+**Author:**           `rsyslog project <https://github.com/rsyslog/rsyslog>`_
+**Available since:**  8.2410.0
+====================  ==========================================================================
 
 .. note::
 
@@ -20,7 +21,7 @@ Purpose
 
 ``mmjsontransform`` restructures JSON properties whose names contain dotted
 segments. The action reads a JSON object from the configured input property and
-stores the transformed tree under a dedicated output property. By default the
+stores the transformed tree under a dedicated output property. By default, the
 module expands dotted keys into nested containers (``unflatten`` mode) so
 pipelines that consume ``option.jsonfTree`` data can normalize payloads inline.
 When ``mode="flatten"`` is selected, the action collapses nested objects back
@@ -51,8 +52,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive. For readability, camelCase is
-   recommended.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------
