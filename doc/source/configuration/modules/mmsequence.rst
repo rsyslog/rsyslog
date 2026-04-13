@@ -1,25 +1,27 @@
-Number generator and counter module (mmsequence)
-================================================
+***********************************************
+mmsequence: Number generator and counter module
+***********************************************
 
-**Module Name:    mmsequence**
+====================  ========================================================
+**Module Name:**      **mmsequence**
+**Author:**           Pavel Levshin <pavel@levshin.spb.ru>
+**Available since**:  7.5.6
+**Status:**           Non project-supported module - contact author or rsyslog
+                      mailing list for questions
+====================  ========================================================
 
-**Author:**\ Pavel Levshin <pavel@levshin.spb.ru>
+.. warning::
 
-**Status:**\ Non project-supported module - contact author or rsyslog
-mailing list for questions
+   **This module is deprecated** in v8 and solely provided for backward
+   compatibility reasons. It was written as a work-around for missing
+   global variable support in v7. Global variables are available in v8,
+   and at some point in time this module will entirely be removed.
 
-**This module is deprecated** in v8 and solely provided for backward
-compatibility reasons. It was written as a work-around for missing
-global variable support in v7. Global variables are available in v8,
-and at some point in time this module will entirely be removed.
+   **Do not use this module for newly crafted config files.**
+   Use global variables instead.
 
-**Do not use this module for newly crafted config files.**
-Use global variables instead.
-
-
-**Available since**: 7.5.6
-
-**Description**:
+Purpose
+=======
 
 This module generates numeric sequences of different kinds. It can be
 used to count messages up to a limit and to number them. It can generate
@@ -28,11 +30,16 @@ random numbers in a given range.
 This module is implemented via the output module interface, so it is
 called just as an action. The number generated is stored in a variable.
 
- 
+Configuration Parameters
+========================
 
-**Action Parameters**:
+.. note::
 
-Note: parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+Action Parameters
+-----------------
 
 -  **mode** "random" or "instance" or "key"
 
@@ -74,9 +81,11 @@ Note: parameter names are case-insensitive.
    Name of the variable where the number will be stored. Should start
    with "$".
 
-**Sample**:
 
-::
+Examples
+========
+
+.. code-block:: none
 
     # load balance
     Ruleset(
@@ -148,9 +157,9 @@ Note: parameter names are case-insensitive.
                 key=""
             )
 
-**Legacy Configuration Parameters**:
 
-Note: parameter names are case-insensitive.
+Legacy Configuration Parameters
+===============================
 
 Not supported.
 
