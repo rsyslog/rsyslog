@@ -1,11 +1,19 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import socket
 import sys
 import time
 
 
-def main() -> None:
+def write_text(path, content):
+    fh = open(path, "w")
+    try:
+        fh.write(content)
+    finally:
+        fh.close()
+
+
+def main():
     if len(sys.argv) != 4:
         raise SystemExit("usage: holdtcpopen.py <portfile> <acceptfile> <hold-seconds>")
 
@@ -18,12 +26,10 @@ def main() -> None:
     listener.bind(("127.0.0.1", 0))
     listener.listen(1)
 
-    with open(portfile, "w", encoding="ascii") as fh:
-        fh.write(str(listener.getsockname()[1]))
+    write_text(portfile, str(listener.getsockname()[1]))
 
     conn, _ = listener.accept()
-    with open(acceptfile, "w", encoding="ascii") as fh:
-        fh.write("accepted\n")
+    write_text(acceptfile, "accepted\n")
 
     conn.settimeout(0.2)
     deadline = time.time() + hold_seconds
