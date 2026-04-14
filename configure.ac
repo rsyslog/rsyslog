@@ -257,10 +257,19 @@ AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set def
 
 AC_CHECK_HEADERS([arpa/nameser.h resolv.h])
 AC_SEARCH_LIBS([ns_initparse], [resolv])
-LIBRESOLV_LIBS=$ac_cv_search_ns_initparse
-AS_CASE([$LIBRESOLV_LIBS],
-        ["none required"], [LIBRESOLV_LIBS=""],
-        ["no"], [LIBRESOLV_LIBS=""])
+AC_SEARCH_LIBS([res_init], [resolv])
+AC_SEARCH_LIBS([res_query], [resolv])
+LIBRESOLV_LIBS=
+for libresolv_lib in "$ac_cv_search_ns_initparse" "$ac_cv_search_res_init" "$ac_cv_search_res_query"; do
+        AS_CASE([$libresolv_lib],
+                ["none required"], [],
+                ["no"], [],
+                [""], [],
+                [*], [
+                        AS_CASE([" $LIBRESOLV_LIBS "], [*" $libresolv_lib "*], [], [LIBRESOLV_LIBS="$LIBRESOLV_LIBS $libresolv_lib"])
+                ])
+done
+LIBRESOLV_LIBS=${LIBRESOLV_LIBS# }
 AC_SUBST([LIBRESOLV_LIBS])
 AS_IF([test "x$ac_cv_search_ns_initparse" != "xno"],
       [AC_DEFINE([HAVE_RESOLV_NS_INITPARSE], [1],
