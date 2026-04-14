@@ -486,9 +486,20 @@ static rsRetVal computeBaseUrl(const char *const serverParam,
                      : es_addBuf(&urlBuf, SCHEME_HTTP, sizeof(SCHEME_HTTP) - 1);
 
     if (r == 0) r = es_addBuf(&urlBuf, (char *)serverParam, strlen(serverParam));
-    if (r == 0 && !strchr(host, ':')) {
-        snprintf(portBuf, sizeof(portBuf), ":%d", defaultPort);
-        r = es_addBuf(&urlBuf, portBuf, strlen(portBuf));
+    /* Append serverport unless the server string already contains an explicit port. */
+    if (r == 0) {
+        int has_port = 0;
+        if (host[0] == '[') {
+            /* IPv6 bracket notation: port would appear after ']' */
+            const char *bracket_end = strchr(host, ']');
+            if (bracket_end && strchr(bracket_end, ':')) has_port = 1;
+        } else {
+            if (strchr(host, ':')) has_port = 1;
+        }
+        if (!has_port) {
+            snprintf(portBuf, sizeof(portBuf), ":%d", defaultPort);
+            r = es_addBuf(&urlBuf, portBuf, strlen(portBuf));
+        }
     }
     if (r == 0) r = es_addChar(&urlBuf, '/');
     if (r == 0) *baseUrl = (uchar *)es_str2cstr(urlBuf, NULL);
