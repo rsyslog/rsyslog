@@ -185,12 +185,11 @@ static uchar *getRelpPt(instanceData *pData) {
 static void onErr(void *pUsr, char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
     instanceData *pData = (instanceData *)pUsr;
     if (pData == NULL) {
-        LogError(0, RS_RET_RELP_ERR,
-                 "omrelp: error '%s', object '%s' - action may not work as intended",
-                 errmesg, objinfo);
+        LogError(0, RS_RET_RELP_ERR, "omrelp: error '%s', object '%s' - action may not work as intended", errmesg,
+                 objinfo);
         return;
     }
-    LogError(0, RS_RET_RELP_AUTH_FAIL,
+    LogError(0, RS_RET_RELP_ERR,
              "omrelp[%s:%s]: error '%s', object "
              " '%s' - action may not work as intended",
              pData->target, getRelpPt(pData), errmesg, objinfo);
@@ -206,8 +205,7 @@ static void onGenericErr(char *objinfo, char *errmesg, __attribute__((unused)) r
 static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
     instanceData *pData = (instanceData *)pUsr;
     if (pData == NULL) {
-        LogError(0, RS_RET_RELP_AUTH_FAIL,
-                 "omrelp: authentication error '%s', peer is '%s' - DISABLING action",
+        LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp: authentication error '%s', peer is '%s' - DISABLING action",
                  errmesg, authinfo);
         return;
     }
