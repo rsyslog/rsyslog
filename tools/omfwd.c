@@ -428,10 +428,6 @@ static const char *resolverErrorString(const int err) {
     }
 }
 
-#if defined(__RES) && (__RES >= 19991006)
-    #define HAVE_RESOLV_RES_N_API 1
-#endif
-
 static rsRetVal initResolverState(res_state *const pres) {
     DEFiRet;
 

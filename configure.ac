@@ -265,6 +265,10 @@ AC_SUBST([LIBRESOLV_LIBS])
 AS_IF([test "x$ac_cv_search_ns_initparse" != "xno"],
       [AC_DEFINE([HAVE_RESOLV_NS_INITPARSE], [1],
                  [Define if resolver provides ns_initparse])])
+AC_CHECK_FUNCS([res_ninit res_nquery res_nclose])
+AS_IF([test "x$ac_cv_func_res_ninit" = "xyes" -a "x$ac_cv_func_res_nquery" = "xyes" -a "x$ac_cv_func_res_nclose" = "xyes"],
+      [AC_DEFINE([HAVE_RESOLV_RES_N_API], [1],
+                 [Define if resolver provides res_n* APIs])])
 AM_CONDITIONAL([HAVE_SRV_DISCOVERY], [test "x$ac_cv_search_ns_initparse" != "xno"])
 
 # the check below is probably ugly. If someone knows how to do it in a better way, please
