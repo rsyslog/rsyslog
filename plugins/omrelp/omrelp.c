@@ -183,11 +183,16 @@ static uchar *getRelpPt(instanceData *pData) {
 }
 
 static void onErr(void *pUsr, char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
-    wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *)pUsr;
-    LogError(0, RS_RET_RELP_AUTH_FAIL,
+    instanceData *pData = (instanceData *)pUsr;
+    if (pData == NULL) {
+        LogError(0, RS_RET_RELP_ERR, "omrelp: error '%s', object '%s' - action may not work as intended", errmesg,
+                 objinfo);
+        return;
+    }
+    LogError(0, RS_RET_RELP_ERR,
              "omrelp[%s:%s]: error '%s', object "
              " '%s' - action may not work as intended",
-             pWrkrData->pData->target, pWrkrData->pData->port, errmesg, objinfo);
+             pData->target, getRelpPt(pData), errmesg, objinfo);
 }
 
 static void onGenericErr(char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
@@ -198,11 +203,16 @@ static void onGenericErr(char *objinfo, char *errmesg, __attribute__((unused)) r
 }
 
 static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
-    instanceData *pData = ((wrkrInstanceData_t *)pUsr)->pData;
+    instanceData *pData = (instanceData *)pUsr;
+    if (pData == NULL) {
+        LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp: authentication error '%s', peer is '%s' - DISABLING action",
+                 errmesg, authinfo);
+        return;
+    }
     LogError(0, RS_RET_RELP_AUTH_FAIL,
              "omrelp[%s:%s]: authentication error '%s', peer "
              "is '%s' - DISABLING action",
-             pData->target, pData->port, errmesg, authinfo);
+             pData->target, getRelpPt(pData), errmesg, authinfo);
     pData->bHadAuthFail = 1;
 }
 
@@ -304,7 +314,7 @@ BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
     pWrkrData->pRelpClt = NULL;
     iRet = doCreateRelpClient(pWrkrData->pData, &pWrkrData->pRelpClt);
-    if (relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+    if (relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData->pData) != RELP_RET_OK)
         LogError(0, RS_RET_NO_ERRCODE, "omrelp: error when creating relp client");
     pWrkrData->bInitialConnect = 1;
     pWrkrData->nSent = 0;
@@ -613,7 +623,7 @@ static rsRetVal doRebind(wrkrInstanceData_t *pWrkrData) {
     CHKiRet(relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt));
     pWrkrData->bIsConnected = 0;
     CHKiRet(doCreateRelpClient(pWrkrData->pData, &pWrkrData->pRelpClt));
-    if (relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+    if (relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData->pData) != RELP_RET_OK)
         LogError(0, RS_RET_NO_ERRCODE, "omrelp: error when creating relp client");
     pWrkrData->bInitialConnect = 1;
     pWrkrData->nSent = 0;

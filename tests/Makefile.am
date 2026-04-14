@@ -1487,6 +1487,7 @@ TESTS_RELP = \
 	sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
 	 omrelp_errmsg_no_connect.sh \
+	 omrelp-shutdown-partial-session.sh \
 	 imrelp-basic.sh \
 	 imrelp-basic-oldstyle.sh \
 	 imrelp-basic-hup.sh \
@@ -3096,6 +3097,7 @@ EXTRA_DIST += \
 	testsuites/omprog-defaults-bin.sh \
 	testsuites/omprog-output-capture-bin.sh \
 	testsuites/omprog-output-capture-mt-bin.py \
+	holdtcpopen.py \
 	testsuites/omprog-feedback-bin.sh \
 	testsuites/omprog-feedback-mt-bin.sh \
 	testsuites/omprog-feedback-timeout-bin.sh \
