@@ -1,0 +1,4 @@
+# Valid API keys for imhttp test coverage
+
+secret-token-1
+secret-token-2

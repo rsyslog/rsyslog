@@ -977,6 +977,9 @@ TESTS_IMDOCKER_VALGRIND = \
 TESTS_IMHTTP = \
 	imhttp-post-payload.sh \
 	imhttp-post-payload-basic-auth.sh \
+	imhttp-post-payload-api-key-auth.sh \
+	imhttp-post-payload-auth-header-limits.sh \
+	imhttp-post-payload-mixed-auth.sh \
 	imhttp-post-payload-query-params.sh \
 	imhttp-post-payload-large.sh \
 	imhttp-post-payload-multi.sh \
@@ -985,6 +988,10 @@ TESTS_IMHTTP = \
 	imhttp-getrequest-file.sh \
 	imhttp-healthcheck.sh \
 	imhttp-metrics.sh \
+	imhttp-healthcheck-api-key-auth.sh \
+	imhttp-metrics-api-key-auth.sh \
+	yaml-imhttp-apikeyfile.sh \
+	yaml-imhttp-metrics-apikeyfile.sh \
 	imhttp_ratelimit_name.sh
 
 TESTS_IMHTTP_VALGRIND = \
@@ -3089,6 +3096,7 @@ EXTRA_DIST += \
 	testsuites/action-tx-errfile.result \
 	improg-multiline-test.py \
 	testsuites/imhttp-large-data.txt \
+	testsuites/imhttp-apikeys.txt \
 	testsuites/docroot/file.txt \
 	testsuites/htpasswd \
 	omhttp_server.py \

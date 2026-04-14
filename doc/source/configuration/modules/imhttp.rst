@@ -106,24 +106,36 @@ healthCheckPath
 Configures the request path for a simple HTTP health probe that returns
 ``200`` when the module is running.
 The endpoint is unauthenticated unless :ref:`healthCheckBasicAuthFile
-<imhttp-healthcheckbasicauthfile>` is set. Otherwise, bind the server to
+<imhttp-healthcheckbasicauthfile>` or :ref:`healthCheckApiKeyFile
+<imhttp-healthcheckapikeyfile>` is set. Otherwise, bind the server to
 ``localhost`` or use CivetWeb access controls if external access is not
 desired.
 
-.. _imhttp-healthcheckbasicauthfile:
+Authentication Parameters
+-------------------------
 
-healthCheckBasicAuthFile
-^^^^^^^^^^^^^^^^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "mandatory", "format", "default"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "no", "path to htpasswd file", "none"
-
-Protects the health probe with HTTP Basic Authentication using a file in
-`htpasswd` format.
+   * - Parameter
+     - Summary
+   * - :ref:`param-imhttp-healthcheckbasicauthfile`
+     - .. include:: ../../reference/parameters/imhttp-healthcheckbasicauthfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imhttp-healthcheckapikeyfile`
+     - .. include:: ../../reference/parameters/imhttp-healthcheckapikeyfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imhttp-metricsbasicauthfile`
+     - .. include:: ../../reference/parameters/imhttp-metricsbasicauthfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imhttp-metricsapikeyfile`
+     - .. include:: ../../reference/parameters/imhttp-metricsapikeyfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _imhttp-metricspath:
 
@@ -141,24 +153,28 @@ Exposes rsyslog statistics in Prometheus text format at the specified
 path. The endpoint emits counters such as ``imhttp_submitted_total`` and
 ``imhttp_failed_total``.
 By default the endpoint does not enforce authentication, but it can be
-protected with :ref:`metricsBasicAuthFile <imhttp-metricsbasicauthfile>`.
+protected with :ref:`metricsBasicAuthFile <imhttp-metricsbasicauthfile>`
+or :ref:`metricsApiKeyFile <imhttp-metricsapikeyfile>`.
 Leaving the default paths enabled creates user-visible URLs as soon as
 the module is loaded, so review firewall and access-control settings.
 
-.. _imhttp-metricsbasicauthfile:
+Authentication Parameters
+-------------------------
 
-metricsBasicAuthFile
-^^^^^^^^^^^^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "mandatory", "format", "default"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "no", "path to htpasswd file", "none"
-
-Protects the metrics endpoint with HTTP Basic Authentication using a
-file in `htpasswd` format.
+   * - Parameter
+     - Summary
+   * - :ref:`param-imhttp-basicauthfile`
+     - .. include:: ../../reference/parameters/imhttp-basicauthfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imhttp-apikeyfile`
+     - .. include:: ../../reference/parameters/imhttp-apikeyfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Input Parameters
 ----------------
@@ -307,41 +323,26 @@ The following metadata will be injected into the following properties:
   for case-insensitive access.
 
 
-basicAuthFile
-^^^^^^^^^^^^^^^^^^
+Authentication Parameters
+-------------------------
 
-.. csv-table::
-   :header: "type", "mandatory", "format", "default"
-   :widths: auto
-   :class: parameter-table
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-   "string", "no", "none", ""
-
-Enables access control to this endpoint using HTTP basic authentication. Option is disabled by default.
-To enable it, set this option to an `htpasswd file`, which can be generated using a standard `htpasswd` tool.
-
-See also:
-
-- `HTTP Authorization <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization>`_
-- `HTTP Basic Authentication <https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic_authentication_scheme>`_
-- `htpasswd utility <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_
+   * - Parameter
+     - Summary
+   * - :ref:`param-imhttp-basicauthfile`
+     - .. include:: ../../reference/parameters/imhttp-basicauthfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imhttp-apikeyfile`
+     - .. include:: ../../reference/parameters/imhttp-apikeyfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 .. _imhttp-statistic-counter:
-
-
-basicAuthFile
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "mandatory", "format", "default"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "no", "none", "none"
-
-Configures an `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on HTTP request received on this input.
-If this option is not set, basic authentication will not be enabled.
 
 
 Statistic Counter
@@ -513,3 +514,47 @@ Authentication:
 
    # scrape statistics with credentials
    # curl -u user:password http://localhost:8080/metrics
+
+Example 7
+---------
+
+Protect an input endpoint with API-key authentication:
+
+.. code-block:: none
+
+   module(load="imhttp" ports="8080")
+   input(type="imhttp"
+         endpoint="/postrequest"
+         apiKeyFile="/etc/rsyslog/imhttp-apikeys")
+
+   # send logs with an API key
+   # curl -H 'Authorization: ApiKey secret-token' \
+   #      -d 'message payload' http://localhost:8080/postrequest
+
+Example 8
+---------
+
+Allow either Basic or API-key authentication on the same input during a
+migration:
+
+.. code-block:: none
+
+   module(load="imhttp" ports="8080")
+   input(type="imhttp"
+         endpoint="/postrequest"
+         basicAuthFile="/etc/rsyslog/htpasswd"
+         apiKeyFile="/etc/rsyslog/imhttp-apikeys")
+
+Example 9
+---------
+
+Protect the metrics endpoint with an API key:
+
+.. code-block:: none
+
+   module(load="imhttp" ports="8080"
+          metricsPath="/metrics"
+          metricsApiKeyFile="/etc/rsyslog/imhttp-apikeys")
+
+   # scrape statistics with an API key
+   # curl -H 'Authorization: ApiKey secret-token' http://localhost:8080/metrics
