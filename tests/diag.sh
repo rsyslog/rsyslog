@@ -243,6 +243,49 @@ require_plugin() {
         exit 77
 }
 
+# ensure YAML config support is available before running yaml-only tests.
+# Skips only when the binary was built without libyaml; any other validation
+# failure indicates a broken probe and is treated as a testbench error.
+require_yaml_support() {
+	local yaml_probe="${RSYSLOG_DYNNAME}.yaml-support-check.yaml"
+	local yaml_probe_log="${RSYSLOG_DYNNAME}.yaml-support-check.log"
+
+	cat > "$yaml_probe" << 'EOF'
+version: 2
+
+templates:
+  - name: outfmt
+    type: string
+    string: "%msg%\n"
+
+rulesets:
+  - name: main
+    script: |
+      action(type="omfile" file="/dev/null" template="outfmt")
+EOF
+
+	../tools/rsyslogd -C -N1 -f "$yaml_probe" -M"$RSYSLOG_MODDIR" \
+		> "$yaml_probe_log" 2>&1
+	local rc=$?
+	rm -f "$yaml_probe"
+
+	if [ $rc -eq 0 ]; then
+		rm -f "$yaml_probe_log"
+		return 0
+	fi
+
+	if grep -q "requested but rsyslog was built without libyaml support" "$yaml_probe_log"; then
+		printf 'info: skipping test - rsyslog was built without libyaml support\n'
+		rm -f "$yaml_probe_log"
+		exit 77
+	fi
+
+	printf 'TESTBENCH_ERROR: YAML support probe failed unexpectedly\n'
+	cat "$yaml_probe_log"
+	rm -f "$yaml_probe_log"
+	error_exit 100
+}
+
 
 
 # a consistent format to output testbench timestamps
