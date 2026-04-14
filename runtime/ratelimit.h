@@ -23,6 +23,7 @@
 
 #include <stddef.h>
 #include "rsyslog.h"
+#include "rswatch.h"
 #include "statsobj.h"
 
 struct hashtable;
@@ -38,6 +39,8 @@ typedef struct ratelimit_shared_s {
     char *policy_file;
     sbool policy_watch;
     unsigned int policy_watch_debounce_ms;
+    rswatch_handle_t *policy_watch_handle;
+    rswatch_handle_t *per_source_policy_watch_handle;
     pthread_mutex_t mut;
     sbool per_source_enabled;
     char *per_source_policy_file;

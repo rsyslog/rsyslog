@@ -57,10 +57,8 @@
 DEFobjStaticHelpers;
 DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(parser) DEFobjCurrIf(statsobj)
 
-    static void ratelimitWatcherShutdown(void);
-static void ratelimitWatcherUnregisterCfgs(ratelimit_cfgs_t *cfgs);
 
-static inline unsigned int ratelimitSharedLoadUInt(const unsigned int *value, pthread_mutex_t *mut) {
+    static inline unsigned int ratelimitSharedLoadUInt(const unsigned int *value, pthread_mutex_t *mut) {
 #ifdef HAVE_ATOMIC_BUILTINS
     (void)mut;
     return __atomic_load_n(value, __ATOMIC_RELAXED);
@@ -108,24 +106,7 @@ static inline void ratelimitSharedStoreSeverity(intTiny *value, pthread_mutex_t 
 #endif
 }
 
-static rsRetVal ratelimitSetCloseOnExec(int fd) {
-    int flags;
-    DEFiRet;
-
-    if (fd == -1) {
-        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-    }
-
-    if ((flags = fcntl(fd, F_GETFD)) == -1) {
-        ABORT_FINALIZE(RS_RET_IO_ERROR);
-    }
-    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
-        ABORT_FINALIZE(RS_RET_IO_ERROR);
-    }
-
-finalize_it:
-    RETiRet;
-}
+static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared);
 
 /**
  * Classify the per-source key template for parsing requirements.
@@ -197,6 +178,7 @@ static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct temp
 static void ratelimitFreeShared(void *ptr) {
     ratelimit_shared_t *shared = (ratelimit_shared_t *)ptr;
     if (shared == NULL) return;
+    ratelimitUnregisterSharedWatchers(shared);
     pthread_mutex_destroy(&shared->mut);
     free(shared->policy_file);
     if (shared->per_source_overrides != NULL) {
@@ -231,7 +213,16 @@ void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
 }
 
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
-    ratelimitWatcherUnregisterCfgs(cfgs);
+    struct hashtable_itr *itr;
+
+    if (cfgs->ht != NULL && hashtable_count(cfgs->ht) > 0) {
+        itr = hashtable_iterator(cfgs->ht);
+        do {
+            ratelimit_shared_t *shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
+            ratelimitUnregisterSharedWatchers(shared);
+        } while (hashtable_iterator_advance(itr));
+        free(itr);
+    }
     if (cfgs->ht != NULL) {
         hashtable_destroy(cfgs->ht, 1); /* 1 = free values */
     }
@@ -284,34 +275,6 @@ typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
 
 enum ratelimit_watch_kind { RATELIMIT_WATCH_GLOBAL = 0, RATELIMIT_WATCH_PERSOURCE };
 
-typedef struct ratelimit_watch_target_s {
-    ratelimit_shared_t *shared;
-    enum ratelimit_watch_kind kind;
-    char *path;
-    char *dir;
-    char *base;
-#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
-    int wd;
-    sbool pending;
-    uint64_t due_at_ms;
-#endif
-    struct ratelimit_watch_target_s *next;
-} ratelimit_watch_target_t;
-
-#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
-typedef struct ratelimit_watch_state_s {
-    pthread_mutex_t mut;
-    ratelimit_watch_target_t *targets;
-    pthread_t thread;
-    sbool thread_started;
-    sbool stop_requested;
-    int ino_fd;
-    int wake_pipe[2];
-} ratelimit_watch_state_t;
-
-static ratelimit_watch_state_t g_ratelimit_watch = {PTHREAD_MUTEX_INITIALIZER, NULL, 0, 0, 0, -1, {-1, -1}};
-#endif
-
 static rsRetVal parseDurationMillis(const char *value, unsigned int *out);
 #ifdef HAVE_LIBYAML
 static rsRetVal parseDurationSeconds(const char *value, unsigned int *out);
@@ -319,56 +282,6 @@ static rsRetVal parseDurationSeconds(const char *value, unsigned int *out);
 static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger);
 static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, const char *trigger);
 static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared);
-#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
-static void ratelimitWatcherSignalLocked(void);
-static rsRetVal ratelimitWatcherEnsureStartedLocked(void);
-#endif
-
-static uint64_t ratelimitMonotonicMs(void) {
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
-        return 0;
-    }
-    return ((uint64_t)ts.tv_sec * 1000ULL) + (uint64_t)(ts.tv_nsec / 1000000ULL);
-}
-
-static char *ratelimitDupDirname(const char *path) {
-    const char *slash;
-    size_t len;
-    char *out;
-
-    if (path == NULL || *path == '\0') {
-        return NULL;
-    }
-
-    slash = strrchr(path, '/');
-    if (slash == NULL) {
-        return strdup(".");
-    }
-    if (slash == path) {
-        return strdup("/");
-    }
-
-    len = (size_t)(slash - path);
-    out = malloc(len + 1);
-    if (out == NULL) {
-        return NULL;
-    }
-    memcpy(out, path, len);
-    out[len] = '\0';
-    return out;
-}
-
-static char *ratelimitDupBasename(const char *path) {
-    const char *slash;
-
-    if (path == NULL || *path == '\0') {
-        return NULL;
-    }
-
-    slash = strrchr(path, '/');
-    return strdup((slash == NULL) ? path : slash + 1);
-}
 
 static rsRetVal parseDurationMillis(const char *value, unsigned int *out) {
     char *end = NULL;
@@ -428,423 +341,36 @@ finalize_it:
 }
 #endif
 
-static void ratelimitFreeWatchTarget(ratelimit_watch_target_t *target) {
-    if (target == NULL) {
-        return;
-    }
-    free(target->path);
-    free(target->dir);
-    free(target->base);
-    free(target);
-}
-
 static const char *ratelimitWatchKindName(enum ratelimit_watch_kind kind) {
     return (kind == RATELIMIT_WATCH_PERSOURCE) ? "per-source policy" : "policy";
 }
 
-#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
-static void ratelimitFreeWatchTargetsLocked(void) {
-    ratelimit_watch_target_t *target = g_ratelimit_watch.targets;
-    while (target != NULL) {
-        ratelimit_watch_target_t *next = target->next;
-        ratelimitFreeWatchTarget(target);
-        target = next;
-    }
-    g_ratelimit_watch.targets = NULL;
+static void ratelimitWatchReloadPolicyCb(void *ctx, const char *trigger) {
+    ratelimitReloadPolicyFile((ratelimit_shared_t *)ctx, trigger);
 }
 
-static void ratelimitWatcherStopThread(void) {
-    pthread_mutex_lock(&g_ratelimit_watch.mut);
-    if (g_ratelimit_watch.thread_started) {
-        g_ratelimit_watch.stop_requested = 1;
-        ratelimitWatcherSignalLocked();
-        pthread_mutex_unlock(&g_ratelimit_watch.mut);
-        pthread_join(g_ratelimit_watch.thread, NULL);
-        pthread_mutex_lock(&g_ratelimit_watch.mut);
-        g_ratelimit_watch.thread_started = 0;
-        g_ratelimit_watch.stop_requested = 0;
-    }
-    pthread_mutex_unlock(&g_ratelimit_watch.mut);
+static void ratelimitWatchReloadPerSourcePolicyCb(void *ctx, const char *trigger) {
+    ratelimitReloadPerSourcePolicyFile((ratelimit_shared_t *)ctx, trigger);
 }
 
-static int ratelimitFindDirWatchLocked(const char *dir) {
-    ratelimit_watch_target_t *target;
-
-    for (target = g_ratelimit_watch.targets; target != NULL; target = target->next) {
-        if (!strcmp(target->dir, dir)) {
-            return target->wd;
-        }
-    }
-    return -1;
-}
-
-static sbool ratelimitWatcherDirInUseLocked(int wd) {
-    ratelimit_watch_target_t *target;
-
-    for (target = g_ratelimit_watch.targets; target != NULL; target = target->next) {
-        if (target->wd == wd) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static sbool ratelimitCfgsContainsShared(ratelimit_cfgs_t *cfgs, ratelimit_shared_t *shared) {
-    if (cfgs == NULL || cfgs->ht == NULL || shared == NULL || shared->name == NULL) {
-        return 0;
-    }
-    return hashtable_search(cfgs->ht, shared->name) == shared;
-}
-
-static void ratelimitWatcherUnregisterCfgs(ratelimit_cfgs_t *cfgs) {
-    ratelimit_watch_target_t **targetp;
-
-    if (cfgs == NULL || cfgs->ht == NULL) {
+static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared) {
+    if (shared == NULL) {
         return;
     }
-
-    ratelimitWatcherStopThread();
-
-    pthread_mutex_lock(&g_ratelimit_watch.mut);
-    targetp = &g_ratelimit_watch.targets;
-    while (*targetp != NULL) {
-        ratelimit_watch_target_t *target = *targetp;
-
-        if (!ratelimitCfgsContainsShared(cfgs, target->shared)) {
-            targetp = &target->next;
-            continue;
-        }
-
-        *targetp = target->next;
-        if (g_ratelimit_watch.ino_fd != -1 && target->wd != -1 && !ratelimitWatcherDirInUseLocked(target->wd)) {
-            inotify_rm_watch(g_ratelimit_watch.ino_fd, target->wd);
-        }
-        ratelimitFreeWatchTarget(target);
+    if (shared->policy_watch_handle != NULL) {
+        rswatchUnregister(shared->policy_watch_handle);
+        shared->policy_watch_handle = NULL;
     }
-
-    if (g_ratelimit_watch.targets != NULL) {
-        if (ratelimitWatcherEnsureStartedLocked() == RS_RET_OK) {
-            ratelimitWatcherSignalLocked();
-        }
-    }
-    pthread_mutex_unlock(&g_ratelimit_watch.mut);
-}
-
-static int ratelimitWatcherNextTimeoutLocked(uint64_t now_ms) {
-    ratelimit_watch_target_t *target;
-    uint64_t min_due = 0;
-    uint64_t diff;
-
-    for (target = g_ratelimit_watch.targets; target != NULL; target = target->next) {
-        if (!target->pending) {
-            continue;
-        }
-        if (target->due_at_ms <= now_ms) {
-            return 0;
-        }
-        if (min_due == 0 || target->due_at_ms < min_due) {
-            min_due = target->due_at_ms;
-        }
-    }
-
-    if (min_due == 0) {
-        return 1000;
-    }
-    diff = min_due - now_ms;
-    return (diff > INT_MAX) ? INT_MAX : (int)diff;
-}
-
-static void ratelimitWatcherSignalLocked(void) {
-    if (g_ratelimit_watch.wake_pipe[1] != -1) {
-        const char sig = 'w';
-        ssize_t ignored = write(g_ratelimit_watch.wake_pipe[1], &sig, 1);
-        (void)ignored;
+    if (shared->per_source_policy_watch_handle != NULL) {
+        rswatchUnregister(shared->per_source_policy_watch_handle);
+        shared->per_source_policy_watch_handle = NULL;
     }
 }
-
-static rsRetVal ratelimitWatcherEnsureInfraLocked(void) {
-    sbool created_ino_fd = 0;
-    sbool created_wake_pipe = 0;
-    DEFiRet;
-
-    if (g_ratelimit_watch.ino_fd == -1) {
-        g_ratelimit_watch.ino_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-        if (g_ratelimit_watch.ino_fd == -1) {
-            ABORT_FINALIZE(RS_RET_INOTIFY_INIT_FAILED);
-        }
-        created_ino_fd = 1;
-    }
-
-    if (g_ratelimit_watch.wake_pipe[0] == -1 || g_ratelimit_watch.wake_pipe[1] == -1) {
-    #ifdef HAVE_PIPE2
-        if (pipe2(g_ratelimit_watch.wake_pipe, O_CLOEXEC) != 0) {
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        created_wake_pipe = 1;
-    #else
-        if (pipe(g_ratelimit_watch.wake_pipe) != 0) {
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        created_wake_pipe = 1;
-        CHKiRet(ratelimitSetCloseOnExec(g_ratelimit_watch.wake_pipe[0]));
-        CHKiRet(ratelimitSetCloseOnExec(g_ratelimit_watch.wake_pipe[1]));
-    #endif
-    }
-
-finalize_it:
-    if (iRet != RS_RET_OK) {
-        if (created_wake_pipe && g_ratelimit_watch.wake_pipe[0] != -1 && g_ratelimit_watch.wake_pipe[1] != -1) {
-            close(g_ratelimit_watch.wake_pipe[0]);
-            close(g_ratelimit_watch.wake_pipe[1]);
-            g_ratelimit_watch.wake_pipe[0] = -1;
-            g_ratelimit_watch.wake_pipe[1] = -1;
-        }
-        if (created_ino_fd && g_ratelimit_watch.ino_fd != -1) {
-            close(g_ratelimit_watch.ino_fd);
-            g_ratelimit_watch.ino_fd = -1;
-        }
-    }
-    RETiRet;
-}
-
-static void ratelimitWatcherMarkEventLocked(int wd, const char *name, uint64_t now_ms) {
-    ratelimit_watch_target_t *target;
-
-    if (name == NULL || *name == '\0') {
-        return;
-    }
-
-    for (target = g_ratelimit_watch.targets; target != NULL; target = target->next) {
-        if (target->wd == wd && !strcmp(target->base, name)) {
-            target->pending = 1;
-            target->due_at_ms = now_ms + target->shared->policy_watch_debounce_ms;
-        }
-    }
-}
-
-static ratelimit_watch_target_t *ratelimitWatcherPopDueLocked(uint64_t now_ms) {
-    ratelimit_watch_target_t *target;
-
-    for (target = g_ratelimit_watch.targets; target != NULL; target = target->next) {
-        if (target->pending && target->due_at_ms <= now_ms) {
-            target->pending = 0;
-            return target;
-        }
-    }
-    return NULL;
-}
-
-static void *ratelimitWatcherThread(void *arg) {
-    struct pollfd fds[2];
-    char buf[4096];
-    int bFatalError = 0;
-    (void)arg;
-
-    while (1) {
-        int timeout_ms;
-        uint64_t now_ms;
-
-        pthread_mutex_lock(&g_ratelimit_watch.mut);
-        if (g_ratelimit_watch.stop_requested) {
-            pthread_mutex_unlock(&g_ratelimit_watch.mut);
-            break;
-        }
-        now_ms = ratelimitMonotonicMs();
-        timeout_ms = ratelimitWatcherNextTimeoutLocked(now_ms);
-        fds[0].fd = g_ratelimit_watch.ino_fd;
-        fds[0].events = POLLIN;
-        fds[0].revents = 0;
-        fds[1].fd = g_ratelimit_watch.wake_pipe[0];
-        fds[1].events = POLLIN;
-        fds[1].revents = 0;
-        pthread_mutex_unlock(&g_ratelimit_watch.mut);
-
-        if (poll(fds, 2, timeout_ms) < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            LogError(errno, RS_RET_IO_ERROR, "ratelimit: watch poll failed, disabling watched policy reload");
-            bFatalError = 1;
-            goto finalize_it;
-        }
-
-        if (fds[1].revents & POLLIN) {
-            ssize_t ignored = read(g_ratelimit_watch.wake_pipe[0], buf, sizeof(buf));
-            (void)ignored;
-        }
-
-        if (fds[0].revents & POLLIN) {
-            ssize_t rd;
-            while ((rd = read(g_ratelimit_watch.ino_fd, buf, sizeof(buf))) > 0) {
-                ssize_t off = 0;
-                now_ms = ratelimitMonotonicMs();
-                pthread_mutex_lock(&g_ratelimit_watch.mut);
-                while (off < rd) {
-                    struct inotify_event evhdr;
-                    const char *name = NULL;
-
-                    memcpy(&evhdr, buf + off, sizeof(evhdr));
-                    if (evhdr.len > 0) {
-                        name = buf + off + sizeof(evhdr);
-                    }
-                    if ((evhdr.mask & (IN_CLOSE_WRITE | IN_MOVED_TO | IN_ATTRIB | IN_CREATE)) != 0) {
-                        ratelimitWatcherMarkEventLocked(evhdr.wd, name, now_ms);
-                    }
-                    off += (ssize_t)(sizeof(struct inotify_event) + evhdr.len);
-                }
-                pthread_mutex_unlock(&g_ratelimit_watch.mut);
-            }
-            if (rd < 0 && errno != EAGAIN && errno != EINTR) {
-                LogMsg(errno, RS_RET_IO_ERROR, LOG_WARNING, "ratelimit: watch read failed, continuing without event");
-            }
-        }
-
-        while (1) {
-            ratelimit_watch_target_t *target;
-
-            pthread_mutex_lock(&g_ratelimit_watch.mut);
-            if (g_ratelimit_watch.stop_requested) {
-                pthread_mutex_unlock(&g_ratelimit_watch.mut);
-                break;
-            }
-            target = ratelimitWatcherPopDueLocked(ratelimitMonotonicMs());
-            pthread_mutex_unlock(&g_ratelimit_watch.mut);
-
-            if (target == NULL) {
-                break;
-            }
-
-            if (target->kind == RATELIMIT_WATCH_PERSOURCE) {
-                ratelimitReloadPerSourcePolicyFile(target->shared, "watch");
-            } else {
-                ratelimitReloadPolicyFile(target->shared, "watch");
-            }
-        }
-    }
-
-finalize_it:
-    if (bFatalError) {
-        pthread_mutex_lock(&g_ratelimit_watch.mut);
-        g_ratelimit_watch.stop_requested = 1;
-        pthread_mutex_unlock(&g_ratelimit_watch.mut);
-    }
-    return NULL;
-}
-
-static rsRetVal ratelimitWatcherEnsureStartedLocked(void) {
-    DEFiRet;
-
-    if (g_ratelimit_watch.thread_started) {
-        FINALIZE;
-    }
-
-    CHKiRet(ratelimitWatcherEnsureInfraLocked());
-    if (pthread_create(&g_ratelimit_watch.thread, NULL, ratelimitWatcherThread, NULL) != 0) {
-        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    }
-    g_ratelimit_watch.thread_started = 1;
-
-finalize_it:
-    RETiRet;
-}
-
-static void ratelimitWatcherShutdown(void) {
-    ratelimitWatcherStopThread();
-
-    pthread_mutex_lock(&g_ratelimit_watch.mut);
-    ratelimitFreeWatchTargetsLocked();
-    if (g_ratelimit_watch.ino_fd != -1) {
-        close(g_ratelimit_watch.ino_fd);
-        g_ratelimit_watch.ino_fd = -1;
-    }
-    if (g_ratelimit_watch.wake_pipe[0] != -1) {
-        close(g_ratelimit_watch.wake_pipe[0]);
-        g_ratelimit_watch.wake_pipe[0] = -1;
-    }
-    if (g_ratelimit_watch.wake_pipe[1] != -1) {
-        close(g_ratelimit_watch.wake_pipe[1]);
-        g_ratelimit_watch.wake_pipe[1] = -1;
-    }
-    g_ratelimit_watch.thread_started = 0;
-    g_ratelimit_watch.stop_requested = 0;
-    pthread_mutex_unlock(&g_ratelimit_watch.mut);
-}
-
-static rsRetVal ratelimitRegisterOneWatchTarget(ratelimit_shared_t *shared,
-                                                enum ratelimit_watch_kind kind,
-                                                const char *path) {
-    ratelimit_watch_target_t *target = NULL;
-    sbool bLocked = 0;
-    int wd;
-    DEFiRet;
-
-    if (path == NULL || *path == '\0') {
-        FINALIZE;
-    }
-
-    CHKmalloc(target = calloc(1, sizeof(*target)));
-    target->shared = shared;
-    target->kind = kind;
-    CHKmalloc(target->path = strdup(path));
-    CHKmalloc(target->dir = ratelimitDupDirname(path));
-    CHKmalloc(target->base = ratelimitDupBasename(path));
-
-    pthread_mutex_lock(&g_ratelimit_watch.mut);
-    bLocked = 1;
-    iRet = ratelimitWatcherEnsureInfraLocked();
-    if (iRet != RS_RET_OK) {
-        goto finalize_it;
-    }
-    wd = ratelimitFindDirWatchLocked(target->dir);
-    if (wd == -1) {
-        wd = inotify_add_watch(g_ratelimit_watch.ino_fd, target->dir,
-                               IN_CLOSE_WRITE | IN_MOVED_TO | IN_ATTRIB | IN_CREATE);
-        if (wd == -1) {
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-    }
-    target->wd = wd;
-    target->next = g_ratelimit_watch.targets;
-    g_ratelimit_watch.targets = target;
-    target = NULL;
-    iRet = ratelimitWatcherEnsureStartedLocked();
-    if (iRet != RS_RET_OK) {
-        goto finalize_it;
-    }
-    ratelimitWatcherSignalLocked();
-
-finalize_it:
-    if (bLocked) {
-        pthread_mutex_unlock(&g_ratelimit_watch.mut);
-    }
-    if (iRet != RS_RET_OK) {
-        LogMsg((iRet == RS_RET_IO_ERROR || iRet == RS_RET_INOTIFY_INIT_FAILED) ? errno : 0, iRet, LOG_WARNING,
-               "ratelimit: automatic reload unavailable for '%s' %s '%s'", shared->name, ratelimitWatchKindName(kind),
-               path);
-    }
-    if (target != NULL) {
-        ratelimitFreeWatchTarget(target);
-    }
-    return RS_RET_OK;
-}
-#else
-static void ratelimitWatcherShutdown(void) {}
-static void ratelimitWatcherUnregisterCfgs(ratelimit_cfgs_t *cfgs) {
-    (void)cfgs;
-}
-
-static rsRetVal ratelimitRegisterOneWatchTarget(ratelimit_shared_t *shared,
-                                                enum ratelimit_watch_kind kind,
-                                                const char *path) {
-    (void)shared;
-    (void)kind;
-    (void)path;
-    return RS_RET_OK;
-}
-#endif
 
 static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared) {
     DEFiRet;
+    rsRetVal localRet;
+    rswatch_desc_t desc;
 
     if (shared == NULL || !shared->policy_watch) {
         FINALIZE;
@@ -857,15 +383,36 @@ static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared) {
         FINALIZE;
     }
 
-#if !defined(HAVE_INOTIFY_INIT) || !defined(HAVE_SYS_INOTIFY_H)
-    LogMsg(0, RS_RET_OK, LOG_WARNING,
-           "ratelimit: policyWatch requested for '%s' but this build has no inotify support; using HUP-only reload",
-           shared->name);
-    FINALIZE;
-#endif
-
-    CHKiRet(ratelimitRegisterOneWatchTarget(shared, RATELIMIT_WATCH_GLOBAL, shared->policy_file));
-    CHKiRet(ratelimitRegisterOneWatchTarget(shared, RATELIMIT_WATCH_PERSOURCE, shared->per_source_policy_file));
+    if (shared->policy_file != NULL) {
+        memset(&desc, 0, sizeof(desc));
+        desc.id = shared->name;
+        desc.path = shared->policy_file;
+        desc.debounce_ms = shared->policy_watch_debounce_ms;
+        desc.cb = ratelimitWatchReloadPolicyCb;
+        desc.ctx = shared;
+        localRet = rswatchRegister(&desc, &shared->policy_watch_handle);
+        if (localRet != RS_RET_OK) {
+            LogMsg(0, localRet, LOG_WARNING,
+                   "ratelimit: policyWatch requested for '%s' but automatic reload unavailable for %s '%s'; using "
+                   "HUP-only reload",
+                   shared->name, ratelimitWatchKindName(RATELIMIT_WATCH_GLOBAL), shared->policy_file);
+        }
+    }
+    if (shared->per_source_policy_file != NULL) {
+        memset(&desc, 0, sizeof(desc));
+        desc.id = shared->name;
+        desc.path = shared->per_source_policy_file;
+        desc.debounce_ms = shared->policy_watch_debounce_ms;
+        desc.cb = ratelimitWatchReloadPerSourcePolicyCb;
+        desc.ctx = shared;
+        localRet = rswatchRegister(&desc, &shared->per_source_policy_watch_handle);
+        if (localRet != RS_RET_OK) {
+            LogMsg(0, localRet, LOG_WARNING,
+                   "ratelimit: policyWatch requested for '%s' but automatic reload unavailable for %s '%s'; using "
+                   "HUP-only reload",
+                   shared->name, ratelimitWatchKindName(RATELIMIT_WATCH_PERSOURCE), shared->per_source_policy_file);
+        }
+    }
 
 finalize_it:
     RETiRet;
@@ -2214,7 +1761,6 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
 }
 
 void ratelimitModExit(void) {
-    ratelimitWatcherShutdown();
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
     objRelease(parser, CORE_COMPONENT);

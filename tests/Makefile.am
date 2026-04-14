@@ -590,6 +590,8 @@ TESTS_LIBYAML = \
 TESTS_RATELIMIT_WATCH = \
 	ratelimit_policy_watch.sh \
 	ratelimit_policy_watch_debounce.sh \
+	ratelimit_policy_watch_invalid.sh \
+	ratelimit_policy_watch_multi.sh \
 	yaml-ratelimit-policywatch.sh
 
 TESTS_IMTCP = \
@@ -1322,6 +1324,11 @@ TESTS_MMJSONTRANSFORM_IMTCP = \
 TESTS_MMJSONTRANSFORM_LIBYAML = \
         mmjsontransform-policy-basic.sh
 
+TESTS_MMJSONTRANSFORM_WATCH = \
+        mmjsontransform-policy-watch.sh \
+        mmjsontransform-policy-watch-invalid.sh \
+        yaml-mmjsontransform-policywatch.sh
+
 TESTS_MMJSONTRANSFORM_MMJSONPARSE = \
 	data_pipeline-qradar.sh
 
@@ -1838,6 +1845,7 @@ EXTRA_DIST += $(TESTS_MMJSONPARSE_PART2)
 EXTRA_DIST += $(TESTS_MMJSONTRANSFORM_IMTCP)
 EXTRA_DIST += $(TESTS_MMJSONTRANSFORM_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_MMJSONTRANSFORM_LIBYAML)
+EXTRA_DIST += $(TESTS_MMJSONTRANSFORM_WATCH)
 EXTRA_DIST += $(TESTS_MMDBLOOKUP)
 EXTRA_DIST += $(TESTS_MMDBLOOKUP_VALGRIND)
 EXTRA_DIST += $(TESTS_GNUTLS)
@@ -2641,6 +2649,9 @@ if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_MMJSONTRANSFORM_IMTCP)
 if HAVE_LIBYAML
 TESTS += $(TESTS_MMJSONTRANSFORM_LIBYAML)
+if ENABLE_INOTIFY
+TESTS += $(TESTS_MMJSONTRANSFORM_WATCH)
+endif
 endif
 endif
 if ENABLE_MMJSONPARSE

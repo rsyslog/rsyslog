@@ -28,6 +28,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <limits.h>
 #include <string.h>
 #include <strings.h>
 #include <errno.h>
@@ -41,6 +43,7 @@
 #include "errmsg.h"
 #include "parserif.h"
 #include "module-template.h"
+#include "rswatch.h"
 #include "syslogd-types.h"
 
 MODULE_TYPE_OUTPUT;
@@ -86,6 +89,9 @@ typedef struct _instanceData {
     size_t nRenameRules;
     struct json_object *renameMap;
     time_t policyMtime;
+    sbool policyWatch;
+    unsigned int policyWatchDebounceMs;
+    rswatch_handle_t *policyWatchHandle;
     pthread_mutex_t policyLock;
 } instanceData;
 
@@ -196,13 +202,14 @@ static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,
                                               const char *contextPath);
 static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyPath);
 static void jsontransformFreePolicy(instanceData *pData);
-static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData);
+static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData, const char *trigger);
+static rsRetVal jsontransformReloadPolicy(instanceData *pData, const char *trigger);
+static void jsontransformPolicyWatchCb(void *ctx, const char *trigger);
+static rsRetVal jsontransformParseDurationMillis(const char *value, unsigned int *out);
 
 static struct cnfparamdescr actpdescr[] = {
-    {"input", eCmdHdlrString, 0},
-    {"output", eCmdHdlrString, 0},
-    {"mode", eCmdHdlrString, 0},
-    {"policy", eCmdHdlrString, 0},
+    {"input", eCmdHdlrString, 0},  {"output", eCmdHdlrString, 0},      {"mode", eCmdHdlrString, 0},
+    {"policy", eCmdHdlrString, 0}, {"policyWatch", eCmdHdlrBinary, 0}, {"policyWatchDebounce", eCmdHdlrString, 0},
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -237,9 +244,7 @@ ENDfreeCnf
 BEGINdoHUP
     CODESTARTdoHUP;
     if (pData->policyPath != NULL) {
-        pthread_mutex_lock(&pData->policyLock);
-        jsontransformMaybeReloadPolicy(pData);
-        pthread_mutex_unlock(&pData->policyLock);
+        jsontransformReloadPolicy(pData, "HUP");
     }
 ENDdoHUP
 
@@ -258,6 +263,9 @@ BEGINcreateInstance
     pData->nRenameRules = 0;
     pData->renameMap = NULL;
     pData->policyMtime = 0;
+    pData->policyWatch = 0;
+    pData->policyWatchDebounceMs = 5000U;
+    pData->policyWatchHandle = NULL;
     pthread_mutex_init(&pData->policyLock, NULL);
 ENDcreateInstance
 
@@ -270,6 +278,10 @@ BEGINfreeInstance
     if (pData->outputProp != NULL) {
         msgPropDescrDestruct(pData->outputProp);
         free(pData->outputProp);
+    }
+    if (pData->policyWatchHandle != NULL) {
+        rswatchUnregister(pData->policyWatchHandle);
+        pData->policyWatchHandle = NULL;
     }
     if (pData->policyPath != NULL) {
         free(pData->policyPath);
@@ -299,9 +311,7 @@ ENDdbgPrintInstInfo
 BEGINtryResume
     CODESTARTtryResume;
     if (pWrkrData->pData->policyPath != NULL) {
-        pthread_mutex_lock(&pWrkrData->pData->policyLock);
-        jsontransformMaybeReloadPolicy(pWrkrData->pData);
-        pthread_mutex_unlock(&pWrkrData->pData->policyLock);
+        jsontransformReloadPolicy(pWrkrData->pData, "resume");
     }
 ENDtryResume
 
@@ -373,6 +383,7 @@ static sbool jsontransformValuesEqual(struct json_object *lhs, struct json_objec
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i;
+    unsigned int policyWatchDebounceMs = 5000U;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -439,6 +450,18 @@ BEGINnewActInst
                 ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
             }
             pData->policyPath = policyPath;
+        } else if (!strcmp(actpblk.descr[i].name, "policyWatch")) {
+            pData->policyWatch = (sbool)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "policyWatchDebounce")) {
+            char *debounce = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (debounce == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            iRet = jsontransformParseDurationMillis(debounce, &policyWatchDebounceMs);
+            free(debounce);
+            if (iRet != RS_RET_OK) {
+                ABORT_FINALIZE(iRet);
+            }
         } else {
             dbgprintf("mmjsontransform: unexpected parameter '%s'\n", actpblk.descr[i].name);
         }
@@ -451,6 +474,27 @@ BEGINnewActInst
 
     if (pData->policyPath != NULL) {
         CHKiRet(jsontransformLoadPolicy(pData, pData->policyPath));
+    }
+    pData->policyWatchDebounceMs = policyWatchDebounceMs;
+    if (pData->policyWatch && pData->policyPath != NULL) {
+        rswatch_desc_t watchDesc;
+
+        watchDesc.id = "mmjsontransform";
+        watchDesc.path = pData->policyPath;
+        watchDesc.debounce_ms = pData->policyWatchDebounceMs;
+        watchDesc.cb = jsontransformPolicyWatchCb;
+        watchDesc.ctx = pData;
+
+        rsRetVal watchRet = rswatchRegister(&watchDesc, &pData->policyWatchHandle);
+        if (watchRet != RS_RET_OK) {
+            LogMsg(0, watchRet, LOG_WARNING,
+                   "mmjsontransform: policyWatch requested for '%s' but automatic reload unavailable; using HUP-only"
+                   " reload",
+                   pData->policyPath);
+        }
+    } else if (pData->policyWatch && pData->policyPath == NULL) {
+        LogMsg(0, RS_RET_OK, LOG_WARNING,
+               "mmjsontransform: policyWatch enabled but no policy file is configured; using HUP-only reload");
     }
 
     CODE_STD_FINALIZERnewActInst;
@@ -570,6 +614,53 @@ static rsRetVal jsontransformParseModeValue(const char *mode, mmjsontransformMod
     return RS_RET_INVALID_PARAMS;
 }
 
+static rsRetVal jsontransformParseDurationMillis(const char *value, unsigned int *out) {
+    char *end = NULL;
+    unsigned long val;
+    unsigned long long multiplier = 1000ULL;
+    unsigned long long total;
+    DEFiRet;
+
+    if (value == NULL || out == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    while (isspace((unsigned char)*value)) value++;
+    if (*value == '-') {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    errno = 0;
+    val = strtoul(value, &end, 10);
+    if (errno != 0 || end == value) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+    while (isspace((unsigned char)*end)) end++;
+    if (*end == '\0' || !strcmp(end, "s")) {
+        multiplier = 1000ULL;
+    } else if (!strcmp(end, "ms")) {
+        multiplier = 1ULL;
+    } else if (!strcmp(end, "m")) {
+        multiplier = 60ULL * 1000ULL;
+    } else if (!strcmp(end, "h")) {
+        multiplier = 60ULL * 60ULL * 1000ULL;
+    } else {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    if ((unsigned long long)val > ((unsigned long long)UINT_MAX / multiplier)) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    total = (unsigned long long)val * multiplier;
+    if (total > UINT_MAX) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    *out = (unsigned int)total;
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyPath) {
 #ifndef HAVE_LIBYAML
     LogError(0, RS_RET_CONF_PARAM_INVLD,
@@ -670,8 +761,6 @@ static rsRetVal jsontransformLoadPolicy(instanceData *pData, const char *policyP
                 nNewDropKeys++;
             } else if (currentKey != NULL && !strcmp(currentKey, "mode")) {
                 if (jsontransformParseModeValue(scalar, &newPolicyMode) != RS_RET_OK) {
-                    yaml_event_delete(&event);
-                    eventInitialized = 0;
                     LogError(0, RS_RET_CONF_PARAM_INVLD,
                              "mmjsontransform: policy file '%s' has invalid mode '%s'; "
                              "use 'unflatten' or 'flatten'",
@@ -766,7 +855,7 @@ finalize_it:
 #endif
 }
 
-static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData) {
+static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData, const char *trigger) {
     struct stat st;
     rsRetVal localRet;
 
@@ -775,23 +864,40 @@ static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData) {
     }
 
     if (stat(pData->policyPath, &st) != 0) {
-        LogError(errno, RS_RET_IO_ERROR, "mmjsontransform: could not stat policy file '%s' during HUP reload",
-                 pData->policyPath);
+        LogError(errno, RS_RET_IO_ERROR, "mmjsontransform: could not stat policy file '%s' during %s reload",
+                 pData->policyPath, trigger);
         return RS_RET_OK;
     }
 
-    if (pData->policyMtime != 0 && st.st_mtime <= pData->policyMtime) {
-        return RS_RET_OK;
+    if (trigger == NULL || strcmp(trigger, "watch") != 0) {
+        if (pData->policyMtime != 0 && st.st_mtime <= pData->policyMtime) {
+            return RS_RET_OK;
+        }
     }
 
     localRet = jsontransformLoadPolicy(pData, pData->policyPath);
     if (localRet == RS_RET_OK) {
         DBGPRINTF("mmjsontransform: reloaded policy file '%s'\n", pData->policyPath);
     } else {
-        LogError(0, localRet, "mmjsontransform: failed to reload policy file '%s' on HUP, keeping previous policy",
-                 pData->policyPath);
+        LogError(0, localRet, "mmjsontransform: failed to reload policy file '%s' during %s, keeping previous policy",
+                 pData->policyPath, trigger);
     }
     return RS_RET_OK;
+}
+
+static rsRetVal jsontransformReloadPolicy(instanceData *pData, const char *trigger) {
+    if (pData == NULL || pData->policyPath == NULL) {
+        return RS_RET_OK;
+    }
+
+    pthread_mutex_lock(&pData->policyLock);
+    (void)jsontransformMaybeReloadPolicy(pData, trigger);
+    pthread_mutex_unlock(&pData->policyLock);
+    return RS_RET_OK;
+}
+
+static void jsontransformPolicyWatchCb(void *ctx, const char *trigger) {
+    jsontransformReloadPolicy((instanceData *)ctx, trigger);
 }
 
 static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,

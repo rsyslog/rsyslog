@@ -73,6 +73,7 @@
 #include "dirty.h"
 #include "janitor.h"
 #include "parserif.h"
+#include "rswatch.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -2125,59 +2126,107 @@ void rsyslogdDoDie(int sig) {
 }
 
 
-static rsRetVal wait_timeout(const sigset_t *sigmask) {
-    struct timespec tvSelectTimeout;
-    DEFiRet;
+static uint64_t mainloopMonotonicMs(void) {
+    struct timespec ts;
 
-    tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
-    tvSelectTimeout.tv_nsec = 0;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    return ((uint64_t)ts.tv_sec * 1000ULL) + (uint64_t)(ts.tv_nsec / 1000000ULL);
+}
+
+/* The main loop sleeps until the earliest housekeeping deadline among the
+ * periodic janitor run, the systemd watchdog ping, and any pending rswatch
+ * debounce expiry.
+ */
+static int mainloopComputeTimeoutMs(uint64_t now_ms, uint64_t next_janitor_run_ms) {
+    uint64_t diff = 0;
+    int timeout_ms;
+
+    if (next_janitor_run_ms <= now_ms) {
+        timeout_ms = 0;
+    } else {
+        diff = next_janitor_run_ms - now_ms;
+        timeout_ms = (diff > (uint64_t)INT_MAX) ? INT_MAX : (int)diff;
+    }
 #ifdef HAVE_LIBSYSTEMD
     if (systemdWatchdogEnabled && systemdWatchdogUsec > 0) {
-        uint64_t watchdogWaitUsec = systemdWatchdogUsec / 2;
-        const uint64_t janitorTimeoutUsec = (uint64_t)tvSelectTimeout.tv_sec * 1000000 + tvSelectTimeout.tv_nsec / 1000;
+        uint64_t watchdogWaitMs = systemdWatchdogUsec / 2000;
 
-        if (watchdogWaitUsec == 0) {
-            watchdogWaitUsec = 1000; /* 1ms minimum to avoid a busy loop */
+        if (watchdogWaitMs == 0) {
+            watchdogWaitMs = 1;
         }
-
-        if (watchdogWaitUsec < janitorTimeoutUsec) {
-            tvSelectTimeout.tv_sec = watchdogWaitUsec / 1000000;
-            tvSelectTimeout.tv_nsec = (watchdogWaitUsec % 1000000) * 1000;
+        if (watchdogWaitMs < (uint64_t)timeout_ms) {
+            timeout_ms = (watchdogWaitMs > (uint64_t)INT_MAX) ? INT_MAX : (int)watchdogWaitMs;
         }
     }
 #endif
+    return rswatchComputeTimeoutMs(now_ms, timeout_ms);
+}
+
+static rsRetVal wait_timeout(const sigset_t *sigmask, int timeout_ms) {
+    struct timespec tvSelectTimeout;
+    int rswatch_fd;
+    DEFiRet;
+
+    if (timeout_ms < 0) {
+        timeout_ms = 0;
+    }
+    tvSelectTimeout.tv_sec = timeout_ms / 1000;
+    tvSelectTimeout.tv_nsec = (timeout_ms % 1000) * 1000000L;
+    rswatch_fd = rswatchGetWaitFd();
 
 #ifdef _AIX
     if (!src_exists) {
-        /* it looks like select() is NOT interrupted by HUP, even though
-         * SA_RESTART is not given in the signal setup. As this code is
-         * not expected to be used in production (when running as a
-         * service under src control), we simply make a kind of
-         * "somewhat-busy-wait" algorithm. We compute our own
-         * timeout value, which we count down to zero. We do this
-         * in useful subsecond steps.
-         */
-        const long wait_period = 500000000; /* wait period in nanoseconds */
-        int timeout = runConf->globals.janitorInterval * 60 * (1000000000 / wait_period);
+        long remaining_ms = timeout_ms;
 
-        tvSelectTimeout.tv_sec = 0;
-        tvSelectTimeout.tv_nsec = wait_period;
         do {
+            fd_set rfds;
+            int maxfd = -1;
+            struct timespec stepTimeout;
+            long step_ms = remaining_ms;
+
+            if (step_ms > 500) {
+                step_ms = 500;
+            }
+            if (step_ms < 0) {
+                step_ms = 0;
+            }
+            stepTimeout.tv_sec = step_ms / 1000;
+            stepTimeout.tv_nsec = (step_ms % 1000) * 1000000L;
+
             pthread_mutex_lock(&mutHadHUP);
             if (bFinished || bHadHUP) {
                 pthread_mutex_unlock(&mutHadHUP);
                 break;
             }
             pthread_mutex_unlock(&mutHadHUP);
-            pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
-        } while (--timeout > 0);
+
+            FD_ZERO(&rfds);
+            if (rswatch_fd != -1) {
+                FD_SET(rswatch_fd, &rfds);
+                maxfd = rswatch_fd;
+            }
+            pselect(maxfd + 1, maxfd >= 0 ? (fd_set *)&rfds : NULL, NULL, NULL, &stepTimeout, sigmask);
+            if (remaining_ms <= 500) {
+                break;
+            }
+            remaining_ms -= 500;
+        } while (remaining_ms > 0);
     } else {
         char buf[256];
         fd_set rfds;
+        int maxfd = SRC_FD;
 
         FD_ZERO(&rfds);
         FD_SET(SRC_FD, &rfds);
-        if (pselect(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout, sigmask)) {
+        if (rswatch_fd != -1) {
+            FD_SET(rswatch_fd, &rfds);
+            if (rswatch_fd > maxfd) {
+                maxfd = rswatch_fd;
+            }
+        }
+        if (pselect(maxfd + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout, sigmask)) {
             if (FD_ISSET(SRC_FD, &rfds)) {
                 rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
                 if (rc < 0) {
@@ -2185,7 +2234,7 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
                         LogError(errno, NO_ERRCODE, "%s: ERROR: recvfrom failed - disabling AIX SRC", progname);
                         src_exists = FALSE;
                         ABORT_FINALIZE(RS_RET_IO_ERROR);
-                    } else { /* punt on short read */
+                    } else {
                         FINALIZE;
                     }
                 }
@@ -2210,11 +2259,12 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
                             errno = 0;
                             logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
                             FINALIZE;
-                        } else
+                        } else {
                             dosrcpacket(SRC_SUBMSG,
                                         "ERROR: rsyslogd does not support "
                                         "this option.\n",
                                         sizeof(struct srcrep));
+                        }
                         break;
                     case REFRESH:
                         dosrcpacket(SRC_SUBMSG,
@@ -2230,7 +2280,14 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
         }
     }
 #else
-    pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
+    if (rswatch_fd != -1) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(rswatch_fd, &rfds);
+        pselect(rswatch_fd + 1, &rfds, NULL, NULL, &tvSelectTimeout, sigmask);
+    } else {
+        pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
+    }
 #endif /* AIXPORT : SRC end */
 
 #ifdef _AIX
@@ -2275,13 +2332,17 @@ static void mainloop(void) {
     sigset_t origmask;
     sigset_t sigblockset;
     int need_free_mutex;
+    uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
     sigaddset(&sigblockset, SIGTERM);
     sigaddset(&sigblockset, SIGCHLD);
     sigaddset(&sigblockset, SIGHUP);
+    next_janitor_run_ms = mainloopMonotonicMs() + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
 
     do {
+        uint64_t now_ms;
+
         sigemptyset(&origmask);
         pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
         pthread_mutex_lock(&mutChildDied);
@@ -2314,8 +2375,16 @@ static void mainloop(void) {
 
         if (bFinished) break; /* exit as quickly as possible */
 
-        wait_timeout(&origmask);
+        now_ms = mainloopMonotonicMs();
+        wait_timeout(&origmask, mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms));
         pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
+        now_ms = mainloopMonotonicMs();
+
+        /* File-watch I/O is handled before due dispatch so newly-read events can
+         * arm or extend debounce deadlines within the same wake cycle.
+         */
+        rswatchProcessIo(now_ms);
+        rswatchDispatchDue(now_ms);
 
 #ifdef HAVE_LIBSYSTEMD
         if (systemdWatchdogEnabled) {
@@ -2323,11 +2392,14 @@ static void mainloop(void) {
         }
 #endif
 
-        janitorRun();
+        if (now_ms >= next_janitor_run_ms) {
+            janitorRun();
 
-        assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
-        datetime.GetTime(&tTime);
-        checkGoneAwaySenders(tTime);
+            assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
+            datetime.GetTime(&tTime);
+            checkGoneAwaySenders(tTime);
+            next_janitor_run_ms = now_ms + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
+        }
 
     } while (!bFinished); /* end do ... while() */
 }
