@@ -257,14 +257,25 @@ AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set def
 
 AC_CHECK_HEADERS([arpa/nameser.h resolv.h])
 AC_SEARCH_LIBS([ns_initparse], [resolv])
-LIBRESOLV_LIBS=$ac_cv_search_ns_initparse
-AS_CASE([$LIBRESOLV_LIBS],
-        ["none required"], [LIBRESOLV_LIBS=""],
-        ["no"], [LIBRESOLV_LIBS=""])
+AC_SEARCH_LIBS([res_query], [resolv])
+LIBRESOLV_LIBS=
+AS_CASE([$ac_cv_search_ns_initparse],
+        ["none required"], [],
+        ["no"], [],
+        [*], [LIBRESOLV_LIBS="$ac_cv_search_ns_initparse"])
+AS_CASE([$ac_cv_search_res_query],
+        ["none required"], [],
+        ["no"], [],
+        [*], [AS_CASE([" $LIBRESOLV_LIBS "], [*" $ac_cv_search_res_query "*], [], [LIBRESOLV_LIBS="$LIBRESOLV_LIBS $ac_cv_search_res_query"])])
+LIBRESOLV_LIBS=${LIBRESOLV_LIBS# }
 AC_SUBST([LIBRESOLV_LIBS])
 AS_IF([test "x$ac_cv_search_ns_initparse" != "xno"],
       [AC_DEFINE([HAVE_RESOLV_NS_INITPARSE], [1],
                  [Define if resolver provides ns_initparse])])
+AC_CHECK_FUNCS([res_ninit res_nquery res_nclose])
+AS_IF([test "x$ac_cv_func_res_ninit" = "xyes" -a "x$ac_cv_func_res_nquery" = "xyes" -a "x$ac_cv_func_res_nclose" = "xyes"],
+      [AC_DEFINE([HAVE_RESOLV_RES_N_API], [1],
+                 [Define if resolver provides res_n* APIs])])
 AM_CONDITIONAL([HAVE_SRV_DISCOVERY], [test "x$ac_cv_search_ns_initparse" != "xno"])
 
 # the check below is probably ugly. If someone knows how to do it in a better way, please

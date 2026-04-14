@@ -1,11 +1,34 @@
-# note: repository key is added in Dockerfile!
-echo "http://build.rsyslog.com/alpine/3.7/unstable" >> /etc/apk/repositories
 apk --no-cache update
 apk add --no-cache \
-	git build-base automake libtool autoconf py-docutils gnutls gnutls-dev \
-	zlib-dev curl-dev mysql-dev libdbi-dev libuuid util-linux-dev \
-	libgcrypt-dev flex bison bsd-compat-headers linux-headers valgrind librdkafka-dev \
-	autoconf-archive
-
-# interactive dev only:
-apk add man man-pages gcc-doc
+	autoconf \
+	autoconf-archive \
+	automake \
+	bison \
+	build-base \
+	bash \
+	bsd-compat-headers \
+	curl-dev \
+	flex \
+	git \
+	gnutls-dev \
+	libdbi-dev \
+	libestr-dev \
+	libfastjson-dev \
+	libgcrypt-dev \
+	liblognorm-dev \
+	librelp-dev \
+	libtool \
+	libuuid \
+	linux-headers \
+	librdkafka-dev \
+	mariadb-dev \
+	pkgconf \
+	python3 \
+	py3-docutils \
+	protobuf-c-compiler \
+	protobuf-c-dev \
+	snappy-dev \
+	util-linux-dev \
+	valgrind \
+	yaml-dev \
+	zlib-dev

@@ -428,6 +428,52 @@ static const char *resolverErrorString(const int err) {
     }
 }
 
+static rsRetVal initResolverState(res_state *const pres) {
+    DEFiRet;
+
+#ifdef HAVE_RESOLV_RES_N_API
+    CHKmalloc(*pres = (res_state)calloc(1, sizeof(struct __res_state)));
+    if (res_ninit(*pres) != 0) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+#else
+    if (res_init() != 0) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    *pres = &_res;
+#endif
+
+finalize_it:
+    RETiRet;
+}
+
+static int queryResolverState(res_state const res,
+                              const char *const srvName,
+                              unsigned char *const answer,
+                              const size_t answerSize) {
+#ifdef HAVE_RESOLV_RES_N_API
+    return res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, answerSize);
+#else
+    (void)res;
+    return res_query(srvName, ns_c_in, ns_t_srv, answer, answerSize);
+#endif
+}
+
+static void closeResolverState(res_state const res) {
+    if (res == NULL) {
+        return;
+    }
+#ifdef HAVE_RESOLV_RES_N_API
+    res_nclose(res);
+    free(res);
+#else
+    /* Old resolver APIs use global state; musl's implementation is stateless. */
+    (void)res;
+#endif
+}
+
 static rsRetVal applyResolverOverrides(res_state res) {
     const char *const dnsServerEnv = getenv("RSYSLOG_DNS_SERVER");
     const char *const dnsPortEnv = getenv("RSYSLOG_DNS_PORT");
@@ -508,15 +554,11 @@ static rsRetVal resolveSrvTargets(instanceData *const pData) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
-    CHKmalloc(res = (res_state)calloc(1, sizeof(struct __res_state)));
-    if (res_ninit(res) != 0) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
-        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-    }
+    CHKiRet(initResolverState(&res));
 
     CHKiRet(applyResolverOverrides(res));
 
-    const int ansLen = res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, sizeof(answer));
+    const int ansLen = queryResolverState(res, srvName, answer, sizeof(answer));
     if (ansLen < 0) {
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: failed to resolve SRV records for '%s': %s", srvName,
                  resolverErrorString(res->res_h_errno));
@@ -644,10 +686,7 @@ static rsRetVal resolveSrvTargets(instanceData *const pData) {
 finalize_it:
     free(records);
     free(ordered);
-    if (res != NULL) {
-        res_nclose(res);
-        free(res);
-    }
+    closeResolverState(res);
     RETiRet;
 #endif
 }

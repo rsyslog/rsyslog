@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        config: [clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
+        config: [alpine, clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
     steps:
       - name: git checkout project
         uses: actions/checkout@v4
@@ -60,6 +60,8 @@ jobs:
             tests/*.sh
             diag.sh
             **/Makefile.am
+            packaging/docker/dev_env/alpine/**
+            packaging/docker/dev_env/common/**
 
       - name: run compile check (container)
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -68,6 +70,10 @@ jobs:
           export RSYSLOG_CONTAINER_UID="" # use default
           export CFLAGS='-g'
           case "${{ matrix.config }}" in
+          'alpine')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_full:alpine_latest'
+              export CC='gcc'
+              ;;
           'clang9')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-9'
