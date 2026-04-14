@@ -14,8 +14,8 @@ template(name="outfmt" type="list") {
 :msg, contains, "x-pid" stop
 
 
-if $msg contains "msgnum:" then
-	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
+	if $msg contains "msgnum:" then
+		action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 
 :msg, contains, "this does not occur" action(type="omfwd"
 	target="10.0.0.1" keepalive="on" keepalive.probes="10"
