@@ -138,6 +138,7 @@ TESTS_DEFAULT = \
 	omusrmsg-noabort.sh \
 	omusrmsg_ratelimit_name.sh \
 	omfile-module-params.sh \
+	omfile-dynafilecachesize-invalid.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
@@ -567,6 +568,7 @@ TESTS_LIBYAML = \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
+	yaml-omfile-dynafilecachesize-invalid.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
 	yaml-error.sh \

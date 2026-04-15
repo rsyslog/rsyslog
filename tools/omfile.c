@@ -78,6 +78,7 @@ MODULE_CNFNAME("omfile")
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
+static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal);
 
 /* internal structures
  */
@@ -418,22 +419,29 @@ finalize_it:
  */
 static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) * pVal, int iNewVal) {
     DEFiRet;
+    iRet = normalizeDynaFileCacheSize(&iNewVal);
 
-    if (iNewVal < 1) {
+    cs.iDynaFileCacheSize = iNewVal;
+    DBGPRINTF("DynaFileCacheSize changed to %d.\n", iNewVal);
+    RETiRet;
+}
+
+static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal) {
+    DEFiRet;
+    assert(pNewVal != NULL);
+
+    if (*pNewVal < 1) {
         errno = 0;
-        parser_errmsg("DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
+        parser_errmsg("DynaFileCacheSize must be greater 0 (%d given), changed to 1.", *pNewVal);
         iRet = RS_RET_VAL_OUT_OF_RANGE;
-        iNewVal = 1;
-    } else if (iNewVal > 25000) {
+        *pNewVal = 1;
+    } else if (*pNewVal > 25000) {
         errno = 0;
         parser_warnmsg(
             "DynaFileCacheSize is larger than 25,000 (%d given) - this looks very "
             "large. Is it intended?",
-            iNewVal);
+            *pNewVal);
     }
-
-    cs.iDynaFileCacheSize = iNewVal;
-    DBGPRINTF("DynaFileCacheSize changed to %d.\n", iNewVal);
 
     RETiRet;
 }
@@ -760,6 +768,12 @@ static rsRetVal ATTR_NONNULL()
 
     assert(pData != NULL);
     assert(newFileName != NULL);
+
+    if (pData->iDynaFileCacheSize < 1 || pData->dynCache == NULL) {
+        parser_errmsg("omfile: invalid dynafile cache state for '%s' (size %d) - discarding message", pData->fname,
+                      pData->iDynaFileCacheSize);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     pCache = pData->dynCache;
 
@@ -1439,6 +1453,7 @@ BEGINnewActInst
     struct cnfparamvals *pvals;
     uchar *tplToUse;
     int i;
+    rsRetVal localRet;
     CODESTARTnewActInst;
     DBGPRINTF("newActInst (omfile)\n");
 
@@ -1462,6 +1477,10 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
             pData->iDynaFileCacheSize = (int)pvals[i].val.d.n;
+            localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
+            if (localRet != RS_RET_OK && localRet != RS_RET_VAL_OUT_OF_RANGE) {
+                ABORT_FINALIZE(localRet);
+            }
         } else if (!strcmp(actpblk.descr[i].name, "ziplevel")) {
             pData->iZipLevel = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "flushinterval")) {
@@ -1544,7 +1563,7 @@ BEGINnewActInst
 
     int allWhiteSpace = 1;
     for (const char *p = (const char *)pData->fname; *p; ++p) {
-        if (!isspace(*p)) {
+        if (!isspace((unsigned char)*p)) {
             allWhiteSpace = 0;
             break;
         }
