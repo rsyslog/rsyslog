@@ -499,6 +499,11 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
 
     pWti = pThis->pWrkr[i];
     iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void *)pWti);
+    if (iState != 0) {
+        wtiSetState(pWti, WRKTHRD_STOPPED);
+        LogError(iState, RS_RET_ERR, "%s: pthread_create failed while starting a worker", wtpGetDbgHdr(pThis));
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
     // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards

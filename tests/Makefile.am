@@ -229,6 +229,8 @@ TESTS_DEFAULT = \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
 	diskqueue-fail.sh \
+	queue-invalid-spooldirectory-empty.sh \
+	queue-invalid-workerthreads-zero.sh \
 	diskqueue-oncorruption-missing-segment.sh \
 	diskqueue-non-unique-prefix.sh \
 	rulesetmultiqueue.sh \

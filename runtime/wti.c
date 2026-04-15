@@ -36,6 +36,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -89,6 +90,7 @@ void ATTR_NONNULL() wtiJoinThrd(wti_t *const pThis) {
         DBGPRINTF("%s: joining terminated worker\n", wtiGetDbgHdr(pThis));
         if ((r = pthread_join(pThis->thrdID, NULL)) != 0) {
             LogMsg(r, RS_RET_INTERNAL_ERROR, LOG_WARNING, "rsyslog bug? wti cannot join terminated wrkr");
+            return;
         }
         DBGPRINTF("%s: worker fully terminated\n", wtiGetDbgHdr(pThis));
         wtiSetState(pThis, WRKTHRD_STOPPED);
@@ -232,17 +234,28 @@ finalize_it:
 rsRetVal wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams) {
     actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
     actWrkrIParams_t *iparams;
-    int newMax;
+    size_t allocCount;
+    size_t newMax;
+    size_t startOffset;
+    size_t zeroCount;
     DEFiRet;
 
     if (wrkrInfo->p.tx.currIParam == wrkrInfo->p.tx.maxIParams) {
         /* we need to extend */
-        newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE : 2 * wrkrInfo->p.tx.maxIParams;
-        CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams, sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax));
-        memset(iparams + (wrkrInfo->p.tx.currIParam * pAction->iNumTpls), 0,
-               sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
+        newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE : 2u * (size_t)wrkrInfo->p.tx.maxIParams;
+        if ((size_t)pAction->iNumTpls > SIZE_MAX / newMax) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        allocCount = (size_t)pAction->iNumTpls * newMax;
+        if (allocCount > SIZE_MAX / sizeof(actWrkrIParams_t)) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams, sizeof(actWrkrIParams_t) * allocCount));
+        startOffset = (size_t)wrkrInfo->p.tx.currIParam * (size_t)pAction->iNumTpls;
+        zeroCount = ((size_t)newMax - (size_t)wrkrInfo->p.tx.maxIParams) * (size_t)pAction->iNumTpls;
+        memset(iparams + startOffset, 0, sizeof(actWrkrIParams_t) * zeroCount);
         wrkrInfo->p.tx.iparams = iparams;
-        wrkrInfo->p.tx.maxIParams = newMax;
+        wrkrInfo->p.tx.maxIParams = (int)newMax;
     }
     *piparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam * pAction->iNumTpls;
     ++wrkrInfo->p.tx.currIParam;
