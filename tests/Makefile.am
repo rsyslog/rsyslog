@@ -952,6 +952,7 @@ TESTS_OMAZUREDCE = \
 	omazuredce-bad-template.sh \
 	omazuredce-good-template.sh \
 	omazuredce-basic.sh \
+	omazuredce-compression.sh \
 	omazuredce-basic-url.sh \
 	omazuredce-batch.sh \
 	omazuredce-interrupt.sh \
@@ -959,6 +960,9 @@ TESTS_OMAZUREDCE = \
 
 TESTS_OMAZUREDCE_VALGRIND = \
 	omazuredce-basic-vg.sh
+
+TESTS_OMAZUREDCE_YAML = \
+	yaml-omazuredce-compression.sh
 
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
@@ -1804,7 +1808,9 @@ EXTRA_DIST += $(TESTS_OMAZUREEVENTHUBS)
 EXTRA_DIST += $(TESTS_OMAZUREEVENTHUBS_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREDCE)
 EXTRA_DIST += $(TESTS_OMAZUREDCE_VALGRIND)
+EXTRA_DIST += $(TESTS_OMAZUREDCE_YAML)
 EXTRA_DIST += omazuredce-env.sh
+EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
 EXTRA_DIST += $(TESTS_IMHTTP)
@@ -2455,6 +2461,9 @@ endif
 if ENABLE_OMAZUREDCE
 if ENABLE_OMAZUREDCE_TESTS
 TESTS += $(TESTS_OMAZUREDCE)
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMAZUREDCE_YAML)
+endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMAZUREDCE_VALGRIND)
 endif

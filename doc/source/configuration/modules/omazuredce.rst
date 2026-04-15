@@ -40,6 +40,7 @@ Notable Features
 
 - Size-aware batching with a configurable ``max_batch_bytes`` limit
 - Timed flushing for partially filled batches via ``flush_timeout_ms``
+- Optional ``gzip`` request-body compression via ``compression``
 - Automatic OAuth token acquisition for the
   ``https://monitor.azure.com/.default`` scope
 - Retry-friendly error handling that cooperates with rsyslog action suspension
@@ -121,6 +122,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omazuredce-flush_timeout_ms.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omazuredce-compression`
+     - .. include:: ../../reference/parameters/omazuredce-compression.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -134,6 +139,7 @@ Action Parameters
    ../../reference/parameters/omazuredce-table_name
    ../../reference/parameters/omazuredce-max_batch_bytes
    ../../reference/parameters/omazuredce-flush_timeout_ms
+   ../../reference/parameters/omazuredce-compression
 
 
 Batching Behavior
@@ -147,7 +153,10 @@ following happens:
 - The batch has been idle for at least ``flush_timeout_ms`` milliseconds
 
 The internal size check is conservative. It includes both the JSON payload size
-and an estimate for HTTP headers before sending the request.
+and an estimate for HTTP headers before sending the request. When
+``compression`` is set to any compressed mode, the module still keeps that
+conservative batching behavior and only compresses the final request body
+during flush.
 
 
 Error Handling
@@ -192,4 +201,5 @@ Azure Monitor Logs Ingestion:
       table_name="Custom-MyTable_CL"
       max_batch_bytes="1048576"
       flush_timeout_ms="2000"
+      compression="default"
    )
