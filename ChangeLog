@@ -1,5 +1,7 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-15: omazuredce: add gzip request compression support
+  Thanks to Jan Kängsepp for implementing the new module.
 - 2026-04-15: omelasticsearch fix: port detection for IPv6 server addresses
   The computeBaseUrl() function used strchr(host, ':') to detect whether
   a port was already embedded in the server string. Since IPv6 addresses
