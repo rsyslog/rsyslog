@@ -770,8 +770,8 @@ static rsRetVal ATTR_NONNULL()
     assert(newFileName != NULL);
 
     if (pData->iDynaFileCacheSize < 1 || pData->dynCache == NULL) {
-        parser_errmsg("omfile: invalid dynafile cache state for '%s' (size %d) - discarding message", pData->fname,
-                      pData->iDynaFileCacheSize);
+        parser_errmsg("omfile: invalid dynafile cache state for '%s' (size %d) - discarding message",
+                      (char *)pData->fname, pData->iDynaFileCacheSize);
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
@@ -1453,7 +1453,6 @@ BEGINnewActInst
     struct cnfparamvals *pvals;
     uchar *tplToUse;
     int i;
-    rsRetVal localRet;
     CODESTARTnewActInst;
     DBGPRINTF("newActInst (omfile)\n");
 
@@ -1477,7 +1476,7 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
             pData->iDynaFileCacheSize = (int)pvals[i].val.d.n;
-            localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
+            const rsRetVal localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
             if (localRet != RS_RET_OK && localRet != RS_RET_VAL_OUT_OF_RANGE) {
                 ABORT_FINALIZE(localRet);
             }
