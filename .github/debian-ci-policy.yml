@@ -1,0 +1,14 @@
+{
+  "allowed_patch_skips": [
+    {
+      "patch": "Fix-doc-version-for-sphinx-build.patch",
+      "reason": "Debian latest still carries a doc-version patch that no longer applies to upstream doc/source/conf.py."
+    },
+    {
+      "patch": "imfile-preserve-symlink-cleanup-notifications-with-deferr.patch",
+      "reason": "Debian latest still carries an imfile patch that is already effectively upstream and now applies in reverse."
+    }
+  ],
+  "supplemental_build_deps": [],
+  "not_installed_paths": []
+}

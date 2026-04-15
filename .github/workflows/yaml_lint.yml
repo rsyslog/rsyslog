@@ -37,6 +37,7 @@ jobs:
         id: changed
         uses: tj-actions/changed-files@v46
         with:
+          json: "true"
           separator: "\n"
           files: |
             **/*.yml
@@ -49,14 +50,27 @@ jobs:
       - name: Run yamllint
         if: steps.changed.outputs.any_changed == 'true'
         env:
-          CHANGED_YAML_FILES: ${{ steps.changed.outputs.all_changed_files }}
+          CHANGED_YAML_FILES_JSON: ${{ steps.changed.outputs.all_changed_files }}
         run: |
+          python3 - <<'PY' > /tmp/changed-yaml-files.txt
+          import json
+          import os
+
+          raw = os.environ["CHANGED_YAML_FILES_JSON"]
+          try:
+              paths = json.loads(raw)
+          except json.JSONDecodeError:
+              paths = json.loads(raw.encode("utf-8").decode("unicode_escape"))
+
+          for path in paths:
+              print(path)
+          PY
           while IFS= read -r file; do
             [ -n "$file" ] || continue
             yamllint \
               -d '{extends: relaxed, rules: {line-length: {max: 120}}}' \
               "$file"
-          done <<< "$CHANGED_YAML_FILES"
+          done < /tmp/changed-yaml-files.txt
 
       - name: Skip yamllint, no YAML changes
         if: steps.changed.outputs.any_changed != 'true'
