@@ -1,5 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-15: omelasticsearch fix: port detection for IPv6 server addresses
+  The computeBaseUrl() function used strchr(host, ':') to detect whether
+  a port was already embedded in the server string. Since IPv6 addresses
+  contain colons, this always matched, causing serverport to never be
+  appended. Fix by looking for ':' only after the closing ']' when the
+  host is in bracket notation.
+  Thanks to Attila Lakatos for the patch.
 - 2026-04-14: omrelp: use stable data in librelp callbacks
   The omrelp workaround now keeps callback logging on shared instance
   data instead of worker-lifetime state. A regression test covers a
