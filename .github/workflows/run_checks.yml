@@ -358,7 +358,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - suite: focal
+          # Temporarily disabled: Ubuntu 20.04 (focal) is EOL and the package
+          # build no longer works reliably there.
           - suite: jammy
           - suite: noble
     steps:
