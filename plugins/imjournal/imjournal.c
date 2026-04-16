@@ -57,6 +57,16 @@
 #include "unicode-helper.h"
 #include "ratelimit.h"
 
+#ifndef O_CLOEXEC
+    #define O_CLOEXEC 0
+#endif
+#ifndef O_NOCTTY
+    #define O_NOCTTY 0
+#endif
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
+
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -183,6 +193,97 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process *
 
 static rsRetVal persistJournalState(struct journalContext_s *journalContext, char *stateFile);
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile);
+
+/**
+ * Create a unique temporary state file next to the final cursor file.
+ *
+ * The temp file must live in the target directory so that the later rename()
+ * stays atomic on the same filesystem. Callers receive ownership of *tmpPath
+ * and must free it. On success, *fd is an open descriptor positioned at the
+ * beginning of an empty file created with the configured mode and protected
+ * against symlink traversal.
+ */
+static rsRetVal openStateFileTemp(const char *stateFile, char **tmpPath, int *fd) {
+    struct timespec ts;
+    char *candidate = NULL;
+    int localFd = -1;
+    int attempt;
+    DEFiRet;
+
+    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        ts.tv_sec = time(NULL);
+        ts.tv_nsec = 0;
+    }
+
+    for (attempt = 0; attempt < 100; ++attempt) {
+        free(candidate);
+        candidate = NULL;
+        if (asprintf(&candidate, "%s.tmp.%ld.%ld.%d", stateFile, (long)getpid(), (long)ts.tv_nsec, attempt) == -1) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        localFd = open(candidate, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW, cs.fCreateMode);
+        if (localFd >= 0) {
+            *tmpPath = candidate;
+            *fd = localFd;
+            candidate = NULL;
+            FINALIZE;
+        }
+
+        if (errno != EEXIST) {
+            LogError(errno, RS_RET_FILE_OPEN_ERROR, "imjournal: open() failed for path: '%s'", candidate);
+            ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+        }
+    }
+
+    LogError(0, RS_RET_FILE_OPEN_ERROR, "imjournal: could not create a unique temp state file for '%s'", stateFile);
+    ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+
+finalize_it:
+    free(candidate);
+    RETiRet;
+}
+
+/**
+ * Fsync the directory that contains the persisted cursor file.
+ *
+ * After the caller has fsync'd the file contents and renamed the temporary
+ * file into place, syncing the parent directory is required to make the name
+ * update durable across power loss. The path may be absolute or relative.
+ */
+static rsRetVal fsyncStateFileParentDir(const char *stateFile) {
+    DIR *dir = NULL;
+    char *dirPath = NULL;
+    const char *slash;
+    DEFiRet;
+
+    slash = strrchr(stateFile, '/');
+    if (slash == NULL) {
+        CHKmalloc(dirPath = strdup("."));
+    } else if (slash == stateFile) {
+        CHKmalloc(dirPath = strdup("/"));
+    } else {
+        const size_t len = (size_t)(slash - stateFile);
+        CHKmalloc(dirPath = strndup(stateFile, len));
+    }
+
+    if ((dir = opendir(dirPath)) == NULL) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (fsync(dirfd(dir)) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+finalize_it:
+    if (dir != NULL) {
+        closedir(dir);
+    }
+    free(dirPath);
+    RETiRet;
+}
 
 static rsRetVal openJournal(struct journalContext_s *journalContext) {
     int r;
@@ -319,8 +420,8 @@ static rsRetVal readJSONfromJournalMsg(struct journalContext_s *journalContext, 
         if (equal_sign == NULL) {
             LogError(0, RS_RET_ERR,
                      "SD_JOURNAL_FOREACH_DATA()"
-                     "returned a malformed field (has no '='): '%s'",
-                     (char *)get);
+                     " returned a malformed field without '=' (length %zu)",
+                     l);
             continue; /* skip the entry */
         }
 
@@ -521,8 +622,8 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
         } else {
             DBGPRINTF(
                 "The value of the 'FACILITY' field has an "
-                "unexpected length: %zu value: '%s'\n",
-                length, (const char *)get);
+                "unexpected length: %zu\n",
+                length);
         }
     }
 
@@ -598,7 +699,7 @@ finalize_it:
  */
 static rsRetVal persistJournalState(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
-    char tmp_sf[MAXFNAME];
+    char *tmp_sf = NULL;
     int fd = -1;
     size_t len;
     ssize_t wr_ret;
@@ -611,31 +712,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
         ABORT_FINALIZE(RS_RET_OK);
     }
 
-    /* we create a temporary name by adding a ".tmp"
-     * suffix to the end of our state file's name
-     *
-     * we use snprintf() to safely honor the boundaries
-     * of the temporary state file name buffer by using
-     * a precision specifier, which will limit the number
-     * of bytes taken from stateFile to what will fit
-     *
-     * TODO: figure out a better way to avoid the PATH_MAX
-     * problem. The truncated stateFile with .tmp at the
-     * end is not optimal
-     */
-#define IM_SF_TMP_SUFFIX ".tmp"
-    snprintf(tmp_sf, sizeof(tmp_sf), "%.*s%s",
-             /* this calculates the max size for state file name, note that
-              * sizeof() NOT -1 is intentional - it reserves spaces for the
-              * NUL terminator.
-              */
-             (int)(sizeof(tmp_sf) - sizeof(IM_SF_TMP_SUFFIX)), stateFile, IM_SF_TMP_SUFFIX);
-
-    fd = open((char *)tmp_sf, O_WRONLY | O_CREAT | O_CLOEXEC, cs.fCreateMode);
-    if (fd == -1) {
-        LogError(errno, RS_RET_FILE_OPEN_ERROR, "imjournal: open() failed for path: '%s'", tmp_sf);
-        ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
-    }
+    CHKiRet(openStateFileTemp(stateFile, &tmp_sf, &fd));
 
     len = strlen(journalContext->cursor);
     wr_ret = write(fd, journalContext->cursor, len);
@@ -643,9 +720,23 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
         LogError(errno, RS_RET_IO_ERROR,
                  "imjournal: failed to save cursor to: '%s',"
                  "write returned %zd, expected %zu",
-                 cs.stateFile, wr_ret, len);
+                 stateFile, wr_ret, len);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+
+    if (cs.bFsync) {
+        if (fsync(fd) != 0) {
+            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", tmp_sf);
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+    }
+
+    if (close(fd) == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: close() failed for path: '%s'", tmp_sf);
+        fd = -1;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
 
     /* change the name of the file to the configured one */
     if (rename(tmp_sf, stateFile) < 0) {
@@ -654,23 +745,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     }
 
     if (cs.bFsync) {
-        if (fsync(fd) != 0) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", stateFile);
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        /* In order to guarantee physical write we need to force parent sync as well */
-        DIR *wd;
-        if (!(wd = opendir((char *)glbl.GetWorkDir(runModConf->pConf)))) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory",
-                     glbl.GetWorkDir(runModConf->pConf));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        if (fsync(dirfd(wd)) != 0) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", glbl.GetWorkDir(runModConf->pConf));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-
-        closedir(wd);
+        CHKiRet(fsyncStateFileParentDir(stateFile));
     }
 
     DBGPRINTF("Persisted journal to '%s'\n", stateFile);
@@ -682,6 +757,10 @@ finalize_it:
             iRet = RS_RET_IO_ERROR;
         }
     }
+    if (iRet != RS_RET_OK && tmp_sf != NULL) {
+        unlink(tmp_sf);
+    }
+    free(tmp_sf);
     RETiRet;
 }
 
@@ -764,14 +843,16 @@ finalize_it:
  */
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
+    struct stat st;
     int r;
+    int fd = -1;
     FILE *r_sf;
 
     DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n", journalContext->atHead,
               journalContext->reloaded);
 
-    /* if state file not exists (on very first run), skip */
-    if (access(stateFile, F_OK | R_OK) == -1 && errno == ENOENT) {
+    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW);
+    if (fd == -1 && errno == ENOENT) {
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
@@ -782,8 +863,27 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                stateFile);
         FINALIZE;
     }
+    if (fd == -1) {
+        LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: open on state file `%s' failed\n", stateFile);
+        if (cs.bIgnorePrevious) {
+            /* Seek to the very end of the journal and ignore all older messages. */
+            skipOldMessages(journalContext);
+        }
+        FINALIZE;
+    }
+    if (fstat(fd, &st) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: fstat on state file `%s' failed\n", stateFile);
+        iRet = RS_RET_IO_ERROR;
+        FINALIZE;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        LogError(0, RS_RET_IO_ERROR, "imjournal: state file `%s' is not a regular file\n", stateFile);
+        iRet = RS_RET_IO_ERROR;
+        FINALIZE;
+    }
 
-    if ((r_sf = fopen(stateFile, "rb")) != NULL) {
+    if ((r_sf = fdopen(fd, "rb")) != NULL) {
+        fd = -1;
         char readCursor[128 + 1];
         if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
             if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
@@ -841,7 +941,7 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
             }
         }
     } else {
-        LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: open on state file `%s' failed\n", stateFile);
+        LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fdopen on state file `%s' failed\n", stateFile);
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
@@ -849,6 +949,9 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     }
 
 finalize_it:
+    if (fd != -1) {
+        close(fd);
+    }
     RETiRet;
 }
 
