@@ -47,6 +47,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "gss-misc.h"
+#include "gss-token-util.h"
 #include "debug.h"
 #include "glbl.h"
 #include "unlimited_select.h"
@@ -94,10 +95,11 @@ static void display_ctx_flags(OM_uint32 flags) {
 }
 
 
-static int read_all(int fd, char *buf, unsigned int nbyte) {
-    int ret;
+static ssize_t read_all(int fd, char *buf, size_t nbyte) {
+    ssize_t ret;
     char *ptr;
     struct timeval tv;
+    const time_t deadline = time(NULL) + GSS_TOKEN_IO_TIMEOUT_SECS;
 #ifdef USE_UNLIMITED_SELECT
     fd_set *pRfds = malloc(glbl.GetFdSetSize());
 
@@ -108,12 +110,18 @@ static int read_all(int fd, char *buf, unsigned int nbyte) {
 #endif
 
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+        const time_t now = time(NULL);
+        if (now == (time_t)-1 || now >= deadline) {
+            errno = ETIMEDOUT;
+            freeFdSet(pRfds);
+            return -1;
+        }
         FD_ZERO(pRfds);
         FD_SET(fd, pRfds);
         tv.tv_sec = 1;
         tv.tv_usec = 0;
 
-        if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0 || !FD_ISSET(fd, pRfds)) {
+        if ((ret = select(fd + 1, pRfds, NULL, NULL, &tv)) <= 0 || !FD_ISSET(fd, pRfds)) {
             freeFdSet(pRfds);
             return ret;
         }
@@ -151,10 +159,14 @@ static int write_all(int fd, char *buf, unsigned int nbyte) {
 }
 
 
-static int recv_token(int s, gss_buffer_t tok) {
-    int ret;
+static int recv_token(int s, gss_buffer_t tok, size_t max_tok_len) {
+    ssize_t ret;
     unsigned char lenbuf[4] = "xxx";  // initialized to make clang static analyzer happy
-    unsigned int len;
+    size_t len = 0;
+
+    assert(tok != NULL);
+    tok->length = 0;
+    tok->value = NULL;
 
     ret = read_all(s, (char *)lenbuf, 4);
     if (ret < 0) {
@@ -167,8 +179,11 @@ static int recv_token(int s, gss_buffer_t tok) {
         return -1;
     }
 
-    len = ((lenbuf[0] << 24) | (lenbuf[1] << 16) | (lenbuf[2] << 8) | lenbuf[3]);
-    tok->length = ntohl(len);
+    if (gssTokenDecodeLength(lenbuf, max_tok_len, &len) != RS_RET_OK) {
+        LogError(0, NO_ERRCODE, "GSS-API rejecting token length %zu that exceeds limit %zu", len, max_tok_len);
+        return -1;
+    }
+    tok->length = len;
 
     tok->value = (char *)malloc(tok->length ? tok->length : 1);
     if (tok->length && tok->value == NULL) {
@@ -181,7 +196,7 @@ static int recv_token(int s, gss_buffer_t tok) {
         LogError(0, NO_ERRCODE, "GSS-API error reading token data");
         free(tok->value);
         return -1;
-    } else if (ret != (int)tok->length) {
+    } else if ((size_t)ret != tok->length) {
         LogError(0, NO_ERRCODE, "GSS-API error reading token data");
         free(tok->value);
         return -1;
@@ -196,9 +211,10 @@ static int send_token(int s, gss_buffer_t tok) {
     unsigned char lenbuf[4];
     unsigned int len;
 
-    if (tok->length > 0xffffffffUL)
-        abort(); /* TODO: we need to reconsider this, abort() is not really
-               a solution - degrade, but keep running */
+    if (tok->length > 0xffffffffUL) {
+        LogError(0, NO_ERRCODE, "GSS-API token length %lu exceeds wire format limit", (unsigned long)tok->length);
+        return -1;
+    }
     len = htonl(tok->length);
     lenbuf[0] = (len >> 24) & 0xff;
     lenbuf[1] = (len >> 16) & 0xff;
