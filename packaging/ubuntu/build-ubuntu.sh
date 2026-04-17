@@ -159,7 +159,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 echo "== Build binary package (in $IMAGE) =="
-docker run --rm \
+docker run --rm -i \
   -v "$REPO_ROOT:/build" -w /build \
   -e DEBIAN_FRONTEND=noninteractive \
   -e VERSION="$VERSION" \
@@ -172,9 +172,12 @@ docker run --rm \
   "$IMAGE" bash -s -- <<'EOF'
 set -e
 
-default_archive_mirror="https://archive.ubuntu.com/ubuntu"
-default_security_mirror="https://security.ubuntu.com/ubuntu"
-default_fallback_mirror="https://azure.archive.ubuntu.com/ubuntu"
+# Fresh Ubuntu containers may not have a trusted CA store early enough for the
+# initial apt bootstrap, so keep the built-in archive defaults on plain HTTP.
+# Explicit mirror overrides can still use HTTPS if the caller wants that.
+default_archive_mirror="http://archive.ubuntu.com/ubuntu"
+default_security_mirror="http://security.ubuntu.com/ubuntu"
+default_fallback_mirror="http://azure.archive.ubuntu.com/ubuntu"
 apt_retries="${RSYSLOG_APT_RETRIES:-3}"
 case "$apt_retries" in
   ''|*[!0-9]*) apt_retries=3 ;;
@@ -349,4 +352,8 @@ EOF
 
 echo "== Built packages =="
 find . -maxdepth 2 -name "*.deb" -type f -exec ls -la {} \;
+if ! find . -maxdepth 2 -name "*.deb" -type f | grep -q .; then
+  echo "Error: binary package build completed without producing any .deb artifacts" >&2
+  exit 1
+fi
 echo "Done."
