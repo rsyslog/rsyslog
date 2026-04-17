@@ -79,6 +79,7 @@ static void TCPSessGSSClose(tcps_sess_t *pSess);
 static rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *);
 static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess, ATTR_UNUSED char *connInfo);
 static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *ppSess);
+static rsRetVal setInputGSSTokenIOTimeout(void *pVal, int timeout_secs);
 
 /* static data */
 DEF_IMOD_STATIC_DATA;
@@ -112,6 +113,7 @@ static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
 static int bKeepAlive = 0; /* use SO_KEEPALIVE? */
+static int gss_token_io_timeout_secs = GSS_TOKEN_IO_TIMEOUT_SECS;
 
 
 /* methods */
@@ -166,14 +168,11 @@ finalize_it:
 /* Check if the host is permitted to send us messages.
  * Note: the pUsrSess may be zero if the server is running in tcp-only mode!
  */
-static int isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void *pUsrSess) {
-    gsssrv_t *pGSrv;
-    gss_sess_t *pGSess;
+static char getAllowedMethodsForPeer(struct sockaddr *addr, const char *fromHostFQDN, const gsssrv_t *pGSrv) {
     char allowedMethods = 0;
 
-    assert(pUsrSrv != NULL);
-    pGSrv = (gsssrv_t *)pUsrSrv;
-    pGSess = (gss_sess_t *)pUsrSess;
+    assert(addr != NULL);
+    assert(pGSrv != NULL);
 
     if ((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
         net.isAllowedSender2((uchar *)"TCP", addr, (char *)fromHostFQDN, 1))
@@ -181,6 +180,21 @@ static int isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsr
     if ((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
         net.isAllowedSender2((uchar *)"GSS", addr, (char *)fromHostFQDN, 1))
         allowedMethods |= ALLOWEDMETHOD_GSS;
+
+    return allowedMethods;
+}
+
+
+static int isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void *pUsrSess) {
+    gsssrv_t *pGSrv;
+    gss_sess_t *pGSess;
+    char allowedMethods;
+
+    assert(pUsrSrv != NULL);
+    pGSrv = (gsssrv_t *)pUsrSrv;
+    pGSess = (gss_sess_t *)pUsrSess;
+
+    allowedMethods = getAllowedMethodsForPeer(addr, fromHostFQDN, pGSrv);
     if (allowedMethods && pGSess != NULL) pGSess->allowedMethods = allowedMethods;
     return allowedMethods;
 }
@@ -193,7 +207,6 @@ static rsRetVal getAllowedMethodsForSess(tcps_sess_t *pSess, gsssrv_t *pGSrv, ch
     socklen_t peerAddrLen;
     uchar *pszPeer = NULL;
     int lenPeer = 0;
-    char allowedMethods = 0;
 
     assert(pSess != NULL);
     assert(pGSrv != NULL);
@@ -207,14 +220,7 @@ static rsRetVal getAllowedMethodsForSess(tcps_sess_t *pSess, gsssrv_t *pGSrv, ch
     }
 
     prop.GetString(pSess->fromHost, &pszPeer, &lenPeer);
-    if ((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
-        net.isAllowedSender2((uchar *)"TCP", (struct sockaddr *)&peerAddr, (char *)pszPeer, 1))
-        allowedMethods |= ALLOWEDMETHOD_TCP;
-    if ((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
-        net.isAllowedSender2((uchar *)"GSS", (struct sockaddr *)&peerAddr, (char *)pszPeer, 1))
-        allowedMethods |= ALLOWEDMETHOD_GSS;
-
-    *pAllowedMethods = allowedMethods;
+    *pAllowedMethods = getAllowedMethodsForPeer((struct sockaddr *)&peerAddr, (char *)pszPeer, pGSrv);
 
 finalize_it:
     RETiRet;
@@ -549,7 +555,8 @@ static rsRetVal OnSessAcceptGSS(ATTR_UNUSED tcpsrv_t *pThis, tcps_sess_t *pSess)
         *context = GSS_C_NO_CONTEXT;
         sess_flags = &pGSess->gss_flags;
         do {
-            if (gssutil.recv_token(fdSess, &recv_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES) <= 0) {
+            if (gssutil.recv_token(fdSess, &recv_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES,
+                                   (unsigned int)gss_token_io_timeout_secs) <= 0) {
                 LogError(0, NO_ERRCODE,
                          "TCP session %p from %s will be "
                          "closed, error ignored\n",
@@ -620,7 +627,9 @@ rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *
     pGSess = (gss_sess_t *)pSess->pUsr;
 
     netstrm.GetSock(pSess->pStrm, &fdSess);  // TODO: method access, CHKiRet!
-    if (gssutil.recv_token(fdSess, &xmit_buf, gssTokenGetMessageLimit(buf_len)) <= 0) ABORT_FINALIZE(RS_RET_GSS_ERR);
+    if (gssutil.recv_token(fdSess, &xmit_buf, gssTokenGetMessageLimit(buf_len),
+                           (unsigned int)gss_token_io_timeout_secs) <= 0)
+        ABORT_FINALIZE(RS_RET_GSS_ERR);
 
     context = &pGSess->gss_context;
     maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf, &conf_state, (gss_qop_t *)NULL);
@@ -789,6 +798,18 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     bPermitPlainTcp = 0;
     iTCPSessMax = 200;
     bKeepAlive = 0;
+    gss_token_io_timeout_secs = GSS_TOKEN_IO_TIMEOUT_SECS;
+    return RS_RET_OK;
+}
+
+
+static rsRetVal setInputGSSTokenIOTimeout(void __attribute__((unused)) * pVal, int timeout_secs) {
+    if (timeout_secs < 0) {
+        LogError(0, RS_RET_PARAM_ERROR, "imgssapi: $InputGSSServerTokenIOTimeout must be greater than or equal to 0");
+        return RS_RET_PARAM_ERROR;
+    }
+
+    gss_token_io_timeout_secs = timeout_secs;
     return RS_RET_OK;
 }
 
@@ -816,6 +837,8 @@ BEGINmodInit()
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgsslistenportfilename", 0, eCmdHdlrGetWord, NULL, &pszLstnPortFileName,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssservermaxsessions", 0, eCmdHdlrInt, NULL, &iTCPSessMax,
+                               STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssservertokeniotimeout", 0, eCmdHdlrInt, setInputGSSTokenIOTimeout, NULL,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverkeepalive", 0, eCmdHdlrBinary, NULL, &bKeepAlive,
                                STD_LOADABLE_MODULE_ID));

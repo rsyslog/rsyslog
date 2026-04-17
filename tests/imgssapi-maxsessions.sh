@@ -25,6 +25,7 @@ add_conf '
 $MaxMessageSize 10k
 module(load="../plugins/imgssapi/.libs/imgssapi")
 $InputGSSServerPermitPlainTCP on
+$InputGSSServerTokenIOTimeout 10
 $InputGSSListenPortFileName '$RSYSLOG_DYNNAME'.gss_port
 $InputGSSServerMaxSessions '$MAXSESSIONS'
 $InputGSSServerRun 0

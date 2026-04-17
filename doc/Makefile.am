@@ -527,6 +527,7 @@ EXTRA_DIST = \
     source/reference/parameters/imgssapi-inputgssservermaxsessions.rst \
     source/reference/parameters/imgssapi-inputgssserverpermitplaintcp.rst \
     source/reference/parameters/imgssapi-inputgssserverrun.rst \
+    source/reference/parameters/imgssapi-inputgssservertokeniotimeout.rst \
     source/reference/parameters/imgssapi-inputgssserverservicename.rst \
     source/reference/parameters/imhttp-apikeyfile.rst \
     source/reference/parameters/imhttp-basicauthfile.rst \
@@ -965,6 +966,7 @@ EXTRA_DIST = \
     source/reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst \
     source/reference/parameters/omgssapi-gssforwardservicename.rst \
     source/reference/parameters/omgssapi-gssmode.rst \
+    source/reference/parameters/omgssapi-gsstokeniotimeout.rst \
     source/reference/parameters/omhdfs-omhdfsdefaulttemplate.rst \
     source/reference/parameters/omhdfs-omhdfsfilename.rst \
     source/reference/parameters/omhdfs-omhdfshost.rst \

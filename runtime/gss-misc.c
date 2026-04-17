@@ -95,11 +95,10 @@ static void display_ctx_flags(OM_uint32 flags) {
 }
 
 
-static ssize_t read_all(int fd, char *buf, size_t nbyte) {
+static ssize_t read_all(int fd, char *buf, size_t nbyte, time_t deadline) {
     ssize_t ret;
     char *ptr;
     struct timeval tv;
-    const time_t deadline = time(NULL) + GSS_TOKEN_IO_TIMEOUT_SECS;
 #ifdef USE_UNLIMITED_SELECT
     fd_set *pRfds = malloc(glbl.GetFdSetSize());
 
@@ -110,20 +109,30 @@ static ssize_t read_all(int fd, char *buf, size_t nbyte) {
 #endif
 
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-        const time_t now = time(NULL);
-        if (now == (time_t)-1 || now >= deadline) {
-            errno = ETIMEDOUT;
-            freeFdSet(pRfds);
-            return -1;
+        if (deadline != 0) {
+            const time_t now = time(NULL);
+            if (now == (time_t)-1 || now >= deadline) {
+                errno = ETIMEDOUT;
+                freeFdSet(pRfds);
+                return -1;
+            }
         }
         FD_ZERO(pRfds);
         FD_SET(fd, pRfds);
         tv.tv_sec = 1;
         tv.tv_usec = 0;
 
-        if ((ret = select(fd + 1, pRfds, NULL, NULL, &tv)) <= 0 || !FD_ISSET(fd, pRfds)) {
+        ret = select(fd + 1, pRfds, NULL, NULL, &tv);
+        if (ret < 0) {
+            if (errno == EINTR) continue;
             freeFdSet(pRfds);
             return ret;
+        }
+        if (ret == 0) continue;
+        if (!FD_ISSET(fd, pRfds)) {
+            errno = EIO;
+            freeFdSet(pRfds);
+            return -1;
         }
         ret = recv(fd, ptr, nbyte, 0);
         if (ret < 0) {
@@ -159,16 +168,27 @@ static int write_all(int fd, char *buf, unsigned int nbyte) {
 }
 
 
-static int recv_token(int s, gss_buffer_t tok, size_t max_tok_len) {
+static int recv_token(int s, gss_buffer_t tok, size_t max_tok_len, unsigned int timeout_secs) {
     ssize_t ret;
     unsigned char lenbuf[4] = "xxx";  // initialized to make clang static analyzer happy
     size_t len = 0;
+    time_t deadline = 0;
 
     assert(tok != NULL);
     tok->length = 0;
     tok->value = NULL;
 
-    ret = read_all(s, (char *)lenbuf, 4);
+    if (timeout_secs > 0) {
+        deadline = time(NULL);
+        if (deadline == (time_t)-1) {
+            errno = EIO;
+            LogError(errno, NO_ERRCODE, "GSS-API error obtaining current time for token deadline");
+            return -1;
+        }
+        deadline += timeout_secs;
+    }
+
+    ret = read_all(s, (char *)lenbuf, 4, deadline);
     if (ret < 0) {
         LogError(0, NO_ERRCODE, "GSS-API error reading token length");
         return -1;
@@ -191,7 +211,7 @@ static int recv_token(int s, gss_buffer_t tok, size_t max_tok_len) {
         return -1;
     }
 
-    ret = read_all(s, (char *)tok->value, tok->length);
+    ret = read_all(s, (char *)tok->value, tok->length, deadline);
     if (ret < 0) {
         LogError(0, NO_ERRCODE, "GSS-API error reading token data");
         free(tok->value);

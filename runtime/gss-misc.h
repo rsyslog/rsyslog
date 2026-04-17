@@ -28,12 +28,12 @@
 
 /* interfaces */
 BEGINinterface(gssutil) /* name must also be changed in ENDinterface macro! */
-    int (*recv_token)(int s, gss_buffer_t tok, size_t max_tok_len);
+    int (*recv_token)(int s, gss_buffer_t tok, size_t max_tok_len, unsigned int timeout_secs);
     int (*send_token)(int s, gss_buffer_t tok);
     void (*display_status)(char *m, OM_uint32 maj_stat, OM_uint32 min_stat);
     void (*display_ctx_flags)(OM_uint32 flags);
 ENDinterface(gssutil)
-#define gssutilCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define gssutilCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

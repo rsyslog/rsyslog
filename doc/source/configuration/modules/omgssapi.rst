@@ -96,6 +96,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/omgssapi-gssmode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omgssapi-gsstokeniotimeout`
+     - .. include:: ../../reference/parameters/omgssapi-gsstokeniotimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omgssapi-actiongssforwarddefaulttemplate`
      - .. include:: ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst
         :start-after: .. summary-start
@@ -120,5 +124,5 @@ selector, for example ``:omgssapi:(z5,o)hostname``.
 
    ../../reference/parameters/omgssapi-gssforwardservicename
    ../../reference/parameters/omgssapi-gssmode
+   ../../reference/parameters/omgssapi-gsstokeniotimeout
    ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate
-
