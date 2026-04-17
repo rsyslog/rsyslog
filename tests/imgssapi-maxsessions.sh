@@ -25,13 +25,15 @@ wait_for_drop_logs()
 {
 	local tries=${1:-15}
 	local count
+	local i=1
 
-	for ((i = 1; i <= tries; ++i)); do
+	while [ "$i" -le "$tries" ]; do
 		count=$(count_dropped_sessions)
 		if [ "$count" -ge "$MIN_EXPECTED_DROPS" ] && [ "$count" -le "$EXPECTED_DROPS" ]; then
 			return 0
 		fi
 		$TESTTOOL_DIR/msleep 1000
+		i=$((i + 1))
 	done
 
 	return 1
