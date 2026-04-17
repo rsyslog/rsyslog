@@ -51,6 +51,26 @@ burst
 
 The maximum number of messages allowed within the ``interval``.
 
+.. _ratelimit_severity:
+
+severity
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "severity", "no", "0"
+
+Only messages with a syslog severity numerically greater than or equal to this
+threshold are subject to rate limiting. Lower numeric severities remain
+unlimited.
+
+This is useful when a shared policy should throttle verbose traffic such as
+``info`` or ``debug`` while leaving more urgent messages untouched. Modules that
+derive severity from input metadata, such as ``imjournal``, can use the same
+shared policy without a module-specific severity knob.
+
 .. _ratelimit_policywatch:
 
 policyWatch
@@ -170,6 +190,12 @@ Example
    # Define a strict rate limit for public facing ports
    ratelimit(name="strict" interval="1" burst="50")
 
+   # Rate-limit only lower-priority journal traffic
+   ratelimit(name="journal_lowprio"
+             interval="600"
+             burst="20000"
+             severity="info")
+
    # Define a watched YAML policy for automatic reload
    ratelimit(name="watched"
              policy="/etc/rsyslog/ratelimit.yaml"
@@ -190,6 +216,9 @@ Example
 
    # Apply per-source limits to a TCP listener
    input(type="imtcp" port="10516" rateLimit.Name="per_source")
+
+   # Apply a severity-aware shared policy to the journal reader
+   module(load="imjournal" rateLimit.Name="journal_lowprio")
 
 Per-source key examples
 -----------------------
