@@ -420,6 +420,13 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     CHKiRet(DTLSCreateSocket(inst));
 finalize_it:
     if (iRet != RS_RET_OK) {
+        inst->bEnableLstn = 0;
+        if (inst->pInputName != NULL) {
+            prop.Destruct(&inst->pInputName);
+        }
+        if (inst->stats != NULL) {
+            statsobj.Destruct(&(inst->stats));
+        }
         LogError(0, NO_ERRCODE,
                  "DTLS Listener for thread failed to create UDP socket "
                  "for thread %s is not functional!",
@@ -1101,13 +1108,17 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        pthread_kill(inst->tid, SIGTTIN);
-        DTLSCloseSocket(inst);
+        if (inst->bEnableLstn) {
+            pthread_kill(inst->tid, SIGTTIN);
+            DTLSCloseSocket(inst);
+        }
     }
 
     DBGPRINTF("imdtls: threads signaled, waiting for join...");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        pthread_join(inst->tid, NULL);
+        if (inst->bEnableLstn) {
+            pthread_join(inst->tid, NULL);
+        }
     }
 
     DBGPRINTF("imdtls: finished threads, stopping\n");
