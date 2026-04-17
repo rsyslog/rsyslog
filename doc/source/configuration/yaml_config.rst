@@ -560,18 +560,47 @@ and action parameters are expressed as YAML.
 +----------------------+-------------------------------------------------------------+
 
 ``foreach`` iterates over a JSON array.  The ``do:`` value is a sequence of
-statement items using the same syntax as ``statements:``.  Example:
+statement items using the same syntax as ``statements:``.
+
+**Complex routing and iteration example**
+
+This example demonstrates how to combine variable assignment, a ``foreach`` loop,
+and a nested ``if/then/else`` statement to achieve complex routing without writing
+raw RainerScript blocks.
 
 .. code-block:: yaml
 
-   statements:
-     - foreach:
-         var: "$.item"
-         in: "$!items"
-         do:
-           - type: omfile
-             file: /var/log/items.log
-             template: outfmt
+   rulesets:
+     - name: process_items
+       statements:
+         # Set a local variable based on message content
+         - set:
+             var: "$.is_audit"
+             expr: 're_match($msg, "AUDIT")'
+
+         # Parse the JSON message content into $! variables
+         - type: mmjsonparse
+
+         # Iterate over a JSON array in the message
+         - foreach:
+             var: "$.item"
+             in: "$!items"
+             do:
+               - if: '$.is_audit == 1'
+                 then:
+                   - type: omfile
+                     file: /var/log/audit_items.log
+                     template: outfmt
+                 else:
+                   - if: '$.item!type == "error"'
+                     then:
+                       - type: omfile
+                         file: /var/log/error_items.log
+                         template: outfmt
+                     else:
+                       - type: omfile
+                         file: /var/log/standard_items.log
+                         template: outfmt
 
 .. _yaml_scripting:
 

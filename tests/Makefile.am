@@ -593,7 +593,6 @@ TESTS_LIBYAML = \
 	yaml-statements-stop.sh \
 	yaml-statements-call.sh \
 	yaml-statements-unset.sh \
-	yaml-statements-foreach.sh \
 	yaml-template-list.sh \
 	yaml-template-subtree.sh \
 	yaml-statements-reload-lookup.sh
@@ -604,6 +603,10 @@ TESTS_RATELIMIT_WATCH = \
 	ratelimit_policy_watch_invalid.sh \
 	ratelimit_policy_watch_multi.sh \
 	yaml-ratelimit-policywatch.sh
+
+TESTS_LIBYAML_IMPTCP_MMJSONPARSE = \
+	yaml-statements-foreach.sh \
+	yaml-statements-complex.sh
 
 TESTS_IMTCP = \
 	fromhost-port.sh \
@@ -1779,6 +1782,7 @@ EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
+EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
@@ -2177,6 +2181,11 @@ TESTS += $(TESTS_LIBYAML)
 if ENABLE_INOTIFY
 TESTS += $(TESTS_RATELIMIT_WATCH)
 endif # ENABLE_INOTIFY
+if ENABLE_IMPTCP
+if ENABLE_MMJSONPARSE
+TESTS += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
+endif # ENABLE_MMJSONPARSE
+endif # ENABLE_IMPTCP
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
 endif # ENABLE_IMTCP_TESTS
@@ -3084,6 +3093,7 @@ EXTRA_DIST += \
 	testsuites/tokenized_input \
 	testsuites/complex_replace_input \
 	testsuites/wrap3_input\
+	testsuites/yaml_complex_input \
 	testsuites/json_array_input \
 	testsuites/json_object_input \
 	testsuites/json_nonarray_input \
