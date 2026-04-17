@@ -274,7 +274,7 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.checkpointinterval", eCmdHdlrInt, 0},
                                            {"queue.syncqueuefiles", eCmdHdlrBinary, 0},
                                            {"queue.type", eCmdHdlrQueueType, 0},
-                                           {"queue.workerthreads", eCmdHdlrInt, 0},
+                                           {"queue.workerthreads", eCmdHdlrPositiveInt, 0},
                                            {"queue.timeoutshutdown", eCmdHdlrInt, 0},
                                            {"queue.timeoutactioncompletion", eCmdHdlrInt, 0},
                                            {"queue.timeoutenqueue", eCmdHdlrInt, 0},
@@ -322,6 +322,7 @@ void qqueueDoneLoadCnf(void) {
         free((void *)del->dirname);
         free((void *)del);
     }
+    queue_filename_root = NULL;
 }
 
 
@@ -379,6 +380,7 @@ static rsRetVal tdlPop(qqueue_t *pQueue) {
 static rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq) {
     toDeleteLst_t *pNew;
     toDeleteLst_t *pPrev;
+    toDeleteLst_t *pCur;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pQueue, qqueue);
@@ -389,16 +391,31 @@ static rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq) {
     pNew->nElemDeq = nElemDeq;
 
     /* now find right spot */
-    for (pPrev = pQueue->toDeleteLst; pPrev != NULL && deqID > pPrev->deqID; pPrev = pPrev->pNext) {
+    pPrev = NULL;
+    for (pCur = pQueue->toDeleteLst; pCur != NULL && deqID > pCur->deqID; pCur = pCur->pNext) {
+        pPrev = pCur;
         /*JUST SEARCH*/;
     }
 
     if (pPrev == NULL) {
-        pNew->pNext = pQueue->toDeleteLst;
+        pNew->pNext = pCur;
         pQueue->toDeleteLst = pNew;
     } else {
-        pNew->pNext = pPrev->pNext;
+        pNew->pNext = pCur;
         pPrev->pNext = pNew;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal validateQueueSpoolDir(qqueue_t *pThis) {
+    DEFiRet;
+
+    if (pThis->pszSpoolDir != NULL && pThis->lenSpoolDir == 0) {
+        parser_errmsg("queue.spooldirectory must not be empty");
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
     }
 
 finalize_it:
@@ -1977,7 +1994,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
 
     assert(ppThis != NULL);
     assert(pConsumer != NULL);
-    assert(iWorkerThreads >= 0);
+    assert(iWorkerThreads > 0);
 
     CHKmalloc(pThis = (qqueue_t *)calloc(1, sizeof(qqueue_t)));
 
@@ -1998,7 +2015,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
     pThis->takeFlowCtlFromMsg = 0;
     pThis->iMaxQueueSize = iMaxQueueSize;
     pThis->pConsumer = pConsumer;
-    pThis->iNumWorkerThreads = iWorkerThreads;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iDeqBatchSize = 8; /* conservative default, should still provide good performance */
     pThis->iMinDeqBatchSize = 0; /* conservative default, should still provide good performance */
@@ -2011,6 +2027,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
 
     INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
     INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+    CHKiRet(qqueueSetiNumWorkerThreads(pThis, iWorkerThreads));
 
 finalize_it:
     OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
@@ -3794,6 +3811,7 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         if (newetry != NULL) {
             free((void *)newetry->filename);
+            free((void *)newetry->dirname);
             free((void *)newetry);
         }
     }
@@ -3972,7 +3990,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             free(pThis->pszSpoolDir);
             pThis->pszSpoolDir = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             pThis->lenSpoolDir = es_strlen(pvals[i].val.d.estr);
-            if (pThis->pszSpoolDir[pThis->lenSpoolDir - 1] == '/') {
+            CHKiRet(validateQueueSpoolDir(pThis));
+            if (pThis->lenSpoolDir > 0 && pThis->pszSpoolDir[pThis->lenSpoolDir - 1] == '/') {
                 pThis->pszSpoolDir[pThis->lenSpoolDir - 1] = '\0';
                 --pThis->lenSpoolDir;
                 parser_errmsg(
@@ -4029,7 +4048,7 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
                 n_params_set--;
             }
         } else if (!strcmp(pblk.descr[i].name, "queue.workerthreads")) {
-            pThis->iNumWorkerThreads = pvals[i].val.d.n;
+            CHKiRet(qqueueSetiNumWorkerThreads(pThis, pvals[i].val.d.n));
         } else if (!strcmp(pblk.descr[i].name, "queue.timeoutshutdown")) {
             pThis->toQShutdown = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.timeoutactioncompletion")) {
@@ -4106,7 +4125,7 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
     }
 
     if (pThis->cryprovName != NULL) {
-        initCryprov(pThis, lst);
+        CHKiRet(initCryprov(pThis, lst));
     }
 
     cnfparamvalsDestruct(pvals, &pblk);
@@ -4149,7 +4168,6 @@ DEFpropSetMeth(qqueue, iLowWtrMrk, int);
 DEFpropSetMeth(qqueue, iDiscardMrk, int);
 DEFpropSetMeth(qqueue, iDiscardSeverity, int);
 DEFpropSetMeth(qqueue, iLightDlyMrk, int);
-DEFpropSetMeth(qqueue, iNumWorkerThreads, int);
 DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
 DEFpropSetMeth(qqueue, bSaveOnShutdown, int);
 DEFpropSetMeth(qqueue, pAction, action_t *);
@@ -4158,6 +4176,16 @@ DEFpropSetMeth(qqueue, iDeqBatchSize, int);
 DEFpropSetMeth(qqueue, iMinDeqBatchSize, int);
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64);
 DEFpropSetMeth(qqueue, iSmpInterval, int);
+
+rsRetVal qqueueSetiNumWorkerThreads(qqueue_t *pThis, int pVal) {
+    if (pVal <= 0) {
+        LogError(0, RS_RET_CONF_PARAM_INVLD, "queue.workerthreads must be greater than 0, but is %d", pVal);
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+
+    pThis->iNumWorkerThreads = pVal;
+    return RS_RET_OK;
+}
 
 /* This function can be used as a generic way to set properties. Only the subset
  * of properties required to read persisted property bags is supported. This

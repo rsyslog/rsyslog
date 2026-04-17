@@ -276,6 +276,48 @@ finalize_it:
 }
 
 
+static rsRetVal doGetNonNegInt(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *pVal) {
+    int val;
+    DEFiRet;
+
+    CHKiRet(doGetInt(pp, NULL, &val));
+    if (val < 0) {
+        LogError(0, RS_RET_INVALID_VALUE, "value %d must not be less than zero.", val);
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
+
+    if (pSetHdlr == NULL) {
+        *((int *)pVal) = val;
+    } else {
+        CHKiRet(pSetHdlr(pVal, val));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal doGetPositiveInt(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *pVal) {
+    int val;
+    DEFiRet;
+
+    CHKiRet(doGetInt(pp, NULL, &val));
+    if (val < 1) {
+        LogError(0, RS_RET_INVALID_VALUE, "value %d must be greater than zero.", val);
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
+
+    if (pSetHdlr == NULL) {
+        *((int *)pVal) = val;
+    } else {
+        CHKiRet(pSetHdlr(pVal, val));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* Parse and interpret a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -745,6 +787,12 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
         case eCmdHdlrInt:
             CHKiRet(doGetInt(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
+        case eCmdHdlrNonNegInt:
+            CHKiRet(doGetNonNegInt(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
+            break;
+        case eCmdHdlrPositiveInt:
+            CHKiRet(doGetPositiveInt(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
+            break;
         case eCmdHdlrSize:
             CHKiRet(doGetSize(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
@@ -765,8 +813,6 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
             break;
         /* some non-legacy handler (used in v6+ solely) */
         case eCmdHdlrInvalid:
-        case eCmdHdlrNonNegInt:
-        case eCmdHdlrPositiveInt:
         case eCmdHdlrString:
         case eCmdHdlrArray:
         case eCmdHdlrQueueType:

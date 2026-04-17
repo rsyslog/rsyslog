@@ -1380,7 +1380,7 @@ static rsRetVal initLegacyConf(void) {
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL,
                              &loadConf->globals.mainQ.bMainMsgQSyncQeueFiles, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
-    CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL,
+    CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrPositiveInt, NULL,
                              &loadConf->globals.mainQ.iMainMsgQueueNumWorkers, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL,
                              &loadConf->globals.mainQ.iMainMsgQtoQShutdown, NULL));

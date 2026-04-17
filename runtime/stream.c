@@ -554,8 +554,13 @@ static rsRetVal strmNextFile(strm_t *pThis) {
 
     assert(pThis != NULL);
     assert(pThis->sType == STREAMTYPE_FILE_CIRCULAR);
-    assert(pThis->iMaxFiles != 0);
     assert(pThis->fd != -1);
+
+    if (pThis->iMaxFiles <= 0) {
+        LogError(0, RS_RET_CONF_PARAM_INVLD, "stream: circular file mode requires iMaxFiles > 0, but is %d",
+                 pThis->iMaxFiles);
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
 
     CHKiRet(strmCloseFile(pThis));
 
@@ -1825,6 +1830,7 @@ finalize_it:
 rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel) {
     struct stat statBuf;
     int skipped_files;
+    off64_t deletedBytes;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, strm);
 
@@ -1840,6 +1846,8 @@ rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64
         CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir, pThis->pszFName, pThis->lenFName,
                             pThis->iCurrFNum, pThis->iFileNumDigits));
         dbgprintf("rger: processing file %s\n", pThis->pszCurrFName);
+        memset(&statBuf, 0, sizeof(statBuf));
+        deletedBytes = 0;
         if (stat((char *)pThis->pszCurrFName, &statBuf) != 0) {
             LogError(errno, RS_RET_IO_ERROR,
                      "unexpected error doing a stat() "
@@ -1849,12 +1857,14 @@ rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64
              * situation. As such, we just keep running and try to delete
              * as many files as possible.
              */
+        } else {
+            deletedBytes = statBuf.st_size;
+            *bytesDel += deletedBytes;
         }
-        *bytesDel += statBuf.st_size;
         DBGPRINTF(
             "strmMultiFileSeek: detected new filenum, was %u, new %u, "
             "deleting '%s' (%lld bytes)\n",
-            pThis->iCurrFNum, FNum, pThis->pszCurrFName, (long long)statBuf.st_size);
+            pThis->iCurrFNum, FNum, pThis->pszCurrFName, (long long)deletedBytes);
         unlink((char *)pThis->pszCurrFName);
         if (pThis->cryprov != NULL) pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
         free(pThis->pszCurrFName);
