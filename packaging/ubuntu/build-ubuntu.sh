@@ -3,7 +3,13 @@
 # Usage: ./build-ubuntu.sh [--source-only] [--suite SUITE]
 #   --source-only: build source package only (no binary, no docker)
 #   --suite SUITE: focal, jammy, or noble (default: prompt or UBUNTU_SUITE env)
-# Env: UBUNTU_SUITE, UBUNTU_VERSION (optional override, default: from configure.ac + timestamp)
+# Env:
+#   UBUNTU_SUITE, UBUNTU_VERSION (optional override, default: from configure.ac + timestamp)
+#   RSYSLOG_APT_PROXY (optional apt proxy for container-side package installs)
+#   RSYSLOG_UBUNTU_ARCHIVE_MIRROR (optional archive mirror override, e.g. https://mirror.example/ubuntu)
+#   RSYSLOG_UBUNTU_SECURITY_MIRROR (optional security mirror override)
+#   RSYSLOG_UBUNTU_FALLBACK_MIRROR (optional fallback mirror used automatically after archive failures)
+#   RSYSLOG_APT_RETRIES (optional retry count for container-side apt, default: 3)
 #
 # Run from repo root or packaging/ubuntu/. Requires: dpkg-dev, wget (for jammy/noble qpid-proton), (docker for binary build).
 
@@ -157,47 +163,180 @@ docker run --rm \
   -v "$REPO_ROOT:/build" -w /build \
   -e DEBIAN_FRONTEND=noninteractive \
   -e VERSION="$VERSION" \
-  "$IMAGE" bash -c '
-    set -e
-    apt-get update
-    apt-get install -y software-properties-common
-    add-apt-repository -y universe
-    add-apt-repository --yes --update ppa:adiscon/v8-stable
-    apt-get update
-    apt-get install -y dpkg-dev devscripts build-essential fakeroot equivs flex wget
-    # Build in container-local /tmp to avoid dpkg-deb "control directory has bad permissions 777"
-    # when /build is a Windows/NTFS volume mount (Docker Desktop, WSL).
-    mkdir -p /tmp/rsyslog-build
-    for f in rsyslog_${VERSION}*.dsc rsyslog_${VERSION}*.orig.tar.gz rsyslog_${VERSION}*.debian.tar.*; do
-      [ -f "$f" ] && cp -a "$f" /tmp/rsyslog-build/
-    done
-    cd /tmp/rsyslog-build
-    dpkg-source -x rsyslog_${VERSION}*.dsc
-    SRCDIR="rsyslog-${VERSION}"
-    test -d "$SRCDIR" || (echo "No rsyslog-${VERSION} directory"; ls -la; exit 1)
-    cd "$SRCDIR"
-    # Fix debhelper config file modes (chmod may not work on Windows host, so do it in container)
-    chmod -x debian/clean debian/not-installed 2>/dev/null || true
-    find debian -type f \( -name "*.dirs" -o -name "*.install.*" -o -name "*.docs" -o -name "*.examples" -o -name "*.config" -o -name "*.conf.template" -o -name "*.apparmor" -o -name "*.logrotate" -o -name "*.triggers" -o -name "*.maintscript" -o -name "*.logcheck.ignore.*" \) -exec chmod -x {} \;
-    # Strip executable from plain *.install; keep it for dh-exec scripts (noble rsyslog.install)
-    for f in $(find debian -type f -name "*.install"); do
-      if head -1 "$f" 2>/dev/null | grep -q "#!/usr/bin/dh-exec"; then
-        chmod +x "$f"
-      else
-        chmod -x "$f"
-      fi
-    done
-    # Re-fetch qpid-proton tarball in container to avoid corruption from Windows host mount
-    if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/include-binaries; then
-      mkdir -p debian/qpid-proton
-      wget -q -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
-        https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
-      (cd debian/qpid-proton && echo "3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz" | sha512sum -c -)
+  -e UBUNTU_SUITE="$SUITE" \
+  -e RSYSLOG_APT_PROXY="${RSYSLOG_APT_PROXY:-}" \
+  -e RSYSLOG_UBUNTU_ARCHIVE_MIRROR="${RSYSLOG_UBUNTU_ARCHIVE_MIRROR:-}" \
+  -e RSYSLOG_UBUNTU_SECURITY_MIRROR="${RSYSLOG_UBUNTU_SECURITY_MIRROR:-}" \
+  -e RSYSLOG_UBUNTU_FALLBACK_MIRROR="${RSYSLOG_UBUNTU_FALLBACK_MIRROR:-}" \
+  -e RSYSLOG_APT_RETRIES="${RSYSLOG_APT_RETRIES:-3}" \
+  "$IMAGE" bash -s -- <<'EOF'
+set -e
+
+default_archive_mirror="https://archive.ubuntu.com/ubuntu"
+default_security_mirror="https://security.ubuntu.com/ubuntu"
+default_fallback_mirror="https://azure.archive.ubuntu.com/ubuntu"
+apt_retries="${RSYSLOG_APT_RETRIES:-3}"
+case "$apt_retries" in
+  ''|*[!0-9]*) apt_retries=3 ;;
+esac
+if [ "$apt_retries" -lt 1 ]; then
+  apt_retries=1
+fi
+
+apt_base_args=(
+  -o "Acquire::Retries=${apt_retries}"
+  -o "Acquire::ForceIPv4=true"
+  -o "Acquire::http::Timeout=20"
+  -o "Acquire::https::Timeout=20"
+)
+
+active_archive_mirror=""
+active_security_mirror=""
+fallback_applied=0
+
+trim_trailing_slash() {
+  local value="$1"
+  while [ "${value%/}" != "$value" ]; do
+    value="${value%/}"
+  done
+  printf '%s\n' "$value"
+}
+
+apt_retry() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  while true; do
+    if "$@"; then
+      return 0
     fi
-    mk-build-deps -i -r -t "apt-get -y --no-install-recommends"
-    debuild -b -us -uc
-    cp -a ../*.deb /build/
-  '
+
+    if [ "$attempt" -ge "$apt_retries" ]; then
+      echo "APT command failed after ${attempt} attempts: ${description}" >&2
+      return 1
+    fi
+
+    echo "APT command failed (${description}), retrying (${attempt}/${apt_retries})..." >&2
+    sleep $((attempt * 10))
+    attempt=$((attempt + 1))
+  done
+}
+
+configure_apt_proxy() {
+  if [ -z "${RSYSLOG_APT_PROXY:-}" ]; then
+    return 0
+  fi
+
+  local proxy
+  proxy="$(trim_trailing_slash "$RSYSLOG_APT_PROXY")"
+  cat >/etc/apt/apt.conf.d/99rsyslog-proxy <<APTCONF
+Acquire::http::Proxy "${proxy}";
+Acquire::https::Proxy "${proxy}";
+APTCONF
+}
+
+configure_apt_sources() {
+  local suite="${UBUNTU_SUITE:?UBUNTU_SUITE missing}"
+  local archive_mirror security_mirror
+  archive_mirror="$1"
+  security_mirror="$2"
+
+  archive_mirror="$(trim_trailing_slash "$archive_mirror")"
+  security_mirror="$(trim_trailing_slash "$security_mirror")"
+  active_archive_mirror="$archive_mirror"
+  active_security_mirror="$security_mirror"
+
+  rm -f /etc/apt/sources.list.d/ubuntu.sources
+  cat >/etc/apt/sources.list <<APTSOURCES
+deb ${archive_mirror} ${suite} main restricted universe multiverse
+deb ${archive_mirror} ${suite}-updates main restricted universe multiverse
+deb ${archive_mirror} ${suite}-backports main restricted universe multiverse
+deb ${security_mirror} ${suite}-security main restricted universe multiverse
+APTSOURCES
+}
+
+primary_archive_mirror="$(trim_trailing_slash "${RSYSLOG_UBUNTU_ARCHIVE_MIRROR:-$default_archive_mirror}")"
+primary_security_mirror="$(trim_trailing_slash "${RSYSLOG_UBUNTU_SECURITY_MIRROR:-$default_security_mirror}")"
+fallback_archive_mirror="$(trim_trailing_slash "${RSYSLOG_UBUNTU_FALLBACK_MIRROR:-$default_fallback_mirror}")"
+fallback_security_mirror="$fallback_archive_mirror"
+
+configure_apt_proxy
+configure_apt_sources "$primary_archive_mirror" "$primary_security_mirror"
+
+switch_to_fallback_mirror() {
+  if [ "$fallback_applied" -eq 1 ]; then
+    return 1
+  fi
+
+  if [ "$active_archive_mirror" = "$fallback_archive_mirror" ] && [ "$active_security_mirror" = "$fallback_security_mirror" ]; then
+    return 1
+  fi
+
+  echo "Switching apt sources to fallback mirror: ${fallback_archive_mirror}" >&2
+  configure_apt_sources "$fallback_archive_mirror" "$fallback_security_mirror"
+  fallback_applied=1
+  return 0
+}
+
+apt_retry_with_fallback() {
+  local description="$1"
+  shift
+
+  if apt_retry "$description" "$@"; then
+    return 0
+  fi
+
+  if ! switch_to_fallback_mirror; then
+    return 1
+  fi
+
+  apt_retry "${description} (fallback mirror)" "$@"
+}
+
+apt_retry_with_fallback "apt-get update (base image)" apt-get "${apt_base_args[@]}" update
+apt_retry_with_fallback "install software-properties-common" \
+  apt-get "${apt_base_args[@]}" install -y --fix-missing software-properties-common
+add-apt-repository -y universe
+apt_retry "add adiscon ppa" add-apt-repository --yes ppa:adiscon/v8-stable
+apt_retry_with_fallback "apt-get update (with ppa)" apt-get "${apt_base_args[@]}" update
+apt_retry_with_fallback "install packaging dependencies" \
+  apt-get "${apt_base_args[@]}" install -y --fix-missing dpkg-dev devscripts build-essential fakeroot equivs flex wget
+
+# Build in container-local /tmp to avoid dpkg-deb "control directory has bad permissions 777"
+# when /build is a Windows/NTFS volume mount (Docker Desktop, WSL).
+mkdir -p /tmp/rsyslog-build
+for f in rsyslog_${VERSION}*.dsc rsyslog_${VERSION}*.orig.tar.gz rsyslog_${VERSION}*.debian.tar.*; do
+  [ -f "$f" ] && cp -a "$f" /tmp/rsyslog-build/
+done
+cd /tmp/rsyslog-build
+dpkg-source -x rsyslog_${VERSION}*.dsc
+SRCDIR="rsyslog-${VERSION}"
+test -d "$SRCDIR" || (echo "No rsyslog-${VERSION} directory"; ls -la; exit 1)
+cd "$SRCDIR"
+# Fix debhelper config file modes (chmod may not work on Windows host, so do it in container)
+chmod -x debian/clean debian/not-installed 2>/dev/null || true
+find debian -type f \( -name "*.dirs" -o -name "*.install.*" -o -name "*.docs" -o -name "*.examples" -o -name "*.config" -o -name "*.conf.template" -o -name "*.apparmor" -o -name "*.logrotate" -o -name "*.triggers" -o -name "*.maintscript" -o -name "*.logcheck.ignore.*" \) -exec chmod -x {} \;
+# Strip executable from plain *.install; keep it for dh-exec scripts (noble rsyslog.install)
+for f in $(find debian -type f -name "*.install"); do
+  if head -1 "$f" 2>/dev/null | grep -q "#!/usr/bin/dh-exec"; then
+    chmod +x "$f"
+  else
+    chmod -x "$f"
+  fi
+done
+# Re-fetch qpid-proton tarball in container to avoid corruption from Windows host mount
+if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/include-binaries; then
+  mkdir -p debian/qpid-proton
+  wget -q -O debian/qpid-proton/qpid-proton-0.40.0.tar.gz \
+    https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
+  (cd debian/qpid-proton && echo "3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz" | sha512sum -c -)
+fi
+apt_retry "mk-build-deps" \
+  mk-build-deps -i -r -t "apt-get ${apt_base_args[*]} -y --no-install-recommends --fix-missing"
+debuild -b -us -uc
+cp -a ../*.deb /build/
+EOF
 
 echo "== Built packages =="
 find . -maxdepth 2 -name "*.deb" -type f -exec ls -la {} \;
