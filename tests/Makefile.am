@@ -983,6 +983,9 @@ TESTS_IMDOCKER_VALGRIND = \
 TESTS_IMHTTP = \
 	imhttp-post-payload.sh \
 	imhttp-post-payload-basic-auth.sh \
+	imhttp-post-payload-api-key-auth.sh \
+	imhttp-post-payload-auth-header-limits.sh \
+	imhttp-post-payload-mixed-auth.sh \
 	imhttp-post-payload-query-params.sh \
 	imhttp-post-payload-large.sh \
 	imhttp-post-payload-multi.sh \
@@ -991,6 +994,8 @@ TESTS_IMHTTP = \
 	imhttp-getrequest-file.sh \
 	imhttp-healthcheck.sh \
 	imhttp-metrics.sh \
+	imhttp-healthcheck-api-key-auth.sh \
+	imhttp-metrics-api-key-auth.sh \
 	imhttp_ratelimit_name.sh
 
 TESTS_IMHTTP_VALGRIND = \
@@ -1237,6 +1242,10 @@ TESTS_OMSTDOUT = \
 TESTS_LIBYAML_IMTCP = \
 	config-translate-rs-roundtrip.sh \
 	config-translate-yaml-roundtrip.sh
+
+TESTS_LIBYAML_IMHTTP = \
+	yaml-imhttp-apikeyfile.sh \
+	yaml-imhttp-metrics-apikeyfile.sh
 
 TESTS_LIBYAML_OMSTDOUT = \
 	config-translate-legacy-warning.sh
@@ -1761,6 +1770,7 @@ EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
+EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
 EXTRA_DIST += $(TESTS_IMTCP_YAML)
@@ -2141,6 +2151,9 @@ endif # ENABLE_INOTIFY
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
 endif # ENABLE_IMTCP_TESTS
+if ENABLE_IMHTTP
+TESTS += $(TESTS_LIBYAML_IMHTTP)
+endif # ENABLE_IMHTTP
 if ENABLE_OMSTDOUT
 TESTS += $(TESTS_LIBYAML_OMSTDOUT)
 endif # ENABLE_OMSTDOUT
@@ -3101,6 +3114,7 @@ EXTRA_DIST += \
 	testsuites/action-tx-errfile.result \
 	improg-multiline-test.py \
 	testsuites/imhttp-large-data.txt \
+	testsuites/imhttp-apikeys.txt \
 	testsuites/docroot/file.txt \
 	testsuites/htpasswd \
 	omhttp_server.py \

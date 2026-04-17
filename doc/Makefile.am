@@ -528,6 +528,12 @@ EXTRA_DIST = \
     source/reference/parameters/imgssapi-inputgssserverpermitplaintcp.rst \
     source/reference/parameters/imgssapi-inputgssserverrun.rst \
     source/reference/parameters/imgssapi-inputgssserverservicename.rst \
+    source/reference/parameters/imhttp-apikeyfile.rst \
+    source/reference/parameters/imhttp-basicauthfile.rst \
+    source/reference/parameters/imhttp-healthcheckapikeyfile.rst \
+    source/reference/parameters/imhttp-healthcheckbasicauthfile.rst \
+    source/reference/parameters/imhttp-metricsapikeyfile.rst \
+    source/reference/parameters/imhttp-metricsbasicauthfile.rst \
     source/reference/parameters/imhttp-ratelimit-name.rst \
     source/reference/parameters/imjournal-defaultfacility.rst \
     source/reference/parameters/imjournal-defaultseverity.rst \
