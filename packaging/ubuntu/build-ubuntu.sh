@@ -193,6 +193,7 @@ apt_base_args=(
 active_archive_mirror=""
 active_security_mirror=""
 fallback_applied=0
+explicit_primary_mirror_config=0
 
 trim_trailing_slash() {
   local value="$1"
@@ -261,10 +262,18 @@ primary_security_mirror="$(trim_trailing_slash "${RSYSLOG_UBUNTU_SECURITY_MIRROR
 fallback_archive_mirror="$(trim_trailing_slash "${RSYSLOG_UBUNTU_FALLBACK_MIRROR:-$default_fallback_mirror}")"
 fallback_security_mirror="$fallback_archive_mirror"
 
+if [ -n "${RSYSLOG_UBUNTU_ARCHIVE_MIRROR:-}" ] || [ -n "${RSYSLOG_UBUNTU_SECURITY_MIRROR:-}" ]; then
+  explicit_primary_mirror_config=1
+fi
+
 configure_apt_proxy
 configure_apt_sources "$primary_archive_mirror" "$primary_security_mirror"
 
 switch_to_fallback_mirror() {
+  if [ "$explicit_primary_mirror_config" -eq 1 ]; then
+    return 1
+  fi
+
   if [ "$fallback_applied" -eq 1 ]; then
     return 1
   fi
