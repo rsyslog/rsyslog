@@ -537,17 +537,43 @@ solaris) GSSLIB=gss ;;
 *)       GSSLIB=gssapi_krb5 ;;
 esac
 
+gssapi_found=no
+GSS_CFLAGS=""
+GSS_LIBS=""
 if test $enable_gssapi_krb5 = yes; then
-	AC_CHECK_LIB($GSSLIB, gss_acquire_cred, [
-		AC_CHECK_HEADER(gssapi/gssapi.h, [
-			AC_DEFINE(USE_GSSAPI,,
-				  Define if you want to use GSSAPI)
-			GSS_LIBS="-l$GSSLIB"
-			AC_SUBST(GSS_LIBS)
-		])
-	])
+	AC_CHECK_HEADER(gssapi/gssapi.h, [
+		if test "x$PKG_CONFIG" != "xno" && $PKG_CONFIG --exists krb5-gssapi; then
+			GSS_CFLAGS=`$PKG_CONFIG --cflags krb5-gssapi`
+			GSS_LIBS=`$PKG_CONFIG --libs krb5-gssapi`
+			gssapi_found=yes
+		else
+			save_LIBS="$LIBS"
+			LIBS="-l$GSSLIB $LIBS"
+			AC_LINK_IFELSE(
+				[AC_LANG_PROGRAM(
+					[[#include <gssapi/gssapi.h>]],
+					[[OM_uint32 maj = 0, min = 0; gss_cred_id_t cred = GSS_C_NO_CREDENTIAL;
+					  return gss_acquire_cred(&min, GSS_C_NO_NAME, 0, GSS_C_NULL_OID_SET,
+						GSS_C_ACCEPT, &cred, 0, 0) == maj;]]
+				)],
+				[
+					GSS_LIBS="-l$GSSLIB"
+					gssapi_found=yes
+				]
+			)
+			LIBS="$save_LIBS"
+		fi
+	], [])
+	if test "x$gssapi_found" = "xyes"; then
+		AC_DEFINE(USE_GSSAPI,,
+			  Define if you want to use GSSAPI)
+	else
+		AC_MSG_ERROR([--enable-gssapi-krb5 requested, but usable GSSAPI headers/libraries were not found])
+	fi
 fi
-AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
+AC_SUBST(GSS_CFLAGS)
+AC_SUBST(GSS_LIBS)
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$gssapi_found = xyes)
 
 
 # shall the testbench try to run test that require root permissions?

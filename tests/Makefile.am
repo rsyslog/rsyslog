@@ -17,6 +17,13 @@ EXTRA_DIST = \
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
+TESTS_GSSAPI = \
+	imgssapi-listen-port-file.sh \
+	imgssapi-maxsessions.sh
+TESTS_GSSAPI_LIBYAML = \
+	imgssapi-yaml-include-listen-port-file.sh
+EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
+
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
@@ -1963,6 +1970,18 @@ runtime_unit_linkedlist_SOURCES = \
 runtime_unit_stringbuf_SOURCES = \
 	unit/stringbuf_test.c
 
+if ENABLE_GSSAPI
+check_PROGRAMS += runtime_unit_gss_token_util
+TESTS += runtime_unit_gss_token_util
+
+runtime_unit_gss_token_util_SOURCES = \
+	unit/gss_token_util_test.c
+
+runtime_unit_gss_token_util_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_gss_token_util_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
+
 runtime_unit_linkedlist_CPPFLAGS = \
 	-DSD_EXPORT_SYMBOLS \
 	-D_PATH_MODDIR=\"$(pkglibdir)/\" \
@@ -2005,6 +2024,13 @@ check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS)
+
+if ENABLE_GSSAPI
+TESTS += $(TESTS_GSSAPI)
+if HAVE_LIBYAML
+TESTS += $(TESTS_GSSAPI_LIBYAML)
+endif # HAVE_LIBYAML
+endif
 
 
 

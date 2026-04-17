@@ -51,6 +51,7 @@
     #include "cfsysline.h"
     #include "module-template.h"
     #include "gss-misc.h"
+    #include "gss-token-util.h"
     #include "tcpclt.h"
     #include "glbl.h"
     #include "errmsg.h"
@@ -253,7 +254,7 @@ static rsRetVal TCPSendGSSInit(void *pvData) {
 
         if (maj_stat == GSS_S_CONTINUE_NEEDED) {
             dbgprintf("GSS-API Continue needed...\n");
-            if (gssutil.recv_token(s, &in_tok) <= 0) {
+            if (gssutil.recv_token(s, &in_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES) <= 0) {
                 goto fail;
             }
             tok_ptr = &in_tok;

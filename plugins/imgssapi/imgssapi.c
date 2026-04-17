@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #if HAVE_FCNTL_H
@@ -52,6 +53,7 @@
 #include "net.h"
 #include "srUtils.h"
 #include "gss-misc.h"
+#include "gss-token-util.h"
 #include "tcpsrv.h"
 #include "tcps_sess.h"
 #include "errmsg.h"
@@ -184,16 +186,60 @@ static int isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsr
 }
 
 
+static rsRetVal getAllowedMethodsForSess(tcps_sess_t *pSess, gsssrv_t *pGSrv, char *pAllowedMethods) {
+    DEFiRet;
+    int fdSess;
+    struct sockaddr_storage peerAddr;
+    socklen_t peerAddrLen;
+    uchar *pszPeer = NULL;
+    int lenPeer = 0;
+    char allowedMethods = 0;
+
+    assert(pSess != NULL);
+    assert(pGSrv != NULL);
+    assert(pAllowedMethods != NULL);
+
+    peerAddrLen = sizeof(peerAddr);
+    CHKiRet(netstrm.GetSock(pSess->pStrm, &fdSess));
+    if (getpeername(fdSess, (struct sockaddr *)&peerAddr, &peerAddrLen) != 0) {
+        LogError(errno, RS_RET_ERR, "imgssapi: could not determine peer address during session accept");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    prop.GetString(pSess->fromHost, &pszPeer, &lenPeer);
+    if ((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
+        net.isAllowedSender2((uchar *)"TCP", (struct sockaddr *)&peerAddr, (char *)pszPeer, 1))
+        allowedMethods |= ALLOWEDMETHOD_TCP;
+    if ((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
+        net.isAllowedSender2((uchar *)"GSS", (struct sockaddr *)&peerAddr, (char *)pszPeer, 1))
+        allowedMethods |= ALLOWEDMETHOD_GSS;
+
+    *pAllowedMethods = allowedMethods;
+
+finalize_it:
+    RETiRet;
+}
+
+
 static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess, ATTR_UNUSED char *connInfo) {
     DEFiRet;
+    char allowedMethods;
     gsssrv_t *pGSrv;
+    gss_sess_t *pGSess;
 
     pGSrv = (gsssrv_t *)pThis->pUsr;
+    pGSess = (gss_sess_t *)pSess->pUsr;
+    assert(pGSess != NULL);
 
-    if (pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
+    CHKiRet(getAllowedMethodsForSess(pSess, pGSrv, &allowedMethods));
+    if (allowedMethods == 0) ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
+    pGSess->allowedMethods = allowedMethods;
+
+    if (allowedMethods & ALLOWEDMETHOD_GSS) {
         iRet = OnSessAcceptGSS(pThis, pSess);
     }
 
+finalize_it:
     RETiRet;
 }
 
@@ -334,10 +380,15 @@ static rsRetVal actGSSListener(uchar *port) {
     CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
     CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
     CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, cnf_params, UCHAR_CONSTANT("imgssapi")));
+    CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, 1));
     CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
+    CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
     CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
     cnf_params->pszPort = port;
     cnf_params->bSuppOctetFram = 1;
+    if (pszLstnPortFileName != NULL) {
+        CHKmalloc(cnf_params->pszLstnPortFileName = ustrdup(pszLstnPortFileName));
+    }
     tcpsrv.configureTCPListen(pOurTcpsrv, cnf_params);
     CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
     cnf_params = NULL;
@@ -385,16 +436,16 @@ static int TCPSessGSSInit(void) {
 /* returns 0 if all went OK, -1 if it failed
  * tries to guess if the connection uses gssapi.
  */
-static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
+static rsRetVal OnSessAcceptGSS(ATTR_UNUSED tcpsrv_t *pThis, tcps_sess_t *pSess) {
     DEFiRet;
-    gss_buffer_desc send_tok, recv_tok;
+    gss_buffer_desc send_tok = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc recv_tok = GSS_C_EMPTY_BUFFER;
     gss_name_t client;
     OM_uint32 maj_stat, min_stat, acc_sec_min_stat;
     gss_ctx_id_t *context;
     OM_uint32 *sess_flags;
     int fdSess;
     char allowedMethods;
-    gsssrv_t *pGSrv;
     gss_sess_t *pGSess;
     uchar *pszPeer = NULL;
     int lenPeer = 0;
@@ -402,9 +453,8 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
 
     assert(pSess != NULL);
 
-    pGSrv = (gsssrv_t *)pThis->pUsr;
     pGSess = (gss_sess_t *)pSess->pUsr;
-    allowedMethods = pGSrv->allowedMethods;
+    allowedMethods = pGSess->allowedMethods;
     if (allowedMethods & ALLOWEDMETHOD_GSS) {
         int ret = 0;
         const size_t bufsize = glbl.GetMaxLine(runConf);
@@ -416,7 +466,7 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
 
         CHKiRet(netstrm.GetSock(pSess->pStrm, &fdSess));  // TODO: method access!
         if (allowedMethods & ALLOWEDMETHOD_TCP) {
-            int len;
+            size_t hinted_len = 0;
             struct timeval tv;
 #ifdef USE_UNLIMITED_SELECT
             fd_set *pFds = malloc(glbl.GetFdSetSize());
@@ -485,8 +535,8 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
             }
 
             /* TODO: how does this work together with IPv6? Does it? */
-            len = ntohl((buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]);
-            if ((ret - 4) < len || len == 0) {
+            if (gssTokenDecodeLength((unsigned char *)buf, SIZE_MAX, &hinted_len) != RS_RET_OK ||
+                (size_t)(ret - 4) < hinted_len || hinted_len == 0) {
                 dbgprintf("GSS-API Reverting to plain TCP from %s\n", (char *)pszPeer);
                 pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
                 ABORT_FINALIZE(RS_RET_OK);  // TODO: define good error codes
@@ -499,7 +549,7 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
         *context = GSS_C_NO_CONTEXT;
         sess_flags = &pGSess->gss_flags;
         do {
-            if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
+            if (gssutil.recv_token(fdSess, &recv_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES) <= 0) {
                 LogError(0, NO_ERRCODE,
                          "TCP session %p from %s will be "
                          "closed, error ignored\n",
@@ -516,20 +566,6 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
             if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CONTINUE_NEEDED) {
                 gss_release_buffer(&min_stat, &send_tok);
                 if (*context != GSS_C_NO_CONTEXT) gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-                if ((allowedMethods & ALLOWEDMETHOD_TCP) && (GSS_ROUTINE_ERROR(maj_stat) == GSS_S_DEFECTIVE_TOKEN)) {
-                    dbgprintf("GSS-API Reverting to plain TCP from %s\n", (char *)pszPeer);
-                    dbgprintf("tcp session socket with new data: #%d\n", fdSess);
-                    if (tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
-                        LogError(0, NO_ERRCODE,
-                                 "Tearing down TCP "
-                                 "Session %p from %s - see previous messages "
-                                 "for reason(s)\n",
-                                 pSess, (char *)pszPeer);
-                        ABORT_FINALIZE(RS_RET_ERR);  // TODO: define good error codes
-                    }
-                    pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
-                    ABORT_FINALIZE(RS_RET_OK);  // TODO: define good error codes
-                }
                 gssutil.display_status((char *)"accepting context", maj_stat, acc_sec_min_stat);
                 ABORT_FINALIZE(RS_RET_ERR);  // TODO: define good error codes
             }
@@ -571,7 +607,8 @@ finalize_it:
  */
 rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLenRcvd) {
     DEFiRet;
-    gss_buffer_desc xmit_buf, msg_buf;
+    gss_buffer_desc xmit_buf = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc msg_buf = GSS_C_EMPTY_BUFFER;
     gss_ctx_id_t *context;
     OM_uint32 maj_stat, min_stat;
     int fdSess;
@@ -583,7 +620,7 @@ rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *
     pGSess = (gss_sess_t *)pSess->pUsr;
 
     netstrm.GetSock(pSess->pStrm, &fdSess);  // TODO: method access, CHKiRet!
-    if (gssutil.recv_token(fdSess, &xmit_buf) <= 0) ABORT_FINALIZE(RS_RET_GSS_ERR);
+    if (gssutil.recv_token(fdSess, &xmit_buf, gssTokenGetMessageLimit(buf_len)) <= 0) ABORT_FINALIZE(RS_RET_GSS_ERR);
 
     context = &pGSess->gss_context;
     maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf, &conf_state, (gss_qop_t *)NULL);
@@ -600,7 +637,14 @@ rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *
         xmit_buf.value = 0;
     }
 
-    *piLenRcvd = msg_buf.length < buf_len ? msg_buf.length : buf_len;
+    if (msg_buf.length > buf_len) {
+        LogError(0, NO_ERRCODE, "GSS-API message length %zu exceeds configured max message size %zu; closing session",
+                 (size_t)msg_buf.length, buf_len);
+        gss_release_buffer(&min_stat, &msg_buf);
+        ABORT_FINALIZE(RS_RET_GSS_ERR);
+    }
+
+    *piLenRcvd = msg_buf.length;
     memcpy(buf, msg_buf.value, *piLenRcvd);
     gss_release_buffer(&min_stat, &msg_buf);
 

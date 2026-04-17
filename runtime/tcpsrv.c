@@ -704,6 +704,7 @@ finalize_it:
 static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
                                           tcpLstnPortList_t *const pLstnInfo,
                                           tcps_sess_t **ppSess,
+                                          int *const piSessIdx,
                                           netstrm_t *pStrm,
                                           char *const connInfo) {
     DEFiRet;
@@ -721,6 +722,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pLstnInfo != NULL);
+    assert(piSessIdx != NULL);
 
     CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
@@ -815,9 +817,8 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     }
 
     *ppSess = pSess;
-#if !defined(ENABLE_IMTCP_EPOLL)
     pThis->pSessions[iSess] = pSess;
-#endif
+    *piSessIdx = iSess;
     pSess = NULL; /* this is now also handed over */
 
     if (pThis->bEmitMsgOnOpen) {
@@ -884,12 +885,11 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     pThis->pOnRegularClose(pSess);
 
     tcps_sess.Destruct(&pSess);
+    pThis->pSessions[pioDescr->id] = NULL;
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
     free(pioDescr);
-#else
-    pThis->pSessions[pioDescr->id] = NULL;
 #endif
     RETiRet;
 }
@@ -1103,12 +1103,13 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
     tcps_sess_t *pNewSess = NULL;
     tcpsrv_io_descr_t *pDescrNew = NULL;
     const int idx = pioDescr->id;
+    int iSess = -1;
     tcpsrv_t *const pThis = pioDescr->pSrv;
     char connInfo[TCPSRV_CONNINFO_SIZE] = "\0";
     DEFiRet;
 
     DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-    iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx], connInfo);
+    iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, &iSess, pThis->ppLstn[idx], connInfo);
     if (iRet == RS_RET_NO_MORE_DATA) {
         goto no_more_data;
     }
@@ -1118,7 +1119,7 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
         /* pDescrNew is only dyn allocated in epoll mode! */
         CHKmalloc(pDescrNew = (tcpsrv_io_descr_t *)calloc(1, sizeof(tcpsrv_io_descr_t)));
         pDescrNew->pSrv = pThis;
-        pDescrNew->id = idx;
+        pDescrNew->id = iSess;
         pDescrNew->isInError = 0;
         INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
         pDescrNew->ptrType = NSD_PTR_TYPE_SESS;

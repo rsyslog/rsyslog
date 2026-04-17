@@ -301,8 +301,8 @@ endif
 #
 if ENABLE_GSSAPI
 pkglib_LTLIBRARIES += lmgssutil.la
-lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
-lmgssutil_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmgssutil_la_SOURCES = gss-misc.c gss-misc.h gss-token-util.h
+lmgssutil_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(GSS_CFLAGS)
 lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(GSS_LIBS)
 endif
