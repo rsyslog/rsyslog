@@ -1,5 +1,13 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-17: imhttp: refactor to support additional auth methods
+  Feature-wise API key authentication was added. We may need other
+  authentication methods in the future, as such the module has been
+  generally refactored. This is also prep work for a future potential
+  mode where imhttp may accept request from Elastic Agent, with imhttp
+  acting as a mock ElasticSearch instance. This can be useful for projects
+  which want to do message enrichment and "drop noise" decisions before
+  this hits the backend.
 - 2026-04-15: omazuredce: add gzip request compression support
   Thanks to Jan Kängsepp for implementing the new module.
 - 2026-04-15: omelasticsearch fix: port detection for IPv6 server addresses
