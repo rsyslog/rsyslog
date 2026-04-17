@@ -297,7 +297,7 @@ apt_retry_with_fallback() {
 apt_retry_with_fallback "apt-get update (base image)" apt-get "${apt_base_args[@]}" update
 apt_retry_with_fallback "install software-properties-common" \
   apt-get "${apt_base_args[@]}" install -y --fix-missing software-properties-common
-add-apt-repository -y universe
+apt_retry "enable universe" add-apt-repository -y universe
 apt_retry "add adiscon ppa" add-apt-repository --yes ppa:adiscon/v8-stable
 apt_retry_with_fallback "apt-get update (with ppa)" apt-get "${apt_base_args[@]}" update
 apt_retry_with_fallback "install packaging dependencies" \
@@ -332,7 +332,7 @@ if [ -f debian/source/include-binaries ] && grep -q qpid-proton debian/source/in
     https://archive.apache.org/dist/qpid/proton/0.40.0/qpid-proton-0.40.0.tar.gz
   (cd debian/qpid-proton && echo "3e7fe56ca1423f45f71d81f5e1d6ec5f21c073cc580628e12a8dbd545a86805b7312834e0d1234dde43797633d575ed639f21a96239b217500cc0a824482aae3  qpid-proton-0.40.0.tar.gz" | sha512sum -c -)
 fi
-apt_retry "mk-build-deps" \
+apt_retry_with_fallback "mk-build-deps" \
   mk-build-deps -i -r -t "apt-get ${apt_base_args[*]} -y --no-install-recommends --fix-missing"
 debuild -b -us -uc
 cp -a ../*.deb /build/
