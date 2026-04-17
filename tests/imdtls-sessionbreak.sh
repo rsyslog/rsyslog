@@ -2,6 +2,7 @@
 # added 2020-04-10 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
+export DTLS_SESSIONBREAK_ROUNDS=${DTLS_SESSIONBREAK_ROUNDS:-16}
 export USE_VALGRIND="yes"
 # TODO remote leak check skip and fix memory leaks caused by session break
 export RS_TESTBENCH_LEAK_CHECK=no
@@ -38,9 +39,8 @@ ruleset(name="spool" queue.type="direct") {
 }
 '
 startup
-# How many tcpfloods we run at the same tiem
-for ((i=1;i<=10;i++)); do 
-        # How many times tcpflood runs in each threads
+# Stress repeated DTLS client churn to exercise session cleanup and fd reuse.
+for ((i=1;i<=DTLS_SESSIONBREAK_ROUNDS;i++)); do
 	./tcpflood -Tdtls -p$PORT_RCVR -m$NUMMESSAGES -W1000 -d102400 -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem -s &
 	tcpflood_pid=$!
 
@@ -49,7 +49,8 @@ for ((i=1;i<=10;i++)); do
 	# Give it time to actually connect
 	./msleep 1000;
 
-	kill -9 $tcpflood_pid # >/dev/null 2>&1;
+	kill -9 $tcpflood_pid >/dev/null 2>&1 || true
+	wait $tcpflood_pid >/dev/null 2>&1 || true
 	echo "killed tcpflood instance $i (PID $tcpflood_pid)"
 done;
 
