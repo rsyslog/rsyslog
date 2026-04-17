@@ -180,18 +180,32 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     DEFiRet;
     CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
     inst->next = NULL;
+    inst->prev = NULL;
 
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
+    inst->pInputName = NULL;
     inst->pBindRuleset = NULL;
     inst->bEnableLstn = 0;
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
     inst->CertVerifyDepth = 2;
+    inst->pszRcvBuf = NULL;
+    inst->lenRcvBuf = -1;
+    inst->ptrRcvBuf = 0;
+    inst->pNetOssl = NULL;
+    inst->nClients = 0;
+    inst->dtlsClients = NULL;
+    inst->sockfd = -1;
+    memset(&inst->server_addr, 0, sizeof(inst->server_addr));
+    inst->port = 0;
+    inst->id = 0;
+    inst->pThrd = NULL;
+    memset(&inst->tid, 0, sizeof(inst->tid));
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -221,9 +235,10 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
 
 static void DTLSCloseSocket(instanceConf_t *inst) {
     DBGPRINTF("imdtls: DTLSCloseSocket for %s:%d\n", inst->pszBindAddr, inst->port);
-    // Close UDP Socket
-    close(inst->sockfd);
-    inst->sockfd = 0;
+    if (inst->sockfd >= 0) {
+        close(inst->sockfd);
+        inst->sockfd = -1;
+    }
 }
 
 static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
@@ -249,7 +264,17 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
 
     // Set NON Blcoking Flags
     flags = fcntl(inst->sockfd, F_GETFL, 0);
-    fcntl(inst->sockfd, F_SETFL, flags | O_NONBLOCK);
+    if (flags < 0) {
+        LogError(errno, NO_ERRCODE, "imdtls: Unable to query listener socket flags, ignoring port %d bind-address %s.",
+                 inst->port, inst->pszBindAddr);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (fcntl(inst->sockfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        LogError(errno, NO_ERRCODE,
+                 "imdtls: Unable to set listener socket nonblocking mode, ignoring port %d bind-address %s.",
+                 inst->port, inst->pszBindAddr);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     // Convert IP Address into numeric
     if (inet_pton(AF_INET, (char *)inst->pszBindAddr, &ip_struct) <= 0) {
@@ -265,7 +290,7 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     memset(&inst->server_addr, 0, sizeof(struct sockaddr_in));
     inst->server_addr.sin_family = AF_INET;
     inst->server_addr.sin_port = htons(inst->port);
-    inst->server_addr.sin_addr.s_addr = htonl(ip_struct.s_addr);
+    inst->server_addr.sin_addr = ip_struct;
 
     // Bind UDP Socket
     if (bind(inst->sockfd, (struct sockaddr *)&inst->server_addr, sizeof(struct sockaddr_in)) < 0) {
@@ -277,6 +302,9 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        DTLSCloseSocket(inst);
+    }
     RETiRet;
 }
 
@@ -562,12 +590,12 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
 }
 
 static void DTLSHandleSessions(instanceConf_t *inst) {
-    int fdToIndex[MAX_DTLS_CLIENTS + 1];
+    int clientIdxByPollSlot[MAX_DTLS_CLIENTS + 1];
     struct pollfd fds[MAX_DTLS_CLIENTS + 1];
     int optval = 1;
     int fdcount = 0;
     int ret, err;
-    memset(fdToIndex, 0, sizeof(fdToIndex));
+    memset(clientIdxByPollSlot, -1, sizeof(clientIdxByPollSlot));
     memset(fds, 0, sizeof(fds));
     fds[0].fd = inst->sockfd;
     fds[0].events = POLLIN;
@@ -577,12 +605,16 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
         if (inst->dtlsClients[i]->sslClient != NULL) {
             int clientfd = -1;
-            fdcount++;
             BIO_get_fd(SSL_get_wbio(inst->dtlsClients[i]->sslClient), &clientfd);
+            if (clientfd < 0) {
+                DBGPRINTF("imdtls: skip client idx %d with invalid fd %d\n", i, clientfd);
+                continue;
+            }
+            fdcount++;
             DBGPRINTF("imdtls: DTLSHandleSessions handle client %d (%d)\n", fdcount, clientfd);
             fds[fdcount].fd = clientfd;
             fds[fdcount].events = POLLIN;
-            fdToIndex[clientfd] = i;  // Map fd to dtlsClients index
+            clientIdxByPollSlot[fdcount] = i;
         }
     }
 
@@ -600,7 +632,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     // Process pending Client Data first!
     DBGPRINTF("imdtls: DTLSHandleSessions handle client sockets (%d) \n", fdcount);
     for (int i = 1; i <= fdcount; ++i) {
-        DTLSReadClient(inst, fdToIndex[fds[i].fd], fds[i].revents);
+        if (clientIdxByPollSlot[i] >= 0) {
+            DTLSReadClient(inst, clientIdxByPollSlot[i], fds[i].revents);
+        }
     }
 
     // Check session timeouts
@@ -620,10 +654,19 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
 
         // Create BIO Object for potential new client
         BIO *sbio = BIO_new_dgram(inst->sockfd, BIO_NOCLOSE);
+        if (sbio == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS listener BIO");
+            return;
+        }
         BIO_ctrl(sbio, BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
 
         // Create SSL Object for new client and apply default callbacks
         SSL *ssl = SSL_new(inst->pNetOssl->ctx);
+        if (ssl == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS SSL object");
+            BIO_free(sbio);
+            return;
+        }
         SSL_set_bio(ssl, sbio, sbio);
         SSL_set_accept_state(ssl);
         if (inst->pNetOssl->authMode != OSSL_AUTH_CERTANON) {
@@ -645,6 +688,11 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
 
         // Connect the new Client
         BIO_ADDR *client_addr = BIO_ADDR_new();
+        if (client_addr == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS client address helper");
+            SSL_free(ssl);
+            return;
+        }
 
         // Start DTLS Listen and Session
         do {
@@ -657,7 +705,8 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     LogError(0, NO_ERRCODE,
                              "imdtls: DTLSHandleSessions unable to create"
                              " client socket");
-                    return;
+                    SSL_free(ssl);
+                    break;
                 }
                 setsockopt(clientfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
                 setsockopt(clientfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
@@ -668,7 +717,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                              " client socket"
                              " ignoring port %d bind-address %s.",
                              inst->port, inst->pszBindAddr);
-                    return;
+                    close(clientfd);
+                    SSL_free(ssl);
+                    break;
                 }
                 // Set new fd and set BIO to connected
                 BIO *rbio = SSL_get_rbio(ssl);
@@ -687,8 +738,10 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     DBGPRINTF("imdtls: DTLSHandleSessions BIO_connect ERROR %d\n", err);
                     net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING, "DTLSHandleSessions", "BIO_connect");
                     LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: BIO_connect failed for DTLS client");
+                    close(clientfd);
                     SSL_free(ssl);
                 } else {
+                    int addedClient = 0;
                     BIO_ctrl_set_connected(rbio, client_addr);
                     DBGPRINTF("imdtls: BIO_connect succeeded.\n");
 
@@ -699,8 +752,15 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                             inst->dtlsClients[i]->lastActivityTime = time(NULL);
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
+                            addedClient = 1;
                             break;
                         }
+                    }
+                    if (!addedClient) {
+                        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+                               "imdtls: maximum number of DTLS clients reached, dropping new client");
+                        close(clientfd);
+                        SSL_free(ssl);
                     }
                 }
                 break;

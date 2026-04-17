@@ -265,9 +265,9 @@ finalize_it:
 static rsRetVal addListner(instanceConf_t *inst) {
     DEFiRet;
     uchar *bindAddr;
-    int *newSocks;
-    int iSrc;
-    struct lstn_s *newlcnfinfo;
+    int *newSocks = NULL;
+    int iSrc = 1;
+    struct lstn_s *newlcnfinfo = NULL;
     uchar *bindName;
     uchar *port;
     uchar dispname[64], inpnameBuf[128];
@@ -381,8 +381,10 @@ finalize_it:
         }
         /* close the rest of the open sockets as there's
            nowhere to put them */
-        for (; iSrc <= newSocks[0]; iSrc++) {
-            close(newSocks[iSrc]);
+        if (newSocks != NULL) {
+            for (; iSrc <= newSocks[0]; iSrc++) {
+                close(newSocks[iSrc]);
+            }
         }
     }
 
@@ -902,7 +904,7 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
     DEFiRet;
 
     CHKiRet(createInstance(&inst));
-    inst->pszBindPort = (uchar *)es_str2cstr(port, NULL);
+    CHKmalloc(inst->pszBindPort = (uchar *)es_str2cstr(port, NULL));
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
@@ -914,7 +916,7 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
                          "parameter specified - only one can be used");
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
-            inst->inputname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->inputname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name.appendport")) {
             if (bAppendPortUsed) {
                 LogError(0, RS_RET_INVALID_PARAMS,
@@ -934,7 +936,7 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
                          "parameter specified - only one can be used");
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
-            inst->inputname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->inputname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
             LogError(0, RS_RET_DEPRECATED,
                      "imudp: deprecated parameter inputname.appendport "
@@ -948,19 +950,19 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
             bAppendPortUsed = 1;
             inst->bAppendPortToInpname = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
-            inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "device")) {
-            inst->pszBindDevice = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindDevice = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
             const uint64_t val = pvals[i].val.d.n;
             if (val > 1024 * 1024 * 1024) {
@@ -1019,7 +1021,7 @@ BEGINnewInpInst
     portIdx = cnfparamGetIdx(&inppblk, "port");
     assert(portIdx != -1);
     for (i = 0; i < pvals[portIdx].val.d.ar->nmemb; ++i) {
-        createListner(pvals[portIdx].val.d.ar->arr[i], pvals);
+        CHKiRet(createListner(pvals[portIdx].val.d.ar->arr[i], pvals));
     }
 
 finalize_it:
