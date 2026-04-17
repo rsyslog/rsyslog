@@ -1,5 +1,6 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+- 2026-04-17: overall hardening of components
 - 2026-04-17: imhttp: refactor to support additional auth methods
   Feature-wise API key authentication was added. We may need other
   authentication methods in the future, as such the module has been
