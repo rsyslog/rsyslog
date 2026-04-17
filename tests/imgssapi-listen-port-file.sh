@@ -23,6 +23,7 @@ add_conf '
 template(name="outfmt" type="string" string="%msg%\n")
 module(load="../plugins/imgssapi/.libs/imgssapi")
 $InputGSSServerPermitPlainTCP on
+$InputGSSServerTokenIOTimeout 10
 $InputGSSListenPortFileName '$RSYSLOG_DYNNAME'.gss_port
 $InputGSSServerRun 0
 action(type="omfile" file="'$RSYSLOG_DYNNAME'.msgs.log" template="outfmt")

@@ -62,6 +62,7 @@ MODULE_TYPE_NOKEEP;
 
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
+static rsRetVal setGSSTokenIOTimeout(void *pVal, int timeout_secs);
 
 /* internal structures
  */
@@ -96,7 +97,8 @@ static struct configSettings_s {
     uchar *pszTplName; /* name of the default template to use */
     char *gss_base_service_name;
     gss_mode_t gss_mode;
-} cs;
+    int gss_token_io_timeout_secs;
+} cs = {NULL, NULL, GSSMODE_ENC, GSS_TOKEN_IO_TIMEOUT_SECS};
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -254,7 +256,8 @@ static rsRetVal TCPSendGSSInit(void *pvData) {
 
         if (maj_stat == GSS_S_CONTINUE_NEEDED) {
             dbgprintf("GSS-API Continue needed...\n");
-            if (gssutil.recv_token(s, &in_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES) <= 0) {
+            if (gssutil.recv_token(s, &in_tok, GSS_TOKEN_MAX_HANDSHAKE_BYTES,
+                                   (unsigned int)cs.gss_token_io_timeout_secs) <= 0) {
                 goto fail;
             }
             tok_ptr = &in_tok;
@@ -674,10 +677,22 @@ static rsRetVal setGSSMode(void __attribute__((unused)) * pVal, uchar *mode) {
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
     cs.gss_mode = GSSMODE_ENC;
+    cs.gss_token_io_timeout_secs = GSS_TOKEN_IO_TIMEOUT_SECS;
     free(cs.gss_base_service_name);
     cs.gss_base_service_name = NULL;
     free(cs.pszTplName);
     cs.pszTplName = NULL;
+    return RS_RET_OK;
+}
+
+
+static rsRetVal setGSSTokenIOTimeout(void __attribute__((unused)) * pVal, int timeout_secs) {
+    if (timeout_secs < 0) {
+        LogError(0, RS_RET_PARAM_ERROR, "omgssapi: $GssTokenIOTimeout must be greater than or equal to 0");
+        return RS_RET_PARAM_ERROR;
+    }
+
+    cs.gss_token_io_timeout_secs = timeout_secs;
     return RS_RET_OK;
 }
 
@@ -693,6 +708,8 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(
         omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &cs.gss_mode, STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr((uchar *)"gsstokeniotimeout", 0, eCmdHdlrInt, setGSSTokenIOTimeout, NULL,
+                               STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"actiongssforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &cs.pszTplName,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
