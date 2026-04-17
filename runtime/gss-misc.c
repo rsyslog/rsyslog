@@ -99,6 +99,7 @@ static ssize_t read_all(int fd, char *buf, size_t nbyte, time_t deadline) {
     ssize_t ret;
     char *ptr;
     struct timeval tv;
+    struct timeval *ptv;
 #ifdef USE_UNLIMITED_SELECT
     fd_set *pRfds = malloc(glbl.GetFdSetSize());
 
@@ -108,7 +109,7 @@ static ssize_t read_all(int fd, char *buf, size_t nbyte, time_t deadline) {
     fd_set *pRfds = &rfds;
 #endif
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+    for (ptr = buf; nbyte;) {
         if (deadline != 0) {
             const time_t now = time(NULL);
             if (now == (time_t)-1 || now >= deadline) {
@@ -116,13 +117,16 @@ static ssize_t read_all(int fd, char *buf, size_t nbyte, time_t deadline) {
                 freeFdSet(pRfds);
                 return -1;
             }
+            tv.tv_sec = 1;
+            tv.tv_usec = 0;
+            ptv = &tv;
+        } else {
+            ptv = NULL;
         }
         FD_ZERO(pRfds);
         FD_SET(fd, pRfds);
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
 
-        ret = select(fd + 1, pRfds, NULL, NULL, &tv);
+        ret = select(fd + 1, pRfds, NULL, NULL, ptv);
         if (ret < 0) {
             if (errno == EINTR) continue;
             freeFdSet(pRfds);
@@ -143,6 +147,8 @@ static ssize_t read_all(int fd, char *buf, size_t nbyte, time_t deadline) {
             freeFdSet(pRfds);
             return (ptr - buf);
         }
+        ptr += ret;
+        nbyte -= ret;
     }
 
     freeFdSet(pRfds);
@@ -154,7 +160,7 @@ static int write_all(int fd, char *buf, unsigned int nbyte) {
     int ret;
     char *ptr;
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+    for (ptr = buf; nbyte;) {
         ret = send(fd, ptr, nbyte, 0);
         if (ret < 0) {
             if (errno == EINTR) continue;
@@ -162,6 +168,8 @@ static int write_all(int fd, char *buf, unsigned int nbyte) {
         } else if (ret == 0) {
             return (ptr - buf);
         }
+        ptr += ret;
+        nbyte -= ret;
     }
 
     return (ptr - buf);
