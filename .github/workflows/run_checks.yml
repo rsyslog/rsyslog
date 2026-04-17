@@ -384,6 +384,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev lintian wget
 
       - name: Build Ubuntu package
+        env:
+          RSYSLOG_APT_PROXY: ${{ vars.RSYSLOG_APT_PROXY }}
+          RSYSLOG_UBUNTU_ARCHIVE_MIRROR: ${{ vars.RSYSLOG_UBUNTU_ARCHIVE_MIRROR }}
+          RSYSLOG_UBUNTU_SECURITY_MIRROR: ${{ vars.RSYSLOG_UBUNTU_SECURITY_MIRROR }}
+          RSYSLOG_APT_RETRIES: ${{ vars.RSYSLOG_APT_RETRIES }}
         run: bash devtools/run-deb-ubuntu-build.sh ${{ matrix.suite }}
 
       - name: List built packages
