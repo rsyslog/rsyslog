@@ -262,9 +262,8 @@ void insertNodeAfter(redisNode *root, redisNode *elem);
 void dbgPrintNode(redisNode *node);
 
 
-static rsRetVal
-copyStreamIndexText(char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context)
-{
+static rsRetVal copyStreamIndexText(
+    char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context) {
     DEFiRet;
 
     assert(dst != NULL);

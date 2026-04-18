@@ -1734,13 +1734,20 @@ BEGINrunInput
     docker_cont_log_instances_t *pInstances = NULL;
     pthread_t thrd_id; /* the worker's thread ID */
     pthread_attr_t thrd_attr;
+    CURLcode curlRet;
+    int curl_initialized = 0;
     int get_containers_thread_initialized = 0;
     time_t now;
     CODESTARTrunInput;
     datetime.GetTime(&now);
 
     CHKiRet(ratelimitNew(&ratelimiter, "imdocker", NULL));
-    curl_global_init(CURL_GLOBAL_ALL);
+    curlRet = curl_global_init(CURL_GLOBAL_ALL);
+    if (curlRet != CURLE_OK) {
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "imdocker: curl_global_init failed: %s", curl_easy_strerror(curlRet));
+        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    }
+    curl_initialized = 1;
     localRet = dockerContLogReqsNew(&pInstances);
     if (localRet != RS_RET_OK) {
         return localRet;
@@ -1771,8 +1778,12 @@ finalize_it:
     if (pInstances) {
         dockerContLogReqsDestruct(pInstances);
     }
+    if (curl_initialized) {
+        curl_global_cleanup();
+    }
     if (ratelimiter) {
         ratelimitDestruct(ratelimiter);
+        ratelimiter = NULL;
     }
 ENDrunInput
 
