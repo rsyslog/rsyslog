@@ -646,6 +646,7 @@ BEGINnewInpInst
             }
 #endif
             else {
+                /* Config parsing should never accept unknown socktypes; fail closed if it does. */
                 LogError(0, RS_RET_CONFIG_ERROR, "imczmq: invalid socktype '%s'", stringType);
                 free(stringType);
                 ABORT_FINALIZE(RS_RET_CONFIG_ERROR);

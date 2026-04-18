@@ -1046,6 +1046,7 @@ TESTS_OMRABBITMQ_VALGRIND = \
 	omrabbitmq_data_1server-vg.sh
 
 TESTS_IMHIREDIS = \
+	imhiredis-stream-readfrom-too-long.sh \
 	imhiredis-queue.sh \
 	imhiredis-queue-lpop.sh \
 	imhiredis-redis-restart.sh \
