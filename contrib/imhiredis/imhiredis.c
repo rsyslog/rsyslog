@@ -251,8 +251,6 @@ rsRetVal ackStreamIndex(instanceConf_t *inst, uchar *stream, uchar *group, uchar
 static rsRetVal enqueueRedisStreamReply(instanceConf_t *const inst, redisReply *reply);
 static rsRetVal handleRedisXREADReply(instanceConf_t *const inst, const redisReply *reply);
 static rsRetVal handleRedisXAUTOCLAIMReply(instanceConf_t *const inst, const redisReply *reply, char **autoclaimIndex);
-static rsRetVal copyStreamIndexText(
-    char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context);
 rsRetVal redisStreamRead(instanceConf_t *inst);
 rsRetVal redisSubscribe(instanceConf_t *inst);
 void workerLoop(struct imhiredisWrkrInfo_s *me);
@@ -262,6 +260,29 @@ rsRetVal copyNode(redisNode *src, redisNode **dst);
 redisNode *freeNode(redisNode *node);
 void insertNodeAfter(redisNode *root, redisNode *elem);
 void dbgPrintNode(redisNode *node);
+
+
+static rsRetVal
+copyStreamIndexText(char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context)
+{
+    DEFiRet;
+
+    assert(dst != NULL);
+    assert(src != NULL);
+    assert(context != NULL);
+
+    if (srcLen >= dstSize) {
+        LogError(0, err, "imhiredis: %s exceeds maximum supported stream index length of %zu bytes", context,
+                 dstSize - 1);
+        ABORT_FINALIZE(err);
+    }
+
+    memcpy(dst, src, srcLen);
+    dst[srcLen] = '\0';
+
+finalize_it:
+    RETiRet;
+}
 
 
 /* create input instance, set default parameters, and
@@ -1005,27 +1026,6 @@ static struct json_object *_redisParseDoubleReply(const redisReply *reply) {
 
 static struct json_object *_redisParseStringReply(const redisReply *reply) {
     return json_object_new_string_len(reply->str, reply->len);
-}
-
-static rsRetVal copyStreamIndexText(
-    char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context) {
-    DEFiRet;
-
-    assert(dst != NULL);
-    assert(src != NULL);
-    assert(context != NULL);
-
-    if (srcLen >= dstSize) {
-        LogError(0, err, "imhiredis: %s exceeds maximum supported stream index length of %zu bytes", context,
-                 dstSize - 1);
-        ABORT_FINALIZE(err);
-    }
-
-    memcpy(dst, src, srcLen);
-    dst[srcLen] = '\0';
-
-finalize_it:
-    RETiRet;
 }
 
 static struct json_object *_redisParseArrayReply(const redisReply *reply) {
