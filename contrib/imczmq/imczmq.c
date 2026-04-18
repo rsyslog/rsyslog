@@ -90,6 +90,7 @@ struct listener_t {
 static zlist_t *listenerList;
 static modConfData_t *runModConf = NULL;
 static prop_t *s_namep = NULL;
+enum { IMCZMQ_MAX_TOPIC_LEN = 255 };
 
 static struct cnfparamdescr inppdescr[] = {
     {"endpoints", eCmdHdlrGetWord, 1},
@@ -111,6 +112,34 @@ static void setDefaults(instanceConf_t *iconf) {
     iconf->pBindRuleset = NULL;
     iconf->next = NULL;
 };
+
+static rsRetVal validateTopics(const char *topics) {
+    DEFiRet;
+    const char *cursor;
+
+    if (topics == NULL) {
+        FINALIZE;
+    }
+
+    for (cursor = topics; *cursor != '\0';) {
+        const char *delimiter = strchr(cursor, ',');
+        const size_t topic_len = (delimiter == NULL) ? strlen(cursor) : (size_t)(delimiter - cursor);
+
+        if (topic_len > IMCZMQ_MAX_TOPIC_LEN) {
+            LogError(0, RS_RET_PARAM_ERROR, "imczmq: configured topic exceeds maximum supported length of %u bytes",
+                     (unsigned)IMCZMQ_MAX_TOPIC_LEN);
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        }
+
+        if (delimiter == NULL) {
+            break;
+        }
+        cursor = delimiter + 1;
+    }
+
+finalize_it:
+    RETiRet;
+}
 
 /**
  * @brief Allocate a new listener configuration block.
@@ -228,20 +257,22 @@ static rsRetVal addListener(instanceConf_t *iconf) {
     }
 
     if (iconf->topics) {
+        const char *topic_cursor = iconf->topics;
         // A zero-length topic means subscribe to everything
-        if (!*iconf->topics && iconf->sockType == ZMQ_SUB) {
+        if (!*topic_cursor && iconf->sockType == ZMQ_SUB) {
             DBGPRINTF("imczmq: subscribing to all topics\n");
             zsock_set_subscribe(pData->sock, "");
         }
 
-        char topic[256];
-        while (*iconf->topics) {
-            char *delimiter = strchr(iconf->topics, ',');
+        char topic[IMCZMQ_MAX_TOPIC_LEN + 1];
+        while (*topic_cursor) {
+            const char *delimiter = strchr(topic_cursor, ',');
+            const size_t topic_len = (delimiter == NULL) ? strlen(topic_cursor) : (size_t)(delimiter - topic_cursor);
             if (!delimiter) {
-                delimiter = iconf->topics + strlen(iconf->topics);
+                delimiter = topic_cursor + topic_len;
             }
-            memcpy(topic, iconf->topics, delimiter - iconf->topics);
-            topic[delimiter - iconf->topics] = 0;
+            memcpy(topic, topic_cursor, topic_len);
+            topic[topic_len] = 0;
             DBGPRINTF("imczmq: subscribing to %s\n", topic);
             if (iconf->sockType == ZMQ_SUB) {
                 zsock_set_subscribe(pData->sock, topic);
@@ -259,7 +290,7 @@ static rsRetVal addListener(instanceConf_t *iconf) {
             if (*delimiter == 0) {
                 break;
             }
-            iconf->topics = delimiter + 1;
+            topic_cursor = delimiter + 1;
         }
     }
 
@@ -541,6 +572,7 @@ BEGINfreeCnf
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->pszBindRuleset);
         free(inst->sockEndpoints);
+        free(inst->topics);
         inst_r = inst;
         inst = inst->next;
         free(inst_r);
@@ -575,11 +607,12 @@ BEGINnewInpInst
         }
 
         if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "endpoints")) {
-            inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "topics")) {
-            inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKiRet(validateTopics(inst->topics));
         } else if (!strcmp(inppblk.descr[i].name, "socktype")) {
             char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
             if (NULL == stringType) {
@@ -612,6 +645,11 @@ BEGINnewInpInst
                 inst->sockType = ZMQ_SERVER;
             }
 #endif
+            else {
+                LogError(0, RS_RET_CONFIG_ERROR, "imczmq: invalid socktype '%s'", stringType);
+                free(stringType);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
             free(stringType);
 
         } else {

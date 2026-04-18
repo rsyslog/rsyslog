@@ -993,6 +993,9 @@ TESTS_IMDOCKER_VALGRIND = \
 	imdocker-new-logs-from-start-vg.sh \
 	imdocker-multi-line-vg.sh
 
+TESTS_IMCZMQ = \
+	imczmq-topic-too-long.sh
+
 TESTS_IMHTTP = \
 	imhttp-post-payload.sh \
 	imhttp-post-payload-basic-auth.sh \
@@ -1839,6 +1842,7 @@ EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
+EXTRA_DIST += $(TESTS_IMCZMQ)
 EXTRA_DIST += $(TESTS_IMHTTP)
 EXTRA_DIST += $(TESTS_IMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_OMRABBITMQ)
@@ -2534,6 +2538,11 @@ endif # HAVE_VALGRIND
 endif # ENABLE_IMDOCKER_TESTS
 endif # ENABLE_IMDOCKER
 
+
+
+if ENABLE_IMCZMQ
+TESTS += $(TESTS_IMCZMQ)
+endif # ENABLE_IMCZMQ
 
 
 if ENABLE_IMHTTP
