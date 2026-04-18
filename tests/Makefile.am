@@ -983,6 +983,7 @@ TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
 	imdocker-long-logline.sh \
+	imdocker-long-options.sh \
 	imdocker-new-logs-from-start.sh \
 	imdocker-multi-line.sh
 
