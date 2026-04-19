@@ -3187,15 +3187,8 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     }
 
     int lentmpQIFName;
-#ifdef _AIX
-    lentmpQIFName = strlen(pThis->pszQIFNam) + strlen(".tmp") + 1;
-    tmpQIFName = malloc(sizeof(char) * lentmpQIFName);
-    if (tmpQIFName == NULL) tmpQIFName = (char *)pThis->pszQIFNam;
-    snprintf(tmpQIFName, lentmpQIFName, "%s.tmp", pThis->pszQIFNam);
-#else
     lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
     if (tmpQIFName == NULL) tmpQIFName = (char *)pThis->pszQIFNam;
-#endif
 
     CHKiRet(strm.Construct(&psQIF));
     CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));

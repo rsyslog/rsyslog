@@ -56,13 +56,13 @@ static void usage(void) {
 static void genMsg(char *buf, const int sev, const int iRun) {
     switch (fmt) {
         case FMT_NATIVE:
-            sprintf(buf, "test message nbr %d, severity=%d", iRun, sev);
+            snprintf(buf, 4096, "test message nbr %d, severity=%d", iRun, sev);
             break;
         case FMT_SYSLOG_INJECT_L:
-            sprintf(buf, "test\n");
+            snprintf(buf, 4096, "%s", "test\n");
             break;
         case FMT_SYSLOG_INJECT_C:
-            sprintf(buf, "test 1\t2");
+            snprintf(buf, 4096, "%s", "test 1\t2");
             break;
     }
 }

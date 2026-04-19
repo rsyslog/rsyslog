@@ -404,8 +404,13 @@ static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, st
         struct json_object *const jval = json_object_new_string(ri->http_headers[i].value);
         CHKmalloc(jval);
         /* truncate header names bigger than INIT_SCRATCH_BUF_SIZE */
-        strncpy(connWrkr->pScratchBuf, ri->http_headers[i].name, connWrkr->scratchBufSize - 1);
-        connWrkr->pScratchBuf[connWrkr->scratchBufSize - 1] = '\0';
+        if (connWrkr->scratchBufSize > 0) {
+            const size_t header_name_len = strlen(ri->http_headers[i].name);
+            const size_t copy_len =
+                header_name_len < connWrkr->scratchBufSize - 1 ? header_name_len : connWrkr->scratchBufSize - 1;
+            memcpy(connWrkr->pScratchBuf, ri->http_headers[i].name, copy_len);
+            connWrkr->pScratchBuf[copy_len] = '\0';
+        }
         /* make header lowercase */
         char *pname = connWrkr->pScratchBuf;
         while (pname && *pname != '\0') {
@@ -429,8 +434,12 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
     const struct mg_request_info *ri = connWrkr->pri;
 
     if (ri && ri->query_string) {
-        strncpy(connWrkr->pScratchBuf, ri->query_string, connWrkr->scratchBufSize - 1);
-        connWrkr->pScratchBuf[connWrkr->scratchBufSize - 1] = '\0';
+        if (connWrkr->scratchBufSize > 0) {
+            const size_t query_len = strlen(ri->query_string);
+            const size_t copy_len = query_len < connWrkr->scratchBufSize - 1 ? query_len : connWrkr->scratchBufSize - 1;
+            memcpy(connWrkr->pScratchBuf, ri->query_string, copy_len);
+            connWrkr->pScratchBuf[copy_len] = '\0';
+        }
         char *pquery_str = connWrkr->pScratchBuf;
         if (pquery_str) {
             CHKmalloc(json = json_object_new_object());

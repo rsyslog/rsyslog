@@ -386,7 +386,7 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     CHKmalloc(pEntry = (tcpLstnPortList_t *)calloc(1, sizeof(tcpLstnPortList_t)));
     pEntry->cnf_params = cnf_params;
 
-    strcpy((char *)pEntry->cnf_params->dfltTZ, (char *)pThis->dfltTZ);
+    u_cstr_copy(pEntry->cnf_params->dfltTZ, pThis->dfltTZ, sizeof(pEntry->cnf_params->dfltTZ));
     pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
     pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
     pEntry->pSrv = pThis;
@@ -2016,8 +2016,7 @@ static rsRetVal ATTR_NONNULL(1) SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSiz
 static rsRetVal ATTR_NONNULL(1) SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    strncpy((char *)pThis->dfltTZ, (char *)tz, sizeof(pThis->dfltTZ));
-    pThis->dfltTZ[sizeof(pThis->dfltTZ) - 1] = '\0';
+    u_cstr_copy(pThis->dfltTZ, tz, sizeof(pThis->dfltTZ));
     RETiRet;
 }
 

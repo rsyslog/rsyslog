@@ -52,6 +52,11 @@ typedef struct cstr_s {
     size_t iStrLen; /**< length of the string in characters. */
 } cstr_t;
 
+typedef struct rs_cstr_part_s {
+    const uchar *ptr;
+    size_t len;
+} rs_cstr_part_t;
+
 
 /**
  * Construct an empty counted string.
@@ -129,6 +134,7 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar *psz);
  * The object remains non-finalized after this call.
  */
 rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar *psz, size_t iStrLen);
+rsRetVal rsCStrAppendParts(cstr_t *pThis, const rs_cstr_part_t *parts, size_t count);
 
 /**
  * Append a printf-style formated string to the buffer.

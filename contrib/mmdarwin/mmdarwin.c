@@ -32,6 +32,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "parserif.h"
+#include "unicode-helper.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,7 +159,7 @@ static rsRetVal openSocket(wrkrInstanceData_t *pWrkrData) {
 
     memset(&pWrkrData->addr, 0, sizeof(struct sockaddr_un));
     pWrkrData->addr.sun_family = AF_UNIX;
-    strncpy(pWrkrData->addr.sun_path, (char *)pWrkrData->pData->pSockName, sizeof(pWrkrData->addr.sun_path) - 1);
+    rs_cstr_copy(pWrkrData->addr.sun_path, (const char *)pWrkrData->pData->pSockName, sizeof(pWrkrData->addr.sun_path));
 
     DBGPRINTF("mmdarwin::openSocket:: connecting to Darwin...\n");
 

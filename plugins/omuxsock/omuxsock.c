@@ -494,7 +494,7 @@ static rsRetVal openSocket(instanceData *pData) {
      * Note destination is all \0 initially, so a non-abstract name is properly terminated,
      * and an abstract name doesn't care what follows (and may consume the entire sun_path).
      */
-    strncpy(pData->addr.sun_path + pData->bAbstract, (char *)pData->sockName, nameLen);
+    memcpy(pData->addr.sun_path + pData->bAbstract, pData->sockName, nameLen);
 
     /*
      * Note that connect is legal even for non-connected sockets, and the parameters so passed

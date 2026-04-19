@@ -533,7 +533,7 @@ void readConfFile(FILE *const fp, es_str_t **str) {
         ++lineno;
         if (bWriteLineno) {
             bWriteLineno = 0;
-            lenBuf = sprintf(buf, "PreprocFileLineNumber(%d)\n", lineno);
+            lenBuf = snprintf(buf, sizeof(buf), "PreprocFileLineNumber(%d)\n", lineno);
             es_addBuf(str, buf, lenBuf);
         }
         len = strlen(ln);
@@ -2633,8 +2633,10 @@ static void ATTR_NONNULL() doFunct_FormatTime(struct cnffunc *__restrict__ const
         ret->d.estr = es_newStr(0);
     } else {
         if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
-            strncpy(result, str, resMax);
-            result[resMax - 1] = '\0';
+            const size_t src_len = strlen(str);
+            const size_t copy_len = src_len < (size_t)(resMax - 1) ? src_len : (size_t)(resMax - 1);
+            memcpy(result, str, copy_len);
+            result[copy_len] = '\0';
         }
         ret->d.estr = es_newStrFromCStr(result, strlen(result));
     }
@@ -5718,7 +5720,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     if (result == GLOB_NOSPACE || result == GLOB_ABORTED) {
         if (optional == 0) {
             rs_strerror_r(errno, errStr, sizeof(errStr));
-            if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+            if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
             parser_errmsg(
                 "error accessing config file or directory '%s' "
                 "[cwd:%s]: %s",
@@ -5738,7 +5740,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
         if (lstat(cfgFile, &linkInfo) != 0) {
             if (optional == 0) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
                 parser_errmsg(
                     "error accessing config file or directory '%s' "
                     "[cwd: %s]: %s",
@@ -5753,7 +5755,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
             if (stat(cfgFile, &fileInfo) != 0) {
                 if (optional == 0) {
                     rs_strerror_r(errno, errStr, sizeof(errStr));
-                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
                     parser_errmsg(
                         "error accessing config file or directory '%s' "
                         "[cwd: %s]: %s",

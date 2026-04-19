@@ -912,8 +912,11 @@ static uchar *ATTR_NONNULL(1, 2)
     if (strchr((const char *)pbucket->name, '/') != NULL) {
         /* Basic path traversal protection - bucket names should not contain slashes */
         char sanitized_name[MAXFNAME];
-        strncpy(sanitized_name, (const char *)pbucket->name, sizeof(sanitized_name) - 1);
-        sanitized_name[sizeof(sanitized_name) - 1] = '\0';
+        const size_t bucket_name_len = strlen((const char *)pbucket->name);
+        const size_t name_len =
+            bucket_name_len < sizeof(sanitized_name) - 1 ? bucket_name_len : sizeof(sanitized_name) - 1;
+        memcpy(sanitized_name, pbucket->name, name_len);
+        sanitized_name[name_len] = '\0';
         for (char *p = sanitized_name; *p; p++) {
             if (*p == '/') *p = '_';
         }

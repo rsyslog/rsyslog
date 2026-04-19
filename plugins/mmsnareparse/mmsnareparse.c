@@ -779,7 +779,7 @@ static char *trim_whitespace_enhanced(const char *input) {
     char *result = malloc(new_len + 1);
     if (result == NULL) return NULL;
 
-    strncpy(result, start, new_len);
+    memcpy(result, start, new_len);
     result[new_len] = '\0';
 
     return result;
@@ -4574,7 +4574,7 @@ static char *extract_channel_from_raw_msg(const char *rawMsg) {
                 size_t channelLen = channelEnd - channelStart;
                 char *channelBuf = malloc(channelLen + 1);
                 if (channelBuf != NULL) {
-                    strncpy(channelBuf, channelStart, channelLen);
+                    memcpy(channelBuf, channelStart, channelLen);
                     channelBuf[channelLen] = '\0';
                     return channelBuf;
                 }

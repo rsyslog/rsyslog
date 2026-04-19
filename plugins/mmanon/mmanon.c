@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <netinet/in.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -38,6 +39,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "parserif.h"
+#include "unicode-helper.h"
 #include "hashtable.h"
 #include <pthread.h>
 
@@ -1007,7 +1009,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         CurrentCharPtr = current->ips.ip_low;
     }
     if (CurrentCharPtr[0] != '\0') {
-        strcpy(address, CurrentCharPtr);
+        rs_cstr_copy(address, CurrentCharPtr, sizeof(current->ips.ip_high));
     } else {
         if (pWrkrData->pData->ipv4.randConsisUnique && pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs == NULL) {
             CHKmalloc(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs =
@@ -1059,7 +1061,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
             uniqueKey = NULL;
         }
 
-        strcpy(address, CurrentCharPtr);
+        rs_cstr_copy(address, CurrentCharPtr, sizeof(current->ips.ip_high));
     }
 finalize_it:
     if (locked) {
@@ -1153,7 +1155,7 @@ static void anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
         assert(iplen < sizeof(address));
         getip(*msg + offset, iplen, address);
         offset += iplen;
-        strcpy(caddress, address);
+        rs_cstr_copy(caddress, address, sizeof(caddress));
         process_IPv4(caddress, pWrkrData);
         caddresslen = strlen(caddress);
         *hasChanged = 1;
@@ -1546,7 +1548,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     char *val = (char *)(hashtable_search(randConsisIPs, num));
 
     if (val != NULL) {
-        strcpy(address, val);
+        rs_cstr_copy(address, val, INET6_ADDRSTRLEN);
     } else {
         CHKmalloc(hashKey = (struct ipv6_int *)malloc(sizeof(struct ipv6_int)));
         *hashKey = original;

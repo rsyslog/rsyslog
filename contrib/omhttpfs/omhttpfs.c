@@ -405,18 +405,15 @@ static rsRetVal httpfs_parse_exception(char* buf, int length, httpfs_json_remote
 
     json_object_object_get_ex(json, "javaClassName", &jobj);
     str = json_object_get_string(jobj);
-    strncpy(jre->class, str, sizeof(jre->class));
-    jre->class[sizeof(jre->class) - 1] = '\0';
+    rs_cstr_copy(jre->class, str, sizeof(jre->class));
 
     json_object_object_get_ex(json, "exception", &jobj);
     str = json_object_get_string(jobj);
-    strncpy(jre->exception, str, sizeof(jre->exception));
-    jre->exception[sizeof(jre->exception) - 1] = '\0';
+    rs_cstr_copy(jre->exception, str, sizeof(jre->exception));
 
     json_object_object_get_ex(json, "message", &jobj);
     str = json_object_get_string(jobj);
-    strncpy(jre->message, str, sizeof(jre->message));
-    jre->message[sizeof(jre->message) - 1] = '\0';
+    rs_cstr_copy(jre->message, str, sizeof(jre->message));
 
 finalize_it:
     if (jt != NULL) json_tokener_free(jt);

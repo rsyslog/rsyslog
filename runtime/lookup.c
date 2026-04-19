@@ -1130,11 +1130,10 @@ rsRetVal lookupTableDefProcessCnf(struct cnfobj *o) {
         ABORT_FINALIZE(iRet);
     }
 #ifdef HAVE_PTHREAD_SETNAME_NP
-    thd_name_len = ustrlen(lu_name) + strlen(reloader_prefix) + 1;
-    CHKmalloc(reloader_thd_name = malloc(thd_name_len));
-    strcpy(reloader_thd_name, reloader_prefix);
-    strcpy(reloader_thd_name + strlen(reloader_prefix), (char *)lu_name);
-    reloader_thd_name[thd_name_len - 1] = '\0';
+    thd_name_len = asprintf(&reloader_thd_name, "%s%s", reloader_prefix, (char *)lu_name);
+    if (thd_name_len < 0) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     #if defined(__NetBSD__)
     pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
     #elif defined(__APPLE__)

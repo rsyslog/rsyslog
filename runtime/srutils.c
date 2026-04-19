@@ -50,6 +50,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "rsconf.h"
+#include "unicode-helper.h"
 
 #if _POSIX_TIMERS <= 0
     #include <sys/time.h>
@@ -563,13 +564,16 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #ifndef HAVE_STRERROR_R
     char *pszErr;
     pszErr = strerror(errnum);
-    snprintf(buf, buflen, "%s", pszErr);
+    if (buflen > 0) {
+        rs_cstr_copy(buf, pszErr, buflen);
+    }
 #else
     #ifdef STRERROR_R_CHAR_P
     char *p = strerror_r(errnum, buf, buflen);
     if (p != buf) {
-        strncpy(buf, p, buflen);
-        buf[buflen - 1] = '\0';
+        if (buflen > 0) {
+            rs_cstr_copy(buf, p, buflen);
+        }
     }
     #else
     strerror_r(errnum, buf, buflen);
@@ -600,8 +604,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab) {
         }
         return (int)val;
     }
-    strncpy((char *)buf, (char *)name, 79);
-    buf[sizeof(buf) - 1] = '\0';
+    u_cstr_copy(buf, name, sizeof(buf));
     for (p = buf; *p; p++) {
         if (isupper((int)*p)) *p = tolower((int)*p);
     }

@@ -140,7 +140,8 @@ void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int 
     va_start(ap, fmt);
     lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
     if (lenBuf < 0) {
-        strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
+        memcpy(buf, "error message lost due to problem with vsnprintf",
+               sizeof("error message lost due to problem with vsnprintf"));
     }
     va_end(ap);
     buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
@@ -167,7 +168,8 @@ void __attribute__((format(printf, 4, 5))) LogMsg(
     va_start(ap, fmt);
     lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
     if (lenBuf < 0) {
-        strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
+        memcpy(buf, "error message lost due to problem with vsnprintf",
+               sizeof("error message lost due to problem with vsnprintf"));
     }
     va_end(ap);
     buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */

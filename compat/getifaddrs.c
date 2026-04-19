@@ -179,8 +179,12 @@ retry:
         }
 
         /* Prepare for the ioctl call */
-        (void)strncpy(ifrl.ifr_name, ifrp->ifr_name, sizeof(ifrl.ifr_name));
-        (void)strncpy(ifrl6.ifr_name, ifrp->ifr_name, sizeof(ifrl.ifr_name));
+        const char *name_end = memchr(ifrp->ifr_name, '\0', sizeof(ifrl.ifr_name));
+        size_t name_len = name_end == NULL ? sizeof(ifrl.ifr_name) : (size_t)(name_end - ifrp->ifr_name);
+        memset(ifrl.ifr_name, 0, sizeof(ifrl.ifr_name));
+        memset(ifrl6.ifr_name, 0, sizeof(ifrl6.ifr_name));
+        memcpy(ifrl.ifr_name, ifrp->ifr_name, name_len);
+        memcpy(ifrl6.ifr_name, ifrp->ifr_name, name_len);
         ifr_af = ifrp->ifr_addr.sa_family;
 
         if (ifr_af != AF_INET && ifr_af != AF_INET6) goto next;
@@ -352,7 +356,10 @@ retry:
     *ifap = NULL;
     for (n = 0; n < numifs; n++, lifrp++) {
         /* Prepare for the ioctl call */
-        (void)strncpy(lifrl.lifr_name, lifrp->lifr_name, sizeof(lifrl.lifr_name));
+        const char *name_end = memchr(lifrp->lifr_name, '\0', sizeof(lifrl.lifr_name));
+        size_t name_len = name_end == NULL ? sizeof(lifrl.lifr_name) : (size_t)(name_end - lifrp->lifr_name);
+        memset(lifrl.lifr_name, 0, sizeof(lifrl.lifr_name));
+        memcpy(lifrl.lifr_name, lifrp->lifr_name, name_len);
         lifr_af = lifrp->lifr_addr.ss_family;
         if (af != AF_UNSPEC && lifr_af != af) continue;
 

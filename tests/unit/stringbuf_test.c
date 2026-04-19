@@ -9,6 +9,7 @@
 #include "obj.h"
 #include "srUtils.h"
 #include "stringbuf.h"
+#include "unicode-helper.h"
 
 #define CHECK(cond)                                                                  \
     do {                                                                             \
@@ -40,6 +41,94 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv) {
  * need to manage dependency files for sources outside tests/ during distcheck.
  */
 #include "../../runtime/stringbuf.c"
+#include "../../compat/asprintf.c"
+
+static int test_append_parts(void) {
+    cstr_t *str = NULL;
+    uchar *buf = NULL;
+    const rs_cstr_part_t parts[] = {
+        {(const uchar *)"alpha", strlen("alpha")},
+        {(const uchar *)"", 0},
+        {(const uchar *)"-", 1},
+        {(const uchar *)"beta", strlen("beta")},
+    };
+
+    CHECK(rsCStrConstruct(&str) == RS_RET_OK);
+    CHECK(rsCStrAppendParts(str, parts, sizeof(parts) / sizeof(parts[0])) == RS_RET_OK);
+    cstrFinalize(str);
+    CHECK(cstrConvSzStrAndDestruct(&str, &buf, 0) == RS_RET_OK);
+    CHECK(strcmp((char *)buf, "alpha-beta") == 0);
+    free(buf);
+
+    CHECK(rsCStrConstruct(&str) == RS_RET_OK);
+    CHECK(rsCStrAppendParts(str, NULL, 0) == RS_RET_OK);
+    cstrFinalize(str);
+    CHECK(cstrConvSzStrAndDestruct(&str, &buf, 0) == RS_RET_OK);
+    CHECK(strcmp((char *)buf, "") == 0);
+    free(buf);
+
+    return 0;
+}
+
+static int test_vasprintf_helper(char **buf, const char *fmt, ...)
+#if defined(__GNUC__)
+    __attribute__((format(printf, 2, 3)))
+#endif
+    ;
+
+static int test_vasprintf_helper(char **buf, const char *fmt, ...) {
+    va_list ap;
+    int ret;
+
+    va_start(ap, fmt);
+    ret = vasprintf(buf, fmt, ap);
+    va_end(ap);
+
+    return ret;
+}
+
+static int test_asprintf_compat(void) {
+    char *buf = NULL;
+
+    CHECK(asprintf(&buf, "%s:%d", "value", 42) == (int)strlen("value:42"));
+    CHECK(strcmp(buf, "value:42") == 0);
+    free(buf);
+    buf = NULL;
+
+    CHECK(test_vasprintf_helper(&buf, "%s/%s", "left", "right") == (int)strlen("left/right"));
+    CHECK(strcmp(buf, "left/right") == 0);
+    free(buf);
+
+    return 0;
+}
+
+static int test_cstr_copy_helper(void) {
+    char dst[5];
+    char raw_src[5] = {'a', 'b', 'c', 'd', 'e'};
+    uchar udst[4];
+    uchar uraw_src[4] = {'x', 'y', 'z', 'w'};
+
+    CHECK(rs_cstr_copy(dst, "hi", sizeof(dst)) == 2);
+    CHECK(strcmp(dst, "hi") == 0);
+
+    CHECK(rs_cstr_copy(dst, "abcdef", sizeof(dst)) == sizeof(dst) - 1);
+    CHECK(strcmp(dst, "abcd") == 0);
+
+    CHECK(rs_cstr_copy(dst, raw_src, sizeof(dst)) == sizeof(dst) - 1);
+    CHECK(memcmp(dst, "abcd", sizeof(dst) - 1) == 0);
+    CHECK(dst[sizeof(dst) - 1] == '\0');
+
+    CHECK(u_cstr_copy(udst, (const uchar *)"ok", sizeof(udst)) == 2);
+    CHECK(strcmp((char *)udst, "ok") == 0);
+
+    CHECK(u_cstr_copy(udst, uraw_src, sizeof(udst)) == sizeof(udst) - 1);
+    CHECK(memcmp(udst, "xyz", sizeof(udst) - 1) == 0);
+    CHECK(udst[sizeof(udst) - 1] == '\0');
+
+    CHECK(rs_cstr_copy(dst, "ignored", 0) == 0);
+
+    return 0;
+}
 
 static int test_empty_finalize_and_getsz(void) {
     cstr_t *str = NULL;
@@ -153,6 +242,9 @@ int main(void) {
         {"locate_in_szstr_basic_cases", test_locate_in_szstr_basic_cases},
         {"locate_in_szstr_needle_longer_than_haystack", test_locate_in_szstr_needle_longer_than_haystack},
         {"prefix_suffix_helpers", test_prefix_suffix_helpers},
+        {"append_parts", test_append_parts},
+        {"asprintf_compat", test_asprintf_compat},
+        {"cstr_copy_helper", test_cstr_copy_helper},
     };
     size_t i;
 
