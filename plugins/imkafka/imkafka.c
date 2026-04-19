@@ -878,6 +878,8 @@ finalize_it:
 static rsRetVal ATTR_NONNULL()
     processKafkaParam(char *const param, const char **const name, const char **const paramval) {
     DEFiRet;
+    char *tmpName = NULL;
+    char *tmpVal = NULL;
     char *val = strstr(param, "=");
     if (val == NULL) {
         LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in parameter '%s'", param);
@@ -885,9 +887,15 @@ static rsRetVal ATTR_NONNULL()
     }
     *val = '\0'; /* terminates name */
     ++val; /* now points to begin of value */
-    CHKmalloc(*name = strdup(param));
-    CHKmalloc(*paramval = strdup(val));
+    CHKmalloc(tmpName = strdup(param));
+    CHKmalloc(tmpVal = strdup(val));
+    *name = tmpName;
+    *paramval = tmpVal;
+    tmpName = NULL;
+    tmpVal = NULL;
 finalize_it:
+    free(tmpName);
+    free(tmpVal);
     RETiRet;
 }
 
@@ -916,22 +924,23 @@ BEGINnewInpInst
                 es_addStr(&es, pvals[i].val.d.ar->arr[j]);
                 bNeedComma = 1;
             }
-            inst->brokers = es_str2cstr(es, NULL);
+            CHKmalloc(inst->brokers = es_str2cstr(es, NULL));
             es_deleteStr(es);
         } else if (!strcmp(inppblk.descr[i].name, "confparam")) {
             inst->nConfParams = pvals[i].val.d.ar->nmemb;
             CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params) * inst->nConfParams));
             for (int j = 0; j < inst->nConfParams; j++) {
-                char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                char *cstr = NULL;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 CHKiRet(processKafkaParam(cstr, &inst->confParams[j].name, &inst->confParams[j].val));
                 free(cstr);
             }
         } else if (!strcmp(inppblk.descr[i].name, "topic")) {
-            inst->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "consumergroup")) {
-            inst->consumergroup = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->consumergroup = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "parsehostname")) {
             if (pvals[i].val.d.n) {
                 inst->nMsgParsingFlags = NEEDS_PARSING | PARSE_HOSTNAME;
@@ -979,7 +988,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "ruleset")) {
-            loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf("imkafka: program error, non-handled param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
         }
@@ -1092,9 +1101,15 @@ static void shutdownKafkaWorkers(void) {
     kafkaWrkrInfo = NULL;
 
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        if (inst->rk == NULL) {
+            continue;
+        }
         DBGPRINTF("imkafka: stop consuming %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
         rd_kafka_consumer_close(inst->rk); /* Close the consumer, committing final offsets, etc. */
         rd_kafka_destroy(inst->rk); /* Destroy handle object */
+        inst->rk = NULL;
+        inst->bIsConnected = 0;
+        inst->bIsSubscribed = 0;
         DBGPRINTF("imkafka: stopped consuming %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
 #if RD_KAFKA_VERSION < 0x00090001
         /* Wait for kafka being destroyed in old API */
@@ -1110,23 +1125,24 @@ static void shutdownKafkaWorkers(void) {
 /* This function is called to gather input. */
 BEGINrunInput
     int i;
+    int workerSlots = 0;
     instanceConf_t *inst;
     CODESTARTrunInput;
     DBGPRINTF("imkafka: runInput loop started ...\n");
     activeKafkaworkers = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->rk != NULL) {
-            ++activeKafkaworkers;
+            ++workerSlots;
         }
     }
-    if (activeKafkaworkers == 0) {
+    if (workerSlots == 0) {
         LogError(
             0, RS_RET_ERR,
             "imkafka: no active inputs, input not run - other additional error messages should've given previously");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    DBGPRINTF("imkafka: Starting %d imkafka workerthreads\n", activeKafkaworkers);
-    kafkaWrkrInfo = calloc(activeKafkaworkers, sizeof(struct kafkaWrkrInfo_s));
+    DBGPRINTF("imkafka: Starting %d imkafka workerthreads\n", workerSlots);
+    kafkaWrkrInfo = calloc(workerSlots, sizeof(struct kafkaWrkrInfo_s));
     if (kafkaWrkrInfo == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "imkafka: worker-info array allocation failed.");
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1134,11 +1150,21 @@ BEGINrunInput
     /* Start worker threads for each imkafka input source */
     i = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        if (inst->rk == NULL) {
+            continue;
+        }
         /* init worker info structure! */
         kafkaWrkrInfo[i].inst = inst; /* Set reference pointer */
-        pthread_create(&kafkaWrkrInfo[i].tid, &wrkrThrdAttr, imkafkawrkr, &(kafkaWrkrInfo[i]));
+        int r = pthread_create(&kafkaWrkrInfo[i].tid, &wrkrThrdAttr, imkafkawrkr, &(kafkaWrkrInfo[i]));
+        if (r != 0) {
+            activeKafkaworkers = i;
+            LogError(r, RS_RET_ERR, "imkafka: failed to start worker thread %d", i);
+            shutdownKafkaWorkers();
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
         i++;
     }
+    activeKafkaworkers = i;
     while (glbl.GetGlobalInputTermState() == 0) {
         /* Note: the additional 10000ns wait is vitally important. It guards rsyslog
          * against totally hogging the CPU if the users selects a polling interval

@@ -983,6 +983,7 @@ TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
 	imdocker-long-logline.sh \
+	imdocker-long-options.sh \
 	imdocker-new-logs-from-start.sh \
 	imdocker-multi-line.sh
 
@@ -992,6 +993,9 @@ TESTS_IMDOCKER_VALGRIND = \
 	imdocker-long-logline-vg.sh \
 	imdocker-new-logs-from-start-vg.sh \
 	imdocker-multi-line-vg.sh
+
+TESTS_IMCZMQ = \
+	imczmq-topic-too-long.sh
 
 TESTS_IMHTTP = \
 	imhttp-post-payload.sh \
@@ -1043,6 +1047,7 @@ TESTS_OMRABBITMQ_VALGRIND = \
 	omrabbitmq_data_1server-vg.sh
 
 TESTS_IMHIREDIS = \
+	imhiredis-stream-readfrom-too-long.sh \
 	imhiredis-queue.sh \
 	imhiredis-queue-lpop.sh \
 	imhiredis-redis-restart.sh \
@@ -1839,6 +1844,7 @@ EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
+EXTRA_DIST += $(TESTS_IMCZMQ)
 EXTRA_DIST += $(TESTS_IMHTTP)
 EXTRA_DIST += $(TESTS_IMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_OMRABBITMQ)
@@ -2534,6 +2540,11 @@ endif # HAVE_VALGRIND
 endif # ENABLE_IMDOCKER_TESTS
 endif # ENABLE_IMDOCKER
 
+
+
+if ENABLE_IMCZMQ
+TESTS += $(TESTS_IMCZMQ)
+endif # ENABLE_IMCZMQ
 
 
 if ENABLE_IMHTTP

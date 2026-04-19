@@ -34,6 +34,7 @@ RUN 	apt-get update && \
 	libcap-ng0 \
 	libcurl4-gnutls-dev \
 	libdbi-dev \
+	libevent-dev \
 	libgcrypt20-dev \
 	libglib2.0-dev \
 	libgnutls28-dev \
