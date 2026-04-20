@@ -767,7 +767,7 @@ finalize_it:
 static void varResetState(var_t *pVar) {
     rsCStrDestruct(&pVar->pcsName); /* no longer needed */
     if (pVar->varType == VARTYPE_STR) {
-        if (pVar->val.pStr != NULL) rsCStrDestruct(&pVar->val.pStr);
+        rsCStrDestruct(&pVar->val.pStr);
     }
     memset(&pVar->val, 0, sizeof(pVar->val));
     pVar->varType = VARTYPE_NONE;
