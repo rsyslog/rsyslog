@@ -1369,7 +1369,9 @@ TESTS_MMDBLOOKUP = \
     mmdb.sh \
     mmdb-space.sh \
     mmdb-container.sh \
-    mmdb-container-empty.sh
+    mmdb-container-empty.sh \
+    mmdb-compound.sh \
+    mmdb-multilevel.sh
 
 TESTS_MMDBLOOKUP_VALGRIND = \
     mmdb-vg.sh \
@@ -3068,6 +3070,7 @@ EXTRA_DIST += \
 	mmdb.rb \
 	test.mmdb \
 	with_space.mmdb \
+	GeoIP2-City-Test.mmdb \
 	testsuites/es.yml \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
