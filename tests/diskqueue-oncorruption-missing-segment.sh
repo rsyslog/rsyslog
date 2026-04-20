@@ -28,7 +28,7 @@ main_queue(
 )
 
 	template(name="outfmt" type="string" string="%msg:F,58:2%\\n")
-	template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`)
+	template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 
 :omtesting:sleep 0 20000
 if ($msg contains "msgnum:") then {
