@@ -650,6 +650,9 @@ finalize_it:
      * the deconstruct method of var might free unallocated memory
      */
     if (iRet != RS_RET_OK && iRet != RS_RET_NO_PROPLINE) {
+        if (pProp->varType == VARTYPE_STR && step < 4) {
+            pProp->val.pStr = NULL;
+        }
         if (step <= 2) {
             pProp->varType = VARTYPE_NONE;
         }
@@ -761,6 +764,18 @@ finalize_it:
 }
 
 
+static void
+varResetState(var_t *pVar)
+{
+    rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+    if (pVar->varType == VARTYPE_STR) {
+        if (pVar->val.pStr != NULL) rsCStrDestruct(&pVar->val.pStr);
+    }
+    memset(&pVar->val, 0, sizeof(pVar->val));
+    pVar->varType = VARTYPE_NONE;
+}
+
+
 /* De-serialize the properties of an object. This includes processing
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
@@ -778,11 +793,7 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)
     iRet = objDeserializeProperty(pVar, pStrm);
     while (iRet == RS_RET_OK) {
         CHKiRet(objSetProperty(pObj, pVar));
-        /* re-init var object - TODO: method of var! */
-        rsCStrDestruct(&pVar->pcsName); /* no longer needed */
-        if (pVar->varType == VARTYPE_STR) {
-            if (pVar->val.pStr != NULL) rsCStrDestruct(&pVar->val.pStr);
-        }
+        varResetState(pVar);
         iRet = objDeserializeProperty(pVar, pStrm);
     }
 

@@ -56,36 +56,51 @@ action(type="omfile" file="'"$RSYSLOG_OUT_LOG"'" template="outfmt")
 }
 
 list_spool_top() {
-	find "$SPOOL_DIR" -maxdepth 1 -mindepth 1 -printf '%f %s bytes\n' | sort
+	for path in "$SPOOL_DIR"/*; do
+		[ -e "$path" ] || continue
+		base="${path##*/}"
+		if [ -f "$path" ]; then
+			size=$(wc -c < "$path")
+			printf '%s %s bytes\n' "$base" "$size"
+		elif [ -L "$path" ]; then
+			printf '%s symlink\n' "$base"
+		else
+			printf '%s/\n' "$base"
+		fi
+	done | sort
 }
 
 count_bad_dirs() {
-	find "$SPOOL_DIR" -maxdepth 1 -mindepth 1 -type d -name 'mainq.bad.*' | wc -l
+	count=0
+	for path in "$SPOOL_DIR"/mainq.bad.*; do
+		[ -d "$path" ] || continue
+		count=$((count + 1))
+	done
+	printf '%s\n' "$count"
 }
 
 check_no_live_mainq_files() {
-	local live_files
-
-	live_files="$(find "$SPOOL_DIR" -maxdepth 1 -mindepth 1 \
-		\( -type f -o -type l \) -name 'mainq*' -printf '%f\n')"
-	if [ -n "$live_files" ]; then
+	live_list="${RSYSLOG_DYNNAME}.live-mainq"
+	: > "$live_list"
+	for path in "$SPOOL_DIR"/mainq*; do
+		[ -e "$path" ] || continue
+		[ -f "$path" ] || [ -L "$path" ] || continue
+		printf '%s\n' "${path##*/}" >> "$live_list"
+	done
+	if [ -s "$live_list" ]; then
 		echo "FAIL: live mainq files remain after restart recovery"
-		printf '%s\n' "$live_files"
+		cat "$live_list"
 		ls -l "$SPOOL_DIR"
+		rm -f "$live_list"
 		error_exit 1
 	fi
+	rm -f "$live_list"
 }
 
 corrupt_middle_segment() {
-	local seg_files=()
-	local base
-	local num
-	local target
-	local orig_size
-	local mid_idx
-	local seek_offs
-	local corrupt_len
-
+	seg_list="${RSYSLOG_DYNNAME}.segments"
+	sorted_list="${seg_list}.sorted"
+	: > "$seg_list"
 	for path in "$SPOOL_DIR"/mainq.*; do
 		[ -f "$path" ] || continue
 		base="${path##*/}"
@@ -95,27 +110,27 @@ corrupt_middle_segment() {
 			continue
 			;;
 		esac
-		seg_files+=("$base")
+		printf '%s\n' "$base" >> "$seg_list"
 	done
 
-	if [ "${#seg_files[@]}" -gt 0 ]; then
-		IFS=$'\n' seg_files=($(printf '%s\n' "${seg_files[@]}" | sort -t. -k2,2n))
-		unset IFS
-	fi
-
-	if [ "${#seg_files[@]}" -lt 3 ]; then
-		printf 'FAIL: expected at least 3 queue segment files, found %d\n' "${#seg_files[@]}"
+	sort -t. -k2,2n "$seg_list" > "$sorted_list"
+	seg_count=$(wc -l < "$sorted_list")
+	if [ "$seg_count" -lt 3 ]; then
+		printf 'FAIL: expected at least 3 queue segment files, found %s\n' "$seg_count"
 		list_spool_top
+		rm -f "$seg_list" "$sorted_list"
 		error_exit 1
 	fi
 
-	mid_idx=$(( ${#seg_files[@]} / 2 ))
-	target="$SPOOL_DIR/${seg_files[$mid_idx]}"
-	orig_size=$(stat -c%s "$target")
+	mid_line=$(( (seg_count / 2) + 1 ))
+	target_base=$(sed -n "${mid_line}p" "$sorted_list")
+	target="$SPOOL_DIR/$target_base"
+	orig_size=$(wc -c < "$target")
 	seek_offs=$(( orig_size / 2 ))
 	corrupt_len=4096
 	if [ "$seek_offs" -le 0 ] || [ "$seek_offs" -ge "$orig_size" ]; then
 		printf 'FAIL: invalid corruption offset for %s (size=%s)\n' "$target" "$orig_size"
+		rm -f "$seg_list" "$sorted_list"
 		error_exit 1
 	fi
 	if [ $(( seek_offs + corrupt_len )) -gt "$orig_size" ]; then
@@ -123,7 +138,9 @@ corrupt_middle_segment() {
 	fi
 
 	printf 'Corrupting queue segment %s at offset %s for %s bytes\n' "$target" "$seek_offs" "$corrupt_len"
-	dd if=/dev/zero of="$target" bs=1 seek="$seek_offs" count="$corrupt_len" conv=notrunc status=none
+	dd if=/dev/zero of="$target" bs=1 seek="$seek_offs" count="$corrupt_len" conv=notrunc \
+		>/dev/null 2>&1
+	rm -f "$seg_list" "$sorted_list"
 }
 
 write_phase1_conf
