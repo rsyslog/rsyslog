@@ -286,6 +286,7 @@ struct ptcpsess_s {
     int sock;
     epolld_t *epd;
     sbool bzInitDone; /* did we do an init of zstrm already? */
+    sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
     int iMsg; /* index of next char to store in msg */
@@ -1272,6 +1273,38 @@ finalize_it:
     RETiRet;
 }
 
+static const char *zlibRetName(const int zRet) {
+    switch (zRet) {
+        case Z_OK:
+            return "Z_OK";
+        case Z_STREAM_END:
+            return "Z_STREAM_END";
+        case Z_NEED_DICT:
+            return "Z_NEED_DICT";
+        case Z_ERRNO:
+            return "Z_ERRNO";
+        case Z_STREAM_ERROR:
+            return "Z_STREAM_ERROR";
+        case Z_DATA_ERROR:
+            return "Z_DATA_ERROR";
+        case Z_MEM_ERROR:
+            return "Z_MEM_ERROR";
+        case Z_BUF_ERROR:
+            return "Z_BUF_ERROR";
+        case Z_VERSION_ERROR:
+            return "Z_VERSION_ERROR";
+        default:
+            return "Z_UNKNOWN";
+    }
+}
+
+static rsRetVal logCompressedStreamFailure(ptcpsess_t *const pThis, const char *const failure, const int zRet) {
+    LogError(0, RS_RET_ZLIB_ERR, "imptcp: %s compressed stream from peer %s[%s]: zlib state %s (%d)", failure,
+             propGetSzStrOrDefault(pThis->peerName, "(hostname unknown)"),
+             propGetSzStrOrDefault(pThis->peerIP, "(IP unknown)"), zlibRetName(zRet), zRet);
+    return RS_RET_ZLIB_ERR;
+}
+
 static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
     struct syslogTime stTime;
     time_t ttGenTime;
@@ -1285,6 +1318,10 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
 
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
     outtotal = 0;
+
+    if (pThis->bZipStreamEnd) {
+        ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received trailing data after end of", Z_STREAM_END));
+    }
 
     if (!pThis->bzInitDone) {
         /* allocate deflate state */
@@ -1308,13 +1345,20 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         pThis->zstrm.avail_out = sizeof(zipBuf);
         pThis->zstrm.next_out = zipBuf;
         zRet = inflate(&pThis->zstrm, Z_SYNC_FLUSH); /* no bad return value */
-        // zRet = inflate(&pThis->zstrm, Z_NO_FLUSH);    /* no bad return value */
         DBGPRINTF("after inflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
+        if (zRet == Z_STREAM_END) {
+            pThis->bZipStreamEnd = RSTRUE;
+        } else if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
+            ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received invalid", zRet));
+        }
         outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
         if (outavail != 0) {
             outtotal += outavail;
             pThis->pLstn->rcvdDecompressed += outavail;
             CHKiRet(DataRcvdUncompressed(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
+        }
+        if (pThis->bZipStreamEnd && pThis->zstrm.avail_in != 0) {
+            ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received trailing data after end of", Z_STREAM_END));
         }
     } while (pThis->zstrm.avail_out == 0);
 
@@ -1478,6 +1522,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->iMsg = 0;
     pSess->iCurrLine = 1;
     pSess->bzInitDone = 0;
+    pSess->bZipStreamEnd = 0;
     pSess->bAtStrtOfFram = 1;
     pSess->peerName = peerName;
     pSess->peerIP = peerIP;
@@ -1535,6 +1580,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
     uchar zipBuf[32 * 1024];  // TODO: use "global" one from pSess
 
     if (!pSess->bzInitDone) goto done;
+    if (pSess->bZipStreamEnd) goto finalize_it;
 
     pSess->zstrm.avail_in = 0;
     /* run inflate() on buffer until everything has been compressed */
@@ -1545,6 +1591,12 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         pSess->zstrm.next_out = zipBuf;
         zRet = inflate(&pSess->zstrm, Z_FINISH); /* no bad return value */
         DBGPRINTF("after inflate, ret %d, avail_out %d\n", zRet, pSess->zstrm.avail_out);
+        if (zRet == Z_STREAM_END) {
+            pSess->bZipStreamEnd = RSTRUE;
+        } else if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
+            iRet = logCompressedStreamFailure(pSess, "received invalid", zRet);
+            break;
+        }
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
             pSess->pLstn->rcvdDecompressed += outavail;
@@ -1552,6 +1604,9 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
             // TODO: query time!
         }
     } while (pSess->zstrm.avail_out == 0);
+    if (iRet == RS_RET_OK && !pSess->bZipStreamEnd) {
+        iRet = logCompressedStreamFailure(pSess, "detected truncated", zRet);
+    }
 
 finalize_it:
     zRet = inflateEnd(&pSess->zstrm);
@@ -1570,9 +1625,12 @@ done:
  * exception is duplicated file handles, which we do not create.
  */
 static rsRetVal closeSess(ptcpsess_t *pSess) {
+    rsRetVal localRet = RS_RET_OK;
     DEFiRet;
 
-    if (pSess->compressionMode >= COMPRESS_STREAM_ALWAYS) doZipFinish(pSess);
+    if (pSess->compressionMode >= COMPRESS_STREAM_ALWAYS) {
+        localRet = doZipFinish(pSess);
+    }
 
     const int sock = pSess->sock;
     close(sock);
@@ -1590,6 +1648,9 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
     /* unlinked, now remove structure */
     destructSess(pSess);
 
+    if (localRet != RS_RET_OK) {
+        iRet = localRet;
+    }
     DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
     RETiRet;
 }
@@ -1631,7 +1692,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
     inst->ratelimitBurst = -1;
     inst->ratelimitInterval = -1;
-    inst->compressionMode = COMPRESS_SINGLE_MSG;
+    inst->compressionMode = COMPRESS_NEVER;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
     inst->pszLstnPortFileName = NULL;
@@ -1911,7 +1972,12 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
         if (lenRcv > 0) {
             /* have data, process it */
             DBGPRINTF("imptcp: data(%d) on socket %d: %s\n", lenBuf, pSess->sock, rcvBuf);
-            CHKiRet(DataRcvd(pSess, rcvBuf, lenRcv));
+            iRet = DataRcvd(pSess, rcvBuf, lenRcv);
+            if (iRet != RS_RET_OK) {
+                *continue_polling = 0;
+                closeSess(pSess);
+                break;
+            }
         } else if (lenRcv == 0) {
             /* session was closed, do clean-up */
             if (pSess->pLstn->pSrv->bEmitMsgOnClose) {
