@@ -1212,7 +1212,7 @@ EXTRA_DIST = \
     source/tutorials/config_format_translation.rst \
     source/tutorials/database.rst \
     source/tutorials/deploy_rsyslog_rosi_stack.rst \
-    source/tutorials/rosi_stack_architecture.png \
+    source/tutorials/rosi_stack_architecture.jpg \
     source/tutorials/rosi_stack_grafana_dashboard.png \
     source/tutorials/failover_syslog_server.rst \
     source/tutorials/gelf_forwarding.rst \
