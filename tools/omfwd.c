@@ -295,6 +295,7 @@ ENDinitConfVars
 
 static rsRetVal doTryResume(targetData_t *);
 static rsRetVal doZipFinish(targetData_t *);
+static rsRetVal TCPSendBuf(targetData_t *, uchar *, unsigned, sbool);
 
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
@@ -692,7 +693,13 @@ finalize_it:
 }
 
 static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebind) {
-    // TODO: do we need to do a final send? if so, old bug!
+    if (pTarget->bIsConnected && pTarget->offsSndBuf != 0) {
+        rsRetVal localRet = TCPSendBuf(pTarget, pTarget->sndBuf, pTarget->offsSndBuf, IS_FLUSH);
+        if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_PREVIOUS_COMMITTED) {
+            pTarget->offsSndBuf = 0;
+        }
+    }
+
     doZipFinish(pTarget);
 
     if (pTarget->pNetstrm != NULL) {
