@@ -1,6 +1,19 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-21
+
+IMPORTANT FOR MAINTAINERS
+- this version very strongly depends on YAML - we highly recommend to
+  ADD LIBYAML TO PACKAGE BUILD. If libyaml is not available, rsyslog builds
+  but is missing many important features. The ability to build without
+  libyaml is mainly introduced as a capability for outdated systems.
+- the doc build process changed again in hope to make it more stable.
+  it was verified to work against Debian and other distros as good
+  as we could, still there may be some unexpected isuses.
+
 - 2026-04-17: overall hardening of components
+- 2026-04-20: queue: address potential segfault on startup
+  original report: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031360
+  This was only partly addressed in previous hardening
 - 2026-04-17: imhttp: refactor to support additional auth methods
   Feature-wise API key authentication was added. We may need other
   authentication methods in the future, as such the module has been

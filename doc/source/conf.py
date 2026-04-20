@@ -217,8 +217,8 @@ rst_epilog = """
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
 version = '8.2604'
-#release = '8.2604.0'
-release = version + ' daily stable'
+release = '8.2604.0'
+#release = version + ' daily stable'
 
 # Allow override from environment (e.g. Docker/CI builds without .git)
 _env_version = os.environ.get('RSYSLOG_DOC_VERSION')
