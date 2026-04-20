@@ -1518,11 +1518,11 @@ static rsRetVal qDestructDisk(qqueue_t *pThis) {
 
     free(pThis->pszQIFNam);
     if (pThis->tVars.disk.pWrite != NULL) {
-        int64 currOffs;
-        strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
-        if (currOffs == 0) {
-            /* if no data is present, we can (and must!) delete this
-             * file. Else we can leave garbagge after termination.
+        if (getPhysicalQueueSize(pThis) == 0) {
+            /* Once the disk queue is logically empty, any remaining active write
+             * file only contains untracked tail data, typically late internal
+             * messages emitted during shutdown. Keep teardown from leaving that
+             * orphaned file behind.
              */
             strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 1);
         }

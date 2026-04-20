@@ -232,6 +232,7 @@ TESTS_DEFAULT = \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown-recovery.sh \
 	diskq-rfc5424.sh \
+	diskqueue-truncated-segment-startup.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
