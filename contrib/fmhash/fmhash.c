@@ -77,9 +77,9 @@ struct hash_context_s {
 
 #ifndef USE_HASH_XXHASH
     /*
-    * Fowler–Noll–Vo hash 32 bit
-    * http://www.isthe.com/chongo/src/fnv/hash_32.c
-    */
+     * Fowler–Noll–Vo hash 32 bit
+     * http://www.isthe.com/chongo/src/fnv/hash_32.c
+     */
     #if defined(__clang__)
         #pragma GCC diagnostic ignored "-Wunknown-attributes"
     #endif
@@ -108,9 +108,9 @@ static hash_t
 
 
     /*
-    * Modified Bernstein
-    * http://www.eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
-    */
+     * Modified Bernstein
+     * http://www.eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
+     */
     #if defined(__clang__)
         #pragma GCC diagnostic ignored "-Wunknown-attributes"
     #endif
