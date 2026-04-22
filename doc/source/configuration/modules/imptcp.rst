@@ -216,7 +216,7 @@ Statistic Counter
 =================
 
 This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener. The statistic is
-named "imtcp" , followed by the bound address, listener port and IP
+named "imptcp", followed by the bound address, listener port and IP
 version in parenthesis. For example, the counter for a listener on port
 514, bound to all interfaces and listening on IPv6 is called
 "imptcp(\*/514/IPv6)".
@@ -224,6 +224,11 @@ version in parenthesis. For example, the counter for a listener on port
 The following properties are maintained for each listener:
 
 -  **submitted** - total number of messages submitted for processing since startup
+-  **sessions.opened** - number of accepted sessions
+-  **sessions.openfailed** - number of failed session accept paths
+-  **sessions.closed** - number of closed sessions
+-  **bytes.received** - compressed or uncompressed bytes read from the socket
+-  **bytes.decompressed** - bytes emitted by the stream decompressor
 
 
 .. _error-messages:
@@ -232,6 +237,13 @@ Error Messages
 ==============
 
 When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
+
+If ``compression.mode="stream:always"`` is enabled, ``imptcp`` also logs:
+
+- invalid compressed streams
+- trailing bytes after the end of a compressed stream
+- truncated compressed streams detected when the peer disconnects before the
+  stream is cleanly finished
 
 
 Caveats/Known Bugs
