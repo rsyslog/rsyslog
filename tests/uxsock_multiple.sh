@@ -71,9 +71,16 @@ for name in "${SOCKET_NAMES[@]}"; do
 done
 
 # now do the usual run
+RS_REDIR="> ${RSYSLOG_DYNNAME}.log 2>&1"
 startup
 # 10000 messages should be enough
 injectmsg 0 10000
+wait_queueempty
+echo resetting uxsockrcvr...
+for pid in ${BGPROCESS[@]}; do
+    kill -HUP $pid
+done
+injectmsg 10000 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
@@ -86,10 +93,22 @@ for pid in ${BGPROCESS[@]}; do
 done
 echo background processes have terminated, continue test...
 
-# and continue the usual checks
+# and continue the usual checks.
 BASE=${RSYSLOG_OUT_LOG}
 for name in "${SOCKET_NAMES[@]}"; do
-    RSYSLOG_OUT_LOG=${BASE}.${name##*.}
-    seq_check 0 9999
+    SEQ_CHECK_FILE=${BASE}.${name##*.}
+    case ${name##*.} in
+        STREAM) ;&
+        SEQPACKET)
+            echo 10000 >> ${SEQ_CHECK_FILE}
+            ;;
+    esac
+    seq_check 0 19999
 done
+
+# Verify that we get messages for when our receiver reset
+# We don't redirect with valgrind
+if [[ "${USE_VALGRIND}" != "YES" ]]; then
+    content_check "omuxsock suspending: send(), socket " ${RSYSLOG_DYNNAME}.log
+fi
 exit_test
