@@ -51,6 +51,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "ratelimit.h"
+#include "stringbuf.h"
 #include "hashtable.h"
 #include "hashtable_itr.h"
 
@@ -578,7 +579,7 @@ static rsRetVal dockerContLogsInstNew(docker_cont_logs_inst_t **ppThis,
     CHKmalloc(pThis = calloc(1, sizeof(docker_cont_logs_inst_t)));
 
     CHKmalloc(pThis->id = strdup((char *)id));
-    strncpy((char *)pThis->short_id, id, sizeof(pThis->short_id) - 1);
+    rs_cstr_copy(pThis->short_id, (const char *)id, sizeof(pThis->short_id));
     CHKiRet(dockerContLogsReqNew(&pThis->logsReq, submitMsg));
     /* make a copy */
     if (container_info) {
@@ -894,6 +895,7 @@ BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     int i;
     char *buf = NULL;
+    cstr_t *option_cstr = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -923,11 +925,8 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
             CHKmalloc(loadModConf->getContainerLogOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             /* also initialize the non-tail version */
-            size_t offset = 0;
-            size_t option_str_len = strlen((char *)loadModConf->getContainerLogOptions);
             CHKmalloc(buf = strdup((char *)loadModConf->getContainerLogOptions));
-            uchar *option_str = calloc(1, option_str_len + 1);
-            CHKmalloc(option_str);
+            CHKiRet(rsCStrConstruct(&option_cstr));
 
             const char *search_str = "tail=";
             size_t search_str_len = strlen(search_str);
@@ -938,18 +937,12 @@ BEGINsetModCnf
                     token = strtok(NULL, "&");
                     continue;
                 }
-                int len = strlen(token);
-                if (offset + len + 1 >= option_str_len + 1) {
-                    break;
-                }
-                int bytes = snprintf((char *)option_str + offset, (option_str_len + 1 - offset), "%s&", token);
-                if (bytes <= 0) {
-                    break;
-                }
-                offset += bytes;
+                const rs_cstr_part_t parts[] = {{(const uchar *)token, strlen(token)}, {UCHAR_CONSTANT("&"), 1}};
+                CHKiRet(rsCStrAppendParts(option_cstr, parts, sizeof(parts) / sizeof(parts[0])));
                 token = strtok(NULL, "&");
             }
-            loadModConf->getContainerLogOptionsWithoutTail = option_str;
+            cstrFinalize(option_cstr);
+            CHKiRet(cstrConvSzStrAndDestruct(&option_cstr, &loadModConf->getContainerLogOptionsWithoutTail, 0));
             free(buf);
             buf = NULL;
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiunixsockaddr")) {
@@ -979,6 +972,7 @@ BEGINsetModCnf
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
+    if (option_cstr != NULL) rsCStrDestruct(&option_cstr);
     free(buf);
 ENDsetModCnf
 

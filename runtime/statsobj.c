@@ -374,8 +374,10 @@ static rsRetVal getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsF
              * Note: ES 2.0 does not longer accept dot in name
              */
             uchar esbuf[256];
-            strncpy((char *)esbuf, (char *)pCtr->name, sizeof(esbuf) - 1);
-            esbuf[sizeof(esbuf) - 1] = '\0';
+            const size_t ctr_name_len = strlen((char *)pCtr->name);
+            const size_t esbuf_len = ctr_name_len < sizeof(esbuf) - 1 ? ctr_name_len : sizeof(esbuf) - 1;
+            memcpy(esbuf, pCtr->name, esbuf_len);
+            esbuf[esbuf_len] = '\0';
             for (uchar *c = esbuf; *c; ++c) {
                 if (*c == '.') *c = '!';
             }

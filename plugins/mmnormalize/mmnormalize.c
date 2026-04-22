@@ -345,16 +345,19 @@ BEGINnewActInst
             }
             buffer = malloc(size + pvals[i].val.d.ar->nmemb + 1);
             tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[0], NULL);
-            strcpy(buffer, tStr);
+            char *dst = buffer;
+            memcpy(dst, tStr, strlen(tStr));
+            dst += strlen(tStr);
             free(tStr);
-            strcat(buffer, "\n");
+            *dst++ = '\n';
             for (int j = 1; j < pvals[i].val.d.ar->nmemb; ++j) {
                 tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                strcat(buffer, tStr);
+                memcpy(dst, tStr, strlen(tStr));
+                dst += strlen(tStr);
                 free(tStr);
-                strcat(buffer, "\n");
+                *dst++ = '\n';
             }
-            strcat(buffer, "\0");
+            *dst = '\0';
             pData->rule = (uchar *)buffer;
         } else if (!strcmp(actpblk.descr[i].name, "userawmsg")) {
             pData->bUseRawMsg = (int)pvals[i].val.d.n;

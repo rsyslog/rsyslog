@@ -2520,7 +2520,7 @@ int main(int argc, char **argv) {
 
     pthread_mutex_init(&mutHadHUP, NULL);
     pthread_mutex_init(&mutChildDied, NULL);
-    strncpy(progname, argv[0], sizeof(progname) - 1);
+    rs_cstr_copy(progname, argv[0], sizeof(progname));
     addrsz = sizeof(srcaddr);
     if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
         fprintf(stderr, "%s: continuing without SRC support\n", progname);

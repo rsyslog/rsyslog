@@ -1498,7 +1498,7 @@ get_file_id_hash(const char *data, size_t lendata, char *const hash_str, const s
  */
 static void ATTR_NONNULL(1) getFileID(act_obj_t *const act) {
     char tmp_id[FILE_ID_HASH_SIZE];
-    strncpy(tmp_id, (const char *)act->file_id, FILE_ID_HASH_SIZE);
+    memcpy(tmp_id, act->file_id, sizeof(tmp_id));
     act->file_id[0] = '\0';
     assert(act->fd >= 0); /* fd must have been opened at act_obj_t creation! */
     char filedata[FILE_ID_SIZE];
@@ -1510,7 +1510,7 @@ static void ATTR_NONNULL(1) getFileID(act_obj_t *const act) {
         DBGPRINTF("getFileID partial or error read, ret %d\n", r);
     }
     if (strncmp(tmp_id, act->file_id, FILE_ID_HASH_SIZE)) { /* save the old id for cleaning purposes */
-        strncpy(act->file_id_prev, tmp_id, FILE_ID_HASH_SIZE);
+        memcpy(act->file_id_prev, tmp_id, sizeof(act->file_id_prev));
     }
     DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, act->file_id);
 }
@@ -1588,8 +1588,8 @@ static rsRetVal ATTR_NONNULL(1, 2)
         size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
         char *ceeMsg;
         CHKmalloc(ceeMsg = malloc(ceeMsgSize));
-        strcpy(ceeMsg, CONST_CEE_COOKIE);
-        strcat(ceeMsg, (char *)rsCStrGetSzStrNoNULL(cstrLine));
+        memcpy(ceeMsg, CONST_CEE_COOKIE, CONST_LEN_CEE_COOKIE);
+        memcpy(ceeMsg + CONST_LEN_CEE_COOKIE, rsCStrGetSzStrNoNULL(cstrLine), msgLen + 1);
         MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
         free(ceeMsg);
     } else {
@@ -2028,7 +2028,7 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
                 ABORT_FINALIZE(RS_RET_ERR);
             }
             curr_wd[len_curr_wd] = '/';
-            strcpy((char *)curr_wd + len_curr_wd + 1, (char *)inst->pszFileName);
+            memcpy(curr_wd + len_curr_wd + 1, inst->pszFileName, ustrlen(inst->pszFileName) + 1);
             free(inst->pszFileName);
             CHKmalloc(inst->pszFileName = ustrdup(curr_wd));
         }
@@ -3065,7 +3065,6 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     const char *jstr = json_object_to_json_string_ext(json, JSON_C_TO_STRING_SPACED);
 
     CHKiRet(atomicWriteStateFile((const char *)statefname, jstr));
-    json_object_put(json);
 
     /* file-id changed remove the old statefile */
     if (strncmp((const char *)act->file_id_prev, (const char *)act->file_id, FILE_ID_HASH_SIZE)) {
@@ -3073,6 +3072,9 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     }
 
 finalize_it:
+    if (json != NULL) {
+        json_object_put(json);
+    }
     if (iRet != RS_RET_OK) {
         LogError(0, iRet,
                  "imfile: could not persist state "

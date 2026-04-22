@@ -19,34 +19,69 @@
  * limitations under the License.
  */
 #include "config.h"
-#ifndef HAVE_ASPRINTF
 
-    #include <stdlib.h>
-    #include <stdarg.h>
-    #include <stdio.h>
-int asprintf(char **strp, const char *fmt, ...) {
-    va_list ap;
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#if !defined(HAVE_VASPRINTF) || !defined(HAVE_ASPRINTF)
+static int compat_vasprintf_impl(char **strp, const char *fmt, va_list ap)
+    #if defined(__GNUC__)
+    __attribute__((format(printf, 2, 0)))
+    #endif
+    ;
+
+static int compat_vasprintf_impl(char **strp, const char *fmt, va_list ap) {
+    va_list ap_copy;
     int len;
+    char *buf;
 
-    va_start(ap, fmt);
-    len = vsnprintf(NULL, 0, fmt, ap);
-    va_end(ap);
-
-    *strp = malloc(len + 1);
-    if (!*strp) {
+    if (strp == NULL || fmt == NULL) {
         return -1;
     }
 
-    va_start(ap, fmt);
-    vsnprintf(*strp, len + 1, fmt, ap);
-    va_end(ap);
+    *strp = NULL;
 
-    (*strp)[len] = 0;
+    va_copy(ap_copy, ap);
+    len = vsnprintf(NULL, 0, fmt, ap_copy);
+    va_end(ap_copy);
+    if (len < 0) {
+        return -1;
+    }
+
+    buf = malloc((size_t)len + 1);
+    if (buf == NULL) {
+        return -1;
+    }
+
+    va_copy(ap_copy, ap);
+    if (vsnprintf(buf, (size_t)len + 1, fmt, ap_copy) != len) {
+        va_end(ap_copy);
+        free(buf);
+        return -1;
+    }
+    va_end(ap_copy);
+
+    *strp = buf;
     return len;
 }
-#else
-    /* XLC needs at least one method in source file even static to compile */
-    #ifdef __xlc__
-static void dummy(void) {}
-    #endif
-#endif /* #ifndef HAVE_ASPRINTF */
+#endif
+
+#ifndef HAVE_VASPRINTF
+int vasprintf(char **strp, const char *fmt, va_list ap) {
+    return compat_vasprintf_impl(strp, fmt, ap);
+}
+#endif
+
+#ifndef HAVE_ASPRINTF
+int asprintf(char **strp, const char *fmt, ...) {
+    va_list ap;
+    int ret;
+
+    va_start(ap, fmt);
+    ret = compat_vasprintf_impl(strp, fmt, ap);
+    va_end(ap);
+
+    return ret;
+}
+#endif

@@ -2478,8 +2478,7 @@ void MsgSetInputName(smsg_t *pThis, prop_t *inputName) {
  * otherwise overrun our buffer!
  */
 void MsgSetDfltTZ(smsg_t *pThis, char *tz) {
-    strncpy(pThis->dfltTZ, tz, 7);
-    pThis->dfltTZ[7] = '\0'; /* ensure 0-Term in case of overflow! */
+    rs_cstr_copy(pThis->dfltTZ, tz, sizeof(pThis->dfltTZ));
 }
 
 

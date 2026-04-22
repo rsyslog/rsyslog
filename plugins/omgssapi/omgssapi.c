@@ -203,9 +203,9 @@ static rsRetVal TCPSendGSSInit(void *pvData) {
     base = (cs.gss_base_service_name == NULL) ? "host" : cs.gss_base_service_name;
     out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
     CHKmalloc(out_tok.value = malloc(out_tok.length));
-    strcpy(out_tok.value, base);
-    strcat(out_tok.value, "@");
-    strcat(out_tok.value, pData->f_hname);
+    memcpy(out_tok.value, base, strlen(base));
+    ((char *)out_tok.value)[strlen(base)] = '@';
+    memcpy((char *)out_tok.value + strlen(base) + 1, pData->f_hname, strlen(pData->f_hname) + 1);
     dbgprintf("GSS-API service name: %s\n", (char *)out_tok.value);
 
     tok_ptr = GSS_C_NO_BUFFER;

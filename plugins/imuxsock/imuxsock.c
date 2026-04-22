@@ -519,8 +519,7 @@ static rsRetVal
     if (pLstn->bCreatePath) {
         makeFileParentDirs((uchar *)pLstn->sockName, ustrlen(pLstn->sockName), 0755, -1, -1, 0);
     }
-    strncpy(sunx.sun_path, (char *)pLstn->sockName, sizeof(sunx.sun_path));
-    sunx.sun_path[sizeof(sunx.sun_path) - 1] = '\0';
+    rs_cstr_copy(sunx.sun_path, (const char *)pLstn->sockName, sizeof(sunx.sun_path));
     pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (pLstn->fd < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);

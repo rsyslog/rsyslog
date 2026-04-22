@@ -289,6 +289,46 @@ finalize_it:
 }
 
 
+rsRetVal rsCStrAppendParts(cstr_t *const pThis, const rs_cstr_part_t *const parts, const size_t count) {
+    uchar *dst;
+    size_t total_len = 0;
+    size_t i;
+    DEFiRet;
+
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    assert(parts != NULL || count == 0);
+
+    for (i = 0; i < count; ++i) {
+        if (parts[i].len == 0) {
+            continue;
+        }
+        assert(parts[i].ptr != NULL);
+        total_len += parts[i].len;
+    }
+
+    if (total_len == 0) {
+        FINALIZE;
+    }
+
+    if (pThis->iStrLen + total_len + 1 > pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, total_len + 1));
+    }
+
+    dst = pThis->pBuf + pThis->iStrLen;
+    for (i = 0; i < count; ++i) {
+        if (parts[i].len == 0) {
+            continue;
+        }
+        memcpy(dst, parts[i].ptr, parts[i].len);
+        dst += parts[i].len;
+    }
+    pThis->iStrLen += total_len;
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* changed to be a wrapper to rsCStrAppendStrWithLen() so that
  * we can save some time when we have the length but do not
  * need to change existing code.

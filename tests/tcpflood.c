@@ -179,13 +179,22 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #ifndef HAVE_STRERROR_R
     char *pszErr;
     pszErr = strerror(errnum);
-    snprintf(buf, buflen, "%s", pszErr);
+    if (buflen > 0) {
+        const size_t err_len = strlen(pszErr);
+        const size_t copy_len = err_len < buflen - 1 ? err_len : buflen - 1;
+        memcpy(buf, pszErr, copy_len);
+        buf[copy_len] = '\0';
+    }
 #else
     #ifdef STRERROR_R_CHAR_P
     char *p = strerror_r(errnum, buf, buflen);
     if (p != buf) {
-        strncpy(buf, p, buflen);
-        buf[buflen - 1] = '\0';
+        if (buflen > 0) {
+            const size_t err_len = strlen(p);
+            const size_t copy_len = err_len < buflen - 1 ? err_len : buflen - 1;
+            memcpy(buf, p, copy_len);
+            buf[copy_len] = '\0';
+        }
     }
     #else
     strerror_r(errnum, buf, buflen);
@@ -671,7 +680,7 @@ void closeConnections(void) {
         }
     for (i = 0; i < numConnections; ++i) {
         if (i % 10 == 0 && bShowProgress) {
-            lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+            lenMsg = snprintf(msgBuf, sizeof(msgBuf), "\r%5.5d", i);
             if (write(1, msgBuf, lenMsg)) {
             }
         }
@@ -702,7 +711,7 @@ void closeConnections(void) {
         }
     }
     if (bShowProgress) {
-        lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
+        lenMsg = snprintf(msgBuf, sizeof(msgBuf), "\r%5.5d close connections\n", i);
         if (write(1, msgBuf, lenMsg)) {
         }
     }

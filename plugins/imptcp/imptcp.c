@@ -446,8 +446,9 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
 
+    memset(&local, 0, sizeof(local));
     local.sun_family = AF_UNIX;
-    strncpy(local.sun_path, (char *)path, sizeof(local.sun_path) - 1);
+    rs_cstr_copy(local.sun_path, (const char *)path, sizeof(local.sun_path));
     if (pSrv->bUnlink) {
         unlink(local.sun_path);
     }
@@ -731,10 +732,14 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
     *peerIP = NULL;
 
     if (bUXServer) {
-        strncpy((char *)szHname, (char *)glbl.GetLocalHostName(), NI_MAXHOST);
-        strncpy((char *)szIP, (char *)glbl.GetLocalHostIP(), NI_MAXHOST);
-        szHname[NI_MAXHOST] = '\0';
-        szIP[NI_MAXHOST] = '\0';
+        const size_t hname_src_len = strlen((char *)glbl.GetLocalHostName());
+        const size_t ip_src_len = strlen((char *)glbl.GetLocalHostIP());
+        const size_t hname_len = hname_src_len < NI_MAXHOST ? hname_src_len : NI_MAXHOST;
+        const size_t ip_len = ip_src_len < NI_MAXHOST ? ip_src_len : NI_MAXHOST;
+        memcpy(szHname, glbl.GetLocalHostName(), hname_len);
+        memcpy(szIP, glbl.GetLocalHostIP(), ip_len);
+        szHname[hname_len] = '\0';
+        szIP[ip_len] = '\0';
     } else {
         error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if (error) {
@@ -762,10 +767,10 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
                     bMaliciousHName = 1;
                 }
             } else {
-                strcpy((char *)szHname, (char *)szIP);
+                u_cstr_copy(szHname, szIP, sizeof(szHname));
             }
         } else {
-            strcpy((char *)szHname, (char *)szIP);
+            u_cstr_copy(szHname, szIP, sizeof(szHname));
         }
     }
 
@@ -1022,13 +1027,13 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(ptcpsess_t *const __
         const int isMatch = !regexec(&inst->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
         if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
-            strcpy((char *)pThis->pMsg_save, (char *)pThis->pMsg + pThis->iCurrLine);
+            memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, ustrlen(pThis->pMsg + pThis->iCurrLine) + 1);
             pThis->iMsg = pThis->iCurrLine - 1;
 
             doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
             ++(*pnMsgs);
 
-            strcpy((char *)pThis->pMsg, (char *)pThis->pMsg_save);
+            memmove(pThis->pMsg, pThis->pMsg_save, ustrlen(pThis->pMsg_save) + 1);
             pThis->iMsg = ustrlen(pThis->pMsg_save);
             pThis->iCurrLine = 1;
         }

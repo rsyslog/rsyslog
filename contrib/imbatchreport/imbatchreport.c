@@ -431,8 +431,9 @@ static void pollFile(instanceConf_t *pInst) {
             if (pInst->action == action_rename || toolargeOrFailure) {
                 pInst->pszNewFName = (char *)malloc(strlen(fpath) + pInst->filename_oversize);
                 memcpy(pInst->pszNewFName, fpath, matches[0].rm_so);
-                strcpy((char *)pInst->pszNewFName + matches[0].rm_so,
-                       (toolargeOrFailure) ? pInst->ff_reject : pInst->ff_rename);
+                memcpy((char *)pInst->pszNewFName + matches[0].rm_so,
+                       (toolargeOrFailure) ? pInst->ff_reject : pInst->ff_rename,
+                       strlen((toolargeOrFailure) ? pInst->ff_reject : pInst->ff_rename) + 1);
 
                 if (rename(fpath, pInst->pszNewFName)) {
                     /* if the module can not rename the file, it must stop to avoid flooding
@@ -590,14 +591,14 @@ static rsRetVal checkInstance(instanceConf_t *inst) {
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
     if (inst->action == action_rename) {
-        strcpy(dirn + matches[0].rm_so, inst->ff_rename);
+        memcpy(dirn + matches[0].rm_so, inst->ff_rename, strlen(inst->ff_rename) + 1);
         if (fnmatch((char *)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0) {
             LogError(0, RS_RET_INVALID_PARAMS,
                      "Normal renaming leaves files in glob scope: Instance ignored to avoid loops.");
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
     }
-    strcpy(dirn + matches[0].rm_so, inst->ff_reject);
+    memcpy(dirn + matches[0].rm_so, inst->ff_reject, strlen(inst->ff_reject) + 1);
     if (fnmatch((char *)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0) {
         LogError(0, RS_RET_INVALID_PARAMS,
                  "Reject renaming leaves files in glob scope: Instance ignored to avoid loops.");

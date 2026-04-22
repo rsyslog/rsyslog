@@ -225,7 +225,7 @@ static size_t getAccessTokenLen(instanceData *pData) {
 }
 
 static rsRetVal requestAccessToken(instanceData *pData) {
-    char tokenURL[512];
+    char *tokenURL = NULL;
     char *body = NULL;
     char *escClientID = NULL;
     char *escClientSecret = NULL;
@@ -253,11 +253,10 @@ static rsRetVal requestAccessToken(instanceData *pData) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
-    n = snprintf(tokenURL, sizeof(tokenURL), "https://login.microsoftonline.com/%s/oauth2/v2.0/token",
-                 (char *)pData->tenantID);
-    if (n < 0 || (size_t)n >= sizeof(tokenURL)) {
-        LogError(0, RS_RET_ERR, "omazuredce: tenant_id is too long to build OAuth token URL");
-        ABORT_FINALIZE(RS_RET_ERR);
+    n = asprintf(&tokenURL, "https://login.microsoftonline.com/%s/oauth2/v2.0/token", (char *)pData->tenantID);
+    if (n < 0) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omazuredce: failed building OAuth token URL");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
     curl = curl_easy_init();
@@ -274,24 +273,20 @@ static rsRetVal requestAccessToken(instanceData *pData) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
-    bodyLen = strlen("client_id=&scope=&client_secret=&grant_type=client_credentials") + strlen(escClientID) +
-              strlen(escScope) + strlen(escClientSecret) + 1;
-    body = malloc(bodyLen);
-    if (body == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-    n = snprintf(body, bodyLen, "client_id=%s&scope=%s&client_secret=%s&grant_type=client_credentials", escClientID,
-                 escScope, escClientSecret);
-    if (n < 0 || (size_t)n >= bodyLen) {
-        LogError(0, RS_RET_ERR, "omazuredce: failed building OAuth request body");
-        ABORT_FINALIZE(RS_RET_ERR);
+    n = asprintf(&body, "client_id=%s&scope=%s&client_secret=%s&grant_type=client_credentials", escClientID, escScope,
+                 escClientSecret);
+    if (n < 0) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omazuredce: failed building OAuth request body");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
+    bodyLen = (size_t)n;
 
     headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
     curl_easy_setopt(curl, CURLOPT_URL, tokenURL);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(body));
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)bodyLen);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tokenWriteCb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
@@ -355,6 +350,7 @@ static rsRetVal requestAccessToken(instanceData *pData) {
 finalize_it:
     if (token != NULL) free(token);
     free(response.data);
+    free(tokenURL);
     free(body);
     if (escClientID != NULL) curl_free(escClientID);
     if (escClientSecret != NULL) curl_free(escClientSecret);
@@ -376,7 +372,6 @@ static rsRetVal buildAzureRequestUrl(instanceData *pData) {
     const char *slash;
     const char *dce;
     char *url = NULL;
-    size_t urlLen;
     int n;
     DEFiRet;
 
@@ -392,19 +387,16 @@ static rsRetVal buildAzureRequestUrl(instanceData *pData) {
         slash = "/";
     }
 
-    urlLen = strlen(dce) + strlen(slash) + strlen("dataCollectionRules/") + strlen((const char *)pData->dcrID) +
-             strlen("/streams/") + strlen((const char *)pData->tableName) + strlen("?api-version=2023-01-01") + 1;
-    CHKmalloc(url = malloc(urlLen));
-    n = snprintf(url, urlLen, "%s%sdataCollectionRules/%s/streams/%s?api-version=2023-01-01", dce, slash,
+    n = asprintf(&url, "%s%sdataCollectionRules/%s/streams/%s?api-version=2023-01-01", dce, slash,
                  (const char *)pData->dcrID, (const char *)pData->tableName);
-    if (n < 0 || (size_t)n >= urlLen) {
-        LogError(0, RS_RET_ERR, "omazuredce: failed building Azure DCE request URL");
-        ABORT_FINALIZE(RS_RET_ERR);
+    if (n < 0) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omazuredce: failed building Azure DCE request URL");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
     free(pData->requestURL);
     pData->requestURL = url;
-    pData->requestURLLen = strlen(url);
+    pData->requestURLLen = (size_t)n;
     url = NULL;
 
 finalize_it:

@@ -357,12 +357,14 @@ static rsRetVal osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* ,
     } else if (pThis->gnutlsPriorityString == NULL) {
 /* Allow ANON Ciphers only in ANON Mode and if no custom priority string is defined */
 #ifdef ENABLE_WOLFSSL
-        strncpy(pristringBuf, "ADH-AES256-GCM-SHA384:ADH-AES128-SHA", sizeof(pristringBuf));
+        memcpy(pristringBuf, "ADH-AES256-GCM-SHA384:ADH-AES128-SHA", sizeof("ADH-AES256-GCM-SHA384:ADH-AES128-SHA"));
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
         /* NOTE: do never use: +eNULL, it DISABLES encryption! */
-        strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0", sizeof(pristringBuf));
+        memcpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0",
+               sizeof("ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0"));
 #else
-        strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL", sizeof(pristringBuf));
+        memcpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL",
+               sizeof("ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL"));
 #endif
 
         dbgprintf("osslInitSession: setting anon ciphers: %s\n", pristringBuf);

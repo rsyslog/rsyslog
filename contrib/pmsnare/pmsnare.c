@@ -94,13 +94,22 @@ static struct cnfparamdescr parserpdescr[] = {{"parser.controlcharacterescapepre
                                               {"parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0}};
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
+enum { PMSNARE_TAB_REPR_SIZE = 5 };
+
+#define PMSNARE_SET_TAB_REPR(dst, literal)                                                                         \
+    do {                                                                                                           \
+        RS_STATIC_ASSERT(sizeof(literal) <= PMSNARE_TAB_REPR_SIZE, "pmsnare tabRepresentation literal too large"); \
+        memset((dst), 0, PMSNARE_TAB_REPR_SIZE);                                                                   \
+        memcpy((dst), (literal), sizeof(literal));                                                                 \
+    } while (0)
+
 struct instanceConf_s {
     int bEscapeCCOnRcv;
     int bEscapeTab;
     int bParserEscapeCCCStyle;
     uchar cCCEscapeChar;
     int tabLength;
-    char tabRepresentation[5];
+    char tabRepresentation[PMSNARE_TAB_REPR_SIZE];
     struct instanceConf_s *next;
 };
 
@@ -226,13 +235,13 @@ BEGINendCnfLoad
          */
         if (inst->bEscapeCCOnRcv && inst->bEscapeTab) {
             if (inst->bParserEscapeCCCStyle) {
-                strncpy(inst->tabRepresentation, "\\t", 5);
+                PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "\\t");
             } else {
-                strncpy(inst->tabRepresentation, "#011", 5);
+                PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "#011");
                 inst->tabRepresentation[0] = inst->cCCEscapeChar;
             }
         } else {
-            strncpy(inst->tabRepresentation, "\t", 5);
+            PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "\t");
         }
         inst->tabLength = strlen(inst->tabRepresentation);
         /* TODO: This debug message would be more useful if it told which Snare instance! */

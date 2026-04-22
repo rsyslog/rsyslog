@@ -992,8 +992,7 @@ static void parse_origin_name(const char *json, char *origin, size_t olen, char 
     struct fjson_object *root = fjson_tokener_parse(json);
     if (!root) {
         if (olen) {
-            strncpy(origin, "unknown", olen - 1);
-            origin[olen - 1] = '\0';
+            rs_cstr_copy(origin, "unknown", olen);
         }
         return;
     }
@@ -1003,20 +1002,17 @@ static void parse_origin_name(const char *json, char *origin, size_t olen, char 
     if (fjson_object_object_get_ex(root, "origin", &j) && fjson_object_is_type(j, fjson_type_string)) {
         const char *s = fjson_object_get_string(j);
         if (s && olen) {
-            strncpy(origin, s, olen - 1);
-            origin[olen - 1] = '\0';
+            rs_cstr_copy(origin, s, olen);
         }
     } else if (olen) {
-        strncpy(origin, "unknown", olen - 1);
-        origin[olen - 1] = '\0';
+        rs_cstr_copy(origin, "unknown", olen);
     }
 
     j = NULL;
     if (fjson_object_object_get_ex(root, "name", &j) && fjson_object_is_type(j, fjson_type_string)) {
         const char *s = fjson_object_get_string(j);
         if (s && nlen) {
-            strncpy(name, s, nlen - 1);
-            name[nlen - 1] = '\0';
+            rs_cstr_copy(name, s, nlen);
         }
     }
 

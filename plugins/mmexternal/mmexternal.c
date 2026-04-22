@@ -210,7 +210,7 @@ static void processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData
             if ((newptr = realloc(pWrkrData->respBuf, pWrkrData->maxLenRespBuf)) == NULL) {
                 DBGPRINTF("mmexternal: error realloc responseBuf: %s\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
                 /* emergency - fake no update */
-                strcpy(pWrkrData->respBuf, "{}\n");
+                memcpy(pWrkrData->respBuf, "{}\n", sizeof("{}\n"));
                 numCharsRead = 3;
                 break;
             }
@@ -222,7 +222,7 @@ static void processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData
             pWrkrData->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
         } else {
             /* emergency - fake no update */
-            strcpy(pWrkrData->respBuf, "{}\n");
+            memcpy(pWrkrData->respBuf, "{}\n", sizeof("{}\n"));
             numCharsRead = 3;
         }
         if (Debug && r == -1) {

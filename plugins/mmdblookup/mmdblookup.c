@@ -436,7 +436,6 @@ static MMDB_entry_data_list_s *entry_data_list_to_json(MMDB_entry_data_list_s *n
     }
 }
 
-
 BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];

@@ -198,7 +198,10 @@ int main(int argc, char *argv[]) {
     /*      Set up address structure for server socket      */
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path + abstract, sockName, sizeof(addr.sun_path) - abstract);
+    const size_t sockname_src_len = strlen(sockName);
+    const size_t sockname_len =
+        sockname_src_len < sizeof(addr.sun_path) - abstract ? sockname_src_len : sizeof(addr.sun_path) - abstract;
+    memcpy(addr.sun_path + abstract, sockName, sockname_len);
     /*
      * Abstract socket addresses do not require termination.
      */
