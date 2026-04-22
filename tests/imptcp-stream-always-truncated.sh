@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2026-04-20 by Codex, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
+wait_truncated_stream_result() {
+	content_check --check-only "imptcp: detected truncated compressed stream" "$RSYSLOG_OUT_LOG" || return 1
+	[ -f "$RSYSLOG2_OUT_LOG" ] || return 1
+	[ "$(wc -l < "$RSYSLOG2_OUT_LOG")" -eq 1 ]
+}
+export QUEUE_EMPTY_CHECK_FUNC=wait_truncated_stream_result
 
 generate_conf
 add_conf '
@@ -12,8 +19,11 @@ input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_por
 	compression.mode="stream:always")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-:msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG2_OUT_LOG'" template="outfmt")
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
+if $syslogtag contains "rsyslogd" then {
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
+	stop
+}
+action(type="omfile" file="'$RSYSLOG2_OUT_LOG'" template="outfmt")
 '
 startup
 assign_tcpflood_port "$RSYSLOG_DYNNAME.tcpflood_port"
@@ -32,7 +42,6 @@ sock.sendall(payload)
 sock.close()
 PY
 
-sleep 1
 shutdown_when_empty
 wait_shutdown
 
