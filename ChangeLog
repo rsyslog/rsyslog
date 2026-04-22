@@ -1,5 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-04-22: doc: update modules documentation
+  fix documentation nits and increase consistency
+  Thanks to Yury Bushmelev for the patch
+- 2026-04-22: imfile: harden state file handling
+  potential edge-cases are now better handled, leading to higher robustness
+  and stability.
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-21
 
