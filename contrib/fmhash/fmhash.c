@@ -75,17 +75,18 @@ struct hash_context_s {
     hash_wrapper_3 hash_wrapper_2_3;
 };
 
-/*
- * Fowler–Noll–Vo hash 32 bit
- * http://www.isthe.com/chongo/src/fnv/hash_32.c
- */
-#if defined(__clang__)
-    #pragma GCC diagnostic ignored "-Wunknown-attributes"
-#endif
+#ifndef USE_HASH_XXHASH
+    /*
+     * Fowler–Noll–Vo hash 32 bit
+     * http://www.isthe.com/chongo/src/fnv/hash_32.c
+     */
+    #if defined(__clang__)
+        #pragma GCC diagnostic ignored "-Wunknown-attributes"
+    #endif
 static hash_t
-#if defined(__clang__)
+    #if defined(__clang__)
     __attribute__((no_sanitize("unsigned-integer-overflow")))
-#endif
+    #endif
     fnv_32(const void *input, size_t len, seed_t seed) {
     unsigned char *bp = (unsigned char *)input; /* start of buffer */
 
@@ -106,17 +107,17 @@ static hash_t
 }
 
 
-/*
- * Modified Bernstein
- * http://www.eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
- */
-#if defined(__clang__)
-    #pragma GCC diagnostic ignored "-Wunknown-attributes"
-#endif
+    /*
+     * Modified Bernstein
+     * http://www.eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
+     */
+    #if defined(__clang__)
+        #pragma GCC diagnostic ignored "-Wunknown-attributes"
+    #endif
 static hash_t
-#if defined(__clang__)
+    #if defined(__clang__)
     __attribute__((no_sanitize("unsigned-integer-overflow")))
-#endif
+    #endif
     djb_hash(const void *input, size_t len, seed_t seed) {
     const char *p = input;
     hash_t hash = 5381;
@@ -127,6 +128,7 @@ static hash_t
 
     return hash + seed;
 }
+#endif /* ifndef USE_HASH_XXHASH */
 
 /*Get 32 bit hash for input*/
 static hash_t hash32(const void *input, size_t len, seed_t seed) {
