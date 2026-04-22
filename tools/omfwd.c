@@ -166,6 +166,7 @@ typedef struct targetData {
     int bIsConnected; /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
     int nXmit; /* number of transmissions since last (re-)bind */
     tcpclt_t *pTCPClt; /* our tcpclt object */
+    sbool bInDestruct; /* guard against recursive teardown on send failure */
     sbool bzInitDone; /* did we do an init of zstrm already? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     /* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
@@ -693,6 +694,11 @@ finalize_it:
 }
 
 static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebind) {
+    if (pTarget->bInDestruct) {
+        return;
+    }
+
+    pTarget->bInDestruct = RSTRUE;
     if (pTarget->bIsConnected && pTarget->offsSndBuf != 0) {
         rsRetVal localRet = TCPSendBuf(pTarget, pTarget->sndBuf, pTarget->offsSndBuf, IS_FLUSH);
         if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_PREVIOUS_COMMITTED) {
@@ -725,6 +731,7 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         pTarget->ttResume += pTarget->pData->poolResumeInterval;
     }
     pTarget->bIsConnected = 0;
+    pTarget->bInDestruct = RSFALSE;
     DBGPRINTF("omfwd: DestructTargetData: %p %s:%s, connected %d, ttResume %lld\n", pTarget, pTarget->target_name,
               pTarget->port, pTarget->bIsConnected, (long long)pTarget->ttResume);
 }
@@ -862,6 +869,7 @@ BEGINcreateWrkrInstance
         pWrkrData->target[i].port = pData->ports[(i < pData->nPorts) ? i : 0];
         pWrkrData->target[i].maxLenSndBuf =
             (runModConf->maxLenSndBuf == -1) ? SNDBUF_FIXED_BUFFER_SIZE : runModConf->maxLenSndBuf;
+        pWrkrData->target[i].bInDestruct = RSFALSE;
         pWrkrData->target[i].offsSndBuf = 0;
         pWrkrData->target[i].ttResume = ttNow;
     }
@@ -1115,7 +1123,9 @@ static rsRetVal CheckConnection(targetData_t *const pTarget) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         emitConnectionErrorMsg(pTarget, iRet);
-        DestructTargetData(pTarget, 0);
+        if (!pTarget->bInDestruct) {
+            DestructTargetData(pTarget, 0);
+        }
         iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
@@ -1145,7 +1155,9 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 finalize_it:
     if (iRet != RS_RET_OK) {
         emitConnectionErrorMsg(pTarget, iRet);
-        DestructTargetData(pTarget, 0);
+        if (!pTarget->bInDestruct) {
+            DestructTargetData(pTarget, 0);
+        }
         iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
