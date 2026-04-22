@@ -1,5 +1,8 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-04-22: core: harden string allocation and copy handling
+  improve bounded string-copy and string-building paths across the code base
+  and add portable asprintf/vasprintf compatibility support.
 - 2026-04-22: doc: update modules documentation
   fix documentation nits and increase consistency
   Thanks to Yury Bushmelev for the patch
