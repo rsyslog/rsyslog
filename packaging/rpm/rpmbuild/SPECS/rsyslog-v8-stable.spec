@@ -656,7 +656,6 @@ export HIREDIS_LIBS=-L%{_libdir}
 	--enable-mmjsontransform \
 	--enable-qpidproton-static \
 	--enable-debug-symbols
-#	--enable-pmrfc3164sd \
 
 make %{?_smp_mflags}
 

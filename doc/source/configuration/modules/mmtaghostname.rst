@@ -1,12 +1,11 @@
-******************************************
-mmtaghostname: message modification module
-******************************************
+*******************************************************
+mmtaghostname: Message tag/hostname modification module
+*******************************************************
 
 ================  ==============================================================
 **Module Name:**  **mmtaghostname**
 **Authors:**      Jean-Philippe Hilaire <jean-philippe.hilaire@pmu.fr> & Philippe Duveau <philippe.duveau@free.fr>
 ================  ==============================================================
-
 
 Purpose
 =======
@@ -16,11 +15,11 @@ message processing without interfering in the parsers' chain process
 and can be applied before or after parsing process using rulesets.
 
 The purposes are :
- 
+
 - to add a tag on message produce by input module which does not provide
   a tag like imudp or imtcp. Useful when the tag is used for routing the
   message.
-   
+
 - to force message hostname to the rsyslog value.
   AWS Use case : applications in auto-scaling systems provides logs to rsyslog
   through udp/tcp. As a result of auto-scaling, the name of the host is based
@@ -40,12 +39,13 @@ To successfully compile mmtaghostname module.
 Configuration Parameters
 ========================
 
-Input Parameters
-----------------
-
 .. note::
 
-   Parameter names are case-insensitive. The camelCase convention is recommended.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -68,18 +68,18 @@ Input Parameters
    ../../reference/parameters/mmtaghostname-tag
    ../../reference/parameters/mmtaghostname-forcelocalhostname
 
-Sample
-======
+Example
+=======
 
-In this sample, the message received is parsed by RFC5424 parser and then 
-the HOSTNAME is overwritten and a tag is set. 
+In this sample, the message received is parsed by RFC5424 parser and then
+the HOSTNAME is overwritten and a tag is set.
 
 .. code-block:: none
 
     module(load='mmtaghostname')
     module(load='imudp')
     global(localhostname="sales-front")
-    
+
     ruleset(name="TagUDP" parser=[ "rsyslog.rfc5424" ]) {
         action(type="mmtaghostname" tag="front" forceLocalHostname="on")
         call ...

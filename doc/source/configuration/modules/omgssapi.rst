@@ -1,67 +1,73 @@
-GSSAPI module support in rsyslog v3
-===================================
+*************************************
+omgssapi: GSSAPI Syslog Output Module
+*************************************
 
-What is it good for.
+Purpose
+=======
 
--  client-serverauthentication
+What is it good for
+-------------------
+
+-  Client-server authentication
 -  Log messages encryption
 
-Requirements.
+Requirements
+------------
 
 -  Kerberos infrastructure
 -  rsyslog, rsyslog-gssapi
 
-Configuration.
+Configuration
+=============
 
 Let's assume there are 3 machines in Kerberos Realm:
 
--  the first is running KDC (Kerberos Authentication Service and Key
+-  The first is running KDC (Kerberos Authentication Service and Key
    Distribution Center),
--  the second is a client sending its logs to the server,
--  the third is receiver, gathering all logs.
+-  The second is a client sending its logs to the server,
+-  The third is receiver, gathering all logs.
 
 1. KDC:
 
--  Kerberos database must be properly set-up on KDC machine first. Use
-   kadmin/kadmin.local to do that. Two principals need to be add in our
-   case:
+   -  Kerberos database must be properly set-up on KDC machine first. Use
+      kadmin/kadmin.local to do that. Two principals need to be added in our
+      case:
 
-#. sender@REALM.ORG
+      #. sender@REALM.ORG
 
--  client must have ticket for principal sender
--  REALM.ORG is kerberos Realm
+         -  client must have ticket for principal sender
+         -  REALM.ORG is Kerberos Realm
 
-#. host/receiver.mydomain.com@REALM.ORG - service principal
+      #. host/receiver.mydomain.com@REALM.ORG - service principal
 
--  Use ktadd to export service principal and transfer it to
-   /etc/krb5.keytab on receiver
+   -  Use ktadd to export service principal and transfer it to
+      /etc/krb5.keytab on receiver
 
-2. CLIENT:
+#. CLIENT:
 
--  set-up rsyslog, in /etc/rsyslog.conf
--  $ModLoad omgssapi - load output gss module
--  $GSSForwardServiceName otherThanHost - set the name of service
-   principal, "host" is the default one
--  \*.\* :omgssapi:receiver.mydomain.com - action line, forward logs to
-   receiver
--  kinit root - get the TGT ticket
--  service rsyslog start
+   -  set-up rsyslog, in ``/etc/rsyslog.conf``:
 
-3. SERVER:
+      -  ``$ModLoad omgssapi`` - load output GSS module
+      -  ``$GSSForwardServiceName otherThanHost`` - set the name of service
+         principal, "host" is the default one
+      -  ``*.* :omgssapi:receiver.mydomain.com`` - action line, forward logs to
+         receiver
 
--  set-up rsyslog, in /etc/rsyslog.conf
+   -  ``kinit root`` - get the TGT ticket
+   -  ``service rsyslog start``
 
--  $ModLoad `imgssapi <imgssapi.html>`_ - load input gss module
+#. SERVER:
 
--  $InputGSSServerServiceName otherThanHost - set the name of service
-   principal, "host" is the default one
+   -  set-up rsyslog, in /etc/rsyslog.conf:
 
--  $InputGSSServerPermitPlainTCP on - accept GSS and TCP connections
-   (not authenticated senders), off by default
+      -  ``$ModLoad imgssapi`` - load input GSS module
+      -  ``$InputGSSServerServiceName otherThanHost`` - set the name of service
+         principal, "host" is the default one
+      -  ``$InputGSSServerPermitPlainTCP on`` - accept GSS and TCP connections
+         (not authenticated senders), off by default
+      -  ``$InputGSSServerRun 514`` - run server on port
 
--  $InputGSSServerRun 514 - run server on port
-
--  service rsyslog start
+   -  ``service rsyslog start``
 
 The picture demonstrate how things work.
 
@@ -69,7 +75,7 @@ The picture demonstrate how things work.
    :align: center
    :alt: rsyslog gssapi support
 
-   rsyslog gssapi support
+   rsyslog GSSAPI support
 
 
 Configuration Parameters

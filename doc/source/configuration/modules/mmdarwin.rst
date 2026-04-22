@@ -3,9 +3,9 @@
 .. role:: json(code)
    :language: json
 
-***************************
-Darwin connector (mmdarwin)
-***************************
+*****************************************************
+mmdarwin: Darwin AI CyberSecurity Framework connector
+*****************************************************
 
 ================  ===========================================
 **Module Name:**  **mmdarwin**
@@ -16,21 +16,23 @@ Darwin connector (mmdarwin)
 Purpose
 =======
 
-Darwin is an open source Artificial Intelligence Framework for CyberSecurity. The mmdarwin module allows us to call Darwin in order to enrich our JSON-parsed logs with a score, and/or to allow Darwin to generate alerts.
+Darwin is an open source Artificial Intelligence Framework for CyberSecurity.
+The mmdarwin module allows us to call Darwin in order to enrich our
+JSON-parsed logs with a score, and/or to allow Darwin to generate alerts.
 
 How to build the module
 =======================
 
-To compile Rsyslog with mmdarwin you'll need to:
+To compile Rsyslog with mmdarwin you'll need to set ``--enable-mmdarwin`` on
+configure.
 
-* set *--enable-mmdarwin* on configure
-
-Configuration Parameter
-=======================
+Configuration Parameters
+========================
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Module Parameters
 -----------------
@@ -45,8 +47,8 @@ Module Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
-Input Parameters
-----------------
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -80,8 +82,8 @@ Input Parameters
         :end-before: .. summary-end
 
 
-Configuration example
-=====================
+Example
+=======
 
 This example shows a possible configuration of mmdarwin.
 

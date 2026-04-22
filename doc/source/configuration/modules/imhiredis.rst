@@ -2,7 +2,7 @@
 .. include:: <isonum.txt>
 
 *****************************
-Imhiredis: Redis input plugin
+imhiredis: Redis input plugin
 *****************************
 
 ====================  =====================================
@@ -14,7 +14,7 @@ Imhiredis: Redis input plugin
 Purpose
 =======
 
-Imhiredis is an input module reading arbitrary entries from Redis.
+This module provides native support for reading arbitrary entries from Redis.
 It uses the `hiredis library <https://github.com/redis/hiredis>`_ to query Redis instances using 3 modes:
 
 - **queues**, using `LIST <https://redis.io/commands#list>`_ commands

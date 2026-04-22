@@ -1,13 +1,15 @@
-Log Message Normalization Module (mmnormalize)
-==============================================
+*********************************************
+mmnormalize: Log Message Normalization Module
+*********************************************
 
-**Module Name:    mmnormalize**
+====================  =======================================
+**Module Name:**      **mmnormalize**
+**Author:**           Rainer Gerhards <rgerhards@adiscon.com>
+**Available since:**  6.1.2+
+====================  =======================================
 
-**Available since:** 6.1.2+
-
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
-
-**Description**:
+Purpose
+=======
 
 This module provides the capability to normalize log messages via
 `liblognorm <http://www.liblognorm.com>`_. Thanks to liblognorm,
@@ -23,22 +25,25 @@ because liblognorm creates a format that is inspired by the
 CEE/lumberjack approach.
 
 **Please note:** CEE/lumberjack properties are different from regular
-properties. They have always "$!" prepended to the property name given
+properties. They have always ``$!`` prepended to the property name given
 in the rulebase. Such a property needs to be called with
-**%$!propertyname%**.
+``%$!propertyname%``.
 
 Note that from a performance point of view mmnormalize should only be called
 once on each message, if possible. To do so, place all rules into a single
 rule base. If that is not possible, you can safely call mmnormalize multiple
 times. This incurs a small performance drawback.
 
-Module Parameters
-~~~~~~~~~~~~~~~~~
+Configuration Parameters
+========================
 
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for
    readability.
+
+Module Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -52,12 +57,7 @@ Module Parameters
         :end-before: .. summary-end
 
 Action Parameters
-~~~~~~~~~~~~~~~~~
-
-.. note::
-
-   Parameter names are case-insensitive; camelCase is recommended for
-   readability.
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -97,7 +97,7 @@ Action Parameters
    ../../reference/parameters/mmnormalize-variable
 
 See Also
-~~~~~~~~
+========
 
 -  `First steps for
    mmnormalize <http://www.rsyslog.com/normalizer-first-steps-for-mmnormalize/>`_
@@ -109,19 +109,20 @@ See Also
    LogAnalyzer <http://www.rsyslog.com/using-rsyslog-mmnormalize-module-effectively-with-adiscon-loganalyzer/>`_
 
 Caveats/Known Bugs
-~~~~~~~~~~~~~~~~~~
+==================
 
 None known at this time.
 
 Example
-~~~~~~~
+=======
 
-**Sample 1:**
+Sample 1
+--------
 
 In this sample messages are received via imtcp. Then they are normalized with the given rulebase.
 After that they are written in a file.
 
-::
+.. code-block:: none
 
   module(load="mmnormalize")
   module(load="imtcp")
@@ -129,16 +130,17 @@ After that they are written in a file.
   input(type="imtcp" port="10514" ruleset="outp")
 
   ruleset(name="outp") {
-  	action(type="mmnormalize" rulebase="/tmp/rules.rulebase")
-  	action(type="omfile" File="/tmp/output")
+      action(type="mmnormalize" rulebase="/tmp/rules.rulebase")
+      action(type="omfile" File="/tmp/output")
   }
 
-**Sample 2:**
+Sample 2
+--------
 
 In this sample messages are received via imtcp. Then they are normalized based on the given rules.
 The strings from **rule** are put together and are equal to a rulebase with the same content.
 
-::
+.. code-block:: none
 
   module(load="mmnormalize")
   module(load="imtcp")
@@ -146,22 +148,23 @@ The strings from **rule** are put together and are equal to a rulebase with the 
   input(type="imtcp" port="10514" ruleset="outp")
 
   ruleset(name="outp") {
-  	action(type="mmnormalize" rule=["rule=:%host:word% %tag:char-to:\\x3a%: no longer listening on %ip:ipv4%#%port:number%", "rule=:%host:word% %ip:ipv4% user was logged out"])
-  	action(type="omfile" File="/tmp/output")
+      action(type="mmnormalize" rule=["rule=:%host:word% %tag:char-to:\\x3a%: no longer listening on %ip:ipv4%#%port:number%", "rule=:%host:word% %ip:ipv4% user was logged out"])
+      action(type="omfile" File="/tmp/output")
   }
 
-**Sample 3:**
+Sample 3
+--------
 
 This activates the module and applies normalization to all messages:
 
-::
+.. code-block:: none
 
   module(load="mmnormalize")
   action(type="mmnormalize" ruleBase="/path/to/rulebase.rb")
 
 The same in legacy format:
 
-::
+.. code-block:: none
 
   $ModLoad mmnormalize
   $mmnormalizeRuleBase /path/to/rulebase.rb

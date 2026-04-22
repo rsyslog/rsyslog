@@ -1,13 +1,15 @@
-RFC5424 structured data parsing module (mmpstrucdata)
-=====================================================
+****************************************************
+mmpstrucdata: RFC5424 structured data parsing module
+****************************************************
 
-**Module Name:** mmpstrucdata
+====================  =======================================
+**Module Name:**      mmpstrucdata
+**Author:**           Rainer Gerhards <rgerhards@adiscon.com>
+**Available since:**  7.5.4
+====================  =======================================
 
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
-
-**Available since**: 7.5.4
-
-**Description**:
+Purpose
+=======
 
 The mmpstrucdata parses the structured data of `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_ into the message json variable tree. The data parsed, if available, is stored under "jsonRoot!rfc5424-sd!...". Please note that only RFC5424 messages will be processed.
 
@@ -18,12 +20,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
-
-Module Parameters
------------------
-
-This module has no module parameters.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------
@@ -43,12 +41,14 @@ Action Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
-**See Also**
+See Also
+========
 
 -  `Howto anonymize messages that go to specific
    files <http://www.rsyslog.com/howto-anonymize-messages-that-go-to-specific-files/>`_
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+==================
 
 -  this module is currently experimental; feedback is appreciated
 -  property names are treated case-insensitive in rsyslog. As such,
@@ -58,11 +58,12 @@ Action Parameters
 -  structured data with duplicate SD-IDs and SD-PARAMS is not properly
    processed
 
-**Samples:**
+Examples
+========
 
 Below you can find a structured data part of a random message which has three parameters.
 
-::
+.. code-block:: none
 
   [exampleSDID@32473 iut="3" eventSource="Application"eventID="1011"]
 
@@ -72,7 +73,7 @@ file with the message anonymized. Note that once mmpstrucdata has run,
 access to the original message is no longer possible (except if stored
 in user variables before anonymization).
 
-::
+.. code-block:: none
 
   module(load="mmpstrucdata") action(type="mmpstrucdata")
   template(name="jsondump" type="string" string="%msg%: %$!%\\n")
@@ -83,23 +84,30 @@ in user variables before anonymization).
 
 Take this example message (inspired by RFC5424 sample;)):
 
-``<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="test"] BOM'su root' failed for lonvick on /dev/pts/8``
+.. code-block:: none
+
+  <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="test"] BOM'su root' failed for lonvick on /dev/pts/8
+
 
 We apply this configuration:
 
-::
+.. code-block:: none
 
   module(load="mmpstrucdata") action(type="mmpstrucdata")
-  template(name="sample2" type="string" string="ALL: %$!%\\nSD:
-  %$!RFC5424-SD%\\nIUT:%$!rfc5424-sd!exampleSDID@32473!iut%\\nRAWMSG:
-  %rawmsg%\\n\\n") action(type="omfile" file="/path/to/log"
-  template="sample2")
-
+  template(name="sample2" type="string"
+    string="ALL: %$!%\\nSD: %$!RFC5424-SD%\\nIUT:%$!rfc5424-sd!exampleSDID@32473!iut%\\nRAWMSG: %rawmsg%\\n\\n")
+  action(type="omfile" file="/path/to/log" template="sample2")
 
 
 This will output:
 
-``ALL: { "rfc5424-sd": { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "test" } } } SD: { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "test" } } IUT:3 RAWMSG: <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="test"] BOM'su root' failed for lonvick on /dev/pts/8``
+.. code-block:: none
+
+  ALL: { "rfc5424-sd": { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "test" } } }
+  SD: { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "test" } }
+  IUT:3
+  RAWMSG: <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="test"] BOM'su root' failed for lonvick on /dev/pts/8
+
 
 As you can seem, you can address each of the individual items. Note that
 the case of the RFC5424 parameter names has been converted to lower

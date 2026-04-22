@@ -1,13 +1,12 @@
-********************************************************
-Support module for external message modification modules
-********************************************************
+********************************************************************
+mmexternal: Support module for external message modification plugins
+********************************************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **mmexternal**
 **Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available since:**         8.3.0
 ===========================  ===========================================================================
-
 
 Purpose
 =======
@@ -17,18 +16,17 @@ into rsyslog.
 
 For details on the interface specification, see rsyslog's source in the
 ./plugins/external/INTERFACE.md.
- 
 
 Configuration Parameters
 ========================
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-
-Input Parameters
-----------------
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -62,14 +60,11 @@ Input Parameters
    ../../reference/parameters/mmexternal-forcesingleinstance
 
 
-Examples
-========
-
-Execute external module
------------------------
+Example
+=======
 
 The following config file snippet is used to write execute an external
-message modification module "mmexternal.py". Note that the path to the
+message modification module ``mmexternal.py``. Note that the path to the
 module is specified here. This is necessary if the module is not in the
 default search path.
 
@@ -78,5 +73,4 @@ default search path.
    module (load="mmexternal") # needs to be done only once inside the config
 
    action(type="mmexternal" binary="/path/to/mmexternal.py")
-
 

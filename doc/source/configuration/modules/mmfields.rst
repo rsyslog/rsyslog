@@ -1,18 +1,18 @@
-***********************************
-Fields Extraction Module (mmfields)
-***********************************
+**********************************
+mmfields: Fields Extraction Module
+**********************************
 
-===========================  ===========================================================================
-**Module Name:**             **mmfields**
-**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-**Available since:**         7.5.1
-===========================  ===========================================================================
+====================  ===========================================================================
+**Module Name:**      **mmfields**
+**Author:**           `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Available since:**  7.5.1
+====================  ===========================================================================
 
 
 Purpose
 =======
 
-The mmfield module permits to extract fields. It is an alternate to
+The mmfields module permits to extract fields. It is an alternate to
 using the property replacer field extraction capabilities. In contrast
 to the property replacer, all fields are extracted as once and stored
 inside the structured data part (more precisely: they become Lumberjack
@@ -33,7 +33,7 @@ most important if only a smaller subset of the fields is actually
 needed.
 
 In any case, mmfields provides a very handy and easy to use way to parse
-structured data into a it's individual data items. Again, a primary use
+structured data into its individual data items. Again, a primary use
 case was support for CEF (Common Event Format), which is made extremely
 easy to do with this module.
 
@@ -46,10 +46,11 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive. camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-
-**Input Parameters**
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -98,8 +99,8 @@ Writing into a specific json path
 ---------------------------------
 
 The following sample is similar to the previous one, but this time the
-colon is used as separator and data is written into the "$!mmfields"
-json path.
+colon is used as separator and data is written into the ``$!mmfields``
+JSON path.
 
 .. code-block:: none
 

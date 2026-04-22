@@ -268,7 +268,6 @@ EXTRA_DIST = \
     source/configuration/modules/pmnormalize.rst \
     source/configuration/modules/pmnull.rst \
     source/configuration/modules/pmrfc3164.rst \
-    source/configuration/modules/pmrfc3164sd.rst \
     source/configuration/modules/pmrfc5424.rst \
     source/configuration/modules/sigprov_gt.rst \
     source/configuration/modules/sigprov_ksi.rst \

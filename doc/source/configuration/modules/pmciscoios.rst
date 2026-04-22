@@ -1,6 +1,6 @@
-**********
-pmciscoios
-**********
+********************************************
+pmciscoios: Cisco IOS "syslog" format parser
+********************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **pmciscoios**
@@ -40,8 +40,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
-
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Parser Parameters
 -----------------
