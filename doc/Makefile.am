@@ -189,6 +189,7 @@ EXTRA_DIST = \
     source/configuration/modules/imhttp.rst \
     source/configuration/modules/imjournal.rst \
     source/configuration/modules/imkafka.rst \
+    source/configuration/modules/imkubernetes.rst \
     source/configuration/modules/imklog.rst \
     source/configuration/modules/imkmsg.rst \
     source/configuration/modules/immark.rst \
@@ -474,6 +475,20 @@ EXTRA_DIST = \
     source/reference/parameters/imdocker-listcontainersoptions.rst \
     source/reference/parameters/imdocker-pollinginterval.rst \
     source/reference/parameters/imdocker-retrievenewlogsfromstart.rst \
+    source/reference/parameters/imkubernetes-allowunsignedcerts.rst \
+    source/reference/parameters/imkubernetes-cacheentryttl.rst \
+    source/reference/parameters/imkubernetes-defaultfacility.rst \
+    source/reference/parameters/imkubernetes-defaultseverity.rst \
+    source/reference/parameters/imkubernetes-enrichkubernetes.rst \
+    source/reference/parameters/imkubernetes-escapelf.rst \
+    source/reference/parameters/imkubernetes-freshstarttail.rst \
+    source/reference/parameters/imkubernetes-kubernetesurl.rst \
+    source/reference/parameters/imkubernetes-logfileglob.rst \
+    source/reference/parameters/imkubernetes-pollinginterval.rst \
+    source/reference/parameters/imkubernetes-skipverifyhost.rst \
+    source/reference/parameters/imkubernetes-tls-cacert.rst \
+    source/reference/parameters/imkubernetes-token.rst \
+    source/reference/parameters/imkubernetes-tokenfile.rst \
     source/reference/parameters/imdtls-address.rst \
     source/reference/parameters/imdtls-name.rst \
     source/reference/parameters/imdtls-port.rst \

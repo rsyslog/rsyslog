@@ -300,7 +300,7 @@ def build_doc_xref_check(name_status: list[dict[str, object]], base: str, head: 
     }
 
 
-
+def list_tree(ref: str, path: str) -> list[str]:
     output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
     return [line for line in output.splitlines() if line]
 

@@ -2213,6 +2213,21 @@ if test "x$enable_imdocker" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_IMDOCKER, test x$enable_imdocker = xyes)
 
+AC_ARG_ENABLE(imkubernetes,
+        [AS_HELP_STRING([--enable-imkubernetes],[input kubernetes log module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imkubernetes="yes" ;;
+          no) enable_imkubernetes="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imkubernetes) ;;
+         esac],
+        [enable_imkubernetes=no]
+)
+if test "x$enable_imkubernetes" = "xyes"; then
+	AC_CHECK_HEADERS([curl/curl.h glob.h])
+	PKG_CHECK_MODULES([CURL], [libcurl >= 7.40.0])
+fi
+AM_CONDITIONAL(ENABLE_IMKUBERNETES, test x$enable_imkubernetes = xyes)
+
 AC_ARG_ENABLE(imdocker-tests,
         [AS_HELP_STRING([--enable-imdocker-tests],[Enable imdocker tests @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -3565,6 +3580,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imbatchreport/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/imkubernetes/Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
@@ -3613,6 +3629,7 @@ echo "    DTLS udp input module enabled:            $enable_imdtls"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    docker log input module enabled:          $enable_imdocker"
+echo "    kubernetes log input module enabled:      $enable_imkubernetes"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
