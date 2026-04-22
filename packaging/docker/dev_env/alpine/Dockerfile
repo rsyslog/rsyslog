@@ -52,6 +52,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS="\
 --enable-imfile \
 --enable-impstats \
 --enable-imptcp \
+--enable-imkubernetes \
 --enable-mmjsonparse \
 --enable-mmutf8fix \
 --enable-omstdout \

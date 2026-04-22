@@ -238,6 +238,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmfields \
 	--disable-mmgrok \
 	--enable-mmjsonparse \
+	--enable-imkubernetes \
 	--enable-mmkubernetes \
 	--enable-mmnormalize \
 	--enable-mmpstrucdata \
