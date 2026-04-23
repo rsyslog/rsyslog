@@ -102,7 +102,7 @@ The following sections describe previous efforts and image bases that are **no l
 * `/appliance` - This directory represents an early experiment at creating an all-in-one rsyslog logging appliance. This approach did not align with current containerization best practices and was discontinued. The images are outdated and should not be used.
 
 ### Legacy Base Images
-* Legacy Alpine and CentOS base images previously existed in a `/base` directory. These are no longer maintained. Development now focuses exclusively on Ubuntu-based images, which integrate best with our daily stable package builds.
+* Legacy Alpine and CentOS base images previously existed in a `/base` directory. These are no longer maintained. Development now focuses exclusively on Ubuntu-based images, which integrate with the Adiscon stable and daily-stable package feeds.
 
 ### CentOS Notes (Historical)
 * Older CentOS 7 definitions can be found under `/base/centos7`. Like the Alpine files, these are no longer maintained but remain for reference.
