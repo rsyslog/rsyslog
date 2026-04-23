@@ -1,5 +1,8 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-04-23: omusrmsg: avoid potential segfault when used under systemd
+  Systemd hosts can hit the logind wall-message path with zero active
+  sessions. omusrmsg must not abort while handling that case.
 - 2026-04-22: core: harden string allocation and copy handling
   improve bounded string-copy and string-building paths across the code base
   and add portable asprintf/vasprintf compatibility support.
