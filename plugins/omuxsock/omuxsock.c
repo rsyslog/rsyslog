@@ -431,7 +431,7 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
     DEFiRet;
-    unsigned lenSent = 0;
+    ssize_t lenSent = 0;
 
     if (pData->sock == INVLD_SOCK) {
         CHKiRet(doTryResume(pData));
@@ -448,17 +448,29 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
         } else {
             lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, pData->addrLen);
         }
-        if (lenSent != len) {
+        if ((size_t)lenSent != len) {
             int eno = errno;
             char errStr[1024];
 
+            if (lenSent != -1) {
+                eno = 0;
+            }
+
             /*
-             * XXX/rgerhards: how is this message correct, in that we are returning OK still?
-             * In reality, the remainder of the partially sent message (or never sent message)
-             * is simply dropped, and we do not change the state of the socket.
+             * For connected sockets, we'll let the infrastructure resume us according to its own
+             * criteria.  For unconnected sockets, we'll simply try again on the next message received.
              */
-            DBGPRINTF("omuxsock suspending: send%s(), socket %d, error: %d = %s.\n", pData->bConnected ? "" : "to",
-                      pData->sock, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+            if (pData->bConnected) {
+                LogError(eno, RS_RET_SUSPENDED, "omuxsock suspending: send(), socket %d, len %zu, sent %zd",
+                         pData->sock, len, lenSent);
+                if (iRet == RS_RET_OK) {
+                    iRet = RS_RET_SUSPENDED;
+                }
+            } else {
+                DBGPRINTF("omuxsock: sendto(), socket %d, len %zu, sent %zd, error: %d = %s.\n", pData->sock, len,
+                          lenSent, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+            }
+            closeSocket(pData);
         }
     }
 

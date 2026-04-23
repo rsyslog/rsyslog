@@ -39,9 +39,14 @@ BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 
 # now do the usual run
+RS_REDIR="> ${RSYSLOG_DYNNAME}.log 2>&1"
 startup
 # 10000 messages should be enough
 injectmsg 0 10000
+wait_queueempty
+echo resetting uxsockrcvr...
+kill -HUP $BGPROCESS
+injectmsg 10000 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
@@ -53,5 +58,12 @@ wait $BGPROCESS
 echo background process has terminated, continue test...
 
 # and continue the usual checks
-seq_check 0 9999
+seq_check 0 19999
+
+# Verify that we do NOT get messages for when our receiver reset.
+# We only expect these messages if we have a connected socket.
+# We don't redirect with valgrind
+if [ "${USE_VALGRIND}" != "YES" ]; then
+    check_not_present "omuxsock suspending: send(), socket " ${RSYSLOG_DYNNAME}.log
+fi
 exit_test

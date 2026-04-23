@@ -31,6 +31,10 @@ echo background uxsockrcvr process id is $BGPROCESS
 startup
 # 10000 messages should be enough
 injectmsg 0 10000
+wait_queueempty
+echo resetting uxsockrcvr...
+kill -HUP $BGPROCESS
+injectmsg 10000 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
@@ -42,5 +46,5 @@ wait $BGPROCESS
 echo background process has terminated, continue test...
 
 # and continue the usual checks
-seq_check 0 9999
+seq_check 0 19999
 exit_test

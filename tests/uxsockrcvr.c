@@ -62,17 +62,24 @@ int abstract;
 int sockBacklog = MAX_FDS - 1;
 struct pollfd fds[MAX_FDS];
 int nfds;
-
+volatile int need_reset;
 
 /* called to clean up on exit
  */
 void cleanup(void) {
     int index;
 
+    /*
+     * This function is called from a signal handler.  Ensure any
+     * called functions are async-signal-safe as per
+     * signal-safety(7).  close and unlink are safe.
+     */
     if (!abstract) unlink(sockName);
     for (index = 0; index < nfds; ++index) {
         close(fds[index].fd);
+        fds[index].fd = -1;
     }
+    nfds = 0;
 }
 
 
@@ -80,6 +87,9 @@ void doTerm(int __attribute__((unused)) signum) {
     exit(1);
 }
 
+void doReset(int __attribute__((unused)) signum) {
+    need_reset = 1;
+}
 
 void usage(void) {
     fprintf(stderr,
@@ -127,13 +137,61 @@ static void _decode_sockType(const char *s) {
     exit(1);
 }
 
+void initialize_socket(void) {
+    struct sockaddr_un addr; /* address of server */
+
+    /*      Create a UNIX datagram socket for server        */
+    if ((fds[0].fd = socket(AF_UNIX, sockType, 0)) < 0) {
+        perror("server: socket");
+        exit(1);
+    }
+
+    /*      Set up address structure for server socket      */
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    const size_t sockname_len = strlen(sockName);
+
+    /* Require non-abstract addresses to be terminated. */
+    if (sockname_len >= (sizeof(addr.sun_path) - 1)) {
+        fprintf(stderr, "error: socket path would be truncated\n");
+        exit(1);
+    }
+    memcpy(addr.sun_path + abstract, sockName, sockname_len);
+    /*
+     * Abstract socket addresses do not require termination.
+     */
+    if (!abstract && addr.sun_path[sizeof(addr.sun_path) - 1]) {
+        addr.sun_path[sizeof(addr.sun_path) - 1] = 0;
+    }
+
+    /*
+     * For pathname addresses, the +1 is the terminating \0 character.
+     * For abstract addresses, the +1 is the leading \0 character.
+     * Technically, Linux doesn't care about that terminating \0 for
+     * pathname addresses.
+     */
+    if (bind(fds[0].fd, (struct sockaddr *)&addr, offsetof(struct sockaddr_un, sun_path) + sockname_len + 1) < 0) {
+        perror("server: bind");
+        close(fds[0].fd);
+        exit(1);
+    }
+
+    if (sockConnected && listen(fds[0].fd, sockBacklog) == -1) {
+        perror("server: listen");
+        close(fds[0].fd);
+        exit(1);
+    }
+
+    fds[0].events = POLLIN;
+    nfds = 1;
+}
+
 int main(int argc, char *argv[]) {
     int opt;
     int rlen;
     int timeout = DFLT_TIMEOUT;
     FILE *fp = stdout;
     unsigned char data[128 * 1024];
-    struct sockaddr_un addr; /* address of server */
     struct sockaddr from;
     socklen_t fromlen;
     int index;
@@ -186,56 +244,33 @@ int main(int argc, char *argv[]) {
         perror("signal(SIGINT, ...)");
         exit(1);
     }
-
-    /*      Create a UNIX datagram socket for server        */
-    if ((fds[0].fd = socket(AF_UNIX, sockType, 0)) < 0) {
-        perror("server: socket");
+    if (signal(SIGHUP, doReset) == SIG_ERR) {
+        perror("signal(SIGHUP, ...)");
         exit(1);
     }
 
+    for (index = 0; index < MAX_FDS; ++index) {
+        fds[index].fd = -1;
+    }
     atexit(cleanup);
-
-    /*      Set up address structure for server socket      */
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    const size_t sockname_src_len = strlen(sockName);
-    const size_t sockname_len =
-        sockname_src_len < sizeof(addr.sun_path) - abstract ? sockname_src_len : sizeof(addr.sun_path) - abstract;
-    memcpy(addr.sun_path + abstract, sockName, sockname_len);
-    /*
-     * Abstract socket addresses do not require termination.
-     */
-    if (!abstract && addr.sun_path[sizeof(addr.sun_path) - 1]) {
-        addr.sun_path[sizeof(addr.sun_path) - 1] = 0;
-        fprintf(stderr, "warning: socket path truncated: %s\n", addr.sun_path);
-    }
-
-    /*
-     * For pathname addresses, the +1 is the terminating \0 character.
-     * For abstract addresses, the +1 is the leading \0 character.
-     */
-    if (bind(fds[0].fd, (struct sockaddr *)&addr, offsetof(struct sockaddr_un, sun_path) + strlen(sockName) + 1) < 0) {
-        perror("server: bind");
-        close(fds[0].fd);
-        exit(1);
-    }
-
-    if (sockConnected && listen(fds[0].fd, sockBacklog) == -1) {
-        perror("server: listen");
-        close(fds[0].fd);
-        exit(1);
-    }
-
-    fds[0].events = POLLIN;
-    nfds = 1;
 
     /* we now run in an endless loop. We do not check who sends us
      * data. This should be no problem for our testbench use.
      */
 
     while (1) {
+        if (need_reset) {
+            need_reset = 0;
+            cleanup();
+        }
+        if (!nfds) {
+            initialize_socket();
+        }
         rlen = poll(fds, nfds, timeout);
         if (rlen == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
             perror("uxsockrcvr : poll\n");
             exit(1);
         } else if (rlen == 0) {
