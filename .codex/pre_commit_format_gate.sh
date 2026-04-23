@@ -11,6 +11,7 @@ should_gate="$(
   PAYLOAD="$payload" python3 <<'PY'
 import json
 import os
+import posixpath
 import re
 import shlex
 import sys
@@ -68,6 +69,37 @@ def strip_prefixes(words: list[str]) -> list[str]:
     return words[i:]
 
 
+def unwrap_shell_command(words: list[str]) -> list[str] | None:
+    words = strip_prefixes(words)
+    if not words:
+        return None
+
+    shell_name = posixpath.basename(words[0])
+    if shell_name not in {"bash", "sh", "zsh"}:
+        return None
+
+    i = 1
+    while i < len(words):
+        token = words[i]
+
+        if token == "--":
+            i += 1
+            break
+
+        if token.startswith("-") and "c" in token[1:]:
+            if i + 1 >= len(words):
+                return None
+            return words[i + 1 :]
+
+        if token.startswith("-"):
+            i += 1
+            continue
+
+        return None
+
+    return None
+
+
 def is_git_commit(words: list[str]) -> bool:
     words = strip_prefixes(words)
     if not words or words[0] != "git":
@@ -110,6 +142,26 @@ def is_git_commit(words: list[str]) -> bool:
     return False
 
 
+def contains_git_commit(words: list[str]) -> bool:
+    if is_git_commit(words):
+        return True
+
+    nested_command = unwrap_shell_command(words)
+    if not nested_command:
+        return False
+
+    command = nested_command[0]
+    if not isinstance(command, str) or not command.strip():
+        return False
+
+    try:
+        commands = split_simple_commands(command)
+    except ValueError:
+        return False
+
+    return any(contains_git_commit(simple_command) for simple_command in commands)
+
+
 payload_raw = os.environ.get("PAYLOAD")
 if payload_raw is None:
     sys.exit(0)
@@ -136,7 +188,7 @@ except ValueError:
     sys.exit(0)
 
 for simple_command in commands:
-    if is_git_commit(simple_command):
+    if contains_git_commit(simple_command):
         print("yes")
         break
 PY
