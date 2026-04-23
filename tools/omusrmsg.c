@@ -339,7 +339,7 @@ static rsRetVal wallmsg(uchar *pMsg, instanceData *pData) {
     if (sd_booted() > 0) {
         register int j;
         int sdRet;
-        char **sessions_list;
+        char **sessions_list = NULL;
         int sessions = sd_get_sessions(&sessions_list);
 
         for (j = 0; j < sessions; j++) {
