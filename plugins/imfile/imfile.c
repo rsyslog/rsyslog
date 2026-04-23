@@ -106,6 +106,7 @@ DEF_IMOD_STATIC_DATA /* must be present, starts static data */
                                   const size_t outlen); /* see siphash.c */
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
+static sbool havePendingDeletes = 0; /* set when files await deferred deletion after FILE_DELETE_DELAY */
 
 #define NUM_MULTISUB 1024 /* default max number of submits */
 #define DFLT_PollInterval 10
@@ -970,6 +971,7 @@ static void detect_updates(fs_edge_t *const edge) {
                         "detect_updates obj gone away, keep '%s' "
                         "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
                         act_name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
+                    havePendingDeletes = 1;
                     pollFile(act);
                 }
                 break;
@@ -2649,6 +2651,7 @@ static rsRetVal do_inotify(void) {
     int currev;
     static int last_timeout = 0;
     time_t last_fallback = 0;
+    time_t last_delete_check = 0;
     struct pollfd pollfd;
     DEFiRet;
 
@@ -2684,6 +2687,14 @@ static rsRetVal do_inotify(void) {
                 poll_timeout = fallback_timeout;
             }
         }
+        /* Cap poll() so we wake up to clean up deleted-file FDs even
+         * when no inotify events arrive. */
+        if (havePendingDeletes) {
+            const int delete_timeout = (FILE_DELETE_DELAY + 1) * 1000;
+            if (poll_timeout == -1 || delete_timeout < poll_timeout) {
+                poll_timeout = delete_timeout;
+            }
+        }
         r = poll(&pollfd, 1, poll_timeout);
 
         if (r == -1 && errno == EINTR) {
@@ -2702,6 +2713,14 @@ static rsRetVal do_inotify(void) {
                     in_doFallbackScan();
                     last_fallback = now;
                 }
+            }
+            /* poll() timed out — re-check deleted files whose
+             * FILE_DELETE_DELAY has now elapsed. */
+            if (havePendingDeletes) {
+                DBGPRINTF("pending deletes exist, running tree walk to re-check\n");
+                havePendingDeletes = 0;
+                fs_node_walk(runModConf->conf_tree, poll_tree);
+                last_delete_check = time(NULL);
             }
             continue;
         } else if (r == -1) {
@@ -2728,6 +2747,17 @@ static rsRetVal do_inotify(void) {
                 if (last_fallback == 0 || last_fallback + runModConf->inotifyFallbackInterval <= now) {
                     in_doFallbackScan();
                     last_fallback = now;
+                }
+            }
+            /* Under sustained event load poll() never times out, so
+             * also check here, rate-limited to once per FILE_DELETE_DELAY. */
+            if (havePendingDeletes) {
+                time_t now = time(NULL);
+                if (last_delete_check == 0 || last_delete_check + FILE_DELETE_DELAY + 1 <= now) {
+                    DBGPRINTF("pending deletes exist (event path), running tree walk to re-check\n");
+                    havePendingDeletes = 0;
+                    fs_node_walk(runModConf->conf_tree, poll_tree);
+                    last_delete_check = now;
                 }
             }
             rd = read(ino_fd, iobuf, sizeof(iobuf));
