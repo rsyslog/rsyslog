@@ -20,9 +20,21 @@ DEFAULT_VERSION = dev-local
 #   make all VERSION=2026-03
 VERSION ?= $(DEFAULT_VERSION)
 
+# Package source channel for all container builds.
+# Local and CI builds default to the stable PPA; pass PPA_CHANNEL=daily-stable
+# to switch the image family to the daily package feed.
+PPA_CHANNEL ?= stable
+ifeq ($(PPA_CHANNEL),stable)
+RSYSLOG_APT_PPA = ppa:adiscon/v8-stable
+else ifeq ($(PPA_CHANNEL),daily-stable)
+RSYSLOG_APT_PPA = ppa:adiscon/daily-stable
+else
+RSYSLOG_APT_PPA =
+endif
+
 # Stable release targets derive the container tag from RSYSLOG_VERSION using
 # 8.yymm.0 -> 20yy-mm. Example: 8.2602.0 -> 2026-02.
-RELEASE_CHANNEL ?= stable
+RELEASE_CHANNEL ?= $(PPA_CHANNEL)
 RELEASE_VERSION = $(strip $(shell \
 	if [ "$(RELEASE_CHANNEL)" = "daily-stable" ]; then \
 		printf 'daily-stable\n'; \
@@ -35,6 +47,8 @@ BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 VCS_REF ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 OCI_BUILD_ARGS = --build-arg BUILD_DATE="$(BUILD_DATE)" \
                  --build-arg VCS_REF="$(VCS_REF)"
+PPA_BUILD_ARGS = --build-arg RSYSLOG_APT_PPA="$(RSYSLOG_APT_PPA)" \
+                 --build-arg RSYSLOG_PPA_CHANNEL="$(PPA_CHANNEL)"
 
 # Manual release publishing is downstream of PPA readiness. Operators must
 # provide the expected rsyslog release version explicitly before stable
@@ -80,7 +94,7 @@ ETL_IMAGE_TAG = $(strip $(ETL_IMAGE_NAME):$(VERSION))
         minimal standard collector dockerlogs etl \
         build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image \
         push_minimal push_standard push_collector push_dockerlogs push_etl \
-        rebuild_all check_publish_version check_release_inputs \
+        rebuild_all check_build_channel check_publish_version check_release_inputs \
         check_ppa_release_ready release_build release_push release_publish
 
 # Default target: Builds all functional images.
@@ -108,12 +122,23 @@ etl: build_etl_image
 
 # --- Core Build Logic ---
 
+check_build_channel:
+	@case "$(PPA_CHANNEL)" in \
+		stable|daily-stable) \
+			echo "Using container PPA channel $(PPA_CHANNEL) ($(RSYSLOG_APT_PPA))" ;; \
+		*) \
+			echo "ERROR: invalid PPA_CHANNEL=$(PPA_CHANNEL)." >&2; \
+			echo "Expected one of: stable, daily-stable" >&2; \
+			exit 1 ;; \
+	esac
+
 # Build the minimal rsyslog container.
-build_minimal_image: ./minimal/Dockerfile ./minimal/rsyslog.conf
+build_minimal_image: check_build_channel ./minimal/Dockerfile ./minimal/rsyslog.conf
 	@echo "--- Building minimal image: $(MINIMAL_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
 		              -t $(MINIMAL_IMAGE_TAG) \
 		              $(OCI_BUILD_ARGS) \
+		              $(PPA_BUILD_ARGS) \
 		              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
 		              -f ./minimal/Dockerfile ./minimal
 
@@ -188,6 +213,13 @@ check_publish_version:
 	esac
 
 check_release_inputs:
+	@case "$(RELEASE_CHANNEL)" in \
+		stable|daily-stable) ;; \
+		*) \
+			echo "ERROR: invalid RELEASE_CHANNEL=$(RELEASE_CHANNEL)." >&2; \
+			echo "Expected one of: stable, daily-stable" >&2; \
+			exit 1 ;; \
+	esac
 	@if [ "$(RELEASE_CHANNEL)" = "stable" ] && [ -z "$(RSYSLOG_VERSION)" ]; then \
 		echo "ERROR: stable release targets require RSYSLOG_VERSION." >&2; \
 		echo "Example: make release_build RSYSLOG_VERSION=8.2602.0" >&2; \
@@ -244,16 +276,16 @@ check_ppa_release_ready: check_release_inputs
 
 release_build: check_ppa_release_ready
 	@echo "--- Manual release build for VERSION=$(RELEASE_VERSION) ---"
-	$(MAKE) all VERSION=$(RELEASE_VERSION)
+	$(MAKE) all VERSION=$(RELEASE_VERSION) PPA_CHANNEL=$(RELEASE_CHANNEL) REBUILD=$(REBUILD)
 
 release_push: check_ppa_release_ready
 	@echo "--- Manual release push for VERSION=$(RELEASE_VERSION) ---"
-	$(MAKE) all_push VERSION=$(RELEASE_VERSION)
+	$(MAKE) all_push VERSION=$(RELEASE_VERSION) PPA_CHANNEL=$(RELEASE_CHANNEL) REBUILD=$(REBUILD)
 
 release_publish: release_push
 	@if [ "$(PUSH_LATEST)" = "yes" ]; then \
 		echo "--- Updating latest tags for VERSION=$(RELEASE_VERSION) ---"; \
-		$(MAKE) push_latest VERSION=$(RELEASE_VERSION); \
+		$(MAKE) push_latest VERSION=$(RELEASE_VERSION) PPA_CHANNEL=$(RELEASE_CHANNEL) REBUILD=$(REBUILD); \
 	else \
 		echo "Skipping latest tag update. Set PUSH_LATEST=yes to publish latest."; \
 	fi
@@ -345,6 +377,9 @@ help:
 	@echo "                       Current default: $(VERSION)"
 	@echo "                       The default is intentionally non-release for local builds."
 	@echo "                       Publish/tag targets reject development-like values."
+	@echo "  PPA_CHANNEL        - Package source for image builds. Defaults to stable."
+	@echo "                       stable -> ppa:adiscon/v8-stable"
+	@echo "                       daily-stable -> ppa:adiscon/daily-stable"
 	@echo "  RSYSLOG_VERSION    - Expected rsyslog release version, for example 8.2602.0."
 	@echo "                       Required for RELEASE_CHANNEL=stable."
 	@echo "  RELEASE_CHANNEL    - Release source. Defaults to stable."
@@ -357,9 +392,10 @@ help:
 	@echo ""
 	@echo "Example Workflow:"
 	@echo "  1. Local smoke build: make all"
-	@echo "  2. Local release rehearsal: make VERSION=2026-03 all"
-	@echo "  3. Force a full rebuild of all images: make rebuild_all"
-	@echo "  4. Check PPA readiness: make check_ppa_release_ready RSYSLOG_VERSION=8.2602.0"
-	@echo "  5. Manual release push: make release_push RSYSLOG_VERSION=8.2602.0"
-	@echo "  6. Release push plus latest: make release_publish RSYSLOG_VERSION=8.2602.0 PUSH_LATEST=yes"
-	@echo "  7. Daily channel build: make release_build RELEASE_CHANNEL=daily-stable"
+	@echo "  2. Local daily build: make all PPA_CHANNEL=daily-stable"
+	@echo "  3. Local release rehearsal: make VERSION=2026-03 all"
+	@echo "  4. Force a full rebuild of all images: make rebuild_all"
+	@echo "  5. Check PPA readiness: make check_ppa_release_ready RSYSLOG_VERSION=8.2602.0"
+	@echo "  6. Manual release push: make release_push RSYSLOG_VERSION=8.2602.0"
+	@echo "  7. Release push plus latest: make release_publish RSYSLOG_VERSION=8.2602.0 PUSH_LATEST=yes"
+	@echo "  8. Daily channel build: make release_build RELEASE_CHANNEL=daily-stable"

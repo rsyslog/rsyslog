@@ -5,6 +5,7 @@
 # Build arguments passed from the Makefile
 ARG UBUNTU_VERSION="24.04"
 ARG RSYSLOG_IMG_VERSION="unset" # New ARG to pick up version from Makefile
+ARG RSYSLOG_APT_PPA="ppa:adiscon/v8-stable"
 ARG BUILD_DATE="unknown"
 ARG VCS_REF="unknown"
 
@@ -13,6 +14,7 @@ FROM ubuntu:${UBUNTU_VERSION}
 # Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
+ARG RSYSLOG_APT_PPA
 ARG BUILD_DATE
 ARG VCS_REF
 
@@ -35,7 +37,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 1. Combined RUN instruction for all apt operations:
 #    - Update apt cache.
 #    - Install software-properties-common (provides add-apt-repository) and ca-certificates.
-#    - Add the Adiscon PPA for rsyslog (using the correct v8-stable PPA).
+#    - Add the selected Adiscon PPA for rsyslog.
 #    - Update apt cache again after adding the PPA to fetch package lists from it.
 #    - Install rsyslog with --no-install-recommends for minimal footprint.
 #    - Purge build-time-only dependencies (software-properties-common) and auto-remove any unused packages.
@@ -45,7 +47,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
         ca-certificates \
-    && add-apt-repository -y ppa:adiscon/daily-stable \
+    && add-apt-repository -y "${RSYSLOG_APT_PPA}" \
     && apt-get update && \
     apt-get install -y --no-install-recommends tzdata rsyslog rsyslog-omstdout \
     && apt-get purge -y --auto-remove software-properties-common \
