@@ -144,7 +144,7 @@ done
 
 # Verify that we get messages for when our receiver reset
 # We don't redirect with valgrind
-if [[ "${USE_VALGRIND}" != "YES" ]]; then
+if [ "${USE_VALGRIND}" != "YES" ]; then
     content_check "omuxsock suspending: send(), socket " ${RSYSLOG_DYNNAME}.log
 fi
 exit_test
