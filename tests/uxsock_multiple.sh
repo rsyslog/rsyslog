@@ -98,8 +98,7 @@ BASE=${RSYSLOG_OUT_LOG}
 for name in "${SOCKET_NAMES[@]}"; do
     SEQ_CHECK_FILE=${BASE}.${name##*.}
     case ${name##*.} in
-        STREAM) ;&
-        SEQPACKET)
+        STREAM|SEQPACKET)
             echo 10000 >> ${SEQ_CHECK_FILE}
             ;;
     esac
