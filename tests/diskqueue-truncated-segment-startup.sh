@@ -5,9 +5,16 @@
 # without leaving live queue files behind.
 # added 2026-04-20 by Codex, released under ASL 2.0
 
+export TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-300}
+
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=15000
+BASE_NUMMESSAGES=${NUMMESSAGES:-8000}
+PHASE1_SLEEP_USEC=${PHASE1_SLEEP_USEC:-5000}
+PREPARE_ATTEMPTS=${PREPARE_ATTEMPTS:-3}
+RECOVERY_WAIT_TIMEOUT=${RECOVERY_WAIT_TIMEOUT:-120}
+SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-60}
+NUMMESSAGES=$BASE_NUMMESSAGES
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
 RSYSLOGD_LOG="${RSYSLOG_DYNNAME}.rsyslogd.log"
 STARTED_LOG="${RSYSLOG_DYNNAME}.started"
@@ -29,7 +36,7 @@ main_queue(
 template(name="outfmt" type="string" string="%msg:F,58:2%\\n")
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`)
 
-:omtesting:sleep 0 20000
+:omtesting:sleep 0 '"$PHASE1_SLEEP_USEC"'
 if ($msg contains "msgnum:") then {
 	action(type="omfile" template="outfmt" dynaFile="dynfile")
 }
@@ -74,6 +81,32 @@ count_bad_dirs() {
 	count=0
 	for path in "$SPOOL_DIR"/mainq.bad.*; do
 		[ -d "$path" ] || continue
+		count=$((count + 1))
+	done
+	printf '%s\n' "$count"
+}
+
+count_live_mainq_files() {
+	count=0
+	for path in "$SPOOL_DIR"/mainq*; do
+		[ -e "$path" ] || continue
+		[ -f "$path" ] || [ -L "$path" ] || continue
+		count=$((count + 1))
+	done
+	printf '%s\n' "$count"
+}
+
+count_segment_files() {
+	count=0
+	for path in "$SPOOL_DIR"/mainq.*; do
+		[ -f "$path" ] || continue
+		base="${path##*/}"
+		num="${base#mainq.}"
+		case "$num" in
+		''|*[!0-9]*)
+			continue
+			;;
+		esac
 		count=$((count + 1))
 	done
 	printf '%s\n' "$count"
@@ -143,11 +176,73 @@ corrupt_middle_segment() {
 	rm -f "$seg_list" "$sorted_list"
 }
 
-write_phase1_conf
-startup
-injectmsg 0 "$NUMMESSAGES"
-shutdown_immediate
-wait_shutdown
+prepare_corrupted_queue() {
+	attempt=1
+	current_messages=$BASE_NUMMESSAGES
+
+	while [ "$attempt" -le "$PREPARE_ATTEMPTS" ]; do
+		rm -rf "$SPOOL_DIR" "$RSYSLOG_OUT_LOG" "$RSYSLOGD_LOG" "$STARTED_LOG"
+		NUMMESSAGES=$current_messages
+
+		write_phase1_conf
+		startup
+		injectmsg 0 "$NUMMESSAGES"
+		shutdown_immediate
+		wait_shutdown "" "$SHUTDOWN_TIMEOUT"
+
+		seg_count=$(count_segment_files)
+		if [ -f "$SPOOL_DIR/mainq.qi" ] && [ "$seg_count" -ge 3 ]; then
+			printf 'Prepared persisted queue with %s messages and %s segment files\n' \
+				"$NUMMESSAGES" "$seg_count"
+			return 0
+		fi
+
+		printf 'Phase 1 attempt %s produced %s segment files with %s messages; retrying\n' \
+			"$attempt" "$seg_count" "$NUMMESSAGES"
+		attempt=$((attempt + 1))
+		current_messages=$((current_messages + BASE_NUMMESSAGES / 2))
+	done
+
+	printf 'FAIL: unable to create a persisted queue with at least 3 segment files after %s attempts\n' \
+		"$PREPARE_ATTEMPTS"
+	list_spool_top
+	error_exit 1
+}
+
+wait_for_recovery_outcome() {
+	bad_before=$1
+	deadline=$(( $(date +%s) + RECOVERY_WAIT_TIMEOUT ))
+
+	while [ $(date +%s) -le "$deadline" ]; do
+		bad_after=$(count_bad_dirs)
+		if [ "$bad_after" -gt "$bad_before" ]; then
+			echo "Detected mainq.bad.* quarantine directory"
+			return 0
+		fi
+
+		seg_after=$(count_segment_files)
+		if [ "$seg_after" -le 1 ] && [ -s "$RSYSLOG_OUT_LOG" ]; then
+			echo "Detected recovery to a single live queue segment"
+			return 0
+		fi
+
+		if [ -f "$RSYSLOG_PIDBASE.pid" ] && \
+		   ! ps -p "$(cat "$RSYSLOG_PIDBASE.pid" 2>/dev/null)" > /dev/null 2>&1; then
+			echo "FAIL: rsyslog exited before recovery outcome was observed"
+			[ -s "$RSYSLOGD_LOG" ] && cat "$RSYSLOGD_LOG"
+			error_exit 1
+		fi
+
+		$TESTTOOL_DIR/msleep 100
+	done
+
+	echo "FAIL: timed out waiting for truncated queue recovery outcome"
+	list_spool_top
+	[ -s "$RSYSLOGD_LOG" ] && cat "$RSYSLOGD_LOG"
+	error_exit 1
+}
+
+prepare_corrupted_queue
 
 if [ ! -f "$SPOOL_DIR/mainq.qi" ]; then
 	echo "FAIL: mainq.qi missing after initial shutdown"
@@ -169,8 +264,9 @@ export RS_REDIR=">>\"$RSYSLOGD_LOG\" 2>&1"
 bad_before=$(count_bad_dirs)
 
 startup
-shutdown_when_empty
-wait_shutdown
+wait_for_recovery_outcome "$bad_before"
+shutdown_immediate
+wait_shutdown "" "$SHUTDOWN_TIMEOUT"
 unset RS_REDIR
 
 echo "spool files after restart recovery:"

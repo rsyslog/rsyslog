@@ -382,7 +382,7 @@ generate_conf() {
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
-		mkdir $RSYSLOG_DYNNAME.spool
+		mkdir -p $RSYSLOG_DYNNAME.spool
 	fi
 	if [ "$yaml_only" = "1" ]; then
 		export RSYSLOG_YAML_ONLY=1
