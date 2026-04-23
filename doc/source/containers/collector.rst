@@ -5,12 +5,12 @@ rsyslog/rsyslog-collector
 =========================
 
 .. meta::
-   :description: Reference for the rsyslog collector container image, including enabled inputs, file outputs, RELP, and optional TLS settings.
-   :keywords: rsyslog, collector, Docker, RELP, TLS, syslog
+   :description: Reference for the rsyslog collector container image, including enabled inputs, file outputs, Kafka module availability, RELP, and optional TLS settings.
+   :keywords: rsyslog, collector, Docker, Kafka, RELP, TLS, syslog
 
 .. summary-start
 
-The ``rsyslog/rsyslog-collector`` image is the reusable central-receiver role in the rsyslog container family. By default it listens on UDP and TCP syslog, can optionally enable RELP and TLS, and writes received messages to local files unless you mount additional rules.
+The ``rsyslog/rsyslog-collector`` image is the reusable central-receiver role in the rsyslog container family. By default it listens on UDP and TCP syslog, can optionally enable RELP and TLS, ships the ``omkafka`` module, and writes received messages to local files unless you mount additional rules.
 
 .. summary-end
 
@@ -24,6 +24,7 @@ Overview
 The ``rsyslog-collector`` container image extends the standard
 :doc:`standard` base with modules for **centralised log aggregation**.
 It is preconfigured to receive logs via UDP, TCP, and optionally RELP or TLS.
+It also includes extra output modules such as ``omkafka`` for custom routing.
 The packaged configuration writes received messages to local files. Additional
 rules can be mounted into ``/etc/rsyslog.d/`` when you want to forward to
 other backends or reshape the pipeline.
@@ -47,6 +48,12 @@ Environment Variables
 ---------------------
 
 Runtime behaviour can be tuned with the following variables:
+
+These environment variables control the packaged collector snippets only.
+Included modules such as ``omkafka`` are available for custom rules, but the
+image does not expose Kafka output settings through built-in environment
+variables. To forward to Kafka, mount an additional rsyslog config snippet
+that loads or uses ``omkafka``.
 
 .. _containers-user-collector-enable_udp:
 .. envvar:: ENABLE_UDP
@@ -97,6 +104,17 @@ Runtime behaviour can be tuned with the following variables:
 .. envvar:: WRITE_JSON_FILE
 
    Write JSON formatted messages to ``/var/log/all-json.log``. Default ``on``.
+
+Custom Kafka forwarding
+-----------------------
+
+The collector image includes the Kafka plugin package, so ``omkafka`` is
+available for custom configurations. Kafka forwarding is not enabled by the
+packaged collector rules and is not configured via built-in environment
+variables.
+
+To use Kafka, mount an additional file into ``/etc/rsyslog.d/`` with an
+``action(type="omkafka" ...)`` rule that fits your deployment.
 
 .. _containers-user-collector-rsyslog_hostname:
 .. envvar:: RSYSLOG_HOSTNAME
@@ -180,6 +198,7 @@ collector on external port ``10514`` for plain TCP clients.
 
 .. seealso::
 
+   - :doc:`../configuration/modules/omkafka` - Kafka action module reference
    - :doc:`../deployments/rosi_collector/index` - Complete log collection stack
    - `GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_ for community support.
    - `rsyslog Assistant AI <https://rsyslog.ai>`_ for self-help and examples.
