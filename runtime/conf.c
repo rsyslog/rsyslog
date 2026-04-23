@@ -2,7 +2,7 @@
  *
  * This file is based on an excerpt from syslogd.c, which dates back
  * much later. I began the file on 2008-02-19 as part of the modularization
- * effort. Over time, a clean abstration will become even more important
+ * effort. Over time, a clean abstraction will become even more important
  * because the config file handler will by dynamically be loaded and be
  * kept in memory only as long as the config file is actually being
  * processed. Thereafter, it shall be unloaded. -- rgerhards
