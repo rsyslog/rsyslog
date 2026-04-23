@@ -51,6 +51,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
+        rsyslog-kafka \
         rsyslog-omhttp \
         rsyslog-relp \
         rsyslog-openssl \
