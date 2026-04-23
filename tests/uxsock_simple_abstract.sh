@@ -63,7 +63,7 @@ seq_check 0 19999
 # Verify that we do NOT get messages for when our receiver reset.
 # We only expect these messages if we have a connected socket.
 # We don't redirect with valgrind
-if [[ "${USE_VALGRIND}" != "YES" ]]; then
+if [ "${USE_VALGRIND}" != "YES" ]; then
     check_not_present "omuxsock suspending: send(), socket " ${RSYSLOG_DYNNAME}.log
 fi
 exit_test
