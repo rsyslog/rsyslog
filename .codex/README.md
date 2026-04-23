@@ -6,6 +6,7 @@ This repository ships a repo-local Codex hook configuration for trusted projects
 
 - Enables Codex hooks for this repository via `.codex/config.toml`
 - Runs `.codex/pre_commit_format_gate.sh` before Bash-based `git commit` commands
+- Understands both direct `git commit ...` invocations and shell-wrapped forms such as `bash -lc 'git commit ...'`
 - Runs the deterministic repo-policy focus checks first against the staged commit snapshot
 - If those invariants fail, the hook exits early and prints the specific failures for the agent to fix
 - The hook runs `./devtools/format-code.sh --git-changed`
