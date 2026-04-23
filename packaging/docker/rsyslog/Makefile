@@ -47,8 +47,7 @@ BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 VCS_REF ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 OCI_BUILD_ARGS = --build-arg BUILD_DATE="$(BUILD_DATE)" \
                  --build-arg VCS_REF="$(VCS_REF)"
-PPA_BUILD_ARGS = --build-arg RSYSLOG_APT_PPA="$(RSYSLOG_APT_PPA)" \
-                 --build-arg RSYSLOG_PPA_CHANNEL="$(PPA_CHANNEL)"
+PPA_BUILD_ARGS = --build-arg RSYSLOG_APT_PPA="$(RSYSLOG_APT_PPA)"
 
 # Manual release publishing is downstream of PPA readiness. Operators must
 # provide the expected rsyslog release version explicitly before stable
