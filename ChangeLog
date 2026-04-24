@@ -1,5 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-04-24: imhttp: harden request parsing and cleanup
+  imhttp now bounds accepted request bodies, handles malformed gzip
+  and oversized octet-counted frames more robustly, returns proper
+  auth challenges, and cleans up CivetWeb/module resources consistently
+  on activation failures and shutdown. Additional regression tests cover
+  these paths.
 - 2026-04-23: omusrmsg: avoid potential segfault when used under systemd
   Systemd hosts can hit the logind wall-message path with zero active
   sessions. omusrmsg must not abort while handling that case.
