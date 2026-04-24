@@ -1533,6 +1533,9 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->docroot.name = strdup(CIVETWEB_OPTION_NAME_DOCUMENT_ROOT));
             CHKmalloc(loadModConf->docroot.val = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "liboptions")) {
+            if (pvals[i].val.d.ar->nmemb == 0) {
+                continue;
+            }
             CHKmalloc(loadModConf->options = calloc(pvals[i].val.d.ar->nmemb, sizeof(struct option)));
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
