@@ -3435,7 +3435,13 @@ omhttp_stop_server() {
     if [ ! -d $omhttp_work_dir ]; then
         echo "omhttp server $omhttp_work_dir does not exist, no action needed"
     else
-        omhttp_server_pid=$(cat ${omhttp_work_dir}/omhttp_server.pid)
+        omhttp_server_pid=$(cat "${omhttp_work_dir}/omhttp_server.pid" 2>/dev/null)
+        case "$omhttp_server_pid" in
+            "" | *[!0-9]* | 0)
+                echo "omhttp server PID could not be read from ${omhttp_work_dir}/omhttp_server.pid, cannot stop server."
+                return 1
+                ;;
+        esac
         echo "Stopping omhttp server process group ${omhttp_server_pid}"
         kill -TERM -- -${omhttp_server_pid} > /dev/null 2>&1
         wait ${omhttp_server_pid} 2>/dev/null || :
