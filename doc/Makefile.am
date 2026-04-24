@@ -836,6 +836,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmnormalize-path.rst \
     source/reference/parameters/mmnormalize-rule.rst \
     source/reference/parameters/mmnormalize-rulebase.rst \
+    source/reference/parameters/mmnormalize-turbo.rst \
     source/reference/parameters/mmnormalize-userawmsg.rst \
     source/reference/parameters/mmnormalize-variable.rst \
     source/reference/parameters/mmpstrucdata-jsonroot.rst \
