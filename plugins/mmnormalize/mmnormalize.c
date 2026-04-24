@@ -39,10 +39,10 @@
 #include <json.h>
 #include <liblognorm.h>
 #ifdef HAVE_LOGNORM_TURBO
-#include <lognorm-features.h>
-#include <turbo.h>
-#include <turbo_result_fast.h>
-#include <turbo_snapshot.h>
+    #include <lognorm-features.h>
+    #include <turbo.h>
+    #include <turbo_result_fast.h>
+    #include <turbo_snapshot.h>
 #endif
 #include "conf.h"
 #include "syslogd-types.h"
@@ -77,18 +77,18 @@ typedef struct _instanceData {
     char *pszPath; /**< path of normalized data */
     msgPropDescr_t *varDescr; /**< name of variable to use */
 #ifdef HAVE_LOGNORM_TURBO
-    sbool bTurbo;           /**< user requested turbo mode */
-    sbool bTurboAvail;      /**< turbo compilation succeeded at startup */
-    uchar *rulebaseForClone;/**< saved rulebase path for per-worker cloning */
-    uchar *ruleForClone;    /**< saved inline rules for per-worker cloning */
-    unsigned ctxOpts;       /**< saved context options for per-worker cloning */
+    sbool bTurbo; /**< user requested turbo mode */
+    sbool bTurboAvail; /**< turbo compilation succeeded at startup */
+    uchar *rulebaseForClone; /**< saved rulebase path for per-worker cloning */
+    uchar *ruleForClone; /**< saved inline rules for per-worker cloning */
+    unsigned ctxOpts; /**< saved context options for per-worker cloning */
 #endif
 } instanceData;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
 #ifdef HAVE_LOGNORM_TURBO
-    ln_ctx ctxlnTurbo;      /**< per-worker turbo context (thread-safe) */
+    ln_ctx ctxlnTurbo; /**< per-worker turbo context (thread-safe) */
 #endif
 } wrkrInstanceData_t;
 
@@ -101,13 +101,11 @@ static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {{"rulebase", eCmdHdlrGetWord, 0},
-                                           {"rule", eCmdHdlrArray, 0},
-                                           {"path", eCmdHdlrGetWord, 0},
-                                           {"userawmsg", eCmdHdlrBinary, 0},
-                                           {"variable", eCmdHdlrGetWord, 0},
+static struct cnfparamdescr actpdescr[] = {
+    {"rulebase", eCmdHdlrGetWord, 0}, {"rule", eCmdHdlrArray, 0},       {"path", eCmdHdlrGetWord, 0},
+    {"userawmsg", eCmdHdlrBinary, 0}, {"variable", eCmdHdlrGetWord, 0},
 #ifdef HAVE_LOGNORM_TURBO
-                                           {"turbo", eCmdHdlrBinary, 0},
+    {"turbo", eCmdHdlrBinary, 0},
 #endif
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
@@ -185,8 +183,7 @@ static rsRetVal buildInstance(instanceData *pData) {
     if (pData->bTurbo) {
         if (ln_turbo_is_available(pData->ctxln)) {
             pData->bTurboAvail = 1;
-            LogMsg(0, RS_RET_OK, LOG_INFO,
-                   "mmnormalize: turbo mode available and enabled");
+            LogMsg(0, RS_RET_OK, LOG_INFO, "mmnormalize: turbo mode available and enabled");
         } else {
             pData->bTurboAvail = 0;
             LogMsg(0, NO_ERRCODE, LOG_WARNING,
@@ -230,17 +227,12 @@ BEGINcreateWrkrInstance
             ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
 
             if (pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(
-                    pWrkrData->ctxlnTurbo,
-                    (char *)pData->ruleForClone);
+                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pData->ruleForClone);
             } else if (pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(
-                    pWrkrData->ctxlnTurbo,
-                    (char *)pData->rulebaseForClone);
+                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pData->rulebaseForClone);
             }
 
-            if (loadRet != 0 ||
-                !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
+            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
                 LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
                          "mmnormalize: turbo worker rulebase "
                          "load/compile failed, falling back "
@@ -248,8 +240,9 @@ BEGINcreateWrkrInstance
                 ln_exitCtx(pWrkrData->ctxlnTurbo);
                 pWrkrData->ctxlnTurbo = NULL;
             } else {
-                DBGPRINTF("mmnormalize: turbo worker context "
-                          "ready\n");
+                DBGPRINTF(
+                    "mmnormalize: turbo worker context "
+                    "ready\n");
             }
         }
     }
@@ -338,8 +331,8 @@ BEGINtryResume
 ENDtryResume
 
 #ifdef HAVE_LOGNORM_TURBO
-/* Maximum field name length for stack-allocated buffer */
-#define MMNORM_MAX_FIELDNAME 256
+    /* Maximum field name length for stack-allocated buffer */
+    #define MMNORM_MAX_FIELDNAME 256
 
 /* Forward declaration -- defined below, needed by turbo_result_to_json_cb */
 static struct json_object *fast_result_to_json(const ln_fast_result_t *result);
@@ -349,14 +342,11 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result);
  * Called by msg.c when template/property access needs pMsg->json.
  * turbo_result points to an ln_fast_result_snapshot_t* (deep copy).
  */
-static void
-turbo_result_to_json_cb(void *result_ptr, struct json_object **json) {
-    const ln_fast_result_snapshot_t *snap =
-        (const ln_fast_result_snapshot_t *)result_ptr;
+static void turbo_result_to_json_cb(void *result_ptr, struct json_object **json) {
+    const ln_fast_result_snapshot_t *snap = (const ln_fast_result_snapshot_t *)result_ptr;
     if (snap != NULL) {
         const ln_fast_result_t *r = ln_fast_result_snapshot_get(snap);
-        if (r != NULL)
-            *json = fast_result_to_json(r);
+        if (r != NULL) *json = fast_result_to_json(r);
     }
 }
 
@@ -371,43 +361,35 @@ turbo_result_to_json_cb(void *result_ptr, struct json_object **json) {
  *
  * Returns 0 on hit (val/vlen set, zero-copy into snapshot), -1 on miss.
  */
-static int
-turbo_result_get_str_cb(void *result_ptr,
-                        const uchar *name, int nameLen,
-                        const uchar **val, rs_size_t *vlen) {
-    const ln_fast_result_snapshot_t *snap =
-        (const ln_fast_result_snapshot_t *)result_ptr;
+static int turbo_result_get_str_cb(
+    void *result_ptr, const uchar *name, int nameLen, const uchar **val, rs_size_t *vlen) {
+    const ln_fast_result_snapshot_t *snap = (const ln_fast_result_snapshot_t *)result_ptr;
     const ln_fast_result_t *r;
     char keybuf[MMNORM_MAX_FIELDNAME];
     int keylen;
 
-    if (snap == NULL)
-        return -1;
+    if (snap == NULL) return -1;
 
     r = ln_fast_result_snapshot_get(snap);
-    if (r == NULL)
-        return -1;
+    if (r == NULL) return -1;
 
     /* Convert rsyslog path to liblognorm key.
      * pProp->name is "!sns!src" (leading ! = CEE root, ! separators).
      * liblognorm uses "sns.src" (dot separators, no root prefix).
      * Skip first char (!), replace ! with . */
-    if (nameLen < 2 || name[0] != '!')
-        return -1;  /* bare "!" = full tree request, not a single field */
+    if (nameLen < 2 || name[0] != '!') return -1; /* bare "!" = full tree request, not a single field */
 
-    keylen = nameLen - 1;  /* skip leading '!' */
-    if (keylen >= (int)sizeof(keybuf))
-        return -1;
+    keylen = nameLen - 1; /* skip leading '!' */
+    if (keylen >= (int)sizeof(keybuf)) return -1;
 
     const uchar *src = name + 1;
-    for (int i = 0; i < keylen; i++)
-        keybuf[i] = (src[i] == '!') ? '.' : (char)src[i];
+    for (int i = 0; i < keylen; i++) keybuf[i] = (src[i] == '!') ? '.' : (char)src[i];
     keybuf[keylen] = '\0';
 
     const char *sval;
     size_t slen;
     if (ln_fast_result_get_string(r, keybuf, &sval, &slen) != 0)
-        return -1;  /* field not in snapshot -> fall through to json */
+        return -1; /* field not in snapshot -> fall through to json */
 
     *val = (const uchar *)sval;
     *vlen = (rs_size_t)slen;
@@ -420,10 +402,8 @@ turbo_result_get_str_cb(void *result_ptr,
  * The snapshot is a self-contained deep copy (single malloc),
  * so a single free reclaims everything.
  */
-static void
-turbo_result_snapshot_free(void *ptr) {
-    if (ptr != NULL)
-        ln_fast_result_snapshot_free((ln_fast_result_snapshot_t *)ptr);
+static void turbo_result_snapshot_free(void *ptr) {
+    if (ptr != NULL) ln_fast_result_snapshot_free((ln_fast_result_snapshot_t *)ptr);
 }
 
 
@@ -435,8 +415,7 @@ turbo_result_snapshot_free(void *ptr) {
  * Handles nested fields (dotted names like "event.src.ip") by building
  * nested json_objects on the fly.
  */
-static struct json_object *
-fast_result_to_json(const ln_fast_result_t *result) {
+static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
     struct json_object *root;
     int nfields;
     int i;
@@ -445,8 +424,7 @@ fast_result_to_json(const ln_fast_result_t *result) {
     size_t nl;
 
     root = json_object_new_object();
-    if (root == NULL)
-        return NULL;
+    if (root == NULL) return NULL;
 
     nfields = ln_fast_result_field_count(result);
     for (i = 0; i < nfields; i++) {
@@ -454,31 +432,29 @@ fast_result_to_json(const ln_fast_result_t *result) {
         struct json_object *jval = NULL;
 
         switch (f->type) {
-        case LN_FTYPE_STRING:
-            jval = json_object_new_string_len(f->v.str.ptr, f->v.str.len);
-            break;
-        case LN_FTYPE_STRING_INLINE:
-            jval = json_object_new_string(f->v.inl);
-            break;
-        case LN_FTYPE_INT:
-            jval = json_object_new_int64(f->v.i);
-            break;
-        case LN_FTYPE_DOUBLE:
-            jval = json_object_new_double(f->v.d);
-            break;
-        case LN_FTYPE_BOOL:
-            jval = json_object_new_boolean(f->v.b);
-            break;
-        default:
-            continue;
+            case LN_FTYPE_STRING:
+                jval = json_object_new_string_len(f->v.str.ptr, f->v.str.len);
+                break;
+            case LN_FTYPE_STRING_INLINE:
+                jval = json_object_new_string(f->v.inl);
+                break;
+            case LN_FTYPE_INT:
+                jval = json_object_new_int64(f->v.i);
+                break;
+            case LN_FTYPE_DOUBLE:
+                jval = json_object_new_double(f->v.d);
+                break;
+            case LN_FTYPE_BOOL:
+                jval = json_object_new_boolean(f->v.b);
+                break;
+            default:
+                continue;
         }
 
-        if (jval == NULL)
-            continue;
+        if (jval == NULL) continue;
 
         /* Null-terminate field name into stack buffer */
-        nl = f->name_len < (MMNORM_MAX_FIELDNAME - 1)
-                    ? f->name_len : (MMNORM_MAX_FIELDNAME - 1);
+        nl = f->name_len < (MMNORM_MAX_FIELDNAME - 1) ? f->name_len : (MMNORM_MAX_FIELDNAME - 1);
         memcpy(namebuf, f->name, nl);
         namebuf[nl] = '\0';
 
@@ -493,13 +469,9 @@ fast_result_to_json(const ln_fast_result_t *result) {
 
             while (next != NULL) {
                 struct json_object *child = NULL;
-                if (!json_object_object_get_ex(parent, tok,
-                                               &child)
-                    || !json_object_is_type(child,
-                                            json_type_object)) {
+                if (!json_object_object_get_ex(parent, tok, &child) || !json_object_is_type(child, json_type_object)) {
                     child = json_object_new_object();
-                    json_object_object_add(parent, tok,
-                                           child);
+                    json_object_object_add(parent, tok, child);
                 }
                 parent = child;
                 tok = next;
@@ -517,9 +489,7 @@ fast_result_to_json(const ln_fast_result_t *result) {
         struct json_object *tags = json_object_new_array();
         for (i = 0; i < ntags; i++) {
             const char *tag = ln_fast_result_get_tag(result, i);
-            if (tag)
-                json_object_array_add(tags,
-                    json_object_new_string(tag));
+            if (tag) json_object_array_add(tags, json_object_new_string(tag));
         }
         json_object_object_add(root, "tags", tags);
     }
@@ -549,8 +519,7 @@ BEGINdoAction_NoStrings
 #ifdef HAVE_LOGNORM_TURBO
     if (pWrkrData->ctxlnTurbo != NULL) {
         const ln_fast_result_t *result = NULL;
-        r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo,
-                                   (char *)buf, len, &result);
+        r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo, (char *)buf, len, &result);
         if (r == 0 && result != NULL) {
             /* SNAPSHOT PATH: when path is "$!" (CEE root).
              * Create a deep-copy snapshot of the turbo result.
@@ -558,17 +527,15 @@ BEGINdoAction_NoStrings
              * all string data -- safe for async output actions and
              * non-DIRECT queues. The lazy materializer builds json
              * on-demand only when templates access $! or $!field. */
-            if (pWrkrData->pData->pszPath[0] == '$' &&
-                pWrkrData->pData->pszPath[1] == '!' &&
+            if (pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
                 pWrkrData->pData->pszPath[2] == '\0') {
-                ln_fast_result_snapshot_t *snap =
-                    ln_turbo_snapshot_result(pWrkrData->ctxlnTurbo);
+                ln_fast_result_snapshot_t *snap = ln_turbo_snapshot_result(pWrkrData->ctxlnTurbo);
                 if (snap == NULL) {
-                    DBGPRINTF("mmnormalize: turbo snapshot alloc failed, "
-                              "falling back to JSON materialization\n");
+                    DBGPRINTF(
+                        "mmnormalize: turbo snapshot alloc failed, "
+                        "falling back to JSON materialization\n");
                     json = fast_result_to_json(result);
-                    if (json != NULL)
-                        goto add_json;
+                    if (json != NULL) goto add_json;
                     goto turbo_done;
                 }
                 /* If a prior mmnormalize action on the same pMsg
@@ -576,8 +543,7 @@ BEGINdoAction_NoStrings
                  * overwriting — rsyslog action chains can stack
                  * parsers, and each snapshot owns ~6KB of string
                  * data that would otherwise leak. */
-                if (pMsg->turbo_result != NULL
-                    && pMsg->turbo_result_free != NULL) {
+                if (pMsg->turbo_result != NULL && pMsg->turbo_result_free != NULL) {
                     pMsg->turbo_result_free(pMsg->turbo_result);
                 }
                 pMsg->turbo_result = (void *)snap;
@@ -589,11 +555,12 @@ BEGINdoAction_NoStrings
             }
             /* Non-$! path: build json from turbo result directly */
             json = fast_result_to_json(result);
-            if (json != NULL)
-                goto add_json;
+            if (json != NULL) goto add_json;
         } else {
-            DBGPRINTF("mmnormalize: turbo normalize failed (r=%d), "
-                      "falling back to standard\n", r);
+            DBGPRINTF(
+                "mmnormalize: turbo normalize failed (r=%d), "
+                "falling back to standard\n",
+                r);
         }
     }
 #endif
@@ -836,31 +803,24 @@ ENDparseSelectorAct
 
 #ifdef HAVE_LOGNORM_TURBO
 BEGINdoHUPWrkr
-CODESTARTdoHUPWrkr
-    DBGPRINTF("mmnormalize: HUP received\n");
+    CODESTARTdoHUPWrkr DBGPRINTF("mmnormalize: HUP received\n");
     if (pWrkrData->ctxlnTurbo != NULL && pWrkrData->pData->bTurbo) {
         DBGPRINTF("mmnormalize: HUP - rebuilding turbo worker context\n");
         ln_exitCtx(pWrkrData->ctxlnTurbo);
         pWrkrData->ctxlnTurbo = ln_initCtx();
         if (pWrkrData->ctxlnTurbo != NULL) {
             int loadRet = -1;
-            ln_setCtxOpts(pWrkrData->ctxlnTurbo,
-                          pWrkrData->pData->ctxOpts);
+            ln_setCtxOpts(pWrkrData->ctxlnTurbo, pWrkrData->pData->ctxOpts);
             ln_setCtxOpts(pWrkrData->ctxlnTurbo, LN_CTXOPT_TURBO);
             ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
 
             if (pWrkrData->pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(
-                    pWrkrData->ctxlnTurbo,
-                    (char *)pWrkrData->pData->ruleForClone);
+                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->ruleForClone);
             } else if (pWrkrData->pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(
-                    pWrkrData->ctxlnTurbo,
-                    (char *)pWrkrData->pData->rulebaseForClone);
+                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->rulebaseForClone);
             }
 
-            if (loadRet != 0 ||
-                !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
+            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
                 LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
                          "mmnormalize: HUP turbo reload failed, "
                          "falling back to standard");
@@ -872,8 +832,7 @@ CODESTARTdoHUPWrkr
                        "reloaded");
             }
         } else {
-            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT,
-                     "mmnormalize: HUP turbo ctx init failed");
+            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: HUP turbo ctx init failed");
         }
     }
 ENDdoHUPWrkr

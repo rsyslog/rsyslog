@@ -2851,20 +2851,15 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
  * snapshot fields are merged in — existing keys win on conflict.
  * Must be called with pMsg->mut held.
  */
-static inline void
-msgMaterializeTurboJSON(smsg_t *pMsg)
-{
+static inline void msgMaterializeTurboJSON(smsg_t *pMsg) {
     struct json_object *snap_json = NULL;
 
-    if (pMsg->turbo_result == NULL
-        || pMsg->turbo_result_to_json == NULL)
-        return;
+    if (pMsg->turbo_result == NULL || pMsg->turbo_result_to_json == NULL) return;
 
     pMsg->turbo_result_to_json(pMsg->turbo_result, &snap_json);
     pMsg->turbo_result_to_json = NULL; /* one-shot */
 
-    if (snap_json == NULL)
-        return;
+    if (snap_json == NULL) return;
 
     if (pMsg->json == NULL) {
         pMsg->json = snap_json;
@@ -2875,8 +2870,7 @@ msgMaterializeTurboJSON(smsg_t *pMsg)
         while (!json_object_iter_equal(&it, &itEnd)) {
             const char *key = json_object_iter_peek_name(&it);
             if (!json_object_object_get_ex(pMsg->json, key, NULL)) {
-                json_object_object_add(pMsg->json, key,
-                    json_object_get(json_object_iter_peek_value(&it)));
+                json_object_object_add(pMsg->json, key, json_object_get(json_object_iter_peek_value(&it)));
             }
             json_object_iter_next(&it);
         }
@@ -2987,14 +2981,10 @@ rsRetVal getJSONPropVal(
      * here would defeat the very reason this fast-path exists
      * (scaling property access without lock contention).
      */
-    if (pProp->id == PROP_CEE
-        && pMsg->turbo_result != NULL
-        && pMsg->turbo_result_get_str != NULL) {
+    if (pProp->id == PROP_CEE && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL) {
         const uchar *val;
         rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result,
-                                       pProp->name, pProp->nameLen,
-                                       &val, &vlen) == 0) {
+        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
             *pRes = (uchar *)malloc(vlen + 1);
             if (*pRes != NULL) {
                 memcpy(*pRes, val, vlen);
@@ -3068,14 +3058,10 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
      * (write-once at parse, read-many at template, destruct with no
      * readers; queue mutex+condvar provides cross-thread visibility).
      */
-    if (pProp->id == PROP_CEE
-        && pMsg->turbo_result != NULL
-        && pMsg->turbo_result_get_str != NULL) {
+    if (pProp->id == PROP_CEE && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL) {
         const uchar *val;
         rs_size_t vlen;
-        if (pMsg->turbo_result_get_str(pMsg->turbo_result,
-                                       pProp->name, pProp->nameLen,
-                                       &val, &vlen) == 0) {
+        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
             *pcstr = (uchar *)malloc(vlen + 1);
             if (*pcstr != NULL) {
                 memcpy(*pcstr, val, vlen);
