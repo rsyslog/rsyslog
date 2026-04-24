@@ -1624,7 +1624,30 @@ if test "x$enable_mmnormalize" = "xyes"; then
 	LIBS="$LIBS $LIBLOGNORM_LIBS"
 
 	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_REGEX_SUPPORTED,[lognorm_regex_supported="yes"],)
-	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_TURBO_SUPPORTED,[lognorm_turbo_supported="yes"],)
+
+	# --enable-turbo / --disable-turbo override for TurboVM autodetection.
+	# default=auto: honour lognorm-features.h like before.
+	# --disable-turbo: force the non-turbo code path even when liblognorm
+	#                  has TurboVM compiled in (useful for CI matrix).
+	# --enable-turbo:  fail hard if liblognorm lacks TURBO — avoids silent
+	#                  fallback when the user explicitly asked for it.
+	AC_ARG_ENABLE(turbo,
+	        [AS_HELP_STRING([--disable-turbo],[Disable liblognorm TurboVM acceleration in mmnormalize @<:@default=auto@:>@])],
+	        [case "${enableval}" in
+	         yes) enable_turbo="yes" ;;
+	          no) enable_turbo="no" ;;
+	           *) AC_MSG_ERROR(bad value ${enableval} for --enable-turbo) ;;
+	         esac],
+	        [enable_turbo=auto]
+	)
+	if test "x$enable_turbo" = "xno"; then
+		lognorm_turbo_supported="no"
+	else
+		AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_TURBO_SUPPORTED,[lognorm_turbo_supported="yes"],)
+		if test "x$enable_turbo" = "xyes" -a "x$lognorm_turbo_supported" != "xyes"; then
+			AC_MSG_ERROR([--enable-turbo was requested but LOGNORM_TURBO_SUPPORTED is not defined in lognorm-features.h. Upgrade liblognorm or rebuild it with --enable-turbo.])
+		fi
+	fi
 
 	CFLAGS="$save_CFLAGS"
 	LIBS="$save_LIBS"
