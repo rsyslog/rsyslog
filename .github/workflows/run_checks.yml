@@ -1652,6 +1652,11 @@ jobs:
             platform: linux/arm/v7
             qemu_platform: arm
             use_qemu: true
+          - arch: s390x
+            runs_on: ubuntu-24.04
+            platform: linux/s390x
+            qemu_platform: s390x
+            use_qemu: true
           - arch: arm64
             runs_on: ubuntu-24.04-arm
             platform: linux/arm64
@@ -1706,10 +1711,10 @@ jobs:
           context: .
           file: devtools/ci/Dockerfile.arm
           platforms: ${{ matrix.platform }}
-          tags: rsyslog-arm-dev:${{ matrix.arch }}
+          tags: rsyslog-cross-dev:${{ matrix.arch }}
           load: true
-          cache-from: type=gha,scope=arm-dev-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=arm-dev-${{ matrix.arch }}
+          cache-from: type=gha,scope=cross-dev-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=cross-dev-${{ matrix.arch }}
 
       - name: Run ${{ matrix.arch }} build and testbench
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -1722,13 +1727,13 @@ jobs:
             --security-opt seccomp=unconfined \
             -v "${{ github.workspace }}:/rsyslog" \
             -w /rsyslog \
-            rsyslog-arm-dev:${{ matrix.arch }} bash -c '
+            rsyslog-cross-dev:${{ matrix.arch }} bash -c '
               set -e
               export CFLAGS="-g -O1 -fno-omit-frame-pointer"
               export CC=gcc
               export TEST_MAX_RUNTIME=1200
               autoreconf -fvi
-              if [ "$ARCH" = "armhf" ]; then
+              if [ "$ARCH" = "armhf" ] || [ "$ARCH" = "s390x" ]; then
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker --enable-imfile \
                   --disable-default-tests --disable-impstats \
