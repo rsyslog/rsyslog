@@ -37,14 +37,13 @@ ruleset(name="ruleset") {
 '
 startup
 # validate invalid passwd
-ret=$(curl -v -s -H Content-Type:application/json -H "BAZ: skat" -H "daddle: doodle" -H "fiddle: faddle" \
+ret=$(curl -s -o /dev/null -H Content-Type:application/json -H "BAZ: skat" -H "daddle: doodle" -H "fiddle: faddle" \
   --user user1:badpass --write-out '%{http_code}' \
   http://localhost:$IMHTTP_PORT/postrequest -d '[{"foo":"bar","bar":"foo"},{"one":"two","three":"four"}]')
 
 echo "response: $ret"
-if ! ( echo "$ret" | grep "Error 401: Unauthorized" )
-then
-  echo "ERROR: should not be unauthorized"
+if [ "$ret" != "401" ]; then
+  echo "ERROR: invalid credentials returned $ret instead of 401"
   error_exit 1
 fi
 
