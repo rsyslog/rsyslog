@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-. ${srcdir:-.}/uxsock_multiple.sh
+. "${srcdir:-$(dirname "$0")}/uxsock_multiple.sh"
