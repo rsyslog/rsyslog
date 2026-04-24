@@ -3415,7 +3415,7 @@ omhttp_start_server() {
 
     server_args="-p $omhttp_server_port ${*:2} --port-file $RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
 
-    timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
         echo "Failed to start omhttp test server."
         rm -rf $omhttp_work_dir
@@ -3426,7 +3426,7 @@ omhttp_start_server() {
     wait_file_exists "$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
     omhttp_server_lstnport="$(cat $RSYSLOG_DYNNAME.omhttp_server_lstnport.file)"
     echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
-    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
+    echo "Started omhttp test server with args ${server_args} with process group ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
 }
 
 omhttp_stop_server() {
@@ -3435,8 +3435,21 @@ omhttp_stop_server() {
     if [ ! -d $omhttp_work_dir ]; then
         echo "omhttp server $omhttp_work_dir does not exist, no action needed"
     else
-        echo "Stopping omhttp server"
-        kill -9 $(cat ${omhttp_work_dir}/omhttp_server.pid) > /dev/null 2>&1
+        omhttp_server_pid=$(cat ${omhttp_work_dir}/omhttp_server.pid)
+        echo "Stopping omhttp server process group ${omhttp_server_pid}"
+        kill -TERM -- -${omhttp_server_pid} > /dev/null 2>&1
+        wait ${omhttp_server_pid} 2>/dev/null || :
+        i=0
+        while kill -0 -- -${omhttp_server_pid} > /dev/null 2>&1; do
+            $TESTTOOL_DIR/msleep 100
+            (( i++ ))
+            if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+                echo "omhttp server process group ${omhttp_server_pid} still running - Performing hard shutdown (-9)"
+                kill -9 -- -${omhttp_server_pid} > /dev/null 2>&1
+                wait ${omhttp_server_pid} 2>/dev/null || :
+                break
+            fi
+        done
         rm -rf $omhttp_work_dir
     fi
 }
