@@ -421,7 +421,6 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
     int i;
     int ntags;
     char namebuf[MMNORM_MAX_FIELDNAME];
-    size_t nl;
 
     root = json_object_new_object();
     if (root == NULL) return NULL;
@@ -453,10 +452,32 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
 
         if (jval == NULL) continue;
 
-        /* Null-terminate field name into stack buffer */
-        nl = f->name_len < (MMNORM_MAX_FIELDNAME - 1) ? f->name_len : (MMNORM_MAX_FIELDNAME - 1);
-        memcpy(namebuf, f->name, nl);
-        namebuf[nl] = '\0';
+        /* Field name: stack buffer for common short names, heap
+         * fallback for names >= MMNORM_MAX_FIELDNAME.  Silently
+         * truncating (the previous behaviour) would collide two
+         * distinct field names sharing the first 255 bytes, letting
+         * the second write overwrite the first.  The heap path pays
+         * one malloc+free per oversized field; pathological inputs
+         * should not happen in well-designed rulebases, but the
+         * contract is now "no truncation, ever" for correctness. */
+        char *name_ptr;
+        char *heap_name = NULL;
+        if (f->name_len < MMNORM_MAX_FIELDNAME) {
+            memcpy(namebuf, f->name, f->name_len);
+            namebuf[f->name_len] = '\0';
+            name_ptr = namebuf;
+        } else {
+            heap_name = (char *)malloc(f->name_len + 1);
+            if (heap_name == NULL) {
+                /* OOM: drop the field rather than truncate.  json_object
+                 * created above must be released to avoid leaking. */
+                json_object_put(jval);
+                continue;
+            }
+            memcpy(heap_name, f->name, f->name_len);
+            heap_name[f->name_len] = '\0';
+            name_ptr = heap_name;
+        }
 
         /* Handle nested fields (dotted names).
          * Detect dots directly -- LN_FFIELD_NESTED flag is not
@@ -464,7 +485,7 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
         if (memchr(f->name, '.', f->name_len) != NULL) {
             struct json_object *parent = root;
             char *saveptr = NULL;
-            char *tok = strtok_r(namebuf, ".", &saveptr);
+            char *tok = strtok_r(name_ptr, ".", &saveptr);
             char *next = strtok_r(NULL, ".", &saveptr);
 
             while (next != NULL) {
@@ -479,8 +500,12 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
             }
             json_object_object_add(parent, tok, jval);
         } else {
-            json_object_object_add(root, namebuf, jval);
+            json_object_object_add(root, name_ptr, jval);
         }
+
+        /* json_object_object_add copies the key internally, so
+         * heap_name is safe to release on every iteration. */
+        free(heap_name);
     }
 
     /* Add tags at root level as JSON array (ECS standard) */
