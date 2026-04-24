@@ -571,6 +571,15 @@ BEGINdoAction_NoStrings
                         goto add_json;
                     goto turbo_done;
                 }
+                /* If a prior mmnormalize action on the same pMsg
+                 * already populated a snapshot, release it before
+                 * overwriting — rsyslog action chains can stack
+                 * parsers, and each snapshot owns ~6KB of string
+                 * data that would otherwise leak. */
+                if (pMsg->turbo_result != NULL
+                    && pMsg->turbo_result_free != NULL) {
+                    pMsg->turbo_result_free(pMsg->turbo_result);
+                }
                 pMsg->turbo_result = (void *)snap;
                 pMsg->turbo_result_free = turbo_result_snapshot_free;
                 pMsg->turbo_result_to_json = turbo_result_to_json_cb;
