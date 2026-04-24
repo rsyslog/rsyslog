@@ -2972,16 +2972,29 @@ rsRetVal getJSONPropVal(
     /* Turbo fast-path: serve parse-origin fields directly from snapshot.
      * Avoids json-c tree materialization + navigation + strdup entirely.
      *
-     * Lock-free by design: turbo_result and turbo_result_get_str are
-     * set exactly once by the parser (mmnormalize / pmnormalize) on an
-     * owned message before any template access runs, and cleared only
-     * in msgDestruct when no readers remain.  Cross-thread visibility
-     * is provided by the rsyslog queue's mutex+condvar on message
-     * handoff, which acts as a full memory barrier.  Taking pMsg->mut
-     * here would defeat the very reason this fast-path exists
-     * (scaling property access without lock contention).
+     * Guarded on pMsg->json == NULL: once anything has written to the
+     * json-c tree (imfile metadata, msgMaterializeTurboJSON, `set`
+     * statements, downstream enrichment), the turbo snapshot is no
+     * longer authoritative — the slow path below honours the
+     * existing-keys-win merge semantics of msgMaterializeTurboJSON.
+     * Returning snapshot values in that state would bypass a more
+     * recent write.  The fast path is therefore only valid while the
+     * message has no json tree yet, which is the common case for
+     * pure-normalize pipelines with no post-parse mutation.
+     *
+     * Lock-free by design: pMsg->json, turbo_result and
+     * turbo_result_get_str are all pointer-sized atomic reads.
+     * Parser writes happen-before queue enqueue (full barrier); later
+     * mutations to pMsg->json go through pMsg->mut.  A reader racing
+     * a concurrent json creation can observe the pre-write NULL
+     * exactly once — an existing minor exposure, dramatically
+     * narrower than the always-fires-even-after-mutation bug this
+     * guard closes.  Taking pMsg->mut here would defeat the very
+     * reason this fast-path exists (scaling property access without
+     * lock contention).
      */
-    if (pProp->id == PROP_CEE && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL) {
+    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
+        pMsg->turbo_result_get_str != NULL) {
         const uchar *val;
         rs_size_t vlen;
         if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
@@ -3054,11 +3067,12 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
 
 #ifdef HAVE_LOGNORM_TURBO
     /* Turbo fast-path: serve parse-origin strings directly from snapshot.
-     * Lock-free — see getJSONPropVal() above for the invariant
-     * (write-once at parse, read-many at template, destruct with no
-     * readers; queue mutex+condvar provides cross-thread visibility).
+     * See getJSONPropVal() above for the full rationale — guarded on
+     * pMsg->json == NULL so post-parse mutations (set, enrichment,
+     * materialize) fall through to the merge-aware slow path.
      */
-    if (pProp->id == PROP_CEE && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL) {
+    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
+        pMsg->turbo_result_get_str != NULL) {
         const uchar *val;
         rs_size_t vlen;
         if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
