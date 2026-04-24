@@ -57,6 +57,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsob
 #define CIVETWEB_OPTION_NAME_PORTS "listening_ports"
 #define CIVETWEB_OPTION_NAME_DOCUMENT_ROOT "document_root"
 #define MAX_READ_BUFFER_SIZE 16384
+#define MAX_REQUEST_BODY_SIZE (16 * 1024 * 1024)
 #define INIT_SCRATCH_BUF_SIZE 4096
 /* General purpose buffer size. */
 /**
@@ -227,6 +228,7 @@ typedef struct httpserv_s {
 } httpserv_t;
 
 static httpserv_t *s_httpserv;
+static sbool s_civetweb_initialized = 0;
 
 /* FORWARD DECLARATIONS */
 static rsRetVal processData(const instanceConf_t *const inst,
@@ -305,6 +307,10 @@ finalize_it:
 
 static rsRetVal processCivetwebOptions(char *const param, const char **const name, const char **const paramval) {
     DEFiRet;
+    char *parsedName = NULL;
+    char *parsedVal = NULL;
+    *name = NULL;
+    *paramval = NULL;
     char *val = strstr(param, "=");
     if (val == NULL) {
         LogError(0, RS_RET_PARAM_ERROR,
@@ -315,10 +321,16 @@ static rsRetVal processCivetwebOptions(char *const param, const char **const nam
     }
     *val = '\0'; /* terminates name */
     ++val; /* now points to begin of value */
-    CHKmalloc(*name = strdup(param));
-    CHKmalloc(*paramval = strdup(val));
+    CHKmalloc(parsedName = strdup(param));
+    CHKmalloc(parsedVal = strdup(val));
+    *name = parsedName;
+    parsedName = NULL;
+    *paramval = parsedVal;
+    parsedVal = NULL;
 
 finalize_it:
+    free(parsedName);
+    free(parsedVal);
     RETiRet;
 }
 
@@ -352,7 +364,7 @@ static void *init_thread(ATTR_UNUSED const struct mg_context *ctx, int thread_ty
         data->multiSub.maxElem = CONF_NUM_MULTISUB;
         data->multiSub.ppMsgs = data->pMsgs;
         data->multiSub.nElem = 0;
-        data->pReadBuf = malloc(MAX_READ_BUFFER_SIZE);
+        CHKmalloc(data->pReadBuf = malloc(MAX_READ_BUFFER_SIZE));
         data->readBufSize = MAX_READ_BUFFER_SIZE;
 
         data->parseState.bzInitDone = 0;
@@ -389,6 +401,24 @@ static void exit_thread(ATTR_UNUSED const struct mg_context *ctx, ATTR_UNUSED in
         free(data->pReadBuf);
         free(data->pMsg);
         free(data);
+    }
+}
+
+static void cleanupHttpServer(void) {
+    if (s_httpserv != NULL) {
+        if (s_httpserv->ctx != NULL) {
+            mg_stop(s_httpserv->ctx);
+            s_httpserv->ctx = NULL;
+        }
+        free(s_httpserv->civetweb_options);
+        s_httpserv->civetweb_options = NULL;
+        s_httpserv->civetweb_options_count = 0;
+        free(s_httpserv);
+        s_httpserv = NULL;
+    }
+    if (s_civetweb_initialized) {
+        mg_exit_library();
+        s_civetweb_initialized = 0;
     }
 }
 
@@ -611,21 +641,19 @@ static rsRetVal processOctetCounting(const instanceConf_t *const inst,
                 pbuf++;
             } else {
                 assert(connWrkr->parseState.framingMode == TCP_FRAMING_OCTET_COUNTING);
-                /* parsing payload */
-                size_t remainingBytes = pbufLast - pbuf;
-                // figure out how much is in block
-                size_t count = min(connWrkr->parseState.iOctetsRemain, remainingBytes);
-                if (connWrkr->iMsg + count >= s_iMaxLine) {
-                    count = s_iMaxLine - connWrkr->iMsg;
-                }
+                const size_t remainingBytes = pbufLast - pbuf;
+                const size_t frameBytes = min(connWrkr->parseState.iOctetsRemain, remainingBytes);
+                size_t copyBytes = 0;
 
-                // just copy the bytes
-                if (count) {
-                    memcpy(connWrkr->pMsg + connWrkr->iMsg, pbuf, count);
-                    pbuf += count;
-                    connWrkr->iMsg += count;
-                    connWrkr->parseState.iOctetsRemain -= count;
+                if (connWrkr->iMsg < s_iMaxLine) {
+                    copyBytes = min(frameBytes, s_iMaxLine - connWrkr->iMsg);
+                    if (copyBytes != 0) {
+                        memcpy(connWrkr->pMsg + connWrkr->iMsg, pbuf, copyBytes);
+                        connWrkr->iMsg += copyBytes;
+                    }
                 }
+                pbuf += frameBytes;
+                connWrkr->parseState.iOctetsRemain -= frameBytes;
 
                 if (connWrkr->parseState.iOctetsRemain == 0) {
                     doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
@@ -720,7 +748,7 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
     }
 
     connWrkr->parseState.zstrm.next_in = (Bytef *)buf;
-    connWrkr->parseState.zstrm.avail_in = len;
+    connWrkr->parseState.zstrm.avail_in = (uInt)len;
     /* run inflate() on buffer until everything has been uncompressed */
     int outtotal = 0;
     do {
@@ -737,6 +765,20 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
         if (outavail != 0) {
             outtotal += outavail;
             CHKiRet(processDataUncompressed(inst, connWrkr, (const char *)connWrkr->zipBuf, outavail));
+        }
+        if (zRet == Z_STREAM_END) {
+            break;
+        }
+        if (zRet == Z_BUF_ERROR) {
+            if (outavail == 0 && connWrkr->parseState.zstrm.avail_in != 0) {
+                LogError(0, RS_RET_ZLIB_ERR, "imhttp: zlib inflate made no progress while input remained");
+                ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+            }
+            break;
+        }
+        if (zRet != Z_OK) {
+            LogError(0, RS_RET_ZLIB_ERR, "imhttp: zlib inflate failed with status %d", zRet);
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
     } while (connWrkr->parseState.zstrm.avail_out == 0);
 
@@ -1035,7 +1077,12 @@ finalize:
  */
 static void sendUnauthorized(struct mg_connection *conn, const struct route_auth_ctx_s *authCtx) {
     if (authCtx != NULL && authCtx->pszBasicAuthFile != NULL) {
-        mg_send_http_error(conn, 401, "WWW-Authenticate: Basic realm=\"User Visible Realm\"\n");
+        mg_printf(conn,
+                  "HTTP/1.1 401 Unauthorized\r\n"
+                  "WWW-Authenticate: Basic realm=\"User Visible Realm\"\r\n"
+                  "Connection: close\r\n"
+                  "Content-Length: 0\r\n"
+                  "\r\n");
     } else {
         mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
     }
@@ -1117,6 +1164,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
         connWrkr->pScratchBuf = calloc(1, INIT_SCRATCH_BUF_SIZE);
         if (!connWrkr->pScratchBuf) {
             mg_cry(conn, "%s() - could not alloc scratch buffer!\n", __FUNCTION__);
+            mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
             rc = 500;
             FINALIZE;
         }
@@ -1144,10 +1192,21 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
 
     if (ri->content_length >= 0) {
         /* We know the content length in advance */
-        if (ri->content_length > (long long)connWrkr->readBufSize) {
-            char *newReadBuf = realloc(connWrkr->pReadBuf, ri->content_length + 1);
+        if ((uint64_t)ri->content_length > MAX_REQUEST_BODY_SIZE) {
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "imhttp: rejecting request body with Content-Length %lld exceeding maximum %d",
+                     (long long)ri->content_length, MAX_REQUEST_BODY_SIZE);
+            STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+            STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+            mg_printf(conn, "HTTP/1.1 413 Payload Too Large\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+            rc = 413;
+            FINALIZE;
+        }
+        if ((uint64_t)ri->content_length + 1 > connWrkr->readBufSize) {
+            char *newReadBuf = realloc(connWrkr->pReadBuf, (size_t)ri->content_length + 1);
             if (newReadBuf == NULL) {
                 mg_cry(conn, "%s() - realloc failed!\n", __FUNCTION__);
+                mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
                 rc = 500;
                 FINALIZE;
             }
@@ -1176,6 +1235,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
             if (localRet != RS_RET_OK) {
                 LogError(0, localRet, "imhttp: failed processing request payload");
                 STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+                mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
                 rc = 500;
                 FINALIZE;
             }
@@ -1189,6 +1249,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
     if (localRet != RS_RET_OK) {
         LogError(0, localRet, "imhttp: failed submitting final request message");
         STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
         rc = 500;
         FINALIZE;
     }
@@ -1196,6 +1257,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
     if (localRet != RS_RET_OK) {
         LogError(0, localRet, "imhttp: failed flushing submitted messages");
         STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
         rc = 500;
         FINALIZE;
     }
@@ -1236,9 +1298,13 @@ struct stats_buf {
 static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
     struct stats_buf *sb = (struct stats_buf *)usrptr;
     const size_t line_len = strlen(line);
-    if (sb->len + line_len >= sb->cap) {
+    if (line_len > ((size_t)-1) - sb->len - 1) {
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    const size_t needed = sb->len + line_len + 1;
+    if (needed > sb->cap) {
         size_t newcap = sb->cap ? sb->cap * 2 : 1024;
-        while (newcap <= sb->len + line_len) {
+        while (newcap < needed) {
             if (newcap > ((size_t)-1) / 2) {
                 return RS_RET_OUT_OF_MEMORY;
             }
@@ -1360,21 +1426,21 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "endpoint")) {
-            inst->pszEndpoint = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszEndpoint = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "basicauthfile")) {
-            inst->pszBasicAuthFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBasicAuthFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "apikeyfile")) {
-            inst->pszApiKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszApiKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             inst->flowControl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -1439,6 +1505,7 @@ ENDbeginCnfLoad
 
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
+    char *cstr = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -1458,39 +1525,43 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "ports")) {
             assert(loadModConf->ports.name == NULL);
             assert(loadModConf->ports.val == NULL);
-            loadModConf->ports.name = strdup(CIVETWEB_OPTION_NAME_PORTS);
-            loadModConf->ports.val = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->ports.name = strdup(CIVETWEB_OPTION_NAME_PORTS));
+            CHKmalloc(loadModConf->ports.val = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "documentroot")) {
             assert(loadModConf->docroot.name == NULL);
             assert(loadModConf->docroot.val == NULL);
-            loadModConf->docroot.name = strdup(CIVETWEB_OPTION_NAME_DOCUMENT_ROOT);
-            loadModConf->docroot.val = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->docroot.name = strdup(CIVETWEB_OPTION_NAME_DOCUMENT_ROOT));
+            CHKmalloc(loadModConf->docroot.val = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "liboptions")) {
-            loadModConf->nOptions = pvals[i].val.d.ar->nmemb;
-            CHKmalloc(loadModConf->options = malloc(sizeof(struct option) * pvals[i].val.d.ar->nmemb));
+            if (pvals[i].val.d.ar->nmemb == 0) {
+                continue;
+            }
+            CHKmalloc(loadModConf->options = calloc(pvals[i].val.d.ar->nmemb, sizeof(struct option)));
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 CHKiRet(processCivetwebOptions(cstr, &loadModConf->options[j].name, &loadModConf->options[j].val));
+                ++loadModConf->nOptions;
                 free(cstr);
+                cstr = NULL;
             }
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckpath")) {
             free(loadModConf->pszHealthCheckPath);
-            loadModConf->pszHealthCheckPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszHealthCheckPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "metricspath")) {
             free(loadModConf->pszMetricsPath);
-            loadModConf->pszMetricsPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMetricsPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckbasicauthfile")) {
             free(loadModConf->pszHealthCheckAuthFile);
-            loadModConf->pszHealthCheckAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszHealthCheckAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "metricsbasicauthfile")) {
             free(loadModConf->pszMetricsAuthFile);
-            loadModConf->pszMetricsAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMetricsAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckapikeyfile")) {
             free(loadModConf->pszHealthCheckApiKeyFile);
-            loadModConf->pszHealthCheckApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszHealthCheckApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "metricsapikeyfile")) {
             free(loadModConf->pszMetricsApiKeyFile);
-            loadModConf->pszMetricsApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMetricsApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imhttp: program error, non-handled "
@@ -1511,6 +1582,7 @@ BEGINsetModCnf
     }
 
 finalize_it:
+    free(cstr);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
@@ -1550,7 +1622,7 @@ BEGINcheckCnf
                  "imhttp: healthCheckPath '%s' is invalid, must start with '/'. Using default '%s'.",
                  pModConf->pszHealthCheckPath ? pModConf->pszHealthCheckPath : "(null)", DEFAULT_HEALTH_CHECK_PATH);
         free(pModConf->pszHealthCheckPath);
-        pModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH);
+        CHKmalloc(pModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH));
     }
 
     if (pModConf->pszMetricsPath == NULL || pModConf->pszMetricsPath[0] != '/') {
@@ -1558,9 +1630,10 @@ BEGINcheckCnf
                  "imhttp: metricsPath '%s' is invalid, must start with '/'. Using default '%s'.",
                  pModConf->pszMetricsPath ? pModConf->pszMetricsPath : "(null)", DEFAULT_PROM_METRICS_PATH);
         free(pModConf->pszMetricsPath);
-        pModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH);
+        CHKmalloc(pModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH));
     }
 
+finalize_it:
 ENDcheckCnf
 
 
@@ -1630,6 +1703,7 @@ BEGINactivateCnf
 
     /* init civetweb libs and start server w/no input */
     mg_init_library(MG_FEATURES_TLS);
+    s_civetweb_initialized = 1;
     memset(&callbacks, 0, sizeof(callbacks));
     // callbacks.log_message = log_message;
     // callbacks.init_ssl = init_ssl;
@@ -1644,8 +1718,10 @@ BEGINactivateCnf
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        free(s_httpserv);
-        s_httpserv = NULL;
+        cleanupHttpServer();
+        if (statsCounter.stats != NULL) {
+            statsobj.Destruct(&statsCounter.stats);
+        }
         LogError(0, NO_ERRCODE, "imhttp: error %d trying to activate configuration", iRet);
     }
     RETiRet;
@@ -1710,12 +1786,7 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
-    if (s_httpserv) {
-        mg_stop(s_httpserv->ctx);
-        mg_exit_library();
-        free(s_httpserv->civetweb_options);
-        free(s_httpserv);
-    }
+    cleanupHttpServer();
 ENDafterRun
 
 
