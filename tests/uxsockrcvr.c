@@ -5,6 +5,7 @@
  * -s name of socket (required)
  * -o name of output file (stdout if not given)
  * -l add newline after each message received (default: do not add anything)
+ * -r file to write the receiver ready generation after bind/listen
  * -t timeout in seconds (default 60)
  *
  * Part of the testbench for rsyslog.
@@ -63,6 +64,8 @@ int sockBacklog = MAX_FDS - 1;
 struct pollfd fds[MAX_FDS];
 int nfds;
 volatile int need_reset;
+static const char *readyFile;
+static unsigned int readyGeneration;
 
 /* called to clean up on exit
  */
@@ -97,6 +100,7 @@ void usage(void) {
             "-l adds newline after each message received\n"
             "-s MUST be specified\n"
             "-a Use abstract socket name\n"
+            "-r file to write receiver ready generation after bind/listen\n"
             "-T {DGRAM|STREAM"
 #ifdef SOCK_SEQPACKET
             "|SEQPACKET"
@@ -104,6 +108,19 @@ void usage(void) {
             "} Set socket type (default DGRAM)\n"
             "if -o ist not specified, stdout is used\n");
     exit(1);
+}
+
+static void signal_ready(void) {
+    FILE *fp;
+
+    if (readyFile == NULL) return;
+
+    if ((fp = fopen(readyFile, "w")) == NULL) {
+        perror(readyFile);
+        exit(1);
+    }
+    fprintf(fp, "%u\n", ++readyGeneration);
+    fclose(fp);
 }
 
 static struct {
@@ -184,6 +201,7 @@ void initialize_socket(void) {
 
     fds[0].events = POLLIN;
     nfds = 1;
+    signal_ready();
 }
 
 int main(int argc, char *argv[]) {
@@ -201,7 +219,7 @@ int main(int argc, char *argv[]) {
         usage();
     }
 
-    while ((opt = getopt(argc, argv, "as:o:lt:T:")) != EOF) {
+    while ((opt = getopt(argc, argv, "as:o:lr:t:T:")) != EOF) {
         switch ((char)opt) {
             case 'a':
                 abstract = 1;
@@ -217,6 +235,9 @@ int main(int argc, char *argv[]) {
                     perror(optarg);
                     exit(1);
                 }
+                break;
+            case 'r':
+                readyFile = optarg;
                 break;
             case 't':
                 timeout = atoi(optarg);
