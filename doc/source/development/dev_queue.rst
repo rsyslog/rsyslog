@@ -53,6 +53,11 @@ is empty, it is shut down and processing of the primary queue continues
 as a regular in-memory queue (aka "DA mode is shut down"). The whole
 thing iterates once the high water mark is hit again.
 
+The DA queue is a first-class disk queue object. Disk queue semantics
+for ``.qi`` state, segment files, ``queue.onCorruption``, quarantine,
+and runtime corruption handling apply to the DA queue in the same way as
+they apply to a queue configured directly as ``queue.type="disk"``.
+
 There is one special case: if the primary queue is shut down and could
 not finish processing all messages within the configured timeout
 periods, the DA queue is instantiated to take up the remaining messages.
@@ -303,4 +308,3 @@ destruction - this is what enables us to persist the disk queue!
 
 After that point, left over queue resources (mutexes, dynamic memory,
 ...) are freed and the queue object is actually destructed.
-
