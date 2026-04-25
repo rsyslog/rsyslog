@@ -2,13 +2,15 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # imdocker unit tests are enabled with --enable-imdocker-tests
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=1
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 export COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
 
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="image=%$!metadata!Image%\n")
-module(load="../contrib/imdocker/.libs/imdocker")
+module(load="../contrib/imdocker/.libs/imdocker"
+        ListContainersOptions="all=true")
 if $!metadata!Names == "'$COOKIE'" then {
   action(type="omfile" template="outfmt"  file="'$RSYSLOG_OUT_LOG'")
 }

@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-. ${srcdir:-.}/imdocker-image-name.sh
+. "${srcdir:-$(dirname "$0")}/imdocker-image-name.sh"
