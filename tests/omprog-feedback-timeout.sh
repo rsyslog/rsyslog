@@ -22,12 +22,15 @@ template(name="outfmt" type="string" string="%msg%\n")
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"
         confirmTimeout="2000"  # 2 seconds
+        action.resumeInterval="1"
+        action.resumeRetryCount="10"
         reportFailures="on"
     )
 }
 '
 startup
 injectmsg 0 10
+content_check_with_count "=> msgnum:00000004:" 2 90
 shutdown_when_empty
 wait_shutdown
 

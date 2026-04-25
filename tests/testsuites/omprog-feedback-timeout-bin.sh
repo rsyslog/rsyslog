@@ -2,8 +2,16 @@
 
 outfile=$RSYSLOG_OUT_LOG
 
-echo "Starting" >> $outfile
-echo "<= OK" >> $outfile
+interruptible_sleep() {
+    elapsed=0
+    trap 'exit 0' TERM INT PIPE
+    while [[ $elapsed -lt $1 ]]; do
+        ./msleep 100
+        elapsed=$((elapsed + 100))
+    done
+    trap - TERM INT PIPE
+}
+
 echo "OK"
 
 just_started=true
@@ -11,6 +19,10 @@ just_started=true
 read line
 while [[ -n "$line" ]]; do
     message=${line//$'\n'}
+    if [[ $just_started == true ]]; then
+        echo "Starting" >> $outfile
+        echo "<= OK" >> $outfile
+    fi
     echo "=> $message" >> $outfile
 
     if [[ $message == *02* ]]; then
@@ -23,7 +35,8 @@ while [[ -n "$line" ]]; do
         if [[ $just_started == false ]]; then
             # Force a restart due to 'confirmTimeout' (2 seconds) exceeded
             echo "<= (timeout)" >> $outfile
-            ./msleep 10000
+            interruptible_sleep 3500
+            exit 0
         else
             # When the message is retried (just after restart), confirm it correctly
             echo "<= OK" >> $outfile

@@ -14,6 +14,7 @@ ruleset(name="ruleset") {
 }
 '
 startup
+wait_file_lines "$RSYSLOG_OUT_LOG" 10
 shutdown_when_empty
 wait_shutdown
 NUM_ITEMS=10
