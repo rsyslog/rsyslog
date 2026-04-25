@@ -230,6 +230,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 #define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
 #define MAX_DISK_QUEUE_FILES 10000000 /* maximum file number for disk queues */
+#define DISKQUEUE_CORRUPTION_RESYNC_MAX_BYTES (1024 * 1024)
 
 
 /* forward-definitions */
@@ -245,6 +246,7 @@ static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiS
 static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg);
 static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) * pThis);
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) * pThis);
+static rsRetVal qConstructDisk(qqueue_t *pThis);
 static rsRetVal qDestructDisk(qqueue_t *pThis);
 rsRetVal qqueueSetSpoolDir(qqueue_t *pThis, uchar *pszSpoolDir, int lenSpoolDir);
 static rsRetVal handleReadSeekError(rsRetVal seekRet, qqueue_t *pThis, const char *streamName, sbool *pReadSeekFailed);
@@ -252,6 +254,7 @@ static void alignReadDeqToWrite(qqueue_t *pThis);
 static void recoverFromInvalidQi(qqueue_t *pThis, int wr_fd, int64_t wr_offs);
 static void qqueueDestroyDiskStreams(qqueue_t *pThis);
 static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis);
+static rsRetVal qqueueResetDiskQueueAfterCorruption(qqueue_t *pThis);
 
 /* some constants for queuePersist () */
 #define QUEUE_CHECKPOINT 1
@@ -620,6 +623,7 @@ static rsRetVal StartDA(qqueue_t *pThis) {
     pThis->pqDA->iMinDeqBatchSize = pThis->iMinDeqBatchSize;
     pThis->pqDA->iMinMsgsPerWrkr = pThis->iMinMsgsPerWrkr;
     pThis->pqDA->iLowWtrMrk = pThis->iLowWtrMrk;
+    pThis->pqDA->onCorruption = pThis->onCorruption;
     if (pThis->useCryprov) {
         /* hand over cryprov to DA queue - in-mem queue does no longer need it
          * and DA queue will be kept active from now on until termination.
@@ -907,23 +911,48 @@ static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
     if (pThis->tVars.disk.pReadDel != NULL) strm.Destruct(&pThis->tVars.disk.pReadDel);
 }
 
-static void qqueueResetRecoveredQueueSize(qqueue_t *pThis) {
+static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOverallQueueSize) {
     if (pThis->iQueueSize > 0) {
 #ifdef ENABLE_IMDIAG
+        if (adjustOverallQueueSize) {
     #ifdef HAVE_ATOMIC_BUILTINS
-        ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
+            ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
     #else
-        iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
+            iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
     #endif
+        }
 #endif
         pThis->iQueueSize = 0;
     }
     pThis->nLogDeq = 0;
 }
 
+static void qqueueSubtractOverallQueueSize(const int nElem) {
+    if (nElem <= 0) {
+        return;
+    }
+#ifdef ENABLE_IMDIAG
+    #ifdef HAVE_ATOMIC_BUILTINS
+    ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
+    #else
+    iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
+    #endif
+#endif
+}
+
+static void qqueueAddLogDeq(qqueue_t *pThis, const int nElem) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    ATOMIC_ADD(pThis->nLogDeq, nElem);
+#else
+    pthread_mutex_lock(&pThis->mutLogDeq);
+    pThis->nLogDeq += nElem;
+    pthread_mutex_unlock(&pThis->mutLogDeq);
+#endif
+}
+
 static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis) {
     DEFiRet;
-    qqueueResetRecoveredQueueSize(pThis);
+    qqueueResetRecoveredQueueSize(pThis, 1);
     qqueueDestroyDiskStreams(pThis);
     free(pThis->pszFilePrefix);
     pThis->pszFilePrefix = NULL;
@@ -1190,7 +1219,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                 FINALIZE;
             }
 
-            if (mkdir(badDir, 0700) != 0) {
+            if (mkdir(badDir, 0755) != 0) {
                 if (errno == EEXIST) {
                     struct stat badDirStat;
                     if (stat(badDir, &badDirStat) != 0 || !S_ISDIR(badDirStat.st_mode)) {
@@ -1263,7 +1292,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                 }
             }
 
-            qqueueResetRecoveredQueueSize(pThis);
+            qqueueResetRecoveredQueueSize(pThis, 1);
             iRet = RS_RET_FILE_NOT_FOUND;
         }
     } else {
@@ -1277,6 +1306,181 @@ finalize_it:
     if (files) {
         for (i = 0; i < nFiles; i++) free(files[i].name);
         free(files);
+    }
+    RETiRet;
+}
+
+static rsRetVal makeDiskQueueBadDir(qqueue_t *pThis, char *badDir, const size_t badDirLen) {
+    char timebuf[96];
+    struct tm tm_buf;
+    time_t now = time(NULL);
+    DEFiRet;
+
+    if (now == (time_t)-1) {
+        struct timespec ts;
+        if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
+            snprintf(timebuf, sizeof(timebuf), "timeerr-%ld-%ld", (long)getpid(), (long)ts.tv_nsec);
+        } else {
+            snprintf(timebuf, sizeof(timebuf), "timeerr-%ld", (long)getpid());
+        }
+    } else {
+        localtime_r(&now, &tm_buf);
+        strftime(timebuf, sizeof(timebuf), "%Y%m%d%H%M%S", &tm_buf);
+    }
+
+    const int len = snprintf(badDir, badDirLen, "%s/%s.bad.%s.%ld", pThis->pszSpoolDir, pThis->pszFilePrefix, timebuf,
+                             (long)getpid());
+    if (len < 0 || len >= (int)badDirLen) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (mkdir(badDir, 0755) != 0) {
+        if (errno != EEXIST) {
+            LogError(errno, RS_RET_ERR, "queue corruption: failed to create quarantine directory %s", badDir);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        struct stat badDirStat;
+        if (stat(badDir, &badDirStat) != 0 || !S_ISDIR(badDirStat.st_mode)) {
+            LogError(errno, RS_RET_ERR, "queue corruption: quarantine path exists but is unusable %s", badDir);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal moveQueueFileToBadDir(qqueue_t *pThis, const char *badDir, const char *fileName) {
+    char oldPath[MAXFNAME];
+    char newPath[MAXFNAME];
+    DEFiRet;
+
+    const int oldLen = snprintf(oldPath, sizeof(oldPath), "%s/%s", pThis->pszSpoolDir, fileName);
+    const int newLen = snprintf(newPath, sizeof(newPath), "%s/%s", badDir, fileName);
+    if (oldLen < 0 || oldLen >= (int)sizeof(oldPath) || newLen < 0 || newLen >= (int)sizeof(newPath)) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (rename(oldPath, newPath) != 0 && errno != ENOENT) {
+        LogError(errno, RS_RET_ERR, "queue corruption: could not move queue file %s to quarantine directory %s",
+                 fileName, badDir);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal qqueueQuarantineCurrentDiskFiles(qqueue_t *pThis, char *badDir, const size_t badDirLen) {
+    DIR *d = NULL;
+    struct dirent *dir;
+    fileEntry_t *files = NULL;
+    int nFiles = 0;
+    int capFiles = 0;
+    int i;
+    DEFiRet;
+
+    CHKiRet(makeDiskQueueBadDir(pThis, badDir, badDirLen));
+    d = opendir((char *)pThis->pszSpoolDir);
+    if (d == NULL) {
+        LogError(errno, RS_RET_ERR, "queue corruption: unable to scan spool directory %s for quarantine",
+                 pThis->pszSpoolDir);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    errno = 0;
+    while ((dir = readdir(d)) != NULL) {
+        const size_t nameLen = strlen(dir->d_name);
+        const size_t prefixLen = pThis->lenFilePrefix;
+        if (nameLen <= prefixLen + 1 || strncmp(dir->d_name, (char *)pThis->pszFilePrefix, prefixLen) != 0 ||
+            dir->d_name[prefixLen] != '.') {
+            continue;
+        }
+        const char *suffix = dir->d_name + prefixLen + 1;
+        if (strcmp(suffix, "qi") == 0) {
+            continue;
+        }
+        char *endptr;
+        errno = 0;
+        const long parsedNum = strtol(suffix, &endptr, 10);
+        if (*endptr != '\0' || errno == ERANGE || parsedNum < 0 || parsedNum > INT_MAX) {
+            continue;
+        }
+        if (nFiles == capFiles) {
+            fileEntry_t *newFiles;
+            const int newCapFiles = capFiles ? capFiles * 2 : 16;
+            if ((size_t)newCapFiles > SIZE_MAX / sizeof(fileEntry_t)) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            CHKmalloc(newFiles = realloc(files, (size_t)newCapFiles * sizeof(fileEntry_t)));
+            files = newFiles;
+            capFiles = newCapFiles;
+        }
+        CHKmalloc(files[nFiles].name = strdup(dir->d_name));
+        files[nFiles].number = (int)parsedNum;
+        ++nFiles;
+    }
+    if (errno != 0) {
+        LogError(errno, RS_RET_ERR, "queue corruption: unable to fully scan spool directory %s for quarantine",
+                 pThis->pszSpoolDir);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    closedir(d);
+    d = NULL;
+
+    qqueueDestroyDiskStreams(pThis);
+
+    char qiName[MAXFNAME];
+    const int qiLen = snprintf(qiName, sizeof(qiName), "%s.qi", pThis->pszFilePrefix);
+    if (qiLen < 0 || qiLen >= (int)sizeof(qiName)) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKiRet(moveQueueFileToBadDir(pThis, badDir, qiName));
+    for (i = 0; i < nFiles; ++i) {
+        CHKiRet(moveQueueFileToBadDir(pThis, badDir, files[i].name));
+    }
+
+finalize_it:
+    if (d != NULL) {
+        closedir(d);
+    }
+    if (files != NULL) {
+        for (i = 0; i < nFiles; ++i) free(files[i].name);
+        free(files);
+    }
+    RETiRet;
+}
+
+static rsRetVal qqueueResetDiskQueueAfterCorruption(qqueue_t *pThis) {
+    char badDir[MAXFNAME];
+    DEFiRet;
+
+    CHKiRet(qqueueQuarantineCurrentDiskFiles(pThis, badDir, sizeof(badDir)));
+    LogMsg(0, RS_RET_ERR, LOG_ALERT,
+           "%s: disk queue corruption could not be resynchronized; quarantined unread queue tail into %s",
+           obj.GetName((obj_t *)pThis), badDir);
+
+    qqueueResetRecoveredQueueSize(pThis, 0);
+    pThis->tVars.disk.sizeOnDisk = 0;
+    pThis->tVars.disk.deqFileNumIn = 0;
+    pThis->tVars.disk.deqFileNumOut = 0;
+    pThis->tVars.disk.deqOffs = 0;
+    pThis->tVars.disk.nForcePersist = 0;
+    pThis->tVars.disk.pendingCorruptRet = RS_RET_OK;
+    pThis->bNeedDelQIF = 0;
+    pThis->iUpdsSincePersist = 0;
+    CHKiRet(qConstructDisk(pThis));
+    LogMsg(0, RS_RET_OK, LOG_WARNING, "%s: disk queue active state reset after corruption quarantine",
+           obj.GetName((obj_t *)pThis));
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        LogError(0, iRet, "%s: disk queue corruption quarantine failed; switching to emergency in-memory mode",
+                 obj.GetName((obj_t *)pThis));
+        const rsRetVal localRet = qqueueSwitchToInMemoryEmergency(pThis);
+        if (localRet != RS_RET_OK) {
+            LogError(0, localRet, "%s: emergency in-memory mode switch failed after disk queue corruption",
+                     obj.GetName((obj_t *)pThis));
+        }
+        iRet = RS_RET_OK;
     }
     RETiRet;
 }
@@ -1436,6 +1640,8 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
     int bRestarted = 0;
 
     assert(pThis != NULL);
+    pThis->tVars.disk.pendingCorruptRet = RS_RET_OK;
+    pThis->tVars.disk.runtimeCorruptionSkip = 0;
 
     /* and now check if there is some persistent information that needs to be read in */
     iRet = qqueueTryLoadPersistedInfo(pThis);
@@ -1595,6 +1801,83 @@ static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg) {
     RETiRet;
 }
 
+static rsRetVal qDeqDiskRecoverAfterCorruption(qqueue_t *pThis,
+                                               smsg_t **ppMsg,
+                                               const rsRetVal corruptRet,
+                                               int *const pSkippedMsgs) {
+    uchar c;
+    int64_t startOffs;
+    int startFile;
+    unsigned int scanned = 0;
+    DEFiRet;
+
+    assert(ppMsg != NULL);
+    assert(pSkippedMsgs != NULL);
+    *ppMsg = NULL;
+    *pSkippedMsgs = 0;
+
+    if (pThis->onCorruption != QUEUE_ON_CORRUPTION_SAFE_MODE || pThis->tVars.disk.pReadDeq == NULL) {
+        ABORT_FINALIZE(corruptRet);
+    }
+
+    if (pThis->tVars.disk.pWrite != NULL &&
+        strmGetCurrFileNum(pThis->tVars.disk.pReadDeq) == strmGetCurrFileNum(pThis->tVars.disk.pWrite) &&
+        pThis->tVars.disk.pReadDeq->iCurrOffs >= pThis->tVars.disk.pWrite->iCurrOffs) {
+        ABORT_FINALIZE(corruptRet);
+    }
+
+    startFile = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+    startOffs = pThis->tVars.disk.pReadDeq->iCurrOffs;
+    LogMsg(0, corruptRet, LOG_ALERT,
+           "%s: disk queue corruption detected while dequeuing at file %d offset %lld; attempting bounded resync",
+           obj.GetName((obj_t *)pThis), startFile, (long long)startOffs);
+
+    while (scanned < DISKQUEUE_CORRUPTION_RESYNC_MAX_BYTES) {
+        if (pThis->tVars.disk.pWrite != NULL &&
+            strmGetCurrFileNum(pThis->tVars.disk.pReadDeq) == strmGetCurrFileNum(pThis->tVars.disk.pWrite) &&
+            pThis->tVars.disk.pReadDeq->iCurrOffs >= pThis->tVars.disk.pWrite->iCurrOffs) {
+            break;
+        }
+
+        iRet = strm.ReadChar(pThis->tVars.disk.pReadDeq, &c);
+        if (iRet != RS_RET_OK) {
+            break;
+        }
+        ++scanned;
+        if (c != '<') {
+            continue;
+        }
+
+        CHKiRet(strm.UnreadChar(pThis->tVars.disk.pReadDeq, c));
+        iRet = objDeserializeWithMethods(ppMsg, (uchar *)"msg", sizeof("msg") - 1, pThis->tVars.disk.pReadDeq, NULL,
+                                         NULL, msgConstructFromVoid, NULL, msgDeserializeFromVoid);
+        if (iRet == RS_RET_OK) {
+            *pSkippedMsgs = 1;
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "%s: disk queue corruption recovery resumed after skipping a damaged record; "
+                   "resynchronized at file %d offset %lld after scanning %u bytes",
+                   obj.GetName((obj_t *)pThis), strmGetCurrFileNum(pThis->tVars.disk.pReadDeq),
+                   (long long)pThis->tVars.disk.pReadDeq->iCurrOffs, scanned);
+            FINALIZE;
+        }
+        if (iRet == RS_RET_OUT_OF_MEMORY) {
+            ABORT_FINALIZE(iRet);
+        }
+        *ppMsg = NULL;
+    }
+
+    LogMsg(0, corruptRet, LOG_ALERT,
+           "%s: disk queue corruption recovery failed after bounded scan of %u bytes; quarantining unread tail",
+           obj.GetName((obj_t *)pThis), scanned);
+    const int skippedTail = getLogicalQueueSize(pThis);
+    CHKiRet(qqueueResetDiskQueueAfterCorruption(pThis));
+    *pSkippedMsgs = skippedTail;
+    iRet = RS_RET_NO_DATA;
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* -------------------- direct (no queueing) -------------------- */
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) * pThis) {
@@ -1688,28 +1971,6 @@ static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
     }
 
 finalize_it:
-    RETiRet;
-}
-
-
-/* generic code to dequeue a queue entry
- */
-static rsRetVal qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg) {
-    DEFiRet;
-
-    assert(pThis != NULL);
-
-    /* we do NOT abort if we encounter an error, because otherwise the queue
-     * will not be decremented, what will most probably result in an endless loop.
-     * If we decrement, however, we may lose a message. But that is better than
-     * losing the whole process because it loops... -- rgerhards, 2008-01-03
-     */
-    iRet = pThis->qDeq(pThis, ppMsg);
-    ATOMIC_INC(&pThis->nLogDeq, &pThis->mutLogDeq);
-
-    DBGOPRINT((obj_t *)pThis, "entry deleted, size now log %d, phys %d entries\n", getLogicalQueueSize(pThis),
-              getPhysicalQueueSize(pThis));
-
     RETiRet;
 }
 
@@ -2176,6 +2437,8 @@ static void alignReadDeqToWrite(qqueue_t *pThis) {
 }
 
 static void recoverFromInvalidQi(qqueue_t *pThis, const int wr_fd, const int64_t wr_offs) {
+    pThis->tVars.disk.runtimeCorruptionSkip = 0;
+
     if (pThis->tVars.disk.pReadDel == NULL || pThis->tVars.disk.pWrite == NULL || wr_fd < 0 || wr_offs < 0) {
         return;
     }
@@ -2250,7 +2513,11 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
          * size. -- rgerhards, 2008-01-30
          */
         if (bytesDel != 0) {
-            pThis->tVars.disk.sizeOnDisk -= bytesDel;
+            if (pThis->tVars.disk.sizeOnDisk >= bytesDel) {
+                pThis->tVars.disk.sizeOnDisk -= bytesDel;
+            } else {
+                pThis->tVars.disk.sizeOnDisk = 0;
+            }
             DBGOPRINT((obj_t *)pThis,
                       "doDeleteBatch: a %lld octet file has been deleted, now %lld "
                       "octets disk space used\n",
@@ -2325,7 +2592,7 @@ static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
 
     switch (phase) {
         case TDL_EMPTY:
-            DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+            DoDeleteBatchFromQStore(pThis, pBatch->nElemDeq);
             break;
 
         case TDL_PROCESS_HEAD:
@@ -2337,13 +2604,13 @@ static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
             }
             assert(pThis->deqIDDel == nextID);
             /* old entries deleted, now delete current ones... */
-            DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+            DoDeleteBatchFromQStore(pThis, pBatch->nElemDeq);
             break;
 
         case TDL_QUEUE:
             /* cannot delete, insert into to-delete list */
             DBGPRINTF("not at head of to-delete list, enqueue %d\n", (int)pBatch->deqID);
-            CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElem));
+            CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElemDeq));
             break;
 
         default:
@@ -2418,6 +2685,8 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     int nDeleted;
     int iQueueSize;
     int keep_running = 1;
+    int deferredDiskCorruption = 0;
+    rsRetVal pendingCorruptRet = RS_RET_OK;
     struct timespec timeout;
     smsg_t *pMsg;
     rsRetVal localRet;
@@ -2429,6 +2698,11 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     nDequeued = nDiscarded = 0;
     if (pThis->qType == QUEUETYPE_DISK) {
         pThis->tVars.disk.deqFileNumIn = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+        pThis->tVars.disk.runtimeCorruptionSkip = 0;
+        if (pThis->tVars.disk.pendingCorruptRet != RS_RET_OK) {
+            pendingCorruptRet = pThis->tVars.disk.pendingCorruptRet;
+            pThis->tVars.disk.pendingCorruptRet = RS_RET_OK;
+        }
     }
 
     /* work-around clang static analyzer false positive, we need a const value */
@@ -2450,30 +2724,161 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
             wr_fd = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
             wr_offs = pThis->tVars.disk.pWrite->iCurrOffs;
         }
-        if (rd_fd != -1 && rd_fd == wr_fd && rd_offs == wr_offs) {
-            DBGPRINTF(
-                "problem on disk queue '%s': "
-                //"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%lld\n",
-                "queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%" PRId64 "\n",
-                obj.GetName((obj_t *)pThis), iQueueSize, pThis->iQueueSize, rd_fd, rd_offs);
-            *pSkippedMsgs = iQueueSize;
-#ifdef ENABLE_IMDIAG
-            iOverallQueueSize -= iQueueSize;
-#endif
-            pThis->iQueueSize -= iQueueSize;
-            recoverFromInvalidQi(pThis, wr_fd, wr_offs);
-            iQueueSize = 0;
-            break;
-        }
+        pMsg = NULL;
+        if (pendingCorruptRet != RS_RET_OK) {
+            localRet = pendingCorruptRet;
+            pendingCorruptRet = RS_RET_OK;
+        } else {
+            if (rd_fd != -1 && rd_fd == wr_fd && rd_offs == wr_offs) {
+                DBGPRINTF(
+                    "problem on disk queue '%s': "
+                    //"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%lld\n",
+                    "queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%" PRId64 "\n",
+                    obj.GetName((obj_t *)pThis), iQueueSize, pThis->iQueueSize, rd_fd, rd_offs);
+                if (pThis->onCorruption == QUEUE_ON_CORRUPTION_SAFE_MODE && iQueueSize > 1) {
+                    LogMsg(0, RS_RET_ERR, LOG_ALERT,
+                           "%s: disk queue corruption reached the write pointer with %d logical records remaining; "
+                           "quarantining unread tail",
+                           obj.GetName((obj_t *)pThis), iQueueSize);
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    *pSkippedMsgs += iQueueSize;
+                    qqueueSubtractOverallQueueSize(iQueueSize);
+                    pThis->iQueueSize -= iQueueSize;
+                    CHKiRet(qqueueResetDiskQueueAfterCorruption(pThis));
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    nDiscarded = 0;
+                    iQueueSize = 0;
+                    break;
+                }
+                *pSkippedMsgs = iQueueSize;
+                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                pThis->iQueueSize -= iQueueSize;
+                recoverFromInvalidQi(pThis, wr_fd, wr_offs);
+                iQueueSize = 0;
+                break;
+            }
 
-        localRet = qqueueDeq(pThis, &pMsg);
-        if (localRet == RS_RET_FILE_NOT_FOUND) {
-            DBGPRINTF(
-                "fatal error on disk queue '%s': file '%s' "
-                "not found, queue size said to be %d",
-                obj.GetName((obj_t *)pThis), "...", iQueueSize);
+            localRet = pThis->qDeq(pThis, &pMsg);
+            if (localRet == RS_RET_FILE_NOT_FOUND) {
+                DBGPRINTF(
+                    "fatal error on disk queue '%s': file '%s' "
+                    "not found, queue size said to be %d",
+                    obj.GetName((obj_t *)pThis), "...", iQueueSize);
+                if (pThis->qType == QUEUETYPE_DISK) {
+                    if (pThis->onCorruption == QUEUE_ON_CORRUPTION_SAFE_MODE && iQueueSize > 1) {
+                        LogMsg(0, localRet, LOG_ALERT,
+                               "%s: disk queue corruption reached a missing file with %d logical records remaining; "
+                               "quarantining unread tail",
+                               obj.GetName((obj_t *)pThis), iQueueSize);
+                        pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                        *pSkippedMsgs += iQueueSize;
+                        qqueueSubtractOverallQueueSize(iQueueSize);
+                        pThis->iQueueSize -= iQueueSize;
+                        CHKiRet(qqueueResetDiskQueueAfterCorruption(pThis));
+                        pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                        nDiscarded = 0;
+                        iQueueSize = 0;
+                        break;
+                    }
+                    *pSkippedMsgs = iQueueSize;
+                    qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                    pThis->iQueueSize -= iQueueSize;
+                    recoverFromInvalidQi(pThis, wr_fd, wr_offs);
+                    iQueueSize = 0;
+                    break;
+                }
+            }
+            if (localRet != RS_RET_OK && pThis->qType == QUEUETYPE_DISK && pThis->tVars.disk.pReadDeq != NULL &&
+                pThis->tVars.disk.pWrite != NULL &&
+                strmGetCurrFileNum(pThis->tVars.disk.pReadDeq) == strmGetCurrFileNum(pThis->tVars.disk.pWrite) &&
+                pThis->tVars.disk.pReadDeq->iCurrOffs >= pThis->tVars.disk.pWrite->iCurrOffs) {
+                if (pThis->onCorruption == QUEUE_ON_CORRUPTION_SAFE_MODE && iQueueSize > 1) {
+                    LogMsg(0, localRet, LOG_ALERT,
+                           "%s: disk queue corruption reached the write pointer with %d logical records remaining; "
+                           "quarantining unread tail",
+                           obj.GetName((obj_t *)pThis), iQueueSize);
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    *pSkippedMsgs += iQueueSize;
+                    qqueueSubtractOverallQueueSize(iQueueSize);
+                    pThis->iQueueSize -= iQueueSize;
+                    CHKiRet(qqueueResetDiskQueueAfterCorruption(pThis));
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    nDiscarded = 0;
+                    iQueueSize = 0;
+                    break;
+                }
+                *pSkippedMsgs = iQueueSize;
+                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                pThis->iQueueSize -= iQueueSize;
+                recoverFromInvalidQi(pThis, strmGetCurrFileNum(pThis->tVars.disk.pWrite),
+                                     pThis->tVars.disk.pWrite->iCurrOffs);
+                iQueueSize = 0;
+                break;
+            }
+        }
+        if (localRet != RS_RET_OK && pThis->qType == QUEUETYPE_DISK &&
+            pThis->onCorruption == QUEUE_ON_CORRUPTION_SAFE_MODE) {
+            int nSkippedCorrupt = 0;
+            if (nDequeued > 0) {
+                LogMsg(0, localRet, LOG_WARNING,
+                       "%s: disk queue corruption detected after %d valid records; deferring recovery until "
+                       "the current batch is committed",
+                       obj.GetName((obj_t *)pThis), nDequeued);
+                deferredDiskCorruption = 1;
+                pThis->tVars.disk.pendingCorruptRet = localRet;
+                iRet = RS_RET_OK;
+                break;
+            }
+            localRet = qDeqDiskRecoverAfterCorruption(pThis, &pMsg, localRet, &nSkippedCorrupt);
+            if (localRet != RS_RET_OK && pThis->tVars.disk.pReadDeq != NULL && pThis->tVars.disk.pWrite != NULL &&
+                strmGetCurrFileNum(pThis->tVars.disk.pReadDeq) == strmGetCurrFileNum(pThis->tVars.disk.pWrite) &&
+                pThis->tVars.disk.pReadDeq->iCurrOffs >= pThis->tVars.disk.pWrite->iCurrOffs) {
+                if (iQueueSize > 1) {
+                    LogMsg(0, localRet, LOG_ALERT,
+                           "%s: disk queue corruption reached the write pointer with %d logical records remaining; "
+                           "quarantining unread tail",
+                           obj.GetName((obj_t *)pThis), iQueueSize);
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    *pSkippedMsgs += iQueueSize;
+                    qqueueSubtractOverallQueueSize(iQueueSize);
+                    pThis->iQueueSize -= iQueueSize;
+                    CHKiRet(qqueueResetDiskQueueAfterCorruption(pThis));
+                    pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                    nDiscarded = 0;
+                    iQueueSize = 0;
+                    break;
+                }
+                *pSkippedMsgs = iQueueSize;
+                qqueueSubtractOverallQueueSize(iQueueSize - nDiscarded);
+                pThis->iQueueSize -= iQueueSize;
+                recoverFromInvalidQi(pThis, strmGetCurrFileNum(pThis->tVars.disk.pWrite),
+                                     pThis->tVars.disk.pWrite->iCurrOffs);
+                iQueueSize = 0;
+                break;
+            }
+            if (localRet == RS_RET_NO_DATA) {
+                pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                *pSkippedMsgs += nSkippedCorrupt;
+                qqueueSubtractOverallQueueSize(nSkippedCorrupt);
+                iQueueSize = 0;
+                break;
+            }
+            if (nSkippedCorrupt > 0) {
+                pThis->tVars.disk.runtimeCorruptionSkip = 1;
+                nDiscarded += nSkippedCorrupt;
+                *pSkippedMsgs += nSkippedCorrupt;
+            }
+            if (localRet == RS_RET_OK) {
+                qqueueAddLogDeq(pThis, nSkippedCorrupt + 1);
+            }
+        } else if (localRet == RS_RET_OK) {
+            qqueueAddLogDeq(pThis, 1);
         }
         CHKiRet(localRet);
+        if (pThis->qType == QUEUETYPE_DISK) {
+            strm.GetCurrOffset(pThis->tVars.disk.pReadDeq, &pThis->tVars.disk.deqOffs);
+            pThis->tVars.disk.deqFileNumOut = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+        }
 
         /* check if we should discard this element */
         localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg);
@@ -2507,7 +2912,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
         }
     }
 
-    if (pThis->qType == QUEUETYPE_DISK) {
+    if (pThis->qType == QUEUETYPE_DISK && !deferredDiskCorruption) {
         strm.GetCurrOffset(pThis->tVars.disk.pReadDeq, &pThis->tVars.disk.deqOffs);
         pThis->tVars.disk.deqFileNumOut = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
     }
@@ -2552,8 +2957,13 @@ static rsRetVal DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkip
     /* dequeue element batch (still protected from mutex) */
     iRet = DequeueConsumableElements(pThis, pWti, &iQueueSize, pSkippedMsgs);
     if (*pSkippedMsgs > 0) {
-        LogError(0, RS_RET_ERR, "%s: lost %d messages from diskqueue (invalid .qi file)", obj.GetName((obj_t *)pThis),
-                 *pSkippedMsgs);
+        if (pThis->qType == QUEUETYPE_DISK && pThis->tVars.disk.runtimeCorruptionSkip) {
+            LogMsg(0, RS_RET_ERR, LOG_ERR, "%s: skipped %d messages from diskqueue during runtime corruption handling",
+                   obj.GetName((obj_t *)pThis), *pSkippedMsgs);
+        } else {
+            LogError(0, RS_RET_ERR, "%s: lost %d messages from diskqueue (invalid .qi file)",
+                     obj.GetName((obj_t *)pThis), *pSkippedMsgs);
+        }
     }
 
     /* awake some flow-controlled sources if we can do this right now */

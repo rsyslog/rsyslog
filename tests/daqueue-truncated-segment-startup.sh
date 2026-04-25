@@ -1,11 +1,11 @@
 #!/bin/bash
-# Validate queue.onCorruption handling when bytes inside a persisted disk-queue
-# segment are corrupted in the middle of the queue sequence. Restart must
-# process the valid prefix, quarantine the unread tail into mainq.bad.*,
-# and leave no stale live queue files behind. A fresh mainq.00000001/mainq.qi
-# pair is acceptable because resetting a pure disk queue constructs a new live
-# head.
-# added 2026-04-20 by Codex, released under ASL 2.0
+# Validate queue.onCorruption handling when bytes inside a persisted
+# disk-assisted queue segment are corrupted. The DA child is a first-class disk
+# queue, so it must process the valid prefix, quarantine the unread tail into
+# mainq.bad.*, and leave no stale live queue files behind. A fresh
+# mainq.00000001/mainq.qi pair is acceptable because resetting the DA disk
+# child constructs a new live head.
+# added 2026-04-25 by Codex, released under ASL 2.0
 
 export TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-300}
 
@@ -29,7 +29,7 @@ module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="'"$SPOOL_DIR"'")
 
 main_queue(
-	queue.type="disk"
+	queue.type="LinkedList"
 	queue.filename="mainq"
 	queue.maxFileSize="16k"
 	queue.saveOnShutdown="on"
@@ -53,7 +53,7 @@ module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="'"$SPOOL_DIR"'")
 
 main_queue(
-	queue.type="disk"
+	queue.type="LinkedList"
 	queue.filename="mainq"
 	queue.maxFileSize="16k"
 	queue.saveOnShutdown="off"
@@ -84,16 +84,6 @@ count_bad_dirs() {
 	count=0
 	for path in "$SPOOL_DIR"/mainq.bad.*; do
 		[ -d "$path" ] || continue
-		count=$((count + 1))
-	done
-	printf '%s\n' "$count"
-}
-
-count_live_mainq_files() {
-	count=0
-	for path in "$SPOOL_DIR"/mainq*; do
-		[ -e "$path" ] || continue
-		[ -f "$path" ] || [ -L "$path" ] || continue
 		count=$((count + 1))
 	done
 	printf '%s\n' "$count"
@@ -201,7 +191,7 @@ prepare_corrupted_queue() {
 
 		seg_count=$(count_segment_files)
 		if [ -f "$SPOOL_DIR/mainq.qi" ] && [ "$seg_count" -ge 3 ]; then
-			printf 'Prepared persisted queue with %s messages and %s segment files\n' \
+			printf 'Prepared persisted DA queue with %s messages and %s segment files\n' \
 				"$NUMMESSAGES" "$seg_count"
 			return 0
 		fi
@@ -212,7 +202,7 @@ prepare_corrupted_queue() {
 		current_messages=$((current_messages + BASE_NUMMESSAGES / 2))
 	done
 
-	printf 'FAIL: unable to create a persisted queue with at least 3 segment files after %s attempts\n' \
+	printf 'FAIL: unable to create a persisted DA queue with at least 3 segment files after %s attempts\n' \
 		"$PREPARE_ATTEMPTS"
 	list_spool_top
 	error_exit 1
@@ -239,7 +229,7 @@ wait_for_recovery_outcome() {
 		$TESTTOOL_DIR/msleep 100
 	done
 
-	echo "FAIL: timed out waiting for truncated queue recovery outcome"
+	echo "FAIL: timed out waiting for truncated DA queue recovery outcome"
 	list_spool_top
 	[ -s "$RSYSLOGD_LOG" ] && cat "$RSYSLOGD_LOG"
 	error_exit 1
@@ -284,7 +274,7 @@ if grep -q "invalid \\.qi file" "$STARTED_LOG" "$RSYSLOGD_LOG"; then
 fi
 
 if [ ! -s "$RSYSLOG_OUT_LOG" ]; then
-	echo "FAIL: truncated queue recovery produced no output before quarantine"
+	echo "FAIL: truncated DA queue recovery produced no output before quarantine"
 	list_spool_top
 	cat "$RSYSLOGD_LOG"
 	error_exit 1
@@ -292,7 +282,7 @@ fi
 
 bad_after=$(count_bad_dirs)
 if [ "$bad_after" -le "$bad_before" ]; then
-	echo "FAIL: truncated queue segment was not quarantined into mainq.bad.*"
+	echo "FAIL: truncated DA queue segment was not quarantined into mainq.bad.*"
 	list_spool_top
 	error_exit 1
 fi

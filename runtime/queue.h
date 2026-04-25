@@ -204,6 +204,8 @@ struct queue_s {
                 strm_t *pReadDeq; /* current file for dequeueing */
                 strm_t *pReadDel; /* current file for deleting */
                 int nForcePersist; /* force persist of .qi file the next "n" times */
+                int pendingCorruptRet; /* deferred dequeue-time corruption result to recover on next batch */
+                sbool runtimeCorruptionSkip; /* skipped messages in current batch due to runtime corruption */
             } disk;
         } tVars;
         sbool useCryprov; /* quicker than checkig ptr (1 vs 8 bytes!) */
