@@ -216,6 +216,7 @@ struct queue_s {
         /* for statistics subsystem */
         statsobj_t *statsobj;
         STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued)
+        STATSCOUNTER_DEF(ctrSizeEnqueued, mutCtrSizeEnqueued) /* cumulative bytes enqueued */
         STATSCOUNTER_DEF(ctrFull, mutCtrFull)
         STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd)
         STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
