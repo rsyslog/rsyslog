@@ -166,7 +166,7 @@ def evaluate_doc_xref_sync(check: dict[str, object]) -> dict[str, object]:
     }
 
 
-
+def evaluate_module_onboarding(check: dict[str, object]) -> dict[str, object]:
     # Missing metadata is a hard policy failure; missing docs stay advisory
     # until rsyslog has a stricter deterministic doc coverage rule.
     facts = check["facts"]
