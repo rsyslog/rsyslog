@@ -831,6 +831,24 @@ static int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf) {
 }
 
 
+static int getNormalizedSecFracPower(const struct syslogTime *ts, int *secfrac) {
+    int precision;
+
+    assert(ts != NULL);
+    assert(secfrac != NULL);
+    assert(ts->secfracPrecision > 0);
+
+    precision = ts->secfracPrecision;
+    *secfrac = ts->secfrac;
+    while (precision > 6) {
+        *secfrac /= 10;
+        --precision;
+    }
+
+    return tenPowers[precision - 1];
+}
+
+
 /**
  * Format a syslogTimestamp to just the fractional seconds.
  * The caller must provide the timestamp as well as a character
@@ -851,8 +869,7 @@ static int formatTimestampSecFrac(struct syslogTime *ts, char *pBuf) {
 
     iBuf = 0;
     if (ts->secfracPrecision > 0) {
-        power = tenPowers[(ts->secfracPrecision - 1) % 6];
-        secfrac = ts->secfrac;
+        power = getNormalizedSecFracPower(ts, &secfrac);
         while (power > 0) {
             digit = secfrac / power;
             secfrac -= digit * power;
@@ -916,8 +933,7 @@ static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
 
     if (ts->secfracPrecision > 0) {
         pBuf[iBuf++] = '.';
-        power = tenPowers[(ts->secfracPrecision - 1) % 6];
-        secfrac = ts->secfrac;
+        power = getNormalizedSecFracPower(ts, &secfrac);
         while (power > 0) {
             digit = secfrac / power;
             secfrac -= digit * power;
