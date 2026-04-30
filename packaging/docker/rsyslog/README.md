@@ -75,6 +75,19 @@ make VERSION=2026-03 all_push
 make VERSION=2026-03 push_latest
 ```
 
+The plain Makefile push targets above are single-platform compatibility
+targets. The manual release push and publish targets use Docker Buildx and
+publish multi-platform manifests by default for:
+
+- `linux/amd64`
+- `linux/arm64`
+
+Override the release platform list only when needed:
+
+```bash
+./release-images.sh publish --rsyslog-version 8.2604.0 --platforms linux/amd64,linux/arm64
+```
+
 ## PPA readiness comes first
 
 Release-tagged container images must only be built and pushed after the
@@ -141,11 +154,15 @@ early. If subpackages are still missing, the actual image build fails.
 ./release-images.sh build --rsyslog-version 8.2602.0
 ```
 
-4. Push the release-tagged images:
+4. Push the release-tagged images as multi-platform manifests:
 
 ```bash
 ./release-images.sh push --rsyslog-version 8.2602.0
 ```
+
+This publishes the five image variants for `linux/amd64,linux/arm64`
+by default. Derived images are pushed after their base images so Buildx
+can resolve the correct platform-specific base layers from Docker Hub.
 
 5. Update `latest` only when that is intended:
 
@@ -154,7 +171,15 @@ early. If subpackages are still missing, the actual image build fails.
 ```
 
 If `PUSH_LATEST` is not set to `yes`, `release_publish` pushes only the
-versioned images and leaves `latest` unchanged.
+versioned images and leaves `latest` unchanged. When `latest` is enabled,
+the manifest tags are created from the already-pushed versioned manifests
+instead of retagging local single-platform images.
+
+To override the default release platforms:
+
+```bash
+./release-images.sh publish --rsyslog-version 8.2604.0 --platforms linux/amd64,linux/arm64
+```
 
 For the daily channel:
 
@@ -178,3 +203,6 @@ make all PPA_CHANNEL=daily-stable VERSION=ci-example
 CI validation jobs should use non-release tags such as `ci-<sha>`.
 Release publishing jobs should inject the stable release version
 explicitly, for example `VERSION=2026-03`.
+
+Container CI should validate Dockerfile buildability without publishing.
+Release publishing remains a manual PPA-gated operation.

@@ -11,21 +11,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [minimal, standard, collector, dockerlogs]
+        variant: [minimal, standard, collector, dockerlogs, etl]
+        platform: [linux/amd64, linux/arm64]
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        if: ${{ matrix.platform == 'linux/arm64' }}
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.variant }} image
+      - name: Build ${{ matrix.variant }} image for ${{ matrix.platform }}
         working-directory: rsyslog
-        run: make ${{ matrix.variant }}
+        run: make ${{ matrix.variant }} DOCKER_BUILD_PLATFORM=${{ matrix.platform }} VERSION=ci-${{ github.sha }}
 
       - name: List images
         run: docker images

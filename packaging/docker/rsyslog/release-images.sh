@@ -18,6 +18,8 @@ Stable release options:
 
 Additional options:
   --latest                         With publish, also update :latest tags.
+  --platforms <list>               Buildx platforms for push/publish.
+                                   Default: linux/amd64,linux/arm64.
   --rebuild                        Force docker builds to bypass cache.
   --ubuntu-version <version>       Override the readiness-check Ubuntu base.
   -h, --help                       Show this help text.
@@ -26,6 +28,7 @@ Examples:
   ./release-images.sh check --rsyslog-version 8.2604.0
   ./release-images.sh build --rsyslog-version 8.2604.0
   ./release-images.sh publish --rsyslog-version 8.2604.0 --latest
+  ./release-images.sh publish --rsyslog-version 8.2604.0 --platforms linux/amd64,linux/arm64
   ./release-images.sh build --daily
 EOF
 }
@@ -41,6 +44,7 @@ rsyslog_version=""
 push_latest="no"
 rebuild="no"
 release_ubuntu_version=""
+platforms=""
 
 while (($# > 0)); do
 	case "$1" in
@@ -70,6 +74,11 @@ while (($# > 0)); do
 		--latest)
 			push_latest="yes"
 			shift
+			;;
+		--platforms)
+			[[ $# -ge 2 ]] || die "--platforms requires a value"
+			platforms="$2"
+			shift 2
 			;;
 		--rebuild)
 			rebuild="yes"
@@ -135,6 +144,10 @@ fi
 
 if [[ "$push_latest" == "yes" ]]; then
 	make_args+=("PUSH_LATEST=yes")
+fi
+
+if [[ -n "$platforms" ]]; then
+	make_args+=("PLATFORMS=$platforms")
 fi
 
 exec make "${make_args[@]}"
