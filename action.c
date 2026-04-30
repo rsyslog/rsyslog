@@ -1678,6 +1678,9 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     DBGPRINTF("actionCommit[%s]: unhappy, we still have %d uncommitted messages.\n", pThis->pszName, nMsgs);
     int bDone = 0;
     do {
+        if (*pWti->pbShutdownImmediate) {
+            ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        }
         iRet = actionTryCommit(pThis, pWti, iparams, nMsgs);
         DBGPRINTF("actionCommit[%s]: in retry loop, iRet %d\n", pThis->pszName, iRet);
         if (iRet == RS_RET_FORCE_TERM) {
@@ -1760,6 +1763,14 @@ finalize_it:
     RETiRet;
 }
 
+static void markBatchCommittedFrom(batch_t *const pBatch, const int firstElem) {
+    for (int i = firstElem; i < batchNumMsgs(pBatch); ++i) {
+        if (batchIsValidElem(pBatch, i)) {
+            batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+        }
+    }
+}
+
 /**
  * @brief Worker callback for action queues.
  *
@@ -1785,7 +1796,8 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
 
     if (actionIsDisabled(pAction)) {
         actionDisableForWorker(pAction, pWti);
-        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+        markBatchCommittedFrom(pBatch, 0);
+        FINALIZE;
     }
 
     for (i = 0; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate; ++i) {
@@ -1801,7 +1813,8 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
                 DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
             } else if (localRet == RS_RET_DISABLE_ACTION) {
                 actionDisableForWorker(pAction, pWti);
-                ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+                markBatchCommittedFrom(pBatch, i);
+                FINALIZE;
             }
         }
     }
