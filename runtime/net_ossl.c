@@ -34,6 +34,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/time.h>
 
@@ -644,18 +645,76 @@ finalize_it:
 }
 
 
-/* Perform a match on ONE peer name obtained from the certificate. This name
- * is checked against the set of configured credentials. *pbFoundPositiveMatch is
- * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
- * to 0 by the caller (this is a performance enhancement as we expect to be
- * called multiple times).
- * TODO: implemet wildcards?
- * rgerhards, 2008-05-26
- */
-static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
-                                        X509 *certpeer,
-                                        uchar *pszPeerID,
-                                        int *pbFoundPositiveMatch) {
+static const unsigned char *ossl_asn1_string_data(const ASN1_STRING *const str) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
+    return ASN1_STRING_get0_data(str);
+#else
+    return ASN1_STRING_data((ASN1_STRING *)str);
+#endif
+}
+
+static rsRetVal ossl_asn1_string_to_cstr(ASN1_STRING *const str, uchar **const ppszOut) {
+    uchar *pszOut = NULL;
+    int len;
+    const unsigned char *data = NULL;
+#ifndef ENABLE_WOLFSSL
+    unsigned char *utf8 = NULL;
+#endif
+    DEFiRet;
+
+    *ppszOut = NULL;
+    if (str == NULL) {
+        FINALIZE;
+    }
+
+#ifndef ENABLE_WOLFSSL
+    len = ASN1_STRING_to_UTF8(&utf8, str);
+    if (len < 0 || utf8 == NULL) {
+        FINALIZE;
+    }
+    data = utf8;
+#else
+    len = ASN1_STRING_length(str);
+    data = ossl_asn1_string_data(str);
+#endif
+    if (len < 0 || data == NULL) {
+        FINALIZE;
+    }
+    if (memchr(data, '\0', (size_t)len) != NULL) {
+        FINALIZE;
+    }
+    CHKmalloc(pszOut = malloc((size_t)len + 1));
+    memcpy(pszOut, data, (size_t)len);
+    pszOut[len] = '\0';
+    *ppszOut = pszOut;
+    pszOut = NULL;
+
+finalize_it:
+    free(pszOut);
+#ifndef ENABLE_WOLFSSL
+    if (utf8 != NULL) {
+        OPENSSL_free(utf8);
+    }
+#endif
+    RETiRet;
+}
+
+static rsRetVal ossl_append_identity(cstr_t *const pStr, const char *const prefix, const uchar *const identity) {
+    DEFiRet;
+
+    CHKiRet(rsCStrAppendStrWithLen(pStr, (const uchar *)prefix, strlen(prefix)));
+    CHKiRet(rsCStrAppendStrWithLen(pStr, identity, strlen((const char *)identity)));
+    CHKiRet(rsCStrAppendStrWithLen(pStr, (const uchar *)"; ", 2));
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
+                                           X509 *certpeer,
+                                           const uchar *pszPeerID,
+                                           int *pbFoundPositiveMatch,
+                                           const sbool allowX509CheckHost) {
     permittedPeers_t *pPeer;
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
     int osslRet;
@@ -672,9 +731,6 @@ static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
     assert(pszPeerID != NULL);
     assert(pbFoundPositiveMatch != NULL);
 
-    /* Obtain Namex509 name from subject */
-    x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(certpeer), NULL, 0);
-
     if (pThis->pPermPeers) { /* do we have configured peer IDs? */
         pPeer = pThis->pPermPeers;
         while (pPeer != NULL) {
@@ -686,23 +742,31 @@ static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
              * ( Includes check against SubjectAlternativeName )
              * if prioritizeSAN set, only check against SAN
              */
-            if (pThis->bSANpriority == 1) {
+            if (!allowX509CheckHost || pPeer->etryType == PERM_PEER_TYPE_WILDCARD) {
+                pPeer = pPeer->pNext;
+                continue;
+            } else if (pThis->bSANpriority == 1) {
     #if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER) && \
         defined(X509_CHECK_FLAG_NEVER_CHECK_SUBJECT)
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     #else
-                dbgprintf("net_ossl_chkonepeername: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
+                dbgprintf("net_ossl_matchpeeridentity: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
+            }
+
+            /* Obtain Namex509 name from subject */
+            if (x509name == NULL) {
+                x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(certpeer), NULL, 0);
             }
             osslRet = X509_check_host(certpeer, (const char *)pPeer->pszID, strlen((const char *)pPeer->pszID),
                                       x509flags, NULL);
             if (osslRet == 1) {
                 /* Found Peer cert in allowed Peerslist */
-                dbgprintf("net_ossl_chkonepeername: Client ('%s') is allowed (X509_check_host)\n", x509name);
+                dbgprintf("net_ossl_matchpeeridentity: Client ('%s') is allowed (X509_check_host)\n", x509name);
                 *pbFoundPositiveMatch = 1;
                 break;
             } else if (osslRet < 0) {
-                net_ossl_lastOpenSSLErrorMsg(NULL, osslRet, NULL, LOG_ERR, "net_ossl_chkonepeername",
+                net_ossl_lastOpenSSLErrorMsg(NULL, osslRet, NULL, LOG_ERR, "net_ossl_matchpeeridentity",
                                              "X509_check_host");
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             }
@@ -723,6 +787,128 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
+                                        X509 *certpeer,
+                                        const uchar *pszPeerID,
+                                        int *pbFoundPositiveMatch) {
+    DEFiRet;
+
+    CHKiRet(net_ossl_matchpeeridentity(pThis, certpeer, pszPeerID, pbFoundPositiveMatch, 1));
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal net_ossl_match_sans(
+    net_ossl_t *pThis, X509 *certpeer, cstr_t *pStr, int *bHaveSAN, int *bFoundPositiveMatch) {
+    DEFiRet;
+
+    GENERAL_NAMES *names = NULL;
+    GENERAL_NAME *name;
+    ASN1_STRING *dns;
+    ASN1_OCTET_STRING *ip;
+    uchar *dnsName = NULL;
+    const unsigned char *ipData;
+    const char *addr;
+    char ipAddress[INET6_ADDRSTRLEN];
+    int count;
+    int i;
+
+    if (*bFoundPositiveMatch) {
+        FINALIZE;
+    }
+
+    names = X509_get_ext_d2i(certpeer, NID_subject_alt_name, NULL, NULL);
+    if (names == NULL) {
+        FINALIZE;
+    }
+
+    count = sk_GENERAL_NAME_num(names);
+    /* PrioritizeSAN suppresses CN fallback when any SAN exists, even if it is
+     * not a DNS/IP identity usable by x509/name matching. */
+    if (count > 0) {
+        *bHaveSAN = 1;
+    }
+    for (i = 0; i < count && !*bFoundPositiveMatch; ++i) {
+        name = sk_GENERAL_NAME_value(names, i);
+        if (name == NULL) {
+            continue;
+        }
+        if (name->type == GEN_DNS) {
+            dns = name->d.dNSName;
+            CHKiRet(ossl_asn1_string_to_cstr(dns, &dnsName));
+            if (dnsName == NULL) {
+                continue;
+            }
+            dbgprintf("net_ossl_match_sans: subject alt dnsName: '%s'\n", dnsName);
+            CHKiRet(ossl_append_identity(pStr, "DNSname: ", dnsName));
+            CHKiRet(net_ossl_matchpeeridentity(pThis, certpeer, dnsName, bFoundPositiveMatch, 0));
+            free(dnsName);
+            dnsName = NULL;
+        } else if (name->type == GEN_IPADD) {
+            ip = name->d.iPAddress;
+            ipData = ossl_asn1_string_data(ip);
+            if (ipData == NULL) {
+                continue;
+            }
+            if (ASN1_STRING_length(ip) == 4) {
+                addr = inet_ntop(AF_INET, ipData, ipAddress, sizeof(ipAddress));
+            } else if (ASN1_STRING_length(ip) == 16) {
+                addr = inet_ntop(AF_INET6, ipData, ipAddress, sizeof(ipAddress));
+            } else {
+                continue;
+            }
+            if (addr == NULL) {
+                continue;
+            }
+            dbgprintf("net_ossl_match_sans: subject alt ipAddr: '%s'\n", ipAddress);
+            CHKiRet(ossl_append_identity(pStr, "IPaddress: ", (const uchar *)ipAddress));
+            CHKiRet(net_ossl_matchpeeridentity(pThis, certpeer, (const uchar *)ipAddress, bFoundPositiveMatch, 0));
+        }
+    }
+
+finalize_it:
+    free(dnsName);
+    if (names != NULL) {
+        GENERAL_NAMES_free(names);
+    }
+    RETiRet;
+}
+
+static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pStr, int *bFoundPositiveMatch) {
+    X509_NAME *subject;
+    X509_NAME_ENTRY *entry;
+    ASN1_STRING *cn;
+    uchar *cnName = NULL;
+    int idx;
+    DEFiRet;
+
+    subject = RSYSLOG_X509_NAME_oneline(certpeer);
+    if (subject == NULL) {
+        FINALIZE;
+    }
+    idx = X509_NAME_get_index_by_NID(subject, NID_commonName, -1);
+    if (idx < 0) {
+        FINALIZE;
+    }
+    entry = X509_NAME_get_entry(subject, idx);
+    if (entry == NULL) {
+        FINALIZE;
+    }
+    cn = X509_NAME_ENTRY_get_data(entry);
+    CHKiRet(ossl_asn1_string_to_cstr(cn, &cnName));
+    if (cnName == NULL) {
+        FINALIZE;
+    }
+
+    dbgprintf("net_ossl_match_cn: now checking auth for CN '%s'\n", cnName);
+    CHKiRet(ossl_append_identity(pStr, "CN: ", cnName));
+    CHKiRet(net_ossl_matchpeeridentity(pThis, certpeer, cnName, bFoundPositiveMatch, 0));
+
+finalize_it:
+    free(cnName);
+    RETiRet;
+}
 
 /* Check the peer's ID in fingerprint auth mode.
  * rgerhards, 2008-05-22
@@ -805,23 +991,31 @@ finalize_it:
  */
 rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP) {
     DEFiRet;
-    uchar lnBuf[256];
     int bFoundPositiveMatch;
+    int bHaveSAN;
     cstr_t *pStr = NULL;
     char *x509name = NULL;
 
     ISOBJ_TYPE_assert(pThis, net_ossl);
 
     bFoundPositiveMatch = 0;
+    bHaveSAN = 0;
     CHKiRet(rsCStrConstruct(&pStr));
 
     /* Obtain Namex509 name from subject */
     x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(certpeer), NULL, 0);
+    if (x509name == NULL) {
+        LogMsg(0, RS_RET_CERT_INVALID_DN, LOG_WARNING, "net_ossl_chkpeername: could not obtain X.509 subject name");
+        ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
+    }
 
     dbgprintf("net_ossl_chkpeername: checking - peername '%s' on server '%s'\n", x509name, fromHostIP);
-    snprintf((char *)lnBuf, sizeof(lnBuf), "name: %s; ", x509name);
-    CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+    CHKiRet(ossl_append_identity(pStr, "name: ", (const uchar *)x509name));
     CHKiRet(net_ossl_chkonepeername(pThis, certpeer, (uchar *)x509name, &bFoundPositiveMatch));
+    CHKiRet(net_ossl_match_sans(pThis, certpeer, pStr, &bHaveSAN, &bFoundPositiveMatch));
+    if (!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
+        CHKiRet(net_ossl_match_cn(pThis, certpeer, pStr, &bFoundPositiveMatch));
+    }
 
     if (!bFoundPositiveMatch) {
         dbgprintf("net_ossl_chkpeername: invalid peername, not permitted to talk to it\n");
