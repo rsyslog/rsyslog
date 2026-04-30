@@ -300,6 +300,12 @@ Group: System Environment/Daemons
 Requires: %name = %version-%release
 BuildRequires: libcurl-devel
 
+%package omotel
+Summary: omotel output module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+BuildRequires: libcurl-devel
+
 %package mmdblookup
 Summary: mmdblookup MaxMind/GeoIP DB lookup for rsyslog
 Group: System Environment/Daemons
@@ -492,6 +498,9 @@ Function module for rainerscript function hash.
 %description omhttp
 HTTP output module for sending syslog messages to HTTP endpoints.
 
+%description omotel
+OTEL output module for sending syslog messages to OpenTelemetry endpoints.
+
 %description mmdblookup
 This module provides support for storing information about IP addresses in a highly optimized and flexible database format.
 
@@ -648,6 +657,7 @@ export HIREDIS_LIBS=-L%{_libdir}
 	--enable-pmciscoios \
 	--enable-mmkubernetes \
 	--enable-omhttp \
+	--enable-omotel \
 	--enable-pmnull \
 	--enable-mmdblookup \
 	--enable-pmnormalize \
@@ -938,6 +948,10 @@ done
 %files omhttp
 %defattr(-,root,root)
 %{_libdir}/rsyslog/omhttp.so
+
+%files omotel
+%defattr(-,root,root)
+%{_libdir}/rsyslog/omotel.so
 
 %files mmdblookup
 %defattr(-,root,root)
