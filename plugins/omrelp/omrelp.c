@@ -216,6 +216,18 @@ static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((
     pData->bHadAuthFail = 1;
 }
 
+static int relpRetIsAuthErr(const relpRetVal relpRet) {
+    switch (relpRet) {
+        case RELP_RET_AUTH_ERR_FP:
+        case RELP_RET_AUTH_ERR_NAME:
+        case RELP_RET_AUTH_NO_CERT:
+        case RELP_RET_AUTH_CERT_INVL:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 static rsRetVal doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt) {
     int i;
     DEFiRet;
@@ -592,6 +604,15 @@ static rsRetVal ATTR_NONNULL() doConnect(wrkrInstanceData_t *const pWrkrData) {
                  "Note: anonymous TLS is probably supported.");
         FINALIZE;
     } else {
+        if (relpRetIsAuthErr(iRet)) {
+            if (!pWrkrData->pData->bHadAuthFail) {
+                LogError(0, RS_RET_RELP_AUTH_FAIL,
+                         "omrelp[%s:%s]: TLS authentication failed, librelp error %d - DISABLING action",
+                         pWrkrData->pData->target, getRelpPt(pWrkrData->pData), iRet);
+                pWrkrData->pData->bHadAuthFail = 1;
+            }
+            ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+        }
         if (pWrkrData->bIsSuspended == 0) {
             LogError(0, RS_RET_RELP_ERR,
                      "omrelp: could not connect to "
