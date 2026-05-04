@@ -4,6 +4,9 @@ name: Spellcheck
 'on':
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   spellcheck:
     runs-on: ubuntu-latest

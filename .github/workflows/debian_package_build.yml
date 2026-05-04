@@ -22,10 +22,6 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
-
 concurrency:
   group: >-
     ${{ github.workflow }}-${{
@@ -42,6 +38,8 @@ jobs:
   debian_experimental_gate:
     name: debian experimental gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 75
     container:
       image: debian:trixie
@@ -128,6 +126,9 @@ jobs:
   debian_experimental_diagnostics:
     name: debian experimental diagnostics
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     timeout-minutes: 90
     needs: debian_experimental_gate
     if: always()
