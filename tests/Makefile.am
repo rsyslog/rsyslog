@@ -840,6 +840,7 @@ TESTS_OMJOURNAL = \
 
 TESTS_IMPROG = \
 	improg_errmsg_no_params.sh \
+	improg_child_killed.sh \
 	improg_prog_simple.sh \
 	improg_prog_confirm.sh \
 	improg_prog_confirm_killonclose.sh \
@@ -3197,6 +3198,7 @@ EXTRA_DIST += \
 	testsuites/omprog-defaults-bin.sh \
 	testsuites/omprog-output-capture-bin.sh \
 	testsuites/omprog-output-capture-mt-bin.py \
+	testsuites/improg-child-kill-bin.sh \
 	holdtcpopen.py \
 	testsuites/omprog-feedback-bin.sh \
 	testsuites/omprog-feedback-mt-bin.sh \
