@@ -144,9 +144,11 @@ jobs:
           fetch-depth: 0
 
       - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           git remote add upstream https://github.com/${{ github.repository }}.git
-          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+          git fetch upstream "$BASE_REF"
 
       - name: Check for code changes
         id: code_changes
@@ -369,9 +371,11 @@ jobs:
           fetch-depth: 0
 
       - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           git remote add upstream https://github.com/${{ github.repository }}.git
-          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+          git fetch upstream "$BASE_REF"
 
       - name: Check for package changes
         id: package_changes
@@ -448,10 +452,12 @@ jobs:
           fetch-depth: 0
 
       - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git remote add upstream https://github.com/${{ github.repository }}.git
-          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+          git fetch upstream "$BASE_REF"
 
       - name: Check for code changes
         id: code_changes
@@ -1703,9 +1709,11 @@ jobs:
           fetch-depth: 0
 
       - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           git remote add upstream https://github.com/${{ github.repository }}.git
-          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+          git fetch upstream "$BASE_REF"
 
       - name: Check for code changes
         id: code_changes
