@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: git checkout project
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -142,6 +144,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
         env:
@@ -369,6 +372,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
         env:
@@ -450,6 +454,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
         env:
@@ -558,6 +563,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -770,6 +776,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -931,6 +938,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1208,6 +1216,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1406,6 +1415,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1472,6 +1482,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1538,6 +1549,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1619,6 +1631,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for code changes
         id: code_changes
@@ -1707,6 +1720,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: fetch upstream (for changed-files diff)
         env:

@@ -120,6 +120,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Skip Debian package gate, no relevant changes
         if: needs.debian_package_changes.outputs.any_changed != 'true'
@@ -214,6 +215,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Skip Debian package diagnostics, no relevant changes
         if: needs.debian_package_changes.outputs.any_changed != 'true'
