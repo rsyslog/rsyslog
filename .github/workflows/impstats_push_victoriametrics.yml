@@ -25,6 +25,9 @@ name: impstats push to VictoriaMetrics
       - 'configure.ac'
       - '.github/workflows/impstats_push_victoriametrics.yml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event.pull_request.number ||
