@@ -48,7 +48,7 @@ jobs:
         }}
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -64,7 +64,7 @@ jobs:
       - name: Check for Debian package relevant changes
         id: debian_package_changes
         if: github.event_name == 'pull_request'
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -117,7 +117,7 @@ jobs:
 
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -211,7 +211,7 @@ jobs:
 
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

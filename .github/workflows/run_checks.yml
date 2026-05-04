@@ -44,11 +44,11 @@ jobs:
         config: [alpine, clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           # Keep doc/Makefile.am in scope: compile must not ignore it to satisfy
           # branch protection requirements for this workflow.
@@ -139,7 +139,7 @@ jobs:
 
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -152,7 +152,7 @@ jobs:
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -366,7 +366,7 @@ jobs:
           - suite: noble
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -379,7 +379,7 @@ jobs:
 
       - name: Check for package changes
         id: package_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -447,7 +447,7 @@ jobs:
         run: dnf install -y git
 
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -461,7 +461,7 @@ jobs:
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -520,7 +520,7 @@ jobs:
 
       - name: Upload RPM artifacts
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpms-epel-9-x86_64
           path: build-result/
@@ -555,13 +555,13 @@ jobs:
       ABORT_ALL_ON_TEST_FAIL: true
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -767,13 +767,13 @@ jobs:
     name: journal CI
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -893,7 +893,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -902,7 +902,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.info
           flags: journal
@@ -928,13 +928,13 @@ jobs:
     name: codecov base CI
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1170,7 +1170,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -1179,7 +1179,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.info
           flags: main
@@ -1205,13 +1205,13 @@ jobs:
     name: codecov kafka CI
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1263,7 +1263,7 @@ jobs:
 
       - name: cache configure results
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: config.cache
           key: >
@@ -1349,7 +1349,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -1358,7 +1358,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.info
           flags: kafka
@@ -1403,13 +1403,13 @@ jobs:
           --health-retries=30
     steps:
       - name: checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1469,13 +1469,13 @@ jobs:
           - 29428:9428
     steps:
       - name: checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1535,13 +1535,13 @@ jobs:
     name: clang static analyzer
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1574,7 +1574,7 @@ jobs:
       - name: Upload clang static analyzer report
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         id: upload-report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: clang-static-analyzer-report
           path: scan-build-report
@@ -1616,13 +1616,13 @@ jobs:
     name: kafka distcheck CI
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1704,7 +1704,7 @@ jobs:
     name: ${{ matrix.arch }} CI (${{ matrix.use_qemu && 'QEMU' || 'native, asan' }})${{ matrix.arch == 'arm64' && ', asan' || '' }}
     steps:
       - name: git checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -1717,7 +1717,7 @@ jobs:
 
       - name: Check for code changes
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
@@ -1737,17 +1737,17 @@ jobs:
 
       - name: Set up QEMU for ${{ matrix.arch }} emulation
         if: steps.code_changes.outputs.any_changed == 'true' && matrix.use_qemu
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: ${{ matrix.qemu_platform }}
 
       - name: Set up Docker Buildx
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build ${{ matrix.arch }} dev image (cached)
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: devtools/ci/Dockerfile.arm
@@ -1843,7 +1843,7 @@ jobs:
 
       - name: Upload ${{ matrix.arch }} test logs
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.arch }}-test-logs
           path: |

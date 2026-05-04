@@ -26,13 +26,13 @@ jobs:
       docs_changed: ${{steps.doc_changes.outputs.any_changed}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Check for doc changes
         id: doc_changes
-        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
         with:
           files: |
             doc/**/*.rst
@@ -110,7 +110,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.x'
 
@@ -173,7 +173,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docs-html
           path: doc-builder/doc/build
@@ -182,7 +182,7 @@ jobs:
         if: >-
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rag-knowledge-base
           path: doc-builder/doc/build/rag/rsyslog_rag_db.json
@@ -203,7 +203,7 @@ jobs:
       issues: write
     steps:
       - name: Comment on PR with artifact links
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const repo = context.repo;
