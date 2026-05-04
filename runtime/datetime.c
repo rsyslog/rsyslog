@@ -1045,7 +1045,7 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
             MonthInDays = 90;  // until 01 of April
             break;
         case 5:
-            MonthInDays = 120;  // until 01 of Mai
+            MonthInDays = 120;  // until 01 of May
             break;
         case 6:
             MonthInDays = 151;  // until 01 of June
