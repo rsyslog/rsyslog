@@ -77,7 +77,7 @@ static const long long yearInSecs[] = {
     3629145599, 3660681599, 3692217599, 3723753599, 3755375999, 3786911999, 3818447999, 3849983999, 3881606399,
     3913142399, 3944678399, 3976214399, 4007836799, 4039372799, 4070908799, 4102444799};
 
-/* note ramge is 1969 -> 2100 because it needs to access previous/next year */
+/* note range is 1969 -> 2100 because it needs to access previous/next year */
 /* for x in $(seq 1969 2100) ; do
  *   printf %s', ' $(date --date="Dec 28 ${x} UTC 12:00:00" +%V)
  * done | fold -w 70 -s */
