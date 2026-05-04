@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: checkout project
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: wait for VictoriaMetrics to be ready
         run: |

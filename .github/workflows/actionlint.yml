@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@v1
         with:
