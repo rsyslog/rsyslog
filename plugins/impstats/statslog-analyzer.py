@@ -135,7 +135,6 @@ else:
 
                     # Convert Datetime!
                     try:
-                        iMonth = int( result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] )
                         filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%m %Y %d %H:%M:%S")
                     except ValueError:
                         filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%b %Y %d %H:%M:%S")
@@ -229,22 +228,14 @@ else:
     for szSingleStatsID in outputData:
         # Init variables
         aProblemFound = {}
-        bEvictedMsgs = False
-        bFailedMsgs = False
         aPossibleProblems[szSingleStatsID] = []
         iLineNum = 0
         szLineDate  = ""
-        szHost = ""
 
         # Loop through loglines
         for singleStatLine in outputData[szSingleStatsID]:
             iLineNum = singleStatLine[LN_LINENUM]
             szLineDate = singleStatLine[LN_DATE]
-            szHost = singleStatLine[LN_HOST]
-            
-            # Init helper values
-            iLogEvictedData = 0
-            iLogRequestsData = 0
 
             # Loop through data
             for logDataID in singleStatLine[LN_DATA]:
