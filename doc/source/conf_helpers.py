@@ -57,6 +57,7 @@ def get_current_branch():
                 detached_from_branch = branch.split('/')[-1].replace(')', '')
 
                 return detached_from_branch
+        return 'unknown'
 
     else:
         # The assumption is that we are on a branch at this point. Return that.

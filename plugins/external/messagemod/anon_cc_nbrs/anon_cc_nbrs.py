@@ -62,6 +62,7 @@ def onReceive(msg):
             res = re.match(pat, match.group(0))
             if res:
                 return str(res.group(1))+patterns[pat]+str(res.group(res.lastindex))
+        return match.group(0)
 
     res_msg = rc.sub(lambda m: lookup(m), msg)
     if res_msg == msg:
