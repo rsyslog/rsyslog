@@ -35,8 +35,78 @@ env:
   DEBIAN_PACKAGING_BRANCH: debian/latest
 
 jobs:
+  debian_package_changes:
+    name: debian package change detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      any_changed: >-
+        ${{
+        github.event_name == 'workflow_dispatch' ||
+        steps.debian_package_changes.outputs.any_changed == 'true'
+        }}
+    steps:
+      - name: Checkout rsyslog source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch upstream base for changed-files diff
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "$BASE_REF"
+
+      - name: Check for Debian package relevant changes
+        id: debian_package_changes
+        if: github.event_name == 'pull_request'
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            **/*.l
+            **/*.m4
+            **/*.py
+            **/*.rst
+            **/*.sh
+            **/*.y
+            **/Makefile.am
+            .github/debian-ci-policy.yml
+            .github/scripts/debian_package_build.sh
+            .github/workflows/debian_package_build.yml
+            ChangeLog
+            CONTRIBUTING.md
+            COPYING
+            COPYING.*
+            NEWS
+            README
+            README.*
+            autogen.sh
+            build-aux/**
+            compat/**
+            configure.ac
+            contrib/**
+            diag.sh
+            doc/**
+            grammar/**
+            m4/**
+            packaging/**
+            platform/**
+            plugins/**
+            runtime/**
+            tests/**
+            tools/**
+
   debian_experimental_gate:
     name: debian experimental gate
+    needs: debian_package_changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,17 +121,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Skip Debian package gate, no relevant changes
+        if: needs.debian_package_changes.outputs.any_changed != 'true'
+        run: echo "No Debian package relevant changes detected; skipping package gate."
+
       - name: Install prerequisites
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" install_prereqs
 
       - name: Load Debian CI policy
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" load_policy \
             "$GITHUB_WORKSPACE/$DEBIAN_CI_POLICY_FILE" \
             /tmp/debian-ci-policy
 
       - name: Fetch official Debian experimental baseline
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" fetch_debian_packaging \
             "$DEBIAN_PACKAGING_REPO" \
@@ -69,17 +146,20 @@ jobs:
             /tmp/debian-packaging
 
       - name: Install Debian build dependencies
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" install_build_deps \
             /tmp/debian-packaging/control \
             /tmp/debian-ci-policy/supplemental_build_deps.txt
 
       - name: Generate rsyslog dist tarball
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" run_dist_build \
             "$GITHUB_WORKSPACE"
 
       - name: Locate rsyslog dist tarball
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           dist_tarball="$(
             "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" find_dist_tarball \
@@ -88,6 +168,7 @@ jobs:
           echo "DIST_TARBALL=$dist_tarball" >> "$GITHUB_ENV"
 
       - name: Unpack tarball and inject Debian packaging
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" unpack_source_tree \
             "$GITHUB_WORKSPACE" \
@@ -96,6 +177,7 @@ jobs:
             /tmp/debian-src
 
       - name: Apply Debian CI policy
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" apply_not_installed_policy \
             /tmp/debian-src \
@@ -108,6 +190,7 @@ jobs:
             strict
 
       - name: Build Debian packages including docs
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" build_package \
             /tmp/debian-src
@@ -118,7 +201,9 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 90
-    needs: debian_experimental_gate
+    needs:
+      - debian_package_changes
+      - debian_experimental_gate
     if: always()
     container:
       image: debian:trixie
@@ -130,22 +215,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Skip Debian package diagnostics, no relevant changes
+        if: needs.debian_package_changes.outputs.any_changed != 'true'
+        run: echo "No Debian package relevant changes detected; skipping package diagnostics."
+
       - name: Install prerequisites
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" install_prereqs
 
       - name: Load Debian CI policy
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" load_policy \
             "$GITHUB_WORKSPACE/$DEBIAN_CI_POLICY_FILE" \
             /tmp/debian-ci-policy
 
       - name: Initialize findings
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" init_findings_dir \
             /tmp/debian-ci-findings.d
 
       - name: Fetch official Debian experimental baseline
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" fetch_debian_packaging \
             "$DEBIAN_PACKAGING_REPO" \
@@ -153,6 +246,7 @@ jobs:
             /tmp/debian-packaging
 
       - name: Install Debian build dependencies
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           set +e
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" install_build_deps \
@@ -175,11 +269,13 @@ jobs:
           echo "DIAG_DEP_RC=$rc" >> "$GITHUB_ENV"
 
       - name: Generate rsyslog dist tarball
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" run_dist_build \
             "$GITHUB_WORKSPACE"
 
       - name: Locate rsyslog dist tarball
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           dist_tarball="$(
             "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" find_dist_tarball \
@@ -188,6 +284,7 @@ jobs:
           echo "DIST_TARBALL=$dist_tarball" >> "$GITHUB_ENV"
 
       - name: Unpack tarball and inject Debian packaging
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" unpack_source_tree \
             "$GITHUB_WORKSPACE" \
@@ -201,6 +298,7 @@ jobs:
             /tmp/debian-ci-findings.d
 
       - name: Resolve Debian patch policy
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" resolve_patch_policy \
             /tmp/debian-src \
@@ -210,6 +308,7 @@ jobs:
             /tmp/debian-ci-findings.d
 
       - name: Build Debian packages under policy
+        if: needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           if [ "${DIAG_DEP_RC:-1}" -ne 0 ]; then
             echo "Skipping build because dependency setup already failed."
@@ -243,7 +342,9 @@ jobs:
 
       - name: Publish diagnostics findings
         id: findings
-        if: always()
+        if: >-
+          always() &&
+          needs.debian_package_changes.outputs.any_changed == 'true'
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" render_findings \
             /tmp/debian-ci-findings.d \
