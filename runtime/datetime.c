@@ -963,7 +963,7 @@ static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string termnator). If 0 is returend, an error occurred.
+ * the string terminator). If 0 is returend, an error occurred.
  * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
  * where a zero-digit is written instead of a space for the first
  * day character if day < 10. syslog-ng seems to do that, and some
