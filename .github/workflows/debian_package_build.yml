@@ -112,23 +112,11 @@ jobs:
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" build_package \
             /tmp/debian-src
 
-      - name: Upload gate build artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debian-experimental-gate
-          path: |
-            /tmp/*.deb
-            /tmp/debian-src/debian/build
-          if-no-files-found: ignore
-          retention-days: 7
-
   debian_experimental_diagnostics:
     name: debian experimental diagnostics
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
     timeout-minutes: 90
     needs: debian_experimental_gate
     if: always()
@@ -267,60 +255,3 @@ jobs:
             echo
             cat /tmp/debian-ci-findings.md
           } >> "$GITHUB_STEP_SUMMARY"
-          {
-            echo "has_findings=true"
-            echo "body<<EOF"
-            cat /tmp/debian-ci-findings.md
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Comment PR with diagnostics findings
-        if: >-
-          ${{ github.event_name == 'pull_request' &&
-          steps.findings.outputs.has_findings == 'true' }}
-        continue-on-error: true
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const marker = '<!-- debian-ci-findings-main -->';
-            const body = `${marker}\n\nDebian experimental diagnostics findings:\n\n${process.env.FINDINGS_BODY}`;
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number,
-              per_page: 100,
-            });
-            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body,
-              });
-            }
-        env:
-          FINDINGS_BODY: ${{ steps.findings.outputs.body }}
-
-      - name: Upload diagnostics artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debian-experimental-diagnostics
-          path: |
-            /tmp/debian-build.log
-            /tmp/debian-ci-findings.md
-            /tmp/debian-ci-findings.d
-            /tmp/*.deb
-            /tmp/debian-src/debian/build
-          if-no-files-found: ignore
-          retention-days: 7
