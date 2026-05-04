@@ -368,8 +368,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: fetch upstream (for changed-files diff)
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "${{ github.event.pull_request.base.ref }}"
+
+      - name: Check for package changes
+        id: package_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            packaging/ubuntu/**
+            devtools/run-deb-ubuntu-build.sh
+          files_ignore: |
+            doc/Makefile.am
+
       - name: Get version
         id: get_version
+        if: steps.package_changes.outputs.any_changed == 'true'
         run: |
           set -e
           BASE_VER=$(sed -n 's/AC_INIT(\[rsyslog\],\[\([^]]*\)\].*/\1/p' configure.ac | sed 's/\.daily$//')
@@ -381,9 +407,11 @@ jobs:
           echo "Using version: $VERSION"
 
       - name: Install build dependencies
+        if: steps.package_changes.outputs.any_changed == 'true'
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev lintian wget
 
       - name: Build Ubuntu package
+        if: steps.package_changes.outputs.any_changed == 'true'
         env:
           RSYSLOG_APT_PROXY: ${{ vars.RSYSLOG_APT_PROXY }}
           RSYSLOG_UBUNTU_ARCHIVE_MIRROR: ${{ vars.RSYSLOG_UBUNTU_ARCHIVE_MIRROR }}
@@ -392,7 +420,12 @@ jobs:
         run: bash devtools/run-deb-ubuntu-build.sh ${{ matrix.suite }}
 
       - name: List built packages
+        if: steps.package_changes.outputs.any_changed == 'true'
         run: find . -maxdepth 2 -name "*.deb" -type f -exec ls -la {} \;
+
+      - name: Skip Ubuntu package build, no relevant changes
+        if: steps.package_changes.outputs.any_changed != 'true'
+        run: echo "No relevant package changes detected; skipping Ubuntu package build."
 
   package_build_rpm:
     name: package build (RPM)
