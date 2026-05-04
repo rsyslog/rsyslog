@@ -28,14 +28,14 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Check for container image changes
         id: container_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
         with:
           files: |
             packaging/docker/rsyslog/**
