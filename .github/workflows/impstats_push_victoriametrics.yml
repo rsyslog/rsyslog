@@ -162,6 +162,6 @@ jobs:
           devtools/gather-check-logs.sh
           cat failed-tests.log || echo "No failed-tests.log found"
           echo "=== VictoriaMetrics logs ==="
-          docker logs $(docker ps -q \
-            -f ancestor=victoriametrics/victoria-metrics:v1.134.0) || \
+          docker logs "$(docker ps -q \
+            -f ancestor=victoriametrics/victoria-metrics:v1.134.0)" || \
             echo "Could not get VM logs"

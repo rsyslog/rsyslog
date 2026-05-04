@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Detect changed files
         id: code_changes
@@ -40,4 +40,3 @@ jobs:
             echo "can help apply formatting fixes if needed."
             exit 1
           fi
-
