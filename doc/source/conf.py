@@ -65,7 +65,7 @@ mermaid_init_js = ""
 try:
     import sphinxcontrib.mermaid as _sphinx_mermaid  # type: ignore
 except Exception:  # pragma: no cover - fallback for doc builds without the extension
-    _sphinx_mermaid = None
+    pass
 else:
     _sphinx_mermaid._MERMAID_RUN_NO_D3_ZOOM = """
 window.addEventListener("load", () => {{
@@ -243,9 +243,6 @@ elif version == '8':
     # 'version' and 'release' build configuration variables. In that
     # case, keep the placeholder values already set.
 
-    # The directory where this conf.py file is located
-    source_conf_dir = os.getcwd()
-
     # If building from a Git repo, then this directory should be present
     # in the parent directory.
     git_dir = \
@@ -387,9 +384,11 @@ if tags.has('with_sitemap'):
         extensions.append('sphinx_sitemap')
 
         # Sitemap configuration to remove language/version from URLs
-        sitemap_url_scheme = "{link}"
-        sitemap_localtolinks = False
-        sitemap_filename = "sitemap.xml"
+        globals().update({
+            'sitemap_url_scheme': "{link}",
+            'sitemap_localtolinks': False,
+            'sitemap_filename': "sitemap.xml",
+        })
 
 # Enable Google Analytics tracking when a tracking ID is provided via
 # the GOOGLE_ANALYTICS_ID environment variable.
@@ -407,8 +406,10 @@ if _ga_id:
         pass
     else:
         extensions.append('sphinxcontrib.googleanalytics')
-        googleanalytics_id = _ga_id
-        googleanalytics_enabled = True
+        globals().update({
+            'googleanalytics_id': _ga_id,
+            'googleanalytics_enabled': True,
+        })
         _ga_use_extension = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -430,7 +431,7 @@ html_theme = 'furo'
 # "<project> v<release> documentation".
 if release_type == 'dev':
 
-    html_title = "{} {} docs".format(
+    globals()['html_title'] = "{} {} docs".format(
         project,
         conf_helpers.get_release_string(
             release_type, release_string_detail, version)
@@ -584,7 +585,7 @@ if release_type == 'dev':
     # Override "simple" dev build string for epub format
     release_string_detail = 'detailed'
 
-    epub_title = "{} {} docs".format(
+    globals()['epub_title'] = "{} {} docs".format(
         project,
         conf_helpers.get_release_string(
             release_type,
@@ -723,10 +724,11 @@ if tags.has('minimal_build'):
     # The files inside _templates_minimal are intentionally blank.
     templates_path = ['_templates_minimal']
 
-    # Disable all sidebars
-    html_sidebars = {'**': []}
-
-    # Turn off other non-content elements
-    html_show_sourcelink = False
-    html_show_sphinx = False
-    html_show_copyright = False
+    globals().update({
+        # Disable all sidebars
+        'html_sidebars': {'**': []},
+        # Turn off other non-content elements
+        'html_show_sourcelink': False,
+        'html_show_sphinx': False,
+        'html_show_copyright': False,
+    })
