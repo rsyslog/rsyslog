@@ -4,6 +4,9 @@ name: Workflow Lint
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -13,3 +16,5 @@ jobs:
         uses: reviewdog/action-actionlint@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          filter_mode: file
+          fail_level: any
