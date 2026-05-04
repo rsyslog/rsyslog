@@ -1060,7 +1060,7 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
             MonthInDays = 243;  // until 01 of September
             break;
         case 10:
-            MonthInDays = 273;  // until 01 of Oktober
+            MonthInDays = 273;  // until 01 of October
             break;
         case 11:
             MonthInDays = 304;  // until 01 of November
