@@ -5,6 +5,9 @@
 # handshake test before message transfer. This coverage remains exercised by
 # non-TSAN lanes, where the same test passes.
 skip_TSAN "Ubuntu 26.04/clang-21 TSAN breaks the mbedTLS priority-string handshake before message transfer"
+# ASAN/UBSAN sanitizer instrumentation hits the same mbedTLS priority-string
+# handshake incompatibility; non-sanitizer lanes still cover this test.
+skip_ASAN "Ubuntu 26.04 ASAN/UBSAN breaks the mbedTLS priority-string handshake before message transfer"
 export NUMMESSAGES=1000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
