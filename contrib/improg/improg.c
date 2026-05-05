@@ -401,7 +401,7 @@ static rsRetVal readChild(instanceConf_t *const pInst) {
             cstrAppendChar(pInst->ppCStr, c);
         }
     }
-    return (retval == 0) ? RS_RET_OK : RS_RET_IO_ERROR;
+    return (retval == 0) ? RS_RET_EOF : RS_RET_IO_ERROR;
 }
 
 /* create input instance, set default parameters, and
@@ -553,6 +553,7 @@ BEGINrunInput
     struct timeval tv;
     int retval;
     instanceConf_t *pInst;
+    rsRetVal readRet;
     CODESTARTrunInput;
     FD_ZERO(&rfds);
 
@@ -581,9 +582,16 @@ BEGINrunInput
         /* retval is the number of fd with data to read */
         while (retval > 0) {
             for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
-                if (FD_ISSET(pInst->fdPipeFromChild, &temp)) {
+                if (pInst->fdPipeFromChild != -1 && FD_ISSET(pInst->fdPipeFromChild, &temp)) {
                     DBGPRINTF("read child %s\n", pInst->pszBinary);
-                    readChild(pInst);
+                    readRet = readChild(pInst);
+                    if (readRet == RS_RET_EOF) {
+                        DBGPRINTF("improg: program '%s' closed stdout pipe\n", pInst->pszBinary);
+                        terminateChild(pInst);
+                    } else if (readRet != RS_RET_OK) {
+                        LogError(errno, readRet, "improg: error reading from child process");
+                        terminateChild(pInst);
+                    }
                     retval--;
                 }
             }
