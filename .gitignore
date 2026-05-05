@@ -129,3 +129,6 @@ plugins/impstats/remote.pb-c.h
 # Python cache artifacts
 __pycache__/
 *.py[cod]
+
+# Local machine-specific Codex notes
+AGENTS.local.md
