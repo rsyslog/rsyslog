@@ -405,15 +405,15 @@ finalize_it:
  */
 static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
                                  const uchar *const message,
-                                 char **newMessage) {
+                                 const char **newMessage) {
     size_t r = 0;
-    char *v;
+    const char *v;
     if (pWrkrData->batch.nmemb != 0 && (v = strstr((const char *)message, "VALUES")) != NULL &&
         (v = strchr(v, '(')) != NULL) {
         *newMessage = v;
         r = strlen(*newMessage);
     } else {
-        *newMessage = (char *)message;
+        *newMessage = (const char *)message;
         r = strlen(*newMessage);
     }
     dbgprintf("omclickhouse: computeBulkMessage: new message part: %s\n", *newMessage);
@@ -424,7 +424,7 @@ static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
 
 /* This method builds the batch, that will be submitted.
  */
-static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, char *message) {
+static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, const char *message) {
     DEFiRet;
     int length = strlen(message);
     int r;
@@ -532,7 +532,7 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-    char *batchPart = NULL;
+    const char *batchPart = NULL;
     CODESTARTdoAction;
     dbgprintf("CODESTARTdoAction: entered\n");
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
@@ -550,7 +550,7 @@ BEGINdoAction
                 pWrkrData->batch.nmemb);
             CHKiRet(submitBatch(pWrkrData));
             initializeBatch(pWrkrData);
-            batchPart = (char *)ppString[0];
+            batchPart = (const char *)ppString[0];
         }
 
         CHKiRet(buildBatch(pWrkrData, batchPart));
