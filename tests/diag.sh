@@ -207,6 +207,26 @@ skip_ASAN() {
         fi
 }
 
+# function to skip a test only when both ARM and ASan are active
+# $1 is the reason why the ARM ASan combination is not supported
+skip_ARM_ASAN() {
+	reason="$1"
+	echo skip:_ARM_ASAN, ARCH "$ARCH", GITHUB_RUNNER_ARCH "$GITHUB_RUNNER_ARCH", CFLAGS "$CFLAGS"
+	[[ "$CFLAGS" == *"sanitize=address"* ]] || return 0
+
+	for arch in "$ARCH" "$GITHUB_RUNNER_ARCH" "$(uname -m 2>/dev/null)" "$(dpkg --print-architecture 2>/dev/null)"; do
+		[ -z "$arch" ] && continue
+		arch=$(printf '%s' "$arch" | tr '[:upper:]' '[:lower:]')
+		case "$arch" in
+			arm64|aarch64|armhf|armv7l*|armv7*|armv6l*|armv6*|arm*)
+				printf 'test skipped on ARM ASan (%s): %s\n' "$arch" "$reason"
+				exit 77
+				;;
+		esac
+	done
+	return 0
+}
+
 
 # ensure a dynamically loaded rsyslog plugin is available before continuing.
 # $1 - plugin name (without the leading im/om/mm prefix differentiation)
