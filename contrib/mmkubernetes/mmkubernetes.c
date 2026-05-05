@@ -906,8 +906,8 @@ BEGINcreateWrkrInstance
     if (pWrkrData->pData->caCertFile) curl_easy_setopt(ctx, CURLOPT_CAINFO, pWrkrData->pData->caCertFile);
     if (pWrkrData->pData->myCertFile) curl_easy_setopt(ctx, CURLOPT_SSLCERT, pWrkrData->pData->myCertFile);
     if (pWrkrData->pData->myPrivKeyFile) curl_easy_setopt(ctx, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYPEER, 0);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYHOST, 0);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYHOST, 0L);
 #if defined(SUPPORT_SSL_PARTIAL_CHAIN)
     if (pWrkrData->pData->sslPartialChain) {
         curl_easy_setopt(ctx, CURLOPT_SSL_CTX_FUNCTION, set_ssl_partial_chain);
@@ -1115,13 +1115,16 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
     DEFiRet;
     struct cache_entry_s *cache_entry = NULL;
     struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+    char *dup_key = NULL;
 
+    if (key == NULL) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     /* see if it is time for a general cache expiration */
     (void)cache_delete_expired_entries(pWrkrData, isnsmd, now);
     CHKmalloc(cache_entry = cache_entry_new(now + pWrkrData->pData->cacheEntryTTL, jso));
     if (cache_entry) {
-        if (!hashtable_insert(ht, (void *)(bDupKey ? strdup(key) : key), cache_entry))
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (bDupKey) CHKmalloc(dup_key = strdup(key));
+        if (!hashtable_insert(ht, (void *)(bDupKey ? dup_key : key), cache_entry)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        dup_key = NULL;
 
         if (isnsmd) {
             STATSCOUNTER_INC(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
@@ -1131,6 +1134,7 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
         cache_entry = NULL;
     }
 finalize_it:
+    free(dup_key);
     if (cache_entry) cache_entry_free(cache_entry);
     return iRet;
 }

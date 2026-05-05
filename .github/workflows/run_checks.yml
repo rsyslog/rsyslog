@@ -1571,7 +1571,7 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         id: run-clang
         env:
-          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
           SCAN_BUILD: scan-build
           SCAN_BUILD_CC: clang
           SCAN_BUILD_REPORT_DIR: scan-build-report

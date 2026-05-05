@@ -451,7 +451,7 @@ replication - required block replication for the file.
     httpfs_set_url(pWrkrData, "&op=create&overwrite=false&data=true");
 
     curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDS, (char*)buf);
-    curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, strlen((char*)buf));
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, (long)strlen((char*)buf));
 
     DBGPRINTF("%s(): msg=%s\n", __FUNCTION__, buf);
 
@@ -493,7 +493,7 @@ static rsRetVal httpfs_append_file(wrkrInstanceData_t* pWrkrData, uchar* buf) {
     httpfs_set_url(pWrkrData, "&op=append&data=true");
 
     curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDS, (char*)buf);
-    curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, strlen((char*)buf));
+    curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, (long)strlen((char*)buf));
 
     headers = httpfs_curl_add_header(headers, 1, HTTPFS_CONTENT_TYPE);
     curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);

@@ -350,17 +350,22 @@ done:
 
 static void gcryDecryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs) {
     gcry_error_t gcryError;
-    size_t nRead, nWritten;
+    size_t nRead, nReadRaw, nWritten;
     size_t toRead;
     size_t leftTillBlkEnd;
     char buf[64 * 1024];
 
     leftTillBlkEnd = blkEnd - *pCurrOffs;
-    while (1) {
+    while (leftTillBlkEnd > 0) {
         toRead = sizeof(buf) <= leftTillBlkEnd ? sizeof(buf) : leftTillBlkEnd;
         toRead = toRead - toRead % cnf.blkLength;
+        if (toRead == 0) break;
         nRead = fread(buf, 1, toRead, fpin);
-        if (nRead == 0) break;
+        if (nRead == 0) {
+            if (ferror(fpin)) perror("fpin");
+            break;
+        }
+        nReadRaw = nRead;
         leftTillBlkEnd -= nRead, *pCurrOffs += nRead;
         gcryError = gcry_cipher_decrypt(cnf.libData.gcry.gcry_chd,  // gcry_cipher_hd_t
                                         buf,  // void *
@@ -378,6 +383,7 @@ static void gcryDecryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *p
             perror("fpout");
             return;
         }
+        if (nReadRaw < toRead) break;
     }
 }
 

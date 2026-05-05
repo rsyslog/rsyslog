@@ -1986,6 +1986,10 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
 
     /* just double-check */
     assert(value != NULL);
+    if (value == NULL) {
+        parser_errmsg("constant template entry is missing mandatory value parameter");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     /* apply */
     CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -2711,7 +2715,7 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
             }
             break;
         case T_LIST:
-            createListTpl(pTpl, o);
+            CHKiRet(createListTpl(pTpl, o));
             break;
         case T_SUBTREE:
             memcpy(&pTpl->subtree, &subtree, sizeof(msgPropDescr_t));

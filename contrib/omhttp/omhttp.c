@@ -2059,20 +2059,20 @@ static void ATTR_NONNULL()
     CURLcode cRet;
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, serverData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
     if (pData->proxyHost != NULL) {
         curl_easy_setopt(handle, CURLOPT_PROXY, pData->proxyHost);
     }
     if (pData->proxyPort != 0) {
-        curl_easy_setopt(handle, CURLOPT_PROXYPORT, pData->proxyPort);
+        curl_easy_setopt(handle, CURLOPT_PROXYPORT, (long)pData->proxyPort);
     }
     if (pData->restPathTimeout) {
         curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, pData->restPathTimeout);
     }
-    if (pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-    if (pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
     if (pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);

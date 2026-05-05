@@ -4266,7 +4266,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  * enhancement.
                  */
                 for (pDst = pRes; *pDst; pDst++) {
-                    if (*pDst == '/') *pDst++ = '_';
+                    if (*pDst == '/') *pDst = '_';
                 }
             } else {
                 if (bufLen == -1) bufLen = ustrlen(pRes);

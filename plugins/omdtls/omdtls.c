@@ -745,6 +745,10 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
 
     // Connect the UDP socket to the receiver's address
     pWrkrData->sockout = socket(AF_INET, SOCK_DGRAM, 0);
+    if (pWrkrData->sockout < 0) {
+        LogError(errno, RS_RET_ERR, "dtls_init[%p]: Failed to create output socket", pWrkrData);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     if (connect(pWrkrData->sockout, pWrkrData->dtls_rcvr_addrinfo->ai_addr, pWrkrData->dtls_rcvr_addrinfo->ai_addrlen) <
         0) {
         LogError(errno, RS_RET_SUSPENDED, "dtls_init[%p]: Failed to connect to hostname '%s':'%s'", pWrkrData,

@@ -472,6 +472,10 @@ static ATTR_NONNULL() rsRetVal writeSenderInfo(instanceData *const pData) {
     int tmp_alloc = 0;
 
     dbgprintf("writeSenderInfo, file %s\n", pData->statefile);
+    if (pData->statefile == NULL) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omsendertrack: statefile is not configured");
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
     if (tmpname == NULL) {
         /* safety fallback if not yet built */
         const size_t statefile_len = strlen((const char *)pData->statefile);
