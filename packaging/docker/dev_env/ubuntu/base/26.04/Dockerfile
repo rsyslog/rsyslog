@@ -305,7 +305,7 @@ RUN	cd helper-projects \
 	&& rm -rf kafkacat \
 	&& cd ..
 
-RUN	pip install pyasn1 pysnmp --break-system-packages --upgrade --ignore-installed --no-cache-dir
+RUN	pip install pyasn1 pysnmp pysmi --break-system-packages --upgrade --ignore-installed --no-cache-dir
 
 # next ENV is specifically for running scan-build - use the default 26.04
 # clang toolchain instead of stale versioned names.
