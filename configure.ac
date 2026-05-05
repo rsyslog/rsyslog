@@ -482,7 +482,8 @@ if test "$enable_ffaup" = "yes"; then
 		AC_CHECK_HEADER([faup/faup.h], [
 			FAUP_LIBS="-lfaupl"
 			AC_SUBST(FAUP_LIBS)],
-			[AC_MSG_ERROR([Unable to add faup support for URL parsing.])])
+			[AC_MSG_ERROR([Unable to add faup support for URL parsing.])],
+			[#include <stdint.h>])
 	])
 fi
 
