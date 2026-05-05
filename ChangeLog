@@ -1,5 +1,13 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-05-05: github action hardening and cleanup
+- 2026-05-05: improg: stop on child stdout EOF
+  Issue https://github.com/rsyslog/rsyslog/issues/6791 reports that
+  improg can consume a full CPU after its configured child program is killed.
+  EOF on the child stdout pipe kept the fd readable forever, so the input
+  thread repeatedly selected and read the closed pipe.
+  improg now stops spinning and cleans up when the child closes stdout.
+  Closes https://github.com/rsyslog/rsyslog/issues/6791
 - 2026-04-24: imhttp: harden request parsing and cleanup
   imhttp now bounds accepted request bodies, handles malformed gzip
   and oversized octet-counted frames more robustly, returns proper
