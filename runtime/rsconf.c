@@ -555,8 +555,8 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
-    CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
-                               (char *)policy, policy_watch, (char *)policy_watch_debounce, per_source_enabled,
+    CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, severity, (char *)policy,
+                               policy_watch, (char *)policy_watch_debounce, per_source_enabled,
                                (char *)per_source_policy, (char *)per_source_key_tpl, (unsigned)per_source_max_states,
                                (unsigned)per_source_topn));
 
