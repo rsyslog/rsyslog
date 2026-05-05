@@ -12,8 +12,13 @@ input(type="imtcp"
       framing.delimiter.regex="^<[0-9]{2}>")
 '
 
+RSYSLOGD_LOG="${RSYSLOG_DYNNAME}.rsyslog.log"
+export RS_REDIR=">\"$RSYSLOGD_LOG\" 2>&1"
 startup
-content_check 'framing.delimiter.regex requires maxMessageSize <=' "${RSYSLOG_DYNNAME}.started"
+unset RS_REDIR
+# The guard is emitted while the input starts. On some distcheck builds the
+# input is rejected before rsyslogd-internal messages reach the .started action.
+content_check 'framing.delimiter.regex requires maxMessageSize <=' "$RSYSLOGD_LOG"
 shutdown_immediate
 wait_shutdown
 exit_test
