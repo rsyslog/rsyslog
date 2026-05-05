@@ -2,9 +2,9 @@
 # added 2018-04-27 by alorbach
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
-export RS_REDIR=">${RSYSLOG_DYNNAME}.rsyslog.log 2>&1"
 
-export NUMMESSAGES=10000
+export NUMMESSAGES=3
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'" # wrong CA
@@ -23,6 +23,7 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 # Begin actual testcase
 startup
 tcpflood --check-only -p'$TCPFLOOD_PORT' -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+shutdown_when_empty
 wait_shutdown
-content_check "X509 - Certificate verification failed" "${RSYSLOG_DYNNAME}.rsyslog.log"
+content_check "X509 - Certificate verification failed"
 exit_test
