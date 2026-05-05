@@ -91,7 +91,7 @@ static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ cons
     rsRetVal iRet __attribute__((unused)) = RS_RET_OK;
 
     CHKmalloc(handle = curl_easy_init());
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, func);
 

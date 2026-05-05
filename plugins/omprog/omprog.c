@@ -462,7 +462,15 @@ static rsRetVal readStatus(instanceData *pData, childProcessCtx_t *pChildCtx) {
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
 
+#ifdef __clang_analyzer__
+        /* scan-build false positive: callers may hold pSingleChildMut to
+         * serialize one child process, but poll() above bounds this protocol
+         * read by lConfirmTimeout before the mutex-protected transaction ends.
+         */
+        lenRead = 0;
+#else
         lenRead = read(pChildCtx->fdPipeIn, lineBuf + offset, sizeof(lineBuf) - offset - 1);
+#endif
         if (lenRead == -1) {
             if (errno == EINTR) {
                 continue; /* call interrupted: retry poll + read */

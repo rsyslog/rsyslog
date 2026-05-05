@@ -1937,17 +1937,17 @@ static rsRetVal ATTR_NONNULL(1, 2)
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 
     if ((pWrkrData->pData->rebindInterval > -1) && (pWrkrData->nOperations > pWrkrData->pData->rebindInterval)) {
-        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
+        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1L);
         pWrkrData->nOperations = 0;
         STATSCOUNTER_INC(rebinds, mutRebinds);
     } else {
         /* by default, reuse existing connections */
-        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0);
+        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0L);
     }
     if ((pWrkrData->pData->rebindInterval > -1) && (pWrkrData->nOperations == pWrkrData->pData->rebindInterval)) {
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
     } else {
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 0);
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 0L);
     }
 
     if (pWrkrData->pData->numServers > 1) {
@@ -1958,7 +1958,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CHKiRet(setPostURL(pWrkrData, tpls));
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
@@ -2105,11 +2105,11 @@ finalize_it:
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
     if (pWrkrData->pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);

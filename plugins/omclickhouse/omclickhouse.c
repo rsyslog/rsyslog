@@ -244,7 +244,7 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
 
     curl_easy_setopt(curl, CURLOPT_URL, pWrkrData->restURL);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, healthCheckMessage);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(healthCheckMessage));
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(healthCheckMessage));
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     res = curl_easy_perform(curl);
 
@@ -471,7 +471,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CHKiRet(setPostURL(pWrkrData));
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
     dbgprintf("curl returned %lld\n", (long long)code);
@@ -615,11 +615,11 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
 
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
     if (pWrkrData->pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);

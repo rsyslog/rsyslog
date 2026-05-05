@@ -1007,13 +1007,15 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
             int try_send = 1;
             size_t lenThisTry = len;
             while (try_send) {
+                int sendErrno;
                 lsent = sendto(pTarget->pSockArray[i + 1], msg, lenThisTry, 0, r->ai_addr, r->ai_addrlen);
+                sendErrno = errno;
                 if (lsent == (ssize_t)lenThisTry) {
                     bSendSuccess = RSTRUE;
                     ATOMIC_ADD_uint64(&pTargetStats->sentBytes, &pTargetStats->mut_sentBytes, lenThisTry);
                     try_send = 0;
                     runSockArrayLoop = 0;
-                } else if (errno == EMSGSIZE) {
+                } else if (sendErrno == EMSGSIZE) {
                     const size_t newlen = (lenThisTry > 1024) ? lenThisTry - 1024 : 512;
                     LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
                              "omfwd/udp: send failed due to message being too "
@@ -1023,7 +1025,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
                     lenThisTry = newlen;
                 } else {
                     reInit = RSTRUE;
-                    lasterrno = errno;
+                    lasterrno = sendErrno;
                     lasterr_sock = pTarget->pSockArray[i + 1];
                     LogError(lasterrno, RS_RET_ERR_UDPSEND, "omfwd/udp: socket %d: sendto() error", lasterr_sock);
                     try_send = 0;

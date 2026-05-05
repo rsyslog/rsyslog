@@ -256,6 +256,7 @@ static rsRetVal fsyncStateFileParentDir(const char *stateFile) {
     DIR *dir = NULL;
     char *dirPath = NULL;
     const char *slash;
+    int dfd;
     DEFiRet;
 
     slash = strrchr(stateFile, '/');
@@ -272,7 +273,12 @@ static rsRetVal fsyncStateFileParentDir(const char *stateFile) {
         LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory", dirPath);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
-    if (fsync(dirfd(dir)) != 0) {
+    dfd = dirfd(dir);
+    if (dfd < 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to get '%s' directory fd", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (fsync(dfd) != 0) {
         LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", dirPath);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }

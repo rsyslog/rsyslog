@@ -1513,9 +1513,11 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
  */
 static rsRetVal ATTR_NONNULL() processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[]) {
     int i;
-    assert(numEntries > 0);
-    const unsigned numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
+    unsigned numWrkr;
     DEFiRet;
+    assert(numEntries > 0);
+    if (numEntries <= 0 || pioDescr[0] == NULL || pioDescr[0]->pSrv == NULL) return RS_RET_INTERNAL_ERROR;
+    numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
 
     DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
