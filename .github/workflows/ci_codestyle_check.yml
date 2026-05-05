@@ -30,8 +30,10 @@ jobs:
             devtools/format-code.sh
 
       - name: Enforce code style
+        env:
+          ANY_CHANGED: ${{ steps.code_changes.outputs.any_changed }}
         run: |
-          if [ "${{ steps.code_changes.outputs.any_changed }}" != "true" ]; then
+          if [ "$ANY_CHANGED" != "true" ]; then
             echo "No code changes detected; skipping style check."
             exit 0
           fi

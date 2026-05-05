@@ -1474,7 +1474,7 @@ jobs:
       DOCKER_RUN_EXTRA_OPTS: --network host
     services:
       victorialogs:
-        image: victoriametrics/victoria-logs:latest
+        image: victoriametrics/victoria-logs:latest # zizmor: ignore[unpinned-images] intentional: CI tracks latest VictoriaLogs compatibility
         ports:
           - 29428:9428
     steps:
@@ -1595,23 +1595,25 @@ jobs:
 
       - name: Show clang static analyzer report link
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload-report.outputs.artifact-url }}
         run: |
-          artifact="${{ steps.upload-report.outputs.artifact-url }}"
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           Clang static analyzer HTML report (download):
-          $artifact
+          $ARTIFACT_URL
           EOF
           echo "Clang static analyzer HTML report (download):"
-          echo "$artifact"
+          echo "$ARTIFACT_URL"
 
       - name: Fail if analysis failed
         if: ${{ steps.code_changes.outputs.any_changed == 'true' && steps.run-clang.outputs.exitcode != '0' }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload-report.outputs.artifact-url }}
         run: |
-          artifact="${{ steps.upload-report.outputs.artifact-url }}"
           echo "clang static analyzer detected issues:" >&2
           tail -n 200 clang-analyzer.log >&2 || true
           echo >&2
-          echo "Clang static analyzer HTML report (download): $artifact" >&2
+          echo "Clang static analyzer HTML report (download): $ARTIFACT_URL" >&2
           exit 1
 
       - name: Skip clang analyzer CI, no relevant changes
