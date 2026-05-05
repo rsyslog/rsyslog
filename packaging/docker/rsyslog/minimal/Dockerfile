@@ -6,6 +6,7 @@
 ARG UBUNTU_VERSION="24.04"
 ARG RSYSLOG_IMG_VERSION="unset" # New ARG to pick up version from Makefile
 ARG RSYSLOG_APT_PPA="ppa:adiscon/v8-stable"
+ARG RSYSLOG_APT_ORIGIN="LP-PPA-adiscon-v8-stable"
 ARG BUILD_DATE="unknown"
 ARG VCS_REF="unknown"
 
@@ -15,6 +16,7 @@ FROM ubuntu:${UBUNTU_VERSION}
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
 ARG RSYSLOG_APT_PPA
+ARG RSYSLOG_APT_ORIGIN
 ARG BUILD_DATE
 ARG VCS_REF
 
@@ -48,7 +50,16 @@ RUN apt-get update && \
         software-properties-common \
         ca-certificates \
     && add-apt-repository -y "${RSYSLOG_APT_PPA}" \
-    && apt-get update && \
+    && printf '%s\n' \
+        'Package: rsyslog*' \
+        "Pin: release o=${RSYSLOG_APT_ORIGIN}" \
+        'Pin-Priority: 1001' \
+        '' \
+        'Package: rsyslog*' \
+        'Pin: release o=Ubuntu' \
+        'Pin-Priority: -1' \
+        > /etc/apt/preferences.d/rsyslog-adiscon \
+    && apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends tzdata rsyslog rsyslog-omstdout \
     && apt-get purge -y --auto-remove software-properties-common \
     && apt-get autoremove -y \

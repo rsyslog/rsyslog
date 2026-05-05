@@ -48,7 +48,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional rsyslog modules/packages specific to the collector's role.
 # Includes TLS support via OpenSSL (rsyslog-openssl) for secure log collection.
-RUN apt-get update && \
+RUN apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
         rsyslog-kafka \
