@@ -44,7 +44,7 @@ LABEL org.opencontainers.image.revision="${VCS_REF}"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install common rsyslog modules suitable for a standard image.
-# - tzadata: For timezone data, needed for log timestamps. 
+# - tzdata: For timezone data, needed for log timestamps. 
 # - rsyslog-imhttp: For the built-in HTTP server (health, metrics, potential future ingestion).
 # - rsyslog-omhttp: For forwarding logs via HTTP.
 # apt-get update is run to ensure the package lists are fresh before installing.
