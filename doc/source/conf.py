@@ -11,6 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import importlib.util
 import json
 import os
 import re
@@ -363,6 +364,14 @@ suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------
 
+
+def has_optional_extension(name):
+    try:
+        return importlib.util.find_spec(name) is not None
+    except ModuleNotFoundError:
+        return False
+
+
 # The base URL which points to the root of the HTML documentation.
 # It is used to indicate the location of document like canonical_url and sitemap.
 # DOC_BASE_URL env (e.g. https://docs.rsyslog.com) overrides when set (CI deploy).
@@ -375,9 +384,7 @@ ENABLE_JSON_LD = not DISABLE_JSON_LD
 
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):
-    try:
-        import sphinx_sitemap  # type: ignore
-    except ImportError:
+    if not has_optional_extension('sphinx_sitemap'):
         # Optional extension - sitemap generation skipped if not installed
         pass
     else:
@@ -399,9 +406,7 @@ if _ga_id and not re.match(r'^(UA-\d+-\d+|G-[A-Za-z0-9]+)$', _ga_id):
     _ga_id = ''
 _ga_use_extension = False
 if _ga_id:
-    try:
-        import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
-    except ImportError:
+    if not has_optional_extension('sphinxcontrib.googleanalytics'):
         # Extension not installed – fall back to metatags injection in setup().
         pass
     else:

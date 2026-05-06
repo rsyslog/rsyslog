@@ -1,11 +1,8 @@
 # source/_ext/rsyslog_lexer.py
 
-import re
-
 from pygments.lexer import RegexLexer, bygroups
 from pygments.token import (
     Text, Comment, Operator, Keyword, Name, String, Number, Punctuation,
-    Error
 )
 
 __all__ = ['RainerScriptLexer']
@@ -125,8 +122,6 @@ class RainerScriptLexer(RegexLexer):
 
 # --- Sphinx Extension setup function ---
 def setup(app):
-    from sphinx.highlighting import PygmentsBridge
-    
     app.add_lexer('rainerscript', RainerScriptLexer)
     app.add_lexer('rsyslog', RainerScriptLexer) 
 
