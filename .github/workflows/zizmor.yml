@@ -1,0 +1,40 @@
+---
+name: zizmor check
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/requirements-zizmor.txt'
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/**'
+      - '.github/requirements-zizmor.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install zizmor
+        run: |
+          python3 -m venv .zizmor-venv
+          .zizmor-venv/bin/python -m pip install --upgrade pip
+          .zizmor-venv/bin/python -m pip install \
+            -r .github/requirements-zizmor.txt
+
+      - name: Audit GitHub Actions workflows
+        run: .zizmor-venv/bin/zizmor --strict-collection --format=github .github/workflows
