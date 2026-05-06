@@ -186,7 +186,7 @@ jobs:
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j4'
+          export CI_MAKE_CHECK_OPT='-j6'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
           case "${{ matrix.config }}" in
@@ -290,8 +290,8 @@ jobs:
               ;;
           'ubuntu_26_tsan')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-              # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
-              export CI_MAKE_CHECK_OPT='-j2'
+              # TSAN is CPU-heavy; try matching the default check parallelism after test hardening.
+              export CI_MAKE_CHECK_OPT='-j6'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang-21'
@@ -1152,7 +1152,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j5 check
+        run: make -j6 check
 
       - name: show error logs (if we errored)
         if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
@@ -1917,7 +1917,11 @@ jobs:
                 su rsyslogci -c "make -j8 && timeout 40m make -j2 check TESTS=\"$S390X_TESTS\""
               else
                 make -j8
-                make -j3 check
+                if [ "$ARCH" = "arm64" ]; then
+                  make -j6 check
+                else
+                  make -j3 check
+                fi
               fi
             '
 

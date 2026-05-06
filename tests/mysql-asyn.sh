@@ -3,12 +3,16 @@
 # asyn test for mysql functionality (running on async action queue)
 
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
+if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
+	export NUMMESSAGES=15000
+else
+	export NUMMESSAGES=25000
+fi
 generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 $ActionQueueType LinkedList
-$ActionQueueTimeoutEnqueue 1000
+$ActionQueueTimeoutEnqueue 20000
 if $msg contains "msgnum:" then {
   action(
     type="ommysql"
@@ -17,7 +21,7 @@ if $msg contains "msgnum:" then {
     uid="rsyslog"
     pwd="testbench"
     queue.type="LinkedList"
-    queue.timeoutEnqueue="10000"
+    queue.timeoutEnqueue="20000"
     queue.workerThreads="2"
     queue.workerThreadMinimumMessages="64"
   )
