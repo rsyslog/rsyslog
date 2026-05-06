@@ -1,4 +1,4 @@
-This tool has been replaced by ./tests/diagtalker.c in release 4.7.1
+/* This tool has been replaced by ./tests/diagtalker.c in release 4.7.1 */
 /* A yet very simple tool to talk to imdiag.
  *
  * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
@@ -33,7 +33,12 @@ public class DiagTalker {
 	final String host = "127.0.0.1";
 	int port = 13500;
 	if(args.length > 1) {
-		port = Integer.parseInt(args[1]);
+		try {
+			port = Integer.parseInt(args[1]);
+		} catch (NumberFormatException e) {
+			System.err.println("Invalid port: " + args[1]);
+			System.exit(1);
+		}
 	}
 
         try {
