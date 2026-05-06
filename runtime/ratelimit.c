@@ -82,12 +82,12 @@ static inline void ratelimitSharedStoreUInt(unsigned int *value, pthread_mutex_t
 #endif
 }
 
-static inline intTiny ratelimitSharedLoadSeverity(const intTiny *value, pthread_mutex_t *mut) {
+static inline int ratelimitSharedLoadSeverity(const int *value, pthread_mutex_t *mut) {
 #ifdef HAVE_ATOMIC_BUILTINS
     (void)mut;
     return __atomic_load_n(value, __ATOMIC_RELAXED);
 #else
-    intTiny snapshot;
+    int snapshot;
     pthread_mutex_lock(mut);
     snapshot = *value;
     pthread_mutex_unlock(mut);
@@ -95,7 +95,7 @@ static inline intTiny ratelimitSharedLoadSeverity(const intTiny *value, pthread_
 #endif
 }
 
-static inline void ratelimitSharedStoreSeverity(intTiny *value, pthread_mutex_t *mut, intTiny newval) {
+static inline void ratelimitSharedStoreSeverity(int *value, pthread_mutex_t *mut, int newval) {
 #ifdef HAVE_ATOMIC_BUILTINS
     (void)mut;
     __atomic_store_n(value, newval, __ATOMIC_RELAXED);
@@ -424,7 +424,7 @@ static rsRetVal parsePolicyFile(const char *policy_file
                                 ,
                                 unsigned int *interval,
                                 unsigned int *burst,
-                                intTiny *severity
+                                int *severity
 #endif
 ) {
     DEFiRet;
@@ -477,10 +477,12 @@ static rsRetVal parsePolicyFile(const char *policy_file
                         long val = 0;
                         if (!strcmp(curr_key, "interval") || !strcmp(curr_key, "burst") ||
                             !strcmp(curr_key, "severity")) {
+                            const int is_severity = !strcmp(curr_key, "severity");
                             val = strtol((char *)token.data.scalar.value, &endptr, 10);
+                            const int out_of_range =
+                                is_severity ? (val < -1 || val > 127) : (val < 0 || (unsigned long)val > UINT_MAX);
                             if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0) ||
-                                endptr == (char *)token.data.scalar.value || *endptr != '\0' || val < 0 ||
-                                val > UINT_MAX) {
+                                endptr == (char *)token.data.scalar.value || *endptr != '\0' || out_of_range) {
                                 LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid integer value for '%s': %s",
                                          curr_key, (char *)token.data.scalar.value);
                                 /* ignore invalid values, keep parsing */
@@ -495,7 +497,7 @@ static rsRetVal parsePolicyFile(const char *policy_file
                                                  "ratelimit: severity value %ld out of range (max 127) in %s", val,
                                                  policy_file);
                                     } else {
-                                        *severity = (intTiny)val;
+                                        *severity = (int)val;
                                     }
                                 }
                             }
@@ -965,7 +967,7 @@ static void ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_p
 static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger) {
     unsigned int interval;
     unsigned int burst;
-    intTiny severity;
+    int severity;
     DEFiRet;
 
     if (shared == NULL || shared->policy_file == NULL) {
@@ -1139,7 +1141,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *name,
                             unsigned int interval,
                             unsigned int burst,
-                            intTiny severity,
+                            int severity,
                             const char *policy_file,
                             sbool policy_watch,
                             const char *policy_watch_debounce,
@@ -1522,7 +1524,7 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     rsRetVal localRet;
     int severity = 0;
     unsigned int interval;
-    intTiny threshold;
+    int threshold;
 
     assert(ratelimit != NULL);
     assert(pMsg != NULL);
@@ -1735,7 +1737,7 @@ void ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
 /* Severity level determines which messages are subject to
  * ratelimiting. Default (no value set) is all messages.
  */
-void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity) {
+void ratelimitSetSeverity(ratelimit_t *ratelimit, int severity) {
     ratelimitSharedStoreSeverity(&ratelimit->pShared->severity, &ratelimit->pShared->mut, severity);
 }
 
