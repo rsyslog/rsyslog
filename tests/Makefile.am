@@ -1558,6 +1558,9 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-truncate.sh \
 	 glbl-oversizeMsg-split.sh
 
+TESTS_RELP_OPENSSL = \
+	 omrelp-tls-ossl-authfail-no-cacert.sh
+
 TESTS_RELP_GNUTLS = \
          sndrcv_relp_tls.sh \
          sndrcv_relp_tls_certvalid.sh \
@@ -1923,6 +1926,7 @@ EXTRA_DIST += $(TESTS_GNUTLS_OPENSSL_INTEROP)
 EXTRA_DIST += $(TESTS_OMUXSOCK)
 EXTRA_DIST += $(TESTS_OMUXSOCK_VALGRIND)
 EXTRA_DIST += $(TESTS_RELP)
+EXTRA_DIST += $(TESTS_RELP_OPENSSL)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS_CFG)
 EXTRA_DIST += $(TESTS_RELP_VALGRIND)
@@ -2832,6 +2836,9 @@ endif
 
 if ENABLE_RELP
 TESTS += $(TESTS_RELP)
+if ENABLE_OPENSSL
+TESTS += $(TESTS_RELP_OPENSSL)
+endif # ENABLE_OPENSSL
 if ENABLE_GNUTLS
 TESTS += $(TESTS_RELP_GNUTLS)
 if USE_RELPENGINESETTLSCFGCMD
