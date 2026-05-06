@@ -35,6 +35,10 @@ public class DiagTalker {
 	if(args.length > 1) {
 		try {
 			port = Integer.parseInt(args[1]);
+			if(port < 0 || port > 65535) {
+				System.err.println("Port out of range: " + args[1]);
+				System.exit(1);
+			}
 		} catch (NumberFormatException e) {
 			System.err.println("Invalid port: " + args[1]);
 			System.exit(1);
@@ -76,4 +80,3 @@ public class DiagTalker {
 	diagSocket.close();
     }
 }
-
