@@ -368,7 +368,7 @@ suppress_warnings = ['epub.unknown_project_files']
 def has_optional_extension(name):
     try:
         return importlib.util.find_spec(name) is not None
-    except ModuleNotFoundError:
+    except ImportError:
         return False
 
 
