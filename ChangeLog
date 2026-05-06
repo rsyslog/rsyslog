@@ -1,5 +1,16 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-05-06: omrelp: fix OpenSSL TLS auth failure CPU spin
+  omrelp with OpenSSL TLS and an action queue could consume a full CPU
+  after TLS authentication failed, for example when the action omitted
+  tls.caCert. The action was disabled, but queued messages from the
+  already-dequeued batch were retried immediately against the same
+  permanently disabled action.
+  omrelp now classifies librelp TLS authentication return codes as
+  permanent auth failures, and the action queue commits affected batch
+  entries from the queue's perspective when an action is disabled.
+  Transient suspend/retry behavior is unchanged.
+  Fixes https://github.com/rsyslog/rsyslog/issues/6612
 - 2026-05-06: ossl drvier: match PermittedPeer wildcards against cert identities
   OpenSSL x509/name authorization only applied rsyslog wildcard matching to
   the full OpenSSL subject string and then fell back to X509_check_host() for
@@ -13,7 +24,7 @@ Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
   peer entries.
   Add OpenSSL regression tests for both wildcard acceptance and wildcard
   rejection.
-  Fixes rsyslog/rsyslog#6686
+  Fixes https://github.com/rsyslog/rsyslog/issues/6686
 - 2026-05-06: CI; added zizmor workflow security checks
 - 2026-05-06: CI: new tests based on s390x architecture (via QEMU)
 - 2026-05-06: new development container based on Ubunutu 26.04
