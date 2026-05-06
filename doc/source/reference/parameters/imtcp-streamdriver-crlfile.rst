@@ -31,6 +31,11 @@ This permits to override the CRL (Certificate revocation list) file set via ``gl
 config object at the per-action basis. This parameter is ignored if the netstream driver
 and/or its mode does not need or support certificates.
 
+CRL checking is available with the ``ossl`` network stream driver when rsyslog
+is compiled against either OpenSSL or wolfSSL. On wolfSSL builds, wolfSSL must
+be compiled with ``--enable-crl``; both PEM and DER CRL files are accepted. The
+GnuTLS driver also supports CRL files (see its own documentation).
+
 Input usage
 -----------
 .. _param-imtcp-input-streamdriver-crlfile:

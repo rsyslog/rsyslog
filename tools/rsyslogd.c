@@ -677,6 +677,17 @@ static void printVersion(void) {
 #else
     printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tNo\n");
 #endif
+#if defined(ENABLE_WOLFSSL)
+    printf("\tTLS network stream driver:\t\twolfSSL\n");
+#elif defined(ENABLE_OPENSSL)
+    printf("\tTLS network stream driver:\t\tOpenSSL\n");
+#elif defined(ENABLE_GNUTLS)
+    printf("\tTLS network stream driver:\t\tGnuTLS\n");
+#elif defined(ENABLE_MBEDTLS)
+    printf("\tTLS network stream driver:\t\tMbed TLS\n");
+#else
+    printf("\tTLS network stream driver:\t\tnone\n");
+#endif
     /* we keep the following message to so that users don't need
      * to wonder.
      */

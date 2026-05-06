@@ -65,7 +65,7 @@ void net_ossl_set_ssl_verify_callback(SSL *pSsl, int flags);
 void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags);
 void net_ossl_set_bio_callback(BIO *conn);
 int net_ossl_verify_callback(int status, X509_STORE_CTX *store);
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
 rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
@@ -368,7 +368,60 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
     }
     if (bHaveCRL == 1) {
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if defined(ENABLE_WOLFSSL)
+        /* wolfSSL_CTX_LoadCRLFile / LoadCRLBuffer drop every PEM block after
+         * the first; wolfSSL_PEM_X509_INFO_read_bio iterates correctly. */
+        WOLFSSL_BIO *crlBio = NULL;
+        WOLF_STACK_OF(WOLFSSL_X509_INFO) *crlStack = NULL;
+        WOLFSSL_X509_STORE *crlStore = NULL;
+        int loaded = 0;
+        int crlIdx;
+
+        crlBio = wolfSSL_BIO_new_file(crlFile, "rb");
+        if (crlBio == NULL) {
+            LogError(errno, RS_RET_CRL_MISSING, "Error: CRL '%s' could not be opened", crlFile);
+            ABORT_FINALIZE(RS_RET_CRL_MISSING);
+        }
+
+        crlStore = wolfSSL_CTX_get_cert_store(pThis->ctx);
+        crlStack = wolfSSL_PEM_X509_INFO_read_bio(crlBio, NULL, NULL, NULL);
+        if (crlStack != NULL && crlStore != NULL) {
+            for (crlIdx = 0; crlIdx < wolfSSL_sk_X509_INFO_num(crlStack); crlIdx++) {
+                WOLFSSL_X509_INFO *info = wolfSSL_sk_X509_INFO_value(crlStack, crlIdx);
+                if (info == NULL || info->crl == NULL) continue;
+                if (wolfSSL_X509_STORE_add_crl(crlStore, info->crl) == WOLFSSL_SUCCESS) {
+                    loaded++;
+                } else {
+                    LogMsg(0, RS_RET_CRL_INVALID, LOG_WARNING,
+                           "wolfSSL: CRL block #%d in '%s' failed to add to store, skipping", crlIdx + 1, crlFile);
+                }
+            }
+            wolfSSL_sk_pop_free(crlStack, NULL);
+        }
+        wolfSSL_BIO_free(crlBio);
+
+        if (loaded == 0) {
+            /* No PEM CRL blocks parsed - try the raw file as DER (single CRL) */
+            if (wolfSSL_CTX_LoadCRLFile(pThis->ctx, crlFile, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
+                LogError(0, RS_RET_CRL_INVALID,
+                         "Error: CRL '%s' could not be loaded (tried PEM bundle and DER). "
+                         "Check at least: 1) file path is correct, 2) file exists, "
+                         "3) permissions are correct, 4) file content is correct.",
+                         crlFile);
+                ABORT_FINALIZE(RS_RET_CRL_INVALID);
+            }
+            loaded = 1;
+        } else {
+            /* wolfSSL_X509_STORE_add_crl forces WOLFSSL_CRL_CHECKALL; reset
+             * to WOLFSSL_CRL_CHECK to match OpenSSL X509_V_FLAG_CRL_CHECK. */
+            WOLFSSL_CERT_MANAGER *cm = wolfSSL_CTX_GetCertManager(pThis->ctx);
+            if (cm != NULL) {
+                wolfSSL_CertManagerDisableCRL(cm);
+                wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK);
+            }
+        }
+        dbgprintf("osslCtxInit: loaded %d CRL(s) from '%s' into wolfSSL CertManager\n", loaded, crlFile);
+#elif OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         // Get X509_STORE reference
         X509_STORE *store = SSL_CTX_get_cert_store(pThis->ctx);
         if (!X509_STORE_load_file(store, crlFile)) {
@@ -429,6 +482,18 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     #endif
 #endif
     }
+#ifdef ENABLE_WOLFSSL
+    if (pThis->bTlsRevocationCheck) {
+        WOLFSSL_CERT_MANAGER *cm = wolfSSL_CTX_GetCertManager(pThis->ctx);
+        if (cm == NULL || wolfSSL_CertManagerEnableOCSP(cm, WOLFSSL_OCSP_CHECKALL) != WOLFSSL_SUCCESS) {
+            LogError(0, RS_RET_SYS_ERR,
+                     "Error: unable to enable OCSP revocation checking in wolfSSL "
+                     "(was wolfSSL built with --enable-ocsp?)");
+            ABORT_FINALIZE(RS_RET_SYS_ERR);
+        }
+        dbgprintf("osslCtxInit: wolfSSL OCSP revocation checking enabled\n");
+    }
+#endif
     if (bHaveCert == 1 && SSL_CTX_use_certificate_chain_file(pThis->ctx, certFile) != 1) {
         LogError(0, RS_RET_TLS_CERT_ERR,
                  "Error: Certificate file could not be accessed. "
@@ -526,7 +591,7 @@ void net_ossl_lastOpenSSLErrorMsg(
     }
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
 /* initialize tls config commands in openssl context
  */
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd) {
@@ -716,7 +781,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
                                            int *pbFoundPositiveMatch,
                                            const sbool allowX509CheckHost) {
     permittedPeers_t *pPeer;
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L || defined(ENABLE_WOLFSSL)
     int osslRet;
     unsigned int x509flags = 0;
 #endif
@@ -737,7 +802,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
             CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
             if (*pbFoundPositiveMatch) break;
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L || defined(ENABLE_WOLFSSL)
             /* if we did not succeed so far, try ossl X509_check_host
              * ( Includes check against SubjectAlternativeName )
              * if prioritizeSAN set, only check against SAN
@@ -2425,7 +2490,7 @@ BEGINobjQueryInterface(net_ossl)
     pIf->osslPeerfingerprint = net_ossl_peerfingerprint;
     pIf->osslGetpeercert = net_ossl_getpeercert;
     pIf->osslChkpeercertvalidity = net_ossl_chkpeercertvalidity;
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
     pIf->osslApplyTlscgfcmd = net_ossl_apply_tlscgfcmd;
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
     pIf->osslSetBioCallback = net_ossl_set_bio_callback;

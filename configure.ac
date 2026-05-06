@@ -1276,6 +1276,22 @@ AC_ARG_ENABLE(wolfssl,
 ])
 AM_CONDITIONAL(ENABLE_WOLFSSL, [test "x$enable_wolfssl" = "xyes"])
 
+rsyslog_wolfssl_has_crl=no
+rsyslog_wolfssl_has_ocsp=no
+if test "x$enable_wolfssl" = "xyes"; then
+	save_CFLAGS=$CFLAGS
+	CFLAGS="$CFLAGS $WOLFSSL_CFLAGS"
+	AC_CHECK_DECL([HAVE_CRL],
+		[rsyslog_wolfssl_has_crl=yes],
+		[AC_MSG_ERROR([wolfSSL must be built with --enable-crl to support rsyslog certificate revocation lists])],
+		[[#include <wolfssl/options.h>]])
+	AC_CHECK_DECL([HAVE_OCSP],
+		[rsyslog_wolfssl_has_ocsp=yes],
+		[AC_MSG_ERROR([wolfSSL must be built with --enable-ocsp to support rsyslog OCSP revocation checking])],
+		[[#include <wolfssl/options.h>]])
+	CFLAGS=$save_CFLAGS
+fi
+
 # openssl support
 AC_ARG_ENABLE(openssl,
         [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=no@:>@])],
@@ -3718,6 +3734,8 @@ echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
 echo "    wolfssl network stream driver enabled:    $enable_wolfssl"
+echo "        with CRL support:                     $rsyslog_wolfssl_has_crl"
+echo "        with OCSP support:                    $rsyslog_wolfssl_has_ocsp"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    Mbed TLS network stream driver enabled:   $enable_mbedtls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
