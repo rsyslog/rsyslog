@@ -2365,44 +2365,40 @@ if ENABLE_MYSQL_TESTS
 TESTS += $(TESTS_MYSQL)
 
 mysql-basic.log: mysqld-start.log
-mysql-basic-cnf6.log: mysqld-start.log
-mysql-asyn.log: mysqld-start.log
-mysql-actq-mt.log: mysqld-start.log
-mysql-actq-mt-withpause.log: mysqld-start.log
-action-tx-single-processing.log: mysqld-start.log
-action-tx-errfile.log: mysqld-start.log
+mysql-basic-cnf6.log: mysql-basic.log
+mysql-asyn.log: mysql-basic-cnf6.log
+mysql-actq-mt.log: mysql-asyn.log
+mysql-actq-mt-withpause.log: mysql-actq-mt.log
+action-tx-single-processing.log: mysql-actq-mt-withpause.log
+action-tx-errfile-maxsize.log: action-tx-single-processing.log
+action-tx-errfile.log: action-tx-errfile-maxsize.log
 
-mysqld-stop.log: mysql-basic.log \
-	mysql-basic-cnf6.log \
-	mysql-asyn.log \
-	mysql-actq-mt.log \
-	mysql-actq-mt-withpause.log \
-	action-tx-single-processing.log \
-	action-tx-errfile.log
+mysqld-stop.log: action-tx-errfile.log
 
 if HAVE_VALGRIND
 TESTS += $(TESTS_MYSQL_VALGRIND)
 
-mysql-basic-vg.log: mysqld-start.log
-mysql-asyn-vg.log: mysqld-start.log
-mysql-actq-mt-withpause-vg.log: mysqld-start.log
+mysql-basic-vg.log: action-tx-errfile.log
+mysql-asyn-vg.log: mysql-basic-vg.log
+mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
 
-mysqld-stop.log: mysql-basic-vg.log \
-	mysql-asyn-vg.log \
-	mysql-actq-mt-withpause-vg.log
+mysqld-stop.log: mysql-actq-mt-withpause-vg.log
 endif
 
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
 TESTS += $(TESTS_LIBDBI)
 
-libdbi-basic.log: mysqld-start.log
-libdbi-asyn.log: mysqld-start.log
-mysqld-stop.log: libdbi-basic.log \
-	libdbi-asyn.log
+if HAVE_VALGRIND
+libdbi-basic.log: mysql-actq-mt-withpause-vg.log
+else
+libdbi-basic.log: action-tx-errfile.log
+endif
+libdbi-asyn.log: libdbi-basic.log
+mysqld-stop.log: libdbi-asyn.log
 if HAVE_VALGRIND
 TESTS += $(TESTS_LIBDBI_VALGRIND)
 
-libdbi-basic-vg.log: mysqld-start.log
+libdbi-basic-vg.log: libdbi-asyn.log
 mysqld-stop.log: libdbi-basic-vg.log
 endif
 endif
