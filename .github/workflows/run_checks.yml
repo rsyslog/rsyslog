@@ -1792,7 +1792,52 @@ jobs:
               export CC=gcc
               export TEST_MAX_RUNTIME=1200
               autoreconf -fvi
-              if [ "$ARCH" = "armhf" ] || [ "$ARCH" = "s390x" ]; then
+              if [ "$ARCH" = "s390x" ]; then
+                apt-get update
+                apt-get install -y --no-install-recommends \
+                  curl liblognorm-dev libmaxminddb-dev libsnmp-dev \
+                  libssl-dev libsystemd-dev libyaml-dev libzstd-dev openssl
+                rm -rf /var/lib/apt/lists/*
+                useradd --create-home rsyslogci
+                chown -R rsyslogci:rsyslogci /rsyslog
+                su rsyslogci -c "./configure --enable-silent-rules \
+                  --enable-testbench --disable-extended-tests \
+                  --enable-imdiag --disable-imdocker \
+                  --enable-imfile --enable-imfile-tests \
+                  --enable-impstats --enable-imptcp \
+                  --enable-mmanon --enable-mmaudit \
+                  --enable-mmcount --enable-mmdblookup \
+                  --enable-mmfields --enable-mmjsonparse \
+                  --enable-mmnormalize --enable-mmpstrucdata \
+                  --enable-mmrm1stspace --enable-mmsequence \
+                  --enable-mmsnmptrapd --enable-mmutf8fix \
+                  --enable-mail \
+                  --disable-omhttp --enable-omjournal \
+                  --enable-omprog --enable-omruleset \
+                  --enable-omstdout --enable-omuxsock \
+                  --enable-pmaixforwardedfrom --enable-pmciscoios \
+                  --enable-pmcisconames --enable-pmlastmsg \
+                  --enable-pmnull --enable-pmsnare \
+                  --enable-gnutls --enable-openssl \
+                  --enable-relp --enable-snmp \
+                  --enable-usertools --enable-imdtls --enable-omdtls \
+                  --enable-imjournal \
+                  --enable-fmhash --enable-libzstd \
+                  --enable-klog --enable-kmsg \
+                  --enable-libsystemd=yes \
+                  --disable-libgcrypt --disable-liblogging-stdlog \
+                  --disable-fmhttp --disable-mysql \
+                  --disable-valgrind --without-valgrind-testbench \
+                  --disable-helgrind --disable-mmkubernetes \
+                  --disable-omkafka --disable-imkafka \
+                  --disable-ommongodb --disable-omrabbitmq \
+                  --disable-mmdarwin \
+                  --disable-root-tests \
+                  --disable-elasticsearch-tests \
+                  --disable-kafka-tests --disable-snmp-tests \
+                  --disable-journal-tests"
+                su rsyslogci -c "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
+              elif [ "$ARCH" = "armhf" ]; then
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker --enable-imfile \
                   --disable-default-tests --disable-impstats \
@@ -1851,8 +1896,29 @@ jobs:
                   --disable-elasticsearch-tests \
                   --disable-kafka-tests --disable-snmp-tests
               fi
-              make -j8
-              make -j3 check
+              if [ "$ARCH" = "s390x" ]; then
+                S390X_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
+                  yaml-basic.sh yaml-script-call.sh yaml-ratelimit-policywatch.sh \
+                  imudp_ratelimit_name.sh ratelimit_name.sh imrelp_ratelimit_name.sh \
+                  imtcp-basic.sh imtcp-starvation-1.sh \
+                  imtcp_framing_regex_maxmsg_overflow.sh imtcp-impstats.sh \
+                  imptcp_framing_regex.sh imptcp-connection-msg-received.sh \
+                  diskqueue-truncated-segment-startup.sh \
+                  diskqueue-oncorruption-missing-segment.sh \
+                  sndrcv_tls_anon_rebind.sh sndrcv_tls_certvalid_action_level.sh \
+                  sndrcv_tls_ossl_certvalid_action_level.sh \
+                  sndrcv_tls_ossl_anon_rebind.sh \
+                  sndrcv_relp.sh sndrcv_relp_tls_certvalid.sh \
+                  imdtls-basic.sh sndrcv_dtls_certvalid.sh \
+                  imfile-basic.sh imfile-logrotate.sh \
+                  mmjsonparse_simple.sh mmnormalize_variable.sh mmpstrucdata.sh \
+                  omprog-feedback.sh omprog-feedback-timeout.sh \
+                  uxsock_simple.sh"
+                su rsyslogci -c "make -j8 && timeout 40m make -j2 check TESTS=\"$S390X_TESTS\""
+              else
+                make -j8
+                make -j3 check
+              fi
             '
 
       - name: Collect test logs
