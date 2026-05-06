@@ -67,7 +67,7 @@ jobs:
 
       - name: run impstats push test
         env:
-          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
           RSYSLOG_TESTBENCH_EXTERNAL_VM_URL: http://host.docker.internal:8428
           DOCKER_RUN_EXTRA_OPTS: --add-host=host.docker.internal:host-gateway
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-

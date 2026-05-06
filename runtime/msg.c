@@ -4619,8 +4619,8 @@ static uchar *jsonPathGetLeaf(uchar *name, int lenName) {
 static json_bool jsonVarExtract(struct json_object *root, const char *key, struct json_object **value) {
     char namebuf[MAX_VARIABLE_NAME_LEN];
     int key_len = strlen(key);
-    char *array_idx_start = strstr(key, "[");
-    char *array_idx_end = NULL;
+    const char *array_idx_start = strstr(key, "[");
+    const char *array_idx_end = NULL;
     char *array_idx_num_end_discovered = NULL;
     struct json_object *arr = NULL;
     if (array_idx_start != NULL) {

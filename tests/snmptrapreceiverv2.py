@@ -17,6 +17,17 @@ if sys.version_info >= (3, 11):
         print(f"Warning: Could not set asyncio event loop policy: {e}", file=sys.stderr)
 
 try:
+    loop = asyncio.get_event_loop()
+    if loop.is_closed():
+        raise RuntimeError("current asyncio event loop is closed")
+except RuntimeError:
+    # pysnmp's asyncio UDP transport still calls get_event_loop().
+    # Python 3.14 no longer creates a main-thread loop implicitly.
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    print("Created asyncio event loop for pysnmp transport", file=sys.stderr)
+
+try:
     from pysnmp.entity import engine, config
     from pysnmp.carrier.asyncio.dgram import udp  # Changed from asyncore to asyncio
     from pysnmp.entity.rfc3413 import ntfrcv

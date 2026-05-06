@@ -1374,7 +1374,7 @@ finalize_it:
 
 static rsRetVal SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPriorityString) {
     DEFiRet;
-    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+    nsd_ossl_t __attribute__((unused)) *pThis = (nsd_ossl_t *)pNsd;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
@@ -1405,7 +1405,7 @@ static rsRetVal SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPr
 }
 
 
-static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pThis) {
+static rsRetVal applyGnutlsPriorityString(nsd_ossl_t __attribute__((unused)) *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 

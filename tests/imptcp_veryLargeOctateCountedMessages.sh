@@ -4,6 +4,9 @@
 # added 2015-10-17 by singh.janmejay
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
+# The 32-thread/100k payload stress case overloads TSAN instrumentation; non-TSAN
+# lanes still cover it, and TSAN still covers lighter imptcp tests.
+skip_TSAN "the 32-thread/100k payload imptcp stress case overloads TSAN instrumentation"
 export NUMMESSAGES=20000
 generate_conf
 add_conf '$MaxMessageSize 100k

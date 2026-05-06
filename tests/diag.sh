@@ -207,6 +207,26 @@ skip_ASAN() {
         fi
 }
 
+# function to skip a test only when both ARM and ASan are active
+# $1 is the reason why the ARM ASan combination is not supported
+skip_ARM_ASAN() {
+	reason="$1"
+	echo skip:_ARM_ASAN, ARCH "$ARCH", GITHUB_RUNNER_ARCH "$GITHUB_RUNNER_ARCH", CFLAGS "$CFLAGS"
+	[[ "$CFLAGS" == *"sanitize=address"* ]] || return 0
+
+	for arch in "$ARCH" "$GITHUB_RUNNER_ARCH" "$(uname -m 2>/dev/null)" "$(dpkg --print-architecture 2>/dev/null)"; do
+		[ -z "$arch" ] && continue
+		arch=$(printf '%s' "$arch" | tr '[:upper:]' '[:lower:]')
+		case "$arch" in
+			arm64|aarch64|armhf|armv7l*|armv7*|armv6l*|armv6*|arm*)
+				printf 'test skipped on ARM ASan (%s): %s\n' "$arch" "$reason"
+				exit 77
+				;;
+		esac
+	done
+	return 0
+}
+
 
 # ensure a dynamically loaded rsyslog plugin is available before continuing.
 # $1 - plugin name (without the leading im/om/mm prefix differentiation)
@@ -3524,29 +3544,68 @@ omhttp_validate_metadata_response() {
 }
 
 # download OTEL Collector binary from opentelemetry-collector-releases
+otel_collector_archive_valid() {
+	[ -f "$1" ] || return 1
+	tar -tzf "$1" > /dev/null 2>&1
+}
+
+otel_collector_cached_file_valid() {
+	otel_collector_archive_valid "$dep_otel_collector_cached_file"
+}
+
 download_otel_collector() {
-	if [ ! -d $dep_cache_dir ]; then
+	if [ ! -d "$dep_cache_dir" ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
-		mkdir -p $dep_cache_dir
+		mkdir -p "$dep_cache_dir"
 	fi
-	if [ ! -f $dep_otel_collector_cached_file ]; then
-		if [ -f /local_dep_cache/$OTEL_COLLECTOR_DOWNLOAD ]; then
-			printf 'OTEL Collector: satisfying dependency %s from system cache.\n' "$OTEL_COLLECTOR_DOWNLOAD"
-			cp /local_dep_cache/$OTEL_COLLECTOR_DOWNLOAD $dep_otel_collector_cached_file
-		else
-			printf 'OTEL Collector: downloading %s from %s\n' "$OTEL_COLLECTOR_DOWNLOAD" "$dep_otel_collector_url"
-			wget -q $dep_otel_collector_url -O $dep_otel_collector_cached_file
+
+	if [ -f "$dep_otel_collector_cached_file" ]; then
+		if otel_collector_cached_file_valid; then
+			return
+		fi
+		printf 'OTEL Collector: cached archive %s is invalid; removing it.\n' "$dep_otel_collector_cached_file"
+		rm -f "$dep_otel_collector_cached_file"
+	fi
+
+	if [ -f /local_dep_cache/$OTEL_COLLECTOR_DOWNLOAD ]; then
+		printf 'OTEL Collector: satisfying dependency %s from system cache.\n' "$OTEL_COLLECTOR_DOWNLOAD"
+		dep_otel_collector_tmp_file="${dep_otel_collector_cached_file}.$$"
+		rm -f "$dep_otel_collector_tmp_file"
+		cp "/local_dep_cache/$OTEL_COLLECTOR_DOWNLOAD" "$dep_otel_collector_tmp_file"
+		if otel_collector_archive_valid "$dep_otel_collector_tmp_file"; then
+			mv -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
+			return
+		fi
+		printf 'OTEL Collector: system cache archive %s is invalid; downloading fresh copy.\n' "/local_dep_cache/$OTEL_COLLECTOR_DOWNLOAD"
+		rm -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
+	fi
+
+	if [ ! -f "$dep_otel_collector_cached_file" ]; then
+		printf 'OTEL Collector: downloading %s from %s\n' "$OTEL_COLLECTOR_DOWNLOAD" "$dep_otel_collector_url"
+		dep_otel_collector_tmp_file="${dep_otel_collector_cached_file}.$$"
+		rm -f "$dep_otel_collector_tmp_file"
+		wget -q "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"
+		if [ $? -ne 0 ]; then
+			echo "error during wget, retry:"
+			wget "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"
 			if [ $? -ne 0 ]; then
-				echo "error during wget, retry:"
-				wget $dep_otel_collector_url -O $dep_otel_collector_cached_file
-				if [ $? -ne 0 ]; then
-					rm -f $dep_otel_collector_cached_file
-					echo "Skipping test - unable to download OTEL Collector"
-					error_exit 77
-				fi
+				rm -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
+				echo "Skipping test - unable to download OTEL Collector"
+				error_exit 77
 			fi
 		fi
+		if ! otel_collector_archive_valid "$dep_otel_collector_tmp_file"; then
+			printf 'OTEL Collector: downloaded archive %s is invalid.\n' "$dep_otel_collector_tmp_file"
+			rm -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
+			echo "Skipping test - unable to obtain valid OTEL Collector archive"
+			error_exit 77
+		fi
+		mv -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
 	fi
+}
+
+otel_collector_extract_cached_file() {
+	(cd "$otelcol_work_dir" && tar -zxf "$dep_otel_collector_cached_file") > /dev/null
 }
 
 # prepare OTEL Collector instance for test
@@ -3569,7 +3628,7 @@ prepare_otel_collector() {
 	# Use per-test directory to allow parallel execution
 	otelcol_work_dir="$dep_work_dir/otelcol-${RSYSLOG_DYNNAME}"
 
-	if [ ! -f $dep_otel_collector_cached_file ]; then
+	if [ ! -f "$dep_otel_collector_cached_file" ]; then
 		echo "Dependency-cache does not have OTEL Collector package, did you download dependencies?"
 		error_exit 77
 	fi
@@ -3591,7 +3650,18 @@ prepare_otel_collector() {
 	rm -rf "$otelcol_work_dir"
 	echo "TEST USES OTEL COLLECTOR BINARY $dep_otel_collector_cached_file"
 	mkdir -p "$otelcol_work_dir"
-	(cd "$otelcol_work_dir" && tar -zxf $dep_otel_collector_cached_file) > /dev/null
+	if ! otel_collector_extract_cached_file; then
+		printf 'OTEL Collector: failed to extract cached archive %s; removing it and retrying download.\n' "$dep_otel_collector_cached_file"
+		rm -rf "$otelcol_work_dir"
+		rm -f "$dep_otel_collector_cached_file"
+		download_otel_collector
+		mkdir -p "$otelcol_work_dir"
+		if ! otel_collector_extract_cached_file; then
+			printf 'OTEL Collector: failed to extract archive %s after redownload.\n' "$dep_otel_collector_cached_file"
+			rm -rf "$otelcol_work_dir"
+			error_exit 77
+		fi
+	fi
 
 	# Find the actual binary location (tarball may extract to subdirectory or root)
 	otelcol_binary=""

@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        config: [alpine, clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
+        config: [alpine, clang9, clang21-noatomics, clang21-ndebug, gcc8-debug, gcc-11-ndebug, gcc15-gnu23-debug]
     steps:
       - name: git checkout project
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -80,15 +80,15 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-9'
               ;;
-          'clang18-ndebug')
+          'clang21-ndebug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CC='clang-18'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+              export CC='clang-21'
               ;;
-          'clang18-noatomics')
+          'clang21-noatomics')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-atomic-operations=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CC='clang-18'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+              export CC='clang-21'
               ;;
           'gcc8-debug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
@@ -100,13 +100,13 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CC='gcc-11'
               ;;
-          'gcc14-gnu23-debug')
+          'gcc15-gnu23-debug')
               # omamqp1 seems to have an issue with the build system - exclude it for now
               # rgerhards, 2024-12-06
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CFLAGS="-g -std=gnu23"
-              export CC='gcc-14'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+              export CFLAGS='-g -std=gnu23'
+              export CC='gcc-15'
               ;;
           *)
               echo "unknown configuration "
@@ -133,10 +133,10 @@ jobs:
       fail-fast: false
       matrix:
         config: [centos_7, centos_8, debian_sid, debian_13,
-                 ubuntu_24_imtcp_no_epoll,
+                 ubuntu_26_imtcp_no_epoll,
                  fedora_42, fedora_43,
                  ubuntu_20, ubuntu_24,
-                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
+                 ubuntu_26_san, ubuntu_26_tsan, ubuntu_22_distcheck,
                  openeuler, wolfssl, elasticsearch]
 
     steps:
@@ -213,11 +213,11 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
-          'ubuntu_24_imtcp_no_epoll')
+          'ubuntu_26_imtcp_no_epoll')
               # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
               # platforms where this is the case, thus we do a quick run on ubuntu where we also have all
               # thread and memory debuggers available.
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               # Note: we completely override the container configure options here!
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
@@ -268,13 +268,13 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export VERBOSE=1
               ;;
-          'ubuntu_24_san')
+          'ubuntu_26_san')
               # TODO: remove the -fno-sanitize=function once the root issue is solved. We use
               #       it in order to migrate to the newer sanitizer checker which otherwise
               #       would be much delayed. That was the prime reason we did not upgrade before.
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CC='clang'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+              export CC='clang-21'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
                       --enable-omotel \
@@ -288,13 +288,15 @@ jobs:
               export LSAN_OPTIONS='detect_leaks=0'
               export UBSAN_OPTIONS='print_stacktrace=1'
               ;;
-          'ubuntu_24_tsan')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+          'ubuntu_26_tsan')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
               export CI_MAKE_CHECK_OPT='-j2'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
-              export CC='clang'
+              export CC='clang-21'
+              # Clang 21 TSAN disables ASLR; Docker's default seccomp profile blocks that.
+              export DOCKER_RUN_EXTRA_OPTS='--security-opt seccomp=unconfined'
               # impstats has known and OK races
               # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
               # imhttp disabled because of race in civetweb (need to consider different lib)
@@ -315,7 +317,7 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
           'wolfssl')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \

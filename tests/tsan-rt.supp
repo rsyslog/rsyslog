@@ -8,4 +8,9 @@ race:doLogMsg
 race:setlocale
 race:doSIGTTIN
 race:libfaketime
+# ommysql uses per-worker MYSQL handles. Ubuntu 26.04/Clang 21 can report the
+# existing stock libmysqlclient false positive through OpenSSL frames
+# (memcmp/libcrypto) instead of libmysqlclient, so keep mysql-asyn's multi-worker
+# coverage and suppress only reports that include the external libcrypto frame.
+race:libcrypto.so.3
 race:libmysqlclient
