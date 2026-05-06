@@ -186,7 +186,7 @@ jobs:
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j4'
+          export CI_MAKE_CHECK_OPT='-j6'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
           case "${{ matrix.config }}" in
@@ -291,7 +291,7 @@ jobs:
           'ubuntu_26_tsan')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
-              export CI_MAKE_CHECK_OPT='-j2'
+              export CI_MAKE_CHECK_OPT='-j4'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang-21'
