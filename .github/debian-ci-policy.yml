@@ -7,6 +7,14 @@
     {
       "patch": "imfile-preserve-symlink-cleanup-notifications-with-deferr.patch",
       "reason": "Debian latest still carries an imfile patch that is already effectively upstream and now applies in reverse."
+    },
+    {
+      "patch": "ratelimit-preserve-severity-sentinel-on-s390x.patch",
+      "reason": "Debian latest carries an s390x ratelimit severity-sentinel patch that is already effectively upstream and now applies in reverse."
+    },
+    {
+      "patch": "queue-quarantine-runtime-disk-corruption-safely.patch",
+      "reason": "Debian latest carries a queue disk-corruption quarantine patch that is already effectively upstream and now applies in reverse."
     }
   ],
   "supplemental_build_deps": [],
