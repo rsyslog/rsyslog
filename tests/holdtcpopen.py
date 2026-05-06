@@ -39,7 +39,9 @@ def main():
             if not data:
                 break
         except socket.timeout:
-            pass
+            # No data yet; keep holding until data closes the connection or the
+            # deadline expires.
+            continue
 
     conn.close()
     listener.close()
