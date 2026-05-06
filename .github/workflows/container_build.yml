@@ -3,9 +3,9 @@ name: container image build
 
 on:
   pull_request:
-    # Run on every PR so this workflow can be used in branch protection.
-    # The actual container build is gated below and becomes a no-op when the
-    # PR does not touch files related to the rsyslog container family.
+    paths:
+      - 'packaging/docker/rsyslog/**'
+      - '.github/workflows/container_build.yml'
   push:
     branches: [main, master]
     paths:
@@ -33,23 +33,10 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Check for container image changes
-        id: container_changes
-        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46
-        with:
-          files: |
-            packaging/docker/rsyslog/**
-            .github/workflows/container_build.yml
-
       - name: Build rsyslog container family
-        # Keep the workflow green for unrelated PRs while still exercising the
-        # full image family whenever container packaging inputs change.
         # CI intentionally uses a non-release `ci-<sha>` tag. Stable release
         # workflows must inject their own explicit release version instead.
         id: build_containers
-        if: >-
-          ${{ github.event_name == 'workflow_dispatch' ||
-          steps.container_changes.outputs.any_changed == 'true' }}
         run: |
           short_sha="$(git rev-parse --short=12 HEAD)"
           echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
@@ -60,11 +47,13 @@ jobs:
         # config contracts for each role without requiring external services.
         # These runs are short-lived and use representative environment values
         # for images whose entrypoint/config expects them.
-        if: >-
-          ${{ github.event_name == 'workflow_dispatch' ||
-          steps.container_changes.outputs.any_changed == 'true' }}
+        # This workflow is intentionally path-scoped because these tests
+        # validate the PPA-backed container image family, not arbitrary source
+        # changes from normal pull requests.
+        env:
+          IMAGE_TAG_SUFFIX: ${{ steps.build_containers.outputs.short_sha }}
         run: |
-          tag="ci-${{ steps.build_containers.outputs.short_sha }}"
+          tag="ci-${IMAGE_TAG_SUFFIX}"
 
           docker run --rm \
             --entrypoint id \
@@ -102,12 +91,3 @@ jobs:
             -e VESPA_PORT=8080 \
             "rsyslog/rsyslog-etl:${tag}" \
             rsyslogd -N1 -f /etc/rsyslog.conf
-
-      - name: Skip container build, no relevant changes
-        # This step is intentionally successful so the workflow can participate
-        # in branch protection without forcing container rebuilds on unrelated
-        # changes.
-        if: >-
-          ${{ github.event_name != 'workflow_dispatch' &&
-          steps.container_changes.outputs.any_changed != 'true' }}
-        run: echo "No rsyslog container image changes detected; skipping build."

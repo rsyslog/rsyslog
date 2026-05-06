@@ -47,7 +47,7 @@ LABEL org.opencontainers.image.revision="${VCS_REF}"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional rsyslog modules/packages specific to the collector's role.
-RUN apt-get update && \
+RUN apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
         rsyslog-omhttp \

@@ -26,10 +26,13 @@ VERSION ?= $(DEFAULT_VERSION)
 PPA_CHANNEL ?= stable
 ifeq ($(PPA_CHANNEL),stable)
 RSYSLOG_APT_PPA = ppa:adiscon/v8-stable
+RSYSLOG_APT_ORIGIN = LP-PPA-adiscon-v8-stable
 else ifeq ($(PPA_CHANNEL),daily-stable)
 RSYSLOG_APT_PPA = ppa:adiscon/daily-stable
+RSYSLOG_APT_ORIGIN = LP-PPA-adiscon-daily-stable
 else
 RSYSLOG_APT_PPA =
+RSYSLOG_APT_ORIGIN =
 endif
 
 # Stable release targets derive the container tag from RSYSLOG_VERSION using
@@ -47,7 +50,8 @@ BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 VCS_REF ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
 OCI_BUILD_ARGS = --build-arg BUILD_DATE="$(BUILD_DATE)" \
                  --build-arg VCS_REF="$(VCS_REF)"
-PPA_BUILD_ARGS = --build-arg RSYSLOG_APT_PPA="$(RSYSLOG_APT_PPA)"
+PPA_BUILD_ARGS = --build-arg RSYSLOG_APT_PPA="$(RSYSLOG_APT_PPA)" \
+                 --build-arg RSYSLOG_APT_ORIGIN="$(RSYSLOG_APT_ORIGIN)"
 BUILDX_COMMON_ARGS = $(DOCKER_BUILD_FLAGS) \
                      --platform $(PLATFORMS) \
                      --push \

@@ -48,7 +48,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # - rsyslog-imhttp: For the built-in HTTP server (health, metrics, potential future ingestion).
 # - rsyslog-omhttp: For forwarding logs via HTTP.
 # apt-get update is run to ensure the package lists are fresh before installing.
-RUN apt-get update && \
+RUN apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends tzdata rsyslog-imhttp rsyslog-omhttp && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
