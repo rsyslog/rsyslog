@@ -1,5 +1,25 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+- 2026-05-06: ossl drvier: match PermittedPeer wildcards against cert identities
+  OpenSSL x509/name authorization only applied rsyslog wildcard matching to
+  the full OpenSSL subject string and then fell back to X509_check_host() for
+  configured peer names. That allowed exact FQDN entries to work, but wildcard
+  PermittedPeer entries such as "*.example.com" were not matched against the
+  certificate's SAN/CN identities the way gtls and mbedtls do.
+  Extract DNS SANs, IP SANs, and CN values in the OpenSSL path and match each
+  identity through the shared PermittedPeerWildcardMatch() helper. Keep the
+  legacy subject-DN check for existing configurations that authorize full
+  subject strings, and keep X509_check_host() as a fallback for non-wildcard
+  peer entries.
+  Add OpenSSL regression tests for both wildcard acceptance and wildcard
+  rejection.
+  Fixes rsyslog/rsyslog#6686
+- 2026-05-06: CI; added zizmor workflow security checks
+- 2026-05-06: CI: new tests based on s390x architecture (via QEMU)
+- 2026-05-06: new development container based on Ubunutu 26.04
+- 2026-05-06: CI: github action now also test un der Ubuntu 26.04
+  This includes builds with newer compilers. Also some fixes were applied
+  that came up with new static analyzer and build incompatibilities with 26.04
 - 2026-05-05: github action hardening and cleanup
 - 2026-05-05: improg: stop on child stdout EOF
   Issue https://github.com/rsyslog/rsyslog/issues/6791 reports that
