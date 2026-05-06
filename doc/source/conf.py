@@ -11,7 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import importlib.util
+import importlib
 import json
 import os
 import re
@@ -367,9 +367,10 @@ suppress_warnings = ['epub.unknown_project_files']
 
 def has_optional_extension(name):
     try:
-        return importlib.util.find_spec(name) is not None
+        importlib.import_module(name)
     except ImportError:
         return False
+    return True
 
 
 # The base URL which points to the root of the HTML documentation.
