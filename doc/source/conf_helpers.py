@@ -74,11 +74,19 @@ def get_current_stable_version():
         if not git_tag_output:
             return None
 
-        git_tag_list = re.sub('[A-Za-z]', '', git_tag_output).split('\n')
-        git_tag_list.sort(key=lambda s: [int(u) for u in s.split('.')])
+        git_tag_list = []
+        for tag in git_tag_output.splitlines():
+            match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', tag.strip())
+            if match:
+                git_tag_list.append(tuple(int(part) for part in match.groups()))
+
+        if not git_tag_list:
+            return None
+
+        git_tag_list.sort()
 
         # The latest tag is the last in the list
-        git_tag_latest = git_tag_list[-1]
+        git_tag_latest = "{}.{}.{}".format(*git_tag_list[-1])
 
         return git_tag_latest
 
@@ -88,7 +96,7 @@ def get_current_stable_version():
         return '0.0'
 
     # Return 'X.Y' from 'X.Y.Z'
-    return latest_tag[:-2]
+    return '.'.join(latest_tag.split('.')[:2])
 
 
 def get_next_stable_version():
