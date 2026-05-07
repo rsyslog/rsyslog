@@ -10,7 +10,6 @@ export NUMMESSAGES=2500
 # start up the instances
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 # certificates
 global(
@@ -21,7 +20,7 @@ global(
 )
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="gtls" StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" gnutlspriorityString="NORMAL:-MD5")
-input(type="imtcp" port="'$PORT_RCVR'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
@@ -29,11 +28,11 @@ if $msg contains "msgnum" then {
 	action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 }
 '
-startup 
+startup
+assign_file_content PORT_RCVR "$RSYSLOG_DYNNAME.rcvr_port"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 #certificates
 global(

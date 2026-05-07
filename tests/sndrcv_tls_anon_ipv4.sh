@@ -10,7 +10,6 @@ export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
