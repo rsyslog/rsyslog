@@ -109,6 +109,8 @@ def cleanup_started_file():
     try:
         os.remove(szSnmpLogfile + ".started")
     except OSError:
+        # The marker is best-effort cleanup; shutdown must continue if it is
+        # already gone or cannot be removed.
         pass
 
 
