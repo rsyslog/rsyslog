@@ -115,7 +115,9 @@ def onExit():
     # For illustrative purposes, this plugin skeleton appends the received logs
     # to a file. When implementing your plugin, remove the following code.
     global outfile
-    outfile.close()
+    if outfile is not None:
+        outfile.close()
+        outfile = None
 
 
 """

@@ -67,7 +67,11 @@ if len(sys.argv) > 4:
 # Create output files
 print(f"Creating output files: {szOutputfile}, {szSnmpLogfile}", file=sys.stderr)
 outputFile = open(szOutputfile,"w+")
-logFile = open(szSnmpLogfile,"a+")
+try:
+    logFile = open(szSnmpLogfile,"a+")
+except:
+    outputFile.close()
+    raise
 print("Output files created successfully", file=sys.stderr)
 
 # Assemble MIB viewer
@@ -156,14 +160,18 @@ print("Registering notification receiver", file=sys.stderr)
 ntfrcv.NotificationReceiver(snmpEngine, cbReceiverSnmp)
 
 # Run I/O dispatcher which would receive queries and send confirmations
-print("Starting transport dispatcher", file=sys.stderr)
 try:
-    snmpEngine.transportDispatcher.runDispatcher()
-except KeyboardInterrupt:
-    print("Received keyboard interrupt, shutting down", file=sys.stderr)
-except Exception as e:
-    print(f"Exception in dispatcher: {e}", file=sys.stderr)
-    raise
+    try:
+        print("Starting transport dispatcher", file=sys.stderr)
+        snmpEngine.transportDispatcher.runDispatcher()
+    except KeyboardInterrupt:
+        print("Received keyboard interrupt, shutting down", file=sys.stderr)
+    except Exception as e:
+        print(f"Exception in dispatcher: {e}", file=sys.stderr)
+        raise
+    finally:
+        cleanup_started_file()
+        snmpEngine.transportDispatcher.closeDispatcher()
 finally:
-    cleanup_started_file()
-    snmpEngine.transportDispatcher.closeDispatcher()
+    outputFile.close()
+    logFile.close()
