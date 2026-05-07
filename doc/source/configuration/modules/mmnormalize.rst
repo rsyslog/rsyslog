@@ -86,6 +86,15 @@ Action Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+.. list-table::
+   :widths: 30 70
+   :header-rows: 0
+
+   * - **turbo**
+     - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
 .. toctree::
    :hidden:
 
@@ -95,6 +104,7 @@ Action Parameters
    ../../reference/parameters/mmnormalize-userawmsg
    ../../reference/parameters/mmnormalize-path
    ../../reference/parameters/mmnormalize-variable
+   ../../reference/parameters/mmnormalize-turbo
 
 See Also
 ========
