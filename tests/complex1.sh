@@ -7,10 +7,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test currently does not work on all flavors of Solaris."
 export NUMMESSAGES=40000
-export RSYSLOG_PORT2="$(get_free_port)"
-export RSYSLOG_PORT3="$(get_free_port)"
 generate_conf
-echo ports: $TCPFLOOD_PORT $RSYSLOG_PORT2 $RSYSLOG_PORT3
 add_conf '
 $MaxMessageSize 10k
 
@@ -39,9 +36,10 @@ $omfileFlushInterval 1
 *.* ?dynfile;outfmt
 action(type="omfile" file ="'$RSYSLOG_DYNNAME'.countfile")
 # listener
-$InputTCPServerInputName '$TCPFLOOD_PORT'
+$InputTCPServerInputName R13514
 $InputTCPServerBindRuleset R13514
-$InputTCPServerRun '$TCPFLOOD_PORT'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port
+$InputTCPServerRun 0
 
 
 ## RULESET with listener
@@ -64,9 +62,10 @@ $omfileFlushInterval 1
 *.* ?dynfile;outfmt
 action(type="omfile" file ="'$RSYSLOG_DYNNAME'.countfile")
 # listener
-$InputTCPServerInputName '$RSYSLOG_PORT2'
+$InputTCPServerInputName R_PORT2
 $InputTCPServerBindRuleset R_PORT2
-$InputTCPServerRun '$RSYSLOG_PORT2'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port2
+$InputTCPServerRun 0
 
 
 
@@ -90,9 +89,10 @@ $omfileFlushInterval 1
 *.* ?dynfile;outfmt
 action(type="omfile" file ="'$RSYSLOG_DYNNAME'.countfile")
 # listener
-$InputTCPServerInputName '$RSYSLOG_PORT3'
+$InputTCPServerInputName R_PORT3
 $InputTCPServerBindRuleset R_PORT3
-$InputTCPServerRun '$RSYSLOG_PORT3'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port3
+$InputTCPServerRun 0
 '
 
 count_function() {
@@ -114,6 +114,10 @@ count_function() {
 }
 
 startup
+assign_file_content TCPFLOOD_PORT "$RSYSLOG_DYNNAME.tcpflood_port"
+assign_file_content RSYSLOG_PORT2 "$RSYSLOG_DYNNAME.tcpflood_port2"
+assign_file_content RSYSLOG_PORT3 "$RSYSLOG_DYNNAME.tcpflood_port3"
+echo ports: $TCPFLOOD_PORT $RSYSLOG_PORT2 $RSYSLOG_PORT3
 # send 40,000 messages of 400 bytes plus header max, via three dest ports
 export TCPFLOOD_PORT="$TCPFLOOD_PORT:$RSYSLOG_PORT2:$RSYSLOG_PORT3"
 tcpflood -m$NUMMESSAGES -rd400 -P129 -f5 -n3 -c15 -i1

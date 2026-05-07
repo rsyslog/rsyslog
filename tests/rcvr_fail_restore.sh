@@ -29,7 +29,6 @@ export PORT_RCVR="$TCPFLOOD_PORT"
 #valgrind="valgrind"
 echo starting sender
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueSize 2000
