@@ -4,8 +4,8 @@
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 
-export PORT_A="$(get_free_port)"
-export PORT_B="$(get_free_port)"
+read -r PORT_A PORT_B < <(get_free_ports 2 udp | tr '\n' ' ')
+export PORT_A PORT_B
 export POLICY_A="$(pwd)/${RSYSLOG_DYNNAME}.policy-a.yaml"
 export POLICY_B="$(pwd)/${RSYSLOG_DYNNAME}.policy-b.yaml"
 export OUT_A="$(pwd)/${RSYSLOG_DYNNAME}.out-a.log"

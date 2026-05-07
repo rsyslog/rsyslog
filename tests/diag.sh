@@ -2421,6 +2421,50 @@ get_free_port() {
 $PYTHON -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
+# prints $1 distinct free ports, one per line
+# This is meant for tests that need more than one preselected port in the same
+# config. It avoids duplicate values from repeated get_free_port calls by
+# keeping all probe sockets open until every requested port has been selected.
+# $2 may be "tcp" (default) or "udp".
+get_free_ports() {
+	if [ "$1" == "" ]; then
+		printf 'TESTBENCH_ERROR: get_free_ports requires a port count\n'
+		error_exit 100
+	fi
+	$PYTHON - "$1" "${2:-tcp}" <<'PYTHON'
+import socket
+import sys
+
+try:
+    count = int(sys.argv[1])
+except ValueError:
+    sys.exit("port count must be an integer")
+
+if count < 1:
+    sys.exit("port count must be positive")
+
+proto = sys.argv[2].lower()
+if proto == "tcp":
+    socktype = socket.SOCK_STREAM
+elif proto == "udp":
+    socktype = socket.SOCK_DGRAM
+else:
+    sys.exit("protocol must be tcp or udp")
+
+sockets = []
+try:
+    for _ in range(count):
+        sock = socket.socket(socket.AF_INET, socktype)
+        sock.bind(("", 0))
+        sockets.append(sock)
+    for sock in sockets:
+        print(sock.getsockname()[1])
+finally:
+    for sock in sockets:
+        sock.close()
+PYTHON
+}
+
 
 # return the inode number of file $1; file MUST exist
 get_inode() {
