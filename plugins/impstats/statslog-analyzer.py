@@ -177,16 +177,23 @@ else:
                             if szFileName not in outputFiles:
                                 if bDebugOutput:
                                     print "Creating file : " + szFileName
-                                outputFiles[szFileName] = open(szFileName, 'w')
-                                nLogFileCount += 1
+                                outputFile = open(szFileName, 'w')
+                                try:
+                                    outputFiles[szFileName] = outputFile
+                                    nLogFileCount += 1
 
-                                # Output CSV Header
-                                outputFiles[szFileName].write("Date;")
-                                outputFiles[szFileName].write("Host;")
-                                outputFiles[szFileName].write("Object;")
-                                for szField in aFields:
-                                    outputFiles[szFileName].write(szField + ";")
-                                outputFiles[szFileName].write("\n")
+                                    # Output CSV Header
+                                    outputFile.write("Date;")
+                                    outputFile.write("Host;")
+                                    outputFile.write("Object;")
+                                    for szField in aFields:
+                                        outputFile.write(szField + ";")
+                                    outputFile.write("\n")
+                                except Exception:
+                                    if outputFiles.get(szFileName) is outputFile:
+                                        del outputFiles[szFileName]
+                                    outputFile.close()
+                                    raise
                             # Output CSV Data
                             outputFiles[szFileName].write(filedate.strftime("%Y/%b/%d %H:%M:%S") + ";")
                             outputFiles[szFileName].write(szLogHost + ";")
@@ -215,8 +222,8 @@ else:
                 # Increment helper counter
                 nLogLineNum += 1
     finally:
-        for outFileName in outputFiles:
-            outputFiles[outFileName].close()
+        for outputFile in outputFiles.values():
+            outputFile.close()
         if errorlog is not None:
             errorlog.close()
 

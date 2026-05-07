@@ -72,11 +72,6 @@ def onInit():
     # emitted you must set 'level' to logging.DEBUG above.)
     logging.debug("onInit called")
 
-    # For illustrative purposes, this plugin skeleton appends the received logs
-    # to a file. When implementing your plugin, remove the following code.
-    global outfile
-    outfile = open("/tmp/logfile", "w")
-
 
 def onMessage(msg):
     """Process one log message received from rsyslog (e.g. send it to a
@@ -112,12 +107,8 @@ def onExit():
     """
     logging.debug("onExit called")
 
-    # For illustrative purposes, this plugin skeleton appends the received logs
-    # to a file. When implementing your plugin, remove the following code.
     global outfile
-    if outfile is not None:
-        outfile.close()
-        outfile = None
+    outfile = None
 
 
 """
@@ -141,26 +132,29 @@ print("OK", flush=True)
 
 endedWithError = False
 try:
-    line = sys.stdin.readline()
-    while line:
-        line = line.rstrip('\n')
-        try:
-            onMessage(line)
-            status = "OK"
-        except RecoverableError as e:
-            # Any line written to stdout that is not a status code will be
-            # treated as a recoverable error by 'omprog', and cause the action
-            # to be temporarily suspended. In this skeleton, we simply return
-            # a one-line representation of the Python exception. (If debugging
-            # is enabled in rsyslog, this line will appear in the debug logs.)
-            status = repr(e)
-            # We also log the complete exception to stderr (or to the logging
-            # handler(s) configured in doInit, if any).
-            logging.exception(e)
-
-        # Send the status code (or the one-line error message) to rsyslog:
-        print(status, flush=True)
+    # For illustrative purposes, this plugin skeleton appends the received logs
+    # to a file. When implementing your plugin, remove the following code.
+    with open("/tmp/logfile", "w") as outfile:
         line = sys.stdin.readline()
+        while line:
+            line = line.rstrip('\n')
+            try:
+                onMessage(line)
+                status = "OK"
+            except RecoverableError as e:
+                # Any line written to stdout that is not a status code will be
+                # treated as a recoverable error by 'omprog', and cause the action
+                # to be temporarily suspended. In this skeleton, we simply return
+                # a one-line representation of the Python exception. (If debugging
+                # is enabled in rsyslog, this line will appear in the debug logs.)
+                status = repr(e)
+                # We also log the complete exception to stderr (or to the logging
+                # handler(s) configured in doInit, if any).
+                logging.exception(e)
+
+            # Send the status code (or the one-line error message) to rsyslog:
+            print(status, flush=True)
+            line = sys.stdin.readline()
 
 except Exception:
     # If a non-recoverable error occurs, log it and terminate. The 'omprog'
