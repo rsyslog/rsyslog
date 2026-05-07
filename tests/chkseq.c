@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                if (val != i) {
+                if (!scanfOK || val != i) {
                     reachedEOF = 0;
                     goto breakIF;
                 }
