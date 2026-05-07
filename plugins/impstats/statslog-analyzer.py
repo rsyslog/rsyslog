@@ -13,10 +13,10 @@
 
 import sys
 import datetime
+import re
 
 # Include regex definitions
-#import statslog_regex
-from statslog_regex import *
+from statslog_regex import loglineindexes, loglineregexes
 
 # Set default variables
 szInput = "rsyslog-stats.log"
