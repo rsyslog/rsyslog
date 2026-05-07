@@ -2364,44 +2364,32 @@ endif
 if ENABLE_MYSQL_TESTS
 TESTS += $(TESTS_MYSQL)
 
-mysql-basic.log: mysqld-start.log
-mysql-basic-cnf6.log: mysql-basic.log
-mysql-asyn.log: mysql-basic-cnf6.log
-mysql-actq-mt.log: mysql-asyn.log
-mysql-actq-mt-withpause.log: mysql-actq-mt.log
-action-tx-single-processing.log: mysql-actq-mt-withpause.log
-action-tx-errfile-maxsize.log: action-tx-single-processing.log
-action-tx-errfile.log: action-tx-errfile-maxsize.log
-
-mysqld-stop.log: action-tx-errfile.log
+MYSQL_PARALLEL_LOGS = \
+	$(filter-out mysqld-start.log mysqld-stop.log, $(TESTS_MYSQL:.sh=.log))
 
 if HAVE_VALGRIND
 TESTS += $(TESTS_MYSQL_VALGRIND)
 
-mysql-basic-vg.log: action-tx-errfile.log
-mysql-asyn-vg.log: mysql-basic-vg.log
-mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
-
-mysqld-stop.log: mysql-actq-mt-withpause-vg.log
+MYSQL_PARALLEL_LOGS += $(TESTS_MYSQL_VALGRIND:.sh=.log)
 endif
 
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
 TESTS += $(TESTS_LIBDBI)
 
-if HAVE_VALGRIND
-libdbi-basic.log: mysql-actq-mt-withpause-vg.log
-else
-libdbi-basic.log: action-tx-errfile.log
-endif
-libdbi-asyn.log: libdbi-basic.log
-mysqld-stop.log: libdbi-asyn.log
+MYSQL_PARALLEL_LOGS += $(TESTS_LIBDBI:.sh=.log)
+
 if HAVE_VALGRIND
 TESTS += $(TESTS_LIBDBI_VALGRIND)
 
-libdbi-basic-vg.log: libdbi-asyn.log
-mysqld-stop.log: libdbi-basic-vg.log
+MYSQL_PARALLEL_LOGS += $(TESTS_LIBDBI_VALGRIND:.sh=.log)
 endif
 endif
+
+# MySQL tests use one shared server but each test creates its own database.
+# Start the server once, run independent database tests in parallel, then stop
+# the server only after all MySQL-backed tests have completed.
+$(MYSQL_PARALLEL_LOGS): mysqld-start.log
+mysqld-stop.log: $(MYSQL_PARALLEL_LOGS)
 endif #  MYSQL_TESTS
 
 
