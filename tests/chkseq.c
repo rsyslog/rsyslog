@@ -51,7 +51,7 @@
 
 int main(int argc, char *argv[]) {
     FILE *fp;
-    int val;
+    int val = -1;
     int i;
     int ret = 0;
     int scanfOK;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     int lostok = 0; /* how many messages are OK to be lost? */
     int nDups = 0;
     int increment = 1;
-    int reachedEOF;
+    int reachedEOF = 0;
     int edLen; /* length of extra data */
     static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the safe side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                 break;
             default:
                 printf("Invalid call of chkseq, optchar='%c'\n", opt);
-                printf("Usage: chkseq file -sstart -eend -d -E\n");
+                printf("Usage: chkseq -f<file> -s<start> -e<end> [-d] [-E] [-T] [-v] [-m<lostok>] [-i<increment>]\n");
                 exit(1);
         }
     }
@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
         while (val > i && lostok > 0) {
             --lostok;
             printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
-            ++i;
+            i += increment;
         }
         if (val != i) {
             if (val == i - increment && dupsPermitted) {
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                if (val != i) {
+                if (!scanfOK || val != i) {
                     reachedEOF = 0;
                     goto breakIF;
                 }
