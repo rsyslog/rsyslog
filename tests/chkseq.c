@@ -51,7 +51,7 @@
 
 int main(int argc, char *argv[]) {
     FILE *fp;
-    int val;
+    int val = -1;
     int i;
     int ret = 0;
     int scanfOK;
