@@ -703,6 +703,7 @@ EXTRA_DIST = \
     source/reference/parameters/imudp-defaulttz.rst \
     source/reference/parameters/imudp-device.rst \
     source/reference/parameters/imudp-ipfreebind.rst \
+    source/reference/parameters/imudp-listenportfilename.rst \
     source/reference/parameters/imudp-name-appendport.rst \
     source/reference/parameters/imudp-name.rst \
     source/reference/parameters/imudp-port.rst \

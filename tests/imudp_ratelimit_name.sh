@@ -8,20 +8,22 @@ export SENDMESSAGES=20
 export NUMMESSAGES=5
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines # ensure we wait for expected messages to arrive
 # Receiver PORT
-export PORT_RCVR="$(get_free_port)"
+export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 
 generate_conf
 add_conf '
 ratelimit(name="imudp_test_limit" interval="2" burst="5")
 
 module(load="../plugins/imudp/.libs/imudp")
-input(type="imudp" port="'$PORT_RCVR'" ratelimit.name="imudp_test_limit")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_FILE'"
+      ratelimit.name="imudp_test_limit")
 
 template(name="outfmt" type="string" string="%msg%\n")
 if $msg contains "msgnum:" then 
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 # Send 20 messages via UDP
 ./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES

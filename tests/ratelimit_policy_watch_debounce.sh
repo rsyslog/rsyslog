@@ -4,7 +4,7 @@
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 
-export PORT_RCVR="$(get_free_port)"
+export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
 export SENDMESSAGES=20
 
@@ -19,7 +19,8 @@ add_conf '
 global(processInternalMessages="on")
 ratelimit(name="debounce_limiter" policy="'$POLICY_FILE'" policyWatch="on" policyWatchDebounce="500ms")
 module(load="../plugins/imudp/.libs/imudp" batchSize="1")
-input(type="imudp" port="'$PORT_RCVR'" ratelimit.name="debounce_limiter" ruleset="main")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_FILE'"
+      ratelimit.name="debounce_limiter" ruleset="main")
 
 template(name="outfmt" type="string" string="RECEIVED RAW: %rawmsg%\n")
 
@@ -28,6 +29,7 @@ ruleset(name="main") {
 }
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 cat > "$POLICY_FILE" <<'YAML'
 interval: 1
