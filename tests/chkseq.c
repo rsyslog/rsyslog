@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                 break;
             default:
                 printf("Invalid call of chkseq, optchar='%c'\n", opt);
-                printf("Usage: chkseq file -sstart -eend -d -E\n");
+                printf("Usage: chkseq -f<file> -s<start> -e<end> [-d] [-E] [-T] [-v] [-m<lostok>] [-i<increment>]\n");
                 exit(1);
         }
     }
