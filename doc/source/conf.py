@@ -85,27 +85,7 @@ window.addEventListener("load", () => {{
         const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
         if (mermaids_to_add_zoom > 0) {{
             const svgs = d3.selectAll("{d3_selector}");
-            if (all_mermaids.length !== mermaids_processed.length) {{
-                setTimeout(() => {{
-                    const svgs = d3.selectAll("{d3_selector}");
-                    if (svgs.size() !== mermaids_to_add_zoom) {{
-                        setTimeout(arguments.callee, 200);
-                        return;
-                    }}
-                    svgs.each(function() {{
-                        const svg = d3.select(this);
-                        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
-                        const inner = svg.select("g");
-                        const zoom = d3.zoom().on("zoom", function(event) {{
-                            inner.attr("transform", event.transform);
-                        }});
-                        svg.call(zoom);
-                    }});
-                }}, 200);
-            }} else if (svgs.size() !== mermaids_to_add_zoom) {{
-                setTimeout(arguments.callee, 200);
-                return;
-            }} else {{
+            function addZoomToSvgs(svgs) {{
                 svgs.each(function() {{
                     const svg = d3.select(this);
                     svg.html("<g class='wrapper'>" + svg.html() + "</g>");
@@ -115,6 +95,20 @@ window.addEventListener("load", () => {{
                     }});
                     svg.call(zoom);
                 }});
+            }}
+            if (all_mermaids.length !== mermaids_processed.length || svgs.size() !== mermaids_to_add_zoom) {{
+                function waitForSvgsReady() {{
+                    const svgs = d3.selectAll("{d3_selector}");
+                    if (svgs.size() !== mermaids_to_add_zoom) {{
+                        setTimeout(waitForSvgsReady, 200);
+                        return;
+                    }}
+                    addZoomToSvgs(svgs);
+                }}
+                setTimeout(waitForSvgsReady, 200);
+                return;
+            }} else {{
+                addZoomToSvgs(svgs);
             }}
         }}
     }}
@@ -237,20 +231,20 @@ if _env_version and _env_release_type:
 # For this to be true, it means that we are not attempting to build from
 # a release tarball, as otherwise the values above would have been replaced
 # with official stable release values.
-elif version == '8':
+elif version.split('.')[0] == '8':
+    release_type = 'stable'
 
     # Confirm that a .git folder is available. If not, skip all
     # following steps intended to generate daily stable build values for
     # 'version' and 'release' build configuration variables. In that
     # case, keep the placeholder values already set.
 
-    # If building from a Git repo, then this directory should be present
-    # in the parent directory.
-    git_dir = \
-        os.path.abspath(os.path.join(os.getcwd(), os.pardir)) \
-        + os.sep + '.git'
+    # If building from a Git repo, then this entry should be present at
+    # the repository root.
+    git_dir = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), os.pardir, os.pardir, '.git'))
 
-    if os.path.isdir(git_dir):
+    if os.path.exists(git_dir):
 
         # If the 'version' variable is left with a placeholder it means
         # that this build configuration is being called from a Git repo
