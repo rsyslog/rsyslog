@@ -110,6 +110,7 @@ struct instanceConf_s {
     uchar *pszBindAddr; /* IP to bind socket to */
     char *pszBindDevice; /* Device to bind socket to */
     uchar *pszBindPort; /* Port to bind socket to */
+    uchar *pszLstnPortFileName; /* file receiving dynamic port for port="0" */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
     uchar *inputname;
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
@@ -171,6 +172,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrArray, CNFPARAM_REQUIRED}, /* legacy: InputTCPServerRun */
+                                           {"listenportfilename", eCmdHdlrString, 0},
                                            {"defaulttz", eCmdHdlrString, 0},
                                            {"inputname", eCmdHdlrGetWord, 0},
                                            {"inputname.appendport", eCmdHdlrBinary, 0},
@@ -200,6 +202,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
 
     inst->pszBindPort = NULL;
+    inst->pszLstnPortFileName = NULL;
     inst->pszBindAddr = NULL;
     inst->pszBindDevice = NULL;
     inst->pszBindRuleset = NULL;
@@ -257,6 +260,38 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal writeListenPortFile(const uchar *const pszLstnPortFileName, const unsigned listenPort) {
+    FILE *fp = NULL;
+    DEFiRet;
+
+    if ((fp = fopen((const char *)pszLstnPortFileName, "w")) == NULL) {
+        LogError(errno, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "error while trying to open file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (fprintf(fp, "%u", listenPort) < 0) {
+        LogError(errno, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "error while trying to write file");
+        fclose(fp);
+        fp = NULL;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (fclose(fp) != 0) {
+        fp = NULL;
+        LogError(errno, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "error while trying to close file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fp = NULL;
+
+finalize_it:
+    if (fp != NULL) fclose(fp);
+    RETiRet;
+}
+
 
 /* This function is called when a new listener shall be added. It takes
  * the instance config description, tries to bind the socket and, if that
@@ -289,12 +324,24 @@ static rsRetVal addListner(instanceConf_t *inst) {
 
     newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, 0, inst->ipfreebind, inst->pszBindDevice);
     if (newSocks != NULL) {
+        if (inst->pszLstnPortFileName != NULL && newSocks[0] != 1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imudp: listenPortFileName requires exactly one bound "
+                     "socket, got %d; set address to a single local address",
+                     newSocks[0]);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
         /* we now need to add the new sockets to the existing set */
         /* ready to copy */
         for (iSrc = 1; iSrc <= newSocks[0]; ++iSrc) {
-            struct sockaddr_in sa;
-            socklen_t salen = sizeof(sa);
+            union {
+                struct sockaddr_storage storage;
+                struct sockaddr_in ipv4;
+                struct sockaddr_in6 ipv6;
+            } sa;
+            socklen_t salen = sizeof(sa.storage);
             const char *suffix;
+            unsigned listenPort = 0;
             CHKmalloc(newlcnfinfo = (struct lstn_s *)calloc(1, sizeof(struct lstn_s)));
             newlcnfinfo->next = NULL;
             newlcnfinfo->sock = newSocks[iSrc];
@@ -302,14 +349,16 @@ static rsRetVal addListner(instanceConf_t *inst) {
             newlcnfinfo->dfltTZ = inst->dfltTZ;
             newlcnfinfo->ratelimiter = NULL;
             /* query socket IPv4 vs IPv6 */
-            sa.sin_family = 0; /* just to keep CLANG static analyzer happy! */
-            if (getsockname(newlcnfinfo->sock, (struct sockaddr *)&sa, &salen) != 0) {
+            sa.storage.ss_family = 0; /* just to keep CLANG static analyzer happy! */
+            if (getsockname(newlcnfinfo->sock, (struct sockaddr *)&sa.storage, &salen) != 0) {
                 suffix = "error_getting_AF...";
             } else {
-                if (sa.sin_family == AF_INET) {
+                if (sa.storage.ss_family == AF_INET) {
                     suffix = "IPv4";
-                } else if (sa.sin_family == AF_INET6) {
+                    listenPort = ntohs(sa.ipv4.sin_port);
+                } else if (sa.storage.ss_family == AF_INET6) {
                     suffix = "IPv6";
+                    listenPort = ntohs(sa.ipv6.sin6_port);
                 } else {
                     suffix = "AF_unknown";
                 }
@@ -353,6 +402,15 @@ static rsRetVal addListner(instanceConf_t *inst) {
             CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("disallowed"), ctrType_IntCtr,
                                         CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrDisallowed)));
             CHKiRet(statsobj.ConstructFinalize(newlcnfinfo->stats));
+            if (inst->pszLstnPortFileName != NULL) {
+                if (listenPort == 0) {
+                    LogError(0, RS_RET_IO_ERROR,
+                             "imudp: listenPortFileName: "
+                             "could not determine bound UDP port");
+                    ABORT_FINALIZE(RS_RET_IO_ERROR);
+                }
+                CHKiRet(writeListenPortFile(inst->pszLstnPortFileName, listenPort));
+            }
             /* link to list. Order must be preserved to take care for
              * conflicting matches.
              */
@@ -909,6 +967,8 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
             continue; /* array, handled by caller */
+        } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
+            CHKmalloc(inst->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
             if (inst->inputname != NULL) {
                 LogError(0, RS_RET_INVALID_PARAMS,
@@ -1007,6 +1067,7 @@ BEGINnewInpInst
     struct cnfparamvals *pvals;
     int i;
     int portIdx;
+    int portFileIdx;
     CODESTARTnewInpInst;
     DBGPRINTF("newInpInst (imudp)\n");
 
@@ -1020,6 +1081,14 @@ BEGINnewInpInst
 
     portIdx = cnfparamGetIdx(&inppblk, "port");
     assert(portIdx != -1);
+    portFileIdx = cnfparamGetIdx(&inppblk, "listenportfilename");
+    assert(portFileIdx != -1);
+    if (pvals[portFileIdx].bUsed && pvals[portIdx].val.d.ar->nmemb > 1) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "imudp: listenPortFileName cannot be used with multiple "
+                 "port values; use one input per port");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
     for (i = 0; i < pvals[portIdx].val.d.ar->nmemb; ++i) {
         CHKiRet(createListner(pvals[portIdx].val.d.ar->arr[i], pvals));
     }
@@ -1196,6 +1265,7 @@ BEGINfreeCnf
     CODESTARTfreeCnf;
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->pszBindPort);
+        free(inst->pszLstnPortFileName);
         free(inst->pszBindAddr);
         free(inst->pszBindDevice);
         free(inst->pszBindRuleset);

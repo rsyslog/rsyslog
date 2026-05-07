@@ -4,8 +4,8 @@
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 
-export PORT_A="$(get_free_port)"
-export PORT_B="$(get_free_port)"
+export PORT_A_FILE="${RSYSLOG_DYNNAME}.imudp_port_a"
+export PORT_B_FILE="${RSYSLOG_DYNNAME}.imudp_port_b"
 export POLICY_A="$(pwd)/${RSYSLOG_DYNNAME}.policy-a.yaml"
 export POLICY_B="$(pwd)/${RSYSLOG_DYNNAME}.policy-b.yaml"
 export OUT_A="$(pwd)/${RSYSLOG_DYNNAME}.out-a.log"
@@ -30,8 +30,10 @@ global(processInternalMessages="on")
 ratelimit(name="watch_a" policy="'$POLICY_A'" policyWatch="on" policyWatchDebounce="200ms")
 ratelimit(name="watch_b" policy="'$POLICY_B'" policyWatch="on" policyWatchDebounce="200ms")
 module(load="../plugins/imudp/.libs/imudp" batchSize="1")
-input(type="imudp" port="'$PORT_A'" ratelimit.name="watch_a" ruleset="a")
-input(type="imudp" port="'$PORT_B'" ratelimit.name="watch_b" ruleset="b")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_A_FILE'"
+      ratelimit.name="watch_a" ruleset="a")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_B_FILE'"
+      ratelimit.name="watch_b" ruleset="b")
 
 template(name="outfmt" type="string" string="RECEIVED RAW: %rawmsg%\n")
 
@@ -53,6 +55,8 @@ count_msgs() {
 }
 
 startup
+assign_file_content PORT_A "$PORT_A_FILE"
+assign_file_content PORT_B "$PORT_B_FILE"
 
 tcpflood -Tudp -p"$PORT_A" -m "$SENDMESSAGES" -M "msgnum:"
 tcpflood -Tudp -p"$PORT_B" -m "$SENDMESSAGES" -M "msgnum:"
