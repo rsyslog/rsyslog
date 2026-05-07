@@ -88,7 +88,6 @@ cat "$CERTDIR/client-int2-cert.pem" "$CERTDIR/intermediate-ca2-cert.pem" > "$CER
 }
 
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 export SERVER_CN="rsyslogserver"
 export CLIENT_CN="rsyslogclient"
 
@@ -106,7 +105,7 @@ module(  load="../plugins/imtcp/.libs/imtcp"
         StreamDriver.Mode="1"
         PermittedPeer="'$CLIENT_CN'"
         StreamDriver.AuthMode="x509/name" )
-input(  type="imtcp" port="'$PORT_RCVR'" )
+input(  type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port" )
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'"
@@ -114,10 +113,10 @@ $template dynfile,"'$RSYSLOG_OUT_LOG'"
 '
 
 startup
+assign_file_content PORT_RCVR "$RSYSLOG_DYNNAME.rcvr_port"
 export RSYSLOG_DEBUGLOG="log2"
 
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 global(
     defaultNetstreamDriverCAFile="'$CERTDIR'/ca-root-cert.pem"

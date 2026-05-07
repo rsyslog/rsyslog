@@ -12,7 +12,6 @@ export NUMMESSAGES=25000 #25000
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(	
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -26,14 +25,14 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 # then SENDER sends to this port (not tcpflood!)
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-export PORT_RCVR=$TCPFLOOD_PORT # save this, will be rewritten with next config
+assign_file_content PORT_RCVR "$RSYSLOG_DYNNAME.rcvr_port"
 
 #export RSYSLOG_DEBUG="debug nostdout"
 export RSYSLOG_DEBUGLOG="log2"
