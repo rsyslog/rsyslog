@@ -134,7 +134,8 @@ VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "ALL ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # mysql needs a little help:
 RUN	mkdir -p /var/run/mysqld && \

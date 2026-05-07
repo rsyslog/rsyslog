@@ -432,7 +432,8 @@ RUN	groupadd -g 1002 rsyslog998 \
 	&& echo "rsyslog998 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 	&& echo "rsyslog997 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 	&& echo "rsyslog996 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-	&& echo "rsyslog995 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+	&& echo "rsyslog995 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "ALL ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 WORKDIR	/rsyslog
 USER	rsyslog
