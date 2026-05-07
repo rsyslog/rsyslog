@@ -43,6 +43,8 @@
  * -D	randomly drop and re-establish connections. Useful for stress-testing
  *      the TCP receiver.
  * -F	USASCII value for frame delimiter (in octet-stuffing mode), default LF
+ * -K   keep still-open plain TCP sockets open after sending. -K0 holds until
+ *      terminated, -K<N> holds for N seconds before closing connections.
  * -R	number of times the test shall be run (very useful for gathering performance
  *      data and other repetitive things). Default: 1
  * -S   number of seconds to sleep between different runs (-R) Default: 30
@@ -122,6 +124,7 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <limits.h>
 #ifdef ENABLE_RELP
     #include <librelp.h>
 #endif
@@ -234,6 +237,7 @@ static int bShowProgress = 1; /* show progress messages */
 static int bSilent = 0; /* completely silent operation */
 static int bRandConnDrop = 0; /* randomly drop connections? */
 static double dbRandConnDrop = 0.95; /* random drop probability */
+static int holdOpenSeconds = -1; /* keep plain TCP sockets open after sending? */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 static char *hostname = "172.20.245.8"; /* this is the "tratditional" default, as bad is it is... */
 static int bBinaryFile = 0; /* is -I file binary */
@@ -714,6 +718,48 @@ void closeConnections(void) {
         lenMsg = snprintf(msgBuf, sizeof(msgBuf), "\r%5.5d close connections\n", i);
         if (write(1, msgBuf, lenMsg)) {
         }
+    }
+}
+
+
+static void holdOpenConnections(void) {
+    int i;
+    int openSockets = 0;
+    unsigned int secondsRemaining;
+
+    if (holdOpenSeconds < 0) {
+        return;
+    }
+
+    for (i = 0; i < numConnections; ++i) {
+        if (sockArray[i] != -1) {
+            ++openSockets;
+        }
+    }
+    if (openSockets == 0) {
+        if (!bSilent) {
+            printf("no open TCP connections to hold\n");
+        }
+        return;
+    }
+
+    if (!bSilent) {
+        if (holdOpenSeconds == 0) {
+            printf("holding %d TCP connections until terminated\n", openSockets);
+        } else {
+            printf("holding %d TCP connections for %d seconds\n", openSockets, holdOpenSeconds);
+        }
+    }
+
+    if (holdOpenSeconds == 0) {
+        while (1) {
+            pause();
+        }
+    }
+
+    secondsRemaining = (unsigned int)holdOpenSeconds;
+    while (secondsRemaining > 0) {
+        secondsRemaining = sleep(secondsRemaining);
     }
 }
 
@@ -2061,7 +2107,7 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, buf, _IONBF, 48);
 
     while ((opt = getopt(argc, argv,
-                         "a:ABb:c:C:d:DeE:f:F:h:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
+                         "a:ABb:c:C:d:DeE:f:F:h:i:I:j:K:k:l:L:m:M:n:o:OP:p:rR:"
                          "sS:t:T:u:vW:w:x:XyYz:Z:H")) != -1) {
         switch (opt) {
             case 'b':
@@ -2098,6 +2144,19 @@ int main(int argc, char *argv[]) {
             case 'j':
                 jsonCookie = optarg;
                 break;
+            case 'K': {
+                char *endptr;
+                long parsed;
+
+                errno = 0;
+                parsed = strtol(optarg, &endptr, 10);
+                if (errno != 0 || *optarg == '\0' || *endptr != '\0' || parsed < 0 || parsed > INT_MAX) {
+                    fprintf(stderr, "-K requires a non-negative seconds value\n");
+                    exit(1);
+                }
+                holdOpenSeconds = (int)parsed;
+                break;
+            }
             case 'd':
                 extraDataLen = atoi(optarg);
                 if (extraDataLen > MAX_EXTRADATA_LEN) {
@@ -2298,6 +2357,21 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    if (holdOpenSeconds >= 0) {
+        if (transport != TP_TCP) {
+            fprintf(stderr, "-K is only supported with plain TCP transport\n");
+            exit(1);
+        }
+        if (numRuns != 1) {
+            fprintf(stderr, "-K cannot be combined with multiple runs (-R must be 1)\n");
+            exit(1);
+        }
+        if (bRandConnDrop) {
+            fprintf(stderr, "-K cannot be combined with random connection drops (-D)\n");
+            exit(1);
+        }
+    }
+
     if (portFile != NULL && numConnections != 1) {
         fprintf(stderr, "-w requires exactly one connection\n");
         exit(1);
@@ -2434,6 +2508,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    holdOpenConnections();
     closeConnections(); /* this is important so that we do not finish too early! */
 
 #ifdef ENABLE_RELP
