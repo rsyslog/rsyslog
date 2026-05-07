@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     int lostok = 0; /* how many messages are OK to be lost? */
     int nDups = 0;
     int increment = 1;
-    int reachedEOF;
+    int reachedEOF = 0;
     int edLen; /* length of extra data */
     static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the safe side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
