@@ -6,20 +6,22 @@ echo \[sndrcv_udp_nonstdpt_v6.sh\]: testing sending and receiving via udp
 
 # uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-ipv6-available
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imudp" address="127.0.0.1" port=`echo $PORT_RCVR`)
+input(type="imudp" address="::1" port="0" listenPortFileName="'$PORT_RCVR_FILE'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
@@ -30,7 +32,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port=`echo $TCPFLOOD_PORT`)
 
 action(type="omfwd"
-       target="127.0.0.1" port=`echo $PORT_RCVR`
+       target="::1" port=`echo $PORT_RCVR`
        protocol="udp" udp.sendDelay="1")
 ' 2
 startup 2
