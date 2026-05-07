@@ -51,6 +51,12 @@ contrib_mmkubernetes:
   notes:
     - WID is per-thread; shared caches in pData must be guarded.
 
+contrib_imkubernetes:
+  paths: ["contrib/imkubernetes/"]
+  requires_serialization: false
+  notes:
+    - The single input thread owns file tail state, partial-record buffers, cache entries, and the CURL client.
+
 mmsnareparse:
   paths: ["plugins/mmsnareparse/"]
   requires_serialization: false

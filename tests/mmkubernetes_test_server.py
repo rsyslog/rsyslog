@@ -72,7 +72,7 @@ pod_template = '''{{
       "annotation.with.empty.value":""
     }}
   }},
-  "status": {{
+{spec_block}  "status": {{
     "phase": "Running",
     "hostIP": "172.18.4.32",
     "podIP": "10.128.0.14",
@@ -97,6 +97,7 @@ err_template = '''{{
 }}'''
 
 is_busy = False
+include_node_name = os.environ.get("MMK8S_INCLUDE_NODE_NAME") == "1"
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
@@ -118,6 +119,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                 hsh['pod_name'] = comps[6]
                 hsh['kind'] = 'pods'
                 hsh['objectname'] = hsh['pod_name']
+                if include_node_name:
+                    hsh['spec_block'] = (
+                        '  "spec": {{\n'
+                        '    "nodeName": "{pod_name}-node"\n'
+                        '  }},\n'
+                    ).format(**hsh)
+                else:
+                    hsh['spec_block'] = ''
                 resp_template = pod_template
                 status = 200
             else:

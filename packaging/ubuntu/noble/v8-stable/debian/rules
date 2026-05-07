@@ -63,6 +63,7 @@ override_dh_auto_configure: build-qpid-proton
 		--enable-mmsequence \
 		--enable-mmfields \
 		--enable-mmrm1stspace \
+		--enable-imkubernetes \
 		--enable-mmkubernetes \
 		--enable-mmleefparse \
 		--enable-imczmq \
