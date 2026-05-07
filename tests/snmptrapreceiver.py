@@ -26,107 +26,94 @@ if len(sys.argv) > 4:
     szSnmpLogfile = sys.argv[4]
 
 # Create output files
-outputFile = open(szOutputfile,"w+")
-try:
-    logFile = open(szSnmpLogfile,"a+")
-except:
-    outputFile.close()
-    raise
+with open(szOutputfile,"w+") as outputFile:
+    with open(szSnmpLogfile,"a+") as logFile:
+        # Assemble MIB viewer
+        mibBuilder = builder.MibBuilder()
+        compiler.addMibCompiler(mibBuilder, sources=['file:///usr/share/snmp/mibs', 'file:///var/lib/snmp/mibs', '/usr/local/share/snmp/mibs/'])
+        mibViewController = view.MibViewController(mibBuilder)
+        # Pre-load MIB modules we expect to work with
+        try:
+            mibBuilder.loadModules('SNMPv2-MIB', 'SNMP-COMMUNITY-MIB', 'SYSLOG-MSG-MIB')
+        except Exception:
+            print("Failed loading MIBs")
 
-# Assemble MIB viewer
-mibBuilder = builder.MibBuilder()
-compiler.addMibCompiler(mibBuilder, sources=['file:///usr/share/snmp/mibs', 'file:///var/lib/snmp/mibs', '/usr/local/share/snmp/mibs/'])
-mibViewController = view.MibViewController(mibBuilder)
-# Pre-load MIB modules we expect to work with
-try:
-    mibBuilder.loadModules('SNMPv2-MIB', 'SNMP-COMMUNITY-MIB', 'SYSLOG-MSG-MIB')
-except Exception:
-    print("Failed loading MIBs")
+        # Create SNMP engine with autogenernated engineID and pre-bound to socket transport dispatcher
+        snmpEngine = engine.SnmpEngine()
 
-# Create SNMP engine with autogenernated engineID and pre-bound to socket transport dispatcher
-snmpEngine = engine.SnmpEngine()
+        # Transport setup
+        # UDP over IPv4, add listening interface/port
+        config.addTransport(
+            snmpEngine,
+            udp.domainName + (1,),
+            udp.UdpTransport().openServerMode((snmpip, snmpport))
+        )
 
-# Transport setup
-# UDP over IPv4, add listening interface/port
-config.addTransport(
-    snmpEngine,
-    udp.domainName + (1,),
-    udp.UdpTransport().openServerMode((snmpip, snmpport))
-)
+        # SNMPv1/2c setup
+        # SecurityName <-> CommunityName mapping
+        config.addV1System(snmpEngine, 'my-area', 'public')
 
-# SNMPv1/2c setup
-# SecurityName <-> CommunityName mapping
-config.addV1System(snmpEngine, 'my-area', 'public')
-
-print("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOutputfile))
-logFile.write("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOutputfile))
-logFile.flush()
-
-# Add PID file creation after startup message
-import os
-with open(szSnmpLogfile + ".started", "w") as f:
-    f.write(str(os.getpid()))
-
-# Callback function for receiving notifications
-# noinspection PyUnusedLocal,PyUnusedLocal,PyUnusedLocal
-def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
-    transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
-    if (bDebug):
-        szDebug = str("Notification From: %s, Domain: %s, SNMP Engine: %s, Context: %s" %
-            (transportAddress, transportDomain, contextEngineId.prettyPrint(), contextName.prettyPrint()))
-        print(szDebug)
-        logFile.write(szDebug)
+        print("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOutputfile))
+        logFile.write("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOutputfile))
         logFile.flush()
 
-    # Create output String
-    szOut = "Trap Source{}, Trap OID {}".format(transportAddress, transportDomain)
+        # Add PID file creation after startup message
+        import os
+        with open(szSnmpLogfile + ".started", "w") as f:
+            f.write(str(os.getpid()))
 
-    varBinds = [rfc1902.ObjectType(rfc1902.ObjectIdentity(x[0]), x[1]).resolveWithMib(mibViewController) for x in varBinds]
+        # Callback function for receiving notifications
+        # noinspection PyUnusedLocal,PyUnusedLocal,PyUnusedLocal
+        def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
+            transportDomain, transportAddress = snmpEngine.msgAndPduDsp.getTransportInfo(stateReference)
+            if (bDebug):
+                szDebug = str("Notification From: %s, Domain: %s, SNMP Engine: %s, Context: %s" %
+                    (transportAddress, transportDomain, contextEngineId.prettyPrint(), contextName.prettyPrint()))
+                print(szDebug)
+                logFile.write(szDebug)
+                logFile.flush()
 
-    for name, val in varBinds:
-        # Append to output String
-        szOut = szOut + ", Oid: {}, Value: {}".format(name.prettyPrint(), val.prettyPrint())
+            # Create output String
+            szOut = "Trap Source{}, Trap OID {}".format(transportAddress, transportDomain)
 
-        if isinstance(val, OctetString):
-            if (name.prettyPrint() != "SNMP-COMMUNITY-MIB::snmpTrapAddress.0"):
-                szOctets = val.asOctets()#.rstrip('\r').rstrip('\n')
-                szOut = szOut + ", Octets: {}".format(szOctets)
-        if (bDebug):
-            print('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
-    outputFile.write(szOut)
-    if "\n" not in szOut:
-        outputFile.write("\n")
-    outputFile.flush()
+            varBinds = [rfc1902.ObjectType(rfc1902.ObjectIdentity(x[0]), x[1]).resolveWithMib(mibViewController) for x in varBinds]
 
+            for name, val in varBinds:
+                # Append to output String
+                szOut = szOut + ", Oid: {}, Value: {}".format(name.prettyPrint(), val.prettyPrint())
 
-# Register SNMP Application at the SNMP engine
-ntfrcv.NotificationReceiver(snmpEngine, cbReceiverSnmp)
-
-# this job would never finish
-snmpEngine.transportDispatcher.jobStarted(1)
-
-def cleanup_started_file():
-    try:
-        os.remove(szSnmpLogfile + ".started")
-    except OSError:
-        # The marker is best-effort cleanup; shutdown must continue if it is
-        # already gone or cannot be removed.
-        pass
-
-
-def close_output_files():
-    outputFile.close()
-    logFile.close()
+                if isinstance(val, OctetString):
+                    if (name.prettyPrint() != "SNMP-COMMUNITY-MIB::snmpTrapAddress.0"):
+                        szOctets = val.asOctets()#.rstrip('\r').rstrip('\n')
+                        szOut = szOut + ", Octets: {}".format(szOctets)
+                if (bDebug):
+                    print('%s = %s' % (name.prettyPrint(), val.prettyPrint()))
+            outputFile.write(szOut)
+            if "\n" not in szOut:
+                outputFile.write("\n")
+            outputFile.flush()
 
 
-# Run I/O dispatcher which would receive queries and send confirmations
-try:
-    try:
-        snmpEngine.transportDispatcher.runDispatcher()
-    except KeyboardInterrupt:
-        print("Received keyboard interrupt, shutting down")
-    finally:
-        cleanup_started_file()
-        snmpEngine.transportDispatcher.closeDispatcher()
-finally:
-    close_output_files()
+        # Register SNMP Application at the SNMP engine
+        ntfrcv.NotificationReceiver(snmpEngine, cbReceiverSnmp)
+
+        # this job would never finish
+        snmpEngine.transportDispatcher.jobStarted(1)
+
+        def cleanup_started_file():
+            try:
+                os.remove(szSnmpLogfile + ".started")
+            except OSError:
+                # The marker is best-effort cleanup; shutdown must continue if it
+                # is already gone or cannot be removed.
+                pass
+
+
+        # Run I/O dispatcher which would receive queries and send confirmations
+        try:
+            snmpEngine.transportDispatcher.runDispatcher()
+        except KeyboardInterrupt:
+            print("Received keyboard interrupt, shutting down")
+        finally:
+            cleanup_started_file()
+            snmpEngine.transportDispatcher.closeDispatcher()
