@@ -68,7 +68,7 @@ def get_current_stable_version():
     """Return the current X.Y stable version number from the latest git tag"""
 
     def get_latest_tag():
-        """"Helper function: Return the latest git tag"""
+        """Helper function: Return the latest git tag"""
 
         git_tag_output = _run_git(['tag', '--list', 'v*'])
         if not git_tag_output:
