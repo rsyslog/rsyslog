@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     int increment = 1;
     int reachedEOF;
     int edLen; /* length of extra data */
-    static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the save side...) */
+    static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the safe side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
     char extraFmt[64];
     char *file = NULL;
