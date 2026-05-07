@@ -27,9 +27,6 @@ public class SimplePlugin {
     		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
     		String s;
 		File outFile = new File("out.txt");
-      		if (! outFile.exists())  {
-         		outFile.createNewFile();
-      		}
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile, true)));
 
  		while ((s = in.readLine()) != null && s.length() != 0) 	{
