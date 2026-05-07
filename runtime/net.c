@@ -838,7 +838,7 @@ static rsRetVal addAllowedSenderLine(char *pName, uchar **ppRestOfConfLine) {
      * for this.
      */
     /* create parser object starting with line string without leading colon */
-    if ((iRet = rsParsConstructFromSz(&pPars, (uchar *)*ppRestOfConfLine) != RS_RET_OK)) {
+    if ((iRet = rsParsConstructFromSz(&pPars, (uchar *)*ppRestOfConfLine)) != RS_RET_OK) {
         LogError(0, iRet, "Error %d constructing parser object - ignoring allowed sender list", iRet);
         return (iRet);
     }
