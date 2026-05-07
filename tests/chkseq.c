@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
         while (val > i && lostok > 0) {
             --lostok;
             printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
-            ++i;
+            i += increment;
         }
         if (val != i) {
             if (val == i - increment && dupsPermitted) {
