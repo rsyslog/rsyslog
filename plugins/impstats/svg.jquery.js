@@ -542,7 +542,7 @@ jQuery.extend({
 
 	isEmptyObject: function( obj ) {
 		for ( var name in obj ) {
-			return false;
+			return name === undefined;
 		}
 		return true;
 	},
@@ -602,17 +602,10 @@ jQuery.extend({
 
 	noop: function() {},
 
-	// Evaluates a script in a global context
-	// Workarounds based on findings by Jim Driscoll
-	// http://weblogs.java.net/blog/driscoll/archive/2009/09/08/eval-javascript-global-context
+	// Global string evaluation is disabled in this vendored copy.
 	globalEval: function( data ) {
 		if ( data && rnotwhite.test( data ) ) {
-			// We use execScript on Internet Explorer
-			// We use an anonymous function so that context is window
-			// rather than jQuery in Firefox
-			( window.execScript || function( data ) {
-				window[ "eval" ].call( window, data );
-			} )( data );
+			jQuery.error( "globalEval is disabled" );
 		}
 	},
 
@@ -3364,7 +3357,6 @@ jQuery.each({
 			var target = this,
 				related = event.relatedTarget,
 				handleObj = event.handleObj,
-				selector = handleObj.selector,
 				ret;
 
 			// For mousenter/leave call the handler if related is outside the target.
@@ -3826,7 +3818,7 @@ var Sizzle = function( selector, context, results, seed ) {
 			}
 
 		} else {
-			checkSet = parts = [];
+			checkSet = [];
 		}
 	}
 
@@ -4471,7 +4463,7 @@ var Expr = Sizzle.selectors = {
 
 		CHILD: function( elem, match ) {
 			var first, last,
-				doneName, parent, cache,
+				doneName, parent,
 				count, diff,
 				type = match[1],
 				node = elem;
@@ -4557,14 +4549,18 @@ var Expr = Sizzle.selectors = {
 					elem[ name ] != null ?
 						elem[ name ] :
 						elem.getAttribute( name ),
-				value = result + "",
+				value,
 				type = match[2],
 				check = match[4];
 
-			return result == null ?
-				type === "!=" :
-				!type && Sizzle.attr ?
-				result != null :
+			if ( result == null ) {
+				return type === "!=";
+			}
+
+			value = result + "";
+
+			return !type && Sizzle.attr ?
+				true :
 				type === "=" ?
 				value === check :
 				type === "*=" ?
@@ -8853,7 +8849,6 @@ if ( "getBoundingClientRect" in document.documentElement ) {
 	getOffset = function( elem, doc, docElem ) {
 		var computedStyle,
 			offsetParent = elem.offsetParent,
-			prevOffsetParent = elem,
 			body = doc.body,
 			defaultView = doc.defaultView,
 			prevComputedStyle = defaultView ? defaultView.getComputedStyle( elem, null ) : elem.currentStyle,
@@ -8878,7 +8873,6 @@ if ( "getBoundingClientRect" in document.documentElement ) {
 					left += parseFloat( computedStyle.borderLeftWidth ) || 0;
 				}
 
-				prevOffsetParent = offsetParent;
 				offsetParent = elem.offsetParent;
 			}
 
