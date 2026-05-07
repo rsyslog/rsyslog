@@ -40,7 +40,6 @@ TESTS_IMPTCP_TABESCAPE = \
 
 TESTS_ELASTICSEARCH_MINIMAL = \
 	es-duplicated-ruleset.sh \
-	es-basic-es7.14.sh \
 	es-basic.sh \
 	es-basic-bulk.sh \
 	elasticsearch-stop.sh
@@ -2074,7 +2073,6 @@ endif
 if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 TESTS += $(TESTS_ELASTICSEARCH_MINIMAL)
 
-es-basic.log: es-basic-es7.14.log
 es-basic-bulk.log: es-basic.log
 es-basic-server.log: es-basic-bulk.log
 
