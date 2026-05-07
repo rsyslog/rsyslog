@@ -6,7 +6,7 @@
 . ${srcdir:=.}/diag.sh init
 
 # Define ports and files
-export PORT_RCVR="$(get_free_port)"
+export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 export POLICY_FILE="$(pwd)/test_policy_hup.yaml"
 
 # Create initial policy (High limits)
@@ -18,12 +18,14 @@ generate_conf
 add_conf '
 ratelimit(name="hup_limiter" policy="'$POLICY_FILE'")
 module(load="../plugins/imudp/.libs/imudp" batchSize="1")
-input(type="imudp" port="'$PORT_RCVR'" ratelimit.name="hup_limiter")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_FILE'"
+      ratelimit.name="hup_limiter")
 
 template(name="outfmt" type="string" string="RECEIVED RAW: %rawmsg%\n")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 # Phase 1: High Limit (Burst 1000)
 # Send 20 messages. All should pass.
