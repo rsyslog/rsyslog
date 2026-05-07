@@ -46,7 +46,7 @@ def onReceive(msg):
        and so each message needs to be fully processed (rsyslog will wait for the
        reply before the next message is pushed to this module).
     """
-    data = json.loads(msg)
+    json.loads(msg)
     print(json.dumps({"$!": {"sometag": "somevalue"}}))
 
 def onExit():
