@@ -41,8 +41,12 @@ LN_HOST = 1
 LN_LINENUM = 2
 LN_DATA = 3
 
-# Open Errorlog on init
-errorlog = open(szTmpDir + "statslog-analyzer.corrupted.log", 'w')
+szErrorLog = szTmpDir + "statslog-analyzer.corrupted.log"
+errorlog = None
+
+
+def writeErrorLog(message):
+    errorlog.write(message)
 
 # Process Arguments
 for arg in sys.argv: # [-4:]:
@@ -77,142 +81,144 @@ else:
     print " Start sorting impstats file ... "
     if bDebugOutput:
         print ": '" + szInput+ "'"
-    
+
+    # Open Errorlog on init
+    errorlog = open(szErrorLog, 'w')
+
     # Open inout file
-    inputfile = open(szInput, 'r')
-    for line in inputfile.readlines():
-#       if line.find("rsyslogd-pstats") != -1:
+    try:
+        with open(szInput, 'r') as inputfile:
+            for line in inputfile:
+        #       if line.find("rsyslogd-pstats") != -1:
 
-        # Init variables
-        aFields = []
-        aData = {}
-        aDataCsv = []
-        iLogRegExIndex = 0
-        bLogProcessed = False
+                # Init variables
+                aFields = []
+                aData = {}
+                aDataCsv = []
+                iLogRegExIndex = 0
+                bLogProcessed = False
 
-        # Loop through Regex parsers
-        for loglineregex in loglineregexes:
-            # Parse IMPStats Line!
-            result = loglineregex.split(line)
-            
-            # Found valid logline, save into file!
-            if len(result) >= loglineindexes[iLogRegExIndex]["LN_LOGDATA"]:
-                # Get/Set SyslogTag
-                if loglineindexes[iLogRegExIndex]["LN_SYSLOGTAG"] == -1:
-                    szLogSyslogTag = "rsyslogd-pstats" # Set to "rsyslogd-pstats" if no SyslogTag is available
-                else:
-                    szLogSyslogTag = result[ loglineindexes[iLogRegExIndex]["LN_SYSLOGTAG"] ]
+                # Loop through Regex parsers
+                for loglineregex in loglineregexes:
+                    # Parse IMPStats Line!
+                    result = loglineregex.split(line)
 
-                # Get/Set SyslogTag
-                if loglineindexes[iLogRegExIndex]["LN_HOST"] == -1:
-                    szLogHost = "localhost" # Set default to "localhost" if no host is available
-                else:
-                    szLogHost = result[ loglineindexes[iLogRegExIndex]["LN_HOST"] ]
-
-                if szLogSyslogTag == "rsyslogd-pstats":
-                    # Init StatsID!
-                    szStatsID = "Unknown"
-
-                    # If LogobjectID is -1, we have JSON Format in LN_LOGDATA
-                    if loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] == -1:
-                        # Remove unecessary characters and split into templ array
-                        aCleanedArray = re.sub("[{}\"]", "", result[loglineindexes[iLogRegExIndex]["LN_LOGDATA"]]).split(",")
-                        # Reset Logdata
-                        result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] = ""
-                        # Loop Through temp array
-                        for szTempEntry in aCleanedArray:
-                            if szTempEntry.find("name:") != -1:
-                                szStatsID = szTempEntry[5:]
-                            else:
-                                # Correct and append to Logdata
-                                result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] += re.sub("[:]", "=", szTempEntry) + " "
-                        #print szStatsID + " - " + result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ]
-                        #sys.exit(0)
-                    else:
-                        # Remove invalid characters from StatsID!
-    #                   szStatsID = re.sub("[^a-zA-Z0-9]", "_", result[ loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] ])
-                        szStatsID = result[ loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] ]
-
-                    # Convert Datetime!
-                    try:
-                        filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%m %Y %d %H:%M:%S")
-                    except ValueError:
-                        filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%b %Y %d %H:%M:%S")
-
-                    # Split logdata into Array
-                    aProperties = result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ].rstrip().split(" ")
-                    for szProperty in aProperties:
-                        aProperty = szProperty.split("=")
-                        aFields.append(aProperty[0])    # Append FieldID
-                        if len(aProperty) > 1:
-                            aDataCsv.append(aProperty[1])   # Append FieldData
-                            aData[aProperty[0]] = aProperty[1]
+                    # Found valid logline, save into file!
+                    if len(result) >= loglineindexes[iLogRegExIndex]["LN_LOGDATA"]:
+                        # Get/Set SyslogTag
+                        if loglineindexes[iLogRegExIndex]["LN_SYSLOGTAG"] == -1:
+                            szLogSyslogTag = "rsyslogd-pstats" # Set to "rsyslogd-pstats" if no SyslogTag is available
                         else:
-                            errorlog.write("Corrupted Logline at line " + str(nLogLineNum) + " failed to parse: " + result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ])
-                            break
-                
-                    # Open Statsdata per ID
-                    if szStatsID not in outputData:
-                        outputData[szStatsID] = []
-                    
-                    # Add data into array
-                    outputData[szStatsID].append( [ filedate.strftime("%Y/%b/%d %H:%M:%S"),
-                                    szLogHost,
-                                    nLogLineNum,
-                                    aData ] )
+                            szLogSyslogTag = result[ loglineindexes[iLogRegExIndex]["LN_SYSLOGTAG"] ]
 
-                    # --- Save into CSV File as well!
-                    # Remove invalid characters for filename!
-                    szFileName = szInput + "-" + re.sub("[^a-zA-Z0-9]", "_", szStatsID) + ".csv"
+                        # Get/Set SyslogTag
+                        if loglineindexes[iLogRegExIndex]["LN_HOST"] == -1:
+                            szLogHost = "localhost" # Set default to "localhost" if no host is available
+                        else:
+                            szLogHost = result[ loglineindexes[iLogRegExIndex]["LN_HOST"] ]
 
-                    # Open file for writing!
-                    if szFileName not in outputFiles:
-                        if bDebugOutput:
-                            print "Creating file : " + szFileName
-                        outputFiles[szFileName] = open(szFileName, 'w')
-                        nLogFileCount += 1
-                        
-                        # Output CSV Header
-                        outputFiles[szFileName].write("Date;")
-                        outputFiles[szFileName].write("Host;")
-                        outputFiles[szFileName].write("Object;")
-                        for szField in aFields:
-                            outputFiles[szFileName].write(szField + ";")
-                        outputFiles[szFileName].write("\n")
-                    # Output CSV Data
-                    outputFiles[szFileName].write(filedate.strftime("%Y/%b/%d %H:%M:%S") + ";")
-                    outputFiles[szFileName].write(szLogHost + ";")
-                    outputFiles[szFileName].write(szStatsID + ";")
-                    for szData in aDataCsv:
-                        outputFiles[szFileName].write(szData + ";")
-                    outputFiles[szFileName].write("\n")
-                    # ---
+                        if szLogSyslogTag == "rsyslogd-pstats":
+                            # Init StatsID!
+                            szStatsID = "Unknown"
 
-                    # Set Log as processed, abort Loop!
-                    bLogProcessed = True
-                    
+                            # If LogobjectID is -1, we have JSON Format in LN_LOGDATA
+                            if loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] == -1:
+                                # Remove unecessary characters and split into templ array
+                                aCleanedArray = re.sub("[{}\"]", "", result[loglineindexes[iLogRegExIndex]["LN_LOGDATA"]]).split(",")
+                                # Reset Logdata
+                                result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] = ""
+                                # Loop Through temp array
+                                for szTempEntry in aCleanedArray:
+                                    if szTempEntry.find("name:") != -1:
+                                        szStatsID = szTempEntry[5:]
+                                    else:
+                                        # Correct and append to Logdata
+                                        result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] += re.sub("[:]", "=", szTempEntry) + " "
+                                #print szStatsID + " - " + result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ]
+                                #sys.exit(0)
+                            else:
+                                # Remove invalid characters from StatsID!
+            #                   szStatsID = re.sub("[^a-zA-Z0-9]", "_", result[ loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] ])
+                                szStatsID = result[ loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] ]
 
-            # Increment Logreged Counter
-            iLogRegExIndex += 1
+                            # Convert Datetime!
+                            try:
+                                filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%m %Y %d %H:%M:%S")
+                            except ValueError:
+                                filedate = datetime.datetime.strptime(result[ loglineindexes[iLogRegExIndex]["LN_MONTH"] ] + " " + str(datetime.datetime.now().year) + " " + result[ loglineindexes[iLogRegExIndex]["LN_DAY"] ] + " " + result[ loglineindexes[iLogRegExIndex]["LN_TIME"] ] ,"%b %Y %d %H:%M:%S")
 
-            # Abort Loop if processed
-            if bLogProcessed:
-                break
+                            # Split logdata into Array
+                            aProperties = result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ].rstrip().split(" ")
+                            for szProperty in aProperties:
+                                aProperty = szProperty.split("=")
+                                aFields.append(aProperty[0])    # Append FieldID
+                                if len(aProperty) > 1:
+                                    aDataCsv.append(aProperty[1])   # Append FieldData
+                                    aData[aProperty[0]] = aProperty[1]
+                                else:
+                                    writeErrorLog("Corrupted Logline at line " + str(nLogLineNum) + " failed to parse: " + result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ])
+                                    break
 
-        # Debug output if format not detected
-        if bLogProcessed == False and bDebugOutput:
-            print "Fail parsing logline: "
-            print result
+                            # Open Statsdata per ID
+                            if szStatsID not in outputData:
+                                outputData[szStatsID] = []
 
-        # Increment helper counter
-        nLogLineNum += 1
+                            # Add data into array
+                            outputData[szStatsID].append( [ filedate.strftime("%Y/%b/%d %H:%M:%S"),
+                                            szLogHost,
+                                            nLogLineNum,
+                                            aData ] )
 
-    # Close outfiles
-    for outFileName in outputFiles:
-        outputFiles[outFileName].close()
+                            # --- Save into CSV File as well!
+                            # Remove invalid characters for filename!
+                            szFileName = szInput + "-" + re.sub("[^a-zA-Z0-9]", "_", szStatsID) + ".csv"
 
-    # Close input file
-    inputfile.close()
+                            # Open file for writing!
+                            if szFileName not in outputFiles:
+                                if bDebugOutput:
+                                    print "Creating file : " + szFileName
+                                outputFiles[szFileName] = open(szFileName, 'w')
+                                nLogFileCount += 1
+
+                                # Output CSV Header
+                                outputFiles[szFileName].write("Date;")
+                                outputFiles[szFileName].write("Host;")
+                                outputFiles[szFileName].write("Object;")
+                                for szField in aFields:
+                                    outputFiles[szFileName].write(szField + ";")
+                                outputFiles[szFileName].write("\n")
+                            # Output CSV Data
+                            outputFiles[szFileName].write(filedate.strftime("%Y/%b/%d %H:%M:%S") + ";")
+                            outputFiles[szFileName].write(szLogHost + ";")
+                            outputFiles[szFileName].write(szStatsID + ";")
+                            for szData in aDataCsv:
+                                outputFiles[szFileName].write(szData + ";")
+                            outputFiles[szFileName].write("\n")
+                            # ---
+
+                            # Set Log as processed, abort Loop!
+                            bLogProcessed = True
+
+
+                    # Increment Logreged Counter
+                    iLogRegExIndex += 1
+
+                    # Abort Loop if processed
+                    if bLogProcessed:
+                        break
+
+                # Debug output if format not detected
+                if bLogProcessed == False and bDebugOutput:
+                    print "Fail parsing logline: "
+                    print result
+
+                # Increment helper counter
+                nLogLineNum += 1
+    finally:
+        for outFileName in outputFiles:
+            outputFiles[outFileName].close()
+        if errorlog is not None:
+            errorlog.close()
 
     # Data sorted, now analyze data!
     print " Sorting finished with '" + str(nLogLineNum) + "' loglines processed."
@@ -321,7 +327,7 @@ else:
 
         # Debug break
 #       sys.exit(0)
-    
+
 
     print " End analyzing logdata"
 

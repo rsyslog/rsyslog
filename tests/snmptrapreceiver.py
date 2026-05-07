@@ -27,7 +27,11 @@ if len(sys.argv) > 4:
 
 # Create output files
 outputFile = open(szOutputfile,"w+")
-logFile = open(szSnmpLogfile,"a+")
+try:
+    logFile = open(szSnmpLogfile,"a+")
+except:
+    outputFile.close()
+    raise
 
 # Assemble MIB viewer
 mibBuilder = builder.MibBuilder()
@@ -101,10 +105,26 @@ ntfrcv.NotificationReceiver(snmpEngine, cbReceiverSnmp)
 # this job would never finish
 snmpEngine.transportDispatcher.jobStarted(1)
 
+def cleanup_started_file():
+    try:
+        os.remove(szSnmpLogfile + ".started")
+    except OSError:
+        pass
+
+
+def close_output_files():
+    outputFile.close()
+    logFile.close()
+
+
 # Run I/O dispatcher which would receive queries and send confirmations
 try:
-    snmpEngine.transportDispatcher.runDispatcher()
-except:
-    os.remove(szOutputfile + ".started")  # Remove PID file on shutdown
-    snmpEngine.transportDispatcher.closeDispatcher()
-    raise
+    try:
+        snmpEngine.transportDispatcher.runDispatcher()
+    except KeyboardInterrupt:
+        print("Received keyboard interrupt, shutting down")
+    finally:
+        cleanup_started_file()
+        snmpEngine.transportDispatcher.closeDispatcher()
+finally:
+    close_output_files()
