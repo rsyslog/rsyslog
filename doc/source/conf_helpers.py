@@ -53,7 +53,7 @@ def get_current_branch():
             if '*' in branch:
                 # Split on the remote/branch separator, grab the
                 # last entry in the list and then strip off the trailing
-                # parentheis
+                # parenthesis
                 detached_from_branch = branch.split('/')[-1].replace(')', '')
 
                 return detached_from_branch
