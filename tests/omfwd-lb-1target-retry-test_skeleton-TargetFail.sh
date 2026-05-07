@@ -7,6 +7,8 @@
 skip_platform "SunOS" "This test is currently not supported on solaris due to too-different timing"
 generate_conf
 export NUMMESSAGES=2000
+export OMFWD_TARGETFAIL_MAX_LOSS=250
+export OMFWD_TARGETFAIL_MIN_RECEIVED=$((NUMMESSAGES - OMFWD_TARGETFAIL_MAX_LOSS))
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
@@ -35,11 +37,14 @@ echo Note: intentionally not started any local TCP receiver!
 startup
 
 injectmsg
+wait_file_lines "$RSYSLOG_OUT_LOG" "$OMFWD_TARGETFAIL_MIN_RECEIVED"
 shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
 export SEQ_CHECK_OPTIONS=-d
-#permit 250 messages to be lost in this extreme test (-m 250)
-seq_check 0 $((NUMMESSAGES-1)) -m250
+# Permit bounded message loss in this extreme test. The pre-shutdown
+# wait above keeps the assertion meaningful while the -m check also
+# accepts bounded loss at the end of the stream.
+seq_check 0 $((NUMMESSAGES-1)) -m"$OMFWD_TARGETFAIL_MAX_LOSS"
 exit_test

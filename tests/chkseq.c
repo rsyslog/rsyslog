@@ -163,6 +163,14 @@ int main(int argc, char *argv[]) {
             }
         }
         if (!scanfOK) {
+            if (feof(fp) && lostok > 0) {
+                while (i <= end && lostok > 0) {
+                    --lostok;
+                    printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
+                    i += increment;
+                }
+                if (i > end) break;
+            }
             printf("scanf error in index i=%d\n", i);
             exit(1);
         }
