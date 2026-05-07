@@ -18,7 +18,6 @@ export RSYSLOG_DEBUGLOG="log"
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 # then SENDER sends to this port (not tcpflood!)
 module(load="../plugins/imtcp/.libs/imtcp")
