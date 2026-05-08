@@ -17,6 +17,7 @@
 #include <poll.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 
 #include <libfastjson/json.h>
 #include <libfastjson/json_tokener.h>
@@ -97,6 +98,7 @@ typedef struct instanceConf_s {
     size_t listener_cap;
     pthread_t listener_tid;
     int listener_running;
+    int shuttingDown;
     pthread_mutex_t mutSessions;
     session_t *sessions;
 } instanceConf_t;
@@ -112,6 +114,7 @@ struct session_s {
     netstrm_t *pStrm;
     pthread_t tid;
     int done;
+    int threadStarted;
     int sock;
     uchar *fromHostFQDN;
     prop_t *fromHost;
@@ -186,8 +189,30 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
 static rsRetVal createInstance(instanceConf_t **const pinst);
 static rsRetVal buildListeners(instanceConf_t *inst);
 static rsRetVal destroyInstanceRuntime(instanceConf_t *inst);
+static void destroySession(session_t *sess);
 static void *listenerThread(void *arg);
 static void *sessionThread(void *arg);
+
+static int instanceIsShuttingDown(instanceConf_t *const inst) {
+    int shuttingDown;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    shuttingDown = inst->shuttingDown;
+    pthread_mutex_unlock(&inst->mutSessions);
+    return shuttingDown;
+}
+
+static void setInstanceShuttingDown(instanceConf_t *const inst) {
+    pthread_mutex_lock(&inst->mutSessions);
+    inst->shuttingDown = 1;
+    pthread_mutex_unlock(&inst->mutSessions);
+}
+
+static void clearInstanceShuttingDown(instanceConf_t *const inst) {
+    pthread_mutex_lock(&inst->mutSessions);
+    inst->shuttingDown = 0;
+    pthread_mutex_unlock(&inst->mutSessions);
+}
 
 static rsRetVal validateUInt32Limit(const char *const name,
                                     const int64_t value,
@@ -577,14 +602,60 @@ static void unlinkSession(instanceConf_t *const inst, session_t *const target) {
     session_t **pp;
     assert(inst != NULL);
     assert(target != NULL);
-    pthread_mutex_lock(&inst->mutSessions);
     for (pp = &inst->sessions; *pp != NULL; pp = &(*pp)->next) {
         if (*pp == target) {
             *pp = target->next;
+            target->next = NULL;
+            break;
+        }
+    }
+}
+
+static session_t *takeSession(instanceConf_t *const inst, const int takeAll) {
+    session_t *sess = NULL;
+    session_t **pp;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    for (pp = &inst->sessions; *pp != NULL; pp = &(*pp)->next) {
+        if (takeAll || (*pp)->done) {
+            sess = *pp;
+            *pp = sess->next;
+            sess->next = NULL;
             break;
         }
     }
     pthread_mutex_unlock(&inst->mutSessions);
+    return sess;
+}
+
+static void shutdownSessionSocket(session_t *const sess) {
+    if (sess != NULL && sess->sock >= 0) {
+        (void)shutdown(sess->sock, SHUT_RDWR);
+    }
+}
+
+static void shutdownAllSessionSockets(instanceConf_t *const inst) {
+    session_t *sess;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    for (sess = inst->sessions; sess != NULL; sess = sess->next) {
+        shutdownSessionSocket(sess);
+    }
+    pthread_mutex_unlock(&inst->mutSessions);
+}
+
+static void reapSessions(instanceConf_t *const inst, const int reapAll) {
+    session_t *sess;
+
+    while ((sess = takeSession(inst, reapAll)) != NULL) {
+        if (reapAll) {
+            shutdownSessionSocket(sess);
+        }
+        if (sess->threadStarted) {
+            pthread_join(sess->tid, NULL);
+        }
+        destroySession(sess);
+    }
 }
 
 static void destroySession(session_t *sess) {
@@ -613,7 +684,7 @@ static void *sessionThread(void *arg) {
 
     assert(sess != NULL);
 
-    while (glbl.GetGlobalInputTermState() == 0) {
+    while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(sess->inst)) {
         struct lj_batch_s batch;
         size_t idx;
 
@@ -643,49 +714,63 @@ static void *sessionThread(void *arg) {
     }
 
     STATSCOUNTER_INC(statsCounter.ctrConnectionsClosed, statsCounter.mutCtrConnectionsClosed);
-    unlinkSession(sess->inst, sess);
-    destroySession(sess);
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->done = 1;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
     return NULL;
 }
 
-static rsRetVal spawnSession(instanceConf_t *const inst, netstrm_t *const pNewStrm) {
+static rsRetVal spawnSession(instanceConf_t *const inst, netstrm_t **const ppNewStrm) {
     session_t *sess = NULL;
     struct sockaddr_storage *addr = NULL;
     DEFiRet;
 
+    assert(ppNewStrm != NULL);
+    assert(*ppNewStrm != NULL);
+
+    if (ppNewStrm == NULL || *ppNewStrm == NULL) {
+        return RS_RET_INVALID_VALUE;
+    }
     CHKmalloc(sess = calloc(1, sizeof(*sess)));
+    sess->sock = -1;
     sess->inst = inst;
-    sess->pStrm = pNewStrm;
-    CHKiRet(netstrm.GetSock(pNewStrm, &sess->sock));
+    sess->pStrm = *ppNewStrm;
+    *ppNewStrm = NULL;
+    CHKiRet(netstrm.GetSock(sess->pStrm, &sess->sock));
     if (inst->bKeepAlive) {
-        CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, inst->iKeepAliveProbes));
-        CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, inst->iKeepAliveTime));
-        CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, inst->iKeepAliveIntvl));
-        CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
+        CHKiRet(netstrm.SetKeepAliveProbes(sess->pStrm, inst->iKeepAliveProbes));
+        CHKiRet(netstrm.SetKeepAliveTime(sess->pStrm, inst->iKeepAliveTime));
+        CHKiRet(netstrm.SetKeepAliveIntvl(sess->pStrm, inst->iKeepAliveIntvl));
+        CHKiRet(netstrm.EnableKeepAlive(sess->pStrm));
     }
     if (inst->gnutlsPriorityString != NULL) {
-        CHKiRet(netstrm.SetGnutlsPriorityString(pNewStrm, inst->gnutlsPriorityString));
+        CHKiRet(netstrm.SetGnutlsPriorityString(sess->pStrm, inst->gnutlsPriorityString));
     }
-    CHKiRet(netstrm.GetRemoteHName(pNewStrm, &sess->fromHostFQDN));
+    CHKiRet(netstrm.GetRemoteHName(sess->pStrm, &sess->fromHostFQDN));
     if (sess->fromHostFQDN != NULL) {
         CHKiRet(prop.Construct(&sess->fromHost));
         CHKiRet(prop.SetString(sess->fromHost, sess->fromHostFQDN, ustrlen(sess->fromHostFQDN)));
         CHKiRet(prop.ConstructFinalize(sess->fromHost));
     }
-    CHKiRet(netstrm.GetRemoteIP(pNewStrm, &sess->fromHostIP));
-    CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
+    CHKiRet(netstrm.GetRemoteIP(sess->pStrm, &sess->fromHostIP));
+    CHKiRet(netstrm.GetRemAddr(sess->pStrm, &addr));
     CHKiRet(createPortProp(addr, &sess->fromHostPort));
 
     pthread_mutex_lock(&inst->mutSessions);
+    if (inst->shuttingDown) {
+        pthread_mutex_unlock(&inst->mutSessions);
+        ABORT_FINALIZE(RS_RET_FORCE_TERM);
+    }
     sess->next = inst->sessions;
     inst->sessions = sess;
-    pthread_mutex_unlock(&inst->mutSessions);
-
-    STATSCOUNTER_INC(statsCounter.ctrConnectionsAccepted, statsCounter.mutCtrConnectionsAccepted);
     if (pthread_create(&sess->tid, NULL, sessionThread, sess) != 0) {
+        unlinkSession(inst, sess);
+        pthread_mutex_unlock(&inst->mutSessions);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
-    pthread_detach(sess->tid);
+    sess->threadStarted = 1;
+    pthread_mutex_unlock(&inst->mutSessions);
+    STATSCOUNTER_INC(statsCounter.ctrConnectionsAccepted, statsCounter.mutCtrConnectionsAccepted);
     sess = NULL;
 
 finalize_it:
@@ -710,13 +795,13 @@ static void *listenerThread(void *arg) {
         pfds[i].events = POLLIN;
     }
 
-    inst->listener_running = 1;
-    while (glbl.GetGlobalInputTermState() == 0) {
+    while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(inst)) {
         if (poll(pfds, inst->listener_count, 1000) <= 0) {
+            reapSessions(inst, 0);
             continue;
         }
         for (i = 0; i < inst->listener_count; ++i) {
-            if ((pfds[i].revents & POLLIN) != 0) {
+            if ((pfds[i].revents & POLLIN) != 0 && !instanceIsShuttingDown(inst)) {
                 netstrm_t *pNewStrm = NULL;
                 char connInfo[TCPSRV_CONNINFO_SIZE];
                 rsRetVal iRet;
@@ -724,13 +809,14 @@ static void *listenerThread(void *arg) {
                 memset(connInfo, 0, sizeof(connInfo));
                 iRet = netstrm.AcceptConnReq(inst->listeners[i], &pNewStrm, connInfo);
                 if (iRet == RS_RET_OK) {
-                    iRet = spawnSession(inst, pNewStrm);
+                    iRet = spawnSession(inst, &pNewStrm);
                     if (iRet != RS_RET_OK && pNewStrm != NULL) {
                         netstrm.Destruct(&pNewStrm);
                     }
                 }
             }
         }
+        reapSessions(inst, 0);
     }
 
     free(pfds);
@@ -740,10 +826,13 @@ static void *listenerThread(void *arg) {
 static rsRetVal destroyInstanceRuntime(instanceConf_t *inst) {
     size_t i;
 
+    setInstanceShuttingDown(inst);
     if (inst->listener_running) {
         pthread_join(inst->listener_tid, NULL);
         inst->listener_running = 0;
     }
+    shutdownAllSessionSockets(inst);
+    reapSessions(inst, 1);
 
     for (i = 0; i < inst->listener_count; ++i) {
         if (inst->listeners[i] != NULL) {
@@ -953,10 +1042,12 @@ BEGINrunInput
     instanceConf_t *inst;
     CODESTARTrunInput;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        clearInstanceShuttingDown(inst);
         CHKiRet(buildListeners(inst));
         if (pthread_create(&inst->listener_tid, NULL, listenerThread, inst) != 0) {
             ABORT_FINALIZE(RS_RET_IO_ERROR);
         }
+        inst->listener_running = 1;
     }
     while (glbl.GetGlobalInputTermState() == 0) {
         srSleep(0, 250000);

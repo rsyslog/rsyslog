@@ -1040,6 +1040,7 @@ TESTS_IMBEATS = \
 	imbeats-basic.sh \
 	imbeats-compressed.sh \
 	imbeats-limits.sh \
+	imbeats-shutdown-open-session.sh \
 	imbeats-filebeat-docker.sh
 
 TESTS_IMBEATS_YAML = \
