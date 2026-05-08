@@ -244,8 +244,9 @@ static void skipSDID(uchar *sdbuf, int sdlen, int *rootIdx) {
     *rootIdx = i;
 }
 
-static void getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid) {
-    int i, j;
+static void getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid, size_t sdidSize) {
+    int i;
+    size_t j;
     i = *rootIdx;
     j = 0;
 
@@ -256,10 +257,15 @@ static void getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid) {
 
     ++i;
     while (i < sdlen && sdbuf[i] != '=' && sdbuf[i] != ' ' && sdbuf[i] != ']' && sdbuf[i] != '"') {
-        sdid[j++] = sdbuf[i++];
+        if (j + 1 < sdidSize) {
+            sdid[j++] = sdbuf[i];
+        }
+        ++i;
     }
 done:
-    sdid[j] = '\0';
+    if (sdidSize > 0) {
+        sdid[j] = '\0';
+    }
     *rootIdx = i;
 }
 
@@ -279,7 +285,7 @@ static sbool isHmacPresent(instanceData *pData, smsg_t *pMsg) {
 
     i = 0;
     while (i < sdlen && !found) {
-        getSDID(sdbuf, sdlen, &i, sdid);
+        getSDID(sdbuf, sdlen, &i, sdid, sizeof(sdid));
         if (!strcmp((char *)pData->sdid, (char *)sdid)) {
             found = 1;
             break;
@@ -308,7 +314,13 @@ static rsRetVal hashMsg(instanceData *pData, smsg_t *pMsg) {
     HMAC(pData->algo, pData->key, pData->keylen, pRawMsg, lenRawMsg, hash, &hashlen);
     hexify(hash, hashlen, hashPrintable);
     lenNewsd = snprintf((char *)newsd, sizeof(newsd), "[%s hash=\"%s\"]", (char *)pData->sdid, (char *)hashPrintable);
+    if (lenNewsd < 0 || (size_t)lenNewsd >= sizeof(newsd)) {
+        LogError(0, RS_RET_INVALID_VALUE, "mmrfc5424addhmac: sdId '%s' too long to build HMAC structured data",
+                 pData->sdid);
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
     MsgAddToStructuredData(pMsg, newsd, lenNewsd);
+finalize_it:
     RETiRet;
 }
 
@@ -316,8 +328,10 @@ static rsRetVal hashMsg(instanceData *pData, smsg_t *pMsg) {
 BEGINdoAction
     instanceData *pData = pWrkrData->pData;
     smsg_t *pMsg;
+    void *pMsgVoid;
     CODESTARTdoAction;
-    pMsg = (smsg_t *)ppString[0];
+    pMsgVoid = ppString[0];
+    pMsg = pMsgVoid;
     if (msgGetProtocolVersion(pMsg) == MSG_RFC5424_PROTOCOL && !isHmacPresent(pData, pMsg)) {
         hashMsg(pData, pMsg);
     } else {
