@@ -672,11 +672,11 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "server")) {
-            pData->md.smtp.pszSrv = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->md.smtp.pszSrv = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
-            pData->md.smtp.pszSrvPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->md.smtp.pszSrvPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mailfrom")) {
-            pData->md.smtp.pszFrom = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->md.smtp.pszFrom = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mailto")) {
             for (j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 addRcpt(&(pData->md.smtp.lstRcpt), (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
@@ -688,7 +688,7 @@ BEGINnewActInst
                     "can be set");
                 ABORT_FINALIZE(RS_RET_DUP_PARAM);
             }
-            tplSubject = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(tplSubject = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "subject.text")) {
             if (tplSubject != NULL) {
                 parser_errmsg(
@@ -696,11 +696,11 @@ BEGINnewActInst
                     "can be set");
                 ABORT_FINALIZE(RS_RET_DUP_PARAM);
             }
-            pData->constSubject = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->constSubject = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "body.enable")) {
             pData->bEnableBody = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "ommail: program error, non-handled "

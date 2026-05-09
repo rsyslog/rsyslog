@@ -143,7 +143,7 @@ BEGINnewActInst
         if (!strcmp(actpblk.descr[i].name, "separator")) {
             pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
         } else if (!strcmp(actpblk.descr[i].name, "jsonroot")) {
-            pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "mmfields: program error, non-handled "

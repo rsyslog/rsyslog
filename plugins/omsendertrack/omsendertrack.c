@@ -757,10 +757,10 @@ BEGINnewActInst
             pData->interval = (int)pvals[i].val.d.n;
             // TODO: add cmdfile
         } else if (!strcmp(actpblk.descr[i].name, "statefile")) {
-            pData->statefile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statefile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "senderid")) {
             free((void *)pData->senderidTemplate);  // free default template
-            pData->senderidTemplate = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->senderidTemplate = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "omsendertrack: program error, non-handled "

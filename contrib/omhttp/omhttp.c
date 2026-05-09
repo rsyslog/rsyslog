@@ -2547,7 +2547,7 @@ BEGINnewActInst
         if (!strcmp(actpblk.descr[i].name, "server")) {
             servers = pvals[i].val.d.ar;
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
             pData->defaultPort = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
@@ -2557,15 +2557,15 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "restpathtimeout")) {
             pData->restPathTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "token")) {
-            pData->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "uid")) {
-            pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpcontenttype")) {
-            pData->httpcontenttype = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->httpcontenttype = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpheaderkey")) {
-            pData->httpheaderkey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->httpheaderkey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpheadervalue")) {
-            pData->httpheadervalue = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->httpheadervalue = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpheaders")) {
             pData->nHttpHeaders = pvals[i].val.d.ar->nmemb;
             CHKmalloc(pData->httpHeaders = malloc(sizeof(uchar *) * pvals[i].val.d.ar->nmemb));
@@ -2575,21 +2575,21 @@ BEGINnewActInst
                 pData->httpHeaders[j] = (uchar *)cstr;
             }
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-            pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "restpath")) {
-            pData->restPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->restPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "checkpath")) {
-            pData->checkPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->checkPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynrestpath")) {
             pData->dynRestPath = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "proxyhost")) {
-            pData->proxyHost = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->proxyHost = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "proxyport")) {
             pData->proxyPort = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "batch")) {
             pData->batchMode = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "batch.format")) {
-            batchFormatName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(batchFormatName = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (strstr(VALID_BATCH_FORMATS, batchFormatName) != NULL) {
                 pData->batchFormatName = (uchar *)batchFormatName;
                 pData->bFreeBatchFormatName = 1;
@@ -2630,9 +2630,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "usehttps")) {
             pData->useHttps = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -2642,7 +2642,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -2652,7 +2652,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -2682,7 +2682,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "retry")) {
             pData->retryFailures = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "retry.ruleset")) {
-            pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "retry.addmetadata")) {
             pData->retryAddMetadata = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
@@ -2690,9 +2690,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "name")) {
-            pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpignorablecodes")) {
             pData->nIgnorableCodes = pvals[i].val.d.ar->nmemb;
             // note: use zero as sentinel value
@@ -2711,7 +2711,7 @@ BEGINnewActInst
                 }
             }
         } else if (!strcmp(actpblk.descr[i].name, "profile")) {
-            profileName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(profileName = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsbysenders")) {
             pData->statsBySenders = pvals[i].val.d.n;
         } else {

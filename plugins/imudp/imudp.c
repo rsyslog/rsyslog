@@ -1148,7 +1148,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "schedulingpriority")) {
             loadModConf->iSchedPrio = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "schedulingpolicy")) {
-            loadModConf->pszSchedPolicy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszSchedPolicy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "threads")) {
             wrkrMax = (int)pvals[i].val.d.n;
             if (wrkrMax > MAX_WRKR_THREADS) {

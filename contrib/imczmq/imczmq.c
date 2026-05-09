@@ -504,11 +504,11 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "authenticator")) {
             runModConf->authenticator = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "authtype")) {
-            runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "servercertpath")) {
-            runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "clientcertpath")) {
-            runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INVALID_PARAMS,
                      "imczmq: config error, unknown "
@@ -614,7 +614,8 @@ BEGINnewInpInst
             CHKmalloc(inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL));
             CHKiRet(validateTopics(inst->topics));
         } else if (!strcmp(inppblk.descr[i].name, "socktype")) {
-            char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *stringType;
+            CHKmalloc(stringType = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (NULL == stringType) {
                 LogError(0, RS_RET_CONFIG_ERROR, "imczmq: out of memory error copying sockType param");
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);

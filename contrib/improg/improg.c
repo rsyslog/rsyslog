@@ -501,10 +501,10 @@ BEGINnewInpInst
         if (!strcmp(inppblk.descr[i].name, "binary")) {
             CHKiRet(split_binary_parameters(&pInst->pszBinary, &pInst->aParams, &pInst->iParams, pvals[i].val.d.estr));
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            pInst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pInst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pInst->lenTag = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            pInst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pInst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "severity")) {
             pInst->iSeverity = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "facility")) {

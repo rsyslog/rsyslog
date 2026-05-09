@@ -596,25 +596,25 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "uristr")) {
-            pData->uristr = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->uristr = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "server")) {
-            pData->server = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->server = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
-            pData->port = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->port = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "db")) {
-            pData->db = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->db = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "collection")) {
-            pData->collection_name = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->collection_name = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ssl_ca")) {
-            pData->ssl_ca = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ssl_ca = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ssl_cert")) {
-            pData->ssl_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ssl_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "uid")) {
-            pData->uid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->uid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-            pData->pwd = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pwd = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "allowed_error_codes")) {
             const int maxerrcodes = sizeof(pData->allowed_error_codes) / sizeof(uint32_t);
             pData->allowed_error_codes_nbr = pvals[i].val.d.ar->nmemb;

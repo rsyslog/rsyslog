@@ -215,12 +215,13 @@ BEGINsetModCnf
             } else if (!es_strconstcmp(pvals[i].val.d.estr, "off")) {
                 loadModConf->parseKernelStamp = KMSG_PARSE_TS_OFF;
             } else {
-                const char *const cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+                char *cstr;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_PARAM_ERROR,
                          "imkmsg: unknown "
                          "parse mode '%s'",
                          cstr);
-                free((void *)cstr);
+                free(cstr);
             }
         } else if (!strcmp(modpblk.descr[i].name, "expectedbootcompleteseconds")) {
             loadModConf->expected_boot_complete_secs = pvals[i].val.d.n;
@@ -232,12 +233,13 @@ BEGINsetModCnf
             } else if (!es_strconstcmp(pvals[i].val.d.estr, "new-only")) {
                 loadModConf->readMode = KMSG_READMODE_NEW_ONLY;
             } else {
-                const char *const cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+                char *cstr;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_PARAM_ERROR,
                          "imkmsg: unknown "
                          "read mode '%s', keeping default setting",
                          cstr);
-                free((void *)cstr);
+                free(cstr);
             }
         } else {
             LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_WARNING,

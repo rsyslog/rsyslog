@@ -778,7 +778,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (cs.pszTplName != NULL) {
                 LogError(0, RS_RET_DUP_PARAM,
                          "omfwd: warning: default template "
@@ -2006,19 +2006,19 @@ BEGINnewActInst
             pData->nTargets = nTargets;
             CHKmalloc(pData->target_name = (char **)calloc(pData->nTargets, sizeof(char *)));
             for (int j = 0; j < nTargets; ++j) {
-                pData->target_name[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(pData->target_name[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
             }
         } else if (!strcmp(actpblk.descr[i].name, "targetsrv")) {
-            pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "address")) {
-            pData->address = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->address = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "device")) {
-            pData->device = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->device = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             pData->nPorts = pvals[i].val.d.ar->nmemb;
             CHKmalloc(pData->ports = (char **)calloc(pData->nPorts, sizeof(char *)));
             for (int j = 0; j < pData->nPorts; ++j) {
-                pData->ports[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(pData->ports[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
             }
         } else if (!strcmp(actpblk.descr[i].name, "protocol")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"udp", 3)) {
@@ -2035,13 +2035,13 @@ BEGINnewActInst
                 pData->protocol = FORW_TCP;
             } else {
                 uchar *str;
-                str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_INVLD_PROTOCOL, "omfwd: invalid protocol \"%s\"", str);
                 free(str);
                 ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
             }
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
-            pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tcp_framing")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"traditional", 11)) {
                 pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -2049,7 +2049,7 @@ BEGINnewActInst
                 pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
             } else {
                 uchar *str;
-                str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_CNF_INVLD_FRAMING, "omfwd: invalid framing \"%s\"", str);
                 free(str);
                 ABORT_FINALIZE(RS_RET_CNF_INVLD_FRAMING);
@@ -2067,10 +2067,10 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "conerrskip")) {
             pData->iConErrSkip = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
-            pData->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver") ||
                    !strcmp(actpblk.descr[i].name, "streamdriver.name")) {
-            pData->pszStrmDrvr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdrivermode") ||
                    !strcmp(actpblk.descr[i].name, "streamdrivermode")) {
             pData->iStrmDrvrMode = pvals[i].val.d.n;
@@ -2086,9 +2086,10 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverauthmode") ||
                    !strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
-            pData->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            uchar *val = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            uchar *val;
+            CHKmalloc(val = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"off", 3) &&
                 es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"on", 2) &&
                 es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"warn", 4)) {
@@ -2102,20 +2103,20 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverremotesni") ||
                    !strcmp(actpblk.descr[i].name, "streamdriver.remotesni")) {
-            pData->pszStrmDrvrRemoteSNI = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrRemoteSNI = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.cafile")) {
-            pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.crlfile")) {
-            pData->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.keyfile")) {
-            pData->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.certfile")) {
-            pData->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
             uchar *start, *str;
             uchar *p;
             int lenStr;
-            str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             start = str;
             lenStr = ustrlen(start); /* we need length after '\0' has been dropped... */
             while (lenStr > 0) {
@@ -2162,11 +2163,11 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "udp.sendbuf")) {
             pData->UDPSendBuf = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
             pData->strmCompFlushOnTxEnd = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "compression.mode")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
                 pData->compressionMode = COMPRESS_STREAM_ALWAYS;
             } else if (!strcasecmp(cstr, "none")) {
@@ -2191,7 +2192,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: program error, non-handled parameter '%s'",
                      actpblk.descr[i].name);

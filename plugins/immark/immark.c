@@ -159,9 +159,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "use.markflag")) {
             loadModConf->bUseMarkFlag = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
-            loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "markmessagetext")) {
-            loadModConf->pszMarkMsgText = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMarkMsgText = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "immark: program error, non-handled "

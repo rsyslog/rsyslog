@@ -433,13 +433,13 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "authenticator")) {
             runModConf->authenticator = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "authtype")) {
-            runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: authtype set to %s\n", runModConf->authType);
         } else if (!strcmp(modpblk.descr[i].name, "servercertpath")) {
-            runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: serverCertPath set to %s\n", runModConf->serverCertPath);
         } else if (!strcmp(modpblk.descr[i].name, "clientcertpath")) {
-            runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
         } else {
             LogError(0, RS_RET_INVALID_PARAMS,
@@ -492,35 +492,51 @@ BEGINnewActInst
         }
 
         if (!strcmp(actpblk.descr[i].name, "endpoints")) {
-            pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: sockEndPoints set to '%s'\n", pData->sockEndpoints);
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: template set to '%s'\n", pData->tplName);
         } else if (!strcmp(actpblk.descr[i].name, "dynatopic")) {
             pData->dynaTopic = pvals[i].val.d.n;
             DBGPRINTF("omczmq: dynaTopic set to %s\n", pData->dynaTopic ? "true" : "false");
         } else if (!strcmp(actpblk.descr[i].name, "sendtimeout")) {
-            pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmpSendTimeout;
+            CHKmalloc(tmpSendTimeout = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->sendTimeout = atoi(tmpSendTimeout);
+            free(tmpSendTimeout);
             DBGPRINTF("omczmq: sendTimeout set to %d\n", pData->sendTimeout);
         } else if (!strcmp(actpblk.descr[i].name, "sendhwm")) {
-            pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmpSendTimeout;
+            CHKmalloc(tmpSendTimeout = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->sendHWM = atoi(tmpSendTimeout);
+            free(tmpSendTimeout);
             DBGPRINTF("omczmq: sendHWM set to %d\n", pData->sendHWM);
         }
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
         else if (!strcmp(actpblk.descr[i].name, "heartbeativl")) {
-            pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmpHeartbeatIvl;
+            CHKmalloc(tmpHeartbeatIvl = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->heartbeatIvl = atoi(tmpHeartbeatIvl);
+            free(tmpHeartbeatIvl);
             DBGPRINTF("omczmq: heartbeatbeatIvl set to %d\n", pData->heartbeatIvl);
         } else if (!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
-            pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmpHeartbeatTimeout;
+            CHKmalloc(tmpHeartbeatTimeout = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->heartbeatTimeout = atoi(tmpHeartbeatTimeout);
+            free(tmpHeartbeatTimeout);
             DBGPRINTF("omczmq: heartbeatTimeout set to %d\n", pData->heartbeatTimeout);
         } else if (!strcmp(actpblk.descr[i].name, "heartbeatttl")) {
-            pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmpHeartbeatTimeout;
+            CHKmalloc(tmpHeartbeatTimeout = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->heartbeatTTL = atoi(tmpHeartbeatTimeout);
+            free(tmpHeartbeatTimeout);
             DBGPRINTF("omczmq: heartbeatTTL set to %d\n", pData->heartbeatTTL);
         }
 #endif
         else if (!strcmp(actpblk.descr[i].name, "socktype")) {
-            char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *stringType;
+            CHKmalloc(stringType = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (stringType != NULL) {
                 if (!strcmp("PUB", stringType)) {
                     pData->sockType = ZMQ_PUB;
@@ -563,7 +579,8 @@ BEGINnewActInst
             DBGPRINTF("omczmq: topicFrame set to %s\n", pData->topicFrame ? "true" : "false");
         } else if (!strcmp(actpblk.descr[i].name, "topics")) {
             pData->topics = zlist_new();
-            char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *topics;
+            CHKmalloc(topics = es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("omczmq: topics set to %s\n", topics);
             char *topics_org = topics;
             char topic[256];

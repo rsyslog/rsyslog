@@ -5385,32 +5385,24 @@ BEGINsetModCnf
     for (i = 0; i < (int)modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "definition.file")) {
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (value == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             free(loadModConf->definitionFile);
             loadModConf->definitionFile = value;
         } else if (!strcmp(modpblk.descr[i].name, "definition.json")) {
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (value == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             free(loadModConf->definitionJson);
             loadModConf->definitionJson = value;
         } else if (!strcmp(modpblk.descr[i].name, "runtime.config")) {
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (value == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             free(loadModConf->runtimeConfigFile);
             loadModConf->runtimeConfigFile = value;
         } else if (!strcmp(modpblk.descr[i].name, "validation.mode")) {
-            char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *mode;
+            CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
             rsRetVal r;
-            if (mode == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
             validation_mode_t parsedMode;
             r = parse_validation_mode(mode, &parsedMode);
             free(mode);
@@ -5419,17 +5411,13 @@ BEGINsetModCnf
             }
             loadModConf->validationTemplate.mode = parsedMode;
         } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern")) {
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (value == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             free(loadModConf->ignoreTrailingPattern);
             loadModConf->ignoreTrailingPattern = (uchar *)value;
         } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern.regex")) {
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (value == NULL) {
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             free(loadModConf->ignoreTrailingPatternRegex);
             loadModConf->ignoreTrailingPatternRegex = (uchar *)value;
         } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern.searchWindow")) {
@@ -5578,12 +5566,12 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "container") || !strcmp(actpblk.descr[i].name, "rootpath")) {
             free(pData->container);
-            pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->container != NULL && pData->container[0] == '$')
                 memmove(pData->container, pData->container + 1, strlen((char *)pData->container));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
             free(templateName);
-            templateName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(templateName = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "enable.network")) {
             pData->enableNetwork = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "enable.laps")) {
@@ -5598,16 +5586,17 @@ BEGINnewActInst
             pData->emitDebugJson = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "definition.file")) {
             free(definitionFile);
-            definitionFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(definitionFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "definition.json")) {
             free(definitionJson);
-            definitionJson = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(definitionJson = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "runtime.config")) {
             free(runtimeConfigFile);
-            runtimeConfigFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(runtimeConfigFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "validation.mode") ||
                    !strcmp(actpblk.descr[i].name, "validation_mode")) {
-            char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *mode;
+            CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (mode == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
@@ -5615,7 +5604,8 @@ BEGINnewActInst
             free(mode);
         } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern")) {
             hasStaticPattern = 1;
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (value == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
@@ -5624,7 +5614,8 @@ BEGINnewActInst
             pData->ignoreTrailingPattern_isRegex = 0;
         } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern.regex")) {
             hasRegexPattern = 1;
-            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *value;
+            CHKmalloc(value = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (value == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }

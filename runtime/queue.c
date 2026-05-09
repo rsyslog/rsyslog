@@ -4385,13 +4385,13 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         if (!pvals[i].bUsed) continue;
         n_params_set++;
         if (!strcmp(pblk.descr[i].name, "queue.filename")) {
-            pThis->pszFilePrefix = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pThis->pszFilePrefix = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
-            pThis->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pThis->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "queue.spooldirectory")) {
             free(pThis->pszSpoolDir);
-            pThis->pszSpoolDir = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pThis->pszSpoolDir = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pThis->lenSpoolDir = es_strlen(pvals[i].val.d.estr);
             CHKiRet(validateQueueSpoolDir(pThis));
             if (pThis->lenSpoolDir > 0 && pThis->pszSpoolDir[pThis->lenSpoolDir - 1] == '/') {

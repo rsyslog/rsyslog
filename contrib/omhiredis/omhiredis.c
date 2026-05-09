@@ -592,31 +592,31 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
 
         if (!strcmp(actpblk.descr[i].name, "server")) {
-            pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
             pData->port = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "socketpath")) {
-            pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverpassword")) {
-            pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
             pData->dynaKey = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "userpush")) {
             pData->useRPush = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.outField")) {
-            pData->streamOutField = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamOutField = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.keyAck")) {
-            pData->streamKeyAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamKeyAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaKeyAck")) {
             pData->streamDynaKeyAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.groupAck")) {
-            pData->streamGroupAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamGroupAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaGroupAck")) {
             pData->streamDynaGroupAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.indexAck")) {
-            pData->streamIndexAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamIndexAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaIndexAck")) {
             pData->streamDynaIndexAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.capacityLimit")) {
@@ -626,7 +626,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "stream.del")) {
             pData->streamDel = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "mode")) {
-            pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcmp(pData->modeDescription, "template")) {
                 pData->mode = OMHIREDIS_MODE_TEMPLATE;
             } else if (!strcmp(pData->modeDescription, "queue")) {
@@ -642,7 +642,7 @@ BEGINnewActInst
                 ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
             }
         } else if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "expiration")) {
             pData->expiration = pvals[i].val.d.n;
             dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
@@ -650,15 +650,15 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "use_tls")) {
             pData->use_tls = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ca_cert_bundle")) {
-            pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ca_cert_dir")) {
-            pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "client_cert")) {
-            pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "client_key")) {
-            pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sni")) {
-            pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #endif
         } else {
             dbgprintf(

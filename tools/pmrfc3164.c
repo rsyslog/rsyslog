@@ -175,13 +175,13 @@ BEGINnewParserInst
         } else if (!strcmp(parserpblk.descr[i].name, "detect.headerless")) {
             inst->bHdrLessMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(parserpblk.descr[i].name, "headerless.hostname")) {
-            inst->pszHeaderlessHostname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessHostname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "headerless.tag")) {
-            inst->pszHeaderlessTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "headerless.ruleset")) {
-            inst->pszHeaderlessRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "headerless.errorfile")) {
-            inst->pszHeaderlessErrFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessErrFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "headerless.drop")) {
             inst->bDropHeaderless = (int)pvals[i].val.d.n;
         } else {

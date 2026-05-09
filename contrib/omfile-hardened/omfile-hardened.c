@@ -875,7 +875,7 @@ BEGINsetModCnf
         }
 
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pszFileDfltTplName != NULL) {
                 parser_errmsg(
                     "omfile: warning: default template was already "
@@ -1283,22 +1283,22 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "createdirs")) {
             pData->bCreateDirs = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "file")) {
-            pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             CODE_STD_STRING_REQUESTnewActInst(1);
             pData->bDynamicName = 0;
         } else if (!strcmp(actpblk.descr[i].name, "dynafile")) {
             if (pData->fname != NULL) {
                 parser_errmsg("omfile: both \"file\" and \"dynafile\" set, will use dynafile");
             }
-            pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             CODE_STD_STRING_REQUESTnewActInst(2);
             pData->bDynamicName = 1;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sig.provider")) {
-            pData->sigprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sigprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "cry.provider")) {
-            pData->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "closetimeout")) {
             pData->iCloseTimeout = (int)pvals[i].val.d.n;
         } else {
