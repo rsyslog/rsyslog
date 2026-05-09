@@ -31,7 +31,9 @@
 #define OMSR_TPL_AS_ARRAY 2 /* introduced in 4.1.6, 2009-04-03 */
 #define OMSR_TPL_AS_MSG 4 /* introduced in 5.3.4, 2009-11-02 */
 #define OMSR_TPL_AS_JSON 8 /* introduced in 6.5.1, 2012-09-02 */
-/* next option is 16, 32, 64, ... */
+/** Template is used to render a dynamic file name. */
+#define OMSR_TPL_AS_DYNAFILE 16
+/* next option is 32, 64, ... */
 
 struct omodStringRequest_s { /* strings requested by output module for doAction() */
     int iNumEntries; /* number of array entries for data elements below */

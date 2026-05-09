@@ -347,6 +347,8 @@ EXTRA_DIST = \
     source/faq/impstats-push-mode.rst \
     source/faq/imudp-packet-loss.rst \
     source/faq/index.rst \
+    source/faq/tls_anon_auth_mitm.rst \
+    source/faq/tls_mode0_disables_tls.rst \
     source/faq/vespa-ai-integration.rst \
     source/features.rst \
     source/getting_started/ai-assistants.rst \

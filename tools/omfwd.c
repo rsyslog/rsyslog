@@ -1973,6 +1973,38 @@ finalize_it:
     RETiRet;
 }
 
+/** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
+static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
+    if (pData->protocol == FORW_UDP) {
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "omfwd action uses protocol=\"udp\" (without TLS); "
+                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
+        const int tlsHintsConfigured =
+            (pData->pszStrmDrvrAuthMode != NULL) ||
+            (pData->pszStrmDrvr != NULL && strcasecmp((const char *)pData->pszStrmDrvr, "ptcp") != 0);
+        if (tlsHintsConfigured) {
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
+                                      "TCP so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else {
+            glblWarnIfInsecureDefault(
+                loadModConf->pConf,
+                "omfwd action uses protocol=\"tcp\" with streamdriver.mode=\"0\" "
+                "(plain TCP without TLS); see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
+    }
+
+    if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode != 0 && pData->pszStrmDrvrAuthMode != NULL &&
+        strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadModConf->pConf,
+            "omfwd uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
 
 BEGINnewActInst
     struct cnfparamvals *pvals;
@@ -2072,7 +2104,7 @@ BEGINnewActInst
                    !strcmp(actpblk.descr[i].name, "streamdriver.name")) {
             CHKmalloc(pData->pszStrmDrvr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdrivermode") ||
-                   !strcmp(actpblk.descr[i].name, "streamdrivermode")) {
+                   !strcmp(actpblk.descr[i].name, "streamdriver.mode")) {
             pData->iStrmDrvrMode = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
             pData->iStrmDrvrExtendedCertCheck = pvals[i].val.d.n;
@@ -2085,7 +2117,7 @@ BEGINnewActInst
                 parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
             }
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverauthmode") ||
-                   !strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
+                   !strcmp(actpblk.descr[i].name, "streamdriver.authmode")) {
             CHKmalloc(pData->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
             uchar *val;
@@ -2287,6 +2319,8 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter \"address\" not supported for tcp -- ignored");
     }
 
+    warnIfNonTlsForwardingConfigured(pData);
+
     if (pData->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
                                        "omfwd", NULL));
@@ -2475,6 +2509,7 @@ BEGINparseSelectorAct
             cs.pPermPeers = NULL;
         }
     }
+    warnIfNonTlsForwardingConfigured(pData);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {
         setupInstStatsCtrs(pData);
     }

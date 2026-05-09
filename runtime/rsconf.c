@@ -180,6 +180,10 @@ static void cnfSetDefaults(rsconf_t *pThis) {
 #endif
     pThis->globals.bAbortOnUncleanConfig = 0;
     pThis->globals.bAbortOnFailedQueueStartup = 0;
+    pThis->globals.compatConfigFormatLegacy = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatConfigFormatSyslogd = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatConfigFormatProperty = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
     pThis->globals.bReduceRepeatMsgs = 0;
     pThis->globals.bDebugPrintTemplateList = 1;
     pThis->globals.bDebugPrintModuleList = 0;
@@ -691,6 +695,10 @@ void cnfDoCfsysline(char *ln) {
                                       ln);
     }
     DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
+    if (!glblPermitLegacyConfigDirective(loadConf, ln)) {
+        free(ln);
+        return;
+    }
     /* the legacy system needs the "$" stripped */
     conf.cfsysline((uchar *)ln + 1);
     free(ln);

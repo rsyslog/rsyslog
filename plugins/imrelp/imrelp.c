@@ -496,6 +496,20 @@ finalize_it:
     RETiRet;
 }
 
+/** Warn in secure warn mode when an imrelp listener is configured without TLS. */
+static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) {
+    if (!inst->bEnableTLS) {
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "imrelp input uses tls=\"off\" (plain RELP without TLS); "
+                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (inst->authmode != NULL && strcasecmp((const char *)inst->authmode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadModConf->pConf,
+            "imrelp uses tls.authmode=\"anon\"; peer identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
 
 BEGINnewInpInst
     struct cnfparamvals *pvals;
@@ -672,6 +686,8 @@ BEGINnewInpInst
         if (inst->ratelimitInterval == -1) inst->ratelimitInterval = 0;
         if (inst->ratelimitBurst == -1) inst->ratelimitBurst = 10000;
     }
+
+    warnIfPlainRelpListenerConfigured(inst);
 
     inst->bEnableLstn = -1; /* all ok, ready to start up */
 

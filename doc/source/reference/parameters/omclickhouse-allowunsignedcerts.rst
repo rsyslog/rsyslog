@@ -21,15 +21,14 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 :Name: allowUnsignedCerts
 :Scope: input
 :Type: boolean
-:Default: on
+:Default: off
 :Required?: no
 :Introduced: not specified
 
 Description
 -----------
-The module accepts connections to servers, which have unsigned certificates.
-If this parameter is disabled, the module will verify whether the
-certificates are authentic.
+If set to ``"on"``, the module accepts servers with unsigned certificates.
+By default (``"off"``), TLS peer certificates are verified.
 
 Input usage
 -----------

@@ -13,5 +13,7 @@ FAQ
    imtcp-tls-gibberish
    impstats-push-mode
    etl_tool
+   tls_mode0_disables_tls
+   tls_anon_auth_mitm
    vespa-ai-integration
    does-rsyslog-run-under-windows

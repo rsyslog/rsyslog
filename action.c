@@ -2291,6 +2291,7 @@ rsRetVal addAction(action_t **ppAction,
                          "the SQL or stdSQL option in your template!\n");
                 ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
             }
+            tplNoteUse(pAction->ppTpl[i], iTplOpts & OMSR_TPL_AS_DYNAFILE);
         }
 
         /* set parameter-passing mode */

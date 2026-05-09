@@ -78,6 +78,83 @@ static rsRetVal tplJsonBuildTree(struct template *pTpl);
 static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParams_t *iparam, struct syslogTime *ttNow);
 static rsRetVal tplJsonRenderChildren(
     const struct tplJsonNode *parent, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppDst, int *pNeedComma);
+
+/** Returns true when at least one field lacks explicit secure path handling. */
+static int tplNeedsDynafileSecureDefault(const struct template *const pTpl) {
+    const struct templateEntry *pTpe;
+
+    assert(pTpl != NULL);
+    for (pTpe = pTpl->pEntryRoot; pTpe != NULL; pTpe = pTpe->pNext) {
+        if (pTpe->eEntryType == FIELD && !pTpe->data.field.options.bSecPathDrop &&
+            !pTpe->data.field.options.bSecPathReplace) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+/** Applies the strict dynafile path default to fields without explicit mode. */
+static void tplApplyDynafileSecureDefault(struct template *const pTpl) {
+    struct templateEntry *pTpe;
+
+    assert(pTpl != NULL);
+    for (pTpe = pTpl->pEntryRoot; pTpe != NULL; pTpe = pTpe->pNext) {
+        if (pTpe->eEntryType == FIELD && !pTpe->data.field.options.bSecPathDrop &&
+            !pTpe->data.field.options.bSecPathReplace) {
+            pTpe->data.field.options.bSecPathReplace = 1;
+            pTpe->bComplexProcessing = 1;
+        }
+    }
+    pTpl->bAppliedDynafileSecureDefault = 1;
+}
+
+
+/** Records a template use and enforces compatibility.defaults.secure policy. */
+void tplNoteUse(struct template *const pTpl, const int bDynafile) {
+    assert(pTpl != NULL);
+
+    if (bDynafile) {
+        pTpl->bUsedAsDynafile = 1;
+    } else {
+        pTpl->bUsedAsNonDynafile = 1;
+    }
+
+    if (pTpl->bUsedAsDynafile && pTpl->bUsedAsNonDynafile && !pTpl->bWarnedDynafileMixedUse) {
+        if (loadConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
+            parser_warnmsg(
+                "template '%s' is used both as an omfile dynafile template and for other output; "
+                "strict secure dynafile defaults apply to the shared template, use separate templates "
+                "if literal slashes must be preserved outside dynafile paths",
+                pTpl->pszName);
+        } else {
+            parser_warnmsg(
+                "template '%s' is used both as an omfile dynafile template and for other output; "
+                "in strict mode, secure dynafile defaults apply to the shared template, use separate "
+                "templates if literal slashes must be preserved outside dynafile paths",
+                pTpl->pszName);
+        }
+        pTpl->bWarnedDynafileMixedUse = 1;
+    }
+
+    if (!bDynafile || !tplNeedsDynafileSecureDefault(pTpl)) {
+        return;
+    }
+
+    if (loadConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
+        if (!pTpl->bAppliedDynafileSecureDefault) {
+            tplApplyDynafileSecureDefault(pTpl);
+        }
+    } else if (loadConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_WARN &&
+               !pTpl->bWarnedDynafileSecureDefault) {
+        parser_warnmsg(
+            "backward-compatible insecure default in use: omfile dynafile template '%s' has "
+            "fields without securepath handling; use global(compatibility.defaults.secure=\"strict\") "
+            "to default them to secpath-replace",
+            pTpl->pszName);
+        pTpl->bWarnedDynafileSecureDefault = 1;
+    }
+}
 static rsRetVal tplJsonRenderNode(
     const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput);
 static rsRetVal tplJsonRenderValue(

@@ -273,6 +273,8 @@ TESTS_DEFAULT = \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	asynwr_dynfile_flushtxend-off.sh \
+	compat-configformat-rainerscript.sh \
+	compat-defaults-secure-dynafile-rainerscript.sh \
 	abort-uncleancfg-goodcfg.sh \
 	abort-uncleancfg-goodcfg-check.sh \
 	abort-uncleancfg-badcfg-check.sh \
@@ -575,6 +577,8 @@ TESTS_LIBYAML = \
 	config-translate-legacy-debian-default.sh \
 	config-translate-legacy-file-action.sh \
 	config-translate-yaml-to-rs.sh \
+	compat-configformat-yaml.sh \
+	compat-defaults-secure-dynafile-yaml.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \

@@ -61,6 +61,11 @@ struct template {
     char bJsonTreeEnabled;
     struct tplJsonNode *pJsonRoot;
     char bJsonTreeBuilt;
+    unsigned bUsedAsDynafile : 1; /**< template renders an omfile dynamic file name */
+    unsigned bUsedAsNonDynafile : 1; /**< template also has a non-dynafile use */
+    unsigned bWarnedDynafileMixedUse : 1; /**< mixed-use warning was already emitted */
+    unsigned bWarnedDynafileSecureDefault : 1; /**< warn-mode notice was already emitted */
+    unsigned bAppliedDynafileSecureDefault : 1; /**< strict-mode default was already applied */
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
@@ -192,6 +197,7 @@ void tplPrintList(rsconf_t *conf);
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
 rsRetVal ExtendBuf(actWrkrIParams_t *const iparam, const size_t iMinSize);
 int tplRequiresDateCall(struct template *pTpl);
+void tplNoteUse(struct template *pTpl, int bDynafile);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h
  * BEFORE msg.h, even if your code file does not actually need it.

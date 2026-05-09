@@ -446,6 +446,20 @@ finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
+/** Warn in secure warn mode when an omrelp action is configured without TLS. */
+static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
+    if (!pData->bEnableTLS) {
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "omrelp action uses tls=\"off\" (plain RELP without TLS); "
+                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (pData->authmode != NULL && strcasecmp((const char *)pData->authmode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadModConf->pConf,
+            "omrelp uses tls.authmode=\"anon\"; peer identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i, j;
@@ -548,6 +562,8 @@ BEGINnewActInst
     CHKiRet(OMSRsetEntry(*ppOMSR, 0,
                          (uchar *)strdup((pData->tplName == NULL) ? "RSYSLOG_ForwardFormat" : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));
+
+    warnIfPlainRelpActionConfigured(pData);
 
     iRet = doCreateRelpClient(pData, &pRelpClt);
     if (pRelpClt != NULL) relpEngineCltDestruct(pRelpEngine, &pRelpClt);

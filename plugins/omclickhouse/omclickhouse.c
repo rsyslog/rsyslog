@@ -586,7 +586,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->authBuf = NULL;
     pData->tplName = NULL;
     pData->useHttps = 1;
-    pData->allowUnsignedCerts = 1;
+    pData->allowUnsignedCerts = 0;
     pData->skipVerifyHost = 0;
     pData->errorFile = NULL;
     pData->bulkmode = 1;
