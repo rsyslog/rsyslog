@@ -1594,7 +1594,7 @@ BEGINnewActInst
         /* "filename" is actually a template name, we need this as string 1. So let's add it
          * to the pOMSR. -- rgerhards, 2007-07-27
          */
-        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_TPL_AS_DYNAFILE));
         pData->iNumTpls = 2;
         // TODO: create unified code for this (legacy+v6 system)
         /* we now allocate the cache table */
@@ -1669,7 +1669,7 @@ BEGINparseSelectorAct
             /* "filename" is actually a template name, we need this as string 1. So let's add it
              * to the pOMSR. -- rgerhards, 2007-07-27
              */
-            CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
+            CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_TPL_AS_DYNAFILE));
             /* we now allocate the cache table */
             CHKmalloc(pData->dynCache =
                           (dynaFileCacheEntry **)calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry *)));

@@ -91,6 +91,8 @@ See also
 --------
 
 * :doc:`../concepts/netstrm_drvr` — overview of TLS options in rsyslog
+* :doc:`tls_mode0_disables_tls` — transport mode disables TLS even when TLS params exist
+* :doc:`tls_anon_auth_mitm` — anonymous TLS auth and MITM risk
 * :doc:`../configuration/modules/imtcp` — reference for the TCP input module
 * :doc:`../configuration/modules/imptcp` — reference for the imptcp input module
 * :doc:`../troubleshooting/index` — general debugging tips

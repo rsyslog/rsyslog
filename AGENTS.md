@@ -35,6 +35,10 @@ Follow these three steps for a typical development task:
 ## Container Images
 
 - Runtime container definitions live in `packaging/docker/rsyslog`.
+- Local GitHub Actions-style validation commands for the Ubuntu 26.04 dev
+  container, `-j60` check runs, clang static analyzer, disabled external
+  services, and Docker storage cleanup are documented in
+  [`devtools/local-container-testing.md`](./devtools/local-container-testing.md).
 - The container Makefile default version must stay clearly non-release.
   Use explicit `VERSION=...` values for release-like local rehearsals and for
   any publish automation.

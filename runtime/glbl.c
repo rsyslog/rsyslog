@@ -164,6 +164,10 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"net.aclresolvehostname", eCmdHdlrBinary, 0},
     {"net.enabledns", eCmdHdlrBinary, 0},
     {"net.permitACLwarning", eCmdHdlrBinary, 0},
+    {"compatibility.configformat.legacy", eCmdHdlrGetWord, 0},
+    {"compatibility.configformat.syslogd", eCmdHdlrGetWord, 0},
+    {"compatibility.configformat.property", eCmdHdlrGetWord, 0},
+    {"compatibility.defaults.secure", eCmdHdlrGetWord, 0},
     {"abortonuncleanconfig", eCmdHdlrBinary, 0},
     {"abortonfailedqueuestartup", eCmdHdlrBinary, 0},
     {"variables.casesensitive", eCmdHdlrBinary, 0},
@@ -664,6 +668,112 @@ static rsRetVal ATTR_NONNULL() setReportChildProcessExits(const uchar *const mod
     RETiRet;
 }
 
+/** Convert enable/warn/disable config-format policy text to its internal enum. */
+static rsRetVal ATTR_NONNULL()
+    setCompatConfigFormatMode(const char *const param, const uchar *const mode, int *const dst) {
+    DEFiRet;
+    if (!strcmp((const char *)mode, "enable")) {
+        *dst = COMPAT_CONFIGFORMAT_ENABLE;
+    } else if (!strcmp((const char *)mode, "warn")) {
+        *dst = COMPAT_CONFIGFORMAT_WARN;
+    } else if (!strcmp((const char *)mode, "disable")) {
+        *dst = COMPAT_CONFIGFORMAT_DISABLE;
+    } else {
+        parser_errmsg("invalid value '%s' for global parameter %s", mode, param);
+        iRet = RS_RET_CONF_PARAM_INVLD;
+    }
+    RETiRet;
+}
+
+/** Convert strict/backward-compatible/warn secure-defaults policy text to its internal enum. */
+static rsRetVal ATTR_NONNULL() setCompatDefaultsSecure(const uchar *const mode) {
+    DEFiRet;
+    if (!strcmp((const char *)mode, "strict")) {
+        loadConf->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_STRICT;
+        loadConf->globals.bAbortOnUncleanConfig = 1;
+    } else if (!strcmp((const char *)mode, "backward-compatible")) {
+        loadConf->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_BACKWARD_COMPATIBLE;
+    } else if (!strcmp((const char *)mode, "warn")) {
+        loadConf->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
+    } else {
+        parser_errmsg("invalid value '%s' for global parameter compatibility.defaults.secure", mode);
+        iRet = RS_RET_CONF_PARAM_INVLD;
+    }
+    RETiRet;
+}
+
+/** Apply a global compatibility enum string during config parsing. */
+static rsRetVal ATTR_NONNULL() processCompatGlobalParam(const char *const name, struct cnfparamvals *const pval) {
+    char *mode;
+    DEFiRet;
+
+    mode = es_str2cstr(pval->val.d.estr, NULL);
+    if (mode == NULL) {
+        parser_errmsg("out of memory processing global parameter %s", name);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    if (!strcmp(name, "compatibility.configformat.legacy")) {
+        CHKiRet(setCompatConfigFormatMode(name, (uchar *)mode, &loadConf->globals.compatConfigFormatLegacy));
+    } else if (!strcmp(name, "compatibility.configformat.syslogd")) {
+        CHKiRet(setCompatConfigFormatMode(name, (uchar *)mode, &loadConf->globals.compatConfigFormatSyslogd));
+    } else if (!strcmp(name, "compatibility.configformat.property")) {
+        CHKiRet(setCompatConfigFormatMode(name, (uchar *)mode, &loadConf->globals.compatConfigFormatProperty));
+    } else if (!strcmp(name, "compatibility.defaults.secure")) {
+        CHKiRet(setCompatDefaultsSecure((uchar *)mode));
+    }
+
+finalize_it:
+    free(mode);
+    RETiRet;
+}
+
+/** Emit a compatibility warning through the parser diagnostics path. */
+static void ATTR_NONNULL() compatParserWarnmsg(const char *const msg) {
+    parser_warnmsg("%s", msg);
+}
+
+/** Emit warning/error for compatibility-controlled legacy syntax and say how to re-enable it. */
+static int ATTR_NONNULL()
+    permitCompatSyntax(const int mode, const char *const kind, const char *const text, const char *const option) {
+    int permitted = 1;
+
+    if (mode == COMPAT_CONFIGFORMAT_WARN) {
+        char msg[1024];
+        snprintf(msg, sizeof(msg), "obsolete %s syntax encountered: '%s'", kind, text);
+        msg[sizeof(msg) - 1] = '\0';
+        compatParserWarnmsg(msg);
+    } else if (mode == COMPAT_CONFIGFORMAT_DISABLE) {
+        parser_errmsg("obsolete %s syntax disabled: '%s'; use global(%s=\"enable\") to enable it", kind, text, option);
+        permitted = 0;
+    }
+
+    return permitted;
+}
+
+int glblPermitLegacyConfigDirective(rsconf_t *cnf, const char *directive) {
+    return permitCompatSyntax(cnf->globals.compatConfigFormatLegacy, "$-directive", directive,
+                              "compatibility.configformat.legacy");
+}
+
+int glblPermitSyslogdConfigFilter(rsconf_t *cnf, const char *filter) {
+    return permitCompatSyntax(cnf->globals.compatConfigFormatSyslogd, "classic syslogd filter", filter,
+                              "compatibility.configformat.syslogd");
+}
+
+int glblPermitPropertyConfigFilter(rsconf_t *cnf, const char *filter) {
+    return permitCompatSyntax(cnf->globals.compatConfigFormatProperty, "classic property-based filter", filter,
+                              "compatibility.configformat.property");
+}
+
+void glblWarnIfInsecureDefault(rsconf_t *cnf, const char *detail) {
+    if (cnf != NULL && cnf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_WARN) {
+        parser_warnmsg(
+            "backward-compatible insecure default in use: %s; "
+            "use global(compatibility.defaults.secure=\"strict\") to enable the secure default",
+            detail);
+    }
+}
+
 static int getDefPFFamily(rsconf_t *cnf) {
     return cnf->globals.iDefPFFamily;
 }
@@ -1088,6 +1198,12 @@ void glblProcessCnf(struct cnfobj *o) {
         } else if (!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
             loadConf->globals.abortOnIDResolutionFail = (int)cnfparamvals[i].val.d.n;
             cnfparamvals[i].bUsed = TRUE;
+        } else if (!strncmp(paramblk.descr[i].name, "compatibility.", 14)) {
+            if (processCompatGlobalParam(paramblk.descr[i].name, &cnfparamvals[i]) == RS_RET_OK) {
+                cnfparamvals[i].bUsed = 1;
+            } else {
+                dbgprintf("glblProcessCnf: failed to process early global parameter '%s'\n", paramblk.descr[i].name);
+            }
         }
     }
 done:
@@ -1352,6 +1468,8 @@ rsRetVal glblDoneLoadCnf(void) {
             SetDisableDNS(!((int)cnfparamvals[i].val.d.n));
         } else if (!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
             SetOptionDisallowWarning(!((int)cnfparamvals[i].val.d.n));
+        } else if (!strncmp(paramblk.descr[i].name, "compatibility.", 14)) {
+            /* processed immediately by glblProcessCnf(), as later syntax depends on it */
         } else if (!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
             loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "abortonfailedqueuestartup")) {
@@ -1425,6 +1543,12 @@ rsRetVal glblDoneLoadCnf(void) {
     if (loadConf->globals.debugOnShutdown && Debug != DEBUG_FULL) {
         Debug = DEBUG_ONDEMAND;
         stddbg = -1;
+    }
+
+    if (loadConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
+        loadConf->globals.bAbortOnUncleanConfig = 1;
+    } else if (!loadConf->globals.bAbortOnUncleanConfig) {
+        glblWarnIfInsecureDefault(loadConf, "global(abortOnUncleanConfig=\"off\")");
     }
 
 finalize_it:

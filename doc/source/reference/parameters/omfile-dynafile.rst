@@ -39,6 +39,18 @@ used properly escapes file paths*. This is done by using the *securepath*
 parameter in the template's property statements, or the *secpath-drop*
 or *secpath-replace* property options with the property replacer.
 
+When ``global(compatibility.defaults.secure="strict")`` is active,
+dynafile templates default fields without explicit secure path handling
+to ``secpath-replace``.  The ``warn`` setting keeps the historical
+default and emits a warning for dynafile templates that need an explicit
+``securepath`` or ``secpath-*`` option.  The ``backward-compatible``
+setting keeps the historical default silently.
+
+If the same template is used both for ``dynaFile`` and for non-dynafile
+output, rsyslog emits a warning.  In strict mode the secure dynafile
+default still applies to that shared template.  Use separate templates
+when non-dynafile output must preserve literal slashes.
+
 Either file or dynaFile can be used, but not both. If both are given,
 dynaFile will be used.
 

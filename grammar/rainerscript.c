@@ -58,6 +58,7 @@
 #include "wti.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
+#include "glbl.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -4919,7 +4920,15 @@ struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
         cnfstmt->printable = (uchar *)prifilt;
         cnfstmt->d.s_prifilt.t_then = t_then;
         cnfstmt->d.s_prifilt.t_else = NULL;
-        DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
+        if (glblPermitSyslogdConfigFilter(loadConf, prifilt)) {
+            DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
+        } else {
+            free(cnfstmt->printable);
+            cnfstmt->printable = NULL;
+            cnfstmt->nodetype = S_NOP;
+            cnfstmtDestructLst(t_then);
+            cnfstmt->d.s_prifilt.t_then = NULL;
+        }
     }
     return cnfstmt;
 }
@@ -4931,7 +4940,13 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
         cnfstmt->d.s_propfilt.t_then = t_then;
         cnfstmt->d.s_propfilt.regex_cache = NULL;
         cnfstmt->d.s_propfilt.pCSCompValue = NULL;
-        if (DecodePropFilter((uchar *)propfilt, cnfstmt) != RS_RET_OK) {
+        if (!glblPermitPropertyConfigFilter(loadConf, propfilt)) {
+            free(cnfstmt->printable);
+            cnfstmt->printable = NULL;
+            cnfstmt->nodetype = S_NOP;
+            cnfstmtDestructLst(t_then);
+            cnfstmt->d.s_propfilt.t_then = NULL;
+        } else if (DecodePropFilter((uchar *)propfilt, cnfstmt) != RS_RET_OK) {
             cnfstmt->nodetype = S_NOP; /* disable action! */
             cnfstmtDestructLst(t_then); /* we do no longer need this */
         }

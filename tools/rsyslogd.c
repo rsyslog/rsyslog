@@ -1135,7 +1135,8 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
         }
     }
     if (emit_to_stderr || iConfigVerify) {
-        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR)
+        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
+            (iConfigVerify && pri2sev(pri) <= LOG_WARNING))
             fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char *)msg : bufModMsg);
     }
     if (emit_supress_msg) {

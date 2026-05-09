@@ -329,6 +329,33 @@ static rsRetVal validateLegacySessionLimits(void) {
     return RS_RET_OK;
 }
 
+/** Warn in secure warn mode when imtcp listener transport/auth settings reduce security. */
+static void warnIfInsecureListenerConfigured(const int streamDriverMode,
+                                             const uchar *const streamDriverName,
+                                             const uchar *const authMode) {
+    if (streamDriverMode == 0) {
+        const int tlsHintsConfigured =
+            (authMode != NULL) || (streamDriverName != NULL && strcasecmp((const char *)streamDriverName, "ptcp") != 0);
+        if (tlsHintsConfigured) {
+            glblWarnIfInsecureDefault(loadConf,
+                                      "imtcp has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
+                                      "TCP so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else {
+            glblWarnIfInsecureDefault(loadConf,
+                                      "imtcp input uses streamdriver.mode=\"0\" (plain TCP without TLS); "
+                                      "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
+    }
+
+    if (streamDriverMode != 0 && authMode != NULL && strcasecmp((const char *)authMode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadConf,
+            "imtcp uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
 /* callbacks */
 /* this shall go into a specific ACL module! */
 static int isPermittedHost(struct sockaddr *addr,
@@ -773,6 +800,7 @@ BEGINnewInpInst
             inst->ratelimitBurst = 10000;
         }
     }
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, inst->pszStrmDrvrName, inst->pszStrmDrvrAuthMode);
 
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
@@ -930,6 +958,8 @@ BEGINsetModCnf
      */
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
+    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, loadModConf->pszStrmDrvrName,
+                                     loadModConf->pszStrmDrvrAuthMode);
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
@@ -972,6 +1002,8 @@ BEGINendCnfLoad
             cs.pszStrmDrvrAuthMode = NULL;
         }
         pModConf->bPreserveCase = cs.bPreserveCase;
+        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, pModConf->pszStrmDrvrName,
+                                         pModConf->pszStrmDrvrAuthMode);
     }
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;

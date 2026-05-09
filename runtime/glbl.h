@@ -159,5 +159,13 @@ int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
 uchar *glblGetLocalHostName(void);
+/** Check whether a legacy $-directive may be processed under the active compatibility policy. */
+int glblPermitLegacyConfigDirective(rsconf_t *cnf, const char *directive);
+/** Check whether a classic syslogd PRI selector may be processed under the active compatibility policy. */
+int glblPermitSyslogdConfigFilter(rsconf_t *cnf, const char *filter);
+/** Check whether a classic property-based selector filter may be processed under the active compatibility policy. */
+int glblPermitPropertyConfigFilter(rsconf_t *cnf, const char *filter);
+/** Emit an insecure-default warning when compatibility.defaults.secure is set to warn. */
+void glblWarnIfInsecureDefault(rsconf_t *cnf, const char *detail);
 
 #endif /* #ifndef GLBL_H_INCLUDED */
