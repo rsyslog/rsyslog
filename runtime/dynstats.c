@@ -221,6 +221,9 @@ static rsRetVal dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_buc
     DEFiRet;
 
     name_len = ustrlen(name);
+    if (name_len > SIZE_MAX - DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH - 2) {
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
     /* Layout: "<name>" + '.' + <suffix up to MAX> + '\0' => +2 avoids off-by-one overflow. */
     CHKmalloc(metric_name_buff = malloc(name_len + DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH + 2));
 
