@@ -143,16 +143,16 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "patterndir")) {
-            pData->pszPatternDir = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszPatternDir = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "match")) {
-            pData->pszMatch = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszMatch = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "source")) {
-            pData->pszSource = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszSource = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "target")) {
-            pData->pszTarget = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszTarget = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         } else {
             DBGPRINTF(

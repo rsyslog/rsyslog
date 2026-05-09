@@ -438,7 +438,7 @@ BEGINnewActInst
             memcpy(pData->pass, cstr, len + 1);
             free(cstr);
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "conninfo")) {
             cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
             len = es_strlen(pvals[i].val.d.estr);

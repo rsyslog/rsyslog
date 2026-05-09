@@ -652,20 +652,20 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "reports")) {
-            inst->pszFollow_glob = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszFollow_glob = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             inst->lenTag = ustrlen(inst->pszTag);
         } else if (!strcmp(inppblk.descr[i].name, "programkey")) {
-            inst->pszProgk = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszProgk = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             inst->lenProgk = ustrlen(inst->pszProgk) + 2;
         } else if (!strcmp(inppblk.descr[i].name, "timestampkey")) {
-            inst->pszTSk = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszTSk = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             inst->lenTSk = ustrlen(inst->pszTSk) + 1;
         } else if (!strcmp(inppblk.descr[i].name, "deduplicatespace")) {
             inst->bDedupSpace = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "severity")) {
             inst->iSeverity = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "facility")) {
@@ -676,7 +676,7 @@ BEGINnewInpInst
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
 
-            inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL));
 
             while ((temp = strchr(inst->ff_regex, '\t')) != NULL) *temp = ' ';
 
@@ -729,7 +729,7 @@ BEGINnewInpInst
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
 
-            inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL));
 
             while ((temp = strchr(inst->ff_regex, '\t')) != NULL) *temp = ' ';
 

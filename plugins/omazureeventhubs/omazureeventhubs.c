@@ -900,29 +900,30 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "amqp_address")) {
-            pData->amqp_address = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->amqp_address = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "azurehost")) {
-            pData->azurehost = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->azurehost = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "azureport")) {
-            pData->azureport = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->azureport = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "azure_key_name")) {
-            pData->azure_key_name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->azure_key_name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "azure_key")) {
-            pData->azure_key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->azure_key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "container")) {
-            pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "eventproperties")) {
             pData->nEventProperties = pvals[i].val.d.ar->nmemb;
-            CHKmalloc(pData->eventProperties = malloc(sizeof(struct event_property) * pvals[i].val.d.ar->nmemb));
+            CHKmalloc(pData->eventProperties = calloc(pvals[i].val.d.ar->nmemb, sizeof(struct event_property)));
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                char *cstr;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 CHKiRet(processEventProperty(cstr, &pData->eventProperties[j].key, &pData->eventProperties[j].val));
                 free(cstr);
             }
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsname")) {
-            pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omazureeventhubs: program error, non-handled param '%s'\n",
                      actpblk.descr[i].name);

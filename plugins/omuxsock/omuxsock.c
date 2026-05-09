@@ -261,7 +261,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (cs.tplName != NULL) {
                 LogError(0, RS_RET_DUP_PARAM,
                          "omuxsock: default template "
@@ -271,11 +271,11 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "abstract")) {
             loadModConf->bAbstract = !!(int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "socketname")) {
-            loadModConf->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "sockettype")) {
             CHKiRet(_decodeSockType(pvals[i].val.d.estr, &loadModConf->sockType, &loadModConf->bConnected));
         } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
-            loadModConf->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->namespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "omuxsock: program error, non-handled "
@@ -358,17 +358,17 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "abstract")) {
             pData->bAbstract = !!(int)pvals[i].val.d.n;
             bHaveAbstract = 1;
         } else if (!strcmp(actpblk.descr[i].name, "socketname")) {
-            pData->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sockettype")) {
             CHKiRet(_decodeSockType(pvals[i].val.d.estr, &pData->sockType, &pData->bConnected));
             bHaveSocketType = 1;
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
-            pData->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->namespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         }
     }
 

@@ -125,15 +125,15 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst) {
     for (i = 0; i < pblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
-            hash = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(hash = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.url")) {
-            ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
-            ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
-            ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(ag_key = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.hmacAlg")) {
-            hmac = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(hmac = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "sig.block.levelLimit")) {
             if (pvals[i].val.d.n < 2) {
                 LogError(0, RS_RET_ERR,
@@ -179,7 +179,7 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst) {
         } else if (!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
             rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
         } else if (!strcmp(pblk.descr[i].name, "sig.syncmode")) {
-            cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp((char *)cstr, "sync"))
                 rsksiSetSyncMode(pThis->ctx, LOGSIG_SYNCHRONOUS);
             else if (!strcasecmp((char *)cstr, "async"))
@@ -188,11 +188,11 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst) {
                 LogError(0, RS_RET_ERR, "sig.syncmode '%s' unknown - using default", cstr);
             free(cstr);
         } else if (!strcmp(pblk.descr[i].name, "sig.randomsource")) {
-            cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             rsksiSetRandomSource(pThis->ctx, (char *)cstr);
             free(cstr);
         } else if (!strcmp(pblk.descr[i].name, "sig.debugfile")) {
-            cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             rsksiSetDebugFile(pThis->ctx, (char *)cstr);
             free(cstr);
         } else if (!strcmp(pblk.descr[i].name, "sig.debuglevel")) {

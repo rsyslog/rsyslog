@@ -467,11 +467,11 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "cookie")) {
             free(pData->cookie);
-            pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "container")) {
             free(pData->container);
             size_t lenvar = es_strlen(pvals[i].val.d.estr);
-            pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->container[0] == '$') {
                 /* pre 8.35, the container name needed to be specified without
                  * the leading $. This was confusing, so we now require a full

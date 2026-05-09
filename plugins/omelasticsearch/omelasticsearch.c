@@ -2237,7 +2237,7 @@ BEGINnewActInst
         if (!strcmp(actpblk.descr[i].name, "server")) {
             servers = pvals[i].val.d.ar;
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "erroronly")) {
             pData->errorOnly = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "interleaved")) {
@@ -2249,23 +2249,23 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "indextimeout")) {
             pData->indexTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "uid")) {
-            pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-            pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "apikey")) {
-            pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "searchindex")) {
-            pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
-            pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pipelinename")) {
-            pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynpipelinename")) {
             pData->dynPipelineName = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "skippipelineifempty")) {
             pData->skipPipelineIfEmpty = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "parent")) {
-            pData->parent = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->parent = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynsearchindex")) {
             pData->dynSrchIdx = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "dynsearchtype")) {
@@ -2281,17 +2281,17 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
             pData->skipVerifyHost = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "timeout")) {
-            pData->timeout = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->timeout = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "usehttps")) {
             pData->useHttps = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynbulkid")) {
             pData->dynBulkId = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "bulkid")) {
-            pData->bulkId = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->bulkId = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.cacert' file %s couldn't be accessed",
@@ -2300,7 +2300,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.mycert' file %s couldn't be accessed",
@@ -2309,7 +2309,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.myprivkey' file %s couldn't be accessed",
@@ -2318,7 +2318,8 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "writeoperation")) {
-            char *writeop = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *writeop;
+            CHKmalloc(writeop = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (writeop && !strcmp(writeop, "create")) {
                 pData->writeOperation = ES_WRITE_CREATE;
             } else if (writeop && !strcmp(writeop, "index")) {
@@ -2338,9 +2339,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "retryruleset")) {
-            pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "rebindinterval")) {
             pData->rebindInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "esversion.major")) {

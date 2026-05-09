@@ -425,7 +425,7 @@ BEGINsetModCnf
         }
         if (!strcmp(modpblk.descr[i].name, "tls.tlslib")) {
 #if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
-            loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (relpEngineSetTLSLibByName(pRelpEngine, loadModConf->tlslib) != RELP_RET_OK) {
                 LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
                        "omrelp: tlslib '%s' not accepted as valid by librelp - using default", loadModConf->tlslib);
@@ -462,13 +462,13 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "target")) {
-            pData->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
-            pData->port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "localclientip")) {
-            pData->localClientIP = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->localClientIP = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "timeout")) {
             pData->timeout = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "conn.timeout")) {
@@ -490,9 +490,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "tls.compression")) {
             pData->bEnableTLSZip = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.prioritystring")) {
-            pData->pristring = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pristring = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -501,7 +501,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -510,7 +510,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -520,7 +520,7 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.tlscfgcmd")) {
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
-            pData->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #else
             LogError(0, RS_RET_NOT_IMPLEMENTED,
                      "omrelp: librelp does not support input parameter "
@@ -528,12 +528,12 @@ BEGINnewActInst
                      "ignoring setting now.");
 #endif
         } else if (!strcmp(actpblk.descr[i].name, "tls.authmode")) {
-            pData->authmode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->authmode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
             pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
-            CHKmalloc(pData->permittedPeers.name = malloc(sizeof(uchar *) * pData->permittedPeers.nmemb));
+            CHKmalloc(pData->permittedPeers.name = calloc(pData->permittedPeers.nmemb, sizeof(uchar *)));
             for (j = 0; j < pData->permittedPeers.nmemb; ++j) {
-                pData->permittedPeers.name[j] = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(pData->permittedPeers.name[j] = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
             }
         } else {
             dbgprintf(

@@ -167,15 +167,15 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "appname")) {
-            pData->pszAppName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszAppName = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         }
         if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         }
         if (!strcmp(actpblk.descr[i].name, "value")) {
-            pData->pszValue = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszValue = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         }
         dbgprintf(

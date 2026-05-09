@@ -332,7 +332,8 @@ BEGINnewActInst
         for (i = 0; i < actpblk.nParams; ++i) {
             if (!pvals[i].bUsed) continue;
             if (!strcmp(actpblk.descr[i].name, "host")) {
-                char *u = es_str2cstr(pvals[i].val.d.estr, NULL);
+                char *u;
+                CHKmalloc(u = es_str2cstr(pvals[i].val.d.estr, NULL));
                 cs->url = pn_url_parse(u);
                 if (!cs->url) {
                     LogError(0, RS_RET_CONF_PARSE_ERROR, "omamqp1: Invalid host URL configured: '%s'", u);
@@ -341,13 +342,13 @@ BEGINnewActInst
                 }
                 free(u);
             } else if (!strcmp(actpblk.descr[i].name, "template")) {
-                cs->templateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cs->templateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             } else if (!strcmp(actpblk.descr[i].name, "target")) {
-                cs->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cs->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             } else if (!strcmp(actpblk.descr[i].name, "username")) {
-                cs->username = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cs->username = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             } else if (!strcmp(actpblk.descr[i].name, "password")) {
-                cs->password = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cs->password = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             } else if (!strcmp(actpblk.descr[i].name, "reconnectDelay")) {
                 cs->reconnectDelay = (int)pvals[i].val.d.n;
             } else if (!strcmp(actpblk.descr[i].name, "idleTimeout")) {

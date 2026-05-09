@@ -664,12 +664,12 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "ulogbase")) {
-            inst->pszUlogBaseName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszUlogBaseName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             inst->lenTag = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "severity")) {
             inst->iSeverity = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "facility")) {

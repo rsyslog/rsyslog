@@ -105,13 +105,13 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst, int paramType) {
     for (i = 0; i < pblk->nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(pblk->descr[i].name, "cry.key") || !strcmp(pblk->descr[i].name, "queue.cry.key")) {
-            key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             ++nKeys;
         } else if (!strcmp(pblk->descr[i].name, "cry.keyfile") || !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
-            keyfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(keyfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             ++nKeys;
         } else if (!strcmp(pblk->descr[i].name, "cry.algo") || !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
-            algomode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(algomode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "lmcry_ossl: program error, non-handled "

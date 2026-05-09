@@ -1433,7 +1433,7 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "persiststateinterval")) {
             cs.iPersistStateInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "statefile")) {
-            cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "filecreatemode")) {
             cs.fCreateMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
@@ -1442,7 +1442,7 @@ BEGINsetModCnf
             cs.ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
             free(cs.pszRatelimitName);
-            cs.pszRatelimitName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.pszRatelimitName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
             cs.bIgnorePrevious = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
@@ -1455,13 +1455,13 @@ BEGINsetModCnf
 
             char *fac, *p;
 
-            fac = p = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(fac = p = es_str2cstr(pvals[i].val.d.estr, NULL));
             facilityHdlr((uchar **)&p, (void *)&cs.iDfltFacility);
             free(fac);
         } else if (!strcmp(modpblk.descr[i].name, "usepidfromsystem")) {
             cs.bUseJnlPID = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "usepid")) {
-            cs.usePid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.usePid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "workaroundjournalbug")) {
             cs.bWorkAroundJournalBug = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "fsync")) {
@@ -1469,7 +1469,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "remote")) {
             cs.bRemote = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "defaulttag")) {
-            cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imjournal: program error, non-handled "
@@ -1540,7 +1540,7 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "main")) {
             inst->bMain = (int)pvals[i].val.d.n;
         } else {

@@ -1047,21 +1047,21 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "host")) {
-            host = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(host = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "recover_policy")) {
-            recover = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(recover = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             port = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "virtual_host")) {
-            vhost = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(vhost = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "user")) {
-            user = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(user = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "password")) {
-            password = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(password = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ssl")) {
             pData->ssl = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ca_cert")) {
-            pData->caCert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "heartbeat_interval")) {
             pData->heartbeat = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "init_openssl")) {
@@ -1071,15 +1071,20 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "verify_hostname")) {
             pData->verifyHostname = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "exchange")) {
-            pData->exchange = cstring_bytes(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmp;
+            CHKmalloc(tmp = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->exchange = cstring_bytes(tmp);
         } else if (!strcmp(actpblk.descr[i].name, "routing_key")) {
-            pData->routing_key = cstring_bytes(es_str2cstr(pvals[i].val.d.estr, NULL));
+            char *tmp;
+            CHKmalloc(tmp = es_str2cstr(pvals[i].val.d.estr, NULL));
+            pData->routing_key = cstring_bytes(tmp);
         } else if (!strcmp(actpblk.descr[i].name, "routing_key_template")) {
-            pData->routing_key_template = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->routing_key_template = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "populate_properties")) {
             pData->populate_properties = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "delivery_mode")) {
-            char *temp = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *temp;
+            CHKmalloc(temp = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (temp) {
                 if (!strcasecmp(temp, "TRANSIENT") || !strcmp(temp, "1")) {
                     pData->delivery_mode = 1;
@@ -1102,11 +1107,11 @@ BEGINnewActInst
 #endif
             }
         } else if (!strcmp(actpblk.descr[i].name, "body_template")) {
-            pData->body_template = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->body_template = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "content_type")) {
-            pData->content_type = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->content_type = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "exchange_type")) {
-            pData->exchange_type = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->exchange_type = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "auto_delete")) {
             pData->auto_delete = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "durable")) {

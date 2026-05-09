@@ -1343,7 +1343,7 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "syssock.use")) {
             loadModConf->bOmitLocalLogging = ((int)pvals[i].val.d.n) ? 0 : 1;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.name")) {
-            loadModConf->pLogSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pLogSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ignoretimestamp")) {
             loadModConf->bIgnoreTimestamp = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ignoreownmessages")) {
@@ -1371,7 +1371,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.severity")) {
             loadModConf->ratelimitSeveritySysSock = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.name")) {
-            loadModConf->pszRatelimitNameSysSock = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszRatelimitNameSysSock = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "
@@ -1423,7 +1423,7 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "socket")) {
-            inst->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "createpath")) {
             inst->bCreatePath = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "parsetrusted")) {
@@ -1433,7 +1433,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "unlink")) {
             inst->bUnlink = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "hostname")) {
-            inst->pLogHostName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pLogHostName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ignoretimestamp")) {
             inst->bIgnoreTimestamp = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
@@ -1449,7 +1449,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "usespecialparser")) {
             inst->bUseSpecialParser = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
@@ -1457,7 +1457,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
             inst->ratelimitSeverity = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "

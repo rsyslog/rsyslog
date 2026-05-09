@@ -521,7 +521,7 @@ BEGINnewActInst
         if (!strcmp(actpblk.descr[i].name, "binary")) {
             CHKiRet(split_binary_parameters(&pData->szBinary, &pData->aParams, &pData->iParams, pvals[i].val.d.estr));
         } else if (!strcmp(actpblk.descr[i].name, "output")) {
-            pData->outputFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->outputFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
             pData->bForceSingleInst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "interface.input")) {

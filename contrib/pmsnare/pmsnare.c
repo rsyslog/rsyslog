@@ -173,7 +173,12 @@ BEGINnewParserInst
         } else if (!strcmp(parserpblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
             inst->bParserEscapeCCCStyle = pvals[i].val.d.n;
         } else if (!strcmp(parserpblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
-            inst->cCCEscapeChar = (uchar)*es_str2cstr(pvals[i].val.d.estr, NULL);
+            {
+                char *cstr;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
+                inst->cCCEscapeChar = (uchar)*cstr;
+                free(cstr);
+            }
         } else {
             dbgprintf("pmsnare: program error, non-handled param '%s'\n", parserpblk.descr[i].name);
         }

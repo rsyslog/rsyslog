@@ -2088,7 +2088,7 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "topic")) {
-            pData->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
             pData->dynaKey = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "dynatopic")) {
@@ -2144,13 +2144,13 @@ BEGINnewActInst
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 #endif
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsfile")) {
-            pData->statsFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "reopenonhup")) {
             pData->bReopenOnHup = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "resubmitonfailure")) {
@@ -2158,9 +2158,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "keepfailedmessages")) {
             pData->bKeepFailedMessages = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
-            pData->failedMsgFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->failedMsgFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsname")) {
-            pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omkafka: program error, non-handled param '%s'\n",
                      actpblk.descr[i].name);

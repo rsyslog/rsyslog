@@ -252,7 +252,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ensurelfending")) {
             pData->bEnsureLFEnding = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->templateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->templateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "omstdout: program error, non-handled "

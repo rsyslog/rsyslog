@@ -141,7 +141,7 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "jsonroot")) {
             size_t lenvar = es_strlen(pvals[i].val.d.estr);
-            pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->jsonRoot[0] == '$') {
                 /* pre 8.35, the jsonRoot name needed to be specified without
                  * the leading $. This was confusing, so we now require a full

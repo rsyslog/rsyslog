@@ -346,7 +346,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "logpath")) {
-            loadModConf->pszPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "permitnonkernelfacility")) {
             loadModConf->bPermitNonKernel = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "parsekerneltimestamp")) {
@@ -362,9 +362,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "ratelimitinterval")) {
             loadModConf->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
-            loadModConf->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
-            loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_WARNING,
                    "imklog: RSYSLOG BUG, non-handled param '%s' in "

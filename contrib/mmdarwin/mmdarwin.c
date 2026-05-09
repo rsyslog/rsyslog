@@ -553,7 +553,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "container")) {
-            loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (loadModConf->container[0] != '!' && loadModConf->container[0] != '.') {
                 LogError(0, RS_RET_INVALID_PARAMS,
                          "mmdarwin: container should either"
@@ -613,7 +613,7 @@ BEGINnewActInst
             free(key);
             DBGPRINTF("mmdarwin::newActInst:: certitudeKey is %s\n", pData->pCertitudeKey);
         } else if (!strcmp(actpblk.descr[i].name, "socketpath")) {
-            pData->pSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             DBGPRINTF("mmdarwin::newActInst:: sockName is %s\n", pData->pSockName);
         } else if (!strcmp(actpblk.descr[i].name, "socket_max_use")) {
             pData->socketMaxUse = (uint32_t)pvals[i].val.d.n;
@@ -626,7 +626,8 @@ BEGINnewActInst
                 DBGPRINTF("mmdarwin::newActInst:: only sending complete bodies\n");
             }
         } else if (!strcmp(actpblk.descr[i].name, "response")) {
-            char *response = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *response;
+            CHKmalloc(response = es_str2cstr(pvals[i].val.d.estr, NULL));
 
             if (!strcmp(response, "no")) {
                 pData->response = DARWIN_RESPONSE_SEND_NO;
@@ -649,7 +650,8 @@ BEGINnewActInst
 
             free(response);
         } else if (!strcmp(actpblk.descr[i].name, "filtercode")) {
-            char *filterCode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *filterCode;
+            CHKmalloc(filterCode = es_str2cstr(pvals[i].val.d.estr, NULL));
             pData->filterCode = strtoull(filterCode, NULL, 16);
             free(filterCode);
         } else if (!strcmp(actpblk.descr[i].name, "fields")) {
@@ -658,7 +660,8 @@ BEGINnewActInst
             CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(char *)));
 
             for (int j = 0; j < pData->fieldList.nmemb; ++j) {
-                char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                char *param;
+                CHKmalloc(param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 char *varname = NULL;
                 char *name;
                 if (*param == ':') {

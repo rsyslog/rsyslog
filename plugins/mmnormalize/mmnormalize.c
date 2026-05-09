@@ -336,7 +336,7 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "rulebase")) {
-            pData->rulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->rulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "rule")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
@@ -362,9 +362,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "userawmsg")) {
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "variable")) {
-            varName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(varName = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "path")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (strlen(cstr) < 2) {
                 LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                          "mmnormalize: valid path name should be at least "

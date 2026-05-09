@@ -512,7 +512,7 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     for (i = 0; i < ratelimitpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(ratelimitpblk.descr[i].name, "name")) {
-            name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "interval")) {
             interval = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "burst")) {
@@ -520,17 +520,17 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
         } else if (!strcmp(ratelimitpblk.descr[i].name, "severity")) {
             severity = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
-            policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatch")) {
             policy_watch = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatchDebounce")) {
-            policy_watch_debounce = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(policy_watch_debounce = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
             per_source_enabled = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
-            per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceKeyTpl")) {
-            per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
             per_source_max_states = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {

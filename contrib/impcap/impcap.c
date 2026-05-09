@@ -185,17 +185,17 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "interface")) {
-            inst->interface = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->interface = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "file")) {
-            inst->filePath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->filePath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "promiscuous")) {
             inst->promiscuous = (uint8_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "filter")) {
-            inst->filter = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->filter = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            inst->tag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->tag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "no_buffer")) {
             inst->immediateMode = (uint8_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "buffer_size")) {
@@ -235,9 +235,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "metadata_only")) {
             loadModConf->metadataOnly = (uint8_t)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "metadata_container")) {
-            loadModConf->metadataContainer = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->metadataContainer = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "data_container")) {
-            loadModConf->dataContainer = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->dataContainer = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf("impcap: non-handled param %s in beginSetModCnf\n", modpblk.descr[i].name);
         }

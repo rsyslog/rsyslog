@@ -224,7 +224,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "container")) {
-            loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "mmdblookup: program error, non-handled "
@@ -265,15 +265,16 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mmdbfile")) {
-            pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "fields")) {
             pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
             CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(char *)));
             CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(char *)));
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                char *param;
+                CHKmalloc(param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 char *varname = NULL;
                 char *name;
                 if (*param == ':') {

@@ -710,23 +710,23 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "host")) {
-            pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             pData->port = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "user")) {
-            pData->user = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->user = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 
         } else if (!strcmp(actpblk.descr[i].name, "https")) {
             pData->https = pvals[i].val.d.n ? 1 : 0;
 
         } else if (!strcmp(actpblk.descr[i].name, "file")) {
-            pData->file = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->file = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 
         } else if (!strcmp(actpblk.descr[i].name, "isdynfile")) {
             pData->isDynFile = pvals[i].val.d.n ? 1 : 0;
 
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF("omhttpfs: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }

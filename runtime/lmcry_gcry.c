@@ -119,19 +119,19 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst, int paramType) {
     for (i = 0; i < pblk->nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(pblk->descr[i].name, "cry.key") || !strcmp(pblk->descr[i].name, "queue.cry.key")) {
-            key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             ++nKeys;
         } else if (!strcmp(pblk->descr[i].name, "cry.keyfile") || !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
-            keyfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(keyfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             ++nKeys;
         } else if (!strcmp(pblk->descr[i].name, "cry.keyprogram") ||
                    !strcmp(pblk->descr[i].name, "queue.cry.keyprogram")) {
-            keyprogram = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(keyprogram = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             ++nKeys;
         } else if (!strcmp(pblk->descr[i].name, "cry.mode") || !strcmp(pblk->descr[i].name, "queue.cry.mode")) {
-            mode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(mode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk->descr[i].name, "cry.algo") || !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
-            algo = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(algo = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "lmcry_gcry: program error, non-handled "

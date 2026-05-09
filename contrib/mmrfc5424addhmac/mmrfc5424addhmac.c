@@ -167,10 +167,10 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pData->keylen = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(actpblk.descr[i].name, "hashfunction")) {
-            ciphername = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(ciphername = es_str2cstr(pvals[i].val.d.estr, NULL));
             pData->algo = EVP_get_digestbyname(ciphername);
             if (pData->algo == NULL) {
                 LogError(0, RS_RET_CRY_INVLD_ALGO,
@@ -182,7 +182,7 @@ BEGINnewActInst
             }
             free(ciphername);
         } else if (!strcmp(actpblk.descr[i].name, "sd_id")) {
-            pData->sdid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sdid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pData->sdidLen = es_strlen(pvals[i].val.d.estr);
         } else {
             dbgprintf(

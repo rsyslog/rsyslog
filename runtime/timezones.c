@@ -88,8 +88,16 @@ void glblProcessTimezone(struct cnfobj *o) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(timezonepblk.descr[i].name, "id")) {
             id = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (id == NULL) {
+                parser_errmsg("timezone: failed to convert id parameter due to out of memory");
+                goto done;
+            }
         } else if (!strcmp(timezonepblk.descr[i].name, "offset")) {
             offset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (offset == NULL) {
+                parser_errmsg("timezone: failed to convert offset parameter due to out of memory");
+                goto done;
+            }
         } else {
             dbgprintf(
                 "glblProcessTimezone: program error, non-handled "
