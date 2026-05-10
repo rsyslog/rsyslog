@@ -871,6 +871,34 @@ static int copyescaped(uchar *dstbuf, uchar *inbuf, int inlen) {
 }
 
 
+static size_t escapedLen(uchar *inbuf, int inlen) {
+    size_t len = 2; /* surrounding quotes */
+
+    for (int i = 0; i < inlen; ++i) {
+        if (inbuf[i] == '"' || inbuf[i] == '\\') {
+            ++len;
+        }
+        ++len;
+    }
+    return len;
+}
+
+
+static rsRetVal appendTrustedProp(
+    uchar *const dst, const size_t dstLen, size_t *const offs, const uchar *const src, const size_t len) {
+    DEFiRet;
+
+    if (len > dstLen || *offs > dstLen - len) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    memcpy(dst + *offs, src, len);
+    *offs += len;
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
@@ -974,10 +1002,23 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         } else {
             uchar msgbuf[8192];
             uchar *pmsgbuf = msgbuf;
-            int toffs; /* offset for trusted properties */
+            const size_t trustedPropBufLen = sizeof(propBuf) - 1;
+            const size_t trustedPropMaxExtra = 3 + /* " @[" */
+                                               96 + /* _PID/_UID/_GID tags plus maximum decimal values */
+                                               7 + trustedPropBufLen + /* _COMM= */
+                                               6 + trustedPropBufLen + /* _EXE= */
+                                               10 + 2 + 2 * trustedPropBufLen + /* _CMDLINE= plus escaped value */
+                                               2; /* closing bracket and NUL */
+            size_t msgbuf_size = sizeof(msgbuf);
+            size_t toffs; /* offset for trusted properties */
+            size_t escaped;
 
-            if ((unsigned)(lenRcv + 4096) >= sizeof(msgbuf)) {
-                CHKmalloc(pmsgbuf = malloc(lenRcv + 4096));
+            if ((size_t)lenRcv > (size_t)-1 - trustedPropMaxExtra) {
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            if ((size_t)lenRcv + trustedPropMaxExtra > sizeof(msgbuf)) {
+                msgbuf_size = (size_t)lenRcv + trustedPropMaxExtra;
+                CHKmalloc(pmsgbuf = malloc(msgbuf_size));
             }
 
             memcpy(pmsgbuf, pRcv, lenRcv);
@@ -985,29 +1026,51 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
             toffs = lenRcv + 3; /* next free location */
             lenProp = snprintf((char *)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu", (long unsigned)cred->pid,
                                (long unsigned)cred->uid, (long unsigned)cred->gid);
-            memcpy(pmsgbuf + toffs, propBuf, lenProp);
-            toffs = toffs + lenProp;
+            if (lenProp < 0) {
+                iRet = RS_RET_ERR;
+            } else {
+                iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp);
+            }
+            if (iRet != RS_RET_OK) {
+                if (pmsgbuf != msgbuf) free(pmsgbuf);
+                FINALIZE;
+            }
 
             if (getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _COMM=", 7);
-                memcpy(pmsgbuf + toffs + 7, propBuf, lenProp);
-                toffs = toffs + 7 + lenProp;
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _COMM=", 7)) != RS_RET_OK ||
+                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
             }
             if (getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _EXE=", 6);
-                memcpy(pmsgbuf + toffs + 6, propBuf, lenProp);
-                toffs = toffs + 6 + lenProp;
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _EXE=", 6)) != RS_RET_OK ||
+                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
             }
             if (getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _CMDLINE=", 10);
-                toffs = toffs + 10 + copyescaped(pmsgbuf + toffs + 10, propBuf, lenProp);
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _CMDLINE=", 10)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
+                escaped = escapedLen(propBuf, lenProp);
+                if (escaped > msgbuf_size || toffs > msgbuf_size - escaped) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    ABORT_FINALIZE(RS_RET_ERR);
+                }
+                toffs += (size_t)copyescaped(pmsgbuf + toffs, propBuf, lenProp);
             }
 
             /* finalize string */
-            pmsgbuf[toffs] = ']';
-            pmsgbuf[toffs + 1] = '\0';
+            if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)"]", 1)) != RS_RET_OK ||
+                (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)"\0", 1)) != RS_RET_OK) {
+                if (pmsgbuf != msgbuf) free(pmsgbuf);
+                FINALIZE;
+            }
 
-            MsgSetRawMsg(pMsg, (char *)pmsgbuf, toffs + 1);
+            MsgSetRawMsg(pMsg, (char *)pmsgbuf, toffs - 1);
             if (pmsgbuf != msgbuf) {
                 free(pmsgbuf);
             }
