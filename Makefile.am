@@ -186,6 +186,10 @@ if ENABLE_IMDOCKER
 SUBDIRS += contrib/imdocker
 endif
 
+if ENABLE_IMKUBERNETES
+SUBDIRS += contrib/imkubernetes
+endif
+
 if ENABLE_IMPTCP
 SUBDIRS += plugins/imptcp
 endif

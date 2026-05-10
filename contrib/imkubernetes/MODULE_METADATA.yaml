@@ -1,0 +1,17 @@
+support_status: contributor-supported
+maturity_level: fresh
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-04-20
+build_dependencies:
+  - libcurl development headers and library
+runtime_dependencies:
+  - Kubernetes node log files mounted from the host, typically under /var/log/pods or /var/log/containers
+  - Kubernetes API reachability and credentials when EnrichKubernetes is enabled
+ci_targets:
+  - imkubernetes-cri-basic.sh
+  - imkubernetes-dockerjson-basic.sh
+documentation:
+  - doc/source/configuration/modules/imkubernetes.rst
+notes:
+  - The module is a Kubernetes-first file tailer and does not depend on a local Docker daemon.
+  - File state, partial-record assembly, cache entries, and the CURL handle are owned by the single input thread.
