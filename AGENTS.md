@@ -31,6 +31,10 @@ Follow these three steps for a typical development task:
 - **Architecture**: Microkernel core (`runtime/`) + Loadable Plugins (`plugins/`)
 - **Metadata**: Every module directory contains `MODULE_METADATA.yaml`.
 - **Knowledge Base**: `doc/ai/` contains canonical patterns for RAG ingestion.
+- **Security Triage**: [`doc/ai/security_triage_rubric.md`](./doc/ai/security_triage_rubric.md)
+  defines how AI agents must distinguish confirmed issues from potential
+  issues, hardening, and invalid findings before using security severity or CWE
+  language.
 
 ## Container Images
 

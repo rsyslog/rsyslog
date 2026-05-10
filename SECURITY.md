@@ -42,8 +42,9 @@ The current stable release is listed on the
 ## Response
 
 rsyslog is maintained by a small team. Security reports receive priority
-handling, and we aim to provide an initial response within 90 days where
-possible.
+handling, and we aim to acknowledge reports within 7 days where possible.
+Final fixes and coordinated disclosure timelines are handled separately, as
+described below.
 
 ## Requirements for a Valid Report
 
