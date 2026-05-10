@@ -12,6 +12,7 @@
 | `authoring_guidelines.md` | Required blocks, tone, section order |
 | `mermaid_rules.md` | Diagram syntax rules |
 | `terminology.md` | Canonical rsyslog vocabulary |
+| `security_triage_rubric.md` | Security finding proof, severity, and hardening classification rules |
 | `chunking_and_embeddings.md` | RAG extraction schema and chunk structure |
 | `crosslinking_and_nav.md` | Navigation and cross-reference patterns |
 | `drift_monitoring.md` | Detecting doc/code drift |

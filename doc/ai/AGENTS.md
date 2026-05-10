@@ -7,6 +7,7 @@ This file defines specific guidelines for AI assistants working on the documenta
 - **Authoring Guidelines:** [`doc/ai/authoring_guidelines.md`](./authoring_guidelines.md)
 - **Structure and Paths:** [`doc/ai/structure_and_paths.md`](./structure_and_paths.md)
 - **Terminology:** [`doc/ai/terminology.md`](./terminology.md)
+- **Security Triage Rubric:** [`doc/ai/security_triage_rubric.md`](./security_triage_rubric.md)
 - **Doc Assistant Prompt:** [`ai/rsyslog_doc_assistant/base_prompt.txt`](../../ai/rsyslog_doc_assistant/base_prompt.txt)
 
 ## Critical Requirements for Documentation
@@ -22,6 +23,13 @@ All documentation files (especially module documentation) must strictly adhere t
 - Consult `authoring_guidelines.md` for specific RST syntax rules.
 
 ## Common Tasks
+
+### Security and Hardening Reviews
+- Read `security_triage_rubric.md` before classifying audit findings.
+- Treat unproven issues as hardening unless attacker control, reachability, and
+  impact are demonstrated.
+- Use CWE labels only when the CWE mapping is proven by a reproducer or direct
+  code proof.
 
 ### Updating Module Documentation
 - Ensure the module page (`doc/source/configuration/modules/<module>.rst`) has the required `.. meta::` block.

@@ -36,6 +36,20 @@ Every documentation page must include:
 > [!IMPORTANT]
 > **Trigger Side-Effect**: If you add, move, or remove any `.rst` file, YOU MUST follow the [`rsyslog_doc_dist`](../rsyslog_doc_dist/SKILL.md) skill to update `doc/Makefile.am` and run the **extended distribution check**.
 
+> [!IMPORTANT]
+> **Sample Config Security Review**: If you add or materially update a sample
+> rsyslog configuration, you MUST review that specific configuration for
+> security posture before finishing the documentation change. Check whether the
+> example exposes listeners, weakens authentication or TLS, writes to sensitive
+> paths, follows unsafe file/link behavior, uses overly broad permissions,
+> enables compatibility fallbacks, or recommends defaults that are unsuitable
+> for new deployments. Use `doc/ai/security_triage_rubric.md` to classify any
+> concern as a confirmed issue, potential issue, hardening, or not actionable.
+> If this review exposes vulnerable or unsafe code behavior, do not treat it as
+> documentation-only work: either fix the code in the same change when the scope
+> is clear and bounded, or record the implementation follow-up with enough
+> evidence for maintainers to reproduce and prioritize it.
+
 ### 2. Module Documentation
 - **Parameters**: Use the `include` directive to pull parameter details from `doc/source/reference/parameters/`.
 - **Anchors**: Use explicit anchors (e.g., `.. _parameter_name:`) for consistent linking.
