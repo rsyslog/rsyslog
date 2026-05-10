@@ -1,4 +1,8 @@
 /* imdiag.c
+ * Diagnostic input module for the testbench and controlled diagnostics.
+ * The module has no internal access control; limit exposure with external
+ * controls such as firewalls or host isolation.
+ *
  * This is a testbench tool. It started out with a broader scope,
  * but we dropped this idea. To learn about rsyslog runtime statistics
  * have a look at impstats.
