@@ -5,16 +5,23 @@ imdiag: Diagnostic instrumentation
 :Author: Rainer Gerhards
 :Available since: at least 5.x
 
+.. warning::
+
+   **Testing and controlled diagnostics**
+
+   This module is intended for the testbench and controlled diagnostics. It
+   provides message injection and queue control over TCP and has no internal
+   access control (ACLs). Limit exposure to trusted hosts with external
+   controls such as firewalls or host isolation.
+
 Purpose
 -------
 
 The imdiag input module exposes a TCP-based diagnostics and control channel
-that can inject messages into the
-main queue, wait for queues to drain, coordinate statistics reporting, and
-exercise other helper functions used by the rsyslog testbench. While imdiag is
-primarily intended for automated testing, it can also be used to diagnose
-production systems. Because the interface permits queue control and message
-injection, it **must only be exposed to trusted hosts**.
+that can inject messages into the main queue, wait for queues to drain,
+coordinate statistics reporting, and exercise other helper functions used by the
+rsyslog testbench. Because the interface permits queue control and message
+injection, expose it only to trusted hosts in controlled environments.
 
 Configuration Parameters
 ------------------------
