@@ -279,6 +279,7 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
     #define ATOMIC_ADD_uint64(data, phlpmut, value) ((void)__sync_fetch_and_add(data, value))
     #define ATOMIC_DEC_uint64(data, phlpmut) ((void)__sync_sub_and_fetch(data, 1))
     #define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
+    #define ATOMIC_STORE_uint64(data, phlpmut, value) ((void)__sync_lock_test_and_set((data), (value)))
 
     #define DEF_ATOMIC_HELPER_MUT64(x)
     #define INIT_ATOMIC_HELPER_MUT64(x)
@@ -301,6 +302,12 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
             pthread_mutex_lock(phlpmut);     \
             --(*(data));                     \
             pthread_mutex_unlock(phlpmut);   \
+        }
+    #define ATOMIC_STORE_uint64(data, phlpmut, value) \
+        {                                             \
+            pthread_mutex_lock(phlpmut);              \
+            *(data) = (value);                        \
+            pthread_mutex_unlock(phlpmut);            \
         }
 
 static inline unsigned ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {

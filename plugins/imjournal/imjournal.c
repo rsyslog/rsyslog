@@ -173,6 +173,7 @@ static struct {
     STATSCOUNTER_DEF(ctrRecoveryAttempts, mutCtrRecoveryAttempts);
     uint64 ratelimitDiscardedInInterval;
     uint64 diskUsageBytes;
+    DEF_ATOMIC_HELPER_MUT64(mut_diskUsageBytes);
 } statsCounter;
 struct journalContext_s { /* structure encapsulating all the journald_API-related stuff  */
     sd_journal *j; /* main object encapsulating journal for us, has to be used in every sd_journal*() call */
@@ -1057,9 +1058,12 @@ static rsRetVal doRun(journal_etry_t const *etry) {
             /*
              * update journal disk usage before reading the new message.
              */
-            const int e = sd_journal_get_usage(etry->journalContext->j, (uint64_t *)&statsCounter.diskUsageBytes);
+            uint64 usage;
+            const int e = sd_journal_get_usage(etry->journalContext->j, &usage);
             if (e < 0) {
                 LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+            } else {
+                ATOMIC_STORE_uint64(&statsCounter.diskUsageBytes, &statsCounter.mut_diskUsageBytes, usage);
             }
 
             if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
@@ -1267,6 +1271,8 @@ BEGINactivateCnf
                                 CTR_FLAG_RESETTABLE, &(statsCounter.ctrRecoveryAttempts)));
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("ratelimit_discarded_in_interval"), ctrType_IntCtr,
                                 CTR_FLAG_NONE, &(statsCounter.ratelimitDiscardedInInterval)));
+    INIT_ATOMIC_HELPER_MUT64(statsCounter.mut_diskUsageBytes);
+    statsCounter.diskUsageBytes = 0;
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("disk_usage_bytes"), ctrType_IntCtr, CTR_FLAG_NONE,
                                 &(statsCounter.diskUsageBytes)));
     CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
