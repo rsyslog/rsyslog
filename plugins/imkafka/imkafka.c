@@ -107,8 +107,11 @@ STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 /* librdkafka window metrics (like omkafka) exposed as counters */
 static uint64 rtt_avg_usec;
+static DEF_ATOMIC_HELPER_MUT64(mut_rtt_avg_usec);
 static uint64 throttle_avg_msec;
+static DEF_ATOMIC_HELPER_MUT64(mut_throttle_avg_msec);
 static uint64 int_latency_avg_usec;
+static DEF_ATOMIC_HELPER_MUT64(mut_int_latency_avg_usec);
 
 /* convenience macros for per-instance stats */
 #define INST_STATSCOUNTER_INC(inst, ctr, mut) \
@@ -303,9 +306,11 @@ static int statsCallback(rd_kafka_t __attribute__((unused)) * rk,
     }
 
     /* Window stats extraction */
-    rtt_avg_usec = jsonExtractWindoStats(stats_object, "rtt", "avg", 100);
-    throttle_avg_msec = jsonExtractWindoStats(stats_object, "throttle", "avg", 0);
-    int_latency_avg_usec = jsonExtractWindoStats(stats_object, "int_latency", "avg", 0);
+    ATOMIC_STORE_uint64(&rtt_avg_usec, &mut_rtt_avg_usec, jsonExtractWindoStats(stats_object, "rtt", "avg", 100));
+    ATOMIC_STORE_uint64(&throttle_avg_msec, &mut_throttle_avg_msec,
+                        jsonExtractWindoStats(stats_object, "throttle", "avg", 0));
+    ATOMIC_STORE_uint64(&int_latency_avg_usec, &mut_int_latency_avg_usec,
+                        jsonExtractWindoStats(stats_object, "int_latency", "avg", 0));
     fjson_object_put(stats_object);
 
     /* Optional: visible info line for operator */
@@ -1263,9 +1268,12 @@ BEGINmodInit()
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxlag", ctrType_Int, CTR_FLAG_NONE, &ctrMaxLag));
 
     /* librdkafka window metrics */
+    INIT_ATOMIC_HELPER_MUT64(mut_rtt_avg_usec);
     CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"), ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
+    INIT_ATOMIC_HELPER_MUT64(mut_throttle_avg_msec);
     CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"), ctrType_Int, CTR_FLAG_NONE,
                                 &throttle_avg_msec));
+    INIT_ATOMIC_HELPER_MUT64(mut_int_latency_avg_usec);
     CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"), ctrType_Int, CTR_FLAG_NONE,
                                 &int_latency_avg_usec));
 
