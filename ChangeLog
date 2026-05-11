@@ -1,5 +1,15 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+This release has many commits in regard to
+  * general hardening
+  * testbench de-flaking
+These will not be mentioned individually, check commit log for details.
+
+- 2026-05-11: rosi-collector: prevent Loki 400 queue stalls
+  ROSI Collector could get stuck when Loki rejected a pushed sample with
+  HTTP 400, for example because old or clock-skewed sender timestamps were
+  outside Loki's accepted time window. In that state one bad backlog entry
+  could keep the omhttp action retrying instead of advancing to newer logs.
 - 2026-05-06: omrelp: fix OpenSSL TLS auth failure CPU spin
   omrelp with OpenSSL TLS and an action queue could consume a full CPU
   after TLS authentication failed, for example when the action omitted
