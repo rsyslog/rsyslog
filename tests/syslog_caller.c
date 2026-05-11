@@ -3,7 +3,7 @@
  *
  * Options
  *
- * -s severity (0..7 accoding to syslog spec, r "rolling", default 6)
+ * -s severity (0..7 according to syslog spec, r "rolling", default 6)
  * -m number of messages to generate (default 500)
  * -C liblognorm-stdlog channel description
  * -f message format to use
@@ -84,7 +84,8 @@ static void sendRawUnix(const char *sockName, const int sev, const int iRun, con
     }
     memset(&sa, 0, sizeof(sa));
     sa.sun_family = AF_UNIX;
-    strcpy(sa.sun_path, sockName);
+    strncpy(sa.sun_path, sockName, sizeof(sa.sun_path) - 1);
+    sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
     genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen);
     if (sendto(sock, msgbuf, strlen(msgbuf), 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
         perror("sendto");
