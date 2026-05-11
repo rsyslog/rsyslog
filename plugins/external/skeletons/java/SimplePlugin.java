@@ -24,21 +24,20 @@ import java.io.*;
 public class SimplePlugin {
 	
 	public static void main(String[] args) throws IOException {
-    		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-    		String s;
-		File outFile = new File("out.txt");
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile, true)));
+		try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("out.txt", true)))) {
+			String s;
 
- 		while ((s = in.readLine()) != null && s.length() != 0) 	{
-			MsgOut(s, writer);
+			while ((s = in.readLine()) != null) {
+				msgOut(s, writer);
+			}
 		}
-		 writer.close();
 	}
 
-	public static void MsgOut (String msg, BufferedWriter writerMsg)  throws IOException {
-		writerMsg.newLine();		
+	public static void msgOut(String msg, BufferedWriter writerMsg) throws IOException {
 		writerMsg.write(msg);
+		writerMsg.newLine();
+		writerMsg.flush();
 	}
 
-} 
-
+}
