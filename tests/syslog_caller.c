@@ -7,6 +7,9 @@
  * -m number of messages to generate (default 500)
  * -C liblognorm-stdlog channel description
  * -f message format to use
+ * -u Unix datagram socket path
+ * -L generated message length for Unix datagram mode
+ * -w milliseconds to wait after sending messages
  *
  * Part of the testbench for rsyslog.
  *
@@ -38,7 +41,10 @@
 #endif
 #include <errno.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <syslog.h>
+#include <unistd.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
     #include <liblogging/stdlog.h>
 #endif
@@ -46,8 +52,46 @@
 static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C } fmt = FMT_NATIVE;
 
 static void usage(void) {
-    fprintf(stderr, "usage: syslog_caller num-messages\n");
+    fprintf(stderr, "usage: syslog_caller [-m messages] [-s severity] [-u socket] [-L length] [-w milliseconds]\n");
     exit(1);
+}
+
+static void genRawMsg(char *buf, const size_t buflen, const int sev, const int iRun, const size_t msgLen) {
+    if (msgLen > 0) {
+        const size_t prefixLen = (size_t)snprintf(buf, buflen, "<%d>", sev % 8);
+        if (prefixLen >= buflen) return;
+        const size_t avail = buflen - prefixLen - 1;
+        const size_t len = msgLen < avail ? msgLen : avail;
+        memset(buf + prefixLen, 'A', len);
+        buf[prefixLen + len] = '\0';
+    } else {
+        snprintf(buf, buflen, "<%d>test message nbr %d, severity=%d", sev % 8, iRun, sev % 8);
+    }
+}
+
+static void sendRawUnix(const char *sockName, const int sev, const int iRun, const size_t msgLen) {
+    int sock;
+    struct sockaddr_un sa;
+    char msgbuf[4096];
+
+    if (strlen(sockName) >= sizeof(sa.sun_path)) {
+        fprintf(stderr, "Unix socket path too long: %s\n", sockName);
+        exit(1);
+    }
+    if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+        perror("socket");
+        exit(1);
+    }
+    memset(&sa, 0, sizeof(sa));
+    sa.sun_family = AF_UNIX;
+    strcpy(sa.sun_path, sockName);
+    genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen);
+    if (sendto(sock, msgbuf, strlen(msgbuf), 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        perror("sendto");
+        close(sock);
+        exit(1);
+    }
+    close(sock);
 }
 
 
@@ -74,6 +118,9 @@ int main(int argc, char *argv[]) {
     int bRollingSev = 0;
     int sev = 6;
     int msgs = 500;
+    const char *unixSockName = NULL;
+    size_t msgLen = 0;
+    int waitMs = 0;
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_channel_t logchan = NULL;
     const char *chandesc = "syslog:";
@@ -82,9 +129,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_init(STDLOG_USE_DFLT_OPTS);
-    while ((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:C:f:u:L:w:")) != -1) {
 #else
-    while ((opt = getopt(argc, argv, "m:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:u:L:w:")) != -1) {
 #endif
         switch (opt) {
             case 's':
@@ -100,6 +147,16 @@ int main(int argc, char *argv[]) {
                 break;
             case 'm':
                 msgs = atoi(optarg);
+                break;
+            case 'u':
+                unixSockName = optarg;
+                break;
+            case 'L':
+                msgLen = (size_t)atoi(optarg);
+                if (msgLen >= 4096) msgLen = 4095;
+                break;
+            case 'w':
+                waitMs = atoi(optarg);
                 break;
 #ifdef HAVE_LIBLOGGING_STDLOG
             case 'C':
@@ -121,6 +178,15 @@ int main(int argc, char *argv[]) {
 #endif
                 break;
         }
+    }
+
+    if (unixSockName != NULL) {
+        for (i = 0; i < msgs; ++i) {
+            sendRawUnix(unixSockName, sev, i, msgLen);
+            if (bRollingSev) sev++;
+        }
+        if (waitMs > 0) usleep((unsigned int)waitMs * 1000U);
+        return 0;
     }
 
 #ifdef HAVE_LIBLOGGING_STDLOG
