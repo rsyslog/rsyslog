@@ -184,6 +184,7 @@ EXTRA_DIST = \
     source/configuration/modules/imdiag.rst \
     source/configuration/modules/imdocker.rst \
     source/configuration/modules/imdtls.rst \
+    source/configuration/modules/imbeats.rst \
     source/configuration/modules/imfile.rst \
     source/configuration/modules/imgssapi.rst \
     source/configuration/modules/imhiredis.rst \
@@ -227,6 +228,33 @@ EXTRA_DIST = \
     source/configuration/modules/mmtaghostname.rst \
     source/configuration/modules/mmutf8fix.rst \
     source/configuration/modules/module_workflow.png \
+    source/reference/parameters/imbeats-address.rst \
+    source/reference/parameters/imbeats-gnutlsprioritystring.rst \
+    source/reference/parameters/imbeats-keepalive.rst \
+    source/reference/parameters/imbeats-keepalive-interval.rst \
+    source/reference/parameters/imbeats-keepalive-probes.rst \
+    source/reference/parameters/imbeats-keepalive-time.rst \
+    source/reference/parameters/imbeats-listenportfilename.rst \
+    source/reference/parameters/imbeats-maxdecompressedsize.rst \
+    source/reference/parameters/imbeats-maxframesize.rst \
+    source/reference/parameters/imbeats-maxwindowsize.rst \
+    source/reference/parameters/imbeats-name.rst \
+    source/reference/parameters/imbeats-networknamespace.rst \
+    source/reference/parameters/imbeats-permittedpeer.rst \
+    source/reference/parameters/imbeats-port.rst \
+    source/reference/parameters/imbeats-ruleset.rst \
+    source/reference/parameters/imbeats-streamdriver-authmode.rst \
+    source/reference/parameters/imbeats-streamdriver-cafile.rst \
+    source/reference/parameters/imbeats-streamdriver-certfile.rst \
+    source/reference/parameters/imbeats-streamdriver-checkextendedkeypurpose.rst \
+    source/reference/parameters/imbeats-streamdriver-crlfile.rst \
+    source/reference/parameters/imbeats-streamdriver-keyfile.rst \
+    source/reference/parameters/imbeats-streamdriver-mode.rst \
+    source/reference/parameters/imbeats-streamdriver-name.rst \
+    source/reference/parameters/imbeats-streamdriver-permitexpiredcerts.rst \
+    source/reference/parameters/imbeats-streamdriver-prioritizesan.rst \
+    source/reference/parameters/imbeats-streamdriver-tlsrevocationcheck.rst \
+    source/reference/parameters/imbeats-streamdriver-tlsverifydepth.rst \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omazureeventhubs.rst \
@@ -293,6 +321,7 @@ EXTRA_DIST = \
     source/containers/development_images.rst \
     source/containers/dockerlogs.rst \
     source/containers/etl.rst \
+    source/containers/imbeats.rst \
     source/containers/index.rst \
     source/containers/minimal.rst \
     source/containers/standard.rst \

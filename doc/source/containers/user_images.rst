@@ -5,7 +5,7 @@ User-Focused Images
 
 .. meta::
    :description: Official rsyslog container image variants for end users, including minimal, standard, collector, dockerlogs, and ETL roles.
-   :keywords: rsyslog, containers, Docker, minimal, collector, dockerlogs, ETL
+   :keywords: rsyslog, containers, Docker, minimal, collector, dockerlogs, ETL, imbeats
 
 .. summary-start
 
@@ -35,6 +35,12 @@ Available variants include:
   syslog and forwards events to a Vespa HTTP endpoint using ``omhttp``.
 * ``rsyslog/rsyslog-debug`` – planned variant with troubleshooting tools.
 
+Sample container definitions include:
+
+* :doc:`rsyslog/rsyslog-imbeats <imbeats>` – concrete sample for receiving
+  Elastic Agent and Filebeat ``output.logstash`` traffic with ``imbeats``.
+  This sample is not wired into published image builds yet.
+
 .. toctree::
    :maxdepth: 1
 
@@ -43,6 +49,7 @@ Available variants include:
    collector
    dockerlogs
    etl
+   imbeats
 
 Images are built using the layered ``Makefile`` in
 ``packaging/docker/rsyslog``::

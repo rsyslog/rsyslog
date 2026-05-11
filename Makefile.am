@@ -194,6 +194,10 @@ if ENABLE_IMDIAG
 SUBDIRS += plugins/imdiag
 endif
 
+if ENABLE_IMBEATS
+SUBDIRS += plugins/imbeats
+endif
+
 if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif

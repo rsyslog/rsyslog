@@ -65,6 +65,11 @@ def file_exists_at_ref(ref: str, path: str) -> bool:
     return result.returncode == 0
 
 
+def list_tree(ref: str, path: str) -> list[str]:
+    output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
+    return [line for line in output.splitlines() if line]
+
+
 def read_file_at_ref(ref: str, path: str) -> str:
     return run_git(["show", f"{ref}:{path}"])
 
@@ -298,13 +303,6 @@ def build_doc_xref_check(name_status: list[dict[str, object]], base: str, head: 
             "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
         },
     }
-
-
-def list_tree(ref: str, path: str) -> list[str]:
-    output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
-    return [line for line in output.splitlines() if line]
-
-
 def build_module_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
     # Treat a brand-new plugins/ or contrib/ subtree with code or build files as
     # a module candidate, then check only for deterministic onboarding signals.
