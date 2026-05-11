@@ -15,7 +15,7 @@
 Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog
 Version: 8.2602.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 # Build-time generated file list for optional liboverride_*.so modules.
 %global liboverride_filelist %{_builddir}/%{name}-%{version}/liboverride.files
 License: (GPLv3+ and ASL 2.0)
@@ -246,6 +246,11 @@ BuildRequires: librdkafka-devel >= 0.11.0
 BuildRequires: lz4-devel
 BuildRequires: cyrus-sasl-devel
 
+%package imbeats
+Summary: Elastic Beats / Lumberjack v2 input module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+
 %package mmsnareparse
 Summary: NXLog Snare Windows Security event parser support
 Group: System Environment/Daemons
@@ -455,6 +460,12 @@ containing both Producer and Consumer support. It was designed with message deli
 reliability and high performance in mind, current figures exceed 800000 msgs/second 
 for the producer and 3 million msgs/second for the consumer.
 
+%description imbeats
+The imbeats input module receives log and metrics traffic from Elastic Beats,
+Elastic Agent, and compatible forwarders using the Lumberjack v2 protocol over
+plain TCP or TLS. It depends on the base rsyslog package for the core engine
+and stream drivers.
+
 %description mmsnareparse
 The mmsnareparse module parses NXLog Snare-formatted Windows Security events
 that are embedded in RFC3164/RFC5424 syslog envelopes or delivered as JSON
@@ -642,6 +653,7 @@ export HIREDIS_LIBS=-L%{_libdir}
 	--enable-uuid \
  	--enable-omkafka \
 	--enable-imkafka \
+	--enable-imbeats \
 %if 0%{?rhel} >= 8
 	--enable-omdtls \
 	--enable-imdtls \
@@ -908,6 +920,10 @@ done
 %{_libdir}/rsyslog/omkafka.so
 %{_libdir}/rsyslog/imkafka.so
 
+%files imbeats
+%defattr(-,root,root)
+%{_libdir}/rsyslog/imbeats.so
+
 %files mmsnareparse
 %defattr(-,root,root)
 %{_libdir}/rsyslog/mmsnareparse.so
@@ -963,6 +979,9 @@ done
 
 
 %changelog
+* Mon May 11 2026 Andre Lorbach - 8.2602.0-2
+- Add rsyslog-imbeats subpackage (imbeats input module, Lumberjack v2).
+
 * Fri Feb 27 2026 Andre Lorbach - 8.2602.0-1
 - Release build for 8.2602.0
 
