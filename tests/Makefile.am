@@ -1043,6 +1043,7 @@ TESTS_IMBEATS = \
 	imbeats-seq-cumulative-after-multi-event-window.sh \
 	imbeats-seq-reset-rejected.sh \
 	imbeats-limits.sh \
+	imbeats-shutdown-open-session.sh \
 	imbeats-filebeat-docker.sh
 
 TESTS_IMBEATS_YAML = \
