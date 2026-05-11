@@ -1044,6 +1044,7 @@ TESTS_IMBEATS = \
 	imbeats-seq-reset-rejected.sh \
 	imbeats-compressed-window-overflow.sh \
 	imbeats-compressed-malformed.sh \
+	imbeats-elastic-agent-windows-fixture.sh \
 	imbeats-limits.sh \
 	imbeats-shutdown-open-session.sh \
 	imbeats-filebeat-docker.sh
