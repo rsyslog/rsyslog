@@ -113,6 +113,7 @@ struct session_s {
     pthread_t tid;
     int done;
     int sock;
+    uint32_t lastAckedSeq;
     uchar *fromHostFQDN;
     prop_t *fromHost;
     prop_t *fromHostIP;
@@ -545,7 +546,7 @@ static rsRetVal receiveBatch(session_t *const sess, struct lj_batch_s *batch) {
     }
 
     for (idx = 0; idx < batch->count; ++idx) {
-        const uint32_t expected = (uint32_t)idx + 1;
+        const uint32_t expected = sess->lastAckedSeq + (uint32_t)idx + 1;
         if (batch->events[idx].seq != expected) {
             ABORT_FINALIZE(RS_RET_INVALID_VALUE);
         }
@@ -635,6 +636,9 @@ static void *sessionThread(void *arg) {
         }
         if (iRet == RS_RET_OK) {
             iRet = ackBatch(sess, batch.events[batch.count - 1].seq);
+            if (iRet == RS_RET_OK) {
+                sess->lastAckedSeq = batch.events[batch.count - 1].seq;
+            }
         }
         lj_batch_free(&batch);
         if (iRet != RS_RET_OK) {

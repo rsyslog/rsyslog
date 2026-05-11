@@ -1039,6 +1039,9 @@ TESTS_IMHTTP_VALGRIND = \
 TESTS_IMBEATS = \
 	imbeats-basic.sh \
 	imbeats-compressed.sh \
+	imbeats-seq-cumulative-two-windows.sh \
+	imbeats-seq-cumulative-after-multi-event-window.sh \
+	imbeats-seq-reset-rejected.sh \
 	imbeats-limits.sh \
 	imbeats-filebeat-docker.sh
 
