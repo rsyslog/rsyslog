@@ -3,11 +3,11 @@
  * available. If they are not, I am making the necessary provisioning to live without them if
  * they are not available. Please note that you should only use the macros
  * here if you think you can actually live WITHOUT an explicit atomic operation,
- * because in the non-presence of them, we simply do it without atomicitiy.
+ * because in the non-presence of them, we simply do it without atomicity.
  * Which, for word-aligned data types, usually (but only usually!) should work.
  *
  * We are using the functions described in
- * http:/gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
+ * http://gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
  *
  * THESE MACROS MUST ONLY BE USED WITH WORD-SIZED DATA TYPES!
  *
@@ -70,9 +70,9 @@
     #define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
     #define ATOMIC_STORE_INT(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
     #define ATOMIC_OR_INT_TO_INT(data, phlpmut, val) __sync_fetch_and_or((data), (val))
-    #define ATOMIC_CAS(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
-    #define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
-    #define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap(data, (oldVal), (newVal));
+    #define ATOMIC_CAS(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap((data), (oldVal), (newVal))
+    #define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap((data), (oldVal), (newVal))
+    #define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap((data), (oldVal), (newVal))
     /* Atomic operations for pointers (word-sized on all supported platforms) */
     #define ATOMIC_FETCH_PTR(data, phlpmut) ((void *)__sync_fetch_and_add(data, 0))
     #define ATOMIC_STORE_PTR(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
@@ -83,7 +83,7 @@
     #define INIT_ATOMIC_HELPER_MUT(x)
     #define DESTROY_ATOMIC_HELPER_MUT(x)
 
-    /* the following operations should preferrably be done atomic, but it is
+    /* the following operations should preferably be done atomically, but it is
      * not fatal if not -- that means we can live with some missed updates. So be
      * sure to use these macros only if that really does not matter!
      */
@@ -92,7 +92,7 @@
     #define PREFER_STORE_0_TO_INT(data) __sync_fetch_and_and(data, 0)
     #define PREFER_STORE_1_TO_INT(data) __sync_fetch_and_or(data, 1)
 #else
-    /* note that we gained parctical proof that theoretical problems DO occur
+    /* note that we gained practical proof that theoretical problems DO occur
      * if we do not properly address them. See this blog post for details:
      * http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
      * The bottom line is that if there are no atomics available, we should NOT
@@ -131,7 +131,7 @@
     #define ATOMIC_OR_INT_TO_INT(data, hlpmut, val) \
         {                                           \
             pthread_mutex_lock(hlpmut);             \
-            *(data) = val;                          \
+            *(data) |= (val);                       \
             pthread_mutex_unlock(hlpmut);           \
         }
 
@@ -165,10 +165,10 @@ static inline int ATOMIC_CAS_time_t(time_t *data, time_t oldVal, time_t newVal, 
 static inline int ATOMIC_CAS_VAL(int *data, int oldVal, int newVal, pthread_mutex_t *phlpmut) {
     int val;
     pthread_mutex_lock(phlpmut);
+    val = *data;
     if (*data == oldVal) {
         *data = newVal;
     }
-    val = *data;
     pthread_mutex_unlock(phlpmut);
     return (val);
 }
