@@ -36,7 +36,12 @@ printf 'STEP: make %s ==========================================================
 	"$CI_CHECK_CMD"
 set +e
 echo CI_CHECK_CMD: "$CI_CHECK_CMD"
-make $CI_MAKE_CHECK_OPT "${CI_CHECK_CMD:-check}"
+if [ "$CI_MAKE_CHECK_TESTS" != "" ]; then
+	echo CI_MAKE_CHECK_TESTS: "$CI_MAKE_CHECK_TESTS"
+	make $CI_MAKE_CHECK_OPT TESTS="$CI_MAKE_CHECK_TESTS" "${CI_CHECK_CMD:-check}"
+else
+	make $CI_MAKE_CHECK_OPT "${CI_CHECK_CMD:-check}"
+fi
 rc=$?
 
 printf 'STEP: find failing tests ====================================================\n'
