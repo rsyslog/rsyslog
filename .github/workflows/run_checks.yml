@@ -1548,6 +1548,9 @@ jobs:
     timeout-minutes: 25
     name: imbeats-tests
     env:
+      RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200
+      ES_HOST: 127.0.0.1
+      ES_PORT: 19200
       DOCKER_RUN_EXTRA_OPTS: >-
         --network host
         -v /var/run/docker.sock:/var/run/docker.sock
@@ -1582,15 +1585,40 @@ jobs:
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-imbeats
+            --enable-elasticsearch --enable-elasticsearch-tests
             --disable-default-tests --disable-imtcp-tests --disable-imfile
             --disable-imfile-tests --disable-fmhttp
           CI_MAKE_OPT: -j20
-          CI_MAKE_CHECK_OPT: -j1 TESTS=imbeats-filebeat-docker.sh
+          CI_MAKE_CHECK_OPT: -j1
+          CI_MAKE_CHECK_TESTS: >-
+            imbeats-filebeat-docker.sh
+            imbeats-filebeat-omelasticsearch-docker.sh
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           USE_AUTO_DEBUG: 'off'
           VERBOSE: '1'
         run: |
+          docker rm -f rsyslog-imbeats-es >/dev/null 2>&1 || true
+          docker run -d --rm \
+            --name rsyslog-imbeats-es \
+            -e discovery.type=single-node \
+            -e xpack.security.enabled=false \
+            -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
+            -p 19200:9200 \
+            docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+          trap 'docker rm -f rsyslog-imbeats-es >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:19200/_cluster/health >/dev/null; then
+              echo "Elasticsearch is ready"
+              break
+            fi
+            sleep 2
+            if [ "$i" -eq 60 ]; then
+              echo "Elasticsearch service did not become ready in time"
+              docker logs rsyslog-imbeats-es || true
+              exit 1
+            fi
+          done
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
