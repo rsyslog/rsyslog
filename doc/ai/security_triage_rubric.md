@@ -118,7 +118,7 @@ break, for example:
 - A non-obvious size calculation before appending variable-length metadata.
 - A deliberate compatibility fallback controlled by
   `compatibility.defaults.secure`.
-- A concurrency decision where stats are intentionally best effort.
+- A concurrency decision where stats are intentionally best-effort.
 - A lifecycle pairing such as an initialization helper that needs destruction
   when atomic operations are disabled or unavailable.
 
