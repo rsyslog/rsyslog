@@ -355,10 +355,16 @@ finalize_it:
 
 static rsRetVal sessionPollWait(const int fd, const short events, const int timeout_ms) {
     struct pollfd pfd;
+    int pollRet;
+
     pfd.fd = fd;
     pfd.events = events;
     pfd.revents = 0;
-    if (poll(&pfd, 1, timeout_ms) < 0) {
+    pollRet = poll(&pfd, 1, timeout_ms);
+    if (pollRet < 0 && errno == EINTR) {
+        return RS_RET_OK;
+    }
+    if (pollRet < 0) {
         return RS_RET_IO_ERROR;
     }
     return RS_RET_OK;
@@ -800,7 +806,11 @@ static void *listenerThread(void *arg) {
     }
 
     while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(inst)) {
-        if (poll(pfds, inst->listener_count, 1000) <= 0) {
+        const int pollRet = poll(pfds, inst->listener_count, 1000);
+        if (pollRet < 0 && errno == EINTR) {
+            continue;
+        }
+        if (pollRet <= 0) {
             reapSessions(inst, 0);
             continue;
         }
