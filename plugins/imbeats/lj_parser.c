@@ -14,9 +14,13 @@
 #include <zlib.h>
 
 static rsRetVal append_event_owned(struct lj_batch_s *batch, uint32_t seq, unsigned char *payload, size_t payload_len) {
-    if (batch == NULL || batch->events == NULL || batch->count >= batch->window_size) {
+    if (batch == NULL || batch->events == NULL) {
         free(payload);
         return RS_RET_PARAM_ERROR;
+    }
+    if (batch->count >= batch->window_size) {
+        free(payload);
+        return RS_RET_INVALID_VALUE;
     }
 
     batch->events[batch->count].seq = seq;
@@ -83,8 +87,7 @@ rsRetVal lj_append_json_event(struct lj_batch_s *batch,
 static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                                          const unsigned char *buf,
                                          size_t len,
-                                         size_t max_frame_size,
-                                         size_t max_decompressed_size) {
+                                         size_t max_frame_size) {
     size_t off = 0;
 
     while (off + 2 <= len) {
@@ -107,7 +110,7 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 off += 8;
                 v1 = ntohl(v1);
                 v2 = ntohl(v2);
-                if ((size_t)v2 > max_frame_size || (size_t)v2 > len - off) {
+                if (v2 == 0 || (size_t)v2 > max_frame_size || (size_t)v2 > len - off) {
                     return RS_RET_INVALID_VALUE;
                 }
                 iRet = lj_append_json_event(batch, v1, buf + off, v2);
@@ -123,15 +126,7 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 memcpy(&v1, buf + off, 4);
                 off += 4;
                 v1 = ntohl(v1);
-                if ((size_t)v1 > max_frame_size || (size_t)v1 > len - off) {
-                    return RS_RET_INVALID_VALUE;
-                }
-                iRet = lj_parse_compressed_frames(batch, buf + off, v1, max_frame_size, max_decompressed_size);
-                if (iRet != RS_RET_OK) {
-                    return iRet;
-                }
-                off += v1;
-                break;
+                return RS_RET_INVALID_VALUE;
             default:
                 return RS_RET_INVALID_VALUE;
         }
@@ -192,12 +187,17 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
         zrc = inflate(&zstrm, Z_NO_FLUSH);
         out_len = out_cap - zstrm.avail_out;
         if (zrc != Z_OK && zrc != Z_STREAM_END) {
-            iRet = RS_RET_ZLIB_ERR;
+            iRet = RS_RET_INVALID_VALUE;
             goto finalize_it;
         }
     } while (zrc != Z_STREAM_END);
 
-    iRet = parse_frames_from_memory(batch, out, out_len, max_frame_size, max_decompressed_size);
+    if (zstrm.avail_in != 0) {
+        iRet = RS_RET_INVALID_VALUE;
+        goto finalize_it;
+    }
+
+    iRet = parse_frames_from_memory(batch, out, out_len, max_frame_size);
 
 finalize_it:
     inflateEnd(&zstrm);
