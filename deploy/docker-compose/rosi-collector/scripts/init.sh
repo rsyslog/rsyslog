@@ -179,6 +179,27 @@ genpw() {
   openssl rand -base64 48 | tr -d '\n' | head -c 32
 }
 
+## @fn dir_content_hash()
+## @brief Return a stable content hash for all files below a directory.
+## @param dir Directory to hash
+## @description
+##   Used to detect whether bind-mounted collector config files changed during
+##   init.sh. Docker can keep existing bind mounts attached to stale replaced
+##   files until the affected container is recreated.
+dir_content_hash() {
+  local dir="$1"
+
+  if [ ! -d "${dir}" ]; then
+    echo "__missing__"
+    return 0
+  fi
+
+  (
+    cd "${dir}"
+    find . -type f -exec sha256sum {} + | sort
+  ) | sha256sum | awk '{print $1}'
+}
+
 ## @fn is_ip_address()
 ## @brief Check if a string is an IP address (IPv4 or IPv6)
 ## @param addr The address string to check
@@ -234,6 +255,8 @@ install -d -m 0750 "${BASE}"
 chown ${STACK}:${STACK} "${BASE}"
 
 echo "Copying configuration files to ${BASE}..."
+RSYSLOG_CONF_BEFORE="$(dir_content_hash "${BASE}/rsyslog.conf")"
+RSYSLOG_COLLECTOR_CONFIG_CHANGED=0
 
 rsync -a --exclude='*.template' --exclude='prometheus-targets/' "${CONFIGS_DIR}/" "${BASE}/" || {
   echo "Error: Failed to copy config files" >&2
@@ -1640,6 +1663,11 @@ else
   echo "TLS is disabled (SYSLOG_TLS_ENABLED=${SYSLOG_TLS_ENABLED})"
 fi
 
+RSYSLOG_CONF_AFTER="$(dir_content_hash "${BASE}/rsyslog.conf")"
+if [ "${RSYSLOG_CONF_BEFORE}" != "${RSYSLOG_CONF_AFTER}" ]; then
+  RSYSLOG_COLLECTOR_CONFIG_CHANGED=1
+fi
+
 # Note: Docker network may be pre-created later in the script for node_exporter binding.
 # Docker Compose will reuse an existing network with the same name.
 
@@ -1796,6 +1824,44 @@ restart_server_rsyslog() {
 }
 restart_server_rsyslog
 
+recreate_collector_rsyslog_if_changed() {
+  if [ "${RSYSLOG_COLLECTOR_CONFIG_CHANGED:-0}" != "1" ]; then
+    return 0
+  fi
+
+  local services profile_args container_ids
+  services="rsyslog"
+  profile_args=""
+  if [ "${SYSLOG_TLS_ENABLED:-false}" = "true" ]; then
+    services="rsyslog rsyslog-tls"
+    profile_args="--profile tls"
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "rsyslog collector config changed; Docker is not available." >&2
+    echo "Run manually after Docker is available: cd ${BASE} && docker compose ${profile_args} up -d --no-deps --force-recreate ${services}" >&2
+    return 0
+  fi
+
+  container_ids=$(docker compose -f "${COMPOSE}" --project-directory "${BASE}" ${profile_args} ps --all -q ${services} 2>/dev/null || true)
+  if [ -z "${container_ids}" ]; then
+    echo ""
+    echo "rsyslog collector config changed; no existing rsyslog containers found."
+    echo "The next 'docker compose up -d' will create them with the new config."
+    return 0
+  fi
+
+  echo ""
+  echo "rsyslog collector config changed; recreating rsyslog container(s)..."
+  if docker compose -f "${COMPOSE}" --project-directory "${BASE}" ${profile_args} up -d --no-deps --force-recreate ${services}; then
+    echo "rsyslog container(s) recreated with the updated config."
+  else
+    echo "Warning: Failed to recreate rsyslog container(s)" >&2
+    echo "Run manually: cd ${BASE} && docker compose ${profile_args} up -d --no-deps --force-recreate ${services}" >&2
+  fi
+}
+recreate_collector_rsyslog_if_changed
+
 echo ""
 echo "OK. ROSI Collector environment ready:"
 echo "  ${BASE}"
@@ -1834,4 +1900,3 @@ echo "  # Monitor: rosi-monitor status"
 echo "  # Check node_exporter: systemctl status node_exporter"
 echo ""
 echo "Note: To update config files, re-run this script - it will copy latest configs"
-

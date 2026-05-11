@@ -577,6 +577,31 @@ docker inspect rosi-collector-grafana-1 --format '{{.State.Status}} {{.State.Err
    rosi-monitor health  # Includes "Log flow (rsyslog -> omhttp -> Loki)" check
    ```
 
+If rsyslog logs show `omhttp: checkResult error http status code: 400`
+or Loki reports entries as "too far behind", Loki rejected the sample and
+the collector should advance to newer messages. The shipped
+`rsyslog.conf/30-send-loki-http.conf` marks HTTP 400 as non-retriable with
+`httpIgnorableCodes=["400"]` and uses rsyslog `timegenerated` (collector
+receive/process time) as the Loki stream timestamp. The sender-reported
+timestamp remains in the original message text.
+
+After changing files under `rsyslog.conf/`, re-run `scripts/init.sh` to copy
+the updated files into the install directory. If an existing rsyslog
+container is present and the installed `rsyslog.conf/` content changed,
+`init.sh` recreates only that container so the bind-mounted config is
+reloaded. To force the same refresh manually:
+
+```bash
+docker compose up -d --force-recreate rsyslog
+```
+
+When debugging a stale config suspicion, compare the host and container copy:
+
+```bash
+md5sum rsyslog.conf/30-send-loki-http.conf
+docker compose exec rsyslog md5sum /etc/rsyslog.d/30-send-loki-http.conf
+```
+
 ### Prometheus can't scrape node_exporter (server target down)
 
 The node_exporter on the server must bind to the Docker bridge gateway IP for Prometheus (running inside a container) to reach it.
