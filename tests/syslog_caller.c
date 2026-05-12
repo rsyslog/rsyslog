@@ -174,9 +174,6 @@ int main(int argc, char *argv[]) {
 #endif
             default:
                 usage();
-#ifdef HAVE_LIBLOGGING_STDLOG
-                exit(1);
-#endif
                 break;
         }
     }
