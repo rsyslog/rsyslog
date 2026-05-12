@@ -4,13 +4,28 @@
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50 # sufficient for our needs!
 export SEQ_CHECK_OPTIONS=-i2
-check_sql_data_ready() {
+export EXPECTED_ERRFILE="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
+export EXPECTED_ERRFILE_LINES="$(printf '%s\n' "$EXPECTED_ERRFILE" | wc -l)"
+check_sql_and_errfile_data_ready() {
 	mysql_get_data
-	seq_check --check-only 0 $((NUMMESSAGES - 2))
+	seq_check --check-only 0 $((NUMMESSAGES - 2)) || return 1
+
+	if [ ! -f "$RSYSLOG2_OUT_LOG" ]; then
+		return 1
+	fi
+	current_errfile_lines=$(wc -l < "$RSYSLOG2_OUT_LOG")
+	if [ "$current_errfile_lines" -ne "$EXPECTED_ERRFILE_LINES" ]; then
+		return 1
+	fi
+	printf '%s\n' "$EXPECTED_ERRFILE" | cmp - "$RSYSLOG2_OUT_LOG" > /dev/null
 }
-export QUEUE_EMPTY_CHECK_FUNC=check_sql_data_ready
+export QUEUE_EMPTY_CHECK_FUNC=check_sql_and_errfile_data_ready
 
 generate_conf
+printf '%s\n' \
+	'INFO: this test intentionally generates MySQL syntax errors for odd messages.' \
+	'INFO: odd messages leave $!facility unset, causing ommysql RS_RET_DATAFAIL -2218.' \
+	'INFO: the expected SQL errors must be recorded in action.errorfile.'
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 global(errormessagestostderr.maxnumber="5")
@@ -22,6 +37,9 @@ if((not($msg contains "error")) and ($msg contains "msgnum:")) then {
 	if $.num % 2 == 0 then {
 		set $!facility = $syslogfacility;
 	} else {
+		# Intentionally leave $!facility unset so this odd message generates
+		# a MySQL syntax error. The test verifies that the failed action is
+		# written to action.errorfile, not that SQL insertion succeeds.
 		set $/cntr = 0;
 	}
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
@@ -33,7 +51,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-export EXPECTED="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
+export EXPECTED="$EXPECTED_ERRFILE"
 cmp_exact ${RSYSLOG2_OUT_LOG}
 mysql_get_data
 seq_check  0 $((NUMMESSAGES - 2)) -i2
