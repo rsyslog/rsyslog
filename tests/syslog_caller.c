@@ -69,6 +69,12 @@ static void genRawMsg(char *buf, const size_t buflen, const int sev, const int i
     }
 }
 
+/* Send one raw syslog message to a Unix domain datagram socket.
+ * sockName: path to the destination Unix socket.
+ * sev: syslog severity value used when generating the PRI part.
+ * iRun: message sequence number used by the generated text format.
+ * msgLen: payload length for raw/fill mode; 0 uses formatted text mode.
+ */
 static void sendRawUnix(const char *sockName, const int sev, const int iRun, const size_t msgLen) {
     int sock;
     struct sockaddr_un sa;
