@@ -45,8 +45,10 @@ common Elasticsearch-oriented pipelines:
 - ``msg`` keeps the original JSON payload
 - decoded Beat event fields are added under top-level ``$!``
 - transport and protocol metadata is stored under ``$!metadata!imbeats``
-- listener-side size limits reject oversized windows, frames, and compressed
-  payload expansion before unbounded allocation
+- listener-side size limits reject oversized windows, frames, batches, and
+  compressed payload expansion before unbounded allocation
+- listener-side session limits and worker settings bound concurrent sender
+  fan-in and provide fairness between active sessions
 
 This default may be revisited later. A user-selectable representation mode is
 not part of the initial release.
@@ -196,6 +198,16 @@ Input Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+   * - :ref:`param-imbeats-maxsessions`
+     - .. include:: ../../reference/parameters/imbeats-maxsessions.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-maxbatchbytes`
+     - .. include:: ../../reference/parameters/imbeats-maxbatchbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
    * - :ref:`param-imbeats-maxdecompressedsize`
      - .. include:: ../../reference/parameters/imbeats-maxdecompressedsize.rst
         :start-after: .. summary-start
@@ -233,6 +245,11 @@ Input Parameters
 
    * - :ref:`param-imbeats-ruleset`
      - .. include:: ../../reference/parameters/imbeats-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-starvationprotection-maxreads`
+     - .. include:: ../../reference/parameters/imbeats-starvationprotection-maxreads.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -293,6 +310,11 @@ Input Parameters
 
    * - :ref:`param-imbeats-streamdriver-tlsverifydepth`
      - .. include:: ../../reference/parameters/imbeats-streamdriver-tlsverifydepth.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-workerthreads`
+     - .. include:: ../../reference/parameters/imbeats-workerthreads.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -375,14 +397,17 @@ The module exposes these ``impstats`` counters:
    ../../reference/parameters/imbeats-keepalive-probes
    ../../reference/parameters/imbeats-keepalive-time
    ../../reference/parameters/imbeats-listenportfilename
+   ../../reference/parameters/imbeats-maxbatchbytes
    ../../reference/parameters/imbeats-maxdecompressedsize
    ../../reference/parameters/imbeats-maxframesize
+   ../../reference/parameters/imbeats-maxsessions
    ../../reference/parameters/imbeats-maxwindowsize
    ../../reference/parameters/imbeats-name
    ../../reference/parameters/imbeats-networknamespace
    ../../reference/parameters/imbeats-permittedpeer
    ../../reference/parameters/imbeats-port
    ../../reference/parameters/imbeats-ruleset
+   ../../reference/parameters/imbeats-starvationprotection-maxreads
    ../../reference/parameters/imbeats-streamdriver-authmode
    ../../reference/parameters/imbeats-streamdriver-cafile
    ../../reference/parameters/imbeats-streamdriver-certfile
@@ -395,3 +420,4 @@ The module exposes these ``impstats`` counters:
    ../../reference/parameters/imbeats-streamdriver-prioritizesan
    ../../reference/parameters/imbeats-streamdriver-tlsrevocationcheck
    ../../reference/parameters/imbeats-streamdriver-tlsverifydepth
+   ../../reference/parameters/imbeats-workerthreads

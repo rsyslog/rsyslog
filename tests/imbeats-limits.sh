@@ -1,12 +1,19 @@
 #!/bin/bash
 . ${srcdir:=.}/diag.sh init
 require_plugin imbeats
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	require_plugin impstats
+fi
 
 generate_conf
-add_conf '
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
        log.file="'$RSYSLOG_DYNNAME'.spool/imbeats-stats.log"
        log.syslog="off" format="cee")
+'
+fi
+add_conf '
 module(load="../plugins/imbeats/.libs/imbeats")
 
 template(name="outfmt" type="string" string="%msg%\n")
@@ -21,7 +28,8 @@ input(type="imbeats"
       ruleset="main"
       maxWindowSize="2"
       maxFrameSize="64"
-      maxDecompressedSize="128")
+      maxDecompressedSize="128"
+      maxBatchBytes="35")
 '
 
 startup
@@ -60,6 +68,14 @@ send_bad(b"2W" + struct.pack(">I", 3))
 send_bad(b"2W" + struct.pack(">I", 1) + b"2J" + struct.pack(">I", 1) + struct.pack(">I", 65))
 send_bad(b"2W" + struct.pack(">I", 1) + b"2C" + struct.pack(">I", 65))
 
+payload1 = json.dumps({"message": "first"}, separators=(",", ":")).encode()
+payload2 = json.dumps({"message": "second"}, separators=(",", ":")).encode()
+send_bad(
+    b"2W" + struct.pack(">I", 2)
+    + b"2J" + struct.pack(">I", 1) + struct.pack(">I", len(payload1)) + payload1
+    + b"2J" + struct.pack(">I", 2) + struct.pack(">I", len(payload2)) + payload2
+)
+
 large_payload = json.dumps({"message": "x" * 140}, separators=(",", ":")).encode()
 compressed = zlib.compress(b"2J" + struct.pack(">I", 1) + struct.pack(">I", len(large_payload)) + large_payload)
 if len(compressed) > 64:
@@ -84,7 +100,8 @@ cmp_exact
 
 test "$(cat "$RSYSLOG_DYNNAME.imbeats.ack")" = "324100000001"
 
-if ! $PYTHON - "$srcdir/$RSYSLOG_DYNNAME.spool/imbeats-stats.log" <<'PY'
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	if ! $PYTHON - "$srcdir/$RSYSLOG_DYNNAME.spool/imbeats-stats.log" <<'PY'
 import json
 import sys
 
@@ -100,17 +117,18 @@ with open(sys.argv[1], encoding="utf-8") as fh:
 
 expected = {
     "windows.rejected": 1,
-    "frames.rejected": 2,
+    "frames.rejected": 3,
     "compressed.rejected": 2,
-    "protocol_errors": 4,
+    "protocol_errors": 5,
     "events.submitted": 1,
 }
 missing = {key: (stats.get(key), value) for key, value in expected.items() if stats.get(key) != value}
 if missing:
     raise SystemExit(f"unexpected imbeats stats: {missing}; last stats={stats}")
 PY
-then
-	error_exit 1
+	then
+		error_exit 1
+	fi
 fi
 
 exit_test

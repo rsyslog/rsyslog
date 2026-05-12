@@ -1591,6 +1591,13 @@ jobs:
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j1
           CI_MAKE_CHECK_TESTS: >-
+            imbeats-basic.sh
+            imbeats-compressed.sh
+            imbeats-limits.sh
+            imbeats-limits-impstats.sh
+            imbeats-maxsessions.sh
+            imbeats-multiplex-idle-sessions.sh
+            yaml-imbeats-basic.sh
             imbeats-filebeat-docker.sh
             imbeats-filebeat-omelasticsearch-docker.sh
           CI_CHECK_CMD: check

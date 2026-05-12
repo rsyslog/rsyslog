@@ -21,10 +21,15 @@ struct lj_event_s {
 struct lj_batch_s {
     uint32_t window_size;
     size_t count;
+    size_t total_payload_len;
+    size_t max_payload_len;
     struct lj_event_s *events;
 };
 
-rsRetVal lj_batch_alloc(struct lj_batch_s *batch, uint32_t window_size, uint32_t max_window_size);
+rsRetVal lj_batch_alloc(struct lj_batch_s *batch,
+                        uint32_t window_size,
+                        uint32_t max_window_size,
+                        size_t max_payload_len);
 void lj_batch_free(struct lj_batch_s *batch);
 rsRetVal lj_parse_window_header(const unsigned char hdr[2], uint32_t window_size);
 rsRetVal lj_append_json_event(struct lj_batch_s *batch, uint32_t seq, const unsigned char *payload, size_t payload_len);

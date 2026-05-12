@@ -59,6 +59,8 @@ send_bad(zlib.compress(frame(1, "ok")) + b"trailing-garbage")
 nested = b"2C" + struct.pack(">I", len(zlib.compress(frame(1, "nested")))) + zlib.compress(frame(1, "nested"))
 send_bad(zlib.compress(nested))
 
+send_bad(zlib.compress(b""))
+
 zero = b"2J" + struct.pack(">I", 1) + struct.pack(">I", 0)
 send_bad(zlib.compress(zero))
 PY
@@ -86,9 +88,9 @@ with open(sys.argv[1], encoding="utf-8") as fh:
             stats = data
 
 expected = {
-    "compressed_frames": 4,
-    "compressed.rejected": 4,
-    "protocol_errors": 4,
+    "compressed_frames": 5,
+    "compressed.rejected": 5,
+    "protocol_errors": 5,
     "events.submitted": 0,
 }
 missing = {key: (stats.get(key), value) for key, value in expected.items() if stats.get(key) != value}

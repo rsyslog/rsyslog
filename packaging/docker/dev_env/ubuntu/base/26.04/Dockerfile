@@ -332,6 +332,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-imfile \
 	--enable-imhttp \
 	--enable-imjournal \
+	--enable-imbeats \
 	--enable-imkafka \
 	--enable-impstats \
 	--enable-impstats-push \

@@ -3635,6 +3635,7 @@ echo "    imjournal input module enabled:           $enable_imjournal"
 if test "$enable_imjournal" = "optional"; then
 echo "        imjournal use dummy:                  $imjournal_use_dummy"
 fi
+echo "    imbeats input module enabled:             $enable_imbeats"
 echo "    imbatchreport input module enabled:       $enable_imbatchreport"
 echo "    imkafka module will be compiled:          $enable_imkafka"
 if test "$enable_imkafka" = "optional"; then

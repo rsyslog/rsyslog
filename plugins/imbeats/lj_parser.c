@@ -30,8 +30,11 @@ static rsRetVal append_event_owned(struct lj_batch_s *batch, uint32_t seq, unsig
     return RS_RET_OK;
 }
 
-rsRetVal lj_batch_alloc(struct lj_batch_s *batch, uint32_t window_size, uint32_t max_window_size) {
-    if (batch == NULL || window_size == 0 || window_size > max_window_size) {
+rsRetVal lj_batch_alloc(struct lj_batch_s *batch,
+                        uint32_t window_size,
+                        uint32_t max_window_size,
+                        size_t max_payload_len) {
+    if (batch == NULL || window_size == 0 || window_size > max_window_size || max_payload_len == 0) {
         return RS_RET_PARAM_ERROR;
     }
 #if SIZE_MAX <= UINT32_MAX
@@ -41,6 +44,7 @@ rsRetVal lj_batch_alloc(struct lj_batch_s *batch, uint32_t window_size, uint32_t
 #endif
     memset(batch, 0, sizeof(*batch));
     batch->window_size = window_size;
+    batch->max_payload_len = max_payload_len;
     batch->events = calloc(window_size, sizeof(struct lj_event_s));
     return (batch->events == NULL) ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
 }
@@ -69,8 +73,12 @@ rsRetVal lj_append_json_event(struct lj_batch_s *batch,
                               const unsigned char *payload,
                               size_t payload_len) {
     unsigned char *cpy;
+    rsRetVal iRet;
     if (batch == NULL || payload == NULL || payload_len == 0) {
         return RS_RET_PARAM_ERROR;
+    }
+    if (payload_len > batch->max_payload_len || batch->total_payload_len > batch->max_payload_len - payload_len) {
+        return RS_RET_INVALID_VALUE;
     }
     if (payload_len > SIZE_MAX - 1) {
         return RS_RET_OUT_OF_MEMORY;
@@ -81,7 +89,11 @@ rsRetVal lj_append_json_event(struct lj_batch_s *batch,
     }
     memcpy(cpy, payload, payload_len);
     cpy[payload_len] = '\0';
-    return append_event_owned(batch, seq, cpy, payload_len);
+    iRet = append_event_owned(batch, seq, cpy, payload_len);
+    if (iRet == RS_RET_OK) {
+        batch->total_payload_len += payload_len;
+    }
+    return iRet;
 }
 
 static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
@@ -123,9 +135,6 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 if (off + 4 > len) {
                     return RS_RET_INVALID_VALUE;
                 }
-                memcpy(&v1, buf + off, 4);
-                off += 4;
-                v1 = ntohl(v1);
                 return RS_RET_INVALID_VALUE;
             default:
                 return RS_RET_INVALID_VALUE;
@@ -144,6 +153,7 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
     unsigned char *out = NULL;
     size_t out_cap = 0;
     size_t out_len = 0;
+    size_t old_count;
     int zrc;
     rsRetVal iRet = RS_RET_OK;
 
@@ -153,6 +163,7 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
     if (payload_len == 0 || payload_len > max_frame_size) {
         return RS_RET_INVALID_VALUE;
     }
+    old_count = batch->count;
 
     memset(&zstrm, 0, sizeof(zstrm));
     zstrm.next_in = (Bytef *)payload;
@@ -197,7 +208,19 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
         goto finalize_it;
     }
 
+    /* Empty deflate streams are invalid Lumberjack payloads and must not
+     * produce an ACK-able no-op compressed frame. */
+    if (out_len == 0) {
+        iRet = RS_RET_INVALID_VALUE;
+        goto finalize_it;
+    }
+
     iRet = parse_frames_from_memory(batch, out, out_len, max_frame_size);
+    /* A syntactically valid compressed frame must advance the current batch.
+     * Treat no-progress payloads as malformed input instead of spinning. */
+    if (iRet == RS_RET_OK && batch->count == old_count) {
+        iRet = RS_RET_INVALID_VALUE;
+    }
 
 finalize_it:
     inflateEnd(&zstrm);

@@ -235,14 +235,17 @@ EXTRA_DIST = \
     source/reference/parameters/imbeats-keepalive-probes.rst \
     source/reference/parameters/imbeats-keepalive-time.rst \
     source/reference/parameters/imbeats-listenportfilename.rst \
+    source/reference/parameters/imbeats-maxbatchbytes.rst \
     source/reference/parameters/imbeats-maxdecompressedsize.rst \
     source/reference/parameters/imbeats-maxframesize.rst \
+    source/reference/parameters/imbeats-maxsessions.rst \
     source/reference/parameters/imbeats-maxwindowsize.rst \
     source/reference/parameters/imbeats-name.rst \
     source/reference/parameters/imbeats-networknamespace.rst \
     source/reference/parameters/imbeats-permittedpeer.rst \
     source/reference/parameters/imbeats-port.rst \
     source/reference/parameters/imbeats-ruleset.rst \
+    source/reference/parameters/imbeats-starvationprotection-maxreads.rst \
     source/reference/parameters/imbeats-streamdriver-authmode.rst \
     source/reference/parameters/imbeats-streamdriver-cafile.rst \
     source/reference/parameters/imbeats-streamdriver-certfile.rst \
@@ -255,6 +258,7 @@ EXTRA_DIST = \
     source/reference/parameters/imbeats-streamdriver-prioritizesan.rst \
     source/reference/parameters/imbeats-streamdriver-tlsrevocationcheck.rst \
     source/reference/parameters/imbeats-streamdriver-tlsverifydepth.rst \
+    source/reference/parameters/imbeats-workerthreads.rst \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omazureeventhubs.rst \

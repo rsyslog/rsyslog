@@ -88,8 +88,10 @@ imbeats:
     - type: mutex
       field: instanceConf.mutSessions
   notes:
-    - Listener threads mutate per-instance session lists under mutSessions.
+    - Listener threads own readiness notification and worker threads process native Lumberjack session state.
     - Use Elastic Agent or Filebeat output.logstash to send Lumberjack v2 traffic to imbeats.
+    - Concurrent Beats sessions are bounded per listener with maxSessions and processed through the listener worker/multiplexing path.
+    - Use starvationProtection.maxReads to keep one busy sender from monopolizing imbeats worker time.
     - TLS deployments require an installed rsyslog TLS stream-driver package or module, such as rsyslog-gnutls or rsyslog-openssl.
     - The common Elastic Agent TLS setup validates the rsyslog server certificate but does not present a client certificate; use streamDriver.authMode=anon for that pattern and stricter auth modes only with sender client certificates.
     - Compressed Lumberjack v2 frames are supported and should be tested with Beats compression enabled.
