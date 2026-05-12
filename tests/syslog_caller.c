@@ -74,8 +74,8 @@ static void sendRawUnix(const char *sockName, const int sev, const int iRun, con
     struct sockaddr_un sa;
     char msgbuf[4096];
 
-    if (strlen(sockName) >= sizeof(sa.sun_path)) {
-        fprintf(stderr, "Unix socket path too long: %s\n", sockName);
+    if (sockName == NULL || strlen(sockName) >= sizeof(sa.sun_path)) {
+        fprintf(stderr, "Unix socket path invalid or too long: %s\n", sockName ? sockName : "(null)");
         exit(1);
     }
     if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
