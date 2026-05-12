@@ -45,8 +45,8 @@ common Elasticsearch-oriented pipelines:
 - ``msg`` keeps the original JSON payload
 - decoded Beat event fields are added under top-level ``$!``
 - transport and protocol metadata is stored under ``$!metadata!imbeats``
-- listener-side size limits reject oversized windows, frames, and compressed
-  payload expansion before unbounded allocation
+- listener-side size limits reject oversized windows, frames, batches, and
+  compressed payload expansion before unbounded allocation
 
 This default may be revisited later. A user-selectable representation mode is
 not part of the initial release.
@@ -193,6 +193,11 @@ Input Parameters
 
    * - :ref:`param-imbeats-listenportfilename`
      - .. include:: ../../reference/parameters/imbeats-listenportfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-maxbatchbytes`
+     - .. include:: ../../reference/parameters/imbeats-maxbatchbytes.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 

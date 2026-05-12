@@ -235,6 +235,7 @@ EXTRA_DIST = \
     source/reference/parameters/imbeats-keepalive-probes.rst \
     source/reference/parameters/imbeats-keepalive-time.rst \
     source/reference/parameters/imbeats-listenportfilename.rst \
+    source/reference/parameters/imbeats-maxbatchbytes.rst \
     source/reference/parameters/imbeats-maxdecompressedsize.rst \
     source/reference/parameters/imbeats-maxframesize.rst \
     source/reference/parameters/imbeats-maxwindowsize.rst \

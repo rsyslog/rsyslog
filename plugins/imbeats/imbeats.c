@@ -49,6 +49,7 @@ MODULE_CNFNAME("imbeats")
 #define IMBEATS_MAX_WINDOW_SIZE_LIMIT 1000000
 #define IMBEATS_DEFAULT_MAX_FRAME_SIZE (10 * 1024 * 1024)
 #define IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE (64 * 1024 * 1024)
+#define IMBEATS_DEFAULT_MAX_BATCH_BYTES IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE
 #define IMBEATS_MAX_BYTE_SIZE_LIMIT 200000000
 
 DEF_IMOD_STATIC_DATA;
@@ -90,6 +91,7 @@ typedef struct instanceConf_s {
     uint32_t maxWindowSize;
     size_t maxFrameSize;
     size_t maxDecompressedSize;
+    size_t maxBatchBytes;
 
     netstrms_t *pNS;
     netstrm_t **listeners;
@@ -159,6 +161,7 @@ static struct cnfparamdescr inppdescr[] = {
     {"maxwindowsize", eCmdHdlrPositiveInt, 0},
     {"maxframesize", eCmdHdlrPositiveInt, 0},
     {"maxdecompressedsize", eCmdHdlrPositiveInt, 0},
+    {"maxbatchbytes", eCmdHdlrPositiveInt, 0},
 };
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(inppdescr[0]), inppdescr};
 
@@ -478,7 +481,7 @@ static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *cons
         snprintf(portbuf, sizeof(portbuf), "%s", propGetSzStrOrDefault(sess->fromHostPort, ""));
         fjson_object_object_add(meta, "peer_port", json_object_new_string(portbuf));
     }
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!imbeats", meta, 0, 0));
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!imbeats", meta, 1, 0));
     meta = NULL;
 
     CHKiRet(submitMsg2(pMsg));
@@ -518,7 +521,7 @@ static rsRetVal receiveBatch(session_t *const sess, struct lj_batch_s *batch) {
         STATSCOUNTER_INC(statsCounter.ctrWindowsRejected, statsCounter.mutCtrWindowsRejected);
         ABORT_FINALIZE(RS_RET_INVALID_VALUE);
     }
-    CHKiRet(lj_batch_alloc(batch, net32, sess->inst->maxWindowSize));
+    CHKiRet(lj_batch_alloc(batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes));
     STATSCOUNTER_INC(statsCounter.ctrBatchesReceived, statsCounter.mutCtrBatchesReceived);
 
     while (batch->count < batch->window_size) {
@@ -546,6 +549,9 @@ static rsRetVal receiveBatch(session_t *const sess, struct lj_batch_s *batch) {
             }
             iRet = lj_append_json_event(batch, seq, payload, payload_len);
             free(payload);
+            if (iRet == RS_RET_INVALID_VALUE) {
+                STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
+            }
             CHKiRet(iRet);
         } else if (frame_hdr[1] == LJ_FRAME_COMPRESSED) {
             uint32_t compressed_len;
@@ -875,6 +881,7 @@ static rsRetVal createInstance(instanceConf_t **const pinst) {
     inst->maxWindowSize = IMBEATS_DEFAULT_MAX_WINDOW_SIZE;
     inst->maxFrameSize = IMBEATS_DEFAULT_MAX_FRAME_SIZE;
     inst->maxDecompressedSize = IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE;
+    inst->maxBatchBytes = IMBEATS_DEFAULT_MAX_BATCH_BYTES;
     if (loadModConf->tail == NULL) {
         loadModConf->root = loadModConf->tail = inst;
     } else {
@@ -963,6 +970,9 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "maxdecompressedsize")) {
             CHKiRet(validateSizeLimit("maxDecompressedSize", pvals[i].val.d.n, IMBEATS_MAX_BYTE_SIZE_LIMIT,
                                       &inst->maxDecompressedSize));
+        } else if (!strcmp(inppblk.descr[i].name, "maxbatchbytes")) {
+            CHKiRet(validateSizeLimit("maxBatchBytes", pvals[i].val.d.n, IMBEATS_MAX_BYTE_SIZE_LIMIT,
+                                      &inst->maxBatchBytes));
         }
     }
     if (inst->pszInputName != NULL) {
