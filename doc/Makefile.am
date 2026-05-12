@@ -1133,6 +1133,7 @@ EXTRA_DIST = \
     source/reference/parameters/omrelp-tls-mycert.rst \
     source/reference/parameters/omrelp-tls-myprivkey.rst \
     source/reference/parameters/omrelp-tls-permittedpeer.rst \
+    source/reference/parameters/omrelp-tls-permanentfailuredisablesaction.rst \
     source/reference/parameters/omrelp-tls-prioritystring.rst \
     source/reference/parameters/omrelp-tls-tlscfgcmd.rst \
     source/reference/parameters/omrelp-tls-tlslib.rst \

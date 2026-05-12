@@ -131,6 +131,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omrelp-tls-tlscfgcmd.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omrelp-tls-permanentfailuredisablesaction`
+     - .. include:: ../../reference/parameters/omrelp-tls-permanentfailuredisablesaction.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omrelp-localclientip`
      - .. include:: ../../reference/parameters/omrelp-localclientip.rst
         :start-after: .. summary-start
@@ -160,6 +164,7 @@ Action Parameters
    ../../reference/parameters/omrelp-tls-myprivkey
    ../../reference/parameters/omrelp-tls-prioritystring
    ../../reference/parameters/omrelp-tls-tlscfgcmd
+   ../../reference/parameters/omrelp-tls-permanentfailuredisablesaction
    ../../reference/parameters/omrelp-localclientip
 
 
@@ -211,5 +216,4 @@ be specified. To send a message via RELP, use
 .. code-block:: none
 
    *.*  :omrelp:<server>:<port>;<template>
-
 
