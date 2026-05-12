@@ -135,9 +135,6 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 if (off + 4 > len) {
                     return RS_RET_INVALID_VALUE;
                 }
-                memcpy(&v1, buf + off, 4);
-                off += 4;
-                v1 = ntohl(v1);
                 return RS_RET_INVALID_VALUE;
             default:
                 return RS_RET_INVALID_VALUE;
@@ -211,12 +208,16 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
         goto finalize_it;
     }
 
+    /* Empty deflate streams are invalid Lumberjack payloads and must not
+     * produce an ACK-able no-op compressed frame. */
     if (out_len == 0) {
         iRet = RS_RET_INVALID_VALUE;
         goto finalize_it;
     }
 
     iRet = parse_frames_from_memory(batch, out, out_len, max_frame_size);
+    /* A syntactically valid compressed frame must advance the current batch.
+     * Treat no-progress payloads as malformed input instead of spinning. */
     if (iRet == RS_RET_OK && batch->count == old_count) {
         iRet = RS_RET_INVALID_VALUE;
     }

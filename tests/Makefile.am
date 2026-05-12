@@ -1047,7 +1047,10 @@ TESTS_IMBEATS = \
 	imbeats-metadata-collision.sh \
 	imbeats-elastic-agent-windows-fixture.sh \
 	imbeats-limits.sh \
+	imbeats-limits-impstats.sh \
 	imbeats-shutdown-open-session.sh \
+	imbeats-maxsessions.sh \
+	imbeats-multiplex-idle-sessions.sh \
 	imbeats-filebeat-docker.sh
 
 TESTS_IMBEATS_YAML = \

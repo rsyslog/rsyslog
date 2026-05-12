@@ -1,12 +1,19 @@
 #!/bin/bash
 . ${srcdir:=.}/diag.sh init
 require_plugin imbeats
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	require_plugin impstats
+fi
 
 generate_conf
-add_conf '
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
        log.file="'$RSYSLOG_DYNNAME'.spool/imbeats-stats.log"
        log.syslog="off" format="cee")
+'
+fi
+add_conf '
 module(load="../plugins/imbeats/.libs/imbeats")
 
 template(name="outfmt" type="string" string="%msg%\n")
@@ -93,7 +100,8 @@ cmp_exact
 
 test "$(cat "$RSYSLOG_DYNNAME.imbeats.ack")" = "324100000001"
 
-if ! $PYTHON - "$srcdir/$RSYSLOG_DYNNAME.spool/imbeats-stats.log" <<'PY'
+if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
+	if ! $PYTHON - "$srcdir/$RSYSLOG_DYNNAME.spool/imbeats-stats.log" <<'PY'
 import json
 import sys
 
@@ -118,8 +126,9 @@ missing = {key: (stats.get(key), value) for key, value in expected.items() if st
 if missing:
     raise SystemExit(f"unexpected imbeats stats: {missing}; last stats={stats}")
 PY
-then
-	error_exit 1
+	then
+		error_exit 1
+	fi
 fi
 
 exit_test

@@ -1,6 +1,7 @@
 #!/bin/bash
 . ${srcdir:=.}/diag.sh init
 require_plugin imbeats
+require_yaml_support
 
 generate_conf --yaml-only
 add_yaml_conf 'modules:'
@@ -17,6 +18,9 @@ add_yaml_conf '  - type: imbeats'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.imbeats.port\""
 add_yaml_conf '    ruleset: main'
+add_yaml_conf '    maxSessions: 1000'
+add_yaml_conf '    workerThreads: 2'
+add_yaml_conf '    starvationProtection.maxReads: 500'
 add_yaml_conf ''
 add_yaml_conf 'rulesets:'
 add_yaml_conf '  - name: main'
