@@ -56,16 +56,40 @@ static void usage(void) {
     exit(1);
 }
 
-static void genRawMsg(char *buf, const size_t buflen, const int sev, const int iRun, const size_t msgLen) {
+/*
+ * Generate a raw syslog message with a priority prefix in `buf`.
+ *
+ * Parameters:
+ * - buf: destination buffer to receive the generated message.
+ * - buflen: size of `buf` in bytes.
+ * - sev: severity value; only the low syslog severity range is used via (sev % 8).
+ * - iRun: message index used in the formatted test message variant.
+ * - msgLen: if greater than zero, generate a fixed-length payload (after "<PRI>")
+ *           filled with 'A' bytes and truncated to fit `buf`; if zero, generate
+ *           a formatted test message including run number and severity.
+ *
+ * Returns the generated message length in bytes.
+ */
+static size_t genRawMsg(char *buf, const size_t buflen, const int sev, const int iRun, const size_t msgLen) {
+    if (buflen == 0) return 0;
+    buf[0] = '\0';
+
     if (msgLen > 0) {
-        const size_t prefixLen = (size_t)snprintf(buf, buflen, "<%d>", sev % 8);
-        if (prefixLen >= buflen) return;
+        const int n = snprintf(buf, buflen, "<%d>", sev % 8);
+        buf[buflen - 1] = '\0';
+        if (n < 0) return 0;
+        const size_t prefixLen = (size_t)n;
+        if (prefixLen >= buflen) return buflen - 1;
         const size_t avail = buflen - prefixLen - 1;
         const size_t len = msgLen < avail ? msgLen : avail;
         memset(buf + prefixLen, 'A', len);
         buf[prefixLen + len] = '\0';
+        return prefixLen + len;
     } else {
-        snprintf(buf, buflen, "<%d>test message nbr %d, severity=%d", sev % 8, iRun, sev % 8);
+        const int n = snprintf(buf, buflen, "<%d>test message nbr %d, severity=%d", sev % 8, iRun, sev % 8);
+        buf[buflen - 1] = '\0';
+        if (n < 0) return 0;
+        return (size_t)n < buflen ? (size_t)n : buflen - 1;
     }
 }
 
@@ -79,6 +103,7 @@ static void sendRawUnix(const char *sockName, const int sev, const int iRun, con
     int sock;
     struct sockaddr_un sa;
     char msgbuf[4096];
+    size_t lenMsg;
 
     if (sockName == NULL || strlen(sockName) >= sizeof(sa.sun_path)) {
         fprintf(stderr, "Unix socket path invalid or too long: %s\n", sockName ? sockName : "(null)");
@@ -92,8 +117,8 @@ static void sendRawUnix(const char *sockName, const int sev, const int iRun, con
     sa.sun_family = AF_UNIX;
     strncpy(sa.sun_path, sockName, sizeof(sa.sun_path) - 1);
     sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
-    genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen);
-    if (sendto(sock, msgbuf, strlen(msgbuf), 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+    lenMsg = genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen);
+    if (sendto(sock, msgbuf, lenMsg, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
         perror("sendto");
         close(sock);
         exit(1);
