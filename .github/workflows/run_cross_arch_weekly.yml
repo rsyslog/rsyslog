@@ -1,0 +1,295 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: weekly_cross_arch
+
+'on':
+  schedule:
+    # Every Tuesday at 03:00 UTC
+    - cron: '0 3 * * 2'
+  workflow_dispatch:
+
+jobs:
+  check_run:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: armhf
+            platform: linux/arm/v7
+            qemu_platform: arm
+          - arch: s390x
+            platform: linux/s390x
+            qemu_platform: s390x
+    name: Weekly ${{ matrix.arch }} CI (QEMU)
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU for ${{ matrix.arch }} emulation
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        with:
+          platforms: ${{ matrix.qemu_platform }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build ${{ matrix.arch }} dev image (cached)
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: devtools/ci/Dockerfile.arm
+          platforms: ${{ matrix.platform }}
+          tags: rsyslog-cross-dev:${{ matrix.arch }}
+          load: true
+          cache-from: type=gha,scope=cross-dev-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=cross-dev-${{ matrix.arch }}
+
+      - name: Run ${{ matrix.arch }} rich build and testbench
+        id: run_tests
+        continue-on-error: true
+        run: |
+          chmod -R go+rw .
+          set +e
+          docker run --rm --platform ${{ matrix.platform }} \
+            -e ARCH=${{ matrix.arch }} \
+            --cap-add SYS_ADMIN \
+            --cap-add SYS_PTRACE \
+            --security-opt seccomp=unconfined \
+            -v "${{ github.workspace }}:/rsyslog" \
+            -w /rsyslog \
+            rsyslog-cross-dev:${{ matrix.arch }} bash -c '
+              set -e
+              export CFLAGS="-g -O1 -fno-omit-frame-pointer"
+              export CC=gcc
+              export TEST_MAX_RUNTIME=1200
+              autoreconf -fvi
+              if [ "$ARCH" = "s390x" ]; then
+                apt-get update
+                apt-get install -y --no-install-recommends \
+                  curl liblognorm-dev libmaxminddb-dev libsnmp-dev \
+                  libssl-dev libsystemd-dev libyaml-dev libzstd-dev openssl
+                rm -rf /var/lib/apt/lists/*
+                useradd --create-home rsyslogci
+                chown -R rsyslogci:rsyslogci /rsyslog
+                su rsyslogci -c "./configure --enable-silent-rules \
+                  --enable-testbench --disable-extended-tests \
+                  --enable-imdiag --disable-imdocker \
+                  --enable-imfile --enable-imfile-tests \
+                  --enable-impstats --enable-imptcp \
+                  --enable-mmanon --enable-mmaudit \
+                  --enable-mmcount --enable-mmdblookup \
+                  --enable-mmfields --enable-mmjsonparse \
+                  --enable-mmnormalize --enable-mmpstrucdata \
+                  --enable-mmrm1stspace --enable-mmsequence \
+                  --enable-mmsnmptrapd --enable-mmutf8fix \
+                  --enable-mail \
+                  --disable-omhttp --enable-omjournal \
+                  --enable-omprog --enable-omruleset \
+                  --enable-omstdout --enable-omuxsock \
+                  --enable-pmaixforwardedfrom --enable-pmciscoios \
+                  --enable-pmcisconames --enable-pmlastmsg \
+                  --enable-pmnull --enable-pmsnare \
+                  --enable-gnutls --enable-openssl \
+                  --enable-relp --enable-snmp \
+                  --enable-usertools --enable-imdtls --enable-omdtls \
+                  --enable-imjournal \
+                  --enable-fmhash --enable-libzstd \
+                  --enable-klog --enable-kmsg \
+                  --enable-libsystemd=yes \
+                  --disable-libgcrypt --disable-liblogging-stdlog \
+                  --disable-fmhttp --disable-mysql \
+                  --disable-valgrind --without-valgrind-testbench \
+                  --disable-helgrind --disable-mmkubernetes \
+                  --disable-omkafka --disable-imkafka \
+                  --disable-ommongodb --disable-omrabbitmq \
+                  --disable-mmdarwin \
+                  --disable-root-tests \
+                  --disable-elasticsearch-tests \
+                  --disable-kafka-tests --disable-snmp-tests \
+                  --disable-journal-tests"
+                su rsyslogci -c "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
+                S390X_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
+                  yaml-basic.sh yaml-script-call.sh yaml-ratelimit-policywatch.sh \
+                  imudp_ratelimit_name.sh ratelimit_name.sh imrelp_ratelimit_name.sh \
+                  imtcp-basic.sh imtcp-starvation-1.sh \
+                  imtcp_framing_regex_maxmsg_overflow.sh imtcp-impstats.sh \
+                  imptcp_framing_regex.sh imptcp-connection-msg-received.sh \
+                  diskqueue-truncated-segment-startup.sh \
+                  diskqueue-oncorruption-missing-segment.sh \
+                  sndrcv_tls_anon_rebind.sh sndrcv_tls_certvalid_action_level.sh \
+                  sndrcv_tls_ossl_certvalid_action_level.sh \
+                  sndrcv_tls_ossl_anon_rebind.sh \
+                  sndrcv_relp.sh sndrcv_relp_tls_certvalid.sh \
+                  imdtls-basic.sh sndrcv_dtls_certvalid.sh \
+                  imfile-basic.sh imfile-logrotate.sh \
+                  mmjsonparse_simple.sh mmnormalize_variable.sh mmpstrucdata.sh \
+                  omprog-feedback.sh omprog-feedback-timeout.sh \
+                  uxsock_simple.sh"
+                su rsyslogci -c "make -j8 && timeout 40m make -j2 check TESTS=\"$S390X_TESTS\""
+              else
+                ./configure --enable-silent-rules --enable-testbench \
+                  --enable-imdiag --disable-imdocker --enable-imfile \
+                  --disable-default-tests --disable-impstats \
+                  --disable-impstats-push \
+                  --disable-imptcp \
+                  --disable-mmanon --disable-mmaudit \
+                  --disable-mmfields --disable-mmjsonparse \
+                  --disable-mmpstrucdata --disable-mmsequence \
+                  --disable-mmutf8fix --disable-mail \
+                  --disable-omprog --disable-improg \
+                  --disable-omruleset \
+                  --enable-omstdout --disable-omuxsock \
+                  --disable-pmaixforwardedfrom --disable-pmciscoios \
+                  --disable-pmcisconames --disable-pmlastmsg \
+                  --disable-pmsnare \
+                  --disable-libgcrypt --disable-mmnormalize \
+                  --disable-omudpspoof --disable-relp \
+                  --disable-mmsnmptrapd \
+                  --enable-gnutls --enable-usertools \
+                  --disable-mysql \
+                  --disable-valgrind --disable-mmkubernetes \
+                  --disable-omkafka --disable-imkafka \
+                  --disable-ommongodb --disable-omrabbitmq \
+                  --disable-mmdarwin \
+                  --disable-helgrind --disable-uuid \
+                  --disable-fmhttp
+                make -j8
+                make -j3 check
+              fi
+            '
+          EXIT_CODE=$?
+          STATUS=success
+          if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          printf "%s,%s\n" "${{ matrix.arch }}" "$STATUS" > result.txt
+          exit 0
+
+      - name: Collect test logs
+        if: always()
+        run: devtools/gather-check-logs.sh || true
+
+      - name: Upload ${{ matrix.arch }} test logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: weekly-${{ matrix.arch }}-test-logs
+          path: |
+            tests/test-suite.log
+            failed-tests.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Ensure result artifact exists
+        if: always()
+        run: |
+          if [ ! -f result.txt ]; then
+            printf "%s,failure\n" "${{ matrix.arch }}" > result.txt
+          fi
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: res-${{ matrix.arch }}
+          path: result.txt
+
+      - name: Fail job if tests failed
+        if: steps.run_tests.outputs.status == 'failure'
+        run: exit 1
+
+  report:
+    name: Summarize and report failures
+    needs: check_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    if: always()
+    steps:
+      - name: Download all result artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: res-*
+          path: results
+
+      - name: Build summary
+        id: summary
+        run: |
+          set -e
+          {
+            echo "Weekly cross-arch matrix results"
+            echo ""
+            echo "| Arch | Status |"
+            echo "| --- | --- |"
+          } > summary.md
+          FAILURES=0
+          while IFS= read -r -d '' f; do
+            line=$(cat "$f")
+            IFS=',' read -r arch status <<< "$line"
+            echo "| $arch | $status |" >> summary.md
+            if [ "$status" != "success" ]; then
+              FAILURES=$((FAILURES+1))
+            fi
+          done < <(find results -type f -name 'result.txt' -print0)
+          echo "failures=$FAILURES" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update tracking issue
+        if: >-
+          steps.summary.outputs.failures != '0' &&
+          github.repository == 'rsyslog/rsyslog'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('summary.md', 'utf8');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue in:title Weekly cross-arch CI failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Weekly cross-arch CI failures',
+                body,
+                labels: ['ci']
+              });
+            }
+
+      - name: Upload summary as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: weekly-cross-arch-summary
+          path: summary.md
