@@ -10,6 +10,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 |-------|---------|
 | [`rsyslog_build`](.agent/skills/rsyslog_build/SKILL.md) | Environment setup and incremental parallel builds. |
 | [`rsyslog_test`](.agent/skills/rsyslog_test/SKILL.md) | Standardized validation and debugging via `diag.sh`. |
+| [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, analyzer-first flow, service-skip checks, and clean-tree rules. |
 | [`rsyslog_doc`](.agent/skills/rsyslog_doc/SKILL.md) | Structured, RAG-optimized documentation and metadata. |
 | [`rsyslog_doc_dist`](.agent/skills/rsyslog_doc_dist/SKILL.md) | Syncing documentation files in `doc/Makefile.am`. |
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |
@@ -40,9 +41,11 @@ Follow these three steps for a typical development task:
 
 - Runtime container definitions live in `packaging/docker/rsyslog`.
 - Local GitHub Actions-style validation commands for the Ubuntu 26.04 dev
-  container, `-j60` check runs, clang static analyzer, disabled external
-  services, and Docker storage cleanup are documented in
-  [`devtools/local-container-testing.md`](./devtools/local-container-testing.md).
+  container, `-j80` check runs, clang static analyzer, disabled external
+  services, and Docker storage cleanup are documented in the
+  [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md)
+  skill. AI agents should use that skill when running or planning this
+  validation.
 - The container Makefile default version must stay clearly non-release.
   Use explicit `VERSION=...` values for release-like local rehearsals and for
   any publish automation.

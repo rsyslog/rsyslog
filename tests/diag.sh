@@ -56,8 +56,12 @@
 #               service-backed tests.
 # RSYSLOG_TESTBENCH_FORCE_<MODULE>_TESTS
 #               If set to "1", bypasses changed-file relevance checks for a
-#               specific module. Current modules: ELASTICSEARCH, MYSQL, LIBDBI,
-#               KAFKA.
+#               specific module. Current modules: AZURE_DCE, AZUREDCE,
+#               AZURE_EVENTHUBS, AZUREEVENTHUBS, CLICKHOUSE, ELASTICSEARCH,
+#               HIREDIS, IMBEATS, IMDOCKER, IMHIREDIS, IMJOURNAL,
+#               IMPSTATS_PUSH, JOURNAL, KAFKA, LIBDBI, MYSQL, OMAZUREDCE,
+#               OMAZUREEVENTHUBS, OMHIREDIS, OMJOURNAL, OMRABBITMQ, PGSQL,
+#               POSTGRESQL, SNMP.
 # RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE
 #               If set to "1", disables service relevance checks and preserves
 #               the historical behavior.
@@ -2293,10 +2297,40 @@ testbench_changed_files() {
 
 _module_force_enabled() {
 	case "$1" in
+		azuredce|omazuredce) [ "${RSYSLOG_TESTBENCH_FORCE_AZURE_DCE_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_AZUREDCE_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_OMAZUREDCE_TESTS:-}" = "1" ] ;;
+		azureeventhubs|omazureeventhubs) [ "${RSYSLOG_TESTBENCH_FORCE_AZURE_EVENTHUBS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_AZUREEVENTHUBS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_OMAZUREEVENTHUBS_TESTS:-}" = "1" ] ;;
+		clickhouse) [ "${RSYSLOG_TESTBENCH_FORCE_CLICKHOUSE_TESTS:-}" = "1" ] ;;
 		elasticsearch) [ "${RSYSLOG_TESTBENCH_FORCE_ELASTICSEARCH_TESTS:-}" = "1" ] ;;
+		imbeats) [ "${RSYSLOG_TESTBENCH_FORCE_IMBEATS_TESTS:-}" = "1" ] ;;
+		imjournal) [ "${RSYSLOG_TESTBENCH_FORCE_IMJOURNAL_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_JOURNAL_TESTS:-}" = "1" ] ;;
+		impstats-push) [ "${RSYSLOG_TESTBENCH_FORCE_IMPSTATS_PUSH_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_IMPSTATS_TESTS:-}" = "1" ] ;;
+		journal) [ "${RSYSLOG_TESTBENCH_FORCE_JOURNAL_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_IMJOURNAL_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_OMJOURNAL_TESTS:-}" = "1" ] ;;
 		mysql) [ "${RSYSLOG_TESTBENCH_FORCE_MYSQL_TESTS:-}" = "1" ] ;;
 		libdbi) [ "${RSYSLOG_TESTBENCH_FORCE_LIBDBI_TESTS:-}" = "1" ] ;;
 		kafka) [ "${RSYSLOG_TESTBENCH_FORCE_KAFKA_TESTS:-}" = "1" ] ;;
+		imhiredis) [ "${RSYSLOG_TESTBENCH_FORCE_IMHIREDIS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_HIREDIS_TESTS:-}" = "1" ] ;;
+		omhiredis) [ "${RSYSLOG_TESTBENCH_FORCE_OMHIREDIS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_HIREDIS_TESTS:-}" = "1" ] ;;
+		hiredis) [ "${RSYSLOG_TESTBENCH_FORCE_HIREDIS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_IMHIREDIS_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_OMHIREDIS_TESTS:-}" = "1" ] ;;
+		imdocker) [ "${RSYSLOG_TESTBENCH_FORCE_IMDOCKER_TESTS:-}" = "1" ] ;;
+		omjournal) [ "${RSYSLOG_TESTBENCH_FORCE_OMJOURNAL_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_JOURNAL_TESTS:-}" = "1" ] ;;
+		omrabbitmq) [ "${RSYSLOG_TESTBENCH_FORCE_OMRABBITMQ_TESTS:-}" = "1" ] ;;
+		pgsql|postgresql) [ "${RSYSLOG_TESTBENCH_FORCE_PGSQL_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_POSTGRESQL_TESTS:-}" = "1" ] ;;
+		snmp|omsnmp) [ "${RSYSLOG_TESTBENCH_FORCE_SNMP_TESTS:-}" = "1" ] ||
+			[ "${RSYSLOG_TESTBENCH_FORCE_OMSNMP_TESTS:-}" = "1" ] ;;
 		*) return 1 ;;
 	esac
 }
@@ -2326,16 +2360,91 @@ module_needs_testing() {
 		esac
 
 		case "$module:$changed_file" in
-			elasticsearch:plugins/omelasticsearch/*)
+			azuredce:plugins/omazuredce/*|omazuredce:plugins/omazuredce/*|\
+			azuredce:tests/omazuredce*.sh|omazuredce:tests/omazuredce*.sh|\
+			azuredce:tests/yaml-omazuredce*.sh|omazuredce:tests/yaml-omazuredce*.sh|\
+			azuredce:tests/omazuredce-env.sh|omazuredce:tests/omazuredce-env.sh|\
+			azuredce:tests/testsuites/yaml-omazuredce*.yaml|\
+			omazuredce:tests/testsuites/yaml-omazuredce*.yaml)
 				return 0
 				;;
-			mysql:plugins/ommysql/*)
+			azureeventhubs:plugins/omazureeventhubs/*|\
+			omazureeventhubs:plugins/omazureeventhubs/*|\
+			azureeventhubs:tests/omazureeventhubs*.sh|\
+			omazureeventhubs:tests/omazureeventhubs*.sh|\
+			azureeventhubs:tests/omazureeventhubs.supp|\
+			omazureeventhubs:tests/omazureeventhubs.supp)
 				return 0
 				;;
-			libdbi:plugins/omlibdbi/*)
+			clickhouse:plugins/omclickhouse/*|\
+			clickhouse:tests/clickhouse*.sh|\
+			clickhouse:devtools/prepare_clickhouse.sh)
 				return 0
 				;;
-			kafka:plugins/imkafka/*|kafka:plugins/omkafka/*)
+			elasticsearch:plugins/omelasticsearch/*|\
+			elasticsearch:tests/es*.sh|\
+			elasticsearch:tests/elasticsearch*.sh|\
+			elasticsearch:tests/omelasticsearch*.sh)
+				return 0
+				;;
+			imbeats:plugins/imbeats/*|imbeats:plugins/omelasticsearch/*|\
+			imbeats:tests/imbeats*.sh|\
+			imbeats:tests/yaml-imbeats*.sh)
+				return 0
+				;;
+			imjournal:plugins/imjournal/*|imjournal:tests/imjournal*.sh|\
+			imjournal:tests/journal_print.c|\
+			journal:plugins/imjournal/*|journal:plugins/omjournal/*|\
+			journal:tests/imjournal*.sh|journal:tests/omjournal*.sh|\
+			journal:tests/journal_print.c)
+				return 0
+				;;
+			impstats-push:plugins/impstats/*|impstats-push:tests/impstats-push*.sh)
+				return 0
+				;;
+			mysql:plugins/ommysql/*|mysql:tests/mysql*.sh|\
+			mysql:tests/mysqld-*.sh|mysql:tests/timestamp-mysql.sh)
+				return 0
+				;;
+			libdbi:plugins/omlibdbi/*|libdbi:tests/libdbi*.sh)
+				return 0
+				;;
+			kafka:plugins/imkafka/*|kafka:plugins/omkafka/*|\
+			kafka:tests/*kafka*.sh|kafka:tests/kafka*.sh)
+				return 0
+				;;
+			imhiredis:contrib/imhiredis/*|imhiredis:tests/imhiredis*.sh|\
+			imhiredis:tests/testsuites/redis.conf|imhiredis:tests/testsuites/x.509/*)
+				return 0
+				;;
+			omhiredis:contrib/omhiredis/*|omhiredis:tests/omhiredis*.sh|\
+			omhiredis:tests/testsuites/redis.conf)
+				return 0
+				;;
+			hiredis:contrib/imhiredis/*|hiredis:contrib/omhiredis/*|\
+			hiredis:tests/imhiredis*.sh|hiredis:tests/omhiredis*.sh|\
+			hiredis:tests/testsuites/redis.conf|hiredis:tests/testsuites/x.509/*)
+				return 0
+				;;
+			imdocker:contrib/imdocker/*|imdocker:tests/imdocker*.sh)
+				return 0
+				;;
+			omjournal:plugins/omjournal/*|omjournal:tests/omjournal*.sh)
+				return 0
+				;;
+			omrabbitmq:contrib/omrabbitmq/*|omrabbitmq:tests/omrabbitmq*.sh|\
+			omrabbitmq:tests/miniamqpsrvr.c)
+				return 0
+				;;
+			pgsql:plugins/ompgsql/*|postgresql:plugins/ompgsql/*|\
+			pgsql:tests/pgsql*.sh|postgresql:tests/pgsql*.sh|\
+			pgsql:tests/testsuites/pgsql-*.sql|postgresql:tests/testsuites/pgsql-*.sql)
+				return 0
+				;;
+			snmp:plugins/omsnmp/*|omsnmp:plugins/omsnmp/*|\
+			snmp:tests/sndrcv_omsnmp*.sh|omsnmp:tests/sndrcv_omsnmp*.sh|\
+			snmp:tests/snmptrapreceiver.py|omsnmp:tests/snmptrapreceiver.py|\
+			snmp:tests/snmptrapreceiverv2.py|omsnmp:tests/snmptrapreceiverv2.py)
 				return 0
 				;;
 		esac
@@ -2344,6 +2453,14 @@ $_RSYSLOG_TESTBENCH_CHANGED_FILES
 EOF
 
 	return 1
+}
+
+ensure_hiredis_test_needs_testing() {
+	case "$(basename "$0")" in
+		imhiredis*) ensure_module_needs_testing imhiredis ;;
+		omhiredis*) ensure_module_needs_testing omhiredis ;;
+		*) ensure_any_module_needs_testing imhiredis omhiredis ;;
+	esac
 }
 
 ensure_module_needs_testing() {
@@ -2368,6 +2485,52 @@ ensure_any_module_needs_testing() {
 
 	printf 'info: skipping service lifecycle test - no relevant changes detected for: %s\n' "$*"
 	exit 77
+}
+
+ensure_current_service_test_needs_testing() {
+	case "$(basename "$0")" in
+		imdocker*.sh)
+			ensure_module_needs_testing imdocker
+			;;
+		imhiredis*.sh)
+			ensure_module_needs_testing imhiredis
+			;;
+		imjournal*.sh)
+			ensure_module_needs_testing imjournal
+			;;
+		impstats-push*.sh)
+			ensure_module_needs_testing impstats-push
+			;;
+		imbeats*.sh|yaml-imbeats*.sh)
+			ensure_module_needs_testing imbeats
+			;;
+		omazureeventhubs*.sh)
+			ensure_module_needs_testing omazureeventhubs
+			;;
+		omazuredce-no-dcr-id.sh)
+			;;
+		omazuredce*.sh|yaml-omazuredce*.sh)
+			ensure_module_needs_testing omazuredce
+			;;
+		omjournal*.sh)
+			ensure_module_needs_testing omjournal
+			;;
+		omrabbitmq*.sh)
+			ensure_module_needs_testing omrabbitmq
+			;;
+		omhiredis*.sh)
+			ensure_module_needs_testing omhiredis
+			;;
+		sndrcv_omsnmp*.sh)
+			ensure_module_needs_testing omsnmp
+			;;
+		clickhouse*.sh)
+			ensure_module_needs_testing clickhouse
+			;;
+		pgsql*.sh)
+			ensure_module_needs_testing pgsql
+			;;
+	esac
 }
 
 
@@ -4197,6 +4360,7 @@ mysql_cleanup_test() {
 
 
 start_redis() {
+	ensure_hiredis_test_needs_testing
 	check_command_available redis-server
 
 	export REDIS_DYN_CONF="${RSYSLOG_DYNNAME}.redis.conf"
@@ -4583,6 +4747,7 @@ case $1 in
       # with SUCCESS.
       exit 0
     fi
+	ensure_current_service_test_needs_testing
 
 		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all

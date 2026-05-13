@@ -193,6 +193,33 @@ jobs:
           export CI_MAKE_CHECK_OPT='-j6'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
+          ci_service_family_needs_testing() {
+              local family="$1"
+
+              if tests/diag.sh module-needs-testing "$family"; then
+                  return 0
+              fi
+
+              return 1
+          }
+          ci_add_service_test_suppression() {
+              local family="$1"
+              local disable_opt="$2"
+
+              case " $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA $RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE " in
+              *" $disable_opt "*)
+                  return 0
+                  ;;
+              esac
+
+              if ci_service_family_needs_testing "$family"; then
+                  echo "info: service relevance: keeping $family tests enabled"
+              else
+                  echo "info: service relevance: adding $disable_opt for irrelevant $family tests"
+                  RSYSLOG_CONFIGURE_OPTIONS_EXTRA="${RSYSLOG_CONFIGURE_OPTIONS_EXTRA:+$RSYSLOG_CONFIGURE_OPTIONS_EXTRA }$disable_opt"
+                  export RSYSLOG_CONFIGURE_OPTIONS_EXTRA
+              fi
+          }
           case "${{ matrix.config }}" in
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
@@ -333,6 +360,10 @@ jobs:
               export CI_CHECK_CMD='check'
               ;;
           'elasticsearch')
+              if ! tests/diag.sh module-needs-testing elasticsearch; then
+                  echo "No relevant Elasticsearch changes detected; skipping Elasticsearch matrix CI."
+                  exit 0
+              fi
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
@@ -343,6 +374,23 @@ jobs:
               export CI_MAKE_CHECK_OPT='-j3'
               export CI_CHECK_CMD='check'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
+              ;;
+          esac
+          case "${{ matrix.config }}" in
+          'elasticsearch'|'wolfssl'|'ubuntu_26_imtcp_no_epoll')
+              ;;
+          *)
+              ci_add_service_test_suppression clickhouse --disable-clickhouse-tests
+              ci_add_service_test_suppression pgsql --disable-pgsql-tests
+              ci_add_service_test_suppression hiredis --disable-redis-tests
+              ci_add_service_test_suppression imdocker --disable-imdocker-tests
+              ci_add_service_test_suppression imbeats --disable-imbeats
+              ci_add_service_test_suppression omrabbitmq --disable-omrabbitmq
+              ci_add_service_test_suppression journal --disable-journal-tests
+              ci_add_service_test_suppression snmp --disable-snmp-tests
+              ci_add_service_test_suppression omazureeventhubs --disable-omazureeventhubs-tests
+              ci_add_service_test_suppression omazuredce --disable-omazuredce-tests
+              ci_add_service_test_suppression impstats-push --disable-impstats-push
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
@@ -791,13 +839,14 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
-            **/*.c
-            **/*.h
-            grammar/lexer.l
-            grammar/grammar.y
-            tests/*.sh
-            diag.sh
-            **/Makefile.am
+            runtime/*.[ch]
+            plugins/imjournal/*
+            plugins/omjournal/*
+            tests/imjournal*.sh
+            tests/omjournal*.sh
+            tests/journal_print.c
+            tests/diag.sh
+            tests/Makefile.am
             configure.ac
             .github/workflows/run_checks.yml
           files_ignore: |
@@ -1430,9 +1479,14 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
-            tests/es-*.sh
+            runtime/*.[ch]
+            plugins/omelasticsearch/*
+            tests/es*.sh
+            tests/elasticsearch*.sh
+            tests/omelasticsearch*.sh
             tests/diag.sh
-            plugins/omelasticsearch/**
+            tests/Makefile.am
+            configure.ac
             .github/workflows/run_checks.yml
           files_ignore: |
             doc/Makefile.am
@@ -1575,8 +1629,11 @@ jobs:
           files: |
             tests/imbeats-*.sh
             tests/yaml-imbeats-*.sh
+            runtime/*.[ch]
             tests/Makefile.am
+            tests/diag.sh
             plugins/imbeats/**
+            plugins/omelasticsearch/**
             configure.ac
             Makefile.am
             .github/workflows/run_checks.yml
@@ -1681,6 +1738,7 @@ jobs:
           SCAN_BUILD: scan-build
           SCAN_BUILD_CC: clang
           SCAN_BUILD_REPORT_DIR: scan-build-report
+          CI_MAKE_OPT: -j20
           DOCKER_RUN_EXTRA_OPTS: >-
             -e SCAN_BUILD -e SCAN_BUILD_CC -e SCAN_BUILD_REPORT_DIR
         run: |
