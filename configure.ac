@@ -211,7 +211,30 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h linux/fs.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/queue.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h linux/fs.h])
+
+AC_MSG_CHECKING([for STAILQ macros in sys/queue.h])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [[
+#include <sys/queue.h>
+struct stailq_test_entry {
+    STAILQ_ENTRY(stailq_test_entry) link;
+};
+STAILQ_HEAD(stailq_test_head, stailq_test_entry);
+        ]],
+        [[
+struct stailq_test_head head;
+STAILQ_INIT(&head);
+return STAILQ_EMPTY(&head) ? 0 : 1;
+        ]]
+    )],
+    [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_SYS_QUEUE_STAILQ], [1], [Define if sys/queue.h provides STAILQ macros])
+    ],
+    [AC_MSG_RESULT([no])]
+)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

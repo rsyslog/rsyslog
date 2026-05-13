@@ -58,6 +58,7 @@ librsyslog_la_SOURCES = \
 	modules.h \
 	statsobj.c \
 	statsobj.h \
+	compat_queue.h \
 	dynstats.c \
 	dynstats.h \
 	perctile_ringbuf.c \

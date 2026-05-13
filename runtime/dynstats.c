@@ -33,7 +33,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "hashtable_itr.h"
-#include <sys/queue.h>
+#include "compat_queue.h"
 
 /* definitions for objects we access */
 DEFobjStaticHelpers;

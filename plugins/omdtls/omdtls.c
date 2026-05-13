@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
