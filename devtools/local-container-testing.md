@@ -37,6 +37,48 @@ RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
 devtools/devcontainer.sh --rm ./tests/compat-configformat-yaml.sh
 ```
 
+## Service Test Relevance Skips
+
+Heavy service-backed tests self-skip inside the testbench when the local git
+diff does not touch their relevant source paths. This applies to both
+`devtools/run-ci.sh` and direct test scripts launched through
+`devtools/devcontainer.sh`.
+
+The initial gated services are:
+
+- Elasticsearch: `plugins/omelasticsearch/**` and `runtime/*.[ch]`
+- MySQL: `plugins/ommysql/**` and `runtime/*.[ch]`
+- libdbi: `plugins/omlibdbi/**` and `runtime/*.[ch]`
+- Kafka: `plugins/imkafka/**`, `plugins/omkafka/**`, and `runtime/*.[ch]`
+
+Local detection uses the merge base with `origin/main` plus staged, unstaged,
+and untracked files. If the git state cannot be resolved, the testbench runs
+the service tests instead of skipping them.
+
+Force service tests when intentionally validating them without relevant source
+changes:
+
+```sh
+RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS=1 \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+devtools/devcontainer.sh --rm ./tests/es-basic.sh
+
+RSYSLOG_TESTBENCH_FORCE_KAFKA_TESTS=1 \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+devtools/devcontainer.sh --rm ./tests/kafka-selftest.sh
+```
+
+When validating service-skip behavior, use `-j60` and record wall-clock runtime:
+
+```sh
+/usr/bin/time -p env \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+CI_MAKE_OPT='-j60' \
+CI_MAKE_CHECK_OPT='-j60' \
+CI_CHECK_CMD='check' \
+devtools/devcontainer.sh --rm devtools/run-ci.sh
+```
+
 For broader local check runs, prefer:
 
 ```sh

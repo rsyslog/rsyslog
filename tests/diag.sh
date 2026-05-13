@@ -51,6 +51,18 @@
 # RSYSLOG_TESTBENCH_ES_MAJOR_VERSION
 #               Detected Elasticsearch major version exposed to the test suite.
 #               Populated automatically by ensure_elasticsearch_ready().
+# RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS
+#               If set to "1", bypasses changed-file relevance checks for
+#               service-backed tests.
+# RSYSLOG_TESTBENCH_FORCE_<MODULE>_TESTS
+#               If set to "1", bypasses changed-file relevance checks for a
+#               specific module. Current modules: ELASTICSEARCH, MYSQL, LIBDBI,
+#               KAFKA.
+# RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE
+#               If set to "1", disables service relevance checks and preserves
+#               the historical behavior.
+# RSYSLOG_TESTBENCH_BASE_SHA / RSYSLOG_TESTBENCH_HEAD_SHA
+#               Optional git revisions used by CI to identify changed files.
 #
 #
 # EXIT STATES
@@ -2229,6 +2241,135 @@ skip_test(){
 	exit 77
 }
 
+testbench_changed_files() {
+	if [ "${_RSYSLOG_TESTBENCH_CHANGED_FILES_LOADED:-}" = "1" ]; then
+		return 0
+	fi
+	_RSYSLOG_TESTBENCH_CHANGED_FILES_LOADED=1
+
+	if [ -n "${RSYSLOG_TESTBENCH_CHANGED_FILES:-}" ]; then
+		_RSYSLOG_TESTBENCH_CHANGED_FILES="$RSYSLOG_TESTBENCH_CHANGED_FILES"
+		return 0
+	fi
+
+	if ! command -v git >/dev/null 2>&1 || ! git rev-parse --git-dir >/dev/null 2>&1; then
+		printf 'info: service relevance: git metadata unavailable, running service test\n'
+		_RSYSLOG_TESTBENCH_CHANGED_FILES_UNKNOWN=1
+		return 0
+	fi
+
+	local changed_files=""
+	local base_sha="${RSYSLOG_TESTBENCH_BASE_SHA:-}"
+	local head_sha="${RSYSLOG_TESTBENCH_HEAD_SHA:-}"
+
+	if [ -n "$base_sha" ] && [ -n "$head_sha" ]; then
+		if changed_files=$(git diff --name-only "$base_sha" "$head_sha" 2>/dev/null); then
+			_RSYSLOG_TESTBENCH_CHANGED_FILES="$changed_files"
+			return 0
+		fi
+		printf 'info: service relevance: unable to diff %s..%s, running service test\n' \
+			"$base_sha" "$head_sha"
+		_RSYSLOG_TESTBENCH_CHANGED_FILES_UNKNOWN=1
+		return 0
+	fi
+
+	if base_sha=$(git merge-base HEAD origin/main 2>/dev/null); then
+		changed_files=$(
+			{
+				git diff --name-only "$base_sha"...HEAD
+				git diff --name-only
+				git diff --cached --name-only
+				git ls-files --others --exclude-standard
+			} 2>/dev/null | sort -u
+		)
+		_RSYSLOG_TESTBENCH_CHANGED_FILES="$changed_files"
+		return 0
+	fi
+
+	printf 'info: service relevance: unable to find origin/main merge-base, running service test\n'
+	_RSYSLOG_TESTBENCH_CHANGED_FILES_UNKNOWN=1
+	return 0
+}
+
+_module_force_enabled() {
+	case "$1" in
+		elasticsearch) [ "${RSYSLOG_TESTBENCH_FORCE_ELASTICSEARCH_TESTS:-}" = "1" ] ;;
+		mysql) [ "${RSYSLOG_TESTBENCH_FORCE_MYSQL_TESTS:-}" = "1" ] ;;
+		libdbi) [ "${RSYSLOG_TESTBENCH_FORCE_LIBDBI_TESTS:-}" = "1" ] ;;
+		kafka) [ "${RSYSLOG_TESTBENCH_FORCE_KAFKA_TESTS:-}" = "1" ] ;;
+		*) return 1 ;;
+	esac
+}
+
+module_needs_testing() {
+	local module="$1"
+	local changed_file
+
+	if [ "${RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE:-}" = "1" ] || \
+	   [ "${RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS:-}" = "1" ] || \
+	   _module_force_enabled "$module"; then
+		return 0
+	fi
+
+	testbench_changed_files
+	if [ "${_RSYSLOG_TESTBENCH_CHANGED_FILES_UNKNOWN:-}" = "1" ]; then
+		return 0
+	fi
+
+	while IFS= read -r changed_file || [ -n "$changed_file" ]; do
+		[ -z "$changed_file" ] && continue
+
+		case "$changed_file" in
+			runtime/*.c|runtime/*.h|configure.ac|Makefile.am|tests/Makefile.am|tests/diag.sh)
+				return 0
+				;;
+		esac
+
+		case "$module:$changed_file" in
+			elasticsearch:plugins/omelasticsearch/*)
+				return 0
+				;;
+			mysql:plugins/ommysql/*)
+				return 0
+				;;
+			libdbi:plugins/omlibdbi/*)
+				return 0
+				;;
+			kafka:plugins/imkafka/*|kafka:plugins/omkafka/*)
+				return 0
+				;;
+		esac
+	done <<EOF
+$_RSYSLOG_TESTBENCH_CHANGED_FILES
+EOF
+
+	return 1
+}
+
+ensure_module_needs_testing() {
+	local module="$1"
+
+	if module_needs_testing "$module"; then
+		return 0
+	fi
+
+	printf 'info: skipping %s service test - no relevant changes detected\n' "$module"
+	exit 77
+}
+
+ensure_any_module_needs_testing() {
+	local module
+
+	for module in "$@"; do
+		if module_needs_testing "$module"; then
+			return 0
+		fi
+	done
+
+	printf 'info: skipping service lifecycle test - no relevant changes detected for: %s\n' "$*"
+	exit 77
+}
+
 
 # Helper function to call rsyslog project test error script
 # $1 is the exit code
@@ -2737,6 +2878,7 @@ otel_exit_handling() {
 }
 
 download_kafka() {
+	ensure_module_needs_testing kafka
 	if [ ! -d $dep_cache_dir ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
 		mkdir $dep_cache_dir
@@ -3261,6 +3403,7 @@ prepare_elasticsearch() {
 # ensure that a basic, suitable instance of elasticsearch is running. This is part
 # of an effort to avoid restarting elasticsearch more often than necessary.
 ensure_elasticsearch_ready() {
+	ensure_module_needs_testing elasticsearch
 	printf '%s ensuring Elasticsearch ready\n' "$(tb_timestamp)"
         if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
                 local base
@@ -4022,6 +4165,7 @@ except Exception as e:
 # prepare MySQL for next test
 # each test receives its own database so that we also can run in parallel
 mysql_prep_for_test() {
+	ensure_module_needs_testing "${1:-mysql}"
 	mysql -u rsyslog --password=testbench -e "CREATE DATABASE $RSYSLOG_DYNNAME; "
 	mysql -u rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);"
@@ -4560,6 +4704,14 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 
    'wait-kafka-startup')
                 wait_for_kafka_startup "$2" "$3"
+                ;;
+
+   'module-needs-testing')
+                module_needs_testing "$2"
+                ;;
+
+   'ensure-module-needs-testing')
+                ensure_module_needs_testing "$2"
                 ;;
 
    'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK

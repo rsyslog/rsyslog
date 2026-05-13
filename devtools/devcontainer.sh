@@ -38,6 +38,17 @@ if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
 	RSYSLOG_DEV_CONTAINER=$(cat "$RSYSLOG_HOME"/devtools/default_dev_container)
 fi
 
+git_common_dir_mount=()
+if [ -f "$RSYSLOG_HOME/.git" ] && command -v git >/dev/null 2>&1; then
+	git_common_dir=$(git -C "$RSYSLOG_HOME" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+	if [ -n "$git_common_dir" ] && [ -d "$git_common_dir" ]; then
+		case "$git_common_dir" in
+			"$RSYSLOG_HOME"/*) ;;
+			*) git_common_dir_mount=(-v "$git_common_dir:$git_common_dir") ;;
+		esac
+	fi
+fi
+
 printf '/rsyslog is mapped to %s \n' "$RSYSLOG_HOME"
 printf 'using container %s\n' "$RSYSLOG_DEV_CONTAINER"
 printf 'pulling container...\n'
@@ -136,6 +147,15 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-e RSYSLOG_TESTBENCH_EXTERNAL_ES_HOST \
 	-e RSYSLOG_TESTBENCH_EXTERNAL_ES_PORT \
 	-e RSYSLOG_TESTBENCH_EXTERNAL_VM_URL \
+	-e RSYSLOG_TESTBENCH_BASE_SHA \
+	-e RSYSLOG_TESTBENCH_HEAD_SHA \
+	-e RSYSLOG_TESTBENCH_CHANGED_FILES \
+	-e RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS \
+	-e RSYSLOG_TESTBENCH_FORCE_ELASTICSEARCH_TESTS \
+	-e RSYSLOG_TESTBENCH_FORCE_MYSQL_TESTS \
+	-e RSYSLOG_TESTBENCH_FORCE_LIBDBI_TESTS \
+	-e RSYSLOG_TESTBENCH_FORCE_KAFKA_TESTS \
+	-e RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE \
 	-e CODECOV_commit_sha \
 	-e CODECOV_repo_slug \
 	-e VCS_SLUG \
@@ -144,5 +164,6 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	--cap-add SYS_PTRACE \
 	$container_uid_args \
 	$passwd_group_mounts \
+	"${git_common_dir_mount[@]}" \
 	$DOCKER_RUN_EXTRA_FLAGS \
 	-v "$RSYSLOG_HOME":/rsyslog "$RSYSLOG_DEV_CONTAINER" "$@"
