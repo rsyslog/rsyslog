@@ -2,6 +2,12 @@
 
 This file defines the high-level roadmap for AI assistants to understand and contribute to the rsyslog codebase. Technical workflows are now modularized into **Skills**.
 
+## Local Overlay
+
+Before starting work in this repository, read `AGENTS.local.md` if it exists.
+That file contains machine- and workflow-specific instructions that are not
+duplicated here.
+
 ## AI Agent Skills
 
 To ensure consistency and high-quality contributions, AI agents SHOULD use the following standardized skills located in `.agent/skills/`:
