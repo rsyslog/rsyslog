@@ -31,6 +31,10 @@ concurrency:
 on:
   pull_request:
 
+env:
+  RSYSLOG_TESTBENCH_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+  RSYSLOG_TESTBENCH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
 jobs:
   compile:
     name: compile (${{ matrix.config }})

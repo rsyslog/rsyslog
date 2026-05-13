@@ -19,7 +19,7 @@ $ActionLibdbiDBName '$RSYSLOG_DYNNAME'
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")
 }
 '
-mysql_prep_for_test
+mysql_prep_for_test libdbi
 startup
 injectmsg
 wait_file_lines $RSYSLOG_DYNNAME.syncfile $NUMMESSAGES 2500

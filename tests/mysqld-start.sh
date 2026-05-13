@@ -5,6 +5,7 @@
 # Copyright (C) 2018 Rainer Gerhards and Adiscon GmbH
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+ensure_any_module_needs_testing mysql libdbi
 echo pre-start
 ps -ef |grep bin.mysqld
 if [ "$MYSQLD_START_CMD" == "" ]; then
