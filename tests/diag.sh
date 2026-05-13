@@ -2297,9 +2297,11 @@ module_needs_testing() {
 		return 0
 	fi
 
-	while IFS= read -r changed_file; do
+	while IFS= read -r changed_file || [ -n "$changed_file" ]; do
+		[ -z "$changed_file" ] && continue
+
 		case "$changed_file" in
-			runtime/*.c|runtime/*.h)
+			runtime/*.c|runtime/*.h|configure.ac|Makefile.am|tests/Makefile.am|tests/diag.sh)
 				return 0
 				;;
 		esac
