@@ -3,6 +3,7 @@ cd /rsyslog
 set -e
 echo "SCAN_BUILD_CC: $SCAN_BUILD_CC"
 echo "SCAN_BUILD: $SCAN_BUILD"
+echo "CI_MAKE_OPT: ${CI_MAKE_OPT:--j2}"
 
 if [ -n "$SCAN_BUILD_REPORT_DIR" ]
 then
@@ -17,7 +18,7 @@ export CC=$SCAN_BUILD_CC
 ./configure $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA
 
 set +e
-$SCAN_BUILD $REPORT_OPT --use-cc $SCAN_BUILD_CC --status-bugs make -j2
+$SCAN_BUILD $REPORT_OPT --use-cc $SCAN_BUILD_CC --status-bugs make ${CI_MAKE_OPT:--j2}
 
 RESULT=$?
 set -e
