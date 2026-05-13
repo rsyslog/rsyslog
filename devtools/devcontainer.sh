@@ -38,13 +38,13 @@ if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
 	RSYSLOG_DEV_CONTAINER=$(cat "$RSYSLOG_HOME"/devtools/default_dev_container)
 fi
 
-git_common_dir_mount=
+git_common_dir_mount=()
 if [ -f "$RSYSLOG_HOME/.git" ] && command -v git >/dev/null 2>&1; then
 	git_common_dir=$(git -C "$RSYSLOG_HOME" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
 	if [ -n "$git_common_dir" ] && [ -d "$git_common_dir" ]; then
 		case "$git_common_dir" in
 			"$RSYSLOG_HOME"/*) ;;
-			*) git_common_dir_mount="-v $git_common_dir:$git_common_dir" ;;
+			*) git_common_dir_mount=(-v "$git_common_dir:$git_common_dir") ;;
 		esac
 	fi
 fi
@@ -164,6 +164,6 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	--cap-add SYS_PTRACE \
 	$container_uid_args \
 	$passwd_group_mounts \
-	$git_common_dir_mount \
+	"${git_common_dir_mount[@]}" \
 	$DOCKER_RUN_EXTRA_FLAGS \
 	-v "$RSYSLOG_HOME":/rsyslog "$RSYSLOG_DEV_CONTAINER" "$@"
