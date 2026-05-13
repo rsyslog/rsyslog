@@ -385,15 +385,18 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
 
         crlStore = wolfSSL_CTX_get_cert_store(pThis->ctx);
         crlStack = wolfSSL_PEM_X509_INFO_read_bio(crlBio, NULL, NULL, NULL);
-        if (crlStack != NULL && crlStore != NULL) {
-            for (crlIdx = 0; crlIdx < wolfSSL_sk_X509_INFO_num(crlStack); crlIdx++) {
-                WOLFSSL_X509_INFO *info = wolfSSL_sk_X509_INFO_value(crlStack, crlIdx);
-                if (info == NULL || info->crl == NULL) continue;
-                if (wolfSSL_X509_STORE_add_crl(crlStore, info->crl) == WOLFSSL_SUCCESS) {
-                    loaded++;
-                } else {
-                    LogMsg(0, RS_RET_CRL_INVALID, LOG_WARNING,
-                           "wolfSSL: CRL block #%d in '%s' failed to add to store, skipping", crlIdx + 1, crlFile);
+        if (crlStack != NULL) {
+            if (crlStore != NULL) {
+                for (crlIdx = 0; crlIdx < wolfSSL_sk_X509_INFO_num(crlStack); crlIdx++) {
+                    WOLFSSL_X509_INFO *info = wolfSSL_sk_X509_INFO_value(crlStack, crlIdx);
+                    if (info == NULL || info->crl == NULL) continue;
+                    if (wolfSSL_X509_STORE_add_crl(crlStore, info->crl) == WOLFSSL_SUCCESS) {
+                        loaded++;
+                    } else {
+                        LogMsg(0, RS_RET_CRL_INVALID, LOG_WARNING,
+                               "wolfSSL: CRL block #%d in '%s' failed to add to store, skipping",
+                               crlIdx + 1, crlFile);
+                    }
                 }
             }
             wolfSSL_sk_pop_free(crlStack, NULL);
