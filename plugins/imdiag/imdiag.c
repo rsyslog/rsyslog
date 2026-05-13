@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include <signal.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -294,11 +295,15 @@ finalize_it:
 
 /* This function injects messages. Command format:
  * injectmsg <fromnbr> <number-of-messages>
+ * injectmsg <fromnbr> <number-of-messages> <delay-between-messages-ms>
+ * Additional trailing arguments are ignored for backward compatibility with
+ * older testbench helpers.
  * rgerhards, 2009-05-27
  */
 static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
     uchar wordBuf[1024];
     int64_t iFrom, nMsgs;
+    int64_t delayMs = 0;
     uchar *literalMsg;
     int64_t i;
     ratelimit_t *ratelimit = NULL;
@@ -319,8 +324,19 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
         CHKiRet(parseInt64Arg(wordBuf, "from", &iFrom));
         getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
         CHKiRet(parseInt64Arg(wordBuf, "count", &nMsgs));
+        getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
+        if (wordBuf[0] != '\0') {
+            CHKiRet(parseInt64Arg(wordBuf, "delay-ms", &delayMs));
+            if (delayMs < 0 || delayMs > (int64_t)INT_MAX * 1000) {
+                LogError(0, RS_RET_PARAM_ERROR, "imdiag: invalid delay-ms value '%s'", wordBuf);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+        }
         for (i = 0; i < nMsgs; ++i) {
             CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
+            if (delayMs > 0 && i + 1 < nMsgs) {
+                srSleep((int)(delayMs / 1000), (int)((delayMs % 1000) * 1000));
+            }
         }
     }
     CHKiRet(sendResponse(pSess, "%" PRId64 " messages injected\n", nMsgs));

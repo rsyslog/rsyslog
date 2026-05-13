@@ -9,9 +9,11 @@ generate_conf
 export NUMMESSAGES=2000
 export OMFWD_TARGETFAIL_MAX_LOSS=250
 export OMFWD_TARGETFAIL_MIN_RECEIVED=$((NUMMESSAGES - OMFWD_TARGETFAIL_MAX_LOSS))
+export IMDIAG_INJECTMSG_DELAY_MS=1
 
-# starting minitcpsrvr receivers so that we can obtain their port
-# numbers
+# Start minitcpsrv with a forced receiver-side TCP session close and a
+# temporary listener restart. The test verifies that omfwd retries and
+# reconnects after that disruption.
 export MINITCPSRV_EXTRA_OPTS="-D900 -B2 -a -S5"
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
 
@@ -36,6 +38,11 @@ echo Note: intentionally not started any local TCP receiver!
 # now do the usual run
 startup
 
+# Throttle imdiag injection so the forced close happens with less
+# burst-created data already accepted by omfwd, the kernel, or TCP buffers.
+# This keeps the scenario focused on retry/reconnect behavior. Some bounded
+# loss is still expected because a successful send() only proves kernel
+# acceptance, not that the receiver application persisted the message.
 injectmsg
 wait_file_lines "$RSYSLOG_OUT_LOG" "$OMFWD_TARGETFAIL_MIN_RECEIVED"
 shutdown_when_empty
@@ -43,8 +50,8 @@ wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
 export SEQ_CHECK_OPTIONS=-d
-# Permit bounded message loss in this extreme test. The pre-shutdown
-# wait above keeps the assertion meaningful while the -m check also
-# accepts bounded loss at the end of the stream.
+# Permit bounded message loss in this forced receiver-close test. The
+# pre-shutdown wait above keeps the assertion meaningful while the -m check
+# accepts the expected loss window.
 seq_check 0 $((NUMMESSAGES-1)) -m"$OMFWD_TARGETFAIL_MAX_LOSS"
 exit_test
