@@ -50,9 +50,11 @@ int dropConnection_NbrRcv = 0;
 int dropConnection_MaxTimes = 0;
 int opt;
 int sleepStartup = 0;
+int useReusePort = 0;
 char *targetIP = NULL;
 int targetPort = -1;
 char *portFileName = NULL;
+char *waitListenFileName = NULL;
 size_t totalWritten = 0;
 int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
 struct sockaddr_in server_addr;
@@ -67,8 +69,18 @@ static void errout(char *reason) {
 }
 
 static void usage(void) {
-    fprintf(stderr, "usage: minitcpsrv -t ip-addr -p port -P portFile -f outfile\n");
+    fprintf(stderr, "usage: minitcpsrv [-R] [-w listenFile] -t ip-addr -p port -P portFile -f outfile\n");
     exit(1);
+}
+
+static void waitForListenRelease(void) {
+    if (waitListenFileName == NULL) return;
+
+    fprintf(stderr, "minitcpsrv waits for listen release file %s\n", waitListenFileName);
+    while (access(waitListenFileName, F_OK) != 0) {
+        sleep(1);
+    }
+    fprintf(stderr, "minitcpsrv listen release file %s found\n", waitListenFileName);
 }
 
 static void createListenSocket(void) {
@@ -81,19 +93,21 @@ static void createListenSocket(void) {
     if (listen_fd < 0) {
         errout("Failed to create listen socket");
     }
-    /* Set SO_REUSEADDR and SO_REUSEPORT options - these are vital for some
-     * Tests. If not both are supported by the OS (e.g. Solaris 10), some tests
-     * will fail. Those need to be excluded.
-     */
+    /* SO_REUSEADDR is enough for the test helper's restart use cases. */
     int opt = 1;
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         errout("setsockopt failed for SO_REUSEADDR");
     }
+    if (useReusePort) {
 #ifdef SO_REUSEPORT
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-        errout("setsockopt failed for SO_REUSEPORT");
-    }
+        if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+            errout("setsockopt failed for SO_REUSEPORT");
+        }
+#else
+        fprintf(stderr, "SO_REUSEPORT requested but not supported on this platform\n");
+        exit(1);
 #endif
+    }
 
     fprintf(stderr, "listen on target port %d\n", targetPort);
     memset(&server_addr, 0, sizeof(server_addr));
@@ -126,10 +140,6 @@ static void createListenSocket(void) {
         }
     } while (!sockBound);
 
-    if (listen(listen_fd, MAX_CONNECTIONS) < 0) {
-        errout("Listen failed");
-    }
-
     if (getsockname(listen_fd, (struct sockaddr *)&srvAddr, &srvAddrLen) == -1) {
         errout("getsockname");
     }
@@ -148,6 +158,15 @@ static void createListenSocket(void) {
         portFileWritten = 1;
     }
 
+    /* The socket is bound but not listening while this waits. TCP connects fail
+     * with connection refused, while the selected port remains reserved.
+     */
+    waitForListenRelease();
+
+    if (listen(listen_fd, MAX_CONNECTIONS) < 0) {
+        errout("Listen failed");
+    }
+
     fds[0].fd = listen_fd;
     fds[0].events = POLLIN;
 }
@@ -161,10 +180,13 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aB:D:t:p:P:f:s:S:")) != -1) {
+    while ((opt = getopt(argc, argv, "aB:D:Rt:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
+                break;
+            case 'R':
+                useReusePort = 1;
                 break;
             case 'S':  // sleep time after connection drop
                 sleepAfterConnDrop = atoi(optarg);
@@ -195,6 +217,9 @@ int main(int argc, char *argv[]) {
                     fdf = open(optarg, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
                     if (fdf == -1) errout(argv[3]);
                 }
+                break;
+            case 'w':
+                waitListenFileName = optarg;
                 break;
             default:
                 fprintf(stderr, "invalid option '%c' or value missing - terminating...\n", opt);

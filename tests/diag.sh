@@ -1172,10 +1172,17 @@ assign_file_content() {
 # start a minitcpsrvr with the regular parameters
 # $1 is the output file name
 # $2 is the instance name (1, 2)
+# $3, if set, is a file that releases minitcpsrv from bound/offline to listening
 start_minitcpsrvr() {
-	instance=${2:-1}
-	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" -f "$1" $MINITCPSRV_EXTRA_OPTS &
+	local instance=${2:-1}
+	local wait_listen_opt=""
+	if [ "${3:-}" != "" ]; then
+		wait_listen_opt="-w ${3:-}"
+	fi
+	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" \
+		-f "$1" $wait_listen_opt $MINITCPSRV_EXTRA_OPTS &
 	BGPROCESS=$!
+	MINITCPSRVR_PIDS="${MINITCPSRVR_PIDS:-} $BGPROCESS"
 	wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance"
 	if [ "$instance" == "1" ]; then
 		export MINITCPSRVR_PORT1="$(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance)"
@@ -1183,6 +1190,17 @@ start_minitcpsrvr() {
 		export MINITCPSRVR_PORT2="$(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance)"
 	fi
 	echo "### background minitcpsrv process id is $BGPROCESS port $(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance) ###"
+}
+
+stop_minitcpsrvrs() {
+	local pid
+	for pid in ${MINITCPSRVR_PIDS:-}; do
+		if kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null
+		fi
+		wait "$pid" 2>/dev/null
+	done
+	MINITCPSRVR_PIDS=""
 }
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
@@ -1943,6 +1961,7 @@ do_cleanup() {
 		printf 'rsyslog pid file still exists, trying to shutdown...\n'
 		shutdown_immediate 2
 	fi
+	stop_minitcpsrvrs
 }
 
 
@@ -2395,6 +2414,7 @@ exit_test() {
 	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
 	rm -f ${TESTCONF_NM}.conf ${TESTCONF_NM}.yaml
 	rm -f tmp.qi nocert
+	stop_minitcpsrvrs
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 
