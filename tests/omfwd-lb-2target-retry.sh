@@ -6,7 +6,10 @@ export NUMMESSAGES=10000  # MUST be an EVEN number!
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
+TARGET2_LISTEN_RELEASE="$RSYSLOG_DYNNAME.minitcpsrvr2.listen"
+rm -f "$TARGET2_LISTEN_RELEASE"
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
+start_minitcpsrvr $RSYSLOG2_OUT_LOG 2 "$TARGET2_LISTEN_RELEASE"
 
 # regular startup
 add_conf '
@@ -18,7 +21,7 @@ module(load="builtin:omfwd" template="outfmt")
 
 if $msg contains "msgnum:" then {
 	action(type="omfwd" target=["127.0.0.1", "127.0.0.1"]
-	                    port=["'$MINITCPSRVR_PORT1'", "'$TCPFLOOD_PORT'"]
+	                    port=["'$MINITCPSRVR_PORT1'", "'$MINITCPSRVR_PORT2'"]
 		protocol="tcp"
 		pool.resumeInterval="1"
 		action.resumeRetryCount="-1" action.resumeInterval="5")
@@ -37,16 +40,9 @@ cp "$RSYSLOG_OUT_LOG" tmp.log
 seq_check
 printf "\nSUCCESS for part 1 of the test\n\n"
 
-echo WARNING: The next part of this test is flacky, because there is an
-echo inevitable race on the port number for minitcpsrvr. If another
-echo parallel test has aquired it in the interim, this test here will
-echo invalidly fail.
-./minitcpsrv -t127.0.0.1 -p $TCPFLOOD_PORT -f "$RSYSLOG2_OUT_LOG" \
-	-P "$RSYSLOG_DYNNAME.minitcpsrvr_port2"  &
-# Note: we use the port file just to make sure minitcpsrvr has initialized!
-wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port2"
-BGPROCESS=$!
-echo "### background minitcpsrv process id is $BGPROCESS port $TCPFLOOD_PORT ###"
+# target2 has held its port bound but not listening since before rsyslog
+# startup. This keeps phase 1 offline without exposing a get_free_port race.
+touch "$TARGET2_LISTEN_RELEASE"
 echo "waiting a bit to ensure rsyslog retries the currently suspended pool member"
 
 sleep 3
