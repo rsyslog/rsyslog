@@ -54,6 +54,7 @@
 #include "debug.h"
 #include "parserif.h"
 #include "unicode-helper.h"
+#include "atomic.h"
 
 #ifndef RELP_DFLT_PT
     #define RELP_DFLT_PT "514"
@@ -70,6 +71,7 @@ DEFobjCurrIf(glbl)
 
 #define DFLT_ENABLE_TLS 0
 #define DFLT_ENABLE_TLSZIP 0
+#define DFLT_TLS_PERMFAIL_DISABLES_ACTION 1
 
     static relpEngine_t *pRelpEngine; /* our relp engine */
 
@@ -82,7 +84,9 @@ typedef struct _instanceData {
     unsigned rebindInterval;
     sbool bEnableTLS;
     sbool bEnableTLSZip;
-    sbool bHadAuthFail; /**< set on auth failure, will cause retry to disable action */
+    int bHadAuthFail; /**< set on TLS auth failure */
+    DEF_ATOMIC_HELPER_MUT(mutHadAuthFail);
+    sbool bTlsPermFailDisablesAction;
     uchar *pristring; /* GnuTLS priority string (NULL if not to be provided) */
     uchar *authmode;
     uchar *caCertFile;
@@ -132,18 +136,28 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 static struct cnfparamdescr modpdescr[] = {{"tls.tlslib", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {
-    {"target", eCmdHdlrGetWord, 1},         {"tls", eCmdHdlrBinary, 0},
-    {"tls.compression", eCmdHdlrBinary, 0}, {"tls.prioritystring", eCmdHdlrString, 0},
-    {"tls.cacert", eCmdHdlrString, 0},      {"tls.mycert", eCmdHdlrString, 0},
-    {"tls.myprivkey", eCmdHdlrString, 0},   {"tls.authmode", eCmdHdlrString, 0},
-    {"tls.tlscfgcmd", eCmdHdlrString, 0},   {"tls.permittedpeer", eCmdHdlrArray, 0},
-    {"port", eCmdHdlrGetWord, 0},           {"rebindinterval", eCmdHdlrInt, 0},
-    {"windowsize", eCmdHdlrInt, 0},         {"timeout", eCmdHdlrInt, 0},
-    {"conn.timeout", eCmdHdlrInt, 0},       {"keepalive", eCmdHdlrBinary, 0},
-    {"keepalive.probes", eCmdHdlrInt, 0},   {"keepalive.time", eCmdHdlrInt, 0},
-    {"keepalive.interval", eCmdHdlrInt, 0}, {"localclientip", eCmdHdlrGetWord, 0},
-    {"template", eCmdHdlrGetWord, 0}};
+static struct cnfparamdescr actpdescr[] = {{"target", eCmdHdlrGetWord, 1},
+                                           {"tls", eCmdHdlrBinary, 0},
+                                           {"tls.compression", eCmdHdlrBinary, 0},
+                                           {"tls.prioritystring", eCmdHdlrString, 0},
+                                           {"tls.cacert", eCmdHdlrString, 0},
+                                           {"tls.mycert", eCmdHdlrString, 0},
+                                           {"tls.myprivkey", eCmdHdlrString, 0},
+                                           {"tls.authmode", eCmdHdlrString, 0},
+                                           {"tls.tlscfgcmd", eCmdHdlrString, 0},
+                                           {"tls.permittedpeer", eCmdHdlrArray, 0},
+                                           {"tls.permanentfailuredisablesaction", eCmdHdlrBinary, 0},
+                                           {"port", eCmdHdlrGetWord, 0},
+                                           {"rebindinterval", eCmdHdlrInt, 0},
+                                           {"windowsize", eCmdHdlrInt, 0},
+                                           {"timeout", eCmdHdlrInt, 0},
+                                           {"conn.timeout", eCmdHdlrInt, 0},
+                                           {"keepalive", eCmdHdlrBinary, 0},
+                                           {"keepalive.probes", eCmdHdlrInt, 0},
+                                           {"keepalive.time", eCmdHdlrInt, 0},
+                                           {"keepalive.interval", eCmdHdlrInt, 0},
+                                           {"localclientip", eCmdHdlrGetWord, 0},
+                                           {"template", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 BEGINinitConfVars /* (re)set config variables to default values */
@@ -202,6 +216,14 @@ static void onGenericErr(char *objinfo, char *errmesg, __attribute__((unused)) r
              errmesg, objinfo);
 }
 
+static const char *authFailActionText(const instanceData *const pData) {
+    return (pData != NULL && !pData->bTlsPermFailDisablesAction) ? "suspending action" : "DISABLING action";
+}
+
+static rsRetVal authFailActionRet(const instanceData *const pData) {
+    return (pData != NULL && !pData->bTlsPermFailDisablesAction) ? RS_RET_SUSPENDED : RS_RET_DISABLE_ACTION;
+}
+
 static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
     instanceData *pData = (instanceData *)pUsr;
     if (pData == NULL) {
@@ -211,9 +233,9 @@ static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((
     }
     LogError(0, RS_RET_RELP_AUTH_FAIL,
              "omrelp[%s:%s]: authentication error '%s', peer "
-             "is '%s' - DISABLING action",
-             pData->target, getRelpPt(pData), errmesg, authinfo);
-    pData->bHadAuthFail = 1;
+             "is '%s' - %s",
+             pData->target, getRelpPt(pData), errmesg, authinfo, authFailActionText(pData));
+    ATOMIC_STORE_1_TO_INT(&pData->bHadAuthFail, &pData->mutHadAuthFail);
 }
 
 static int relpRetIsAuthErr(const relpRetVal relpRet) {
@@ -306,6 +328,8 @@ BEGINcreateInstance
     pData->bEnableTLS = DFLT_ENABLE_TLS;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
     pData->bHadAuthFail = 0;
+    INIT_ATOMIC_HELPER_MUT(pData->mutHadAuthFail);
+    pData->bTlsPermFailDisablesAction = DFLT_TLS_PERMFAIL_DISABLES_ACTION;
     pData->pristring = NULL;
     pData->authmode = NULL;
     pData->localClientIP = NULL;
@@ -352,6 +376,7 @@ BEGINfreeInstance
             free(pData->permittedPeers.name[i]);
         }
     }
+    DESTROY_ATOMIC_HELPER_MUT(pData->mutHadAuthFail);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -369,6 +394,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->rebindInterval = 0;
     pData->bEnableTLS = DFLT_ENABLE_TLS;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
+    pData->bTlsPermFailDisablesAction = DFLT_TLS_PERMFAIL_DISABLES_ACTION;
     pData->pristring = NULL;
     pData->authmode = NULL;
     if (glbl.GetSourceIPofLocalClient() == NULL)
@@ -503,6 +529,8 @@ BEGINnewActInst
             pData->bEnableTLS = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.compression")) {
             pData->bEnableTLSZip = (unsigned)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "tls.permanentfailuredisablesaction")) {
+            pData->bTlsPermFailDisablesAction = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.prioritystring")) {
             CHKmalloc(pData->pristring = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
@@ -606,6 +634,8 @@ static rsRetVal ATTR_NONNULL() doConnect(wrkrInstanceData_t *const pWrkrData) {
 
     if (iRet == RELP_RET_OK) {
         pWrkrData->bIsConnected = 1;
+        pWrkrData->bIsSuspended = 0;
+        ATOMIC_STORE_0_TO_INT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail);
     } else if (iRet == RELP_RET_ERR_NO_TLS) {
         LogError(0, iRet,
                  "omrelp: Could not connect, librelp does NOT "
@@ -621,13 +651,14 @@ static rsRetVal ATTR_NONNULL() doConnect(wrkrInstanceData_t *const pWrkrData) {
         FINALIZE;
     } else {
         if (relpRetIsAuthErr(iRet)) {
-            if (!pWrkrData->pData->bHadAuthFail) {
-                LogError(0, RS_RET_RELP_AUTH_FAIL,
-                         "omrelp[%s:%s]: TLS authentication failed, librelp error %d - DISABLING action",
-                         pWrkrData->pData->target, getRelpPt(pWrkrData->pData), iRet);
-                pWrkrData->pData->bHadAuthFail = 1;
+            if (ATOMIC_CAS(&pWrkrData->pData->bHadAuthFail, 0, 1, &pWrkrData->pData->mutHadAuthFail)) {
+                LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: TLS authentication failed, librelp error %d - %s",
+                         pWrkrData->pData->target, getRelpPt(pWrkrData->pData), iRet,
+                         authFailActionText(pWrkrData->pData));
             }
-            ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+            pWrkrData->bIsConnected = 0;
+            pWrkrData->bIsSuspended = 1;
+            ABORT_FINALIZE(authFailActionRet(pWrkrData->pData));
         }
         if (pWrkrData->bIsSuspended == 0) {
             LogError(0, RS_RET_RELP_ERR,
@@ -647,7 +678,8 @@ finalize_it:
 
 BEGINtryResume
     CODESTARTtryResume;
-    if (pWrkrData->pData->bHadAuthFail) {
+    if (ATOMIC_FETCH_32BIT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail) &&
+        pWrkrData->pData->bTlsPermFailDisablesAction) {
         ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
     }
     iRet = doConnect(pWrkrData);
@@ -711,7 +743,7 @@ BEGINdoAction
         doRebind(pWrkrData);
     }
 finalize_it:
-    if (pData->bHadAuthFail) iRet = RS_RET_DISABLE_ACTION;
+    if (ATOMIC_FETCH_32BIT(&pData->bHadAuthFail, &pData->mutHadAuthFail)) iRet = authFailActionRet(pData);
     if (iRet == RS_RET_OK) {
         /* we mimic non-commit, as otherwise our endTransaction handler
          * will not get called. While this is not 100% correct, the worst

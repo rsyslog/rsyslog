@@ -1589,7 +1589,8 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-split.sh
 
 TESTS_RELP_OPENSSL = \
-	 omrelp-tls-ossl-authfail-no-cacert.sh
+	 omrelp-tls-ossl-authfail-no-cacert.sh \
+	 omrelp-tls-ossl-authfail-suspend.sh
 
 TESTS_RELP_GNUTLS = \
          sndrcv_relp_tls.sh \
