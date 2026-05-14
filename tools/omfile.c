@@ -643,7 +643,9 @@ static rsRetVal sigprovPrepare(instanceData *__restrict__ const pData, uchar *__
  * @return RS_RET_OK on success, or an error code if file creation,
  * directory creation, or stream construction fails.
  */
-static rsRetVal prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName) {
+static rsRetVal prepareFile(instanceData *__restrict__ const pData,
+                            const uchar *__restrict__ const newFileName,
+                            const int bFailOnOpenErr) {
     int fd;
     char errStr[1024]; /* buffer for strerr() */
     DEFiRet;
@@ -687,6 +689,11 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData, const uchar 
                 }
             }
             close(fd); /* close again, as we need a stream further on */
+        } else if (bFailOnOpenErr) {
+            const int openErrno = errno;
+            rs_strerror_r(openErrno, errStr, sizeof(errStr));
+            parser_errmsg("omfile: open file '%s' failed: %s", newFileName, errStr);
+            ABORT_FINALIZE((openErrno == ENOENT) ? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR);
         }
     }
 
@@ -762,6 +769,7 @@ static rsRetVal ATTR_NONNULL()
     int iOldest;
     int i;
     int iFirstFree;
+    int bNewCacheSlot;
     rsRetVal localRet;
     dynaFileCacheEntry **pCache;
     DEFiRet;
@@ -778,7 +786,8 @@ static rsRetVal ATTR_NONNULL()
     pCache = pData->dynCache;
 
     /* first check, if we still have the current file */
-    if ((pData->iCurrElt != -1) && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
+    if ((pData->iCurrElt != -1) && (pCache[pData->iCurrElt] != NULL) && (pCache[pData->iCurrElt]->pName != NULL) &&
+        !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
         /* great, we are all set */
         pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
         STATSCOUNTER_INC(pData->ctrLevel0, pData->mutCtrLevel0);
@@ -802,6 +811,7 @@ static rsRetVal ATTR_NONNULL()
      */
     pData->iCurrElt = -1; /* invalid current element pointer */
     iFirstFree = -1; /* not yet found */
+    bNewCacheSlot = 0;
     iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
     ctOldest = getClockFileAccess(); /* there must always be an older one */
     for (i = 0; i < pData->iCurrCacheSize; ++i) {
@@ -836,8 +846,8 @@ static rsRetVal ATTR_NONNULL()
 
     if (iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
         /* there is space left, so set it to that index */
-        iFirstFree = pData->iCurrCacheSize++;
-        STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned)pData->iCurrCacheSize);
+        iFirstFree = pData->iCurrCacheSize;
+        bNewCacheSlot = 1;
     }
 
     /* Note that the following code sequence does not work with the cache entry itself,
@@ -848,16 +858,21 @@ static rsRetVal ATTR_NONNULL()
         dynaFileDelCacheEntry(pData, iOldest, 0);
         STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
         iFirstFree = iOldest; /* this one *is* now free ;) */
-    } else {
+    }
+    if (pCache[iFirstFree] == NULL) {
         /* we need to allocate memory for the cache structure */
         CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry *)calloc(1, sizeof(dynaFileCacheEntry)));
     }
 
     /* Ok, we finally can open the file */
-    localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
+    localRet = prepareFile(pData, newFileName, 1);
 
     /* check if we had an error */
     if (localRet != RS_RET_OK) {
+        dynaFileDelCacheEntry(pData, iFirstFree, 1);
+        pData->iCurrElt = -1;
+        pData->pStrm = NULL;
+        pData->sigprovFileData = NULL;
         /* We do no longer care about internal messages. The errmsg rate limiter
          * will take care of too-frequent error messages.
          */
@@ -870,12 +885,20 @@ static rsRetVal ATTR_NONNULL()
 
     if ((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
         closeFile(pData); /* need to free failed entry! */
+        dynaFileDelCacheEntry(pData, iFirstFree, 1);
+        pData->iCurrElt = -1;
+        pData->pStrm = NULL;
+        pData->sigprovFileData = NULL;
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
     pCache[iFirstFree]->pStrm = pData->pStrm;
     if (pData->useSigprov) pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
     pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
     pData->iCurrElt = iFirstFree;
+    if (bNewCacheSlot) {
+        pData->iCurrCacheSize++;
+        STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned)pData->iCurrCacheSize);
+    }
     DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
 finalize_it:
@@ -977,7 +1000,7 @@ static rsRetVal writeFile(instanceData *__restrict__ const pData,
         CHKiRet(prepareDynFile(pData, actParam(pParam, pData->iNumTpls, iMsg, 1).param));
     } else { /* "regular", non-dynafile */
         if (pData->pStrm == NULL) {
-            CHKiRet(prepareFile(pData, pData->fname));
+            CHKiRet(prepareFile(pData, pData->fname, 0));
             if (pData->pStrm == NULL) {
                 parser_errmsg("Could not open output file '%s'", pData->fname);
             }
@@ -1223,6 +1246,7 @@ ENDbeginTransaction
 
 BEGINcommitTransaction
     instanceData *__restrict__ const pData = pWrkrData->pData;
+    rsRetVal localRet;
     unsigned i;
     CODESTARTcommitTransaction;
 
@@ -1233,7 +1257,10 @@ BEGINcommitTransaction
     pthread_mutex_lock(&pData->mutWrite);
 
     for (i = 0; i < nParams; ++i) {
-        writeFile(pData, pParams, i);
+        localRet = writeFile(pData, pParams, i);
+        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
+            iRet = localRet;
+        }
     }
     /* Note: pStrm may be NULL if there was an error opening the stream */
     /* if bFlushOnTXEnd is set, we need to flush on transaction end - in
@@ -1245,7 +1272,10 @@ BEGINcommitTransaction
      * rgerhards, 2017-01-13
      */
     if (pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-        CHKiRet(strm.Flush(pData->pStrm));
+        localRet = strm.Flush(pData->pStrm);
+        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
+            CHKiRet(localRet);
+        }
     }
 
 finalize_it:
