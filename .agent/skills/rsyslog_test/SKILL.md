@@ -92,7 +92,7 @@ make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)
 If container support is available and the change is intended for a PR, prefer
 running `rsyslog_local_container_testing` before pushing. The local container
 flow is often faster than discovering CI-only failures after the PR is opened,
-especially for analyzer findings, compiler or dependency differences, generated
+especially for static-analyzer findings, compiler or dependency differences, generated
 build state, and service-test relevance filtering.
 
 Run the fast host-side checks first when debugging a narrow failure. Once the
