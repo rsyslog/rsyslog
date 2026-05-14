@@ -9,7 +9,7 @@ generate_conf
 export NUMMESSAGES=2000
 export OMFWD_TARGETFAIL_MAX_LOSS=250
 export OMFWD_TARGETFAIL_MIN_RECEIVED=$((NUMMESSAGES - OMFWD_TARGETFAIL_MAX_LOSS))
-export IMDIAG_INJECTMSG_DELAY_MS=1
+export IMDIAG_INJECTMSG_DELAY_MS=3
 
 # Start minitcpsrv with a forced receiver-side TCP session close and a
 # temporary listener restart. The test verifies that omfwd retries and
