@@ -50,7 +50,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/epoll.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <netinet/tcp.h>
 #include <stdint.h>
 #include <zlib.h>

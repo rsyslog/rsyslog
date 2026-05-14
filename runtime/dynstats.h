@@ -18,7 +18,7 @@
 #ifndef INCLUDED_DYNSTATS_H
 #define INCLUDED_DYNSTATS_H
 
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include "hashtable.h"
 
 typedef struct hashtable htable;

@@ -30,7 +30,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <sys/types.h>
 #include <math.h>
 #ifdef HAVE_SYS_STAT_H
