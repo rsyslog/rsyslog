@@ -13,6 +13,11 @@ This skill provides guidelines and tools for running tests efficiently. It empha
 2.  **Run Specific Test**: `./tests/<test-name>.sh`
 3.  **Run with Valgrind**: `./tests/<test-name>-vg.sh`
 
+Use focused host-side tests while iterating on a specific behavior. For
+PR-ready validation, use `rsyslog_local_container_testing` when local container
+support is available; it catches CI-environment, compiler/toolchain, service
+skip, and static-analyzer issues that host-side tests often cannot detect.
+
 ## Detailed Instructions
 
 ### 1. Direct Execution Rule
@@ -83,6 +88,19 @@ make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)
 ```
 - **Pattern**: This uses the `MOCK-OK` mode in `tests/diag.sh` to exit tests with success immediately, skipping the overhead of actual execution while still verifying shell script invocability and distribution completeness.
 
+### 9. Container Validation Escalation
+If container support is available and the change is intended for a PR, prefer
+running `rsyslog_local_container_testing` before pushing. The local container
+flow is often faster than discovering CI-only failures after the PR is opened,
+especially for analyzer findings, compiler or dependency differences, generated
+build state, and service-test relevance filtering.
+
+Run the fast host-side checks first when debugging a narrow failure. Once the
+patch is stable, escalate to the container validation skill for CI-style
+confidence.
+
 ## Related Skills
 - `rsyslog_build`: Required before running tests.
+- `rsyslog_local_container_testing`: Preferred PR-ready validation path when
+  local containers are available.
 - `rsyslog_module`: Documentation on module-specific test dependencies.
