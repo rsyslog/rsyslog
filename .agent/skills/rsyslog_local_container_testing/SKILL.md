@@ -9,6 +9,18 @@ Use this skill when validating rsyslog changes through local dev containers.
 Local container validation should mirror the relevant GitHub Actions container
 jobs instead of inventing a parallel local-only flow.
 
+## When To Use
+
+Use this for PR-ready validation whenever local container support is available.
+It is often faster than waiting for GitHub CI to discover environment-specific
+failures, especially static-analyzer findings, compiler/toolchain differences,
+dependency differences, generated build state issues, and service-test skip
+behavior.
+
+Focused host-side tests from `rsyslog_test` are still the right first step when
+debugging a specific behavior. After the patch is stable, run this skill before
+pushing if the change is intended for review.
+
 ## Preferred Order
 
 Run two container validations for broad local confidence. Mirror these
