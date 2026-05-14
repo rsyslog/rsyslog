@@ -5,6 +5,50 @@ This release has many commits in regard to
   * testbench de-flaking
 These will not be mentioned individually, check commit log for details.
 
+- 2026-05-14: omrelp: add opt-in suspension for TLS auth failures
+  omrelp now supports tls.permanentFailureDisablesAction="off". The default
+  behavior is unchanged, but when disabled TLS authentication failures suspend
+  the action instead of permanently disabling it, so the action queue can keep
+  accepting later messages while certificate or CA configuration is fixed.
+  This avoids a potential data-loss situation under extreme operational
+  circumstances.
+  Closes https://github.com/rsyslog/rsyslog/issues/5636
+- 2026-05-13: runtime: fix AIX build with missing STAILQ macros
+  Some AIX systems provide sys/queue.h without the BSD STAILQ macro subset,
+  which broke builds that use the dynstats file-write queue. Configure now
+  checks for the required STAILQ support and rsyslog provides a small local
+  fallback via runtime/compat_queue.h when the platform header lacks it.
+  Closes https://github.com/rsyslog/rsyslog/issues/6885
+- 2026-05-13: imbeats: add Elastic Beats/Lumberjack input module
+  The new imbeats input receives Elastic Beats and Elastic Agent
+  output.logstash traffic via Lumberjack v2 over TCP or TLS. It accepts JSON
+  event frames, compressed frames, cumulative acknowledgements, preserves the
+  original JSON payload, maps decoded fields into $!, and stores transport
+  metadata under $!metadata!imbeats.
+  The module includes bounds for frame, batch, window, decompressed payload,
+  and session limits, plus worker-based multiplexing so high client counts do
+  not require one thread per connection. Documentation, YAML/RainerScript
+  tests, and Elastic Agent/Filebeat pipeline coverage were added.
+- 2026-05-13: packaging/rpm: add rsyslog-imbeats subpackage
+  The RPM packaging now builds and ships imbeats as its own rsyslog-imbeats
+  subpackage for EL8/EL9. This continues the ongoing work to keep more module
+  packaging in the repository as part of the monorepo packaging effort.
+- 2026-05-13: agents: support local AI workflow overlays
+  Repository agent instructions now explicitly load AGENTS.local.md when it
+  exists. This gives local Codex/AI workflows a documented place for
+  machine-specific notes without putting them into the shared repository guide.
+- 2026-05-09: config: add compatibility controls and secure defaults
+  New global compatibility controls allow legacy $-syntax, classic syslogd
+  filters, and property-based filters to be enabled, warned, or disabled
+  explicitly. A compatibility.defaults.secure mode adds stricter defaults and
+  warnings for insecure transport settings, including TLS-disabled or anonymous
+  TLS configurations.
+  Closes https://github.com/rsyslog/rsyslog/issues/2383
+- 2026-05-08: config: fix operator precedence in condition handling
+  The allowed-sender parser and template regex compilation now assign helper
+  return codes before comparing them, avoiding incorrect condition handling
+  caused by operator precedence.
+  Closes https://github.com/rsyslog/rsyslog/issues/6741
 - 2026-05-11: rosi-collector: prevent Loki 400 queue stalls
   ROSI Collector could get stuck when Loki rejected a pushed sample with
   HTTP 400, for example because old or clock-skewed sender timestamps were
