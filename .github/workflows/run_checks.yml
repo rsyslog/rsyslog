@@ -1911,6 +1911,7 @@ jobs:
             **/Makefile.am
             configure.ac
             .github/workflows/run_checks.yml
+            .github/workflows/run_cross_arch_weekly.yml
             devtools/ci/Dockerfile.arm
           files_ignore: |
             doc/Makefile.am
@@ -1953,15 +1954,40 @@ jobs:
               export CFLAGS="-g -O1 -fno-omit-frame-pointer"
               export CC=gcc
               export TEST_MAX_RUNTIME=1200
-              autoreconf -fvi
+              time_phase() {
+                phase="$1"
+                shift
+                start=$(date +%s)
+                echo "::group::$ARCH $phase"
+                "$@"
+                rc=$?
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH $phase $((end - start))s"
+                return "$rc"
+              }
+              time_shell_phase() {
+                phase="$1"
+                shift
+                start=$(date +%s)
+                echo "::group::$ARCH $phase"
+                sh -c "$*"
+                rc=$?
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH $phase $((end - start))s"
+                return "$rc"
+              }
+              time_phase autoreconf autoreconf -fvi
               if [ "$ARCH" = "s390x" ]; then
-                apt-get update
-                apt-get install -y --no-install-recommends \
+                time_shell_phase "install extra dependencies" "apt-get update && apt-get install -y --no-install-recommends \
                   curl liblognorm-dev libmaxminddb-dev libsnmp-dev \
-                  libssl-dev libsystemd-dev libyaml-dev libzstd-dev openssl
-                rm -rf /var/lib/apt/lists/*
+                  libssl-dev libsystemd-dev libyaml-dev libzstd-dev openssl && \
+                  rm -rf /var/lib/apt/lists/*"
                 useradd --create-home rsyslogci
                 chown -R rsyslogci:rsyslogci /rsyslog
+                start=$(date +%s)
+                echo "::group::$ARCH configure"
                 su rsyslogci -c "./configure --enable-silent-rules \
                   --enable-testbench --disable-extended-tests \
                   --enable-imdiag --disable-imdocker \
@@ -1998,8 +2024,13 @@ jobs:
                   --disable-elasticsearch-tests \
                   --disable-kafka-tests --disable-snmp-tests \
                   --disable-journal-tests"
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH configure $((end - start))s"
                 su rsyslogci -c "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
               elif [ "$ARCH" = "armhf" ]; then
+                start=$(date +%s)
+                echo "::group::$ARCH configure"
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker --enable-imfile \
                   --disable-default-tests --disable-impstats \
@@ -2026,10 +2057,15 @@ jobs:
                   --disable-mmdarwin \
                   --disable-helgrind --disable-uuid \
                   --disable-fmhttp
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH configure $((end - start))s"
               else
                 export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
                 export LDFLAGS="-fsanitize=address"
                 export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
+                start=$(date +%s)
+                echo "::group::$ARCH configure"
                 ./configure --enable-silent-rules --enable-testbench \
                   --enable-imdiag --disable-imdocker \
                   --enable-imfile \
@@ -2057,32 +2093,64 @@ jobs:
                   --disable-fmhttp \
                   --disable-elasticsearch-tests \
                   --disable-kafka-tests --disable-snmp-tests
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH configure $((end - start))s"
               fi
               if [ "$ARCH" = "s390x" ]; then
                 S390X_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
-                  yaml-basic.sh yaml-script-call.sh yaml-ratelimit-policywatch.sh \
-                  imudp_ratelimit_name.sh ratelimit_name.sh imrelp_ratelimit_name.sh \
-                  imtcp-basic.sh imtcp-starvation-1.sh \
-                  imtcp_framing_regex_maxmsg_overflow.sh imtcp-impstats.sh \
+                  yaml-basic.sh yaml-script-call.sh \
+                  imtcp-basic.sh \
+                  imtcp_framing_regex_maxmsg_overflow.sh \
                   imptcp_framing_regex.sh imptcp-connection-msg-received.sh \
                   diskqueue-truncated-segment-startup.sh \
                   diskqueue-oncorruption-missing-segment.sh \
-                  sndrcv_tls_anon_rebind.sh sndrcv_tls_certvalid_action_level.sh \
-                  sndrcv_tls_ossl_certvalid_action_level.sh \
-                  sndrcv_tls_ossl_anon_rebind.sh \
+                  sndrcv_tls_anon_rebind.sh \
                   sndrcv_relp.sh sndrcv_relp_tls_certvalid.sh \
                   imdtls-basic.sh sndrcv_dtls_certvalid.sh \
                   imfile-basic.sh imfile-logrotate.sh \
-                  mmjsonparse_simple.sh mmnormalize_variable.sh mmpstrucdata.sh \
-                  omprog-feedback.sh omprog-feedback-timeout.sh \
+                  mmjsonparse_simple.sh mmpstrucdata.sh \
                   uxsock_simple.sh"
-                su rsyslogci -c "make -j8 && timeout 40m make -j2 check TESTS=\"$S390X_TESTS\""
+                start=$(date +%s)
+                echo "::group::$ARCH build"
+                su rsyslogci -c "make -j8"
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH build $((end - start))s"
+                start=$(date +%s)
+                echo "::group::$ARCH smoke tests"
+                su rsyslogci -c "timeout 30m make -j2 check TESTS=\"$S390X_TESTS\""
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH smoke tests $((end - start))s"
               else
+                start=$(date +%s)
+                echo "::group::$ARCH build"
                 make -j8
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: $ARCH build $((end - start))s"
                 if [ "$ARCH" = "arm64" ]; then
+                  start=$(date +%s)
+                  echo "::group::$ARCH check"
                   make -j6 check
+                  end=$(date +%s)
+                  echo "::endgroup::"
+                  echo "timing: $ARCH check $((end - start))s"
                 else
-                  make -j3 check
+                  ARMHF_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
+                    timestamp-3339.sh template-json.sh \
+                    queue-direct-with-no-params.sh \
+                    diskqueue-truncated-segment-startup.sh \
+                    diskqueue-oncorruption-missing-segment.sh \
+                    imfile-basic.sh imfile-logrotate.sh \
+                    omstdout-basic.sh sndrcv_tls_anon_rebind.sh"
+                  start=$(date +%s)
+                  echo "::group::$ARCH smoke tests"
+                  timeout 30m make -j2 check TESTS="$ARMHF_TESTS"
+                  end=$(date +%s)
+                  echo "::endgroup::"
+                  echo "timing: $ARCH smoke tests $((end - start))s"
                 fi
               fi
             '
