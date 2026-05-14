@@ -308,6 +308,7 @@ TESTS_DEFAULT = \
 	dircreate_off.sh \
 	imuxsock_legacy.sh \
 	imuxsock_logger.sh \
+	imuxsock_unlink_off_stale_socket.sh \
 	imuxsock_logger_ratelimit.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \

@@ -532,7 +532,17 @@ static rsRetVal
     }
 finalize_it:
     if (iRet != RS_RET_OK) {
-        LogError(errno, iRet, "cannot create '%s'", pLstn->sockName);
+        const int savedErrno = errno;
+        if (savedErrno == EADDRINUSE && !pLstn->bUnlink) {
+            LogError(savedErrno, iRet,
+                     "cannot create '%s': socket path already exists and "
+                     "Unlink=\"off\" prevents rsyslog from replacing it; "
+                     "remove the stale socket or set Unlink=\"on\" if "
+                     "rsyslog should manage this socket",
+                     pLstn->sockName);
+        } else {
+            LogError(savedErrno, iRet, "cannot create '%s'", pLstn->sockName);
+        }
         if (pLstn->fd != -1) {
             close(pLstn->fd);
             pLstn->fd = -1;
@@ -1538,6 +1548,15 @@ BEGINnewInpInst
     } else {
         if (inst->ratelimitInterval == -1) inst->ratelimitInterval = DFLT_ratelimitInterval;
         if (inst->ratelimitBurst == -1) inst->ratelimitBurst = DFLT_ratelimitBurst;
+    }
+
+    if (inst->bCreatePath && !inst->bUnlink) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imuxsock: CreatePath=\"on\" cannot be combined with "
+                 "Unlink=\"off\" for socket '%s'; use Unlink=\"on\" when "
+                 "rsyslog creates/manages the socket path",
+                 inst->sockName);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
 finalize_it:
