@@ -102,5 +102,5 @@ confidence.
 ## Related Skills
 - `rsyslog_build`: Required before running tests.
 - `rsyslog_local_container_testing`: Preferred PR-ready validation path when
-  local containers are available.
+  local container support is available.
 - `rsyslog_module`: Documentation on module-specific test dependencies.
