@@ -2411,8 +2411,12 @@ module_needs_testing() {
 			imbeats:tests/yaml-imbeats*.sh)
 				return 0
 				;;
-			imjournal:plugins/imjournal/*|imjournal:tests/imjournal*.sh|\
+			imjournal:plugins/imjournal/*|imjournal:plugins/omjournal/*|\
+			imjournal:tests/imjournal*.sh|imjournal:tests/omjournal*.sh|\
 			imjournal:tests/journal_print.c|\
+			omjournal:plugins/imjournal/*|omjournal:plugins/omjournal/*|\
+			omjournal:tests/imjournal*.sh|omjournal:tests/omjournal*.sh|\
+			omjournal:tests/journal_print.c|\
 			journal:plugins/imjournal/*|journal:plugins/omjournal/*|\
 			journal:tests/imjournal*.sh|journal:tests/omjournal*.sh|\
 			journal:tests/journal_print.c)
@@ -2432,12 +2436,12 @@ module_needs_testing() {
 			kafka:tests/*kafka*.sh|kafka:tests/kafka*.sh)
 				return 0
 				;;
-			imhiredis:contrib/imhiredis/*|imhiredis:tests/imhiredis*.sh|\
-			imhiredis:tests/testsuites/redis.conf|imhiredis:tests/testsuites/x.509/*)
-				return 0
-				;;
-			omhiredis:contrib/omhiredis/*|omhiredis:tests/omhiredis*.sh|\
-			omhiredis:tests/testsuites/redis.conf)
+			imhiredis:contrib/imhiredis/*|imhiredis:contrib/omhiredis/*|\
+			imhiredis:tests/imhiredis*.sh|imhiredis:tests/omhiredis*.sh|\
+			imhiredis:tests/testsuites/redis.conf|imhiredis:tests/testsuites/x.509/*|\
+			omhiredis:contrib/imhiredis/*|omhiredis:contrib/omhiredis/*|\
+			omhiredis:tests/imhiredis*.sh|omhiredis:tests/omhiredis*.sh|\
+			omhiredis:tests/testsuites/redis.conf|omhiredis:tests/testsuites/x.509/*)
 				return 0
 				;;
 			hiredis:contrib/imhiredis/*|hiredis:contrib/omhiredis/*|\
@@ -2446,9 +2450,6 @@ module_needs_testing() {
 				return 0
 				;;
 			imdocker:contrib/imdocker/*|imdocker:tests/imdocker*.sh)
-				return 0
-				;;
-			omjournal:plugins/omjournal/*|omjournal:tests/omjournal*.sh)
 				return 0
 				;;
 			omrabbitmq:contrib/omrabbitmq/*|omrabbitmq:tests/omrabbitmq*.sh|\
