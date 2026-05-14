@@ -38,6 +38,12 @@ starts up before the daemons that create these sockets, it is a vehicle
 to enable rsyslogd to listen to those sockets even though their directories
 do not yet exist.
 
+``CreatePath="on"`` means rsyslog manages creation of the socket path.
+Do not combine it with ``Unlink="off"``, because that tells rsyslog not to
+replace or remove the socket path it created. This contradictory configuration
+is rejected. Use the default ``Unlink="on"`` when rsyslog should manage the
+socket lifecycle.
+
 .. versionadded:: 4.7.0
 
 Input usage
