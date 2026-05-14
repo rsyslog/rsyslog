@@ -394,8 +394,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
                         loaded++;
                     } else {
                         LogMsg(0, RS_RET_CRL_INVALID, LOG_WARNING,
-                               "wolfSSL: CRL block #%d in '%s' failed to add to store, skipping",
-                               crlIdx + 1, crlFile);
+                               "wolfSSL: CRL block #%d in '%s' failed to add to store, skipping", crlIdx + 1, crlFile);
                     }
                 }
             }
