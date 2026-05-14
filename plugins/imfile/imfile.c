@@ -336,6 +336,8 @@ static modConfData_t *currModConf = NULL; /* modConf ptr to CURRENT mod conf (ru
 
 
 #ifdef HAVE_INOTIFY_INIT
+enum { IN_FILE_UPDATE_EVENTS = IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE };
+
 /* We need to map watch descriptors to our actual objects. Unfortunately, the
  * inotify API does not provide us with any cookie, so a simple O(1) algorithm
  * cannot be done (what a shame...). We assume that maintaining the array is much
@@ -590,9 +592,9 @@ static int in_setupWatch(act_obj_t *const act, const int is_file) {
         goto done;
     }
 
-    wd =
-        inotify_add_watch(ino_fd, act->name,
-                          (is_file) ? IN_MODIFY | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
+    wd = inotify_add_watch(
+        ino_fd, act->name,
+        (is_file) ? IN_FILE_UPDATE_EVENTS | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
     if (wd < 0) {
         if (errno == EACCES) { /* There is high probability of selinux denial on top-level paths */
             DBGPRINTF("imfile: permission denied when adding watch for '%s'\n", act->name);
@@ -2545,6 +2547,9 @@ static void ATTR_NONNULL(1) in_dbg_showEv(const struct inotify_event *ev) {
     if (ev->mask & IN_CLOSE_WRITE) {
         dbgprintf("INOTIFY event: watch IN_CLOSE_WRITE\n");
     }
+    if (ev->mask & IN_Q_OVERFLOW) {
+        dbgprintf("INOTIFY event: watch IN_Q_OVERFLOW\n");
+    }
     if (ev->mask & IN_CLOSE_NOWRITE) {
         dbgprintf("INOTIFY event: watch IN_CLOSE_NOWRITE\n");
     }
@@ -2576,7 +2581,7 @@ static void ATTR_NONNULL(1) in_dbg_showEv(const struct inotify_event *ev) {
 
 
 static void ATTR_NONNULL(1, 2) in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry) {
-    if (ev->mask & IN_MODIFY) {
+    if (ev->mask & IN_FILE_UPDATE_EVENTS) {
         DBGPRINTF("fs_node_notify_file_update: act->name '%s'\n", etry->act->name);
         pollFile(etry->act);
     } else {
@@ -2609,6 +2614,12 @@ static void flag_in_move(fs_edge_t *const edge, const char *name_moved) {
 }
 
 static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
+    if (ev->mask & IN_Q_OVERFLOW) {
+        LogMsg(0, RS_RET_ERR, LOG_WARNING, "imfile: inotify queue overflow, scanning configured files");
+        fs_node_walk(runModConf->conf_tree, poll_tree);
+        goto done;
+    }
+
     if (ev->mask & IN_IGNORED) {
         DBGPRINTF("imfile: got IN_IGNORED event\n");
         goto done;
