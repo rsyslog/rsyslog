@@ -255,6 +255,7 @@ TESTS_DEFAULT = \
 	imudp_ratelimit_name.sh \
 	omfwd_ratelimit_name.sh \
 	omelasticsearch_ratelimit_name.sh \
+	omelasticsearch-searchtype-deprecated.sh \
 	omhttp_ratelimit_name.sh \
 	imhttp_ratelimit_name.sh \
 	imjournal_ratelimit_name.sh \
