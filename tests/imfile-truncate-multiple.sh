@@ -44,6 +44,7 @@ for i in {0..50}; do
 done
 
 echo generated $NUMMSG messages
+wait_file_lines  $RSYSLOG_OUT_LOG $NUMMSG 100
 
 shutdown_when_empty
 wait_shutdown

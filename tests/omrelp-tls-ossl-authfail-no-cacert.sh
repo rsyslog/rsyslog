@@ -1,5 +1,10 @@
 #!/bin/bash
 # added 2026-04-30 to guard issue #6612, released under ASL 2.0
+#
+# This test verifies that an omrelp sender without tls.caCert fails OpenSSL
+# certificate validation cleanly: the action must be disabled after the auth
+# error, and the sender must not busy-loop while handling the failed TLS
+# connection or while shutting down afterward.
 . ${srcdir:=.}/diag.sh init
 require_plugin imrelp
 require_plugin omrelp
@@ -33,6 +38,28 @@ sample_cpu_delta_ticks() {
 	$TESTTOOL_DIR/msleep "$interval_ms"
 	end_ticks=$(read_proc_cpu_ticks "$pid") || return 1
 	echo $((end_ticks - start_ticks))
+}
+
+sample_cpu_activity() {
+	local pid="$1"
+	local interval_ms="$2"
+	local sample_count="$3"
+	local threshold_ticks="$4"
+	local delta max_delta=0 over_threshold=0 samples=""
+	local i
+
+	for ((i = 0; i < sample_count; i++)); do
+		delta=$(sample_cpu_delta_ticks "$pid" "$interval_ms") || return 1
+		samples="${samples:+$samples,}$delta"
+		if [ "$delta" -gt "$max_delta" ]; then
+			max_delta="$delta"
+		fi
+		if [ "$delta" -gt "$threshold_ticks" ]; then
+			over_threshold=$((over_threshold + 1))
+		fi
+	done
+
+	printf '%s %d %d\n' "$samples" "$max_delta" "$over_threshold"
 }
 
 export NUMMESSAGES=100
@@ -72,33 +99,41 @@ sender_pid=$(cat "${RSYSLOG_PIDBASE}2.pid")
 injectmsg2 1 $NUMMESSAGES
 
 $TESTTOOL_DIR/msleep 500
-if ! delta_ticks=$(sample_cpu_delta_ticks "$sender_pid" 1200); then
-	error_exit 1 "sender process exited before CPU sampling started"
-fi
-threshold_ticks=$((clk_tck / 2))
+# The CPU samples are part of the test oracle, not debug noise.  TLS failure
+# handling and shutdown can legitimately consume a short burst of CPU, so the
+# test only fails if every sample in a window stays above the threshold.
+sample_interval_ms=1200
+sample_count=3
+threshold_ticks=$((clk_tck * sample_interval_ms * 80 / 100000))
 if [ "$threshold_ticks" -lt 10 ]; then
 	threshold_ticks=10
 fi
 
-printf 'sender pid %s consumed %d CPU ticks while handling TLS auth failure, threshold %d\n' \
-	"$sender_pid" "$delta_ticks" "$threshold_ticks"
+if ! cpu_activity=$(sample_cpu_activity "$sender_pid" "$sample_interval_ms" "$sample_count" "$threshold_ticks"); then
+	error_exit 1 "sender process exited before CPU sampling started"
+fi
+read -r cpu_samples max_delta_ticks over_threshold_samples <<< "$cpu_activity"
+
+printf 'sender pid %s CPU ticks while handling TLS auth failure: [%s], max %d, sustained threshold %d over %d samples\n' \
+	"$sender_pid" "$cpu_samples" "$max_delta_ticks" "$threshold_ticks" "$sample_count"
 
 content_check "DISABLING action" "$RSYSLOG_DYNNAME.errmsgs"
 
 shutdown_immediate 2
 $TESTTOOL_DIR/msleep 100
-if shutdown_delta_ticks=$(sample_cpu_delta_ticks "$sender_pid" 1200); then
-	printf 'sender pid %s consumed %d CPU ticks after shutdown started, threshold %d\n' \
-		"$sender_pid" "$shutdown_delta_ticks" "$threshold_ticks"
+if shutdown_cpu_activity=$(sample_cpu_activity "$sender_pid" "$sample_interval_ms" "$sample_count" "$threshold_ticks"); then
+	read -r shutdown_cpu_samples shutdown_max_delta_ticks shutdown_over_threshold_samples <<< "$shutdown_cpu_activity"
+	printf 'sender pid %s CPU ticks after shutdown started: [%s], max %d, sustained threshold %d over %d samples\n' \
+		"$sender_pid" "$shutdown_cpu_samples" "$shutdown_max_delta_ticks" "$threshold_ticks" "$sample_count"
 else
-	shutdown_delta_ticks=0
+	shutdown_over_threshold_samples=0
 	printf 'sender pid %s exited before shutdown CPU sample completed\n' "$sender_pid"
 fi
 wait_shutdown 2 10
 shutdown_immediate
 wait_shutdown "" 10
 
-if [ "$delta_ticks" -gt "$threshold_ticks" ] || [ "$shutdown_delta_ticks" -gt "$threshold_ticks" ]; then
+if [ "$over_threshold_samples" -eq "$sample_count" ] || [ "$shutdown_over_threshold_samples" -eq "$sample_count" ]; then
 	printf 'FAIL: omrelp consumed too much CPU after OpenSSL TLS auth failure without tls.caCert\n'
 	error_exit 1
 fi

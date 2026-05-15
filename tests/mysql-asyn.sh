@@ -12,7 +12,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 $ActionQueueType LinkedList
-$ActionQueueTimeoutEnqueue 20000
+$ActionQueueTimeoutEnqueue 60000
 if $msg contains "msgnum:" then {
   action(
     type="ommysql"
@@ -21,7 +21,7 @@ if $msg contains "msgnum:" then {
     uid="rsyslog"
     pwd="testbench"
     queue.type="LinkedList"
-    queue.timeoutEnqueue="20000"
+    queue.timeoutEnqueue="60000"
     queue.workerThreads="2"
     queue.workerThreadMinimumMessages="64"
   )

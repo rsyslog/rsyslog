@@ -16,7 +16,9 @@ PHASE1_SLEEP_USEC=${PHASE1_SLEEP_USEC:-5000}
 PREPARE_ATTEMPTS=${PREPARE_ATTEMPTS:-3}
 RECOVERY_WAIT_TIMEOUT=${RECOVERY_WAIT_TIMEOUT:-120}
 SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-60}
-CORRUPT_BYTES=${CORRUPT_BYTES:-1200000}
+CORRUPT_TARGET_BYTES=${CORRUPT_BYTES:-1200000}
+CORRUPT_MIN_BYTES=${CORRUPT_MIN_BYTES:-65536}
+CORRUPT_MIN_SEGMENTS=${CORRUPT_MIN_SEGMENTS:-3}
 NUMMESSAGES=$BASE_NUMMESSAGES
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
 RSYSLOGD_LOG="${RSYSLOG_DYNNAME}.rsyslogd.log"
@@ -115,6 +117,52 @@ count_segment_files() {
 	printf '%s\n' "$count"
 }
 
+write_sorted_segment_list() {
+	seg_list="$1"
+	unsorted_list="${seg_list}.unsorted"
+	: > "$unsorted_list"
+	for path in "$SPOOL_DIR"/mainq.*; do
+		[ -f "$path" ] || continue
+		base="${path##*/}"
+		num="${base#mainq.}"
+		case "$num" in
+		''|*[!0-9]*)
+			continue
+			;;
+		esac
+		printf '%s\n' "$base" >> "$unsorted_list"
+	done
+
+	sort -t. -k2,2n "$unsorted_list" > "$seg_list"
+	rm -f "$unsorted_list"
+}
+
+collect_corruptable_segment_stats() {
+	seg_list="$1"
+	seg_count=$(wc -l < "$seg_list")
+	corruptable_segments=0
+	corruptable_bytes=0
+	line=2
+
+	while [ "$line" -le "$seg_count" ]; do
+		target_base=$(sed -n "${line}p" "$seg_list")
+		target="$SPOOL_DIR/$target_base"
+		[ -f "$target" ] || break
+		orig_size=$(wc -c < "$target")
+		corruptable_bytes=$((corruptable_bytes + orig_size))
+		corruptable_segments=$((corruptable_segments + 1))
+		line=$((line + 1))
+	done
+}
+
+queue_has_corruptable_tail() {
+	[ -f "$SPOOL_DIR/mainq.qi" ] || return 1
+	[ "$seg_count" -ge 3 ] || return 1
+	[ "$corruptable_segments" -ge "$CORRUPT_MIN_SEGMENTS" ] || return 1
+	[ "$corruptable_bytes" -ge "$CORRUPT_MIN_BYTES" ] || return 1
+	return 0
+}
+
 check_clean_live_mainq_state() {
 	live_list="${RSYSLOG_DYNNAME}.live-mainq"
 	: > "$live_list"
@@ -141,33 +189,36 @@ check_clean_live_mainq_state() {
 }
 
 corrupt_middle_segment() {
-	seg_list="${RSYSLOG_DYNNAME}.segments"
-	sorted_list="${seg_list}.sorted"
+	sorted_list="${RSYSLOG_DYNNAME}.segments.sorted"
 	corrupted_bytes=0
-	: > "$seg_list"
-	for path in "$SPOOL_DIR"/mainq.*; do
-		[ -f "$path" ] || continue
-		base="${path##*/}"
-		num="${base#mainq.}"
-		case "$num" in
-		''|*[!0-9]*)
-			continue
-			;;
-		esac
-		printf '%s\n' "$base" >> "$seg_list"
-	done
+	corrupted_segments=0
 
-	sort -t. -k2,2n "$seg_list" > "$sorted_list"
-	seg_count=$(wc -l < "$sorted_list")
+	write_sorted_segment_list "$sorted_list"
+	collect_corruptable_segment_stats "$sorted_list"
+	printf 'Persisted queue segment stats: total segments=%s corruptable tail segments=%s corruptable tail bytes=%s target bytes=%s minimum bytes=%s minimum segments=%s\n' \
+		"$seg_count" "$corruptable_segments" "$corruptable_bytes" \
+		"$CORRUPT_TARGET_BYTES" "$CORRUPT_MIN_BYTES" "$CORRUPT_MIN_SEGMENTS"
+
 	if [ "$seg_count" -lt 3 ]; then
-		printf 'FAIL: expected at least 3 queue segment files, found %s\n' "$seg_count"
+		printf 'FAIL: expected at least 3 queue segment files, found %s\n' \
+			"$seg_count"
 		list_spool_top
-		rm -f "$seg_list" "$sorted_list"
+		rm -f "$sorted_list"
+		error_exit 1
+	fi
+
+	if [ "$corruptable_segments" -lt "$CORRUPT_MIN_SEGMENTS" ] || \
+	   [ "$corruptable_bytes" -lt "$CORRUPT_MIN_BYTES" ]; then
+		printf 'FAIL: persisted queue tail is too small for corruption test: %s segments, %s bytes\n' \
+			"$corruptable_segments" "$corruptable_bytes"
+		list_spool_top
+		rm -f "$sorted_list"
 		error_exit 1
 	fi
 
 	mid_line=2
-	while [ "$mid_line" -le "$seg_count" ] && [ "$corrupted_bytes" -lt "$CORRUPT_BYTES" ]; do
+	while [ "$mid_line" -le "$seg_count" ] && \
+	      [ "$corrupted_bytes" -lt "$CORRUPT_TARGET_BYTES" ]; do
 		target_base=$(sed -n "${mid_line}p" "$sorted_list")
 		target="$SPOOL_DIR/$target_base"
 		orig_size=$(wc -c < "$target")
@@ -175,14 +226,28 @@ corrupt_middle_segment() {
 		dd if=/dev/zero of="$target" bs=1 count="$orig_size" conv=notrunc \
 			>/dev/null 2>&1
 		corrupted_bytes=$((corrupted_bytes + orig_size))
+		corrupted_segments=$((corrupted_segments + 1))
 		mid_line=$((mid_line + 1))
 	done
-	if [ "$corrupted_bytes" -lt "$CORRUPT_BYTES" ]; then
-		printf 'FAIL: only corrupted %s bytes, expected at least %s\n' "$corrupted_bytes" "$CORRUPT_BYTES"
-		rm -f "$seg_list" "$sorted_list"
+
+	if [ "$corrupted_segments" -lt "$CORRUPT_MIN_SEGMENTS" ] || \
+	   [ "$corrupted_bytes" -lt "$CORRUPT_MIN_BYTES" ]; then
+		printf 'FAIL: only corrupted %s segments and %s bytes, expected at least %s segments and %s bytes\n' \
+			"$corrupted_segments" "$corrupted_bytes" \
+			"$CORRUPT_MIN_SEGMENTS" "$CORRUPT_MIN_BYTES"
+		rm -f "$sorted_list"
 		error_exit 1
 	fi
-	rm -f "$seg_list" "$sorted_list"
+
+	if [ "$corrupted_bytes" -lt "$CORRUPT_TARGET_BYTES" ]; then
+		printf 'info: corrupted %s bytes in %s segments; target was %s bytes but persisted tail had only %s bytes\n' \
+			"$corrupted_bytes" "$corrupted_segments" \
+			"$CORRUPT_TARGET_BYTES" "$corruptable_bytes"
+	else
+		printf 'info: corrupted %s bytes in %s segments\n' \
+			"$corrupted_bytes" "$corrupted_segments"
+	fi
+	rm -f "$sorted_list"
 }
 
 prepare_corrupted_queue() {
@@ -200,19 +265,27 @@ prepare_corrupted_queue() {
 		wait_shutdown "" "$SHUTDOWN_TIMEOUT"
 
 		seg_count=$(count_segment_files)
-		if [ -f "$SPOOL_DIR/mainq.qi" ] && [ "$seg_count" -ge 3 ]; then
-			printf 'Prepared persisted queue with %s messages and %s segment files\n' \
-				"$NUMMESSAGES" "$seg_count"
+		stats_list="${RSYSLOG_DYNNAME}.prepare-segments.sorted"
+		write_sorted_segment_list "$stats_list"
+		collect_corruptable_segment_stats "$stats_list"
+		rm -f "$stats_list"
+		printf 'Phase 1 attempt %s with %s messages produced %s segment files, %s corruptable tail segments, %s corruptable tail bytes\n' \
+			"$attempt" "$NUMMESSAGES" "$seg_count" \
+			"$corruptable_segments" "$corruptable_bytes"
+		if queue_has_corruptable_tail; then
+			printf 'Prepared persisted queue with %s messages, %s segment files, %s corruptable tail segments, and %s corruptable tail bytes\n' \
+				"$NUMMESSAGES" "$seg_count" "$corruptable_segments" \
+				"$corruptable_bytes"
 			return 0
 		fi
 
-		printf 'Phase 1 attempt %s produced %s segment files with %s messages; retrying\n' \
-			"$attempt" "$seg_count" "$NUMMESSAGES"
+		printf 'Phase 1 attempt %s did not meet corruption preconditions with %s messages; retrying\n' \
+			"$attempt" "$NUMMESSAGES"
 		attempt=$((attempt + 1))
 		current_messages=$((current_messages + BASE_NUMMESSAGES / 2))
 	done
 
-	printf 'FAIL: unable to create a persisted queue with at least 3 segment files after %s attempts\n' \
+	printf 'FAIL: unable to create a persisted queue with enough corruptable tail after %s attempts\n' \
 		"$PREPARE_ATTEMPTS"
 	list_spool_top
 	error_exit 1

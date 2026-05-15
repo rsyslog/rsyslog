@@ -23,6 +23,11 @@ agents.
 ## Writing & updating tests
 - Base new shell tests on existing ones; include `. $srcdir/diag.sh` to gain the
   helper functions (timeouts, Valgrind integration, rsyslogd launch helpers).
+- Every new or changed test must document the exact behavior, regression, or
+  invariant it covers. Add or refresh a short comment near the top of the test
+  when the current intent is missing, stale, or vague. For timing, retry,
+  sampling, concurrency, or negative-path tests, also explain the oracle: what
+  proves success or failure, and why any wait or threshold exists.
 - Prefer harness helpers such as `cmp_exact`, `command_deny`, and
   `require_plugin` over ad-hoc shell to keep diagnostics uniform.
 - **Config format coverage**: When a module parameter or config object is tested
