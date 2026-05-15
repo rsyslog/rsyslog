@@ -7,12 +7,20 @@ description: Monitor rsyslog pull requests after push or rerun, including GitHub
 
 Use this skill when babysitting an rsyslog PR after pushing, rerunning CI, or
 waiting for review. Babysitting is incomplete unless both CI status and
-unresolved review threads have been checked.
+unresolved review threads have been checked. Read review comments as part of
+babysitting, including bot or CI comments that explain failed or skipped jobs.
+
+When a user says "babysit PR", the default goal is to watch and act until the
+PR is fully babysat (see stop conditions below), then stop. Do not keep
+polling until merge unless the user explicitly asks for merge-time monitoring.
 
 ## Poll Cadence
 
 - Poll every 10 to 20 minutes while checks are running; 15 minutes is the
   default.
+- If checks are complete but actionable review threads or CI/bot comments
+  remain unresolved, continue on the same cadence until they are handled or the
+  user says to stop.
 - If babysitting a non-empty set of PRs, check them together on the same
   cadence instead of starting separate tight loops.
 - Stop babysitting when all monitored PRs are green: no failed checks, no
