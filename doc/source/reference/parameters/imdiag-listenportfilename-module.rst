@@ -34,8 +34,8 @@ imdiag will create and populate with its chosen listen port number after the
 TCP listener is ready. The testbench reads this file to discover the port
 without needing a fixed port number.
 
-This is the module-scope version of the parameter. The same name can also
-be set at input scope via ``input(type="imdiag" listenPortFileName=...)``.
+This parameter is module-scoped. imdiag's diagnostic command listener is
+configured from ``module(...)`` rather than a dedicated ``input(...)`` object.
 
 Module usage
 ------------

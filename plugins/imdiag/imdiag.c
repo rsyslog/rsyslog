@@ -105,7 +105,14 @@ static pthread_t timeoutGuard_thrd; /* thread ID for timeoutGuard thread (if act
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *pszLstnPortFileName; /* port file name (module-level param) */
+    uchar *pszServerRun;
+    uchar *pszInjectDelayMode;
+    uchar *pszStrmDrvrAuthMode;
+    uchar *pszInputName;
+    permittedPeers_t *pPermPeersRoot;
     int abortTimeout; /* abort timeout in seconds, -1 = disabled */
+    int iTCPSessMax;
+    int iStrmDrvrMode;
     int configSetViaV2Method; /* 1 if module() was used to configure */
 };
 
@@ -115,6 +122,13 @@ static modConfData_t *loadModConf = NULL; /* modConf ptr for current load proces
 static struct cnfparamdescr modpdescr[] = {
     {"listenportfilename", eCmdHdlrString, 0},
     {"aborttimeout", eCmdHdlrInt, 0},
+    {"serverrun", eCmdHdlrString, 0},
+    {"injectdelaymode", eCmdHdlrString, 0},
+    {"maxsessions", eCmdHdlrInt, 0},
+    {"serverstreamdrivermode", eCmdHdlrInt, 0},
+    {"serverstreamdriverauthmode", eCmdHdlrString, 0},
+    {"serverstreamdriverpermittedpeer", eCmdHdlrArray, 0},
+    {"serverinputname", eCmdHdlrString, 0},
     {"mainmsgqueuetimeoutshutdown", eCmdHdlrInt, 0},
     {"mainmsgqueuetimeoutenqueue", eCmdHdlrInt, 0},
     {"inputshutdowntimeout", eCmdHdlrInt, 0},
@@ -130,6 +144,9 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 static flowControl_t injectmsgDelayMode = eFLOWCTL_NO_DELAY;
 static int iTCPSessMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static int bLegacyInjectDelayModeSet = 0;
+static int bLegacyTCPSessMaxSet = 0;
+static int bLegacyStrmDrvrModeSet = 0;
 static uchar *pszLstnPortFileName = NULL;
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
@@ -681,7 +698,7 @@ finalize_it:
 }
 
 
-static rsRetVal setInjectDelayMode(void __attribute__((unused)) * pVal, uchar *const pszMode) {
+static rsRetVal setInjectDelayModeFromString(const uchar *const pszMode) {
     DEFiRet;
 
     if (!strcasecmp((char *)pszMode, "no")) {
@@ -693,7 +710,17 @@ static rsRetVal setInjectDelayMode(void __attribute__((unused)) * pVal, uchar *c
     } else {
         LogError(0, RS_RET_PARAM_ERROR, "imdiag: invalid imdiagInjectDelayMode '%s' - ignored", pszMode);
     }
+    RETiRet;
+}
+
+
+static rsRetVal setInjectDelayMode(void __attribute__((unused)) * pVal, uchar *const pszMode) {
+    DEFiRet;
+
+    bLegacyInjectDelayModeSet = 1;
+    iRet = setInjectDelayModeFromString(pszMode);
     free(pszMode);
+
     RETiRet;
 }
 
@@ -823,12 +850,39 @@ finalize_it:
 }
 
 
+static rsRetVal setMaxSessions(void __attribute__((unused)) * pVal, int maxSessions) {
+    DEFiRet;
+
+    iTCPSessMax = maxSessions;
+    bLegacyTCPSessMaxSet = 1;
+
+    RETiRet;
+}
+
+
+static rsRetVal setStrmDrvrMode(void __attribute__((unused)) * pVal, int mode) {
+    DEFiRet;
+
+    iStrmDrvrMode = mode;
+    bLegacyStrmDrvrModeSet = 1;
+
+    RETiRet;
+}
+
+
 BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
     loadModConf = pModConf;
     pModConf->pConf = pConf;
     pModConf->pszLstnPortFileName = NULL;
+    pModConf->pszServerRun = NULL;
+    pModConf->pszInjectDelayMode = NULL;
+    pModConf->pszStrmDrvrAuthMode = NULL;
+    pModConf->pszInputName = NULL;
+    pModConf->pPermPeersRoot = NULL;
     pModConf->abortTimeout = -1;
+    pModConf->iTCPSessMax = -1;
+    pModConf->iStrmDrvrMode = -1;
     pModConf->configSetViaV2Method = 0;
 ENDbeginCnfLoad
 
@@ -853,6 +907,26 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "aborttimeout")) {
             loadModConf->abortTimeout = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "serverrun")) {
+            CHKmalloc(loadModConf->pszServerRun = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "injectdelaymode")) {
+            CHKmalloc(loadModConf->pszInjectDelayMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
+            loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "serverstreamdrivermode")) {
+            loadModConf->iStrmDrvrMode = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "serverstreamdriverauthmode")) {
+            CHKmalloc(loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "serverstreamdriverpermittedpeer")) {
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(peer);
+                iRet = net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer);
+                free(peer);
+                CHKiRet(iRet);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "serverinputname")) {
+            CHKmalloc(loadModConf->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "mainmsgqueuetimeoutshutdown")) {
             loadModConf->pConf->globals.mainQ.iMainMsgQtoQShutdown = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "mainmsgqueuetimeoutenqueue")) {
@@ -881,6 +955,31 @@ BEGINendCnfLoad
         pszLstnPortFileName = loadModConf->pszLstnPortFileName;
         loadModConf->pszLstnPortFileName = NULL; /* ownership transferred to global */
     }
+    if (loadModConf->pszInjectDelayMode != NULL && !bLegacyInjectDelayModeSet) {
+        CHKiRet(setInjectDelayModeFromString(loadModConf->pszInjectDelayMode));
+    }
+    if (loadModConf->iTCPSessMax != -1 && !bLegacyTCPSessMaxSet) {
+        iTCPSessMax = loadModConf->iTCPSessMax;
+    }
+    if (loadModConf->iStrmDrvrMode != -1 && !bLegacyStrmDrvrModeSet) {
+        iStrmDrvrMode = loadModConf->iStrmDrvrMode;
+    }
+    if (loadModConf->pszStrmDrvrAuthMode != NULL && pszStrmDrvrAuthMode == NULL) {
+        pszStrmDrvrAuthMode = loadModConf->pszStrmDrvrAuthMode;
+        loadModConf->pszStrmDrvrAuthMode = NULL; /* ownership transferred to global */
+    }
+    if (loadModConf->pszInputName != NULL && pszInputName == NULL) {
+        pszInputName = loadModConf->pszInputName;
+        loadModConf->pszInputName = NULL; /* ownership transferred to global */
+    }
+    if (loadModConf->pPermPeersRoot != NULL && pPermPeersRoot == NULL) {
+        pPermPeersRoot = loadModConf->pPermPeersRoot;
+        loadModConf->pPermPeersRoot = NULL; /* ownership transferred to global */
+    }
+    if (loadModConf->pszServerRun != NULL && pOurTcpsrv == NULL) {
+        CHKiRet(addTCPListener(NULL, loadModConf->pszServerRun));
+        loadModConf->pszServerRun = NULL; /* ownership transferred to addTCPListener */
+    }
     if (loadModConf->abortTimeout != -1 && abortTimeout == -1) {
         CHKiRet(setAbortTimeout(NULL, loadModConf->abortTimeout));
     }
@@ -902,6 +1001,13 @@ ENDactivateCnf
 BEGINfreeCnf
     CODESTARTfreeCnf;
     free(pModConf->pszLstnPortFileName);
+    free(pModConf->pszServerRun);
+    free(pModConf->pszInjectDelayMode);
+    free(pModConf->pszStrmDrvrAuthMode);
+    free(pModConf->pszInputName);
+    if (pModConf->pPermPeersRoot != NULL) {
+        net.DestructPermittedPeers(&pModConf->pPermPeersRoot);
+    }
 ENDfreeCnf
 
 
@@ -1025,6 +1131,9 @@ ENDmodExit
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
     iTCPSessMax = 200;
     iStrmDrvrMode = 0;
+    bLegacyInjectDelayModeSet = 0;
+    bLegacyTCPSessMaxSet = 0;
+    bLegacyStrmDrvrModeSet = 0;
     free(pszInputName);
     free(pszLstnPortFileName);
     pszLstnPortFileName = NULL;
@@ -1095,9 +1204,9 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiaginjectdelaymode"), 0, eCmdHdlrGetWord, setInjectDelayMode, NULL,
                                STD_LOADABLE_MODULE_ID));
-    CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagmaxsessions"), 0, eCmdHdlrInt, NULL, &iTCPSessMax,
+    CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagmaxsessions"), 0, eCmdHdlrInt, setMaxSessions, NULL,
                                STD_LOADABLE_MODULE_ID));
-    CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdrivermode"), 0, eCmdHdlrInt, NULL, &iStrmDrvrMode,
+    CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdrivermode"), 0, eCmdHdlrInt, setStrmDrvrMode, NULL,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiaglistenportfilename"), 0, eCmdHdlrGetWord, NULL,
                                &pszLstnPortFileName, STD_LOADABLE_MODULE_ID));

@@ -403,8 +403,8 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 # YAML-only modes.  Tests that need a non-default value must set the relevant
 # RSTB_* variable before calling generate_conf.
 #
-# Startup detection relies on the imdiag port file in both RainerScript and
-# yaml-only modes; no .started marker file is used.
+# Startup detection relies on the module-level imdiag port file in both
+# RainerScript and yaml-only modes; no .started marker file is used.
 generate_conf() {
 	local yaml_only=0
 	if [ "$1" = "--yaml-only" ]; then
@@ -443,6 +443,7 @@ generate_conf() {
 			printf '\ntestbench_modules:\n'
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
+			printf '    serverrun: "0"\n'
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
 			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
@@ -450,22 +451,22 @@ generate_conf() {
 			printf '    defaultactionqueuetimeoutshutdown: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
 			printf '    defaultactionqueuetimeoutenqueue: "%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
 			printf '\n###### add modules:, inputs:, rulesets: etc. below\n'
-			printf '###### include imdiag input via add_yaml_imdiag_input\n'
+			printf '###### imdiag listener is configured as a testbench module\n'
 			printf '###### end of testbench instrumentation part, test conf follows:\n'
 		} > ${TESTCONF_NM}$1.yaml
 	else
 		export RSYSLOG_YAML_ONLY=0
 		export TESTCONF_EXT="conf"
 		echo 'module(load="../plugins/imdiag/.libs/imdiag"
+    listenportfilename="'$RSYSLOG_DYNNAME.imdiag$1.port'"
+    serverrun="0"
+    aborttimeout="'$TB_TEST_MAX_RUNTIME'"
     mainmsgqueuetimeoutshutdown="'$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'"
     mainmsgqueuetimeoutenqueue="'$RSTB_MAIN_Q_TO_ENQUEUE'"
     inputshutdowntimeout="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
     defaultactionqueuetimeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
     defaultactionqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
 global(debug.abortOnProgramError="on")
-$IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
-$IMDiagServerRun 0
-$IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
 # Capture rsyslogd own messages (startup, shutdown, errors) to the .started
 # file. Tests use this file to check for expected rsyslogd-internal messages.
 # This rule also ensures at least one output action exists in the default
@@ -496,12 +497,11 @@ add_yaml_conf() {
 	printf '%s\n' "$1" >> ${TESTCONF_NM}$2.yaml
 }
 
-# add the imdiag input entry inside an already-open inputs: section.
-# Call this as the first item after 'add_yaml_conf "inputs:"' so that
-# startup detection via the imdiag port file works correctly.
+# Historical compatibility helper. imdiag is now configured module-wide by
+# generate_conf --yaml-only, so callers no longer need a dedicated input entry.
 # $1 is the instance id, if given
 add_yaml_imdiag_input() {
-	printf '  - type: imdiag\n    port: "0"\n' >> ${TESTCONF_NM}$1.yaml
+	:
 }
 
 rst_msleep() {

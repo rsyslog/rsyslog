@@ -11,7 +11,6 @@ add_yaml_conf '    ports: "'$IMHTTP_PORT'"'
 add_yaml_conf '    metricsPath: "/metrics"'
 add_yaml_conf '    metricsApiKeyFile: "'$srcdir'/testsuites/imhttp-apikeys.txt"'
 add_yaml_conf 'inputs:'
-add_yaml_imdiag_input
 add_yaml_conf '  - type: imhttp'
 add_yaml_conf '    endpoint: "/unused"'
 add_yaml_conf '    ruleset: "main"'

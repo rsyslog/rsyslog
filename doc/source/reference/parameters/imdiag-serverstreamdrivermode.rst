@@ -1,5 +1,5 @@
 .. _param-imdiag-serverstreamdrivermode:
-.. _imdiag.parameter.input.serverstreamdrivermode:
+.. _imdiag.parameter.module.serverstreamdrivermode:
 
 ServerStreamDriverMode
 ======================
@@ -18,9 +18,9 @@ plain TCP driver so the setting is ignored.
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerStreamDriverMode
-:Scope: input
+:Scope: module
 :Type: integer
-:Default: input=0
+:Default: module=0
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -33,18 +33,17 @@ mode value. The parameter remains available for configuration compatibility and
 possible future extensions, but it does not alter behavior in current
 releases.
 
-Input usage
------------
-.. _param-imdiag-input-serverstreamdrivermode:
-.. _imdiag.parameter.input.serverstreamdrivermode-usage:
+Module usage
+------------
+.. _param-imdiag-module-serverstreamdrivermode:
+.. _imdiag.parameter.module.serverstreamdrivermode-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverStreamDriverMode="1"
-         serverRun="19998")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverStreamDriverMode="1"
+          serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

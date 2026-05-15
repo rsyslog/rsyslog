@@ -32,10 +32,6 @@ EOF
 
 add_yaml_conf 'include:'
 add_yaml_conf '  - path: "'${RSYSLOG_DYNNAME}'_imgssapi.conf"'
-add_yaml_conf ''
-add_yaml_conf 'inputs:'
-add_yaml_imdiag_input
-
 startup
 
 assign_file_content GSS_PORT "$RSYSLOG_DYNNAME.gss_port"

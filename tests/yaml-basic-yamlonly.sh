@@ -3,7 +3,7 @@
 #   - generate_conf --yaml-only writes a pure YAML preamble using
 #     testbench_modules: for the imdiag setup (no RainerScript)
 #   - test-specific modules go in a standard modules: section
-#   - add_yaml_imdiag_input adds the imdiag input for startup detection
+#   - imdiag is configured as module-scoped testbench instrumentation
 #   - rsyslogd starts and processes messages using only the YAML loader
 #
 # This test intentionally avoids any RainerScript or legacy-style directives
@@ -26,7 +26,6 @@ add_yaml_conf '    type: string'
 add_yaml_conf "    string: \"%msg:F,58:2%\\n\""
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
-add_yaml_imdiag_input
 add_yaml_conf "  - type: imtcp"
 add_yaml_conf "    port: \"0\""
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""

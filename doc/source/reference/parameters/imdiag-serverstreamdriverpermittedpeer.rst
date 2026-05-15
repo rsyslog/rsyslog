@@ -1,5 +1,5 @@
 .. _param-imdiag-serverstreamdriverpermittedpeer:
-.. _imdiag.parameter.input.serverstreamdriverpermittedpeer:
+.. _imdiag.parameter.module.serverstreamdriverpermittedpeer:
 
 ServerStreamDriverPermittedPeer
 ===============================
@@ -18,9 +18,9 @@ driver used by imdiag does not enforce them.
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerStreamDriverPermittedPeer
-:Scope: input
+:Scope: module
 :Type: array
-:Default: input=none
+:Default: module=none
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -39,18 +39,17 @@ need to preserve configuration compatibility. When multiple peers are listed,
 provide an array of identity strings even though the ``ptcp`` driver ignores
 them.
 
-Input usage
------------
-.. _param-imdiag-input-serverstreamdriverpermittedpeer:
-.. _imdiag.parameter.input.serverstreamdriverpermittedpeer-usage:
+Module usage
+------------
+.. _param-imdiag-module-serverstreamdriverpermittedpeer:
+.. _imdiag.parameter.module.serverstreamdriverpermittedpeer-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverStreamDriverPermittedPeer=["diag.example.com","127.0.0.1"]
-         serverRun="19998")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverStreamDriverPermittedPeer=["diag.example.com","127.0.0.1"]
+          serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

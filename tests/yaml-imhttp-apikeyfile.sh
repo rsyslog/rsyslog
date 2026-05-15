@@ -13,7 +13,6 @@ add_yaml_conf '  - name: outfmt'
 add_yaml_conf '    type: string'
 add_yaml_conf '    string: "%msg%\n"'
 add_yaml_conf 'inputs:'
-add_yaml_imdiag_input
 add_yaml_conf '  - type: imhttp'
 add_yaml_conf '    endpoint: "/postrequest"'
 add_yaml_conf '    ruleset: "main"'

@@ -1,5 +1,5 @@
 .. _param-imdiag-listenportfilename:
-.. _imdiag.parameter.input.listenportfilename:
+.. _imdiag.parameter.module.listenportfilename.listener:
 
 ListenPortFileName
 ==================
@@ -17,9 +17,9 @@ Writes the port chosen for the diagnostic listener to the named file.
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ListenPortFileName
-:Scope: input
+:Scope: module
 :Type: string (filename)
-:Default: input=none
+:Default: module=none
 :Required?: yes
 :Introduced: at least 5.x, possibly earlier
 
@@ -34,17 +34,16 @@ The file is overwritten each time the listener starts. When the listener is
 configured with port ``0`` (ephemeral port selection), this file is the only way
 to discover the actual port allocated by the operating system.
 
-Input usage
------------
-.. _param-imdiag-input-listenportfilename:
-.. _imdiag.parameter.input.listenportfilename-usage:
+Module usage
+------------
+.. _param-imdiag-module-listenportfilename-listener:
+.. _imdiag.parameter.module.listenportfilename.listener-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverRun="0")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverRun="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
