@@ -7,7 +7,7 @@ echo "CI_MAKE_OPT: ${CI_MAKE_OPT:--j2}"
 
 if [ -n "$SCAN_BUILD_REPORT_DIR" ]
 then
-  export CURR_REPORT=$(date +%y-%m-%d_%H-%M-%S)
+  export CURR_REPORT=$(date +%Y-%m-%d_%H-%M-%S)
   export REPORT_DIR="$SCAN_BUILD_REPORT_DIR/$CURR_REPORT"
   export REPORT_OPT="-o $REPORT_DIR"
 fi
