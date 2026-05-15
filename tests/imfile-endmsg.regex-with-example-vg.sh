@@ -1,6 +1,8 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-# This test tests imfile endmsg.regex.
+# This test verifies imfile endmsg.regex message assembly under valgrind for
+# CRI-O and JSON container log fragments, including metadata and normalized
+# multiline output.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export USE_VALGRIND="YES"
@@ -8,11 +10,11 @@ export USE_VALGRIND="YES"
 mkdir $RSYSLOG_DYNNAME.statefiles
 generate_conf
 add_conf '
-module(load="../plugins/imfile/.libs/imfile")
+module(load="../plugins/imfile/.libs/imfile"
+      statefile.directory="'${RSYSLOG_DYNNAME}'.statefiles")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 
 input(type="imfile"
-      statefile.directory="'${RSYSLOG_DYNNAME}'.statefiles"
       File="./'$RSYSLOG_DYNNAME'.*.input"
       Tag="file:" addMetadata="on" escapelf="off"
       endmsg.regex="(^[^ ]+ (stdout|stderr) F )|(\\n\"}$)")
