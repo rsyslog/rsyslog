@@ -692,7 +692,13 @@ TESTS_MMAITAG = \
         mmaitag-invalid-key.sh
 
 TESTS_MAIL = \
-	ommail_errmsg_no_params.sh
+	ommail_errmsg_no_params.sh \
+	ommail-sendmail.sh \
+	ommail-sendmail-body-off.sh \
+	ommail-sendmail-fail.sh \
+	ommail-sendmail-bad-binary.sh \
+	ommail-sendmail-exec-fail.sh \
+	ommail-sendmail-default-binary.sh
 
 TESTS_MMANON = \
 	mmanon_with_debug.sh \
@@ -3250,6 +3256,7 @@ EXTRA_DIST += \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-single-instance-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
+	testsuites/ommail-sendmail-bin.sh \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
 	imfile-endmsg.regex.crio.rulebase \
 	imfile-endmsg.regex.json.rulebase \

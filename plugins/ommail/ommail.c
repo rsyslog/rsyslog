@@ -1,12 +1,12 @@
 /* ommail.c
  *
- * This is an implementation of a mail sending output module. So far, we
- * only support direct SMTP, that is talking to a SMTP server. In the long
- * term, support for using sendmail should also be implemented. Please note
- * that the SMTP protocol implementation is a very bare one. We support
- * RFC821/822 messages, without any authentication and any other nice
- * features (no MIME, no nothing). It is assumed that proper firewalling
- * and/or STMP server configuration is used together with this module.
+ * This is an implementation of a mail sending output module. It supports
+ * direct SMTP, that is talking to a SMTP server, and delivery through a
+ * sendmail-compatible local submission program. Please note that the SMTP
+ * protocol implementation is a very bare one. We support RFC821/822
+ * messages, without any authentication and any other nice features (no MIME,
+ * no nothing). It is assumed that proper firewalling and/or SMTP server
+ * configuration is used together with this module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -33,16 +33,24 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include <syslog.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <signal.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <time.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
+#if defined(HAVE_LINUX_CLOSE_RANGE_H)
+    #include <linux/close_range.h>
+#endif
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -62,10 +70,22 @@ MODULE_CNFNAME("ommail")
 DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(datetime)
 
-    /* we add a little support for multiple recipients. We do this via a
-     * singly-linked list, enqueued from the top. -- rgerhards, 2008-08-04
-     */
-    typedef struct toRcpt_s toRcpt_t;
+#define DEFAULT_SENDMAIL_BINARY "/usr/sbin/sendmail"
+
+    typedef enum {
+        OMMailModeSMTP = 0,
+        OMMailModeSendmail = 1
+    } ommailMode_t;
+
+typedef struct sendmailStatus_s {
+    int waitStatus;
+    int execErrno;
+} sendmailStatus_t;
+
+/* we add a little support for multiple recipients. We do this via a
+ * singly-linked list, enqueued from the top. -- rgerhards, 2008-08-04
+ */
+typedef struct toRcpt_s toRcpt_t;
 struct toRcpt_s {
     uchar *pszTo;
     toRcpt_t *pNext;
@@ -74,16 +94,19 @@ struct toRcpt_s {
 typedef struct _instanceData {
     uchar *tplName; /* format template to use */
     uchar *constSubject; /* if non-NULL, constant string to be used as subject */
-    int8_t iMode; /* 0 - smtp, 1 - sendmail */
+    uchar *pszFrom;
+    toRcpt_t *lstRcpt;
+    ommailMode_t mode;
     sbool bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
     sbool bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
-    union {
+    struct {
         struct {
             uchar *pszSrv;
             uchar *pszSrvPort;
-            uchar *pszFrom;
-            toRcpt_t *lstRcpt;
         } smtp;
+        struct {
+            uchar *szBinary;
+        } sendmail;
     } md; /* mode-specific data */
 } instanceData;
 
@@ -111,14 +134,16 @@ static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
-                                           {"port", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrGetWord, 0},
+                                           {"port", eCmdHdlrGetWord, 0},
                                            {"mailfrom", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
                                            {"mailto", eCmdHdlrArray, CNFPARAM_REQUIRED},
                                            {"subject.template", eCmdHdlrGetWord, 0},
                                            {"subject.text", eCmdHdlrString, 0},
                                            {"body.enable", eCmdHdlrBinary, 0},
-                                           {"template", eCmdHdlrGetWord, 0}};
+                                           {"template", eCmdHdlrGetWord, 0},
+                                           {"mode", eCmdHdlrGetWord, 0},
+                                           {"sendmail.binary", eCmdHdlrString, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
@@ -135,6 +160,7 @@ ENDinitConfVars
 /* forward definitions (as few as possible) */
 static rsRetVal Send(int sock, const char *msg, size_t len);
 static rsRetVal readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected);
+typedef rsRetVal (*mailWriteFunc_t)(void *ctx, const char *msg, size_t len);
 
 
 /* helpers for handling the recipient lists */
@@ -195,7 +221,7 @@ static rsRetVal WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t l
 
     assert(lenOp != 0);
 
-    for (pRcpt = pWrkrData->pData->md.smtp.lstRcpt; pRcpt != NULL; pRcpt = pRcpt->pNext) {
+    for (pRcpt = pWrkrData->pData->lstRcpt; pRcpt != NULL; pRcpt = pRcpt->pNext) {
         DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
         CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pszOp, lenOp));
         CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
@@ -209,35 +235,11 @@ finalize_it:
 }
 
 
-/* output the recipient list in rfc2822 format
- */
-static rsRetVal WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp) {
-    toRcpt_t *pRcpt;
-    int iTos;
-    DEFiRet;
-
-    assert(lenOp != 0);
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pszOp, lenOp));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, ": ", sizeof(": ") - 1));
-
-    for (pRcpt = pWrkrData->pData->md.smtp.lstRcpt, iTos = 0; pRcpt != NULL; pRcpt = pRcpt->pNext, iTos++) {
-        DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
-        if (iTos) CHKiRet(Send(pWrkrData->md.smtp.sock, ", ", sizeof(", ") - 1));
-        CHKiRet(Send(pWrkrData->md.smtp.sock, "<", sizeof("<") - 1));
-        CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pRcpt->pszTo, strlen((char *)pRcpt->pszTo)));
-        CHKiRet(Send(pWrkrData->md.smtp.sock, ">", sizeof(">") - 1));
-    }
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
-
-finalize_it:
-    RETiRet;
-}
 /* end helpers for handling the recipient lists */
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
+    pData->mode = OMMailModeSMTP;
     pData->constSubject = NULL;
     pData->bEnableBody = 1;
 ENDcreateInstance
@@ -245,6 +247,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
+    pWrkrData->md.smtp.sock = -1;
 ENDcreateWrkrInstance
 
 
@@ -257,12 +260,12 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->tplName);
-    if (pData->iMode == 0) {
-        free(pData->md.smtp.pszSrv);
-        free(pData->md.smtp.pszSrvPort);
-        free(pData->md.smtp.pszFrom);
-        lstRcptDestruct(pData->md.smtp.lstRcpt);
-    }
+    free(pData->constSubject);
+    free(pData->pszFrom);
+    lstRcptDestruct(pData->lstRcpt);
+    free(pData->md.smtp.pszSrv);
+    free(pData->md.smtp.pszSrvPort);
+    free(pData->md.sendmail.szBinary);
 ENDfreeInstance
 
 
@@ -418,53 +421,6 @@ finalize_it:
 }
 
 
-/* send body text to the server, blocking send
- * The body is special in that we must escape a leading dot inside a line
- */
-static rsRetVal bodySend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len) {
-    DEFiRet;
-    char szBuf[2048];
-    size_t iSrc;
-    size_t iBuf = 0;
-    int bHadCR = 0;
-    int bInStartOfLine = 1;
-
-    assert(pWrkrData != NULL);
-    assert(msg != NULL);
-
-    for (iSrc = 0; iSrc < len; ++iSrc) {
-        if (iBuf >= sizeof(szBuf) - 1) { /* one is reserved for our extra dot */
-            CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
-            iBuf = 0;
-        }
-        szBuf[iBuf++] = msg[iSrc];
-        switch (msg[iSrc]) {
-            case '\r':
-                bHadCR = 1;
-                break;
-            case '\n':
-                if (bHadCR) bInStartOfLine = 1;
-                bHadCR = 0;
-                break;
-            case '.':
-                if (bInStartOfLine) szBuf[iBuf++] = '.'; /* space is always reserved for this! */
-                /*FALLTHROUGH*/
-            default:
-                bInStartOfLine = 0;
-                bHadCR = 0;
-                break;
-        }
-    }
-
-    if (iBuf > 0) { /* incomplete buffer to send (the *usual* case)? */
-        CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
-    }
-
-finalize_it:
-    RETiRet;
-}
-
-
 /* read response line from server
  */
 static rsRetVal readResponseLn(wrkrInstanceData_t *pWrkrData,
@@ -543,6 +499,136 @@ static void mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf) {
              tmCurr.tm_sec);
 }
 
+static rsRetVal writeSMTP(void *ctx, const char *msg, size_t len) {
+    wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)ctx;
+    return Send(pWrkrData->md.smtp.sock, msg, len);
+}
+
+
+static rsRetVal writePipe(void *ctx, const char *msg, size_t len) {
+    DEFiRet;
+    const int fd = *(int *)ctx;
+    size_t offsBuf = 0;
+    ssize_t lenWritten;
+
+    assert(msg != NULL);
+
+    while (offsBuf < len) {
+        lenWritten = write(fd, msg + offsBuf, len - offsBuf);
+        if (lenWritten <= 0) {
+            if (lenWritten == -1 && errno == EINTR) continue;
+            /* write() is not expected to return 0 for a non-empty pipe write. */
+            ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
+        }
+        offsBuf += lenWritten;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal writeBytes(mailWriteFunc_t writeFunc, void *ctx, const char *msg, size_t len) {
+    assert(writeFunc != NULL);
+    assert(msg != NULL);
+    return writeFunc(ctx, msg, len);
+}
+
+
+static rsRetVal writeStr(mailWriteFunc_t writeFunc, void *ctx, const char *msg) {
+    return writeBytes(writeFunc, ctx, msg, strlen(msg));
+}
+
+
+/* output the recipient list in rfc2822 format to a generic sink */
+static rsRetVal writeTos(mailWriteFunc_t writeFunc, void *ctx, const instanceData *pData) {
+    toRcpt_t *pRcpt;
+    int iTos;
+    DEFiRet;
+
+    CHKiRet(writeStr(writeFunc, ctx, "To: "));
+    for (pRcpt = pData->lstRcpt, iTos = 0; pRcpt != NULL; pRcpt = pRcpt->pNext, iTos++) {
+        if (iTos) CHKiRet(writeStr(writeFunc, ctx, ", "));
+        CHKiRet(writeStr(writeFunc, ctx, "<"));
+        CHKiRet(writeStr(writeFunc, ctx, (char *)pRcpt->pszTo));
+        CHKiRet(writeStr(writeFunc, ctx, ">"));
+    }
+    CHKiRet(writeStr(writeFunc, ctx, "\r\n"));
+
+finalize_it:
+    RETiRet;
+}
+
+
+/* send body text to a generic sink. SMTP requires escaping a leading dot inside a line. */
+static rsRetVal bodyWrite(mailWriteFunc_t writeFunc, void *ctx, char *msg, size_t len, sbool bEscapeDot) {
+    DEFiRet;
+    char szBuf[2048];
+    size_t iSrc;
+    size_t iBuf = 0;
+    int bHadCR = 0;
+    int bInStartOfLine = 1;
+
+    assert(writeFunc != NULL);
+    assert(msg != NULL);
+
+    for (iSrc = 0; iSrc < len; ++iSrc) {
+        const size_t needed = (bEscapeDot && bInStartOfLine && msg[iSrc] == '.') ? 2 : 1;
+        if (iBuf + needed > sizeof(szBuf)) {
+            CHKiRet(writeBytes(writeFunc, ctx, szBuf, iBuf));
+            iBuf = 0;
+        }
+        if (bEscapeDot && bInStartOfLine && msg[iSrc] == '.') szBuf[iBuf++] = '.';
+        szBuf[iBuf++] = msg[iSrc];
+        switch (msg[iSrc]) {
+            case '\r':
+                bHadCR = 1;
+                break;
+            case '\n':
+                if (bHadCR) bInStartOfLine = 1;
+                bHadCR = 0;
+                break;
+            default:
+                bInStartOfLine = 0;
+                bHadCR = 0;
+                break;
+        }
+    }
+
+    if (iBuf > 0) CHKiRet(writeBytes(writeFunc, ctx, szBuf, iBuf));
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal writeMailMessage(
+    const instanceData *pData, mailWriteFunc_t writeFunc, void *ctx, uchar *body, uchar *subject, sbool bEscapeDot) {
+    DEFiRet;
+    uchar szDateBuf[64];
+
+    mkSMTPTimestamp(szDateBuf, sizeof(szDateBuf));
+    CHKiRet(writeStr(writeFunc, ctx, (char *)szDateBuf));
+
+    CHKiRet(writeStr(writeFunc, ctx, "From: <"));
+    CHKiRet(writeStr(writeFunc, ctx, (char *)pData->pszFrom));
+    CHKiRet(writeStr(writeFunc, ctx, ">\r\n"));
+
+    CHKiRet(writeTos(writeFunc, ctx, pData));
+
+    CHKiRet(writeStr(writeFunc, ctx, "Subject: "));
+    CHKiRet(writeStr(writeFunc, ctx, (char *)subject));
+    CHKiRet(writeStr(writeFunc, ctx, "\r\n"));
+
+    CHKiRet(writeStr(writeFunc, ctx, "X-Mailer: rsyslog-ommail\r\n"));
+    CHKiRet(writeStr(writeFunc, ctx, "\r\n"));
+
+    if (pData->bEnableBody) CHKiRet(bodyWrite(writeFunc, ctx, (char *)body, strlen((char *)body), bEscapeDot));
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* send a message via SMTP
  * rgerhards, 2008-04-04
@@ -551,7 +637,6 @@ static rsRetVal sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subj
     DEFiRet;
     int iState; /* SMTP state */
     instanceData *pData;
-    uchar szDateBuf[64];
 
     pData = pWrkrData->pData;
 
@@ -564,7 +649,7 @@ static rsRetVal sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subj
     CHKiRet(readResponse(pWrkrData, &iState, 250));
 
     CHKiRet(Send(pWrkrData->md.smtp.sock, "MAIL FROM:<", sizeof("MAIL FROM:<") - 1));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pData->md.smtp.pszFrom, strlen((char *)pData->md.smtp.pszFrom)));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pData->pszFrom, strlen((char *)pData->pszFrom)));
     CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
     CHKiRet(readResponse(pWrkrData, &iState, 250));
 
@@ -573,27 +658,7 @@ static rsRetVal sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subj
     CHKiRet(Send(pWrkrData->md.smtp.sock, "DATA\r\n", sizeof("DATA\r\n") - 1));
     CHKiRet(readResponse(pWrkrData, &iState, 354));
 
-    /* now come the data part */
-    /* header */
-    mkSMTPTimestamp(szDateBuf, sizeof(szDateBuf));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)szDateBuf, strlen((char *)szDateBuf)));
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "From: <", sizeof("From: <") - 1));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)pData->md.smtp.pszFrom, strlen((char *)pData->md.smtp.pszFrom)));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-
-    CHKiRet(WriteTos(pWrkrData, (uchar *)"To", sizeof("To") - 1));
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "Subject: ", sizeof("Subject: ") - 1));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, (char *)subject, strlen((char *)subject)));
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "X-Mailer: rsyslog-ommail\r\n", sizeof("x-mailer: rsyslog-ommail\r\n") - 1));
-
-    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1)); /* indicate end of header */
-
-    /* body */
-    if (pData->bEnableBody) CHKiRet(bodySend(pWrkrData, (char *)body, strlen((char *)body)));
+    CHKiRet(writeMailMessage(pData, writeSMTP, pWrkrData, body, subject, 1));
 
     /* end of data, back to envelope transaction */
     CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n.\r\n", sizeof("\r\n.\r\n") - 1));
@@ -604,6 +669,359 @@ static rsRetVal sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subj
 
     /* we are finished, a new connection is created for each request, so let's close it now */
     CHKiRet(serverDisconnect(pWrkrData));
+
+finalize_it:
+    RETiRet;
+}
+
+static int countRcpts(const instanceData *pData) {
+    int nRcpt = 0;
+    toRcpt_t *pRcpt;
+
+    for (pRcpt = pData->lstRcpt; pRcpt != NULL; pRcpt = pRcpt->pNext) ++nRcpt;
+    return nRcpt;
+}
+
+
+static rsRetVal buildSendmailArgv(const instanceData *pData, char ***argv) {
+    DEFiRet;
+    char **aParams = NULL;
+    toRcpt_t *pRcpt;
+    int i = 0;
+
+    CHKmalloc(aParams = calloc(countRcpts(pData) + 6, sizeof(char *)));
+    aParams[i++] = (char *)pData->md.sendmail.szBinary;
+    aParams[i++] = (char *)"-i";
+    aParams[i++] = (char *)"-f";
+    aParams[i++] = (char *)pData->pszFrom;
+    aParams[i++] = (char *)"--";
+    for (pRcpt = pData->lstRcpt; pRcpt != NULL; pRcpt = pRcpt->pNext) {
+        aParams[i++] = (char *)pRcpt->pszTo;
+    }
+    aParams[i] = NULL;
+    *argv = aParams;
+
+finalize_it:
+    if (iRet != RS_RET_OK) free(aParams);
+    RETiRet;
+}
+
+
+static void setCloexecIfPossible(int fd) {
+    int flags;
+
+    if (fd == -1) return;
+    flags = fcntl(fd, F_GETFD);
+    if (flags != -1) {
+        fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+    }
+}
+
+
+static int closeOpenFilesViaProc(const char *procdir, int fdKeep) {
+    DIR *dir;
+    struct dirent *entry;
+    int dirFd;
+
+    dir = opendir(procdir);
+    if (dir == NULL) return 1;
+
+    dirFd = dirfd(dir);
+    while ((entry = readdir(dir)) != NULL) {
+        char *end;
+        long fd;
+
+        errno = 0;
+        fd = strtol(entry->d_name, &end, 10);
+        if (errno == 0 && end != entry->d_name && *end == '\0' && fd > STDERR_FILENO && fd != dirFd && fd != fdKeep) {
+            close((int)fd);
+        }
+    }
+
+    closedir(dir);
+    return 0;
+}
+
+
+static void closeUnneededExecFds(int fdKeep) {
+    if (closeOpenFilesViaProc("/proc/self/fd", fdKeep) == 0) return;
+    if (closeOpenFilesViaProc("/proc/fd", fdKeep) == 0) return;
+#if defined(HAVE_CLOSE_RANGE) && defined(CLOSE_RANGE_CLOEXEC)
+    close_range(STDERR_FILENO + 1, ~0U, CLOSE_RANGE_CLOEXEC);
+#else
+    (void)fdKeep;
+#endif
+}
+
+
+static void writeExecFailure(int fdExecErr, int err) {
+    size_t offs = 0;
+    ssize_t nWritten;
+    const char *buf = (const char *)&err;
+
+    while (offs < sizeof(err)) {
+        nWritten = write(fdExecErr, buf + offs, sizeof(err) - offs);
+        if (nWritten <= 0) {
+            if (nWritten == -1 && errno == EINTR) continue;
+            break;
+        }
+        offs += nWritten;
+    }
+}
+
+
+static __attribute__((noreturn)) void execSendmailBinary(int fdStdin, int fdExecErr, char **argv) {
+    int fdDevNull = -1;
+    int sigNum;
+    struct sigaction sigAct;
+    sigset_t sigSet;
+    int err;
+
+    if (dup2(fdStdin, STDIN_FILENO) == -1) goto failed;
+
+    fdDevNull = open("/dev/null", O_WRONLY | O_CLOEXEC);
+    if (fdDevNull == -1) goto failed;
+    if (dup2(fdDevNull, STDOUT_FILENO) == -1) goto failed;
+    if (dup2(fdDevNull, STDERR_FILENO) == -1) goto failed;
+
+    closeUnneededExecFds(fdExecErr);
+
+    memset(&sigAct, 0, sizeof(sigAct));
+    sigemptyset(&sigAct.sa_mask);
+    sigAct.sa_handler = SIG_DFL;
+    for (sigNum = 1; sigNum < NSIG; ++sigNum) sigaction(sigNum, &sigAct, NULL);
+
+    sigAct.sa_handler = SIG_IGN;
+    sigaction(SIGINT, &sigAct, NULL);
+    sigemptyset(&sigSet);
+    sigprocmask(SIG_SETMASK, &sigSet, NULL);
+    alarm(0);
+
+    execv(argv[0], argv);
+
+failed:
+    err = errno;
+    writeExecFailure(fdExecErr, err);
+    _exit(127);
+}
+
+
+static void sendmailSupervisor(int fdStdin, int fdStatus, char **argv) __attribute__((noreturn));
+static void writeSupervisorStatus(int fdStatus, sendmailStatus_t status) {
+    size_t offs = 0;
+    ssize_t nWritten;
+    const char *buf = (const char *)&status;
+
+    while (offs < sizeof(status)) {
+        nWritten = write(fdStatus, buf + offs, sizeof(status) - offs);
+        if (nWritten <= 0) {
+            if (nWritten == -1 && errno == EINTR) continue;
+            /* write() is not expected to return 0 for this status pipe. */
+            break;
+        }
+        offs += nWritten;
+    }
+}
+
+
+static int readExecErrno(int fd) {
+    int err = 0;
+    size_t offs = 0;
+    ssize_t nRead;
+    char *buf = (char *)&err;
+
+    while (offs < sizeof(err)) {
+        nRead = read(fd, buf + offs, sizeof(err) - offs);
+        if (nRead == -1) {
+            if (errno == EINTR) continue;
+            return errno;
+        }
+        if (nRead == 0) return 0;
+        offs += nRead;
+    }
+    return err;
+}
+
+
+static void sendmailSupervisor(int fdStdin, int fdStatus, char **argv) {
+    sendmailStatus_t status = {-1, 0};
+    int pipeExecErr[2] = {-1, -1};
+    pid_t cpid;
+    pid_t ret;
+
+    if (pipe(pipeExecErr) == -1) {
+        writeSupervisorStatus(fdStatus, status);
+        _exit(1);
+    }
+    setCloexecIfPossible(pipeExecErr[0]);
+    setCloexecIfPossible(pipeExecErr[1]);
+
+    cpid = fork();
+    if (cpid == -1) {
+        writeSupervisorStatus(fdStatus, status);
+        _exit(1);
+    }
+
+    if (cpid == 0) {
+        close(pipeExecErr[0]);
+        execSendmailBinary(fdStdin, pipeExecErr[1], argv);
+    }
+
+    close(pipeExecErr[1]);
+    close(fdStdin);
+    status.execErrno = readExecErrno(pipeExecErr[0]);
+    close(pipeExecErr[0]);
+    do {
+        ret = waitpid(cpid, &status.waitStatus, 0);
+    } while (ret == -1 && errno == EINTR);
+
+    if (ret == -1) status.waitStatus = -1;
+    writeSupervisorStatus(fdStatus, status);
+    close(fdStatus);
+    _exit(0);
+}
+
+
+static rsRetVal readSendmailStatus(int fd, sendmailStatus_t *status) {
+    DEFiRet;
+    size_t offs = 0;
+    ssize_t nRead;
+    char *buf = (char *)status;
+
+    while (offs < sizeof(*status)) {
+        nRead = read(fd, buf + offs, sizeof(*status) - offs);
+        if (nRead == -1) {
+            if (errno == EINTR) continue;
+            ABORT_FINALIZE(RS_RET_READ_ERR);
+        }
+        if (nRead == 0) ABORT_FINALIZE(RS_RET_READ_ERR);
+        offs += nRead;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal checkSendmailStatus(const instanceData *pData, const sendmailStatus_t *status) {
+    DEFiRet;
+
+    if (status->execErrno != 0) {
+        char errStr[1024];
+        rs_strerror_r(status->execErrno, errStr, sizeof(errStr));
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommail: failed to execute sendmail binary '%s': %s",
+               pData->md.sendmail.szBinary, errStr);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
+    if (status->waitStatus == -1) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommail: could not obtain status from sendmail binary '%s'",
+               pData->md.sendmail.szBinary);
+        ABORT_FINALIZE(RS_RET_SYS_ERR);
+    }
+
+    if (WIFEXITED(status->waitStatus)) {
+        if (WEXITSTATUS(status->waitStatus) != 0) {
+            LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommail: sendmail binary '%s' exited with status %d",
+                   pData->md.sendmail.szBinary, WEXITSTATUS(status->waitStatus));
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+    } else if (WIFSIGNALED(status->waitStatus)) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommail: sendmail binary '%s' terminated by signal %d",
+               pData->md.sendmail.szBinary, WTERMSIG(status->waitStatus));
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    } else {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommail: sendmail binary '%s' ended unexpectedly",
+               pData->md.sendmail.szBinary);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal sendSendmail(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject) {
+    DEFiRet;
+    instanceData *pData = pWrkrData->pData;
+    int pipeStdin[2] = {-1, -1};
+    int pipeStatus[2] = {-1, -1};
+    pid_t cpid = -1;
+    char **argv = NULL;
+    sendmailStatus_t status = {-1, 0};
+
+    if (access((char *)pData->md.sendmail.szBinary, X_OK) != 0) {
+        LogError(errno, RS_RET_NO_FILE_ACCESS, "ommail: sendmail.binary '%s' is not executable",
+                 pData->md.sendmail.szBinary);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
+    CHKiRet(buildSendmailArgv(pData, &argv));
+
+    if (pipe(pipeStdin) == -1) ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+    if (pipe(pipeStatus) == -1) ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+    setCloexecIfPossible(pipeStdin[0]);
+    setCloexecIfPossible(pipeStdin[1]);
+    setCloexecIfPossible(pipeStatus[0]);
+    setCloexecIfPossible(pipeStatus[1]);
+
+    cpid = fork();
+    if (cpid == -1) ABORT_FINALIZE(RS_RET_ERR_FORK);
+
+    if (cpid == 0) {
+        close(pipeStdin[1]);
+        close(pipeStatus[0]);
+        sendmailSupervisor(pipeStdin[0], pipeStatus[1], argv);
+    }
+
+    close(pipeStdin[0]);
+    pipeStdin[0] = -1;
+    close(pipeStatus[1]);
+    pipeStatus[1] = -1;
+
+    iRet = writeMailMessage(pData, writePipe, &pipeStdin[1], body, subject, 0);
+    if (iRet != RS_RET_OK) {
+        LogError(errno, RS_RET_ERR_WRITE_PIPE, "ommail: error writing message to sendmail binary '%s'",
+                 pData->md.sendmail.szBinary);
+        close(pipeStdin[1]);
+        pipeStdin[1] = -1;
+        readSendmailStatus(pipeStatus[0], &status);
+        checkSendmailStatus(pData, &status);
+        ABORT_FINALIZE(iRet);
+    }
+
+    close(pipeStdin[1]);
+    pipeStdin[1] = -1;
+
+    CHKiRet(readSendmailStatus(pipeStatus[0], &status));
+    close(pipeStatus[0]);
+    pipeStatus[0] = -1;
+    CHKiRet(checkSendmailStatus(pData, &status));
+
+finalize_it:
+    if (pipeStdin[0] != -1) close(pipeStdin[0]);
+    if (pipeStdin[1] != -1) close(pipeStdin[1]);
+    if (pipeStatus[0] != -1) close(pipeStatus[0]);
+    if (pipeStatus[1] != -1) close(pipeStatus[1]);
+    if (cpid != -1) {
+        int supervisorStatus;
+        while (waitpid(cpid, &supervisorStatus, 0) == -1 && errno == EINTR) {
+            ;
+        }
+    }
+    free(argv);
+    RETiRet;
+}
+
+
+static rsRetVal checkSendmailBinary(const instanceData *pData) {
+    DEFiRet;
+
+    if (access((char *)pData->md.sendmail.szBinary, X_OK) != 0) {
+        LogError(errno, RS_RET_NO_FILE_ACCESS, "ommail: sendmail.binary '%s' is not executable",
+                 pData->md.sendmail.szBinary);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
 
 finalize_it:
     RETiRet;
@@ -623,8 +1041,12 @@ finalize_it:
  */
 BEGINtryResume
     CODESTARTtryResume;
-    CHKiRet(serverConnect(pWrkrData));
-    CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
+    if (pWrkrData->pData->mode == OMMailModeSMTP) {
+        CHKiRet(serverConnect(pWrkrData));
+        CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
+    } else {
+        CHKiRet(checkSendmailBinary(pWrkrData->pData));
+    }
 finalize_it:
     if (iRet == RS_RET_IO_ERROR) iRet = RS_RET_SUSPENDED;
 ENDtryResume
@@ -643,7 +1065,11 @@ BEGINdoAction
     else
         subject = (uchar *)"message from rsyslog";
 
-    iRet = sendSMTP(pWrkrData, ppString[0], subject);
+    if (pData->mode == OMMailModeSMTP)
+        iRet = sendSMTP(pWrkrData, ppString[0], subject);
+    else
+        iRet = sendSendmail(pWrkrData, ppString[0], subject);
+
     if (iRet != RS_RET_OK) {
         DBGPRINTF("error sending mail, suspending\n");
         iRet = RS_RET_SUSPENDED;
@@ -656,10 +1082,30 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->constSubject = NULL;
 }
 
+static rsRetVal setMode(instanceData *pData, struct cnfparamvals *pval) {
+    DEFiRet;
+    uchar *mode = NULL;
+
+    CHKmalloc(mode = (uchar *)es_str2cstr(pval->val.d.estr, NULL));
+    if (!strcmp((char *)mode, "smtp")) {
+        pData->mode = OMMailModeSMTP;
+    } else if (!strcmp((char *)mode, "sendmail")) {
+        pData->mode = OMMailModeSendmail;
+    } else {
+        parser_errmsg("ommail: invalid mode '%s'; expected 'smtp' or 'sendmail'", mode);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    free(mode);
+    RETiRet;
+}
+
 
 BEGINnewActInst
     struct cnfparamvals *pvals;
     uchar *tplSubject = NULL;
+    uchar *rcpt = NULL;
     int i, j;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -676,10 +1122,13 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             CHKmalloc(pData->md.smtp.pszSrvPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mailfrom")) {
-            CHKmalloc(pData->md.smtp.pszFrom = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKmalloc(pData->pszFrom = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mailto")) {
             for (j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                addRcpt(&(pData->md.smtp.lstRcpt), (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+                CHKmalloc(rcpt = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+                iRet = addRcpt(&(pData->lstRcpt), rcpt);
+                rcpt = NULL;
+                CHKiRet(iRet);
             }
         } else if (!strcmp(actpblk.descr[i].name, "subject.template")) {
             if (pData->constSubject != NULL) {
@@ -701,12 +1150,32 @@ BEGINnewActInst
             pData->bEnableBody = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
             CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "mode")) {
+            CHKiRet(setMode(pData, &pvals[i]));
+        } else if (!strcmp(actpblk.descr[i].name, "sendmail.binary")) {
+            CHKmalloc(pData->md.sendmail.szBinary = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "ommail: program error, non-handled "
                 "param '%s'\n",
                 actpblk.descr[i].name);
         }
+    }
+
+    if (pData->mode == OMMailModeSMTP) {
+        if (pData->md.smtp.pszSrv == NULL) {
+            parser_errmsg("ommail: parameter 'server' required for mode='smtp'");
+            ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+        }
+        if (pData->md.smtp.pszSrvPort == NULL) {
+            parser_errmsg("ommail: parameter 'port' required for mode='smtp'");
+            ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+        }
+    } else {
+        if (pData->md.sendmail.szBinary == NULL) {
+            CHKmalloc(pData->md.sendmail.szBinary = (uchar *)strdup(DEFAULT_SENDMAIL_BINARY));
+        }
+        CHKiRet(checkSendmailBinary(pData));
     }
 
     if (tplSubject == NULL) {
@@ -724,6 +1193,7 @@ BEGINnewActInst
         CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup((char *)pData->tplName), OMSR_NO_RQD_TPL_OPTS));
     }
     CODE_STD_FINALIZERnewActInst;
+    free(rcpt);
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -750,8 +1220,8 @@ BEGINparseSelectorAct
         ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
     }
 
-    pData->md.smtp.pszFrom = (uchar *)strdup((char *)cs.pszFrom);
-    pData->md.smtp.lstRcpt = cs.lstRcpt; /* we "hand over" this memory */
+    CHKmalloc(pData->pszFrom = (uchar *)strdup((char *)cs.pszFrom));
+    pData->lstRcpt = cs.lstRcpt; /* we "hand over" this memory */
     cs.lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
 
     if (cs.pszSubject == NULL) {
@@ -761,8 +1231,8 @@ BEGINparseSelectorAct
         CODE_STD_STRING_REQUESTparseSelectorAct(2) pData->bHaveSubject = 1;
         CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar *)strdup((char *)cs.pszSubject), OMSR_NO_RQD_TPL_OPTS));
     }
-    if (cs.pszSrv != NULL) pData->md.smtp.pszSrv = (uchar *)strdup((char *)cs.pszSrv);
-    if (cs.pszSrvPort != NULL) pData->md.smtp.pszSrvPort = (uchar *)strdup((char *)cs.pszSrvPort);
+    if (cs.pszSrv != NULL) CHKmalloc(pData->md.smtp.pszSrv = (uchar *)strdup((char *)cs.pszSrv));
+    if (cs.pszSrvPort != NULL) CHKmalloc(pData->md.smtp.pszSrvPort = (uchar *)strdup((char *)cs.pszSrvPort));
     pData->bEnableBody = cs.bEnableBody;
 
     /* process template */
