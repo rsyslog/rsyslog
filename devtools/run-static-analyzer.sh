@@ -7,7 +7,7 @@ echo "CI_MAKE_OPT: ${CI_MAKE_OPT:--j2}"
 
 if [ -n "$SCAN_BUILD_REPORT_DIR" ]
 then
-  export CURR_REPORT=$(date +%y-%m-%d_%H-%M-%S)
+  export CURR_REPORT=$(date +%Y-%m-%d_%H-%M-%S)
   export REPORT_DIR="$SCAN_BUILD_REPORT_DIR/$CURR_REPORT"
   export REPORT_OPT="-o $REPORT_DIR"
 fi
@@ -25,7 +25,7 @@ else
   CONFIGURE_CACHE_OPTS=
 fi
 
-export CC=$SCAN_BUILD_CC
+export CC="$SCAN_BUILD_CC"
 ./configure $CONFIGURE_CACHE_OPTS $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA
 
 set +e
