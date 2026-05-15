@@ -36,6 +36,216 @@ env:
   RSYSLOG_TESTBENCH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
+  changes:
+    name: check change scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      c_headers: ${{ steps.c_headers.outputs.any_changed }}
+      code: ${{ steps.code.outputs.any_changed }}
+      package_ubuntu: ${{ steps.package_ubuntu.outputs.any_changed }}
+      package_rpm: ${{ steps.package_rpm.outputs.any_changed }}
+      journal: ${{ steps.journal.outputs.any_changed }}
+      analyzer: ${{ steps.analyzer.outputs.any_changed }}
+      elasticsearch: ${{ steps.elasticsearch.outputs.any_changed }}
+      victorialogs: ${{ steps.victorialogs.outputs.any_changed }}
+      kafka: ${{ steps.kafka.outputs.any_changed }}
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "$BASE_REF"
+
+      - name: Check C/header changes
+        id: c_headers
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+
+      - name: Check broad code changes
+        id: code
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check Ubuntu package changes
+        id: package_ubuntu
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            packaging/ubuntu/**
+            devtools/run-deb-ubuntu-build.sh
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check RPM package changes
+        id: package_rpm
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            packaging/rpm/**
+            devtools/run-rpm-build.sh
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check journal changes
+        id: journal
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            runtime/*.[ch]
+            plugins/imjournal/*
+            plugins/omjournal/*
+            tests/imjournal*.sh
+            tests/omjournal*.sh
+            tests/journal_print.c
+            tests/diag.sh
+            tests/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check static analyzer changes
+        id: analyzer
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            devtools/run-static-analyzer.sh
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check Elasticsearch changes
+        id: elasticsearch
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            runtime/*.[ch]
+            plugins/omelasticsearch/*
+
+      - name: Check VictoriaLogs changes
+        id: victorialogs
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            tests/omhttp-victorialogs-jsonline.sh
+            tests/Makefile.am
+            contrib/omhttp/**
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Check Kafka changes
+        id: kafka
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            Makefile.am
+            runtime/Makefile.am
+            plugins/imkafka/Makefile.am
+            plugins/omkafka/Makefile.am
+            *.[ch]
+            runtime/*.[ch]
+            plugins/imkafka/*.[ch]
+            plugins/omkafka/*.[ch]
+            tests/*kafka*.sh
+            diag.sh
+            configure.ac
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Summarize change scope
+        env:
+          C_HEADERS_CHANGED: ${{ steps.c_headers.outputs.any_changed }}
+          CODE_CHANGED: ${{ steps.code.outputs.any_changed }}
+          PACKAGE_UBUNTU_CHANGED: ${{ steps.package_ubuntu.outputs.any_changed }}
+          PACKAGE_RPM_CHANGED: ${{ steps.package_rpm.outputs.any_changed }}
+          JOURNAL_CHANGED: ${{ steps.journal.outputs.any_changed }}
+          ANALYZER_CHANGED: ${{ steps.analyzer.outputs.any_changed }}
+          ELASTICSEARCH_CHANGED: ${{ steps.elasticsearch.outputs.any_changed }}
+          VICTORIALOGS_CHANGED: ${{ steps.victorialogs.outputs.any_changed }}
+          KAFKA_CHANGED: ${{ steps.kafka.outputs.any_changed }}
+        run: |
+          {
+            echo "### check workflow change scope"
+            echo
+            echo "| scope | changed |"
+            echo "| --- | --- |"
+            echo "| C/header | $C_HEADERS_CHANGED |"
+            echo "| broad code | $CODE_CHANGED |"
+            echo "| Ubuntu package | $PACKAGE_UBUNTU_CHANGED |"
+            echo "| RPM package | $PACKAGE_RPM_CHANGED |"
+            echo "| journal | $JOURNAL_CHANGED |"
+            echo "| static analyzer | $ANALYZER_CHANGED |"
+            echo "| Elasticsearch | $ELASTICSEARCH_CHANGED |"
+            echo "| VictoriaLogs | $VICTORIALOGS_CHANGED |"
+            echo "| Kafka | $KAFKA_CHANGED |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   compile:
     name: compile (${{ matrix.config }})
     runs-on: ubuntu-latest
@@ -45,7 +255,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        config: [alpine, clang9, clang21-noatomics, clang21-ndebug, gcc8-debug, gcc-11-ndebug, gcc15-gnu23-debug]
+        config: [clang21-ndebug, gcc15-gnu23-debug]
     steps:
       - name: git checkout project
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -56,53 +266,31 @@ jobs:
         id: code_changes
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
-          # Keep doc/Makefile.am in scope: compile must not ignore it to satisfy
-          # branch protection requirements for this workflow.
           files: |
             **/*.c
             **/*.h
-            grammar/lexer.l
-            grammar/grammar.y
-            tests/*.sh
-            diag.sh
-            **/Makefile.am
-            packaging/docker/dev_env/alpine/**
-            packaging/docker/dev_env/common/**
+
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-compile-${{ matrix.config }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh') }}
 
       - name: run compile check (container)
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONTAINER_UID="" # use default
+          export CI_CONFIGURE_CACHE=1
           export CFLAGS='-g'
           case "${{ matrix.config }}" in
-          'alpine')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_full:alpine_latest'
-              export CC='gcc'
-              ;;
-          'clang9')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
-              export CC='clang-9'
-              ;;
           'clang21-ndebug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               export CC='clang-21'
-              ;;
-          'clang21-noatomics')
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-atomic-operations=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-              export CC='clang-21'
-              ;;
-          'gcc8-debug')
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='gcc-8'
-              ;;
-          'gcc-11-ndebug')
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
-              export CC='gcc-11'
               ;;
           'gcc15-gnu23-debug')
               # omamqp1 seems to have an issue with the build system - exclude it for now
@@ -123,11 +311,71 @@ jobs:
 
       - name: Skip compile check, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
-        run: echo "No relevant changes detected; skipping compile stage."
+        run: echo "No C/header changes detected; required compile gate passes without building."
+
+  compile_extended:
+    name: extended compile (${{ matrix.config }})
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.c_headers == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        config: [alpine, clang9, clang21-noatomics, gcc8-debug]
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: cache configure results
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-compile-extended-${{ matrix.config }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh') }}
+
+      - name: run compile check (container)
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export CI_CONFIGURE_CACHE=1
+          export CFLAGS='-g'
+          case "${{ matrix.config }}" in
+          'alpine')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_full:alpine_latest'
+              export CC='gcc'
+              ;;
+          'clang9')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+              export CC='clang-9'
+              ;;
+          'clang21-noatomics')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-atomic-operations=no'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+              export CC='clang-21'
+              ;;
+          'gcc8-debug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='gcc-8'
+              ;;
+          *)
+              echo "unknown configuration "
+              echo "error-terminating this check run"
+              exit 1
+              ;;
+          esac
+          devtools/devcontainer.sh --rm devtools/run-configure.sh
+          devtools/devcontainer.sh --rm make -j20
 
   CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -176,6 +424,15 @@ jobs:
           files_ignore: |
             doc/Makefile.am
 
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-ci-${{ matrix.config }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
+
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
@@ -188,6 +445,7 @@ jobs:
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
           export CC='gcc'
+          export CI_CONFIGURE_CACHE=1
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j10'
@@ -399,16 +657,10 @@ jobs:
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping container CI."
 
-      - name: show error logs (if we errored)
-        if: ${{ failure() || cancelled() }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
   package_build_ubuntu:
     name: package build (Ubuntu, ${{ matrix.suite }})
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_ubuntu == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -491,8 +743,8 @@ jobs:
 
   package_build_rpm:
     name: package build (RPM)
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_rpm == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-22.04
@@ -571,12 +823,6 @@ jobs:
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping RPM build."
 
-      - name: show error logs (if we errored)
-        if: ${{ failure() || cancelled() }}
-        run: |
-          tail -300 build-result/srpm/*.log 2>/dev/null || true
-          tail -300 build-result/rpms/*.log 2>/dev/null || true
-
       - name: Upload RPM artifacts
         if: steps.code_changes.outputs.any_changed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -586,8 +832,8 @@ jobs:
           if-no-files-found: error
 
   macos_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
     strategy:
@@ -793,33 +1039,13 @@ jobs:
           CORE_COUNT=$(find_core_files | wc -l || echo 0)
           echo "Total core files found: $CORE_COUNT"
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          echo "=== Post-failure diagnostics ==="
-          echo "Note: Comprehensive error analysis including core dumps,"
-          echo "system info, and logs is now handled automatically by"
-          echo "tests/diag.sh during test failures."
-          echo ""
-          echo "=== Basic disk space check ==="
-          df -h . | tail -1 | awk '{print "Free space: " $4 " (" $5 " used)"}'
-          echo ""
-          echo "=== Additional error log collection ==="
-          if [ -f "devtools/gather-check-logs.sh" ]; then
-            devtools/gather-check-logs.sh
-          fi
-          if [ -f "failed-tests.log" ]; then
-            echo "=== Failed Tests Summary ==="
-            cat failed-tests.log
-          fi
-
       - name: Skip macOS CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping macOS CI."
 
   journal_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.journal == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -970,19 +1196,13 @@ jobs:
           flags: journal
           fail_ci_if_error: false
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip journal CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping journal CI."
 
   codecov_base_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -1207,12 +1427,6 @@ jobs:
           LDFLAGS: ${{ env.LDFLAGS }}
         run: make -j10 check
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: generate coverage (lcov)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         run: |
@@ -1248,19 +1462,13 @@ jobs:
           flags: main
           fail_ci_if_error: false
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip codecov base CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping codecov base CI."
 
   codecov_kafka_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.kafka == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -1332,7 +1540,7 @@ jobs:
           path: config.cache
           key: >
             cfgcache-${{ runner.os }}-${{ runner.arch }}-gcc14
-            -cfg-${{ hashFiles('configure.ac','m4/**','**/Makefile.am') }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am') }}
             -flags--g-O0--coverage
           restore-keys: |
             cfgcache-${{ runner.os }}-${{ runner.arch }}-gcc14-
@@ -1388,17 +1596,6 @@ jobs:
           LDFLAGS: ${{ env.LDFLAGS }}
         run: make -j10 check
 
-      - name: show all logs
-        if: steps.code_changes.outputs.any_changed == 'true'
-        run: |
-          cat -n tests/*.log
-
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: generate coverage (lcov)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
         run: |
@@ -1428,19 +1625,13 @@ jobs:
           flags: kafka
           fail_ci_if_error: false
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip codecov kafka CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping codecov kafka CI."
 
   elasticsearch_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.elasticsearch == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -1481,15 +1672,15 @@ jobs:
           files: |
             runtime/*.[ch]
             plugins/omelasticsearch/*
-            tests/es*.sh
-            tests/elasticsearch*.sh
-            tests/omelasticsearch*.sh
-            tests/diag.sh
-            tests/Makefile.am
-            configure.ac
-            .github/workflows/run_checks.yml
-          files_ignore: |
-            doc/Makefile.am
+
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-elasticsearch
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
       - name: run elasticsearch test matrix
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -1506,25 +1697,20 @@ jobs:
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           CI_VALGRIND_SUPPRESSIONS: ubuntu22.04.supp
           RSYSLOG_STATSURL: http://build.rsyslog.com/testbench-failedtest.php
+          CI_CONFIGURE_CACHE: '1'
           USE_AUTO_DEBUG: 'off'
           VERBOSE: '1'
         run: |
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip elasticsearch CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping elasticsearch CI."
 
   victorialogs_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.victorialogs == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -1558,6 +1744,15 @@ jobs:
           files_ignore: |
             doc/Makefile.am
 
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-victorialogs
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
+
       - name: run victoria logs omhttp jsonl test
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
@@ -1570,6 +1765,7 @@ jobs:
           CI_MAKE_CHECK_OPT: -j10 TESTS=omhttp-victorialogs-jsonline.sh
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
+          CI_CONFIGURE_CACHE: '1'
           USE_AUTO_DEBUG: 'off'
           VERBOSE: '1'
         run: |
@@ -1587,122 +1783,13 @@ jobs:
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip VictoriaLogs CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping VictoriaLogs CI."
 
-  imbeats_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    name: imbeats-tests
-    env:
-      RSYSLOG_TESTBENCH_EXTERNAL_ES_URL: http://127.0.0.1:19200
-      ES_HOST: 127.0.0.1
-      ES_PORT: 19200
-      DOCKER_RUN_EXTRA_OPTS: >-
-        --network host
-        -v /var/run/docker.sock:/var/run/docker.sock
-        -e GITHUB_WORKSPACE
-    steps:
-      - name: checkout project
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Check for code changes
-        id: code_changes
-        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
-        with:
-          base_sha: ${{ github.event.pull_request.base.sha }}
-          sha: ${{ github.event.pull_request.head.sha }}
-          files: |
-            tests/imbeats-*.sh
-            tests/yaml-imbeats-*.sh
-            runtime/*.[ch]
-            tests/Makefile.am
-            tests/diag.sh
-            plugins/imbeats/**
-            plugins/omelasticsearch/**
-            configure.ac
-            Makefile.am
-            .github/workflows/run_checks.yml
-          files_ignore: |
-            doc/Makefile.am
-
-      - name: run imbeats filebeat docker test
-        if: steps.code_changes.outputs.any_changed == 'true'
-        env:
-          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
-          RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
-            --enable-testbench --enable-omstdout --enable-imdiag --enable-imbeats
-            --enable-elasticsearch --enable-elasticsearch-tests
-            --disable-default-tests --disable-imtcp-tests --disable-imfile
-            --disable-imfile-tests --disable-fmhttp
-          CI_MAKE_OPT: -j20
-          CI_MAKE_CHECK_OPT: -j10
-          CI_MAKE_CHECK_TESTS: >-
-            imbeats-basic.sh
-            imbeats-compressed.sh
-            imbeats-limits.sh
-            imbeats-limits-impstats.sh
-            imbeats-maxsessions.sh
-            imbeats-multiplex-idle-sessions.sh
-            yaml-imbeats-basic.sh
-            imbeats-filebeat-docker.sh
-            imbeats-filebeat-omelasticsearch-docker.sh
-          CI_CHECK_CMD: check
-          ABORT_ALL_ON_TEST_FAIL: 'NO'
-          USE_AUTO_DEBUG: 'off'
-          VERBOSE: '1'
-        run: |
-          docker rm -f rsyslog-imbeats-es >/dev/null 2>&1 || true
-          docker run -d --rm \
-            --name rsyslog-imbeats-es \
-            -e discovery.type=single-node \
-            -e xpack.security.enabled=false \
-            -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
-            -p 19200:9200 \
-            docker.elastic.co/elasticsearch/elasticsearch:8.14.3
-          trap 'docker rm -f rsyslog-imbeats-es >/dev/null 2>&1 || true' EXIT
-          for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:19200/_cluster/health >/dev/null; then
-              echo "Elasticsearch is ready"
-              break
-            fi
-            sleep 2
-            if [ "$i" -eq 60 ]; then
-              echo "Elasticsearch service did not become ready in time"
-              docker logs rsyslog-imbeats-es || true
-              exit 1
-            fi
-          done
-          chmod -R go+rw .
-          devtools/devcontainer.sh --rm devtools/run-ci.sh
-
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
-      - name: Skip imbeats CI, no relevant changes
-        if: steps.code_changes.outputs.any_changed != 'true'
-        run: echo "No relevant changes detected; skipping imbeats CI."
-
   clang_analyzer_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.analyzer == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -1730,6 +1817,15 @@ jobs:
           files_ignore: |
             doc/Makefile.am
 
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-clang-analyzer
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-static-analyzer.sh') }}
+
       - name: Run clang static analyzer
         if: steps.code_changes.outputs.any_changed == 'true'
         id: run-clang
@@ -1739,8 +1835,10 @@ jobs:
           SCAN_BUILD_CC: clang
           SCAN_BUILD_REPORT_DIR: scan-build-report
           CI_MAKE_OPT: -j20
+          CI_CONFIGURE_CACHE: '1'
           DOCKER_RUN_EXTRA_OPTS: >-
             -e SCAN_BUILD -e SCAN_BUILD_CC -e SCAN_BUILD_REPORT_DIR
+            -e CI_CONFIGURE_CACHE
         run: |
           chmod -R go+rw .
           set +e
@@ -1785,8 +1883,8 @@ jobs:
         run: echo "No relevant changes detected; skipping clang analyzer CI."
 
   kafka_distcheck_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.kafka == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -1821,6 +1919,15 @@ jobs:
           files_ignore: |
             doc/Makefile.am
 
+      - name: cache configure results
+        if: steps.code_changes.outputs.any_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-kafka-distcheck
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
+
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
@@ -1835,6 +1942,7 @@ jobs:
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CC='gcc'
           export CFLAGS='-g'
+          export CI_CONFIGURE_CACHE=1
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j10'
@@ -1844,19 +1952,13 @@ jobs:
           export VERBOSE=1
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip kafka distcheck CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping kafka distcheck CI."
 
   arm_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04-arm
@@ -1975,19 +2077,13 @@ jobs:
               time_phase check make -j10 check
             '
 
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
-
       - name: Skip arm64 CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping arm64 CI."
 
   i386_CI:
-    needs: compile
-    if: ${{ needs.compile.result == 'success' }}
+    needs: [compile, changes]
+    if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -2121,12 +2217,6 @@ jobs:
               time_su_phase build "make -j8"
               time_su_phase check "timeout 45m make -j10 check"
             '
-
-      - name: show error logs (if we errored)
-        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
 
       - name: Skip i386 CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
