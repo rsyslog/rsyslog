@@ -91,6 +91,15 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
   Top-level `make check TESTS=...` propagates into every subdirectory, and
   multiple test-owning subdirs make targeted selection fragile.
 
+## GitHub Actions Validation
+
+- When editing files under `.github/workflows/`, validate locally with
+  `actionlint .github/workflows/<file>.yml` and the pinned zizmor version:
+  `python3 -m venv .zizmor-venv && .zizmor-venv/bin/python -m pip install -r .github/requirements-zizmor.txt && .zizmor-venv/bin/zizmor --strict-collection .github/workflows`.
+- Avoid direct `${{ ... }}` template expansion inside shell `run:` scripts.
+  Pass expression values through `env:` variables and expand those variables in
+  the shell script instead.
+
 ## Agent Chat Keywords
 
 - `SETUP`: Triggers the `rsyslog_build` setup workflow.
