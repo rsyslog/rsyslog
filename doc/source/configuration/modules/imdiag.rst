@@ -44,10 +44,6 @@ Module Parameters
      - .. include:: ../../reference/parameters/imdiag-aborttimeout.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-imdiag-listenportfilename-module`
-     - .. include:: ../../reference/parameters/imdiag-listenportfilename-module.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-imdiag-mainmsgqueuetimeoutshutdown`
      - .. include:: ../../reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst
         :start-after: .. summary-start
@@ -76,16 +72,6 @@ Module Parameters
      - .. include:: ../../reference/parameters/imdiag-maxsessions.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-
-Input Parameters
-~~~~~~~~~~~~~~~~
-
-.. list-table::
-   :widths: 30 70
-   :header-rows: 1
-
-   * - Parameter
-     - Summary
    * - :ref:`param-imdiag-listenportfilename`
      - .. include:: ../../reference/parameters/imdiag-listenportfilename.rst
         :start-after: .. summary-start
@@ -122,10 +108,9 @@ ephemeral port, and records the chosen port for the testbench to read.
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverRun="0")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverRun="0")
 
 YAML-only testbench configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,6 +129,7 @@ that it does not conflict with the test's own ``modules:`` section.
    testbench_modules:
      - load: "../plugins/imdiag/.libs/imdiag"
        listenportfilename: "test.imdiag.port"
+       serverrun: "0"
        aborttimeout: "580"
        mainmsgqueuetimeoutshutdown: "10000"
        mainmsgqueuetimeoutenqueue: "30000"
@@ -155,8 +141,6 @@ that it does not conflict with the test's own ``modules:`` section.
      - load: "../plugins/imtcp/.libs/imtcp"
 
    inputs:
-     - type: imdiag
-       port: "0"
      - type: imtcp
        port: "0"
 

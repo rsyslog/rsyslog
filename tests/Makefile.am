@@ -274,6 +274,7 @@ TESTS_DEFAULT = \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	asynwr_dynfile_flushtxend-off.sh \
+	imdiag-modern-module-config.sh \
 	compat-configformat-rainerscript.sh \
 	compat-defaults-secure-dynafile-rainerscript.sh \
 	abort-uncleancfg-goodcfg.sh \

@@ -188,10 +188,9 @@ must validate YAML-loader behaviour or when no RainerScript is desired.
 - Tests add their own `modules:` section (and `inputs:`, `rulesets:`, etc.)
   via `add_yaml_conf`.
 - `add_yaml_conf 'fragment' [instance]` appends arbitrary YAML to the same file.
-- `add_yaml_imdiag_input [instance]` appends the imdiag input entry
-  (`  - type: imdiag / port: "0"`) inside an already-opened `inputs:` block.
-  **Tests must call this** (inside their `inputs:` section) so that startup
-  detection via the imdiag port file works correctly.
+- `add_yaml_imdiag_input [instance]` is a historical compatibility helper.
+  imdiag startup detection is configured by `generate_conf --yaml-only` via
+  module-scoped testbench parameters, so new tests should not call it.
 - `startup_common` detects `RSYSLOG_YAML_ONLY=1` and passes the `.yaml` file
   to rsyslogd instead of the usual `.conf` file.
 
@@ -218,7 +217,6 @@ add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
-add_yaml_imdiag_input           # required for startup detection
 add_yaml_conf "  - type: imtcp"
 add_yaml_conf "    port: \"0\""
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""

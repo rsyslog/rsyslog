@@ -13,7 +13,6 @@ add_yaml_conf '    type: string'
 add_yaml_conf '    string: "%msg%|%$!message%|%$!metadata!imbeats!sequence%\n"'
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
-add_yaml_imdiag_input
 add_yaml_conf '  - type: imbeats'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.imbeats.port\""

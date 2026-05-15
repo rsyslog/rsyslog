@@ -1,5 +1,5 @@
 .. _param-imdiag-serverstreamdriverauthmode:
-.. _imdiag.parameter.input.serverstreamdriverauthmode:
+.. _imdiag.parameter.module.serverstreamdriverauthmode:
 
 ServerStreamDriverAuthMode
 ==========================
@@ -18,9 +18,9 @@ uses the plain TCP driver so the value has no effect.
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerStreamDriverAuthMode
-:Scope: input
+:Scope: module
 :Type: string
-:Default: input=none
+:Default: module=none
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -37,18 +37,17 @@ Configure this parameter before :ref:`ServerRun <param-imdiag-serverrun>` if you
 need forward compatibility with a future build that supports alternate stream
 drivers. In current releases the setting does not change listener behavior.
 
-Input usage
------------
-.. _param-imdiag-input-serverstreamdriverauthmode:
-.. _imdiag.parameter.input.serverstreamdriverauthmode-usage:
+Module usage
+------------
+.. _param-imdiag-module-serverstreamdriverauthmode:
+.. _imdiag.parameter.module.serverstreamdriverauthmode-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverStreamDriverAuthMode="anon"
-         serverRun="19998")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverStreamDriverAuthMode="anon"
+          serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

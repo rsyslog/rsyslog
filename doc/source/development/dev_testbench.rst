@@ -66,8 +66,8 @@ How It Works
    conflict with the test's own ``modules:`` section.
 
 2. Tests add their own sections with ``add_yaml_conf``.
-3. Tests must call ``add_yaml_imdiag_input`` inside their ``inputs:`` section
-   so that startup detection works.
+3. imdiag startup detection is already configured by ``generate_conf
+   --yaml-only`` through module-scoped testbench parameters.
 
 Helper Functions
 ~~~~~~~~~~~~~~~~
@@ -79,8 +79,9 @@ Helper Functions
   Append a YAML fragment to ``${TESTCONF_NM}[instance].yaml``.
 
 ``add_yaml_imdiag_input [instance]``
-  Append the imdiag ``inputs:`` entry inside an already-opened ``inputs:``
-  block. **Required** in every yaml-only test for startup detection.
+  Historical compatibility helper. It no longer appends YAML because imdiag is
+  configured by ``generate_conf --yaml-only`` as a module-scoped testbench
+  listener.
 
 Startup detection
 ~~~~~~~~~~~~~~~~~
@@ -164,7 +165,6 @@ Example Test
    add_yaml_conf '    string: "%msg:F,58:2%\n"'
    add_yaml_conf ''
    add_yaml_conf 'inputs:'
-   add_yaml_imdiag_input   # required -- provides startup detection
    add_yaml_conf "  - type: imtcp"
    add_yaml_conf '    port: "0"'
    add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""
@@ -188,4 +188,3 @@ Naming and Registration
 Name yaml-only tests ``yaml-<area>-yamlonly.sh`` (or append ``-yamlonly`` to
 an existing test name). Register them in ``tests/Makefile.am`` under
 ``TESTS_LIBYAML`` so they are skipped on systems without libyaml.
-
