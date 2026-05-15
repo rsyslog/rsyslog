@@ -224,6 +224,12 @@ static rsRetVal __attribute__((format(printf, 2, 3))) sendResponse(tcps_sess_t *
     va_start(ap, fmt);
     len = vsnprintf((char *)buf, sizeof(buf), fmt, ap);
     va_end(ap);
+    if (len < 0) {
+        memcpy(buf, "imdiag::error formatting response failed\n", sizeof("imdiag::error formatting response failed\n"));
+        len = sizeof("imdiag::error formatting response failed\n") - 1;
+    } else if ((size_t)len >= sizeof(buf)) {
+        len = sizeof(buf) - 1;
+    }
     CHKiRet(netstrm.Send(pSess->pStrm, buf, &len));
 
 finalize_it:

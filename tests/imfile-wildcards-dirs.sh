@@ -52,13 +52,13 @@ startup
 for i in $(seq 1 $IMFILEINPUTFILES);
 do
 	mkdir $RSYSLOG_DYNNAME.input.dir$i
-	touch $RSYSLOG_DYNNAME.input.dir$i/file.logfile
-	./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
+	./inputfilegen -m 1 -i $((i - 1)) > $RSYSLOG_DYNNAME.input.dir$i/file.tmp
+	mv $RSYSLOG_DYNNAME.input.dir$i/file.tmp $RSYSLOG_DYNNAME.input.dir$i/file.logfile
 done
 ls -d $RSYSLOG_DYNNAME.input.*
 
 # Content check with timeout
-content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
+content_check_with_count "HEADER msgnum:" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
 
 for i in $(seq 1 $IMFILEINPUTFILES);
 do

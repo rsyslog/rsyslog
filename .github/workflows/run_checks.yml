@@ -190,7 +190,7 @@ jobs:
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j6'
+          export CI_MAKE_CHECK_OPT='-j10'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
           ci_service_family_needs_testing() {
@@ -322,7 +322,7 @@ jobs:
           'ubuntu_26_tsan')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
               # TSAN is CPU-heavy; try matching the default check parallelism after test hardening.
-              export CI_MAKE_CHECK_OPT='-j6'
+              export CI_MAKE_CHECK_OPT='-j10'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang-21'
@@ -356,7 +356,7 @@ jobs:
                      --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
                      --enable-wolfssl"
               export CI_MAKE_OPT='-j20'
-              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_MAKE_CHECK_OPT='-j10'
               export CI_CHECK_CMD='check'
               ;;
           'elasticsearch')
@@ -371,7 +371,7 @@ jobs:
                      --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
                      --enable-elasticsearch-tests --enable-elasticsearch"
               export CI_MAKE_OPT='-j20'
-              export CI_MAKE_CHECK_OPT='-j3'
+              export CI_MAKE_CHECK_OPT='-j10'
               export CI_CHECK_CMD='check'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
               ;;
@@ -757,7 +757,7 @@ jobs:
             echo "Running without sanitizers"
           fi
 
-          make -j8 check
+          make -j10 check
 
       - name: List core files before cleanup
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -934,7 +934,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j8 check
+        run: make -j10 check
 
       - name: generate coverage (lcov)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
@@ -1205,7 +1205,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j6 check
+        run: make -j10 check
 
       - name: show error logs (if we errored)
         if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
@@ -1386,7 +1386,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j3 check
+        run: make -j10 check
 
       - name: show all logs
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -1501,7 +1501,7 @@ jobs:
             --disable-default-tests --disable-imtcp-tests --enable-elasticsearch-tests
             --enable-elasticsearch
           CI_MAKE_OPT: -j20
-          CI_MAKE_CHECK_OPT: -j8
+          CI_MAKE_CHECK_OPT: -j10
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           CI_VALGRIND_SUPPRESSIONS: ubuntu22.04.supp
@@ -1567,7 +1567,7 @@ jobs:
             --disable-default-tests --disable-imtcp-tests --disable-imfile
             --disable-imfile-tests --disable-fmhttp
           CI_MAKE_OPT: -j20
-          CI_MAKE_CHECK_OPT: -j1 TESTS=omhttp-victorialogs-jsonline.sh
+          CI_MAKE_CHECK_OPT: -j10 TESTS=omhttp-victorialogs-jsonline.sh
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           USE_AUTO_DEBUG: 'off'
@@ -1650,7 +1650,7 @@ jobs:
             --disable-default-tests --disable-imtcp-tests --disable-imfile
             --disable-imfile-tests --disable-fmhttp
           CI_MAKE_OPT: -j20
-          CI_MAKE_CHECK_OPT: -j1
+          CI_MAKE_CHECK_OPT: -j10
           CI_MAKE_CHECK_TESTS: >-
             imbeats-basic.sh
             imbeats-compressed.sh
@@ -1837,7 +1837,7 @@ jobs:
           export CFLAGS='-g'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j2'
+          export CI_MAKE_CHECK_OPT='-j10'
           export CI_CHECK_CMD='distcheck'
           export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
           export ABORT_ALL_ON_TEST_FAIL='YES'
@@ -1859,28 +1859,9 @@ jobs:
     if: ${{ needs.compile.result == 'success' }}
     permissions:
       contents: read
-    runs-on: ${{ matrix.runs_on }}
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: armhf
-            runs_on: ubuntu-24.04
-            platform: linux/arm/v7
-            qemu_platform: arm
-            use_qemu: true
-          - arch: s390x
-            runs_on: ubuntu-24.04
-            platform: linux/s390x
-            qemu_platform: s390x
-            use_qemu: true
-          - arch: arm64
-            runs_on: ubuntu-24.04-arm
-            platform: linux/arm64
-            qemu_platform: aarch64
-            use_qemu: false
-    name: ${{ matrix.arch }} CI (${{ matrix.use_qemu && 'QEMU' || 'native, asan' }})${{ matrix.arch == 'arm64' && ', asan' || '' }}
+    name: arm64 CI (native, asan), asan
     steps:
       - name: git checkout project
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -1916,259 +1897,83 @@ jobs:
           files_ignore: |
             doc/Makefile.am
 
-      - name: Set up QEMU for ${{ matrix.arch }} emulation
-        if: steps.code_changes.outputs.any_changed == 'true' && matrix.use_qemu
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-        with:
-          platforms: ${{ matrix.qemu_platform }}
-
       - name: Set up Docker Buildx
         if: steps.code_changes.outputs.any_changed == 'true'
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Build ${{ matrix.arch }} dev image (cached)
+      - name: Build arm64 dev image (cached)
         if: steps.code_changes.outputs.any_changed == 'true'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: devtools/ci/Dockerfile.arm
-          platforms: ${{ matrix.platform }}
-          tags: rsyslog-cross-dev:${{ matrix.arch }}
+          platforms: linux/arm64
+          tags: rsyslog-cross-dev:arm64
           load: true
-          cache-from: type=gha,scope=cross-dev-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=cross-dev-${{ matrix.arch }}
+          cache-from: type=gha,scope=cross-dev-arm64
+          cache-to: type=gha,mode=max,scope=cross-dev-arm64
 
-      - name: Run ${{ matrix.arch }} build and testbench
+      - name: Run arm64 build and testbench
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           chmod -R go+rw .
-          docker run --rm --platform ${{ matrix.platform }} \
-            -e ARCH=${{ matrix.arch }} \
+          docker run --rm --platform linux/arm64 \
+            -e ARCH=arm64 \
             --cap-add SYS_ADMIN \
             --cap-add SYS_PTRACE \
             --security-opt seccomp=unconfined \
             -v "${{ github.workspace }}:/rsyslog" \
             -w /rsyslog \
-            rsyslog-cross-dev:${{ matrix.arch }} bash -c '
+            rsyslog-cross-dev:arm64 bash -c '
               set -e
-              export CFLAGS="-g -O1 -fno-omit-frame-pointer"
+              export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
+              export LDFLAGS="-fsanitize=address"
+              export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
               export CC=gcc
               export TEST_MAX_RUNTIME=1200
               time_phase() {
                 phase="$1"
                 shift
                 start=$(date +%s)
-                echo "::group::$ARCH $phase"
+                echo "::group::arm64 $phase"
                 "$@"
                 rc=$?
                 end=$(date +%s)
                 echo "::endgroup::"
-                echo "timing: $ARCH $phase $((end - start))s"
-                return "$rc"
-              }
-              time_shell_phase() {
-                phase="$1"
-                shift
-                start=$(date +%s)
-                echo "::group::$ARCH $phase"
-                sh -c "$*"
-                rc=$?
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH $phase $((end - start))s"
+                echo "timing: arm64 $phase $((end - start))s"
                 return "$rc"
               }
               time_phase autoreconf autoreconf -fvi
-              if [ "$ARCH" = "s390x" ]; then
-                time_shell_phase "install extra dependencies" "apt-get update && apt-get install -y --no-install-recommends \
-                  curl liblognorm-dev libmaxminddb-dev libsnmp-dev \
-                  libssl-dev libsystemd-dev libyaml-dev libzstd-dev openssl && \
-                  rm -rf /var/lib/apt/lists/*"
-                useradd --create-home rsyslogci
-                chown -R rsyslogci:rsyslogci /rsyslog
-                start=$(date +%s)
-                echo "::group::$ARCH configure"
-                su rsyslogci -c "./configure --enable-silent-rules \
-                  --enable-testbench --disable-extended-tests \
-                  --enable-imdiag --disable-imdocker \
-                  --enable-imfile --enable-imfile-tests \
-                  --enable-impstats --enable-imptcp \
-                  --enable-mmanon --enable-mmaudit \
-                  --enable-mmcount --enable-mmdblookup \
-                  --enable-mmfields --enable-mmjsonparse \
-                  --enable-mmnormalize --enable-mmpstrucdata \
-                  --enable-mmrm1stspace --enable-mmsequence \
-                  --enable-mmsnmptrapd --enable-mmutf8fix \
-                  --enable-mail \
-                  --disable-omhttp --enable-omjournal \
-                  --enable-omprog --enable-omruleset \
-                  --enable-omstdout --enable-omuxsock \
-                  --enable-pmaixforwardedfrom --enable-pmciscoios \
-                  --enable-pmcisconames --enable-pmlastmsg \
-                  --enable-pmnull --enable-pmsnare \
-                  --enable-gnutls --enable-openssl \
-                  --enable-relp --enable-snmp \
-                  --enable-usertools --enable-imdtls --enable-omdtls \
-                  --enable-imjournal \
-                  --enable-fmhash --enable-libzstd \
-                  --enable-klog --enable-kmsg \
-                  --enable-libsystemd=yes \
-                  --disable-libgcrypt --disable-liblogging-stdlog \
-                  --disable-fmhttp --disable-mysql \
-                  --disable-valgrind --without-valgrind-testbench \
-                  --disable-helgrind --disable-mmkubernetes \
-                  --disable-omkafka --disable-imkafka \
-                  --disable-ommongodb --disable-omrabbitmq \
-                  --disable-mmdarwin \
-                  --disable-root-tests \
-                  --disable-elasticsearch-tests \
-                  --disable-kafka-tests --disable-snmp-tests \
-                  --disable-journal-tests"
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH configure $((end - start))s"
-                su rsyslogci -c "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
-              elif [ "$ARCH" = "armhf" ]; then
-                start=$(date +%s)
-                echo "::group::$ARCH configure"
-                ./configure --enable-silent-rules --enable-testbench \
-                  --enable-imdiag --disable-imdocker --enable-imfile \
-                  --disable-default-tests --disable-impstats \
-                  --disable-impstats-push \
-                  --disable-imptcp \
-                  --disable-mmanon --disable-mmaudit \
-                  --disable-mmfields --disable-mmjsonparse \
-                  --disable-mmpstrucdata --disable-mmsequence \
-                  --disable-mmutf8fix --disable-mail \
-                  --disable-omprog --disable-improg \
-                  --disable-omruleset \
-                  --enable-omstdout --disable-omuxsock \
-                  --disable-pmaixforwardedfrom --disable-pmciscoios \
-                  --disable-pmcisconames --disable-pmlastmsg \
-                  --disable-pmsnare \
-                  --disable-libgcrypt --disable-mmnormalize \
-                  --disable-omudpspoof --disable-relp \
-                  --disable-mmsnmptrapd \
-                  --enable-gnutls --enable-usertools \
-                  --disable-mysql \
-                  --disable-valgrind --disable-mmkubernetes \
-                  --disable-omkafka --disable-imkafka \
-                  --disable-ommongodb --disable-omrabbitmq \
-                  --disable-mmdarwin \
-                  --disable-helgrind --disable-uuid \
-                  --disable-fmhttp
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH configure $((end - start))s"
-              else
-                export CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address -fsanitize-address-use-after-scope"
-                export LDFLAGS="-fsanitize=address"
-                export ASAN_OPTIONS="abort_on_error=1:symbolize=1:detect_leaks=0:disable_coredump=0"
-                start=$(date +%s)
-                echo "::group::$ARCH configure"
-                ./configure --enable-silent-rules --enable-testbench \
-                  --enable-imdiag --disable-imdocker \
-                  --enable-imfile \
-                  --enable-impstats --enable-imptcp \
-                  --enable-mmanon --enable-mmaudit \
-                  --enable-mmfields --enable-mmjsonparse \
-                  --enable-mmpstrucdata --enable-mmsequence \
-                  --enable-mmutf8fix --enable-mail \
-                  --enable-omprog --enable-improg \
-                  --enable-omruleset --enable-omstdout \
-                  --enable-omuxsock \
-                  --disable-pmnormalize \
-                  --enable-pmaixforwardedfrom --enable-pmciscoios \
-                  --enable-pmcisconames --enable-pmlastmsg \
-                  --enable-pmsnare --enable-libgcrypt \
-                  --disable-mmnormalize --disable-omudpspoof \
-                  --enable-relp --enable-mmsnmptrapd \
-                  --enable-gnutls --enable-usertools \
-                  --disable-mysql \
-                  --disable-valgrind --disable-mmkubernetes \
-                  --disable-omkafka --disable-imkafka \
-                  --disable-ommongodb --disable-omrabbitmq \
-                  --disable-mmdarwin \
-                  --disable-helgrind --enable-uuid \
-                  --disable-fmhttp \
-                  --disable-elasticsearch-tests \
-                  --disable-kafka-tests --disable-snmp-tests
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH configure $((end - start))s"
-              fi
-              if [ "$ARCH" = "s390x" ]; then
-                S390X_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
-                  yaml-basic.sh yaml-script-call.sh \
-                  imtcp-basic.sh \
-                  imtcp_framing_regex_maxmsg_overflow.sh \
-                  imptcp_framing_regex.sh imptcp-connection-msg-received.sh \
-                  diskqueue-truncated-segment-startup.sh \
-                  diskqueue-oncorruption-missing-segment.sh \
-                  sndrcv_tls_anon_rebind.sh \
-                  sndrcv_relp.sh sndrcv_relp_tls_certvalid.sh \
-                  imdtls-basic.sh sndrcv_dtls_certvalid.sh \
-                  imfile-basic.sh imfile-logrotate.sh \
-                  mmjsonparse_simple.sh mmpstrucdata.sh \
-                  uxsock_simple.sh"
-                start=$(date +%s)
-                echo "::group::$ARCH build"
-                su rsyslogci -c "make -j8"
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH build $((end - start))s"
-                start=$(date +%s)
-                echo "::group::$ARCH smoke tests"
-                su rsyslogci -c "timeout 30m make -j2 check TESTS=\"$S390X_TESTS\""
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH smoke tests $((end - start))s"
-              else
-                start=$(date +%s)
-                echo "::group::$ARCH build"
-                make -j8
-                end=$(date +%s)
-                echo "::endgroup::"
-                echo "timing: $ARCH build $((end - start))s"
-                if [ "$ARCH" = "arm64" ]; then
-                  start=$(date +%s)
-                  echo "::group::$ARCH check"
-                  make -j6 check
-                  end=$(date +%s)
-                  echo "::endgroup::"
-                  echo "timing: $ARCH check $((end - start))s"
-                else
-                  ARMHF_TESTS="runtime_unit_linkedlist runtime_unit_stringbuf \
-                    timestamp-3339.sh template-json.sh \
-                    queue-direct-with-no-params.sh \
-                    diskqueue-truncated-segment-startup.sh \
-                    diskqueue-oncorruption-missing-segment.sh \
-                    imfile-basic.sh imfile-logrotate.sh \
-                    omstdout-basic.sh sndrcv_tls_anon_rebind.sh"
-                  start=$(date +%s)
-                  echo "::group::$ARCH smoke tests"
-                  timeout 30m make -j2 check TESTS="$ARMHF_TESTS"
-                  end=$(date +%s)
-                  echo "::endgroup::"
-                  echo "timing: $ARCH smoke tests $((end - start))s"
-                fi
-              fi
+              time_phase configure ./configure --enable-silent-rules --enable-testbench \
+                --enable-imdiag --disable-imdocker \
+                --enable-imfile \
+                --enable-impstats --enable-imptcp \
+                --enable-mmanon --enable-mmaudit \
+                --enable-mmfields --enable-mmjsonparse \
+                --enable-mmpstrucdata --enable-mmsequence \
+                --enable-mmutf8fix --enable-mail \
+                --enable-omprog --enable-improg \
+                --enable-omruleset --enable-omstdout \
+                --enable-omuxsock \
+                --disable-pmnormalize \
+                --enable-pmaixforwardedfrom --enable-pmciscoios \
+                --enable-pmcisconames --enable-pmlastmsg \
+                --enable-pmsnare --enable-libgcrypt \
+                --disable-mmnormalize --disable-omudpspoof \
+                --enable-relp --enable-mmsnmptrapd \
+                --enable-gnutls --enable-usertools \
+                --disable-mysql \
+                --disable-valgrind --disable-mmkubernetes \
+                --disable-omkafka --disable-imkafka \
+                --disable-ommongodb --disable-omrabbitmq \
+                --disable-mmdarwin \
+                --disable-helgrind --enable-uuid \
+                --disable-fmhttp \
+                --disable-elasticsearch-tests \
+                --disable-kafka-tests --disable-snmp-tests
+              time_phase build make -j8
+              time_phase check make -j10 check
             '
-
-      - name: Collect test logs
-        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
-        run: devtools/gather-check-logs.sh || true
-
-      - name: Upload ${{ matrix.arch }} test logs
-        if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ matrix.arch }}-test-logs
-          path: |
-            tests/test-suite.log
-            failed-tests.log
-          retention-days: 7
-          if-no-files-found: ignore
 
       - name: show error logs (if we errored)
         if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
@@ -2176,6 +1981,153 @@ jobs:
           devtools/gather-check-logs.sh
           cat failed-tests.log
 
-      - name: Skip ${{ matrix.arch }} CI, no relevant changes
+      - name: Skip arm64 CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
-        run: echo "No relevant changes detected; skipping ${{ matrix.arch }} CI."
+        run: echo "No relevant changes detected; skipping arm64 CI."
+
+  i386_CI:
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    name: i386 CI (Debian 13, linux/386)
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream "$BASE_REF"
+
+      - name: Check for code changes
+        id: code_changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: Run i386 build and regular testbench
+        if: steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          chmod -R go+rw .
+          docker run --rm --platform linux/386 \
+            -e ARCH=i386 \
+            --cap-add SYS_ADMIN \
+            --cap-add SYS_PTRACE \
+            --security-opt seccomp=unconfined \
+            -v "${{ github.workspace }}:/rsyslog" \
+            -w /rsyslog \
+            debian:13 bash -c '
+              set -e
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                build-essential autoconf automake libtool libtool-bin \
+                pkg-config flex bison python3-docutils curl openssl \
+                libestr-dev libfastjson-dev libgnutls28-dev \
+                zlib1g-dev libgcrypt20-dev librelp-dev uuid-dev \
+                libyaml-dev libcurl4-gnutls-dev liblognorm-dev \
+                libmaxminddb-dev libsnmp-dev libssl-dev libsystemd-dev \
+                libzstd-dev libprotobuf-c-dev protobuf-c-compiler \
+                libsnappy-dev iproute2 gdb
+              rm -rf /var/lib/apt/lists/*
+              useradd --create-home rsyslogci
+              chown -R rsyslogci:rsyslogci /rsyslog
+              export CFLAGS="-g -O1 -fno-omit-frame-pointer"
+              export CC=gcc
+              export TEST_MAX_RUNTIME=1200
+              time_phase() {
+                phase="$1"
+                shift
+                start=$(date +%s)
+                echo "::group::i386 $phase"
+                "$@"
+                rc=$?
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: i386 $phase $((end - start))s"
+                return "$rc"
+              }
+              time_su_phase() {
+                phase="$1"
+                shift
+                start=$(date +%s)
+                echo "::group::i386 $phase"
+                su rsyslogci -c "$*"
+                rc=$?
+                end=$(date +%s)
+                echo "::endgroup::"
+                echo "timing: i386 $phase $((end - start))s"
+                return "$rc"
+              }
+              time_phase autoreconf autoreconf -fvi
+              time_su_phase configure "./configure --enable-silent-rules \
+                --enable-testbench --disable-extended-tests \
+                --enable-imdiag --disable-imdocker \
+                --enable-imfile --enable-imfile-tests \
+                --enable-impstats --enable-imptcp \
+                --enable-mmanon --enable-mmaudit \
+                --enable-mmcount --enable-mmdblookup \
+                --enable-mmfields --enable-mmjsonparse \
+                --enable-mmnormalize --enable-mmpstrucdata \
+                --enable-mmrm1stspace --enable-mmsequence \
+                --enable-mmsnmptrapd --enable-mmutf8fix \
+                --enable-mail \
+                --disable-omhttp --enable-omjournal \
+                --enable-omprog --enable-omruleset \
+                --enable-omstdout --enable-omuxsock \
+                --enable-pmaixforwardedfrom --enable-pmciscoios \
+                --enable-pmcisconames --enable-pmlastmsg \
+                --enable-pmnull --enable-pmsnare \
+                --enable-gnutls --enable-openssl \
+                --enable-relp --enable-snmp \
+                --enable-usertools --enable-imdtls --enable-omdtls \
+                --enable-imjournal \
+                --enable-fmhash --enable-libzstd \
+                --enable-klog --enable-kmsg \
+                --enable-libsystemd=yes \
+                --disable-libgcrypt --disable-liblogging-stdlog \
+                --disable-fmhttp --disable-mysql \
+                --disable-valgrind --without-valgrind-testbench \
+                --disable-helgrind --disable-mmkubernetes \
+                --disable-omkafka --disable-imkafka \
+                --disable-ommongodb --disable-omrabbitmq \
+                --disable-mmdarwin \
+                --disable-root-tests \
+                --disable-elasticsearch-tests \
+                --disable-kafka-tests --disable-snmp-tests \
+                --disable-journal-tests"
+              time_su_phase "config sanity" "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
+              time_su_phase build "make -j8"
+              time_su_phase check "timeout 45m make -j10 check"
+            '
+
+      - name: show error logs (if we errored)
+        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
+
+      - name: Skip i386 CI, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping i386 CI."

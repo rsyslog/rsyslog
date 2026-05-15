@@ -81,6 +81,9 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
 
 - For this recursive Automake tree, keep `tests/` as the single recursive
   test-owning subtree.
+- New and changed tests must include inline intent documentation that says what
+  behavior, regression, or invariant they test. If an existing test lacks that
+  context, add it while touching the test.
 - It is fine to organize sources under `tests/unit/`, `tests/helpers/`, or
   similar folders, but register and run those tests from `tests/Makefile.am`.
 - Do not introduce additional recursive `tests/.../Makefile.am` test harnesses.
