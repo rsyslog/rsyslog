@@ -2257,6 +2257,10 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "searchindex")) {
             CHKmalloc(pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
+            LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+                   "omelasticsearch: parameter 'searchType' is deprecated because "
+                   "Elasticsearch mapping types are obsolete; remove this parameter "
+                   "for Elasticsearch 8 and later");
             CHKmalloc(pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pipelinename")) {
             CHKmalloc(pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
