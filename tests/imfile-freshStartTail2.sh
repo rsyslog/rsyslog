@@ -1,11 +1,15 @@
 #!/bin/bash
-# add 2018-05-17 by Pascal Withopf, released under ASL 2.0
+# Verifies that freshStartTail still reads a wildcard-matched file created
+# after startup and continues to follow later appends to that same file.
+# Added 2018-05-17 by Pascal Withopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export IMFILECHECKTIMEOUT="60"
 
+mkdir $RSYSLOG_DYNNAME.spool
 generate_conf
 add_conf '
+global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
 module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile" freshStartTail="on" Tag="pro"
@@ -20,6 +24,7 @@ startup
 
 echo '{ "id": "jinqiao1"}' > $RSYSLOG_DYNNAME.input.a
 content_check_with_count '{ "id": "jinqiao1"}' 1 $IMFILECHECKTIMEOUT
+wait_queueempty
 
 echo '{ "id": "jinqiao2"}' >> $RSYSLOG_DYNNAME.input.a
 content_check_with_count '{ "id": "jinqiao2"}' 1 $IMFILECHECKTIMEOUT
