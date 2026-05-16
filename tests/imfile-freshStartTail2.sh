@@ -21,10 +21,17 @@ template(name="outfmt" type="string" string="%msg%\n")
 	template="outfmt")
 '
 startup
+# Use a canary post-startup wildcard file to prove imfile has armed the
+# directory watch before creating the file used for the append-following check.
+echo '{ "id": "canary"}' > $RSYSLOG_DYNNAME.input.canary
+content_check_with_count '{ "id": "canary"}' 1 $IMFILECHECKTIMEOUT
 
 echo '{ "id": "jinqiao1"}' > $RSYSLOG_DYNNAME.input.a
 content_check_with_count '{ "id": "jinqiao1"}' 1 $IMFILECHECKTIMEOUT
 wait_queueempty
+# Let imfile settle after the first read before checking that later appends to
+# the same post-startup wildcard file are followed.
+./msleep 1000
 
 echo '{ "id": "jinqiao2"}' >> $RSYSLOG_DYNNAME.input.a
 content_check_with_count '{ "id": "jinqiao2"}' 1 $IMFILECHECKTIMEOUT

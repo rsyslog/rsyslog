@@ -1,6 +1,8 @@
 #!/bin/bash
-# Verifies imfile reopenOnTruncate with logrotate copytruncate: rsyslog must
-# read the pre-rotate file, notice the truncate, then read all post-rotate data.
+# Verifies imfile reopenOnTruncate with logrotate copytruncate. The oracle is
+# the exact sequence 0..19999: rsyslog must read the pre-rotate file, finish
+# that batch before the destructive copytruncate, notice the truncation, resume
+# with the post-truncate sentinel, and then read all remaining post-rotate data.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh check-inotify-only
 . ${srcdir:=.}/diag.sh init
@@ -62,8 +64,11 @@ ls -l $RSYSLOG_DYNNAME.input*
 
 startup
 
-# Wait until testmessages are processed by imfile!
+# Wait until the initial file content is visible, then drain the main queue
+# before copytruncate so the test rotates only after the pre-rotate batch is
+# fully processed.
 wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
+wait_queueempty
 
 # Logrotate on logfile
 logrotate --state $RSYSLOG_DYNNAME.logrotate.state -f $RSYSLOG_DYNNAME.logrotate
