@@ -14,8 +14,10 @@
 #                   set to "" to use the container default settings
 #                   (no local mapping)
 set -e
+# Docker run --rm removes the container and its associated anonymous volumes on
+# normal exit. This matters for dev images that declare VOLUME.
 if [ "$1" == "--rm" ]; then
-	optrm="--rm"
+	optrm="--rm=true"
 	shift 1
 fi
 if [ "$1" == "-ti" ]; then
@@ -24,7 +26,7 @@ if [ "$1" == "-ti" ]; then
 fi
 # check in case -ti was in front...
 if [ "$1" == "--rm" ]; then
-	optrm="--rm"
+	optrm="--rm=true"
 	shift 1
 fi
 
@@ -81,7 +83,7 @@ devcontainer_userdb_tmp=
 devcontainer_userdb_cid=
 cleanup_devcontainer_userdb() {
 	if [ -n "$devcontainer_userdb_cid" ]; then
-		docker rm "$devcontainer_userdb_cid" >/dev/null 2>&1 || true
+		docker rm -v "$devcontainer_userdb_cid" >/dev/null 2>&1 || true
 	fi
 	if [ -n "$devcontainer_userdb_tmp" ]; then
 		rm -rf "$devcontainer_userdb_tmp"
