@@ -63,6 +63,7 @@ install_prereqs() {
     g++ \
     git \
     libtool \
+    libyaml-dev \
     make \
     pkg-config \
     python3 \

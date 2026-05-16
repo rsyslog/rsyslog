@@ -2038,7 +2038,7 @@ CLEANFILES=\
 	rsyslog.input rsyslog.input.* imfile-state:* omkafka-failed.data \
 	rsyslog.input-symlink.log rsyslog-link.*.log targets \
 	HOSTNAME \
-	rstb_* \
+	rstb_* *.test_policy_hup.yaml \
 	zookeeper.pid \
 	tmp.qi nocert
 

@@ -407,6 +407,11 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-imdiag \
 	--enable-testbench \
 	--enable-valgrind
+
+if HAVE_LIBYAML
+else
+DISTCHECK_CONFIGURE_FLAGS+= --disable-libyaml
+endif # HAVE_LIBYAML
 # currently not supported in make distcheck:
 # --enable-pgsql-tests
 # --enable-extended-tests --> should probably never be enabled due to runtime

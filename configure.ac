@@ -166,11 +166,24 @@ AC_COMPILE_IFELSE( [AC_LANG_PROGRAM([[#include <limits.h>]],
                  )
 
 # Checks for libraries.
-PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
-	AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
-	have_libyaml=yes
+AC_ARG_ENABLE(libyaml,
+	[AS_HELP_STRING([--disable-libyaml],
+		[Disable libyaml-backed YAML configuration and policy file support @<:@default=enabled@:>@])],
+	[case "${enableval}" in
+	 yes) enable_libyaml="yes" ;;
+	  no) enable_libyaml="no" ;;
+	   *) AC_MSG_ERROR(bad value ${enableval} for --enable-libyaml) ;;
+	 esac],
+	[enable_libyaml="yes"]
+)
+AS_IF([test "x$enable_libyaml" = "xyes"], [
+	PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
+		AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
+		have_libyaml=yes
+	], [
+		AC_MSG_ERROR([libyaml support is enabled by default but yaml-0.1 was not found. Install libyaml development files or configure with --disable-libyaml.])
+	])
 ], [
-	AC_MSG_WARN([libyaml not found, rate limiting policies from files and YAML configuration support will be disabled])
 	have_libyaml=no
 ])
 AM_CONDITIONAL(HAVE_LIBYAML, test x$have_libyaml = xyes)

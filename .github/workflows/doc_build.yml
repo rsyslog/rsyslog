@@ -59,6 +59,7 @@ jobs:
             libsystemd-dev \
             libtool \
             libtool-bin \
+            libyaml-dev \
             libzstd-dev \
             lsof \
             make \

@@ -87,6 +87,7 @@ jobs:
               libtokyocabinet-dev \
               libtool \
               libtool-bin \
+              libyaml-dev \
               logrotate \
               net-tools \
               postgresql-client libpq-dev \
