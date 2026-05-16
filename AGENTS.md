@@ -85,6 +85,14 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
 - New and changed tests must include inline intent documentation that says what
   behavior, regression, or invariant they test. If an existing test lacks that
   context, add it while touching the test.
+
+  For timing, retry, sampling, concurrency, or negative-path tests, also explain
+  the oracle: what proves success or failure, and why any wait or threshold
+  exists.
+
+  When changing a test, verify that the head comment still matches the actual
+  setup, stimulus, oracle, and pass/fail conditions after the edit; update it in
+  the same commit if it does not.
 - It is fine to organize sources under `tests/unit/`, `tests/helpers/`, or
   similar folders, but register and run those tests from `tests/Makefile.am`.
 - Do not introduce additional recursive `tests/.../Makefile.am` test harnesses.
