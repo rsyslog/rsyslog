@@ -59,6 +59,10 @@ the test oracle: what condition makes the test pass or fail, and why any
 threshold or wait exists. Keep these comments focused on intent and semantics;
 do not duplicate each shell command.
 
+When changing a test, verify that the head comment still matches the actual
+setup, stimulus, oracle, and pass/fail conditions after the edit; update it in
+the same commit if it does not.
+
 ### 4. Using diag.sh Helpers
 All tests include `tests/diag.sh` using the POSIX `.` command. You should use its standardized helpers:
 - `cmp_exact`: Verify file content matches.

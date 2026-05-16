@@ -28,6 +28,9 @@ agents.
   when the current intent is missing, stale, or vague. For timing, retry,
   sampling, concurrency, or negative-path tests, also explain the oracle: what
   proves success or failure, and why any wait or threshold exists.
+  When changing a test, verify that the head comment still matches the actual
+  setup, stimulus, oracle, and pass/fail conditions after the edit; update it in
+  the same commit if it does not.
 - Prefer harness helpers such as `cmp_exact`, `command_deny`, and
   `require_plugin` over ad-hoc shell to keep diagnostics uniform.
 - **Config format coverage**: When a module parameter or config object is tested
