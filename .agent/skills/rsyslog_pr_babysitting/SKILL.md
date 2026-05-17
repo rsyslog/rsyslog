@@ -36,8 +36,20 @@ Use `gh pr view` for check rollups:
 
 ```sh
 gh pr view PR_NUMBER --repo rsyslog/rsyslog \
-  --json statusCheckRollup,reviewDecision,mergeable,state,headRefOid,url
+  --json statusCheckRollup,reviewDecision,mergeStateStatus,mergeable,state,headRefOid,url
 ```
+
+Treat `mergeable: CONFLICTING` or `mergeStateStatus: DIRTY` as an
+actionable blocker, not just a status to report. Before resolving it, fetch
+official upstream `main` freshly, for example:
+
+```sh
+git fetch upstream main --prune
+```
+
+Then rebase or merge the PR branch onto that fetched `upstream/main`, resolve
+conflicts locally, validate the affected files, and push the updated branch.
+Do not rely on the fork's `origin/main` for conflict resolution.
 
 For failures, inspect logs before guessing:
 

@@ -131,7 +131,17 @@ jobs:
           name: res-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
           path: result.txt
 
-      - name: Fail job if tests failed (but after artifact upload)
+      - name: Show failed test logs
+        if: steps.run_tests.outputs.status == 'failure'
+        run: |
+          devtools/gather-check-logs.sh || true
+          if [ -f failed-tests.log ]; then
+            cat failed-tests.log
+          else
+            echo "failed-tests.log was not generated"
+          fi
+
+      - name: Fail job if tests failed
         if: steps.run_tests.outputs.status == 'failure'
         run: exit 1
 

@@ -979,7 +979,8 @@ jobs:
           sudo mkdir -p /cores
           sudo sysctl -w kern.corefile=/cores/core-%P
 
-      - name: make check
+      - name: make check (continue on error to collect results)
+        id: run_tests
         if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           # Enable core dumps for debugging segfaults
@@ -1000,7 +1001,13 @@ jobs:
             echo "Running without sanitizers"
           fi
 
+          set +e
           make -j10 check
+          EXIT_CODE=$?
+          STATUS=success
+          if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: List core files before cleanup
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -1035,6 +1042,29 @@ jobs:
           find_core_files | head -20 || true
           CORE_COUNT=$(find_core_files | wc -l || echo 0)
           echo "Total core files found: $CORE_COUNT"
+
+      - name: show error logs and fail if tests failed
+        if: steps.run_tests.outputs.status == 'failure'
+        run: |
+          echo "=== Post-failure diagnostics ==="
+          echo "Note: Comprehensive error analysis including core dumps,"
+          echo "system info, and logs is now handled automatically by"
+          echo "tests/diag.sh during test failures."
+          echo ""
+          echo "=== Basic disk space check ==="
+          df -h . | tail -1 | awk '{print "Free space: " $4 " (" $5 " used)"}'
+          echo ""
+          echo "=== Additional error log collection ==="
+          if [ -f "devtools/gather-check-logs.sh" ]; then
+            devtools/gather-check-logs.sh || true
+          fi
+          if [ -f "failed-tests.log" ]; then
+            echo "=== Failed Tests Summary ==="
+            cat failed-tests.log
+          else
+            echo "failed-tests.log was not generated"
+          fi
+          exit 1
 
       - name: Skip macOS CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
