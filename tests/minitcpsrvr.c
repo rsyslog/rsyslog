@@ -55,6 +55,7 @@ char *targetIP = NULL;
 int targetPort = -1;
 char *portFileName = NULL;
 char *waitListenFileName = NULL;
+char *listenReadyFileName = NULL;
 size_t totalWritten = 0;
 int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
 struct sockaddr_in server_addr;
@@ -69,8 +70,23 @@ static void errout(char *reason) {
 }
 
 static void usage(void) {
-    fprintf(stderr, "usage: minitcpsrv [-R] [-w listenFile] -t ip-addr -p port -P portFile -f outfile\n");
+    fprintf(stderr,
+            "usage: minitcpsrv [-R] [-w listenFile] [-L listenReadyFile] -t ip-addr -p port -P portFile -f outfile\n");
     exit(1);
+}
+
+static void writeListenReadyMarker(void) {
+    FILE *fp;
+    int ret;
+
+    if (listenReadyFileName == NULL) return;
+    if ((fp = fopen(listenReadyFileName, "w")) == NULL) {
+        errout(listenReadyFileName);
+    }
+    ret = fprintf(fp, "listening\n");
+    if (fclose(fp) != 0 || ret < 0) {
+        errout(listenReadyFileName);
+    }
 }
 
 static void waitForListenRelease(void) {
@@ -166,6 +182,7 @@ static void createListenSocket(void) {
     if (listen(listen_fd, MAX_CONNECTIONS) < 0) {
         errout("Listen failed");
     }
+    writeListenReadyMarker();
 
     fds[0].fd = listen_fd;
     fds[0].events = POLLIN;
@@ -180,7 +197,7 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aB:D:Rt:p:P:f:s:S:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "aB:D:L:Rt:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
@@ -199,6 +216,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'D':  // drop connection after this number of recv() operations (not messages)
                 dropConnection_NbrRcv = atoi(optarg);
+                break;
+            case 'L':
+                listenReadyFileName = optarg;
                 break;
             case 't':
                 targetIP = optarg;
