@@ -482,25 +482,25 @@ jobs:
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --disable-snmp-tests --disable-libyaml"
+                     --disable-kafka-tests --disable-snmp-tests"
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               ;;
           'centos_8')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --disable-snmp-tests --enable-imdtls --enable-omdtls --disable-libyaml"
+                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
               ;;
           'debian_sid')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:sid'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls --disable-libyaml"
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
           'debian_13')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls --disable-libyaml"
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
           'ubuntu_26_imtcp_no_epoll')
               # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
