@@ -48,6 +48,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libyaml-dev \
 	logrotate \
 	lsof \
 	make \
@@ -202,6 +203,7 @@ RUN	cd helper-projects \
 RUN	cd helper-projects && \
 	git clone https://github.com/civetweb/civetweb.git \
 	&& cd civetweb \
+	&& git checkout v1.16 \
 	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
 	&& cd .. \
 	&& rm -rf civetweb
