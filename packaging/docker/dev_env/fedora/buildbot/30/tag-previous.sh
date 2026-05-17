@@ -1,2 +1,0 @@
-docker tag rsyslog/rsyslog_dev_buildbot_fedora:30 rsyslog/rsyslog_dev_buildbot_fedora:30_previous
-docker push rsyslog/rsyslog_dev_buildbot_fedora:30_previous
