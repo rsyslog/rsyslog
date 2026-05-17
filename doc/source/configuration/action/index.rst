@@ -7,6 +7,15 @@ Actions defined via the action() object are **not** affected by the
 legacy statements listed here. Use the action() object properties
 instead.
 
+The separation also applies in the other direction. New-style module defaults
+and action parameters are not a migration layer for legacy selector actions.
+For example, ``module(load="builtin:omfile" fileOwner="..." template="...")``
+is intended to configure RainerScript ``action(type="omfile" ...)`` objects.
+Do not rely on it to make legacy file actions such as ``*.* /var/log/messages``
+or ``*.* ?dynafile`` use the same file ownership, permissions, or template
+settings. Convert those outputs to explicit ``action(type="omfile" ...)``
+objects instead.
+
 Generic action configuration Statements
 ---------------------------------------
 These statements can be used with all types of actions.
