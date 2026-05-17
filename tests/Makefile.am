@@ -1745,12 +1745,12 @@ TESTS_IMFILE = \
 	config_enabled-on.sh \
 	config_enabled-off.sh
 
-# These imfile tests all stress dynamic inotify watch changes: creating files
-# after startup, wildcard directory expansion, symlink discovery, renames, and
-# logrotate/truncate handling. Running the whole cluster at very high make
-# parallelism can overload shared inotify delivery and hide the behavior each
-# script is meant to test, so keep the cluster ordered while preserving the
-# individual test coverage and assertions.
+# These imfile tests stress dynamic inotify watch changes. Keep each high-churn
+# subcluster ordered while allowing two independent chains to run in parallel:
+# one for wildcard directory expansion and one for old-state, rename, symlink,
+# and logrotate/truncate handling. This preserves the individual test coverage
+# and assertions without making all imfile inotify stress tests wait behind one
+# long serial chain.
 imfile-freshStartTail2.log: imfile-freshStartTail1.log
 imfile-freshStartTail3.log: imfile-freshStartTail2.log
 imfile-wildcards.log: imfile-freshStartTail3.log
@@ -1762,7 +1762,6 @@ imfile-wildcards-dirs-multi3.log: imfile-wildcards-dirs-multi2.log
 imfile-wildcards-dirs-multi4.log: imfile-wildcards-dirs-multi3.log
 imfile-wildcards-dirs-multi5.log: imfile-wildcards-dirs-multi4.log
 imfile-wildcards-dirs-multi5-polling.log: imfile-wildcards-dirs-multi5.log
-imfile-old-state-file.log: imfile-wildcards-dirs-multi5-polling.log
 imfile-rename-while-stopped.log: imfile-old-state-file.log
 imfile-rename.log: imfile-rename-while-stopped.log
 imfile-symlink.log: imfile-rename.log
