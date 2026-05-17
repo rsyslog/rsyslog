@@ -69,7 +69,7 @@ jobs:
             --enable-testbench --enable-omstdout --enable-imdiag --enable-imbeats
             --enable-elasticsearch --enable-elasticsearch-tests
             --disable-default-tests --disable-imtcp-tests --disable-imfile
-            --disable-imfile-tests --disable-fmhttp --disable-libyaml
+            --disable-imfile-tests --disable-fmhttp
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j10
           CI_MAKE_CHECK_TESTS: >-

@@ -553,7 +553,6 @@ jobs:
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-libyaml"
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export VERBOSE=1
@@ -628,7 +627,7 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
-                     --enable-elasticsearch-tests --enable-elasticsearch --disable-libyaml"
+                     --enable-elasticsearch-tests --enable-elasticsearch"
               export CI_MAKE_OPT='-j20'
               export CI_MAKE_CHECK_OPT='-j10'
               export CI_CHECK_CMD='check'
@@ -1694,7 +1693,7 @@ jobs:
             --enable-testbench --enable-omstdout --enable-imdiag --enable-impstats
             --disable-imfile --disable-imfile-tests --disable-fmhttp --enable-valgrind
             --disable-default-tests --disable-imtcp-tests --enable-elasticsearch-tests
-            --enable-elasticsearch --disable-libyaml
+            --enable-elasticsearch
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j10
           CI_CHECK_CMD: check
@@ -1764,7 +1763,7 @@ jobs:
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-omhttp
             --disable-default-tests --disable-imtcp-tests --disable-imfile
-            --disable-imfile-tests --disable-fmhttp --disable-libyaml
+            --disable-imfile-tests --disable-fmhttp
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j10 TESTS=omhttp-victorialogs-jsonline.sh
           CI_CHECK_CMD: check
