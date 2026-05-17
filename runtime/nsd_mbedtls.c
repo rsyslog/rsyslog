@@ -46,12 +46,23 @@
 #include "nsd_mbedtls.h"
 #include "rsconf.h"
 #include "net.h"
+#include "atomic.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_KEEP
 
 /* static data */
-DEFobjStaticHelpers DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(nsd_ptcp)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(net);
+DEFobjCurrIf(nsd_ptcp);
+static int bTlsVersionWorkaroundReported = 0;
+#ifndef HAVE_ATOMIC_BUILTINS
+static DEF_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+    #define MUT_TLS_VERSION_WORKAROUND_REPORTED &mutTlsVersionWorkaroundReported
+#else
+    #define MUT_TLS_VERSION_WORKAROUND_REPORTED NULL
+#endif
 /* Mbed TLS debug level (0..5)
  * 5 is the most logs.
  */
@@ -60,11 +71,11 @@ DEFobjStaticHelpers DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(nsd_ptcp)
 #define DEFAULT_MAX_DEPTH 5
 
 #if MBEDTLS_DEBUG_LEVEL > 0
-    static void debug(void __attribute__((unused)) * ctx,
-                      int __attribute__((unused)) level,
-                      const char *file,
-                      int line,
-                      const char *str) {
+static void debug(void __attribute__((unused)) * ctx,
+                  int __attribute__((unused)) level,
+                  const char *file,
+                  int line,
+                  const char *str) {
     dbgprintf("%s:%04d: %s", file, line, str);
 }
 #endif
@@ -728,6 +739,31 @@ static int mbedtlsAuthMode(nsd_mbedtls_t *const pThis) {
     return mode;
 }
 
+static void mbedtlsApplyTlsVersionWorkaround(nsd_mbedtls_t *const pThis, mbedtls_ssl_config *const conf) {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    const char *reason = NULL;
+
+    if (MBEDTLS_VERSION_NUMBER < 0x03060100) {
+        reason = "because Mbed TLS versions before 3.6.1 have known TLS 1.3 regressions";
+    } else if (pThis->authMode == MBEDTLS_AUTH_CERTANON || pThis->authMode == MBEDTLS_AUTH_CERTVALID) {
+        reason =
+            "because Mbed TLS with TLS 1.3 fails rsyslog mixed-driver interoperability tests in weak authentication "
+            "modes";
+    } else {
+        return;
+    }
+
+    mbedtls_ssl_conf_max_tls_version(conf, MBEDTLS_SSL_VERSION_TLS1_2);
+    if (ATOMIC_CAS(&bTlsVersionWorkaroundReported, 0, 1, MUT_TLS_VERSION_WORKAROUND_REPORTED)) {
+        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+               "mbedtls netstream driver: limiting TLS protocol version to TLS 1.2 %s", reason);
+    }
+#else
+    (void)pThis;
+    (void)conf;
+#endif
+}
+
 /* Obtain fingerprint of crt in buf of size *len.
  * *len will be filled with actual fingerprint length on output.
  */
@@ -1077,6 +1113,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     CHKiRet(mbedtlsInitCred(pNew));
     CHKiRet(mbedtls_ssl_config_defaults(&(pNew->conf), MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT));
+    mbedtlsApplyTlsVersionWorkaround(pNew, &(pNew->conf));
 
     mbedtls_ssl_conf_rng(&(pNew->conf), mbedtls_ctr_drbg_random, &(pNew->ctr_drbg));
     mbedtls_ssl_conf_authmode(&(pNew->conf), mbedtlsAuthMode(pNew));
@@ -1106,7 +1143,9 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
         logMbedtlsError(RS_RET_TLS_HANDSHAKE_ERR, mbedtlsRet);
         ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
     }
-    CHKiRet(CheckVerifyResult(pNew));
+    if (mbedtlsRet == 0) {
+        CHKiRet(CheckVerifyResult(pNew));
+    }
 
     pNew->bHaveSess = 1;
     *ppNew = (nsd_t *)pNew;
@@ -1230,6 +1269,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     /* we reach this point if in TLS mode */
     CHKiRet(mbedtls_ssl_config_defaults(&(pThis->conf), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT));
+    mbedtlsApplyTlsVersionWorkaround(pThis, &(pThis->conf));
 
     mbedtls_ssl_conf_rng(&(pThis->conf), mbedtls_ctr_drbg_random, &(pThis->ctr_drbg));
     mbedtls_ssl_conf_authmode(&(pThis->conf), mbedtlsAuthMode(pThis));
@@ -1260,7 +1300,9 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
         logMbedtlsError(RS_RET_TLS_HANDSHAKE_ERR, mbedtlsRet);
         ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
     }
-    CHKiRet(CheckVerifyResult(pThis));
+    if (mbedtlsRet == 0) {
+        CHKiRet(CheckVerifyResult(pThis));
+    }
 
     pThis->bHaveSess = 1;
 
@@ -1393,6 +1435,9 @@ BEGINObjClassExit(nsd_mbedtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in E
     objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
     objRelease(net, LM_NET_FILENAME);
     objRelease(glbl, CORE_COMPONENT);
+#ifndef HAVE_ATOMIC_BUILTINS
+    DESTROY_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+#endif
 ENDObjClassExit(nsd_mbedtls)
 
 /* Initialize the nsd_mbedtls class. Must be called as the very first method
@@ -1400,6 +1445,11 @@ ENDObjClassExit(nsd_mbedtls)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(nsd_mbedtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+#ifndef HAVE_ATOMIC_BUILTINS
+    INIT_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+#endif
+    bTlsVersionWorkaroundReported = 0;
+
     /* request objects we use */
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));

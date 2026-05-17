@@ -43,6 +43,7 @@ RUN	dnf -y install \
 	librabbitmq-devel \
 	libtool \
 	libuuid-devel \
+	libyaml-devel \
 	libzstd-devel \
 	logrotate \
 	lsof \

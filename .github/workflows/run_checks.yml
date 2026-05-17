@@ -525,12 +525,12 @@ jobs:
           'fedora_42')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls --disable-libyaml"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
           'fedora_43')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:43'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls --disable-libyaml"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
           'ubuntu_20')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
