@@ -8,6 +8,17 @@ Before starting work in this repository, read `AGENTS.local.md` if it exists.
 That file contains machine- and workflow-specific instructions that are not
 duplicated here.
 
+## Working Tree Coordination
+
+Use a clean base checkout as the coordination checkout for `main`, and keep
+that local `main` branch fast-forwarded to the canonical upstream `main` before
+starting or resuming work. Do not make task changes, run builds, or leave
+generated artifacts in that base checkout.
+
+All implementation, validation, packaging, and generated-file work must happen
+in a dedicated sibling worktree on a feature branch. Local overlays may define
+the exact base checkout path and remote names for a given machine.
+
 ## AI Agent Skills
 
 To ensure consistency and high-quality contributions, AI agents SHOULD use the following standardized skills located in `.agent/skills/`:
