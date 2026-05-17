@@ -15,6 +15,24 @@ Purpose
 This network stream driver implements a TLS protected transport
 via the `MbedTLS library <https://www.trustedfirmware.org/projects/mbed-tls/>`_.
 
+.. note::
+
+   Mbed TLS 3.6.0 enabled TLS 1.3 by default but had several TLS 1.3
+   regressions that were fixed in Mbed TLS 3.6.1. Mbed TLS upstream suggested
+   limiting the maximum TLS version to TLS 1.2 as a temporary
+   `workaround <https://github.com/Mbed-TLS/mbedtls/issues/9223>`_ for the
+   3.6.0 TLS 1.3 breakage. Mbed TLS `3.6.1 release notes
+   <https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.1>`_
+   describe the related TLS 1.3 fixes.
+
+   Rsyslog therefore limits this driver to TLS 1.2 when it is built with Mbed
+   TLS versions older than 3.6.1. With newer Mbed TLS versions, rsyslog still
+   applies this limit for the weak ``anon`` and ``x509/certvalid``
+   authentication modes, because current Mbed TLS releases fail rsyslog's
+   mixed-driver interoperability tests against GnuTLS in these modes. Stronger
+   peer-authentication modes such as ``x509/name`` and ``x509/fingerprint``
+   are not restricted by rsyslog and may negotiate TLS 1.3.
+
 
 Supported Driver Modes
 ======================
