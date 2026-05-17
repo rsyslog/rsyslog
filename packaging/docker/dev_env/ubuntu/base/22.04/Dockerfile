@@ -50,6 +50,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libyaml-dev \
 	libsnappy-dev \
 	libzstd-dev \
 	logrotate \
@@ -258,15 +259,6 @@ RUN	cd helper-projects \
 	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) \
 	&& make install \
 	&& cd .. \
-	&& cd ..
-
-# we need civetweb, as there are no packages for it
-RUN	cd helper-projects && \
-	git clone https://github.com/civetweb/civetweb.git \
-	&& cd civetweb \
-	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
-	&& cd .. \
-	&& rm -rf civetweb \
 	&& cd ..
 
 # next ENV is specifically for running scan-build - so we do not need to
