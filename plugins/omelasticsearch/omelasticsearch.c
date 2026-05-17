@@ -1809,11 +1809,6 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
                 DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
                 ABORT_FINALIZE(RS_RET_ERR);
             }
-        } else if (pData->retryFailures) {
-            if (initializeRetryFailuresContext(pWrkrData, &ctx) != RS_RET_OK) {
-                DBGPRINTF("omelasticsearch: error initializing retry failures context.\n");
-                ABORT_FINALIZE(RS_RET_ERR);
-            }
         } else {
             DBGPRINTF("omelasticsearch: None of the modes match file write. No data to write.\n");
             ABORT_FINALIZE(RS_RET_ERR);

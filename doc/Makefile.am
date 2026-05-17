@@ -938,9 +938,11 @@ EXTRA_DIST = \
     source/reference/parameters/omelasticsearch-dynsearchindex.rst \
     source/reference/parameters/omelasticsearch-dynsearchtype.rst \
     source/reference/parameters/omelasticsearch-errorfile.rst \
+    source/reference/parameters/omelasticsearch-erroronly.rst \
     source/reference/parameters/omelasticsearch-esversion-major.rst \
     source/reference/parameters/omelasticsearch-healthchecktimeout.rst \
     source/reference/parameters/omelasticsearch-indextimeout.rst \
+    source/reference/parameters/omelasticsearch-interleaved.rst \
     source/reference/parameters/omelasticsearch-maxbytes.rst \
     source/reference/parameters/omelasticsearch-parent.rst \
     source/reference/parameters/omelasticsearch-pipelinename.rst \
