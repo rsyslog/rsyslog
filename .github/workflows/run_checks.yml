@@ -482,25 +482,25 @@ jobs:
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --disable-snmp-tests"
+                     --disable-kafka-tests --disable-snmp-tests --disable-libyaml"
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               ;;
           'centos_8')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
+                            --disable-snmp-tests --enable-imdtls --enable-omdtls --disable-libyaml"
               ;;
           'debian_sid')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:sid'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls --disable-libyaml"
               ;;
           'debian_13')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls --disable-libyaml"
               ;;
           'ubuntu_26_imtcp_no_epoll')
               # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
@@ -525,12 +525,12 @@ jobs:
           'fedora_42')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls --disable-libyaml"
               ;;
           'fedora_43')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:43'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls --disable-libyaml"
               ;;
           'ubuntu_20')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
@@ -538,7 +538,7 @@ jobs:
               ;;
           'tumbleweed')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests --disable-libyaml"
               ;;
           'ubuntu_24')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
@@ -553,6 +553,7 @@ jobs:
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-libyaml"
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export VERBOSE=1
@@ -627,7 +628,7 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
-                     --enable-elasticsearch-tests --enable-elasticsearch"
+                     --enable-elasticsearch-tests --enable-elasticsearch --disable-libyaml"
               export CI_MAKE_OPT='-j20'
               export CI_MAKE_CHECK_OPT='-j10'
               export CI_CHECK_CMD='check'
@@ -812,7 +813,7 @@ jobs:
           } > /etc/yum.repos.d/adiscon.repo
           dnf install -y dnf-plugins-core
           dnf config-manager --set-enabled crb
-          dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
+          dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
           echo "== Copy mock configs =="
           cp -v packaging/rpm/etc-mock/*.cfg /etc/mock/ || true
           mkdir -p build-result /var/lib/mock
@@ -911,6 +912,7 @@ jobs:
             libgnutls28-dev \
             libestr-dev \
             libfastjson-dev \
+            libyaml-dev \
             python3-docutils
 
       - name: check disk space
@@ -1096,6 +1098,7 @@ jobs:
             libsystemd-dev \
             libtool \
             libtool-bin \
+            libyaml-dev \
             libzstd-dev \
             lsof \
             make \
@@ -1277,6 +1280,7 @@ jobs:
             libtokyocabinet-dev \
             libtool \
             libtool-bin \
+            libyaml-dev \
             libzstd-dev \
             libprotobuf-c-dev \
             protobuf-c-compiler \
@@ -1690,7 +1694,7 @@ jobs:
             --enable-testbench --enable-omstdout --enable-imdiag --enable-impstats
             --disable-imfile --disable-imfile-tests --disable-fmhttp --enable-valgrind
             --disable-default-tests --disable-imtcp-tests --enable-elasticsearch-tests
-            --enable-elasticsearch
+            --enable-elasticsearch --disable-libyaml
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j10
           CI_CHECK_CMD: check
@@ -1760,7 +1764,7 @@ jobs:
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-omhttp
             --disable-default-tests --disable-imtcp-tests --disable-imfile
-            --disable-imfile-tests --disable-fmhttp
+            --disable-imfile-tests --disable-fmhttp --disable-libyaml
           CI_MAKE_OPT: -j20
           CI_MAKE_CHECK_OPT: -j10 TESTS=omhttp-victorialogs-jsonline.sh
           CI_CHECK_CMD: check

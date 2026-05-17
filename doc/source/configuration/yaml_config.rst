@@ -90,10 +90,12 @@ RainerScript fragments and vice versa.
    documented in :doc:`../containers/index`.
 
    In addition, rsyslog must have been compiled with libyaml
-   (``yaml-0.1``).  If libyaml is absent at build time the daemon will
-   print an error and refuse to load a ``.yaml`` / ``.yml`` file.
-   Install the ``libyaml-dev`` (Debian/Ubuntu) or ``libyaml-devel``
-   (RHEL/Fedora) package before compiling.
+   (``yaml-0.1``).  Libyaml support is enabled by default at build time
+   and can be disabled explicitly with ``--disable-libyaml``.  If libyaml
+   support is disabled, the daemon will print an error and refuse to load a
+   ``.yaml`` / ``.yml`` file.  Install the ``libyaml-dev`` (Debian/Ubuntu)
+   or ``libyaml-devel`` (RHEL/Fedora) package before compiling with the
+   default options.
 
 Schema Overview
 ---------------

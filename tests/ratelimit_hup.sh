@@ -7,7 +7,7 @@
 
 # Define ports and files
 export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
-export POLICY_FILE="$(pwd)/test_policy_hup.yaml"
+export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.test_policy_hup.yaml"
 
 # Create initial policy (High limits)
 echo "interval: 1" > $POLICY_FILE

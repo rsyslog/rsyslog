@@ -5,6 +5,13 @@ This release has many commits in regard to
   * testbench de-flaking
 These will not be mentioned individually, check commit log for details.
 
+IMPORTANT FOR MAINTAINERS
+- libyaml support is now an explicit configure feature. It remains enabled by
+  default and must be satisfied by package builds unless
+  ``--disable-libyaml`` is passed. This removes the previous auto-detection
+  behavior where the presence or absence of libyaml development files silently
+  changed the feature set.
+
 - 2026-05-14: omrelp: add opt-in suspension for TLS auth failures
   omrelp now supports tls.permanentFailureDisablesAction="off". The default
   behavior is unchanged, but when disabled TLS authentication failures suspend
