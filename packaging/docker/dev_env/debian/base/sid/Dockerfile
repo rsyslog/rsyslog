@@ -42,6 +42,7 @@ RUN 	apt-get update && \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
+	libyaml-dev \
 	libzstd-dev \
 	default-mysql-server \
 	net-tools \
