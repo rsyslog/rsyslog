@@ -37,6 +37,9 @@ to "on". Then, data is written at the end of each transaction
 recovery thus can handle write errors without data loss.
 Note that this option severely reduces the effect of zip compression
 and should be switched to "off" for that use case.
+If ``flushOnTXEnd`` is disabled, use
+:ref:`param-omfile-flushinterval` to configure timed flushing of buffered
+data.
 Also note that the default -on- is primarily an aid to preserve the
 traditional syslogd behaviour.
 
