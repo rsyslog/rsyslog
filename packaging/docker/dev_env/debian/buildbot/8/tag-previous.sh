@@ -1,2 +1,0 @@
-docker tag rsyslog/rsyslog_dev_base_debian:8 rsyslog/rsyslog_dev_base_debian:8_previous
-docker push rsyslog/rsyslog_dev_base_debian:8_previous

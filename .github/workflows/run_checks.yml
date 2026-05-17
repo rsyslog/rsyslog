@@ -536,10 +536,6 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp"
               ;;
-          'tumbleweed')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests --disable-libyaml"
-              ;;
           'ubuntu_24')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"

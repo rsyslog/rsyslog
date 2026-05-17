@@ -1,1 +1,0 @@
-docker tag rsyslog/rsyslog_dev_buildbot_ubuntu:16.04 rsyslog/rsyslog_dev_buildbot_ubuntu:16.04_previous
