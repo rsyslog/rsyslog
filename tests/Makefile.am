@@ -14,6 +14,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_COVERAGE_GAP = check-coverage-gaps.sh
+EXTRA_DIST += $(TESTS_COVERAGE_GAP)
+
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
@@ -2128,6 +2131,7 @@ check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS)
+TESTS += $(TESTS_COVERAGE_GAP)
 
 if ENABLE_GSSAPI
 TESTS += $(TESTS_GSSAPI)
