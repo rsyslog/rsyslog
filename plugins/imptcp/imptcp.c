@@ -295,6 +295,7 @@ struct ptcpsess_s {
     sbool bSuppOctetFram; /**< copy from listener, to speed up access */
     sbool bSPFramingFix;
     enum { eAtStrtFram, eInOctetCnt, eInMsg, eInMsgTruncation } inputState; /* our current state */
+    sbool bFrameOversize; /* current frame exceeded maxMessageSize before submit */
     int iOctetsRemain; /* Number of Octets remaining in message */
     TCPFRAMINGMODE eFraming;
     uchar *pMsg; /* message (fragment) received */
@@ -971,6 +972,9 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
     MsgSetRuleset(pMsg, pSrv->pRuleset);
+    if (pThis->bFrameOversize) {
+        writeOversizeMessageLog(pMsg);
+    }
     localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
     if (localRet == RS_RET_OK) {
         STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
@@ -987,6 +991,7 @@ finalize_it:
     /* reset status variables */
     pThis->bAtStrtOfFram = 1;
     pThis->iMsg = 0;
+    pThis->bFrameOversize = 0;
 
     RETiRet;
 }
@@ -1070,6 +1075,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
     if (pThis->inputState == eAtStrtFram) {
         if (pThis->bSuppOctetFram && isdigit((int)c)) {
             pThis->inputState = eInOctetCnt;
+            pThis->bFrameOversize = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (pThis->bSPFramingFix && c == ' ') {
@@ -1081,6 +1087,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
             FINALIZE;
         } else {
             pThis->inputState = eInMsg;
+            pThis->bFrameOversize = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -1116,6 +1123,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                          propPeerName, propPeerIP, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > iMaxLine) {
+                pThis->bFrameOversize = 1;
                 /* while we can not do anything against it, we can at least log an indication
                  * that something went wrong) -- rgerhards, 2008-03-14
                  */
@@ -1159,6 +1167,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                          "imptcp %s: message received is at least %d byte larger than "
                          "max msg size; message will be split starting at: \"%.*s\"\n",
                          pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
+                pThis->bFrameOversize = 1;
                 doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
                 iMsg = 0;
                 ++(*pnMsgs);
