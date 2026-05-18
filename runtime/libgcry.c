@@ -509,24 +509,17 @@ finalize_it:
 /* We use random numbers to initiate the IV. Rsyslog runtime will ensure
  * we get a sufficiently large number.
  */
-#if defined(__clang__)
-    #pragma GCC diagnostic ignored "-Wunknown-attributes"
-#endif
-static rsRetVal
-#if defined(__clang__)
-    __attribute__((no_sanitize("shift"))) /* IV shift causes known overflow */
-#endif
-    seedIV(gcryfile gf, uchar **iv) {
-    long rndnum = 0; /* keep compiler happy -- this value is always overriden */
+static rsRetVal seedIV(gcryfile gf, uchar **iv) {
+    unsigned long rndnum = 0; /* keep compiler happy -- this value is always overriden */
     DEFiRet;
 
     CHKmalloc(*iv = calloc(1, gf->blkLength));
     for (size_t i = 0; i < gf->blkLength; ++i) {
         const int shift = (i % 4) * 8;
         if (shift == 0) { /* need new random data? */
-            rndnum = randomNumber();
+            rndnum = (unsigned long)randomNumber();
         }
-        (*iv)[i] = 0xff & ((rndnum & (255u << shift)) >> shift);
+        (*iv)[i] = (uchar)((rndnum >> shift) & 0xffu);
     }
 finalize_it:
     RETiRet;
