@@ -169,7 +169,7 @@ MariaDB/MySQL.
    }
 
 **RSYSLOG_StdPgSQLFmt** – insert command for table ``SystemEvents`` in
-pgsql.
+PostgreSQL.
 
 .. code-block:: none
 
