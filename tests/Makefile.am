@@ -77,6 +77,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
 	immark.sh \
 	immark-inputname.sh \

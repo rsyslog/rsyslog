@@ -50,6 +50,8 @@
 %{
 #include <libestr.h>
 #include <ctype.h>
+#include <errno.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -71,6 +73,8 @@ read_file(const char *const filename)
 	int fd = -1;
 	struct stat sb;
 	ssize_t nread;
+	size_t cap;
+	size_t len = 0;
 	assert(filename != NULL);
 
 	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
@@ -81,18 +85,54 @@ read_file(const char *const filename)
 		goto done;
 	}
 
-	content = malloc(sb.st_size+1);
+	if(!S_ISREG(sb.st_mode)) {
+		goto done;
+	}
+
+	if(sb.st_size < 0) {
+		goto done;
+	}
+
+	if(sb.st_size > 0 && (uintmax_t) sb.st_size > SIZE_MAX - 1) {
+		goto done;
+	}
+	cap = (sb.st_size > 0) ? (size_t) sb.st_size : 4096;
+	content = malloc(cap+1);
 	if(content == NULL) {
 		goto done;
 	}
 
-	nread = read(fd, content, sb.st_size);
-	content[nread] = '\0';
-	if(nread != (ssize_t) sb.st_size) {
-		free(content);
-		content = NULL;
-		goto done;
+	while(1) {
+		if(len == cap) {
+			if(cap > (SIZE_MAX - 1) / 2) {
+				free(content);
+				content = NULL;
+				goto done;
+			}
+			char *const new_content = realloc(content, cap * 2 + 1);
+			if(new_content == NULL) {
+				free(content);
+				content = NULL;
+				goto done;
+			}
+			content = new_content;
+			cap *= 2;
+		}
+		nread = read(fd, content + len, cap - len);
+		if(nread == -1) {
+			if(errno == EINTR) {
+				continue;
+			}
+			free(content);
+			content = NULL;
+			goto done;
+		}
+		if(nread == 0) {
+			break;
+		}
+		len += (size_t) nread;
 	}
+	content[len] = '\0';
 
 done:
 	if(fd != -1) {
