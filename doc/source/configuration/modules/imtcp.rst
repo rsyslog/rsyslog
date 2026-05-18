@@ -94,9 +94,9 @@ Stream Decompression
 ====================
 
 ``imtcp`` supports stream decompression for peers that send with
-:doc:`omfwd <omfwd>` and ``compression.mode="stream:always"``. Configure
-``compression.mode="stream:always"`` on the ``imtcp`` input and keep
-``compression.driver`` identical on both sides.
+:doc:`omfwd <omfwd>` using ``compression.mode="stream:always"`` and a
+non-zero ``zipLevel``. Configure ``compression.mode="stream:always"`` on the
+``imtcp`` input and keep ``compression.driver`` identical on both sides.
 
 The default driver is ``zlib``. To use ``zstd``, rsyslog must be built with
 libzstd support and both the ``omfwd`` sender and ``imtcp`` receiver must set

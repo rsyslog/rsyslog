@@ -437,7 +437,9 @@ sender-side ``single`` compression mode.
 Stream compression is an rsyslog layer and is not TLS-native compression. The
 default compression driver is ``zlib``. Set ``compression.driver="zstd"`` only
 when both the sender and receiver are built with libzstd support and both sides
-are configured for ``zstd``.
+are configured for ``zstd``. For zstd stream compression, ``zipLevel`` must be
+non-zero; libzstd treats level 0 as its default compression level rather than
+as "no compression".
 
 Stream compression is intended for trusted company VPNs and internal WAN/LAN
 deployments where lower bandwidth usage is valuable and both endpoints are

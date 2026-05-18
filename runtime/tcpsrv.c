@@ -2044,6 +2044,11 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionDriver(tcpsrv_t *pThis, int driver
     if (driver != TCPSRV_COMPRESS_DRIVER_ZLIB && driver != TCPSRV_COMPRESS_DRIVER_ZSTD) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
+#ifndef ENABLE_LIBZSTD
+    if (driver == TCPSRV_COMPRESS_DRIVER_ZSTD) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+#endif
     pThis->compressionDriver = (uint8_t)driver;
 finalize_it:
     RETiRet;

@@ -960,8 +960,11 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis, char *const pDa
         }
     }
 
-    while (input.pos < input.size) {
-        ZSTD_outBuffer output = {out, sizeof(out), 0};
+    ZSTD_outBuffer output;
+    do {
+        output.dst = out;
+        output.size = sizeof(out);
+        output.pos = 0;
         const size_t oldInputPos = input.pos;
         const size_t remaining = ZSTD_decompressStream((ZSTD_DCtx *)pThis->zstdDctx, &output, &input);
         if (ZSTD_isError(remaining)) {
@@ -982,12 +985,13 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis, char *const pDa
                                            "data after end of zstd stream");
                 ABORT_FINALIZE(RS_RET_ZLIB_ERR);
             }
+            break;
         }
 
         if (input.pos == oldInputPos && output.pos == 0) {
             break;
         }
-    }
+    } while (input.pos < input.size || output.pos == output.size);
 
 finalize_it:
     RETiRet;

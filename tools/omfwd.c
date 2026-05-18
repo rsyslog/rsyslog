@@ -2444,6 +2444,14 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
+    if (pData->compressionDriver == COMPRESS_DRIVER_ZSTD && pData->compressionMode == COMPRESS_STREAM_ALWAYS &&
+        pData->compressionLevel == 0) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: compression.driver=\"zstd\" with compression.mode=\"stream:always\" requires non-zero "
+                 "zipLevel because libzstd treats level 0 as its default compression level");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
     CODE_STD_STRING_REQUESTnewActInst(1);
 
     tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);

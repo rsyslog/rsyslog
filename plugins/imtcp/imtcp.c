@@ -339,10 +339,8 @@ static rsRetVal validateLegacySessionLimits(void) {
     return RS_RET_OK;
 }
 
-static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode) {
+static rsRetVal parseCompressionModeStr(const char *const str, int *const mode) {
     DEFiRet;
-    char *const str = es_str2cstr(val, NULL);
-    CHKmalloc(str);
 
     if (strcasecmp(str, "none") == 0) {
         *mode = TCPSRV_COMPRESS_NEVER;
@@ -354,14 +352,21 @@ static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode) {
     }
 
 finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode) {
+    DEFiRet;
+    char *const str = es_str2cstr(val, NULL);
+    CHKmalloc(str);
+    CHKiRet(parseCompressionModeStr(str, mode));
+finalize_it:
     free(str);
     RETiRet;
 }
 
-static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver) {
+static rsRetVal parseCompressionDriverStr(const char *const str, int *const driver) {
     DEFiRet;
-    char *const str = es_str2cstr(val, NULL);
-    CHKmalloc(str);
 
     if (strcasecmp(str, "zlib") == 0) {
         *driver = TCPSRV_COMPRESS_DRIVER_ZLIB;
@@ -378,7 +383,32 @@ static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver) {
     }
 
 finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver) {
+    DEFiRet;
+    char *const str = es_str2cstr(val, NULL);
+    CHKmalloc(str);
+    CHKiRet(parseCompressionDriverStr(str, driver));
+finalize_it:
     free(str);
+    RETiRet;
+}
+
+static rsRetVal setLegacyCompressionMode(void __attribute__((unused)) * pVal, uchar *pNewVal) {
+    DEFiRet;
+    CHKiRet(parseCompressionModeStr((const char *)pNewVal, &cs.compressionMode));
+finalize_it:
+    free(pNewVal);
+    RETiRet;
+}
+
+static rsRetVal setLegacyCompressionDriver(void __attribute__((unused)) * pVal, uchar *pNewVal) {
+    DEFiRet;
+    CHKiRet(parseCompressionDriverStr((const char *)pNewVal, &cs.compressionDriver));
+finalize_it:
+    free(pNewVal);
     RETiRet;
 }
 
@@ -1393,6 +1423,11 @@ BEGINmodInit()
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverlistenportfile"), 1, eCmdHdlrGetWord, NULL,
                               &cs.lstnPortFile, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservercompressionmode"), 0, eCmdHdlrGetWord,
+                              setLegacyCompressionMode, NULL, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservercompressiondriver"), 0, eCmdHdlrGetWord,
+                              setLegacyCompressionDriver, NULL, STD_LOADABLE_MODULE_ID,
+                              &bLegacyCnfModGlobalsPermitted));
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler, resetConfigVariables,
                                NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
