@@ -30,6 +30,12 @@ Description
 Defines, in seconds, the interval after which unwritten data is
 flushed.
 
+This parameter is applied when :ref:`param-omfile-asyncwriting` is enabled
+for the action. Use ``flushInterval`` together with ``asyncWriting="on"``
+when :ref:`param-omfile-flushontxend` is disabled, for example to keep gzip
+compression effective while still bounding how long buffered data may remain
+unflushed.
+
 Action usage
 ------------
 
@@ -37,7 +43,20 @@ Action usage
 .. _omfile.parameter.action.flushinterval:
 .. code-block:: rsyslog
 
-   action(type="omfile" flushInterval="...")
+   action(type="omfile" file="/var/log/app.log"
+          asyncWriting="on" flushOnTXEnd="off" flushInterval=1)
+
+YAML usage
+----------
+
+.. code-block:: yaml
+
+   actions:
+     - type: omfile
+       file: /var/log/app.log
+       asyncWriting: "on"
+       flushOnTXEnd: "off"
+       flushInterval: 1
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
