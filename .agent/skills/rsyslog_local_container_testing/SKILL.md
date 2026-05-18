@@ -5,9 +5,12 @@ description: Mirror rsyslog run_checks.yml container validation locally, includi
 
 # rsyslog_local_container_testing
 
-Use this skill when validating rsyslog changes through local dev containers.
-Local container validation should mirror the relevant GitHub Actions container
-jobs instead of inventing a parallel local-only flow.
+Use this skill when validating rsyslog implementation changes through local dev
+containers, and treat it as the final pre-finish gate when Docker, Podman, or
+equivalent container tooling is available. Local container validation should
+mirror the relevant GitHub Actions container jobs instead of inventing a
+parallel local-only flow. If container tooling is unavailable, report that
+limitation explicitly rather than silently substituting a weaker gate.
 
 ## When To Use
 
@@ -23,7 +26,8 @@ pushing if the change is intended for review.
 
 ## Preferred Order
 
-Run two container validations for broad local confidence. Mirror these
+For the full final gate, run two container validations for broad local
+confidence. Mirror these
 `.github/workflows/run_checks.yml` paths:
 
 1. The `clang static analyzer` job's container command.
@@ -102,6 +106,8 @@ change set, MySQL, libdbi, and Kafka should appear in the test list but skip via
 local container users rely on.
 
 For a faster build-only smoke check, set `CI_MAKE_CHECK_OPT='-j80 TESTS='`.
+This is useful for intermediate feedback, but it does not satisfy the full
+final validation gate.
 
 ## Service Relevance
 

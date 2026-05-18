@@ -27,12 +27,16 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 
 ## Agent Quick Start: The "Happy Path"
 
-Follow these three steps for a typical development task:
+Follow these steps for a typical development task:
 
 1.  **Build**: Use the `rsyslog_build` skill to set up and compile.
 2.  **Validate**: Use the `rsyslog_test` skill to run relevant shell tests.
-3.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
-    - *Tip*: You do NOT need to re-run your build/test cycle after formatting if you already validated the code immediately before.
+3.  **Container Validation**: Use the `rsyslog_local_container_testing` skill
+    when Docker or Podman container tooling is available.
+4.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
+
+Tip: You do NOT need to re-run your build, test, or container validation cycle
+after formatting if you already validated the code immediately before.
 
 ## Repository Overview
 
@@ -66,6 +70,24 @@ Follow these three steps for a typical development task:
   `daily-stable`.
 - AI agents must not introduce release-looking fallback tags such as
   `2026-03` as the default local container build version.
+
+## Required Final Validation Gate
+
+For implementation tasks, AI agents MUST treat full local container validation
+as the final validation gate when container tooling is available.
+
+- If Docker or Podman is available and usable, run the
+  [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md)
+  skill's full local validation before reporting the task complete.
+- If Docker or Podman is not installed, not running, lacks required
+  permissions, or the required image cannot be obtained, state that exact
+  blocker in the final response.
+- If full local container validation is skipped or blocked, list the targeted
+  validation that was run instead and explicitly mark the work as **not fully
+  container-validated**.
+- Do not describe implementation work as fully validated or complete unless
+  full local container validation passed, or the user explicitly accepted the
+  reduced validation scope after the blocker was reported.
 
 ## Context Discovery (Subtree Guides)
 
