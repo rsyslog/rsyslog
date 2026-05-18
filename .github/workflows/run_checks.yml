@@ -34,6 +34,7 @@ on:
 env:
   RSYSLOG_TESTBENCH_BASE_SHA: ${{ github.event.pull_request.base.sha }}
   RSYSLOG_TESTBENCH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  RSYSLOG_UPLOAD_FAILURE_ARTIFACTS: '1'
 
 jobs:
   changes:
@@ -650,18 +651,29 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       # Failure artifacts are an opt-in transport for flake evidence.  They are
-      # uploaded only for failed Ubuntu 26.04 attempts, including the SAN lane,
-      # and include the run attempt plus matrix lane in the name so reruns
-      # cannot overwrite a previous failed attempt.  Cancelled attempts are not
-      # uploaded because push-cancelled runs usually do not contain useful flake
-      # evidence.  The long-term record belongs in the external flake-campaign
-      # evidence store; these artifacts are intentionally short lived and may be
-      # deleted by the collector after successful processing.
-      - name: Upload Ubuntu 26.04 failure evidence
+      # uploaded only for failed CI matrix attempts and include the run attempt
+      # plus matrix lane in the name so reruns cannot overwrite a previous
+      # failed attempt.  Cancelled attempts are not uploaded because
+      # push-cancelled runs usually do not contain useful flake evidence.  The
+      # long-term record belongs in the external flake-campaign evidence store;
+      # these artifacts are intentionally short lived and may be deleted by the
+      # collector after successful processing.  Some logs are created by the
+      # container user, so normalize read permissions before upload.
+      - name: Prepare CI failure evidence
         if: >-
           ${{ failure()
-              && vars.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
-              && startsWith(matrix.config, 'ubuntu_26_') }}
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        run: |
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
+
+      - name: Upload CI failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.config }}
