@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omfile`.
 :Name: flushOnTXEnd
 :Scope: action
 :Type: boolean
-:Default: action=on
+:Default: on
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
