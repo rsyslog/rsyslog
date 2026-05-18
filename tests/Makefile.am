@@ -1193,6 +1193,7 @@ TESTS_IMPTCP = \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
+	imptcp-oversize-errorfile-truncate.sh \
 	imptcp_multi_line.sh \
 	imptcp_spframingfix.sh \
 	imptcp_maxsessions.sh \

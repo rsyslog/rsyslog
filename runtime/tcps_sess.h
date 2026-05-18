@@ -46,6 +46,7 @@ struct tcps_sess_s {
             eInMsgTruncating,
             eInMsgCheckMultiLine
         } inputState; /* our current state */
+        sbool bFrameOversize; /* current frame exceeded maxMessageSize before submit */
         int iOctetsRemain; /* Number of Octets remaining in message */
         TCPFRAMINGMODE eFraming;
         uchar *pMsg; /* message (fragment) received */

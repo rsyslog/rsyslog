@@ -357,6 +357,9 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
     CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
+    if (pThis->bFrameOversize) {
+        writeOversizeMessageLog(pMsg);
+    }
 
     if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
         const char *per_source_key = NULL;
@@ -456,6 +459,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
 finalize_it:
     /* reset status variables */
     pThis->iMsg = 0;
+    pThis->bFrameOversize = 0;
 
     RETiRet;
 }
@@ -630,6 +634,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
     if (pThis->inputState == eAtStrtFram) {
         if (c >= '0' && c <= '9' && pThis->bSuppOctetFram) {
             pThis->inputState = eInOctetCnt;
+            pThis->bFrameOversize = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (c == ' ' && pThis->bSPFramingFix) {
@@ -641,6 +646,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
             FINALIZE;
         } else {
             pThis->inputState = eInMsg;
+            pThis->bFrameOversize = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -686,6 +692,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
                           pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+                pThis->bFrameOversize = 1;
                 defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
                 ++(*pnMsgs);
                 if (pThis->pSrv->discardTruncatedMsg == 1) {
@@ -754,6 +761,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                          cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > pThis->iMaxLine) {
+                pThis->bFrameOversize = 1;
                 /* while we can not do anything against it, we can at least log an indication
                  * that something went wrong) -- rgerhards, 2008-03-14
                  */
