@@ -36,6 +36,10 @@ The packaged collector still runs as root by default. Its shipped
 configuration binds privileged listener ports such as ``514`` and
 ``6514`` and writes files under ``/var/log``.
 
+The inherited regex lookup-table noise filter is applied before the
+packaged collector file outputs. See :doc:`minimal` for the
+``/etc/rsyslog/noise-drop.lkp_tbl`` format and matching behavior.
+
 .. note::
 
    - **UDP (514/udp)** and **TCP (514/tcp)** are enabled by default.  

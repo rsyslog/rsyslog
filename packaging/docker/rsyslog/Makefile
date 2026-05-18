@@ -169,7 +169,12 @@ check_build_channel:
 	esac
 
 # Build the minimal rsyslog container.
-build_minimal_image: check_build_channel ./minimal/Dockerfile ./minimal/rsyslog.conf
+build_minimal_image: check_build_channel \
+                     ./minimal/Dockerfile \
+                     ./minimal/rsyslog.conf \
+                     ./minimal/01-main-queue.conf \
+                     ./minimal/02-noise-drop.conf \
+                     ./minimal/noise-drop.lkp_tbl
 	@echo "--- Building minimal image: $(MINIMAL_IMAGE_TAG) ---"
 	docker build $(DOCKER_BUILD_FLAGS) \
 		              $(DOCKER_PLATFORM_FLAGS) \
@@ -335,7 +340,13 @@ release_publish: release_push
 # These targets publish manifest lists directly via Buildx. They intentionally
 # remain separate from the local build/push targets so developer workflows keep
 # using plain docker builds unless release publishing is requested.
-buildx_push_minimal: check_publish_version check_build_channel ./minimal/Dockerfile ./minimal/rsyslog.conf
+buildx_push_minimal: check_publish_version \
+                     check_build_channel \
+                     ./minimal/Dockerfile \
+                     ./minimal/rsyslog.conf \
+                     ./minimal/01-main-queue.conf \
+                     ./minimal/02-noise-drop.conf \
+                     ./minimal/noise-drop.lkp_tbl
 	$(call buildx_push_template,minimal,MINIMAL,$(PPA_BUILD_ARGS))
 
 buildx_push_standard: buildx_push_minimal ./standard/Dockerfile

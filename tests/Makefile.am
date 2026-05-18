@@ -425,6 +425,7 @@ TESTS_DEFAULT = \
 	lookup_table.sh \
 	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
+	container-noise-drop.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
 	sparse_array_lookup_table.sh \
