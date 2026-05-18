@@ -184,10 +184,3 @@ pgsql.
 .. code-block:: none
 
    template(name="RSYSLOG_spoofadr" type="string" string="%fromhost-ip%")
-
-**RSYSLOG_StdJSONFmt** – JSON structure containing message properties.
-
-.. code-block:: none
-
-   template(name="RSYSLOG_StdJSONFmt" type="string"
-        string="{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":\"%timereported:::date-rfc3339%\",\"timegenerated\":\"%timegenerated:::date-rfc3339%\"}")
