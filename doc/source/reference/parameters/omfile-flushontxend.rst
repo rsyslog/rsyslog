@@ -31,7 +31,7 @@ Disk writes are only done when the buffer is full. So if an error
 happens during that write, data is potentially lost. Bear in mind that
 the buffer may become full only after several hours or a rsyslog
 shutdown (however a buffer flush can still be forced by sending rsyslogd
-a HUP signal). In cases where this is unacceptable, set FlushOnTXEnd
+a HUP signal). In cases where this is unacceptable, set flushOnTXEnd
 to "on". Then, data is written at the end of each transaction
 (for pre-v5 this means after each log message) and the usual error
 recovery thus can handle write errors without data loss.
