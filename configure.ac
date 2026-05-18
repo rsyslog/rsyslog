@@ -1514,6 +1514,7 @@ if test "x$enable_libzstd" = "xyes"; then
         )]
     )
     LIBS="$save_LIBS"
+    AC_DEFINE([ENABLE_LIBZSTD], [1], [Indicator that LIBZSTD is present])
 fi
 AM_CONDITIONAL(ENABLE_LIBZSTD, test x$enable_libzstd = xyes)
 

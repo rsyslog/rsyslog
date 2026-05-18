@@ -34,6 +34,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#ifdef ENABLE_LIBZSTD
+    #include <zstd.h>
+#endif
 
 #include "rsyslog.h"
 #include "dirty.h"
@@ -86,6 +89,7 @@ DEFobjCurrIf(parser)
 
     /* forward definitions */
     static rsRetVal Close(tcps_sess_t *pThis);
+static rsRetVal finishCompressedStream(tcps_sess_t *pThis);
 
 
 /* Standard-Constructor */
@@ -105,6 +109,12 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->tlsProbeBytes = 0;
     pThis->tlsProbeDone = 0;
     pThis->tlsMismatchWarned = 0;
+    pThis->compressionMode = TCPSRV_COMPRESS_NEVER;
+    pThis->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    pThis->zipInitDone = 0;
+    pThis->compressedStreamEnded = 0;
+    pThis->zstdDctx = NULL;
+    memset(&pThis->zstrm, 0, sizeof(pThis->zstrm));
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
@@ -147,6 +157,16 @@ finalize_it:
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(tcps_sess);
+    if (pThis->zipInitDone) {
+        inflateEnd(&pThis->zstrm);
+        pThis->zipInitDone = 0;
+    }
+#ifdef ENABLE_LIBZSTD
+    if (pThis->zstdDctx != NULL) {
+        ZSTD_freeDCtx((ZSTD_DCtx *)pThis->zstdDctx);
+        pThis->zstdDctx = NULL;
+    }
+#endif
     if (pThis->pStrm != NULL) netstrm.Destruct(&pThis->pStrm);
 
     if (pThis->pSrv->pOnSessDestruct != NULL) {
@@ -297,6 +317,8 @@ static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     /* set cached elements */
     pThis->bSuppOctetFram = pLstnInfo->cnf_params->bSuppOctetFram;
     pThis->bSPFramingFix = pLstnInfo->cnf_params->bSPFramingFix;
+    pThis->compressionMode = pLstnInfo->compressionMode;
+    pThis->compressionDriver = pLstnInfo->compressionDriver;
     RETiRet;
 }
 
@@ -482,6 +504,8 @@ static rsRetVal PrepareClose(tcps_sess_t *pThis) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
+
+    CHKiRet(finishCompressedStream(pThis));
 
     if (pThis->inputState == eAtStrtFram) {
         /* this is how it should be. There is no unprocessed
@@ -806,7 +830,7 @@ finalize_it:
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  */
 #define NUM_MULTISUB 1024
-static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
+static rsRetVal DataRcvdUncompressed(tcps_sess_t *pThis, char *pData, const size_t iLen, const sbool detectTls) {
     multi_submit_t multiSub;
     smsg_t *pMsgs[NUM_MULTISUB];
     struct syslogTime stTime;
@@ -819,7 +843,9 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
     assert(pData != NULL);
     assert(iLen > 0);
 
-    CHKiRet(maybeDetectTlsClientHello(pThis, pData, iLen));
+    if (detectTls) {
+        CHKiRet(maybeDetectTlsClientHello(pThis, pData, iLen));
+    }
 
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
     multiSub.ppMsgs = pMsgs;
@@ -841,6 +867,187 @@ finalize_it:
     RETiRet;
 }
 #undef NUM_MULTISUB
+
+static const char *compressionDriverName(const tcps_sess_t *const pThis) {
+    switch (pThis->compressionDriver) {
+        case TCPSRV_COMPRESS_DRIVER_ZSTD:
+            return "zstd";
+        case TCPSRV_COMPRESS_DRIVER_ZLIB:
+        default:
+            return "zlib";
+    }
+}
+
+static void logCompressedStreamFailure(tcps_sess_t *const pThis, const char *const reason, const char *const detail) {
+    const char *const host = propGetSzStrOrDefault(pThis->fromHost, "(host unknown)");
+    const char *const ip = propGetSzStrOrDefault(pThis->fromHostIP, "(IP unknown)");
+    const char *const port = propGetSzStrOrDefault(pThis->fromHostPort, "(port unknown)");
+
+    STATSCOUNTER_INC(pThis->pLstnInfo->ctrDecompressErr, pThis->pLstnInfo->mutCtrDecompressErr);
+    LogError(0, RS_RET_ZLIB_ERR, "imtcp: %s from %s (%s:%s), driver=%s%s%s", reason, host, ip, port,
+             compressionDriverName(pThis), detail == NULL ? "" : ": ", detail == NULL ? "" : detail);
+}
+
+static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis, char *const pData, const size_t iLen) {
+    uchar out[64 * 1024];
+    DEFiRet;
+
+    if (pThis->compressedStreamEnded) {
+        logCompressedStreamFailure(pThis, "received invalid compressed stream", "data after end of zlib stream");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    if (!pThis->zipInitDone) {
+        memset(&pThis->zstrm, 0, sizeof(pThis->zstrm));
+        const int zret = inflateInit(&pThis->zstrm);
+        if (zret != Z_OK) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream", "zlib inflateInit failed");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        pThis->zipInitDone = 1;
+    }
+
+    pThis->zstrm.next_in = (Bytef *)pData;
+    pThis->zstrm.avail_in = (uInt)iLen;
+
+    do {
+        pThis->zstrm.next_out = out;
+        pThis->zstrm.avail_out = sizeof(out);
+        const int zret = inflate(&pThis->zstrm, Z_SYNC_FLUSH);
+        const size_t have = sizeof(out) - pThis->zstrm.avail_out;
+
+        if (have != 0) {
+            STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed, have);
+            CHKiRet(DataRcvdUncompressed(pThis, (char *)out, have, 0));
+        }
+
+        if (zret == Z_STREAM_END) {
+            pThis->compressedStreamEnded = 1;
+            if (pThis->zstrm.avail_in != 0) {
+                logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                           "data after end of zlib stream");
+                ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+            }
+            break;
+        }
+
+        if (zret != Z_OK && zret != Z_BUF_ERROR) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream", "zlib inflate failed");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+    } while (pThis->zstrm.avail_in != 0 || pThis->zstrm.avail_out == 0);
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis, char *const pData, const size_t iLen) {
+#ifdef ENABLE_LIBZSTD
+    uchar out[64 * 1024];
+    ZSTD_inBuffer input = {pData, iLen, 0};
+    DEFiRet;
+
+    if (pThis->compressedStreamEnded) {
+        logCompressedStreamFailure(pThis, "received invalid compressed stream", "data after end of zstd stream");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    if (pThis->zstdDctx == NULL) {
+        pThis->zstdDctx = ZSTD_createDCtx();
+        if (pThis->zstdDctx == NULL) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream", "zstd context allocation failed");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+    }
+
+    while (input.pos < input.size) {
+        ZSTD_outBuffer output = {out, sizeof(out), 0};
+        const size_t oldInputPos = input.pos;
+        const size_t remaining = ZSTD_decompressStream((ZSTD_DCtx *)pThis->zstdDctx, &output, &input);
+        if (ZSTD_isError(remaining)) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(remaining));
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+
+        if (output.pos != 0) {
+            STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed,
+                             output.pos);
+            CHKiRet(DataRcvdUncompressed(pThis, (char *)out, output.pos, 0));
+        }
+
+        if (remaining == 0) {
+            pThis->compressedStreamEnded = 1;
+            if (input.pos != input.size) {
+                logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                           "data after end of zstd stream");
+                ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+            }
+        }
+
+        if (input.pos == oldInputPos && output.pos == 0) {
+            break;
+        }
+    }
+
+finalize_it:
+    RETiRet;
+#else
+    DEFiRet;
+    (void)pData;
+    (void)iLen;
+    logCompressedStreamFailure(pThis, "received invalid compressed stream", "zstd support is not built in");
+    ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+finalize_it:
+    RETiRet;
+#endif
+}
+
+static rsRetVal finishCompressedStream(tcps_sess_t *pThis) {
+    DEFiRet;
+
+    if (pThis->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
+        FINALIZE;
+    }
+
+    if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZLIB) {
+        if (!pThis->zipInitDone || pThis->compressedStreamEnded) {
+            FINALIZE;
+        }
+        logCompressedStreamFailure(pThis, "detected truncated compressed stream", "zlib stream ended before trailer");
+        inflateEnd(&pThis->zstrm);
+        pThis->zipInitDone = 0;
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD && !pThis->compressedStreamEnded) {
+        logCompressedStreamFailure(pThis, "detected truncated compressed stream", "zstd stream ended before trailer");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
+    DEFiRet;
+
+    ISOBJ_TYPE_assert(pThis, tcps_sess);
+    assert(pData != NULL);
+    assert(iLen > 0);
+
+    STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesRcvd, pThis->pLstnInfo->mutCtrBytesRcvd, iLen);
+
+    if (pThis->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
+        CHKiRet(DataRcvdUncompressed(pThis, pData, iLen, 1));
+    } else if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD) {
+        CHKiRet(DataRcvdCompressedZstd(pThis, pData, iLen));
+    } else {
+        CHKiRet(DataRcvdCompressedZlib(pThis, pData, iLen));
+    }
+
+finalize_it:
+    RETiRet;
+}
 
 
 /* queryInterface function

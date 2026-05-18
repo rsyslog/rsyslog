@@ -123,6 +123,22 @@ For test and controlled environments, you can override the resolver used for
 SRV lookups by setting ``RSYSLOG_DNS_SERVER`` (IPv4 address) and the optional
 ``RSYSLOG_DNS_PORT`` environment variables before starting rsyslog.
 
+**4. Stream-compress forwarding to imtcp**
+
+.. code-block:: rsyslog
+
+   # Compress the full TCP stream. Receiver must use matching imtcp settings.
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="514"
+       protocol="tcp"
+       compression.mode="stream:always"
+       compression.driver="zlib"
+       zipLevel="3"
+       queue.type="linkedList"
+   )
+
 Outdated Legacy Methods
 =======================
 
@@ -404,7 +420,8 @@ a conversation.
 
 In "stream:always" compression mode the full stream is being
 compressed. This also uses non-standard protocol and is compatible
-only with receives that have the same abilities. This mode offers
+only with receivers configured for the same stream-compression mode
+and driver. This mode offers
 potentially very high compression ratios. With typical syslog
 messages, it can be as high as 95+% compression (so only one
 twentieth of data is actually transmitted!). Note that this mode
@@ -413,8 +430,39 @@ emits new compressed data. For typical syslog messages, this can mean
 that some hundred messages may be held in local buffers before they
 are actually sent. This mode has been introduced in 7.5.1.
 
-**Note: currently only imptcp supports receiving stream-compressed
-data.**
+Use :doc:`imtcp <imtcp>` with ``compression.mode="stream:always"`` to receive
+stream-compressed TCP data from ``omfwd``. ``imtcp`` does not receive the
+sender-side ``single`` compression mode.
+
+Stream compression is an rsyslog layer and is not TLS-native compression. The
+default compression driver is ``zlib``. Set ``compression.driver="zstd"`` only
+when both the sender and receiver are built with libzstd support and both sides
+are configured for ``zstd``.
+
+Stream compression is intended for trusted company VPNs and internal WAN/LAN
+deployments where lower bandwidth usage is valuable and both endpoints are
+under the same administrative control. Compression can expose side channels
+through compressed sizes and timing, especially when attacker-controlled text
+can be placed near sensitive log content. For untrusted networks, use TLS for
+confidentiality and authentication and decide separately whether compression is
+acceptable for the data.
+
+For long-lived stream-compressed TCP sessions, ``rebindInterval`` can be used
+to periodically reconnect after a configured number of batches. This resets the
+compression context and can reduce the amount of data exposed through one
+continuous compression history, at the cost of reconnect overhead. A future
+time-based reconnect option may provide a more direct way to reset compression
+context by elapsed time.
+
+
+compression.driver
+^^^^^^^^^^^^^^^^^^
+
+.. include:: ../../reference/parameters/omfwd-compression-driver.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
+See :ref:`param-omfwd-compression-driver` for full details.
 
 
 compression.stream.flushOnTXEnd
@@ -468,6 +516,11 @@ For UDP, the new \`\`connection'' uses a different source port (ports
 are cycled and not reused too frequently). This usually is perceived
 as a \`\`new connection'' by load balancers, which in turn forward
 messages to another physical target system.
+
+For ``compression.mode="stream:always"``, reconnecting also starts a new
+compression context. This can be used as a practical mitigation when long-lived
+compressed streams are acceptable operationally but should not keep one
+compression history indefinitely.
 
 
 KeepAlive

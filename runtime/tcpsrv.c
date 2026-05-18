@@ -390,6 +390,8 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
     pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
     pEntry->pSrv = pThis;
+    pEntry->compressionMode = pThis->compressionMode;
+    pEntry->compressionDriver = pThis->compressionDriver;
 
 #ifdef FEATURE_REGEXP
     if (cnf_params->pszStartRegex != NULL) {
@@ -430,8 +432,17 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     CHKiRet(statsobj.SetName(pEntry->stats, statname));
     CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
     STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
+    STATSCOUNTER_INIT(pEntry->ctrBytesRcvd, pEntry->mutCtrBytesRcvd);
+    STATSCOUNTER_INIT(pEntry->ctrBytesDecompressed, pEntry->mutCtrBytesDecompressed);
+    STATSCOUNTER_INIT(pEntry->ctrDecompressErr, pEntry->mutCtrDecompressErr);
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pEntry->ctrSubmit)));
+    CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.received"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &(pEntry->ctrBytesRcvd)));
+    CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.decompressed"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(pEntry->ctrBytesDecompressed)));
+    CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("decompression.errors"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(pEntry->ctrDecompressErr)));
     CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
 
     /* all OK - add to list */
@@ -1778,6 +1789,8 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->iSynBacklog = 0; /* default: unset */
     pThis->DrvrTlsVerifyDepth = 0;
     pThis->DrvrTlsRevocationCheck = 0;
+    pThis->compressionMode = TCPSRV_COMPRESS_NEVER;
+    pThis->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
 ENDobjConstruct(tcpsrv)
 
 
@@ -2014,6 +2027,27 @@ static rsRetVal ATTR_NONNULL(1) SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSiz
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL(1) SetCompressionMode(tcpsrv_t *pThis, int mode) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    if (mode != TCPSRV_COMPRESS_NEVER && mode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    pThis->compressionMode = (uint8_t)mode;
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(1) SetCompressionDriver(tcpsrv_t *pThis, int driver) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    if (driver != TCPSRV_COMPRESS_DRIVER_ZLIB && driver != TCPSRV_COMPRESS_DRIVER_ZSTD) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    pThis->compressionDriver = (uint8_t)driver;
+finalize_it:
+    RETiRet;
+}
 
 static rsRetVal ATTR_NONNULL(1) SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
     DEFiRet;
@@ -2325,6 +2359,8 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetbSPFramingFix = SetbSPFramingFix;
     pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
     pIf->SetMaxFrameSize = SetMaxFrameSize;
+    pIf->SetCompressionMode = SetCompressionMode;
+    pIf->SetCompressionDriver = SetCompressionDriver;
     pIf->SetbDisableLFDelim = SetbDisableLFDelim;
     pIf->SetDiscardTruncatedMsg = SetDiscardTruncatedMsg;
     pIf->SetSessMax = SetSessMax;
