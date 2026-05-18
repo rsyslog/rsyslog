@@ -261,8 +261,6 @@ For modern JSON pipelines, prefer custom list or subtree templates.
      - Insert command for PostgreSQL
    * - RSYSLOG_spoofadr
      - Sender IP address only
-   * - RSYSLOG_StdJSONFmt
-     - JSON structure of message properties
 
 
 Legacy ``$template`` statement
