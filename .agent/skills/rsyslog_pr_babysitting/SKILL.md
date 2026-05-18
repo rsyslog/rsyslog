@@ -23,12 +23,52 @@ polling until merge unless the user explicitly asks for merge-time monitoring.
   user says to stop.
 - If babysitting a non-empty set of PRs, check them together on the same
   cadence instead of starting separate tight loops.
-- Stop babysitting when all monitored PRs are green: no failed checks, no
+- Stop babysitting each PR as soon as that PR is green: no failed checks, no
   running or queued required checks, and no unresolved actionable review
-  threads. Do not keep polling until merge unless explicitly asked.
+  threads. Merge is a maintainer decision and may happen days later, so a green
+  unmerged PR is not a reason to keep polling unless the user explicitly asked
+  for merge-time monitoring.
 - Do not leave background sleep or polling processes alive when stopping work.
 - Report the commit SHA, failed checks, running checks, and unresolved review
   findings at each meaningful update.
+- Do not keep polling when progress is blocked by a maintainer decision,
+  missing credentials, unavailable external service, or any other condition the
+  agent cannot resolve safely. Notify once with the blocker and recommended
+  next step, then stop or pause the automation.
+
+## Poll Decision Table
+
+Run this decision table on every poll before deciding whether to report, fix,
+or keep waiting:
+
+- **Merged**: stop tracking the PR. Worktree and branch cleanup is a separate
+  maintenance task; do it only when explicitly requested.
+- **Checks running or queued**: keep polling on cadence, unless review threads
+  already contain an actionable simple fix that can be handled while checks
+  run.
+- **Checks failed**: inspect failing logs before guessing. Classify the failure
+  as likely flake, PR-caused, external/unresolvable, or decision-needed.
+- **Likely flake**: record the failing test and reason, rerun failed jobs only,
+  and keep polling.
+- **PR-caused failure**: fix only after tying the failing path to the PR's
+  changes, validate locally, amend or commit as appropriate, push, and keep
+  polling.
+- **Active review threads**: classify each unresolved, non-outdated thread as
+  `actionable/simple`, `needs maintainer decision`, `external/unresolvable`, or
+  `response-only`.
+- **Actionable/simple review thread**: if the PR branch is in the agent's write
+  scope, fix it immediately, validate the affected area, amend or commit as
+  appropriate, push, and continue babysitting. Do not report it as a blocker
+  before attempting the fix.
+- **Needs maintainer decision or external/unresolvable**: notify the user once
+  with the exact blocker and recommended next step, then stop or pause
+  babysitting for that PR.
+- **Response-only**: draft the needed response for the user and stop or pause
+  unless the user explicitly asked the agent to post replies.
+- **Fully babysat**: stop tracking this PR when there are no failed checks, no
+  running or queued required checks, and no unresolved actionable review
+  threads. Do not keep polling a green PR while it waits for maintainer merge
+  unless the user explicitly asked for merge-time monitoring.
 
 ## CI Poll
 
@@ -107,7 +147,21 @@ For each unresolved, non-outdated thread, track:
 - priority words such as high, critical, regression, skip, CI, or workflow
 - whether the requested change is actionable or only needs a response
 
-Do not reply on GitHub, resolve threads, or push fixes unless explicitly asked.
+When the PR branch belongs to the current agent task or the user has asked the
+agent to babysit its own PR, simple review comments are part of the babysitting
+work. Handle small, localized fixes directly, validate them, and push the
+updated branch. Examples include typo fixes, documentation wording, metadata
+formatting, simple example corrections, and narrow test expectation updates.
+
+AI review comments need an explicit GitHub reply so later readers know the
+comment was considered. If the requested change was implemented, a short
+`Done.` reply is sufficient. If the comment is invalid, not applicable, or not
+implemented, reply with the specific reason.
+
+Do not push fixes for PRs outside the agent's write scope, broad design changes,
+compatibility changes, ambiguous review requests, or anything requiring
+maintainer policy judgment. Report those once and stop or pause polling. Do not
+reply to non-AI reviewers or resolve threads unless explicitly asked.
 
 ## Status Summary
 
