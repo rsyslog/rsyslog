@@ -649,6 +649,32 @@ jobs:
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
+      # Failure artifacts are an opt-in transport for flake evidence.  They are
+      # uploaded only for failed Ubuntu 26.04 attempts, including the SAN lane,
+      # and include the run attempt plus matrix lane in the name so reruns
+      # cannot overwrite a previous failed attempt.  Cancelled attempts are not
+      # uploaded because push-cancelled runs usually do not contain useful flake
+      # evidence.  The long-term record belongs in the external flake-campaign
+      # evidence store; these artifacts are intentionally short lived and may be
+      # deleted by the collector after successful processing.
+      - name: Upload Ubuntu 26.04 failure evidence
+        if: >-
+          ${{ failure()
+              && vars.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
+              && startsWith(matrix.config, 'ubuntu_26_') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.config }}
+          path: |
+            failed-tests.log
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Skip CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping container CI."
