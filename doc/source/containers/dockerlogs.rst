@@ -27,6 +27,10 @@ The packaged dockerlogs image still runs as root by default. Typical
 deployments rely on Docker daemon or socket access, which is commonly
 root-scoped.
 
+The inherited regex lookup-table noise filter is applied before the
+packaged forwarding action. See :doc:`minimal` for the
+``/etc/rsyslog/noise-drop.lkp_tbl`` format and matching behavior.
+
 Environment Variables
 ---------------------
 

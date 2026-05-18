@@ -62,6 +62,7 @@ checklog
 logfile*
 *.conf
 !tests/testsuites/*.conf
+!packaging/docker/rsyslog/minimal/02-noise-drop.conf
 # packaging/ubuntu: exclude from *.conf and rsyslog.service
 !packaging/ubuntu/**/*.conf
 !packaging/ubuntu/**/rsyslog.service

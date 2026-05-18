@@ -19,6 +19,26 @@ The script reads credentials from `DOCKERHUB_USERNAME` /
 `DOCKERHUB_PASSWORD` or the local `~/.docker/config.json` and defaults
 to a dry run.
 
+## Inherited noise filter
+
+The minimal image ships an empty regex lookup table at
+`/etc/rsyslog/noise-drop.lkp_tbl` and a default filter snippet in
+`/etc/rsyslog.d/02-noise-drop.conf`. All derived images inherit this
+filter. Operators can mount or replace the lookup table with native
+rsyslog lookup-table JSON:
+
+```json
+{ "version": 1, "nomatch": "", "type": "regex", "table": [
+  { "regex": "healthcheck succeeded", "tag": "drop" }
+] }
+```
+
+The default filter matches `$rawmsg`, which is the most robust property
+for source-side filtering because it includes the full received event.
+Any non-empty tag returned by the lookup table causes rsyslog to `stop`
+processing that event. Replace the filter snippet if a deployment needs
+to match another property such as `$msg`.
+
 ## Version and tag contract
 
 Local builds default to a non-release tag on purpose and use the stable

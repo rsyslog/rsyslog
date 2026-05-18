@@ -31,6 +31,10 @@ This image is a concrete example of rsyslog being used as an ETL transport and
 delivery component. It is optimized for Vespa-oriented pipelines, not presented
 here as a generic all-destinations ETL appliance.
 
+The inherited regex lookup-table noise filter is applied before the
+packaged Vespa output action. See :doc:`minimal` for the
+``/etc/rsyslog/noise-drop.lkp_tbl`` format and matching behavior.
+
 .. warning::
 
    ``rsyslog/rsyslog-etl`` is currently experimental. Treat it as a
