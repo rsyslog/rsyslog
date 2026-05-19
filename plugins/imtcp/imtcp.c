@@ -124,6 +124,8 @@ static struct configSettings_s {
     uchar *lstnPortFile;
     int compressionMode;
     int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
 } cs;
 
 struct instanceConf_s {
@@ -169,6 +171,8 @@ struct instanceConf_s {
     unsigned starvationMaxReads;
     int compressionMode;
     int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
     struct instanceConf_s *next;
 };
 
@@ -211,6 +215,8 @@ struct modConfData_s {
     unsigned starvationMaxReads;
     int compressionMode;
     int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -251,6 +257,8 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"preservecase", eCmdHdlrBinary, 0},
                                            {"compression.mode", eCmdHdlrString, 0},
                                            {"compression.driver", eCmdHdlrString, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -300,6 +308,8 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"networknamespace", eCmdHdlrString, 0},
                                            {"compression.mode", eCmdHdlrString, 0},
                                            {"compression.driver", eCmdHdlrString, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"multiline", eCmdHdlrBinary, 0},
                                            {"framing.delimiter.regex", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
@@ -552,6 +562,8 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->starvationMaxReads = loadModConf->starvationMaxReads;
     inst->compressionMode = loadModConf->compressionMode;
     inst->compressionDriver = loadModConf->compressionDriver;
+    inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
 
     inst->cnf_params->pszLstnPortFileName = NULL;
     inst->cnf_params->bMultiLine = 0;
@@ -625,6 +637,8 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
     inst->compressionMode = cs.compressionMode;
     inst->compressionDriver = cs.compressionDriver;
+    inst->compressionMaxExpansionRatio = cs.compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = cs.compressionMaxDecompressedBytesPerReceive;
 
 finalize_it:
     free(pNewVal);
@@ -665,6 +679,9 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, inst->maxFrameSize));
     CHKiRet(tcpsrv.SetCompressionMode(pOurTcpsrv, inst->compressionMode));
     CHKiRet(tcpsrv.SetCompressionDriver(pOurTcpsrv, inst->compressionDriver));
+    CHKiRet(tcpsrv.SetCompressionMaxExpansionRatio(pOurTcpsrv, inst->compressionMaxExpansionRatio));
+    CHKiRet(tcpsrv.SetCompressionMaxDecompressedBytesPerReceive(pOurTcpsrv,
+                                                                inst->compressionMaxDecompressedBytesPerReceive));
     CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, inst->bDisableLFDelim));
     CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, inst->discardTruncatedMsg));
     CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
@@ -868,6 +885,10 @@ BEGINnewInpInst
             CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode));
         } else if (!strcmp(inppblk.descr[i].name, "compression.driver")) {
             CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver));
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
+            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
@@ -942,6 +963,8 @@ BEGINbeginCnfLoad
     loadModConf->bPreserveCase = 1; /* default to true */
     loadModConf->compressionMode = TCPSRV_COMPRESS_NEVER;
     loadModConf->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    loadModConf->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    loadModConf->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config variables */
     resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
@@ -1046,6 +1069,10 @@ BEGINsetModCnf
             CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &loadModConf->compressionMode));
         } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
             CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &loadModConf->compressionDriver));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
+            loadModConf->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            loadModConf->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "
@@ -1348,6 +1375,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.bPreserveCase = 1;
     cs.compressionMode = TCPSRV_COMPRESS_NEVER;
     cs.compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    cs.compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    cs.compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszInputName);

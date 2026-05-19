@@ -22,7 +22,7 @@ Enables stream decompression for TCP streams sent by omfwd with
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: compression.mode
-:Scope: input
+:Scope: input/module
 :Type: word
 :Default: input=none
 :Required?: no
@@ -55,6 +55,11 @@ required.
 ``imtcp`` supports ``stream:always`` decompression only. It does not receive
 ``omfwd`` sender-side ``single`` compression mode.
 
+Decompressed output is bounded by
+:ref:`param-imtcp-compression-maxexpansionratio` and
+:ref:`param-imtcp-compression-maxdecompressedbytesperreceive`. If either guard
+is exceeded, ``imtcp`` logs the stream as invalid and closes the session.
+
 Input usage
 -----------
 .. _param-imtcp-input-compression-mode:
@@ -67,5 +72,7 @@ Input usage
 See also
 --------
 
-See also :ref:`param-imtcp-compression-driver` and
+See also :ref:`param-imtcp-compression-driver`,
+:ref:`param-imtcp-compression-maxexpansionratio`,
+:ref:`param-imtcp-compression-maxdecompressedbytesperreceive`, and
 :doc:`../../configuration/modules/imtcp`.

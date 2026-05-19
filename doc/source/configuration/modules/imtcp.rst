@@ -111,6 +111,14 @@ authentication, and evaluate whether compression side channels are acceptable
 for the data being sent. rsyslog does not provide TLS-native compression for
 ``imtcp``; TLS and rsyslog stream compression are separate layers.
 
+To limit decompression amplification, ``imtcp`` bounds decompressed output for
+each compressed TCP receive operation. The defaults allow a 1024:1 expansion
+ratio and 64 MiB of decompressed output per receive. If either limit is
+exceeded, ``imtcp`` logs the stream as invalid and closes the session. Set
+``compression.maxExpansionRatio`` or
+``compression.maxDecompressedBytesPerReceive`` to ``0`` only for tightly
+controlled deployments that need to disable the corresponding guard.
+
 ``imtcp`` stream decompression is for ``stream:always`` only. It does not
 receive the sender-side ``single`` compression mode.
 
@@ -171,6 +179,22 @@ Module Parameters
         :end-before: .. summary-end
    * - :ref:`param-imtcp-maxframesize`
      - .. include:: ../../reference/parameters/imtcp-maxframesize.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-mode`
+     - .. include:: ../../reference/parameters/imtcp-compression-mode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-driver`
+     - .. include:: ../../reference/parameters/imtcp-compression-driver.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-maxexpansionratio`
+     - .. include:: ../../reference/parameters/imtcp-compression-maxexpansionratio.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-maxdecompressedbytesperreceive`
+     - .. include:: ../../reference/parameters/imtcp-compression-maxdecompressedbytesperreceive.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imtcp-notifyonconnectionopen`
@@ -304,6 +328,8 @@ Module Parameters
    ../../reference/parameters/imtcp-address
    ../../reference/parameters/imtcp-compression-mode
    ../../reference/parameters/imtcp-compression-driver
+   ../../reference/parameters/imtcp-compression-maxexpansionratio
+   ../../reference/parameters/imtcp-compression-maxdecompressedbytesperreceive
    ../../reference/parameters/imtcp-name
    ../../reference/parameters/imtcp-ruleset
    ../../reference/parameters/imtcp-supportoctetcountedframing
@@ -344,6 +370,14 @@ Input Parameters
         :end-before: .. summary-end
    * - :ref:`param-imtcp-compression-driver`
      - .. include:: ../../reference/parameters/imtcp-compression-driver.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-maxexpansionratio`
+     - .. include:: ../../reference/parameters/imtcp-compression-maxexpansionratio.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-compression-maxdecompressedbytesperreceive`
+     - .. include:: ../../reference/parameters/imtcp-compression-maxdecompressedbytesperreceive.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imtcp-name`

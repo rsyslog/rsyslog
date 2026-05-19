@@ -21,7 +21,7 @@ Selects the decompression driver for ``imtcp`` stream-compressed TCP input.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: compression.driver
-:Scope: input
+:Scope: input/module
 :Type: word
 :Default: input=zlib
 :Required?: no

@@ -392,6 +392,8 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     pEntry->pSrv = pThis;
     pEntry->compressionMode = pThis->compressionMode;
     pEntry->compressionDriver = pThis->compressionDriver;
+    pEntry->compressionMaxExpansionRatio = pThis->compressionMaxExpansionRatio;
+    pEntry->compressionMaxDecompressedBytesPerReceive = pThis->compressionMaxDecompressedBytesPerReceive;
 
 #ifdef FEATURE_REGEXP
     if (cnf_params->pszStartRegex != NULL) {
@@ -1791,6 +1793,8 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->DrvrTlsRevocationCheck = 0;
     pThis->compressionMode = TCPSRV_COMPRESS_NEVER;
     pThis->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    pThis->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    pThis->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
 ENDobjConstruct(tcpsrv)
 
 
@@ -2051,6 +2055,20 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionDriver(tcpsrv_t *pThis, int driver
 #endif
     pThis->compressionDriver = (uint8_t)driver;
 finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(1) SetCompressionMaxExpansionRatio(tcpsrv_t *pThis, const uint64_t ratio) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->compressionMaxExpansionRatio = ratio;
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(1) SetCompressionMaxDecompressedBytesPerReceive(tcpsrv_t *pThis, const uint64_t maxBytes) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->compressionMaxDecompressedBytesPerReceive = maxBytes;
     RETiRet;
 }
 
@@ -2366,6 +2384,8 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetMaxFrameSize = SetMaxFrameSize;
     pIf->SetCompressionMode = SetCompressionMode;
     pIf->SetCompressionDriver = SetCompressionDriver;
+    pIf->SetCompressionMaxExpansionRatio = SetCompressionMaxExpansionRatio;
+    pIf->SetCompressionMaxDecompressedBytesPerReceive = SetCompressionMaxDecompressedBytesPerReceive;
     pIf->SetbDisableLFDelim = SetbDisableLFDelim;
     pIf->SetDiscardTruncatedMsg = SetDiscardTruncatedMsg;
     pIf->SetSessMax = SetSessMax;

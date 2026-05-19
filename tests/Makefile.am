@@ -663,7 +663,8 @@ TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
 	imtcp-stream-always-zlib-basic.sh \
 	imtcp-stream-always-zlib-flushoff.sh \
 	imtcp-stream-always-zlib-corrupt.sh \
-	imtcp-stream-always-zlib-truncated.sh
+	imtcp-stream-always-zlib-truncated.sh \
+	imtcp-stream-always-zlib-expansion-guard.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS = \
 	imtcp-stream-always-zlib-impstats.sh
@@ -673,6 +674,8 @@ TESTS_IMTCP_STREAM_ALWAYS_ZSTD = \
 	imtcp-stream-always-zstd-flushoff.sh \
 	imtcp-stream-always-zstd-corrupt.sh \
 	imtcp-stream-always-zstd-truncated.sh \
+	imtcp-stream-always-zstd-empty-close.sh \
+	imtcp-stream-always-zstd-expansion-guard.sh \
 	imtcp-stream-always-zstd-to-zlib-mismatch.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS = \
@@ -1850,11 +1853,14 @@ imtcp-stream-always-zlib-basic.log: sndrcv_udp_nonstdpt_v6.log
 imtcp-stream-always-zlib-flushoff.log: imtcp-stream-always-zlib-basic.log
 imtcp-stream-always-zlib-corrupt.log: imtcp-stream-always-zlib-flushoff.log
 imtcp-stream-always-zlib-truncated.log: imtcp-stream-always-zlib-corrupt.log
-imtcp-stream-always-zstd-basic.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zlib-expansion-guard.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zstd-basic.log: imtcp-stream-always-zlib-expansion-guard.log
 imtcp-stream-always-zstd-flushoff.log: imtcp-stream-always-zstd-basic.log
 imtcp-stream-always-zstd-corrupt.log: imtcp-stream-always-zstd-flushoff.log
 imtcp-stream-always-zstd-truncated.log: imtcp-stream-always-zstd-corrupt.log
-imtcp-stream-always-zstd-to-zlib-mismatch.log: imtcp-stream-always-zstd-truncated.log
+imtcp-stream-always-zstd-empty-close.log: imtcp-stream-always-zstd-truncated.log
+imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-empty-close.log
+imtcp-stream-always-zstd-to-zlib-mismatch.log: imtcp-stream-always-zstd-expansion-guard.log
 imtcp-impstats.log: imtcp-stream-always-zlib-truncated.log
 imtcp-stream-always-zlib-impstats.log: imtcp-impstats.log
 imtcp-stream-always-zstd-impstats.log: imtcp-stream-always-zlib-impstats.log

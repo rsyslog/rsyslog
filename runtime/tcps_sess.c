@@ -319,6 +319,8 @@ static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     pThis->bSPFramingFix = pLstnInfo->cnf_params->bSPFramingFix;
     pThis->compressionMode = pLstnInfo->compressionMode;
     pThis->compressionDriver = pLstnInfo->compressionDriver;
+    pThis->compressionMaxExpansionRatio = pLstnInfo->compressionMaxExpansionRatio;
+    pThis->compressionMaxDecompressedBytesPerReceive = pLstnInfo->compressionMaxDecompressedBytesPerReceive;
     RETiRet;
 }
 
@@ -883,12 +885,56 @@ static void logCompressedStreamFailure(tcps_sess_t *const pThis, const char *con
     const char *const ip = propGetSzStrOrDefault(pThis->fromHostIP, "(IP unknown)");
     const char *const port = propGetSzStrOrDefault(pThis->fromHostPort, "(port unknown)");
 
+    pThis->compressedStreamFailed = 1;
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrDecompressErr, pThis->pLstnInfo->mutCtrDecompressErr);
     LogError(0, RS_RET_ZLIB_ERR, "imtcp: %s from %s (%s:%s), driver=%s%s%s", reason, host, ip, port,
              compressionDriverName(pThis), detail == NULL ? "" : ": ", detail == NULL ? "" : detail);
 }
 
-static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis, char *const pData, const size_t iLen) {
+typedef struct decompressReceiveGuard_s {
+    uint64_t compressedBytes;
+    uint64_t decompressedBytes;
+} decompressReceiveGuard_t;
+
+static rsRetVal checkDecompressedBytesLimit(tcps_sess_t *const pThis,
+                                            decompressReceiveGuard_t *const guard,
+                                            const size_t len) {
+    DEFiRet;
+
+    if (UINT64_MAX - guard->decompressedBytes < len) {
+        logCompressedStreamFailure(pThis, "received invalid compressed stream", "decompressed byte counter overflowed");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+    const uint64_t newTotal = guard->decompressedBytes + len;
+
+    if (pThis->compressionMaxDecompressedBytesPerReceive != 0 &&
+        newTotal > pThis->compressionMaxDecompressedBytesPerReceive) {
+        logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                   "decompressed bytes exceeded configured per-receive limit");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+
+    if (pThis->compressionMaxExpansionRatio != 0) {
+        const uint64_t maxByRatio = guard->compressedBytes > UINT64_MAX / pThis->compressionMaxExpansionRatio
+                                        ? UINT64_MAX
+                                        : guard->compressedBytes * pThis->compressionMaxExpansionRatio;
+        if (newTotal > maxByRatio) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                       "decompressed bytes exceeded configured expansion ratio");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+    }
+
+    guard->decompressedBytes = newTotal;
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis,
+                                       char *const pData,
+                                       const size_t iLen,
+                                       decompressReceiveGuard_t *const guard) {
     uchar out[64 * 1024];
     DEFiRet;
 
@@ -917,6 +963,7 @@ static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis, char *const pDa
         const size_t have = sizeof(out) - pThis->zstrm.avail_out;
 
         if (have != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pThis, guard, have));
             STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed, have);
             CHKiRet(DataRcvdUncompressed(pThis, (char *)out, have, 0));
         }
@@ -941,7 +988,10 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis, char *const pData, const size_t iLen) {
+static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
+                                       char *const pData,
+                                       const size_t iLen,
+                                       decompressReceiveGuard_t *const guard) {
 #ifdef ENABLE_LIBZSTD
     uchar out[64 * 1024];
     ZSTD_inBuffer input = {pData, iLen, 0};
@@ -973,6 +1023,7 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis, char *const pDa
         }
 
         if (output.pos != 0) {
+            CHKiRet(checkDecompressedBytesLimit(pThis, guard, output.pos));
             STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed,
                              output.pos);
             CHKiRet(DataRcvdUncompressed(pThis, (char *)out, output.pos, 0));
@@ -999,6 +1050,7 @@ finalize_it:
     DEFiRet;
     (void)pData;
     (void)iLen;
+    (void)guard;
     logCompressedStreamFailure(pThis, "received invalid compressed stream", "zstd support is not built in");
     ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 finalize_it:
@@ -1010,6 +1062,9 @@ static rsRetVal finishCompressedStream(tcps_sess_t *pThis) {
     DEFiRet;
 
     if (pThis->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
+        FINALIZE;
+    }
+    if (pThis->compressedStreamFailed) {
         FINALIZE;
     }
 
@@ -1024,6 +1079,11 @@ static rsRetVal finishCompressedStream(tcps_sess_t *pThis) {
     }
 
     if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD && !pThis->compressedStreamEnded) {
+#ifdef ENABLE_LIBZSTD
+        if (pThis->zstdDctx == NULL) {
+            FINALIZE;
+        }
+#endif
         logCompressedStreamFailure(pThis, "detected truncated compressed stream", "zstd stream ended before trailer");
         ABORT_FINALIZE(RS_RET_ZLIB_ERR);
     }
@@ -1043,10 +1103,13 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
 
     if (pThis->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
         CHKiRet(DataRcvdUncompressed(pThis, pData, iLen, 1));
-    } else if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD) {
-        CHKiRet(DataRcvdCompressedZstd(pThis, pData, iLen));
     } else {
-        CHKiRet(DataRcvdCompressedZlib(pThis, pData, iLen));
+        decompressReceiveGuard_t guard = {.compressedBytes = iLen, .decompressedBytes = 0};
+        if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD) {
+            CHKiRet(DataRcvdCompressedZstd(pThis, pData, iLen, &guard));
+        } else {
+            CHKiRet(DataRcvdCompressedZlib(pThis, pData, iLen, &guard));
+        }
     }
 
 finalize_it:

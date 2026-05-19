@@ -36,6 +36,9 @@ struct tcpsrv_s;
 #define TCPSRV_COMPRESS_DRIVER_ZLIB 0
 #define TCPSRV_COMPRESS_DRIVER_ZSTD 1
 
+#define TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT 1024
+#define TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT (64ULL * 1024ULL * 1024ULL)
+
 /* the tcps_sess object */
 struct tcps_sess_s {
     BEGINobjInstance
@@ -73,8 +76,11 @@ struct tcps_sess_s {
         sbool tlsMismatchWarned; /**< avoids logging the same TLS mismatch twice */
         uint8_t compressionMode;
         uint8_t compressionDriver;
+        uint64_t compressionMaxExpansionRatio;
+        uint64_t compressionMaxDecompressedBytesPerReceive;
         sbool zipInitDone;
         sbool compressedStreamEnded;
+        sbool compressedStreamFailed;
         z_stream zstrm;
         void *zstdDctx;
 };
