@@ -1192,6 +1192,7 @@ TESTS_IMPTCP = \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
 	imptcp-discard-truncated-msg.sh \
+	imptcp-discard-truncated-msg-same-session.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
