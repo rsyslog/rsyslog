@@ -10,7 +10,7 @@ port
 
 .. summary-start
 
-Sets the SMTP port number or service name that ommail uses to send mail.
+Sets the SMTP port number or service name that ommail uses in SMTP mode.
 
 .. summary-end
 
@@ -25,9 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Port number or name of the SMTP port to be used. While the module may fall
-back to port 25 in some legacy scenarios, this parameter is required and must
-be set explicitly in modern configurations.
+Port number or name of the SMTP port to be used by ``mode="smtp"``. While
+the module may fall back to port 25 in some legacy scenarios, this parameter
+is required for modern SMTP-mode configurations. It is not used by
+``mode="sendmail"``.
 
 Input usage
 ------------

@@ -1082,7 +1082,9 @@ EXTRA_DIST = \
     source/reference/parameters/ommail-body-enable.rst \
     source/reference/parameters/ommail-mailfrom.rst \
     source/reference/parameters/ommail-mailto.rst \
+    source/reference/parameters/ommail-mode.rst \
     source/reference/parameters/ommail-port.rst \
+    source/reference/parameters/ommail-sendmail-binary.rst \
     source/reference/parameters/ommail-server.rst \
     source/reference/parameters/ommail-subject-template.rst \
     source/reference/parameters/ommail-subject-text.rst \
