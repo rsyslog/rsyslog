@@ -1247,7 +1247,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -1256,7 +1256,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: coverage.info
           flags: journal
@@ -1514,7 +1514,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -1523,7 +1523,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: coverage.info
           flags: main
@@ -1677,7 +1677,7 @@ jobs:
 
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
@@ -1686,7 +1686,7 @@ jobs:
 
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && steps.code_changes.outputs.any_changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: coverage.info
           flags: kafka
