@@ -174,7 +174,7 @@ PostgreSQL.
 .. code-block:: none
 
    template(name="RSYSLOG_StdPgSQLFmt" type="string"
-   string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
+        string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
         ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%',
         %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%,
         '%syslogtag%')")
