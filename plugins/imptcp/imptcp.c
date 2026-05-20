@@ -1154,6 +1154,8 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
         assert(pThis->inputState == eInMsg);
         if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
             int iMsg = pThis->iMsg; /* cache value for faster access */
+            const sbool isFrameDelim = (c == '\n') || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) &&
+                                                       (c == pThis->iAddtlFrameDelim));
             if (iMsg >= iMaxLine) {
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 int i = 1;
@@ -1172,7 +1174,9 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                 iMsg = 0;
                 ++(*pnMsgs);
                 if (pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
-                    pThis->inputState = eInMsgTruncation;
+                    pThis->inputState = isFrameDelim ? eAtStrtFram : eInMsgTruncation;
+                    pThis->iMsg = iMsg;
+                    FINALIZE;
                 }
                 /* we might think if it is better to ignore the rest of the
                  * message than to treat it as a new one. Maybe this is a good
@@ -1180,8 +1184,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                  * rgerhards, 2006-12-04
                  */
             }
-            if ((c == '\n') || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) &&
-                                (c == pThis->iAddtlFrameDelim))) { /* record delimiter? */
+            if (isFrameDelim) { /* record delimiter? */
                 if (pThis->pLstn->pSrv->multiLine) {
                     if ((buffLen == 1) || ((*buff)[1] == '<')) {
                         doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
