@@ -101,7 +101,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #if EAGAIN == EWOULDBLOCK
     #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN)
 #else
-    #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN | errno == EWOULDBLOCK)
+    #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN || errno == EWOULDBLOCK)
 #endif /* #if EAGAIN == EWOULDBOLOCK */
 
 #define DFLT_wrkrMax 2
@@ -324,6 +324,7 @@ struct ptcplstn_s {
     STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
     STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
     DEF_ATOMIC_HELPER_MUT64(mut_rcvdBytes);
+    DEF_ATOMIC_HELPER_MUT64(mut_rcvdDecompressed);
 };
 
 
@@ -734,12 +735,15 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
     *peerIP = NULL;
 
     if (bUXServer) {
-        const size_t hname_src_len = strlen((char *)glbl.GetLocalHostName());
-        const size_t ip_src_len = strlen((char *)glbl.GetLocalHostIP());
+        const uchar *lhName = glbl.GetLocalHostName();
+        prop_t *lhIP_prop = glbl.GetLocalHostIP();
+        const uchar *lhIP = (lhIP_prop != NULL) ? propGetSzStr(lhIP_prop) : NULL;
+        const size_t hname_src_len = lhName ? strlen((const char *)lhName) : 9;
+        const size_t ip_src_len = lhIP ? strlen((const char *)lhIP) : 9;
         const size_t hname_len = hname_src_len < NI_MAXHOST ? hname_src_len : NI_MAXHOST;
         const size_t ip_len = ip_src_len < NI_MAXHOST ? ip_src_len : NI_MAXHOST;
-        memcpy(szHname, glbl.GetLocalHostName(), hname_len);
-        memcpy(szIP, glbl.GetLocalHostIP(), ip_len);
+        memcpy(szHname, lhName ? lhName : (const uchar *)"localhost", hname_len);
+        memcpy(szIP, lhIP ? lhIP : (const uchar *)"127.0.0.1", ip_len);
         szHname[hname_len] = '\0';
         szIP[ip_len] = '\0';
     } else {
@@ -1220,7 +1224,10 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
             if (buffLen < octetsToCopy) {
                 octetsToCopy = buffLen;
             }
-            if (octetsToCopy + pThis->iMsg > iMaxLine) {
+            if (pThis->iMsg >= iMaxLine) {
+                octetsToDiscard = octetsToCopy;
+                octetsToCopy = 0;
+            } else if (octetsToCopy + pThis->iMsg > iMaxLine) {
                 octetsToDiscard = octetsToCopy - (iMaxLine - pThis->iMsg);
                 octetsToCopy = iMaxLine - pThis->iMsg;
             }
@@ -1371,7 +1378,7 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
         if (outavail != 0) {
             outtotal += outavail;
-            pThis->pLstn->rcvdDecompressed += outavail;
+            ATOMIC_ADD_uint64(&pThis->pLstn->rcvdDecompressed, &pThis->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressed(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
         }
         if (pThis->bZipStreamEnd && pThis->zstrm.avail_in != 0) {
@@ -1448,6 +1455,7 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
     DEFiRet;
     ptcplstn_t *pLstn = NULL;
     uchar statname[64];
+    int bMutInit = 0;
 
     CHKmalloc(pLstn = calloc(1, sizeof(ptcplstn_t)));
     pLstn->pSrv = pSrv;
@@ -1483,6 +1491,8 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
      * that they may not be 100% correct */
     pLstn->rcvdBytes = 0, pLstn->rcvdDecompressed = 0;
     INIT_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdBytes);
+    INIT_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdDecompressed);
+    bMutInit = 1;
     CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.received"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pLstn->rcvdBytes)));
     CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.decompressed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
@@ -1500,6 +1510,10 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pLstn != NULL) {
+            if (bMutInit) {
+                DESTROY_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdBytes);
+                DESTROY_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdDecompressed);
+            }
             if (pLstn->stats != NULL) statsobj.Destruct(&(pLstn->stats));
             free(pLstn);
         }
@@ -1520,7 +1534,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
 
-    CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
+    CHKmalloc(pSess = calloc(1, sizeof(ptcpsess_t)));
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
         pmsg_size_factor = 1;
@@ -1616,7 +1630,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         }
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
-            pSess->pLstn->rcvdDecompressed += outavail;
+            ATOMIC_ADD_uint64(&pSess->pLstn->rcvdDecompressed, &pSess->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressed(pSess, (char *)zipBuf, outavail, &stTime, 0));
             // TODO: query time!
         }
@@ -1679,7 +1693,7 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
 static rsRetVal createInstance(instanceConf_t **pinst) {
     instanceConf_t *inst;
     DEFiRet;
-    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+    CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
     inst->next = NULL;
 
     inst->pszBindPort = NULL;
@@ -2562,6 +2576,8 @@ static void shutdownSrv(ptcpsrv_t *pSrv) {
             "imptcp shutdown listen socket %d (rcvd %lld bytes, "
             "decompressed %lld)\n",
             lstnDel->sock, lstnDel->rcvdBytes, lstnDel->rcvdDecompressed);
+        DESTROY_ATOMIC_HELPER_MUT64(lstnDel->mut_rcvdBytes);
+        DESTROY_ATOMIC_HELPER_MUT64(lstnDel->mut_rcvdDecompressed);
         free(lstnDel->epd);
         free(lstnDel);
     }
