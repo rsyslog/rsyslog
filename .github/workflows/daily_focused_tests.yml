@@ -1,0 +1,394 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: daily focused tests
+
+'on':
+  schedule:
+    # Daily at 02:43 UTC. These lanes used to run during PR processing only
+    # to feed Codecov; keep the test value without making every PR pay for it.
+    - cron: '43 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RSYSLOG_UPLOAD_FAILURE_ARTIFACTS: '1'
+
+jobs:
+  focused_test:
+    name: daily ${{ matrix.lane }} tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: base
+            timeout: 50
+          - lane: journal
+            timeout: 30
+          - lane: kafka
+            timeout: 25
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: add extra dependencies
+        run: |
+          sudo apt-get update
+          case "${{ matrix.lane }}" in
+          'base')
+            sudo apt-get install -y --no-install-recommends \
+              clang-tools \
+              cmake \
+              cmake-curses-gui \
+              curl \
+              default-jre-headless \
+              faketime \
+              gdb \
+              libaprutil1-dev \
+              libbson-dev \
+              libcap-ng-dev \
+              libcap-ng0 \
+              libcivetweb-dev \
+              libcurl4-gnutls-dev \
+              libdbd-mysql \
+              libdbi-dev \
+              libevent-dev \
+              libgcrypt20-dev \
+              libglib2.0-dev \
+              libgnutls28-dev \
+              libhiredis-dev \
+              libkrb5-dev \
+              liblz4-dev \
+              libmaxminddb-dev \
+              libmongoc-dev \
+              libmysqlclient-dev \
+              libnet1-dev \
+              libpcap-dev \
+              libprotobuf-c-dev \
+              librabbitmq-dev \
+              librdkafka-dev \
+              libsnappy-dev \
+              libsnmp-dev \
+              libsodium-dev \
+              libsasl2-2 \
+              libsasl2-dev \
+              libsasl2-modules \
+              libssl-dev \
+              libsystemd-dev \
+              libtirpc-dev \
+              libtokyocabinet-dev \
+              libtool \
+              libtool-bin \
+              libyaml-dev \
+              libzstd-dev \
+              libestr-dev \
+              libfastjson-dev \
+              librelp-dev \
+              liblognorm-dev \
+              libczmq-dev \
+              mysql-server \
+              net-tools \
+              postgresql-client \
+              libpq-dev \
+              protobuf-c-compiler \
+              python3-dev \
+              python3-docutils \
+              python3-pip \
+              python3-pysnmp4 \
+              python3-sphinx \
+              ruby-dev \
+              software-properties-common \
+              tcl-dev \
+              uuid-dev \
+              valgrind \
+              zlib1g-dev
+            ;;
+          'journal')
+            sudo apt-get install -y \
+              libestr-dev \
+              libgcrypt20-dev \
+              libglib2.0-dev \
+              libgnutls28-dev \
+              liblognorm-dev \
+              liblz4-dev \
+              libnet1-dev \
+              librelp-dev \
+              libssl-dev \
+              libsystemd-dev \
+              libtool \
+              libtool-bin \
+              libyaml-dev \
+              libzstd-dev \
+              lsof \
+              make \
+              net-tools \
+              pkg-config \
+              python3-docutils \
+              software-properties-common \
+              valgrind \
+              wget \
+              zstd
+            ;;
+          'kafka')
+            sudo apt-get install -y --no-install-recommends \
+              autoconf-archive \
+              faketime \
+              gdb \
+              kcat \
+              libestr-dev \
+              libfastjson-dev \
+              libgcrypt20-dev \
+              libgnutls28-dev \
+              liblognorm-dev \
+              libnet1-dev \
+              librelp-dev \
+              librdkafka-dev \
+              libsasl2-dev \
+              libsystemd-dev \
+              libtirpc-dev \
+              libtool-bin \
+              uuid-dev \
+              valgrind
+            ;;
+          *)
+            echo "unknown lane: ${{ matrix.lane }}" >&2
+            exit 1
+            ;;
+          esac
+
+      - name: build journal helper dependencies
+        if: matrix.lane == 'journal'
+        run: |
+          mkdir helper-projects
+          cd helper-projects
+          git clone https://github.com/rsyslog/libfastjson.git
+          cd libfastjson
+          autoreconf -fi
+          ./configure --prefix=/usr --enable-compile-warnings=yes \
+            --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include
+          make -j
+          sudo make install
+
+      - name: reset hosts for Kafka lane
+        if: matrix.lane == 'kafka'
+        run: |
+          cat -n /etc/hosts
+          echo resetting
+          sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
+          cat -n /etc/hosts
+
+      - name: cache Kafka configure results
+        if: matrix.lane == 'kafka'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-daily-focused-kafka-${{ runner.os }}-${{
+            runner.arch }}-cfg-${{
+            hashFiles('configure.ac','m4/*.m4','Makefile.am') }}
+          restore-keys: |
+            cfgcache-daily-focused-kafka-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: prepare for build
+        run: |
+          case "${{ matrix.lane }}" in
+          'base')
+            autoreconf -fvi
+            ./configure \
+              --enable-compile-warning=error \
+              --enable-clickhouse \
+              --enable-clickhouse-tests=no \
+              --disable-elasticsearch \
+              --disable-elasticsearch-tests \
+              --disable-ffaup \
+              --enable-gnutls \
+              --enable-gssapi-krb5 \
+              --enable-imbatchreport \
+              --enable-imczmq \
+              --enable-imdiag \
+              --enable-imdocker \
+              --disable-imdocker-tests \
+              --enable-imfile \
+              --enable-imhttp \
+              --enable-imjournal \
+              --disable-imkafka \
+              --disable-omkafka \
+              --enable-impstats \
+              --enable-impcap \
+              --enable-imptcp \
+              --disable-kafka-tests \
+              --disable-ksi-ls12 \
+              --enable-libdbi \
+              --enable-libfaketime \
+              --enable-libgcrypt \
+              --enable-libzstd \
+              --enable-mail \
+              --enable-mmanon \
+              --enable-mmaudit \
+              --enable-mmcapture \
+              --enable-mmcount \
+              --enable-mmdarwin \
+              --enable-mmdblookup \
+              --enable-mmfields \
+              --enable-mmjsonparse \
+              --enable-mmkubernetes \
+              --enable-mmnormalize \
+              --enable-mmpstrucdata \
+              --enable-mmrm1stspace \
+              --enable-mmsequence \
+              --enable-mmsnmptrapd \
+              --enable-mmutf8fix \
+              --disable-mysql \
+              --disable-mysql-tests \
+              --disable-omamqp1 \
+              --enable-omczmq \
+              --enable-omhiredis \
+              --enable-omhttpfs \
+              --enable-omhttp \
+              --enable-omjournal \
+              --enable-ommongodb \
+              --enable-omprog \
+              --enable-omrabbitmq \
+              --enable-omrelp-default-port=13515 \
+              --enable-omruleset \
+              --enable-omsendertrack \
+              --enable-omstdout \
+              --enable-omtcl \
+              --enable-omudpspoof \
+              --enable-omuxsock \
+              --enable-openssl \
+              --enable-pgsql \
+              --enable-pmaixforwardedfrom \
+              --enable-pmciscoios \
+              --enable-pmcisconames \
+              --enable-pmlastmsg \
+              --enable-pmnormalize \
+              --enable-pmnull \
+              --enable-pmsnare \
+              --enable-relp \
+              --disable-snmp \
+              --disable-snmp-tests \
+              --enable-usertools \
+              --enable-imdtls \
+              --enable-omdtls \
+              --enable-mmaitag \
+              --enable-valgrind \
+              --enable-testbench
+            ;;
+          'journal')
+            autoreconf -fvi
+            ./configure --enable-silent-rules --enable-testbench \
+              --enable-imdiag --disable-imdocker --disable-imfile \
+              --disable-default-tests --disable-impstats \
+              --disable-impstats-push --disable-imptcp --disable-mmanon \
+              --disable-mmaudit --disable-mmfields --disable-mmjsonparse \
+              --disable-mmpstrucdata --disable-mmsequence \
+              --disable-mmutf8fix --disable-mail --disable-omprog \
+              --disable-improg --disable-omruleset --enable-omstdout \
+              --disable-omuxsock --disable-pmaixforwardedfrom \
+              --disable-pmciscoios --disable-pmcisconames \
+              --disable-pmlastmsg --disable-pmsnare --disable-libgcrypt \
+              --disable-mmnormalize --disable-omudpspoof --disable-relp \
+              --disable-mmsnmptrapd --disable-gnutls --enable-usertools \
+              --disable-mysql --enable-valgrind --enable-omjournal \
+              --enable-libsystemd=yes --disable-mmkubernetes \
+              --enable-imjournal --disable-omkafka --disable-imkafka \
+              --disable-ommongodb --disable-omrabbitmq \
+              --enable-journal-tests --disable-mmdarwin \
+              --enable-compile-warnings=error --disable-helgrind \
+              --disable-uuid --disable-fmhttp
+            ;;
+          'kafka')
+            autoreconf -fvi
+            ./configure \
+              --cache-file=config.cache \
+              --enable-compile-warning=error \
+              --enable-testbench \
+              --enable-omstdout \
+              --enable-imdiag \
+              --disable-generate-man-pages \
+              --disable-impstats \
+              --disable-impstats-push \
+              --enable-imfile \
+              --disable-imfile-tests \
+              --disable-fmhttp \
+              --enable-valgrind \
+              --enable-valgrind-testbench \
+              --disable-helgrind \
+              --disable-default-tests \
+              --disable-imtcp-tests \
+              --enable-omkafka \
+              --enable-gnutls \
+              --disable-gnutls-tests \
+              --enable-kafka-tests \
+              --enable-imkafka
+            ;;
+          esac
+
+      - name: build
+        run: |
+          if [ "${{ matrix.lane }}" = "journal" ]; then
+            make -j
+          else
+            make -j10
+          fi
+
+      - name: make check
+        run: make -j10 check
+
+      - name: Prepare focused failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        run: |
+          if [ -f "devtools/gather-check-logs.sh" ]; then
+            devtools/gather-check-logs.sh || true
+          fi
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
+
+      - name: Upload focused failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: >-
+            daily-focused-failure-${{ github.run_id }}-${{
+            github.run_attempt }}-${{ matrix.lane }}
+          path: |
+            failed-tests.log
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 14
+          if-no-files-found: ignore
