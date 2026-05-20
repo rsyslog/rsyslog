@@ -33,6 +33,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -186,8 +187,8 @@ static rsRetVal addSender(instanceData *const pData,
     sender_stats_t *stat;
     DEFiRet;
 
-    DBGPRINTF("addSender: Sender: %s, Messages: %" PRIu64 ", FirstSeen: %ld, LastSeen: %ld\n", sender, nMsgs, firstSeen,
-              lastSeen);
+    DBGPRINTF("addSender: Sender: %s, Messages: %" PRIu64 ", FirstSeen: %" PRIdMAX ", LastSeen: %" PRIdMAX "\n", sender,
+              nMsgs, (intmax_t)firstSeen, (intmax_t)lastSeen);
 
     CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
     stat->sender = (const uchar *)strdup((const char *)sender);

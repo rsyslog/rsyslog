@@ -564,7 +564,7 @@ static rsRetVal dtls_send(wrkrInstanceData_t *pWrkrData,
 
     iErr = SSL_write(pWrkrData->sslClient, pszParamStr, tzParamStrLen);
     if (iErr > 0) {
-        DBGPRINTF("dtls_send[%p]: Successfully send message '%s' with %ld bytes to %s:%s\n", pWrkrData, pszParamStr,
+        DBGPRINTF("dtls_send[%p]: Successfully send message '%s' with %zu bytes to %s:%s\n", pWrkrData, pszParamStr,
                   tzParamStrLen, pData->target, pData->port);
 
         // Increment Stats Counter
