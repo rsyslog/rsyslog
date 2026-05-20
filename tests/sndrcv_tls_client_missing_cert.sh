@@ -1,5 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verifies the receiver-side TLS diagnostic for clients that do not present a
+# certificate. The diagnostic must include the remote IP address so operators
+# can feed the event into IP-based tooling such as fail2ban.
 . ${srcdir:=.}/diag.sh init
 echo "This test is under review - it seems to have some issues"
 exit 77
@@ -63,6 +66,6 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "peer .* did not provide a certificate,"
+content_check --regex "peer 127\\.0\\.0\\.1 did not provide a certificate,"
 
 exit_test
