@@ -52,6 +52,7 @@
 #include "netstrms.h"
 #include "nsd_ptcp.h"
 #include "nsd_gtls.h"
+#include "prop.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
 
@@ -63,7 +64,7 @@ MODULE_TYPE_KEEP;
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(nsd_ptcp)
+DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(nsd_ptcp) DEFobjCurrIf(prop)
 
 
     /* Static Helper variables for certless communication */
@@ -1203,6 +1204,25 @@ finalize_it:
 }
 
 
+static rsRetVal getRemotePeerLogName(nsd_gtls_t *const pThis, uchar **const peer) {
+    prop_t *remoteIP = NULL;
+    DEFiRet;
+
+    *peer = NULL;
+    if (!pThis->bIsInitiator && nsd_ptcp.GetRemoteIP((nsd_t *)pThis->pTcp, &remoteIP) == RS_RET_OK &&
+        remoteIP != NULL) {
+        CHKmalloc(*peer = (uchar *)strdup((const char *)propGetSzStr(remoteIP)));
+        FINALIZE;
+    }
+
+    CHKiRet(nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, peer));
+
+finalize_it:
+    if (remoteIP != NULL) prop.Destruct(&remoteIP);
+    RETiRet;
+}
+
+
 /* check the ID of the remote peer - used for both fingerprint and
  * name authentication. This is common code. Will call into specific
  * drivers once the certificate has been obtained.
@@ -1225,15 +1245,15 @@ static rsRetVal gtlsChkPeerID(nsd_gtls_t *pThis) {
 
     if (list_size < 1) {
         if (pThis->bReportAuthErr == 1) {
-            uchar *fromHost = NULL;
+            uchar *peer = NULL;
             errno = 0;
             pThis->bReportAuthErr = 0;
-            nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+            CHKiRet(getRemotePeerLogName(pThis, &peer));
             LogError(0, RS_RET_TLS_NO_CERT,
                      "error: peer %s did not provide a certificate, "
                      "not permitted to talk to it",
-                     fromHost);
-            free(fromHost);
+                     peer);
+            free(peer);
         }
         ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
     }
@@ -1287,10 +1307,10 @@ static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
     cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
     if (cert_list_size < 1) {
         errno = 0;
-        uchar *fromHost = NULL;
-        nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
-        LogError(0, RS_RET_TLS_NO_CERT, "peer %s did not provide a certificate, not permitted to talk to it", fromHost);
-        free(fromHost);
+        uchar *peer = NULL;
+        CHKiRet(getRemotePeerLogName(pThis, &peer));
+        LogError(0, RS_RET_TLS_NO_CERT, "peer %s did not provide a certificate, not permitted to talk to it", peer);
+        free(peer);
         ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
     }
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
@@ -2550,6 +2570,7 @@ BEGINObjClassExit(nsd_gtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END 
     gtlsGlblExit(); /* shut down GnuTLS */
 
     /* release objects we no longer need */
+    objRelease(prop, CORE_COMPONENT);
     objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
     objRelease(net, LM_NET_FILENAME);
     objRelease(glbl, CORE_COMPONENT);
@@ -2567,6 +2588,7 @@ BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
 
     /* now do global TLS init stuff */
     CHKiRet(gtlsGlblInit());
