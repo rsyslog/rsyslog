@@ -29,6 +29,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -164,6 +165,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"net.aclresolvehostname", eCmdHdlrBinary, 0},
     {"net.enabledns", eCmdHdlrBinary, 0},
     {"net.permitACLwarning", eCmdHdlrBinary, 0},
+    {"maxopenfiles", eCmdHdlrPositiveInt, 0},
     {"compatibility.configformat.legacy", eCmdHdlrGetWord, 0},
     {"compatibility.configformat.syslogd", eCmdHdlrGetWord, 0},
     {"compatibility.configformat.property", eCmdHdlrGetWord, 0},
@@ -557,6 +559,38 @@ static rsRetVal setDfltOpensslEngine(void __attribute__((unused)) * pVal, uchar 
     DEFiRet;
     free(loadConf->globals.pszDfltOpensslEngine);
     loadConf->globals.pszDfltOpensslEngine = pNewVal;
+    RETiRet;
+}
+
+/* Set the maximum number of files the rsyslog process may open. */
+rsRetVal glblSetMaxOpenFiles(void __attribute__((unused)) * pVal, int iFiles) {
+    struct rlimit maxFiles;
+    struct rlimit currentLimit;
+
+    DEFiRet;
+
+    if (getrlimit(RLIMIT_NOFILE, &currentLimit) < 0) {
+        currentLimit.rlim_max = 0;
+    }
+
+    maxFiles.rlim_cur = iFiles;
+    maxFiles.rlim_max = iFiles;
+
+    if (setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+        /* NOTE: under valgrind, we seem to be unable to extend the size! */
+        LogError(errno, RS_RET_ERR_RLIM_NOFILE,
+                 "could not set process file limit to %d "
+                 "[current hard limit %llu]",
+                 iFiles, (unsigned long long)currentLimit.rlim_max);
+        ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
+    }
+#ifdef USE_UNLIMITED_SELECT
+    SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof(fd_mask));
+#endif
+    DBGPRINTF("Max number of files set to %d [current hard limit %llu].\n", iFiles,
+              (unsigned long long)currentLimit.rlim_max);
+
+finalize_it:
     RETiRet;
 }
 
@@ -1359,6 +1393,8 @@ rsRetVal glblDoneLoadCnf(void) {
             loadConf->globals.bActionReportSuspensionCont = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
             setMaxLine(cnfparamvals[i].val.d.n);
+        } else if (!strcmp(paramblk.descr[i].name, "maxopenfiles")) {
+            loadConf->globals.iMaxOpenFiles = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "oversizemsg.errorfile")) {
             free(loadConf->globals.oversizeMsgErrorFile);
             loadConf->globals.oversizeMsgErrorFile = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);

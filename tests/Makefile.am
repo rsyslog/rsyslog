@@ -276,6 +276,7 @@ TESTS_DEFAULT = \
 	asynwr_deadlock4.sh \
 	asynwr_dynfile_flushtxend-off.sh \
 	imdiag-modern-module-config.sh \
+	global-maxopenfiles-rainerscript.sh \
 	compat-configformat-rainerscript.sh \
 	compat-defaults-secure-dynafile-rainerscript.sh \
 	abort-uncleancfg-goodcfg.sh \
@@ -585,6 +586,7 @@ TESTS_LIBYAML = \
 	config-translate-yaml-to-rs.sh \
 	compat-configformat-yaml.sh \
 	compat-defaults-secure-dynafile-yaml.sh \
+	global-maxopenfiles-yaml.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \

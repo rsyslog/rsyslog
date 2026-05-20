@@ -30,7 +30,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <stdarg.h>
-#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -229,6 +228,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.bProcessInternalMessages = 0;
     const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
     if (log_dflt != NULL && !strcmp(log_dflt, "1")) pThis->globals.bProcessInternalMessages = 1;
+    pThis->globals.iMaxOpenFiles = 0;
     pThis->globals.glblDevOptions = 0;
     pThis->globals.intMsgRateLimitItv = 60;
     pThis->globals.intMsgRateLimitBurst = 100;
@@ -1086,6 +1086,9 @@ static rsRetVal activate(rsconf_t *cnf) {
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #endif
     setUmask(cnf->globals.umask);
+    if (cnf->globals.iMaxOpenFiles > 0) {
+        CHKiRet(glblSetMaxOpenFiles(NULL, cnf->globals.iMaxOpenFiles));
+    }
 
     /* the output part and the queue is now ready to run. So it is a good time
      * to initialize the inputs. Please note that the net code above should be
@@ -1124,6 +1127,14 @@ finalize_it:
 /* legacy config system: set the action resume interval */
 static rsRetVal setActionResumeInterval(void __attribute__((unused)) * pVal, int iNewVal) {
     return actionSetGlobalResumeInterval(iNewVal);
+}
+
+
+/* set the processes max number of files immediately for legacy $MaxOpenFiles
+ * configs.
+ */
+static rsRetVal setMaxFiles(void *pVal, int iFiles) {
+    return glblSetMaxOpenFiles(pVal, iFiles);
 }
 
 
@@ -1199,36 +1210,6 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 
 
 /* -------------------- end legacy config handlers -------------------- */
-
-
-/* set the processes max number ob files (upon configuration request)
- * 2009-04-14 rgerhards
- */
-static rsRetVal setMaxFiles(void __attribute__((unused)) * pVal, int iFiles) {
-    // TODO this must use a local var, then carry out action during activate!
-    struct rlimit maxFiles;
-
-    DEFiRet;
-
-    maxFiles.rlim_cur = iFiles;
-    maxFiles.rlim_max = iFiles;
-
-    if (setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
-        /* NOTE: under valgrind, we seem to be unable to extend the size! */
-        LogError(errno, RS_RET_ERR_RLIM_NOFILE,
-                 "could not set process file limit to %d "
-                 "[kernel max %ld]",
-                 iFiles, (long)maxFiles.rlim_max);
-        ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
-    }
-#ifdef USE_UNLIMITED_SELECT
-    glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof(fd_mask));
-#endif
-    DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long)maxFiles.rlim_max);
-
-finalize_it:
-    RETiRet;
-}
 
 
 /* legacy config system: reset config variables to default values.  */

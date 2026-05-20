@@ -159,6 +159,7 @@ int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
 uchar *glblGetLocalHostName(void);
+rsRetVal glblSetMaxOpenFiles(void *pVal, int iFiles);
 /** Check whether a legacy $-directive may be processed under the active compatibility policy. */
 int glblPermitLegacyConfigDirective(rsconf_t *cnf, const char *directive);
 /** Check whether a classic syslogd PRI selector may be processed under the active compatibility policy. */

@@ -5,6 +5,9 @@ $MaxOpenFiles
 
 **Type:** global configuration parameter
 
+**Status:** deprecated legacy directive. Use ``global(maxOpenFiles="...")``
+in new configurations.
+
 **Default:** *operating system default*
 
 **Description:**
@@ -18,6 +21,19 @@ Please note that each dynafile also requires up to 100 open file
 handles.
 
 The setting is similar to running "ulimit -n number-of-files".
+
+For new configurations, use the RainerScript global parameter instead:
+
+.. code-block:: none
+
+   global(maxOpenFiles="2000")
+
+The YAML equivalent is:
+
+.. code-block:: yaml
+
+   global:
+     maxOpenFiles: 2000
 
 Please note that depending on permissions and operating system
 configuration, the setrlimit() request issued by rsyslog may fail, in
@@ -33,4 +49,3 @@ warning message in this case.
 For some reason, this settings seems not to work on all platforms. If
 you experience problems, please let us know so that we can (hopefully)
 narrow down the issue.
-
