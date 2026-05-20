@@ -16,18 +16,18 @@ template(name="outfmt" type="string" string="%msg:%\n")
 startup
 
 LONGLINE="$(printf 'A%.0s' {1..124000})"
-echo "localhost test: $LONGLINE" | nc -U "$srcdir/testbench_socket"
+echo "localhost test: $LONGLINE" | nc -N -U "$RSYSLOG_DYNNAME-testbench_socket"
 
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
 
-PERMS="$(stat -c "%#a" "$srcdir/testbench_socket")"
+PERMS="$(stat -c "%#a" "$RSYSLOG_DYNNAME-testbench_socket")"
 if [ "$PERMS" != "0600" ]; then
   echo "imptcp_uds.sh failed, incorrect permissions on socket file: $PERMS"
   error_exit
 fi
 
-PERMS="$(stat -c "%#a" "$srcdir/testbench_socket2")"
+PERMS="$(stat -c "%#a" "$RSYSLOG_DYNNAME-testbench_socket2")"
 if [ "$PERMS" != "0666" ]; then
   echo "imptcp_uds.sh failed, incorrect permissions on 2nd socket file: $PERMS"
   error_exit
