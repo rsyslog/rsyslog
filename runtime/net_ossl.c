@@ -37,6 +37,9 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#if defined(__GLIBC__)
+    #include <time.h>
+#endif
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -79,6 +82,112 @@ rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHost
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 #ifndef ENABLE_WOLFSSL
+    #if defined(__GLIBC__)
+typedef struct ocsp_gai_req_s {
+    struct gaicb request;
+    struct addrinfo hints;
+    char *host;
+    char *port;
+} ocsp_gai_req_t;
+
+static void ocsp_gai_req_free(ocsp_gai_req_t *req) {
+    if (req == NULL) return;
+    if (req->request.ar_result != NULL) freeaddrinfo(req->request.ar_result);
+    free(req->host);
+    free(req->port);
+    free(req);
+}
+
+static void *ocsp_gai_cleanup_thread(void *arg) {
+    ocsp_gai_req_t *req = (ocsp_gai_req_t *)arg;
+    const struct gaicb *requests[1];
+
+    requests[0] = &req->request;
+    (void)gai_suspend(requests, 1, NULL);
+    (void)gai_error(&req->request);
+    ocsp_gai_req_free(req);
+    return NULL;
+}
+
+static int ocsp_gai_cleanup_async(ocsp_gai_req_t *req) {
+    pthread_t tid;
+
+    if (pthread_create(&tid, NULL, ocsp_gai_cleanup_thread, req) != 0) {
+        const struct gaicb *requests[1];
+
+        requests[0] = &req->request;
+        (void)gai_suspend(requests, 1, NULL);
+        (void)gai_error(&req->request);
+        ocsp_gai_req_free(req);
+    } else {
+        pthread_detach(tid);
+    }
+    return EAI_AGAIN;
+}
+    #endif
+
+static int ocsp_getaddrinfo(const char *host, const char *port, const struct addrinfo *hints, struct addrinfo **res) {
+    #if defined(__GLIBC__)
+    ocsp_gai_req_t *req;
+    struct gaicb *requests[1];
+    struct timespec timeout;
+    int ret;
+
+    req = calloc(1, sizeof(*req));
+    if (req == NULL) return EAI_MEMORY;
+    req->host = strdup(host);
+    req->port = strdup(port);
+    if (req->host == NULL || req->port == NULL) {
+        ocsp_gai_req_free(req);
+        return EAI_MEMORY;
+    }
+    req->hints = *hints;
+    req->request.ar_name = req->host;
+    req->request.ar_service = req->port;
+    req->request.ar_request = &req->hints;
+    requests[0] = &req->request;
+
+    ret = getaddrinfo_a(GAI_NOWAIT, requests, 1, NULL);
+    if (ret != 0) {
+        ocsp_gai_req_free(req);
+        return ret;
+    }
+
+    timeout.tv_sec = OCSP_TIMEOUT;
+    timeout.tv_nsec = 0;
+    ret = gai_suspend((const struct gaicb *const *)requests, 1, &timeout);
+    if (ret == EAI_AGAIN) {
+        ret = gai_cancel(&req->request);
+        if (ret == EAI_CANCELED) {
+            ocsp_gai_req_free(req);
+            return EAI_AGAIN;
+        }
+        if (ret == EAI_NOTCANCELED) {
+            return ocsp_gai_cleanup_async(req);
+        }
+        if (ret == EAI_ALLDONE) {
+            ret = 0;
+        }
+    }
+    if (ret != 0) {
+        ocsp_gai_req_free(req);
+        return ret;
+    }
+
+    ret = gai_error(&req->request);
+    if (ret == 0) {
+        *res = req->request.ar_result;
+        req->request.ar_result = NULL;
+    } else {
+        (void)gai_cancel(&req->request);
+    }
+    ocsp_gai_req_free(req);
+    return ret;
+    #else
+    return getaddrinfo(host, port, hints, res);
+    #endif
+}
+
 static MUTEX_TYPE *mutex_buf = NULL;
 static sbool openssl_initialized = 0;  // Avoid multiple initialization / deinitialization
 
@@ -1665,12 +1774,7 @@ static BIO *ocsp_connect(const char *host, const char *port, const char *device)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    /* TODO: DNS resolution is blocking with no timeout. A malicious certificate
-     * with OCSP responder URLs pointing to slow/unresponsive DNS names can cause
-     * the TLS handshake to block indefinitely. This is called from the TLS verify
-     * callback. Consider using async DNS resolution or making OCSP optional.
-     */
-    s = getaddrinfo(host, port, &hints, &res);
+    s = ocsp_getaddrinfo(host, port, &hints, &res);
     if (s != 0) {
         LogError(0, RS_RET_NO_ERRCODE, "OCSP: getaddrinfo failed for %s:%s: %s\n", host, port, gai_strerror(s));
         goto err;
@@ -1768,6 +1872,7 @@ err:
 static OCSP_RESPONSE *ocsp_send_and_receive(BIO *bio, const char *host, const char *path, OCSP_REQUEST *req) {
     OCSP_RESPONSE *rsp = NULL;
     char *req_data = NULL;
+    unsigned char *rsp_data = NULL;
     int req_len;
     int rv;
 
@@ -1808,6 +1913,9 @@ static OCSP_RESPONSE *ocsp_send_and_receive(BIO *bio, const char *host, const ch
     int in_headers = 1;
     long content_length = -1;
     const long MAX_OCSP_RESPONSE_SIZE = 1024 * 1024; /* 1MB limit */
+    size_t rsp_len = 0;
+    const size_t rsp_limit = (size_t)MAX_OCSP_RESPONSE_SIZE;
+    const size_t read_limit = rsp_limit + 1;
 
     while (in_headers) {
         rv = BIO_gets(bio, buf, sizeof(buf));
@@ -1818,7 +1926,13 @@ static OCSP_RESPONSE *ocsp_send_and_receive(BIO *bio, const char *host, const ch
 
         /* Parse Content-Length header */
         if (strncasecmp(buf, "Content-Length:", 15) == 0) {
-            content_length = atol(buf + 15);
+            char *endptr;
+            errno = 0;
+            content_length = strtol(buf + 15, &endptr, 10);
+            if (errno != 0 || endptr == buf + 15 || content_length < 0) {
+                LogError(0, RS_RET_NO_ERRCODE, "OCSP: Invalid Content-Length header\n");
+                goto err;
+            }
             if (content_length > MAX_OCSP_RESPONSE_SIZE) {
                 LogError(0, RS_RET_NO_ERRCODE,
                          "OCSP: Response Content-Length (%ld) exceeds maximum allowed size (%ld)\n", content_length,
@@ -1833,17 +1947,50 @@ static OCSP_RESPONSE *ocsp_send_and_receive(BIO *bio, const char *host, const ch
         }
     }
 
-    /* Read OCSP response with size limit */
-    if (content_length > 0 && content_length <= MAX_OCSP_RESPONSE_SIZE) {
-        /* Size is within limits, proceed with reading */
-        rsp = d2i_OCSP_RESPONSE_bio(bio, NULL);
-    } else if (content_length == -1) {
-        /* No Content-Length header - read with caution */
-        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-               "OCSP: No Content-Length header in response, reading without size validation\n");
-        rsp = d2i_OCSP_RESPONSE_bio(bio, NULL);
+    rsp_data = malloc(read_limit);
+    if (rsp_data == NULL) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "OCSP: Failed to allocate response buffer\n");
+        goto err;
     }
 
+    while (rsp_len < read_limit) {
+        size_t wanted = read_limit - rsp_len;
+        if (content_length >= 0) {
+            size_t remaining = (size_t)content_length - rsp_len;
+            if (remaining == 0) {
+                break;
+            }
+            if (wanted > remaining) {
+                wanted = remaining;
+            }
+        }
+
+        rv = BIO_read(bio, rsp_data + rsp_len, (int)wanted);
+        if (rv < 0) {
+            LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed to read HTTP response body\n");
+            goto err;
+        }
+        if (rv == 0) {
+            break;
+        }
+        rsp_len += (size_t)rv;
+    }
+
+    if (rsp_len > rsp_limit) {
+        LogError(0, RS_RET_NO_ERRCODE, "OCSP: Response exceeds maximum allowed size (%ld)\n", MAX_OCSP_RESPONSE_SIZE);
+        goto err;
+    }
+    if (content_length > 0 && rsp_len != (size_t)content_length) {
+        LogError(0, RS_RET_NO_ERRCODE, "OCSP: Incomplete response body\n");
+        goto err;
+    }
+    if (rsp_len == 0) {
+        LogError(0, RS_RET_NO_ERRCODE, "OCSP: Empty response body\n");
+        goto err;
+    }
+
+    const unsigned char *p = rsp_data;
+    rsp = d2i_OCSP_RESPONSE(NULL, &p, (long)rsp_len);
     if (!rsp) {
         LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed to parse OCSP response\n");
         goto err;
@@ -1851,6 +1998,7 @@ static OCSP_RESPONSE *ocsp_send_and_receive(BIO *bio, const char *host, const ch
 
 err:
     if (req_data) OPENSSL_free(req_data);
+    free(rsp_data);
 
     return rsp;
 }

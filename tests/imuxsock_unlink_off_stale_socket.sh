@@ -56,6 +56,7 @@ input(type="imuxsock"
 
 startup
 
+wait_file_exists "$RSYSLOG_DYNNAME.started"
 grep -F 'socket path already exists and Unlink="off" prevents rsyslog from replacing it' \
 	"$RSYSLOG_DYNNAME.started" >/dev/null || {
 	echo "FAIL: expected stale imuxsock path diagnostic"

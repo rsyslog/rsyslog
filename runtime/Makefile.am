@@ -223,10 +223,10 @@ lmnsd_ossl_la_LDFLAGS = -module -avoid-version
 
 if ENABLE_WOLFSSL
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(WOLFSSL_CFLAGS)
-lmnsd_ossl_la_LIBADD = $(WOLFSSL_LIBS)
+lmnsd_ossl_la_LIBADD = $(WOLFSSL_LIBS) $(GAI_LIBS)
 else
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
-lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS)
+lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS) $(GAI_LIBS)
 
 endif
 endif
