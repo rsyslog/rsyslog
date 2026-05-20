@@ -71,10 +71,17 @@ static void *lookupTableReloader(void *self);
 
 static void lookupStopReloader(lookup_ref_t *pThis);
 
+static void lookupAppend(lookup_ref_t *pThis) {
+    pThis->next = NULL;
+    if (loadConf->lu_tabs.root == NULL) {
+        loadConf->lu_tabs.root = pThis;
+    } else {
+        loadConf->lu_tabs.last->next = pThis;
+    }
+    loadConf->lu_tabs.last = pThis;
+}
 
-/* create a new lookup table object AND include it in our list of
- * lookup tables.
- */
+/* create a new lookup table object */
 static rsRetVal lookupNew(lookup_ref_t **ppThis) {
     lookup_ref_t *pThis = NULL;
     lookup_t *t = NULL;
@@ -86,13 +93,6 @@ static rsRetVal lookupNew(lookup_ref_t **ppThis) {
     pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
 
     pThis->next = NULL;
-    if (loadConf->lu_tabs.root == NULL) {
-        loadConf->lu_tabs.root = pThis;
-    } else {
-        loadConf->lu_tabs.last->next = pThis;
-    }
-    loadConf->lu_tabs.last = pThis;
-
     pThis->self = t;
 
     *ppThis = pThis;
@@ -250,6 +250,19 @@ static void lookupDestruct(lookup_t *pThis) {
     free(pThis->interned_vals);
     free(pThis->nomatch);
     free(pThis);
+}
+
+static void __attribute__((noinline)) lookupRefFreeUnlinked(lookup_ref_t *pThis) {
+    if (pThis == NULL) return;
+    lookupDestruct(pThis->self);
+    free(pThis->name);
+    free(pThis->filename);
+    free(pThis);
+}
+
+static void __attribute__((noinline)) lookupRefDropTable(lookup_ref_t *pThis) {
+    lookupDestruct(pThis->self);
+    pThis->self = NULL;
 }
 
 void lookupInitCnf(lookup_tables_t *lu_tabs) {
@@ -1090,6 +1103,10 @@ finalize_it:
 rsRetVal lookupTableDefProcessCnf(struct cnfobj *o) {
     struct cnfparamvals *pvals;
     lookup_ref_t *lu;
+    uchar *name = NULL;
+    uchar *filename = NULL;
+    int reload_on_hup = 1;
+    int lu_linked = 0;
     short i;
 #ifdef HAVE_PTHREAD_SETNAME_NP
     char *reloader_thd_name = NULL;
@@ -1105,16 +1122,14 @@ rsRetVal lookupTableDefProcessCnf(struct cnfobj *o) {
     DBGPRINTF("lookupTableDefProcessCnf params:\n");
     cnfparamsPrint(&modpblk, pvals);
 
-    CHKiRet(lookupNew(&lu));
-
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "file")) {
-            CHKmalloc(lu->filename = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKmalloc(filename = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "name")) {
-            CHKmalloc(lu->name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "reloadOnHUP")) {
-            lu->reload_on_hup = (pvals[i].val.d.n != 0);
+            reload_on_hup = (pvals[i].val.d.n != 0);
         } else {
             dbgprintf(
                 "lookup_table: program error, non-handled "
@@ -1122,13 +1137,25 @@ rsRetVal lookupTableDefProcessCnf(struct cnfobj *o) {
                 modpblk.descr[i].name);
         }
     }
-    const uchar *const lu_name = lu->name; /* we need a const to keep TSAN happy :-( */
-    const uchar *const lu_filename = lu->filename; /* we need a const to keep TSAN happy :-( */
-    if (lu_name == NULL || lu_filename == NULL) {
+    if (name == NULL || filename == NULL) {
         iRet = RS_RET_INTERNAL_ERROR;
-        LogError(0, iRet, "internal error: lookup table name not set albeit being mandatory");
+        LogError(0, iRet, "internal error: lookup table name or file not set albeit being mandatory");
         ABORT_FINALIZE(iRet);
     }
+    if (lookupFindTable(name) != NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "lookup_table: duplicate name '%s' in current config set", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    CHKiRet(lookupNew(&lu));
+    lu->name = name;
+    name = NULL;
+    lu->filename = filename;
+    filename = NULL;
+    lu->reload_on_hup = reload_on_hup;
+
+    const uchar *const lu_name = lu->name; /* we need a const to keep TSAN happy :-( */
+    const uchar *const lu_filename = lu->filename; /* we need a const to keep TSAN happy :-( */
 #ifdef HAVE_PTHREAD_SETNAME_NP
     thd_name_len = asprintf(&reloader_thd_name, "%s%s", reloader_prefix, (char *)lu_name);
     if (thd_name_len < 0) {
@@ -1142,6 +1169,8 @@ rsRetVal lookupTableDefProcessCnf(struct cnfobj *o) {
     pthread_setname_np(lu->reloader, reloader_thd_name);
     #endif
 #endif
+    lookupAppend(lu);
+    lu_linked = 1;
     CHKiRet(lookupReadFile(lu->self, lu_name, lu_filename));
     LogMsg(0, RS_RET_OK, LOG_INFO, "lookup table '%s' loaded from file '%s'", lu_name, lu->filename);
 
@@ -1149,11 +1178,14 @@ finalize_it:
 #ifdef HAVE_PTHREAD_SETNAME_NP
     free(reloader_thd_name);
 #endif
+    free(name);
+    free(filename);
     cnfparamvalsDestruct(pvals, &modpblk);
-    if (iRet != RS_RET_OK) {
-        if (lu != NULL) {
-            lookupDestruct(lu->self);
-            lu->self = NULL;
+    if (iRet != RS_RET_OK && lu != NULL) {
+        if (lu_linked) {
+            lookupRefDropTable(lu);
+        } else {
+            lookupRefFreeUnlinked(lu);
         }
     }
     RETiRet;

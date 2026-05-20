@@ -431,6 +431,7 @@ TESTS_DEFAULT = \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
 	sparse_array_lookup_table.sh \
+	lookup_table_duplicate.sh \
 	lookup_table_bad_configs.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
@@ -608,7 +609,8 @@ TESTS_LIBYAML = \
 	yaml-statements-unset.sh \
 	yaml-template-list.sh \
 	yaml-template-subtree.sh \
-	yaml-statements-reload-lookup.sh
+	yaml-statements-reload-lookup.sh \
+	yaml-lookup-table-duplicate.sh
 
 TESTS_RATELIMIT_WATCH = \
 	ratelimit_policy_watch.sh \
