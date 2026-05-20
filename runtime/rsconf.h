@@ -150,6 +150,7 @@ struct globals_s {
                                    * 1 - yes
                                    * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
                                    */
+    int iMaxOpenFiles; /* requested RLIMIT_NOFILE value, 0 means leave OS limit unchanged */
     uint64_t glblDevOptions; /* to be used by developers only */
     int intMsgRateLimitItv;
     int intMsgRateLimitBurst;

@@ -139,6 +139,7 @@ mapping of parameter names to values.
    global:
      workdirectory: "/var/spool/rsyslog"
      maxmessagesize: 8192
+     maxOpenFiles: 2000
      defaultnetstreamdriver: "gtls"
      privdrop.user.name: "syslog"
      privdrop.group.name: "syslog"

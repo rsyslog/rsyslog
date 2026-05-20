@@ -157,6 +157,36 @@ The following parameters can be set:
   Note: some modules provide separate parameters that allow overriding this
   setting (e.g., :doc:`imrelp's MaxDataSize parameter <../../configuration/modules/imrelp>`).
 
+- **maxOpenFiles**
+
+  Configures the maximum number of files that the rsyslog process may keep
+  open at the same time. This includes regular files and sockets, so it also
+  affects the practical upper bound for concurrent TCP connections and dynamic
+  output files.
+
+  The default is the operating-system process limit. The value is applied with
+  ``setrlimit(RLIMIT_NOFILE)`` during configuration activation, before rsyslog
+  drops privileges. The request can still fail if operating-system policy,
+  service manager limits, or the current hard limit do not permit the requested
+  value. On systemd systems, ``LimitNOFILE=`` in the service unit is often the
+  preferred place to raise the hard limit.
+
+  Example:
+
+  .. code-block:: none
+
+     global(maxOpenFiles="2000")
+
+  YAML equivalent:
+
+  .. code-block:: yaml
+
+     global:
+       maxOpenFiles: 2000
+
+  The legacy ``$MaxOpenFiles`` directive remains supported for existing
+  configurations, but new configurations should use ``global(maxOpenFiles=...)``.
+
 .. _global_janitorInterval:
 
 - **janitor.interval** [minutes], available 8.3.3+
