@@ -1377,7 +1377,7 @@ static rsRetVal SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPr
     nsd_ossl_t __attribute__((unused)) *pThis = (nsd_ossl_t *)pNsd;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
     sbool ApplySettings = 0;
     if ((gnutlsPriorityString != NULL && pThis->gnutlsPriorityString == NULL) ||
         (gnutlsPriorityString != NULL &&
@@ -1409,7 +1409,7 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t __attribute__((unused)) *co
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
     /* Note: we disable unkonwn functions. The corresponding error message is
      * generated during SetGntuTLSPriorityString().
      */
@@ -1420,7 +1420,7 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t __attribute__((unused)) *co
     }
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
 finalize_it:
 #endif
     RETiRet;
@@ -1495,6 +1495,7 @@ static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
 
     ISOBJ_TYPE_assert((pThis), nsd_ossl);
     pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+    pThis->pNetOssl->bTlsRevocationCheck = pThis->DrvrTlsRevocationCheck;
     dbgprintf("SetTlsRevocationCheck: revocation check %s\n", pThis->DrvrTlsRevocationCheck ? "enabled" : "disabled");
 
     RETiRet;

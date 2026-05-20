@@ -333,6 +333,19 @@ tb_timestamp() {
 	printf '%s[%s] ' "$(date +%H:%M:%S)" "$(( $(date +%s) - TB_STARTTEST ))"
 }
 
+# echoes wolfssl | openssl | gnutls | mbedtls | none
+tls_backend() {
+	local line
+	line=$(../tools/rsyslogd -v 2>/dev/null | grep -i '^	TLS network stream driver:')
+	case "$line" in
+		*wolfSSL*)  echo wolfssl ;;
+		*OpenSSL*)  echo openssl ;;
+		*GnuTLS*)   echo gnutls ;;
+		*"Mbed TLS"*) echo mbedtls ;;
+		*)          echo none ;;
+	esac
+}
+
 # override the test timeout, but only if the new value is higher
 # than the previous one. This is necessary for slow test systems
 # $1 is timeout in seconds

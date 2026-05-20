@@ -85,6 +85,7 @@ struct net_ossl_s {
                              * set to 1 and changed to 0 after the first report. It is changed back to 1 after
                              * one successful authentication. */
         int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not check CN) */
+        int bTlsRevocationCheck;
         /* Open SSL objects */
         BIO *bio; /* OpenSSL main BIO obj */
         int ctx_is_copy;
@@ -107,7 +108,7 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*osslPeerfingerprint)(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
     X509 *(*osslGetpeercert)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
     rsRetVal (*osslChkpeercertvalidity)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
+#if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
     rsRetVal (*osslApplyTlscgfcmd)(net_ossl_t *pThis, uchar *tlscfgcmd);
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
     void (*osslSetBioCallback)(BIO *conn);
