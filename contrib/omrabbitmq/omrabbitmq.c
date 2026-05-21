@@ -29,6 +29,7 @@
  *
  */
 #include "config.h"
+#include <inttypes.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -994,11 +995,13 @@ BEGINdbgPrintInstInfo
         dbgprintf("\thost2='%s' \n", pData->server2.host);
         dbgprintf("\tport2=%d\n", pData->server2.port);
         dbgprintf("\tfailback policy :");
-        dbgprintf("\t\tusual server check interval=%ld s", pData->recover_policy.return_check_interval);
-        dbgprintf("\t\tquick oscillation limit=%ld s", pData->recover_policy.quick_oscillation_interval);
+        dbgprintf("\t\tusual server check interval=%" PRIdMAX " s",
+                  (intmax_t)pData->recover_policy.return_check_interval);
+        dbgprintf("\t\tquick oscillation limit=%" PRIdMAX " s",
+                  (intmax_t)pData->recover_policy.quick_oscillation_interval);
         dbgprintf("\t\tmax number of oscillation=%d s", pData->recover_policy.quick_oscillation_max);
-        dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s",
-                  pData->recover_policy.graceful_interval);
+        dbgprintf("\t\tgraceful interval after quick oscillation detection=%" PRIdMAX " s",
+                  (intmax_t)pData->recover_policy.graceful_interval);
     } else {
         dbgprintf("\thost='%s' \n", pData->server1.host);
         dbgprintf("\tport=%d\n", pData->server1.port);

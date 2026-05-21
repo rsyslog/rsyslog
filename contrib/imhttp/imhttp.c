@@ -592,12 +592,12 @@ static rsRetVal processOctetMsgLen(const instanceConf_t *const inst, struct conn
                          "SP but has ASCII value %d.",
                          remoteAddr, ch);
             } else if (connWrkr->parseState.iOctetsRemain > s_iMaxLine) {
-                DBGPRINTF("truncating message with %lu octets - max msg size is %lu\n",
+                DBGPRINTF("truncating message with %zu octets - max msg size is %zu\n",
                           connWrkr->parseState.iOctetsRemain, s_iMaxLine);
                 LogError(0, NO_ERRCODE,
                          "received oversize message from peer: "
-                         "(hostname) (ip) %s: size is %lu bytes, max msg "
-                         "size is %lu, truncating...",
+                         "(hostname) (ip) %s: size is %zu bytes, max msg "
+                         "size is %zu, truncating...",
                          remoteAddr, connWrkr->parseState.iOctetsRemain, s_iMaxLine);
             }
             connWrkr->parseState.inputState = eInMsg;

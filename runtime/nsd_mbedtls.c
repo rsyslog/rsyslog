@@ -70,6 +70,10 @@ static DEF_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
 
 #define DEFAULT_MAX_DEPTH 5
 
+static inline nsd_mbedtls_t *nsd_mbedtls_from_nsd(nsd_t *const pNsd) {
+    return (nsd_mbedtls_t *)(void *)pNsd;
+}
+
 #if MBEDTLS_DEBUG_LEVEL > 0
 static void debug(void __attribute__((unused)) * ctx,
                   int __attribute__((unused)) level,
@@ -173,8 +177,8 @@ static rsRetVal get_custom_string(char **out) {
     if (localtime_r(&(tv.tv_sec), &tm) == NULL) {
         ABORT_FINALIZE(RS_RET_NO_ERRCODE);
     }
-    if (asprintf(out, "nsd_mbedtls-%04d-%02d-%02d %02d:%02d:%02d:%08ld", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                 tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec) == -1) {
+    if (asprintf(out, "nsd_mbedtls-%04d-%02d-%02d %02d:%02d:%02d:%08lld", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                 tm.tm_hour, tm.tm_min, tm.tm_sec, (long long)tv.tv_usec) == -1) {
         *out = NULL;
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
@@ -279,7 +283,7 @@ ENDobjDestruct(nsd_mbedtls)
  */
 static rsRetVal SetMode(nsd_t *const pNsd, const int mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     dbgprintf("(tls) mode: %d\n", mode);
@@ -307,7 +311,7 @@ finalize_it:
  */
 static rsRetVal SetAuthMode(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (mode == NULL || !strcasecmp((char *)mode, "x509/name")) {
@@ -340,7 +344,7 @@ finalize_it:
  */
 static rsRetVal SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     /* default is set to off! */
@@ -372,7 +376,7 @@ finalize_it:
  */
 static rsRetVal SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (pPermPeers == NULL) FINALIZE;
@@ -395,7 +399,7 @@ finalize_it:
  */
 static rsRetVal SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int nCipherSuiteId;
     char *pCurrentPos;
     char *pSave;
@@ -444,7 +448,7 @@ finalize_it:
  */
 static rsRetVal SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
@@ -469,7 +473,7 @@ finalize_it:
  */
 static rsRetVal SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (prioritizeSan != 0 && prioritizeSan != 1) {
@@ -491,7 +495,7 @@ finalize_it:
  */
 static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     pThis->DrvrVerifyDepth = verifyDepth;
@@ -502,7 +506,7 @@ static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
 
 static rsRetVal SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -520,7 +524,7 @@ finalize_it:
 
 static rsRetVal SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -538,7 +542,7 @@ finalize_it:
 
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -556,7 +560,7 @@ finalize_it:
 
 static rsRetVal SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -574,7 +578,7 @@ finalize_it:
 
 static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
@@ -596,7 +600,7 @@ finalize_it:
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -610,7 +614,7 @@ static rsRetVal SetSock(nsd_t *pNsd, int sock) {
  */
 static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveIntvl >= 0);
@@ -624,7 +628,7 @@ static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
  */
 static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveProbes >= 0);
@@ -638,7 +642,7 @@ static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
  */
 static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveTime >= 0);
@@ -652,7 +656,7 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
 static rsRetVal Abort(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     DEFiRet;
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
@@ -1080,7 +1084,7 @@ finalize_it:
 static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) {
     DEFiRet;
     nsd_mbedtls_t *pNew = NULL;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int mbedtlsRet;
 
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
@@ -1166,7 +1170,7 @@ finalize_it:
  */
 static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     int n = 0;
 
@@ -1211,7 +1215,7 @@ finalize_it:
  */
 static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     int iSent;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
 
@@ -1242,7 +1246,7 @@ finalize_it:
  * rgerhards, 2009-06-02
  */
 static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
@@ -1251,7 +1255,7 @@ static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
  */
 static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int mbedtlsRet;
 
     dbgprintf("Connect to %s:%s\n", host, port);
@@ -1332,7 +1336,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
@@ -1342,7 +1346,7 @@ static rsRetVal CheckConnection(nsd_t *pNsd) {
 /* Provide access to the underlying OS socket.
  */
 static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     return nsd_ptcp.GetSock(pThis->pTcp, pSock);
 }
@@ -1352,7 +1356,7 @@ static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
  */
 static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
     RETiRet;
@@ -1364,7 +1368,7 @@ static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
  */
 static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
     RETiRet;
@@ -1373,7 +1377,7 @@ static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 /* get the remote host's IP address. Caller must Destruct the object. */
 static rsRetVal GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
     RETiRet;

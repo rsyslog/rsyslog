@@ -76,6 +76,10 @@ static int dhMinBits = 512; /**< minimum number of bits for Diffie-Hellman key *
 static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
+static inline nsd_gtls_t *nsd_gtls_from_nsd(nsd_t *const pNsd) {
+    return (nsd_gtls_t *)(void *)pNsd;
+}
+
 static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 
 /* Module-level bitfield for warnings that have been logged (shared across all instances)
@@ -1570,7 +1574,7 @@ ENDobjDestruct(nsd_gtls)
  */
 static rsRetVal SetMode(nsd_t *const pNsd, const int mode) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     dbgprintf("(tls) mode: %d\n", mode);
@@ -1598,7 +1602,7 @@ finalize_it:
  */
 static rsRetVal SetAuthMode(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (mode == NULL || !strcasecmp((char *)mode, "x509/name")) {
@@ -1633,7 +1637,7 @@ finalize_it:
  */
 static rsRetVal SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     /* default is set to off! */
@@ -1666,7 +1670,7 @@ finalize_it:
  */
 static rsRetVal SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (pPermPeers == NULL) FINALIZE;
@@ -1689,7 +1693,7 @@ finalize_it:
  */
 static rsRetVal SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     pThis->gnutlsPriorityString = gnutlsPriorityString;
@@ -1705,7 +1709,7 @@ static rsRetVal SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString
  */
 static rsRetVal SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
@@ -1729,7 +1733,7 @@ finalize_it:
  */
 static rsRetVal SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (prioritizeSan != 0 && prioritizeSan != 1) {
@@ -1751,7 +1755,7 @@ finalize_it:
  */
 static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (verifyDepth == 0) {
@@ -1766,7 +1770,7 @@ finalize_it:
 
 static rsRetVal SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile) {
     DEFiRet;
-    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *const pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (caFile == NULL) {
@@ -1781,7 +1785,7 @@ finalize_it:
 
 static rsRetVal SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile) {
     DEFiRet;
-    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *const pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (crlFile == NULL) {
@@ -1796,7 +1800,7 @@ finalize_it:
 
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *const pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (pszFile == NULL) {
@@ -1811,7 +1815,7 @@ finalize_it:
 
 static rsRetVal SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *const pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     if (pszFile == NULL) {
@@ -1827,7 +1831,7 @@ finalize_it:
 /* Set the TLS SNI of the remote server */
 static rsRetVal SetRemoteSNI(nsd_t *pNsd, uchar *remoteSNI) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
 
@@ -1844,7 +1848,7 @@ finalize_it:
 
 static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
     pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
@@ -1866,7 +1870,7 @@ finalize_it:
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     assert(sock >= 0);
@@ -1877,7 +1881,7 @@ static rsRetVal SetSock(nsd_t *pNsd, int sock) {
 }
 
 static rsRetVal GetRemotePort(nsd_t *pNsd, int *port) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     return nsd_ptcp.GetRemotePort(pThis->pTcp, port);
 }
@@ -1891,7 +1895,7 @@ static rsRetVal FmtRemotePortStr(const int port, uchar *const buf, const size_t 
  */
 static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     assert(keepAliveIntvl >= 0);
@@ -1906,7 +1910,7 @@ static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
  */
 static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     assert(keepAliveProbes >= 0);
@@ -1921,7 +1925,7 @@ static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
  */
 static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
     assert(keepAliveTime >= 0);
@@ -1936,7 +1940,7 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
 static rsRetVal Abort(nsd_t *pNsd) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     DEFiRet;
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
@@ -1952,8 +1956,8 @@ static rsRetVal Abort(nsd_t *pNsd) {
 /* Callback after netstrm obj init in nsd_ptcp - permits us to add some data */
 static rsRetVal LstnInitDrvr(netstrm_t *const pThis) {
     DEFiRet;
-    CHKiRet(gtlsInitCred((nsd_gtls_t *)pThis->pDrvrData));
-    CHKiRet(gtlsAddOurCert((nsd_gtls_t *)pThis->pDrvrData));
+    CHKiRet(gtlsInitCred(nsd_gtls_from_nsd(pThis->pDrvrData)));
+    CHKiRet(gtlsAddOurCert(nsd_gtls_from_nsd(pThis->pDrvrData)));
 finalize_it:
     RETiRet;
 }
@@ -1983,7 +1987,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
@@ -1994,7 +1998,7 @@ static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
 /* Provide access to the underlying OS socket.
  */
 static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     return nsd_ptcp.GetSock(pThis->pTcp, pSock);
 }
 
@@ -2004,7 +2008,7 @@ static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
  */
 static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
     iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
     RETiRet;
@@ -2016,7 +2020,7 @@ static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
  */
 static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
     iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
     RETiRet;
@@ -2026,7 +2030,7 @@ static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 /* get the remote host's IP address. Caller must Destruct the object. */
 static rsRetVal GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
     DEFiRet;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
     iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
     RETiRet;
@@ -2042,7 +2046,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     DEFiRet;
     int gnuRet;
     nsd_gtls_t *pNew = NULL;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     const char *error_position = NULL;
 
     ISOBJ_TYPE_assert((pThis), nsd_gtls);
@@ -2185,7 +2189,7 @@ finalize_it:
 static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection) {
     DEFiRet;
     ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
     if (pThis->bAbortConn) ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
@@ -2265,7 +2269,7 @@ finalize_it:
 static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     int iSent;
     int wantsWriteData = 0;
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
@@ -2323,7 +2327,7 @@ finalize_it:
  * rgerhards, 2009-06-02
  */
 static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
     return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
@@ -2365,7 +2369,7 @@ static int SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
-    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    nsd_gtls_t *pThis = nsd_gtls_from_nsd(pNsd);
     int sock;
     int gnuRet;
     const char *error_position;
