@@ -3095,7 +3095,7 @@ endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT+= TESTTOOL_DIR='$(abs_top_builddir)/tests'
 test_files = testbench.h runtime-dummy.c
-DISTCLEANFILES=rsyslog.pid
+DISTCLEANFILES=rsyslog.pid testbench_test_failed_rsyslog
 
 distclean-local:
 	rm -rf .dep_cache .dep_wrk
