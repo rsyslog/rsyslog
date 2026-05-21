@@ -53,12 +53,17 @@ MODULE_CNFNAME("pmdb2diag")
 DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(datetime)
 
-    /* input instance parameters */
-    static struct cnfparamdescr parserpdescr[] = {
-        {"levelpos", eCmdHdlrInt, 0},
-        {"timepos", eCmdHdlrInt, 0},
-        {"timeformat", eCmdHdlrString, 0},
-        {"pidstarttoprogstartshift", eCmdHdlrInt, 0},
+    static char *bounded_memchr(char *const start, const int len, const int ch) {
+    if (len <= 0) return NULL;
+    return memchr(start, ch, len);
+}
+
+/* input instance parameters */
+static struct cnfparamdescr parserpdescr[] = {
+    {"levelpos", eCmdHdlrInt, 0},
+    {"timepos", eCmdHdlrInt, 0},
+    {"timeformat", eCmdHdlrString, 0},
+    {"pidstarttoprogstartshift", eCmdHdlrInt, 0},
 };
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
@@ -78,21 +83,26 @@ ENDisCompatibleWithFeature
 
 BEGINparse2
     struct tm tm;
-    char *ms, *timepos, *pid, *prog, *eprog, *backslash, *end, *lvl;
-    int lprog, lpid, lvl_len;
+    char *ms, *timepos, *pid, *prog, *eprog, *backslash, *end, *lvl, *rawStart, *space;
+    int lprog, lpid, lvl_len, rawLen;
     char buffer[128];
     CODESTARTparse2;
     assert(pMsg != NULL);
     assert(pMsg->pszRawMsg != NULL);
 
     DBGPRINTF("Message will now be parsed by \"db2diag\" parser.\n");
-    if (pMsg->iLenRawMsg - (int)pMsg->offAfterPRI < pInst->levelpos + 4) ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    rawStart = (char *)pMsg->pszRawMsg + pMsg->offAfterPRI;
+    rawLen = pMsg->iLenRawMsg - (int)pMsg->offAfterPRI;
+    if (rawLen <= 0 || pInst->levelpos < 0 || pInst->timepos < 0 || pInst->pidstarttoprogstartshift < 0) {
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    if (pInst->levelpos > rawLen - 4 || pInst->timepos >= rawLen) ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
     /* Instead of comparing strings which a waste of cpu cycles we take interpret the 4 first chars of
      * level read it as int32 and compare it to same interpretation of our constant "levels"
      * So this test is not sensitive to ENDIANESS. This is not a clean way but very efficient.
      */
-    lvl = (char *)(pMsg->pszRawMsg + pMsg->offAfterPRI + pInst->levelpos);
+    lvl = rawStart + pInst->levelpos;
 
     switch (*lvl) {
         case 'C': /* Critical */
@@ -129,13 +139,13 @@ BEGINparse2
     }
 
     /* let recheck with the real level len */
-    if (pMsg->iLenRawMsg - (int)pMsg->offAfterPRI < pInst->levelpos + lvl_len) ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    if (pInst->levelpos > rawLen - lvl_len) ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
     DBGPRINTF("db2parse Level %d\n", pMsg->iSeverity);
 
     end = (char *)pMsg->pszRawMsg + pMsg->iLenRawMsg;
 
-    timepos = (char *)pMsg->pszRawMsg + pMsg->offAfterPRI + pInst->timepos;
+    timepos = rawStart + pInst->timepos;
 
     DBGPRINTF("db2parse Time %.30s\n", timepos);
     ms = strptime(timepos, pInst->timeformat, &tm);
@@ -163,10 +173,13 @@ BEGINparse2
         pMsg->tTIMESTAMP.OffsetMinute = tzoff % 60;
     }
 
-    pid = strchr((char *)pMsg->pszRawMsg + pInst->levelpos + lvl_len, ':');
+    pid = bounded_memchr(rawStart + pInst->levelpos + lvl_len, rawLen - (pInst->levelpos + lvl_len), ':');
     if (!pid || pid >= end) ABORT_FINALIZE(0);
+    if (end - pid < 3) ABORT_FINALIZE(0);
     pid += 2;
-    lpid = strchr(pid, ' ') - pid;
+    space = bounded_memchr(pid, end - pid, ' ');
+    if (space == NULL) ABORT_FINALIZE(0);
+    lpid = space - pid;
 
     DBGPRINTF("db2parse pid %.*s\n", lpid, pid);
 
@@ -174,14 +187,14 @@ BEGINparse2
     snprintf(buffer, 128, "%.*s", lpid, pid);
     MsgSetPROCID(pMsg, buffer);
 
+    if (pInst->pidstarttoprogstartshift > end - pid) ABORT_FINALIZE(0);
     prog = pid + pInst->pidstarttoprogstartshift; /* this offset between start of pid to start of prog */
     if (prog >= end) ABORT_FINALIZE(0);
 
-    eprog = strchr(prog, ' '); /* let find the end of the program */
-    if (eprog && eprog >= end) ABORT_FINALIZE(0);
+    eprog = bounded_memchr(prog, end - prog, ' '); /* let find the end of the program */
 
-    backslash = strchr(prog, '\\'); /* perhaps program contain an backslash */
-    if (!backslash || backslash >= end) backslash = end;
+    backslash = bounded_memchr(prog, end - prog, '\\'); /* perhaps program contain an backslash */
+    if (!backslash) backslash = end;
 
     /* Determine the final length of prog */
     lprog = (eprog && eprog < backslash) ? eprog - prog : backslash - prog;
@@ -259,10 +272,14 @@ BEGINnewParserInst
     }
 
     if (inst->timeformat == NULL) {
-        inst->timeformat = strdup("%Y-%m-%d-%H.%M.%S.");
+        CHKmalloc(inst->timeformat = strdup("%Y-%m-%d-%H.%M.%S."));
         inst->sepSec = '.';
-    } else
+    } else if (strlen(inst->timeformat) == 0) {
+        LogError(0, RS_RET_INVALID_PARAMS, "pmdb2diag: timeformat must not be empty");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    } else {
         inst->sepSec = inst->timeformat[strlen(inst->timeformat) - 1];
+    }
 
     DBGPRINTF("pmdb2diag: parsing date/time with '%s' at position %d and level at position %d.\n", inst->timeformat,
               inst->timepos, inst->levelpos);

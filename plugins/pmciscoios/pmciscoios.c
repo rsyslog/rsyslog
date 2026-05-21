@@ -163,6 +163,7 @@ BEGINparse2
         ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
     }
     p2parse += 2;
+    lenMsg -= 2;
 
     /* ORIGIN (optional) */
     if (pInst->bOriginPresent) {
@@ -179,6 +180,7 @@ BEGINparse2
             ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
         }
         p2parse += 2;
+        lenMsg -= 2;
     }
 
     /* XR RSP (optional) */
@@ -193,10 +195,14 @@ BEGINparse2
             ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
         }
         p2parse += 1;
+        lenMsg -= 1;
     }
 
     /* TIMESTAMP */
-    if (p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
+    if (lenMsg > 0 && (p2parse[0] == '*' || p2parse[0] == '.')) {
+        p2parse++;
+        lenMsg--;
+    }
     if (datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING,
                                     NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
         if (pMsg->dfltTZ[0] != '\0') applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
@@ -231,7 +237,13 @@ BEGINparse2
         --lenMsg;
     }
     /* delimiter check */
-    if (pInst->bXrPresent) p2parse++;
+    if (pInst->bXrPresent) {
+        if (lenMsg < 1) {
+            ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+        }
+        p2parse++;
+        lenMsg--;
+    }
     if (lenMsg < 2 || *p2parse != ':' || *(p2parse + 1) != ' ') {
         DBGPRINTF("pmciscoios: fail after tag: '%s'\n", p2parse);
         ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
