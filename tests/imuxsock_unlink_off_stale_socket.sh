@@ -1,6 +1,9 @@
 #!/bin/bash
 # Verify imuxsock rejects contradictory socket ownership settings and reports a
-# clear runtime diagnostic for stale sockets with Unlink="off".
+# clear runtime diagnostic for stale sockets with Unlink="off". The stale-socket
+# oracle is the default testbench omfile action for rsyslogd internal messages;
+# shutdown is synchronized before checking it so the test proves the diagnostic
+# reached the configured output destination.
 . ${srcdir:=.}/diag.sh init
 
 # This intentionally exercises a module activation failure; the current failure
@@ -55,8 +58,9 @@ input(type="imuxsock"
 '
 
 startup
+shutdown_when_empty
+wait_shutdown
 
-wait_file_exists "$RSYSLOG_DYNNAME.started"
 grep -F 'socket path already exists and Unlink="off" prevents rsyslog from replacing it' \
 	"$RSYSLOG_DYNNAME.started" >/dev/null || {
 	echo "FAIL: expected stale imuxsock path diagnostic"
@@ -64,6 +68,4 @@ grep -F 'socket path already exists and Unlink="off" prevents rsyslog from repla
 	error_exit 1
 }
 
-shutdown_when_empty
-wait_shutdown
 exit_test
