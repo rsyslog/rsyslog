@@ -41,6 +41,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <signal.h>
+#include <limits.h>
 #include <json.h>
 
 #include <pcap.h>
@@ -491,9 +492,11 @@ ENDfreeCnf
 char *stringToHex(char *string, size_t length) {
     const char *hexChar = "0123456789ABCDEF";
     char *retBuf;
-    uint16_t i;
+    size_t i;
 
+    if (length > (((size_t)-1) - 1) / 2) return NULL;
     retBuf = malloc((2 * length + 1) * sizeof(char));
+    if (retBuf == NULL) return NULL;
     for (i = 0; i < length; ++i) {
         retBuf[2 * i] = hexChar[(string[i] & 0xF0) >> 4];
         retBuf[2 * i + 1] = hexChar[string[i] & 0x0F];
@@ -551,7 +554,18 @@ void packet_parse(uchar *arg, const struct pcap_pkthdr *pkthdr, const uchar *pac
 
     json_object_object_add(jown, "net_bytes_total", json_object_new_int(pkthdr->len));
 
-    data_ret_t *dataLeft = eth_parse(packet, pkthdr->caplen, jown);
+    if (pkthdr->caplen > INT_MAX) {
+        DBGPRINTF("impcap : captured packet too large to parse: %u\n", pkthdr->caplen);
+        msgDestruct(&pMsg);
+        json_object_put(jown);
+        return;
+    }
+    data_ret_t *dataLeft = eth_parse(packet, (int)pkthdr->caplen, jown);
+    if (dataLeft == NULL) {
+        msgDestruct(&pMsg);
+        json_object_put(jown);
+        return;
+    }
 
     json_object_object_add(jown, "net_bytes_data", json_object_new_int(dataLeft->size));
     char *dataHex = stringToHex(dataLeft->pData, dataLeft->size);

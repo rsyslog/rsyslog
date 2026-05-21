@@ -97,6 +97,10 @@ data_ret_t *tcp_parse(const uchar *packet, int pktSize, struct json_object *jpar
     uint16_t dstPort = ntohs(tcp_header->dstPort);
 
     uint8_t headerLength = (tcp_header->dor & 0xF0) >> 2;  //>>4 to offset but <<2 to get offset as bytes
+    if (headerLength < 20 || headerLength > pktSize) {
+        DBGPRINTF("TCP invalid header length : %u packet size %d\n", headerLength, pktSize);
+        RETURN_DATA_AFTER(0)
+    }
 
     json_object_object_add(jparent, "net_src_port", json_object_new_int(srcPort));
     json_object_object_add(jparent, "net_dst_port", json_object_new_int(dstPort));

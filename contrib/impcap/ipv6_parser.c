@@ -59,6 +59,7 @@ typedef struct __attribute__((__packed__)) ipv6_header_s {
 #define IPV6_NHDR_ICMP6 58
 #define IPV6_NHDR_NONHDR 59
 #define IPV6_NHDR_DOPTS 60
+#define IPV6_NHDR_INVALID 255
 
     uint8_t hopLimit;
     uint8_t addrSrc[16];
@@ -107,6 +108,11 @@ typedef struct frag_header_s {
 
 static inline uint8_t hbh_header_parse(const uchar **packet, int *pktSize) {
     DBGPRINTF("hbh_header_parse\n");
+    if (*pktSize < 2) {
+        DBGPRINTF("IPv6 HBH header too small : %d\n", *pktSize);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
 
     /* Union to prevent cast from uchar to hbh_header_t */
     union {
@@ -119,8 +125,13 @@ static inline uint8_t hbh_header_parse(const uchar **packet, int *pktSize) {
 
     /* hbh_header->hLength is the number of octets of header in 8-octet units minus 1
      * the header length SHOULD be a multiple of 8 */
-    uint8_t hByteLength = hbh_header->hLength * 8 + 8;
+    int hByteLength = hbh_header->hLength * 8 + 8;
     DBGPRINTF("hByteLength: %d\n", hByteLength);
+    if (*pktSize < hByteLength) {
+        DBGPRINTF("IPv6 HBH header truncated : %d needed %d\n", *pktSize, hByteLength);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
     *pktSize -= hByteLength;
     *packet += hByteLength;
 
@@ -129,6 +140,11 @@ static inline uint8_t hbh_header_parse(const uchar **packet, int *pktSize) {
 
 static inline uint8_t dest_header_parse(const uchar **packet, int *pktSize) {
     DBGPRINTF("dest_header_parse\n");
+    if (*pktSize < 2) {
+        DBGPRINTF("IPv6 destination header too small : %d\n", *pktSize);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
 
     /* Union to prevent cast from uchar to dest_header_t */
     union {
@@ -141,8 +157,13 @@ static inline uint8_t dest_header_parse(const uchar **packet, int *pktSize) {
 
     /* dest_header->hLength is the number of octets of header in 8-octet units minus 1
      * the header length SHOULD be a multiple of 8 */
-    uint8_t hByteLength = dest_header->hLength * 8 + 8;
+    int hByteLength = dest_header->hLength * 8 + 8;
     DBGPRINTF("hByteLength: %d\n", hByteLength);
+    if (*pktSize < hByteLength) {
+        DBGPRINTF("IPv6 destination header truncated : %d needed %d\n", *pktSize, hByteLength);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
     *pktSize -= hByteLength;
     *packet += hByteLength;
 
@@ -151,6 +172,11 @@ static inline uint8_t dest_header_parse(const uchar **packet, int *pktSize) {
 
 static inline uint8_t route_header_parse(const uchar **packet, int *pktSize, struct json_object *jparent) {
     DBGPRINTF("route_header_parse\n");
+    if (*pktSize < 2) {
+        DBGPRINTF("IPv6 route header too small : %d\n", *pktSize);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
 
     /* Union to prevent cast from uchar to route_header_t */
     union {
@@ -163,7 +189,12 @@ static inline uint8_t route_header_parse(const uchar **packet, int *pktSize, str
 
     /* route_header->hLength is the number of octets of header in 8-octet units minus 1
      * the header length (in bytes) SHOULD be a multiple of 8 */
-    uint8_t hByteLength = route_header->hLength * 8 + 8;
+    int hByteLength = route_header->hLength * 8 + 8;
+    if (*pktSize < hByteLength) {
+        DBGPRINTF("IPv6 route header truncated : %d needed %d\n", *pktSize, hByteLength);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
     *pktSize -= hByteLength;
     *packet += hByteLength;
 
@@ -194,6 +225,11 @@ static inline uint8_t route_header_parse(const uchar **packet, int *pktSize, str
 #define MFLAG_MASK 0x0001
 static inline uint8_t frag_header_parse(const uchar **packet, int *pktSize, struct json_object *jparent) {
     DBGPRINTF("frag_header_parse\n");
+    if (*pktSize < 8) {
+        DBGPRINTF("IPv6 fragment header too small : %d\n", *pktSize);
+        *pktSize = 0;
+        return IPV6_NHDR_INVALID;
+    }
 
     /* Union to prevent cast from uchar to frag_header_t */
     union {
@@ -291,6 +327,9 @@ data_ret_t *ipv6_parse(const uchar *packet, int pktSize, struct json_object *jpa
             case IPV6_NHDR_NONHDR:
                 hasNext = 0;
                 break;
+            case IPV6_NHDR_INVALID:
+                hasNext = 0;
+                break;
             case IPV6_NHDR_DOPTS:
                 nextHeader = dest_header_parse(&packet, &pktSize);
                 break;
@@ -300,6 +339,8 @@ data_ret_t *ipv6_parse(const uchar *packet, int pktSize, struct json_object *jpa
         }
     } while (hasNext);
 
-    json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+    if (nextHeader != IPV6_NHDR_INVALID) {
+        json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+    }
     RETURN_DATA_AFTER(0)
 }

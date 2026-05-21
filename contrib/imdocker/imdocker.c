@@ -325,6 +325,10 @@ static rsRetVal dockerContLogsBufWrite(docker_cont_logs_buf_t *const pThis,
     DEFiRet;
 
     imdocker_buf_t *const mem = pThis->buf;
+    if (mem->len == SIZE_MAX || write_size > SIZE_MAX - mem->len - 1) {
+        LogError(0, RS_RET_ERR, "%s() - buffer size overflow\n", __FUNCTION__);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     if (mem->len + write_size + 1 > mem->data_size) {
         uchar *const pbuf = realloc(mem->data, mem->len + write_size + 1);
         if (pbuf == NULL) {
@@ -1103,7 +1107,7 @@ static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
         size_t lenMsg = pMsg->iLenRawMsg;
         uchar *pszMsg = pMsg->pszRawMsg;
 
-        if (pszMsg[lenMsg - 1] == '\0') {
+        if (lenMsg > 0 && pszMsg[lenMsg - 1] == '\0') {
             DBGPRINTF("dropped NULL at very end of message\n");
             lenMsg--;
         }
@@ -1179,10 +1183,13 @@ static void debug_byte_buffer(const uchar *data, size_t size) {
 static size_t imdocker_container_list_curlCB(void *data, size_t size, size_t nmemb, void *buffer) {
     DEFiRet;
 
-    size_t realsize = size * nmemb;
+    size_t realsize;
     uchar *pbuf = NULL;
     imdocker_buf_t *mem = (imdocker_buf_t *)buffer;
 
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) ABORT_FINALIZE(RS_RET_ERR);
+    realsize = size * nmemb;
+    if (mem->len == SIZE_MAX || realsize > SIZE_MAX - mem->len - 1) ABORT_FINALIZE(RS_RET_ERR);
     if ((pbuf = realloc(mem->data, mem->len + realsize + 1)) == NULL) {
         LogError(errno, RS_RET_ERR, "%s() - realloc failed!\n", __FUNCTION__);
         ABORT_FINALIZE(RS_RET_ERR);
@@ -1328,9 +1335,12 @@ static size_t imdocker_container_logs_curlCB(void *data, size_t size, size_t nme
     docker_cont_logs_inst_t *pInst = (docker_cont_logs_inst_t *)buffer;
     docker_cont_logs_req_t *req = pInst->logsReq;
 
-    size_t realsize = size * nmemb;
+    size_t realsize;
     const uchar *pdata = data;
     size_t write_size = 0;
+
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) ABORT_FINALIZE(RS_RET_ERR);
+    realsize = size * nmemb;
 
 #ifdef ENABLE_DEBUG_BYTE_BUFFER
     debug_byte_buffer((const uchar *)data, realsize);

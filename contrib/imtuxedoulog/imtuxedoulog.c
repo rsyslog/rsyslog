@@ -197,6 +197,7 @@ static rsRetVal parseMsg(smsg_t *pMsg, char *rawMsg, size_t msgLen, instanceConf
     int hour, min, sec;
     rsRetVal ret;
 
+    if (msgLen < 11) return RS_RET_COULD_NOT_PARSE;
     hour = (rawMsg[0] ^ 0x30) * 10 + (rawMsg[1] ^ 0x30);
     min = (rawMsg[2] ^ 0x30) * 10 + (rawMsg[3] ^ 0x30);
     sec = (rawMsg[4] ^ 0x30) * 10 + (rawMsg[5] ^ 0x30);
@@ -225,7 +226,10 @@ static rsRetVal parseMsg(smsg_t *pMsg, char *rawMsg, size_t msgLen, instanceConf
     pMsg->tTIMESTAMP.OffsetHour = syslogTz.OffsetHour;
     pMsg->tTIMESTAMP.OffsetMinute = syslogTz.OffsetMinute;
 
-    pMsg->tTIMESTAMP.secfrac = atoi(rawMsg + 7);
+    pMsg->tTIMESTAMP.secfrac = 0;
+    for (size_t i = 7; i < msgLen && i < 10 && rawMsg[i] >= '0' && rawMsg[i] <= '9'; ++i) {
+        pMsg->tTIMESTAMP.secfrac = (pMsg->tTIMESTAMP.secfrac * 10) + (rawMsg[i] - '0');
+    }
     /* secfracprecision depends on the char on position 9 (case 1 or case 2) */
     pMsg->tTIMESTAMP.secfracPrecision = (rawMsg[9] == '.') ? 2 : 3;
 
@@ -235,21 +239,26 @@ static rsRetVal parseMsg(smsg_t *pMsg, char *rawMsg, size_t msgLen, instanceConf
     else
         *strtData = '\0';
 
+    if ((size_t)(strtData - rawMsg) > msgLen - 2) return RS_RET_COULD_NOT_PARSE;
     strtData = strtData + 2;
 
     /* Case 4 */
-    if (memcmp(strtData, "gtrid", 5) == 0) {
+    if ((size_t)(strtData - rawMsg) <= msgLen - 5 && memcmp(strtData, "gtrid", 5) == 0) {
         strtData = memchr(strtData, ':', msgLen - (strtData - rawMsg));
-        if (strtData != NULL) strtData += 2;
+        if (strtData == NULL || (size_t)(strtData - rawMsg) > msgLen - 2) return RS_RET_COULD_NOT_PARSE;
+        strtData += 2;
     }
 
     text = strtData;
 
     /* ecid point to message text or the word ECID */
-    if (strtData != NULL && memcmp(strtData, "ECID", 4) == 0) {
-        text = memchr(strtData + 6, '>', msgLen - (strtData - rawMsg));
+    if ((size_t)(strtData - rawMsg) <= msgLen - 4 && memcmp(strtData, "ECID", 4) == 0) {
+        char *const ecidEnd = ((size_t)(strtData - rawMsg) <= msgLen - 7)
+                                  ? memchr(strtData + 6, '>', msgLen - (strtData - rawMsg) - 6)
+                                  : NULL;
         /* case 3 : we have the word ECID */
-        if (text != NULL) {
+        if (ecidEnd != NULL && (size_t)(ecidEnd - rawMsg) <= msgLen - 3) {
+            text = ecidEnd;
             *(--strtData) = '[';
             strtData[5] = '=';
             strtData[6] = '\"';

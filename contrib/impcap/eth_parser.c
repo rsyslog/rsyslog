@@ -142,6 +142,10 @@ data_ret_t *eth_parse(const uchar *packet, int pktSize, struct json_object *jpar
     uint16_t ethType = (uint16_t)ntohs(eth_header->type);
 
     if (ethType == ETHERTYPE_VLAN) {
+        if (pktSize < (int)sizeof(vlan_header_t)) {
+            DBGPRINTF("VLAN packet too small : %d\n", pktSize);
+            RETURN_DATA_AFTER(0)
+        }
         vlan_header_t *vlan_header = (vlan_header_t *)packet;
         json_object_object_add(jparent, "ETH_tag", json_object_new_int(ntohs(vlan_header->vlanTag)));
         ethType = (uint16_t)ntohs(vlan_header->type);
@@ -154,6 +158,7 @@ data_ret_t *eth_parse(const uchar *packet, int pktSize, struct json_object *jpar
         /* this is a LLC header */
         json_object_object_add(jparent, "ETH_len", json_object_new_int(ethType));
         ret = llc_parse(packet + hdrLen, pktSize - hdrLen, jparent);
+        if (ret == NULL) return NULL;
 
         /* packet has the minimum allowed size, so the remaining data is
          * most likely padding, this should not appear as data, so remove it
@@ -169,6 +174,7 @@ data_ret_t *eth_parse(const uchar *packet, int pktSize, struct json_object *jpar
     json_object_object_add(jparent, "ETH_type", json_object_new_int(ethType));
     json_object_object_add(jparent, "ETH_typestr", json_object_new_string((char *)eth_type_to_string(ethType)));
     ret = eth_proto_parse(ethType, (packet + hdrLen), (pktSize - hdrLen), jparent);
+    if (ret == NULL) return NULL;
 
     /* packet has the minimum allowed size, so the remaining data is
      * most likely padding, this should not appear as data, so remove it */

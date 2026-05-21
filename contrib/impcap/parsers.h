@@ -70,6 +70,7 @@ typedef struct data_ret_s data_ret_t;
 
     #define RETURN_DATA_AFTER(x)                          \
         data_ret_t *retData = malloc(sizeof(data_ret_t)); \
+        if (retData == NULL) return NULL;                 \
         if (pktSize > x) {                                \
             retData->size = pktSize - x;                  \
             retData->pData = (char *)packet + x;          \

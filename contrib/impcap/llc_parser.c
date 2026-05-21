@@ -73,6 +73,10 @@ data_ret_t *llc_parse(const uchar *packet, int pktSize, struct json_object *jpar
         headerLen = 3;
     } else {
         /* I and S data frames: LLC control is 16 bits */
+        if (pktSize < 4) {
+            DBGPRINTF("LLC packet too small for 16-bit control : %d\n", pktSize);
+            RETURN_DATA_AFTER(0)
+        }
         ctrl = ntohs((uint16_t)packet[2]);
         headerLen = 4;
     }
@@ -87,6 +91,10 @@ data_ret_t *llc_parse(const uchar *packet, int pktSize, struct json_object *jpar
 
     if (dsap == 0xaa && ssap == 0xaa && ctrl == 0x03) {
         /* SNAP header */
+        if (pktSize < headerLen + 5) {
+            DBGPRINTF("LLC SNAP packet too small : %d\n", pktSize);
+            RETURN_DATA_AFTER(headerLen)
+        }
         uint32_t orgCode = packet[headerLen] << 16 | packet[headerLen + 1] << 8 | packet[headerLen + 2];
         uint16_t ethType = packet[headerLen + 3] << 8 | packet[headerLen + 4];
         json_object_object_add(jparent, "SNAP_oui", json_object_new_int(orgCode));

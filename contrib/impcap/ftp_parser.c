@@ -93,12 +93,17 @@ data_ret_t *ftp_parse(const uchar *packet, int pktSize, struct json_object *jpar
     if (pktSize < 5) { /* too short for ftp packet*/
         RETURN_DATA_AFTER(0)
     }
-    uchar *packet2 = (uchar *)malloc(pktSize * sizeof(uchar));
+    uchar *packet2 = (uchar *)malloc((size_t)pktSize + 1);
+    if (packet2 == NULL) {
+        RETURN_DATA_AFTER(0)
+    }
 
     memcpy(packet2, packet, pktSize);  // strtok changes original packet
+    packet2[pktSize] = '\0';
+    char *saveptr = NULL;
     uchar *frst_part_ftp;
-    frst_part_ftp = (uchar *)strtok((char *)packet2, " ");  // Get first part of packet ftp
-    strtok(NULL, "\r\n");
+    frst_part_ftp = (uchar *)strtok_r((char *)packet2, " ", &saveptr);  // Get first part of packet ftp
+    strtok_r(NULL, "\r\n", &saveptr);
 
     if (frst_part_ftp) {
         int code = check_Code_ftp(frst_part_ftp);
