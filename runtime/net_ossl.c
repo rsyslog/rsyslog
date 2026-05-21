@@ -908,8 +908,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
     assert(pbFoundPositiveMatch != NULL);
 
     if (pThis->pPermPeers) { /* do we have configured peer IDs? */
-        pPeer = pThis->pPermPeers;
-        while (pPeer != NULL) {
+        for (pPeer = pThis->pPermPeers; pPeer != NULL; pPeer = pPeer->pNext) {
             CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
             if (*pbFoundPositiveMatch) break;
 
@@ -919,7 +918,6 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
              * if prioritizeSAN set, only check against SAN
              */
             if (!allowX509CheckHost || pPeer->etryType == PERM_PEER_TYPE_WILDCARD) {
-                pPeer = pPeer->pNext;
                 continue;
             } else if (pThis->bSANpriority == 1) {
     #if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER) && \
@@ -927,6 +925,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     #else
                 dbgprintf("net_ossl_matchpeeridentity: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
+                continue;
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
             }
 
@@ -947,8 +946,6 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             }
 #endif
-            /* Check next peer */
-            pPeer = pPeer->pNext;
         }
     } else {
         LogMsg(0, RS_RET_TLS_NO_CERT, LOG_WARNING,
