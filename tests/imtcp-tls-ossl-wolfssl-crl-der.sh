@@ -1,17 +1,18 @@
 #!/bin/bash
-# Test wolfSSL DER CRL handling.  The receiver is configured with an expired
-# CRL converted to DER; success is proved by TLS rejection with a CRL-expired
-# diagnostic and by the absence of delivered payload messages.  This locks in
-# that DER CRL loading also enables wolfSSL CRL verification.
+# Test wolfSSL DER CRL handling.  The receiver is configured with the existing
+# CRL converted to DER while the sender presents a revoked certificate; success
+# is proved by TLS rejection with a revoked-certificate diagnostic and by the
+# absence of delivered payload messages.  This locks in that DER CRL loading
+# also enables wolfSSL CRL verification.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 check_command_available openssl
 
 export NUMMESSAGES=1000
-DER_CRL="$RSYSLOG_DYNNAME.crl-expired.der"
-openssl crl -in "$srcdir/testsuites/x.509/crl-expired.pem" -outform DER -out "$DER_CRL" || \
-	error_exit 1 "could not convert expired CRL to DER"
+DER_CRL="$RSYSLOG_DYNNAME.crl.der"
+openssl crl -in "$srcdir/testsuites/x.509/crl.pem" -outform DER -out "$DER_CRL" || \
+	error_exit 1 "could not convert CRL to DER"
 
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
@@ -42,8 +43,8 @@ add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
 	defaultnetstreamdriverCRLfile="'$srcdir/testsuites/x.509/crl.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert-new.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-revoked.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-revoked-key.pem'"
 	defaultNetstreamDriver="ossl"
 )
 
@@ -60,7 +61,7 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "CRL has expired"
+content_check --regex "certificate revoked"
 assert_content_missing "msgnum:"
 
 exit_test
