@@ -86,8 +86,7 @@ static rsRetVal net_ossl_wolfssl_enable_leaf_crl(SSL_CTX *ctx, const char *crlFi
 
     cm = wolfSSL_CTX_GetCertManager(ctx);
     if (cm == NULL) {
-        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CertManager unavailable after loading CRL '%s'",
-                 crlFile);
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CertManager unavailable after loading CRL '%s'", crlFile);
         ABORT_FINALIZE(RS_RET_CRL_INVALID);
     }
 
@@ -95,13 +94,11 @@ static rsRetVal net_ossl_wolfssl_enable_leaf_crl(SSL_CTX *ctx, const char *crlFi
      * DER loader does not enable CRL checks at all. Normalize both paths to
      * OpenSSL's X509_V_FLAG_CRL_CHECK behavior: verify the leaf certificate. */
     if (wolfSSL_CertManagerDisableCRL(cm) != WOLFSSL_SUCCESS) {
-        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be reset for CRL '%s'",
-                 crlFile);
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be reset for CRL '%s'", crlFile);
         ABORT_FINALIZE(RS_RET_CRL_INVALID);
     }
     if (wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK) != WOLFSSL_SUCCESS) {
-        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be enabled for CRL '%s'",
-                 crlFile);
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be enabled for CRL '%s'", crlFile);
         ABORT_FINALIZE(RS_RET_CRL_INVALID);
     }
 
