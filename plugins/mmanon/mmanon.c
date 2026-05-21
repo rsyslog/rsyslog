@@ -621,6 +621,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -630,6 +633,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -639,6 +645,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -1760,8 +1769,17 @@ static int syntax_embedded(const uchar *const __restrict__ buf,
                 goto done;
             }
             *v4Start = findV4Start(buf, (*nprocessed) - 1);
-            if (syntax_ipv4(buf + (*v4Start), buflen, &ipv4Len)) {
-                *nprocessed += (ipv4Len - ((*nprocessed) - (*v4Start)));
+            if (*v4Start >= buflen) {
+                isIP = 0;
+                goto done;
+            }
+            if (syntax_ipv4(buf + (*v4Start), buflen - *v4Start, &ipv4Len)) {
+                const size_t ipv4BytesAlreadyScanned = *nprocessed - *v4Start;
+                if (ipv4Len < ipv4BytesAlreadyScanned) {
+                    isIP = 0;
+                    goto done;
+                }
+                *nprocessed += ipv4Len - ipv4BytesAlreadyScanned;
                 isIP = 1;
                 goto done;
             } else {

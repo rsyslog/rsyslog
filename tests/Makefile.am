@@ -730,7 +730,8 @@ TESTS_MMANON = \
 	mmanon_both_modes_compatible.sh \
 	mmanon_recognize_ipembedded.sh \
 	mmanon_ipv6_port.sh \
-	mmanon_random_cons_128_ipembedded.sh
+	mmanon_random_cons_128_ipembedded.sh \
+	mmanon_truncated_dotted_suffix.sh
 
 TESTS_CLICKHOUSE = \
 	clickhouse-start.sh \
