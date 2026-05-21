@@ -592,8 +592,12 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         }
 #endif
         freeLstnParams(pEntry->cnf_params);
-        ratelimitDestruct(pEntry->ratelimiter);
-        statsobj.Destruct(&(pEntry->stats));
+        if (pEntry->ratelimiter != NULL) {
+            ratelimitDestruct(pEntry->ratelimiter);
+        }
+        if (pEntry->stats != NULL) {
+            statsobj.Destruct(&(pEntry->stats));
+        }
         pDel = pEntry;
         pEntry = pEntry->pNext;
         free(pDel);
