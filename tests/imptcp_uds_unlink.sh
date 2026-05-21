@@ -19,6 +19,8 @@ startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 content_check "imptcp: error while binding unix socket: Address already in use"
+[ -f "$RSYSLOG_DYNNAME-testbench_socket" ] || { echo "expected pre-existing socket path file to remain when unlink=off"; exit 1; }
+grep -qx "nope" "$RSYSLOG_DYNNAME-testbench_socket" || { echo "expected pre-existing socket path file content to remain unchanged when unlink=off"; exit 1; }
 exit_test
 
 # Now make sure we unlink if asked to
