@@ -61,7 +61,7 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "ASN CRL no signer|certificate revoked"
+content_check --regex "ASN CRL no signer|certificate revoked" "${RSYSLOG_DYNNAME}2.started"
 assert_content_missing "msgnum:"
 
 exit_test
