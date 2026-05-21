@@ -9,6 +9,30 @@ maintainer validation and coordination with the reporter.
 Use this template when reviewing a private GitHub Security Advisory report and
 preparing a respectful coordination response to the reporter.
 
+## Maintainer Workflow Notes
+
+The GHSA coordinator is the maintainer team. At present, Rainer Gerhards
+(`rgerhards`) is the primary coordinator and Andre Lorbach (`alorbach`) is the
+fallback. The coordinator owns the reporter conversation, keeps the validation
+state clear, and avoids parallel inconsistent replies.
+
+Use the review prompt early. It is intended to help draft both the initial
+reporter response and more substantial follow-up once maintainer validation
+notes are available. The prompt output is a basis for maintainer review, not an
+automatic decision. Maintainers still decide what to send, what to validate
+next, and what wording needs reporter coordination.
+
+For normal cases, the prompt should also be used as the first-pass validation
+organizer. It should identify the affected component, default and non-default
+configuration preconditions, strongest evidence, uncertainties, proposed
+component-scoped wording, and next steps. Complex cases may need additional
+manual analysis or separate technical review before a response is sent.
+
+Do not make meaningful advisory wording changes unilaterally. Changes to the
+title, impact, affected configurations, affected versions, or publication
+timing should be coordinated with the reporter before publication, especially
+when narrowing broad claims to a specific module or configuration path.
+
 ## Review Prompt
 
 ```text
@@ -34,6 +58,12 @@ Context to consider:
   handling. Published advisories should stand on minimal configuration,
   reproduction steps, PoC text or scripts, logs, stack traces, sanitizer
   output, affected versions, workarounds, and fixed versions.
+- The current coordinator is usually rgerhards, with alorbach as fallback.
+  The coordinator owns the reporter conversation and avoids parallel
+  inconsistent responses.
+- The prompt may be used early for both an initial reporter response and later
+  substantive follow-up. Treat this output as maintainer-draft material, not
+  as an automatic acceptance, rejection, severity decision, or final advisory.
 - Keep the response collaborative and factual. Acknowledge useful work by the
   reporter without promising acceptance, CVE assignment, severity, affected
   versions, or publication timing before maintainer validation is complete.
@@ -50,19 +80,32 @@ Your task:
 1. Classify the report status as one of: needs clarification, plausible
    pending validation, confirmed pending fix, fixed pending release or
    publication, duplicate or overlapping report, or likely not actionable.
-2. Summarize the strongest evidence in favor of the report.
-3. Summarize the main uncertainties or wording concerns.
-4. Propose component-scoped advisory wording for:
+2. Organize the first-pass validation basis:
+   - affected component, module, plugin, or configuration path
+   - whether it is built in, optional, contrib, default-loaded, or explicitly
+     configured
+   - whether upstream defaults are affected
+   - whether known distribution defaults differ from upstream defaults
+   - whether required non-default settings are common in production or
+     enterprise deployments
+   - attacker control, vulnerable sink, missing guard, and demonstrated impact
+3. Summarize the strongest evidence in favor of the report.
+4. Summarize the main uncertainties or wording concerns.
+5. Propose component-scoped advisory wording for:
    - title
    - one-paragraph summary
    - affected configurations
    - impact
    - workarounds, if known
-5. Identify any wording that should be coordinated with the reporter before
+6. Identify any wording that should be coordinated with the reporter before
    publication.
-6. Draft an initial response to the reporter that is professional, concise, and
-   collaborative.
-7. Suggest next maintainer steps, including validation, duplicate handling,
+7. Draft a reporter response that is professional, concise, and collaborative.
+   If this is the first reply, acknowledge receipt and ask for missing
+   validation details without promising acceptance, CVE assignment, severity,
+   affected versions, or publication timing. If maintainer validation notes are
+   provided, draft a more substantial follow-up that clearly separates
+   confirmed facts from open questions.
+8. Suggest next maintainer steps, including validation, duplicate handling,
    fix/review, CVE decision, release coordination, downstream coordination, and
    publication checks.
 
