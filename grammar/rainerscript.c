@@ -2562,7 +2562,7 @@ static void ATTR_NONNULL() doFunct_Lookup(struct cnffunc *__restrict__ const fun
             DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n", __FILE__, __LINE__);
             key.k_uint = 0;
         }
-        ret->d.estr = lookupKey((lookup_ref_t *)func->funcdata, key);
+        ret->d.estr = lookupKeyLocked((lookup_ref_t *)func->funcdata, key);
         if (bMustFree) {
             free(key.k_str);
         }

@@ -425,6 +425,7 @@ TESTS_DEFAULT = \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
+	lookup_table-daemon-shutdown.sh \
 	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
 	container-noise-drop.sh \
