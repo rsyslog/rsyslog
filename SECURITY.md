@@ -118,6 +118,23 @@ requires a specific optional module and a larger-than-default message size, the
 advisory should identify both conditions and avoid implying that all rsyslog
 installations are affected.
 
+## Reproduction Artifacts and Media
+
+Reports should stand on text-based technical artifacts that maintainers,
+downstream security teams, and users can review, archive, search, and
+reproduce. Preferred artifacts include minimal configuration, reproduction
+steps, proof-of-concept text or scripts, logs, stack traces, sanitizer output,
+affected versions, workarounds, and fixed versions.
+
+Videos and screenshots may be useful as supplementary private evidence, but
+published advisories should not include embedded video. Media files and media
+parsers are themselves attack surfaces, especially when content auto-plays or
+is opened in different browser or player environments. Security advisory
+readers should not need to open media files or rely on auto-playing content to
+understand a vulnerability. Screenshots should also be avoided unless they add
+essential context that cannot be represented as text, and any media must be
+reviewed for sensitive environment details before publication.
+
 ## Coordinated Disclosure
 
 We ask reporters not to disclose vulnerabilities publicly before an agreed
