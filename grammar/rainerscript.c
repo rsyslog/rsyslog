@@ -3499,7 +3499,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
     int bMustFree, bMustFree2;
     int64_t n_r, n_l;
     int convok_r, convok_l;
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     int ret;
 
     cnfexprEval(expr->l, &l, usrptr, pWti);
@@ -3535,7 +3535,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                                 struct svar *__restrict__ const ret,
                                 void *__restrict__ const usrptr,
                                 wti_t *__restrict__ const pWti) {
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
     int convok_r, convok_l;
     int bMustFree, bMustFree2;

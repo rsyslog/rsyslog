@@ -41,6 +41,16 @@
    fun:mainloop
    fun:main
 }
+{
+   <pselect wait call with valid sigset misreported via armhf glibc wrapper>
+   Memcheck:Param
+   pselect6(sig)
+   fun:__pselect32
+   fun:__pselect64
+   fun:wait_timeout
+   fun:mainloop
+   fun:main
+}
 
 {
    <librdkafka mem leak - we cannot work around it>
