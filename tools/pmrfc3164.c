@@ -468,6 +468,7 @@ BEGINparse2
          * in RFC3164...). We now receive the full size, but will modify the
          * outputs so that only 32 characters max are used by default.
          */
+        uchar* const pTagStart = p2parse;
         i = 0;
         while (lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE - 2) {
             bufParseTAG[i++] = *p2parse++;
@@ -481,8 +482,12 @@ BEGINparse2
             /* Tag need to be ended by a colon or it's not a tag but the
              * begin of the message
              */
-            p2parse -= (i + 1);
-            lenMsg += (i + 1);
+            size_t rewind = i;
+            if (pTagStart > pMsg->pszRawMsg && pTagStart[-1] == ' ') {
+                ++rewind;
+            }
+            p2parse -= rewind;
+            lenMsg += rewind;
             i = 0;
             /* Default TAG is dash (without ':')
              */

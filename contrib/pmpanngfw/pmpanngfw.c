@@ -132,7 +132,7 @@ BEGINparse
     }
 
     /* check log type */
-    log_type = *((uint64 *)p2parse);
+    memcpy(&log_type, p2parse, sizeof(log_type));
     for (j = 0; j < (int)NUM_LOG_TYPES; j++) {
         if ((log_type & log_types[j].mask) == log_types[j].value) break;
     }

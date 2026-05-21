@@ -199,6 +199,7 @@ TESTS_DEFAULT = \
 	pmrfc3164-AtSignsInHostname.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164_force_tag_no_colon.sh \
 	pmrfc3164-defaultTag.sh \
 	pmrfc3164-headerless.sh \
 	pmrfc3164-drop.sh \
@@ -1664,7 +1665,11 @@ TESTS_OMRULESET = \
 	omruleset-queue.sh
 
 TESTS_PMDB2DIAG = \
-	pmdb2diag_parse.sh
+	pmdb2diag_parse.sh \
+	pmdb2diag_malformed_tail.sh
+
+TESTS_PMCISCOIOS = \
+	pmciscoios_truncated_input.sh
 
 TESTS_PMSNARE = \
 	pmsnare-default.sh \
@@ -1677,6 +1682,7 @@ TESTS_PMSNARE = \
 	pmsnare-cccstyle-udp.sh \
 	pmsnare-ccbackslash.sh \
 	pmsnare-ccbackslash-udp.sh \
+	pmsnare_malformed_tag_tail.sh \
 	pmsnare-modoverride.sh \
 	pmsnare-modoverride-udp.sh
 
@@ -2016,6 +2022,7 @@ EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_OMUDPSPOOF)
 EXTRA_DIST += $(TESTS_OMRULESET)
 EXTRA_DIST += $(TESTS_PMDB2DIAG)
+EXTRA_DIST += $(TESTS_PMCISCOIOS)
 EXTRA_DIST += $(TESTS_PMSNARE)
 EXTRA_DIST += $(TESTS_PMLASTMSG)
 EXTRA_DIST += $(TESTS_IMFILE_EXTENDED)
@@ -3006,6 +3013,11 @@ endif
 
 if ENABLE_PMDB2DIAG
 TESTS += $(TESTS_PMDB2DIAG)
+endif
+
+
+if ENABLE_PMCISCOIOS
+TESTS += $(TESTS_PMCISCOIOS)
 endif
 
 
