@@ -10,7 +10,8 @@ template(name="outlocal" type="string" string="%$.%\n")
 
 if $msg contains "msgnum" then {
   set $.ret = parse_json("{\"offsets\": [ { \"a\": 9, \"b\": 0, \"c\": \"boo\", \"d\": null },\
-                                         { \"a\": 9, \"b\": 3, \"c\": null, \"d\": null } ],\
+                                         { \"a\": 9, \"b\": 3, \"c\": null, \"d\": null },\
+                                         2, 3, 4, 5, 6, 7, 8, 9 ],\
                                          \"booltest\": true,\
                                          \"int64\": 1234567890,\
                                          \"nulltest\": null,\
@@ -28,7 +29,7 @@ if $msg contains "msgnum" then {
 		set $.res2 = get_property($!parsed!offsets[1], $.test);
 		reset $.test = "bar";
 		set $.res3 = get_property($!foo, $.test);
-		reset $.index = 5;
+		reset $.index = 12;
 		set $.res4 = get_property($!parsed!offsets, $.index);
 		set $.key = "test";
 		set $.res5 = get_property($., $.key);
@@ -49,6 +50,8 @@ if $msg contains "msgnum" then {
 		set $.res14 = get_property($!parsed, $.key);
 		set $.res15 = get_property($msg, "");
 		set $.res16 = get_property("string literal", "");
+		reset $.index = 9;
+		set $.res17 = get_property($!parsed!offsets, $.index);
 
 		# output result
 		unset $.key;
@@ -63,8 +66,8 @@ injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED='{ "parsed": { "offsets": [ { "a": 9, "b": 0, "c": "boo", "d": null }, { "a": 9, "b": 3, "c": null, "d": null } ], "booltest": true, "int64": 1234567890, "nulltest": null, "double": 12345.67890, "foo": 3, "bar": 28 }, "foo": { "bar": 3 } }
-{ "ret": 0, "index": 5, "test": "bar", "res1": { "a": 9, "b": 3, "c": null, "d": null }, "res2": 9, "res3": 3, "res4": "", "res5": "bar", "res6": { "bar": 3 }, "res7": 3, "res8": 3, "res9": 3, "res10": 3, "res11": 1, "res12": 1234567890, "res13": "", "res14": 12345.678900000001, "res15": " msgnum:00000000:", "res16": "" }'
+EXPECTED='{ "parsed": { "offsets": [ { "a": 9, "b": 0, "c": "boo", "d": null }, { "a": 9, "b": 3, "c": null, "d": null }, 2, 3, 4, 5, 6, 7, 8, 9 ], "booltest": true, "int64": 1234567890, "nulltest": null, "double": 12345.67890, "foo": 3, "bar": 28 }, "foo": { "bar": 3 } }
+{ "ret": 0, "index": 9, "test": "bar", "res1": { "a": 9, "b": 3, "c": null, "d": null }, "res2": 9, "res3": 3, "res4": "", "res5": "bar", "res6": { "bar": 3 }, "res7": 3, "res8": 3, "res9": 3, "res10": 3, "res11": 1, "res12": 1234567890, "res13": "", "res14": 12345.678900000001, "res15": " msgnum:00000000:", "res16": "", "res17": 9 }'
 cmp_exact
 
 exit_test
