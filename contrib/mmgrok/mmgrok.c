@@ -36,7 +36,6 @@ typedef struct result_s {
     int key_len;
     const char *value;
     int value_len;
-    char *type;
 } result_t;
 
 /* config variables */
@@ -45,7 +44,7 @@ typedef struct _instanceData {
     char *pszMatch;
     char *pszSource;
     char *pszTarget; /* as a json root for store parse json data */
-    smsg_t *pmsg; /* store  origin messages*/
+    msgPropDescr_t *sourceDescr;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -110,6 +109,8 @@ BEGINfreeInstance
     free(pData->pszMatch);
     free(pData->pszSource);
     free(pData->pszTarget);
+    msgPropDescrDestruct(pData->sourceDescr);
+    free(pData->sourceDescr);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -122,7 +123,7 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->pszMatch = NULL;
     pData->pszSource = NULL;
     pData->pszTarget = NULL;
-    pData->pmsg = NULL;
+    pData->sourceDescr = NULL;
 }
 
 
@@ -164,6 +165,10 @@ BEGINnewActInst
     if (pData->pszTarget == NULL) {
         CHKmalloc(pData->pszTarget = strdup("!"));
     }
+    if (pData->pszSource != NULL && strcmp(pData->pszSource, "msg")) {
+        CHKmalloc(pData->sourceDescr = malloc(sizeof(msgPropDescr_t)));
+        CHKiRet(msgPropDescrFill(pData->sourceDescr, (uchar *)pData->pszSource, strlen(pData->pszSource)));
+    }
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -188,7 +193,7 @@ static inline grok_t *CreateGrok(void) {
 }
 
 /* the parseing is complate message into json */
-static rsRetVal smsg_to_json(GList *list, instanceData *pData) {
+static rsRetVal smsg_to_json(GList *list, instanceData *pData, smsg_t *pMsg) {
     GList *it = list;
 
     struct json_object *json;
@@ -212,20 +217,19 @@ static rsRetVal smsg_to_json(GList *list, instanceData *pData) {
         free(key);
         free(value);
     }
-    msgAddJSON(pData->pmsg, (uchar *)pData->pszTarget, json, 0, 0);
+    msgAddJSON(pMsg, (uchar *)pData->pszTarget, json, 0, 0);
 finalize_it:
     RETiRet;
 }
 
 /* store parse result ,use list in glib*/
-static rsRetVal parse_result_store(const grok_match_t gm, instanceData *pData) {
+static rsRetVal parse_result_store(const grok_match_t gm, instanceData *pData, smsg_t *pMsg) {
     GList *re_list = NULL;
     char *pname;
     const char *pdata;
     int pname_len, pdata_len;
 
     char *key;
-    char *type;
     DEFiRet;
 
     grok_match_walk_init(&gm);  // grok API
@@ -240,34 +244,26 @@ static rsRetVal parse_result_store(const grok_match_t gm, instanceData *pData) {
             key_len = pname_len - ((key + 1) - pname);
             key = key + 1;
             pname_len = key_len;
-            type = strchr(key, ':');
-            int type_len;
-            if (type != NULL) {
-                key_len = (type - key);
-                type = type + 1;
-                type_len = pname_len - key_len - 1;
-                type[type_len] = '\0';
-            } else {
-                type = (char *)"null";
-            }
+            char *type = memchr(key, ':', pname_len);
+            if (type != NULL) key_len = (type - key);
             /* store parse result into list */
             result->key = key;
             result->key_len = key_len;
             result->value = pdata;
             result->value_len = pdata_len;
-            result->type = type;
             /* the value of merger the same key*/
             re_list = g_list_append(re_list, result);
         }
     }
-    smsg_to_json(re_list, pData);
-    g_list_free(re_list);
+    CHKiRet(smsg_to_json(re_list, pData, pMsg));
+finalize_it:
+    g_list_free_full(re_list, g_free);
     grok_match_walk_end(&gm);
     RETiRet;
 }
 
 /* motify message for per line */
-static rsRetVal MotifyLine(char *line, grok_t *grok, instanceData *pData) {
+static rsRetVal MotifyLine(char *line, grok_t *grok, instanceData *pData, smsg_t *pMsg) {
     grok_match_t gm;
     DEFiRet;
     grok_patterns_import_from_file(grok, pData->pszPatternDir);
@@ -281,25 +277,28 @@ static rsRetVal MotifyLine(char *line, grok_t *grok, instanceData *pData) {
         DBGPRINTF("mmgrok: grok_exec faile!exit code: %d\n", exe);
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    parse_result_store(gm, pData);
+    (void)parse_result_store(gm, pData, pMsg);
 finalize_it:
     RETiRet;
 }
 
 /* motify rsyslog messages */
-static rsRetVal MotifyMessage(instanceData *pData) {
+static rsRetVal MotifyMessage(instanceData *pData, smsg_t *pMsg, const uchar *msgBuf, const rs_size_t msgLen) {
     char *saveptr = NULL;
+    char *msg = NULL;
+    char *line = NULL;
     DEFiRet;
     grok_t *grok = CreateGrok();
-    char *msg = strdup(pData->pszSource);
-    char *line = NULL;
+    msg = strndup((const char *)msgBuf, msgLen);
+    CHKmalloc(msg);
     line = strtok_r(msg, "\n", &saveptr);
     while (line != NULL) {
-        MotifyLine(line, grok, pData);
+        (void)MotifyLine(line, grok, pData, pMsg);
         line = strtok_r(NULL, "\n", &saveptr);
     }
+finalize_it:
     free(msg);
-    msg = NULL;
+    grok_free(grok);
     RETiRet;
 }
 
@@ -308,24 +307,33 @@ BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];
     uchar *buf;
+    uchar *bufToFree = NULL;
+    rs_size_t len;
+    unsigned short freeBuf = 0;
     instanceData *pData;
 
     CODESTARTdoAction;
     pData = pWrkrData->pData;
-    buf = getMSG(pMsg);
-    pData->pmsg = pMsg;
-    while (*buf && isspace(*buf)) {
+    if (pData->sourceDescr == NULL) {
+        buf = getMSG(pMsg);
+        len = getMSGLen(pMsg);
+    } else {
+        buf = MsgGetProp(pMsg, NULL, pData->sourceDescr, &len, &freeBuf, NULL);
+        if (freeBuf) bufToFree = buf;
+    }
+    while (len > 0 && isspace(*buf)) {
         ++buf;
+        --len;
     }
 
-    if (*buf == '\0') {
+    if (len == 0) {
         DBGPRINTF("mmgrok:  not msg for mmgrok!");
         ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
     }
-    pData->pszSource = (char *)buf;
-    CHKiRet(MotifyMessage(pData));
+    CHKiRet(MotifyMessage(pData, pMsg, buf, len));
 
 finalize_it:
+    free(bufToFree);
 ENDdoAction
 
 BEGINparseSelectorAct
