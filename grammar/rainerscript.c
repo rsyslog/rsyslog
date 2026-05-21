@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
+#include <limits.h>
 #include <glob.h>
 #include <errno.h>
 #include <pwd.h>
@@ -1479,7 +1481,7 @@ long long var2Number(struct svar *r, int *bSuccess) {
 static es_str_t *var2String(struct svar *__restrict__ const r, int *__restrict__ const bMustFree) {
     es_str_t *estr;
     const char *cstr;
-    rs_size_t lenstr;
+    size_t lenstr;
     if (r->datatype == 'N') {
         *bMustFree = 1;
         estr = es_newStrFromNumber(r->d.n);
@@ -1489,9 +1491,18 @@ static es_str_t *var2String(struct svar *__restrict__ const r, int *__restrict__
             cstr = "", lenstr = 0;
         } else {
             cstr = (char *)json_object_get_string(r->d.json);
-            lenstr = strlen(cstr);
+            if (json_object_get_type(r->d.json) == json_type_string) {
+                lenstr = json_object_get_string_len(r->d.json);
+            } else {
+                lenstr = strlen(cstr);
+            }
+#if SIZE_MAX > UINT_MAX
+            if (lenstr > (size_t)UINT_MAX) {
+                cstr = "", lenstr = 0;
+            }
+#endif
         }
-        estr = es_newStrFromCStr(cstr, lenstr);
+        estr = es_newStrFromCStr(cstr, (es_size_t)lenstr);
     } else {
         *bMustFree = 0;
         estr = r->d.estr;
@@ -1937,7 +1948,11 @@ static void ATTR_NONNULL() doFunc_get_property(struct cnffunc *__restrict__ cons
         case json_type_array: {
             int success = 0;
             long long index = var2Number(&srcVal[1], &success);
-            if (!success || index < 0 || (size_t)index >= sizeof(size_t)) {
+            if (!success || index < 0
+#if LLONG_MAX > SIZE_MAX
+                || (unsigned long long)index > SIZE_MAX
+#endif
+                || (size_t)index >= (size_t)json_object_array_length(json)) {
                 retVal = RS_SCRIPT_EINVAL;
                 FINALIZE;
             }
@@ -2449,8 +2464,24 @@ static void ATTR_NONNULL()
     cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
     es_str_t *es = var2String(&srcVal[0], &bMustFree);
     const int lenSrcStr = es_strlen(es);
-    int start = var2Number(&srcVal[1], NULL);
-    int subStrLen = var2Number(&srcVal[2], NULL);
+    long long startNum = var2Number(&srcVal[1], NULL);
+    long long subStrLenNum = var2Number(&srcVal[2], NULL);
+    int start;
+    int subStrLen;
+    if (startNum < 0) {
+        start = 0;
+    } else if (startNum > INT_MAX) {
+        start = lenSrcStr;
+    } else {
+        start = (int)startNum;
+    }
+    if (subStrLenNum < INT_MIN) {
+        subStrLen = INT_MIN;
+    } else if (subStrLenNum > INT_MAX) {
+        subStrLen = INT_MAX;
+    } else {
+        subStrLen = (int)subStrLenNum;
+    }
     if (start >= lenSrcStr) {
         /* begin PAST the source string - ensure nothing is copied at all */
         start = subStrLen = 0;
