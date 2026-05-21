@@ -171,6 +171,7 @@ TESTS_DEFAULT = \
 	template-json.sh \
         template-pure-json.sh \
         template-jsonf-nested.sh \
+	template-jsonf-trailing-backslash.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \

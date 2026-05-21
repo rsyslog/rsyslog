@@ -35,6 +35,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 #include <json.h>
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -78,6 +79,7 @@ static rsRetVal tplJsonBuildTree(struct template *pTpl);
 static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParams_t *iparam, struct syslogTime *ttNow);
 static rsRetVal tplJsonRenderChildren(
     const struct tplJsonNode *parent, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppDst, int *pNeedComma);
+static rsRetVal tplAddSize(size_t a, size_t b, size_t *sum);
 
 /** Returns true when at least one field lacks explicit secure path handling. */
 static int tplNeedsDynafileSecureDefault(const struct template *const pTpl) {
@@ -180,6 +182,10 @@ static struct tplJsonNode *tplJsonNodeNew(enum tplJsonNodeType type, const uchar
     node->type = type;
     node->pTpe = NULL;
     if (name != NULL && nameLen > 0) {
+        if (nameLen == SIZE_MAX) {
+            free(node);
+            return NULL;
+        }
         node->name = malloc(nameLen + 1);
         if (node->name == NULL) {
             free(node);
@@ -436,8 +442,13 @@ static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParam
     es_addBufConstcstr(&out, "}\n");
 
     const int len = es_strlen(out);
-    if ((size_t)len + 1 > (size_t)iparam->lenBuf) {
-        CHKiRet(ExtendBuf(iparam, (size_t)len + 1));
+    if (len < 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    size_t neededLen;
+    CHKiRet(tplAddSize((size_t)len, 1, &neededLen));
+    if (neededLen > iparam->lenBuf) {
+        CHKiRet(ExtendBuf(iparam, neededLen));
     }
     CHKmalloc(rendered = es_str2cstr(out, NULL));
     memcpy(iparam->param, rendered, (size_t)len);
@@ -591,7 +602,9 @@ static rsRetVal tplJsonRenderValue(
     if (valueLen == 0) {
         FINALIZE;
     }
-    const size_t requiredLen = node->nameLen + valueLen + 4;
+    size_t requiredLen;
+    CHKiRet(tplAddSize(node->nameLen, valueLen, &requiredLen));
+    CHKiRet(tplAddSize(requiredLen, 4, &requiredLen));
     if (requiredLen > (size_t)INT_MAX) {
         parser_errmsg("error: jsonf value to be rendered is too large");
         ABORT_FINALIZE(RS_RET_ERR);
@@ -637,7 +650,8 @@ static rsRetVal tplJsonRenderObject(
 
     if (node->name == NULL || node->nameLen == 0) RETiRet;
 
-    const size_t requiredLen = node->nameLen + 5;
+    size_t requiredLen;
+    CHKiRet(tplAddSize(node->nameLen, 5, &requiredLen));
     if (requiredLen > (size_t)INT_MAX) {
         parser_errmsg("error: jsonf object key to be rendered is too large");
         ABORT_FINALIZE(RS_RET_ERR);
@@ -780,6 +794,10 @@ rsRetVal ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMi
     size_t iNewSize;
     DEFiRet;
 
+    if (iMinSize > SIZE_MAX - ALLOC_INC) {
+        parser_errmsg("error: template output buffer size overflow");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     iNewSize = (iMinSize / ALLOC_INC + 1) * ALLOC_INC;
     CHKmalloc(pNewBuf = (uchar *)realloc(iparam->param, iNewSize));
     iparam->param = pNewBuf;
@@ -787,6 +805,36 @@ rsRetVal ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMi
 
 finalize_it:
     RETiRet;
+}
+
+static rsRetVal tplAddSize(const size_t a, const size_t b, size_t *const sum) {
+    if (a > SIZE_MAX - b) {
+        parser_errmsg("error: template size calculation overflow");
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    *sum = a + b;
+    return RS_RET_OK;
+}
+
+static int tplParseNonNegativeInt(uchar **const pp, int *const out) {
+    uchar *p = *pp;
+    int val = 0;
+    int overflow = 0;
+
+    while (isdigit((int)*p)) {
+        const int digit = *p++ - '0';
+        if (val > (INT_MAX - digit) / 10) {
+            overflow = 1;
+            val = INT_MAX;
+            while (isdigit((int)*p)) ++p;
+            break;
+        }
+        val = val * 10 + digit;
+    }
+
+    *pp = p;
+    *out = val;
+    return overflow;
 }
 
 
@@ -824,8 +872,14 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
          * in subtree mode and so most probably only used for debug & test.
          */
         getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
-        if (iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
-            CHKiRet(ExtendBuf(iparam, iLenVal + 1));
+        if (iLenVal < 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        if ((size_t)iLenVal >= iparam->lenBuf) { /* we reserve one char for the final \0! */
+            size_t neededLen;
+            CHKiRet(tplAddSize((size_t)iLenVal, 1, &neededLen));
+            CHKiRet(ExtendBuf(iparam, neededLen));
+        }
         memcpy(iparam->param, pVal, iLenVal + 1);
         iparam->lenStr = iLenVal;
         FINALIZE;
@@ -887,11 +941,17 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
         const size_t closingLen = (isJsonFlat && isLastEntry) ? 2 : 0;
         size_t requiredLen = closingLen;
         if (iLenVal > 0) {
-            if (need_comma) requiredLen += 2;
-            requiredLen += (size_t)iLenVal;
+            if (need_comma) CHKiRet(tplAddSize(requiredLen, 2, &requiredLen));
+            CHKiRet(tplAddSize(requiredLen, (size_t)iLenVal, &requiredLen));
         }
-        if (requiredLen > 0 && (iBuf + requiredLen) >= iparam->lenBuf)
-            CHKiRet(ExtendBuf(iparam, iBuf + requiredLen + 1));
+        if (requiredLen > 0) {
+            size_t neededLen;
+            CHKiRet(tplAddSize(iBuf, requiredLen, &neededLen));
+            if (neededLen >= iparam->lenBuf) {
+                CHKiRet(tplAddSize(neededLen, 1, &neededLen));
+                CHKiRet(ExtendBuf(iparam, neededLen));
+            }
+        }
 
         if (iLenVal > 0) { /* may be zero depending on property */
             if (need_comma) {
@@ -986,6 +1046,9 @@ rsRetVal tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjs
             } else {
                 pVal = (uchar *)MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp, &propLen, &bMustBeFreed, ttNow);
                 if (pTpe->data.field.options.bMandatory || propLen > 0) {
+                    if (propLen < 0 || propLen == INT_MAX) {
+                        ABORT_FINALIZE(RS_RET_ERR);
+                    }
                     jsonf = json_object_new_string_len((char *)pVal, propLen + 1);
                     json_object_object_add(json, (char *)pTpe->fieldName, jsonf);
                 }
@@ -1247,13 +1310,19 @@ static rsRetVal do_Constant(unsigned char **pp, struct template *pTpl, int bDoEs
                 case '6':
                 case '7':
                 case '8':
-                case '9':
-                    i = 0;
-                    while (*p && isdigit((int)*p)) {
-                        i = i * 10 + *p++ - '0';
+                case '9': {
+                    uchar *numStart = p;
+                    if (tplParseNonNegativeInt(&numStart, &i)) {
+                        LogError(0, NO_ERRCODE, "template numeric escape value too large, using %d as substitute",
+                                 UCHAR_MAX);
+                        i = UCHAR_MAX;
+                    } else if (i > UCHAR_MAX) {
+                        i = UCHAR_MAX;
                     }
+                    p = numStart;
                     cstrAppendChar(pStrB, i);
                     break;
+                }
                 default:
                     cstrAppendChar(pStrB, *p++);
                     break;
@@ -1603,8 +1672,11 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
                                  (char *)*pp);
                         pTpe->data.field.field_delim = 9;
                     } else {
-                        iNum = 0;
-                        while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                        if (tplParseNonNegativeInt(&p, &iNum)) {
+                            LogError(0, NO_ERRCODE,
+                                     "error: delimiter value in template is too large - using 9 (HT) as substitute");
+                            iNum = 9;
+                        }
                         if (iNum < 0 || iNum > 255) {
                             LogError(0, NO_ERRCODE,
                                      "error: non-USASCII delimiter "
@@ -1621,8 +1693,10 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
 #endif
                             if (*p == ',') { /* real fromPos? */
                                 ++p;
-                                iNum = 0;
-                                while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                                if (tplParseNonNegativeInt(&p, &iNum)) {
+                                    LogError(0, NO_ERRCODE, "error: frompos value in template is too large - using %d",
+                                             INT_MAX);
+                                }
                                 pTpe->data.field.iFromPos = iNum;
                             } else if (*p != ':') {
                                 parser_errmsg(
@@ -1646,8 +1720,9 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
                 }
             } else {
                 /* we now have a simple offset in frompos (the previously "normal" case) */
-                iNum = 0;
-                while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                if (tplParseNonNegativeInt(&p, &iNum)) {
+                    LogError(0, NO_ERRCODE, "error: frompos value in template is too large - using %d", INT_MAX);
+                }
                 pTpe->data.field.iFromPos = iNum;
                 /* skip to next known good */
                 while (*p && *p != '%' && *p != ':') {
@@ -1738,18 +1813,21 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
 #endif /* #ifdef FEATURE_REGEXP */
 
             if (pTpe->data.field.has_fields == 1) {
-                iNum = 0;
-                while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                if (tplParseNonNegativeInt(&p, &iNum)) {
+                    LogError(0, NO_ERRCODE, "error: field number in template is too large - using %d", INT_MAX);
+                }
                 pTpe->data.field.iFieldNr = iNum;
                 if (*p == ',') { /* get real toPos? */
                     ++p;
-                    iNum = 0;
-                    while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                    if (tplParseNonNegativeInt(&p, &iNum)) {
+                        LogError(0, NO_ERRCODE, "error: topos value in template is too large - using %d", INT_MAX);
+                    }
                     pTpe->data.field.iToPos = iNum;
                 }
             } else {
-                iNum = 0;
-                while (isdigit((int)*p)) iNum = iNum * 10 + *p++ - '0';
+                if (tplParseNonNegativeInt(&p, &iNum)) {
+                    LogError(0, NO_ERRCODE, "error: topos value in template is too large - using %d", INT_MAX);
+                }
                 pTpe->data.field.iToPos = iNum;
             }
             /* skip to next known good */
