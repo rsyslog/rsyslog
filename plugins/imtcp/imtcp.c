@@ -549,7 +549,7 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     char *ns; /**< network namespace */
     permittedPeers_t *peers;
 
-    tcpsrv_t *pOurTcpsrv;
+    tcpsrv_t *pOurTcpsrv = NULL;
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -650,6 +650,9 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(0, NO_ERRCODE, "imtcp: error %d trying to add listener", iRet);
+        if (pOurTcpsrv != NULL) {
+            tcpsrv.Destruct(&pOurTcpsrv);
+        }
     }
     RETiRet;
 }
@@ -1247,6 +1250,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszInputName);
     cs.pszInputName = NULL;
+    free(cs.pszBindRuleset);
+    cs.pszBindRuleset = NULL;
     free(cs.lstnPortFile);
     cs.lstnPortFile = NULL;
     return RS_RET_OK;
