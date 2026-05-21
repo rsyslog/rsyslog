@@ -50,6 +50,9 @@ described below.
 
 To allow efficient triage and remediation, reports should include:
 
+- the affected rsyslog component, module, plugin, or configuration feature
+- whether the affected component is loaded by default or requires explicit
+  configuration
 - a working, end-to-end reproducer against the current stable release or the
   main development branch
 - reproduction steps that exercise actual rsyslog code paths, not simulated or
@@ -63,6 +66,57 @@ Reports that do not meet these requirements may be deprioritized or returned
 for clarification. Reports generated solely by automated scanners without
 manual verification or an accompanying proof of concept may also be
 deprioritized or returned for clarification.
+
+## Initial Triage
+
+rsyslog has a modular architecture. During triage, maintainers evaluate:
+
+- the affected component or module
+- whether the component is built in, optional, contrib, default-loaded, or
+  explicitly configured
+- whether exploitation works with upstream defaults
+- whether known distribution defaults differ from upstream defaults
+- whether required non-default settings are common in production or enterprise
+  deployments
+- who controls the input that reaches the vulnerable path
+- the vulnerable sink, missing guard, and demonstrated impact
+- whether the report includes a working reproducer or equivalent direct code
+  proof
+- whether the issue affects released rsyslog software, repository automation,
+  test infrastructure, packaging, or documentation only
+
+## Advisory Scope and Wording
+
+When a vulnerability affects an optional module, plugin, contrib module,
+parser, output, input, or specific configuration path, advisories should name
+that affected component rather than describe the issue as applying to all
+rsyslog deployments.
+
+For example, an issue reachable only when a specific plugin is loaded and used
+should be described as affecting that plugin. The affected package may still be
+rsyslog, but the advisory will state the required module and configuration
+conditions.
+
+## Configuration Preconditions
+
+Many rsyslog security reports depend on configuration. During triage, we
+distinguish between:
+
+- upstream default configuration
+- distribution-provided default configuration
+- explicitly enabled modules or plugins
+- operator changes that are common in production deployments
+
+A vulnerability that requires changing an upstream default, such as increasing
+the maximum message size, is not treated the same as a vulnerability reachable
+in a default installation. However, non-default settings may still represent
+realistic exposure when they are common in enterprise or central log collection
+deployments.
+
+Advisories should state these preconditions clearly. For example, if an issue
+requires a specific optional module and a larger-than-default message size, the
+advisory should identify both conditions and avoid implying that all rsyslog
+installations are affected.
 
 ## Coordinated Disclosure
 
