@@ -144,6 +144,7 @@ static struct wrkrInfo_s {
     struct mmsghdr *recvmsg_mmh;
     struct iovec *recvmsg_iov;
 #endif
+    int started; /* 1 if pthread_create succeeded, 0 otherwise */
 } wrkrInfo[MAX_WRKR_THREADS];
 
 struct modConfData_s {
@@ -1336,19 +1337,31 @@ BEGINrunInput
     pthread_attr_setstacksize(&wrkrThrdAttr, 4096 * 1024);
     for (i = 0; i < runModConf->wrkrMax - 1; ++i) {
         wrkrInfo[i].pThrd = pThrd;
-        pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        wrkrInfo[i].started = 0;
+        int err = pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
+        if (err == 0) {
+            wrkrInfo[i].started = 1;
+        } else {
+            LogError(err, RS_RET_SYS_ERR, "imudp: failed to create worker thread %d", i);
+        }
     }
     pthread_attr_destroy(&wrkrThrdAttr);
 
     wrkrInfo[i].pThrd = pThrd;
     wrkrInfo[i].id = i;
+    wrkrInfo[i].started = 0;
     wrkr(&wrkrInfo[i]);
 
     for (i = 0; i < runModConf->wrkrMax - 1; ++i) {
-        pthread_kill(wrkrInfo[i].tid, SIGTTIN);
+        if (wrkrInfo[i].started) {
+            pthread_kill(wrkrInfo[i].tid, SIGTTIN);
+        }
     }
     for (i = 0; i < runModConf->wrkrMax - 1; ++i) {
-        pthread_join(wrkrInfo[i].tid, NULL);
+        if (wrkrInfo[i].started) {
+            pthread_join(wrkrInfo[i].tid, NULL);
+            wrkrInfo[i].started = 0;
+        }
     }
 ENDrunInput
 
@@ -1378,6 +1391,9 @@ BEGINafterRun
     }
     lcnfRoot = lcnfLast = NULL;
     for (i = 0; i < runModConf->wrkrMax; ++i) {
+        if (wrkrInfo[i].stats != NULL) {
+            statsobj.Destruct(&(wrkrInfo[i].stats));
+        }
 #ifdef HAVE_RECVMMSG
         free(wrkrInfo[i].recvmsg_iov);
         free(wrkrInfo[i].recvmsg_mmh);
