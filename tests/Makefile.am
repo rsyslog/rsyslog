@@ -894,6 +894,7 @@ TESTS_OMPROG = \
 	omprog-restart-terminated-outfile.sh \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
+	omprog-invalid-args.sh \
 	omprog-transactions.sh \
 	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
@@ -3307,6 +3308,7 @@ EXTRA_DIST += \
 	testsuites/omprog-feedback-mt-bin.sh \
 	testsuites/omprog-feedback-timeout-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
+	testsuites/omprog-invalid-args-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-single-instance-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
