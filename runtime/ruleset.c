@@ -61,6 +61,8 @@ DEFobjCurrIf(parser)
                                               {"parser", eCmdHdlrArray, 0}};
 static struct cnfparamblk rspblk = {CNFPARAMBLK_VERSION, sizeof(rspdescr) / sizeof(struct cnfparamdescr), rspdescr};
 
+#define RULESET_CALL_DEPTH_MAX 1024
+
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
 static rsRetVal scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti);
@@ -200,6 +202,37 @@ static rsRetVal execUnset(struct cnfstmt *stmt, smsg_t *pMsg) {
     RETiRet;
 }
 
+static int rulesetCallDepthExceeded(wti_t *const pWti, const char *const rulesetName, const size_t rulesetNameLen) {
+    if (pWti->execState.rulesetCallDepth < RULESET_CALL_DEPTH_MAX) {
+        return 0;
+    }
+
+    LogError(0, RS_RET_ERR,
+             "ruleset call nesting limit of %u reached; call to ruleset '%.*s' "
+             "ignored to avoid runaway recursion",
+             RULESET_CALL_DEPTH_MAX, (int)rulesetNameLen, rulesetName);
+    return 1;
+}
+
+static rsRetVal execSynchronousRulesetCall(struct cnfstmt *const root,
+                                           const char *const rulesetName,
+                                           const size_t rulesetNameLen,
+                                           smsg_t *const pMsg,
+                                           wti_t *const pWti) {
+    DEFiRet;
+
+    if (rulesetCallDepthExceeded(pWti, rulesetName, rulesetNameLen)) {
+        FINALIZE;
+    }
+
+    ++pWti->execState.rulesetCallDepth;
+    iRet = scriptExec(root, pMsg, pWti);
+    --pWti->execState.rulesetCallDepth;
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal execCallIndirect(struct cnfstmt *const __restrict__ stmt,
                                  smsg_t *pMsg,
                                  wti_t *const __restrict__ pWti) {
@@ -233,7 +266,7 @@ static rsRetVal execCallIndirect(struct cnfstmt *const __restrict__ stmt,
          */
         submitMsg2(pMsg);
     } else {
-        CHKiRet(scriptExec(pRuleset->root, pMsg, pWti));
+        CHKiRet(execSynchronousRulesetCall(pRuleset->root, (const char *)rsName, ustrlen(rsName), pMsg, pWti));
     }
 finalize_it:
     varDelete(&result);
@@ -244,7 +277,8 @@ finalize_it:
 static rsRetVal execCall(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti) {
     DEFiRet;
     if (stmt->d.s_call.ruleset == NULL) {
-        CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
+        CHKiRet(execSynchronousRulesetCall(stmt->d.s_call.stmt, (const char *)es_getBufAddr(stmt->d.s_call.name),
+                                           es_strlen(stmt->d.s_call.name), pMsg, pWti));
     } else {
         CHKmalloc(pMsg = MsgDup((smsg_t *)pMsg));
         DBGPRINTF("CALL: forwarding message to async ruleset %p\n", stmt->d.s_call.ruleset->pQueue);
