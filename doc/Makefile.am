@@ -69,6 +69,8 @@ EXTRA_DIST = \
     build_rag_db.py \
     contrib/README.md \
     contrib/cron_build_all_branches.sh \
+    security/distro-component-package-map.json \
+    security/distro-component-package-map.md \
     security/ghsa-coordination-review-template.md \
     proposed-toc \
     requirements.txt \
