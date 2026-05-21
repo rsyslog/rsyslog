@@ -153,6 +153,12 @@ work. Handle small, localized fixes directly, validate them, and push the
 updated branch. Examples include typo fixes, documentation wording, metadata
 formatting, simple example corrections, and narrow test expectation updates.
 
+When reviewing or adjusting test assertions, apply the oracle rule from
+`tests/AGENTS.md`: diagnostics emitted by rsyslog itself should normally be
+asserted through the configured rsyslog output destination after synchronized
+shutdown, not through rsyslogd stdout/stderr. Treat stdout/stderr diagnostic
+oracles as actionable unless the test documents a specific exception.
+
 AI review comments need an explicit GitHub reply so later readers know the
 comment was considered. If the requested change was implemented, a short
 `Done.` reply is sufficient. If the comment is invalid, not applicable, or not
