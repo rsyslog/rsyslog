@@ -122,6 +122,7 @@ static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
 #ifdef FEATURE_REGEXP
     if (pThis->pLstnInfo->bHasStartRegex) {
         size_t regexBufSize;
+        uchar *pMsgTmp;
 
         if (pThis->iMaxLine > (INT_MAX - 1) / 2) {
             LogError(0, RS_RET_ERR,
@@ -131,7 +132,8 @@ static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
         }
         regexBufSize = ((size_t)pThis->iMaxLine * 2) + 1;
         /* in this case, we need a second buffer and a larger primary one */
-        CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, regexBufSize));
+        CHKmalloc(pMsgTmp = (uchar *)realloc(pThis->pMsg, regexBufSize));
+        pThis->pMsg = pMsgTmp;
         CHKmalloc(pThis->pMsg_save = (uchar *)malloc(regexBufSize));
     }
 #endif
@@ -580,7 +582,9 @@ static rsRetVal Close(tcps_sess_t *pThis) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
-    netstrm.Destruct(&pThis->pStrm);
+    if (pThis->pStrm != NULL) {
+        netstrm.Destruct(&pThis->pStrm);
+    }
     if (pThis->fromHost != NULL) {
         prop.Destruct(&pThis->fromHost);
     }
