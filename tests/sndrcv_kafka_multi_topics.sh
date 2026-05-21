@@ -4,6 +4,7 @@
 : "${STARTUP_MAX_RUNTIME:=300}"
 export STARTUP_MAX_RUNTIME
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=100000
@@ -31,7 +32,6 @@ export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

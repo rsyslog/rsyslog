@@ -2,6 +2,7 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kcat
 
@@ -33,7 +34,6 @@ module(load="../plugins/impstats/.libs/impstats"
 	log.file="'$RSYSLOG_DYNNAME.pstats'"
 	interval="1" log.syslog="off")
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

@@ -4,6 +4,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo Init Testbench
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=50000
@@ -60,7 +61,6 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
 main_queue(queue.timeoutactioncompletion="10000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

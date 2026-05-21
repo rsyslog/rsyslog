@@ -2,6 +2,7 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=100000
@@ -25,7 +26,6 @@ export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 
