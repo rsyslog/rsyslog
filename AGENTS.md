@@ -142,3 +142,42 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
 
 ---
 *For human-facing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) and [DEVELOPING.md](DEVELOPING.md).*
+
+## Cursor Cloud specific instructions
+
+### Environment overview
+
+This is a C autotools project (autoconf/automake/libtool). The VM runs Ubuntu 24.04.
+Dependencies are installed via `devtools/codex-setup.sh` (which targets Ubuntu 24.04),
+though MySQL server installation may fail in container environments — this is non-blocking
+for core development.
+
+### Key gotchas
+
+- **`codex-setup.sh` MySQL failure**: The script uses `set -e` and MySQL server
+  post-install scripts fail in unprivileged containers. This is non-blocking for core
+  rsyslog development. The remaining steps (OBS packages, from-source builds) can be
+  run manually if the script aborts at that point.
+- **Module loading**: When running `rsyslogd` from the build tree (without `make install`),
+  you must pass `-M` with the module search path. Use absolute paths:
+  `LD_LIBRARY_PATH=$(pwd)/runtime/.libs ./tools/rsyslogd -n -f <conf> -M "$(pwd)/runtime/.libs:$(pwd)/.libs:$(pwd)/plugins/*/.libs:$(pwd)/contrib/*/.libs"`
+  The test infrastructure (run from `tests/`) uses `../runtime/.libs:../.libs`.
+- **Build command**: Use `make -j$(nproc) check TESTS=""` for fast incremental builds
+  that compile everything (including test binaries) without running the test suite.
+- **Running tests**: `make -C tests check TESTS="test_name.sh"` runs individual tests.
+  Tests use `tests/diag.sh` for setup/teardown. The `cfg.sh` test requires an installed
+  binary and will fail in dev-only builds.
+- **ldconfig**: After building/installing from-source libraries (libfastjson, librelp),
+  run `sudo ldconfig` to update the dynamic linker cache.
+
+### Standard commands reference
+
+| Task | Command |
+|------|---------|
+| Bootstrap | `autoreconf -fvi` or `./autogen.sh --enable-debug ...` |
+| Configure | `./configure --enable-debug --enable-testbench --enable-imdiag ...` |
+| Build | `make -j$(nproc) check TESTS=""` |
+| Run single test | `make -C tests check TESTS="testname.sh"` |
+| Lint (codestyle) | `rsyslog_stylecheck <file.c>` |
+| Format code | `./devtools/format-code.sh --git-changed` |
+| Run rsyslogd | See module loading gotcha above |
