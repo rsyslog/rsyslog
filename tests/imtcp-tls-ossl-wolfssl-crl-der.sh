@@ -1,9 +1,9 @@
 #!/bin/bash
 # Test wolfSSL DER CRL handling.  The receiver is configured with the existing
 # CRL converted to DER while the sender presents a revoked certificate; success
-# is proved by a wolfSSL CRL verification diagnostic and by the absence of
-# delivered payload messages.  This locks in that DER CRL loading also enables
-# wolfSSL CRL verification.
+# is proved by receiver-side TLS rejection and the absence of delivered payload
+# messages.  The sender deliberately has no CRL configured, so only the
+# receiver-side DER CRL can cause the revoked client certificate to be rejected.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
@@ -42,7 +42,6 @@ generate_conf 2
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
-	defaultnetstreamdriverCRLfile="'$srcdir/testsuites/x.509/crl.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-revoked.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-revoked-key.pem'"
 	defaultNetstreamDriver="ossl"
@@ -61,7 +60,7 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check "ASN CRL no signer" "${RSYSLOG_DYNNAME}2.started"
+content_check "Handshake failed" "${RSYSLOG_DYNNAME}.started"
 assert_content_missing "msgnum:"
 
 exit_test
