@@ -202,9 +202,13 @@ static const char *get_class(uint16_t x) {
  */
 data_ret_t *dns_parse(const uchar *packet, int pktSize, struct json_object *jparent) {
     const uchar *packet_ptr = packet;
-    const uchar *end_packet = packet + pktSize;
     DBGPRINTF("dns_parse\n");
     DBGPRINTF("packet size %d\n", pktSize);
+    if (pktSize < 12) {
+        DBGPRINTF("DNS packet too small : %d\n", pktSize);
+        RETURN_DATA_AFTER(0)
+    }
+    const uchar *end_packet = packet + pktSize;
 
     /* Union to prevent cast from uchar to smb_header_t */
     union {

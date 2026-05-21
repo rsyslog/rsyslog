@@ -549,10 +549,19 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
     const char *const p = (const char *)ptr;
     wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)userdata;
     char *buf;
-    const size_t size_add = size * nmemb;  // Size is always 1
+    size_t size_add;
     size_t newlen;
 
     PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+        LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
+        pWrkrData->replyLen = 0;
+        if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+            pWrkrData->reply[0] = '\0';
+        }
+        return 0;
+    }
+    size_add = size * nmemb;
     if (size_add > SIZE_MAX - pWrkrData->replyLen) {
         LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
         pWrkrData->replyLen = 0;
@@ -562,6 +571,14 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
         return 0;
     }
     newlen = pWrkrData->replyLen + size_add;
+    if (newlen == SIZE_MAX) {
+        LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
+        pWrkrData->replyLen = 0;
+        if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+            pWrkrData->reply[0] = '\0';
+        }
+        return 0;
+    }
     if (pWrkrData->pData->replyMaxBytes > 0 && newlen > pWrkrData->pData->replyMaxBytes) {
         LogError(0, RS_RET_ERR, "omhttp: reply buffer exceeds replymaxbytes limit (%zu)",
                  pWrkrData->pData->replyMaxBytes);
@@ -2567,9 +2584,14 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "httpheadervalue")) {
             CHKmalloc(pData->httpheadervalue = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpheaders")) {
-            pData->nHttpHeaders = pvals[i].val.d.ar->nmemb;
-            CHKmalloc(pData->httpHeaders = malloc(sizeof(uchar *) * pvals[i].val.d.ar->nmemb));
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+            const int nmemb = pvals[i].val.d.ar->nmemb;
+            if (nmemb < 0 || (size_t)nmemb > SIZE_MAX / sizeof(uchar *)) {
+                LogError(0, RS_RET_PARAM_ERROR, "omhttp: too many httpheaders configured");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->nHttpHeaders = nmemb;
+            CHKmalloc(pData->httpHeaders = malloc(sizeof(uchar *) * (size_t)nmemb));
+            for (int j = 0; j < nmemb; ++j) {
                 char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
                 CHKiRet(checkHeaderParam(cstr));
                 pData->httpHeaders[j] = (uchar *)cstr;
@@ -2664,11 +2686,16 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "reloadonhup")) {
             pData->reloadOnHup = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "httpretrycodes")) {
-            pData->nhttpRetryCodes = pvals[i].val.d.ar->nmemb;
+            const int nmemb = pvals[i].val.d.ar->nmemb;
+            if (nmemb < 0 || (size_t)nmemb > SIZE_MAX / sizeof(unsigned int)) {
+                LogError(0, RS_RET_PARAM_ERROR, "omhttp: too many httpretrycodes configured");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->nhttpRetryCodes = nmemb;
             // note: use zero as sentinel value
-            CHKmalloc(pData->httpRetryCodes = calloc(pvals[i].val.d.ar->nmemb, sizeof(unsigned int)));
+            CHKmalloc(pData->httpRetryCodes = calloc((size_t)nmemb, sizeof(unsigned int)));
             int count = 0;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+            for (int j = 0; j < nmemb; ++j) {
                 int bSuccess = 0;
                 long long n = es_str2num(pvals[i].val.d.ar->arr[j], &bSuccess);
                 if (!bSuccess) {
@@ -2694,11 +2721,16 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "name")) {
             CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "httpignorablecodes")) {
-            pData->nIgnorableCodes = pvals[i].val.d.ar->nmemb;
+            const int nmemb = pvals[i].val.d.ar->nmemb;
+            if (nmemb < 0 || (size_t)nmemb > SIZE_MAX / sizeof(unsigned int)) {
+                LogError(0, RS_RET_PARAM_ERROR, "omhttp: too many httpignorablecodes configured");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->nIgnorableCodes = nmemb;
             // note: use zero as sentinel value
-            CHKmalloc(pData->ignorableCodes = calloc(pvals[i].val.d.ar->nmemb, sizeof(unsigned int)));
+            CHKmalloc(pData->ignorableCodes = calloc((size_t)nmemb, sizeof(unsigned int)));
             int count = 0;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+            for (int j = 0; j < nmemb; ++j) {
                 int bSuccess = 0;
                 long long n = es_str2num(pvals[i].val.d.ar->arr[j], &bSuccess);
                 if (!bSuccess) {
@@ -2807,8 +2839,15 @@ BEGINnewActInst
     }
 
     if (servers != NULL) {
-        pData->numServers = servers->nmemb;
-        pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar *));
+        const int nmemb = servers->nmemb;
+        if (nmemb <= 0 || (size_t)nmemb > SIZE_MAX / sizeof(uchar *) ||
+            (pData->statsBySenders && (size_t)nmemb > SIZE_MAX / sizeof(targetStats_t)) ||
+            (size_t)nmemb > SIZE_MAX / sizeof(sbool) || (size_t)nmemb > SIZE_MAX / sizeof(time_t)) {
+            LogError(0, RS_RET_PARAM_ERROR, "omhttp: too many servers configured");
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        }
+        pData->numServers = nmemb;
+        pData->serverBaseUrls = malloc((size_t)nmemb * sizeof(uchar *));
         if (pData->serverBaseUrls == NULL) {
             LogError(0, RS_RET_ERR,
                      "omhttp: unable to allocate buffer "
@@ -2817,8 +2856,8 @@ BEGINnewActInst
         }
 
         /* Set up the stats object array */
-        const int numStats = pData->statsBySenders ? servers->nmemb : 1;
-        pData->listObjStats = malloc(numStats * sizeof(targetStats_t));
+        const int numStats = pData->statsBySenders ? nmemb : 1;
+        pData->listObjStats = malloc((size_t)numStats * sizeof(targetStats_t));
         if (pData->listObjStats == NULL) {
             LogError(0, RS_RET_ERR,
                      "omhttp: unable to allocate buffer "

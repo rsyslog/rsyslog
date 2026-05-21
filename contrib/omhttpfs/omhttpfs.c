@@ -26,6 +26,8 @@
 #include <assert.h>
 #include <signal.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <curl/curl.h>
 #include <json.h>
@@ -305,11 +307,26 @@ static struct curl_slist* httpfs_curl_add_header(struct curl_slist* headers, int
  * @return size_t
  */
 static size_t httpfs_curl_result_callback(void* contents, size_t size, size_t nmemb, void* userp) {
-    size_t realsize = size * nmemb;
+    size_t realsize;
     char* newreply = NULL;
     wrkrInstanceData_t* mem = (wrkrInstanceData_t*)userp;
 
-    newreply = realloc(mem->reply, mem->replyLen + realsize + 1);
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+        dbgprintf("response buffer size overflow\n");
+        return 0;
+    }
+    realsize = size * nmemb;
+    if (mem->replyLen < 0) {
+        dbgprintf("response buffer size overflow\n");
+        return 0;
+    }
+    const size_t replyLen = (size_t)mem->replyLen;
+    if (replyLen == SIZE_MAX || realsize > SIZE_MAX - replyLen - 1 || realsize > (size_t)INT_MAX - replyLen) {
+        dbgprintf("response buffer size overflow\n");
+        return 0;
+    }
+
+    newreply = realloc(mem->reply, replyLen + realsize + 1);
     if (newreply == NULL) {
         /* out of memory! */
         dbgprintf("not enough memory (realloc returned NULL)\n");
@@ -323,8 +340,8 @@ static size_t httpfs_curl_result_callback(void* contents, size_t size, size_t nm
     }
 
     mem->reply = newreply;
-    memcpy(&(mem->reply[mem->replyLen]), contents, realsize);
-    mem->replyLen += realsize;
+    memcpy(&(mem->reply[replyLen]), contents, realsize);
+    mem->replyLen = (int)(replyLen + realsize);
     mem->reply[mem->replyLen] = 0;
 
     return realsize;

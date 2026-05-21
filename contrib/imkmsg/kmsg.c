@@ -66,7 +66,7 @@ static int bInInitialReading = 1; /* are we in the initial kmsg reading phase? *
  * from the rest.
  */
 static void submitSyslog(modConfData_t *const pModConf, const uchar *buf) {
-    long offs = 0;
+    size_t offs = 0;
     struct timeval tv;
     struct timeval *tp = NULL;
     struct sysinfo info;
@@ -85,11 +85,19 @@ static void submitSyslog(modConfData_t *const pModConf, const uchar *buf) {
     for (; isdigit(*buf); buf++) {
         priority = (priority * 10) + (*buf - '0');
     }
+    if (*buf != ',') {
+        json_object_put(json);
+        return;
+    }
     buf++;
 
     /* get messages sequence number and add it to json */
     for (; isdigit(*buf); buf++) {
         sequnum = (sequnum * 10) + (*buf - '0');
+    }
+    if (*buf != ',') {
+        json_object_put(json);
+        return;
     }
     buf++; /* skip , */
     jval = json_object_new_int(sequnum);
@@ -100,15 +108,21 @@ static void submitSyslog(modConfData_t *const pModConf, const uchar *buf) {
         timestamp = (timestamp * 10) + (*buf - '0');
     }
 
-    while (*buf != ';') {
+    while (*buf != ';' && *buf != '\0') {
         buf++; /* skip everything till the first ; */
+    }
+    if (*buf == '\0') {
+        json_object_put(json);
+        return;
     }
     buf++; /* skip ; */
 
     /* get message */
     offs = 0;
-    for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
-        msg[offs] = *buf;
+    for (; *buf != '\n' && *buf != '\0'; buf++) {
+        if (offs < sizeof(msg) - 1) {
+            msg[offs++] = *buf;
+        }
     }
     msg[offs] = '\0';
     jval = json_object_new_string((char *)msg);
@@ -121,16 +135,21 @@ static void submitSyslog(modConfData_t *const pModConf, const uchar *buf) {
         /* get name of the property */
         buf++; /* skip ' ' */
         offs = 0;
-        for (; *buf != '=' && *buf != ' '; buf++, offs++) {
-            name[offs] = *buf;
+        for (; *buf != '=' && *buf != ' ' && *buf != '\n' && *buf != '\0'; buf++) {
+            if (offs < sizeof(name) - 1) {
+                name[offs++] = *buf;
+            }
         }
         name[offs] = '\0';
+        if (*buf == '\n' || *buf == '\0') break;
         buf++; /* skip = or ' ' */
         ;
 
         offs = 0;
-        for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
-            value[offs] = *buf;
+        for (; *buf != '\n' && *buf != '\0'; buf++) {
+            if (offs < sizeof(value) - 1) {
+                value[offs++] = *buf;
+            }
         }
         value[offs] = '\0';
         if (*buf != '\0') {

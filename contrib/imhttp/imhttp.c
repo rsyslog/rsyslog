@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -1536,8 +1537,13 @@ BEGINsetModCnf
             if (pvals[i].val.d.ar->nmemb == 0) {
                 continue;
             }
-            CHKmalloc(loadModConf->options = calloc(pvals[i].val.d.ar->nmemb, sizeof(struct option)));
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+            const int nmemb = pvals[i].val.d.ar->nmemb;
+            if (nmemb < 0 || (size_t)nmemb > ((size_t)-1) / sizeof(struct option)) {
+                LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many liboptions configured");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            CHKmalloc(loadModConf->options = calloc((size_t)nmemb, sizeof(struct option)));
+            for (int j = 0; j < nmemb; ++j) {
                 CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 CHKiRet(processCivetwebOptions(cstr, &loadModConf->options[j].name, &loadModConf->options[j].val));
                 ++loadModConf->nOptions;
@@ -1652,7 +1658,16 @@ BEGINactivateCnf
     if (runModConf->docroot.val) {
         count += 2;
     }
+    if (runModConf->nOptions < 0 || (size_t)runModConf->nOptions > ((size_t)-1 - count) / 2 ||
+        (size_t)runModConf->nOptions > ((size_t)-1) / sizeof(*s_httpserv->civetweb_options)) {
+        LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many civetweb options configured");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
     count += (2 * runModConf->nOptions);
+    if (count > ((size_t)-1) / sizeof(*s_httpserv->civetweb_options)) {
+        LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many civetweb options configured");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
     CHKmalloc(s_httpserv->civetweb_options = calloc(count, sizeof(*s_httpserv->civetweb_options)));
 
     const char **pcivetweb_options = s_httpserv->civetweb_options;

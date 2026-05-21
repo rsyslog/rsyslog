@@ -131,7 +131,10 @@ data_ret_t *http_parse(const uchar *packet, int pktSize, struct json_object *jpa
         RETURN_DATA_AFTER(0)
     }
 
-    char *pHttp = malloc(pktSize + 1);
+    char *pHttp = malloc((size_t)pktSize + 1);
+    if (pHttp == NULL) {
+        RETURN_DATA_AFTER(0)
+    }
     char *http = pHttp;
     memcpy(http, packet, pktSize);
     *(http + pktSize) = '\0';

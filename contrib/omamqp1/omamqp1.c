@@ -490,6 +490,10 @@ finalize_it:
 // in case existing buffer too small
 static rsRetVal _grow_buffer(protocolState_t *pState) {
     DEFiRet;
+    if (pState->buffer_size > ((size_t)-1) / 2) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omamqp1: encode buffer size overflow");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     size_t new_size = pState->buffer_size * 2;
     char *new_buf = realloc(pState->encode_buffer, new_size);
     CHKmalloc(new_buf);
