@@ -12,6 +12,65 @@ IMPORTANT FOR MAINTAINERS
   behavior where the presence or absence of libyaml development files silently
   changed the feature set.
 
+- 2026-05-20: imptcp: harden concurrency, boundaries, and memory handling
+  imptcp received additional defense-in-depth work around listener statistics
+  synchronization, receive buffer boundaries, zero-initialized session and
+  instance state, local host name/address fallbacks, and EAGAIN/EWOULDBLOCK
+  handling. The related Unix-domain-socket and delimiter tests were adjusted
+  to cover the hardened behavior.
+- 2026-05-20: config: add global maxOpenFiles setting
+  The open-file limit can now be configured through the modern
+  global(maxOpenFiles="...") RainerScript form and YAML global.maxOpenFiles.
+  The legacy directive remains supported, but the new setting gives
+  RainerScript and YAML configurations a first-class equivalent.
+  Closes https://github.com/rsyslog/rsyslog/issues/4411
+- 2026-05-20: gtls: log peer IP for missing client certificates
+  GnuTLS server-side diagnostics for missing client certificates now prefer
+  the numeric peer IP address when it is available. This makes TLS auth
+  failures easier to correlate with IP-based monitoring and firewall tooling.
+  Closes https://github.com/rsyslog/rsyslog/issues/5465
+- 2026-05-20: wolfSSL: support CRL/OCSP revocation checks
+  The OpenSSL compatibility driver can now use wolfSSL-backed CRL and OCSP
+  certificate revocation checking. Documentation and TLS validation tests were
+  updated for the new wolfSSL-capable path.
+- 2026-05-19: imptcp: fix same-session discardTruncatedMsg recovery
+  When an oversized LF-framed message and the next message arrived in the same
+  TCP session, imptcp could prefix the next message with the first byte beyond
+  the truncation boundary. discardTruncatedMsg now consumes that byte correctly
+  and resumes at the next frame boundary.
+  Closes https://github.com/rsyslog/rsyslog/issues/5179
+- 2026-05-18: config: make backtick cat work with pseudo-files
+  Backtick cat expansion now reads chunked input until EOF, so pseudo-files
+  such as /proc and /sys entries no longer fail or appear empty when their
+  reported size metadata does not match the bytes that can actually be read.
+  Closes https://github.com/rsyslog/rsyslog/issues/5403
+- 2026-05-18: runtime: avoid undefined behavior in libgcrypt IV generation
+  Encrypted queue IV byte extraction no longer relies on a left-shifted mask
+  that UBSan reported as undefined behavior. Queue encryption behavior is
+  unchanged, and the sanitizer suppression for this path was removed.
+  Closes https://github.com/rsyslog/rsyslog/issues/5167
+- 2026-05-18: tcp: log pre-truncated oversize frames
+  imtcp and imptcp now write the configured oversizemsg.errorfile JSON record
+  when they detect and truncate an oversized frame before the core submit path
+  sees the raw message. Previously those cases only emitted the normal warning.
+  Closes https://github.com/rsyslog/rsyslog/issues/5228
+- 2026-05-17: build: honor cross pkg-config for libgcrypt
+  The libgcrypt configure check now respects the Autoconf-selected
+  PKG_CONFIG tool. This fixes cross builds where only a host-prefixed
+  pkg-config command is available, while keeping the existing
+  libgcrypt-config fallback for older systems.
+  Closes https://github.com/rsyslog/rsyslog/issues/6683
+- 2026-05-16: ommail: add sendmail delivery mode
+  ommail can now submit mail through a local sendmail-compatible binary via
+  mode="sendmail", with sendmail.binary available for explicit binary
+  selection. Existing SMTP configurations are unchanged.
+  Closes https://github.com/rsyslog/rsyslog/issues/1073
+- 2026-05-15: omelasticsearch: warn when searchType is configured
+  Explicit use of the legacy searchType action parameter now emits a
+  non-fatal warning because Elasticsearch mapping types are obsolete. Existing
+  configurations continue to run, but users receive a clear migration signal
+  for Elasticsearch 8 and later.
+  See https://github.com/rsyslog/rsyslog/issues/6835
 - 2026-05-14: omrelp: add opt-in suspension for TLS auth failures
   omrelp now supports tls.permanentFailureDisablesAction="off". The default
   behavior is unchanged, but when disabled TLS authentication failures suspend
