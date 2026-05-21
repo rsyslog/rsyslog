@@ -35,6 +35,8 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #ifdef HAVE_SYSINFO_UPTIME
@@ -3060,8 +3062,14 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
 
     assert(len_none_escaped_head <= buflen);
     /* first copy over unescaped head string */
-    if (len_none_escaped_head + 10 > sizeof(wrkbuf)) {
-        dst_size = 2 * len_none_escaped_head;
+    if ((size_t)len_none_escaped_head > sizeof(wrkbuf) - 10) {
+        /* The following condition is not expected to occur in normal operation. */
+#if UINT_MAX > SIZE_MAX / 2
+        if ((size_t)len_none_escaped_head > SIZE_MAX / 2) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+#endif
+        dst_size = (size_t)len_none_escaped_head * 2;
         CHKmalloc(dst_base = malloc(dst_size));
     } else {
         dst_size = sizeof(wrkbuf);
@@ -3076,6 +3084,9 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
     for (i = len_none_escaped_head; i < buflen; ++i) {
         const size_t dst_offset = dst_w - dst_base;
         if (dst_offset >= dst_realloc_size) {
+            if (dst_size > SIZE_MAX / 2) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
             const size_t new_size = 2 * dst_size;
             if (dst_base == wrkbuf) {
                 CHKmalloc(newbuf = malloc(new_size));
@@ -3115,7 +3126,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
                 case '\\':
                     if (escapeAll == RSFALSE) {
                         ni = i + 1;
-                        if (ni <= buflen) {
+                        if (ni < buflen) {
                             nc = pSrc[ni];
 
                             /* Attempt to not double encode */
@@ -3281,7 +3292,11 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
         }
     }
     /* we hope we have only few escapes... */
-    dst = es_newStr(buflen + pTpe->lenFieldName + 15);
+    if (pTpe->lenFieldName < 0 || (size_t)pTpe->lenFieldName > (size_t)INT_MAX - 15 ||
+        buflen > (size_t)INT_MAX - (size_t)pTpe->lenFieldName - 15) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    CHKmalloc(dst = es_newStr(buflen + pTpe->lenFieldName + 15));
     es_addChar(&dst, '"');
     es_addBuf(&dst, (char *)pTpe->fieldName, pTpe->lenFieldName);
     es_addBufConstcstr(&dst, "\":");
@@ -3399,6 +3414,9 @@ static rsRetVal msgPropStrGen(
     uchar *pBuf = NULL;
     DEFiRet;
 
+    if (len > (size_t)INT_MAX || len == SIZE_MAX) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     CHKmalloc(pBuf = malloc(len + 1));
 
     memcpy(pBuf, pSrc, len);
@@ -4618,7 +4636,7 @@ static uchar *jsonPathGetLeaf(uchar *name, int lenName) {
 
 static json_bool jsonVarExtract(struct json_object *root, const char *key, struct json_object **value) {
     char namebuf[MAX_VARIABLE_NAME_LEN];
-    int key_len = strlen(key);
+    const size_t key_len = strlen(key);
     const char *array_idx_start = strstr(key, "[");
     const char *array_idx_end = NULL;
     char *array_idx_num_end_discovered = NULL;
@@ -4626,17 +4644,21 @@ static json_bool jsonVarExtract(struct json_object *root, const char *key, struc
     if (array_idx_start != NULL) {
         array_idx_end = strstr(array_idx_start, "]");
     }
-    if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
+    if (array_idx_end != NULL && (size_t)(array_idx_end - key + 1) == key_len) {
         errno = 0;
-        int idx = (int)strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
-        if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
-            memcpy(namebuf, key, array_idx_start - key);
-            namebuf[array_idx_start - key] = '\0';
+        const long idx = strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
+        if (errno == 0 && idx >= 0 && array_idx_num_end_discovered == array_idx_end) {
+            const size_t name_len = (size_t)(array_idx_start - key);
+            if (name_len >= sizeof(namebuf)) {
+                return json_object_object_get_ex(root, key, value);
+            }
+            memcpy(namebuf, key, name_len);
+            namebuf[name_len] = '\0';
             json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
             if (found_obj && json_object_is_type(arr, json_type_array)) {
-                int len = json_object_array_length(arr);
-                if (len > idx) {
-                    *value = json_object_array_get_idx(arr, idx);
+                const size_t len = json_object_array_length(arr);
+                if (len > (size_t)idx) {
+                    *value = json_object_array_get_idx(arr, (size_t)idx);
                     if (*value != NULL) return TRUE;
                 }
                 return FALSE;
