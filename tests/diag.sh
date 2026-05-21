@@ -416,6 +416,10 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 # YAML-only modes.  Tests that need a non-default value must set the relevant
 # RSTB_* variable before calling generate_conf.
 #
+# RSTB_IMDIAG_INJECT_DELAY_MODE, when set, is passed as the imdiag module's
+# injectDelayMode parameter.  Set it before generate_conf for the instance that
+# needs delayed testbench injection.
+#
 # Startup detection relies on the module-level imdiag port file in both
 # RainerScript and yaml-only modes; no .started marker file is used.
 generate_conf() {
@@ -457,6 +461,8 @@ generate_conf() {
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
 			printf '    serverrun: "0"\n'
+			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
+				printf '    injectdelaymode: "%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
 			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
@@ -470,22 +476,27 @@ generate_conf() {
 	else
 		export RSYSLOG_YAML_ONLY=0
 		export TESTCONF_EXT="conf"
-		echo 'module(load="../plugins/imdiag/.libs/imdiag"
-    listenportfilename="'$RSYSLOG_DYNNAME.imdiag$1.port'"
-    serverrun="0"
-    aborttimeout="'$TB_TEST_MAX_RUNTIME'"
-    mainmsgqueuetimeoutshutdown="'$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'"
-    mainmsgqueuetimeoutenqueue="'$RSTB_MAIN_Q_TO_ENQUEUE'"
-    inputshutdowntimeout="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
-    defaultactionqueuetimeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
-    defaultactionqueuetimeoutenqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
-global(debug.abortOnProgramError="on")
-# Capture rsyslogd own messages (startup, shutdown, errors) to the .started
-# file. Tests use this file to check for expected rsyslogd-internal messages.
-# This rule also ensures at least one output action exists in the default
-# ruleset, which is required by rsyslogd even when only inputs are configured.
-:syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
-###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
+		{
+			printf 'module(load="../plugins/imdiag/.libs/imdiag"\n'
+			printf '    listenportfilename="%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"
+			printf '    serverrun="0"\n'
+			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
+				printf '    injectdelaymode="%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
+			printf '    aborttimeout="%s"\n' "$TB_TEST_MAX_RUNTIME"
+			printf '    mainmsgqueuetimeoutshutdown="%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
+			printf '    mainmsgqueuetimeoutenqueue="%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
+			printf '    inputshutdowntimeout="%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
+			printf '    defaultactionqueuetimeoutshutdown="%s"\n' "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN"
+			printf '    defaultactionqueuetimeoutenqueue="%s")\n' "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE"
+			printf 'global(debug.abortOnProgramError="on")\n'
+			printf '# Capture rsyslogd own messages (startup, shutdown, errors) to the .started\n'
+			printf '# file. Tests use this file to check for expected rsyslogd-internal messages.\n'
+			printf '# This rule also ensures at least one output action exists in the default\n'
+			printf '# ruleset, which is required by rsyslogd even when only inputs are configured.\n'
+			printf 'if $syslogtag contains "rsyslogd" then action(type="omfile" file="./%s%s.started")\n' \
+				"$RSYSLOG_DYNNAME" "$1"
+			printf '###### end of testbench instrumentation part, test conf follows:\n'
+		} > ${TESTCONF_NM}$1.conf
 		# Optionally enforce IPv4 for this test instance.
 		# Set RSTB_FORCE_IPV4=1 to force, or set RSTB_NET_IPPROTO explicitly
 		# to one of: unspecified | ipv4-only | ipv6-only.

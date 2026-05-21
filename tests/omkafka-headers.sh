@@ -3,6 +3,7 @@
 ## @brief Verify Kafka headers are produced by omkafka.
 # added 2024-05-05 by AI Assistant
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 check_command_available kafkacat
 
 export KEEP_KAFKA_RUNNING="YES"
@@ -21,7 +22,6 @@ create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 export NUMMESSAGES=100
 export NUMMESSAGESFULL=$NUMMESSAGES
@@ -38,7 +39,6 @@ add_conf '
 module(load="../plugins/impstats/.libs/impstats"
 	log.file="'$RSYSLOG_DYNNAME.pstats'"
 	interval="1" log.syslog="off")
-$imdiagInjectDelayMode full
 
 # Load mods
 module(load="../plugins/imtcp/.libs/imtcp")

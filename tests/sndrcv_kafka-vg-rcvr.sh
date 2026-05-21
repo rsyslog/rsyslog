@@ -14,6 +14,7 @@ echo Check and Stop previous instances of kafka/zookeeper
 
 echo Init Testbench
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
@@ -53,7 +54,6 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
 main_queue(queue.timeoutactioncompletion="10000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 
