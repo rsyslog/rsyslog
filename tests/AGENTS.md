@@ -31,6 +31,14 @@ agents.
   When changing a test, verify that the head comment still matches the actual
   setup, stimulus, oracle, and pass/fail conditions after the edit; update it in
   the same commit if it does not.
+- For diagnostics emitted by rsyslog itself, prefer asserting the configured
+  rsyslog output destination, usually testbench omfile output such as
+  `RSYSLOG_OUT_LOG`, after synchronized shutdown. Do not use rsyslogd
+  stdout/stderr as the oracle
+  unless the behavior being tested is specifically process-level stdout/stderr
+  emission, startup before configuration is usable, or another documented case
+  where the message cannot pass through rsyslog's normal output path. Explain
+  such exceptions in the test header.
 - Prefer harness helpers such as `cmp_exact`, `command_deny`, and
   `require_plugin` over ad-hoc shell to keep diagnostics uniform.
 - **Config format coverage**: When a module parameter or config object is tested

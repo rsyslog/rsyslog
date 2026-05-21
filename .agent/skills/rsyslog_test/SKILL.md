@@ -63,6 +63,12 @@ When changing a test, verify that the head comment still matches the actual
 setup, stimulus, oracle, and pass/fail conditions after the edit; update it in
 the same commit if it does not.
 
+For diagnostics emitted by rsyslog itself, follow `tests/AGENTS.md`: assert the
+configured rsyslog output destination, usually testbench omfile output such as
+`RSYSLOG_OUT_LOG`, after synchronized shutdown. Avoid rsyslogd stdout/stderr as
+the oracle unless the test is specifically about process-level output or the
+exception is documented in the test header.
+
 ### 4. Using diag.sh Helpers
 All tests include `tests/diag.sh` using the POSIX `.` command. You should use its standardized helpers:
 - `cmp_exact`: Verify file content matches.
