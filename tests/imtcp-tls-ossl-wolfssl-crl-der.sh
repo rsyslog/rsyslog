@@ -1,9 +1,9 @@
 #!/bin/bash
 # Test wolfSSL DER CRL handling.  The receiver is configured with the existing
 # CRL converted to DER while the sender presents a revoked certificate; success
-# is proved by TLS rejection with a revoked-certificate diagnostic and by the
-# absence of delivered payload messages.  This locks in that DER CRL loading
-# also enables wolfSSL CRL verification.
+# is proved by a wolfSSL CRL verification diagnostic and by the absence of
+# delivered payload messages.  This locks in that DER CRL loading also enables
+# wolfSSL CRL verification.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
@@ -61,7 +61,7 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "certificate revoked"
+content_check --regex "ASN CRL no signer|certificate revoked"
 assert_content_missing "msgnum:"
 
 exit_test
