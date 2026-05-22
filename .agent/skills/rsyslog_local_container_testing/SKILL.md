@@ -69,8 +69,10 @@ Keep runtimes and summarize failures separately for each run.
 
 ## Clean Tree Rule
 
-Before switching compiler, sanitizer flags, configure options, container image,
-or test mode, clean generated build state:
+Before every container-mode switch, clean generated build state and rebuild from
+a fresh configure/build cycle. This includes switching compiler, sanitizer
+flags, configure options, container image, test mode, analyzer mode, or
+returning from a container run to host-side testing:
 
 ```sh
 make distclean || true
@@ -79,11 +81,33 @@ rm -f tests/runtime_unit_gss_token_util \
   tests/runtime_unit_stringbuf
 ```
 
-Skip this only for an immediate rerun with unchanged settings.
+Skip this only for an immediate rerun with unchanged settings in the same
+container mode. If the lane changes, reproducibility is more important than
+incremental build speed.
 
 Container configure runs leave generated Makefiles with absolute paths from
 inside the container, such as `/rsyslog/missing`. Reconfigure on the host before
 running host-side `make` in the same tree.
+
+`make distcheck` can leave extracted `rsyslog-<version>/` trees with read-only
+directory permissions. If a normal cleanup gets `Permission denied` but the tree
+is still owned by the local user, do not use `sudo rm`. Restore owner-write
+permission on the generated tree and remove it as the normal user:
+
+```sh
+chmod -R u+w rsyslog-*/
+rm -rf rsyslog-*/
+```
+
+If the tree is actually owned by root because a container ran with the wrong
+user mapping, first fix ownership on that generated tree only, then remove it as
+the normal user:
+
+```sh
+sudo chown -R "$(id -u):$(id -g)" rsyslog-*/
+chmod -R u+w rsyslog-*/
+rm -rf rsyslog-*/
+```
 
 ## Run 1: run_checks.yml Clang Static Analyzer
 
@@ -115,11 +139,19 @@ it uses `CI_MAKE_OPT='-j20'`; do not infer this from the broad compile matrix.
 Run these before PR for non-trivial C/header or portability-sensitive changes.
 They are build-only checks and normally finish faster than a failed PR cycle.
 Clean generated state before switching between configurations.
+These snippets intentionally set `RSYSLOG_CONTAINER_UID=''` to mirror CI/root
+container execution. Some CI-equivalent lanes need root semantics for service
+startup and sudo-backed setup. The tradeoff is that they can leave root-owned
+generated files on the host-side worktree; use the clean-tree and ownership
+recovery rules above before switching lanes or returning to host-side testing.
 
 For `clang21-ndebug`:
 
 ```sh
 make distclean || true
+rm -f tests/runtime_unit_gss_token_util \
+  tests/runtime_unit_linkedlist \
+  tests/runtime_unit_stringbuf
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
 RSYSLOG_CONTAINER_UID='' \
@@ -131,13 +163,16 @@ devtools/devcontainer.sh --rm devtools/run-configure.sh
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
 RSYSLOG_CONTAINER_UID='' \
-devtools/devcontainer.sh --rm make -j20
+devtools/devcontainer.sh --rm make -j80
 ```
 
 For `gcc15-gnu23-debug`:
 
 ```sh
 make distclean || true
+rm -f tests/runtime_unit_gss_token_util \
+  tests/runtime_unit_linkedlist \
+  tests/runtime_unit_stringbuf
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
 RSYSLOG_CONTAINER_UID='' \
@@ -149,7 +184,7 @@ devtools/devcontainer.sh --rm devtools/run-configure.sh
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
 RSYSLOG_CONTAINER_UID='' \
-devtools/devcontainer.sh --rm make -j20
+devtools/devcontainer.sh --rm make -j80
 ```
 
 ## Run 2: run_checks.yml Ubuntu 26.04 Check
@@ -177,6 +212,26 @@ unless the CI-equivalent configure path disables them. For an irrelevant fake
 change set, MySQL, libdbi, and Kafka should appear in the test list but skip via
 `tests/diag.sh` before service startup. This validates the in-test gate that
 local container users rely on.
+
+For broad local runs, prefer abort-on-first-failure plus an outer timeout so an
+already-invalid lane does not keep consuming local time:
+
+```sh
+timeout 1800 env \
+ABORT_ALL_ON_TEST_FAIL='YES' \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+CC='clang-21' \
+CFLAGS='-g' \
+CI_MAKE_OPT='-j80' \
+CI_MAKE_CHECK_OPT='-j80' \
+CI_CHECK_CMD='check' \
+devtools/devcontainer.sh --rm devtools/run-ci.sh
+```
+
+Any full-lane failure is an alert condition. Do not dismiss it as unrelated or
+flaky without either a clean retry or a concrete root cause from logs. When
+retrying, keep `ABORT_ALL_ON_TEST_FAIL='YES'` and the outer timeout so the retry
+stops at the first actionable failure instead of hiding it behind later noise.
 
 For a faster build-only smoke check, set `CI_MAKE_CHECK_OPT='-j80 TESTS='`.
 This is useful for intermediate feedback, but it does not satisfy the full

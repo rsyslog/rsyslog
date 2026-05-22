@@ -584,12 +584,11 @@ jobs:
               # Clang 21 TSAN disables ASLR; Docker's default seccomp profile blocks that.
               export DOCKER_RUN_EXTRA_OPTS='--security-opt seccomp=unconfined'
               # impstats has known and OK races
-              # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
               # imhttp disabled because of race in civetweb (need to consider different lib)
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                     --enable-imfile-tests \
                     --disable-impstats --disable-impstats-push \
-                    --disable-kafka-tests --disable-mmpstrucdata \
+                    --disable-kafka-tests \
                     --enable-omotel \
                     --disable-clickhouse --disable-clickhouse-tests \
                     --disable-kafka-tests \

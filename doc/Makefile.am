@@ -879,6 +879,8 @@ EXTRA_DIST = \
     source/reference/parameters/mmnormalize-userawmsg.rst \
     source/reference/parameters/mmnormalize-variable.rst \
     source/reference/parameters/mmpstrucdata-jsonroot.rst \
+    source/reference/parameters/mmpstrucdata-container.rst \
+    source/reference/parameters/mmpstrucdata-maxstructureddatasize.rst \
     source/reference/parameters/mmpstrucdata-sd_name.lowercase.rst \
     source/reference/parameters/mmrfc5424addhmac-hashfunction.rst \
     source/reference/parameters/mmrfc5424addhmac-key.rst \

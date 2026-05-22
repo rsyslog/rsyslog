@@ -89,7 +89,7 @@ struct msg {
         char *pszTIMESTAMP_MySQL; /* TIMESTAMP as MySQL formatted string (always 14 characters) */
         char *pszTIMESTAMP_PgSQL; /* TIMESTAMP as PgSQL formatted string (always 21 characters) */
         uchar *pszStrucData; /* STRUCTURED-DATA */
-        uint16_t lenStrucData; /* (cached) length of STRUCTURED-DATA */
+        rs_size_t lenStrucData; /* (cached) length of STRUCTURED-DATA */
         cstr_t *pCSAPPNAME; /* APP-NAME */
         cstr_t *pCSPROCID; /* PROCID */
         cstr_t *pCSMSGID; /* MSGID */

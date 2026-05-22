@@ -11,7 +11,7 @@ mmpstrucdata: RFC5424 structured data parsing module
 Purpose
 =======
 
-The mmpstrucdata parses the structured data of `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_ into the message json variable tree. The data parsed, if available, is stored under "jsonRoot!rfc5424-sd!...". Please note that only RFC5424 messages will be processed.
+The mmpstrucdata parses the structured data of `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_ into the message json variable tree. The data parsed, if available, is stored under "jsonRoot!container!...". By default, ``container`` is ``rfc5424-sd``. Please note that only RFC5424 messages will be processed.
 
 The difference of RFC5424 is in the message layout: the SYSLOG-MSG part only contains the structured-data part instead of the normal message part. Further down you can find a example of a structured-data part.
 
@@ -34,6 +34,14 @@ Action Parameters
      - Summary
    * - :ref:`param-mmpstrucdata-jsonroot`
      - .. include:: ../../reference/parameters/mmpstrucdata-jsonroot.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmpstrucdata-container`
+     - .. include:: ../../reference/parameters/mmpstrucdata-container.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmpstrucdata-maxstructureddatasize`
+     - .. include:: ../../reference/parameters/mmpstrucdata-maxstructureddatasize.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-mmpstrucdata-sd_name.lowercase`
@@ -79,6 +87,16 @@ in user variables before anonymization).
   template(name="jsondump" type="string" string="%msg%: %$!%\\n")
   action(type="omfile" file="/path/to/log" template="jsondump")
 
+The same setup in YAML:
+
+.. code-block:: yaml
+
+  modules:
+    - load: mmpstrucdata
+
+  actions:
+    - type: mmpstrucdata
+
 
 **A more practical one:**
 
@@ -97,6 +115,22 @@ We apply this configuration:
   template(name="sample2" type="string"
     string="ALL: %$!%\\nSD: %$!RFC5424-SD%\\nIUT:%$!rfc5424-sd!exampleSDID@32473!iut%\\nRAWMSG: %rawmsg%\\n\\n")
   action(type="omfile" file="/path/to/log" template="sample2")
+
+The structured-data container name can be changed while keeping the same JSON
+root:
+
+.. code-block:: rsyslog
+
+  action(type="mmpstrucdata" jsonRoot="$!structured-data" container="sd"
+         maxStructuredDataSize="64k")
+
+.. code-block:: yaml
+
+  actions:
+    - type: mmpstrucdata
+      jsonRoot: "$!structured-data"
+      container: sd
+      maxStructuredDataSize: 64k
 
 
 This will output:
@@ -117,5 +151,6 @@ case.
    :hidden:
 
    ../../reference/parameters/mmpstrucdata-jsonroot
+   ../../reference/parameters/mmpstrucdata-container
+   ../../reference/parameters/mmpstrucdata-maxstructureddatasize
    ../../reference/parameters/mmpstrucdata-sd_name.lowercase
-
