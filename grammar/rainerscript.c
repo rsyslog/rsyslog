@@ -5731,7 +5731,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     const char *finalName;
     int i;
     int result;
-    glob_t cfgFiles;
+    glob_t cfgFiles = {0};
     int ret = 0;
     struct stat fileInfo;
     struct stat linkInfo;
@@ -5753,13 +5753,15 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
 /* Use GLOB_MARK to append a trailing slash for directories. */
 /* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
 #ifdef HAVE_GLOB_NOMAGIC
-    /* Silently ignore wildcards that match nothing */
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {
 #else
     result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
 #endif /* HAVE_GLOB_NOMAGIC */
+        if (optional == 0) {
+            parser_warnmsg("IncludeConfig pattern '%s' did not match any files", finalName);
+        }
         goto done;
     }
 
