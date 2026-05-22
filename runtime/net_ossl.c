@@ -945,6 +945,11 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
         defined(X509_CHECK_FLAG_NEVER_CHECK_SUBJECT)
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     #else
+                /* Security hard-stop: with older OpenSSL-compatible APIs (notably wolfSSL
+                 * compatibility mode), we cannot request SAN-only matching. Calling
+                 * X509_check_host() with default flags may fall back to CN, which would
+                 * violate PrioritizeSAN semantics and RFC 6125 behavior.
+                 */
                 dbgprintf("net_ossl_matchpeeridentity: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
                 continue;
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
