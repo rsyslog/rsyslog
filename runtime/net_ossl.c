@@ -79,6 +79,34 @@ void ocsp_cache_cleanup(void);
 #endif
 rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
 
+#ifdef ENABLE_WOLFSSL
+static rsRetVal net_ossl_wolfssl_enable_leaf_crl(SSL_CTX *ctx, const char *crlFile) {
+    WOLFSSL_CERT_MANAGER *cm;
+    DEFiRet;
+
+    cm = wolfSSL_CTX_GetCertManager(ctx);
+    if (cm == NULL) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CertManager unavailable after loading CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+
+    /* wolfSSL_X509_STORE_add_crl enables chain-wide CRL checks, while the
+     * DER loader does not enable CRL checks at all. Normalize both paths to
+     * OpenSSL's X509_V_FLAG_CRL_CHECK behavior: verify the leaf certificate. */
+    if (wolfSSL_CertManagerDisableCRL(cm) != WOLFSSL_SUCCESS) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be reset for CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+    if (wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK) != WOLFSSL_SUCCESS) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be enabled for CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+
+finalize_it:
+    RETiRet;
+}
+#endif
+
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 #ifndef ENABLE_WOLFSSL
@@ -522,15 +550,8 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
                 ABORT_FINALIZE(RS_RET_CRL_INVALID);
             }
             loaded = 1;
-        } else {
-            /* wolfSSL_X509_STORE_add_crl forces WOLFSSL_CRL_CHECKALL; reset
-             * to WOLFSSL_CRL_CHECK to match OpenSSL X509_V_FLAG_CRL_CHECK. */
-            WOLFSSL_CERT_MANAGER *cm = wolfSSL_CTX_GetCertManager(pThis->ctx);
-            if (cm != NULL) {
-                wolfSSL_CertManagerDisableCRL(cm);
-                wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK);
-            }
         }
+        CHKiRet(net_ossl_wolfssl_enable_leaf_crl(pThis->ctx, crlFile));
         dbgprintf("osslCtxInit: loaded %d CRL(s) from '%s' into wolfSSL CertManager\n", loaded, crlFile);
 #elif OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         // Get X509_STORE reference

@@ -1572,6 +1572,9 @@ TESTS_OSSL_OPENSSL_SNI = \
 	omfwd-tls-ossl-auto-sni.sh \
 	omfwd-tls-ossl-configured-sni.sh
 
+TESTS_OSSL_WOLFSSL = \
+	imtcp-tls-ossl-wolfssl-crl-der.sh
+
 TESTS_GNUTLS_OPENSSL_INTEROP = \
 	sndrcv_tls_ossl_servercert_gtls_clientanon.sh \
 	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
@@ -2014,6 +2017,7 @@ EXTRA_DIST += $(TESTS_OSSL)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_VALGRIND)
 EXTRA_DIST += $(TESTS_OSSL_OPENSSL_SNI)
+EXTRA_DIST += $(TESTS_OSSL_WOLFSSL)
 EXTRA_DIST += $(TESTS_GNUTLS_OPENSSL_INTEROP)
 EXTRA_DIST += $(TESTS_OMUXSOCK)
 EXTRA_DIST += $(TESTS_OMUXSOCK_VALGRIND)
@@ -2944,6 +2948,9 @@ endif
 
 if ENABLE_OPENSSL
 TESTS += $(TESTS_OSSL_OPENSSL_SNI)
+endif
+if ENABLE_WOLFSSL
+TESTS += $(TESTS_OSSL_WOLFSSL)
 endif
 endif
 
