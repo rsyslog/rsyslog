@@ -1,0 +1,30 @@
+doc/source/reference/parameters/imfile-addmetadata.rst
+  s_6224eda96fc0da::t_52cce8fd0f95d7 33-41
+tests/imfile-metadata-line-number.sh
+  s_6224eda96fc0da::t_3b7c2853c4bb5e 39
+  s_6224eda96fc0da::t_ff774db633e119 1-38,40-42
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_525239ab08aecc 1716-1724,1880,1889,3077-3078
+  s_6224eda96fc0da::t_2809f4165851de 2427-2429
+  s_6224eda96fc0da::t_83089658ebefd8 222,1571,1573,1578-1580,1616-1618
+tests/imfile-no-monitor-config-check.sh
+  s_6224eda96fc0da::t_ff774db633e119 1-20
+tests/Makefile.am
+  s_6224eda96fc0da::t_fc2120dd2fa39b 1737-1738
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "3fdf45b6a2ec035b7ce8d705ed99835be074c010",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
