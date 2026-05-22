@@ -1,9 +1,10 @@
+#!/bin/sh
 #export SUDO=
 #export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 #export LD_LIBRARY_PATH=/usr/local/lib
 
 # end config settings
-export CI_HOME=`pwd`
+export CI_HOME=$(pwd)
 echo CI_HOME: $CI_HOME
 mkdir $CI_HOME/proj
 cd $CI_HOME/proj

@@ -1,5 +1,7 @@
-cd tests
-export srcdir=&(pwd)
+#!/bin/sh
+cd tests || exit 1
+export srcdir
+srcdir=$(pwd)
 # add tests here below
 # ./omfile-read-only.sh
 exit # currently not needed

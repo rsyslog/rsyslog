@@ -1,5 +1,5 @@
 #!/bin/ash
-if [ "$DEBUG" == "on" ]; then
+if [ "$DEBUG" = "on" ]; then
 	echo "container in debug mode, environment is: "
 	env
 	set -x

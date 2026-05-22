@@ -545,8 +545,7 @@ cmp_exact() {
 		printf 'Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n'
 		error_exit 100
 	fi
-	printf '%s\n' "$EXPECTED" | cmp - "$filename"
-	if [ $? -ne 0 ]; then
+	if ! printf '%s\n' "$EXPECTED" | cmp - "$filename"; then
 		printf 'invalid response generated\n'
 		printf '################# %s is:\n' "$filename"
 		cat -n $filename
@@ -567,8 +566,7 @@ cmp_exact_file() {
 		printf 'Testbench ERROR, cmp_exact_file() needs expected and actual filenames!\n'
 		error_exit 100
 	fi
-	cmp "$expected_file" "$actual_file" > /dev/null
-	if [ $? -ne 0 ]; then
+	if ! cmp "$expected_file" "$actual_file" > /dev/null; then
 		printf 'invalid response generated\n'
 		printf '################# %s is:\n' "$actual_file"
 		cat -n "$actual_file"
@@ -680,9 +678,7 @@ wait_process_startup() {
 	if [ "$2" != "" ]; then
 		while test ! -f "$2"; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			ps -p $(cat $1.pid) &> /dev/null
-			if [ $? -ne 0 ]
-			then
+			if ! ps -p $(cat $1.pid) &> /dev/null; then
 			   echo "ABORT! pid in $1 no longer active during startup!"
 			   error_exit 1
 			fi
@@ -706,8 +702,7 @@ wait_pid_termination() {
 		fi
 		terminated=0
 		while [[ $terminated -eq 0 ]]; do
-			ps -p $out_pid &> /dev/null
-			if [[ $? != 0 ]]; then
+			if ! ps -p $out_pid &> /dev/null; then
 				terminated=1
 			fi
 			$TESTTOOL_DIR/msleep 100
@@ -1399,7 +1394,7 @@ content_check() {
 	else
 	    if [ "$output_results" == "yes" ]; then
 		# Output GREP results
-		echo "SUCCESS: content_check found results for '$1'\n"
+		printf "SUCCESS: content_check found results for '%s'\n\n" "$1"
 		grep "$1" "${file}"
 	    fi
 	fi
@@ -1501,8 +1496,7 @@ content_check_with_count() {
 
 
 custom_content_check() {
-	grep -qF -- "$1" < $2
-	if [ "$?" -ne "0" ]; then
+	if ! grep -qF -- "$1" < $2; then
 	    echo FAIL: custom_content_check failed to find "'$1'" inside "'$2'"
 	    echo "file contents:"
 	    cat -n $2
@@ -1518,8 +1512,7 @@ check_not_present() {
 	else
 		file="$2"
 	fi
-	grep -q -- "$1" < "$file"
-	if [ "$?" -eq "0" ]; then
+	if grep -q -- "$1" < "$file"; then
 		echo FAIL: check_not present found
 		echo $1
 		echo inside file $file of $(wc -l < $file) lines
@@ -1561,8 +1554,7 @@ check_spool_empty() {
 check_journal_testmsg_received() {
 	printf 'checking that journal indeed contains test message - may take a short while...\n'
 	# search reverse, gets us to our message (much) faster .... if it is there...
-	journalctl -a -r | grep -qF "$TESTMSG"
-	if [ $? -ne 0 ]; then
+	if ! journalctl -a -r | grep -qF "$TESTMSG"; then
 		print 'SKIP: cannot read journal - our testmessage not found via journalctl\n'
 		exit 77
 	fi
@@ -1570,8 +1562,7 @@ check_journal_testmsg_received() {
 
 	echo "INFO: $(wc -l < $RSYSLOG_OUT_LOG) lines in $RSYSLOG_OUT_LOG"
 
-	grep -qF "$TESTMSG" < $RSYSLOG_OUT_LOG
-	if [ $? -ne 0 ]; then
+	if ! grep -qF "$TESTMSG" < $RSYSLOG_OUT_LOG; then
 	  echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
 	  tail -n200 $RSYSLOG_OUT_LOG
 	  echo "======="
@@ -1698,8 +1689,7 @@ wait_shutdown() {
 		terminated=0
 	fi
 	while [[ $terminated -eq 0 ]]; do
-		ps -p $out_pid &> /dev/null
-		if [[ $? != 0 ]]; then
+		if ! ps -p $out_pid &> /dev/null; then
 			terminated=1
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -1931,8 +1921,7 @@ wait_content() {
 
 
 assert_content_missing() {
-	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
-	if [ "$?" -eq "0" ]; then
+	if grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
 		error_exit 1
 	fi
@@ -1940,8 +1929,7 @@ assert_content_missing() {
 
 
 custom_assert_content_missing() {
-	grep -qF -- "$1" < $2
-	if [ "$?" -eq "0" ]; then
+	if grep -qF -- "$1" < $2; then
 		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
 		cat -n "$2"
 		error_exit 1
@@ -2683,8 +2671,7 @@ seq_check() {
 # $4... are just to have the ability to pass in more options...
 # add -v to chkseq if you need more verbose output
 seq_check2() {
-	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
-	if [ "$?" -ne "0" ]; then
+	if ! $RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7; then
 		echo "sequence error detected"
 		error_exit 1
 	fi
@@ -2707,8 +2694,7 @@ gzip_seq_check() {
 		endnum=$2
 	fi
 	ls -l ${RSYSLOG_OUT_LOG}
-	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$startnum -e$endnum $3 $4 $5 $6 $7
-	if [ "$?" -ne "0" ]; then
+	if ! gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$startnum -e$endnum $3 $4 $5 $6 $7; then
 		echo "sequence error detected"
 		error_exit 1
 	fi
@@ -2723,6 +2709,7 @@ tcpflood() {
 	else
 		check_only="no"
 	fi
+	# shellcheck disable=SC2294 # TCPFLOOD_EXTRA_OPTS is intentionally parsed as shell words.
 	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 	res=$?
 	if [ "$check_only" == "yes" ]; then
@@ -2812,8 +2799,7 @@ check_logger_has_option_d() {
 	skip_platform "SunOS"  "We need logger -d option, which we do not have on (all flavors of) Solaris"
 
 	# check also the case for busybox
-	logger --help 2>&1 | head -n1 | grep -q BusyBox
-	if [ $? -eq 0 ]; then
+	if logger --help 2>&1 | head -n1 | grep -q BusyBox; then
 		echo "We need logger -d option, which we do not have have on Busybox"
 		exit 77
 	fi
@@ -3102,39 +3088,31 @@ download_kafka() {
 		else
 			echo "Downloading zookeeper from $dep_zk_url"
 			echo wget -q $dep_zk_url -O $dep_zk_cached_file
-			wget -q $dep_zk_url -O $dep_zk_cached_file
-			if [ $? -ne 0 ]
-			then
-                                echo error during wget, retry:
-                                wget $dep_zk_url -O $dep_zk_cached_file
-                                if [ $? -ne 0 ]
-                                then
-                                        echo "Skipping test - unable to download zookeeper"
-                                        error_exit 77
-                                fi
-                        fi
-                fi
-        fi
+			if ! wget -q $dep_zk_url -O $dep_zk_cached_file; then
+				echo error during wget, retry:
+				if ! wget $dep_zk_url -O $dep_zk_cached_file; then
+					echo "Skipping test - unable to download zookeeper"
+					error_exit 77
+				fi
+			fi
+		fi
+	fi
 	if [ ! -f $dep_kafka_cached_file ]; then
 		if [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
 			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
 			cp /local_dep_cache/$RS_KAFKA_DOWNLOAD $dep_kafka_cached_file
 		else
 			echo "Downloading kafka from $dep_kafka_url"
-			wget -q $dep_kafka_url -O $dep_kafka_cached_file
-			if [ $? -ne 0 ]
-			then
+			if ! wget -q $dep_kafka_url -O $dep_kafka_cached_file; then
 				echo error during wget, retry:
-                                wget $dep_kafka_url -O $dep_kafka_cached_file
-                                if [ $? -ne 0 ]
-                                then
-                                        rm $dep_kafka_cached_file # a 0-size file may be left over
-                                        echo "Skipping test - unable to download kafka"
-                                        error_exit 77
-                                fi
-                        fi
-                fi
-        fi
+				if ! wget $dep_kafka_url -O $dep_kafka_cached_file; then
+					rm $dep_kafka_cached_file # a 0-size file may be left over
+					echo "Skipping test - unable to download kafka"
+					error_exit 77
+				fi
+			fi
+		fi
+	fi
 }
 
 stop_kafka() {
@@ -3142,7 +3120,7 @@ stop_kafka() {
 		return
 	fi
 	i=0
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_kafka_config="kafka-server.properties"
 	else
@@ -3156,7 +3134,7 @@ stop_kafka() {
 	if [ ! -d $dep_work_dir/kafka ]; then
 		echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
 	else
-		# shellcheck disable=SC2009  - we do not grep on the process name!
+		# shellcheck disable=SC2009 # We do not grep on the process name.
 		kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 
 		echo "Stopping Kafka instance $1 ($dep_work_kafka_config/$kafkapid)"
@@ -3164,7 +3142,7 @@ stop_kafka() {
 
 		# Check if kafka instance went down!
                 while true; do
-                        # shellcheck disable=SC2009  - we do not grep on the process name!
+                        # shellcheck disable=SC2009 # We do not grep on the process name.
                         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
                         if [ -n "$kafkapid" ]; then
                                 $TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -3188,7 +3166,7 @@ stop_kafka() {
 }
 
 cleanup_kafka() {
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$1)
@@ -3206,7 +3184,7 @@ stop_zookeeper() {
 		return
 	fi
 	i=0
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_tk_config="zoo.cfg"
 	else
@@ -3254,7 +3232,7 @@ stop_zookeeper() {
 }
 
 cleanup_zookeeper() {
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$1)
@@ -3325,7 +3303,7 @@ start_kafka() {
 
         _kafka_instance_layout "$1" dep_work_dir dep_work_kafka_config
 
-        # shellcheck disable=SC2009  - we do not grep on the process name!
+        # shellcheck disable=SC2009 # We do not grep on the process name.
         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
         if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -n "$kafkapid" ]; then
                 printf 'kafka already running, no need to start\n'
@@ -3356,7 +3334,7 @@ start_kafka() {
                 readiness_ok=1
         fi
 
-        # shellcheck disable=SC2009  - we do not grep on the process name!
+        # shellcheck disable=SC2009 # We do not grep on the process name.
         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
         if [ "$readiness_ok" -eq 1 ] && [ -n "$kafkapid" ]; then
                 echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
@@ -3386,7 +3364,7 @@ start_kafka() {
                 error_exit 77
         fi
 
-        # shellcheck disable=SC2009  - we do not grep on the process name!
+        # shellcheck disable=SC2009 # We do not grep on the process name.
         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
         if [ -n "$kafkapid" ]; then
                 echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
@@ -3402,12 +3380,12 @@ start_kafka() {
 }
 
 create_kafka_topic() {
-	if [ "x$2" == "x" ]; then
+	if [ -z "$2" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $2)
 	fi
-	if [ "x$3" == "x" ]; then
+	if [ -z "$3" ]; then
 		dep_work_port='2181'
 	else
 		dep_work_port=$3
@@ -3416,7 +3394,7 @@ create_kafka_topic() {
 			echo "Kafka work-dir $dep_work_dir/kafka does not exist, did you start kafka?"
 			exit 1
 	fi
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 			echo "Topic-name not provided."
 			exit 1
 	fi
@@ -3458,12 +3436,12 @@ create_kafka_topic() {
 }
 
 delete_kafka_topic() {
-	if [ "x$2" == "x" ]; then
+	if [ -z "$2" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$2)
 	fi
-	if [ "x$3" == "x" ]; then
+	if [ -z "$3" ]; then
 		dep_work_port='2181'
 	else
 		dep_work_port=$3
@@ -3474,14 +3452,14 @@ delete_kafka_topic() {
 }
 
 dump_kafka_topic() {
-	if [ "x$2" == "x" ]; then
+	if [ -z "$2" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$2)
 		dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka$2.log)
 	fi
-	if [ "x$3" == "x" ]; then
+	if [ -z "$3" ]; then
 		dep_work_port='2181'
 	else
 		dep_work_port=$3
@@ -3492,7 +3470,7 @@ dump_kafka_topic() {
 			echo "Kafka work-dir does not exist, did you start kafka?"
 			exit 1
 	fi
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 			echo "Topic-name not provided."
 			exit 1
 	fi
@@ -3501,7 +3479,7 @@ dump_kafka_topic() {
 }
 
 dump_kafka_serverlog() {
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$1)
@@ -3519,7 +3497,7 @@ dump_kafka_serverlog() {
 }
 
 dump_zookeeper_serverlog() {
-	if [ "x$1" == "x" ]; then
+	if [ -z "$1" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
 		dep_work_dir=$(readlink -f $srcdir/$1)
@@ -3795,7 +3773,7 @@ omhttp_start_server() {
         error_exit 1
     fi
 
-    if [ "x$1" == "x" ]; then
+    if [ -z "$1" ]; then
         omhttp_server_port="8080"
     else
         omhttp_server_port="$1"
@@ -3811,7 +3789,8 @@ omhttp_start_server() {
     server_args="-p $omhttp_server_port ${*:2} --port-file $RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
 
     setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
-    if [ ! $? -eq 0 ]; then
+    # shellcheck disable=SC2181 # Preserve the existing background-start check.
+    if [ $? -ne 0 ]; then
         echo "Failed to start omhttp test server."
         rm -rf $omhttp_work_dir
         error_exit 1
@@ -3857,13 +3836,13 @@ omhttp_stop_server() {
 
 omhttp_get_data() {
     # Args: 1=port 2=endpoint 3=batchformat(optional)
-    if [ "x$1" == "x" ]; then
+    if [ -z "$1" ]; then
         omhttp_server_port=8080
     else
         omhttp_server_port=$1
     fi
 
-    if [ "x$2" == "x" ]; then
+    if [ -z "$2" ]; then
         omhttp_path=""
     else
         omhttp_path=$2
@@ -3872,21 +3851,21 @@ omhttp_get_data() {
     # The test server returns a json encoded array of strings containing whatever omhttp sent to it in each request
     python_init="import json, sys; dat = json.load(sys.stdin)"
     python_print="print('\n'.join(out))"
-    if [ "x$3" == "x" ]; then
+    if [ -z "$3" ]; then
         # dat = ['{"msgnum":"1"}, '{"msgnum":"2"}', '{"msgnum":"3"}', '{"msgnum":"4"}']
         python_parse="$python_init; out = [json.loads(l)['msgnum'] for l in dat]; $python_print"
     else
-       if [ "x$3" == "xjsonarray" ]; then
+       if [ "$3" == "jsonarray" ]; then
             # dat = ['[{"msgnum":"1"},{"msgnum":"2"}]', '[{"msgnum":"3"},{"msgnum":"4"}]']
             python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)]; $python_print"
-        elif [ "x$3" == "xnewline" ]; then
+        elif [ "$3" == "newline" ]; then
             # dat = ['{"msgnum":"1"}\n{"msgnum":"2"}', '{"msgnum":"3"}\n{"msgnum":"4"}']
             python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
-        elif [ "x$3" == "xkafkarest" ]; then
+        elif [ "$3" == "kafkarest" ]; then
             # dat = ['{"records":[{"value":{"msgnum":"1"}},{"value":{"msgnum":"2"}}]}',
             #        '{"records":[{"value":{"msgnum":"3"}},{"value":{"msgnum":"4"}}]}']
             python_parse="$python_init; out = [l['value']['msgnum'] for a in dat for l in json.loads(a)['records']]; $python_print"
-        elif [ "x$3" == "xlokirest" ]; then
+        elif [ "$3" == "lokirest" ]; then
             # dat = ['{"streams":[{"msgnum":"1"},{"msgnum":"2"}]}',
             #        '{"streams":[{"msgnum":"3"},{"msgnum":"4"}]}']
             python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)['streams']]; $python_print"
@@ -3911,8 +3890,7 @@ omhttp_validate_metadata_response() {
         error_exit 1
     fi
 
-	$PYTHON ${omhttp_response_validate_py} --error ${RSYSLOG_DYNNAME}/omhttp.error.log --response ${RSYSLOG_DYNNAME}/omhttp.response.log 2>&1
-	if [ $? -ne 0 ] ; then
+	if ! $PYTHON ${omhttp_response_validate_py} --error ${RSYSLOG_DYNNAME}/omhttp.error.log --response ${RSYSLOG_DYNNAME}/omhttp.response.log 2>&1; then
 		printf 'omhttp_validate_metadata_response failed \n'
 		error_exit 1
 	fi
@@ -3959,11 +3937,9 @@ download_otel_collector() {
 		printf 'OTEL Collector: downloading %s from %s\n' "$OTEL_COLLECTOR_DOWNLOAD" "$dep_otel_collector_url"
 		dep_otel_collector_tmp_file="${dep_otel_collector_cached_file}.$$"
 		rm -f "$dep_otel_collector_tmp_file"
-		wget -q "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"
-		if [ $? -ne 0 ]; then
+		if ! wget -q "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"; then
 			echo "error during wget, retry:"
-			wget "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"
-			if [ $? -ne 0 ]; then
+			if ! wget "$dep_otel_collector_url" -O "$dep_otel_collector_tmp_file"; then
 				rm -f "$dep_otel_collector_tmp_file" "$dep_otel_collector_cached_file"
 				echo "Skipping test - unable to download OTEL Collector"
 				error_exit 77
@@ -4534,7 +4510,7 @@ redis_command() {
 # $4 - expected value
 first_column_sum_check() {
 	sum=$(grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}')
-	if [ "x${sum}" != "x$4" ]; then
+	if [ "${sum}" != "$4" ]; then
 	    printf '\n============================================================\n'
 	    echo FAIL: sum of first column with edit-expr "'$1'" run over lines from file "'$3'" matched by "'$2'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$4'"
 	    echo "file contents:"
@@ -4584,13 +4560,13 @@ snmp_start_trapreceiver() {
         error_exit 1
     fi
 
-    if [ "x$1" == "x" ]; then
+    if [ -z "$1" ]; then
         snmp_server_port="10162"
     else
         snmp_server_port="$1"
     fi
 
-    if [ "x$2" == "x" ]; then
+    if [ -z "$2" ]; then
         output_file="${RSYSLOG_DYNNAME}.snmp.out"
     else
         output_file="$2"
@@ -4732,7 +4708,7 @@ wait_for_stats_flush() {
 	new_count=$prev_count
 	start_loop="$(date +%s)"
 	emit_waiting=0
-	while [[ "x$prev_count" == "x$new_count" ]]; do
+	while [[ "$prev_count" == "$new_count" ]]; do
 		# busy spin, because it allows as close timing-coordination
 		# in actual test run as possible
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
@@ -4779,7 +4755,7 @@ omfwd_sni_check() {
 	wait_file_lines "$RSYSLOG_DYNNAME.sni-server.stdout" 1
 
 	if ! grep -q "^SNI: $sni\$" $RSYSLOG_DYNNAME.sni-server.stdout; then
-	    echo "Expected 'SNI: $sni', but got '"`cat $RSYSLOG_DYNNAME.sni-server.stdout`"'"
+	    printf "Expected 'SNI: %s', but got '%s'\n" "$sni" "$(cat "$RSYSLOG_DYNNAME.sni-server.stdout")"
 		error_exit 1
 	fi
 }
@@ -4935,8 +4911,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 			cmd="ifconfig -a"
 		fi
 		echo command used for ipv6 detection: $cmd
-		$cmd | grep ::1 > /dev/null
-		if [ $? -ne 0 ] ; then
+		if ! $cmd | grep ::1 > /dev/null; then
 			printf 'this test requires an active IPv6 stack, which we do not have here\n'
 			error_exit 77
 		fi
@@ -4946,8 +4921,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		# note: we do not wait for the actual termination!
 		;;
    'ensure-no-process-exists')
-    ps -ef | grep -v grep | grep -qF "$2"
-    if [ "x$?" == "x0" ]; then
+    if ps -ef | grep -v grep | grep -qF "$2"; then
       echo "assertion failed: process with name-fragment matching '$2' found"
 		  error_exit 1
     fi
@@ -4983,7 +4957,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		done
 		prev_purged=$(grep -F 'origin=dynstats' < $2 | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
 		new_purged=$prev_purged
-		while [[ "x$prev_purged" == "x$new_purged" ]]; do
+		while [[ "$prev_purged" == "$new_purged" ]]; do
 				new_purged=$(grep -F 'origin=dynstats' < "$2" | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
 				$TESTTOOL_DIR/msleep 10
 		done
@@ -4999,8 +4973,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		fi
 		;;
    'content-pattern-check')
-		grep -q "$2" < ${RSYSLOG_OUT_LOG}
-		if [ "$?" -ne "0" ]; then
+		if ! grep -q "$2" < ${RSYSLOG_OUT_LOG}; then
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
 		    cat -n $4
@@ -5017,8 +4990,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
 			echo [inotify mode]
 		elif [ -n "$(find /usr/include/sys/ -name 'port.h' -print -quit)" ]; then
-			grep -qF "PORT_SOURCE_FILE" < /usr/include/sys/port.h
-			if [ "$?" -ne "0" ]; then
+			if ! grep -qF "PORT_SOURCE_FILE" < /usr/include/sys/port.h; then
 				echo [port.h found but FEN API not implemented , skipping...]
 				exit 77 # FEN API not available, skip this test
 			fi

@@ -1,3 +1,4 @@
+#!/bin/bash
 . ${srcdir:=.}/diag.sh init
 
 wait_for_nonempty_file() {

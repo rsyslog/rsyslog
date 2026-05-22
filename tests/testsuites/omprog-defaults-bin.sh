@@ -2,7 +2,7 @@
 
 outfile=$RSYSLOG_OUT_LOG
 
-echo "Starting with parameters: $@" >> $outfile
+echo "Starting with parameters: $*" >> "$outfile"
 while [ $# -gt 0 ]; do
     echo Next parameter is \""$1"\"
     shift

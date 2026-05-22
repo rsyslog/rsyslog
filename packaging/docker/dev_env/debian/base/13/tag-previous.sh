@@ -1,2 +1,3 @@
+#!/bin/sh
 docker tag rsyslog/rsyslog_dev_base_debian:13 rsyslog/rsyslog_dev_base_debian:13_previous
 docker push rsyslog/rsyslog_dev_base_debian:13_previous

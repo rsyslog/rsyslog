@@ -1,3 +1,4 @@
+#!/bin/bash
 # Definitions common to these scripts
 # mybasedir=$(dirname "$0")
 mybasedir=$PKGBASEDIR

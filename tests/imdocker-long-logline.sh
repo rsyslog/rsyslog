@@ -32,7 +32,7 @@ wait_shutdown
 echo "file name: $RSYSLOG_OUT_LOG"
 count=$(grep "aaaaaaa" $RSYSLOG_OUT_LOG | tr -d "\n" | wc -c)
 
-if [ "x$count" == "x$SIZE" ]; then
+if [ "$count" == "$SIZE" ]; then
   echo "correct log line length: $count"
 else
   echo "Incorrect log line length - found $count, expected: $SIZE"
