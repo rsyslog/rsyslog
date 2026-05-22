@@ -42,8 +42,16 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmexternal-interface-input.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmexternal-interface-output`
+     - .. include:: ../../reference/parameters/mmexternal-interface-output.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-mmexternal-output`
      - .. include:: ../../reference/parameters/mmexternal-output.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmexternal-responsetimeout`
+     - .. include:: ../../reference/parameters/mmexternal-responsetimeout.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-mmexternal-forcesingleinstance`
@@ -56,7 +64,9 @@ Action Parameters
 
    ../../reference/parameters/mmexternal-binary
    ../../reference/parameters/mmexternal-interface-input
+   ../../reference/parameters/mmexternal-interface-output
    ../../reference/parameters/mmexternal-output
+   ../../reference/parameters/mmexternal-responsetimeout
    ../../reference/parameters/mmexternal-forcesingleinstance
 
 
@@ -73,4 +83,3 @@ default search path.
    module (load="mmexternal") # needs to be done only once inside the config
 
    action(type="mmexternal" binary="/path/to/mmexternal.py")
-

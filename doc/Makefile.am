@@ -834,7 +834,9 @@ EXTRA_DIST = \
     source/reference/parameters/mmexternal-binary.rst \
     source/reference/parameters/mmexternal-forcesingleinstance.rst \
     source/reference/parameters/mmexternal-interface-input.rst \
+    source/reference/parameters/mmexternal-interface-output.rst \
     source/reference/parameters/mmexternal-output.rst \
+    source/reference/parameters/mmexternal-responsetimeout.rst \
     source/reference/parameters/mmfields-jsonroot.rst \
     source/reference/parameters/mmfields-separator.rst \
     source/reference/parameters/mmjsonparse-allow_trailing.rst \

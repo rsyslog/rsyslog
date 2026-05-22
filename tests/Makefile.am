@@ -127,6 +127,8 @@ TESTS_DEFAULT = \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
 	mmexternal-SegFault.sh \
+	mmexternal-interface-output-none.sh \
+	mmexternal-response-timeout.sh \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
@@ -3146,6 +3148,8 @@ EXTRA_DIST += \
 	sndrcv_drvr_noexit.sh \
 	diag.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
+	testsuites/mmexternal-hang-no-reply.sh \
+	testsuites/mmexternal-no-output.sh \
 	testsuites/mmsnareparse/sample-custom-pattern.data \
 	testsuites/mmsnareparse/sample-windows2022-security.data \
 	testsuites/mmsnareparse/sample-windows2025-security.data \
