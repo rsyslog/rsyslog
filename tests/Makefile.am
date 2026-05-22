@@ -1356,6 +1356,7 @@ TESTS_PMNORMALIZE_VALGRIND = \
 TESTS_MMNORMALIZE = \
         msgvar-concurrency-array.sh \
         msgvar-concurrency-array-event.tags.sh \
+        mmexternal-mmnormalize-json-tree.sh \
         mmnormalize_rule_from_string.sh \
         mmnormalize_rule_from_array.sh \
         mmnormalize_parsesuccess.sh
