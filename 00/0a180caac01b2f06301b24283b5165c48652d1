@@ -1,0 +1,47 @@
+tests/testsuites/mmexternal-no-output.sh
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-8
+doc/Makefile.am
+  s_6224eda96fc0da::t_3af855ed9da09f 837,839
+tests/mmexternal-interface-output-none.sh
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-17,19-30
+  s_6224eda96fc0da::t_0eda41eb7b8ed1 18
+doc/source/reference/parameters/mmexternal-responsetimeout.rst
+  s_6224eda96fc0da::t_f840209ed05aa7 1-23,25-57
+  s_6224eda96fc0da::t_c5af567e483738 24
+doc/source/configuration/modules/mmexternal.rst
+  s_6224eda96fc0da::t_08054d33991a3e 45-48,53-56,67,69
+tests/testsuites/mmexternal-hang-no-reply.sh
+  s_6224eda96fc0da::t_e2b90dd7cdda01 4
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-3,5-6
+doc/source/reference/parameters/mmexternal-interface-output.rst
+  s_6224eda96fc0da::t_c5af567e483738 24
+  s_6224eda96fc0da::t_f840209ed05aa7 1-23,25-59
+plugins/mmexternal/mmexternal.c
+  s_6224eda96fc0da::t_0be49a81e229ae 261,324
+  s_6224eda96fc0da::t_6309e89bed6310 463,539
+  s_6224eda96fc0da::t_544e995623c1b9 110-111,198-251,260,266-270,273-274,287-300,327-328
+  s_6224eda96fc0da::t_3a579e3aee75df 576-578,585-586,602-603,607-609,611,613,616-629,643-644
+  s_6224eda96fc0da::t_9998dd56c146ba 33,65-68
+  s_6224eda96fc0da::t_b7ac8ec06ebe9a 94-97,639-641
+tests/Makefile.am
+  s_6224eda96fc0da::t_dc0727773904af 130-131,3151-3152
+tests/mmexternal-response-timeout.sh
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-14,21-31
+  s_6224eda96fc0da::t_3b7c2853c4bb5e 15-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "000a180caac01b2f06301b24283b5165c48652d1",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
