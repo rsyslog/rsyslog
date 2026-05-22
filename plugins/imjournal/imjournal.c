@@ -523,8 +523,9 @@ static rsRetVal enqMsg(uchar *msg,
     pMsg->iSeverity = iSeverity;
 
     if (json != NULL) {
-        CHKiRet(msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedJsonProperties));
+        iRet = msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedJsonProperties);
         json = NULL;
+        CHKiRet(iRet);
     }
 
     CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
@@ -705,7 +706,9 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     CHKiRet(updateJournalCursor(journalContext));
 
     /* submit message */
-    enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    json = NULL;
+    CHKiRet(iRet);
 
 finalize_it:
     if (iRet != RS_RET_OK) {
