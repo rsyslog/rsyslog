@@ -1228,7 +1228,7 @@ static rsRetVal SubmitMultiLineMsg(docker_cont_logs_inst_t *pInst,
 
     size_t size = mem->len - pInst->prevSegEnd;
     memmove(mem->data, mem->data + pInst->prevSegEnd, size);
-    mem->data[len] = '\0';
+    mem->data[size] = '\0';
     mem->len = size;
     pBufData->bytes_remaining = 0;
 
