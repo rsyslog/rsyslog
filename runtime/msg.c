@@ -2651,6 +2651,18 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
     ISOBJ_TYPE_assert(pThis, msg);
     assert(pszMSG != NULL);
 
+    if (pThis->pszRawMsg == NULL) {
+        pThis->pszRawMsg = pThis->szRawMsg;
+        pThis->szRawMsg[0] = '\0';
+    }
+
+    if (pThis->offMSG < 0 || pThis->offMSG > pThis->iLenRawMsg) {
+        pThis->offMSG = pThis->iLenRawMsg;
+        pThis->iLenMSG = 0;
+    } else if (pThis->iLenMSG < 0 || pThis->iLenMSG > pThis->iLenRawMsg - pThis->offMSG) {
+        pThis->iLenMSG = pThis->iLenRawMsg - pThis->offMSG;
+    }
+
     lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
     if (lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
         /*  we have lost our "bet" and need to alloc a new buffer ;) */
