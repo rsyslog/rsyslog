@@ -1040,7 +1040,9 @@ static rsRetVal msgAddResponseMetadata(smsg_t *const __restrict__ pMsg,
         json_object_object_add(json, "body", json_object_new_string_len(pWrkrData->reply, (int)cappedLen));
     }
     json_object_object_add(json, "batch_index", json_object_new_int(batch_index));
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!omhttp!response", json, 0, 0));
+    struct json_object *const toAdd = json;
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!omhttp!response", toAdd, 0, 0));
 
     /* TODO: possible future, an option to automatically parse to json?
         would be under:

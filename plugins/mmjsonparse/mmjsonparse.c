@@ -301,8 +301,7 @@ static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct 
      * but we need to clean up on failure */
 
 finalize_it:
-    if (iRet != RS_RET_OK) {
-        /* msgAddJSON failed, we need to clean up the JSON object */
+    if (iRet != RS_RET_OK && json != NULL) {
         json_object_put(json);
     }
     RETiRet;

@@ -564,8 +564,9 @@ BEGINdoAction_NoStrings
         ABORT_FINALIZE(RS_RET_INVLD_SETOP);
     }
 
-    CHKiRet(msgAddJSON(pMsg, pData->outputProp->name, rewritten, 0, 0));
+    struct json_object *const toAdd = rewritten;
     rewritten = NULL;
+    CHKiRet(msgAddJSON(pMsg, pData->outputProp->name, toAdd, 0, 0));
 
 finalize_it:
     if (input != NULL) json_object_put(input);
