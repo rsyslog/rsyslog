@@ -1130,9 +1130,6 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json
                 }
                 // Getting object as it will not keep the same lifetime as its origin object
                 tempJson = json_object_get(tempJson);
-                // original object is put: no need for it anymore
-                json_object_put(*json);
-                *json = NULL;
             }
 
             DBGPRINTF("got value of field '%s'\n", inst->fieldList.name[i]);
@@ -1145,6 +1142,8 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json
 
             tempJson = NULL;
         }
+        json_object_put(*json);
+        *json = NULL;
     } else {
         struct json_object *const toAdd = *json;
         *json = NULL;

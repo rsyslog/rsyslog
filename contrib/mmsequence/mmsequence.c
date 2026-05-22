@@ -350,8 +350,12 @@ BEGINdoAction_NoStrings
     } else {
         struct json_object *const toAdd = json;
         json = NULL;
-        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, toAdd, 0, 0)) {
+        rsRetVal local_ret = msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, toAdd, 0, 0);
+        if (RS_RET_OK != local_ret) {
             LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to pass out the value");
+            if (local_ret == RS_RET_NON_JSON_PROP) {
+                json_object_put(toAdd);
+            }
         }
     }
 ENDdoAction
