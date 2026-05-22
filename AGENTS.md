@@ -122,6 +122,58 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
   Top-level `make check TESTS=...` propagates into every subdirectory, and
   multiple test-owning subdirs make targeted selection fragile.
 
+
+## Python Style Validation
+
+- Python style is governed by `setup.cfg` with `pycodestyle` line length set
+  to 120 columns.
+- For Python edits, run `devtools/format-python.sh <changed-python-files>`
+  when `pycodestyle` is installed. Use `devtools/format-python.sh --fix
+  <changed-python-files>` to run `autopep8` first.
+- If `pycodestyle` or `autopep8` is not installed in a local agent environment,
+  suggest installing it (`sudo apt-get install -y pycodestyle
+  python3-autopep8` on Debian/Ubuntu) but do not block unrelated build or
+  test validation. Agents may use `devtools/format-python.sh --check-if-available ...` for
+  optional local checks.
+- The GitHub Actions `python_style.yml` workflow installs `pycodestyle` and
+  checks only changed Python files in pull requests. It does not run `autopep8`.
+  Do not introduce full-tree Python style gates unless the baseline is
+  intentionally refreshed in the same change.
+- Be cautious with legacy Python-2-style helper scripts: review any `autopep8`
+  changes that touch print statements, exception syntax, imports, or line
+  continuations.
+
+## Optional Local Linter Passes
+
+CodeFactor and CI provide centralized lint feedback, but agents SHOULD run
+useful local linters on the PR diff when the tools are already installed. These
+checks are advisory local validation: if a tool is missing, suggest installing
+it and continue with the normal build/test flow.
+
+Use a freshly fetched upstream base when computing changed files:
+
+```bash
+git fetch upstream main --prune
+```
+
+- For changed shell scripts, run `shellcheck` when installed:
+  `command -v shellcheck >/dev/null && git diff -z --name-only
+  --diff-filter=ACMR upstream/main...HEAD -- '*.sh' | xargs -0 -r
+  shellcheck -S warning`
+- For changed Dockerfiles, run `hadolint` when installed:
+  `command -v hadolint >/dev/null && git diff -z --name-only
+  --diff-filter=ACMR upstream/main...HEAD -- '*Dockerfile*' 'Dockerfile' |
+  xargs -0 -r hadolint`
+- For changed infrastructure/config files, run `trivy config` when installed.
+  Prefer changed paths or the smallest relevant directory over a full-repo scan.
+- For larger PRs, run `jscpd` on changed source/test files when installed to
+  catch accidental copy/paste duplication. Treat findings as review prompts,
+  not automatic blockers.
+
+Do not add `cppcheck` to the routine local PR checklist for this repository
+unless a maintainer explicitly asks for it; it has historically produced too
+much low-value noise on the rsyslog code base.
+
 ## GitHub Actions Validation
 
 - When editing files under `.github/workflows/`, validate locally with

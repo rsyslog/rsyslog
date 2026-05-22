@@ -225,7 +225,8 @@ def default_build_dir() -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check generated HTML for invalid local links.")
-    parser.add_argument("build_dir", nargs="?", default=str(default_build_dir()), help="Path to generated HTML root (default: doc/build)")
+    parser.add_argument("build_dir", nargs="?", default=str(default_build_dir()),
+                        help="Path to generated HTML root (default: doc/build)")
     parser.add_argument("--check-anchors", action="store_true", help="Also verify #fragment anchors")
     parser.add_argument(
         "--check-root-absolute",

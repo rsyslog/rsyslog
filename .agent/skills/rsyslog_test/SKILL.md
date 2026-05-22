@@ -108,7 +108,61 @@ make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)
 ```
 - **Pattern**: This uses the `MOCK-OK` mode in `tests/diag.sh` to exit tests with success immediately, skipping the overhead of actual execution while still verifying shell script invocability and distribution completeness.
 
-### 10. Container Validation Escalation
+
+### 10. Python Style Checks
+For Python-only changes, use the repository style configuration in `setup.cfg`.
+When `pycodestyle` is installed, run `devtools/format-python.sh
+<changed-python-files>` to check changed Python files. Use
+`devtools/format-python.sh --fix <changed-python-files>` only when you
+intentionally want `autopep8` rewrites before the style check. If the tools are
+missing in a local agent environment, suggest installing them (`sudo
+apt-get install -y pycodestyle python3-autopep8` on Debian/Ubuntu) but do
+not block unrelated build or test validation; `devtools/format-python.sh
+--check-if-available ...` implements that optional behavior.
+
+The pull-request workflow installs `pycodestyle` and intentionally checks only
+changed Python files to avoid reintroducing full-tree style noise. It does not
+run `autopep8`. Be cautious with legacy Python-2-style scripts: review
+formatting changes that touch print statements, exception syntax, imports, or
+line continuations before reporting the patch ready.
+
+### 11. Optional PR-Local Linters
+CodeFactor and CI provide central lint feedback, but local diff-scoped linter
+runs are useful before pushing because they catch simple review noise early.
+Run these only when the tools are installed; if a tool is missing, suggest the
+install command and continue with normal build/test validation.
+
+Fetch the base first when possible:
+
+```bash
+git fetch upstream main --prune
+```
+
+Recommended optional checks:
+
+```bash
+if command -v shellcheck >/dev/null 2>&1; then
+  git diff -z --name-only --diff-filter=ACMR upstream/main...HEAD -- \
+    '*.sh' | xargs -0 -r shellcheck -S warning
+fi
+
+if command -v hadolint >/dev/null 2>&1; then
+  git diff -z --name-only --diff-filter=ACMR upstream/main...HEAD -- \
+    '*Dockerfile*' 'Dockerfile' | xargs -0 -r hadolint
+fi
+```
+
+For changed infrastructure/config files, run `trivy config` on the changed
+paths or the smallest relevant directory when `trivy` is installed. For larger
+PRs, run `jscpd` on changed source/test files when installed to spot accidental
+copy/paste duplication. Treat duplication findings as review prompts, not
+automatic blockers.
+
+Do not include `cppcheck` in the routine local PR linter set unless a maintainer
+explicitly asks for it; prior test runs showed too much low-value noise on this
+code base.
+
+### 12. Container Validation Escalation
 If container support is available and the change is intended for a PR, prefer
 running `rsyslog_local_container_testing` before pushing. The local container
 flow is often faster than discovering CI-only failures after the PR is opened,

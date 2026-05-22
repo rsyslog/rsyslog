@@ -1,3 +1,4 @@
+#!/bin/sh
 apk --no-cache update
 apk add --no-cache \
 	autoconf \
@@ -25,6 +26,8 @@ apk add --no-cache \
 	pkgconf \
 	python3 \
 	py3-docutils \
+	py3-autopep8 \
+	py3-pycodestyle \
 	protobuf-c-compiler \
 	protobuf-c-dev \
 	snappy-dev \

@@ -1,11 +1,13 @@
 import json
 import sys
 import os
+
+
 def checkDefaultErrorFile():
     with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
-        indexCount =0
-        replyCount=0
+        indexCount = 0
+        replyCount = 0
         for item in json_data:
             if item == "request":
                 for reqItem in json_data[item]:
@@ -20,7 +22,7 @@ def checkDefaultErrorFile():
                         print(reqItem)
                         print("Unknown item found")
                         sys.exit(1)
-              
+
             elif item == "reply":
                 for replyItem in json_data[item]:
                     if replyItem == "items":
@@ -40,7 +42,7 @@ def checkDefaultErrorFile():
                 print("Unknown item found")
                 print("error")
                 sys.exit(4)
-    if replyCount == indexCount :
+    if replyCount == indexCount:
         return 0
     else:
         sys.exit(7)
@@ -50,18 +52,16 @@ def checkDefaultErrorFile():
 def checkErrorOnlyFile():
     with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
-        indexCount =0
-        replyCount=0
+        indexCount = 0
+        replyCount = 0
         for item in json_data:
             if item == "request":
                 print(json_data[item])
                 indexCount = str(json_data[item]).count('\"_index\":')
-              
-              
+
             elif item == "url":
                 print("url found")
-              
-          
+
             elif item == "reply":
                 print(json_data[item])
                 replyCount = str(json_data[item]).count('\"_index\":')
@@ -71,17 +71,18 @@ def checkErrorOnlyFile():
                 print("Unknown item found")
                 print("error")
                 sys.exit(4)
-    if replyCount == indexCount :
+    if replyCount == indexCount:
         return 0
     else:
         sys.exit(7)
     return 0
 
+
 def checkErrorInterleaved():
     with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
-        indexCount =0
-        replyCount=0
+        indexCount = 0
+        replyCount = 0
         for item in json_data:
             print(item)
             if item == "response":
@@ -101,16 +102,11 @@ def checkErrorInterleaved():
                             print(res)
                             print("Unknown item found")
                             sys.exit(9)
-                    if replyCount != indexCount :
+                    if replyCount != indexCount:
                         sys.exit(8)
-          
-              
-              
+
             elif item == "url":
                 print("url found")
-              
-          
-         
 
             else:
                 print(item)
@@ -119,8 +115,10 @@ def checkErrorInterleaved():
 
     return 0
 
+
 def checkInterleaved():
     return checkErrorInterleaved()
+
 
 if __name__ == "__main__":
     option = sys.argv[1]

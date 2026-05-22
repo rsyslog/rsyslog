@@ -13,11 +13,11 @@
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
- 
+
          http://www.apache.org/licenses/LICENSE-2.0
          -or-
          see COPYING.ASL20 in the source distribution
- 
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +32,7 @@ import socket
 import time
 
 # skeleton config parameters
-pollPeriod = 0.75 # the number of seconds between polling for new messages
+pollPeriod = 0.75  # the number of seconds between polling for new messages
 maxAtOnce = 5000  # max nbr of messages that are processed within one batch
 retryInterval = 5
 numberOfRetries = 10
@@ -42,7 +42,8 @@ errorFile = None
 solrServer = "localhost"
 solrPort = 8983
 solrUpdatePath = "/solr/gettingstarted/update"
-solrConnection = None # HTTP connection to solr
+solrConnection = None  # HTTP connection to solr
+
 
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
@@ -50,7 +51,7 @@ def onInit():
     """
     global solrConnection
     solrConnection = httplib.HTTPConnection(solrServer, solrPort)
-    
+
 
 def onReceive(msgs):
     """This is the entry point where actual work needs to be done. It receives
@@ -68,6 +69,7 @@ def onReceive(msgs):
         # write batch to error file and move on. Normally there's no point in retrying here
         errorFile.write("%s\n" % msgs)
 
+
 def onExit():
     """ Do everything that is needed to finish processing (e.g.
         close files, handles, disconnect from systems...). This is
@@ -77,6 +79,7 @@ def onExit():
     if solrConnection is not None:
         solrConnection.close()
         solrConnection = None
+
 
 try:
     with open("/var/log/rsyslog_solr_oopsies.log", "a") as errorFile:
@@ -93,7 +96,7 @@ try:
                             # append the JSON array used by Solr for updates
                             msgs += line
                             msgs += ","
-                        else: # an empty line means stdin has been closed
+                        else:  # an empty line means stdin has been closed
                             keepRunning = 0
                             break
                         msgsInBatch = msgsInBatch + 1
@@ -107,13 +110,15 @@ try:
                                 onReceive(msgs[:-1] + "]")
                                 break
                             except socket.error:
-                                # retry if connection failed; it will crash with flames on other exceptions, and you will lose data. But this is something you'd normally see when you first set things up
+                                # retry if connection failed; it will crash with flames on other exceptions,
+                                # and you will lose data. But this is something you'd normally see when
+                                # you first set things up.
                                 time.sleep(retryInterval)
                             retries += 1
                         # if we failed, we write the failed batch to the error file
                         if (retries == numberOfRetries):
                             errorFile.write("%s\n" % msgs)
-                        sys.stdout.flush() # very important, Python buffers far too much!
+                        sys.stdout.flush()  # very important, Python buffers far too much!
         finally:
             onExit()
 finally:

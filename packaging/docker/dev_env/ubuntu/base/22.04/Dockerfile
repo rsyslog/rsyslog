@@ -61,6 +61,8 @@ RUN 	apt-get update && \
 	pkg-config \
 	postgresql-client libpq-dev \
 	python3-docutils  \
+	python3-autopep8 \
+	pycodestyle \
 	python3-pip \
 	python3-pysnmp4 \
 	software-properties-common \

@@ -243,6 +243,8 @@ install_apt_packages() {
 		protobuf-c-compiler \
 		python3-dev \
 		python3-docutils \
+		python3-autopep8 \
+		pycodestyle \
 		python3-pip \
 		python3-pysnmp4 \
 		python3-sphinx \
