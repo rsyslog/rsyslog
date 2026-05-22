@@ -24,6 +24,37 @@ Focused host-side tests from `rsyslog_test` are still the right first step when
 debugging a specific behavior. After the patch is stable, run this skill before
 pushing if the change is intended for review.
 
+## Pre-PR Testbed Tiers
+
+Use these tiers as a session testbed before opening or updating PRs. The goal is
+to catch the failures that otherwise cost a full GitHub Actions turnaround and
+follow-up babysitting cycle, without cloning the entire CI matrix for every
+small patch.
+
+- **Tier 1: default PR-ready gate for code or testbench changes**. Run the
+  existing static-analyzer pass and Ubuntu 26.04 `devtools/run-ci.sh` check.
+  This is the normal local confidence gate for C, parser, module, runtime,
+  `tests/*.sh`, `diag.sh`, `Makefile.am`, `configure.ac`, and
+  `run_checks.yml` changes.
+- **Tier 2: compile portability gate for non-trivial C/header changes**. Add
+  the two build-only compile lanes from `run_checks.yml`:
+  `clang21-ndebug` and `gcc15-gnu23-debug`. Use this when a change touches
+  shared headers, compiler-sensitive code, generated C paths, configure/build
+  inputs, or anything that could behave differently under debug/no-debug or
+  GNU23 compilation.
+- **Tier 3: risk-triggered specialist lanes**. Add only the lanes that match the
+  touched area or risk profile:
+  `ubuntu_26_san` for memory, parser, string, JSON, property, and bounds work;
+  `ubuntu_26_tsan` for threading, queue, action lifecycle, or lock-order work;
+  `ubuntu_26_imtcp_no_epoll` for imtcp and network input changes;
+  `i386_CI` for integer width, pointer size, serialization, and ABI-sensitive
+  work; `ubuntu_22_distcheck` or `kafka_distcheck_CI` for dist, autotools,
+  packaging, or Kafka Makefile changes.
+
+Keep macOS, full distro matrix, package builds, and service-backed matrix jobs
+as CI-owned by default. Run them locally only when the change directly targets
+that area and the local host can reproduce the required environment.
+
 ## Preferred Order
 
 For the full final gate, run two container validations for broad local
@@ -79,6 +110,48 @@ devtools/devcontainer.sh --rm devtools/run-static-analyzer.sh 2>&1 | tee clang-a
 The analyzer job intentionally has its own concurrency knob. In `run_checks.yml`
 it uses `CI_MAKE_OPT='-j20'`; do not infer this from the broad compile matrix.
 
+## Optional Tier 2: run_checks.yml Compile Matrix
+
+Run these before PR for non-trivial C/header or portability-sensitive changes.
+They are build-only checks and normally finish faster than a failed PR cycle.
+Clean generated state before switching between configurations.
+
+For `clang21-ndebug`:
+
+```sh
+make distclean || true
+/usr/bin/time -p env \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+RSYSLOG_CONTAINER_UID='' \
+CI_CONFIGURE_CACHE='1' \
+CC='clang-21' \
+CFLAGS='-g' \
+RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no' \
+devtools/devcontainer.sh --rm devtools/run-configure.sh
+/usr/bin/time -p env \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+RSYSLOG_CONTAINER_UID='' \
+devtools/devcontainer.sh --rm make -j20
+```
+
+For `gcc15-gnu23-debug`:
+
+```sh
+make distclean || true
+/usr/bin/time -p env \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+RSYSLOG_CONTAINER_UID='' \
+CI_CONFIGURE_CACHE='1' \
+CC='gcc-15' \
+CFLAGS='-g -std=gnu23' \
+RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1' \
+devtools/devcontainer.sh --rm devtools/run-configure.sh
+/usr/bin/time -p env \
+RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
+RSYSLOG_CONTAINER_UID='' \
+devtools/devcontainer.sh --rm make -j20
+```
+
 ## Run 2: run_checks.yml Ubuntu 26.04 Check
 
 Use the same `devtools/run-ci.sh` path as CI. On this host, use `-j80`.
@@ -108,6 +181,31 @@ local container users rely on.
 For a faster build-only smoke check, set `CI_MAKE_CHECK_OPT='-j80 TESTS='`.
 This is useful for intermediate feedback, but it does not satisfy the full
 final validation gate.
+
+## Optional Tier 3: Risk-Triggered Specialist Lanes
+
+Run these only when the changed area justifies the extra local time. The command
+shape should stay close to `run_checks.yml`; record deviations in the final
+status.
+
+- **Memory-sensitive changes**: mirror `ubuntu_26_san` with `clang-21`,
+  AddressSanitizer, UndefinedBehaviorSanitizer, disabled Valgrind, and the same
+  configure extras. Use for parser, property, string, JSON, bounds, and
+  segfault-related work.
+- **Threading changes**: mirror `ubuntu_26_tsan` with `clang-21`,
+  ThreadSanitizer, `--security-opt seccomp=unconfined`, and the CI TSAN
+  suppressions. Use for queues, worker lifecycle, action shutdown, locks, and
+  shared state.
+- **imtcp select-mode changes**: mirror `ubuntu_26_imtcp_no_epoll` when touching
+  imtcp behavior that could differ between epoll and poll/select.
+- **32-bit or ABI-sensitive changes**: mirror `i386_CI` when changing integer
+  sizes, pointer casts, serialization, protocol framing, or disk/state formats.
+- **Distribution or build-system changes**: mirror `ubuntu_22_distcheck` for
+  general dist/autotools risk, and `kafka_distcheck_CI` for Kafka build/test
+  plumbing.
+
+Do not run these by habit. The expected value is highest when the lane is tied
+to the changed subsystem or to a specific failure mode seen during babysitting.
 
 ## Service Relevance
 
