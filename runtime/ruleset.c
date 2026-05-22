@@ -294,7 +294,7 @@ finalize_it:
 }
 
 static rsRetVal execIf(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti) {
-    sbool bRet;
+    int bRet;
     DEFiRet;
     bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg, pWti);
     DBGPRINTF("if condition result is %d\n", bRet);
