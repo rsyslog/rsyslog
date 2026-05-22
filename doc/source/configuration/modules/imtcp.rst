@@ -111,10 +111,11 @@ authentication, and evaluate whether compression side channels are acceptable
 for the data being sent. rsyslog does not provide TLS-native compression for
 ``imtcp``; TLS and rsyslog stream compression are separate layers.
 
-To limit decompression amplification, ``imtcp`` bounds decompressed output for
-each compressed TCP receive operation. The defaults allow a 1024:1 expansion
-ratio and 64 MiB of decompressed output per receive. If either limit is
-exceeded, ``imtcp`` logs the stream as invalid and closes the session. Set
+To limit decompression amplification, ``imtcp`` bounds the cumulative expansion
+ratio for the compressed stream and also limits decompressed output for each TCP
+receive operation. The defaults allow a 1024:1 stream expansion ratio and
+64 MiB of decompressed output per receive. If either limit is exceeded,
+``imtcp`` logs the stream as invalid and closes the session. Set
 ``compression.maxExpansionRatio`` or
 ``compression.maxDecompressedBytesPerReceive`` to ``0`` only for tightly
 controlled deployments that need to disable the corresponding guard.

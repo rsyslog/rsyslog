@@ -664,6 +664,7 @@ TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
 	imtcp-stream-always-zlib-flushoff.sh \
 	imtcp-stream-always-zlib-corrupt.sh \
 	imtcp-stream-always-zlib-truncated.sh \
+	imtcp-stream-always-zlib-fragmented-ratio.sh \
 	imtcp-stream-always-zlib-expansion-guard.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS = \
@@ -1853,7 +1854,8 @@ imtcp-stream-always-zlib-basic.log: sndrcv_udp_nonstdpt_v6.log
 imtcp-stream-always-zlib-flushoff.log: imtcp-stream-always-zlib-basic.log
 imtcp-stream-always-zlib-corrupt.log: imtcp-stream-always-zlib-flushoff.log
 imtcp-stream-always-zlib-truncated.log: imtcp-stream-always-zlib-corrupt.log
-imtcp-stream-always-zlib-expansion-guard.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zlib-fragmented-ratio.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zlib-expansion-guard.log: imtcp-stream-always-zlib-fragmented-ratio.log
 imtcp-stream-always-zstd-basic.log: imtcp-stream-always-zlib-expansion-guard.log
 imtcp-stream-always-zstd-flushoff.log: imtcp-stream-always-zstd-basic.log
 imtcp-stream-always-zstd-corrupt.log: imtcp-stream-always-zstd-flushoff.log

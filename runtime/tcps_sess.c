@@ -111,6 +111,8 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->tlsMismatchWarned = 0;
     pThis->compressionMode = TCPSRV_COMPRESS_NEVER;
     pThis->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    pThis->compressionTotalBytesIn = 0;
+    pThis->compressionTotalBytesOut = 0;
     pThis->zipInitDone = 0;
     pThis->compressedStreamEnded = 0;
     pThis->zstdDctx = NULL;
@@ -892,7 +894,6 @@ static void logCompressedStreamFailure(tcps_sess_t *const pThis, const char *con
 }
 
 typedef struct decompressReceiveGuard_s {
-    uint64_t compressedBytes;
     uint64_t decompressedBytes;
 } decompressReceiveGuard_t;
 
@@ -902,30 +903,39 @@ static rsRetVal checkDecompressedBytesLimit(tcps_sess_t *const pThis,
     DEFiRet;
 
     if (UINT64_MAX - guard->decompressedBytes < len) {
-        logCompressedStreamFailure(pThis, "received invalid compressed stream", "decompressed byte counter overflowed");
+        logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                   "per-receive decompressed byte counter overflowed");
         ABORT_FINALIZE(RS_RET_ZLIB_ERR);
     }
-    const uint64_t newTotal = guard->decompressedBytes + len;
+    const uint64_t newReceiveTotal = guard->decompressedBytes + len;
 
     if (pThis->compressionMaxDecompressedBytesPerReceive != 0 &&
-        newTotal > pThis->compressionMaxDecompressedBytesPerReceive) {
+        newReceiveTotal > pThis->compressionMaxDecompressedBytesPerReceive) {
         logCompressedStreamFailure(pThis, "received invalid compressed stream",
                                    "decompressed bytes exceeded configured per-receive limit");
         ABORT_FINALIZE(RS_RET_ZLIB_ERR);
     }
 
+    if (UINT64_MAX - pThis->compressionTotalBytesOut < len) {
+        logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                   "stream decompressed byte counter overflowed");
+        ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+    }
+    const uint64_t newStreamTotal = pThis->compressionTotalBytesOut + len;
+
     if (pThis->compressionMaxExpansionRatio != 0) {
-        const uint64_t maxByRatio = guard->compressedBytes > UINT64_MAX / pThis->compressionMaxExpansionRatio
+        const uint64_t maxByRatio = pThis->compressionTotalBytesIn > UINT64_MAX / pThis->compressionMaxExpansionRatio
                                         ? UINT64_MAX
-                                        : guard->compressedBytes * pThis->compressionMaxExpansionRatio;
-        if (newTotal > maxByRatio) {
+                                        : pThis->compressionTotalBytesIn * pThis->compressionMaxExpansionRatio;
+        if (newStreamTotal > maxByRatio) {
             logCompressedStreamFailure(pThis, "received invalid compressed stream",
                                        "decompressed bytes exceeded configured expansion ratio");
             ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
     }
 
-    guard->decompressedBytes = newTotal;
+    guard->decompressedBytes = newReceiveTotal;
+    pThis->compressionTotalBytesOut = newStreamTotal;
 
 finalize_it:
     RETiRet;
@@ -1104,7 +1114,13 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
     if (pThis->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
         CHKiRet(DataRcvdUncompressed(pThis, pData, iLen, 1));
     } else {
-        decompressReceiveGuard_t guard = {.compressedBytes = iLen, .decompressedBytes = 0};
+        if (UINT64_MAX - pThis->compressionTotalBytesIn < iLen) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream",
+                                       "stream compressed byte counter overflowed");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        pThis->compressionTotalBytesIn += iLen;
+        decompressReceiveGuard_t guard = {.decompressedBytes = 0};
         if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD) {
             CHKiRet(DataRcvdCompressedZstd(pThis, pData, iLen, &guard));
         } else {

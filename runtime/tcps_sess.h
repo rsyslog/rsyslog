@@ -78,6 +78,8 @@ struct tcps_sess_s {
         uint8_t compressionDriver;
         uint64_t compressionMaxExpansionRatio;
         uint64_t compressionMaxDecompressedBytesPerReceive;
+        uint64_t compressionTotalBytesIn;
+        uint64_t compressionTotalBytesOut;
         sbool zipInitDone;
         sbool compressedStreamEnded;
         sbool compressedStreamFailed;
