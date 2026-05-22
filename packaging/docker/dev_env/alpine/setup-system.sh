@@ -1,3 +1,4 @@
+#!/bin/sh
 apk --no-cache update
 apk add --no-cache \
 	autoconf \

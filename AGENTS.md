@@ -143,6 +143,37 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
   changes that touch print statements, exception syntax, imports, or line
   continuations.
 
+## Optional Local Linter Passes
+
+CodeFactor and CI provide centralized lint feedback, but agents SHOULD run
+useful local linters on the PR diff when the tools are already installed. These
+checks are advisory local validation: if a tool is missing, suggest installing
+it and continue with the normal build/test flow.
+
+Use a freshly fetched upstream base when computing changed files:
+
+```bash
+git fetch upstream main --prune
+```
+
+- For changed shell scripts, run `shellcheck` when installed:
+  `command -v shellcheck >/dev/null && git diff -z --name-only
+  --diff-filter=ACMR upstream/main...HEAD -- '*.sh' | xargs -0 -r
+  shellcheck -S warning`
+- For changed Dockerfiles, run `hadolint` when installed:
+  `command -v hadolint >/dev/null && git diff -z --name-only
+  --diff-filter=ACMR upstream/main...HEAD -- '*Dockerfile*' 'Dockerfile' |
+  xargs -0 -r hadolint`
+- For changed infrastructure/config files, run `trivy config` when installed.
+  Prefer changed paths or the smallest relevant directory over a full-repo scan.
+- For larger PRs, run `jscpd` on changed source/test files when installed to
+  catch accidental copy/paste duplication. Treat findings as review prompts,
+  not automatic blockers.
+
+Do not add `cppcheck` to the routine local PR checklist for this repository
+unless a maintainer explicitly asks for it; it has historically produced too
+much low-value noise on the rsyslog code base.
+
 ## GitHub Actions Validation
 
 - When editing files under `.github/workflows/`, validate locally with
