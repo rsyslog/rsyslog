@@ -66,17 +66,18 @@ if len(sys.argv) > 4:
 
 # Create output files
 print(f"Creating output files: {szOutputfile}, {szSnmpLogfile}", file=sys.stderr)
-outputFile = open(szOutputfile,"w+")
+outputFile = open(szOutputfile, "w+")
 try:
-    logFile = open(szSnmpLogfile,"a+")
-except:
+    logFile = open(szSnmpLogfile, "a+")
+except Exception:
     outputFile.close()
     raise
 print("Output files created successfully", file=sys.stderr)
 
 # Assemble MIB viewer
 mibBuilder = builder.MibBuilder()
-compiler.addMibCompiler(mibBuilder, sources=['file:///usr/share/snmp/mibs', 'file:///var/lib/snmp/mibs', '/usr/local/share/snmp/mibs/'])
+compiler.addMibCompiler(mibBuilder, sources=['file:///usr/share/snmp/mibs',
+                        'file:///var/lib/snmp/mibs', '/usr/local/share/snmp/mibs/'])
 mibViewController = view.MibViewController(mibBuilder)
 # Pre-load MIB modules we expect to work with
 try:
@@ -129,7 +130,7 @@ def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, var
     transportDomain, transportAddress = snmpEngine.msgAndPduDsp.get_transport_info(stateReference)
     if (bDebug):
         szDebug = str("Notification From: %s, Domain: %s, SNMP Engine: %s, Context: %s" %
-            (transportAddress, transportDomain, contextEngineId.prettyPrint(), contextName.prettyPrint()))
+                      (transportAddress, transportDomain, contextEngineId.prettyPrint(), contextName.prettyPrint()))
         print(szDebug)
         logFile.write(szDebug)
         logFile.flush()
@@ -137,7 +138,8 @@ def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, var
     # Create output String
     szOut = "Trap Source{}, Trap OID {}".format(transportAddress, transportDomain)
 
-    varBinds = [rfc1902.ObjectType(rfc1902.ObjectIdentity(x[0]), x[1]).resolveWithMib(mibViewController) for x in varBinds]
+    varBinds = [rfc1902.ObjectType(rfc1902.ObjectIdentity(
+        x[0]), x[1]).resolveWithMib(mibViewController) for x in varBinds]
 
     for name, val in varBinds:
         # Append to output String
@@ -145,7 +147,7 @@ def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, var
 
         if isinstance(val, OctetString):
             if (name.prettyPrint() != "SNMP-COMMUNITY-MIB::snmpTrapAddress.0"):
-                szOctets = val.asOctets()#.rstrip('\r').rstrip('\n')
+                szOctets = val.asOctets()  # .rstrip('\r').rstrip('\n')
                 szOut = szOut + ", Octets: {}".format(szOctets)
         if (bDebug):
             print('%s = %s' % (name.prettyPrint(), val.prettyPrint()))

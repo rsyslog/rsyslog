@@ -108,7 +108,25 @@ make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)
 ```
 - **Pattern**: This uses the `MOCK-OK` mode in `tests/diag.sh` to exit tests with success immediately, skipping the overhead of actual execution while still verifying shell script invocability and distribution completeness.
 
-### 10. Container Validation Escalation
+
+### 10. Python Style Checks
+For Python-only changes, use the repository style configuration in `setup.cfg`.
+When `pycodestyle` is installed, run `devtools/format-python.sh
+<changed-python-files>` to check changed Python files. Use
+`devtools/format-python.sh --fix <changed-python-files>` only when you
+intentionally want `autopep8` rewrites before the style check. If the tools are
+missing in a local agent environment, suggest installing them (`sudo
+apt-get install -y pycodestyle python3-autopep8` on Debian/Ubuntu) but do
+not block unrelated build or test validation; `devtools/format-python.sh
+--check-if-available ...` implements that optional behavior.
+
+The pull-request workflow installs `pycodestyle` and intentionally checks only
+changed Python files to avoid reintroducing full-tree style noise. It does not
+run `autopep8`. Be cautious with legacy Python-2-style scripts: review
+formatting changes that touch print statements, exception syntax, imports, or
+line continuations before reporting the patch ready.
+
+### 11. Container Validation Escalation
 If container support is available and the change is intended for a PR, prefer
 running `rsyslog_local_container_testing` before pushing. The local container
 flow is often faster than discovering CI-only failures after the PR is opened,

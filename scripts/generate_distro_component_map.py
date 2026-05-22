@@ -167,7 +167,10 @@ FEDORA_SOURCES = (
         release="rawhide",
         channel="everything",
         kind="fedora_filelists",
-        urls=("https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/repomd.xml",),
+        urls=(
+            "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/"
+            "x86_64/os/repodata/repomd.xml",
+        ),
     ),
 )
 
@@ -221,7 +224,7 @@ def fetch_url(url: str, cache_dir: Path, errors: list[dict[str, str]]) -> bytes 
         return cache_path.read_bytes()
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:  # nosec B310 - URL scheme is checked above.
+        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:  # nosec B310 - scheme checked above.
             data = response.read()
     except (urllib.error.URLError, TimeoutError) as exc:
         errors.append({"url": url, "error": str(exc)})
@@ -376,7 +379,7 @@ def ar_members(data: bytes) -> dict[str, bytes]:
     members: dict[str, bytes] = {}
     offset = 8
     while offset + 60 <= len(data):
-        header = data[offset : offset + 60]
+        header = data[offset: offset + 60]
         offset += 60
         name = header[0:16].decode("utf-8", errors="replace").strip().rstrip("/")
         size_raw = header[48:58].decode("ascii", errors="replace").strip()
@@ -384,7 +387,7 @@ def ar_members(data: bytes) -> dict[str, bytes]:
             size = int(size_raw)
         except ValueError:
             break
-        payload = data[offset : offset + size]
+        payload = data[offset: offset + size]
         offset += size + (size % 2)
         members[name] = payload
     return members
@@ -592,7 +595,8 @@ def generate(repo_root: Path, cache_dir: Path) -> dict[str, Any]:
         "caveats": [
             "Generated from public package metadata and not authoritative for any distribution.",
             "A shipped module file does not mean the module is loaded by default.",
-            "A not_shipped result applies only to searched public repositories, not custom builds or third-party packages.",
+            "A not_shipped result applies only to searched public repositories, "
+            "not custom builds or third-party packages.",
             "Confirm downstream-specific claims with the relevant distribution security team before publication.",
         ],
         "component_count": len(components),

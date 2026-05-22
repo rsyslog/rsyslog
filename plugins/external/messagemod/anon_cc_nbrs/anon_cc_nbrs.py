@@ -30,6 +30,7 @@ import json
 
 # App logic global variables
 
+
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
         open files, create handles, connect to systems...)
@@ -39,7 +40,7 @@ def onInit():
     patterns = {'(^|[^A-Za-z0-9.])(34|37)[0-9]{13}([^A-Za-z0-9]|$)': 'XXXX-Amex-XXXX',           # Amex
                 '(^|[^A-Za-z0-9.])(5020|5038|6759)[0-9]{12}([^A-Za-z0-9]|$)': 'XXXX-Maes-XXXX',  # Maes
                 '(^|[^A-Za-z0-9.])4([0-9]{12}|[0-9]{15})([^A-Za-z0-9]|$)': 'XXXX-Visa-XXXX'      # Visa
-               }
+                }
     rc = re.compile("("+")|(".join(patterns.keys())+")")
 
 
@@ -70,6 +71,7 @@ def onReceive(msg):
     else:
         print json.dumps({'msg': res_msg})
 
+
 def onExit():
     """ Do everything that is needed to finish processing (e.g.
         close files, handles, disconnect from systems...). This is
@@ -96,10 +98,10 @@ keepRunning = 1
 while keepRunning == 1:
     msg = sys.stdin.readline()
     if msg:
-        msg = msg[:-1] # remove LF
+        msg = msg[:-1]  # remove LF
         onReceive(msg)
-        sys.stdout.flush() # very important, Python buffers far too much!
-    else: # an empty line means stdin has been closed
+        sys.stdout.flush()  # very important, Python buffers far too much!
+    else:  # an empty line means stdin has been closed
         keepRunning = 0
 onExit()
-sys.stdout.flush() # very important, Python buffers far too much!
+sys.stdout.flush()  # very important, Python buffers far too much!

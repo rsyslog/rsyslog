@@ -16,6 +16,8 @@ RUN	apt-get install -y \
 	vim \
 	wget \
 	python3-docutils  \
+	python3-autopep8 \
+	pycodestyle \
 	python3-pip \
 	python3-venv \
 	python3-pysnmp4

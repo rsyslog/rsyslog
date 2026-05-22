@@ -98,6 +98,7 @@ err_template = '''{{
 
 is_busy = False
 
+
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -110,11 +111,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         status = 400
         if len(comps) >= 5 and comps[1] == 'api' and comps[2] == 'v1' and comps[3] == 'namespaces':
             resp = None
-            hsh = {'namespace_name':comps[4],'objectname':comps[4],'kind':'namespace'}
-            if len(comps) == 5: # namespace
+            hsh = {'namespace_name': comps[4], 'objectname': comps[4], 'kind': 'namespace'}
+            if len(comps) == 5:  # namespace
                 resp_template = ns_template
                 status = 200
-            elif len(comps) == 7 and comps[5] == 'pods': # pod
+            elif len(comps) == 7 and comps[5] == 'pods':  # pod
                 hsh['pod_name'] = comps[6]
                 hsh['kind'] = 'pods'
                 hsh['objectname'] = hsh['pod_name']
@@ -148,7 +149,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.log_error(resp)
         self.send_response(status)
         self.end_headers()
-        self.wfile.write(json.dumps(json.loads(resp), separators=(',',':')).encode())
+        self.wfile.write(json.dumps(json.loads(resp), separators=(',', ':')).encode())
+
 
 port = int(sys.argv[1])
 

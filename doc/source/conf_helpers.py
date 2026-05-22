@@ -27,6 +27,7 @@ def _run_git(args):
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
+
 def get_current_branch():
     """Return the current branch we are on or the branch that the detached head
     is pointed to"""

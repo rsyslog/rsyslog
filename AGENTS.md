@@ -122,6 +122,27 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
   Top-level `make check TESTS=...` propagates into every subdirectory, and
   multiple test-owning subdirs make targeted selection fragile.
 
+
+## Python Style Validation
+
+- Python style is governed by `setup.cfg` with `pycodestyle` line length set
+  to 120 columns.
+- For Python edits, run `devtools/format-python.sh <changed-python-files>`
+  when `pycodestyle` is installed. Use `devtools/format-python.sh --fix
+  <changed-python-files>` to run `autopep8` first.
+- If `pycodestyle` or `autopep8` is not installed in a local agent environment,
+  suggest installing it (`sudo apt-get install -y pycodestyle
+  python3-autopep8` on Debian/Ubuntu) but do not block unrelated build or
+  test validation. Agents may use `devtools/format-python.sh --check-if-available ...` for
+  optional local checks.
+- The GitHub Actions `python_style.yml` workflow installs `pycodestyle` and
+  checks only changed Python files in pull requests. It does not run `autopep8`.
+  Do not introduce full-tree Python style gates unless the baseline is
+  intentionally refreshed in the same change.
+- Be cautious with legacy Python-2-style helper scripts: review any `autopep8`
+  changes that touch print statements, exception syntax, imports, or line
+  continuations.
+
 ## GitHub Actions Validation
 
 - When editing files under `.github/workflows/`, validate locally with
