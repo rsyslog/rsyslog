@@ -1213,6 +1213,7 @@ TESTS_IMPSTATS_VALGRIND = \
 
 TESTS_IMPTCP = \
 	manyptcp.sh \
+	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
 	imptcp_large.sh \
@@ -2106,6 +2107,14 @@ pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
 liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
+
+if ENABLE_IMPTCP
+pkglib_LTLIBRARIES += liboverride_epoll_ctl.la
+liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
+liboverride_epoll_ctl_la_CFLAGS =
+liboverride_epoll_ctl_la_LDFLAGS = -avoid-version -shared
+liboverride_epoll_ctl_la_LIBADD = $(DL_LIBS)
+endif
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf

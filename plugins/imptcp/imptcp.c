@@ -1529,6 +1529,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
     int pmsg_size_factor;
+    int sessLinked = 0;
 
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
@@ -1575,6 +1576,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->next = pSrv->pSess;
     if (pSrv->pSess != NULL) pSrv->pSess->prev = pSess;
     pSrv->pSess = pSess;
+    sessLinked = 1;
     pthread_mutex_unlock(&pSrv->mutSessLst);
 
     CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
@@ -1587,7 +1589,7 @@ finalize_it:
                  "connect, like during a security or health check port probe.",
                  propGetSzStrOrDefault(peerName, "(hostname unknown)"), propGetSzStrOrDefault(peerIP, "(IP unknown)"));
         if (pSess != NULL) {
-            if (pSess->next != NULL) {
+            if (sessLinked) {
                 unlinkSess(pSess);
             }
             free(pSess->pMsg_save);
