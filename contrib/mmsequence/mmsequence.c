@@ -347,9 +347,12 @@ BEGINdoAction_NoStrings
     json = json_object_new_int(val);
     if (json == NULL) {
         LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to create JSON");
-    } else if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, json, 0, 0)) {
-        LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to pass out the value");
-        json_object_put(json);
+    } else {
+        struct json_object *const toAdd = json;
+        json = NULL;
+        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, toAdd, 0, 0)) {
+            LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to pass out the value");
+        }
     }
 ENDdoAction
 

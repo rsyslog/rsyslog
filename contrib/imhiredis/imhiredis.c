@@ -230,7 +230,7 @@ static struct json_object *_redisParseArrayReply(const redisReply *reply);
 static struct json_object *_redisParseDoubleReply(const redisReply *reply);
 #endif
 static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen);
-static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata);
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json, struct json_object **metadata);
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
 rsRetVal redisAuthentAsynchronous(redisAsyncContext *aconn, uchar *password);
 rsRetVal redisActualizeCurrentNode(instanceConf_t *inst);
@@ -1099,12 +1099,12 @@ finalize_it:
 }
 
 
-static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata) {
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json, struct json_object **metadata) {
     DEFiRet;
     smsg_t *pMsg;
     struct json_object *tempJson = NULL;
 
-    assert(json != NULL);
+    assert(json != NULL && *json != NULL);
 
     CHKiRet(msgConstruct(&pMsg));  // In case of allocation error -> needs to break
     MsgSetInputName(pMsg, pInputName);
@@ -1124,14 +1124,15 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json,
             /* case 2: dynamic field. We retrieve its value from the JSON logline and add it */
             else {
                 DBGPRINTF("field is dynamic, searching in root object...\n");
-                if (!json_object_object_get_ex(json, inst->fieldList.name[i] + 1, &tempJson)) {
+                if (!json_object_object_get_ex(*json, inst->fieldList.name[i] + 1, &tempJson)) {
                     DBGPRINTF("Did not find value %s in message\n", inst->fieldList.name[i]);
                     continue;
                 }
                 // Getting object as it will not keep the same lifetime as its origin object
                 tempJson = json_object_get(tempJson);
                 // original object is put: no need for it anymore
-                json_object_put(json);
+                json_object_put(*json);
+                *json = NULL;
             }
 
             DBGPRINTF("got value of field '%s'\n", inst->fieldList.name[i]);
@@ -1145,14 +1146,20 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json,
             tempJson = NULL;
         }
     } else {
-        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)"!", json, 0, 0)) {
+        struct json_object *const toAdd = *json;
+        *json = NULL;
+        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)"!", toAdd, 0, 0)) {
             LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add json info to message!");
             ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
         }
     }
-    if (metadata != NULL && RS_RET_OK != msgAddJSON(pMsg, (uchar *)".", metadata, 0, 0)) {
-        LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add metadata to message!");
-        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    if (metadata != NULL && *metadata != NULL) {
+        struct json_object *const toAddMeta = *metadata;
+        *metadata = NULL;
+        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)".", toAddMeta, 0, 0)) {
+            LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add metadata to message!");
+            ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+        }
     }
     if (RS_RET_OK != submitMsg2(pMsg)) {
         LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to submit message to main queue!");
@@ -1863,7 +1870,7 @@ static rsRetVal enqueueRedisStreamReply(instanceConf_t *const inst, redisReply *
     // no need to free/destroy/put redis object
     json_object_object_add(metadata, "redis", redis);
 
-    CHKiRet(enqMsgJson(inst, json, metadata));
+    CHKiRet(enqMsgJson(inst, &json, &metadata));
     // enqueued message successfully, json and metadata objects are now owned by enqueued message
     // no need to free/destroy/put json objects
     json = NULL;

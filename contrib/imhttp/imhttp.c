@@ -450,7 +450,9 @@ static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, st
         }
         json_object_object_add(json, (const char *const)connWrkr->pScratchBuf, jval);
     }
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", json, 0, 0));
+    struct json_object *const toAdd = json;
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", toAdd, 0, 0));
 
 finalize_it:
     if (iRet != RS_RET_OK && json) {
@@ -488,7 +490,9 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
                     json_object_object_add(json, (const char *)key, jval);
                 }
             }
-            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", json, 0, 0));
+            struct json_object *const toAdd = json;
+            json = NULL;
+            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", toAdd, 0, 0));
         }
     }
 finalize_it:
