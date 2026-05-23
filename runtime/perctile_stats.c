@@ -588,7 +588,14 @@ rsRetVal perctile_processCnf(struct cnfobj *o) {
                     CHKmalloc(perctiles = calloc(perctilesCount, sizeof(uint8_t)));
                     for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                         char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                        perctiles[j] = atoi(cstr);
+                        int val = atoi(cstr);
+                        if (val < 0 || val > 100) {
+                            LogError(0, RS_RET_PARAM_ERROR,
+                                     "perctile: percentile value %d is invalid - must be between 0 and 100", val);
+                            free(cstr);
+                            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+                        }
+                        perctiles[j] = (uint8_t)val;
                         free(cstr);
                     }
                 }

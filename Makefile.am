@@ -51,10 +51,6 @@ if ENABLE_RELP
 SUBDIRS += plugins/omrelp plugins/imrelp
 endif
 
-if ENABLE_OMFILE_HARDENED
-SUBDIRS += contrib/omfile-hardened
-endif
-
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif

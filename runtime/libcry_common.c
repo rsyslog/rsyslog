@@ -186,7 +186,17 @@ int cryGetKeyFromProg(char *cmd, char **key, unsigned *keylen) {
         goto done;
     }
     if ((r = readProgLine(fd, rcvBuf)) != 0) goto done;
-    *keylen = atoi(rcvBuf);
+    int val = atoi(rcvBuf);
+    if (val <= 0 || val > 64 * 1024) {
+        if (val <= 0) {
+            errno = EINVAL;
+        } else {
+            errno = EMSGSIZE;
+        }
+        r = 3;
+        goto done;
+    }
+    *keylen = (unsigned)val;
     if ((*key = malloc(*keylen)) == NULL) {
         r = -1;
         goto done;
