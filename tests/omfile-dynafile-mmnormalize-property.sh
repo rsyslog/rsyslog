@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Regression reproducer for issue #3488: mmnormalize populates a JSON property
 # used by an omfile dynafile template. The old crash happened while resolving
 # that property during action processing. The oracle is clean shutdown and the
@@ -30,7 +30,7 @@ ruleset(name="writeData"
 '
 
 startup
-tcpflood -m1 -O -M "'<13>192.0.2.15 - - \"GET / HTTP/1.1\" 200 17 \"-\" \"-\" \"-\"'"
+tcpflood -m1 -O -M "\"<13>192.0.2.15 - - \\\"GET / HTTP/1.1\\\" 200 17 \\\"-\\\" \\\"-\\\" \\\"-\\\"\""
 shutdown_when_empty
 wait_shutdown
 
