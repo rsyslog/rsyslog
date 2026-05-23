@@ -34,7 +34,8 @@ Follow these steps for a typical development task:
 2.  **Validate**: Use the `rsyslog_test` skill to run relevant shell tests.
 3.  **Container Validation**: Use the `rsyslog_local_container_testing` skill
     when Docker or Podman container tooling is available.
-4.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
+4.  **Local AI Review**: Run local Cubic review when `cubic` is available.
+5.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
 
 Tip: You do NOT need to re-run your build, test, or container validation cycle
 after formatting if you already validated the code immediately before.
@@ -80,6 +81,18 @@ as the final validation gate when container tooling is available.
 - If Docker or Podman is available and usable, run the
   [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md)
   skill's full local validation before reporting the task complete.
+- Full local container validation means the skill's ordered full sequence,
+  including the static analyzer and Ubuntu 26.04 `run-ci.sh` check run. Focused
+  container tests are useful targeted evidence, but they are not the full gate
+  unless the skill explicitly allows the reduced lane for the touched area.
+- Use the skill's configured CI-equivalent dev image, including Docker Hub dev
+  images when appropriate. Use a locally built image only when validating that
+  local image or the runtime container produced by the task.
+- Run local Cubic validation when `cubic` is installed and reachable. Hosted
+  Cubic or Gemini PR comments are additional review feedback, not substitutes
+  for local Cubic or local container validation.
+- Relax expensive or service-backed lanes only for the narrow touched-area
+  cases documented in the container-testing skill, and record the rationale.
 - If Docker or Podman is not installed, not running, lacks required
   permissions, or the required image cannot be obtained, state that exact
   blocker in the final response.
@@ -89,6 +102,10 @@ as the final validation gate when container tooling is available.
 - Do not describe implementation work as fully validated or complete unless
   full local container validation passed, or the user explicitly accepted the
   reduced validation scope after the blocker was reported.
+- Session ledgers and final summaries for PR work must distinguish fully
+  container-validated work from targeted container-tested-only work. Include the
+  local Cubic status, hosted AI review status, image tag and ID, exact commands,
+  lane relaxations, and pass/fail results.
 
 ## Context Discovery (Subtree Guides)
 
