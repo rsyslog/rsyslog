@@ -795,11 +795,8 @@ finalize_it:
 
 static rsRetVal skipOldMessages(struct journalContext_s *journalContext);
 
-static rsRetVal handleRotation(struct journalContext_s *journalContext, char *stateFile) {
+static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
-
-    LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
-    STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
 
     /* outside error scenarios we should always have a cursor available at this point */
     if (!journalContext->cursor) {
@@ -820,6 +817,17 @@ static rsRetVal handleRotation(struct journalContext_s *journalContext, char *st
         iRet = RS_RET_ERR;
     }
     journalContext->atHead = 0;
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal handleRotation(struct journalContext_s *journalContext, char *stateFile) {
+    DEFiRet;
+
+    LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
+    STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
+    CHKiRet(restoreJournalPosition(journalContext, stateFile));
 
 finalize_it:
     RETiRet;
@@ -1001,7 +1009,7 @@ static rsRetVal tryRecover(struct journalContext_s *journalContext, char *stateF
     STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
     srSleep(0, 200000);  // do not hammer machine with too-frequent retries
     CHKiRet(reopenJournal(journalContext));
-    CHKiRet(handleRotation(journalContext, stateFile));
+    CHKiRet(restoreJournalPosition(journalContext, stateFile));
 
 finalize_it:
     RETiRet;
