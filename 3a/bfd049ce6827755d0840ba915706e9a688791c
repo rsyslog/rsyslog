@@ -1,0 +1,57 @@
+packaging/docker/dev_env/ubuntu/base/22.04/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 68
+packaging/docker/dev_env/debian/base/10/Dockerfile
+  s_21a8eefcb5d3df::t_9cc0467878701c 42
+  s_21a8eefcb5d3df::t_d89c87d58674a2 39,53
+  s_21a8eefcb5d3df::t_c13997ab4594c5 48
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 54,56,58
+  s_21a8eefcb5d3df::t_b19c1260581ee8 5-10,109
+packaging/docker/dev_env/debian/base/11/Dockerfile
+  s_21a8eefcb5d3df::t_b19c1260581ee8 102
+  s_21a8eefcb5d3df::t_d89c87d58674a2 33,48
+  s_21a8eefcb5d3df::t_9cc0467878701c 36
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 53
+  s_21a8eefcb5d3df::t_c13997ab4594c5 42
+packaging/docker/dev_env/ubuntu/base/20.04/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 65
+packaging/docker/dev_env/debian/base/13/Dockerfile
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 63
+packaging/docker/dev_env/fedora/base/43/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 28,75,80
+packaging/docker/dev_env/ubuntu/base/26.04/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 77
+packaging/docker/dev_env/centos/base/7/Dockerfile
+  s_21a8eefcb5d3df::t_acfdf207471d22 82,240
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 73,79-80
+packaging/docker/dev_env/ubuntu/base/24.04/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 76
+packaging/docker/dev_env/centos/base/8/Dockerfile
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 60,78
+packaging/docker/dev_env/ubuntu/base/26.04/build.sh
+  s_21a8eefcb5d3df::t_e8ccf01f02f88a 6-9,11
+packaging/docker/dev_env/fedora/base/42/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 26,73,78
+packaging/docker/dev_env/ubuntu/base/24.04/build.sh
+  s_21a8eefcb5d3df::t_e8ccf01f02f88a 6-11,18,20,24
+packaging/docker/dev_env/debian/base/sid/Dockerfile
+  s_21a8eefcb5d3df::t_99a5a509f8f61d 59
+packaging/docker/dev_env/ubuntu/base/18.04/Dockerfile
+  s_21a8eefcb5d3df::t_7e965710f33db5 59,61,65
+  s_21a8eefcb5d3df::t_f6ca2dc573faec 185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "3abfd049ce6827755d0840ba915706e9a688791c",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
