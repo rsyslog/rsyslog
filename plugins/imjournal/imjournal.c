@@ -994,13 +994,14 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal tryRecover(struct journalContext_s *journalContext) {
+static rsRetVal tryRecover(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
 
     LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
     STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
     srSleep(0, 200000);  // do not hammer machine with too-frequent retries
     CHKiRet(reopenJournal(journalContext));
+    CHKiRet(handleRotation(journalContext, stateFile));
 
 finalize_it:
     RETiRet;
@@ -1093,7 +1094,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
                     continue;
                 } else if (test < 0) {
                     LogError(-test, RS_RET_ERR, "imjournal: sd_journal_test_cursor() failed");
-                    CHKiRet(tryRecover(etry->journalContext));
+                    CHKiRet(tryRecover(etry->journalContext, stateFile));
                     continue;
                 }
             }
@@ -1110,7 +1111,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
             }
 
             if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
-                CHKiRet(tryRecover(etry->journalContext));
+                CHKiRet(tryRecover(etry->journalContext, stateFile));
                 continue;
             }
 
@@ -1126,7 +1127,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
         if (r < 0) {
             LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-            CHKiRet(tryRecover(etry->journalContext));
+            CHKiRet(tryRecover(etry->journalContext, stateFile));
             continue;
         }
 
@@ -1139,7 +1140,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
         /* No new messages, wait for activity. */
         if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK) {
-            CHKiRet(tryRecover(etry->journalContext));
+            CHKiRet(tryRecover(etry->journalContext, stateFile));
         }
     }
 finalize_it:
