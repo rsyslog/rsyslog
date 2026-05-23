@@ -1,3 +1,4 @@
+#!/bin/sh
 UBUNTU_VERSION=24.04
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_ubuntu:$UBUNTU_VERSION . --progress=plain

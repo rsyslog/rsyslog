@@ -1,3 +1,4 @@
+#!/bin/sh
 OPEN_EULER_VERSION=24.03-lts
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_openeuler:$OPEN_EULER_VERSION . --progress=plain

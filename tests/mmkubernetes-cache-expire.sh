@@ -43,7 +43,7 @@ BGPROCESS=$!
 wait_process_startup ${RSYSLOG_DYNNAME}${testsrv} ${RSYSLOG_DYNNAME}${testsrv}.started
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
 
-if [ "x${USE_VALGRIND:-NO}" == "xYES" ] ; then
+if [ "${USE_VALGRIND:-NO}" == "YES" ] ; then
 	export EXTRA_VALGRIND_SUPPRESSIONS="--suppressions=$srcdir/mmkubernetes.supp"
 	startup_vg
 else
@@ -84,7 +84,7 @@ EOF
 wait_queueempty
 
 shutdown_when_empty
-if [ "x${USE_VALGRIND:-NO}" == "xYES" ] ; then
+if [ "${USE_VALGRIND:-NO}" == "YES" ] ; then
 	wait_shutdown_vg
 	check_exit_vg
 else

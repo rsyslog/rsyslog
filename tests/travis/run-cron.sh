@@ -12,26 +12,27 @@ fi
 
 # download coverity tool
 mkdir coverity
-cd coverity
-wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz
-if [ $? -ne 0 ]; then
-	echo Download Coverity analysis tool failed!
-	exit 1
-fi
-tar xzf cov*.tar.gz
-rm -f cov*.tar.gz
-export PATH="coverity/$(ls -d cov*)/bin:$PATH"
-cd ..
+(
+	cd coverity
+	if ! wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz; then
+		echo Download Coverity analysis tool failed!
+		exit 1
+	fi
+	tar xzf cov*.tar.gz
+	rm -f cov*.tar.gz
+) || exit 1
+export PATH="coverity/$(cd coverity && ls -d cov*)/bin:$PATH"
 # Coverity scan tool installed
 
 # we need Guardtime libksi here, otherwise we cannot check the KSI component
 git clone https://github.com/guardtime/libksi.git
-cd libksi
-autoreconf -fvi
-./configure --prefix=/usr
-make -j
-sudo make install
-cd ..
+(
+	cd libksi
+	autoreconf -fvi
+	./configure --prefix=/usr
+	make -j
+	sudo make install
+)
 
 # prep rsyslog for submission
 autoreconf -vfi

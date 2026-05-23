@@ -26,7 +26,7 @@ if [ "$DISTRIB_CODENAME" == "xenial" ]; then
 fi
 sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils wget libkrb5-dev libnet1-dev
 
-if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
+if [ "$GROK" == "YES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev \
 	liblognorm-dev \
 	libcurl4-openssl-dev
@@ -35,7 +35,7 @@ sudo apt-get install -qq python-docutils
 sudo apt-get install -qq libmaxminddb-dev libmongoc-dev libbson-dev
 
 # As travis has no xenial images, we always need to install librdkafka from source
-if [ "x$KAFKA" == "xYES" ]; then 
+if [ "$KAFKA" == "YES" ]; then
 	sudo apt-get install -qq liblz4-dev 
 	# For kafka testbench, "kcat" package is needed!
 	git clone https://github.com/edenhill/librdkafka > /dev/null
@@ -43,13 +43,13 @@ if [ "x$KAFKA" == "xYES" ]; then
 	rm -rf librdkafka # get rid of source, e.g. for line length check
 fi
 
-if [ "x$IMHTTP" == "xYES" ]; then
+if [ "$IMHTTP" == "YES" ]; then
 	git clone https://github.com/civetweb/civetweb.git > /dev/null
 	(unset CFLAGS; cd civetweb; make build ; sudo make install-headers PREFIX=/usr ; sudo make install-slib PREFIX=/usr )
 	rm -rf civetweb # get rid of source, e.g. for line length check
 fi
 
-if [ "x$GCC" == "xNEWEST" ]; then
+if [ "$GCC" == "NEWEST" ]; then
 	# currently the best repo we can find...
 	sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
 	sudo apt-get update -y -qq
@@ -59,8 +59,8 @@ fi
 
 sudo apt-get install -qq libhiredis-dev # somehow we now need this
 
-if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
-if [ "x$IMDOKER" == "xYES" ]; then
+if [ "$ESTEST" == "YES" ]; then sudo apt-get install -qq elasticsearch ; fi
+if [ "$IMDOKER" == "YES" ]; then
 	export IMDOCKER_OPT="--enable-imdocker --enable-imdocker-tests";
 fi
 
@@ -68,8 +68,8 @@ if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench";
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 
 
-if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-imkafka --enable-kafka-tests=no" ; fi
-if [ "x$DEBUGLESS" == "xYES" ]; then export ENABLE_DEBUGLESS="--enable-debugless" ; fi
+if [ "$KAFKA" == "YES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-imkafka --enable-kafka-tests=no" ; fi
+if [ "$DEBUGLESS" == "YES" ]; then export ENABLE_DEBUGLESS="--enable-debugless" ; fi
 
 #
 # uncomment the following if AND ONLY If you need yet-unreleased packages

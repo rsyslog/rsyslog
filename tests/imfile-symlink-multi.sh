@@ -44,7 +44,7 @@ mkdir $RSYSLOG_DYNNAME.targets
 startup
 
 cp $imfilebefore $RSYSLOG_DYNNAME.targets/target.log
-for i in `seq 2 $IMFILEINPUTFILES`;
+for i in $(seq 2 $IMFILEINPUTFILES);
 do
 	ln -s $RSYSLOG_DYNNAME.targets/target.log $RSYSLOG_DYNNAME.input.$i.log
 	# Let imfile observe each newly-created symlink before adding the next.
@@ -60,7 +60,7 @@ wait_shutdown        # we need to wait until rsyslogd is finished!
 sort ${RSYSLOG_OUT_LOG} > ${RSYSLOG_OUT_LOG}.sorted
 
 echo HEADER msgnum:00000000:, filename: ./$RSYSLOG_DYNNAME.input-symlink.log, fileoffset: 0 > $RSYSLOG_DYNNAME.expected
-for i in `seq 2 $IMFILEINPUTFILES` ; do
+for i in $(seq 2 $IMFILEINPUTFILES) ; do
 	echo HEADER msgnum:00000000:, filename: ./$RSYSLOG_DYNNAME.input.${i}.log, fileoffset: 0 >> $RSYSLOG_DYNNAME.expected
 done
 sort < $RSYSLOG_DYNNAME.expected | cmp - ${RSYSLOG_OUT_LOG}.sorted

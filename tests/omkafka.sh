@@ -92,7 +92,7 @@ while [ $timecounter -lt $timeoutend ]; do
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
 		break
 	else
-		if [ "x$timecounter" == "x$timeoutend" ]; then
+			if [ "$timecounter" == "$timeoutend" ]; then
 			echo wait-kafka-lines failed, expected $TESTMESSAGESFULL got $count
 			shutdown_when_empty
 			wait_shutdown

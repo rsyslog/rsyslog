@@ -1,3 +1,4 @@
+#!/bin/sh
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q -y
 apt-get install -y software-properties-common python-software-properties

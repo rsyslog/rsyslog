@@ -1,17 +1,17 @@
 #!/bin/ash
-source internal/set-defaults
-source /config/container_config
+. internal/set-defaults
+. /config/container_config
 
 if [ "$CONTAINER_SILENT" != "on" ]; then
-	echo `cat CONTAINER.name` version `cat CONTAINER.release` - `cat CONTAINER.homepage`
-	echo `cat CONTAINER.copyright`
+	printf '%s version %s - %s\n' "$(cat CONTAINER.name)" "$(cat CONTAINER.release)" "$(cat CONTAINER.homepage)"
+	cat CONTAINER.copyright
 	echo
 	echo "WARNING: this is an experimental container - do not use in production"
 	echo
 fi
 
 if [ "$USE_VALGRIND" = "on" ]; then
-	source internal/install-valgrind
+	. internal/install-valgrind
 	export VALGRIND=valgrind
 fi
 
@@ -40,10 +40,10 @@ echo "Using rsyslog configuration file: $RSYSLOG_CONF"
 
 
 if [ -f tools/$1 ]; then
-	source tools/$1
+	. tools/$1
 else
 	echo "ERROR: command not known: $*"
 	echo
-	source tools/help
+	. tools/help
 	exit 1
 fi

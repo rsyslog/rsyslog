@@ -11,7 +11,7 @@ read line
 while [[ -n "$line" ]]; do
     message=${line//$'\n'}
 
-    if [[ $((RANDOM % 100)) < $1 ]]; then
+    if [ "$((RANDOM % 100))" -lt "$1" ]; then
         status="Error: could not process log message"
         retried=true
     else

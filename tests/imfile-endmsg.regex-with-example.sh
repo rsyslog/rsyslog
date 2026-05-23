@@ -79,9 +79,9 @@ fi
 echo 'date stdout P msgnum:0' > $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:0"}' > $RSYSLOG_DYNNAME.json.input
 echo 'date stdout F msgnum:1' >> $RSYSLOG_DYNNAME.crio.input
-echo '{"time":"date", "stream":"stdout", "log":"msgnum:1\n"}' >> $RSYSLOG_DYNNAME.json.input
+printf '%s\n' '{"time":"date", "stream":"stdout", "log":"msgnum:1\n"}' >> $RSYSLOG_DYNNAME.json.input
 echo 'date stdout F msgnum:2' >> $RSYSLOG_DYNNAME.crio.input
-echo '{"time":"date", "stream":"stdout", "log":"msgnum:2\n"}' >> $RSYSLOG_DYNNAME.json.input
+printf '%s\n' '{"time":"date", "stream":"stdout", "log":"msgnum:2\n"}' >> $RSYSLOG_DYNNAME.json.input
 
 # sleep a little to give rsyslog a chance to begin processing
 if [ -n "${USE_GDB:-}" ] ; then
@@ -105,7 +105,7 @@ else
 fi
 
 echo 'date stdout F msgnum:6' >> $RSYSLOG_DYNNAME.crio.input
-echo '{"time":"date", "stream":"stdout", "log":"msgnum:6\n"}' >> $RSYSLOG_DYNNAME.json.input
+printf '%s\n' '{"time":"date", "stream":"stdout", "log":"msgnum:6\n"}' >> $RSYSLOG_DYNNAME.json.input
 echo 'date stdout P msgnum:7' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:7"}' >> $RSYSLOG_DYNNAME.json.input
 

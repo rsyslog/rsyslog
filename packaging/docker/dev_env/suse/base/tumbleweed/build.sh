@@ -1,3 +1,4 @@
+#!/bin/sh
 set -e
 docker build $1 --build-arg BUILD_TIME="$(date)" -t rsyslog/rsyslog_dev_base_suse:tumbleweed .
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:"
