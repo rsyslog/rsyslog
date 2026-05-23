@@ -295,10 +295,12 @@ static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct 
 
     DBGPRINTF("mmjsonparse: processing already parsed JSON object\n");
 
-    /* JSON is already parsed and validated, just add it to the message */
-    CHKiRet(msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0));
-    /* Note: msgAddJSON takes ownership of the json object on success,
-     * but we need to clean up on failure */
+    /* JSON is already parsed and validated; msgAddJSON consumes it once the
+     * configured container has passed instance validation.
+     */
+    iRet = msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0);
+    json = NULL;
+    CHKiRet(iRet);
 
 finalize_it:
     if (iRet != RS_RET_OK && json != NULL) {
