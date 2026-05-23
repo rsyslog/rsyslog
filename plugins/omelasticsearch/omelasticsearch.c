@@ -975,6 +975,44 @@ done:
 }
 
 
+static int ATTR_NONNULL(1) getTemplateCount(const instanceData *const pData) {
+    int iNumTpls = 1;
+    if (pData->dynSrchIdx) ++iNumTpls;
+    if (pData->dynSrchType) ++iNumTpls;
+    if (pData->dynParent) ++iNumTpls;
+    if (pData->dynBulkId) ++iNumTpls;
+    if (pData->dynPipelineName) ++iNumTpls;
+
+    return iNumTpls;
+}
+
+
+static rsRetVal ATTR_NONNULL(1) validateActionStrings(const instanceData *const pData, uchar **const tpls) {
+    DEFiRet;
+
+    if (tpls == NULL) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "omelasticsearch: action template strings are missing - "
+                 "cannot submit message");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+
+    const int iNumTpls = getTemplateCount(pData);
+    for (int i = 0; i < iNumTpls; ++i) {
+        if (tpls[i] == NULL) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omelasticsearch: rendered action template string %d is "
+                     "NULL - cannot submit message",
+                     i);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+
 static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls) {
     uchar *searchIndex = NULL;
     uchar *searchType = NULL;
@@ -2031,6 +2069,8 @@ BEGINdoAction
     CODESTARTdoAction;
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
+    CHKiRet(validateActionStrings(pWrkrData->pData, ppString));
+
     if (pWrkrData->pData->bulkmode) {
         const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
@@ -2433,12 +2473,7 @@ BEGINnewActInst
     if (pData->uid != NULL && pData->apiKey == NULL)
         CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
-    iNumTpls = 1;
-    if (pData->dynSrchIdx) ++iNumTpls;
-    if (pData->dynSrchType) ++iNumTpls;
-    if (pData->dynParent) ++iNumTpls;
-    if (pData->dynBulkId) ++iNumTpls;
-    if (pData->dynPipelineName) ++iNumTpls;
+    iNumTpls = getTemplateCount(pData);
     DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
     CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
 
