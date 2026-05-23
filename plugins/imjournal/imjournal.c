@@ -797,6 +797,7 @@ static rsRetVal skipOldMessages(struct journalContext_s *journalContext);
 
 static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
+    int r;
 
     /* outside error scenarios we should always have a cursor available at this point */
     if (!journalContext->cursor) {
@@ -809,14 +810,23 @@ static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, 
         FINALIZE;
     }
 
-    if (sd_journal_seek_cursor(journalContext->j, journalContext->cursor) != 0) {
-        LogError(0, RS_RET_ERR,
+    if ((r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor)) != 0) {
+        LogError(-r, RS_RET_ERR,
                  "imjournal: "
                  "couldn't seek to cursor `%s'\n",
                  journalContext->cursor);
-        iRet = RS_RET_ERR;
+        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is unavailable, seeking to the head of journal\n");
+        if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+            LogError(-r, RS_RET_ERR,
+                     "imjournal: "
+                     "sd_journal_seek_head() failed while recovering cursor position\n");
+            iRet = RS_RET_ERR;
+            FINALIZE;
+        }
+        journalContext->atHead = 1;
+    } else {
+        journalContext->atHead = 0;
     }
-    journalContext->atHead = 0;
 
 finalize_it:
     RETiRet;
@@ -1005,11 +1015,21 @@ finalize_it:
 static rsRetVal tryRecover(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
 
-    LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
-    STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
-    srSleep(0, 200000);  // do not hammer machine with too-frequent retries
-    CHKiRet(reopenJournal(journalContext));
-    CHKiRet(restoreJournalPosition(journalContext, stateFile));
+    do {
+        LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
+        STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
+        srSleep(0, 200000);  // do not hammer machine with too-frequent retries
+        iRet = reopenJournal(journalContext);
+        if (iRet == RS_RET_OK) {
+            iRet = restoreJournalPosition(journalContext, stateFile);
+        }
+        if (iRet == RS_RET_OK) {
+            FINALIZE;
+        }
+        LogError(0, iRet, "imjournal: journal recovery attempt failed, will retry");
+    } while (glbl.GetGlobalInputTermState() == 0);
+
+    LogError(0, iRet, "imjournal: journal recovery stopped before success because shutdown was requested");
 
 finalize_it:
     RETiRet;
