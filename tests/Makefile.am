@@ -139,6 +139,7 @@ TESTS_DEFAULT = \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
+	omfwd-missing-target.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
