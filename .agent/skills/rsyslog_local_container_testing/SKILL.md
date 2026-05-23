@@ -65,7 +65,20 @@ confidence. Mirror these
 2. The Ubuntu 26.04 `devtools/run-ci.sh` check run, only after the analyzer run
    is clean or its findings are understood.
 
+This ordered pair is what "full local container validation" means in agent
+status reports. A focused `devtools/run-ci.sh TEST=...` or build-only
+`TESTS=""` container command is useful supplemental evidence, but it is only a
+targeted container test unless this skill explicitly calls that reduced lane
+acceptable for the touched area. Hosted CI, including hosted Cubic/Gemini
+comments, does not replace this local container gate.
+
 Keep runtimes and summarize failures separately for each run.
+
+Use the skill's configured dev image or another explicit CI-equivalent image.
+The Docker Hub `rsyslog/rsyslog_dev_base_ubuntu:26.04` image is acceptable for
+normal local dev-container validation. When the task specifically validates a
+locally built runtime or dev image, use that locally built image/tag for the
+container-under-test and record its image ID.
 
 ## Clean Tree Rule
 
@@ -182,6 +195,10 @@ For a faster build-only smoke check, set `CI_MAKE_CHECK_OPT='-j80 TESTS='`.
 This is useful for intermediate feedback, but it does not satisfy the full
 final validation gate.
 
+Do not replace this run with a focused `TEST=...` lane just because the PR has a
+single new test. The full run validates the CI configure path, generated state,
+service relevance filters, and broad testbench integration.
+
 ## Optional Tier 3: Risk-Triggered Specialist Lanes
 
 Run these only when the changed area justifies the extra local time. The command
@@ -215,12 +232,37 @@ touch their relevant module paths or `runtime/*.[ch]`. Use
 `RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS=1` or per-family force variables when
 intentionally validating service tests without relevant source changes.
 
+Allowed relaxations are narrow and tied to the touched area:
+
+- imfile-only work may skip unrelated external service lanes.
+- Kafka may be disabled only when neither Kafka modules nor Kafka test plumbing
+  are touched.
+- Elasticsearch may be disabled only when neither omelasticsearch nor
+  Elasticsearch test plumbing are touched.
+- Journal/imjournal runtime tests are static-analysis-only on hosts without a
+  usable journal service. Do not try to force journal runtime tests in that
+  environment; record the static-analysis exception instead.
+
+Record every relaxation with the touched-area rationale. A skipped or relaxed
+lane without that rationale makes the result targeted validation, not full
+local container validation.
+
 ## Reporting
 
 Report:
 
 - exact command shape and container image
+- image tag and image ID
 - elapsed `real` time from `/usr/bin/time -p` where used
 - pass/skip/fail summary from `tests/test-suite.log`
 - whether skips were expected from relevance filtering
+- lanes run, lanes relaxed/skipped, and touched-area rationale for each
+  relaxation
+- whether the result is fully container-validated or targeted
 - unrelated local flakes separately from failures caused by the change
+
+If a full container lane fails, inspect the logs and make up to four concrete
+remediation attempts only when the failure appears locally fixable. Record the
+command, log path, failure summary, each attempt, the affected PR/unit, and
+whether host-side validation passed. If it still fails after those attempts,
+carry the error forward in the session ledger instead of spinning.

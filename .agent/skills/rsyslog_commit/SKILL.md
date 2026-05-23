@@ -21,6 +21,8 @@ This skill standardizes the final step of the development workflow: committing a
 - **Optional Local Linters**: Before opening or updating a PR, run useful diff-scoped linters when installed: `shellcheck` for changed `*.sh`, `hadolint` for changed Dockerfiles, `trivy config` for changed infrastructure/config files, and `jscpd` for larger changed source/test sets. Guard each command with `command -v`; if a tool is missing, suggest installing it but do not block unrelated build or test validation. Do not run `cppcheck` routinely unless requested; it is too noisy for the rsyslog tree.
 - **Validation**: Ensure `make -j$(nproc) check TESTS=""` passes and relevant tests are run.
   - **Multi-Pass AI Audit**: Run the `/audit` workflow for a rigorous, persona-based review (Memory, Concurrency, Standards) using the project's canned prompts.
+  - **Local Cubic**: Run local Cubic review when `cubic` is installed and reachable. Hosted Cubic/Gemini PR comments are additional review feedback, not a substitute for local Cubic.
+  - **Container Gate**: For implementation changes, run the `rsyslog_local_container_testing` skill's full ordered local container sequence when container tooling is available. Focused `run-ci.sh TEST=...` commands are targeted container tests, not full local container validation unless that skill explicitly permits the reduced lane.
   - **Mock Smoke Check**: If you added or renamed test files, run `make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)` as a final distribution check.
   - **Note**: If you already successfully built and tested your changes immediately *before* formatting, you do NOT need to re-run the build/test cycle. Formatting is a normalization step and does not affect functionality.
 
