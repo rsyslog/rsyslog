@@ -342,6 +342,7 @@ TESTS_DEFAULT = \
 	suspend-omfwd-via-file.sh \
 	externalstate-failed-rcvr.sh \
 	rcvr_fail_restore.sh \
+	snd-array-cmp-json.sh \
 	rscript_b64_decode.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
