@@ -827,6 +827,16 @@ finalize_it:
 
 #define POLL_TIMEOUT 900000 /* timeout for poll is 900ms */
 
+static rsRetVal reopenJournal(struct journalContext_s *journalContext) {
+    DEFiRet;
+
+    closeJournal(journalContext);
+    CHKiRet(openJournal(journalContext));
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal pollJournal(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
     int err;
@@ -838,6 +848,7 @@ static rsRetVal pollJournal(struct journalContext_s *journalContext, char *state
             LogError(-processRet, RS_RET_ERR, "imjournal: sd_journal_process() failed during rotation handling");
             ABORT_FINALIZE(RS_RET_ERR);
         }
+        CHKiRet(reopenJournal(journalContext));
         CHKiRet(handleRotation(journalContext, stateFile));
     } else if (err < 0) {
         LogError(-err, RS_RET_ERR, "imjournal: sd_journal_wait() failed");
@@ -983,12 +994,16 @@ finalize_it:
     RETiRet;
 }
 
-static void tryRecover(struct journalContext_s *journalContext) {
+static rsRetVal tryRecover(struct journalContext_s *journalContext) {
+    DEFiRet;
+
     LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
     STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
-    closeJournal(journalContext);
     srSleep(0, 200000);  // do not hammer machine with too-frequent retries
-    openJournal(journalContext);
+    CHKiRet(reopenJournal(journalContext));
+
+finalize_it:
+    RETiRet;
 }
 
 static rsRetVal addListner(instanceConf_t *inst, u_int8_t index) {
@@ -1071,10 +1086,16 @@ static rsRetVal doRun(journal_etry_t const *etry) {
              * we need to manually advance the cursor. This is because, after calling sd_journal_next,
              * the cursor should point to a new entry; otherwise, we read the same entry twice.
              */
-            int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
-            if (test == 1) {
-                DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
-                continue;
+            if (etry->journalContext->cursor != NULL) {
+                int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
+                if (test == 1) {
+                    DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
+                    continue;
+                } else if (test < 0) {
+                    LogError(-test, RS_RET_ERR, "imjournal: sd_journal_test_cursor() failed");
+                    CHKiRet(tryRecover(etry->journalContext));
+                    continue;
+                }
             }
 
             /*
@@ -1089,7 +1110,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
             }
 
             if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
-                tryRecover(etry->journalContext);
+                CHKiRet(tryRecover(etry->journalContext));
                 continue;
             }
 
@@ -1105,7 +1126,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
         if (r < 0) {
             LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-            tryRecover(etry->journalContext);
+            CHKiRet(tryRecover(etry->journalContext));
             continue;
         }
 
@@ -1118,7 +1139,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
         /* No new messages, wait for activity. */
         if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK) {
-            tryRecover(etry->journalContext);
+            CHKiRet(tryRecover(etry->journalContext));
         }
     }
 finalize_it:
