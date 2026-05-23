@@ -156,6 +156,7 @@ typedef struct instanceConf_s {
     sbool dynBulkId;
     sbool dynPipelineName;
     sbool bulkmode;
+    int iNumTpls;
     size_t maxbytes;
     sbool useHttps;
     sbool allowUnsignedCerts;
@@ -997,8 +998,7 @@ static rsRetVal ATTR_NONNULL(1) validateActionStrings(const instanceData *const 
         ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     }
 
-    const int iNumTpls = getTemplateCount(pData);
-    for (int i = 0; i < iNumTpls; ++i) {
+    for (int i = 0; i < pData->iNumTpls; ++i) {
         if (tpls[i] == NULL) {
             LogError(0, RS_RET_INVALID_PARAMS,
                      "omelasticsearch: rendered action template string %d is "
@@ -2221,6 +2221,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->dynSrchIdx = 0;
     pData->dynSrchType = 0;
     pData->dynParent = 0;
+    pData->iNumTpls = 1;
     pData->useHttps = 0;
     pData->bulkmode = 0;
     pData->maxbytes = 104857600;  // 100 MB Is the default max message size that ships with ElasticSearch
@@ -2473,9 +2474,9 @@ BEGINnewActInst
     if (pData->uid != NULL && pData->apiKey == NULL)
         CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
-    iNumTpls = getTemplateCount(pData);
-    DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
-    CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
+    pData->iNumTpls = getTemplateCount(pData);
+    DBGPRINTF("omelasticsearch: requesting %d templates\n", pData->iNumTpls);
+    CODE_STD_STRING_REQUESTnewActInst(pData->iNumTpls);
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup((pData->tplName == NULL) ? " StdJSONFmt" : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));
