@@ -43,10 +43,7 @@ BuildRequires: libtool
 BuildRequires: libuuid-devel
 BuildRequires: pkgconfig
 BuildRequires: python3-docutils
-# Sphinx doc build: pip required because EPEL 8/9 system python3-sphinx is 1.7.x
-# but doc/source/conf.py needs_sphinx = '4.5.0'. System packages cannot satisfy
-# this; see doc/BUILDS_README.md "RPM builds".
-BuildRequires: python3-pip
+BuildRequires: python3-sphinx
 # Pillow (rst2pdf/doc deps) build requirements
 BuildRequires: libjpeg-turbo-devel
 # it depens on rhbz#1419228
@@ -562,16 +559,12 @@ if ! grep -q '^version = ' doc/source/conf.py 2>/dev/null; then
   sed -i "/^release = /i version = '%{version}'" doc/source/conf.py
 fi
 cd doc
-echo "Step 1: Installing sphinx and requirements via pip..."
-pip3 install -U sphinx
-pip3 install -r requirements.txt
-
-echo "Step 2: Building Sphinx documentation (output in doc/build)..."
+echo "Step 1: Building Sphinx documentation (output in doc/build)..."
 num_cpus=$(nproc)
 sphinx-build -j$num_cpus -b html source build 2>&1
 echo "✓ Sphinx documentation built"
 
-echo "Step 3: Listing doc directory contents..."
+echo "Step 2: Listing doc directory contents..."
 ls -al 2>&1
 ls -al build 2>&1
 echo "✓ Directory contents listed"
