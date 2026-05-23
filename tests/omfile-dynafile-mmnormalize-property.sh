@@ -22,7 +22,7 @@ ruleset(name="writeData"
         queue.dequeueBatchSize="2048"
         queue.workerThreads="2"
         queue.workerThreadMinimumMessages="10000") {
-    action(type="mmnormalize" rule="rule=:%clientIP:ipv4% %other:rest%" userawmsg="on")
+    action(type="mmnormalize" rule="rule=:<%pri:number%>%clientIP:ipv4% %other:rest%" userawmsg="on")
     if $parsesuccess == "OK" then {
         action(type="omfile" DynaFile="WriteFile" template="LogFormat")
     }
@@ -30,7 +30,7 @@ ruleset(name="writeData"
 '
 
 startup
-tcpflood -m1 -O -M '"192.0.2.15 - - \"GET / HTTP/1.1\" 200 17 \"-\" \"-\" \"-\""'
+tcpflood -m1 -O -M "'<13>192.0.2.15 - - \"GET / HTTP/1.1\" 200 17 \"-\" \"-\" \"-\"'"
 shutdown_when_empty
 wait_shutdown
 
