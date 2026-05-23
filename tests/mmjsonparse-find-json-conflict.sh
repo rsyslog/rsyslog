@@ -13,9 +13,11 @@ module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 
 template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% json=%$!%\n")
 
-set $!conflict = "scalar";
-action(type="mmjsonparse" mode="find-json" container="$!conflict!parsed")
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+if $msg contains "CONFLICT" then {
+    set $!conflict = "scalar";
+    action(type="mmjsonparse" mode="find-json" container="$!conflict!parsed")
+    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+}
 '
 startup
 injectmsg_literal '<167>Jan 16 16:57:54 host.example.net TAG: CONFLICT prefix {"field":"value"}'
