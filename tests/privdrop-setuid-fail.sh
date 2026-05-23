@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Regression test for issue #6633: failed setuid()/setgroups() calls during
 # privilege drop must produce clear diagnostics with the requested id and missing
 # capability context. The oracle is startup failure with those diagnostics on
