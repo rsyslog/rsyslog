@@ -745,14 +745,17 @@ static rsRetVal doDropPrivGid(rsconf_t *cnf) {
     if (!cnf->globals.gidDropPrivKeepSupplemental) {
         res = setgroups(0, NULL); /* remove all supplemental group IDs */
         if (res) {
-            LogError(errno, RS_RET_ERR_DROP_PRIV, "could not remove supplemental group IDs");
+            LogError(errno, RS_RET_ERR_DROP_PRIV,
+                     "could not remove supplemental group IDs via setgroups(): missing CAP_SETGID or insufficient "
+                     "privilege");
             ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
         }
         DBGPRINTF("setgroups(0, NULL): %d\n", res);
     }
     res = setgid(cnf->globals.gidDropPriv);
     if (res) {
-        LogError(errno, RS_RET_ERR_DROP_PRIV, "could not set requested group id %d via setgid()",
+        LogError(errno, RS_RET_ERR_DROP_PRIV,
+                 "could not set requested group id %d via setgid(): missing CAP_SETGID or insufficient privilege",
                  cnf->globals.gidDropPriv);
         ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
     }
@@ -770,11 +773,12 @@ finalize_it:
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
  */
-static void doDropPrivUid(rsconf_t *cnf) {
+static rsRetVal doDropPrivUid(rsconf_t *cnf) {
     int res;
     uchar szBuf[1024];
     struct passwd *pw;
     gid_t gid;
+    DEFiRet;
 
     /* Try to set appropriate supplementary groups for this user.
      * Failure is not fatal.
@@ -783,6 +787,12 @@ static void doDropPrivUid(rsconf_t *cnf) {
     if (pw) {
         gid = getgid();
         res = initgroups(pw->pw_name, gid);
+        if (res) {
+            LogError(errno, RS_RET_ERR_DROP_PRIV,
+                     "could not initialize supplemental groups for user id %d via initgroups(): missing CAP_SETGID or "
+                     "insufficient privilege",
+                     cnf->globals.uidDropPriv);
+        }
         DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long)gid, res);
     } else {
         LogError(errno, NO_ERRCODE, "could not get username for userid '%d'", cnf->globals.uidDropPriv);
@@ -790,14 +800,18 @@ static void doDropPrivUid(rsconf_t *cnf) {
 
     res = setuid(cnf->globals.uidDropPriv);
     if (res) {
-        /* if we can not set the userid, this is fatal, so let's unconditionally abort */
-        perror("could not set requested userid");
-        exit(1);
+        LogError(errno, RS_RET_ERR_DROP_PRIV,
+                 "could not set requested user id %d via setuid(): missing CAP_SETUID or insufficient privilege",
+                 cnf->globals.uidDropPriv);
+        ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
     }
 
     DBGPRINTF("setuid(%d): %d\n", cnf->globals.uidDropPriv, res);
     snprintf((char *)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", cnf->globals.uidDropPriv);
     logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, szBuf, 0);
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -814,7 +828,7 @@ static rsRetVal dropPrivileges(rsconf_t *cnf) {
     }
 
     if (cnf->globals.uidDropPriv != 0) {
-        doDropPrivUid(cnf);
+        CHKiRet(doDropPrivUid(cnf));
         DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)cnf->globals.uidDropPriv);
     }
 

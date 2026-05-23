@@ -164,6 +164,7 @@ TESTS_DEFAULT = \
 	rscript_privdropgroupid.sh \
 	privdropuser.sh \
 	privdropuserid.sh \
+	privdrop-setuid-fail.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	privdropabortonidfail.sh \
