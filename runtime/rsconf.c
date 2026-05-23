@@ -735,7 +735,7 @@ void cnfDoBSDHost(char *ln) {
 
 
 /* drop to specified group
- * if something goes wrong, the function never returns
+ * Returns RS_RET_ERR_DROP_PRIV if the requested group privileges cannot be set.
  */
 static rsRetVal doDropPrivGid(rsconf_t *cnf) {
     int res;
@@ -769,9 +769,7 @@ finalize_it:
 
 
 /* drop to specified user
- * if something goes wrong, the function never returns
- * Note that such an abort can cause damage to on-disk structures, so we should
- * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
+ * Returns RS_RET_ERR_DROP_PRIV if the requested user privileges cannot be set.
  */
 static rsRetVal doDropPrivUid(rsconf_t *cnf) {
     int res;
