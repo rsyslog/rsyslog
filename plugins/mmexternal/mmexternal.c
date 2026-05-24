@@ -353,11 +353,14 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
             perror("mmexternal: open(/dev/null) failed\n");
         }
     }
-    if (dup2(fdStdOutErr == -1 ? fdDevNull : fdStdOutErr, STDOUT_FILENO) == -1) {
-        perror("mmexternal: dup() stdout failed\n");
-    }
-    if (dup2(fdStdOutErr == -1 ? fdDevNull : fdStdOutErr, STDERR_FILENO) == -1) {
-        perror("mmexternal: dup() stderr failed\n");
+    const int targetFd = (fdStdOutErr == -1) ? fdDevNull : fdStdOutErr;
+    if (targetFd != -1) {
+        if (dup2(targetFd, STDOUT_FILENO) == -1) {
+            perror("mmexternal: dup() stdout failed\n");
+        }
+        if (dup2(targetFd, STDERR_FILENO) == -1) {
+            perror("mmexternal: dup() stderr failed\n");
+        }
     }
 
     /* we close all file handles as we fork soon
@@ -446,7 +449,7 @@ static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
 
     DBGPRINTF("mmexternal: child has pid %d\n", (int)cpid);
     if (useOutputPipe) {
-        pWrkrData->fdPipeIn = dup(pipestdout[0]);
+        pWrkrData->fdPipeIn = pipestdout[0];
         close(pipestdout[1]);
     }
     close(pipestdin[0]);
