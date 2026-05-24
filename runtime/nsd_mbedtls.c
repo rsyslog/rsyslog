@@ -1396,6 +1396,16 @@ static rsRetVal GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
     RETiRet;
 }
 
+static rsRetVal GetRemotePort(nsd_t *pNsd, int *port) {
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
+    ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
+    return nsd_ptcp.GetRemotePort(pThis->pTcp, port);
+}
+
+static rsRetVal FmtRemotePortStr(const int port, uchar *const buf, const size_t len) {
+    return nsd_ptcp.FmtRemotePortStr(port, buf, len);
+}
+
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_mbedtls)
     CODESTARTobjQueryInterface(
@@ -1436,9 +1446,11 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
-    pIf->SetTlsCRLFile = SetTlsCRLFile;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
+    pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->GetRemotePort = GetRemotePort;
+    pIf->FmtRemotePortStr = FmtRemotePortStr;
     pIf->SetRemoteSNI = SetRemoteSNI;
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
 finalize_it:
