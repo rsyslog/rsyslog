@@ -134,7 +134,10 @@ int len;
     reply.svrreply.rtncode = msgno;
     /* AIXPORT :  srv was corrected to syslogd */
     RS_COPY_LITERAL(reply.svrreply.objname, "syslogd");
-    snprintf(reply.svrreply.rtnmsg, SRCMIN(sizeof(reply.svrreply.rtnmsg) - 1, strlen(msgtxt)), "%s", msgtxt);
+    if (snprintf(reply.svrreply.rtnmsg, sizeof(reply.svrreply.rtnmsg), "%s", msgtxt) < 0) {
+        reply.svrreply.rtnmsg[0] = '\0';
+    }
+    reply.svrreply.rtnmsg[sizeof(reply.svrreply.rtnmsg) - 1] = '\0';
     srchdr = srcrrqs((char *)&srcpacket);
     srcsrpy(srchdr, (char *)&reply, len, cont);
 }
