@@ -957,7 +957,9 @@ static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,
             if (iRet != RS_RET_OK) {
                 goto loop_finalize;
             }
-            rewrittenValue = NULL;
+            if (conflict == NULL || !conflict->occurred) {
+                rewrittenValue = NULL;
+            }
         }
 
     loop_finalize:
