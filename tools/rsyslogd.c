@@ -128,11 +128,13 @@ char *txt;
 int len;
 {
     struct srcrep reply;
+    const char *msgtxt;
 
+    msgtxt = (txt == NULL) ? "" : txt;
     reply.svrreply.rtncode = msgno;
     /* AIXPORT :  srv was corrected to syslogd */
     RS_COPY_LITERAL(reply.svrreply.objname, "syslogd");
-    snprintf(reply.svrreply.rtnmsg, SRCMIN(sizeof(reply.svrreply.rtnmsg) - 1, strlen(txt)), "%s", txt);
+    snprintf(reply.svrreply.rtnmsg, SRCMIN(sizeof(reply.svrreply.rtnmsg) - 1, strlen(msgtxt)), "%s", msgtxt);
     srchdr = srcrrqs((char *)&srcpacket);
     srcsrpy(srchdr, (char *)&reply, len, cont);
 }
