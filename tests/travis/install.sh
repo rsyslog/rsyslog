@@ -39,13 +39,25 @@ if [ "$KAFKA" == "YES" ]; then
 	sudo apt-get install -qq liblz4-dev 
 	# For kafka testbench, "kcat" package is needed!
 	git clone https://github.com/edenhill/librdkafka > /dev/null
-	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make -j2  > /dev/null ; sudo make install > /dev/null)
+	(
+		unset CFLAGS
+		cd librdkafka || exit 1
+		./configure --prefix=/usr --CFLAGS="-g" > /dev/null &&
+			make -j2 > /dev/null &&
+			sudo make install > /dev/null
+	) || exit 1
 	rm -rf librdkafka # get rid of source, e.g. for line length check
 fi
 
 if [ "$IMHTTP" == "YES" ]; then
 	git clone https://github.com/civetweb/civetweb.git > /dev/null
-	(unset CFLAGS; cd civetweb; make build ; sudo make install-headers PREFIX=/usr ; sudo make install-slib PREFIX=/usr )
+	(
+		unset CFLAGS
+		cd civetweb || exit 1
+		make build &&
+			sudo make install-headers PREFIX=/usr &&
+			sudo make install-slib PREFIX=/usr
+	) || exit 1
 	rm -rf civetweb # get rid of source, e.g. for line length check
 fi
 
