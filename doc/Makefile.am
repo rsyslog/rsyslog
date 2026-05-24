@@ -189,6 +189,7 @@ EXTRA_DIST = \
     source/configuration/modules/imdtls.rst \
     source/configuration/modules/imbeats.rst \
     source/configuration/modules/imfile.rst \
+    source/configuration/modules/imfifo.rst \
     source/configuration/modules/imgssapi.rst \
     source/configuration/modules/imhiredis.rst \
     source/configuration/modules/imhttp.rst \
@@ -560,6 +561,11 @@ EXTRA_DIST = \
     source/reference/parameters/imfile-tag.rst \
     source/reference/parameters/imfile-timeoutgranularity.rst \
     source/reference/parameters/imfile-trimlineoverbytes.rst \
+    source/reference/parameters/imfifo-facility.rst \
+    source/reference/parameters/imfifo-file.rst \
+    source/reference/parameters/imfifo-ruleset.rst \
+    source/reference/parameters/imfifo-severity.rst \
+    source/reference/parameters/imfifo-tag.rst \
     source/reference/parameters/imgssapi-inputgsslistenportfilename.rst \
     source/reference/parameters/imgssapi-inputgssserverkeepalive.rst \
     source/reference/parameters/imgssapi-inputgssservermaxsessions.rst \
