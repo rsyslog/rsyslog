@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
@@ -264,6 +265,8 @@ static rsRetVal processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkr
     int numCharsRead;
     char *newptr;
     struct pollfd fdToPoll[1];
+    struct timespec responseDeadline;
+    long pollTimeout;
 
     if (pWrkrData->pData->outputMode == OUTPUT_NONE) {
         FINALIZE;
@@ -272,20 +275,32 @@ static rsRetVal processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkr
     numCharsRead = 0;
     fdToPoll[0].fd = pWrkrData->fdPipeIn;
     fdToPoll[0].events = POLLIN;
+    if (pWrkrData->pData->responseTimeout > 0) {
+        timeoutComp(&responseDeadline, pWrkrData->pData->responseTimeout);
+    }
     do {
         if (pWrkrData->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
             pWrkrData->maxLenRespBuf += 4096;
             if ((newptr = realloc(pWrkrData->respBuf, pWrkrData->maxLenRespBuf)) == NULL) {
-                DBGPRINTF("mmexternal: error realloc responseBuf: %s\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-                /* emergency - fake no update */
-                memcpy(pWrkrData->respBuf, "{}\n", sizeof("{}\n"));
-                numCharsRead = 3;
-                break;
+                LogError(errno, RS_RET_OUT_OF_MEMORY, "mmexternal: error reallocating response buffer");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
             pWrkrData->respBuf = newptr;
         }
         if (pWrkrData->pData->responseTimeout > 0) {
-            const int pollRet = poll(fdToPoll, 1, pWrkrData->pData->responseTimeout);
+            pollTimeout = timeoutVal(&responseDeadline);
+            if (pollTimeout == 0) {
+                LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
+                       "mmexternal: program '%s' (pid %ld) did not respond within timeout (%ld ms); "
+                       "will be restarted and current message skipped",
+                       pWrkrData->pData->szBinary, (long)pWrkrData->pid, pWrkrData->pData->responseTimeout);
+                terminateChild(pWrkrData, 1000);
+                FINALIZE;
+            }
+            if (pollTimeout > INT_MAX) {
+                pollTimeout = INT_MAX;
+            }
+            const int pollRet = poll(fdToPoll, 1, (int)pollTimeout);
             if (pollRet == -1) {
                 if (errno == EINTR) continue;
                 LogError(errno, RS_RET_SYS_ERR, "mmexternal: error polling for response from program");
@@ -398,16 +413,25 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
  * rgerhards, 2009-04-01
  */
 static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
-    int pipestdin[2];
-    int pipestdout[2];
-    pid_t cpid;
+    int pipestdin[2] = {-1, -1};
+    int pipestdout[2] = {-1, -1};
+    int fdStdOutErr = -1;
+    pid_t cpid = -1;
     DEFiRet;
 
     if (pipe(pipestdin) == -1) {
         ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
     }
-    if (pipe(pipestdout) == -1) {
-        ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+    if (pWrkrData->pData->outputMode == OUTPUT_NONE) {
+        if ((fdStdOutErr = open("/dev/null", O_WRONLY)) == -1) {
+            LogError(errno, RS_RET_SYS_ERR, "mmexternal: error opening /dev/null for ignored program output");
+            ABORT_FINALIZE(RS_RET_SYS_ERR);
+        }
+    } else {
+        if (pipe(pipestdout) == -1) {
+            ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+        }
+        fdStdOutErr = pipestdout[1];
     }
 
     DBGPRINTF("mmexternal: executing program '%s' with '%d' parameters\n", pWrkrData->pData->szBinary,
@@ -427,19 +451,29 @@ static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
     if (cpid == 0) {
         /* we are now the child, just exec the binary. */
         close(pipestdin[1]); /* close those pipe "ports" that */
-        close(pipestdout[0]); /* we don't need */
-        execBinary(pWrkrData, pipestdin[0], pipestdout[1]);
+        if (pipestdout[0] != -1) close(pipestdout[0]); /* we don't need */
+        execBinary(pWrkrData, pipestdin[0], fdStdOutErr);
         /*NO CODE HERE - WILL NEVER BE REACHED!*/
     }
 
     DBGPRINTF("mmexternal: child has pid %d\n", (int)cpid);
-    pWrkrData->fdPipeIn = dup(pipestdout[0]);
+    if (pWrkrData->pData->outputMode != OUTPUT_NONE) {
+        pWrkrData->fdPipeIn = pipestdout[0];
+        pipestdout[0] = -1;
+    }
     close(pipestdin[0]);
-    close(pipestdout[1]);
+    pipestdin[0] = -1;
+    close(fdStdOutErr);
+    fdStdOutErr = -1;
     pWrkrData->pid = cpid;
     pWrkrData->fdPipeOut = pipestdin[1];
+    pipestdin[1] = -1;
     pWrkrData->bIsRunning = 1;
 finalize_it:
+    if (pipestdin[0] != -1) close(pipestdin[0]);
+    if (pipestdin[1] != -1) close(pipestdin[1]);
+    if (pipestdout[0] != -1) close(pipestdout[0]);
+    if (fdStdOutErr != -1) close(fdStdOutErr);
     RETiRet;
 }
 
