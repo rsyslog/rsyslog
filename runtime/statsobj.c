@@ -596,6 +596,7 @@ static rsRetVal generatePrometheusStats(rsRetVal (*cb)(void *, const char *), vo
         }
     }
     pthread_mutex_unlock(&mutStats);
+    listLocked = 0;
     /* Optionally, handle sender stats as additional metrics:
      * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
      * For simplicity, we skip this, or you can extend similarly. */
