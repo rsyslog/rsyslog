@@ -582,9 +582,12 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
 
 static rsRetVal generatePrometheusStats(rsRetVal (*cb)(void *, const char *), void *usrptr, int8_t bResetCtrs) {
     statsobj_t *o;
+    int listLocked = 0;
     DEFiRet;
 
     /* For each statsobj in our linked list, emit Prometheus lines. */
+    pthread_mutex_lock(&mutStats);
+    listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
         CHKiRet(emitPrometheusForObject(o, cb, usrptr, bResetCtrs));
         /* If the object has a read_notifier, call it now */
@@ -592,10 +595,14 @@ static rsRetVal generatePrometheusStats(rsRetVal (*cb)(void *, const char *), vo
             o->read_notifier(o, o->read_notifier_ctx);
         }
     }
+    pthread_mutex_unlock(&mutStats);
     /* Optionally, handle sender stats as additional metrics:
      * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
      * For simplicity, we skip this, or you can extend similarly. */
 finalize_it:
+    if (listLocked) {
+        pthread_mutex_unlock(&mutStats);
+    }
     RETiRet;
 }
 
@@ -611,6 +618,7 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
                                  const int8_t bResetCtrs) {
     statsobj_t *o;
     cstr_t *cstr = NULL;
+    int listLocked = 0;
     DEFiRet;
 
 
@@ -619,6 +627,8 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
         FINALIZE;
     }
 
+    pthread_mutex_lock(&mutStats);
+    listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
         switch (fmt) {
             case statsFmt_Legacy:
@@ -642,10 +652,15 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
             o->read_notifier(o, o->read_notifier_ctx);
         }
     }
+    pthread_mutex_unlock(&mutStats);
+    listLocked = 0;
 
     getSenderStats(cb, usrptr, fmt, bResetCtrs);
 
 finalize_it:
+    if (listLocked) {
+        pthread_mutex_unlock(&mutStats);
+    }
     if (cstr != NULL) {
         rsCStrDestruct(&cstr);
     }
@@ -666,12 +681,15 @@ static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
     DEFiRet;
     statsobj_t *o;
     ctr_t *ctr;
+    int listLocked = 0;
 
     if (cb == NULL) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     /* Iterate through all statsobj instances */
+    pthread_mutex_lock(&mutStats);
+    listLocked = 1;
     for (o = objRoot; o != NULL; o = o->next) {
         /* Iterate through all counters in this object */
         pthread_mutex_lock(&o->mutCtr);
@@ -715,8 +733,13 @@ static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
             o->read_notifier(o, o->read_notifier_ctx);
         }
     }
+    pthread_mutex_unlock(&mutStats);
+    listLocked = 0;
 
 finalize_it:
+    if (listLocked) {
+        pthread_mutex_unlock(&mutStats);
+    }
     RETiRet;
 }
 
