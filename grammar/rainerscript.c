@@ -3221,6 +3221,9 @@ static void ATTR_NONNULL() doFunct_is_in_subnet(struct cnffunc *__restrict__ con
 
     ip_estr = var2String(&srcVal[0], &bMustFreeEs1);
     cidr_estr = var2String(&srcVal[1], &bMustFreeEs2);
+    if (ip_estr == NULL || cidr_estr == NULL) {
+        goto finalize_it;
+    }
     ip_str = (char *)es_str2cstr(ip_estr, NULL);
     cidr_str = (char *)es_str2cstr(cidr_estr, NULL);
     bMustFree1 = 1;
