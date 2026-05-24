@@ -183,6 +183,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMFIFO
+SUBDIRS += plugins/imfifo
+endif
+
 if ENABLE_IMDOCKER
 SUBDIRS += contrib/imdocker
 endif
@@ -641,6 +645,10 @@ endif
 
 if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
+endif
+
+if ENABLE_IMFIFO
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imfifo
 endif
 
 if ENABLE_IMFILE_TESTS
