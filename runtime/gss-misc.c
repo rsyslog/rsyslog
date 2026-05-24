@@ -243,7 +243,7 @@ static int send_token(int s, gss_buffer_t tok) {
         LogError(0, NO_ERRCODE, "GSS-API token length %lu exceeds wire format limit", (unsigned long)tok->length);
         return -1;
     }
-    len = htonl(tok->length);
+    len = (unsigned int)tok->length;
     lenbuf[0] = (len >> 24) & 0xff;
     lenbuf[1] = (len >> 16) & 0xff;
     lenbuf[2] = (len >> 8) & 0xff;
