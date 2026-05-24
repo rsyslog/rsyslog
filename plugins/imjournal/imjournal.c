@@ -708,6 +708,9 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     /* submit message */
     iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
     json = NULL;
+    if (iRet == RS_RET_DISCARDMSG) {
+        iRet = RS_RET_OK;
+    }
     CHKiRet(iRet);
 
 finalize_it:
