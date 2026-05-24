@@ -953,11 +953,20 @@ static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,
             } else {
                 rewrittenValue = json_object_get(value);
             }
-            iRet = jsontransformInsertDotted(dest, targetKey, rewrittenValue, conflict);
+            jsontransformConflict_t insertConflict = {0, NULL};
+            iRet = jsontransformInsertDotted(dest, targetKey, rewrittenValue, &insertConflict);
             if (iRet != RS_RET_OK) {
+                jsontransformConflictCleanup(&insertConflict);
                 goto loop_finalize;
             }
-            if (conflict == NULL || !conflict->occurred) {
+            if (insertConflict.occurred) {
+                if (conflict != NULL && !conflict->occurred) {
+                    conflict->occurred = 1;
+                    conflict->detail = insertConflict.detail;
+                    insertConflict.detail = NULL;
+                }
+                jsontransformConflictCleanup(&insertConflict);
+            } else {
                 rewrittenValue = NULL;
             }
         }
