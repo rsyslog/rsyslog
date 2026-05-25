@@ -2019,7 +2019,7 @@ static rsRetVal validateTargetSrvTlsAuth(const instanceData *const pData) {
     if (pData->pszStrmDrvrAuthMode == NULL || !strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "x509/name")) {
         LogError(0, RS_RET_PARAM_ERROR,
                  "omfwd: targetSrv with TLS requires streamdriverpermittedpeers when using streamdriverauthmode "
-                 "\"x509/name\" (explicitly set permitted peers or use static target)");
+                 "\"x509/name\" or the default auth mode (explicitly set permitted peers or use static target)");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
