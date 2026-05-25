@@ -276,9 +276,15 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
 
 #ifdef HIREDIS_SSL
     if (pWrkrData->pData->use_tls) {
+        const char *tls_server_name = pWrkrData->pData->sni;
+
+        if (tls_server_name == NULL && pWrkrData->pData->server != NULL) {
+            tls_server_name = (const char *)pWrkrData->pData->server;
+        }
+
         pWrkrData->ssl_conn = redisCreateSSLContext(pWrkrData->pData->ca_cert_bundle, pWrkrData->pData->ca_cert_dir,
                                                     pWrkrData->pData->client_cert, pWrkrData->pData->client_key,
-                                                    pWrkrData->pData->sni, &pWrkrData->ssl_error);
+                                                    tls_server_name, &pWrkrData->ssl_error);
         if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
             LogError(0, NO_ERRCODE, "omhiredis[%s]: SSL Context error: %s", actionGetName(pWrkrData->pData->pAction),
                      redisSSLContextGetError(pWrkrData->ssl_error));
@@ -673,6 +679,11 @@ BEGINnewActInst
 #ifdef HIREDIS_SSL
     if ((pData->client_cert == NULL) ^ (pData->client_key == NULL)) {
         parser_errmsg("omhiredis: \"client_cert\" and \"client_key\" must be specified together!");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->use_tls && pData->sni == NULL && pData->server == NULL) {
+        parser_errmsg("omhiredis: TLS requires either \"server\" or \"sni\" to validate server identity");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 #endif
