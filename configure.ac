@@ -1974,18 +1974,6 @@ AC_ARG_ENABLE(mmsnareparse,
 AM_CONDITIONAL(ENABLE_MMSNAREPARSE, test x$enable_mmsnareparse = xyes)
 
 
-# experimental omfile-hardened module
-AC_ARG_ENABLE(omfile-hardened,
-        [AS_HELP_STRING([--enable-omfile-hardened],[Enable omfile-hardened support @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omfile_hardened="yes" ;;
-          no) enable_omfile_hardened="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omfile-hardened) ;;
-         esac],
-        [enable_omfile_hardened=no]
-)
-AM_CONDITIONAL(ENABLE_OMFILE_HARDENED, test x$enable_omfile_hardened = xyes)
-
 
 # RELP support
 AC_ARG_ENABLE(relp,
@@ -3619,7 +3607,6 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
 		contrib/imbatchreport/Makefile \
-		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
@@ -3690,7 +3677,6 @@ echo "    imhiredis input module enabled:           $enable_imhiredis"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omsendertrack module will be compiled:    $enable_omsendertrack"
