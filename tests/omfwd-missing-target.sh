@@ -23,10 +23,6 @@ if [ $? -eq 0 ]; then
     error_exit 1
 fi
 
-grep -F "omfwd: either target or targetSrv must be specified" "${RSYSLOG_DYNNAME}.log" >/dev/null || {
-    echo "FAIL: expected omfwd missing target error message"
-    cat "${RSYSLOG_DYNNAME}.log"
-    error_exit 1
-}
+content_check "omfwd: either target or targetSrv must be specified" "${RSYSLOG_DYNNAME}.log"
 
 exit_test
