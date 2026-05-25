@@ -1,7 +1,7 @@
 #!/bin/bash
-# this checks if omrelp works with the default port
-# Note: imrelp requires the port, so we cannot and must not
-# check the "default port"
+# Verify that omrelp uses its compiled default port when no port parameter is
+# configured. imrelp must explicitly bind the same default port because this is
+# the behavior under test; success is the full ordered delivery sequence.
 # added 2013-12-10 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -31,8 +31,6 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-TCPFLOOD_PORT="$(get_free_port)"
-export TCPFLOOD_PORT
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
 

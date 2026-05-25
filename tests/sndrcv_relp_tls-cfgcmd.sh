@@ -1,9 +1,13 @@
 #!/bin/bash
 # added 2019-11-13 by alorbach
+# Verify RELP TLS configuration command handling for incompatible receiver and
+# sender protocol constraints. The receiver binds an ephemeral IPv4 listener and
+# the testbench discovers that bound port after startup, avoiding the
+# get_free_port race before the sender connects. Success is the expected librelp
+# TLS failure on the sender side, with compatibility skips for unsupported TLS
+# libraries or OpenSSL versions.
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
@@ -11,7 +15,7 @@ add_conf '
 module(	load="../plugins/imrelp/.libs/imrelp" 
 	tls.tlslib="openssl")
 # then SENDER sends to this port (not tcpflood!)
-input(	type="imrelp" port="'$PORT_RCVR'" tls="on"
+input(	type="imrelp" address="127.0.0.1" port="0" tls="on"
 	tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2
 CipherString=ECDHE-RSA-AES256-GCM-SHA384
 Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2,-TLSv1.3
@@ -23,6 +27,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 generate_conf 2

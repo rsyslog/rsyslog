@@ -1,5 +1,9 @@
 #!/bin/bash
 # addd 2020-08-25 by alorbach, released under ASL 2.0
+# Verify RELP forwarding with OpenSSL TLS certificate chains. The imrelp
+# receiver binds an ephemeral IPv4 listener and the testbench discovers that
+# bound port after startup, avoiding the get_free_port race before the omrelp
+# sender connects. Success is the full ordered delivery sequence.
 . ${srcdir:=.}/diag.sh init
 require_relpEngineVersion "1.7.0"
 export NUMMESSAGES=1000
@@ -10,14 +14,12 @@ export TB_TEST_MAX_RUNTIME=30
 # export RSYSLOG_DEBUGLOG="log"
 
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
 add_conf '
 module(	load="../plugins/imrelp/.libs/imrelp"
 	tls.tlslib="openssl")
 
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port="'$PORT_RCVR'" 
+input(type="imrelp" address="127.0.0.1" port="0"
 		tls="on"
 		tls.mycert="'$srcdir'/tls-certs/certchained.pem"
 		tls.myprivkey="'$srcdir'/tls-certs/key.pem"
@@ -28,6 +30,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"

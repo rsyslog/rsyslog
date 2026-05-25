@@ -47,13 +47,9 @@ fi
 proxy_port_file="${RSYSLOG_DYNNAME}.proxy_port.file"
 proxy_data_file="${RSYSLOG_DYNNAME}.proxy_data.json"
 
-# Get a free port for the proxy server
-PROXY_PORT=$(get_free_port)
-export PROXY_PORT
-
-echo "Starting proxy server on port: $PROXY_PORT..."
+echo "Starting proxy server on a dynamic port..."
 python3 "$proxy_server_py" \
-	--port "$PROXY_PORT" \
+	--port 0 \
 	--port-file "$proxy_port_file" \
 	--target-host 127.0.0.1 \
 	--target-port "$otel_port" \
@@ -74,11 +70,6 @@ if [ -z "$proxy_port" ]; then
 	echo "ERROR: Proxy port is empty"
 	kill $proxy_pid 2>/dev/null
 	error_exit 1
-fi
-
-# Verify the port matches what we requested
-if [ "$proxy_port" != "$PROXY_PORT" ]; then
-	echo "WARNING: Proxy port mismatch (requested: $PROXY_PORT, got: $proxy_port)"
 fi
 
 echo "Proxy server started on port: $proxy_port (pid: $proxy_pid)"
@@ -200,13 +191,9 @@ sleep 1
 proxy_port_file2="${RSYSLOG_DYNNAME}.proxy2_port.file"
 proxy_data_file2="${RSYSLOG_DYNNAME}.proxy2_data.json"
 
-# Get a free port for the authenticated proxy server
-PROXY_PORT2=$(get_free_port)
-export PROXY_PORT2
-
-echo "Starting authenticated proxy server on port: $PROXY_PORT2..."
+echo "Starting authenticated proxy server on a dynamic port..."
 python3 "$proxy_server_py" \
-	--port "$PROXY_PORT2" \
+	--port 0 \
 	--port-file "$proxy_port_file2" \
 	--target-host 127.0.0.1 \
 	--target-port "$otel_port" \
@@ -219,11 +206,6 @@ proxy_pid2=$!
 
 wait_file_exists "$proxy_port_file2" 10
 proxy_port2=$(cat "$proxy_port_file2")
-
-# Verify the port matches what we requested
-if [ "$proxy_port2" != "$PROXY_PORT2" ]; then
-	echo "WARNING: Authenticated proxy port mismatch (requested: $PROXY_PORT2, got: $proxy_port2)"
-fi
 
 echo "Authenticated proxy server started on port: $proxy_port2 (pid: $proxy_pid2)"
 
@@ -283,4 +265,3 @@ if [ -f "$proxy_data_file2" ]; then
 fi
 
 exit_test
-

@@ -1,14 +1,20 @@
 #!/bin/bash
 # alorbach, 2019-01-16
 # This file is part of the rsyslog project, released  under ASL 2.0
+#
+# Verify that an OpenSSL omfwd sender can authenticate an imtcp TLS receiver
+# when the trust chain is split between the regular CA file and
+# NetstreamDriverCAExtraFiles. The receiver publishes its dynamic port before
+# the sender instance is configured; success is proved by receiving the full
+# ordered message sequence.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
+PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.rcvr_port"
+export PORT_RCVR_FILE
 ### This is important, as it must be exactly the same
 ### as the ones configured in used certificates
 export HOSTNAME="fedora"
@@ -27,18 +33,17 @@ module(	load="../plugins/imtcp/.libs/imtcp"
         PermittedPeer="'$HOSTNAME'"
 	StreamDriver.AuthMode="x509/name" )
 # then SENDER sends to this port (not tcpflood!)
-input(	type="imtcp" port="'$PORT_RCVR'" )
+input(	type="imtcp" port="0" listenPortFileName="'$PORT_RCVR_FILE'" )
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-TCPFLOOD_PORT="$(get_free_port)"
-export TCPFLOOD_PORT
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/certchain/ca-root-cert.pem'"
