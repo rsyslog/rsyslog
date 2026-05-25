@@ -21,18 +21,20 @@ mkdir coverity
 	tar xzf cov*.tar.gz
 	rm -f cov*.tar.gz
 ) || exit 1
-export PATH="coverity/$(cd coverity && ls -d cov*)/bin:$PATH"
+COVERITY_DIR="$(cd coverity && ls -d cov*)" || exit 1
+export PATH="coverity/$COVERITY_DIR/bin:$PATH"
 # Coverity scan tool installed
 
 # we need Guardtime libksi here, otherwise we cannot check the KSI component
 git clone https://github.com/guardtime/libksi.git
 (
-	cd libksi
+	set -e
+	cd libksi || exit 1
 	autoreconf -fvi
 	./configure --prefix=/usr
 	make -j
 	sudo make install
-)
+) || exit 1
 
 # prep rsyslog for submission
 autoreconf -vfi
