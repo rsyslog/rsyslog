@@ -5,7 +5,8 @@
 export NUMMESSAGES=2000
 export SENDESSAGES=500
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 export TIMEOUT="5"
 
 add_conf '

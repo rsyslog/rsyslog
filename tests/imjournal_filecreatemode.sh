@@ -20,7 +20,8 @@ module(
 '
   startup
 
-  local ACTUAL="$(stat -c "%#a" "$RSYSLOG_DYNNAME.spool/imjournal.state")"
+  local ACTUAL
+  ACTUAL="$(stat -c "%#a" "$RSYSLOG_DYNNAME.spool/imjournal.state")"
   if [ "$ACTUAL" != "$EXPECTED" ]; then
     echo "imjournal fileCreateMode failed, incorrect permissions on state file: expected($EXPECTED) != actual($ACTUAL)"
     error_exit

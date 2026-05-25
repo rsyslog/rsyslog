@@ -14,7 +14,8 @@ fi
 # export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export NUMMESSAGES=100000
 
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
 generate_conf

@@ -9,7 +9,8 @@ export NUMMESSAGES=1
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 
 add_conf '
 global(

@@ -2,7 +2,8 @@
 # added 2019-11-13 by alorbach
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf

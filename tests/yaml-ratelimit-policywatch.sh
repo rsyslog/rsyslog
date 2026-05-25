@@ -5,7 +5,8 @@
 . $srcdir/diag.sh check-inotify
 
 export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
-export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
+POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
+export POLICY_FILE
 export SENDMESSAGES=20
 
 cat > "$POLICY_FILE" <<'YAML'

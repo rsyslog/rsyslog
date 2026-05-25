@@ -10,7 +10,8 @@ export TB_TEST_MAX_RUNTIME=30
 # export RSYSLOG_DEBUGLOG="log"
 
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 add_conf '
 module(	load="../plugins/imrelp/.libs/imrelp"
 	tls.tlslib="openssl")
@@ -47,7 +48,7 @@ action(type="omfile" file="'$RSYSLOG_DYNNAME.errmsgs'")
 startup 2
 
 if grep "omrelp error: invalid authmode" < "$RSYSLOG_DYNNAME.errmsgs" ; then
-        echo "SKIP: librelp does not support "certvalid" auth mode"
+        echo "SKIP: librelp does not support certvalid auth mode"
 	# mini-cleanup to not leave dangling processes
 	shutdown_immediate 2
 	shutdown_immediate

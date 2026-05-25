@@ -20,7 +20,8 @@ startup
 # initial file: 2GiB - 1 message (54 byte)
 ./inputfilegen -s 2147483584 -d47 -M $RSYSLOG_DYNNAME.msgcnt > $RSYSLOG_DYNNAME.input
 ls -lh $RSYSLOG_DYNNAME.input
-export NUMMESSAGES="$(cat $RSYSLOG_DYNNAME.msgcnt)"
+NUMMESSAGES="$(cat $RSYSLOG_DYNNAME.msgcnt)"
+export NUMMESSAGES
 
 wait_file_lines --delay 2500 --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES 3000
 

@@ -8,7 +8,8 @@ if [ ! $? -eq 0 ]; then
   exit 77
 fi
 
-. $RSYSLOG_DYNNAME.source
+# shellcheck source=/dev/null
+. "$RSYSLOG_DYNNAME.source"
 export OMRABBITMQ_TEST=1
 
 generate_conf
@@ -35,7 +36,8 @@ startup
 injectmsg literal "<167>Mar  1 01:00:00 192.0.2.8 tag msgrmq"
 shutdown_when_empty
 wait_shutdown
-export EXPECTED=$(printf 'Exchange:in, routing-key:tag.local4.debug, content-type:rfc5424, facility:local4, severity:debug, hostname:192.0.2.8, fromhost:127.0.0.1, delivery-mode:transient, expiration:5000, timestamp:OK, app-id:tag, msg:<167>1 192.0.2.8 tag - - -  msgrmq')
+EXPECTED=$(printf 'Exchange:in, routing-key:tag.local4.debug, content-type:rfc5424, facility:local4, severity:debug, hostname:192.0.2.8, fromhost:127.0.0.1, delivery-mode:transient, expiration:5000, timestamp:OK, app-id:tag, msg:<167>1 192.0.2.8 tag - - -  msgrmq')
+export EXPECTED
 echo $EXPECTED | cmp - $RSYSLOG_DYNNAME.amqp.log
 if [ ! $? -eq 0 ]; then
   echo "Expected:"

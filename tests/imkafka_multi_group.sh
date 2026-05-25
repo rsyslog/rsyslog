@@ -21,7 +21,8 @@ stop_kafka
 start_zookeeper
 start_kafka
 
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 

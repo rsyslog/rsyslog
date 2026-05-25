@@ -6,7 +6,8 @@ export DTLS_SESSIONBREAK_ROUNDS=${DTLS_SESSIONBREAK_ROUNDS:-16}
 export USE_VALGRIND="yes"
 # TODO remote leak check skip and fix memory leaks caused by session break
 export RS_TESTBENCH_LEAK_CHECK=no
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 
 mkdir $RSYSLOG_DYNNAME.workdir
 generate_conf
@@ -56,7 +57,7 @@ done;
 
 wait_queueempty
 
-netstatresult=$(netstat --all --program 2>&1 | grep "ESTABLISHED" | grep $(cat $RSYSLOG_PIDBASE.pid) | grep $TCPFLOOD_PORT)
+netstatresult=$(netstat --all --program 2>&1 | grep "ESTABLISHED" | grep "$(cat "$RSYSLOG_PIDBASE.pid")" | grep "$TCPFLOOD_PORT")
 openfd=$(ls -l "/proc/$(cat $RSYSLOG_PIDBASE$1.pid)/fd" | wc -l)
 
 shutdown_when_empty
