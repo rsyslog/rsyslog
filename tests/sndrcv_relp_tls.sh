@@ -1,6 +1,8 @@
 #!/bin/bash
 # added 2013-12-10 by Rgerhards
-# testing sending and receiving via relp with TLS enabled
+# Verify RELP forwarding with TLS enabled. The imrelp receiver binds an
+# ephemeral IPv4 listener and the testbench discovers that bound port after
+# startup, avoiding the get_free_port race before the omrelp sender connects.
 # This file is part of the rsyslog project, released under ASL 2.0
 # uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
@@ -8,17 +10,16 @@
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port="'$PORT_RCVR'" tls="on")
+input(type="imrelp" address="127.0.0.1" port="0" tls="on")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2

@@ -1,6 +1,10 @@
 #!/bin/bash
 # added 2014-11-05 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
+#
+# Verify IPv6 UDP forwarding to a non-standard receiver port. The receiver and
+# sender-side tcpflood listener both publish dynamic ports via port files;
+# success is proved by receiving the full ordered sequence over UDP.
 echo ===============================================================================
 echo \[sndrcv_udp_nonstdpt_v6.sh\]: testing sending and receiving via udp
 
@@ -25,12 +29,10 @@ assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
-export TCPFLOOD_PORT
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 # this listener is for message generation by the test framework!
-input(type="imtcp" port=`echo $TCPFLOOD_PORT`)
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfwd"
        target="::1" port=`echo $PORT_RCVR`
