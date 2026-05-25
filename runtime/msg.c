@@ -2002,6 +2002,16 @@ rsRetVal MsgSetFlowControlType(smsg_t *const pMsg, flowControl_t eFlowCtl) {
  */
 rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
     assert(pMsg != NULL);
+    assert(offs >= 0 && offs <= pMsg->iLenRawMsg);
+    if (offs < 0 || offs > pMsg->iLenRawMsg) {
+        pMsg->offAfterPRI = 0;
+        return RS_RET_ERR;
+    }
+    if (offs > 0) {
+        assert(pMsg->pszRawMsg != NULL);
+        assert(pMsg->pszRawMsg[0] == '<');
+        assert(pMsg->pszRawMsg[offs - 1] == '>');
+    }
     pMsg->offAfterPRI = offs;
     return RS_RET_OK;
 }
