@@ -17,7 +17,7 @@ EXTRA_DIST = \
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
-TESTS_IMFIFO = imfifo.sh imfifo-vg.sh
+TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
 TESTS_GSSAPI = \
@@ -2349,6 +2349,9 @@ if ENABLE_IMFIFO
 TESTS += imfifo.sh
 if HAVE_VALGRIND
 TESTS += imfifo-vg.sh
+endif
+if HAVE_LIBYAML
+TESTS += yaml-imfifo.sh
 endif
 endif
 

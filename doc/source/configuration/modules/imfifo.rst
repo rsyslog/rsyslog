@@ -33,7 +33,7 @@ Main Features
 - **Line-by-line Reading**: Messages are read from the named pipe and split on newline (``\n``) boundaries.
 - **O_RDWR Opening Technique**: To prevent rsyslog from blocking indefinitely during startup when no writers are yet connected to the pipe, and to avoid spinning on EOF when a writer disconnects, the module opens named pipes in ``O_RDWR`` mode.
 - **Ruleset Binding**: Each pipe instance can be bound to a specific ruleset for isolated log routing and processing.
-- **Clean Shutdown**: Utilizes non-blocking select loops with a short timeout to ensure rsyslog shuts down cleanly and instantly when requested.
+- **Clean Shutdown**: Utilizes non-blocking poll() loops with a short timeout to ensure rsyslog shuts down cleanly and instantly when requested.
 
 Configuration
 =============

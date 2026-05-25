@@ -102,6 +102,6 @@ imfifo:
   requires_serialization: true
   notes:
     - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
-    - Utilizes non-blocking select loops with a 100ms timeout to ensure clean and immediate shutdown.
+    - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
     - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.
 

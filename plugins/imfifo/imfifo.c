@@ -65,6 +65,7 @@ struct instanceConf_s {
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
     int fd; /* open FIFO file descriptor */
     cstr_t *ppCStr; /* line accumulator buffer */
+    sbool bLineTruncated; /* current line exceeded maxMessageSize */
     struct instanceConf_s *next;
     struct instanceConf_s *prev;
 };
@@ -80,8 +81,8 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset)
 
     static prop_t *pInputName = NULL;
 static instanceConf_t *confRoot = NULL;
-static fd_set rfds;
-static int nfds = 0;
+static size_t iMaxLine = 0;
+
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
@@ -112,13 +113,14 @@ static rsRetVal ATTR_NONNULL(1) createInstance(instanceConf_t **const ppInst) {
     pInst->pszBindRuleset = NULL;
     pInst->pBindRuleset = NULL;
     pInst->iSeverity = 5; /* notice */
-    pInst->iFacility = 128; /* local0 */
+    pInst->iFacility = 128; /* local0 (shifted) */
 
     pInst->pszTag = NULL;
     pInst->lenTag = 0;
 
     pInst->fd = -1;
     pInst->ppCStr = NULL;
+    pInst->bLineTruncated = RSFALSE;
     pInst->pszFileName = NULL;
 
     *ppInst = pInst;
@@ -156,7 +158,7 @@ static void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst) {
 
 /* read config  */
 BEGINnewInpInst
-    struct cnfparamvals *pvals;
+    struct cnfparamvals *pvals = NULL;
     instanceConf_t *pInst = NULL;
     int i;
     CODESTARTnewInpInst;
@@ -241,7 +243,7 @@ static rsRetVal enqLine(instanceConf_t *const __restrict__ pInst) {
     MsgSetRawMsg(pMsg, (const char *)rsCStrGetBufBeg(pInst->ppCStr), cstrLen(pInst->ppCStr));
     MsgSetRuleset(pMsg, pInst->pBindRuleset);
 
-    submitMsg2(pMsg);
+    CHKiRet(submitMsg2(pMsg));
 finalize_it:
     RETiRet;
 }
@@ -253,7 +255,11 @@ static rsRetVal readFIFO(instanceConf_t *const pInst) {
 
     nRead = read(pInst->fd, buf, sizeof(buf));
     if (nRead < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        if (errno == EAGAIN || errno == EINTR
+#if EWOULDBLOCK != EAGAIN
+            || errno == EWOULDBLOCK
+#endif
+        ) {
             FINALIZE;
         }
         ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -265,9 +271,15 @@ static rsRetVal readFIFO(instanceConf_t *const pInst) {
     for (ssize_t i = 0; i < nRead; ++i) {
         if (buf[i] == '\n') {
             CHKiRet(enqLine(pInst));
-            rsCStrTruncate(pInst->ppCStr, cstrLen(pInst->ppCStr)); /* Reset buffer */
+            CHKiRet(rsCStrTruncate(pInst->ppCStr, cstrLen(pInst->ppCStr))); /* Reset buffer */
+            pInst->bLineTruncated = RSFALSE;
         } else {
-            CHKiRet(cstrAppendChar(pInst->ppCStr, buf[i]));
+            if (cstrLen(pInst->ppCStr) < iMaxLine) {
+                CHKiRet(cstrAppendChar(pInst->ppCStr, buf[i]));
+            } else if (pInst->bLineTruncated == RSFALSE) {
+                LogError(0, NO_ERRCODE, "imfifo: message larger than maxMessageSize, truncating");
+                pInst->bLineTruncated = RSTRUE;
+            }
         }
     }
 finalize_it:
@@ -275,12 +287,13 @@ finalize_it:
 }
 
 BEGINrunInput
-    struct timeval tv;
-    int retval;
     instanceConf_t *pInst;
     rsRetVal readRet;
+    struct pollfd *pollfds = NULL;
+    int iNumPipes = 0;
     CODESTARTrunInput;
-    FD_ZERO(&rfds);
+
+    iMaxLine = (size_t)glbl.GetMaxLine(runConf);
 
     /* Open all pipes */
     for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
@@ -306,41 +319,68 @@ BEGINrunInput
             continue;
         }
 
-        FD_SET(pInst->fd, &rfds);
-        if (pInst->fd >= nfds) {
-            nfds = pInst->fd + 1;
-        }
         DBGPRINTF("imfifo: successfully opened FIFO '%s' on fd %d\n", pInst->pszFileName, pInst->fd);
+        iNumPipes++;
     }
 
-    /* Main read/select loop */
-    tv.tv_usec = 100000; /* 0.1 second */
+    if (iNumPipes == 0) {
+        DBGPRINTF("imfifo: no active named pipes to monitor\n");
+        FINALIZE;
+    }
+
+    CHKmalloc(pollfds = calloc((size_t)iNumPipes, sizeof(struct pollfd)));
+
+    /* Main read/poll loop */
     while (glbl.GetGlobalInputTermState() == 0) {
-        fd_set temp;
-        memcpy(&temp, &rfds, sizeof(fd_set));
-        tv.tv_sec = 0;
-        tv.tv_usec = 100000;
+        int nfd = 0;
+        for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
+            if (pInst->fd != -1) {
+                pollfds[nfd].fd = pInst->fd;
+                pollfds[nfd].events = POLLIN;
+                pollfds[nfd].revents = 0;
+                nfd++;
+            }
+        }
 
-        retval = select(nfds, &temp, NULL, NULL, &tv);
+        if (nfd == 0) {
+            /* No active pipes to monitor, sleep a bit to avoid busy looping */
+            srSleep(0, 100000); /* 100ms */
+            continue;
+        }
 
-        while (retval > 0 && glbl.GetGlobalInputTermState() == 0) {
-            for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
-                if (pInst->fd != -1 && FD_ISSET(pInst->fd, &temp)) {
-                    readRet = readFIFO(pInst);
-                    if (readRet == RS_RET_EOF) {
-                        /* EOF received, should not happen but close it */
-                        close(pInst->fd);
-                        FD_CLR(pInst->fd, &rfds);
-                        pInst->fd = -1;
-                    } else if (readRet != RS_RET_OK) {
-                        LogError(errno, readRet, "imfifo: error reading from FIFO '%s'", pInst->pszFileName);
+        int retval = poll(pollfds, nfd, 100); /* 100 ms timeout */
+
+        if (retval < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            LogError(errno, RS_RET_IO_ERROR, "imfifo: poll failed");
+            break;
+        }
+
+        if (retval > 0) {
+            int current_fd_idx = 0;
+            for (pInst = confRoot; pInst != NULL && current_fd_idx < nfd; pInst = pInst->next) {
+                if (pInst->fd != -1) {
+                    if (pollfds[current_fd_idx].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL)) {
+                        readRet = readFIFO(pInst);
+                        if (readRet != RS_RET_OK) {
+                            if (readRet != RS_RET_EOF) {
+                                LogError(errno, readRet, "imfifo: error reading from FIFO '%s'", pInst->pszFileName);
+                            }
+                            /* EOF or error received, close it and disable future polling */
+                            close(pInst->fd);
+                            pInst->fd = -1;
+                        }
                     }
-                    retval--;
+                    current_fd_idx++;
                 }
             }
         }
     }
     DBGPRINTF("imfifo: terminating upon request of rsyslog core\n");
+finalize_it:
+    free(pollfds);
 ENDrunInput
 
 BEGINafterRun
