@@ -2005,6 +2005,28 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
     }
 }
 
+static rsRetVal validateTargetSrvTlsAuth(const instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->targetSrv == NULL || pData->protocol != FORW_TCP || pData->iStrmDrvrMode == 0) {
+        FINALIZE;
+    }
+
+    if (pData->pPermPeers != NULL) {
+        FINALIZE;
+    }
+
+    if (pData->pszStrmDrvrAuthMode == NULL || !strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "x509/name")) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: targetSrv with TLS requires streamdriverpermittedpeers when using streamdriverauthmode "
+                 "\"x509/name\" or the default auth mode (explicitly set permitted peers or use static target)");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 BEGINnewActInst
     struct cnfparamvals *pvals;
@@ -2259,6 +2281,7 @@ BEGINnewActInst
             parser_warnmsg("omfwd: targetSrv was set, ignoring explicit port list");
             freeConfiguredPorts(pData);
         }
+        CHKiRet(validateTargetSrvTlsAuth(pData));
         CHKiRet(resolveSrvTargets(pData));
     }
 
