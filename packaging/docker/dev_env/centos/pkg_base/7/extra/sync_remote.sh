@@ -3,8 +3,9 @@
 # mybasedir=$(dirname "$0")
 mybasedir=$PKGBASEDIR
 
-source $mybasedir/config.sh
-cd $mybasedir/
+source "$mybasedir/config.sh"
+: "${szBaseDir:?}"
+cd "$mybasedir/" || exit 1
 echo "-------------------------------------"
 echo "--- Basedir: $szBaseDir"
 echo "--- Sync remote repository	---"

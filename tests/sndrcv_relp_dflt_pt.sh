@@ -31,7 +31,8 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
+TCPFLOOD_PORT="$(get_free_port)"
+export TCPFLOOD_PORT
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
 

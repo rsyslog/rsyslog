@@ -2,7 +2,8 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # imdocker unit tests are enabled with --enable-imdocker-tests
 . ${srcdir:=.}/diag.sh init
-export COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+export COOKIE
 generate_conf
 add_conf '
 #template(name="template_msg_only" type="string" string="%msg%\n")

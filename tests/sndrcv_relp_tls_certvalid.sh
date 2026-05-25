@@ -7,7 +7,8 @@
 export RSYSLOG_DEBUGLOG="log"
 
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
@@ -42,7 +43,7 @@ startup 2
 
 grep "omrelp error: invalid authmode" $RSYSLOG_DYNNAME.errmsgs > /dev/null
 if [ $? -eq 0 ]; then
-        echo "SKIP: librelp does not support "certvalid" auth mode"
+        echo "SKIP: librelp does not support certvalid auth mode"
 	# mini-cleanup to not leave dangling processes
 	shutdown_immediate 2
 	shutdown_immediate

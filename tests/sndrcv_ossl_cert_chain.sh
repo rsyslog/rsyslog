@@ -7,7 +7,8 @@ export NUMMESSAGES=1000
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 ### This is important, as it must be exactly the same
 ### as the ones configured in used certificates
 export HOSTNAME="fedora"
@@ -36,7 +37,8 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
+TCPFLOOD_PORT="$(get_free_port)"
+export TCPFLOOD_PORT
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/certchain/ca-root-cert.pem'"

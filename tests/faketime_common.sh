@@ -30,7 +30,8 @@ rsyslog_testbench_preload_libfaketime() {
     fi
 
     echo "Testing '${RSYSLOG_LIBFAKETIME}' library ..."
-    local faketime_testtime=$(LD_PRELOAD="${RSYSLOG_LIBFAKETIME}" FAKETIME="1991-08-25 20:57:08" TZ=GMT date +%s 2>/dev/null)
+    local faketime_testtime
+    faketime_testtime=$(LD_PRELOAD="${RSYSLOG_LIBFAKETIME}" FAKETIME="1991-08-25 20:57:08" TZ=GMT date +%s 2>/dev/null)
     if [ ${faketime_testtime} -ne 683153828 ] ; then
         echo "'${RSYSLOG_LIBFAKETIME}' failed sanity check, skipping test!"
         exit 77

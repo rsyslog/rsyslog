@@ -5,6 +5,7 @@
 
 # To support <bash-4.2 which don't support "declare -g" we declare
 # the array outside of the function
+# shellcheck disable=SC2034
 declare -A TESTBENCH_TESTUSER
 
 rsyslog_testbench_setup_testuser() {
@@ -25,18 +26,18 @@ rsyslog_testbench_setup_testuser() {
 
 		if [ -n "${RSYSLOG_TESTUSER}" ]; then
 			# User has specified an username/uid we should use in testbench
-			testusers=("${RSYSLOG_TESTUSER}" ${testusers[@]})
+			testusers=("${RSYSLOG_TESTUSER}" "${testusers[@]}")
 		fi
 
 		local testuser=
 		for testuser in "${testusers[@]}"; do
-			testusername=$(id --user --name ${testuser} 2>/dev/null)
+			testusername=$(id --user --name "${testuser}" 2>/dev/null)
 			if [ -z "${testusername}" ]; then
 				echo "'id' did not find user \"${testuser}\" ... skipping, trying next user!"
 				continue
 			fi
 
-			testgroupname=$(id --group --name ${testuser} 2>/dev/null)
+			testgroupname=$(id --group --name "${testuser}" 2>/dev/null)
 			if [ -z "${testgroupname}" ]; then
 				echo "'id' did not find a primary group for \"${testuser}\" ... skipping, trying next user!"
 				continue
@@ -73,28 +74,32 @@ rsyslog_testbench_setup_testuser() {
 _rsyslog_testbench_declare_testuser() {
 	local testuser=$1
 
-	local testusername=$(id --user --name ${testuser} 2>/dev/null)
+	local testusername
+	testusername=$(id --user --name "${testuser}" 2>/dev/null)
 	if [ -z "${testusername}" ]; then
 		# Should never happen
 		echo "FATAL ERROR: Could not get username for user \"${testuser}\"!"
 		exit 1
 	fi
 
-	local testuid=$(id --user ${testuser} 2>/dev/null)
+	local testuid
+	testuid=$(id --user "${testuser}" 2>/dev/null)
 	if [ -z "${testuid}" ]; then
 		# Should never happen
 		echo "FATAL ERROR: Could not get uid for user \"${testuser}\"!"
 		exit 1
 	fi
 
-	local testgroupname=$(id --group --name ${testuser} 2>/dev/null)
+	local testgroupname
+	testgroupname=$(id --group --name "${testuser}" 2>/dev/null)
 	if [ -z "${testgroupname}" ]; then
 		# Should never happen
 		echo "FATAL ERROR: Could not get uid of user \"${testuser}\"!"
 		exit 1
 	fi
 
-	local testgid=$(id --group ${testuser} 2>/dev/null)
+	local testgid
+	testgid=$(id --group "${testuser}" 2>/dev/null)
 	if [ -z "${testgid}" ]; then
 		# Should never happen
 		echo "FATAL ERROR: Could not get primary gid of user \"${testuser}\"!"

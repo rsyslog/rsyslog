@@ -7,7 +7,8 @@ export NUMMESSAGES=50000
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 input(type="imrelp" port="'$PORT_RCVR'")

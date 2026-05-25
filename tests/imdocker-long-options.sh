@@ -4,7 +4,8 @@
 . ${srcdir:=.}/diag.sh init
 NUMMESSAGES=50
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
-export COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+export COOKIE
 LONG_PREFIX=$(printf 'noop=1&%.0s' $(seq 1 80))
 
 generate_conf

@@ -25,7 +25,8 @@ assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
+TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
+export TCPFLOOD_PORT
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 # this listener is for message generation by the test framework!

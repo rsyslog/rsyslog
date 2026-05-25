@@ -4,7 +4,8 @@
 # even when the action retries multiple times (loggedWarnings mechanism)
 . ${srcdir:=.}/diag.sh init
 
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 export RS_REDIR=">${RSYSLOG_DYNNAME}.rsyslog.log 2>&1"
 
 generate_conf
