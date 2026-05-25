@@ -1167,11 +1167,11 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
             CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)szAltName, &bFoundPositiveMatch));
             /* do NOT break, because there may be multiple dNSName's! */
         } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
+            bHaveSAN = 1;
             const int family = (szAltNameLen == sizeof(struct in6_addr))
                                    ? AF_INET6
                                    : ((szAltNameLen == sizeof(struct in_addr)) ? AF_INET : AF_UNSPEC);
             if (family != AF_UNSPEC) {
-                bHaveSAN = 1;
                 char ipAddress[INET6_ADDRSTRLEN];
                 if (inet_ntop(family, szAltName, ipAddress, INET6_ADDRSTRLEN) != NULL) {
                     dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
