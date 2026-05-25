@@ -448,9 +448,13 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
                 /* do NOT break, because there may be multiple dNSName's! */
             } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
                 char ipAddress[INET6_ADDRSTRLEN];
+                const int family = (tmp == sizeof(struct in6_addr))
+                                       ? AF_INET6
+                                       : ((tmp == sizeof(struct in_addr)) ? AF_INET : AF_UNSPEC);
                 /* we found it! */
-                inet_ntop(((tmp == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szBuf, ipAddress, sizeof(ipAddress));
-                CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", ipAddress));
+                if (family != AF_UNSPEC && inet_ntop(family, szBuf, ipAddress, sizeof(ipAddress)) != NULL) {
+                    CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", ipAddress));
+                }
                 /* do NOT break, because there may be multiple ipAddr's! */
             }
             ++iAltName;
@@ -1164,13 +1168,18 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
             /* do NOT break, because there may be multiple dNSName's! */
         } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
             bHaveSAN = 1;
-            char ipAddress[INET6_ADDRSTRLEN];
-            inet_ntop(((szAltNameLen == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szAltName, ipAddress,
-                      INET6_ADDRSTRLEN);
-            dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
-            snprintf((char *)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", ipAddress);
-            CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-            CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)ipAddress, &bFoundPositiveMatch));
+            const int family = (szAltNameLen == sizeof(struct in6_addr))
+                                   ? AF_INET6
+                                   : ((szAltNameLen == sizeof(struct in_addr)) ? AF_INET : AF_UNSPEC);
+            if (family != AF_UNSPEC) {
+                char ipAddress[INET6_ADDRSTRLEN];
+                if (inet_ntop(family, szAltName, ipAddress, INET6_ADDRSTRLEN) != NULL) {
+                    dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
+                    snprintf((char *)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", ipAddress);
+                    CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+                    CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)ipAddress, &bFoundPositiveMatch));
+                }
+            }
             /* do NOT break, because there may be multiple ipAddr's! */
         }
         ++iAltName;
