@@ -772,17 +772,26 @@ BEGINrunInput
 
         char *tmp_logfile = NULL;
         if (runModConf->bLogOverwrite && runModConf->logfile != NULL) {
-            const size_t len_tmp_logfile = strlen(runModConf->logfile) + 5;
+            const size_t len_tmp_logfile = strlen(runModConf->logfile) + sizeof(".tmp.XXXXXX");
             if ((tmp_logfile = malloc(len_tmp_logfile)) == NULL) {
                 LogError(errno, RS_RET_OUT_OF_MEMORY, "impstats: could not allocate memory for temp log file name");
             } else {
-                snprintf(tmp_logfile, len_tmp_logfile, "%s.tmp", runModConf->logfile);
+                snprintf(tmp_logfile, len_tmp_logfile, "%s.tmp.XXXXXX", runModConf->logfile);
                 pthread_mutex_lock(&hup_mutex);
-                runModConf->logfd = open(tmp_logfile, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR);
+                runModConf->logfd = mkstemp(tmp_logfile);
                 if (runModConf->logfd == -1) {
-                    LogError(errno, RS_RET_ERR, "impstats: error opening temp stats file %s", tmp_logfile);
+                    LogError(errno, RS_RET_ERR, "impstats: error creating temp stats file %s", tmp_logfile);
                     free(tmp_logfile);
                     tmp_logfile = NULL;
+                } else {
+                    if (fcntl(runModConf->logfd, F_SETFD, FD_CLOEXEC) != 0) {
+                        LogError(errno, RS_RET_ERR, "impstats: failed to set close-on-exec on temp stats file %s",
+                                 tmp_logfile);
+                    }
+                    if (fchmod(runModConf->logfd, S_IRUSR | S_IWUSR) != 0) {
+                        LogError(errno, RS_RET_ERR, "impstats: failed to set permissions on temp stats file %s",
+                                 tmp_logfile);
+                    }
                 }
                 pthread_mutex_unlock(&hup_mutex);
             }
