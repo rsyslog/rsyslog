@@ -1,5 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify that cert-valid DTLS reports a handshake failure when sender and
+# receiver ciphers do not overlap. The expected TLS diagnostic is the oracle.
 . ${srcdir:=.}/diag.sh init
 # start up the instances
 # uncomment for debugging support:
@@ -7,8 +9,7 @@
 #export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 export NUMMESSAGES=1
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
+PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imdtls.port"
 
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -23,11 +24,13 @@ module(	load="../plugins/imdtls/.libs/imdtls"
 
 input(	type="imdtls"
 	tls.tlscfgcmd="CipherString=ECDHE-RSA-AES256-SHA384;Ciphersuites=TLS_AES_256_GCM_SHA384"
-	port="'$PORT_RCVR'")
+	port="0"
+	listenPortFileName="'$PORT_RCVR_FILE'")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 generate_conf 2
 add_conf '

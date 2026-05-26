@@ -1,11 +1,12 @@
 #!/bin/bash
 # added 2023-10-05 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify that imdtls receives a DTLS message sequence over a kernel-assigned
+# UDP port and preserves the injected message numbers without loss.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
+PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imdtls.port"
 
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -18,7 +19,8 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 module(	load="../plugins/imdtls/.libs/imdtls" )
 # tls.authmode="anon" )
 input(	type="imdtls"
-	port="'$PORT_RCVR'")
+	port="0"
+	listenPortFileName="'$PORT_RCVR_FILE'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
@@ -28,6 +30,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 # Begin actual testcase
 
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 #	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 
 ./tcpflood -b1 -W1000 -p$PORT_RCVR -m$NUMMESSAGES -Tdtls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem -L0
 

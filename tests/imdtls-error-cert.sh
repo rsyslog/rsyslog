@@ -1,10 +1,10 @@
 #!/bin/bash
 # added 2018-11-07 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify that imdtls reports certificate load errors during startup. No traffic
+# is sent; the configured rsyslog diagnostics are the pass/fail oracle.
 . ${srcdir:=.}/diag.sh init
 generate_conf
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
 
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -14,7 +14,7 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 
 module(	load="../plugins/imdtls/.libs/imdtls" )
 input(	type="imdtls"
-	port="'$PORT_RCVR'")
+	port="0")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
