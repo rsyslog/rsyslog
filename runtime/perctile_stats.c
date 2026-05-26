@@ -520,14 +520,8 @@ static rsRetVal perctileAddBucketMetrics(perctile_buckets_t *bkts, perctile_buck
 finalize_it:
     free(metric_name_buff);
     if (iRet != RS_RET_OK) {
-        if (b->pOpsOverflowCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
-            b->pOpsOverflowCtr = NULL;
-        }
-        if (b->pNewKeyAddCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pNewKeyAddCtr);
-            b->pNewKeyAddCtr = NULL;
-        }
+        perctileDestroyCounter(bkts->global_stats, &b->pOpsOverflowCtr);
+        perctileDestroyCounter(bkts->global_stats, &b->pNewKeyAddCtr);
     }
     RETiRet;
 }
