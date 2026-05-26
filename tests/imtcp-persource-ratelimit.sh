@@ -3,8 +3,10 @@
 
 . ${srcdir:=.}/diag.sh init
 
-export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.persource.yaml"
-export INPUT_FILE="$(pwd)/${RSYSLOG_DYNNAME}.input"
+POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.persource.yaml"
+export POLICY_FILE
+INPUT_FILE="$(pwd)/${RSYSLOG_DYNNAME}.input"
+export INPUT_FILE
 
 cat > "$POLICY_FILE" <<EOF
 default:
@@ -35,7 +37,7 @@ startup
 
 tcp_port=$(cat $RSYSLOG_DYNNAME.tcp.port)
 
-> "$INPUT_FILE"
+: > "$INPUT_FILE"
 for i in $(seq 1 20); do
     echo "<13>Jan 1 00:00:00 noisyhost app: msgnum:$i" >> "$INPUT_FILE"
 done

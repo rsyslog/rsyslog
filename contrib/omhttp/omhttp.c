@@ -2396,12 +2396,13 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
                     pData->nHttpHeaders = 1;
                     pData->httpHeaders[0] = (uchar *)es_str2cstr(tmpHeader, NULL);
                 } else {
-                    pData->httpHeaders = realloc(pData->httpHeaders, sizeof(uchar *) * (pData->nHttpHeaders + 1));
-                    if (pData->httpHeaders == NULL) {
+                    uchar **new_headers = realloc(pData->httpHeaders, sizeof(uchar *) * (pData->nHttpHeaders + 1));
+                    if (new_headers == NULL) {
                         LogError(0, RS_RET_OUT_OF_MEMORY, "omhttp: error reallocating httpHeaders for auth token");
                         es_deleteStr(tmpHeader);
                         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                     }
+                    pData->httpHeaders = new_headers;
 
                     pData->httpHeaders[pData->nHttpHeaders] = (uchar *)es_str2cstr(tmpHeader, NULL);
                     pData->nHttpHeaders += 1;

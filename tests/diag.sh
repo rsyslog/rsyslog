@@ -1165,6 +1165,161 @@ assign_tcpflood_port() {
 	fi
 }
 
+# Discover the single TCP listener port owned by an rsyslog instance, excluding
+# the imdiag listener used by the testbench. This supports modules that can bind
+# port 0 but do not have native listenPortFileName plumbing yet. Tests should
+# still prefer module-native port files where they exist.
+# $1 - variable name to assign
+# $2 - rsyslog instance number, blank for the first instance
+assign_single_tcp_listener_port() {
+	local var_name="$1"
+	local instance="$2"
+	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
+	local imdiag_var="IMDIAG_PORT$instance"
+	local imdiag_port="${!imdiag_var}"
+	local port
+
+	if [ "$var_name" == "" ]; then
+		printf 'TESTBENCH error: assign_single_tcp_listener_port needs a target variable\n'
+		error_exit 100
+	fi
+	if [ "$(uname -s)" != "Linux" ]; then
+		printf 'SKIP: TCP listener discovery requires Linux /proc socket tables\n'
+		skip_test
+	fi
+	wait_rsyslog_instance_pid "$instance"
+	if [ "$imdiag_port" == "" ]; then
+		printf 'TESTBENCH error: imdiag port for instance "%s" is not known\n' "$instance"
+		error_exit 100
+	fi
+	port=$($PYTHON - "$pid_file" "$imdiag_port" <<'PY'
+import os
+import sys
+
+pid_file, imdiag_port = sys.argv[1], int(sys.argv[2])
+with open(pid_file) as pid_fp:
+    pid = pid_fp.read().strip()
+
+socket_inodes = set()
+fd_dir = "/proc/{}/fd".format(pid)
+try:
+    fd_names = os.listdir(fd_dir)
+except OSError:
+    fd_names = []
+for fd_name in fd_names:
+    try:
+        target = os.readlink(os.path.join(fd_dir, fd_name))
+    except OSError:
+        continue
+    if target.startswith("socket:[") and target.endswith("]"):
+        socket_inodes.add(target[8:-1])
+
+ports = set()
+for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+    if not os.path.exists(table):
+        continue
+    with open(table) as table_fp:
+        next(table_fp)
+        for line in table_fp:
+            fields = line.split()
+            if len(fields) < 10 or fields[3] != "0A" or fields[9] not in socket_inodes:
+                continue
+            port = int(fields[1].split(":")[1], 16)
+            if port != imdiag_port:
+                ports.add(port)
+
+if len(ports) != 1:
+    sys.stderr.write(
+        "expected exactly one non-imdiag TCP listener for pid {}, found {}".format(
+            pid, sorted(ports)
+        )
+        + "\n"
+    )
+    sys.exit(1)
+print(next(iter(ports)))
+PY
+	)
+	if [ $? -ne 0 ] || [ "$port" == "" ]; then
+		printf 'TESTBENCH error: could not discover non-imdiag TCP listener for instance "%s"\n' "$instance"
+		error_exit 100
+	fi
+	export "$var_name=$port"
+	echo "$var_name now: $port"
+}
+
+# Discover the single UDP listener port owned by an rsyslog instance. This is
+# intended for UDP-style inputs that can bind port 0 but do not have native
+# listenPortFileName plumbing yet.
+# $1 - variable name to assign
+# $2 - rsyslog instance number, blank for the first instance
+assign_single_udp_listener_port() {
+	local var_name="$1"
+	local instance="$2"
+	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
+	local port
+
+	if [ "$var_name" == "" ]; then
+		printf 'TESTBENCH error: assign_single_udp_listener_port needs a target variable\n'
+		error_exit 100
+	fi
+	if [ "$(uname -s)" != "Linux" ]; then
+		printf 'SKIP: UDP listener discovery requires Linux /proc socket tables\n'
+		skip_test
+	fi
+	wait_rsyslog_instance_pid "$instance"
+	port=$($PYTHON - "$pid_file" <<'PY'
+import os
+import sys
+
+pid_file = sys.argv[1]
+with open(pid_file) as pid_fp:
+    pid = pid_fp.read().strip()
+
+socket_inodes = set()
+fd_dir = "/proc/{}/fd".format(pid)
+try:
+    fd_names = os.listdir(fd_dir)
+except OSError:
+    fd_names = []
+for fd_name in fd_names:
+    try:
+        target = os.readlink(os.path.join(fd_dir, fd_name))
+    except OSError:
+        continue
+    if target.startswith("socket:[") and target.endswith("]"):
+        socket_inodes.add(target[8:-1])
+
+ports = set()
+for table in ("/proc/net/udp", "/proc/net/udp6"):
+    if not os.path.exists(table):
+        continue
+    with open(table) as table_fp:
+        next(table_fp)
+        for line in table_fp:
+            fields = line.split()
+            if len(fields) < 10 or fields[9] not in socket_inodes:
+                continue
+            ports.add(int(fields[1].split(":")[1], 16))
+
+if len(ports) != 1:
+    sys.stderr.write(
+        "expected exactly one UDP listener for pid {}, found {}".format(
+            pid, sorted(ports)
+        )
+        + "\n"
+    )
+    sys.exit(1)
+print(next(iter(ports)))
+PY
+	)
+	if [ $? -ne 0 ] || [ "$port" == "" ]; then
+		printf 'TESTBENCH error: could not discover UDP listener for instance "%s"\n' "$instance"
+		error_exit 100
+	fi
+	export "$var_name=$port"
+	echo "$var_name now: $port"
+}
+
 
 # assign TCPFLOOD_PORT2 from port file
 # $1 - port file
@@ -4740,11 +4895,16 @@ file_size_check() {
 }
 
 ## Start the helper SNI server for omfwd tests.
-## Args: 1=library (openssl|gnutls), 2=port
+## Args: 1=library (openssl|gnutls), 2=port file
+## The helper binds port 0 and writes the selected listener port before rsyslog
+## is configured. This avoids the get_free_port preselection race where another
+## process can take the chosen port before the helper binds it.
 omfwd_sni_server() {
-	"./$1_sni_server" "$2" "$srcdir/tls-certs/cert.pem" "$srcdir/tls-certs/key.pem" \
+	rm -f "$2"
+	"./$1_sni_server" 0 "$srcdir/tls-certs/cert.pem" "$srcdir/tls-certs/key.pem" "$2" \
 		1>"$RSYSLOG_DYNNAME.sni-server.stdout" &
 	echo "$!" >"$RSYSLOG_DYNNAME.sni-server.pid"
+	wait_file_exists "$2" 10
 }
 
 ## Validate that the SNI server observed the expected name.

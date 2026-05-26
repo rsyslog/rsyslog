@@ -11,7 +11,8 @@
 export TESTMESSAGES=1
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.omsnmp.debuglog"
 generate_conf
-export PORT_SNMP="$(get_free_port)"
+PORT_SNMP="$(get_free_port)"
+export PORT_SNMP
 # Start SNMP Trap Receiver
 snmp_start_trapreceiver ${PORT_SNMP} ${RSYSLOG_OUT_LOG}
 

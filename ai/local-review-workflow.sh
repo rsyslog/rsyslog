@@ -7,6 +7,13 @@ set -euo pipefail
 #   Multi-stage rsyslog policy check pipeline using GitHub Copilot CLI.
 #   Runs checks from least to most costly, stopping at first issue.
 #
+# Validation role:
+#   This script runs local review stages, including local Cubic when available.
+#   Hosted Cubic/Gemini PR comments are useful follow-up review feedback, but
+#   they do not substitute for this local Cubic stage. Likewise, local Cubic
+#   does not substitute for the full local container validation sequence in
+#   .agent/skills/rsyslog_local_container_testing/SKILL.md.
+#
 # Default diff:
 #   main...HEAD
 #
@@ -57,9 +64,13 @@ DIFF_SPEC:
 PIPELINE STAGES:
   1. alloc-policy   - Scans .c/.h files for raw malloc/calloc/realloc/strdup calls
   2. mock-distcheck - Runs 'make distcheck TEST_RUN_TYPE=MOCK-OK' for packaging validation
-  3. cubic          - Runs cubic code review (final stage)
+  3. cubic          - Runs local cubic code review (final stage)
 
-NOTE: Agent should build/test working tree BEFORE running this script.
+NOTE: Agent should build/test working tree BEFORE running this script. For
+      implementation PRs, also run the rsyslog_local_container_testing skill's
+      full ordered container gate when container tooling is available. A focused
+      run-ci.sh invocation is targeted container testing, not full validation,
+      unless that skill explicitly permits the reduced lane.
 
 EXIT CODES:
   0  All checks passed (or no changes/skipped)
@@ -394,4 +405,3 @@ fi
 debug "All pipeline checks passed"
 echo "$RESULT"
 exit 0
-

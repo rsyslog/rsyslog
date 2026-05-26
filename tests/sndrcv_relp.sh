@@ -1,5 +1,8 @@
 #!/bin/bash
 # added 2013-12-10 by Rgerhards
+# Verify basic RELP forwarding between two rsyslog instances. The receiver
+# binds an ephemeral IPv4 listener and the testbench discovers that bound port
+# after startup, avoiding the get_free_port race before the sender connects.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50000
@@ -7,15 +10,15 @@ export NUMMESSAGES=50000
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
-input(type="imrelp" port="'$PORT_RCVR'")
+input(type="imrelp" address="127.0.0.1" port="0")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 printf "#### RECEIVER STARTED\n\n"
 
 ########## sender ##########

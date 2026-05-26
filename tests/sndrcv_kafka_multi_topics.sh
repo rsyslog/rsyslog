@@ -10,8 +10,10 @@ export TESTMESSAGES=50000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
-export RANDTOPIC1="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
-export RANDTOPIC2="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC1="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC1
+RANDTOPIC2="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC2
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs

@@ -37,12 +37,12 @@ set -v
 # Now build some custom libraries for whom there are not packages
 mkdir helper-projects
 (
-cd helper-projects
+cd helper-projects || exit 1
 
 # code style checker - not yet packaged
 git clone https://github.com/rsyslog/codestyle
 (
-	cd codestyle
+	cd codestyle || exit 1
 	gcc --std=c99 stylecheck.c -o stylecheck
 	mv stylecheck /usr/bin/rsyslog_stylecheck
 )
@@ -51,7 +51,7 @@ rm -r codestyle
 # we need Guardtime libksi here, otherwise we cannot check the KSI component
 git clone https://github.com/guardtime/libksi.git
 (
-	cd libksi
+	cd libksi || exit 1
 	autoreconf -fvi
 	./configure --prefix=/usr
 	make -j2
@@ -67,7 +67,7 @@ rm -r libksi
 # we need the latest librdkafka as there as always required updates
 git clone https://github.com/edenhill/librdkafka
 (
-	cd librdkafka
+	cd librdkafka || exit 1
 	(unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2)
 	make install
 )

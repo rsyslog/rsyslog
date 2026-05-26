@@ -6,10 +6,14 @@
 
 export PORT_A_FILE="${RSYSLOG_DYNNAME}.imudp_port_a"
 export PORT_B_FILE="${RSYSLOG_DYNNAME}.imudp_port_b"
-export POLICY_A="$(pwd)/${RSYSLOG_DYNNAME}.policy-a.yaml"
-export POLICY_B="$(pwd)/${RSYSLOG_DYNNAME}.policy-b.yaml"
-export OUT_A="$(pwd)/${RSYSLOG_DYNNAME}.out-a.log"
-export OUT_B="$(pwd)/${RSYSLOG_DYNNAME}.out-b.log"
+POLICY_A="$(pwd)/${RSYSLOG_DYNNAME}.policy-a.yaml"
+export POLICY_A
+POLICY_B="$(pwd)/${RSYSLOG_DYNNAME}.policy-b.yaml"
+export POLICY_B
+OUT_A="$(pwd)/${RSYSLOG_DYNNAME}.out-a.log"
+export OUT_A
+OUT_B="$(pwd)/${RSYSLOG_DYNNAME}.out-b.log"
+export OUT_B
 export SENDMESSAGES=20
 
 cat > "$POLICY_A" <<'YAML'

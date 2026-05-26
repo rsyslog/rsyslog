@@ -8,7 +8,8 @@ require_relpEngineSetTLSLibByName
 
 export NUMMESSAGES=50
 export TB_TEST_MAX_RUNTIME=60
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
 
 generate_conf

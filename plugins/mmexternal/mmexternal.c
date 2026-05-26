@@ -339,6 +339,7 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
                                                  const int fdStdin,
                                                  const int fdStdOutErr) {
     int i;
+    int fdDevNull = -1;
     struct sigaction sigAct;
     sigset_t set;
     char *newenviron[] = {NULL};
@@ -346,11 +347,20 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
     if (dup2(fdStdin, STDIN_FILENO) == -1) {
         perror("mmexternal: dup() stdin failed\n");
     }
-    if (dup2(fdStdOutErr, STDOUT_FILENO) == -1) {
-        perror("mmexternal: dup() stdout failed\n");
+    if (fdStdOutErr == -1) {
+        fdDevNull = open("/dev/null", O_WRONLY);
+        if (fdDevNull == -1) {
+            perror("mmexternal: open(/dev/null) failed\n");
+        }
     }
-    if (dup2(fdStdOutErr, STDERR_FILENO) == -1) {
-        perror("mmexternal: dup() stderr failed\n");
+    const int targetFd = (fdStdOutErr == -1) ? fdDevNull : fdStdOutErr;
+    if (targetFd != -1) {
+        if (dup2(targetFd, STDOUT_FILENO) == -1) {
+            perror("mmexternal: dup() stdout failed\n");
+        }
+        if (dup2(targetFd, STDERR_FILENO) == -1) {
+            perror("mmexternal: dup() stderr failed\n");
+        }
     }
 
     /* we close all file handles as we fork soon
@@ -400,13 +410,14 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
 static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
     int pipestdin[2];
     int pipestdout[2];
+    int useOutputPipe = pWrkrData->pData->outputMode != OUTPUT_NONE;
     pid_t cpid;
     DEFiRet;
 
     if (pipe(pipestdin) == -1) {
         ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
     }
-    if (pipe(pipestdout) == -1) {
+    if (useOutputPipe && pipe(pipestdout) == -1) {
         ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
     }
 
@@ -427,15 +438,21 @@ static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
     if (cpid == 0) {
         /* we are now the child, just exec the binary. */
         close(pipestdin[1]); /* close those pipe "ports" that */
-        close(pipestdout[0]); /* we don't need */
-        execBinary(pWrkrData, pipestdin[0], pipestdout[1]);
+        if (useOutputPipe) {
+            close(pipestdout[0]); /* we don't need */
+            execBinary(pWrkrData, pipestdin[0], pipestdout[1]);
+        } else {
+            execBinary(pWrkrData, pipestdin[0], -1);
+        }
         /*NO CODE HERE - WILL NEVER BE REACHED!*/
     }
 
     DBGPRINTF("mmexternal: child has pid %d\n", (int)cpid);
-    pWrkrData->fdPipeIn = dup(pipestdout[0]);
+    if (useOutputPipe) {
+        pWrkrData->fdPipeIn = pipestdout[0];
+        close(pipestdout[1]);
+    }
     close(pipestdin[0]);
-    close(pipestdout[1]);
     pWrkrData->pid = cpid;
     pWrkrData->fdPipeOut = pipestdin[1];
     pWrkrData->bIsRunning = 1;

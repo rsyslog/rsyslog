@@ -5,7 +5,7 @@
     "A not_shipped result applies only to searched public repositories, not custom builds or third-party packages.",
     "Confirm downstream-specific claims with the relevant distribution security team before publication."
   ],
-  "component_count": 98,
+  "component_count": 97,
   "components": {
     "ffaup": {
       "kind": "contrib",
@@ -312,11 +312,6 @@
       "module_file": "omfile.so",
       "upstream_path": "tools/omfile.c"
     },
-    "omfile-hardened": {
-      "kind": "contrib",
-      "module_file": "omfile-hardened.so",
-      "upstream_path": "contrib/omfile-hardened/"
-    },
     "omgssapi": {
       "kind": "plugin",
       "module_file": "omgssapi.so",
@@ -503,7 +498,7 @@
   "sources": {
     "adiscon-daily-stable-focal": {
       "channel": "daily-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -965,10 +960,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [],
           "status": "not_shipped"
@@ -1270,7 +1261,7 @@
     },
     "adiscon-daily-stable-jammy": {
       "channel": "daily-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -1744,10 +1735,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [],
           "status": "not_shipped"
@@ -2049,7 +2036,7 @@
     },
     "adiscon-daily-stable-noble": {
       "channel": "daily-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -2527,10 +2514,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -2821,7 +2804,7 @@
     },
     "adiscon-v8-stable-focal": {
       "channel": "v8-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -3277,10 +3260,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [],
           "status": "not_shipped"
@@ -3576,7 +3555,7 @@
     },
     "adiscon-v8-stable-jammy": {
       "channel": "v8-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -4044,10 +4023,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [],
           "status": "not_shipped"
@@ -4343,7 +4318,7 @@
     },
     "adiscon-v8-stable-noble": {
       "channel": "v8-stable",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -4856,10 +4831,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -5156,7 +5127,7 @@
     },
     "alpine-edge": {
       "channel": "main+community",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -5642,10 +5613,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -5943,7 +5910,7 @@
     },
     "alpine-v3.21": {
       "channel": "main+community",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -6372,10 +6339,6 @@
           "status": "shipped"
         },
         "omfile": {
-          "packages": [],
-          "status": "not_shipped"
-        },
-        "omfile-hardened": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -6646,7 +6609,7 @@
     },
     "alpine-v3.22": {
       "channel": "main+community",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -7078,10 +7041,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -7349,7 +7308,7 @@
     },
     "debian-bookworm": {
       "channel": "main",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -7757,10 +7716,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -8027,7 +7982,7 @@
     },
     "debian-sid": {
       "channel": "main",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -8471,10 +8426,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -8747,7 +8698,7 @@
     },
     "debian-trixie": {
       "channel": "main",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -9185,10 +9136,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -9455,7 +9402,7 @@
     },
     "fedora-rawhide": {
       "channel": "everything",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -9887,10 +9834,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -10181,7 +10124,7 @@
     },
     "ubuntu-focal": {
       "channel": "main+universe",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -10577,10 +10520,6 @@
           "packages": [],
           "status": "not_shipped"
         },
-        "omfile-hardened": {
-          "packages": [],
-          "status": "not_shipped"
-        },
         "omgssapi": {
           "packages": [
             {
@@ -10829,7 +10768,7 @@
     },
     "ubuntu-jammy": {
       "channel": "main+universe",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -11228,10 +11167,6 @@
           "status": "shipped"
         },
         "omfile": {
-          "packages": [],
-          "status": "not_shipped"
-        },
-        "omfile-hardened": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -11495,7 +11430,7 @@
     },
     "ubuntu-noble": {
       "channel": "main+universe",
-      "component_count": 98,
+      "component_count": 97,
       "components": {
         "ffaup": {
           "packages": [],
@@ -11894,10 +11829,6 @@
           "status": "shipped"
         },
         "omfile": {
-          "packages": [],
-          "status": "not_shipped"
-        },
-        "omfile-hardened": {
           "packages": [],
           "status": "not_shipped"
         },

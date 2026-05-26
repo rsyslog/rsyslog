@@ -7,7 +7,8 @@ export KEEP_KAFKA_RUNNING="YES"
 
 export TESTMESSAGES=100000
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 #export EXTRA_EXITCHECK=dumpkafkalogs
 #export EXTRA_EXIT=kafka
 

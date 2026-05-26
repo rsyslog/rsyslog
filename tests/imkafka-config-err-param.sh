@@ -10,7 +10,8 @@ export TESTMESSAGES=1000
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
 
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 
 download_kafka
 stop_zookeeper

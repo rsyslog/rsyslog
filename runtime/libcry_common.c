@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "rsyslog.h" /* we need data typedefs */
 #include "libcry_common.h"
@@ -186,7 +187,15 @@ int cryGetKeyFromProg(char *cmd, char **key, unsigned *keylen) {
         goto done;
     }
     if ((r = readProgLine(fd, rcvBuf)) != 0) goto done;
-    *keylen = atoi(rcvBuf);
+    char *endptr = NULL;
+    errno = 0;
+    const long val = strtol(rcvBuf, &endptr, 10);
+    if (errno == ERANGE || endptr == rcvBuf || *endptr != '\0' || val <= 0 || val > 64 * 1024L) {
+        errno = (errno == ERANGE || val > 64 * 1024L) ? EMSGSIZE : EINVAL;
+        r = 3;
+        goto done;
+    }
+    *keylen = (unsigned)val;
     if ((*key = malloc(*keylen)) == NULL) {
         r = -1;
         goto done;

@@ -64,7 +64,8 @@ sample_cpu_activity() {
 
 export NUMMESSAGES=100
 export TB_TEST_MAX_RUNTIME=30
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 
 generate_conf
 add_conf '

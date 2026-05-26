@@ -2288,10 +2288,18 @@ static void ATTR_NONNULL(1) tryEmulateTAG(smsg_t *const pM, const sbool bLockMut
             /* no process ID, use APP-NAME only */
             MsgSetTAG(pM, (uchar *)getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
         } else {
+            int snRet;
             /* now we can try to emulate */
-            lenTAG = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
-                              getPROCID(pM, MUTEX_ALREADY_LOCKED));
+            snRet = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+                             getPROCID(pM, MUTEX_ALREADY_LOCKED));
             bufTAG[sizeof(bufTAG) - 1] = '\0'; /* just to make sure... */
+            if (snRet < 0) {
+                lenTAG = 0;
+            } else if ((size_t)snRet >= sizeof(bufTAG)) {
+                lenTAG = sizeof(bufTAG) - 1;
+            } else {
+                lenTAG = snRet;
+            }
             MsgSetTAG(pM, bufTAG, lenTAG);
         }
         /* Signal change in TAG for acquireProgramName */
