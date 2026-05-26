@@ -1,5 +1,8 @@
 #!/bin/bash
-# This tests the action suspension via a file
+# Verify omfwd action suspension and resumption controlled by an external state
+# file. The oracle is the complete forwarded sequence after the action is first
+# active, then suspended, then resumed. The receiver readiness wait keeps this
+# focused on external-state suspension instead of listener startup timing.
 # This file is part of the rsyslog project, released under ASL 2.0
 # Written 2019-07-10 by Rainer Gerhards
 . ${srcdir:=.}/diag.sh init
@@ -22,9 +25,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 }
 '
 
-./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG &
-BGPROCESS=$!
-echo background minitcpsrv process id is $BGPROCESS
+start_minitcpsrv_ready "$RSYSLOG_OUT_LOG" "$TCPFLOOD_PORT"
 
 startup
 injectmsg 0 5000

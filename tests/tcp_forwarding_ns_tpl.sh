@@ -1,6 +1,8 @@
 #!/bin/bash
-# This test tests tcp forwarding in a network namespace with assigned template.
-# To do so, a simple tcp listener service is started in a network namespace.
+# Verify TCP forwarding with an action-level template into a network namespace.
+# The oracle is the complete 0..9999 forwarded sequence received by the helper
+# listener inside the namespace. The ready file is written after listen()
+# succeeds, avoiding a sender/listener startup race.
 # Released under GNU GPLv3+
 echo ===============================================================================
 echo \[tcp_forwarding_ns_tpl.sh\]: test for tcp forwarding in a network namespace with assigned template
@@ -27,9 +29,13 @@ ip netns add rsyslog_test_ns
 ip netns exec rsyslog_test_ns ip link set dev lo up
 
 # run server in namespace
-ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p"$TCPFLOOD_PORT" -f $RSYSLOG_OUT_LOG &
+MINITCPSRV_READY="$RSYSLOG_DYNNAME.minitcpsrv.$TCPFLOOD_PORT.ready"
+rm -f "$MINITCPSRV_READY"
+ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p"$TCPFLOOD_PORT" \
+	-f "$RSYSLOG_OUT_LOG" -L "$MINITCPSRV_READY" &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
+wait_file_exists "$MINITCPSRV_READY"
 
 # now do the usual run
 startup

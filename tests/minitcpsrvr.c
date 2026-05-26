@@ -89,6 +89,21 @@ static void writeListenReadyMarker(void) {
     }
 }
 
+static void writePortFileMarker(void) {
+    FILE *fp;
+
+    if (portFileName == NULL) return;
+    if ((fp = fopen(portFileName, "w+")) == NULL) {
+        errout(portFileName);
+    }
+    if (fprintf(fp, "%d", targetPort) < 0) {
+        errout(portFileName);
+    }
+    if (fclose(fp) != 0) {
+        errout(portFileName);
+    }
+}
+
 static void waitForListenRelease(void) {
     if (waitListenFileName == NULL) return;
 
@@ -102,7 +117,6 @@ static void waitForListenRelease(void) {
 static void createListenSocket(void) {
     struct sockaddr_in srvAddr;
     unsigned int srvAddrLen;
-    static int portFileWritten = 0;
     int r;
 
     listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -161,27 +175,19 @@ static void createListenSocket(void) {
     }
     targetPort = ntohs(srvAddr.sin_port);
 
-    if (portFileName != NULL && !portFileWritten) {
-        FILE *fp;
-        if (getsockname(listen_fd, (struct sockaddr *)&srvAddr, &srvAddrLen) == -1) {
-            errout("getsockname");
-        }
-        if ((fp = fopen(portFileName, "w+")) == NULL) {
-            errout(portFileName);
-        }
-        fprintf(fp, "%d", ntohs(srvAddr.sin_port));
-        fclose(fp);
-        portFileWritten = 1;
-    }
-
     /* The socket is bound but not listening while this waits. TCP connects fail
      * with connection refused, while the selected port remains reserved.
+     * Publish the port before this wait so tests can configure a sender while
+     * intentionally keeping the receiver offline. Normal starts publish it only
+     * after listen() succeeds so port-file users do not race the listener.
      */
+    if (waitListenFileName != NULL) writePortFileMarker();
     waitForListenRelease();
 
     if (listen(listen_fd, MAX_CONNECTIONS) < 0) {
         errout("Listen failed");
     }
+    if (waitListenFileName == NULL) writePortFileMarker();
     writeListenReadyMarker();
 
     fds[0].fd = listen_fd;

@@ -1,6 +1,9 @@
 #!/bin/bash
-# This test tests tcp forwarding with assigned default template.
-# added 2015-05-30 by rgerhards. Released under ASL 2.0
+# Verify TCP forwarding uses the module-level default omfwd template. The
+# oracle is the complete 0..9999 forwarded message sequence rendered by that
+# default template. The receiver readiness wait avoids losing the first batch to
+# a listener startup race under high-concurrency test runs.
+# Added 2015-05-30 by rgerhards. Released under ASL 2.0.
 
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
@@ -17,9 +20,7 @@ module(load="builtin:omfwd" template="outfmt")
 if $msg contains "msgnum:" then
 	action(type="omfwd" target="127.0.0.1" port="'$TCPFLOOD_PORT'" protocol="tcp")
 '
-./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG &
-BGPROCESS=$!
-echo background minitcpsrv process id is $BGPROCESS
+start_minitcpsrv_ready "$RSYSLOG_OUT_LOG" "$TCPFLOOD_PORT"
 
 # now do the usual run
 startup
