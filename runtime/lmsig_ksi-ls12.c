@@ -268,9 +268,10 @@ static rsRetVal OnFileOpen(void *pT, uchar *fn, void *pGF) {
  * rgerhards, 2013-03-17
  */
 static rsRetVal OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec) {
+    const rs_size_t payloadLen = (lenRec > 0) ? (lenRec - 1) : 0;
     DEFiRet;
-    DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%d): %s\n", lenRec - 1, rec);
-    sigblkAddRecordKSI(pF, rec, lenRec - 1);
+    DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%d): %.*s\n", (int)payloadLen, (int)payloadLen, rec);
+    sigblkAddRecordKSI(pF, rec, payloadLen);
 
     RETiRet;
 }
