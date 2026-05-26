@@ -50,6 +50,7 @@ struct perctile_stat_s {
 };
 
 struct perctile_bucket_s {
+    struct perctile_buckets_s *bkts;
     uchar *name;
     uchar *delim;
     // lock for entire bucket

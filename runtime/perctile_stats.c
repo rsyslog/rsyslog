@@ -76,6 +76,35 @@ finalize_it:
     RETiRet;
 }
 
+static void perctileDestroyCounter(statsobj_t *stats, ctr_t **ref) {
+    if (*ref != NULL) {
+        if (stats != NULL) {
+            statsobj.DestructCounter(stats, *ref);
+        } else {
+            statsobj.DestructUnlinkedCounter(*ref);
+        }
+        *ref = NULL;
+    }
+}
+
+static void perctileUnlinkBucket(perctile_bucket_t *bkt) {
+    perctile_bucket_t **slot;
+
+    if (bkt->bkts == NULL) {
+        return;
+    }
+
+    pthread_rwlock_wrlock(&bkt->bkts->lock);
+    for (slot = &bkt->bkts->listBuckets; *slot != NULL; slot = &(*slot)->next) {
+        if (*slot == bkt) {
+            *slot = bkt->next;
+            bkt->next = NULL;
+            break;
+        }
+    }
+    pthread_rwlock_unlock(&bkt->bkts->lock);
+}
+
 static uint64_t min(uint64_t a, uint64_t b) {
     return a < b ? a : b;
 }
@@ -93,25 +122,15 @@ static void perctileStatDestruct(perctile_bucket_t *b, perctile_stat_t *pstat) {
         if (pstat->ctrs) {
             for (size_t i = 0; i < pstat->perctile_ctrs_count; ++i) {
                 perctile_ctr_t *ctr = &pstat->ctrs[i];
-                if (ctr->ref_ctr_percentile_stat) {
-                    statsobj.DestructCounter(b->statsobj, ctr->ref_ctr_percentile_stat);
-                }
+                perctileDestroyCounter(b->statsobj, &ctr->ref_ctr_percentile_stat);
             }
             free(pstat->ctrs);
         }
 
-        if (pstat->refCtrWindowCount) {
-            statsobj.DestructCounter(b->statsobj, pstat->refCtrWindowCount);
-        }
-        if (pstat->refCtrWindowMin) {
-            statsobj.DestructCounter(b->statsobj, pstat->refCtrWindowMin);
-        }
-        if (pstat->refCtrWindowMax) {
-            statsobj.DestructCounter(b->statsobj, pstat->refCtrWindowMax);
-        }
-        if (pstat->refCtrWindowSum) {
-            statsobj.DestructCounter(b->statsobj, pstat->refCtrWindowSum);
-        }
+        perctileDestroyCounter(b->statsobj, &pstat->refCtrWindowCount);
+        perctileDestroyCounter(b->statsobj, &pstat->refCtrWindowMin);
+        perctileDestroyCounter(b->statsobj, &pstat->refCtrWindowMax);
+        perctileDestroyCounter(b->statsobj, &pstat->refCtrWindowSum);
         pthread_rwlock_destroy(&pstat->stats_lock);
         free(pstat);
     }
@@ -120,6 +139,14 @@ static void perctileStatDestruct(perctile_bucket_t *b, perctile_stat_t *pstat) {
 static void perctileBucketDestruct(perctile_bucket_t *bkt) {
     PERCTILE_STATS_LOG("destructing perctile bucket\n");
     if (bkt) {
+        perctileUnlinkBucket(bkt);
+        /* Drop stats registry visibility before taking bucket locks and
+         * freeing counter backing storage; stats scrapes hold mutStats while
+         * read notifiers take the bucket locks. */
+        if (bkt->statsobj != NULL) {
+            statsobj.UnlinkAllCounters(bkt->statsobj);
+            statsobj.Destruct(&bkt->statsobj);
+        }
         pthread_rwlock_wrlock(&bkt->lock);
         // Delete all items in hashtable
         size_t count = hashtable_count(bkt->htable);
@@ -136,9 +163,10 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
             dbgprintf("End of container instances.\n");
         }
         hashtable_destroy(bkt->htable, 0);
-        statsobj.Destruct(&bkt->statsobj);
         pthread_rwlock_unlock(&bkt->lock);
         pthread_rwlock_destroy(&bkt->lock);
+        perctileDestroyCounter(bkt->bkts != NULL ? bkt->bkts->global_stats : NULL, &bkt->pOpsOverflowCtr);
+        perctileDestroyCounter(bkt->bkts != NULL ? bkt->bkts->global_stats : NULL, &bkt->pNewKeyAddCtr);
         free(bkt->perctile_values);
         free(bkt->delim);
         free(bkt->name);
@@ -150,18 +178,25 @@ void perctileBucketsDestruct(void) {
     perctile_buckets_t *bkts = &runConf->perctile_buckets;
 
     if (bkts->initialized) {
-        perctile_bucket_t *head = bkts->listBuckets;
-        if (head) {
-            pthread_rwlock_wrlock(&bkts->lock);
-            perctile_bucket_t *pnode = head, *pnext = NULL;
-            while (pnode) {
-                pnext = pnode->next;
-                perctileBucketDestruct(pnode);
-                pnode = pnext;
-            }
-            pthread_rwlock_unlock(&bkts->lock);
+        /* Global counters point into bucket storage, so detach the object
+         * before buckets start releasing that storage. */
+        if (bkts->global_stats != NULL) {
+            statsobj.UnlinkAllCounters(bkts->global_stats);
+            statsobj.Destruct(&bkts->global_stats);
         }
-        statsobj.Destruct(&bkts->global_stats);
+        while (1) {
+            perctile_bucket_t *pnode;
+            pthread_rwlock_wrlock(&bkts->lock);
+            pnode = bkts->listBuckets;
+            if (pnode == NULL) {
+                pthread_rwlock_unlock(&bkts->lock);
+                break;
+            }
+            bkts->listBuckets = pnode->next;
+            pnode->next = NULL;
+            pthread_rwlock_unlock(&bkts->lock);
+            perctileBucketDestruct(pnode);
+        }
         // destroy any global stats we keep specifically for this.
         pthread_rwlock_destroy(&bkts->lock);
     }
@@ -487,9 +522,11 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         if (b->pOpsOverflowCtr != NULL) {
             statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
+            b->pOpsOverflowCtr = NULL;
         }
         if (b->pNewKeyAddCtr != NULL) {
             statsobj.DestructCounter(bkts->global_stats, b->pNewKeyAddCtr);
+            b->pNewKeyAddCtr = NULL;
         }
     }
     RETiRet;
@@ -510,6 +547,7 @@ static rsRetVal perctile_newBucket(
         CHKmalloc(b = calloc(1, sizeof(perctile_bucket_t)));
 
         // initialize
+        b->bkts = bkts;
         pthread_rwlockattr_init(&bucket_lock_attr);
         pthread_rwlock_init(&b->lock, &bucket_lock_attr);
         CHKmalloc(b->htable = create_hashtable(7, hash_from_string, key_equals_string, NULL));
