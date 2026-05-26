@@ -2402,7 +2402,10 @@ module_needs_testing() {
 		[ -z "$changed_file" ] && continue
 
 		case "$changed_file" in
-			runtime/*.c|runtime/*.h|configure.ac|Makefile.am|tests/Makefile.am|tests/diag.sh)
+			runtime/*.c|runtime/*.h|*.c|*.h|\
+			configure.ac|Makefile.am|*.mk|m4/*|\
+			.github/workflows/*|\
+			tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*)
 				return 0
 				;;
 		esac
