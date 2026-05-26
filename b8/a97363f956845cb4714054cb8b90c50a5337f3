@@ -1,0 +1,21 @@
+tests/omfwd_fast_imuxsock.sh
+  s_a9719629ed5597::t_b56bfbc2de2af0 2-11
+  s_a9719629ed5597::t_25648b1597cb2f 26-27
+  s_a9719629ed5597::t_66dcc6e398f3f9 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "b8a97363f956845cb4714054cb8b90c50a5337f3",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
