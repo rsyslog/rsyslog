@@ -4,7 +4,8 @@
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 
-export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
+POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
+export POLICY_FILE
 
 cat > "$POLICY_FILE" <<'YAML'
 version: 1

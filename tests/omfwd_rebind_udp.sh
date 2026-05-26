@@ -3,7 +3,8 @@
 # added 2024-12-24 by Antigravity (Rgerhards). Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 add_conf '
 module(load="builtin:omfwd")
 

@@ -3,7 +3,8 @@
 . ${srcdir:=.}/diag.sh init
 export TESTMESSAGES=1000
 export RETRIES=50
-export TESTMESSAGESFULL=$((3 * $TESTMESSAGES - 1))
+TESTMESSAGESFULL=$((3 * $TESTMESSAGES - 1))
+export TESTMESSAGESFULL
 # export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 # export RSYSLOG_DEBUGLOG="log"
 
@@ -45,7 +46,8 @@ print_state_files() {
 	echo "=== State files after round $round ==="
 	if [ -d "$RSYSLOG_DYNNAME.spool" ]; then
 		echo "State files in spool directory:"
-		local state_count=$(ls -1 "$RSYSLOG_DYNNAME.spool/"imfile-state* 2>/dev/null | wc -l)
+		local state_count
+		state_count=$(ls -1 "$RSYSLOG_DYNNAME.spool/"imfile-state* 2>/dev/null | wc -l)
 		echo "Total state files found: $state_count"
 
 		if [ $state_count -eq 0 ]; then
@@ -83,8 +85,10 @@ print_inode_info() {
 	echo "=== Inode information after round $round ==="
 	for file in "$RSYSLOG_DYNNAME".input.log*; do
 		if [ -f "$file" ]; then
-			local inode=$(stat -c%i "$file" 2>/dev/null || echo "N/A")
-			local size=$(stat -c%s "$file" 2>/dev/null || echo "N/A")
+			local inode
+			inode=$(stat -c%i "$file" 2>/dev/null || echo "N/A")
+			local size
+			size=$(stat -c%s "$file" 2>/dev/null || echo "N/A")
 			echo "File: $file - Inode: $inode - Size: $size bytes"
 		fi
 	done
@@ -93,7 +97,8 @@ print_inode_info() {
 
 write_log_lines() {
 	local round=$1
-	local start_num=$((($round - 1) * $TESTMESSAGES))
+	local start_num
+	start_num=$((($round - 1) * $TESTMESSAGES))
 	echo "Writing $TESTMESSAGES log lines for round $round (starting from msgnum $start_num)"
 	./inputfilegen -m $TESTMESSAGES -i $start_num >> "$RSYSLOG_DYNNAME.input.log"
 }

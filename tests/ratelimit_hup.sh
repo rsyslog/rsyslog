@@ -7,7 +7,8 @@
 
 # Define ports and files
 export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
-export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.test_policy_hup.yaml"
+POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.test_policy_hup.yaml"
+export POLICY_FILE
 
 # Create initial policy (High limits)
 echo "interval: 1" > $POLICY_FILE
@@ -46,7 +47,7 @@ if [ $content_count -lt 20 ]; then
 fi
 
 # Reset log file for Phase 2 (clean slate)
-> $RSYSLOG_OUT_LOG
+: > "$RSYSLOG_OUT_LOG"
 
 # Phase 2: Restrictive Limit (Burst 0 - Drop All)
 echo "Updating policy..."

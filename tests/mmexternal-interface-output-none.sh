@@ -3,8 +3,9 @@
 # Regression coverage for issue #260: interface.output="none" lets an
 # external message modification helper consume messages without producing the
 # JSON response required by the default protocol. The helper also writes enough
-# stderr data to fill an unread pipe; the oracle checks that ignored helper
-# output cannot deadlock the helper before it records its side effect.
+# stderr data to fill an unread pipe. Because this mode has no helper reply to
+# synchronize on, the oracle waits for the helper side-effect file before
+# shutdown and then checks both that file and downstream omfile.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf

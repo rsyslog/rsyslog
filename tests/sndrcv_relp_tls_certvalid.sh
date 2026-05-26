@@ -1,5 +1,9 @@
 #!/bin/bash
 # added 2018-09-13 by PascalWithopf
+# Verify RELP forwarding with TLS certificate validation. The imrelp receiver
+# binds an ephemeral IPv4 listener and the testbench discovers that bound port
+# after startup, avoiding the get_free_port race before the omrelp sender
+# connects. The oracle is full ordered delivery plus absence of authmode errors.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 # uncomment for debugging support:
@@ -7,11 +11,10 @@
 export RSYSLOG_DEBUGLOG="log"
 
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port="'$PORT_RCVR'" tls="on"
+input(type="imrelp" address="127.0.0.1" port="0" tls="on"
 		tls.cacert="'$srcdir'/tls-certs/ca.pem"
 		tls.mycert="'$srcdir'/tls-certs/cert.pem"
 		tls.myprivkey="'$srcdir'/tls-certs/key.pem"
@@ -22,6 +25,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
@@ -42,7 +46,7 @@ startup 2
 
 grep "omrelp error: invalid authmode" $RSYSLOG_DYNNAME.errmsgs > /dev/null
 if [ $? -eq 0 ]; then
-        echo "SKIP: librelp does not support "certvalid" auth mode"
+        echo "SKIP: librelp does not support certvalid auth mode"
 	# mini-cleanup to not leave dangling processes
 	shutdown_immediate 2
 	shutdown_immediate

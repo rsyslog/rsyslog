@@ -140,6 +140,7 @@ TESTS_DEFAULT = \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
+	omfwd-missing-target.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
@@ -149,6 +150,7 @@ TESTS_DEFAULT = \
 	omusrmsg_ratelimit_name.sh \
 	omfile-module-params.sh \
 	omfile-dynafilecachesize-invalid.sh \
+	omfile-dynafile-mmnormalize-property.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
@@ -165,6 +167,7 @@ TESTS_DEFAULT = \
 	rscript_privdropgroupid.sh \
 	privdropuser.sh \
 	privdropuserid.sh \
+	privdrop-setuid-fail.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	privdropabortonidfail.sh \
@@ -261,6 +264,7 @@ TESTS_DEFAULT = \
 	imudp_ratelimit_name.sh \
 	omfwd_ratelimit_name.sh \
 	omelasticsearch_ratelimit_name.sh \
+	omelasticsearch-dynsearch-template.sh \
 	omelasticsearch-searchtype-deprecated.sh \
 	omhttp_ratelimit_name.sh \
 	imhttp_ratelimit_name.sh \
@@ -512,6 +516,7 @@ TESTS_LIBZSTD_VALGRIND = \
 TESTS_LIBGCRYPT = \
 	queue-encryption-disk.sh \
 	queue-encryption-disk_keyfile.sh \
+	queue-encryption-disk_keyprog-invalid-len.sh \
 	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh
 
@@ -1168,6 +1173,7 @@ TESTS_IMPSTATS = \
 	impstats-hup.sh \
 	impstats-overwrite.sh \
 	impstats-no-overwrite.sh \
+	perctile-invalid-percentile.sh \
 	perctile-simple.sh \
 	dynstats.sh \
 	dynstats_overflow.sh \

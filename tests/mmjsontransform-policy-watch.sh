@@ -6,8 +6,10 @@
 . $srcdir/diag.sh check-inotify
 
 # port is assigned by diag.sh from listenPortFileName
-export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
-export POLICY_TMP="$(pwd)/${RSYSLOG_DYNNAME}.policy.tmp.yaml"
+POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.policy.yaml"
+export POLICY_FILE
+POLICY_TMP="$(pwd)/${RSYSLOG_DYNNAME}.policy.tmp.yaml"
+export POLICY_TMP
 
 cat > "$POLICY_FILE" <<'YAML'
 version: 1

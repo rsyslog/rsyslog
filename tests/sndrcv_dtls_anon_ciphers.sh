@@ -1,12 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify that omdtls-to-imdtls anonymous DTLS fails cleanly when the configured
+# cipher suites are incompatible. The expected OpenSSL diagnostic is the oracle.
 . ${srcdir:=.}/diag.sh init
 # start up the instances
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imdtls.port"
 
 add_conf '
 global(	
@@ -19,12 +21,14 @@ module(	load="../plugins/imdtls/.libs/imdtls"
 
 input(	type="imdtls"
 	tls.tlscfgcmd="CipherString=ECDHE-RSA-AES256-SHA384;Ciphersuites=TLS_AES_256_GCM_SHA384"
-	port="'$PORT_RCVR'")
+	port="0"
+	listenPortFileName="'$PORT_RCVR_FILE'")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 generate_conf 2
 add_conf '

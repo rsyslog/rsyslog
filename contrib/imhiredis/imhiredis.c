@@ -378,14 +378,20 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
 
     // Check and initialize SSL context
     if (inst->use_tls) {
+        const char *tls_peer_name = inst->sni;
+
         if ((inst->client_cert == NULL) ^ (inst->client_key == NULL)) {
             LogMsg(0, RS_RET_CONFIG_ERROR, LOG_ERR,
                    "imhiredis: \"client_cert\" and \"client_key\" must be specified together!");
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
 
+        if (tls_peer_name == NULL && inst->redisNodesList->usesSocket == 0) {
+            tls_peer_name = (const char *)inst->redisNodesList->server;
+        }
+
         inst->ssl_conn = redisCreateSSLContext(inst->ca_cert_bundle, inst->ca_cert_dir, inst->client_cert,
-                                               inst->client_key, inst->sni, &ssl_error);
+                                               inst->client_key, tls_peer_name, &ssl_error);
 
         if (!inst->ssl_conn || ssl_error != REDIS_SSL_CTX_NONE) {
             LogError(0, RS_RET_REDIS_ERROR, "imhiredis: TLS configuration Error: %s",
