@@ -415,7 +415,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
         CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
         CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
     }
-    if (inst->pszRatelimitName != NULL || inst->ratelimitInterval > 0) {
+    if (inst->ratelimitInterval > 0) {
         if ((listeners[nfd].ht =
                  create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))ratelimitDestruct)) == NULL) {
             /* in this case, we simply turn off rate-limiting */
@@ -437,7 +437,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].bCreatePath = inst->bCreatePath;
     listeners[nfd].sockName = ustrdup(inst->sockName);
     listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval ||
-                                inst->pszRatelimitName || inst->bAnnotate || inst->bUseSysTimeStamp)
+                                inst->bAnnotate || inst->bUseSysTimeStamp)
                                    ? 1
                                    : 0;
     listeners[nfd].bAnnotate = inst->bAnnotate;
@@ -1290,7 +1290,7 @@ static rsRetVal activateListeners(void) {
             }
         }
 #endif
-        if (runModConf->pszRatelimitNameSysSock != NULL || runModConf->ratelimitIntervalSysSock > 0) {
+        if (runModConf->ratelimitIntervalSysSock > 0) {
             if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
@@ -1310,8 +1310,8 @@ static rsRetVal activateListeners(void) {
         listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
         listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
         listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock ||
-                                  runModConf->pszRatelimitNameSysSock || runModConf->bAnnotateSysSock ||
-                                  runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
+                                  runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs ||
+                                  runModConf->bUseSysTimeStamp)
                                      ? 1
                                      : 0;
         listeners[0].bWritePid = runModConf->bWritePidSysSock;
