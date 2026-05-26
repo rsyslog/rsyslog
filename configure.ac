@@ -1470,7 +1470,7 @@ if test "x$enable_libgcrypt" = "xyes"; then
                         AC_CHECK_LIB(
                                 [gcrypt],
                                 [gcry_cipher_open],
-                                [],
+                                [:],
                                 [AC_MSG_FAILURE([libgcrypt is missing])],
                                 [${LIBGCRYPT_LIBS}]
                         )
