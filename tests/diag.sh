@@ -1428,6 +1428,23 @@ start_minitcpsrvr() {
 	echo "### background minitcpsrv process id is $BGPROCESS port $(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance) ###"
 }
 
+# Start minitcpsrv on a caller-selected port and wait until listen() has
+# completed. Use this for fixed-port tests that start rsyslog immediately after
+# the receiver. Tests that need an ephemeral port should use start_minitcpsrvr().
+start_minitcpsrv_ready() {
+	local output_file="$1"
+	local listen_port="$2"
+	shift 2
+	local ready_file="$RSYSLOG_DYNNAME.minitcpsrv.$listen_port.ready"
+
+	rm -f "$ready_file"
+	./minitcpsrv -t127.0.0.1 -p "$listen_port" -f "$output_file" -L "$ready_file" "$@" &
+	BGPROCESS=$!
+	MINITCPSRVR_PIDS="${MINITCPSRVR_PIDS:-} $BGPROCESS"
+	echo "### background minitcpsrv process id is $BGPROCESS port $listen_port ###"
+	wait_file_exists "$ready_file"
+}
+
 stop_minitcpsrvrs() {
 	local pid
 	for pid in ${MINITCPSRVR_PIDS:-}; do

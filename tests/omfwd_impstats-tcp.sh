@@ -1,6 +1,9 @@
 #!/bin/bash
-# This test tests impstats omfwd counters in TCP mode
-# added 2021-02-11 by rgerhards. Released under ASL 2.0
+# Verify impstats reports omfwd TCP byte counters after forwarding a complete
+# message sequence. The oracle is both a non-zero bytes.sent statistic and the
+# received 0..9999 sequence. The receiver readiness wait avoids startup loss
+# that would make the counter check ambiguous.
+# Added 2021-02-11 by rgerhards. Released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
@@ -21,9 +24,7 @@ module(load="builtin:omfwd" template="outfmt")
 if $msg contains "msgnum:" then
 	action(type="omfwd" target="127.0.0.1" port="'$TCPFLOOD_PORT'" protocol="tcp")
 '
-./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG &
-BGPROCESS=$!
-echo background minitcpsrv process id is $BGPROCESS
+start_minitcpsrv_ready "$RSYSLOG_OUT_LOG" "$TCPFLOOD_PORT"
 
 # now do the usual run
 startup
