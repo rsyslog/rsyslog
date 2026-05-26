@@ -87,24 +87,6 @@ static void perctileDestroyCounter(statsobj_t *stats, ctr_t **ref) {
     }
 }
 
-static void perctileUnlinkBucket(perctile_bucket_t *bkt) {
-    perctile_bucket_t **slot;
-
-    if (bkt->bkts == NULL) {
-        return;
-    }
-
-    pthread_rwlock_wrlock(&bkt->bkts->lock);
-    for (slot = &bkt->bkts->listBuckets; *slot != NULL; slot = &(*slot)->next) {
-        if (*slot == bkt) {
-            *slot = bkt->next;
-            bkt->next = NULL;
-            break;
-        }
-    }
-    pthread_rwlock_unlock(&bkt->bkts->lock);
-}
-
 static uint64_t min(uint64_t a, uint64_t b) {
     return a < b ? a : b;
 }
@@ -139,7 +121,6 @@ static void perctileStatDestruct(perctile_bucket_t *b, perctile_stat_t *pstat) {
 static void perctileBucketDestruct(perctile_bucket_t *bkt) {
     PERCTILE_STATS_LOG("destructing perctile bucket\n");
     if (bkt) {
-        perctileUnlinkBucket(bkt);
         /* Drop stats registry visibility before taking bucket locks and
          * freeing counter backing storage; stats scrapes hold mutStats while
          * read notifiers take the bucket locks. */
@@ -562,7 +543,12 @@ static rsRetVal perctile_newBucket(
             "with windowsize: %d,  values_count: %zu\n",
             b->name, b->window_size, b->perctile_values_count);
 
+        // create the statsobj for this bucket
+        CHKiRet(perctileInitNewBucketStats(b));
+        CHKiRet(perctileAddBucketMetrics(bkts, b));
+
         // add bucket to list of buckets
+        pthread_rwlock_wrlock(&bkts->lock);
         if (!bkts->listBuckets) {
             // none yet
             bkts->listBuckets = b;
@@ -572,10 +558,7 @@ static rsRetVal perctile_newBucket(
             bkts->listBuckets = b;
             PERCTILE_STATS_LOG("perctile_newBucket: prepended new bucket list \n");
         }
-
-        // create the statsobj for this bucket
-        CHKiRet(perctileInitNewBucketStats(b));
-        CHKiRet(perctileAddBucketMetrics(bkts, b));
+        pthread_rwlock_unlock(&bkts->lock);
     } else {
         LogError(0, RS_RET_INTERNAL_ERROR,
                  "perctile: bucket creation failed, as "
