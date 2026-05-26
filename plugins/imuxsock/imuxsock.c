@@ -436,7 +436,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
     listeners[nfd].bCreatePath = inst->bCreatePath;
     listeners[nfd].sockName = ustrdup(inst->sockName);
-    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval ||
+    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval > 0 ||
                                 inst->bAnnotate || inst->bUseSysTimeStamp)
                                    ? 1
                                    : 0;
@@ -1309,11 +1309,11 @@ static rsRetVal activateListeners(void) {
         listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
         listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
         listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-        listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock ||
-                                  runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs ||
-                                  runModConf->bUseSysTimeStamp)
-                                     ? 1
-                                     : 0;
+        listeners[0].bUseCreds =
+            (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock > 0 || runModConf->bAnnotateSysSock ||
+             runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
+                ? 1
+                : 0;
         listeners[0].bWritePid = runModConf->bWritePidSysSock;
         listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
         listeners[0].bParseTrusted = runModConf->bParseTrusted;
