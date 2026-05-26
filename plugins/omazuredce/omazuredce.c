@@ -413,9 +413,11 @@ static size_t decimalDigits(size_t v) {
     return n;
 }
 
+#define GZIP_WRAPPER_OVERHEAD 32U
+
 static size_t estimatePayloadBytesForRequest(instanceData *pData, size_t payloadLen) {
     if (pData->compressionLevel != 0) {
-        return (size_t)compressBound((uLong)payloadLen);
+        return (size_t)compressBound((uLong)payloadLen) + GZIP_WRAPPER_OVERHEAD;
     }
 
     return payloadLen;
@@ -465,7 +467,7 @@ static rsRetVal gzipCompressBuffer(const uint8_t *input,
 
     *out = NULL;
     *outLen = 0;
-    bound = (size_t)compressBound((uLong)inputLen);
+    bound = (size_t)compressBound((uLong)inputLen) + GZIP_WRAPPER_OVERHEAD;
     if (*bufferCap < bound) {
         CHKmalloc(tmpBuf = (uint8_t *)realloc(*buffer, bound));
         *buffer = tmpBuf;
