@@ -3529,8 +3529,8 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
                                 &pThis->ctrEnqueued));
 
     STATSCOUNTER_INIT(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued);
-    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size.enqueued"), ctrType_IntCtr,
-                                CTR_FLAG_RESETTABLE, &pThis->ctrSizeEnqueued));
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size.enqueued"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &pThis->ctrSizeEnqueued));
 
     STATSCOUNTER_INIT(pThis->ctrFull, pThis->mutCtrFull);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
