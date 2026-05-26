@@ -1,0 +1,28 @@
+tests/Makefile.am
+  s_a9719629ed5597::t_57730aa1d72817 20,2353-2354
+tests/yaml-imfifo.sh
+  s_a9719629ed5597::t_57730aa1d72817 1-69
+plugins/imfifo/imfifo.c
+  s_a9719629ed5597::t_309e0011ccc3a9 68,84-85,116,123,275,277-282,292-293,295-296,323-328,331-333,335-374,376,382-383
+  s_a9719629ed5597::t_620c17737c1777 258-262
+  s_a9719629ed5597::t_57730aa1d72817 161
+tests/imfifo.sh
+  s_a9719629ed5597::t_309e0011ccc3a9 13-15,20-28,37,59-60,65,69-70,83-84
+  s_a9719629ed5597::t_c16f5813f11a5e 18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "12bdbaad91ff7d6889dbce6786f32469a383baca",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
