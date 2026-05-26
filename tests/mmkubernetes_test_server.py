@@ -153,8 +153,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 port = int(sys.argv[1])
+port_file = sys.argv[4] if len(sys.argv) > 4 else ""
 
 httpd = HTTPServer(('localhost', port), SimpleHTTPRequestHandler)
+listen_port = httpd.server_address[1]
+
+if port_file:
+    with open(port_file, "w") as ff:
+        ff.write('{0}\n'.format(listen_port))
 
 # write "started" to file named in argv[3]
 with open(sys.argv[3], "w") as ff:

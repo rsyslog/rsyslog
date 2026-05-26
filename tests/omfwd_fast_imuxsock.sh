@@ -1,5 +1,8 @@
 #!/bin/bash
-# This test tries tests DiscardMark / DiscardSeverity queue settings with omfwd with IMUXSOCK input
+# This test exercises DiscardMark / DiscardSeverity queue settings with omfwd
+# fed through an imuxsock input. Success is that the queue statistics show the
+# expected high-volume enqueue/discard behavior while a TCP receiver accepts
+# enough forwarded traffic for the action to stay active.
 # added 2021-09-02 by alorbach. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "We have no ATOMIC BUILTINS, so OverallQueueSize counting of imdiag is NOT threadsafe and the counting will fail on SunOS"
@@ -14,11 +17,12 @@ fi
 # export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export NUMMESSAGES=100000
 
-PORT_RCVR="$(get_free_port)"
-export PORT_RCVR
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
 generate_conf
+start_minitcpsrvr "$RSYSLOG_OUT_LOG" 1
+PORT_RCVR="$MINITCPSRVR_PORT1"
+export PORT_RCVR
 add_conf '
 global(	debug.whitelist="on"
 	debug.files=["imdiag.c", "queue.c"]
@@ -74,10 +78,6 @@ if $msg contains "test message nbr" then
 	    queue.type="linkedlist"
 	)
 '
-./minitcpsrv -t127.0.0.1 -p$PORT_RCVR -f $RSYSLOG_OUT_LOG &
-BGPROCESS=$!
-echo background tcp dummy receiver process id is $BGPROCESS
-
 # now do the usual run
 startup
 
