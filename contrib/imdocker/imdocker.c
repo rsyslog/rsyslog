@@ -1224,14 +1224,18 @@ static rsRetVal SubmitMultiLineMsg(docker_cont_logs_inst_t *pInst,
     uchar *message = (uchar *)mem->data;
     int facility = loadModConf->iDfltFacility;
     int severity = pBufData->stream_type == dst_stderr ? LOG_ERR : loadModConf->iDfltSeverity;
+    if (len > mem->len) {
+        LogError(0, RS_RET_ERR, "imdocker: multiline segment length %zu exceeds buffer length %zu", len, mem->len);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     uchar savedChar = mem->data[len];
     mem->data[len] = '\0';
     const rsRetVal localRet = enqMsg(pInst, message, len, (const uchar *)pszTag, facility, severity, NULL);
     mem->data[len] = savedChar;
     CHKiRet(localRet);
 
-    size_t size = mem->len - pInst->prevSegEnd;
-    memmove(mem->data, mem->data + pInst->prevSegEnd, size);
+    size_t size = mem->len - len;
+    memmove(mem->data, mem->data + len, size);
     mem->data[size] = '\0';
     mem->len = size;
     pBufData->bytes_remaining = 0;
