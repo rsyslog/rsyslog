@@ -184,11 +184,8 @@ static size_t tokenWriteCb(void *contents, size_t size, size_t nmemb, void *user
         return 0;
     }
     realsz = size * nmemb;
-    if (realsz > buf->maxLen || buf->len > buf->maxLen - realsz) {
-        return 0;
-    }
     newLen = buf->len + realsz;
-    if (newLen == SIZE_MAX) {
+    if (newLen > buf->maxLen || newLen < buf->len) {
         return 0;
     }
 
@@ -315,10 +312,11 @@ static rsRetVal requestAccessToken(instanceData *pData) {
     curlRes = curl_easy_perform(curl);
     if (curlRes != CURLE_OK) {
         if (curlRes == CURLE_WRITE_ERROR) {
-            LogError(0, RS_RET_IO_ERROR,
-                     "omazuredce: token response exceeded %zu bytes or failed while buffering", response.maxLen);
+            LogError(0, RS_RET_IO_ERROR, "omazuredce: token response exceeded %zu bytes or failed while buffering",
+                     response.maxLen);
+        } else {
+            LogError(0, RS_RET_IO_ERROR, "omazuredce: token request failed: %s", curl_easy_strerror(curlRes));
         }
-        LogError(0, RS_RET_IO_ERROR, "omazuredce: token request failed: %s", curl_easy_strerror(curlRes));
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
@@ -597,8 +595,9 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
             if (curlRes == CURLE_WRITE_ERROR) {
                 LogError(0, RS_RET_SUSPENDED,
                          "omazuredce: ingest response exceeded %zu bytes or failed while buffering", response.maxLen);
+            } else {
+                LogError(0, RS_RET_SUSPENDED, "omazuredce: batch post failed: %s", curl_easy_strerror(curlRes));
             }
-            LogError(0, RS_RET_SUSPENDED, "omazuredce: batch post failed: %s", curl_easy_strerror(curlRes));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
         curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &httpCode);
