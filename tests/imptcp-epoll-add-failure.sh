@@ -4,13 +4,17 @@
 # post-accept error path ran, and then shut down cleanly without walking a
 # dangling session list entry left by that failure.
 . ${srcdir:=.}/diag.sh init
-skip_platform "FreeBSD" "requires Linux epoll and LD_PRELOAD support"
+platform="$(uname)"
+if [ "$platform" != "Linux" ]; then
+	echo "platform is \"$platform\" - test requires Linux epoll and LD_PRELOAD support"
+	skip_test
+fi
 skip_ASAN "LD_PRELOAD conflicts with ASan runtime load order"
 require_plugin imptcp
 
 export NUMMESSAGES=1
 export RSYSLOG_TEST_EPOLL_CTL_FAIL_MARKER="${RSYSLOG_DYNNAME}.fail-session-epoll"
-export RSYSLOG_PRELOAD=.libs/liboverride_epoll_ctl.so
+export RSYSLOG_PRELOAD=./liboverride_epoll_ctl.so
 STARTED_LOG="${RSYSLOG_DYNNAME}.started"
 EXPECTED_STR="imptcp: failed to fully accept session"
 
