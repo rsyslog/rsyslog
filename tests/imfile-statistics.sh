@@ -1,7 +1,16 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
+#
+# Test imfile per-file statistics for two wildcard-matched files and one
+# explicitly configured file. The oracle is twofold: all three input files must
+# produce one contiguous output sequence, and impstats must report the expected
+# byte and line counters for each input file. The output wait uses the aggregate
+# message count so shutdown does not race ahead after only one file's data was
+# observed.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
+export NUM_INPUT_FILES=3
+export TOTALMESSAGES=$((NUM_INPUT_FILES * NUMMESSAGES))
 generate_conf
 # NOTE: do NOT set a working directory!
 add_conf '
@@ -35,10 +44,10 @@ startup
 ./inputfilegen -m $NUMMESSAGES -i 1000 	>> "$RSYSLOG_DYNNAME"_2.input
 ./inputfilegen -m $NUMMESSAGES -i 2000 	>> "$RSYSLOG_DYNNAME".input_3
 
-wait_file_lines
+wait_file_lines "$RSYSLOG_OUT_LOG" "$TOTALMESSAGES"
 shutdown_when_empty
 wait_shutdown
-seq_check 0 2999
+seq_check 0 $((TOTALMESSAGES - 1))
 content_check "imfile: no working or state file directory set" $RSYSLOG_DYNNAME.othermsgs
 
 EXPECTED_BYTES=$((17 * NUMMESSAGES)) # Test data is 17 bytes per line
