@@ -345,7 +345,7 @@ BEGINObjClassExit(regexp, OBJ_IS_LOADABLE_MODULE) /* class, version */
         /* release objects we no longer need */
         pthread_mutex_destroy(&mut_regexp);
         if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
-        if (perthread_regexs) hashtable_destroy(perthread_regexs, 1);
+        if (perthread_regexs) hashtable_destroy(perthread_regexs, 0);
     }
 ENDObjClassExit(regexp)
 
