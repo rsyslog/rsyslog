@@ -241,7 +241,8 @@ static relpRetVal onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *m
     CHKiRet(MsgSetRcvFromIPStr(pMsg, pIP, ustrlen(pIP), &pProp));
     CHKiRet(prop.Destruct(&pProp));
     if (inst->data.ratelimiter != NULL) {
-        CHKiRet(ratelimitAddMsg(inst->data.ratelimiter, NULL, pMsg));
+        CHKiRet(ratelimitAddMsgPerSource(inst->data.ratelimiter, NULL, pMsg, (const char *)pIP, ustrlen(pIP),
+                                         pMsg->ttGenTime));
     } else {
         CHKiRet(submitMsg2(pMsg));
     }
