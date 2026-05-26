@@ -1,0 +1,23 @@
+tests/action-tx-errfile.sh
+  s_21a8eefcb5d3df::t_ce1b4f2c3c12cc 7
+tests/travis/install.sh
+  s_21a8eefcb5d3df::t_6f701263e2c0fc 42-48,54-60
+tests/travis/run-cron.sh
+  s_21a8eefcb5d3df::t_ce1b4f2c3c12cc 31-32,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "b1080ff3cd1a4bb64cf709e10a95713d86036d71",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
