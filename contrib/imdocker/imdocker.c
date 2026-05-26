@@ -1226,8 +1226,7 @@ static rsRetVal SubmitMultiLineMsg(docker_cont_logs_inst_t *pInst,
     int severity = pBufData->stream_type == dst_stderr ? LOG_ERR : loadModConf->iDfltSeverity;
     uchar savedChar = mem->data[len];
     mem->data[len] = '\0';
-    const rsRetVal localRet =
-        enqMsg(pInst, message, len, (const uchar *)pszTag, facility, severity, NULL);
+    const rsRetVal localRet = enqMsg(pInst, message, len, (const uchar *)pszTag, facility, severity, NULL);
     mem->data[len] = savedChar;
     CHKiRet(localRet);
 
