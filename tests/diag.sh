@@ -740,6 +740,43 @@ wait_file_exists() {
 	done
 }
 
+wait_file_exists_for_process() {
+	local file="$1"
+	local pid="$2"
+	local timeout="$3"
+	local description="$4"
+	local log_file="$5"
+	local i=0
+
+	echo "waiting for $description readiness file $file"
+	while true; do
+		if [ -f "$file" ] && [ "$(cat "$file" 2> /dev/null)" != "" ]; then
+			break
+		fi
+		if ! kill -0 "$pid" 2>/dev/null; then
+			echo "ABORT! $description exited before writing readiness file $file"
+			if [ "$log_file" != "" ] && [ -f "$log_file" ]; then
+				echo "$description log follows:"
+				cat "$log_file"
+			fi
+			wait "$pid" 2>/dev/null || :
+			error_exit 1
+		fi
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		((i++))
+		if test $i -gt "$timeout"; then
+			echo "ABORT! Timeout waiting for $description readiness file $file"
+			ls -l "$file" 2>/dev/null || :
+			ps -fp "$pid" || :
+			if [ "$log_file" != "" ] && [ -f "$log_file" ]; then
+				echo "$description log follows:"
+				cat "$log_file"
+			fi
+			error_exit 1
+		fi
+	done
+}
+
 # kafka special wait function: we wait for the output file in order
 # to ensure Kafka/Zookeeper is actually ready to go. This is NOT
 # a generic check function and must only used with those kafka tests
@@ -1400,6 +1437,40 @@ stop_minitcpsrvrs() {
 		wait "$pid" 2>/dev/null
 	done
 	MINITCPSRVR_PIDS=""
+}
+
+start_udp_receiver() {
+	local portfile="$1"
+	local bind_addr="${2:-127.0.0.1}"
+	$PYTHON -u - "$portfile" "$bind_addr" <<'PY' &
+import socket
+import sys
+
+portfile = sys.argv[1]
+bind_addr = sys.argv[2]
+
+family = socket.AF_INET6 if ":" in bind_addr else socket.AF_INET
+sock = socket.socket(family, socket.SOCK_DGRAM)
+sock.bind((bind_addr, 0))
+with open(portfile, "w") as f:
+    f.write("{0}\n".format(sock.getsockname()[1]))
+while True:
+    sock.recvfrom(65535)
+PY
+	local bg_pid=$!
+	UDP_RECEIVER_PIDS="${UDP_RECEIVER_PIDS:-} $bg_pid"
+	wait_file_exists "$portfile"
+}
+
+stop_udp_receivers() {
+	local pid
+	for pid in ${UDP_RECEIVER_PIDS:-}; do
+		if kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null
+		fi
+		wait "$pid" 2>/dev/null || :
+	done
+	UDP_RECEIVER_PIDS=""
 }
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
@@ -2169,6 +2240,7 @@ do_cleanup() {
 		shutdown_immediate 2
 	fi
 	stop_minitcpsrvrs
+	stop_udp_receivers
 }
 
 
@@ -2910,6 +2982,7 @@ exit_test() {
 	rm -f ${TESTCONF_NM}.conf ${TESTCONF_NM}.yaml
 	rm -f tmp.qi nocert
 	stop_minitcpsrvrs
+	stop_udp_receivers
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 
@@ -3941,7 +4014,8 @@ omhttp_start_server() {
     omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
     mkdir -p ${omhttp_work_dir}
 
-    server_args="-p $omhttp_server_port ${*:2} --port-file $RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
+    omhttp_server_portfile="$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
+    server_args="-p $omhttp_server_port ${*:2} --port-file $omhttp_server_portfile"
 
     setsid timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     # shellcheck disable=SC2181 # Preserve the existing background-start check.
@@ -3952,8 +4026,15 @@ omhttp_start_server() {
     fi
     omhttp_server_pid=$!
 
-    wait_file_exists "$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
-    omhttp_server_lstnport="$(cat $RSYSLOG_DYNNAME.omhttp_server_lstnport.file)"
+    # The Python omhttp helper writes the port file only after HTTPServer has
+    # bound the socket.  Under very high full-suite parallelism the helper can
+    # be runnable but starved for longer than the generic 40s start/stop wait,
+    # so keep the port-file readiness oracle but tie it to the helper process:
+    # fail immediately if it exits, otherwise allow a helper-specific startup
+    # window before treating it as a testbench failure.
+    wait_file_exists_for_process "$omhttp_server_portfile" "$omhttp_server_pid" \
+        "${OMHTTP_SERVER_STARTUP_TIMEOUT:-1200}" "omhttp test server" "$omhttp_server_logfile"
+    omhttp_server_lstnport="$(cat "$omhttp_server_portfile")"
     echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
     echo "Started omhttp test server with args ${server_args} with process group ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
 }

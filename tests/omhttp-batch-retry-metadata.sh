@@ -1,13 +1,17 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+#
+# Verify omhttp batch retry metadata. The helper returns retryable HTTP 207
+# responses at a fixed cadence; success is complete sequence delivery plus
+# metadata output that records the response for retried messages.
 
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=50000
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-every 100 --fail-with 207
+omhttp_start_server 0 --fail-every 100 --fail-with 207
+port="$omhttp_server_lstnport"
 
 generate_conf
 add_conf '
