@@ -50,6 +50,12 @@ the name of the action).
 
 -  **enqueued** - total number of messages enqueued into this queue since startup
 
+-  **size.enqueued** - cumulative number of bytes enqueued into this queue since startup
+   (sum of ``iLenRawMsg`` for every accepted message). Counted on arrival, before any
+   discard or flow-control check, so it represents the inbound byte volume. Resettable.
+   Use it together with ``enqueued`` to derive the average message size, and with
+   ``discarded.full`` / ``discarded.nf`` to reason about lost volume.
+
 -  **maxsize** - maximum number of active messages the queue ever held
 
 -  **full** - number of times the queue was actually full and could not accept additional messages

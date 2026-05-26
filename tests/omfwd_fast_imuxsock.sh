@@ -1,8 +1,14 @@
 #!/bin/bash
-# This test exercises DiscardMark / DiscardSeverity queue settings with omfwd
-# fed through an imuxsock input. Success is that the queue statistics show the
-# expected high-volume enqueue/discard behavior while a TCP receiver accepts
-# enough forwarded traffic for the action to stay active.
+# This test verifies DiscardMark / DiscardSeverity queue handling with omfwd and
+# imuxsock input under high message volume.
+#
+# Oracle:
+# The test sends 100000 messages through an imuxsock input into an omfwd action
+# queue configured with discard settings. Success is proven by the impstats queue
+# line: all messages were enqueued, the queue hit the expected max size, and
+# discard counters stayed internally consistent. The regex also asserts the
+# size.enqueued counter added for cumulative byte accounting.
+#
 # added 2021-09-02 by alorbach. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "We have no ATOMIC BUILTINS, so OverallQueueSize counting of imdiag is NOT threadsafe and the counting will fail on SunOS"
@@ -90,6 +96,6 @@ wait_shutdown
 # check output file generation, should contain at least 100 logs
 check_file_exists "$RSYSLOG_OUT_LOG"
 check_file_exists "$STATSFILE"
-content_check --regex --output-results "action-1-builtin:omfwd queue: origin=core.queue size=.* enqueued=100000 full=0 discarded.full=0 discarded.nf=.* maxqsize=100" $STATSFILE
+content_check --regex --output-results "action-1-builtin:omfwd queue: origin=core.queue size=.* enqueued=100000 size.enqueued=.* full=0 discarded.full=0 discarded.nf=.* maxqsize=100" $STATSFILE
 
 exit_test
