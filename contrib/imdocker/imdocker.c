@@ -1139,7 +1139,10 @@ static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
     STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 
 finalize_it:
-    if (iRet == RS_RET_DISCARDMSG) STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit)
+    if (iRet == RS_RET_DISCARDMSG) {
+        STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
+        iRet = RS_RET_OK;
+    }
 
     RETiRet;
 }
