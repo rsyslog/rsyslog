@@ -966,8 +966,10 @@ TESTS_OMOTEL = \
         omotel-tls.sh \
         omotel-trace-correlation.sh
 
+TESTS_KAFKA_SELFTEST = \
+	kafka-selftest.sh
+
 TESTS_KAFKA = \
-	kafka-selftest.sh \
 	omkafka.sh \
 	omkafkadynakey.sh \
 	omkafka-headers.sh \
@@ -1786,14 +1788,13 @@ TESTS_IMFILE = \
 	config_enabled-off.sh
 
 # These imfile tests stress dynamic inotify watch changes. Keep each high-churn
-# subcluster ordered while allowing two independent chains to run in parallel:
-# one for wildcard directory expansion and one for old-state, rename, symlink,
-# and logrotate/truncate handling. This preserves the individual test coverage
-# and assertions without making all imfile inotify stress tests wait behind one
-# long serial chain.
+# subcluster ordered while allowing independent chains to run in parallel:
+# freshStartTail state handling, wildcard directory expansion, rename/symlink
+# handling, and logrotate/truncate handling. This preserves the individual test
+# coverage and assertions without making all imfile inotify stress tests wait
+# behind one long serial chain.
 imfile-freshStartTail2.log: imfile-freshStartTail1.log
 imfile-freshStartTail3.log: imfile-freshStartTail2.log
-imfile-wildcards.log: imfile-freshStartTail3.log
 imfile-wildcards-dirs.log: imfile-wildcards.log
 imfile-wildcards-dirs2.log: imfile-wildcards-dirs.log
 imfile-wildcards-dirs-multi.log: imfile-wildcards-dirs2.log
@@ -1807,7 +1808,6 @@ imfile-rename.log: imfile-rename-while-stopped.log
 imfile-symlink.log: imfile-rename.log
 imfile-symlink-multi.log: imfile-symlink.log
 imfile-symlink-ext-tmp-dir-tree.log: imfile-symlink-multi.log
-imfile-logrotate.log: imfile-symlink-ext-tmp-dir-tree.log
 imfile-logrotate-async.log: imfile-logrotate.log
 imfile-logrotate-multiple.log: imfile-logrotate-async.log
 imfile-logrotate-copytruncate.log: imfile-logrotate-multiple.log
@@ -1960,6 +1960,7 @@ EXTRA_DIST += $(TESTS_OMHTTP)
 EXTRA_DIST += $(TESTS_OMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP_VICTORIALOGS)
 EXTRA_DIST += $(TESTS_OMOTEL)
+EXTRA_DIST += $(TESTS_KAFKA_SELFTEST)
 EXTRA_DIST += $(TESTS_KAFKA)
 EXTRA_DIST += $(TESTS_KAFKA_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREEVENTHUBS)
@@ -2638,9 +2639,19 @@ endif
 if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
+TESTS += $(TESTS_KAFKA_SELFTEST)
+if HAVE_VALGRIND
+TESTS += $(TESTS_KAFKA_VALGRIND)
+endif
 TESTS += $(TESTS_KAFKA)
 
+if HAVE_VALGRIND
+omkafka-vg.log: kafka-selftest.log
+imkafka-vg.log: omkafka-vg.log
+omkafka.log: imkafka-vg.log
+else
 omkafka.log: kafka-selftest.log
+endif
 imkafka.log: omkafka.log
 imkafka-backgrounded.log: imkafka.log
 imkafka-config-err-ruleset.log: imkafka-backgrounded.log
@@ -2654,12 +2665,6 @@ sndrcv_kafka_multi_topics.log: imkafka_multi_group.log
 omkafkadynakey.log: sndrcv_kafka_multi_topics.log
 omkafka-headers.log: omkafkadynakey.log
 
-if HAVE_VALGRIND
-TESTS += $(TESTS_KAFKA_VALGRIND)
-
-omkafka-vg.log: omkafka-headers.log
-imkafka-vg.log: omkafka-vg.log
-endif
 endif
 endif
 endif
