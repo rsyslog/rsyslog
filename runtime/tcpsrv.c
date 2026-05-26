@@ -2385,7 +2385,9 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+    #ifdef FEATURE_REGEXP
     objRelease(regexp, LM_REGEXP_FILENAME);
+    #endif
 ENDObjClassExit(tcpsrv)
 
 
@@ -2404,7 +2406,9 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    #ifdef FEATURE_REGEXP
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
+    #endif
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);
