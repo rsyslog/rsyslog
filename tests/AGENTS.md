@@ -39,8 +39,12 @@ agents.
   emission, startup before configuration is usable, or another documented case
   where the message cannot pass through rsyslog's normal output path. Explain
   such exceptions in the test header.
-- Prefer harness helpers such as `cmp_exact`, `command_deny`, and
-  `require_plugin` over ad-hoc shell to keep diagnostics uniform.
+- Prefer harness helpers such as `content_check`, `content_count_check`,
+  `custom_content_check`, `check_not_present`, `cmp_exact`, `command_deny`, and
+  `require_plugin` over ad-hoc shell to keep diagnostics uniform. In
+  particular, use `content_check "needle" "$file"` instead of hand-written
+  `grep ... || { cat "$file"; error_exit 1; }` blocks when asserting log or
+  output content.
 - **Config format coverage**: When a module parameter or config object is tested
   via RainerScript, add a companion YAML test (or extend an existing
   `yaml-<area>-*.sh`) that exercises the same parameter.  Both frontends share
