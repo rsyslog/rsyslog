@@ -914,7 +914,22 @@ finalize_it:
 }
 
 static int mbedtlsNameHasEmbeddedNul(const unsigned char *name, size_t nameLen) {
+    if (name == NULL || nameLen == 0) {
+        return 0;
+    }
     return memchr(name, '\0', nameLen) != NULL;
+}
+
+static int mbedtlsCnHasEmbeddedNul(const mbedtls_x509_crt *crt) {
+    const mbedtls_x509_name *name;
+
+    for (name = &crt->subject; name != NULL; name = name->next) {
+        if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
+            mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* Get the common name (CN) from a certificate
@@ -925,9 +940,6 @@ static char *mbedtlsCnFromCrt(const mbedtls_x509_crt *crt) {
 
     for (name = &crt->subject; name != NULL; name = name->next) {
         if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0) {
-            if (mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
-                return NULL;
-            }
             return strndup((const char *)(name->val.p), name->val.len);
         }
     }
@@ -971,26 +983,20 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
 
     /* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
     if (!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
+        if (mbedtlsCnHasEmbeddedNul(crt)) {
+            if (pThis->bReportAuthErr == 1) {
+                errno = 0;
+                LogError(0, RS_RET_INVALID_FINGERPRINT, "error: certificate commonName contains embedded NUL byte");
+                pThis->bReportAuthErr = 0;
+            }
+            ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+        }
         str = mbedtlsCnFromCrt(crt);
         if (str != NULL) { /* NULL if there was no CN present */
             dbgprintf("mbedtls now checking auth for CN '%s'\n", str);
             snprintf((char *)lnBuf, sizeof(lnBuf), "CN: %s; ", str);
             CHKiRet(rsCStrAppendStr(pStr, lnBuf));
             CHKiRet(mbedtlsChkOnePeerName(pThis, (uchar *)str, &bFoundPositiveMatch));
-        } else {
-            const mbedtls_x509_name *name;
-            for (name = &crt->subject; name != NULL; name = name->next) {
-                if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
-                    mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
-                    if (pThis->bReportAuthErr == 1) {
-                        errno = 0;
-                        LogError(0, RS_RET_INVALID_FINGERPRINT,
-                                 "error: certificate commonName contains embedded NUL byte");
-                        pThis->bReportAuthErr = 0;
-                    }
-                    ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
-                }
-            }
         }
     }
 
