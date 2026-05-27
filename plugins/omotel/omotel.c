@@ -1294,7 +1294,7 @@ static const char *cstrToConst(cstr_t *value) {
     return value == NULL ? NULL : (const char *)rsCStrGetSzStrNoNULL(value);
 }
 
-static const char *extractAppName(const smsg_t *msg) {
+static const char *extractAppName(smsg_t *msg) {
     const char *candidate;
 
     if (msg == NULL) {
@@ -1307,7 +1307,7 @@ static const char *extractAppName(const smsg_t *msg) {
     }
 
     if (msg->iLenPROGNAME > 0) {
-        return (const char *)getProgramName((smsg_t *)msg, LOCK_MUTEX);
+        return (const char *)getProgramName(msg, LOCK_MUTEX);
     }
 
     return NULL;
