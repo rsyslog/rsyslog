@@ -2405,6 +2405,7 @@ module_needs_testing() {
 			*/*)
 				case "$changed_file" in
 					runtime/*.c|runtime/*.h|m4/*|\
+					runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am|grammar/Makefile.am|\
 					.github/workflows/*|\
 					tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*)
 						return 0
