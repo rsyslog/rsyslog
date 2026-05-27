@@ -1306,8 +1306,8 @@ static const char *extractAppName(const smsg_t *msg) {
         return candidate;
     }
 
-    if (msg->iLenPROGNAME > 0 && msg->PROGNAME.ptr != NULL) {
-        return (const char *)msg->PROGNAME.ptr;
+    if (msg->iLenPROGNAME > 0) {
+        return (const char *)getProgramName((smsg_t *)msg, LOCK_MUTEX);
     }
 
     return NULL;
