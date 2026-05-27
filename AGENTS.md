@@ -200,6 +200,34 @@ much low-value noise on the rsyslog code base.
   Pass expression values through `env:` variables and expand those variables in
   the shell script instead.
 
+## PR Test Relevance Policy
+
+- Regular pull-request CI may use approximate relevance gates to avoid
+  scheduling expensive service-backed test families that cannot reasonably be
+  affected by the change. The goal is to omit irrelevant tests from the
+  configured Automake `TESTS` set, not merely to start those tests and skip
+  them late after service setup.
+- Relevance gates must be conservative. Direct module changes, related tests,
+  testbench/build plumbing, workflow files, configure inputs, and shared runtime
+  paths that can plausibly affect the service family must keep that family
+  enabled.
+- Isolated helper areas may be excluded from a heavy family only when there is a
+  clear rationale that the family cannot use that code path. Current examples
+  include keeping Kafka, imfile, and Elasticsearch tests disabled for unrelated
+  helper-only changes such as lookup tables or dynstats.
+- Agents changing relevance rules must validate both levels:
+  `tests/diag.sh module-needs-testing <family>` with representative changed-file
+  sets, and a container/mock CI run that confirms the generated test list omits
+  irrelevant heavy-family tests before execution.
+- Full coverage must remain forceable. Daily, weekly, release, flake-campaign,
+  and maintainer-requested runs must be able to bypass relevance gates via
+  `RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS=1`,
+  `RSYSLOG_TESTBENCH_FORCE_<FAMILY>_TESTS=1`, or
+  `RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE=1`.
+- Do not present a relevance-filtered PR run as equivalent to an unconditional
+  full-suite run. Report which families were disabled and why when that matters
+  for the validation claim.
+
 ## Agent Chat Keywords
 
 - `SETUP`: Triggers the `rsyslog_build` setup workflow.

@@ -36,7 +36,7 @@ rsyslogd_SOURCES = \
 	iminternal.c \
 	iminternal.h \
 	\
-	../dirty.h
+	../runtime/dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 
 if ENABLE_LIBLOGGING_STDLOG

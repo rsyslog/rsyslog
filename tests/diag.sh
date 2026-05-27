@@ -58,7 +58,7 @@
 #               If set to "1", bypasses changed-file relevance checks for a
 #               specific module. Current modules: AZURE_DCE, AZUREDCE,
 #               AZURE_EVENTHUBS, AZUREEVENTHUBS, CLICKHOUSE, ELASTICSEARCH,
-#               HIREDIS, IMBEATS, IMDOCKER, IMHIREDIS, IMJOURNAL,
+#               HIREDIS, IMBEATS, IMDOCKER, IMFILE, IMHIREDIS, IMJOURNAL,
 #               IMPSTATS_PUSH, JOURNAL, KAFKA, LIBDBI, MYSQL, OMAZUREDCE,
 #               OMAZUREEVENTHUBS, OMHIREDIS, OMJOURNAL, OMRABBITMQ, PGSQL,
 #               POSTGRESQL, SNMP.
@@ -2586,6 +2586,7 @@ _module_force_enabled() {
 		clickhouse) [ "${RSYSLOG_TESTBENCH_FORCE_CLICKHOUSE_TESTS:-}" = "1" ] ;;
 		elasticsearch) [ "${RSYSLOG_TESTBENCH_FORCE_ELASTICSEARCH_TESTS:-}" = "1" ] ;;
 		imbeats) [ "${RSYSLOG_TESTBENCH_FORCE_IMBEATS_TESTS:-}" = "1" ] ;;
+		imfile) [ "${RSYSLOG_TESTBENCH_FORCE_IMFILE_TESTS:-}" = "1" ] ;;
 		imjournal) [ "${RSYSLOG_TESTBENCH_FORCE_IMJOURNAL_TESTS:-}" = "1" ] ||
 			[ "${RSYSLOG_TESTBENCH_FORCE_JOURNAL_TESTS:-}" = "1" ] ;;
 		impstats-push) [ "${RSYSLOG_TESTBENCH_FORCE_IMPSTATS_PUSH_TESTS:-}" = "1" ] ||
@@ -2615,6 +2616,145 @@ _module_force_enabled() {
 	esac
 }
 
+_service_relevance_is_selective_family() {
+	case "$1" in
+		elasticsearch|imfile|kafka)
+			return 0
+			;;
+	esac
+
+	return 1
+}
+
+_service_relevance_is_broad_change() {
+	local changed_file="$1"
+
+	# Broad relevance is the conservative fallback for service families that do
+	# not yet have focused dependency rules. It keeps the pre-gating behavior for
+	# those modules while allowing expensive Kafka, imfile, and Elasticsearch
+	# tests to use narrower rules below.
+	case "$changed_file" in
+		configure.ac|Makefile.am|m4/*|\
+		.github/workflows/*|devtools/run-ci.sh|devtools/run-configure.sh|\
+		tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*|\
+		grammar/lexer.l|grammar/grammar.y|grammar/Makefile.am|\
+		runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am)
+			return 0
+			;;
+	esac
+
+	case "$changed_file" in
+		runtime/action.*|runtime/atomic.h|runtime/cfsysline.*|runtime/conf.*|\
+		runtime/datetime.*|runtime/debug.*|runtime/errmsg.*|runtime/glbl.*|\
+		runtime/dirty.h|\
+		runtime/hashtable.*|runtime/hashtable/*|runtime/im-helper.h|\
+		runtime/janitor.*|runtime/linkedlist.*|runtime/module-template.h|\
+		runtime/modules.*|runtime/msg.*|runtime/obj.*|runtime/obj-types.h|\
+		runtime/objomsr.*|runtime/operatingstate.*|runtime/outchannel.*|\
+		runtime/parse.*|runtime/parser.*|\
+		runtime/prop.*|runtime/queue.*|runtime/regexp.*|runtime/rsconf.*|\
+		runtime/rsyslog.*|runtime/ruleset.*|runtime/srutils.c|runtime/srUtils.h|\
+		runtime/statsobj.*|runtime/strgen.*|runtime/stringbuf.*|\
+		runtime/syslogd-types.h|runtime/template.*|runtime/threads.*|\
+		runtime/translate.*|runtime/typedefs.h|\
+		runtime/unicode-helper.h|runtime/var.*|runtime/wti.*|runtime/wtp.*|\
+		runtime/yamlconf.*)
+			return 0
+			;;
+	esac
+
+	case "$changed_file" in
+		*/*)
+			return 1
+			;;
+		*.c|*.h)
+			return 0
+			;;
+	esac
+
+	return 1
+}
+
+_service_relevance_is_selective_common_change() {
+	local changed_file="$1"
+
+	# Changes to build, CI, parser grammar, or testbench plumbing can alter the
+	# way the heavy service tests are configured or executed. Keep these changes
+	# relevant even for the focused Kafka/imfile/Elasticsearch gates.
+	case "$changed_file" in
+		configure.ac|Makefile.am|m4/*|\
+		.github/workflows/*|devtools/run-ci.sh|devtools/run-configure.sh|\
+		tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*|\
+		grammar/lexer.l|grammar/grammar.y|grammar/Makefile.am|\
+		runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am)
+			return 0
+			;;
+	esac
+
+	return 1
+}
+
+_service_relevance_selective_runtime_match() {
+	local module="$1"
+	local changed_file="$2"
+
+	# Focused heavy-family relevance. These sets intentionally include common
+	# config/message/queue/action paths that can affect the selected service
+	# tests, while excluding isolated helpers such as lookup tables, dynstats,
+	# DNS cache, KSI, GSSAPI, and unrelated protocol helpers.
+	case "$module:$changed_file" in
+		elasticsearch:runtime/action.*|elasticsearch:runtime/batch.*|\
+		elasticsearch:runtime/conf.*|elasticsearch:runtime/datetime.*|\
+		elasticsearch:runtime/debug.*|elasticsearch:runtime/errmsg.*|\
+		elasticsearch:runtime/glbl.*|elasticsearch:runtime/modules.*|\
+		elasticsearch:runtime/msg.*|elasticsearch:runtime/obj.*|\
+		elasticsearch:runtime/obj-types.h|elasticsearch:runtime/objomsr.*|\
+		elasticsearch:runtime/parser.*|elasticsearch:runtime/prop.*|\
+		elasticsearch:runtime/queue.*|elasticsearch:runtime/ratelimit.*|\
+		elasticsearch:runtime/rsconf.*|elasticsearch:runtime/rsyslog.*|\
+		elasticsearch:runtime/ruleset.*|elasticsearch:runtime/statsobj.*|\
+		elasticsearch:runtime/stringbuf.*|elasticsearch:runtime/template.*|\
+		elasticsearch:runtime/var.*|elasticsearch:runtime/wti.*|\
+		elasticsearch:runtime/wtp.*|elasticsearch:runtime/yamlconf.*)
+			return 0
+			;;
+		imfile:runtime/action.*|imfile:runtime/conf.*|\
+		imfile:runtime/datetime.*|imfile:runtime/debug.*|\
+		imfile:runtime/errmsg.*|imfile:runtime/glbl.*|\
+		imfile:runtime/modules.*|imfile:runtime/msg.*|\
+		imfile:runtime/obj.*|imfile:runtime/obj-types.h|\
+		imfile:runtime/objomsr.*|imfile:runtime/parser.*|\
+		imfile:runtime/prop.*|imfile:runtime/queue.*|\
+		imfile:runtime/ratelimit.*|imfile:runtime/rsconf.*|\
+		imfile:runtime/rsyslog.*|imfile:runtime/rswatch.*|\
+		imfile:runtime/ruleset.*|\
+		imfile:runtime/statsobj.*|imfile:runtime/stream.*|\
+		imfile:runtime/stringbuf.*|imfile:runtime/template.*|\
+		imfile:runtime/var.*|imfile:runtime/wti.*|imfile:runtime/wtp.*|\
+		imfile:runtime/yamlconf.*|imfile:runtime/zlibw.*|\
+		imfile:runtime/zstdw.*)
+			return 0
+			;;
+		kafka:runtime/action.*|kafka:runtime/batch.*|\
+		kafka:runtime/conf.*|kafka:runtime/datetime.*|\
+		kafka:runtime/debug.*|kafka:runtime/errmsg.*|\
+		kafka:runtime/glbl.*|kafka:runtime/modules.*|\
+		kafka:runtime/msg.*|kafka:runtime/obj.*|\
+		kafka:runtime/obj-types.h|kafka:runtime/objomsr.*|\
+		kafka:runtime/parser.*|kafka:runtime/prop.*|\
+		kafka:runtime/queue.*|kafka:runtime/rsconf.*|\
+		kafka:runtime/rsyslog.*|kafka:runtime/ruleset.*|\
+		kafka:runtime/statsobj.*|kafka:runtime/stringbuf.*|\
+		kafka:runtime/template.*|kafka:runtime/var.*|\
+		kafka:runtime/wti.*|kafka:runtime/wtp.*|\
+		kafka:runtime/yamlconf.*)
+			return 0
+			;;
+	esac
+
+	return 1
+}
+
 module_needs_testing() {
 	local module="$1"
 	local changed_file
@@ -2633,25 +2773,14 @@ module_needs_testing() {
 	while IFS= read -r changed_file || [ -n "$changed_file" ]; do
 		[ -z "$changed_file" ] && continue
 
-		case "$changed_file" in
-			*/*)
-				case "$changed_file" in
-					runtime/*.c|runtime/*.h|m4/*|\
-					runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am|grammar/Makefile.am|\
-					.github/workflows/*|\
-					tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*)
-						return 0
-						;;
-				esac
-				;;
-			*)
-				case "$changed_file" in
-					*.c|*.h|configure.ac|Makefile.am|*.mk)
-						return 0
-						;;
-				esac
-				;;
-		esac
+		if _service_relevance_is_selective_family "$module"; then
+			if _service_relevance_is_selective_common_change "$changed_file" || \
+			   _service_relevance_selective_runtime_match "$module" "$changed_file"; then
+				return 0
+			fi
+		elif _service_relevance_is_broad_change "$changed_file"; then
+			return 0
+		fi
 
 		case "$module:$changed_file" in
 			azuredce:plugins/omazuredce/*|omazuredce:plugins/omazuredce/*|\
@@ -2684,6 +2813,12 @@ module_needs_testing() {
 			imbeats:plugins/imbeats/*|imbeats:plugins/omelasticsearch/*|\
 			imbeats:tests/imbeats*.sh|\
 			imbeats:tests/yaml-imbeats*.sh)
+				return 0
+				;;
+			imfile:plugins/imfile/*|\
+			imfile:tests/*imfile*.sh|\
+			imfile:tests/testsuites/imfile*|\
+			imfile:tests/testsuites/*imfile*)
 				return 0
 				;;
 			imjournal:plugins/imjournal/*|imjournal:plugins/omjournal/*|\
