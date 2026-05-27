@@ -3170,6 +3170,8 @@ static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
                             }
                         }
                     }
+                    eventIdStart = eventIdEnd;
+                    continue;
                 }
                 eventIdStart++;
             }
@@ -3216,6 +3218,8 @@ static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
                                   searchStart);
                         return searchStart;
                     }
+                    searchStart = eventIdEnd;
+                    continue;
                 }
                 searchStart++;
             }
