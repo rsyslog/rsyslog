@@ -226,11 +226,60 @@ to the changed subsystem or to a specific failure mode seen during babysitting.
 
 ## Service Relevance
 
-Heavy service-backed tests self-skip through `tests/diag.sh` when changes do not
-touch their relevant module paths or `runtime/*.[ch]`. Use
-`RSYSLOG_TESTBENCH_CHANGED_FILES` for fake change sets and
-`RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS=1` or per-family force variables when
-intentionally validating service tests without relevant source changes.
+Regular PR CI may use approximate relevance gates to avoid scheduling expensive
+service-backed test families that cannot reasonably be affected by the changed
+files. The preferred result is that irrelevant families are absent from the
+configured Automake `TESTS` set. Do not rely on starting an expensive test and
+letting it skip late after service setup unless that is the only available
+plumbing for that family.
+
+Use `RSYSLOG_TESTBENCH_CHANGED_FILES` for local fake change sets when validating
+the decision logic. Source `devtools/apply-service-relevance.sh` and call
+`rsyslog_apply_default_pr_service_suppressions` before `devtools/run-ci.sh` to
+apply the same PR-style configure suppressions in local container runs:
+
+```sh
+make distclean || true
+export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+export RSYSLOG_CONTAINER_UID=''
+export RSYSLOG_TESTBENCH_CHANGED_FILES='runtime/lookup.c'
+export CC='gcc'
+export CFLAGS='-g'
+export CI_CONFIGURE_CACHE=1
+export CI_MAKE_OPT='-j20'
+export CI_MAKE_CHECK_OPT='-j10'
+export CI_CHECK_CMD='check'
+export VERBOSE=1
+. devtools/apply-service-relevance.sh
+rsyslog_apply_default_pr_service_suppressions
+devtools/devcontainer.sh --rm devtools/run-ci.sh
+```
+
+For a fast scheduling proof, add `TEST_RUN_TYPE=MOCK-OK` and pass it into the
+container via `DOCKER_RUN_EXTRA_OPTS='-e TEST_RUN_TYPE'`. The resulting
+configure summary and `PASS:` list should show irrelevant heavy families
+configured out rather than scheduled and skipped late.
+
+For workflow or configure changes, validate both layers:
+
+1. `tests/diag.sh module-needs-testing <family>` for representative changed
+   files that should run and should skip the family.
+2. A clean container/mock `devtools/run-ci.sh` path that confirms configure
+   disables irrelevant test families and the generated test list omits their
+   tests before execution.
+
+The relevance check is intentionally conservative. Direct module changes,
+related tests, testbench/build plumbing, workflow files, configure inputs, and
+shared runtime paths that can plausibly affect a family must keep that family
+enabled. Isolated helper-only changes, such as lookup tables or dynstats, may
+avoid waking focused heavy families only when there is a clear code-path
+rationale.
+
+Full coverage must remain forceable. Use `RSYSLOG_TESTBENCH_FORCE_SERVICE_TESTS=1`,
+`RSYSLOG_TESTBENCH_FORCE_<FAMILY>_TESTS=1`, or
+`RSYSLOG_TESTBENCH_SKIP_SERVICE_RELEVANCE=1` when intentionally validating
+service tests without relevant source changes, or when running daily, weekly,
+release, flake-campaign, or maintainer-requested full coverage.
 
 Allowed relaxations are narrow and tied to the touched area:
 
