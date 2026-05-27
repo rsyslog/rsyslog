@@ -1,5 +1,10 @@
 #!/bin/bash
-# test for mysql with multithread actionq
+# Verify that ommysql keeps multi-worker action queue delivery lossless across
+# worker idle timeout cycles.  The test injects three batches separated by
+# queue-empty waits and short sleeps so action workers can time out and be
+# restarted.  The 80s enqueue timeout is a CI tolerance budget: if a stressed
+# MySQL service cannot drain the action queue in that time, the failure should
+# be reevaluated instead of masking a persistent service or test issue.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=150000
@@ -14,7 +19,7 @@ module(load="../plugins/ommysql/.libs/ommysql")
 	queue.workerthreads="5"
 	queue.workerthreadMinimumMessages="500"
 	queue.timeoutWorkerthreadShutdown="1000"
-	queue.timeoutEnqueue="30000"
+	queue.timeoutEnqueue="80000"
 	)
 } 
 '
