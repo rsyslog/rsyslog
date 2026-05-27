@@ -980,8 +980,8 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
         } else {
             const mbedtls_x509_name *name;
             for (name = &crt->subject; name != NULL; name = name->next) {
-                if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0
-                    && mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
+                if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
+                    mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
                     if (pThis->bReportAuthErr == 1) {
                         errno = 0;
                         LogError(0, RS_RET_INVALID_FINGERPRINT,
