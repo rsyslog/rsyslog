@@ -2239,6 +2239,20 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE_TESTS, test x$enable_imfile_tests = xyes)
 
 
+# settings for the fifo input module
+AC_ARG_ENABLE(imfifo,
+        [AS_HELP_STRING([--enable-imfifo],[fifo input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imfifo="yes" ;;
+          no) enable_imfifo="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfifo) ;;
+         esac],
+        [enable_imfifo=no]
+)
+AM_CONDITIONAL(ENABLE_IMFIFO, test x$enable_imfifo = xyes)
+
+
+
 # settings for the docker log input module
 AC_ARG_ENABLE(imdocker,
         [AS_HELP_STRING([--enable-imdocker],[input docker module enabled @<:@default=no@:>@])],
@@ -3545,6 +3559,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imfifo/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
 		plugins/impstats/Makefile \
@@ -3655,6 +3670,7 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    DTLS udp input module enabled:            $enable_imdtls"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    fifo input module enabled:                $enable_imfifo"
 echo "    docker log input module enabled:          $enable_imdocker"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"

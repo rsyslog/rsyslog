@@ -17,6 +17,9 @@ EXTRA_DIST = \
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
+TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
+EXTRA_DIST += $(TESTS_IMFIFO)
+
 TESTS_GSSAPI = \
 	imgssapi-listen-port-file.sh \
 	imgssapi-maxsessions.sh
@@ -2348,6 +2351,16 @@ if ENABLE_OMHTTP
 TESTS += $(TESTS_OMHTTP)
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMHTTP_VALGRIND)
+endif
+endif
+
+if ENABLE_IMFIFO
+TESTS += imfifo.sh
+if HAVE_VALGRIND
+TESTS += imfifo-vg.sh
+endif
+if HAVE_LIBYAML
+TESTS += yaml-imfifo.sh
 endif
 endif
 
