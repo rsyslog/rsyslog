@@ -1,12 +1,13 @@
 .. _param-mmrfc5424addhmac-sd-id:
+.. _mmrfc5424addhmac.parameter.action.sd_id:
 .. _mmrfc5424addhmac.parameter.action.sdId:
 
-sdId
-====
+sd_id
+=====
 
 .. index::
-   single: mmrfc5424addhmac; sdId
-   single: sdId
+   single: mmrfc5424addhmac; sd_id
+   single: sd_id
 
 .. summary-start
 
@@ -16,7 +17,7 @@ Sets the RFC5424 structured data ID added to the message.
 
 This parameter applies to :doc:`../../configuration/modules/mmrfc5424addhmac`.
 
-:Name: sdId
+:Name: sd_id
 :Scope: action
 :Type: string
 :Default: none
@@ -30,12 +31,14 @@ will be added. Note that nothing is added if this SD-ID is already present.
 
 Action usage
 ------------
+.. _param-mmrfc5424addhmac-action-sd_id:
 .. _param-mmrfc5424addhmac-action-sdId:
+.. _mmrfc5424addhmac.parameter.action.sd_id-usage:
 .. _mmrfc5424addhmac.parameter.action.sdId-usage:
 
 .. code-block:: rsyslog
 
-   action(type="mmrfc5424addhmac" sdId="exampleSDID@32473")
+   action(type="mmrfc5424addhmac" sd_id="exampleSDID@32473")
 
 See also
 --------

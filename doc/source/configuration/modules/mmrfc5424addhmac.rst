@@ -51,7 +51,7 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-hashfunction.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`sdId <param-mmrfc5424addhmac-sd-id>`
+   * - :ref:`sd_id <param-mmrfc5424addhmac-sd-id>`
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-sd-id.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
