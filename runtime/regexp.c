@@ -227,6 +227,13 @@ static void destroy_perthread_regexs(void) {
     pthread_mutex_lock(&mut_regexp);
     if (hashtable_count(perthread_regexs)) {
         itr = hashtable_iterator(perthread_regexs);
+        if (itr == NULL) {
+            hashtable_destroy(perthread_regexs, 0);
+            perthread_regexs = NULL;
+            pthread_mutex_unlock(&mut_regexp);
+            LogError(0, RS_RET_OUT_OF_MEMORY, "error creating per-thread regexp iterator during regexp class unload");
+            return;
+        }
         do {
             perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
 
