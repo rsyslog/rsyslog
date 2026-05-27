@@ -917,9 +917,11 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
     smsg_t *pMsg = NULL;
     int lenMsg;
     int offs;
+    int priDigitCount;
     int i;
     uchar *parse;
     syslog_pri_t pri;
+    sbool priValid;
     uchar bufParseTAG[CONF_TAG_MAXSIZE];
     struct syslogTime st;
     time_t tt;
@@ -942,10 +944,17 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
 
     parse++;
     pri = 0;
+    priDigitCount = 0;
     while (offs < lenMsg && isdigit(*parse)) {
         pri = pri * 10 + *parse - '0';
         ++parse;
         ++offs;
+        ++priDigitCount;
+    }
+    priValid = lenRcv >= 3 && pRcv[0] == '<' && priDigitCount >= 1 && priDigitCount <= 3 && offs < lenMsg &&
+               *parse == '>' && pri <= LOG_MAXPRI;
+    if (!priValid) {
+        pri = LOG_PRI_INVLD;
     }
 
     findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
@@ -1107,7 +1116,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         parser.SanitizeMsg(pMsg);
         lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
         msgSetPRI(pMsg, pri);
-        MsgSetAfterPRIOffs(pMsg, offs);
+        MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
 
         parse++;
         lenMsg--; /* '>' */
