@@ -313,6 +313,7 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
     prop_t *port = NULL;
     char portbuf[8];
     uint16_t pnum;
+    const struct sockaddr_storage *pfrominet;
     DEFiRet;
 
     MsgLock(pMsg);
@@ -324,15 +325,12 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
         }
         if (localRet == RS_RET_OK) {
-            /* we pass down the props, so no need for AddRef */
-            MsgSetRcvFromWithoutAddRef(pMsg, localName);
-            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
-
+            pfrominet = pMsg->rcvFrom.pfrominet;
             if (pMsg->pRcvFromPort == NULL) {
-                if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET)
-                    pnum = ntohs(((struct sockaddr_in *)pMsg->rcvFrom.pfrominet)->sin_port);
-                else if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET6)
-                    pnum = ntohs(((struct sockaddr_in6 *)pMsg->rcvFrom.pfrominet)->sin6_port);
+                if (pfrominet != NULL && pfrominet->ss_family == AF_INET)
+                    pnum = ntohs(((const struct sockaddr_in *)pfrominet)->sin_port);
+                else if (pfrominet != NULL && pfrominet->ss_family == AF_INET6)
+                    pnum = ntohs(((const struct sockaddr_in6 *)pfrominet)->sin6_port);
                 else
                     pnum = 0;
                 snprintf(portbuf, sizeof(portbuf), "%u", pnum);
@@ -340,6 +338,9 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
                 MsgSetRcvFromPortWithoutAddRef(pMsg, port);
                 port = NULL;
             }
+            /* we pass down the props, so no need for AddRef */
+            MsgSetRcvFromWithoutAddRef(pMsg, localName);
+            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
         }
     }
 finalize_it:
