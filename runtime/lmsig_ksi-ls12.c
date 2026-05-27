@@ -23,6 +23,7 @@
 #include "config.h"
 
 #include "rsyslog.h"
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -269,10 +270,18 @@ static rsRetVal OnFileOpen(void *pT, uchar *fn, void *pGF) {
  */
 static rsRetVal OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec) {
     const rs_size_t payloadLen = (lenRec > 0) ? (lenRec - 1) : 0;
+    const int printLen = (payloadLen > (rs_size_t)INT_MAX) ? INT_MAX : (int)payloadLen;
     DEFiRet;
-    DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%d): %.*s\n", (int)payloadLen, (int)payloadLen, rec);
+
+    if (rec == NULL) {
+        DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%lu): (null)\n", (unsigned long)payloadLen);
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+
+    DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%lu): %.*s\n", (unsigned long)payloadLen, printLen, rec);
     sigblkAddRecordKSI(pF, rec, payloadLen);
 
+finalize_it:
     RETiRet;
 }
 
