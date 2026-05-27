@@ -193,10 +193,9 @@ check_allocation_policy() {
       die "Forced --subcli copilot but copilot not found"
     fi
     debug "Using copilot for policy check"
-    debug "Command: copilot --model $POLICY_CHECK_MODEL --add-dir /tmp --prompt <PROMPT>"
+    debug "Command: copilot --model $POLICY_CHECK_MODEL --prompt <PROMPT>"
     copilot \
       --model "$POLICY_CHECK_MODEL" \
-      --add-dir /tmp \
       --prompt "$PROMPT"
   else
     debug "Neither codex nor copilot CLI found, skipping check"
