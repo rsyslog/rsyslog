@@ -1216,6 +1216,7 @@ TESTS_IMPSTATS_VALGRIND = \
 
 TESTS_IMPTCP = \
 	manyptcp.sh \
+	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
 	imptcp_large.sh \
@@ -2096,6 +2097,7 @@ CLEANFILES+= \
 
 
 pkglib_LTLIBRARIES =
+check_DATA =
 
 pkglib_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
@@ -2111,6 +2113,20 @@ pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
 liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
+
+EXTRA_DIST += override_epoll_ctl.c
+
+if ENABLE_IMPTCP
+check_DATA += liboverride_epoll_ctl.so
+CLEANFILES += liboverride_epoll_ctl.so
+
+liboverride_epoll_ctl.so: override_epoll_ctl.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+		$(AM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) -fPIC -shared \
+		-o $@ $< $(DL_LIBS)
+
+imptcp-epoll-add-failure.log: liboverride_epoll_ctl.so
+endif
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf
