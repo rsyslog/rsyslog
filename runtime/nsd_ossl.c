@@ -1279,6 +1279,12 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                     if (pThis->lenRcvBuf == -1) {
                         recvRet = osslRecordRecv(pThis, &nextIODirection);
                         if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
+                        if (recvRet == RS_RET_RETRY) {
+                            pThis->rtryCall = osslRtry_None;
+                            pThis->rtryOsslErr = SSL_ERROR_NONE;
+                            ABORT_FINALIZE(RS_RET_RETRY);
+                        }
+                        if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                     }
                     /* Continue loop to retry SSL_write */
                 } else {
