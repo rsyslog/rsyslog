@@ -1554,12 +1554,14 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(wrkrInstanceData_t *pWrkrData,
         if (serverData->curlHeader == NULL) {
             CHKiRet(buildCurlHeaders(pWrkrData, serverData, compressed));
             curl_easy_setopt(serverData->curlPostHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
+            curl_easy_setopt(serverData->curlCheckConnHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
         }
     }
 
     if (serverData->curlHeader == NULL || serverData->gzipHeaderEnabled != compressed) {
         CHKiRet(buildCurlHeaders(pWrkrData, serverData, compressed));
         curl_easy_setopt(serverData->curlPostHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
+        curl_easy_setopt(serverData->curlCheckConnHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
     }
 
     /* Set Curl object here */
