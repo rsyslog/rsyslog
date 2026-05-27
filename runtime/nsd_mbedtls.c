@@ -926,6 +926,25 @@ finalize_it:
     RETiRet;
 }
 
+static int mbedtlsNameHasEmbeddedNul(const unsigned char *name, size_t nameLen) {
+    if (name == NULL || nameLen == 0) {
+        return 0;
+    }
+    return memchr(name, '\0', nameLen) != NULL;
+}
+
+static int mbedtlsCnHasEmbeddedNul(const mbedtls_x509_crt *crt) {
+    const mbedtls_x509_name *name;
+
+    for (name = &crt->subject; name != NULL; name = name->next) {
+        if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
+            mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Get the common name (CN) from a certificate
  * Caller must free() the returned string
  */
@@ -955,6 +974,15 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
     /* Check SANs */
     for (san = &crt->subject_alt_names; !bFoundPositiveMatch && san != NULL && san->buf.p != NULL; san = san->next) {
         if (san->buf.tag == (MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_X509_SAN_DNS_NAME)) {
+            if (mbedtlsNameHasEmbeddedNul(san->buf.p, san->buf.len)) {
+                if (pThis->bReportAuthErr == 1) {
+                    errno = 0;
+                    LogError(0, RS_RET_INVALID_FINGERPRINT,
+                             "error: certificate SAN dNSName contains embedded NUL byte");
+                    pThis->bReportAuthErr = 0;
+                }
+                ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+            }
             CHKmalloc(str = strndup((const char *)(san->buf.p), san->buf.len));
             bHaveSAN = 1;
             dbgprintf("subject alt dnsName: '%s'\n", str);
@@ -968,6 +996,14 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
 
     /* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
     if (!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
+        if (mbedtlsCnHasEmbeddedNul(crt)) {
+            if (pThis->bReportAuthErr == 1) {
+                errno = 0;
+                LogError(0, RS_RET_INVALID_FINGERPRINT, "error: certificate commonName contains embedded NUL byte");
+                pThis->bReportAuthErr = 0;
+            }
+            ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+        }
         str = mbedtlsCnFromCrt(crt);
         if (str != NULL) { /* NULL if there was no CN present */
             dbgprintf("mbedtls now checking auth for CN '%s'\n", str);
