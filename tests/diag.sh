@@ -2634,8 +2634,22 @@ module_needs_testing() {
 		[ -z "$changed_file" ] && continue
 
 		case "$changed_file" in
-			runtime/*.c|runtime/*.h|configure.ac|Makefile.am|tests/Makefile.am|tests/diag.sh)
-				return 0
+			*/*)
+				case "$changed_file" in
+					runtime/*.c|runtime/*.h|m4/*|\
+					runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am|grammar/Makefile.am|\
+					.github/workflows/*|\
+					tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*)
+						return 0
+						;;
+				esac
+				;;
+			*)
+				case "$changed_file" in
+					*.c|*.h|configure.ac|Makefile.am|*.mk)
+						return 0
+						;;
+				esac
 				;;
 		esac
 
