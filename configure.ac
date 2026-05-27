@@ -2005,6 +2005,8 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [AC_DEFINE([HAVE_RELPENGINESETTLSCFGCMD], [1], [Define if relpSrvSetTlsConfigCmd exists.])])
+        AC_CHECK_FUNC([relpCltSetKeepAlive],
+                      [AC_DEFINE([HAVE_RELPCLTSETKEEPALIVE], [1], [Define if relpCltSetKeepAlive exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [HAVE_RELPENGINESETTLSCFGCMD=1])
 
