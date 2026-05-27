@@ -1396,6 +1396,7 @@ TESTS_MMJSONPARSE_PART1 = \
         mmjsonparse-find-json-scan-limit.sh \
         mmjsonparse-find-json-invalid.sh \
         mmjsonparse-find-json-invalid-mode.sh \
+        mmjsonparse-find-json-conflict.sh \
         mmjsonparse-find-json-parser-validation.sh
 
 TESTS_MMJSONPARSE_IMPSTATS = \
@@ -1419,6 +1420,7 @@ TESTS_MMJSONPARSE_IMPTCP = \
 
 TESTS_MMJSONPARSE_VALGRIND = \
 	mmjsonparse_extra_data-vg.sh \
+	mmjsonparse-find-json-conflict-vg.sh \
 	json_null_array-vg.sh \
 	json_object_looping-vg.sh \
 	json_array_looping-vg.sh \
