@@ -1261,19 +1261,27 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                  * OpenSSL needs us to READ or WRITE to make progress.
                  * In TLS 1.3, servers may send post-handshake messages (e.g. KeyUpdate)
                  * which require the client to read before it can continue writing.
-                 * Use the buffered receive helper to preserve any application data.
                  */
                 if (err == SSL_ERROR_WANT_READ) {
-                    unsigned nextIODirection ATTR_UNUSED;
-                    rsRetVal rcvRet = osslRecordRecv(pThis, &nextIODirection);
-                    if (rcvRet == RS_RET_CLOSED) {
+                    unsigned char tlsCtlBuf[1];
+                    ssize_t ctlRead;
+
+                    /*
+                     * During Send() we must not call osslRecordRecv(), because that helper
+                     * is tied to Rcv() buffering state. Drive a minimal read directly so
+                     * post-handshake control traffic (e.g. TLS 1.3 KeyUpdate) can progress.
+                     */
+                    ctlRead = SSL_read(pThis->pNetOssl->ssl, tlsCtlBuf, sizeof(tlsCtlBuf));
+                    if (ctlRead == 0 || SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
                         ABORT_FINALIZE(RS_RET_CLOSED);
-                    } else if (rcvRet != RS_RET_OK && rcvRet != RS_RET_RETRY) {
-                        ABORT_FINALIZE(rcvRet);
                     }
-                    if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
-                        dbgprintf("Send: detected SSL_RECEIVED_SHUTDOWN while handling WANT_READ\n");
-                        ABORT_FINALIZE(RS_RET_CLOSED);
+                    if (ctlRead < 0) {
+                        int ctlErr = SSL_get_error(pThis->pNetOssl->ssl, ctlRead);
+                        if (ctlErr != SSL_ERROR_WANT_READ && ctlErr != SSL_ERROR_WANT_WRITE) {
+                            nsd_ossl_lastOpenSSLErrorMsg(pThis, ctlRead, pThis->pNetOssl->ssl, LOG_ERR, "Send",
+                                                         "SSL_read");
+                            ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+                        }
                     }
                     /* Continue loop to retry SSL_write */
                 } else {

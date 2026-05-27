@@ -2302,15 +2302,28 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
         if (iSent == GNUTLS_E_AGAIN || iSent == GNUTLS_E_INTERRUPTED) {
             /*
              * GnuTLS may require us to read to make progress (e.g. KeyUpdate).
-             * If direction is READ, call the buffered recv helper so we do not lose data.
+             * During Send(), drive a minimal direct read for control traffic.
              */
             if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
-                unsigned nextIODirection ATTR_UNUSED;
-                rsRetVal rcvRet = gtlsRecordRecv(pThis, &nextIODirection);
-                if (rcvRet == RS_RET_CLOSED || pThis->lenRcvBuf == 0) { /* check for explicit close or 0-byte read */
+                char tlsCtlBuf[1];
+                ssize_t ctlRead;
+
+                /*
+                 * During Send() we must not call gtlsRecordRecv(), because that helper
+                 * is tied to Rcv() buffering state. Drive a minimal read directly so
+                 * post-handshake control traffic (e.g. TLS 1.3 KeyUpdate) can progress.
+                 */
+                ctlRead = gnutls_record_recv(pThis->sess, tlsCtlBuf, sizeof(tlsCtlBuf));
+                if (ctlRead == 0) {
                     ABORT_FINALIZE(RS_RET_CLOSED);
-                } else if (rcvRet != RS_RET_OK && rcvRet != RS_RET_RETRY) {
-                    ABORT_FINALIZE(rcvRet);
+                }
+                if (ctlRead < 0 && ctlRead != GNUTLS_E_AGAIN && ctlRead != GNUTLS_E_INTERRUPTED) {
+                    uchar *pErr = gtlsStrerror(ctlRead);
+                    LogError(0, RS_RET_GNUTLS_ERR,
+                             "unexpected GnuTLS error %zd while handling send-side read: %s\n",
+                             ctlRead, pErr);
+                    free(pErr);
+                    ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
                 }
             }
             continue; /* retry send */
