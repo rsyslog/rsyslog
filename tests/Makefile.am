@@ -178,7 +178,8 @@ TESTS_DEFAULT = \
 	json-onempty-at-end.sh \
 	template-json.sh \
         template-pure-json.sh \
-        template-jsonf-nested.sh \
+	template-jsonf-nested.sh \
+	template-jsonf-nested-fallback-flat.sh \
 	template-jsonf-trailing-backslash.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
