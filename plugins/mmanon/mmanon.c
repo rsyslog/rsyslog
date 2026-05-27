@@ -1703,9 +1703,9 @@ static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
         }
         dotPos--;
     }
-    assert(!"embedded IPv4 must have a ':' before its first '.'");
-    /* If assertions are disabled, fall back to start-of-substring; parsing will
-     * then fail and the caller will treat the sequence as non-IPv4. */
+    /* No ':' was found before the first dot. Treat this as a non-embedded
+     * IPv4 case by returning the start of the substring. The subsequent
+     * syntax_ipv4() check will fail and the caller will reject the candidate. */
     return 0;
 }
 
