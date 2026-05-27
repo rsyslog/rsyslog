@@ -3147,29 +3147,32 @@ static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
                       msWinEventLog);
             return msWinEventLog;
         }
-        // Look for the EventID pattern (4-digit number) which comes before the provider
-        const char *eventIdStart = cursor;
-        while (*eventIdStart != '\0') {
-            if (*eventIdStart >= '0' && *eventIdStart <= '9') {
-                // Found a digit, check if it's a 4-digit EventID
-                const char *eventIdEnd = eventIdStart;
-                while (*eventIdEnd >= '0' && *eventIdEnd <= '9') {
-                    eventIdEnd++;
-                }
-                if (eventIdEnd - eventIdStart == 4) {
-                    // Found a 4-digit number, check if it's followed by tab and provider
-                    if (*eventIdEnd == '\t' || *eventIdEnd == ' ') {
-                        const char *afterEventId = skip_lws_const(eventIdEnd);
-                        if (afterEventId != NULL &&
-                            strstr(afterEventId, "Microsoft-Windows-Security-Auditing") != NULL) {
-                            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
-                                      eventIdStart);
-                            return eventIdStart;
+        // Look for the EventID pattern (4-digit number) which comes before the provider.
+        // Search provider once to avoid repeated full-suffix scans on malformed input.
+        const char *providerPos = strstr(cursor, "Microsoft-Windows-Security-Auditing");
+        if (providerPos != NULL) {
+            const char *eventIdStart = cursor;
+            while (*eventIdStart != '\0' && eventIdStart < providerPos) {
+                if (*eventIdStart >= '0' && *eventIdStart <= '9') {
+                    // Found a digit, check if it's a 4-digit EventID
+                    const char *eventIdEnd = eventIdStart;
+                    while (*eventIdEnd >= '0' && *eventIdEnd <= '9') {
+                        eventIdEnd++;
+                    }
+                    if (eventIdEnd - eventIdStart == 4) {
+                        // Found a 4-digit number, check if it's followed by whitespace before the provider
+                        if (*eventIdEnd == '\t' || *eventIdEnd == ' ') {
+                            const char *afterEventId = skip_lws_const(eventIdEnd);
+                            if (afterEventId != NULL && afterEventId <= providerPos) {
+                                dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
+                                          eventIdStart);
+                                return eventIdStart;
+                            }
                         }
                     }
                 }
+                eventIdStart++;
             }
-            eventIdStart++;
         }
         // After syslog parsing, MSWinEventLog may be removed from the message
         // Try to find MSWinEventLog anywhere in the original message
