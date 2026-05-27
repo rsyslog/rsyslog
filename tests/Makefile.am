@@ -3340,6 +3340,7 @@ EXTRA_DIST += \
 	testsuites/omprog-single-instance-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
 	omotel_proxy_server.py \
+	otel_collector_find_port.py \
 	testsuites/ommail-sendmail-bin.sh \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
 	imfile-endmsg.regex.crio.rulebase \

@@ -188,6 +188,12 @@ echo "=== Test 2: Proxy with authentication ==="
 stop_proxy
 sleep 1
 
+# Restart OTEL Collector before creating the authenticated proxy so the proxy
+# forwards to the current dynamic collector port.
+prepare_otel_collector
+start_otel_collector
+otel_port2=$(cat ${RSYSLOG_DYNNAME}.otel_port.file)
+
 proxy_port_file2="${RSYSLOG_DYNNAME}.proxy2_port.file"
 proxy_data_file2="${RSYSLOG_DYNNAME}.proxy2_data.json"
 
@@ -196,7 +202,7 @@ python3 "$proxy_server_py" \
 	--port 0 \
 	--port-file "$proxy_port_file2" \
 	--target-host 127.0.0.1 \
-	--target-port "$otel_port" \
+	--target-port "$otel_port2" \
 	--require-auth \
 	--user "testuser" \
 	--password "testpass" \
@@ -219,11 +225,6 @@ stop_proxy2() {
 	fi
 }
 trap 'stop_proxy2' EXIT
-
-# Restart OTEL Collector for second test
-prepare_otel_collector
-start_otel_collector
-otel_port2=$(cat ${RSYSLOG_DYNNAME}.otel_port.file)
 
 generate_conf
 add_conf '

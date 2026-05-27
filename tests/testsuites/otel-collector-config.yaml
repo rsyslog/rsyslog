@@ -2,7 +2,7 @@ receivers:
   otlp:
     protocols:
       http:
-        endpoint: 0.0.0.0:0
+        endpoint: ${OTEL_COLLECTOR_ENDPOINT}
 
 exporters:
   file:
@@ -13,7 +13,7 @@ exporters:
 service:
   telemetry:
     metrics:
-      address: 0.0.0.0:${OTEL_METRICS_PORT}
+      address: ${OTEL_METRICS_ENDPOINT}
   pipelines:
     logs:
       receivers: [otlp]
