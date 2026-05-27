@@ -2302,28 +2302,24 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
         if (iSent == GNUTLS_E_AGAIN || iSent == GNUTLS_E_INTERRUPTED) {
             /*
              * GnuTLS may require us to read to make progress (e.g. KeyUpdate).
-             * During Send(), drive a minimal direct read for control traffic.
              */
             if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
-                char tlsCtlBuf[1];
-                ssize_t ctlRead;
+                unsigned int nextIODirection;
+                rsRetVal recvRet;
 
                 /*
-                 * During Send() we must not call gtlsRecordRecv(), because that helper
-                 * is tied to Rcv() buffering state. Drive a minimal read directly so
-                 * post-handshake control traffic (e.g. TLS 1.3 KeyUpdate) can progress.
+                 * Preserve any application data read while driving send-side TLS
+                 * control traffic. TLS 1.3 post-handshake messages can make
+                 * gnutls_record_send() need a read, and gnutls_record_recv() may
+                 * return application bytes after processing that control traffic.
                  */
-                ctlRead = gnutls_record_recv(pThis->sess, tlsCtlBuf, sizeof(tlsCtlBuf));
-                if (ctlRead == 0) {
-                    ABORT_FINALIZE(RS_RET_CLOSED);
+                if (pThis->pszRcvBuf == NULL) {
+                    CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+                    pThis->lenRcvBuf = -1;
                 }
-                if (ctlRead < 0 && ctlRead != GNUTLS_E_AGAIN && ctlRead != GNUTLS_E_INTERRUPTED) {
-                    uchar *pErr = gtlsStrerror(ctlRead);
-                    LogError(0, RS_RET_GNUTLS_ERR,
-                             "unexpected GnuTLS error %zd while handling send-side read: %s\n",
-                             ctlRead, pErr);
-                    free(pErr);
-                    ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+                if (pThis->lenRcvBuf == -1) {
+                    recvRet = gtlsRecordRecv(pThis, &nextIODirection);
+                    if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                 }
             }
             continue; /* retry send */

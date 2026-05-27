@@ -1263,25 +1263,22 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                  * which require the client to read before it can continue writing.
                  */
                 if (err == SSL_ERROR_WANT_READ) {
-                    unsigned char tlsCtlBuf[1];
-                    ssize_t ctlRead;
+                    unsigned nextIODirection;
+                    rsRetVal recvRet;
 
                     /*
-                     * During Send() we must not call osslRecordRecv(), because that helper
-                     * is tied to Rcv() buffering state. Drive a minimal read directly so
-                     * post-handshake control traffic (e.g. TLS 1.3 KeyUpdate) can progress.
+                     * Preserve any application data read while driving send-side TLS
+                     * control traffic.  TLS 1.3 post-handshake messages can make
+                     * SSL_write() need a read, and SSL_read() may return application
+                     * bytes after processing that control traffic.
                      */
-                    ctlRead = SSL_read(pThis->pNetOssl->ssl, tlsCtlBuf, sizeof(tlsCtlBuf));
-                    if (ctlRead == 0 || SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
-                        ABORT_FINALIZE(RS_RET_CLOSED);
+                    if (pThis->pszRcvBuf == NULL) {
+                        CHKmalloc(pThis->pszRcvBuf = malloc(NSD_OSSL_MAX_RCVBUF));
+                        pThis->lenRcvBuf = -1;
                     }
-                    if (ctlRead < 0) {
-                        int ctlErr = SSL_get_error(pThis->pNetOssl->ssl, ctlRead);
-                        if (ctlErr != SSL_ERROR_WANT_READ && ctlErr != SSL_ERROR_WANT_WRITE) {
-                            nsd_ossl_lastOpenSSLErrorMsg(pThis, ctlRead, pThis->pNetOssl->ssl, LOG_ERR, "Send",
-                                                         "SSL_read");
-                            ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-                        }
+                    if (pThis->lenRcvBuf == -1) {
+                        recvRet = osslRecordRecv(pThis, &nextIODirection);
+                        if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                     }
                     /* Continue loop to retry SSL_write */
                 } else {
