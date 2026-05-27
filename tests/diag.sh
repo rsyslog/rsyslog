@@ -4226,6 +4226,32 @@ otel_collector_extract_cached_file() {
 	(cd "$otelcol_work_dir" && tar -zxf "$dep_otel_collector_cached_file") > /dev/null
 }
 
+otel_collector_discover_otlp_port() {
+	local otelcol_pid="$1"
+	local python_bin="${PYTHON:-}"
+	local find_port_py="$srcdir/otel_collector_find_port.py"
+
+	if [ "$(uname -s)" != "Linux" ]; then
+		printf 'SKIP: OTEL Collector dynamic port discovery requires Linux /proc socket tables\n'
+		skip_test
+	fi
+	if [ -n "$python_bin" ] && ! command -v "$python_bin" >/dev/null 2>&1; then
+		python_bin=""
+	fi
+	if [ -z "$python_bin" ]; then
+		if command -v python3 >/dev/null 2>&1; then
+			python_bin=$(command -v python3)
+		elif command -v python >/dev/null 2>&1; then
+			python_bin=$(command -v python)
+		fi
+	fi
+	if [ -z "$python_bin" ]; then
+		echo "ERROR: no Python interpreter available to discover OTEL Collector port"
+		return 1
+	fi
+	"$python_bin" "$find_port_py" "$otelcol_pid"
+}
+
 # prepare OTEL Collector instance for test
 prepare_otel_collector() {
 	# Ensure RSYSLOG_DYNNAME is set for per-test directory isolation
@@ -4321,17 +4347,18 @@ prepare_otel_collector() {
 	# Ensure the output directory exists (OTEL Collector file exporter may not create it)
 	mkdir -p "$(dirname "$otel_output_file")"
 
-	# Get a free port for the collector (use existing get_free_port function for portability)
-	if [ -z "$OTEL_COLLECTOR_PORT" ]; then
-		OTEL_COLLECTOR_PORT=$(get_free_port)
-	fi
+	# Let the collector bind dynamic localhost ports itself. This avoids the
+	# classic get_free_port race where a parallel test can claim the port
+	# between discovery and collector startup. start_otel_collector() discovers
+	# the actual OTLP listener after the collector process owns it.
+	OTEL_COLLECTOR_PORT="${OTEL_COLLECTOR_PORT:-0}"
+	OTEL_METRICS_PORT="${OTEL_METRICS_PORT:-0}"
+	OTEL_COLLECTOR_ENDPOINT="${OTEL_COLLECTOR_ENDPOINT:-127.0.0.1:$OTEL_COLLECTOR_PORT}"
+	OTEL_METRICS_ENDPOINT="${OTEL_METRICS_ENDPOINT:-127.0.0.1:$OTEL_METRICS_PORT}"
 	export OTEL_COLLECTOR_PORT
-
-	# Get a free port for metrics/telemetry
-	if [ -z "$OTEL_METRICS_PORT" ]; then
-		OTEL_METRICS_PORT=$(get_free_port)
-	fi
 	export OTEL_METRICS_PORT
+	export OTEL_COLLECTOR_ENDPOINT
+	export OTEL_METRICS_ENDPOINT
 
 	if [ ! -f $srcdir/testsuites/$dep_work_otel_collector_config ]; then
 		echo "OTEL Collector config template not found: $srcdir/testsuites/$dep_work_otel_collector_config"
@@ -4346,8 +4373,8 @@ prepare_otel_collector() {
 	# Ensure it's properly escaped for sed replacement string (only &, \, and delimiter need escaping)
 	otel_output_file_escaped=$(printf '%s\n' "$otel_output_file" | sed -e 's/[&|\\]/\\&/g')
 	sed -i "s|\${OTEL_OUTPUT_FILE}|$otel_output_file_escaped|g" "$otelcol_work_dir/config.yaml"
-	sed -i "s|\${OTEL_METRICS_PORT}|$OTEL_METRICS_PORT|g" "$otelcol_work_dir/config.yaml"
-	sed -i "s|endpoint: 0.0.0.0:0|endpoint: 0.0.0.0:$OTEL_COLLECTOR_PORT|g" "$otelcol_work_dir/config.yaml"
+	sed -i "s|\${OTEL_COLLECTOR_ENDPOINT}|$OTEL_COLLECTOR_ENDPOINT|g" "$otelcol_work_dir/config.yaml"
+	sed -i "s|\${OTEL_METRICS_ENDPOINT}|$OTEL_METRICS_ENDPOINT|g" "$otelcol_work_dir/config.yaml"
 
 	if [ ! -f "$otelcol_work_dir/config.yaml" ]; then
 		echo "Failed to create OTEL Collector config file"
@@ -4402,7 +4429,7 @@ start_otel_collector() {
 	otelcol_binary_rel="./otelcol-contrib"
 
 	# Start collector in background and capture output (both stdout and stderr)
-	(cd "$otelcol_work_dir" && $otelcol_binary_rel --config=config.yaml > $dep_work_otel_collector_logfile 2>&1) &
+	(cd "$otelcol_work_dir" && exec $otelcol_binary_rel --config=config.yaml > $dep_work_otel_collector_logfile 2>&1) &
 	otelcol_pid=$!
 	echo $otelcol_pid > $dep_work_otel_collector_pidfile
 
@@ -4413,23 +4440,46 @@ start_otel_collector() {
 		sleep 0.5
 	fi
 
-	# Use the port we configured (no discovery needed)
-	otel_port="$OTEL_COLLECTOR_PORT"
-	if [ -z "$otel_port" ]; then
-		echo "ERROR: OTEL_COLLECTOR_PORT not set. Did you call prepare_otel_collector()?"
+	if ! kill -0 $otelcol_pid 2>/dev/null; then
+		echo "OTEL Collector process exited during startup"
+		if [ -f $dep_work_otel_collector_logfile ]; then
+			echo "Dumping OTEL Collector log:"
+			cat $dep_work_otel_collector_logfile
+		fi
 		error_exit 1
 	fi
-	echo $otel_port > $otel_port_file
-	echo "OTEL Collector configured to listen on port $otel_port"
 
-	# Wait a bit more for collector to be fully ready
+	# Wait a bit more for collector to be fully ready and listening.
 	if [ -n "$TESTTOOL_DIR" ] && [ -f "$TESTTOOL_DIR/msleep" ]; then
 		$TESTTOOL_DIR/msleep 1000
 	else
 		sleep 1
 	fi
 
-	# Verify port is listening using existing helper function
+	otel_port=""
+	case "$OTEL_COLLECTOR_ENDPOINT" in
+	*:0) ;;
+	*:[0-9]*)
+		otel_port="${OTEL_COLLECTOR_ENDPOINT##*:}"
+		;;
+	esac
+	if [ -z "$otel_port" ]; then
+		otel_port=$(otel_collector_discover_otlp_port "$otelcol_pid")
+	fi
+	if [ -z "$otel_port" ]; then
+		echo "ERROR: unable to discover OTEL Collector OTLP HTTP listener port"
+		if [ -f $dep_work_otel_collector_logfile ]; then
+			echo "Dumping OTEL Collector log:"
+			cat $dep_work_otel_collector_logfile
+		fi
+		kill $otelcol_pid 2>/dev/null
+		error_exit 1
+	fi
+
+	# Publish the port only after proving it belongs to the collector process.
+	echo $otel_port > $otel_port_file
+	echo "OTEL Collector discovered OTLP listener on port $otel_port"
+
 	if ! wait_for_tcp_service "127.0.0.1" "$otel_port" 10 "OTEL Collector"; then
 		echo "OTEL Collector port $otel_port is not listening"
 		if [ -f $dep_work_otel_collector_logfile ]; then
