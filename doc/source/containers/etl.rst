@@ -94,6 +94,18 @@ Environment Variables
 
    TCP port of the Vespa HTTP endpoint.
 
+.. _containers-user-etl-vespa_use_https:
+.. envvar:: VESPA_USE_HTTPS
+
+   Use HTTPS for the Vespa HTTP action. Default ``on``.
+
+.. _containers-user-etl-vespa_allow_unsigned_certs:
+.. envvar:: VESPA_ALLOW_UNSIGNED_CERTS
+
+   Disable Vespa HTTPS certificate validation when set to ``on``. Default ``off``;
+   production deployments should keep certificate validation enabled and provide
+   a trusted CA through the container trust store or a custom configuration.
+
 .. _containers-user-etl-rsyslog_hostname:
 .. envvar:: RSYSLOG_HOSTNAME
    :noindex:
