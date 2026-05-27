@@ -47,8 +47,8 @@ Best Practices
 
 - **Use TLS where possible:**  
   When sending logs over untrusted networks, configure TLS with TCP by setting a TLS-capable
-  driver (`StreamDriver="ossl"`, `StreamDriver="gtls"` or `StreamDriver="mbedtls"`)
-  **and** `StreamDriverMode="1"`, or switch to `omdtls` (for UDP).
+  driver (``StreamDriver="ossl"``, ``StreamDriver="gtls"`` or ``StreamDriver="mbedtls"``)
+  **and** ``StreamDriverMode="1"``, or switch to ``omdtls`` (for UDP).
 
 - **Enable queues for TCP forwarding:**  
   Always define a queue (`queue.type="linkedList"`) to avoid blocking if the 
