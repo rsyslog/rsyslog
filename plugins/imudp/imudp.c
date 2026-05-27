@@ -523,7 +523,20 @@ static rsRetVal processPacket(struct lstn_s *lstn,
             pMsg->msgFlags |= PRESERVE_CASE; /* preserve case of fromhost */
         }
         CHKiRet(msgSetFromSockinfo(pMsg, frominet));
-        CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
+        if (lstn->ratelimiter != NULL && lstn->ratelimiter->pShared != NULL
+            && lstn->ratelimiter->pShared->per_source_enabled) {
+            char per_source_key[NI_MAXHOST];
+            const int gni_ret = getnameinfo((struct sockaddr *)frominet, socklen, per_source_key,
+                                            sizeof(per_source_key), NULL, 0, NI_NUMERICHOST);
+            if (gni_ret == 0) {
+                CHKiRet(ratelimitAddMsgPerSource(lstn->ratelimiter, multiSub, pMsg, per_source_key,
+                                                 strlen(per_source_key), ttGenTime));
+            } else {
+                CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
+            }
+        } else {
+            CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
+        }
         STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
     }
 

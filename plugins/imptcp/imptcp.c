@@ -979,7 +979,16 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     if (pThis->bFrameOversize) {
         writeOversizeMessageLog(pMsg);
     }
-    localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    if (pSrv->ratelimiter != NULL && pSrv->ratelimiter->pShared != NULL
+        && pSrv->ratelimiter->pShared->per_source_enabled) {
+        uchar *peerIP = NULL;
+        rs_size_t lenPeerIP = 0;
+        prop.GetString(pThis->peerIP, &peerIP, &lenPeerIP);
+        localRet = ratelimitAddMsgPerSource(pSrv->ratelimiter, pMultiSub, pMsg, (const char *)peerIP,
+                                            (size_t)lenPeerIP, ttGenTime);
+    } else {
+        localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    }
     if (localRet == RS_RET_OK) {
         STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
     } else if (localRet == RS_RET_DISCARDMSG) {
