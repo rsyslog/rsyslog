@@ -85,6 +85,7 @@ struct ratelimit_s {
     smsg_t *pMsg;
     sbool bThreadSafe; /**< do we need to operate in Thread-Safe mode? */
     sbool bNoTimeCache; /**< if we shall not used cached reception time */
+    sbool bMutInitialized; /**< if mut has been initialized */
     pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
