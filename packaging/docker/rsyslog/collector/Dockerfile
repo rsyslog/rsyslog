@@ -82,7 +82,7 @@ ENV WRITE_JSON_FILE=on
 ENV TLS_CA_FILE=""
 ENV TLS_CERT_FILE=""
 ENV TLS_KEY_FILE=""
-ENV TLS_AUTH_MODE="anon"
+ENV TLS_AUTH_MODE="x509/certvalid"
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=collector
