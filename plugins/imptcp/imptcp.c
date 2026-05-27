@@ -78,6 +78,7 @@
 #include "statsobj.h"
 #include "ratelimit.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "atomic.h"
 
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
@@ -285,6 +286,8 @@ struct ptcpsess_s {
     ptcpsess_t *prev, *next;
     int sock;
     epolld_t *epd;
+    int bWorkQueued; /* protects against concurrent helper work on this session */
+    DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
     z_stream zstrm; /* zip stream to use for tcp compression */
@@ -396,6 +399,7 @@ static void ATTR_NONNULL() destructSess(ptcpsess_t *const pSess) {
     free(pSess->pMsg);
     prop.Destruct(&pSess->peerName);
     prop.Destruct(&pSess->peerIP);
+    DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
     /* TODO: make these inits compile-time switch depending: */
     pSess->pMsg = NULL;
     free(pSess);
@@ -1529,11 +1533,14 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
     int pmsg_size_factor;
+    sbool bWorkQueuedMutInit = 0;
 
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
 
     CHKmalloc(pSess = calloc(1, sizeof(ptcpsess_t)));
+    INIT_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+    bWorkQueuedMutInit = 1;
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
         pmsg_size_factor = 1;
@@ -1592,6 +1599,9 @@ finalize_it:
             }
             free(pSess->pMsg_save);
             free(pSess->pMsg);
+            if (bWorkQueuedMutInit) {
+                DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+            }
             free(pSess);
         }
     }
@@ -1653,8 +1663,12 @@ done:
  * NOTE: we do not need to remove the socket from the epoll set, as according
  * to the epoll man page it is automatically removed on close (Q6). The only
  * exception is duplicated file handles, which we do not create.
+ *
+ * The caller must serialize access to the session. If destruct is false, the
+ * caller remains responsible for destroying pSess after releasing any session
+ * mutex it currently holds.
  */
-static rsRetVal closeSess(ptcpsess_t *pSess) {
+static rsRetVal closeSess(ptcpsess_t *pSess, const sbool destruct) {
     rsRetVal localRet = RS_RET_OK;
     DEFiRet;
 
@@ -1675,8 +1689,10 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
     }
     STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 
-    /* unlinked, now remove structure */
-    destructSess(pSess);
+    if (destruct) {
+        /* unlinked, now remove structure */
+        destructSess(pSess);
+    }
 
     if (localRet != RS_RET_OK) {
         iRet = localRet;
@@ -1982,7 +1998,7 @@ finalize_it:
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
-static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling) {
+static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling, sbool *const close_session) {
     int lenRcv;
     int lenBuf;
     uchar *peerName;
@@ -2005,7 +2021,7 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
             iRet = DataRcvd(pSess, rcvBuf, lenRcv);
             if (iRet != RS_RET_OK) {
                 *continue_polling = 0;
-                closeSess(pSess);
+                *close_session = RSTRUE;
                 break;
             }
         } else if (lenRcv == 0) {
@@ -2021,37 +2037,61 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
                          "remote peer %s.",
                          remsock, peerName);
             }
-            CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
+            *close_session = RSTRUE;
             break;
         } else {
             if (CHK_EAGAIN_EWOULDBLOCK) break;
             DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
             *continue_polling = 0;
-            closeSess(pSess); /* try clean-up by dropping session */
+            *close_session = RSTRUE; /* try clean-up by dropping session */
             break;
         }
     }
 
-finalize_it:
     RETiRet;
 }
 
 
-/* This function is called to process a single request. This may
- * be carried out by the main worker or a helper. It can be run
- * concurrently.
+static sbool claimSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    return ATOMIC_CAS(&pSess->bWorkQueued, 0, 1, &pSess->mutWorkQueued) ? RSTRUE : RSFALSE;
+}
+
+static void releaseSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    ATOMIC_STORE_0_TO_INT(&pSess->bWorkQueued, &pSess->mutWorkQueued);
+}
+
+/* This function is called to process a single request. Listener work can run
+ * concurrently. Session work must already be claimed with claimSessWork(); the
+ * session parser, zlib stream, socket close, and epoll rearm are then handled
+ * by only one worker at a time.
  */
 static void processWorkItem(epolld_t *epd) {
     int continue_polling = 1;
+    sbool close_session = RSFALSE;
 
     switch (epd->typ) {
         case epolld_lstn:
             /* listener never stops polling (except server shutdown) */
             lstnActivity((ptcplstn_t *)epd->ptr);
             break;
-        case epolld_sess:
-            sessActivity((ptcpsess_t *)epd->ptr, &continue_polling);
-            break;
+        case epolld_sess: {
+            ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+            sessActivity(pSess, &continue_polling, &close_session);
+            if (close_session) {
+                closeSess(pSess, RSFALSE);
+                destructSess(pSess);
+                return;
+            }
+            releaseSessWork(epd);
+            if (continue_polling == 1) {
+                epoll_ctl(epollfd, EPOLL_CTL_MOD, epd->sock, &(epd->ev));
+            }
+            return;
+        }
         default:
             LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: error: invalid epolld_type_t %d after epoll", epd->typ);
             break;
@@ -2149,11 +2189,17 @@ static void processWorkSet(int nEvents, struct epoll_event events[]) {
 
     for (iEvt = 0; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0); ++iEvt) {
         epd = (epolld_t *)events[iEvt].data.ptr;
+        if (epd->typ == epolld_sess && !claimSessWork(epd)) {
+            --remainEvents;
+            continue;
+        }
         if (runModConf->bProcessOnPoller && remainEvents == 1) {
             /* process self, save context switch */
             processWorkItem(epd);
         } else {
-            enqueueIoWork(epd, runModConf->bProcessOnPoller);
+            if (enqueueIoWork(epd, runModConf->bProcessOnPoller) != RS_RET_OK && epd->typ == epolld_sess) {
+                releaseSessWork(epd);
+            }
         }
         --remainEvents;
     }
