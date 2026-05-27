@@ -1,0 +1,28 @@
+plugins/omkafka/omkafka.c
+  s_6224eda96fc0da::t_b76b84571d56eb 1131-1137,1144,1148-1149,1152-1154,1159,1718
+tests/Makefile.am
+  s_6224eda96fc0da::t_c449832183e752 975,977-978,2659-2660
+  s_6224eda96fc0da::t_3689d25297a9c4 976
+tests/omkafka-failedmsg-malformed.sh
+  s_6224eda96fc0da::t_989fb2f88394e7 28-30
+  s_6224eda96fc0da::t_3689d25297a9c4 1-27,31-37
+tests/omkafka-unreachable-shutdown.sh
+  s_6224eda96fc0da::t_e990bea6830b20 20,38
+  s_6224eda96fc0da::t_3689d25297a9c4 1-19,21-37,39-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4d3361c54b7b5fa510b8b400cc82833993098395",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
