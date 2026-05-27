@@ -1060,6 +1060,7 @@ static rsRetVal jsontransformInsertDotted(struct json_object *dest,
 
     if (*segStart == '\0') {
         CHKiRet(jsontransformConflictSet(conflict, "dotted path '%s' ends with an empty segment", path));
+        json_object_put(value);
         goto finalize_it;
     }
 
@@ -1072,6 +1073,7 @@ static rsRetVal jsontransformInsertDotted(struct json_object *dest,
         if (!json_object_is_type(existing, json_type_object) || !json_object_is_type(value, json_type_object)) {
             CHKiRet(
                 jsontransformConflictSet(conflict, "dotted path '%s' collides with existing non-object value", path));
+            json_object_put(value);
             goto finalize_it;
         }
         CHKiRet(jsontransformMergeObjects(existing, value, conflict, path));
@@ -1186,8 +1188,8 @@ static rsRetVal jsontransformRewriteObject(struct json_object *src,
         }
         if (strchr(key, '.') != NULL) {
             CHKiRet(jsontransformInsertDotted(dest, key, child, conflict));
-            if (conflict != NULL && conflict->occurred) goto conflict;
             child = NULL;
+            if (conflict != NULL && conflict->occurred) goto conflict;
             free(valueContext);
             valueContext = NULL;
         } else {
