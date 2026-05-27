@@ -1761,6 +1761,7 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
     /* Store result in cache */
     char *cache_key = ocsp_make_cache_key(cert, issuer);
     if (cache_key) {
+        int should_cache = 1;
         time_t cache_ttl = OCSP_CACHE_DEFAULT_TTL;
         /* Use nextUpdate if available for more accurate cache expiry */
         if (nextupd) {
@@ -1771,12 +1772,19 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
                 time_t seconds_until_expiry = (pday * 86400) + psec;
                 if (seconds_until_expiry > 0) {
                     cache_ttl = seconds_until_expiry;
+                } else {
+                    /* avoid caching stale responses accepted only via OCSP leeway */
+                    should_cache = 0;
                 }
             } else {
                 dbgprintf("OCSP: ASN1_TIME_diff() failed, using default TTL\n");
             }
         }
-        ocsp_cache_store(cache_key, status, cache_ttl);
+        if (should_cache) {
+            ocsp_cache_store(cache_key, status, cache_ttl);
+        } else {
+            dbgprintf("OCSP: nextUpdate is not in the future, skipping cache store\n");
+        }
         free(cache_key);
     }
 
