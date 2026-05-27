@@ -2658,6 +2658,7 @@ BEGINmodExit
     objRelease(net, LM_NET_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
 ENDmodExit
 
 

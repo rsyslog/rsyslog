@@ -1446,6 +1446,7 @@ BEGINmodExit
     objRelease(prop, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
     objRelease(net, LM_NET_FILENAME);
+    objRelease(parser, CORE_COMPONENT);
 ENDmodExit
 
 
