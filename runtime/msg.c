@@ -308,8 +308,8 @@ static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const
 static rsRetVal resolveDNS(smsg_t *const pMsg) {
     rsRetVal localRet;
     prop_t *propFromHost = NULL;
-    prop_t *ip;
-    prop_t *localName;
+    prop_t *ip = NULL;
+    prop_t *localName = NULL;
     prop_t *port = NULL;
     char portbuf[8];
     uint16_t pnum;
@@ -340,7 +340,9 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             }
             /* we pass down the props, so no need for AddRef */
             MsgSetRcvFromWithoutAddRef(pMsg, localName);
+            localName = NULL;
             MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
+            ip = NULL;
         }
     }
 finalize_it:
@@ -351,6 +353,8 @@ finalize_it:
     }
     MsgUnlock(pMsg);
     if (propFromHost != NULL) prop.Destruct(&propFromHost);
+    if (localName != NULL) prop.Destruct(&localName);
+    if (ip != NULL) prop.Destruct(&ip);
     if (port != NULL) prop.Destruct(&port);
     RETiRet;
 }
