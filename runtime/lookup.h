@@ -91,6 +91,8 @@ struct lookup_ref_s {
     uint8_t reloader_attr_initialized;
     uint8_t reloader_started;
     uint8_t do_reload;
+    /* Set after do_reload is consumed until the table swap is complete. */
+    uint8_t is_reloading;
     uint8_t do_stop;
     uint8_t reload_on_hup;
 };
