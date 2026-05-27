@@ -1335,7 +1335,11 @@ static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const
         }
     }
 
-    CHKmalloc(task = malloc(sizeof(file_write_entry_t)));
+    task = malloc(sizeof(file_write_entry_t));
+    if (task == NULL) {
+        pthread_mutex_unlock(&bkts->work_q.mut);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     task->bucket = b;
     task->name = strdup(file_name);
     task->content = strdup(content);
