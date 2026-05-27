@@ -597,6 +597,15 @@ static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, s
     }
 }
 
+static uint32_t random_u32(wrkrInstanceData_t *pWrkrData) {
+    uint32_t value = 0;
+
+    for (size_t i = 0; i < sizeof(value); ++i) {
+        value = (value << 8) | (uint32_t)(rand_r(&(pWrkrData->randstatus)) & 0xffu);
+    }
+    return value;
+}
+
 /**
  * \brief Check whether a buffer starts with an IPv4 address.
  *
@@ -895,8 +904,7 @@ static unsigned code_ipv4_int(unsigned ip, wrkrInstanceData_t *pWrkrData, int bi
             // mask random bits directly so every suffix value remains reachable.
             {
                 const uint32_t mask = (bits == 32) ? UINT32_MAX : (uint32_t)((1ull << bits) - 1);
-                const uint32_t random32 =
-                    (((uint32_t)rand_r(&(pWrkrData->randstatus))) << 16) ^ ((uint32_t)rand_r(&(pWrkrData->randstatus)));
+                const uint32_t random32 = random_u32(pWrkrData);
                 random = (unsigned)(random32 & mask);
             }
             return (unsigned)shiftIP_subst + random;
