@@ -29,11 +29,16 @@ while [ "$attempt" -le "$max_attempts" ]; do
     "$skeleton"
     result=$?
     if [ "$result" -eq 0 ]; then
+        rm -f testbench_test_failed_rsyslog
         if [ "$attempt" -gt 1 ]; then
             echo "omfwd load-balancer test passed on retry."
             echo "Consider future improvements such as synchronising minitcpsrvr reconnects with omfwd drain notifications to reduce flakiness."
         fi
         exit 0
+    fi
+
+    if [ "$attempt" -lt "$max_attempts" ]; then
+        rm -f testbench_test_failed_rsyslog
     fi
 
     attempt=$((attempt + 1))
