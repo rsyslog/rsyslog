@@ -560,8 +560,7 @@ static size_t ATTR_NONNULL(1, 4)
     }
     newlen = buffer->len + size_add;
     if (newlen > ES_VERSION_DETECT_MAX_RESPONSE) {
-        LogError(0, RS_RET_ERR,
-                 "omelasticsearch: platform detection response exceeded %u-byte limit",
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response exceeded %u-byte limit",
                  (unsigned)ES_VERSION_DETECT_MAX_RESPONSE);
         return 0;
     }
