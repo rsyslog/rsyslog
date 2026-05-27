@@ -1,14 +1,16 @@
 #!/bin/bash
-# Test for DA mode on the main message queue
-# This test checks if DA mode operates correctly. To do so,
-# it uses a small in-memory queue size, so that DA mode is initiated
-# rather soon, and disk spooling used. There is some uncertainty (based
-# on machine speeds), but in general the test should work rather well.
-# We add a few messages after the initial run, just so that we can
-# check everything recovers from DA mode correctly.
+# Test disk-assisted mode on the main message queue. The test uses a very small
+# in-memory main queue so the 2000-message burst must spill to disk and then
+# drain back into the configured omfile action. imdiag injection is marked fully
+# delayable so the diagnostic injector does not overrun the intentionally tiny
+# queue; the behavior under test is DA queue persistence and recovery, not
+# non-delayable input loss. The oracle is the complete output sequence 0..2099:
+# first the pre-DA messages, then the DA-triggering burst, then a final small
+# post-DA burst that proves normal processing resumed.
 # added 2009-04-22 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -42,6 +44,7 @@ wait_file_lines $RSYSLOG_OUT_LOG 2050 # wait to ensure DA queue is "empty"
 
 # send another handful
 injectmsg 2050 50
+wait_file_lines $RSYSLOG_OUT_LOG 2100
 
 shutdown_when_empty
 wait_shutdown
