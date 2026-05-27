@@ -257,7 +257,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omjournal \
 	--disable-omkafka \
 	--enable-ommongodb \
-	--enable-omclickhouse \
+	--enable-clickhouse \
 	--enable-omprog \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
