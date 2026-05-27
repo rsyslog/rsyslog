@@ -112,6 +112,14 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #define COMPRESS_SINGLE_MSG 1 /* old, single-message compression */
 /* all other settings are for stream-compression */
 #define COMPRESS_STREAM_ALWAYS 2
+/* auto-detect: sniff first 2 bytes of session, lock-in afterwards.
+ * Used when a single listener must accept both compressed and plain
+ * peers (typical for staged client roll-outs). After detection the
+ * per-session compressionMode is rewritten to either COMPRESS_STREAM_ALWAYS
+ * or COMPRESS_NEVER so the hot path stays branch-free.
+ */
+#define COMPRESS_STREAM_AUTO 3
+#define COMPRESS_AUTO_SNIFF_BYTES 2
 
 /* config settings */
 typedef struct configSettings_s {
@@ -292,6 +300,9 @@ struct ptcpsess_s {
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
+    uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
+    uint8_t compressionAutoDetectLen; /* bytes buffered for sniffing (0..COMPRESS_AUTO_SNIFF_BYTES) */
+    uchar compressionAutoDetectBuf[COMPRESS_AUTO_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
     int iCurrLine; /* 2nd char of current line in regex framing mode */
     int bAtStrtOfFram; /* are we at the very beginning of a new frame? */
@@ -1394,14 +1405,81 @@ finalize_it:
     RETiRet;
 }
 
+/* AUTO mode: inspect the first COMPRESS_AUTO_SNIFF_BYTES bytes of the
+ * session and decide whether the peer is sending a zlib stream
+ * (RFC 1950) or plain syslog. The probe is restricted to byte 0 == 0x78
+ * (CMF: deflate, default 32 KiB window - what rsyslog's omfwd always
+ * emits via deflateInit()). A plain syslog frame never starts with 'x'
+ * (must be ASCII digit for octet-counted framing or '<' for
+ * non-transparent framing), so the test is conclusive for any
+ * rsyslog-to-rsyslog deployment and for every standard 3rd-party syslog
+ * sender we know of.
+ *
+ * Returns:
+ *   1  - decision taken; *pIsCompressed reflects the verdict
+ *   0  - not enough bytes yet; caller must wait for more data
+ */
+static int compressionAutoDetect(const uchar *const buf, const size_t len, sbool *const pIsCompressed) {
+    if (len < COMPRESS_AUTO_SNIFF_BYTES) {
+        return 0;
+    }
+    /* RFC 1950 zlib stream header:
+     *   - CMF byte: low nibble = 8 (deflate); we additionally require
+     *     the full byte to be 0x78 (window bits 15) which is what every
+     *     omfwd build emits via deflateInit().
+     *   - FLG byte: (CMF*256 + FLG) % 31 == 0; FDICT (bit 5) == 0 since
+     *     omfwd does not use a preset dictionary.
+     */
+    const unsigned cmf = buf[0];
+    const unsigned flg = buf[1];
+    if (cmf == 0x78 && ((cmf << 8) + flg) % 31u == 0u && (flg & 0x20u) == 0u) {
+        *pIsCompressed = 1;
+    } else {
+        *pIsCompressed = 0;
+    }
+    return 1;
+}
+
 static rsRetVal DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
     struct syslogTime stTime;
     DEFiRet;
     ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
+
+    if (pThis->compressionAutoDetectPending) {
+        /* buffer up to COMPRESS_AUTO_SNIFF_BYTES bytes spanning reads */
+        sbool bIsCompressed = 0;
+        while (pThis->compressionAutoDetectLen < COMPRESS_AUTO_SNIFF_BYTES && iLen > 0) {
+            pThis->compressionAutoDetectBuf[pThis->compressionAutoDetectLen++] = (uchar)*pData;
+            ++pData;
+            --iLen;
+        }
+        if (!compressionAutoDetect(pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen, &bIsCompressed)) {
+            /* still need more bytes; consume what we have and wait */
+            FINALIZE;
+        }
+        /* lock-in: rewrite mode so subsequent calls hit the fast path */
+        pThis->compressionMode = bIsCompressed ? COMPRESS_STREAM_ALWAYS : COMPRESS_NEVER;
+        pThis->compressionAutoDetectPending = 0;
+        DBGPRINTF("imptcp: AUTO compression detection: %s\n", bIsCompressed ? "compressed" : "plain");
+        /* re-inject the sniffed bytes into the chosen path */
+        if (bIsCompressed) {
+            CHKiRet(
+                DataRcvdCompressed(pThis, (char *)pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen));
+        } else {
+            CHKiRet(DataRcvdUncompressed(pThis, (char *)pThis->compressionAutoDetectBuf,
+                                         pThis->compressionAutoDetectLen, &stTime, 0));
+        }
+        if (iLen == 0) {
+            FINALIZE;
+        }
+    }
+
     if (pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
         iRet = DataRcvdCompressed(pThis, pData, iLen);
     else
         iRet = DataRcvdUncompressed(pThis, pData, iLen, &stTime, 0);
+
+finalize_it:
     RETiRet;
 }
 
@@ -1564,6 +1642,10 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->peerName = peerName;
     pSess->peerIP = peerIP;
     pSess->compressionMode = pLstn->pSrv->compressionMode;
+    /* AUTO mode starts in sniff state; first DataRcvd() locks in the
+     * effective compressionMode for the rest of the session. */
+    pSess->compressionAutoDetectPending = (pSess->compressionMode == COMPRESS_STREAM_AUTO) ? 1 : 0;
+    pSess->compressionAutoDetectLen = 0;
     pSess->startRegex = pLstn->pSrv->inst->startRegex;
     pSess->iAddtlFrameDelim = pLstn->pSrv->iAddtlFrameDelim;
 
@@ -2326,6 +2408,8 @@ BEGINnewInpInst
             CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
                 inst->compressionMode = COMPRESS_STREAM_ALWAYS;
+            } else if (!strcasecmp(cstr, "stream:auto")) {
+                inst->compressionMode = COMPRESS_STREAM_AUTO;
             } else if (!strcasecmp(cstr, "none")) {
                 inst->compressionMode = COMPRESS_NEVER;
             } else {

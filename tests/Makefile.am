@@ -1236,6 +1236,7 @@ TESTS_IMPTCP = \
 	imptcp-basic-hup.sh \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
+	imptcp-stream-compression-auto.sh \
 	rscript_random.sh \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
