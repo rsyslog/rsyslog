@@ -1,5 +1,10 @@
 #!/bin/bash
-# Test imptcp with poller not processing any messages
+# Test imptcp's helper-worker receive path with processOnPoller disabled.
+# A single tcpflood connection sends a large numbered stream while 32 helpers
+# are available; the oracle is that the output contains the complete ordered
+# 0..NUMMESSAGES-1 sequence. This preserves coverage for races in per-session
+# parser state when all socket data processing is delegated away from the
+# poller thread.
 # added 2015-10-16 by singh.janmejay
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
