@@ -69,6 +69,39 @@ configured rsyslog output destination, usually testbench omfile output such as
 the oracle unless the test is specifically about process-level output or the
 exception is documented in the test header.
 
+### 3.1 Deflake Antipattern Review
+Before adding or heavily changing shell tests, run the advisory antipattern
+scanner on the touched files:
+
+```bash
+devtools/check-test-antipatterns.sh tests/<changed-test>.sh
+```
+
+The scanner prefers `rg` and falls back to `grep`/`find`, so it should also work
+in minimal CI-style containers. Findings are review prompts, not automatic
+failures. Fix practical matches; if a match is intentional, document the
+deterministic oracle in the test header.
+
+Known flake-prone patterns from prior fixes:
+
+- Port preselection with `get_free_port`; prefer listener `port="0"` plus a
+  port file or helper readiness written after `listen(2)` succeeds.
+- Fixed sleeps used as synchronization; prefer explicit readiness or completion
+  helpers such as port files, `wait_file_lines`, `wait_queueempty`, stats
+  counters, or imdiag waits.
+- Readiness files written before the underlying service is actually ready.
+- Negative-path tests that assume auth failure, retry, disconnect, or timeout
+  timing instead of waiting for a specific state or diagnostic.
+- CPU tick, runtime, or timeout thresholds without a header comment explaining
+  the oracle and why the value is safe under loaded CI runners.
+- Background helpers without deterministic readiness and cleanup.
+- Queue tests that assume immediate drain or shutdown ordering without
+  queue-specific synchronization.
+- Shared external state such as fixed ports, filenames, spool directories,
+  topics, databases, or service names.
+- Deflake changes that reduce the tested behavior or race window instead of
+  preserving the original invariant with a better oracle.
+
 ### 4. Using diag.sh Helpers
 All tests include `tests/diag.sh` using the POSIX `.` command. You should use its standardized helpers:
 - `cmp_exact`: Verify file content matches.
