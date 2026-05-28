@@ -356,7 +356,6 @@ run_change_gated_ubuntu26() {
 	fi
 	run_distclean_if_available
 	export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-	export RSYSLOG_CONTAINER_UID=''
 	export RSYSLOG_TESTBENCH_CHANGED_FILES
 	RSYSLOG_TESTBENCH_CHANGED_FILES="$(cat "$tmp_changed")"
 	export CC='gcc'
@@ -379,7 +378,6 @@ run_focused_test_shell() {
 	have_devcontainer_script || return 0
 	run_distclean_if_available
 	export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-	export RSYSLOG_CONTAINER_UID=''
 	export CC='gcc'
 	export CFLAGS='-g'
 	export CI_CONFIGURE_CACHE=1
