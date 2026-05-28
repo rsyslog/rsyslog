@@ -2503,7 +2503,7 @@ error_exit() {
 		fi
 	fi
 	printf '%s FAIL: Test %s (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
-	if [ $exitval -ne 77 ]; then
+	if [ $exitval -ne 77 ] && [ "$TESTBENCH_SUPPRESS_FAIL_MARKER" != "YES" ]; then
 		echo $0 > testbench_test_failed_rsyslog
 		# --- AI AGENT GUIDANCE ---
 		echo " "
