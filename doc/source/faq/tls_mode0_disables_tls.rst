@@ -21,6 +21,9 @@ What this warning means
 The warning indicates that the effective transport is not TLS-protected. Common cases are:
 
 * ``imtcp`` or ``omfwd`` with ``streamdriver.mode="0"`` (plain TCP)
+* ``imtcp`` or ``omfwd`` using a TLS-capable stream driver such as ``ossl``,
+  ``gtls``, or ``mbedtls`` while the mode is still ``0``; this includes drivers
+  inherited from ``global(defaultNetstreamDriver="...")``
 * ``omfwd`` with ``protocol="udp"``
 * ``imrelp`` / ``omrelp`` with ``tls="off"``
 
@@ -38,7 +41,10 @@ How to fix
 
 Pick one explicit model and make it consistent:
 
-* **Use TLS intentionally:** configure a TLS-capable transport and keep TLS-auth parameters aligned.
+* **Use TLS intentionally:** configure a TLS-capable stream driver and set
+  ``streamdriver.mode="1"`` / ``StreamDriverMode="1"``. Selecting
+  ``StreamDriver="ossl"``, ``"gtls"``, or ``"mbedtls"`` chooses the driver,
+  but mode ``1`` is what activates TLS.
 * **Use plain transport intentionally:** remove TLS-only parameters so intent is clear and warnings stop.
 
 How to turn this warning off
@@ -50,8 +56,10 @@ You can silence them by changing the global policy:
 * ``global(compatibility.defaults.secure="backward-compatible")``:
   keeps old insecure defaults and suppresses these warnings.
 * ``global(compatibility.defaults.secure="strict")``:
-  enforces secure defaults and also suppresses these warnings because insecure
-  defaults are no longer used.
+  promotes an omitted stream-driver mode to TLS mode ``1`` when the effective
+  stream driver is TLS-capable. An explicit ``streamdriver.mode="0"`` with a
+  TLS-capable effective driver is rejected so that strict mode does not
+  silently override explicit plain-TCP intent.
 
 The recommended path is to keep ``warn`` until configuration is remediated,
 then move to ``strict``.
