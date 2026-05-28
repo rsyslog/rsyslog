@@ -153,11 +153,11 @@ Protocol
 
    "word", "udp", "no", "none"
 
-Type of protocol to use for forwarding. Note that ``tcp`` includes both legacy 
-plain TCP syslog and 
-`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_-based TLS-encrypted 
-syslog. The selection depends on the StreamDriver parameter. If StreamDriver is 
-set to "ossl", "gtls" or "mbedtls", it will use TLS-encrypted syslog.
+Type of protocol to use for forwarding. Note that ``tcp`` includes both legacy
+plain TCP syslog and
+`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_-based TLS-encrypted
+syslog. For TLS, configure a TLS-capable stream driver (``StreamDriver="ossl"``,
+``"gtls"``, or ``"mbedtls"``) **and** set ``StreamDriverMode="1"``.
 
 Template
 ========
