@@ -527,6 +527,9 @@ struct versionDetectBuffer {
     size_t len;
 };
 
+/* Keep startup platform probes bounded: root endpoint metadata is tiny JSON. */
+#define ES_VERSION_DETECT_MAX_RESPONSE (1024U * 1024U)
+
 /**
  * @brief cURL write callback used during platform/version detection.
  *
@@ -541,12 +544,28 @@ struct versionDetectBuffer {
 static size_t ATTR_NONNULL(1, 4)
     curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
     struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
-    const size_t size_add = size * nmemb;
+    size_t size_add;
+    size_t newlen;
     char *tmp;
 
-    if (size_add == 0) return 0;
+    if (size == 0 || nmemb == 0) return 0;
+    if (nmemb > SIZE_MAX / size) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    size_add = size * nmemb;
+    if (buffer->len > SIZE_MAX - size_add) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    newlen = buffer->len + size_add;
+    if (newlen > ES_VERSION_DETECT_MAX_RESPONSE) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response exceeded %u-byte limit",
+                 (unsigned)ES_VERSION_DETECT_MAX_RESPONSE);
+        return 0;
+    }
 
-    tmp = realloc(buffer->data, buffer->len + size_add + 1);
+    tmp = realloc(buffer->data, newlen + 1);
     if (tmp == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: realloc failed in curlVersionResult");
         return 0;
@@ -554,7 +573,7 @@ static size_t ATTR_NONNULL(1, 4)
 
     memcpy(tmp + buffer->len, ptr, size_add);
     buffer->data = tmp;
-    buffer->len += size_add;
+    buffer->len = newlen;
     buffer->data[buffer->len] = '\0';
 
     return size_add;
