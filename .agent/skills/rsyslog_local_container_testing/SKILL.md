@@ -224,6 +224,15 @@ normal local dev-container validation. When the task specifically validates a
 locally built runtime or dev image, use that locally built image/tag for the
 container-under-test and record its image ID.
 
+For normal local validation, do not set `RSYSLOG_CONTAINER_UID=''`. Leaving
+`RSYSLOG_CONTAINER_UID` unset lets `devtools/devcontainer.sh` run the container
+process as the host uid/gid and inject a matching passwd/group entry when
+needed. This prevents generated build products from being owned by the dev
+image's default user, which is often a different uid than the host checkout
+owner. Set `RSYSLOG_CONTAINER_UID=''` only when intentionally reproducing the
+exact GitHub Actions default-container-user behavior, and expect to normalize
+ownership afterwards.
+
 ## Clean Tree Rule
 
 Before switching compiler, sanitizer flags, configure options, container image,
@@ -295,7 +304,6 @@ For `clang21-ndebug`:
 make distclean || true
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
-RSYSLOG_CONTAINER_UID='' \
 CI_CONFIGURE_CACHE='1' \
 CC='clang-21' \
 CFLAGS='-g' \
@@ -303,7 +311,6 @@ RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no' \
 devtools/devcontainer.sh --rm devtools/run-configure.sh
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
-RSYSLOG_CONTAINER_UID='' \
 devtools/devcontainer.sh --rm make -j20
 ```
 
@@ -313,7 +320,6 @@ For `gcc15-gnu23-debug`:
 make distclean || true
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
-RSYSLOG_CONTAINER_UID='' \
 CI_CONFIGURE_CACHE='1' \
 CC='gcc-15' \
 CFLAGS='-g -std=gnu23' \
@@ -321,7 +327,6 @@ RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1' \
 devtools/devcontainer.sh --rm devtools/run-configure.sh
 /usr/bin/time -p env \
 RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04' \
-RSYSLOG_CONTAINER_UID='' \
 devtools/devcontainer.sh --rm make -j20
 ```
 
@@ -343,7 +348,6 @@ make distclean || true
 : "${RSYSLOG_LOCAL_CHECK_JOBS:=10}"
 : "${RSYSLOG_LOCAL_BUILD_JOBS:=10}"
 export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-export RSYSLOG_CONTAINER_UID=''
 export RSYSLOG_TESTBENCH_CHANGED_FILES="$({
   git diff --name-only origin/main...HEAD
   git diff --name-only HEAD
@@ -459,7 +463,6 @@ apply the same PR-style configure suppressions in local container runs:
 ```sh
 make distclean || true
 export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
-export RSYSLOG_CONTAINER_UID=''
 export RSYSLOG_TESTBENCH_CHANGED_FILES='runtime/lookup.c'
 export CC='gcc'
 export CFLAGS='-g'
