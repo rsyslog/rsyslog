@@ -1243,6 +1243,7 @@ TESTS_IMPTCP = \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	imptcp-stream-compression-auto.sh \
+	imptcp-stream-compression-auto-zlib-prefix-plain.sh \
 	rscript_random.sh \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
