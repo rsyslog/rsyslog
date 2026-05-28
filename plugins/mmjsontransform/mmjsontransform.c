@@ -955,6 +955,7 @@ static rsRetVal jsontransformApplyPolicyRules(struct json_object *src,
             }
             jsontransformConflict_t insertConflict = {0, NULL};
             iRet = jsontransformInsertDotted(dest, targetKey, rewrittenValue, &insertConflict);
+            rewrittenValue = NULL;
             if (iRet != RS_RET_OK) {
                 jsontransformConflictCleanup(&insertConflict);
                 goto loop_finalize;
@@ -1190,8 +1191,8 @@ static rsRetVal jsontransformRewriteObject(struct json_object *src,
         }
         if (strchr(key, '.') != NULL) {
             iRet = jsontransformInsertDotted(dest, key, child, conflict);
-            if (iRet != RS_RET_OK) goto conflict;
             child = NULL;
+            if (iRet != RS_RET_OK) goto conflict;
             if (conflict != NULL && conflict->occurred) goto conflict;
             free(valueContext);
             valueContext = NULL;
