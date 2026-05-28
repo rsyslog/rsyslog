@@ -3,7 +3,7 @@
 # timing races trigger the known omfwd load-balancer flake. The second attempt
 # keeps the same forced receiver-close scenario and bounded-loss oracle; it
 # only avoids failing the suite on one unlucky reconnect timing window.
-: "${srcdir:=.}"
+export srcdir="${srcdir:=.}"
 
 export OMFWD_IOBUF_SIZE=1000 # triggers edge cases
 skeleton="$srcdir/omfwd-lb-1target-retry-test_skeleton-TargetFail.sh"
@@ -17,9 +17,9 @@ while [ "$attempt" -le "$max_attempts" ]; do
     fi
 
     if [ "$attempt" -lt "$max_attempts" ]; then
-        TESTBENCH_SUPPRESS_FAIL_MARKER=YES "$skeleton"
+        TESTBENCH_SUPPRESS_FAIL_MARKER=YES bash "$skeleton"
     else
-        "$skeleton"
+        bash "$skeleton"
     fi
     result=$?
     if [ "$result" -eq 0 ]; then
