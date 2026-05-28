@@ -61,6 +61,7 @@
 #include "net.h"
 #include "netstrm.h"
 #include "errmsg.h"
+#include "glbl.h"
 #include "tcpsrv.h"
 #include "ruleset.h"
 #include "rainerscript.h"
@@ -103,6 +104,7 @@ static struct configSettings_s {
     int iTCPLstnMax;
     int bSuppOctetFram;
     int iStrmDrvrMode;
+    sbool bStrmDrvrModeSet; /* stream driver mode was explicitly configured */
     int bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -152,6 +154,7 @@ struct instanceConf_s {
     char *pszNetworkNamespace; /**< optional network name to use */
     uchar *pszStrmDrvrName; /* stream driver to use */
     int iStrmDrvrMode;
+    sbool bStrmDrvrModeSet; /* stream driver mode was explicitly configured */
     uchar *pszStrmDrvrAuthMode;
     uchar *pszStrmDrvrPermitExpiredCerts;
     uchar *pszStrmDrvrCAFile;
@@ -184,6 +187,7 @@ struct modConfData_s {
     int iTCPLstnMax; /* max number of sessions */
     unsigned numWrkr;
     int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+    sbool bStrmDrvrModeSet; /* stream driver mode was explicitly configured */
     int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
     int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
     int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
@@ -424,11 +428,10 @@ finalize_it:
 
 /** Warn in secure warn mode when imtcp listener transport/auth settings reduce security. */
 static void warnIfInsecureListenerConfigured(const int streamDriverMode,
-                                             const uchar *const streamDriverName,
+                                             const uchar *const effectiveStreamDriverName,
                                              const uchar *const authMode) {
     if (streamDriverMode == 0) {
-        const int tlsHintsConfigured =
-            (authMode != NULL) || (streamDriverName != NULL && strcasecmp((const char *)streamDriverName, "ptcp") != 0);
+        const int tlsHintsConfigured = (authMode != NULL) || glblIsTlsCapableNetstrmDrvr(effectiveStreamDriverName);
         if (tlsHintsConfigured) {
             glblWarnIfInsecureDefault(loadConf,
                                       "imtcp has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
@@ -447,6 +450,57 @@ static void warnIfInsecureListenerConfigured(const int streamDriverMode,
             "imtcp uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
             "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
     }
+}
+
+static rsRetVal applySecureDefaultsToStreamDriver(rsconf_t *const cnf,
+                                                  int *const streamDriverMode,
+                                                  const sbool streamDriverModeSet,
+                                                  const uchar *const effectiveStreamDriverName,
+                                                  const char *const context) {
+    if (glblIsTlsCapableNetstrmDrvr(effectiveStreamDriverName) && *streamDriverMode == 0 &&
+        cnf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
+        if (streamDriverModeSet) {
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "%s: compatibility.defaults.secure=\"strict\" rejects explicit streamdriver.mode=\"0\" "
+                     "with TLS-capable stream driver \"%s\"; use streamdriver.mode=\"1\" to enable TLS or "
+                     "select ptcp/plain TCP intentionally",
+                     context, (const char *)effectiveStreamDriverName);
+            return RS_RET_PARAM_ERROR;
+        }
+        *streamDriverMode = 1;
+    }
+    return RS_RET_OK;
+}
+
+static const uchar *getEffectiveModuleStreamDriver(const modConfData_t *const modConf) {
+    return glblGetEffectiveNetstrmDrvr(modConf->pConf, modConf->pszStrmDrvrName);
+}
+
+static const uchar *getEffectiveInstanceStreamDriver(const instanceConf_t *const inst,
+                                                     const modConfData_t *const modConf) {
+    const uchar *const localOrModuleDrvr =
+        inst->pszStrmDrvrName == NULL ? modConf->pszStrmDrvrName : inst->pszStrmDrvrName;
+    return glblGetEffectiveNetstrmDrvr(modConf->pConf, localOrModuleDrvr);
+}
+
+static const uchar *getEffectiveInstanceAuthMode(const instanceConf_t *const inst, const modConfData_t *const modConf) {
+    return inst->pszStrmDrvrAuthMode == NULL ? modConf->pszStrmDrvrAuthMode : inst->pszStrmDrvrAuthMode;
+}
+
+static rsRetVal applySecureDefaultsToModuleConfig(modConfData_t *const modConf) {
+    return applySecureDefaultsToStreamDriver(modConf->pConf, &modConf->iStrmDrvrMode, modConf->bStrmDrvrModeSet,
+                                             getEffectiveModuleStreamDriver(modConf), "imtcp module");
+}
+
+static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst, modConfData_t *const modConf) {
+    return applySecureDefaultsToStreamDriver(modConf->pConf, &inst->iStrmDrvrMode, inst->bStrmDrvrModeSet,
+                                             getEffectiveInstanceStreamDriver(inst, modConf), "imtcp input");
+}
+
+static rsRetVal setLegacyStrmDrvrMode(void __attribute__((unused)) * pVal, int mode) {
+    cs.iStrmDrvrMode = mode;
+    cs.bStrmDrvrModeSet = 1;
+    return RS_RET_OK;
 }
 
 /* callbacks */
@@ -539,6 +593,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pPermPeersRoot = NULL;
     inst->gnutlsPriorityString = NULL;
     inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
+    inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
     inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
     inst->iStrmDrvrSANPreference = loadModConf->iStrmDrvrSANPreference;
     inst->iStrmTlsVerifyDepth = loadModConf->iStrmTlsVerifyDepth;
@@ -622,6 +677,7 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     }
     inst->cnf_params->bSuppOctetFram = cs.bSuppOctetFram;
     inst->iStrmDrvrMode = cs.iStrmDrvrMode;
+    inst->bStrmDrvrModeSet = cs.bStrmDrvrModeSet;
     inst->bKeepAlive = cs.bKeepAlive;
     inst->bUseFlowControl = cs.bUseFlowControl;
     inst->bDisableLFDelim = cs.bDisableLFDelim;
@@ -639,6 +695,9 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->compressionDriver = cs.compressionDriver;
     inst->compressionMaxExpansionRatio = cs.compressionMaxExpansionRatio;
     inst->compressionMaxDecompressedBytesPerReceive = cs.compressionMaxDecompressedBytesPerReceive;
+    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
+                                     getEffectiveInstanceAuthMode(inst, loadModConf));
 
 finalize_it:
     free(pNewVal);
@@ -804,6 +863,7 @@ BEGINnewInpInst
             CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.mode")) {
             inst->iStrmDrvrMode = (int)pvals[i].val.d.n;
+            inst->bStrmDrvrModeSet = 1;
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
             inst->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
@@ -919,7 +979,9 @@ BEGINnewInpInst
             inst->ratelimitBurst = 10000;
         }
     }
-    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, inst->pszStrmDrvrName, inst->pszStrmDrvrAuthMode);
+    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
+                                     getEffectiveInstanceAuthMode(inst, loadModConf));
 
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
@@ -937,6 +999,7 @@ BEGINbeginCnfLoad
     loadModConf->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
     loadModConf->bSuppOctetFram = 1;
     loadModConf->iStrmDrvrMode = 0;
+    loadModConf->bStrmDrvrModeSet = 0;
     loadModConf->iStrmDrvrExtendedCertCheck = 0;
     loadModConf->iStrmDrvrSANPreference = 0;
     loadModConf->iStrmTlsVerifyDepth = 0;
@@ -1034,6 +1097,7 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
             loadModConf->iStrmDrvrMode = (int)pvals[i].val.d.n;
+            loadModConf->bStrmDrvrModeSet = 1;
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
             loadModConf->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
@@ -1089,7 +1153,8 @@ BEGINsetModCnf
      */
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
-    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, loadModConf->pszStrmDrvrName,
+    CHKiRet(applySecureDefaultsToModuleConfig(loadModConf));
+    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(loadModConf),
                                      loadModConf->pszStrmDrvrAuthMode);
 
 finalize_it:
@@ -1111,6 +1176,7 @@ BEGINendCnfLoad
         pModConf->iTCPSessMax = cs.iTCPSessMax;
         pModConf->iTCPLstnMax = cs.iTCPLstnMax;
         pModConf->iStrmDrvrMode = cs.iStrmDrvrMode;
+        pModConf->bStrmDrvrModeSet = cs.bStrmDrvrModeSet;
         pModConf->bEmitMsgOnClose = cs.bEmitMsgOnClose;
         pModConf->bSuppOctetFram = cs.bSuppOctetFram;
         pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
@@ -1135,7 +1201,14 @@ BEGINendCnfLoad
             cs.pszStrmDrvrAuthMode = NULL;
         }
         pModConf->bPreserveCase = cs.bPreserveCase;
-        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, pModConf->pszStrmDrvrName,
+        iRet = applySecureDefaultsToModuleConfig(pModConf);
+        if (iRet != RS_RET_OK) {
+            free(cs.pszStrmDrvrAuthMode);
+            cs.pszStrmDrvrAuthMode = NULL;
+            loadModConf = NULL;
+            return iRet;
+        }
+        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(pModConf),
                                          pModConf->pszStrmDrvrAuthMode);
     }
     free(cs.pszStrmDrvrAuthMode);
@@ -1366,6 +1439,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.iTCPLstnMax = 20;
     cs.bSuppOctetFram = 1;
     cs.iStrmDrvrMode = 0;
+    cs.bStrmDrvrModeSet = 0;
     cs.bUseFlowControl = 1;
     cs.bKeepAlive = 0;
     cs.iKeepAliveProbes = 0;
@@ -1451,8 +1525,8 @@ BEGINmodInit()
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservernotifyonconnectionclose"), 0, eCmdHdlrBinary, NULL,
                               &cs.bEmitMsgOnClose, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
-    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0, eCmdHdlrInt, NULL, &cs.iStrmDrvrMode,
-                              STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverstreamdrivermode"), 0, eCmdHdlrInt, setLegacyStrmDrvrMode,
+                              NULL, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverpreservecase"), 1, eCmdHdlrBinary, NULL, &cs.bPreserveCase,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverlistenportfile"), 1, eCmdHdlrGetWord, NULL,

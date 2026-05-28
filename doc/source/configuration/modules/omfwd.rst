@@ -674,6 +674,13 @@ The recommended alias, compatible with imtcp, is "StreamDriver.Mode".
 
 Mode to use with the stream driver (driver-specific)
 
+Mode ``0`` is plain TCP for the built-in network stream drivers. A TLS-capable
+driver name such as ``ossl``, ``gtls``, or ``mbedtls`` does not activate TLS by
+itself; set mode ``1`` to use TLS. In
+``global(compatibility.defaults.secure="strict")``, an omitted mode is promoted
+to ``1`` when the effective stream driver is TLS-capable, while an explicit
+mode ``0`` is rejected.
+
 Note: aliases help, but are not a great solution. They may
 cause confusion if both names are used together in a single
 config. So care must be taken when using an alias.

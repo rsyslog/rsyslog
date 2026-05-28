@@ -29,6 +29,12 @@ Description
 Sets the driver mode for the currently selected
 :doc:`network stream driver <../../concepts/netstrm_drvr>`.
 <number> is driver specific.
+For the built-in TCP stream drivers, mode ``0`` is plain TCP and mode ``1`` is
+TLS. Selecting a TLS-capable driver such as ``ossl``, ``gtls``, or ``mbedtls``
+does not activate TLS unless the mode is ``1``. In
+``global(compatibility.defaults.secure="strict")``, an omitted mode is promoted
+to ``1`` when the effective stream driver is TLS-capable, while an explicit
+mode ``0`` is rejected.
 
 The same-named input parameter can override this module setting.
 
@@ -66,4 +72,3 @@ Historic names/directives for compatibility. Do not use in new configs.
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.
-

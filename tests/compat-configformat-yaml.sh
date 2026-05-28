@@ -109,6 +109,39 @@ rulesets:
 YAML_EOF
 }
 
+write_yaml_omfwd_global_tls_warn_config() {
+    local cfg="$1"
+    cat >"${cfg}" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+  defaultNetstreamDriver: "gtls"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "tcp"
+YAML_EOF
+}
+
+write_yaml_omfwd_strict_explicit_mode0_config() {
+    local cfg="$1"
+    cat >"${cfg}" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "strict"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "tcp"
+        streamdriver.name: "gtls"
+        streamdriver.mode: 0
+YAML_EOF
+}
+
 write_yaml_tls_anon_warn_config() {
     local cfg="$1"
     cat >"${cfg}" <<YAML_EOF
@@ -228,6 +261,18 @@ write_yaml_tls_warn_config "${RSYSLOG_DYNNAME}.tls-warn.yaml"
 run_expect_success "${RSYSLOG_DYNNAME}.tls-warn.yaml" "${RSYSLOG_DYNNAME}.tls-warn.log"
 content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' "${RSYSLOG_DYNNAME}.tls-warn.log"
 content_check 'omfwd action uses protocol="udp" (without TLS)' "${RSYSLOG_DYNNAME}.tls-warn.log"
+
+write_yaml_omfwd_global_tls_warn_config "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.yaml"
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.yaml" \
+    "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
+content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
+    "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
+
+write_yaml_omfwd_strict_explicit_mode0_config "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.yaml"
+run_expect_failure "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.yaml" \
+    "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.log"
+content_check 'omfwd: compatibility.defaults.secure="strict" rejects explicit streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.log"
 
 write_yaml_tls_anon_warn_config "${RSYSLOG_DYNNAME}.tls-anon-warn.yaml"
 run_expect_success "${RSYSLOG_DYNNAME}.tls-anon-warn.yaml" "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
