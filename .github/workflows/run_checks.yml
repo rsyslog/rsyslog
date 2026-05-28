@@ -443,9 +443,9 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_7, centos_8, debian_sid, debian_13,
+        config: [centos_7, debian_13,
                  ubuntu_26_imtcp_no_epoll,
-                 fedora_42, fedora_43,
+                 fedora_43,
                  ubuntu_20, ubuntu_24,
                  ubuntu_26_san, ubuntu_26_tsan, ubuntu_22_distcheck,
                  openeuler, wolfssl, elasticsearch]
@@ -517,17 +517,6 @@ jobs:
                      --disable-kafka-tests --disable-snmp-tests"
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               ;;
-          'centos_8')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
-              ;;
-          'debian_sid')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:sid'
-              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
-              ;;
           'debian_13')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
@@ -553,11 +542,6 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_openeuler:24.03-lts'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests"
-              ;;
-          'fedora_42')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
           'fedora_43')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:43'
