@@ -663,6 +663,7 @@ TESTS_IMTCP = \
 	imtcp-netns.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
+	omfwd-rebind-tcp.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
 	imtcp-bigmessage-octetcounting.sh \
@@ -683,7 +684,8 @@ TESTS_IMTCP_YAML = \
 	imtcp-persource-ratelimit.sh
 
 TESTS_IMTCP_VALGRIND = \
-	imtcp-octet-framing-too-long-vg.sh
+	imtcp-octet-framing-too-long-vg.sh \
+	omfwd-rebind-tcp-vg.sh
 
 TESTS_RATELIMIT = \
 	ratelimit_exclusivity.sh \

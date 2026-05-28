@@ -1703,15 +1703,16 @@ BEGINcommitTransaction
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
-     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to the
-     * new targets. This is done by the poolTryResume(), which needs to be made in any case.
+     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to
+     * the new targets. DestructInstanceData() drops the transport state and
+     * poolTryResume() creates the next connection. The per-worker tcpclt
+     * objects stay valid across rebinds and must not be reallocated here.
      */
     if (pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
         dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
                   pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
         pWrkrData->nXmit = 0; /* else we have an addtl wrap at 2^31-1 */
         DestructInstanceData(pWrkrData, 1);
-        initTCP(pWrkrData);
         LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING, "omfwd: dropped connections due to configured rebind interval");
     }
 
