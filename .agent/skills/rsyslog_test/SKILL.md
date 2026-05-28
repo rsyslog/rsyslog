@@ -179,6 +179,19 @@ if command -v shellcheck >/dev/null 2>&1; then
     '*.sh' | xargs -0 -r shellcheck -S warning
 fi
 
+if command -v checkbashisms >/dev/null 2>&1; then
+  git diff --name-only --diff-filter=ACMR upstream/main...HEAD -- '*.sh' |
+    while IFS= read -r f; do
+      case "$(head -n1 "$f")" in
+      '#!/bin/sh'|'#!/usr/bin/sh'|'#!/usr/bin/env sh')
+        checkbashisms -p "$f"
+        ;;
+      esac
+    done
+else
+  echo "info: checkbashisms is in Debian/Ubuntu package devscripts"
+fi
+
 if command -v hadolint >/dev/null 2>&1; then
   git diff -z --name-only --diff-filter=ACMR upstream/main...HEAD -- \
     '*Dockerfile*' 'Dockerfile' | xargs -0 -r hadolint
