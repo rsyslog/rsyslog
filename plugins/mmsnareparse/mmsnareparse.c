@@ -5176,8 +5176,21 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
     char *searchStart = lastTab + 1;
 
     if (pData->ignoreTrailingPattern_isRegex) {
-        /* Regex mode: apply regexec to the trailing token */
+        /* Regex mode: bound regex input to searchLimit trailing bytes to
+         * reduce risk from expensive non-matching expressions on untrusted
+         * message content while preserving start-anchored token patterns. */
+        const size_t trailingTokenLen = strlen(searchStart);
+        char savedChar = '\0';
+        const sbool tokenWasTruncated = trailingTokenLen > pData->searchLimit;
+        if (tokenWasTruncated) {
+            savedChar = searchStart[pData->searchLimit];
+            searchStart[pData->searchLimit] = '\0';
+        }
+
         const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, 0);
+        if (tokenWasTruncated) {
+            searchStart[pData->searchLimit] = savedChar;
+        }
         if (isMatch) {
             /* Pattern found in trailing position - truncate at the start of the last token
              * (after the last tab) to remove the entire enrichment section including any
