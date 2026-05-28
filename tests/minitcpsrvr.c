@@ -56,6 +56,7 @@ int targetPort = -1;
 char *portFileName = NULL;
 char *waitListenFileName = NULL;
 char *listenReadyFileName = NULL;
+char *acceptReadyFileName = NULL;
 size_t totalWritten = 0;
 int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
 struct sockaddr_in server_addr;
@@ -71,7 +72,8 @@ static void errout(char *reason) {
 
 static void usage(void) {
     fprintf(stderr,
-            "usage: minitcpsrv [-R] [-w listenFile] [-L listenReadyFile] -t ip-addr -p port -P portFile -f outfile\n");
+            "usage: minitcpsrv [-R] [-w listenFile] [-L listenReadyFile] [-A acceptReadyFile] "
+            "-t ip-addr -p port -P portFile -f outfile\n");
     exit(1);
 }
 
@@ -86,6 +88,20 @@ static void writeListenReadyMarker(void) {
     ret = fprintf(fp, "listening\n");
     if (fclose(fp) != 0 || ret < 0) {
         errout(listenReadyFileName);
+    }
+}
+
+static void writeAcceptReadyMarker(void) {
+    FILE *fp;
+    int ret;
+
+    if (acceptReadyFileName == NULL) return;
+    if ((fp = fopen(acceptReadyFileName, "w")) == NULL) {
+        errout(acceptReadyFileName);
+    }
+    ret = fprintf(fp, "accepted\n");
+    if (fclose(fp) != 0 || ret < 0) {
+        errout(acceptReadyFileName);
     }
 }
 
@@ -203,10 +219,13 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aB:D:L:Rt:p:P:f:s:S:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "aA:B:D:L:Rt:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
+                break;
+            case 'A':
+                acceptReadyFileName = optarg;
                 break;
             case 'R':
                 useReusePort = 1;
@@ -302,6 +321,7 @@ int main(int argc, char *argv[]) {
                     perror("Accept failed");
                     continue;
                 }
+                writeAcceptReadyMarker();
 
                 fds[nfds].fd = conn_fd;
                 fds[nfds].events = POLLIN;

@@ -1405,18 +1405,23 @@ assign_file_content() {
 # $2 is the instance name (1, 2)
 # $3, if set, is a file that releases minitcpsrv from bound/offline to listening
 # $4, if set, is a file minitcpsrv writes after listen() succeeds
+# $5, if set, is a file minitcpsrv writes after accept() succeeds
 start_minitcpsrvr() {
 	local instance=${2:-1}
 	local wait_listen_opt=""
 	local listen_ready_opt=""
+	local accept_ready_opt=""
 	if [ "${3:-}" != "" ]; then
 		wait_listen_opt="-w ${3:-}"
 	fi
 	if [ "${4:-}" != "" ]; then
 		listen_ready_opt="-L ${4:-}"
 	fi
+	if [ "${5:-}" != "" ]; then
+		accept_ready_opt="-A ${5:-}"
+	fi
 	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" \
-		-f "$1" $wait_listen_opt $listen_ready_opt $MINITCPSRV_EXTRA_OPTS &
+		-f "$1" $wait_listen_opt $listen_ready_opt $accept_ready_opt $MINITCPSRV_EXTRA_OPTS &
 	BGPROCESS=$!
 	MINITCPSRVR_PIDS="${MINITCPSRVR_PIDS:-} $BGPROCESS"
 	wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance"
