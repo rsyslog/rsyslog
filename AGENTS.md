@@ -24,6 +24,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |
 | [`rsyslog_config`](.agent/skills/rsyslog_config/SKILL.md) | Dual-frontend config architecture (RainerScript + YAML) and parity rules. |
 | [`rsyslog_issue_triage`](.agent/skills/rsyslog_issue_triage/SKILL.md) | GitHub issue backlog triage, clustering, closure comments, and local evidence boards. |
+| [`rsyslog_continuous_issue_session`](.agent/skills/rsyslog_continuous_issue_session/SKILL.md) | Long-running issue-fix sessions with a rolling active PR set, validation gates, babysitting, cleanup, and automatic refill from the local issue cache. |
 | [`rsyslog_commit`](.agent/skills/rsyslog_commit/SKILL.md) | Compliant commit messages and branching policies. |
 
 ## Agent Quick Start: The "Happy Path"
