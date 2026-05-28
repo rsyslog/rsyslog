@@ -3,10 +3,12 @@
 # unavailable during the first message batch. Phase 1 keeps target 2 bound but
 # not listening, so all initial messages must go to target 1. Phase 2 releases
 # target 2, waits until minitcpsrv has actually called listen(), then waits
-# until the configured target-pool retry interval has elapsed before injecting
-# another full batch. Before shutdown, the test waits until both receivers show
-# the expected exact line counts; this is the oracle that target 2 resumed and
-# the second batch was split evenly rather than still flowing only to target 1.
+# until the one-second pool retry interval is certainly eligible in omfwd's
+# whole-second timer model before injecting another full batch. After injection
+# the test waits for minitcpsrv to accept the retry connection. Before shutdown,
+# the test waits until both receivers show the expected exact line counts; this
+# is the oracle that target 2 resumed and the second batch was split evenly
+# rather than still flowing only to target 1.
 # Added 2024-02-24 by rgerhards. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -16,10 +18,12 @@ export NUMMESSAGES=10000  # MUST be an EVEN number!
 # numbers
 TARGET2_LISTEN_RELEASE="$RSYSLOG_DYNNAME.minitcpsrvr2.listen"
 TARGET2_LISTEN_READY="$RSYSLOG_DYNNAME.minitcpsrvr2.ready"
+TARGET2_ACCEPT_READY="$RSYSLOG_DYNNAME.minitcpsrvr2.accepted"
 rm -f "$TARGET2_LISTEN_RELEASE"
 rm -f "$TARGET2_LISTEN_READY"
+rm -f "$TARGET2_ACCEPT_READY"
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
-start_minitcpsrvr $RSYSLOG2_OUT_LOG 2 "$TARGET2_LISTEN_RELEASE" "$TARGET2_LISTEN_READY"
+start_minitcpsrvr $RSYSLOG2_OUT_LOG 2 "$TARGET2_LISTEN_RELEASE" "$TARGET2_LISTEN_READY" "$TARGET2_ACCEPT_READY"
 
 # regular startup
 add_conf '
@@ -55,10 +59,15 @@ printf "\nSUCCESS for part 1 of the test\n\n"
 touch "$TARGET2_LISTEN_RELEASE"
 echo "waiting until the previously suspended pool member is listening"
 wait_file_exists "$TARGET2_LISTEN_READY"
-echo "waiting for one target-pool retry interval"
-$TESTTOOL_DIR/msleep 1200
+retry_ready_after=$(( $(date +%s) + 2 ))
+echo "waiting until the target-pool retry interval is eligible"
+while [ "$(date +%s)" -lt "$retry_ready_after" ]; do
+	$TESTTOOL_DIR/msleep 100
+done
 
 injectmsg $NUMMESSAGES $NUMMESSAGES
+echo "waiting until omfwd retries and reconnects the previously suspended pool member"
+wait_file_exists "$TARGET2_ACCEPT_READY"
 
 target2_expected=$(( NUMMESSAGES / 2 ))
 target1_expected=$(( NUMMESSAGES + target2_expected ))
