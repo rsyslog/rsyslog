@@ -1017,6 +1017,7 @@ static rsRetVal jsontransformInsertDotted(struct json_object *dest,
     struct json_object *current = dest;
     char *segment = NULL;
     char *leaf = NULL;
+    sbool valueOwned = 1;
     DEFiRet;
 
     while (*ptr != '\0') {
@@ -1076,13 +1077,16 @@ static rsRetVal jsontransformInsertDotted(struct json_object *dest,
         }
         CHKiRet(jsontransformMergeObjects(existing, value, conflict, path));
         json_object_put(value);
+        valueOwned = 0;
         goto finalize_it;
     }
     json_object_object_add(current, leaf, value);
+    valueOwned = 0;
     free(leaf);
     leaf = NULL;
 
 finalize_it:
+    if (valueOwned) json_object_put(value);
     free(segment);
     free(leaf);
     RETiRet;
@@ -1185,9 +1189,10 @@ static rsRetVal jsontransformRewriteObject(struct json_object *src,
             goto conflict;
         }
         if (strchr(key, '.') != NULL) {
-            CHKiRet(jsontransformInsertDotted(dest, key, child, conflict));
-            if (conflict != NULL && conflict->occurred) goto conflict;
+            iRet = jsontransformInsertDotted(dest, key, child, conflict);
+            if (iRet != RS_RET_OK) goto conflict;
             child = NULL;
+            if (conflict != NULL && conflict->occurred) goto conflict;
             free(valueContext);
             valueContext = NULL;
         } else {
