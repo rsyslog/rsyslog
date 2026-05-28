@@ -918,6 +918,12 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
             bMustBeFreed = 0;
         } else if (pTpe->eEntryType == FIELD) {
             pVal = (uchar *)MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp, &iLenVal, &bMustBeFreed, ttNow);
+            if (pVal == NULL) {
+                DBGPRINTF("template property evaluation returned NULL, using empty value\n");
+                pVal = UCHAR_CONSTANT("");
+                iLenVal = 0;
+                bMustBeFreed = 0;
+            }
             /* we now need to check if we should use SQL option. In this case,
              * we must go over the generated string and escape '\'' characters.
              * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
