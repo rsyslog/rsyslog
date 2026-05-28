@@ -1652,6 +1652,7 @@ TESTS_RELP_GNUTLS = \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh \
 	 imrelp-tls.sh \
+	 imrelp-tls-randconn-drop.sh \
 	 imrelp-tls-chainedcert.sh \
 	 imrelp-tls-mixed-chainedcert.sh \
 	 imrelp-tls-mixed-chainedcert2.sh
