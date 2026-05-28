@@ -61,7 +61,15 @@ Every documentation page must include:
 - **Required Keys**: `support_status`, `maturity_level`, `primary_contact`, `last_reviewed`.
 
 ### 4. Validation
-- **Build Docs**: Run `./doc/tools/build-doc-linux.sh --clean --format html`.
+- **Build Docs**: For rendered user-facing documentation changes under
+  `doc/source/**`, or Sphinx support files that affect that tree, run a
+  high-concurrency HTML build:
+  `./doc/tools/build-doc-linux.sh --clean --format html --jobs "${RSYSLOG_LOCAL_DOC_JOBS:-$(nproc)}"`.
+  Add `--strict` for larger, structural, navigation-heavy, or warning-sensitive
+  documentation edits.
+- Internal docs that are not rendered into the user manual, such as `doc/ai/**`,
+  repository agent guides, and skill files, do not require a Sphinx docs build
+  unless they also change rendered Sphinx inputs.
 - **json-formatter**: Run `make -j16 json-formatter` to update the RAG knowledge base.
 - **Mermaid**: Ensure Mermaid diagrams have a blank line after the directive and quoted labels.
 
