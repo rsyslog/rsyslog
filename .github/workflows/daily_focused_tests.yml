@@ -360,7 +360,11 @@ jobs:
       - name: make check
         run: make -j10 check
 
-      - name: Prepare focused failure evidence
+      # Use the same short-lived failure artifact contract as regular PR CI so
+      # the flake collector can process scheduled failures through the same
+      # path. The artifact name includes run attempt and lane so reruns do not
+      # overwrite the failed attempt that produced the evidence.
+      - name: Prepare CI failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
@@ -374,15 +378,13 @@ jobs:
             fi
           done
 
-      - name: Upload focused failure evidence
+      - name: Upload CI failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: >-
-            daily-focused-failure-${{ github.run_id }}-${{
-            github.run_attempt }}-${{ matrix.lane }}
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.lane }}
           path: |
             failed-tests.log
             tests/failed-tests.log
@@ -390,5 +392,64 @@ jobs:
             tests/*.log
             tests/*.trs
             config.log
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: ignore
+
+  report:
+    name: Report daily focused failures
+    needs: focused_test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    if: >-
+      always() &&
+      github.repository == 'rsyslog/rsyslog' &&
+      needs.focused_test.result == 'failure'
+    steps:
+      - name: Create or update tracking issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const body = [
+              'Daily focused tests failed.',
+              '',
+              `Run: ${process.env.RUN_URL}`,
+              '',
+              'This workflow contains historical focused daily lanes. Failure',
+              'artifacts are uploaded by the failing lane; this issue is',
+              'created or updated so scheduled failures are not silent.',
+              '',
+              'Use the linked run and ci-failure artifacts to decide whether',
+              'each failure was a one-off flake or a regression that needs a',
+              'fix. The long-term expectation is that flakes become rarer as',
+              'the recurring causes are fixed.'
+            ].join('\n');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue is:open in:title Daily focused test failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Daily focused test failures',
+                body,
+                labels: ['CI']
+              });
+            }

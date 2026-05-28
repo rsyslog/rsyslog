@@ -1,0 +1,264 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: daily full distro CI
+
+'on':
+  schedule:
+    # Daily at 03:17 UTC. These lanes are useful portability signals, but they
+    # mostly duplicate adjacent PR lanes. Running them daily keeps visibility
+    # for distro drift and less common portability failures without making every
+    # pull request wait for the full duplicate runtime matrix.
+    #
+    # Daily lanes intentionally run the full configured test set for their
+    # distro. They must not use PR relevance pruning: any code may have changed
+    # since the last scheduled run, and failures must create or update the
+    # tracking issue below so they do not go unnoticed.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RSYSLOG_UPLOAD_FAILURE_ARTIFACTS: '1'
+
+jobs:
+  check_run:
+    name: daily full distro CI (${{ matrix.lane }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: centos_8
+            container: rsyslog/rsyslog_dev_base_centos:8
+            configure_extra: >-
+              --disable-elasticsearch-tests --disable-kafka-tests
+              --disable-snmp-tests --enable-imdtls --enable-omdtls
+            valgrind_supp: ''
+          - lane: fedora_42
+            container: rsyslog/rsyslog_dev_base_fedora:42
+            configure_extra: >-
+              --disable-elasticsearch-tests --disable-kafka-tests
+              --enable-debug --enable-imdtls --enable-omdtls
+            valgrind_supp: ''
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: cache configure results
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: config.cache
+          key: >
+            cfgcache-daily-full-distro-${{ matrix.lane }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am',
+            '.github/workflows/run_distro_daily.yml',
+            'devtools/run-configure.sh','devtools/run-ci.sh') }}
+
+      - name: run daily full distro CI pipeline
+        id: run_tests
+        continue-on-error: true
+        env:
+          DAILY_DISTRO_LANE: ${{ matrix.lane }}
+          DAILY_DISTRO_CONTAINER: ${{ matrix.container }}
+          DAILY_DISTRO_CONFIGURE_EXTRA: ${{ matrix.configure_extra }}
+          DAILY_DISTRO_VALGRIND_SUPP: ${{ matrix.valgrind_supp }}
+        run: |
+          set +e
+          chmod -R go+rw .
+          export CODECOV_repo_slug=''
+          export CODECOV_commit_sha=''
+          export RSYSLOG_CONTAINER_UID=''
+          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+          export CFLAGS='-g'
+          export CC='gcc'
+          export CI_CONFIGURE_CACHE=1
+          export USE_AUTO_DEBUG='off'
+          export CI_MAKE_OPT='-j20'
+          export CI_MAKE_CHECK_OPT='-j10'
+          export CI_CHECK_CMD='check'
+          export VERBOSE=1
+          export RSYSLOG_DEV_CONTAINER="$DAILY_DISTRO_CONTAINER"
+          export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="$DAILY_DISTRO_CONFIGURE_EXTRA"
+          export CI_VALGRIND_SUPPRESSIONS="$DAILY_DISTRO_VALGRIND_SUPP"
+
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+          rc=$?
+          status=success
+          if [ "$rc" -ne 0 ]; then
+            status=failure
+          fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          printf "%s,%s\n" "$DAILY_DISTRO_LANE" "$status" > result.txt
+          exit 0
+
+      # Use the same short-lived failure artifact contract as regular PR CI so
+      # the flake collector can process scheduled failures through the same
+      # path. The artifact name includes run attempt and lane so reruns do not
+      # overwrite the failed attempt that produced the evidence.
+      - name: Prepare CI failure evidence
+        if: >-
+          steps.run_tests.outputs.status == 'failure' &&
+          env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
+        run: |
+          if [ -f "devtools/gather-check-logs.sh" ]; then
+            devtools/gather-check-logs.sh || true
+          fi
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
+
+      - name: Upload CI failure evidence
+        if: >-
+          steps.run_tests.outputs.status == 'failure' &&
+          env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.lane }}
+          path: |
+            failed-tests.log
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Ensure result artifact exists
+        if: always()
+        env:
+          DAILY_DISTRO_LANE: ${{ matrix.lane }}
+        run: |
+          if [ ! -f result.txt ]; then
+            printf "%s,failure\n" "$DAILY_DISTRO_LANE" > result.txt
+          fi
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: res-${{ matrix.lane }}
+          path: result.txt
+
+      - name: Fail job if tests failed
+        if: steps.run_tests.outputs.status == 'failure'
+        run: exit 1
+
+  report:
+    name: Summarize and report failures
+    needs: check_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    if: always()
+    steps:
+      - name: Download all result artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: res-*
+          path: results
+
+      - name: Build summary
+        id: summary
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -e
+          {
+            echo "Daily full distro CI results"
+            echo ""
+            echo "Run: $RUN_URL"
+            echo ""
+            echo "These full-suite distro lanes were moved out of regular PR"
+            echo "CI because they mostly duplicate adjacent PR runtime lanes"
+            echo "while still providing useful distro-drift and portability"
+            echo "signal."
+            echo "Use the linked run and ci-failure artifacts to decide"
+            echo "whether each failure was a one-off flake or a regression"
+            echo "that needs a fix. The long-term expectation is that"
+            echo "flakes become rarer as the recurring causes are fixed."
+            echo ""
+            echo "| Lane | Status |"
+            echo "| --- | --- |"
+          } > summary.md
+          failures=0
+          while IFS= read -r -d '' f; do
+            line="$(cat "$f")"
+            IFS=',' read -r lane status <<< "$line"
+            echo "| $lane | $status |" >> summary.md
+            if [ "$status" != "success" ]; then
+              failures=$((failures+1))
+            fi
+          done < <(find results -type f -name 'result.txt' -print0)
+          echo "failures=$failures" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update tracking issue
+        if: >-
+          steps.summary.outputs.failures != '0' &&
+          github.repository == 'rsyslog/rsyslog'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('summary.md', 'utf8');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue is:open in:title Daily full distro CI failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Daily full distro CI failures',
+                body,
+                labels: ['CI']
+              });
+            }
+
+      - name: Upload summary as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: daily-full-distro-summary
+          path: summary.md
