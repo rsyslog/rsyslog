@@ -168,5 +168,9 @@ int glblPermitSyslogdConfigFilter(rsconf_t *cnf, const char *filter);
 int glblPermitPropertyConfigFilter(rsconf_t *cnf, const char *filter);
 /** Emit an insecure-default warning when compatibility.defaults.secure is set to warn. */
 void glblWarnIfInsecureDefault(rsconf_t *cnf, const char *detail);
+/** Return local stream driver name or the configured global default. */
+const uchar *glblGetEffectiveNetstrmDrvr(rsconf_t *cnf, const uchar *localDrvr);
+/** Check whether a netstream driver name selects a TLS-capable driver. */
+int glblIsTlsCapableNetstrmDrvr(const uchar *drvr);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

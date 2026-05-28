@@ -61,6 +61,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "glbl.h"
+#include "rsconf.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
 #include "parserif.h"
@@ -100,6 +101,7 @@ typedef struct _instanceData {
     uchar *pszStrmDrvrRemoteSNI; /* Optional TLS SNI to use for the remote server (instead of its hostname) */
     permittedPeers_t *pPermPeers;
     int iStrmDrvrMode;
+    sbool bStrmDrvrModeSet;
     int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
     int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
     int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
@@ -193,6 +195,7 @@ typedef struct configSettings_s {
     uchar *pszTplName; /* name of the default template to use */
     uchar *pszStrmDrvr; /* name of the stream driver to use */
     int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+    sbool bStrmDrvrModeSet; /* stream driver mode was explicitly configured */
     int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
     uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
     uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
@@ -285,6 +288,7 @@ BEGINinitConfVars /* (re)set config variables to default values */
     cs.pszTplName = NULL; /* name of the default template to use */
     cs.pszStrmDrvr = NULL; /* name of the stream driver to use */
     cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+    cs.bStrmDrvrModeSet = 0;
     cs.bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
     cs.pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
     cs.pszStrmDrvrRemoteSNI = NULL; /* Remote TLS SNI to use instead of hostname */
@@ -837,6 +841,7 @@ BEGINcreateInstance
     pData->nPorts = 1;
     pData->target_name = NULL;
     if (cs.pszStrmDrvr != NULL) CHKmalloc(pData->pszStrmDrvr = (uchar *)strdup((char *)cs.pszStrmDrvr));
+    pData->bStrmDrvrModeSet = cs.bStrmDrvrModeSet;
     if (cs.pszStrmDrvrAuthMode != NULL)
         CHKmalloc(pData->pszStrmDrvrAuthMode = (uchar *)strdup((char *)cs.pszStrmDrvrAuthMode));
     if (cs.pszStrmDrvrRemoteSNI != NULL)
@@ -1889,6 +1894,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->pszStrmDrvrPermitExpiredCerts = NULL;
     pData->pszStrmDrvrRemoteSNI = NULL;
     pData->iStrmDrvrMode = 0;
+    pData->bStrmDrvrModeSet = 0;
     pData->iStrmDrvrExtendedCertCheck = 0;
     pData->iStrmDrvrSANPreference = 0;
     pData->iStrmTlsVerifyDepth = 0;
@@ -1980,9 +1986,9 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
                                   "omfwd action uses protocol=\"udp\" (without TLS); "
                                   "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
     } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
+        const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(loadModConf->pConf, pData->pszStrmDrvr);
         const int tlsHintsConfigured =
-            (pData->pszStrmDrvrAuthMode != NULL) ||
-            (pData->pszStrmDrvr != NULL && strcasecmp((const char *)pData->pszStrmDrvr, "ptcp") != 0);
+            (pData->pszStrmDrvrAuthMode != NULL) || glblIsTlsCapableNetstrmDrvr(effectiveDrvr);
         if (tlsHintsConfigured) {
             glblWarnIfInsecureDefault(loadModConf->pConf,
                                       "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
@@ -2003,6 +2009,35 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
             "omfwd uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
             "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
     }
+}
+
+static rsRetVal applySecureDefaultsToForwarding(instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->protocol == FORW_TCP) {
+        const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(loadModConf->pConf, pData->pszStrmDrvr);
+        if (glblIsTlsCapableNetstrmDrvr(effectiveDrvr) && pData->iStrmDrvrMode == 0 &&
+            loadModConf->pConf->globals.compatDefaultsSecure == COMPAT_DEFAULTS_SECURE_STRICT) {
+            if (pData->bStrmDrvrModeSet) {
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "omfwd: compatibility.defaults.secure=\"strict\" rejects explicit "
+                         "streamdriver.mode=\"0\" with TLS-capable stream driver \"%s\"; use "
+                         "streamdriver.mode=\"1\" to enable TLS or select ptcp/plain TCP intentionally",
+                         (const char *)effectiveDrvr);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->iStrmDrvrMode = 1;
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal setLegacyStrmDrvrMode(void __attribute__((unused)) * pVal, int mode) {
+    cs.iStrmDrvrMode = mode;
+    cs.bStrmDrvrModeSet = 1;
+    return RS_RET_OK;
 }
 
 static rsRetVal validateTargetSrvTlsAuth(const instanceData *const pData) {
@@ -2128,6 +2163,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "streamdrivermode") ||
                    !strcmp(actpblk.descr[i].name, "streamdriver.mode")) {
             pData->iStrmDrvrMode = pvals[i].val.d.n;
+            pData->bStrmDrvrModeSet = 1;
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
             pData->iStrmDrvrExtendedCertCheck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
@@ -2275,6 +2311,8 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: either target or targetSrv must be specified");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
+
+    CHKiRet(applySecureDefaultsToForwarding(pData));
 
     if (pData->targetSrv != NULL) {
         if (pData->ports != NULL) {
@@ -2524,6 +2562,7 @@ BEGINparseSelectorAct
     if (pData->protocol == FORW_TCP) {
         pData->bResendLastOnRecon = cs.bResendLastOnRecon;
         pData->iStrmDrvrMode = cs.iStrmDrvrMode;
+        pData->bStrmDrvrModeSet = cs.bStrmDrvrModeSet;
         if (cs.pszStrmDrvrRemoteSNI != NULL) {
             CHKmalloc(pData->pszStrmDrvrRemoteSNI = (uchar *)strdup((char *)cs.pszStrmDrvrRemoteSNI));
         }
@@ -2532,6 +2571,7 @@ BEGINparseSelectorAct
             cs.pPermPeers = NULL;
         }
     }
+    CHKiRet(applySecureDefaultsToForwarding(pData));
     warnIfNonTlsForwardingConfigured(pData);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {
         setupInstStatsCtrs(pData);
@@ -2586,6 +2626,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 
     /* we now must reset all non-string values */
     cs.iStrmDrvrMode = 0;
+    cs.bStrmDrvrModeSet = 0;
     cs.bResendLastOnRecon = 0;
     cs.iUDPRebindInterval = 0;
     cs.iTCPRebindInterval = 0;
@@ -2620,7 +2661,7 @@ BEGINmodInitNoPredecl(Fwd)
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcpkeepalive_intvl", 0, eCmdHdlrInt, NULL, &cs.iKeepAliveIntvl, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcpkeepalive_time", 0, eCmdHdlrInt, NULL, &cs.iKeepAliveTime, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &cs.pszStrmDrvr, NULL));
-    CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &cs.iStrmDrvrMode, NULL));
+    CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, setLegacyStrmDrvrMode, NULL, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL,
                              &cs.pszStrmDrvrAuthMode, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverremotesni", 0, eCmdHdlrGetWord, NULL,
