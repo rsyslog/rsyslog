@@ -100,7 +100,9 @@ enum tplRegexType {
     TPL_REGEX_ERE = 1 /* posix ERE */
 };
 
-    #include "msg.h"
+#define TPL_REGEX_MAX_MATCHES 10
+
+#include "msg.h"
 
 /* a specific parse entry */
 struct templateEntry {
@@ -123,8 +125,8 @@ struct templateEntry {
     #ifdef FEATURE_REGEXP
             regex_t re; /* APR: this is the regular expression */
             short has_regex;
-            short iMatchToUse; /* which match should be obtained (10 max) */
-            short iSubMatchToUse; /* which submatch should be obtained (10 max) */
+            short iMatchToUse; /* which match should be obtained (TPL_REGEX_MAX_MATCHES max) */
+            short iSubMatchToUse; /* which submatch should be obtained (TPL_REGEX_MAX_MATCHES max) */
             enum tplRegexType typeRegex;
             enum tlpRegexNoMatchType {
                 TPL_REGEX_NOMATCH_USE_DFLTSTR = 0,
