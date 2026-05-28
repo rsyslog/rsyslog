@@ -59,10 +59,10 @@ print_matches() {
 
 	printf '\n## %s\n\n%s\n\n' "$title" "$rationale"
 	if command -v rg >/dev/null 2>&1; then
-		matches="$(xargs -r rg --line-number --with-filename --no-heading --color=never \
+		matches="$(xargs rg --line-number --with-filename --no-heading --color=never \
 			--regexp "$pattern" < "$tmpfiles" || true)"
 	else
-		matches="$(xargs -r grep -nH -E -- "$pattern" < "$tmpfiles" || true)"
+		matches="$(xargs grep -nH -E -- "$pattern" < "$tmpfiles" || true)"
 	fi
 
 	if [ -n "$matches" ]; then
@@ -98,7 +98,7 @@ if print_matches "Fixed TCP/UDP port literals" \
 fi
 
 if print_matches "Backgrounded helpers" \
-	'[^#].*[[:space:]]&([[:space:]]*(#.*)?)?$' \
+	'^[[:space:]]*[^#[:space:]].*[[:space:]]&([[:space:]]*(#.*)?)?$' \
 	'Background processes need deterministic readiness and cleanup. Prefer testbench helpers that write readiness files after the service is actually ready, and ensure exit_test or explicit cleanup owns the process lifecycle.'; then
 	findings=$((findings + 1))
 fi
