@@ -333,6 +333,7 @@ TESTS_DEFAULT = \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_annotate_large.sh \
+	imuxsock-NUL.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_syssock.sh \
@@ -533,6 +534,7 @@ TESTS_OSSL_WRONG_OPT = \
 	tcpflood_wrong_option_output.sh
 
 TESTS_DEFAULT_VALGRIND = \
+	imuxsock-NUL-vg.sh \
 	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \

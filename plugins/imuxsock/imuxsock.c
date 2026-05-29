@@ -1115,6 +1115,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
          */
         parser.SanitizeMsg(pMsg);
         lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
+        parse = pMsg->pszRawMsg + offs;
         msgSetPRI(pMsg, pri);
         MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
 
@@ -1644,7 +1645,7 @@ BEGINactivateCnfPrePrivDrop
         lstn_t *const listeners_new = realloc(listeners, (1 + nLstn) * sizeof(lstn_t));
         CHKmalloc(listeners_new);
         listeners = listeners_new;
-        for (i = 1; i < nLstn; ++i) {
+        for (i = 0; i <= nLstn; ++i) {
             listeners[i].sockName = NULL;
             listeners[i].fd = -1;
         }
