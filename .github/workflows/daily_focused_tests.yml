@@ -61,6 +61,7 @@ jobs:
           case "${{ matrix.lane }}" in
           'base')
             sudo apt-get install -y --no-install-recommends \
+              autoconf-archive \
               clang-tools \
               cmake \
               cmake-curses-gui \
@@ -129,6 +130,7 @@ jobs:
             ;;
           'journal')
             sudo apt-get install -y \
+              autoconf-archive \
               libestr-dev \
               libgcrypt20-dev \
               libglib2.0-dev \
@@ -219,7 +221,7 @@ jobs:
           'base')
             autoreconf -fvi
             ./configure \
-              --enable-compile-warning=error \
+              --enable-compile-warnings=error \
               --enable-clickhouse \
               --enable-clickhouse-tests=no \
               --disable-elasticsearch \
@@ -326,7 +328,7 @@ jobs:
             autoreconf -fvi
             ./configure \
               --cache-file=config.cache \
-              --enable-compile-warning=error \
+              --enable-compile-warnings=error \
               --enable-testbench \
               --enable-omstdout \
               --enable-imdiag \

@@ -56,23 +56,14 @@ AC_CANONICAL_HOST
 
 if test "$GCC" = "yes"
 then
-	m4_ifdef([AX_IS_RELEASE], [
-		AX_IS_RELEASE([git-directory])
-		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
-			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
-			# the default -Wno-error=warning" flags. So we do this via sed below.
-			# Note: we *really* want to have this error out during CI testing!
-			# rgerhards, 2018-05-09
-			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
-		], [
-			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
-		])
-	], [
-		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-	])
+	m4_pattern_forbid([^AX_])
+	AX_IS_RELEASE([git-directory])
+	AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
+	# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
+	# the default -Wno-error=warning" flags. So we do this via sed below.
+	# Note: we *really* want to have this error out during CI testing!
+	# rgerhards, 2018-05-09
+	WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
 else
 	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
 fi

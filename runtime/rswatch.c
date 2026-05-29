@@ -64,6 +64,7 @@ typedef struct rswatch_state_s {
 static rswatch_state_t g_rswatch = {PTHREAD_MUTEX_INITIALIZER, NULL, -1, 0};
 #endif
 
+#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
 static char *rswatchDupDirname(const char *path) {
     const char *slash;
     size_t len;
@@ -101,6 +102,7 @@ static char *rswatchDupBasename(const char *path) {
     slash = strrchr(path, '/');
     return strdup((slash == NULL) ? path : slash + 1);
 }
+#endif
 
 static void rswatchFreeHandle(rswatch_handle_t *handle) {
     if (handle == NULL) {
@@ -265,8 +267,9 @@ static rswatch_handle_t *rswatchPopDueLocked(uint64_t now_ms) {
 
 rsRetVal rswatchRegister(const rswatch_desc_t *desc, rswatch_handle_t **out) {
     rswatch_handle_t *handle = NULL;
+#if defined(HAVE_INOTIFY_INIT) && defined(HAVE_SYS_INOTIFY_H)
     sbool bLocked = 0;
-    int wd;
+#endif
     DEFiRet;
 
     if (out != NULL) {
@@ -279,6 +282,8 @@ rsRetVal rswatchRegister(const rswatch_desc_t *desc, rswatch_handle_t **out) {
 #if !defined(HAVE_INOTIFY_INIT) || !defined(HAVE_SYS_INOTIFY_H)
     ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 #else
+    int wd;
+
     CHKmalloc(handle = calloc(1, sizeof(*handle)));
     CHKmalloc(handle->id = strdup(desc->id));
     CHKmalloc(handle->path = strdup(desc->path));

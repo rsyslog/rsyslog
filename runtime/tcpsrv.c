@@ -1163,14 +1163,18 @@ static rsRetVal ATTR_NONNULL(1)
     doAccept(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
     DEFiRet;
     int bRun = 1;
+#if defined(ENABLE_IMTCP_EPOLL)
     int nAccept = 0;
+#endif
 
     while (bRun) {
         iRet = doSingleAccept(pioDescr);
         if (iRet != RS_RET_OK) {
             bRun = 0;
         }
+#if defined(ENABLE_IMTCP_EPOLL)
         ++nAccept;
+#endif
     }
 #if defined(ENABLE_IMTCP_EPOLL)
     if (pioDescr->pSrv->workQueue.numWrkr > 1) {

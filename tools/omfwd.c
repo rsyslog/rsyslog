@@ -351,6 +351,7 @@ static void freeConfiguredPorts(instanceData *const pData) {
     pData->nPorts = 0;
 }
 
+#ifdef HAVE_RESOLV_NS_INITPARSE
 static int compareSrvPriority(const void *lhs, const void *rhs) {
     const srvRecord_t *const left = (const srvRecord_t *)lhs;
     const srvRecord_t *const right = (const srvRecord_t *)rhs;
@@ -421,10 +422,10 @@ static const char *resolverErrorString(const int err) {
             return "unrecoverable resolver failure";
         case NO_DATA:
             return "no data";
-#if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
+    #if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
         case NO_ADDRESS:
             return "no address";
-#endif
+    #endif
         default:
             return "unknown resolver error";
     }
@@ -433,19 +434,19 @@ static const char *resolverErrorString(const int err) {
 static rsRetVal initResolverState(res_state *const pres) {
     DEFiRet;
 
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     CHKmalloc(*pres = (res_state)calloc(1, sizeof(struct __res_state)));
     if (res_ninit(*pres) != 0) {
         LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
-#else
+    #else
     if (res_init() != 0) {
         LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
     *pres = &_res;
-#endif
+    #endif
 
 finalize_it:
     RETiRet;
@@ -455,25 +456,25 @@ static int queryResolverState(res_state const res,
                               const char *const srvName,
                               unsigned char *const answer,
                               const size_t answerSize) {
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     return res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, answerSize);
-#else
+    #else
     (void)res;
     return res_query(srvName, ns_c_in, ns_t_srv, answer, answerSize);
-#endif
+    #endif
 }
 
 static void closeResolverState(res_state const res) {
     if (res == NULL) {
         return;
     }
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     res_nclose(res);
     free(res);
-#else
+    #else
     /* Old resolver APIs use global state; musl's implementation is stateless. */
     (void)res;
-#endif
+    #endif
 }
 
 static rsRetVal applyResolverOverrides(res_state res) {
@@ -534,6 +535,7 @@ static rsRetVal applyResolverOverrides(res_state res) {
 finalize_it:
     RETiRet;
 }
+#endif
 
 static rsRetVal resolveSrvTargets(instanceData *const pData) {
 #ifndef HAVE_RESOLV_NS_INITPARSE

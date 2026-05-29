@@ -145,14 +145,15 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
                                                const int iSessMax,
                                                const tcpLstnParams_t *const cnf_params) {
     DEFiRet;
-    const char *ns = cnf_params->pszNetworkNamespace;
-    int netns_fd = -1;
 
     ISOBJ_TYPE_assert(pNS, netstrms);
     assert(fAddLstn != NULL);
     assert(cnf_params->pszPort != NULL);
 
 #ifdef HAVE_SETNS
+    const char *ns = cnf_params->pszNetworkNamespace;
+    int netns_fd = -1;
+
     if (ns) {
         CHKiRet(net.netns_save(&netns_fd));
         CHKiRet(net.netns_switch(ns));
