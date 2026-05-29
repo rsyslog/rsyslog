@@ -42,6 +42,8 @@ template(name="outfmt" type="string" string="%msg%\n")
 if $msg contains "too-long-message" then {
 	action(
 		type="mmexternal"
+		# 30000 ms (30 s): long enough for helper restart/recovery to occur
+		# before timing out, which keeps this regression test deterministic.
 		responseTimeout="30000"
 		binary="'${srcdir}'/testsuites/mmexternal-too-long-reply-bin.sh '$RSYSLOG_DYNNAME'.side '$RSYSLOG_DYNNAME'.state"
 	)
@@ -61,8 +63,8 @@ wait_shutdown
 content_check "too-long-message-1"
 content_check "too-long-message-2"
 
-start_count=$(grep -c '^Starting ' "$RSYSLOG_DYNNAME.side" | awk '{print $1}')
-recover_count=$(grep -c '^Recovered too-long-message-2$' "$RSYSLOG_DYNNAME.side" | awk '{print $1}')
+start_count=$(grep -c '^Starting ' "$RSYSLOG_DYNNAME.side" || true)
+recover_count=$(grep -c '^Recovered too-long-message-2$' "$RSYSLOG_DYNNAME.side" || true)
 
 if (( start_count < 2 )); then
 	echo "expected helper restart, but start count was $start_count"
