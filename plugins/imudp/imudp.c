@@ -30,8 +30,10 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <signal.h>
 #include <poll.h>
@@ -262,34 +264,75 @@ finalize_it:
 }
 
 static rsRetVal writeListenPortFile(const uchar *const pszLstnPortFileName, const unsigned listenPort) {
-    FILE *fp = NULL;
+    char portBuf[32];
+    const char *const path = (const char *)pszLstnPortFileName;
+    struct stat st;
+    ssize_t len;
+    ssize_t done = 0;
+    int fd = -1;
     DEFiRet;
 
-    if ((fp = fopen((const char *)pszLstnPortFileName, "w")) == NULL) {
+    const int lstatRet = lstat(path, &st);
+    if (lstatRet == 0 && !S_ISREG(st.st_mode)) {
+        LogError(0, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "refusing to write to non-regular file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    } else if (lstatRet != 0 && errno != ENOENT) {
+        LogError(errno, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "error while trying to inspect file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK, S_IRUSR | S_IWUSR);
+    if (fd == -1) {
         LogError(errno, RS_RET_IO_ERROR,
                  "imudp: listenPortFileName: "
                  "error while trying to open file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
-    if (fprintf(fp, "%u", listenPort) < 0) {
+    if (fstat(fd, &st) != 0) {
         LogError(errno, RS_RET_IO_ERROR,
                  "imudp: listenPortFileName: "
-                 "error while trying to write file");
-        fclose(fp);
-        fp = NULL;
+                 "error while trying to inspect open file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
-    if (fclose(fp) != 0) {
-        fp = NULL;
+    if (!S_ISREG(st.st_mode)) {
+        LogError(0, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "refusing to write to non-regular file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+    len = snprintf(portBuf, sizeof(portBuf), "%u", listenPort);
+    while (done < len) {
+        const ssize_t written = write(fd, portBuf + done, (size_t)(len - done));
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            LogError(errno, RS_RET_IO_ERROR,
+                     "imudp: listenPortFileName: "
+                     "error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        } else if (written == 0) {
+            LogError(0, RS_RET_IO_ERROR,
+                     "imudp: listenPortFileName: "
+                     "error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        done += written;
+    }
+    if (close(fd) != 0) {
+        fd = -1;
         LogError(errno, RS_RET_IO_ERROR,
                  "imudp: listenPortFileName: "
                  "error while trying to close file");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
-    fp = NULL;
+    fd = -1;
 
 finalize_it:
-    if (fp != NULL) fclose(fp);
+    if (fd != -1) close(fd);
     RETiRet;
 }
 
