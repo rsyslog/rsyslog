@@ -211,6 +211,7 @@ struct cnfarray {
     unsigned nodetype;
     int nmemb;
     es_str_t **arr;
+    char *eltypes; /* NULL = all strings; non-NULL: per-element 'S' or 'N' */
 } __attribute__((aligned(8)));
 
 struct cnffparamlst {
@@ -431,6 +432,8 @@ struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);
 struct cnfarray *cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
+struct cnfarray *cnfarrayNewNum(long long val);
+struct cnfarray *cnfarrayAddNum(struct cnfarray *ar, long long val);
 void cnfarrayContentDestruct(struct cnfarray *ar);
 const char *getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);

@@ -3827,28 +3827,71 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
             ret->datatype = 'S';
             ret->d.estr = es_strdup(((struct cnfstringval *)expr)->estr);
             break;
-        case 'A':
-            /* if an array is used with "normal" operations, it just evaluates
-             * to its first element.
+        case 'A': {
+            /* Array literal in expression context produces a JSON array so
+             * that  set $!var = ["tag1", "tag2"];  stores a native JSON array
+             * in the message variable.  Comparisons (== [...]) consume the
+             * cnfarray directly via evalStrArrayCmp and never reach this path,
+             * so their behaviour is unchanged.  Any allocation failure frees
+             * all resources acquired so far and degrades to an empty string.
              */
-            ret->datatype = 'S';
-            ret->d.estr = es_strdup(((struct cnfarray *)expr)->arr[0]);
+            struct cnfarray *const ar = (struct cnfarray *)expr;
+            struct json_object *jarray = json_object_new_array();
+            if (jarray == NULL) {
+                ret->datatype = 'S';
+                ret->d.estr = es_newStr(1);
+                break;
+            }
+            for (int i = 0; i < ar->nmemb; ++i) {
+                char *s = es_str2cstr(ar->arr[i], NULL);
+                if (s == NULL) {
+                    json_object_put(jarray);
+                    jarray = NULL;
+                    break;
+                }
+                struct json_object *jelt;
+                if (ar->eltypes != NULL && ar->eltypes[i] == 'N')
+                    jelt = json_object_new_int64(strtoll(s, NULL, 10));
+                else
+                    jelt = json_object_new_string(s);
+                free(s);
+                if (jelt == NULL || json_object_array_add(jarray, jelt) != 0) {
+                    if (jelt != NULL) json_object_put(jelt);
+                    json_object_put(jarray);
+                    jarray = NULL;
+                    break;
+                }
+            }
+            if (jarray == NULL) {
+                ret->datatype = 'S';
+                ret->d.estr = es_newStr(1);
+                break;
+            }
+            ret->datatype = 'J';
+            ret->d.json = jarray;
             break;
+        }
         case 'V':
             evalVar((struct cnfvar *)expr, usrptr, ret);
             break;
-        case '&':
-            /* TODO: think about optimization, should be possible ;) */
-            PREP_TWO_STRINGS;
-            if (expr->r->nodetype == 'A') {
-                estr_r = ((struct cnfarray *)expr->r)->arr[0];
-                bMustFree = 0;
-            }
+        case '&': {
+            /* Evaluate both operands fully so array literals on either side
+             * serialise to their JSON representation rather than arr[0]. */
+            struct svar lc = {{0}, 0}, rc = {{0}, 0};
+            int bFreeL = 0, bFreeR = 0;
+            cnfexprEval(expr->l, &lc, usrptr, pWti);
+            cnfexprEval(expr->r, &rc, usrptr, pWti);
+            es_str_t *const sl = var2String(&lc, &bFreeL);
+            es_str_t *const sr = var2String(&rc, &bFreeR);
             ret->datatype = 'S';
-            ret->d.estr = es_strdup(estr_l);
-            es_addStr(&ret->d.estr, estr_r);
-            FREE_TWO_STRINGS;
+            ret->d.estr = es_strdup(sl);
+            es_addStr(&ret->d.estr, sr);
+            if (bFreeL) es_deleteStr(sl);
+            if (bFreeR) es_deleteStr(sr);
+            varFreeMembers(&lc);
+            varFreeMembers(&rc);
             break;
+        }
         case '+':
             COMP_NUM_BINOP(+);
             break;
@@ -3896,6 +3939,7 @@ void cnfarrayContentDestruct(struct cnfarray *ar) {
         es_deleteStr(ar->arr[i]);
     }
     free(ar->arr);
+    free(ar->eltypes);
 }
 
 static void regex_destruct(struct cnffunc *func) {
@@ -4676,6 +4720,7 @@ struct cnfarray *cnfarrayNew(es_str_t *val) {
     if ((ar = malloc(sizeof(struct cnfarray))) != NULL) {
         ar->nodetype = 'A';
         ar->nmemb = 1;
+        ar->eltypes = NULL;
         if ((ar->arr = malloc(sizeof(es_str_t *))) == NULL) {
             free(ar);
             ar = NULL;
@@ -4688,16 +4733,80 @@ done:
 }
 
 struct cnfarray *cnfarrayAdd(struct cnfarray *__restrict__ const ar, es_str_t *__restrict__ val) {
+    /* Extend eltypes first so nmemb and eltypes always stay in sync.
+     * If eltypes realloc fails after arr was extended, eltypes would be one
+     * slot short and the next case 'A' evaluation would overread the buffer. */
+    if (ar->eltypes != NULL) {
+        char *newtypes = realloc(ar->eltypes, ar->nmemb + 1);
+        if (newtypes == NULL) {
+            DBGPRINTF("cnfarrayAdd: eltypes realloc failed, item ignored\n");
+            goto done;
+        }
+        newtypes[ar->nmemb] = 'S';
+        ar->eltypes = newtypes;
+    }
     es_str_t **newptr;
     if ((newptr = realloc(ar->arr, (ar->nmemb + 1) * sizeof(es_str_t *))) == NULL) {
         DBGPRINTF("cnfarrayAdd: realloc failed, item ignored, ar->arr=%p\n", ar->arr);
+        /* eltypes has one extra byte past nmemb; safe because nmemb won't increment */
         goto done;
-    } else {
-        ar->arr = newptr;
-        ar->arr[ar->nmemb] = val;
-        ar->nmemb++;
     }
+    ar->arr = newptr;
+    ar->arr[ar->nmemb] = val;
+    ar->nmemb++;
 done:
+    return ar;
+}
+
+struct cnfarray *cnfarrayNewNum(long long val) {
+    char buf[32];
+    const int len = snprintf(buf, sizeof(buf), "%lld", val);
+    es_str_t *const s = es_newStrFromCStr(buf, (es_size_t)len);
+    if (s == NULL) return NULL;
+    /* Allocate eltypes before cnfarrayNew so we can fail cleanly: if malloc
+     * fails we simply return NULL rather than producing a silently mis-typed
+     * array where [42] would serialise as ["42"] in JSON output. */
+    char *const eltypes = malloc(1);
+    if (eltypes == NULL) { es_deleteStr(s); return NULL; }
+    eltypes[0] = 'N';
+    struct cnfarray *const ar = cnfarrayNew(s);
+    if (ar == NULL) { free(eltypes); return NULL; }
+    ar->eltypes = eltypes;
+    return ar;
+}
+
+struct cnfarray *cnfarrayAddNum(struct cnfarray *const ar, long long val) {
+    char buf[32];
+    const int len = snprintf(buf, sizeof(buf), "%lld", val);
+    es_str_t *const s = es_newStrFromCStr(buf, (es_size_t)len);
+    if (s == NULL) return ar;
+
+    /* Extend eltypes before arr so nmemb, arr, and eltypes stay in sync.
+     * If eltypes realloc happened after arr was extended and nmemb incremented,
+     * a failed realloc would leave eltypes one slot short, and the next
+     * case 'A' evaluation would overread the buffer. */
+    char *newtypes;
+    if (ar->eltypes == NULL) {
+        newtypes = malloc(ar->nmemb + 1);
+        if (newtypes == NULL) { es_deleteStr(s); return ar; }
+        for (int i = 0; i < ar->nmemb; ++i) newtypes[i] = 'S';
+    } else {
+        newtypes = realloc(ar->eltypes, ar->nmemb + 1);
+        if (newtypes == NULL) { es_deleteStr(s); return ar; }
+    }
+    newtypes[ar->nmemb] = 'N';
+    ar->eltypes = newtypes;
+
+    es_str_t **const newptr = realloc(ar->arr, (ar->nmemb + 1) * sizeof(es_str_t *));
+    if (newptr == NULL) {
+        DBGPRINTF("cnfarrayAddNum: arr realloc failed, item ignored\n");
+        /* eltypes has one extra byte past nmemb; safe because nmemb won't increment */
+        es_deleteStr(s);
+        return ar;
+    }
+    ar->arr = newptr;
+    ar->arr[ar->nmemb] = s;
+    ar->nmemb++;
     return ar;
 }
 
@@ -4706,8 +4815,14 @@ struct cnfarray *cnfarrayDup(struct cnfarray *old) {
     int i;
     struct cnfarray *ar;
     ar = cnfarrayNew(es_strdup(old->arr[0]));
+    if (ar == NULL) return NULL;
     for (i = 1; i < old->nmemb; ++i) {
         cnfarrayAdd(ar, es_strdup(old->arr[i]));
+    }
+    if (old->eltypes != NULL) {
+        ar->eltypes = malloc(old->nmemb);
+        if (ar->eltypes != NULL)
+            memcpy(ar->eltypes, old->eltypes, old->nmemb);
     }
     return ar;
 }
