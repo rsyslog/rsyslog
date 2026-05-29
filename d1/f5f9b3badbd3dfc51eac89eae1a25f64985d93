@@ -1,0 +1,293 @@
+doc/source/reference/parameters/mmexternal-responsetimeout.rst
+  s_6224eda96fc0da::t_f840209ed05aa7 1-23,25-57
+  s_6224eda96fc0da::t_c5af567e483738 24
+tests/uxsock_multiple_netns.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 107-108,117-119
+tests/es-bulk-errfile-popul-def-interleaved.sh
+  s_21a8eefcb5d3df::t_198def03b8775e 48-49,51
+tests/travis/run.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 45-47,51-52,120-122,162,182-183
+platform/freebsd/rsyslogd
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 28,57,77
+sidecar/tests/validate.py
+  s_21a8eefcb5d3df::t_8eaabb409eea98 8
+tests/testsuites/mmexternal-hang-no-reply.sh
+  s_6224eda96fc0da::t_e2b90dd7cdda01 4
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-3,5-6
+tests/mysql-actq-mt-withpause-extended.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 34
+tests/testsuites/omprog-defaults-bin.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 5
+tests/privdrop_common.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 8,29
+packaging/docker/dev_env/centos/pkg_base/8/extra/initenv.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 27
+tests/imfile-endmsg.regex-with-example.sh
+  s_21a8eefcb5d3df::t_8c805293b7e149 88,90,96-97,109-113,115
+tests/es-bulk-errfile-popul-erronly-interleaved.sh
+  s_21a8eefcb5d3df::t_198def03b8775e 48-49,51
+.agent/skills/rsyslog_continuous_issue_session/references/ledger-template.md
+  s_6224eda96fc0da::t_dc4647123b37c8 23-26
+  s_6224eda96fc0da::t_861395438ce828 56
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-22,27-49,57-73
+  s_6224eda96fc0da::t_aa6219e4728828 50-55
+tests/omjournal-basic-template.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 18
+tests/travis/run-cron.sh
+  s_21a8eefcb5d3df::t_ce1b4f2c3c12cc 31-32,37
+  s_21a8eefcb5d3df::t_bef56253f8a9aa 15-16,18-22,30,33-36
+  s_21a8eefcb5d3df::t_8aa5a82bdaaf4e 17
+  s_21a8eefcb5d3df::t_43f626626a18f2 23
+tests/CI/kill_all_instances.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 6
+tests/imdocker-long-logline.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 36
+tests/imfile-metadata-line-number.sh
+  s_6224eda96fc0da::t_3b7c2853c4bb5e 39
+  s_6224eda96fc0da::t_ff774db633e119 1-38,40-42
+tests/testsuites/omprog-feedback-bin.sh
+  s_21a8eefcb5d3df::t_e503073a03f251 17
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 19
+tests/travis/run-osx.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 45
+doc/tools/buildenv/starter.sh
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2
+tests/Makefile.am
+  s_6224eda96fc0da::t_6c315a3266ccd4 820
+  s_6224eda96fc0da::t_fc2120dd2fa39b 1766-1767
+  s_6224eda96fc0da::t_3689d25297a9c4 979
+  s_6224eda96fc0da::t_d9bb6e06a69891 1982
+  s_6224eda96fc0da::t_c449832183e752 978,980-981,2676-2677
+  s_21a8eefcb5d3df::t_e74152a39b8da9 3382
+  s_6224eda96fc0da::t_dc0727773904af 133-136,3203-3204
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 523,1187
+tests/testsuites/omprog-transactions-bin.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 49
+  s_21a8eefcb5d3df::t_e503073a03f251 43
+tools/coreanalysis.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 15
+tests/imfile-old-state-file.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 46,50
+tests/omkafka.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 96
+tests/imfile-endregex-timeout-none-polling.sh
+  s_21a8eefcb5d3df::t_8c805293b7e149 53
+tests/travis/install.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 29,52,64,74-75,83-84
+  s_21a8eefcb5d3df::t_6f701263e2c0fc 42-48,54-60
+  s_21a8eefcb5d3df::t_2c0dd4ffb1db0f 38
+tests/omfile-read-only.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 33
+tests/solaris/prep-libfastjson.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+runtime/parser.c
+  s_a9719629ed5597::t_e0b434429d7c37 563
+tests/failover-no-rptd-vg.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 21
+grammar/rainerscript.c
+  s_6224eda96fc0da::t_6be346b6398b07 5745,5773-5775
+scripts/generate_distro_component_map.py
+  s_21a8eefcb5d3df::t_ec9dc2b89ef115 227
+tests/imfile-endregex-timeout-polling.sh
+  s_21a8eefcb5d3df::t_8c805293b7e149 53
+packaging/docker/dev_env/suse/base/tumbleweed/setup-projects.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7-8
+tests/testsuites/omprog-feedback-mt-bin.sh
+  s_21a8eefcb5d3df::t_e503073a03f251 14
+tests/sndrcv_relp_tls_certvalid.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 49
+tests/testsuites/mmexternal-no-output.sh
+  s_6224eda96fc0da::t_442d58da8d8d3f 1-8
+tests/imfile-rename.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 85
+tests/sndrcv_relp_tls_chainedcert.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 54
+packaging/docker/dev_env/centos/pkg_base/7/extra/sync_remote.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7
+packaging/docker/dev_env/common/setup-projects.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7-8
+tests/imfile-symlink-multi.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 47,63
+tests/imfile-no-monitor-config-check.sh
+  s_6224eda96fc0da::t_ff774db633e119 1-20
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_2809f4165851de 2438-2440
+  s_6224eda96fc0da::t_83089658ebefd8 222,1571,1573
+  s_6224eda96fc0da::t_fee1bdd0414ecd 1578-1580,1582,1615-1620,1622-1629
+  s_6224eda96fc0da::t_525239ab08aecc 1727-1735,1891,1900,3088-3089
+doc/Makefile.am
+  s_6224eda96fc0da::t_3af855ed9da09f 844,846
+runtime/net_ossl.c
+  s_47efe9f04bf93d::t_04d1bdff3c23ae 932
+tests/imtcp-persource-ratelimit.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 40
+plugins/omkafka/omkafka.c
+  s_6224eda96fc0da::t_0f9f6f17dc3c30 1135-1137
+  s_6224eda96fc0da::t_b76b84571d56eb 1131-1134,1138-1139,1146,1150-1151,1154-1156,1161,1720
+tests/es-bulk-errfile-popul-erronly.sh
+  s_21a8eefcb5d3df::t_198def03b8775e 47-48,50
+tests/omkafka-statistics.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 96
+tests/action-tx-errfile.sh
+  s_21a8eefcb5d3df::t_ce1b4f2c3c12cc 7
+tests/improg-simul.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 46
+  s_21a8eefcb5d3df::t_2c0dd4ffb1db0f 41
+plugins/mmexternal/mmexternal.c
+  s_6224eda96fc0da::t_9998dd56c146ba 33,52-59,64-73,83-85
+  s_6224eda96fc0da::t_544e995623c1b9 133-134,140-145,158-163,172,177-182,200-201,207,209-212,218,223,230-309,318-321,323-325,327-331,334-339,341-383,386,389-398,400-405,407,409,411-412,414-415,418-419
+  s_6224eda96fc0da::t_3a579e3aee75df 696-697,713-714,718-720,722,724,727-740,757-758
+  s_6224eda96fc0da::t_b7ac8ec06ebe9a 117-120,753-755
+AGENTS.md
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 27
+tests/diag.sh
+  s_21a8eefcb5d3df::t_a15607869c4d7c 1645,4192-4193
+  s_21a8eefcb5d3df::t_0878a2d8d68265 1940,3490-3498,3505,3507-3514,5020,5026,5386,5422
+  s_21a8eefcb5d3df::t_7b0c89db695cba 548,569,681,705,1747,1763,1805,1813,2172,2180,2265,2511,2594,2624-2762,2781-2783,2785-2788,2823-2828,3072,3095,3110,3156,3201,3522,3568,3586,3634,3782,3787,3796,3838,3843,3854,3861,3872,3881,3899,4175,4246,4252,4261,4265,4268,4271,4275,4300,4347,4349,5168,5200-5203,5205-5206,5209,5220,5376,5438,5455
+  s_21a8eefcb5d3df::t_bc919ce5e07d76 4970
+  s_21a8eefcb5d3df::t_c30d4153bbd1e1 3705,3736,3766
+  s_21a8eefcb5d3df::t_61b36b1c2ddc09 3536
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 3544
+packaging/docker/dev_env/centos/pkg_base/8/extra/sync_remote.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 7
+tests/mmkubernetes-cache-expire.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 52,93
+doc/source/conf.py
+  s_21a8eefcb5d3df::t_8eaabb409eea98 25
+tests/es-bulk-retry.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 252
+.agent/skills/rsyslog_continuous_issue_session/SKILL.md
+  s_6224eda96fc0da::t_f290ab5e6ecbc8 185,194
+  s_6224eda96fc0da::t_99929e053bd51c 193
+  s_6224eda96fc0da::t_0c1d012cf26183 62-65,69-71,87-90,93-97,99,101-118
+  s_6224eda96fc0da::t_7fdbc0777b2639 163,168-184,186-188
+  s_6224eda96fc0da::t_15fd2ccdcdaa3a 1-61,66-68,72-86,91-92,98,100,119-162,164-167,189-192,195-222
+tests/CI/interactive_exec_test_hook.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1-4
+tests/solaris/prep-librelp.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 1
+plugins/ommysql/ommysql.c
+  s_6224eda96fc0da::t_6c315a3266ccd4 355-358
+packaging/docker/dev_env/ubuntu/base/18.04/setup-system.sh
+  s_21a8eefcb5d3df::t_bef56253f8a9aa 44-48,53-59,69-73
+  s_21a8eefcb5d3df::t_43f626626a18f2 39,78
+tests/execonlywhenprevsuspended-nonsusp-queue.sh
+  s_21a8eefcb5d3df::t_8c805293b7e149 33
+doc/source/configuration/modules/mmexternal.rst
+  s_6224eda96fc0da::t_08054d33991a3e 45-48,53-56,67,69
+tests/omkafka-unreachable-shutdown.sh
+  s_6224eda96fc0da::t_3689d25297a9c4 1-6,8-20,22-38,40-50
+  s_6224eda96fc0da::t_2b9ebb8ff3e38e 7
+  s_6224eda96fc0da::t_e990bea6830b20 21,39
+runtime/msg.c
+  s_6224eda96fc0da::t_fc4ccb1f4cc17a 2677-2684
+tests/omfile-addlf.sh
+  s_21a8eefcb5d3df::t_804d9aa045fe59 1
+packaging/docker/dev_env/ubuntu/base/20.04/setup-system.sh
+  s_21a8eefcb5d3df::t_43f626626a18f2 39,78
+  s_21a8eefcb5d3df::t_bef56253f8a9aa 44-48,53-59,69-73
+tests/imfile-endmsg.regex-with-example-vg.sh
+  s_21a8eefcb5d3df::t_8c805293b7e149 85,87,105-108,112
+tests/glbl-umask.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 24
+tests/omrabbitmq_data_2servers.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 11-12
+devtools/format-python.sh
+  s_21a8eefcb5d3df::t_ec9dc2b89ef115 69-79
+devtools/ci/travis/do-run.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 8
+tests/es-bulk-errfile-popul-def-format.sh
+  s_21a8eefcb5d3df::t_198def03b8775e 45-46,48
+doc/source/reference/parameters/imfile-addmetadata.rst
+  s_6224eda96fc0da::t_52cce8fd0f95d7 33-41
+packaging/docker/appliance/alpine/internal/build-config
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 7
+packaging/docker/dev_env/centos/base/7/setup-system.sh
+  s_21a8eefcb5d3df::t_43f626626a18f2 12,52
+  s_21a8eefcb5d3df::t_bef56253f8a9aa 32-38,43-47
+tests/kafka-selftest.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 40
+tests/killrsyslog.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 5-6,12-13
+tests/imfile-statefile-directory.sh
+  s_21a8eefcb5d3df::t_c6a280ebf3696f 24
+tests/queue-encryption-disk_keyprog-invalid-len.sh
+  s_6224eda96fc0da::t_d8194015f7ecae 36
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 1-35,37-38
+tests/travis/docker-ubuntu-devel.sh
+  s_21a8eefcb5d3df::t_eefd4f4fc1e81a 3
+tests/incltest_dir_empty_wildcard.sh
+  s_6224eda96fc0da::t_6be346b6398b07 2-3,12,14-16
+  s_6224eda96fc0da::t_b9b7d8d8a60792 4-5,13
+tests/ratelimit_hup.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 50
+tests/omkafka-dynatopic.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 98
+packaging/docker/appliance/alpine/starter.sh
+  s_21a8eefcb5d3df::t_ed09cd3ce7e5cf 6-7
+  s_21a8eefcb5d3df::t_538f5c28ebefc9 2-3,14,43,47
+tests/omrabbitmq_data_1server.sh
+  s_21a8eefcb5d3df::t_6db55704d45c3e 11-12
+doc/source/reference/parameters/mmexternal-interface-output.rst
+  s_6224eda96fc0da::t_c5af567e483738 24
+  s_6224eda96fc0da::t_f840209ed05aa7 1-23,25-59
+packaging/docker/dev_env/centos/base/8/setup-system.sh
+  s_21a8eefcb5d3df::t_bef56253f8a9aa 32-38,43-47
+  s_21a8eefcb5d3df::t_43f626626a18f2 12,52
+tests/omkafkadynakey.sh
+  s_21a8eefcb5d3df::t_bcea965432af50 116
+tests/omkafka-failedmsg-malformed.sh
+  s_6224eda96fc0da::t_3689d25297a9c4 1-27,31-37
+  s_6224eda96fc0da::t_989fb2f88394e7 28-30
+runtime/perctile_stats.c
+  s_6224eda96fc0da::t_b947e70d5c849d 591-599
+runtime/libcry_common.c
+  s_6224eda96fc0da::t_b947e70d5c849d 35,190-194
+autogen.sh
+  s_21a8eefcb5d3df::t_ff821fee8c78af 26
+packaging/docker/dev_env/centos/pkg_base/7/extra/initenv.sh
+  s_21a8eefcb5d3df::t_3403e1b55d3ecb 27
+tests/perctile-invalid-percentile.sh
+  s_6224eda96fc0da::t_d8194015f7ecae 24
+  s_6224eda96fc0da::t_e02ceb9d2c70b5 1-23,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d1f5f9b3badbd3dfc51eac89eae1a25f64985d93",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_47efe9f04bf93d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4edc-4dc3-7933-96af-f54a9b9c029f",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
