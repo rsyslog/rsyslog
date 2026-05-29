@@ -671,6 +671,27 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal retrySendSideRecordRecv(nsd_gtls_t *const pThis) {
+    DEFiRet;
+    unsigned int nextIODirection;
+    rsRetVal recvRet;
+
+    if (pThis->pszRcvBuf == NULL) {
+        CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+        pThis->lenRcvBuf = -1;
+    }
+    if (pThis->lenRcvBuf == -1) {
+        recvRet = gtlsRecordRecv(pThis, &nextIODirection);
+        if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
+        if (recvRet == RS_RET_RETRY) ABORT_FINALIZE(RS_RET_RETRY);
+        pThis->rtryCall = gtlsRtry_None;
+        if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* add our own certificate to the certificate set, so that the peer
  * can identify us. Please note that we try to use mutual authentication,
@@ -2282,15 +2303,15 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-    if (pThis->rtryCall == gtlsRtry_recv) {
-        CHKiRet(doRetry(pThis));
-        FINALIZE;
-    }
     if (pThis->bAbortConn) ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
     if (pThis->iMode == 0) {
         CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
         FINALIZE;
+    }
+
+    if (pThis->rtryCall == gtlsRtry_recv) {
+        CHKiRet(retrySendSideRecordRecv(pThis));
     }
 
     while (1) { /* loop broken inside */
@@ -2304,27 +2325,13 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
              * GnuTLS may require us to read to make progress (e.g. KeyUpdate).
              */
             if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
-                unsigned int nextIODirection;
-                rsRetVal recvRet;
-
                 /*
                  * Preserve any application data read while driving send-side TLS
                  * control traffic. TLS 1.3 post-handshake messages can make
                  * gnutls_record_send() need a read, and gnutls_record_recv() may
                  * return application bytes after processing that control traffic.
                  */
-                if (pThis->pszRcvBuf == NULL) {
-                    CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
-                    pThis->lenRcvBuf = -1;
-                }
-                if (pThis->lenRcvBuf == -1) {
-                    recvRet = gtlsRecordRecv(pThis, &nextIODirection);
-                    if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
-                    if (recvRet == RS_RET_RETRY) {
-                        pThis->rtryCall = gtlsRtry_None;
-                    }
-                    if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
-                }
+                CHKiRet(retrySendSideRecordRecv(pThis));
             }
             continue; /* retry send */
         } else {

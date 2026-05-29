@@ -292,6 +292,13 @@ rsRetVal osslRecordRecv(nsd_ossl_t *pThis, unsigned *const nextIODirection) {
             DBGPRINTF("osslRecordRecv: SSL_ERROR_ZERO_RETURN received, connection may closed already\n");
             ABORT_FINALIZE(RS_RET_RETRY);
         } else if (err == SSL_ERROR_SYSCALL) {
+#ifdef ENABLE_WOLFSSL
+            if (SSL_want_read(pThis->pNetOssl->ssl) || SSL_want_write(pThis->pNetOssl->ssl)) {
+                pThis->rtryCall = osslRtry_recv;
+                pThis->rtryOsslErr = SSL_want_write(pThis->pNetOssl->ssl) ? SSL_ERROR_WANT_WRITE : SSL_ERROR_WANT_READ;
+                ABORT_FINALIZE(RS_RET_RETRY);
+            }
+#endif
             /* Output error and abort */
             nsd_ossl_lastOpenSSLErrorMsg(pThis, lenRcvd, pThis->pNetOssl->ssl, LOG_INFO, "osslRecordRecv",
                                          "SSL_read 1");
@@ -327,6 +334,28 @@ finalize_it:
     }
     dbgprintf("osslRecordRecv return. nsd %p, iRet %d, lenRcvd %zd, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, lenRcvd,
               pThis->lenRcvBuf, pThis->ptrRcvBuf);
+    RETiRet;
+}
+
+static rsRetVal retrySendSideRecordRecv(nsd_ossl_t *const pThis) {
+    DEFiRet;
+    unsigned nextIODirection;
+    rsRetVal recvRet;
+
+    if (pThis->pszRcvBuf == NULL) {
+        CHKmalloc(pThis->pszRcvBuf = malloc(NSD_OSSL_MAX_RCVBUF));
+        pThis->lenRcvBuf = -1;
+    }
+    if (pThis->lenRcvBuf == -1) {
+        recvRet = osslRecordRecv(pThis, &nextIODirection);
+        if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
+        if (recvRet == RS_RET_RETRY) ABORT_FINALIZE(RS_RET_RETRY);
+        pThis->rtryCall = osslRtry_None;
+        pThis->rtryOsslErr = SSL_ERROR_NONE;
+        if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
+    }
+
+finalize_it:
     RETiRet;
 }
 
@@ -1229,6 +1258,10 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
         FINALIZE;
     }
 
+    if (pThis->rtryCall == osslRtry_recv) {
+        CHKiRet(retrySendSideRecordRecv(pThis));
+    }
+
     while (1) {
         iSent = SSL_write(pThis->pNetOssl->ssl, pBuf, *pLenBuf);
         if (iSent > 0) {
@@ -1240,6 +1273,11 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                 DBGPRINTF("Send: SSL_ERROR_ZERO_RETURN received, connection closed by peer\n");
                 ABORT_FINALIZE(RS_RET_CLOSED);
             } else if (err == SSL_ERROR_SYSCALL) {
+#ifdef ENABLE_WOLFSSL
+                if (SSL_want_read(pThis->pNetOssl->ssl) || SSL_want_write(pThis->pNetOssl->ssl)) {
+                    ABORT_FINALIZE(RS_RET_RETRY);
+                }
+#endif
                 /* Output error and abort */
                 nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_INFO, "Send", "SSL_write");
                 iRet = RS_RET_TLS_ERR_SYSCALL;
@@ -1263,15 +1301,15 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                  * which require the client to read before it can continue writing.
                  */
                 if (err == SSL_ERROR_WANT_READ) {
+#ifdef ENABLE_WOLFSSL
+                    /*
+                     * wolfSSL's OpenSSL compatibility layer has historically needed
+                     * this local progress loop for the wolfSSL CI lane. Keep real
+                     * OpenSSL on the nonblocking retry propagation path below.
+                     */
                     unsigned nextIODirection;
                     rsRetVal recvRet;
 
-                    /*
-                     * Preserve any application data read while driving send-side TLS
-                     * control traffic.  TLS 1.3 post-handshake messages can make
-                     * SSL_write() need a read, and SSL_read() may return application
-                     * bytes after processing that control traffic.
-                     */
                     if (pThis->pszRcvBuf == NULL) {
                         CHKmalloc(pThis->pszRcvBuf = malloc(NSD_OSSL_MAX_RCVBUF));
                         pThis->lenRcvBuf = -1;
@@ -1285,7 +1323,16 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                         }
                         if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                     }
+#else
+                    /*
+                     * Preserve any application data read while driving send-side TLS
+                     * control traffic.  TLS 1.3 post-handshake messages can make
+                     * SSL_write() need a read, and SSL_read() may return application
+                     * bytes after processing that control traffic.
+                     */
+                    CHKiRet(retrySendSideRecordRecv(pThis));
                     /* Continue loop to retry SSL_write */
+#endif
                 } else {
                     /* Check for SSL Shutdown */
                     if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
