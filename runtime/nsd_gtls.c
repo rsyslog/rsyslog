@@ -2322,6 +2322,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                     if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                     if (recvRet == RS_RET_RETRY) {
                         pThis->rtryCall = gtlsRtry_None;
+                        ABORT_FINALIZE(RS_RET_RETRY);
                     }
                     if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                 }

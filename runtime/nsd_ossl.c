@@ -1282,6 +1282,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                         if (recvRet == RS_RET_RETRY) {
                             pThis->rtryCall = osslRtry_None;
                             pThis->rtryOsslErr = SSL_ERROR_NONE;
+                            ABORT_FINALIZE(RS_RET_RETRY);
                         }
                         if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                     }
