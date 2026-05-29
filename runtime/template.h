@@ -100,9 +100,9 @@ enum tplRegexType {
     TPL_REGEX_ERE = 1 /* posix ERE */
 };
 
-#define TPL_REGEX_MAX_MATCHES 10
+    #define TPL_REGEX_MAX_MATCHES 10
 
-#include "msg.h"
+    #include "msg.h"
 
 /* a specific parse entry */
 struct templateEntry {
