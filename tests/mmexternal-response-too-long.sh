@@ -61,8 +61,8 @@ wait_shutdown
 content_check "too-long-message-1"
 content_check "too-long-message-2"
 
-start_count=$(grep -c '^Starting ' "$RSYSLOG_DYNNAME.side" | awk '{print $1}')
-recover_count=$(grep -c '^Recovered too-long-message-2$' "$RSYSLOG_DYNNAME.side" | awk '{print $1}')
+start_count=$(grep -c '^Starting ' "$RSYSLOG_DYNNAME.side" || true)
+recover_count=$(grep -c '^Recovered too-long-message-2$' "$RSYSLOG_DYNNAME.side" || true)
 
 if (( start_count < 2 )); then
 	echo "expected helper restart, but start count was $start_count"
