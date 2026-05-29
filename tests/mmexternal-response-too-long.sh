@@ -1,11 +1,37 @@
 #!/bin/bash
 # Regression coverage for bounded mmexternal replies: a helper that emits an
 # oversized unterminated JSON line must be restarted before responseTimeout is
-# reached, and the queue must continue to the following action. The oracle
-# waits a short time for both downstream messages and checks that a second
+# reached, and the queue must continue to the following action. The oracle uses
+# the helper side file to observe the oversized-reply and recovery milestones,
+# then checks that both messages reached the downstream action and that a second
 # helper instance handled the recovery message.
 
 . ${srcdir:=.}/diag.sh init
+
+wait_side_content() {
+	local needle="$1"
+	local timeout="${2:-${TB_TEST_TIMEOUT:-60}}"
+	local deadline=$(( $(date +%s) + timeout ))
+	local sidefile="$RSYSLOG_DYNNAME.side"
+
+	while true; do
+		if [ -f "$sidefile" ] && grep -Fq -- "$needle" "$sidefile"; then
+			printf 'side-file milestone reached: %s\n' "$needle"
+			return
+		fi
+		if [ "$(date +%s)" -ge "$deadline" ]; then
+			printf 'FAIL: side-file milestone not reached before timeout: %s\n' "$needle"
+			if [ -f "$sidefile" ]; then
+				printf 'side-file content:\n'
+				cat -n "$sidefile"
+			else
+				printf 'side-file %s does not exist\n' "$sidefile"
+			fi
+			error_exit 1
+		fi
+		$TESTTOOL_DIR/msleep 200
+	done
+}
 
 generate_conf
 add_conf '
@@ -25,8 +51,10 @@ if $msg contains "too-long-message" then {
 
 startup
 injectmsg literal "<13>Mar 10 01:00:00 host tag:too-long-message-1"
+wait_side_content "Oversized too-long-message-1"
 injectmsg literal "<13>Mar 10 01:00:00 host tag:too-long-message-2"
-wait_file_lines "$RSYSLOG_OUT_LOG" 2 5
+wait_side_content "Recovered too-long-message-2"
+wait_file_lines "$RSYSLOG_OUT_LOG" 2
 shutdown_when_empty
 wait_shutdown
 
