@@ -302,7 +302,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-usertools \
 	--enable-valgrind \
 	\
-	--enable-compile-warning=error \
+	--enable-compile-warnings=error \
 	--enable-testbench
 
 # build errors at the moment: --enable-kmsg 

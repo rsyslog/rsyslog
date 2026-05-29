@@ -839,7 +839,7 @@ jobs:
           dnf install -y epel-release
           dnf install -y mock dnf-utils
           echo "== Install build tools for autoreconf/configure/make dist =="
-          dnf install -y autoconf automake libtool gcc make flex bison
+          dnf install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
           curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
           {
@@ -933,6 +933,7 @@ jobs:
             libfastjson \
             docutils \
             autoconf \
+            autoconf-archive \
             automake \
             libtool
 
@@ -945,6 +946,7 @@ jobs:
             flex \
             bison \
             autoconf \
+            autoconf-archive \
             automake \
             libtool \
             pkg-config \
@@ -1397,6 +1399,126 @@ jobs:
           export VERBOSE=1
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
+  dev_container_definition_CI:
+    needs: [changes]
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    name: dev container definition CI
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          git remote add upstream "https://github.com/$GITHUB_REPOSITORY.git"
+          git fetch upstream "$BASE_REF"
+
+      - name: Check for dev container definition changes
+        id: dev_container_changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            devtools/ci/Dockerfile*
+            packaging/docker/dev_env/**/Dockerfile*
+            packaging/docker/dev_env/**/setup-system.sh
+            packaging/docker/dev_env/**/build.sh
+            packaging/docker/dev_env/common/**
+            .github/workflows/run_checks.yml
+
+      - name: Build changed dev containers
+        if: steps.dev_container_changes.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.dev_container_changes.outputs.all_changed_files }}
+        run: |
+          set -euo pipefail
+
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"; rm -rf packaging/docker/dev_env/alpine/common packaging/docker/dev_env/ubuntu/devel/common' EXIT
+
+          add_build() {
+            printf '%s\t%s\n' "$1" "$2" >> "$tmpdir/builds.tsv"
+          }
+
+          add_dir_dockerfiles() {
+            dir="$1"
+            for dockerfile in "$dir"/Dockerfile "$dir"/Dockerfile.arm; do
+              if [ -f "$dockerfile" ]; then
+                add_build "$dir" "$dockerfile"
+              fi
+            done
+          }
+
+          ensure_common_context() {
+            dir="$1"
+            case "$dir" in
+              packaging/docker/dev_env/alpine|packaging/docker/dev_env/ubuntu/devel)
+                rm -rf "$dir/common"
+                cp -r packaging/docker/dev_env/common "$dir/common"
+                ;;
+            esac
+          }
+
+          for changed in $CHANGED_FILES; do
+            case "$changed" in
+              devtools/ci/Dockerfile*)
+                add_build . "$changed"
+                ;;
+              packaging/docker/dev_env/common/*)
+                add_dir_dockerfiles packaging/docker/dev_env/alpine
+                add_dir_dockerfiles packaging/docker/dev_env/ubuntu/devel
+                ;;
+              packaging/docker/dev_env/*)
+                filename="$(basename "$changed")"
+                changed_dir="$(dirname "$changed")"
+                case "$filename" in
+                  Dockerfile|Dockerfile.arm)
+                    add_build "$changed_dir" "$changed"
+                    ;;
+                  setup-system.sh|build.sh)
+                    add_dir_dockerfiles "$changed_dir"
+                    ;;
+                  *)
+                    echo "Ignoring unmatched dev-container-related path: $changed"
+                    ;;
+                esac
+                ;;
+              .github/workflows/run_checks.yml)
+                echo "run_checks.yml changed; this job definition is validated by actionlint/zizmor and normal CI."
+                ;;
+              *)
+                echo "Ignoring unmatched dev-container-related path: $changed"
+                ;;
+            esac
+          done
+
+          if [ ! -s "$tmpdir/builds.tsv" ]; then
+            echo "No concrete dev-container Dockerfile build is required."
+            exit 0
+          fi
+
+          sort -u "$tmpdir/builds.tsv" > "$tmpdir/builds.unique.tsv"
+          while IFS="$(printf '\t')" read -r context dockerfile; do
+            ensure_common_context "$context"
+            tag_suffix="$(printf '%s' "$dockerfile" | tr '/:._' '----' | tr -cd '[:alnum:]-')"
+            tag="rsyslog-devcontainer-pr:${tag_suffix}"
+            echo "::group::docker build $dockerfile"
+            docker build --pull -f "$dockerfile" -t "$tag" "$context"
+            echo "::endgroup::"
+          done < "$tmpdir/builds.unique.tsv"
+
+      - name: Skip dev container build, no relevant changes
+        if: steps.dev_container_changes.outputs.any_changed != 'true'
+        run: echo "No dev container definition changes detected; required dev container build gate passes without building."
+
   arm_CI:
     needs: [compile, changes]
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.code == 'true' }}
@@ -1579,7 +1701,7 @@ jobs:
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get install -y --no-install-recommends \
-                build-essential autoconf automake libtool libtool-bin \
+                build-essential autoconf autoconf-archive automake libtool libtool-bin \
                 pkg-config flex bison python3-docutils curl openssl \
                 libestr-dev libfastjson-dev libgnutls28-dev \
                 zlib1g-dev libgcrypt20-dev librelp-dev uuid-dev \

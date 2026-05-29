@@ -48,6 +48,7 @@ jobs:
             libfastjson \
             docutils \
             autoconf \
+            autoconf-archive \
             automake \
             libtool
 
