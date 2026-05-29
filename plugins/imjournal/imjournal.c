@@ -919,7 +919,10 @@ static void warnIfNewestJournalEntryIsInFuture(struct journalContext_s *journalC
     }
     now_usec = ((uint64_t)now.tv_sec * 1000000ULL) + ((uint64_t)now.tv_nsec / 1000ULL);
     if (now_usec < journalContext->nextFutureJournalProbeUsec) {
-        return;
+        if (journalContext->nextFutureJournalProbeUsec - now_usec <= FUTURE_JOURNAL_WARN_SKEW_USEC) {
+            return;
+        }
+        DBGPRINTF("imjournal: future-time probe detected backward clock jump; resetting throttle\n");
     }
     journalContext->nextFutureJournalProbeUsec = now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC;
 
