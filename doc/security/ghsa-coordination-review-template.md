@@ -135,9 +135,9 @@ Your task:
    affected versions, or publication timing. If maintainer validation notes are
    provided, draft a more substantial follow-up that clearly separates
    confirmed facts from open questions.
-12. Before the reporter response draft, include "Maintainer review before
-    sending" with any sentences that are risky, premature, too broad, or need
-    human confirmation.
+12. Before the reporter response draft, include a "Maintainer Review Before
+    Sending" section with any sentences that are risky, premature, too broad,
+    or need human confirmation.
 13. Suggest next maintainer steps, including validation, duplicate handling,
    fix/review, CVE decision, release coordination, downstream coordination, and
    publication checks.
