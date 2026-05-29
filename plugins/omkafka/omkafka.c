@@ -1419,7 +1419,7 @@ static void errorCallback(rd_kafka_t __attribute__((unused)) * rk,
     /* count kafka transport errors that cause action suspension */
     if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT) {
         STATSCOUNTER_INC(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
-    } else if (err == RD_KAFKA_RESP_ERR__TRANSPORT) {
+    } else if (err == RD_KAFKA_RESP_ERR__TRANSPORT || err == RD_KAFKA_RESP_ERR__RESOLVE) {
         STATSCOUNTER_INC(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
     } else if (err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN) {
         STATSCOUNTER_INC(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
@@ -1431,13 +1431,17 @@ static void errorCallback(rd_kafka_t __attribute__((unused)) * rk,
         STATSCOUNTER_INC(ctrKafkaRespOther, mutCtrKafkaRespOther);
     }
 
-    /* Handle common transport error codes*/
+    /* Suspend action on any error that means brokers are unreachable.
+     * RD_KAFKA_RESP_ERR__RESOLVE (-193) was missing from this list, causing
+     * host-resolution failures to bypass suspension and silence
+     * action.reportSuspension/reportSuspensionContinuation messages. */
     if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT || err == RD_KAFKA_RESP_ERR__TRANSPORT ||
-        err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN || err == RD_KAFKA_RESP_ERR__AUTHENTICATION ||
-        err == RD_KAFKA_RESP_ERR__SSL) {
-        /* Broker transport error, we need to disable the action for now!*/
-        pData->bIsSuspended = 1;
-        LogMsg(0, RS_RET_KAFKA_ERROR, LOG_WARNING, "omkafka: action will suspended due to kafka error %d: %s", err,
+        err == RD_KAFKA_RESP_ERR__RESOLVE || err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN ||
+        err == RD_KAFKA_RESP_ERR__AUTHENTICATION || err == RD_KAFKA_RESP_ERR__SSL) {
+        if (pData != NULL) {
+            pData->bIsSuspended = 1;
+        }
+        LogMsg(0, RS_RET_KAFKA_ERROR, LOG_WARNING, "omkafka: action suspended due to kafka error %d: %s", err,
                rd_kafka_err2str(err));
     } else {
         LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'", err, rd_kafka_err2str(err),
