@@ -1467,6 +1467,7 @@ TESTS_MMJSONTRANSFORM_MMJSONPARSE = \
 	data_pipeline-qradar.sh
 
 TESTS_MMDBLOOKUP = \
+    mmdb-open-missing.sh \
     mmdb.sh \
     mmdb-space.sh \
     mmdb-container.sh \
@@ -1475,6 +1476,7 @@ TESTS_MMDBLOOKUP = \
     mmdb-multilevel.sh
 
 TESTS_MMDBLOOKUP_VALGRIND = \
+    mmdb-open-missing-vg.sh \
     mmdb-vg.sh \
     mmdb-multilevel-vg.sh
 
