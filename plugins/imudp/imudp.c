@@ -306,6 +306,13 @@ static rsRetVal writeListenPortFile(const uchar *const pszLstnPortFileName, cons
     }
 
     len = snprintf(portBuf, sizeof(portBuf), "%u", listenPort);
+    portBuf[sizeof(portBuf) - 1] = '\0';
+    if (len < 0 || len >= (ssize_t)sizeof(portBuf)) {
+        LogError(0, RS_RET_IO_ERROR,
+                 "imudp: listenPortFileName: "
+                 "port string truncated or encoding error");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
     while (done < len) {
         const ssize_t written = write(fd, portBuf + done, (size_t)(len - done));
         if (written < 0) {
