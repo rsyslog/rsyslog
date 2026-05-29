@@ -154,6 +154,7 @@ struct instanceConf_s {
 #define DFLT_SEVERITY pri2sev(LOG_NOTICE)
 #define DFLT_FACILITY pri2fac(LOG_USER)
 #define DFLT_TAG "journal"
+#define FUTURE_JOURNAL_WARN_SKEW_USEC (60ULL * 1000000ULL)
 
 static int bLegacyCnfModGlobalsPermitted = 1; /* are legacy module-global config parameters permitted? */
 
@@ -179,13 +180,15 @@ struct journalContext_s { /* structure encapsulating all the journald_API-relate
     sd_journal *j; /* main object encapsulating journal for us, has to be used in every sd_journal*() call */
     sbool reloaded; /* we have reloaded journal after detecting rotation */
     sbool atHead; /* true if we are at start of journal (no seek was done) */
+    sbool warnedFutureJournalTime; /* warning already emitted for journal entries ahead of current system time */
+    uint64_t nextFutureJournalProbeUsec; /* next permitted future-time diagnostic probe */
     char *cursor; /* should point to last valid journald entry we processed */
 };
 
 #define MAX_JOURNAL 8
 static struct journalContext_s journalContextArray[MAX_JOURNAL] = {
-    {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL},
-    {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL},
+    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
+    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
@@ -899,6 +902,68 @@ finalize_it:
     RETiRet;
 }
 
+static void warnIfNewestJournalEntryIsInFuture(struct journalContext_s *journalContext) {
+    sd_journal *probe = NULL;
+    struct timespec now;
+    uint64_t tail_usec;
+    uint64_t now_usec;
+    int r;
+
+    if (journalContext->warnedFutureJournalTime) {
+        return;
+    }
+
+    if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+        DBGPRINTF("imjournal: future-time probe clock_gettime() failed: %d\n", errno);
+        goto done;
+    }
+    now_usec = ((uint64_t)now.tv_sec * 1000000ULL) + ((uint64_t)now.tv_nsec / 1000ULL);
+    if (now_usec < journalContext->nextFutureJournalProbeUsec) {
+        return;
+    }
+    journalContext->nextFutureJournalProbeUsec = now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC;
+
+    r = sd_journal_open(&probe, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_open() failed: %d\n", r);
+        goto done;
+    }
+
+    r = sd_journal_seek_tail(probe);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_seek_tail() failed: %d\n", r);
+        goto done;
+    }
+
+    r = sd_journal_previous(probe);
+    if (r <= 0) {
+        if (r < 0) {
+            DBGPRINTF("imjournal: future-time probe sd_journal_previous() failed: %d\n", r);
+        }
+        goto done;
+    }
+
+    r = sd_journal_get_realtime_usec(probe, &tail_usec);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_get_realtime_usec() failed: %d\n", r);
+        goto done;
+    }
+
+    if (tail_usec > now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+               "imjournal: sd_journal_next() reports no new entries, "
+               "but the newest journal entry timestamp is %llu seconds ahead of current system time; "
+               "journal delivery may remain stalled until system time catches up or the journal is repaired",
+               (unsigned long long)((tail_usec - now_usec) / 1000000ULL));
+        journalContext->warnedFutureJournalTime = 1;
+    }
+
+done:
+    if (probe != NULL) {
+        sd_journal_close(probe);
+    }
+}
+
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile) {
@@ -1148,6 +1213,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
             count++;
             etry->journalContext->atHead = 0;
+            etry->journalContext->warnedFutureJournalTime = 0;
             if (stateFile) {
                 /* TODO: This could use some finer metric. */
                 if ((count % cs.iPersistStateInterval) == 0) {
@@ -1168,6 +1234,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
                    "imjournal: "
                    "Journal indicates no msgs when positioned at head.\n");
         }
+        warnIfNewestJournalEntryIsInFuture(etry->journalContext);
 
         /* No new messages, wait for activity. */
         if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK) {
