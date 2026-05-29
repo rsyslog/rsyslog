@@ -1452,21 +1452,19 @@ static int compressionAutoDetect(const uchar *const buf, const size_t len, sbool
 
     probe.next_in = (Bytef *)buf;
     probe.avail_in = len;
-    do {
-        probe.next_out = out;
-        probe.avail_out = sizeof(out);
-        zRet = inflate(&probe, Z_SYNC_FLUSH);
-        if (sizeof(out) - probe.avail_out != 0 || zRet == Z_STREAM_END) {
-            *pIsCompressed = 1;
-            inflateEnd(&probe);
-            return 1;
-        }
-        if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
-            *pIsCompressed = 0;
-            inflateEnd(&probe);
-            return 1;
-        }
-    } while (probe.avail_out == 0);
+    probe.next_out = out;
+    probe.avail_out = sizeof(out);
+    zRet = inflate(&probe, Z_SYNC_FLUSH);
+    if (sizeof(out) - probe.avail_out != 0 || zRet == Z_STREAM_END) {
+        *pIsCompressed = 1;
+        inflateEnd(&probe);
+        return 1;
+    }
+    if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
+        *pIsCompressed = 0;
+        inflateEnd(&probe);
+        return 1;
+    }
 
     inflateEnd(&probe);
     if (len >= COMPRESS_AUTO_MAX_SNIFF_BYTES) {
