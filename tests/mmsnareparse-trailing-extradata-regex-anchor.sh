@@ -40,6 +40,6 @@ injectmsg_file ${RSYSLOG_DYNNAME}.input
 shutdown_when_empty
 wait_shutdown
 
-content_check '13,Microsoft-Windows-Sysmon/Operational,NT AUTHORITY\SYSTEM 123abc,' "$RSYSLOG_OUT_LOG"
+content_check --regex '^13,Microsoft-Windows-Sysmon/Operational,NT AUTHORITY\\SYSTEM 123abc,$' "$RSYSLOG_OUT_LOG"
 
 exit_test
