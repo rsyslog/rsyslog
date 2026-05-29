@@ -137,7 +137,10 @@ Definition list (Global Stats)
 
 Definition list (Local Stats)
 -----------------------------
-- **name** Identifier for the action-level statistics object. It includes the module name and the topic_consumer group pair in brackets. (eg: "name": "imkafka[topic_consumergroup]")
+- **name** Identifier for the action-level statistics object. It includes the
+  module name and the topic or comma-separated topic list plus consumer group
+  in brackets, for example ``"name": "imkafka[topic_consumergroup]"`` or
+  ``"name": "imkafka[topic1,topic2_consumergroup]"``.
 - **origin** The module that registered the counters; for these metrics it is always `"imkafka"`.
 - **received** Number of Kafka records fetched for this specific topic and consumer group since rsyslog start (or last reset).
 - **submitted** Number of messages successfully submitted into rsyslog’s processing pipeline for this topic and consumer group.
@@ -170,6 +173,24 @@ In this sample a consumer for the topic static is created and will forward the m
    module(load="imkafka")
    input(type="imkafka" topic="static" broker="localhost:9092"
                         consumergroup="default" ruleset="pRuleset")
+
+   ruleset(name="pRuleset") {
+        action(type="omfile" file="path/to/file")
+   }
+
+Example 2
+---------
+
+In this sample a consumer for multiple topics is created and will forward the messages to the omfile action.
+
+.. code-block:: none
+
+   module(load="imkafka")
+   input(type="imkafka"
+         topic=["topic1", "topic2", "topic3"]
+         broker="localhost:9092"
+         consumergroup="default"
+         ruleset="pRuleset")
 
    ruleset(name="pRuleset") {
    	action(type="omfile" file="path/to/file")
