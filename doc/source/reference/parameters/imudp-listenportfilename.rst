@@ -38,7 +38,10 @@ with ``listenPortFileName`` because one file would be ambiguous. Set
 with separate ``listenPortFileName`` values.
 
 When used with a nonzero single port, rsyslog writes the actual bound port
-number to the file after the bind succeeds.
+number to the file after the bind succeeds. The file is created with owner-only
+permissions when it does not already exist, and rsyslog refuses symlinks, FIFOs,
+and other special files. Configure this path in a trusted directory such as
+``/run/rsyslog`` rather than a directory writable by unprivileged users.
 
 Input usage
 -----------
@@ -47,7 +50,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imudp" port="0" listenPortFileName="/tmp/imudp.port")
+   input(type="imudp" port="0" listenPortFileName="/run/rsyslog/imudp.port")
 
 See also
 --------
