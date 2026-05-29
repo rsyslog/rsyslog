@@ -32,6 +32,7 @@ Source6: qpid-proton-0.38.0.tar.gz
 BuildRequires: make
 BuildRequires: gcc
 BuildRequires: autoconf
+BuildRequires: autoconf-archive
 BuildRequires: automake
 BuildRequires: bison
 BuildRequires: dos2unix

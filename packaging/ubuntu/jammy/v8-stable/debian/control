@@ -5,6 +5,7 @@ Maintainer: Andre Lorbach <alorbach@adiscon.com>
 XSBC-Original-Maintainer: Michael Biebl <biebl@debian.org>
 Build-Depends: debhelper-compat (= 12),
                dpkg-dev (>= 1.6.1),
+               autoconf-archive,
                autotools-dev (>= 20100122.1),
                libczmq-dev (>= 4.0.0),
                dh-autoreconf,
@@ -499,4 +500,3 @@ Description: HTTP input module for rsyslog
  receiving log messages via HTTP POST requests. It enables rsyslog to act
  as a lightweight HTTP server, accepting logs from applications or services
  that communicate over HTTP instead of traditional syslog protocols.
-

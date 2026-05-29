@@ -317,7 +317,7 @@ ENV	SCAN_BUILD=scan-build-9 \
 RUN	chmod o+rx /var/run/mysqld && ls -ld /var/run/mysqld
 
 ENV RSYSLOG_CONFIGURE_OPTIONS=" \
-	--enable-compile-warning=error \
+	--enable-compile-warnings=error \
 	--enable-clickhouse \
 	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \

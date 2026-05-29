@@ -71,10 +71,20 @@ static pthread_key_t keyThrdName;
 /* output the current thread ID to "relevant" places
  * (what "relevant" means is determinded by various ways)
  */
-void dbgOutputTID(char *name __attribute__((unused))) {
-#if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
+void dbgOutputTID(char *name) {
+#if defined(__APPLE__)
+    uint64_t tid;
+    if (pthread_threadid_np(NULL, &tid) == 0) {
+        if (bOutputTidToStderr) fprintf(stderr, "thread tid %llu, name '%s'\n", (unsigned long long)tid, name);
+        DBGPRINTF("thread created, tid %llu, name '%s'\n", (unsigned long long)tid, name);
+    }
+#elif defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
     if (bOutputTidToStderr) fprintf(stderr, "thread tid %u, name '%s'\n", (unsigned)syscall(SYS_gettid), name);
     DBGPRINTF("thread created, tid %u, name '%s'\n", (unsigned)syscall(SYS_gettid), name);
+#else
+    const unsigned long tid = (unsigned long)pthread_self();
+    if (bOutputTidToStderr) fprintf(stderr, "thread pthread id %lu, name '%s'\n", tid, name);
+    DBGPRINTF("thread created, pthread id %lu, name '%s'\n", tid, name);
 #endif
 }
 

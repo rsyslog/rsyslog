@@ -912,6 +912,9 @@ static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
 }
 
 static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOverallQueueSize) {
+#ifndef ENABLE_IMDIAG
+    (void)adjustOverallQueueSize;
+#endif
     if (pThis->iQueueSize > 0) {
 #ifdef ENABLE_IMDIAG
         if (adjustOverallQueueSize) {

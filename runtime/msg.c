@@ -3090,7 +3090,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
     uchar wrkbuf[100000];
     size_t dst_realloc_size;
     size_t dst_size;
-    uchar *dst_base;
+    uchar *dst_base = NULL;
     uchar *dst_w;
     uchar *newbuf;
     DEFiRet;
@@ -3219,7 +3219,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
         es_addBuf(dst, (const char *)dst_base, dst_w - dst_base);
     }
 finalize_it:
-    if (dst_base != wrkbuf) {
+    if (dst_base != NULL && dst_base != wrkbuf) {
         free(dst_base);
     }
     RETiRet;
