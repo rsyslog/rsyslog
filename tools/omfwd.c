@@ -1709,6 +1709,7 @@ finalize_it:
 BEGINcommitTransaction
     unsigned i;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
+    sbool bFlushRetry = 0;
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
      * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to the
@@ -1792,6 +1793,7 @@ BEGINcommitTransaction
             } else if (iRet == RS_RET_RETRY) {
                 DBGPRINTF("omfwd: TCP buffer flush deferred for retry to %s:%s\n", pWrkrData->target[j].target_name,
                           pWrkrData->target[j].port);
+                bFlushRetry = 1;
                 iRet = RS_RET_OK;
             } else {
                 LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
@@ -1817,11 +1819,15 @@ finalize_it:
      *   We determine this by calling countActiveTargets() and inspecting
      *   the atomic nActiveTargets value. When it is zero, the whole pool
      *   is unavailable and the action engine must enter retry logic.
-     * - If at least one target remains active, we keep returning OK here
-     *   so that the action is not suspended at pool level. Any buffered
-     *   frames for failed targets remain in that target's send buffer and
-     *   will be flushed once doTryResume() re-establishes the connection
-     *   on a subsequent transaction.
+     * - Also return RS_RET_SUSPENDED when a connected target reports
+     *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
+     *   connected, but the action engine still needs to schedule another commit
+     *   attempt for the retained buffered data.
+     * - If at least one target remains active and no flush retry is pending,
+     *   we keep returning OK here so that the action is not suspended at pool
+     *   level. Any buffered frames for failed targets remain in that target's
+     *   send buffer and will be flushed once doTryResume() re-establishes the
+     *   connection on a subsequent transaction.
      */
     /* do pool stats */
 
@@ -1829,11 +1835,11 @@ finalize_it:
     const int nActiveTargets =
         ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
-    if (nActiveTargets == 0) {
+    if (bFlushRetry || nActiveTargets == 0) {
         /*
-         * All pool members are currently unavailable. Only in this case we
-         * return RS_RET_SUSPENDED from commitTransaction, as required by the
-         * omfwd pool contract.
+         * All pool members are currently unavailable, or a connected target
+         * needs a retry to finish flushing retained TCP data. Return
+         * RS_RET_SUSPENDED so the action engine schedules retry handling.
          */
         iRet = RS_RET_SUSPENDED;
     }
