@@ -71,7 +71,7 @@ Context to consider:
   substantive follow-up. Treat this output as maintainer-draft material, not
   as an automatic acceptance, rejection, severity decision, or final advisory.
 - Keep first acknowledgements lightweight: status, missing information, and a
-  safe-to-send review are usually enough. Use the fuller evidence/confidence,
+  maintainer review before sending are usually enough. Use the fuller evidence/confidence,
   publication-blocker, and downstream-coordination sections for substantive
   responses or advisory drafts.
 - Keep the response collaborative and factual. Acknowledge useful work by the
