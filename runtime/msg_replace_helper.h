@@ -49,6 +49,9 @@ static inline rsRetVal msgReplaceRawMsgSegment(uchar **ppRawMsg,
                 return RS_RET_OUT_OF_MEMORY;
             }
             bufNew = tmp;
+            if (lenSuffix > 0) {
+                memmove(bufNew + offMSG + lenMSG, bufNew + offMSG + lenOldMSG, lenSuffix);
+            }
         }
     } else if (lenSuffix > 0 && lenMSG != lenOldMSG) {
         memmove(bufNew + offMSG + lenMSG, bufNew + offMSG + lenOldMSG, lenSuffix);
