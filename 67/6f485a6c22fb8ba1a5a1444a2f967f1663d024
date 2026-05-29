@@ -1,0 +1,24 @@
+plugins/imjournal/imjournal.c
+  s_6224eda96fc0da::t_430d57293c66c8 916-925
+  s_6224eda96fc0da::t_174d42e4ad28b3 905-915,926-966
+  s_6224eda96fc0da::t_347bda025b7e45 1216,1237
+  s_6224eda96fc0da::t_52fa84a173afba 157,183
+  s_6224eda96fc0da::t_09b8ef029965f9 184
+  s_6224eda96fc0da::t_02e22fd3e8bb05 190-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "676f485a6c22fb8ba1a5a1444a2f967f1663d024",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
