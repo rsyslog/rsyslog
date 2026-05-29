@@ -1644,8 +1644,22 @@ if test "x$enable_mmnormalize" = "xyes"; then
 		lognorm_turbo_supported="no"
 	else
 		AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_TURBO_SUPPORTED,[lognorm_turbo_supported="yes"],)
+		# The public Turbo API lives in the dedicated installed header
+		# lognorm-turbo.h (liblognorm >= 2.1.0). Older turbo builds defined
+		# LOGNORM_TURBO_SUPPORTED but only shipped internal headers, which we
+		# no longer use. Require the public header so we build strictly
+		# against the opaque contract.
+		lognorm_turbo_header_missing="no"
+		if test "x$lognorm_turbo_supported" = "xyes"; then
+			AC_CHECK_HEADER([lognorm-turbo.h],[],
+				[lognorm_turbo_supported="no"; lognorm_turbo_header_missing="yes"])
+		fi
 		if test "x$enable_turbo" = "xyes" -a "x$lognorm_turbo_supported" != "xyes"; then
-			AC_MSG_ERROR([--enable-turbo was requested but LOGNORM_TURBO_SUPPORTED is not defined in lognorm-features.h. Upgrade liblognorm or rebuild it with --enable-turbo.])
+			if test "x$lognorm_turbo_header_missing" = "xyes"; then
+				AC_MSG_ERROR([--enable-turbo was requested but the public header lognorm-turbo.h is missing. Upgrade liblognorm to >= 2.1.0 (built with --enable-turbo).])
+			else
+				AC_MSG_ERROR([--enable-turbo was requested but LOGNORM_TURBO_SUPPORTED is not defined in lognorm-features.h. Upgrade liblognorm or rebuild it with --enable-turbo.])
+			fi
 		fi
 	fi
 

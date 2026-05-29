@@ -40,9 +40,7 @@
 #include <liblognorm.h>
 #ifdef HAVE_LOGNORM_TURBO
     #include <lognorm-features.h>
-    #include <turbo.h>
-    #include <turbo_result_fast.h>
-    #include <turbo_snapshot.h>
+    #include <lognorm-turbo.h>
 #endif
 #include "conf.h"
 #include "syslogd-types.h"
@@ -427,24 +425,38 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
 
     nfields = ln_fast_result_field_count(result);
     for (i = 0; i < nfields; i++) {
-        const ln_fast_field_t *f = &result->fields[i];
+        /* Read the field through the public opaque accessor instead of
+         * reaching into the result struct, so mmnormalize depends only on
+         * lognorm-turbo.h and not on the internal fast-result layout. */
+        const char *fname = NULL;
+        size_t fname_len = 0;
+        unsigned ftype = 0;
+        const char *sval = NULL;
+        size_t slen = 0;
+        int64_t ival = 0;
+        double dval = 0;
         struct json_object *jval = NULL;
 
-        switch (f->type) {
+        /* flags out-param is NULL: nesting is detected via memchr below,
+         * which does not rely on the LN_FFIELD_NESTED flag being set. */
+        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len,
+                                           &ftype, NULL, &sval, &slen,
+                                           &ival, &dval) != 0)
+            continue;
+
+        switch (ftype) {
             case LN_FTYPE_STRING:
-                jval = json_object_new_string_len(f->v.str.ptr, f->v.str.len);
-                break;
             case LN_FTYPE_STRING_INLINE:
-                jval = json_object_new_string(f->v.inl);
+                jval = json_object_new_string_len(sval, (int)slen);
                 break;
             case LN_FTYPE_INT:
-                jval = json_object_new_int64(f->v.i);
+                jval = json_object_new_int64(ival);
                 break;
             case LN_FTYPE_DOUBLE:
-                jval = json_object_new_double(f->v.d);
+                jval = json_object_new_double(dval);
                 break;
             case LN_FTYPE_BOOL:
-                jval = json_object_new_boolean(f->v.b);
+                jval = json_object_new_boolean((json_bool)ival);
                 break;
             default:
                 continue;
@@ -462,27 +474,27 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
          * contract is now "no truncation, ever" for correctness. */
         char *name_ptr;
         char *heap_name = NULL;
-        if (f->name_len < MMNORM_MAX_FIELDNAME) {
-            memcpy(namebuf, f->name, f->name_len);
-            namebuf[f->name_len] = '\0';
+        if (fname_len < MMNORM_MAX_FIELDNAME) {
+            memcpy(namebuf, fname, fname_len);
+            namebuf[fname_len] = '\0';
             name_ptr = namebuf;
         } else {
-            heap_name = (char *)malloc(f->name_len + 1);
+            heap_name = (char *)malloc(fname_len + 1);
             if (heap_name == NULL) {
                 /* OOM: drop the field rather than truncate.  json_object
                  * created above must be released to avoid leaking. */
                 json_object_put(jval);
                 continue;
             }
-            memcpy(heap_name, f->name, f->name_len);
-            heap_name[f->name_len] = '\0';
+            memcpy(heap_name, fname, fname_len);
+            heap_name[fname_len] = '\0';
             name_ptr = heap_name;
         }
 
         /* Handle nested fields (dotted names).
          * Detect dots directly -- LN_FFIELD_NESTED flag is not
          * always set by liblognorm rule compilation. */
-        if (memchr(f->name, '.', f->name_len) != NULL) {
+        if (memchr(fname, '.', fname_len) != NULL) {
             struct json_object *parent = root;
             char *saveptr = NULL;
             char *tok = strtok_r(name_ptr, ".", &saveptr);
