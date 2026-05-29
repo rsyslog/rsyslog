@@ -1686,7 +1686,9 @@ static rsRetVal processMsg(targetData_t *__restrict__ const pTarget, actWrkrIPar
     } else {
         /* forward via TCP */
         iRet = tcpclt.Send(pTarget->pTCPClt, pTarget, (char *)psz, l);
-        if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry to %s:%s\n", pTarget->target_name, pTarget->port);
+        } else if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
             /* error! */
             LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending target", pTarget->target_name,
                      pTarget->port);
@@ -1787,6 +1789,10 @@ BEGINcommitTransaction
                               IS_FLUSH);
             if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                 pWrkrData->target[j].offsSndBuf = 0;
+            } else if (iRet == RS_RET_RETRY) {
+                DBGPRINTF("omfwd: TCP buffer flush deferred for retry to %s:%s\n", pWrkrData->target[j].target_name,
+                          pWrkrData->target[j].port);
+                iRet = RS_RET_OK;
             } else {
                 LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                        "omfwd: [wrkr %u] target %s:%s became unavailable during buffer flush. "
