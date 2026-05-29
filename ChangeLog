@@ -5,6 +5,16 @@ This release has many commits in regard to
   * testbench de-flaking
 These will not be mentioned individually, check commit log for details.
 
+- 2026-05-27: imptcp: add "stream:auto" compression mode
+  A single listener can now accept both zlib-compressed and plain
+  sessions from independent peers. The first two bytes of every new
+  session are matched against the zlib stream header (RFC 1950,
+  CMF=0x78, valid FCHECK, FDICT=0) and the per-session mode is
+  locked-in for the remainder of the connection, so the data path
+  stays branch-free after the initial probe. This enables staged
+  roll-outs of stream compression across large fleets of omfwd
+  clients without forking the receiver configuration.
+
 IMPORTANT FOR MAINTAINERS
 - libyaml support is now an explicit configure feature. It remains enabled by
   default and must be satisfied by package builds unless

@@ -30,7 +30,7 @@ class RainerScriptLexer(RegexLexer):
         'dyn_stats', 'percentile_stats', 'timezone', 'include',
         'reload_lookup_table'
     ]
-    
+
     # Built-in functions and system properties
     builtins = [
         'exec_template', 'lookup', 're_match', 're_extract', 'field', 'dyn_inc',
@@ -49,18 +49,18 @@ class RainerScriptLexer(RegexLexer):
             (r'\s+', Text),
             (r'#.*?\n', Comment.Single),
             (r'/\*', Comment.Multiline, 'comment'),
-            
+
             # Legacy syslog selectors at the start of a line
             (r'^\s*([a-zA-Z0-9\.\*]+;)?([a-zA-Z0-9\.\*]+)\.(=|!=|=,!=)?([a-zA-Z0-9\*]+)\s+',
              bygroups(Keyword.Namespace, Keyword.Namespace, Operator, Keyword.Namespace), 'legacy_action'),
             (r'^\s*:([a-zA-Z0-9_-]+),\s*(==|!=|<>|contains|startswith|endswith|re_match|re_extract)\s*"[^"]*"\s+',
              bygroups(Name.Tag, Operator.Word, String.Double), 'legacy_action'),
-            
+
             # RainerScript Keywords
             (r'\b(%s)\b' % '|'.join(keywords), Keyword.Reserved),
             (r'\b(%s)\b' % '|'.join(objects), Keyword.Declaration),
             (r'\b(on|off|yes|no|true|false)\b', Keyword.Constant),
-            
+
             # Operators
             (r'(&&|\|\||and|or|not)\b', Operator.Word),
             (r'(=|==|!=|<>|<=|>=|<|>|:=|contains_i|startswith_i|contains|startswith|endswith)', Operator),
@@ -81,13 +81,13 @@ class RainerScriptLexer(RegexLexer):
             # Numbers
             (r'\b(0x[0-9a-fA-F]+)\b', Number.Hex),
             (r'\b\d+\b', Number.Integer),
-            
+
             # Punctuation
             (r'[{}(),;\\\[\].&]', Punctuation),
-            
+
             # Identifiers
-            (r'[a-zA-Z_][a-zA-Z0-9_-]*', Name), # <<<--- THIS IS THE CHANGE: Added '-' to allowed identifier characters
-            
+            (r'[a-zA-Z_][a-zA-Z0-9_-]*', Name),  # <<<--- THIS IS THE CHANGE: Added '-' to allowed identifier characters
+
             # Legacy Directives
             (r'^\$\w+', Keyword.Pseudo),
         ],
@@ -121,9 +121,11 @@ class RainerScriptLexer(RegexLexer):
     }
 
 # --- Sphinx Extension setup function ---
+
+
 def setup(app):
     app.add_lexer('rainerscript', RainerScriptLexer)
-    app.add_lexer('rsyslog', RainerScriptLexer) 
+    app.add_lexer('rsyslog', RainerScriptLexer)
 
     return {
         'version': '0.1',

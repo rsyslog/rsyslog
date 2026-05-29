@@ -1,3 +1,4 @@
+#!/bin/sh
 # CREATE KEY
 #	openssl genpkey -algorithm RSA -out client-revoked-key.pem
 # CREATE REQEST

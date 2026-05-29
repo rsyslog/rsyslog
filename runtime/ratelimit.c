@@ -1719,6 +1719,13 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
 }
 
 
+static void ratelimitEnsureMutexInitialized(ratelimit_t *ratelimit) {
+    if (!ratelimit->bMutInitialized) {
+        pthread_mutex_init(&ratelimit->mut, NULL);
+        ratelimit->bMutInitialized = 1;
+    }
+}
+
 /* enable thread-safe operations mode. This make sure that
  * a single ratelimiter can be called from multiple threads. As
  * this causes some overhead and is not always required, it needs
@@ -1727,11 +1734,11 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
  */
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit) {
     ratelimit->bThreadSafe = 1;
-    pthread_mutex_init(&ratelimit->mut, NULL);
+    ratelimitEnsureMutexInitialized(ratelimit);
 }
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
     ratelimit->bNoTimeCache = 1;
-    pthread_mutex_init(&ratelimit->mut, NULL);
+    ratelimitEnsureMutexInitialized(ratelimit);
 }
 
 /* Severity level determines which messages are subject to
@@ -1751,7 +1758,7 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
         msgDestruct(&ratelimit->pMsg);
     }
     tellLostCnt(ratelimit);
-    if (ratelimit->bThreadSafe) pthread_mutex_destroy(&ratelimit->mut);
+    if (ratelimit->bMutInitialized) pthread_mutex_destroy(&ratelimit->mut);
 
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);

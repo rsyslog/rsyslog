@@ -53,6 +53,8 @@ RUN 	apt-get update && \
 	pkg-config \
 	postgresql-client \
 	python3-docutils \
+	python3-autopep8 \
+	pycodestyle \
 	python3-pip \
 	python3-pysnmp4 \
 	python3-pysnmp4-apps \
@@ -255,7 +257,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omjournal \
 	--disable-omkafka \
 	--enable-ommongodb \
-	--enable-omclickhouse \
+	--enable-clickhouse \
 	--enable-omprog \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \

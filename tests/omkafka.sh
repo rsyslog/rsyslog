@@ -10,7 +10,8 @@ export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -92,7 +93,7 @@ while [ $timecounter -lt $timeoutend ]; do
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
 		break
 	else
-		if [ "x$timecounter" == "x$timeoutend" ]; then
+			if [ "$timecounter" == "$timeoutend" ]; then
 			echo wait-kafka-lines failed, expected $TESTMESSAGESFULL got $count
 			shutdown_when_empty
 			wait_shutdown

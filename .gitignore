@@ -133,3 +133,6 @@ __pycache__/
 
 # Local machine-specific Codex notes
 AGENTS.local.md
+
+# Codex container validation marker
+.codex/container_validated.marker

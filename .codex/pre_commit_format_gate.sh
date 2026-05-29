@@ -174,7 +174,7 @@ except json.JSONDecodeError:
 if payload.get("hook_event_name") != "PreToolUse":
     sys.exit(0)
 
-if payload.get("tool_name") != "Bash":
+if payload.get("tool_name") not in {"Bash", "run_command"}:
     sys.exit(0)
 
 tool_input = payload.get("tool_input") or {}

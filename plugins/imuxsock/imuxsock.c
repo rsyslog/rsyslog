@@ -415,7 +415,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
         CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
         CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
     }
-    if (inst->pszRatelimitName != NULL || inst->ratelimitInterval > 0) {
+    if (inst->ratelimitInterval > 0) {
         if ((listeners[nfd].ht =
                  create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))ratelimitDestruct)) == NULL) {
             /* in this case, we simply turn off rate-limiting */
@@ -436,8 +436,8 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
     listeners[nfd].bCreatePath = inst->bCreatePath;
     listeners[nfd].sockName = ustrdup(inst->sockName);
-    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval ||
-                                inst->pszRatelimitName || inst->bAnnotate || inst->bUseSysTimeStamp)
+    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval > 0 ||
+                                inst->bAnnotate || inst->bUseSysTimeStamp)
                                    ? 1
                                    : 0;
     listeners[nfd].bAnnotate = inst->bAnnotate;
@@ -917,9 +917,11 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
     smsg_t *pMsg = NULL;
     int lenMsg;
     int offs;
+    int priDigitCount;
     int i;
     uchar *parse;
     syslog_pri_t pri;
+    sbool priValid;
     uchar bufParseTAG[CONF_TAG_MAXSIZE];
     struct syslogTime st;
     time_t tt;
@@ -942,10 +944,17 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
 
     parse++;
     pri = 0;
+    priDigitCount = 0;
     while (offs < lenMsg && isdigit(*parse)) {
         pri = pri * 10 + *parse - '0';
         ++parse;
         ++offs;
+        ++priDigitCount;
+    }
+    priValid = lenRcv >= 3 && pRcv[0] == '<' && priDigitCount >= 1 && priDigitCount <= 3 && offs < lenMsg &&
+               *parse == '>' && pri <= LOG_MAXPRI;
+    if (!priValid) {
+        pri = LOG_PRI_INVLD;
     }
 
     findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
@@ -1107,7 +1116,7 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         parser.SanitizeMsg(pMsg);
         lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
         msgSetPRI(pMsg, pri);
-        MsgSetAfterPRIOffs(pMsg, offs);
+        MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
 
         parse++;
         lenMsg--; /* '>' */
@@ -1290,7 +1299,7 @@ static rsRetVal activateListeners(void) {
             }
         }
 #endif
-        if (runModConf->pszRatelimitNameSysSock != NULL || runModConf->ratelimitIntervalSysSock > 0) {
+        if (runModConf->ratelimitIntervalSysSock > 0) {
             if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
@@ -1309,11 +1318,11 @@ static rsRetVal activateListeners(void) {
         listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
         listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
         listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-        listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock ||
-                                  runModConf->pszRatelimitNameSysSock || runModConf->bAnnotateSysSock ||
-                                  runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
-                                     ? 1
-                                     : 0;
+        listeners[0].bUseCreds =
+            (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock > 0 || runModConf->bAnnotateSysSock ||
+             runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
+                ? 1
+                : 0;
         listeners[0].bWritePid = runModConf->bWritePidSysSock;
         listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
         listeners[0].bParseTrusted = runModConf->bParseTrusted;

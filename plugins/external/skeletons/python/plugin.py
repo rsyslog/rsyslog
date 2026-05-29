@@ -8,11 +8,11 @@
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
- 
+
          http://www.apache.org/licenses/LICENSE-2.0
          -or-
          see COPYING.ASL20 in the source distribution
- 
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,11 +24,12 @@ import sys
 import select
 
 # skeleton config parameters
-pollPeriod = 0.75 # the number of seconds between polling for new messages
+pollPeriod = 0.75  # the number of seconds between polling for new messages
 maxAtOnce = 1024  # max nbr of messages that are processed within one batch
 
 # App logic global variables
-outfile = None # "define" global var that the app code needs
+outfile = None  # "define" global var that the app code needs
+
 
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
@@ -84,13 +85,13 @@ with open("/tmp/logfile", "a+") as outfile:
                     line = sys.stdin.readline()
                     if line:
                         msgs.append(line)
-                    else: # an empty line means stdin has been closed
+                    else:  # an empty line means stdin has been closed
                         keepRunning = 0
                     msgsInBatch = msgsInBatch + 1
                     if msgsInBatch >= maxAtOnce:
                         break
                 if len(msgs) > 0:
                     onReceive(msgs)
-                    sys.stdout.flush() # very important, Python buffers far too much!
+                    sys.stdout.flush()  # very important, Python buffers far too much!
     finally:
         onExit()

@@ -232,6 +232,7 @@ typedef struct serverData_s {
     CURL *curlCheckConnHandle; /* libcurl session handle for checking the server connection */
     CURL *curlPostHandle; /* libcurl session handle for posting data to the server */
     HEADER *curlHeader; /* json POST request info */
+    HEADER *curlCheckHeader; /* health-check request headers */
     uchar *fullUrlPost; /* Keep the full url in cache if dynRestPath is off else last URL used */
     uchar *fullUrlHealth; /* Keep the full url healthCheck in cache */
     uchar *restPATH; /* Keep restPath last used */
@@ -393,6 +394,7 @@ BEGINcreateWrkrInstance
         pWrkrData->listServerDataWkr[i]->curlCheckConnHandle = NULL;
         pWrkrData->listServerDataWkr[i]->curlPostHandle = NULL;
         pWrkrData->listServerDataWkr[i]->curlHeader = NULL;
+        pWrkrData->listServerDataWkr[i]->curlCheckHeader = NULL;
         pWrkrData->listServerDataWkr[i]->fullUrlPost = NULL;
         pWrkrData->listServerDataWkr[i]->fullUrlHealth = NULL;
         pWrkrData->listServerDataWkr[i]->restPATH = NULL;
@@ -1040,7 +1042,9 @@ static rsRetVal msgAddResponseMetadata(smsg_t *const __restrict__ pMsg,
         json_object_object_add(json, "body", json_object_new_string_len(pWrkrData->reply, (int)cappedLen));
     }
     json_object_object_add(json, "batch_index", json_object_new_int(batch_index));
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!omhttp!response", json, 0, 0));
+    struct json_object *const toAdd = json;
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!omhttp!response", toAdd, 0, 0));
 
     /* TODO: possible future, an option to automatically parse to json?
         would be under:
@@ -1418,8 +1422,10 @@ finalize_it:
         slist = temp;                                \
     } while (0);
 
-static rsRetVal ATTR_NONNULL()
-    buildCurlHeaders(wrkrInstanceData_t *pWrkrData, serverData_t *serverData, sbool contentEncodeGzip) {
+static rsRetVal ATTR_NONNULL() buildCurlHeaders(wrkrInstanceData_t *pWrkrData,
+                                                serverData_t *serverData,
+                                                HEADER **targetHeader,
+                                                sbool contentEncodeGzip) {
     struct curl_slist *slist = NULL;
     /* Optimization: Temp pointer to capture return without losing list on error */
     struct curl_slist *temp = NULL;
@@ -1474,8 +1480,9 @@ static rsRetVal ATTR_NONNULL()
         SAFE_APPEND(HTTP_HEADER_ENCODING_GZIP);
     }
 
-    curl_slist_free_all(serverData->curlHeader);
-    serverData->curlHeader = slist;
+    curl_slist_free_all(*targetHeader);
+    *targetHeader = slist;
+    slist = NULL;
     serverData->gzipHeaderEnabled = contentEncodeGzip;
 
 finalize_it:
@@ -1550,13 +1557,13 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(wrkrInstanceData_t *pWrkrData,
          * Set Header if first request to the destination server
          */
         if (serverData->curlHeader == NULL) {
-            CHKiRet(buildCurlHeaders(pWrkrData, serverData, compressed));
+            CHKiRet(buildCurlHeaders(pWrkrData, serverData, &serverData->curlHeader, compressed));
             curl_easy_setopt(serverData->curlPostHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
         }
     }
 
     if (serverData->curlHeader == NULL || serverData->gzipHeaderEnabled != compressed) {
-        CHKiRet(buildCurlHeaders(pWrkrData, serverData, compressed));
+        CHKiRet(buildCurlHeaders(pWrkrData, serverData, &serverData->curlHeader, compressed));
         curl_easy_setopt(serverData->curlPostHandle, CURLOPT_HTTPHEADER, serverData->curlHeader);
     }
 
@@ -2115,6 +2122,7 @@ static void ATTR_NONNULL()
 static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData, serverData_t *serverData) {
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curlSetupCommon(pWrkrData, serverData, serverData->curlCheckConnHandle);
+    curl_easy_setopt(serverData->curlCheckConnHandle, CURLOPT_HTTPHEADER, serverData->curlCheckHeader);
     curl_easy_setopt(serverData->curlCheckConnHandle, CURLOPT_TIMEOUT_MS, pWrkrData->pData->healthCheckTimeout);
 }
 
@@ -2145,7 +2153,8 @@ static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *const pWrkrData) {
     for (i = 0; i < pWrkrData->pData->numServers; i++) {
         serverData = pWrkrData->listServerDataWkr[i];
         assert(serverData != NULL);
-        CHKiRet(buildCurlHeaders(pWrkrData, serverData, 0));
+        CHKiRet(buildCurlHeaders(pWrkrData, serverData, &serverData->curlHeader, 0));
+        CHKiRet(buildCurlHeaders(pWrkrData, serverData, &serverData->curlCheckHeader, 0));
         CHKmalloc(serverData->curlCheckConnHandle = curl_easy_init());
         CHKmalloc(serverData->curlPostHandle = curl_easy_init());
         curlPostSetup(pWrkrData, serverData);
@@ -2178,6 +2187,8 @@ static void cleanupServerData(serverData_t *serverData) {
     serverData->restPATH = NULL;
     curl_slist_free_all(serverData->curlHeader);
     serverData->curlHeader = NULL;
+    curl_slist_free_all(serverData->curlCheckHeader);
+    serverData->curlCheckHeader = NULL;
     serverData->gzipHeaderEnabled = 0;
 }
 
@@ -2394,12 +2405,13 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
                     pData->nHttpHeaders = 1;
                     pData->httpHeaders[0] = (uchar *)es_str2cstr(tmpHeader, NULL);
                 } else {
-                    pData->httpHeaders = realloc(pData->httpHeaders, sizeof(uchar *) * (pData->nHttpHeaders + 1));
-                    if (pData->httpHeaders == NULL) {
+                    uchar **new_headers = realloc(pData->httpHeaders, sizeof(uchar *) * (pData->nHttpHeaders + 1));
+                    if (new_headers == NULL) {
                         LogError(0, RS_RET_OUT_OF_MEMORY, "omhttp: error reallocating httpHeaders for auth token");
                         es_deleteStr(tmpHeader);
                         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                     }
+                    pData->httpHeaders = new_headers;
 
                     pData->httpHeaders[pData->nHttpHeaders] = (uchar *)es_str2cstr(tmpHeader, NULL);
                     pData->nHttpHeaders += 1;

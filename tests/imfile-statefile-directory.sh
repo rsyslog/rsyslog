@@ -21,7 +21,7 @@ shutdown_when_empty
 wait_shutdown
 seq_check 0 0 # check we got the messages correctly
 # and also check state file name is correct:
-# shellcheck disable=SC2012  - we do not display (or even use) the file name
+	# shellcheck disable=SC2012 # We do not display or use the file name.
 inode=$(ls -i "$RSYSLOG_DYNNAME.input"|awk '{print $1}')
 if [ ! -f "$RSYSLOG_DYNNAME.statefiles/imfile-state:$inode" ]; then
 	printf 'FAIL: state file name incorrect,\nexpected \"%s\"\nstatefiles dir is:\n' \

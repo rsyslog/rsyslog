@@ -308,11 +308,12 @@ static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const
 static rsRetVal resolveDNS(smsg_t *const pMsg) {
     rsRetVal localRet;
     prop_t *propFromHost = NULL;
-    prop_t *ip;
-    prop_t *localName;
+    prop_t *ip = NULL;
+    prop_t *localName = NULL;
     prop_t *port = NULL;
     char portbuf[8];
     uint16_t pnum;
+    const struct sockaddr_storage *pfrominet;
     DEFiRet;
 
     MsgLock(pMsg);
@@ -324,15 +325,12 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
         }
         if (localRet == RS_RET_OK) {
-            /* we pass down the props, so no need for AddRef */
-            MsgSetRcvFromWithoutAddRef(pMsg, localName);
-            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
-
+            pfrominet = pMsg->rcvFrom.pfrominet;
             if (pMsg->pRcvFromPort == NULL) {
-                if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET)
-                    pnum = ntohs(((struct sockaddr_in *)pMsg->rcvFrom.pfrominet)->sin_port);
-                else if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET6)
-                    pnum = ntohs(((struct sockaddr_in6 *)pMsg->rcvFrom.pfrominet)->sin6_port);
+                if (pfrominet != NULL && pfrominet->ss_family == AF_INET)
+                    pnum = ntohs(((const struct sockaddr_in *)pfrominet)->sin_port);
+                else if (pfrominet != NULL && pfrominet->ss_family == AF_INET6)
+                    pnum = ntohs(((const struct sockaddr_in6 *)pfrominet)->sin6_port);
                 else
                     pnum = 0;
                 snprintf(portbuf, sizeof(portbuf), "%u", pnum);
@@ -340,6 +338,11 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
                 MsgSetRcvFromPortWithoutAddRef(pMsg, port);
                 port = NULL;
             }
+            /* we pass down the props, so no need for AddRef */
+            MsgSetRcvFromWithoutAddRef(pMsg, localName);
+            localName = NULL;
+            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
+            ip = NULL;
         }
     }
 finalize_it:
@@ -350,6 +353,8 @@ finalize_it:
     }
     MsgUnlock(pMsg);
     if (propFromHost != NULL) prop.Destruct(&propFromHost);
+    if (localName != NULL) prop.Destruct(&localName);
+    if (ip != NULL) prop.Destruct(&ip);
     if (port != NULL) prop.Destruct(&port);
     RETiRet;
 }
@@ -2002,6 +2007,16 @@ rsRetVal MsgSetFlowControlType(smsg_t *const pMsg, flowControl_t eFlowCtl) {
  */
 rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
     assert(pMsg != NULL);
+    assert(offs >= 0 && offs <= pMsg->iLenRawMsg);
+    if (offs < 0 || offs > pMsg->iLenRawMsg) {
+        pMsg->offAfterPRI = 0;
+        return RS_RET_ERR;
+    }
+    if (offs > 0) {
+        assert(pMsg->pszRawMsg != NULL);
+        assert(pMsg->pszRawMsg[0] == '<');
+        assert(pMsg->pszRawMsg[offs - 1] == '>');
+    }
     pMsg->offAfterPRI = offs;
     return RS_RET_OK;
 }
@@ -2288,10 +2303,18 @@ static void ATTR_NONNULL(1) tryEmulateTAG(smsg_t *const pM, const sbool bLockMut
             /* no process ID, use APP-NAME only */
             MsgSetTAG(pM, (uchar *)getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
         } else {
+            int snRet;
             /* now we can try to emulate */
-            lenTAG = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
-                              getPROCID(pM, MUTEX_ALREADY_LOCKED));
+            snRet = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+                             getPROCID(pM, MUTEX_ALREADY_LOCKED));
             bufTAG[sizeof(bufTAG) - 1] = '\0'; /* just to make sure... */
+            if (snRet < 0) {
+                lenTAG = 0;
+            } else if ((size_t)snRet >= sizeof(bufTAG)) {
+                lenTAG = sizeof(bufTAG) - 1;
+            } else {
+                lenTAG = snRet;
+            }
             MsgSetTAG(pM, bufTAG, lenTAG);
         }
         /* Signal change in TAG for acquireProgramName */
@@ -2650,6 +2673,18 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, msg);
     assert(pszMSG != NULL);
+
+    if (pThis->pszRawMsg == NULL) {
+        pThis->pszRawMsg = pThis->szRawMsg;
+        pThis->szRawMsg[0] = '\0';
+    }
+
+    if (pThis->offMSG < 0 || pThis->offMSG > pThis->iLenRawMsg) {
+        pThis->offMSG = pThis->iLenRawMsg;
+        pThis->iLenMSG = 0;
+    } else if (pThis->iLenMSG < 0 || pThis->iLenMSG > pThis->iLenRawMsg - pThis->offMSG) {
+        pThis->iLenMSG = pThis->iLenRawMsg - pThis->offMSG;
+    }
 
     lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
     if (lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {

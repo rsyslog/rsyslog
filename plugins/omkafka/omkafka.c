@@ -1128,32 +1128,37 @@ static void deliveryCallback(rd_kafka_t __attribute__((unused)) * rk,
                              void *opaque) {
     instanceData *const pData = (instanceData *)opaque;
     failedmsg_entry *fmsgEntry;
+    const char *const topicname = (rkmessage->rkt != NULL) ? rd_kafka_topic_name(rkmessage->rkt) : (char *)pData->topic;
+    const char *const logTopic = (topicname != NULL) ? topicname : "[unknown]";
+    const char *const payload = (rkmessage->payload != NULL) ? rkmessage->payload : "";
+    const size_t payloadLen = (rkmessage->payload != NULL) ? rkmessage->len : 0;
+    const int payloadLogLen = (payloadLen > 0 && (payload[payloadLen - 1] == '\n' || payload[payloadLen - 1] == '\0'))
+                                  ? (int)payloadLen - 1
+                                  : (int)payloadLen;
+    const char *const key = (rkmessage->key != NULL) ? rkmessage->key : "";
+    const size_t keyLen = (rkmessage->key != NULL) ? rkmessage->key_len : 0;
     DEFiRet;
 
     if (rkmessage->err) {
         updateKafkaFailureCounts(rkmessage->err);
 
         /* Put into kafka queue, again if configured! */
-        if (pData->bResubmitOnFailure) {
+        if (pData->bResubmitOnFailure && rkmessage->payload != NULL) {
             DBGPRINTF(
                 "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' -"
                 " adding to FAILED MSGs for RETRY!\n",
-                rd_kafka_topic_name(rkmessage->rkt), (int)(rkmessage->len - 1), (char *)rkmessage->payload,
-                (int)(rkmessage->key_len), (char *)rkmessage->key);
-            CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->key, rkmessage->key_len, rkmessage->payload,
-                                                            rkmessage->len, rd_kafka_topic_name(rkmessage->rkt)));
+                logTopic, payloadLogLen, payload, (int)keyLen, key);
+            CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->key, keyLen, payload, payloadLen, logTopic));
             SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
         } else {
-            LogError(0, RS_RET_ERR, "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
-                     rd_kafka_topic_name(rkmessage->rkt), (int)(rkmessage->len - 1), (char *)rkmessage->payload,
-                     (int)(rkmessage->key_len), (char *)rkmessage->key);
-            writeDataError(pData, (char *)rkmessage->payload, rkmessage->len, rkmessage->err);
+            LogError(0, RS_RET_ERR, "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n", logTopic,
+                     payloadLogLen, payload, (int)keyLen, key);
+            writeDataError(pData, payload, payloadLen, rkmessage->err);
         }
         STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
         INST_STATSCOUNTER_INC(pData, pData->ctrKafkaFail, pData->mutCtrKafkaFail);
     } else {
-        DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len - 1),
-                  (char *)rkmessage->payload);
+        DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", payloadLogLen, payload);
         STATSCOUNTER_INC(ctrKafkaAck, mutCtrKafkaAck);
         INST_STATSCOUNTER_INC(pData, pData->ctrKafkaAck, pData->mutCtrKafkaAck);
     }
@@ -1712,7 +1717,7 @@ static rsRetVal loadFailedMsgs(instanceData *const __restrict__ pData) {
         } else {
             puStr = rsCStrGetSzStrNoNULL(pCStr);  // topic
             pStrTabPos = index((char *)puStr, '\t');  // key
-            pStrTabPos2 = index((char *)pStrTabPos + 1, '\t');  // msg
+            pStrTabPos2 = (pStrTabPos == NULL) ? NULL : index((char *)pStrTabPos + 1, '\t');  // msg
             if ((pStrTabPos != NULL) && (pStrTabPos2 != NULL)) {
                 *pStrTabPos = '\0'; /* split string into two */
                 *pStrTabPos2 = '\0'; /* split string into two */

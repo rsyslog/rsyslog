@@ -24,5 +24,5 @@ echo "--------------------------------"
 echo "--------------------------------"
 echo "--- Sync RPM REPO and update GIT "
 ./sync_remote.sh
-git pull && yes | cp -rf etc-mock/* /etc/mock/
+git pull && cp -rf etc-mock/* /etc/mock/
 chown -R pkg ./ 

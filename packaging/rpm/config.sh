@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # RPM build configuration for rsyslog packaging/rpm/
 # Sourced by build-rpms.sh and other scripts.
 

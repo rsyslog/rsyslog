@@ -8,7 +8,7 @@
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
- 
+
          http://www.apache.org/licenses/LICENSE-2.0
          -or-
          see COPYING.ASL20 in the source distribution
@@ -27,6 +27,7 @@ import json
 # currently none
 
 # App logic global variables
+
 
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
@@ -47,6 +48,7 @@ def onReceive(msg):
        reply before the next message is pushed to this module).
     """
     print(json.dumps({"$!": {"sometag": "somevalue"}}))
+
 
 def onExit():
     """ Do everything that is needed to finish processing (e.g.
@@ -74,10 +76,10 @@ keepRunning = 1
 while keepRunning == 1:
     msg = sys.stdin.readline()
     if msg:
-        msg = msg[:-1] # remove LF
+        msg = msg[:-1]  # remove LF
         onReceive(msg)
-        sys.stdout.flush() # very important, Python buffers far too much!
-    else: # an empty line means stdin has been closed
+        sys.stdout.flush()  # very important, Python buffers far too much!
+    else:  # an empty line means stdin has been closed
         keepRunning = 0
 onExit()
-sys.stdout.flush() # very important, Python buffers far too much!
+sys.stdout.flush()  # very important, Python buffers far too much!

@@ -15,7 +15,7 @@ action(type="omjournal" template="outfmt")
 '
 
 # we generate a cookie so that we can find our record in journal
-COOKIE=`date`
+COOKIE=$(date)
 echo "COOKIE: $COOKIE"
 startup
 tcpflood -m1 -M "\"<133>2011-03-01T11:22:12Z host tag msgh RsysLoG-TESTBENCH $COOKIE\""

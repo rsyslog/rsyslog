@@ -44,10 +44,10 @@ shutdown_when_empty
 wait_shutdown
 
 $PYTHON $srcdir/elasticsearch-error-format-check.py erroronly
-
-if [ $? -ne 0 ]
+ret=$?
+if [ "$ret" -ne 0 ]
 then
-    echo "error: Format for error file different! " $?
+    echo "error: Format for error file different! " "$ret"
     error_exit 1
 fi
 exit_test

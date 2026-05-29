@@ -12,7 +12,8 @@ echo "CC $CC, SCANBUILD $SCANBUILD"
 
 if [ -n "$SCAN_BUILD_REPORT_DIR" ]
 then
-  export CURR_REPORT=`date +%y-%m-%d_%H-%M-%S`
+  CURR_REPORT=$(date +%y-%m-%d_%H-%M-%S)
+  export CURR_REPORT
   export REPORT_DIR="$SCAN_BUILD_REPORT_DIR/$CURR_REPORT"
   export REPORT_OPT="-o $REPORT_DIR"
 fi

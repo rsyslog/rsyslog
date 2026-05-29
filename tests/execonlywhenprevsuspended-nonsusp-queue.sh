@@ -30,7 +30,7 @@ startup
 injectmsg 0 1000
 shutdown_when_empty
 wait_shutdown
-ls *.out.log
+ls ./*.out.log
 seq_check 0 999
 if [ -e ${RSYSLOG2_OUT_LOG} ]; then
     echo "error: \"suspended\" file exists, first 10 lines:"

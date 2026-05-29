@@ -148,7 +148,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 header_lower = header.lower()
                 if header_lower not in ('host', 'connection', 'proxy-authorization'):
                     req_headers[header] = value
-            
+
             # Set Host header to target server
             req_headers['Host'] = f"{proxy_metadata['target_host']}:{proxy_metadata['target_port']}"
 
@@ -246,4 +246,3 @@ if __name__ == '__main__':
         if args.data_file and proxy_metadata['requests']:
             with open(args.data_file, 'w') as f:
                 json.dump(proxy_metadata['requests'], f, indent=2)
-

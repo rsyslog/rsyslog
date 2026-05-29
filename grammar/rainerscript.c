@@ -3530,7 +3530,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
     int bMustFree, bMustFree2;
     int64_t n_r, n_l;
     int convok_r, convok_l;
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     int ret;
 
     cnfexprEval(expr->l, &l, usrptr, pWti);
@@ -3566,7 +3566,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                                 struct svar *__restrict__ const ret,
                                 void *__restrict__ const usrptr,
                                 wti_t *__restrict__ const pWti) {
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
     int convok_r, convok_l;
     int bMustFree, bMustFree2;
@@ -3595,7 +3595,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l == r.d.n); /*CMP*/
+                            ret->d.n = (n_l == var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree);
                             ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
@@ -3617,7 +3617,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l == r.d.n); /*CMP*/
+                            ret->d.n = (n_l == var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree2);
                             ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
@@ -3639,7 +3639,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                         if (bMustFree) es_deleteStr(estr_l);
                     }
                 } else {
-                    ret->d.n = (l.d.n == r.d.n); /*CMP*/
+                    ret->d.n = (l.d.n == var2Number(&r, NULL)); /*CMP*/
                 }
                 varFreeMembers(&r);
             }
@@ -3647,7 +3647,6 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
             break;
         case CMP_NE:
             cnfexprEval(expr->l, &l, usrptr, pWti);
-            cnfexprEval(expr->r, &r, usrptr, pWti);
             ret->datatype = 'N';
             if (l.datatype == 'S') {
                 if (expr->r->nodetype == 'S') {
@@ -3655,35 +3654,46 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                 } else if (expr->r->nodetype == 'A') {
                     ret->d.n = evalStrArrayCmp(l.d.estr, (struct cnfarray *)expr->r, CMP_NE);
                 } else {
+                    cnfexprEval(expr->r, &r, usrptr, pWti);
                     if (r.datatype == 'S') {
                         ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l != r.d.n); /*CMP*/
+                            ret->d.n = (n_l != var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree);
                             ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
                             if (bMustFree) es_deleteStr(estr_r);
                         }
                     }
+                    varFreeMembers(&r);
                 }
             } else if (l.datatype == 'J') {
                 estr_l = var2String(&l, &bMustFree);
-                if (r.datatype == 'S') {
-                    ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
+                if (expr->r->nodetype == 'S') {
+                    ret->d.n = es_strcmp(estr_l, ((struct cnfstringval *)expr->r)->estr); /*CMP*/
+                } else if (expr->r->nodetype == 'A') {
+                    ret->d.n = evalStrArrayCmp(estr_l, (struct cnfarray *)expr->r, CMP_NE);
                 } else {
-                    n_l = var2Number(&l, &convok_l);
-                    if (convok_l) {
-                        ret->d.n = (n_l != r.d.n); /*CMP*/
+                    cnfexprEval(expr->r, &r, usrptr, pWti);
+                    if (r.datatype == 'S') {
+                        ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
                     } else {
-                        estr_r = var2String(&r, &bMustFree2);
-                        ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
-                        if (bMustFree2) es_deleteStr(estr_r);
+                        n_l = var2Number(&l, &convok_l);
+                        if (convok_l) {
+                            ret->d.n = (n_l != var2Number(&r, NULL)); /*CMP*/
+                        } else {
+                            estr_r = var2String(&r, &bMustFree2);
+                            ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
+                            if (bMustFree2) es_deleteStr(estr_r);
+                        }
                     }
+                    varFreeMembers(&r);
                 }
                 if (bMustFree) es_deleteStr(estr_l);
             } else {
+                cnfexprEval(expr->r, &r, usrptr, pWti);
                 if (r.datatype == 'S') {
                     n_r = var2Number(&r, &convok_r);
                     if (convok_r) {
@@ -3694,10 +3704,11 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                         if (bMustFree) es_deleteStr(estr_l);
                     }
                 } else {
-                    ret->d.n = (l.d.n != r.d.n); /*CMP*/
+                    ret->d.n = (l.d.n != var2Number(&r, NULL)); /*CMP*/
                 }
+                varFreeMembers(&r);
             }
-            FREE_BOTH_RET;
+            varFreeMembers(&l);
             break;
         case CMP_LE:
             ret->datatype = 'N';
@@ -5731,7 +5742,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     const char *finalName;
     int i;
     int result;
-    glob_t cfgFiles;
+    glob_t cfgFiles = {0};
     int ret = 0;
     struct stat fileInfo;
     struct stat linkInfo;
@@ -5753,13 +5764,15 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
 /* Use GLOB_MARK to append a trailing slash for directories. */
 /* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
 #ifdef HAVE_GLOB_NOMAGIC
-    /* Silently ignore wildcards that match nothing */
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {
 #else
     result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
 #endif /* HAVE_GLOB_NOMAGIC */
+        if (optional == 0) {
+            parser_warnmsg("IncludeConfig pattern '%s' did not match any files", finalName);
+        }
         goto done;
     }
 

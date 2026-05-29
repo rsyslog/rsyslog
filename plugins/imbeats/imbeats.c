@@ -499,8 +499,9 @@ static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *cons
     /* TODO: representation mode is intentionally Elasticsearch-oriented for v1.
      * Revisit later whether this should be configurable (for example $! vs $!beats).
      */
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!", json, 0, 0));
+    iRet = msgAddJSON(pMsg, (uchar *)"!", json, 0, 0);
     json = NULL;
+    CHKiRet(iRet);
 
     CHKmalloc(meta = json_object_new_object());
     fjson_object_object_add(meta, "protocol", json_object_new_string("lumberjack-v2"));
@@ -516,8 +517,9 @@ static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *cons
         snprintf(portbuf, sizeof(portbuf), "%s", sess->fromHostPortStr);
         fjson_object_object_add(meta, "peer_port", json_object_new_string(portbuf));
     }
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!imbeats", meta, 1, 0));
+    iRet = msgAddJSON(pMsg, (uchar *)"!metadata!imbeats", meta, 1, 0);
     meta = NULL;
+    CHKiRet(iRet);
 
     CHKiRet(submitMsg2(pMsg));
     STATSCOUNTER_INC(statsCounter.ctrEventsSubmitted, statsCounter.mutCtrEventsSubmitted);

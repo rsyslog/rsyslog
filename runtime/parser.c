@@ -514,38 +514,72 @@ finalize_it:
     RETiRet;
 }
 
+/* Helper to compute the offset immediately after the initial PRI.
+ * Returns the offset of the first byte after the closing '>' if a valid
+ * PRI is found, or -1 if the message does not start with a valid PRI.
+ * Valid PRI format is '<' followed by 1 to 3 decimal digits and '>'.
+ * The PRI value must also be <= LOG_MAXPRI (191).
+ */
+static int compute_off_after_pri(const uchar *buf, size_t len, int *pri) {
+    if (len < 3 || buf[0] != '<') {
+        return -1;
+    }
+    if (isdigit(buf[1]) && buf[2] == '>') {
+        if (pri != NULL) {
+            *pri = buf[1] - '0';
+        }
+        return 3;
+    }
+    if (len >= 4 && isdigit(buf[1]) && isdigit(buf[2]) && buf[3] == '>') {
+        if (pri != NULL) {
+            *pri = (buf[1] - '0') * 10 + (buf[2] - '0');
+        }
+        return 4;
+    }
+    if (len >= 5 && isdigit(buf[1]) && isdigit(buf[2]) && isdigit(buf[3]) && buf[4] == '>') {
+        int val = (buf[1] - '0') * 100 + (buf[2] - '0') * 10 + (buf[3] - '0');
+        if (val <= LOG_MAXPRI) {
+            if (pri != NULL) {
+                *pri = val;
+            }
+            return 5;
+        }
+    }
+    return -1;
+}
+
 /* A standard parser to parse out the PRI. This is made available in
  * this module as it is expected that allmost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
 static rsRetVal ParsePRI(smsg_t *pMsg) {
     syslog_pri_t pri;
-    uchar *msg;
-    int lenMsg;
     DEFiRet;
 
     /* pull PRI */
-    lenMsg = pMsg->iLenRawMsg;
-    msg = pMsg->pszRawMsg;
     pri = DEFUPRI;
     if (pMsg->msgFlags & NO_PRI_IN_RAW) {
         /* In this case, simply do so as if the pri would be right at top */
+        msgSetPRI(pMsg, pri);
         MsgSetAfterPRIOffs(pMsg, 0);
     } else {
-        if (*msg == '<') {
-            pri = 0;
-            while (--lenMsg > 0 && isdigit((int)*++msg) && pri <= LOG_MAXPRI) {
-                pri = 10 * pri + (*msg - '0');
-            }
-            if (*msg == '>') {
-                ++msg;
+        if (pMsg->iLenRawMsg > 0 && pMsg->pszRawMsg[0] == '<') {
+            int parsed_pri = 0;
+            int offs = compute_off_after_pri(pMsg->pszRawMsg, pMsg->iLenRawMsg, &parsed_pri);
+            if (offs != -1) {
+                pri = parsed_pri;
+                msgSetPRI(pMsg, pri);
+                MsgSetAfterPRIOffs(pMsg, offs);
             } else {
                 pri = LOG_PRI_INVLD;
+                msgSetPRI(pMsg, pri);
+                MsgSetAfterPRIOffs(pMsg, 0);
             }
-            if (pri > LOG_MAXPRI) pri = LOG_PRI_INVLD;
+        } else {
+            pri = DEFUPRI;
+            msgSetPRI(pMsg, pri);
+            MsgSetAfterPRIOffs(pMsg, 0);
         }
-        msgSetPRI(pMsg, pri);
-        MsgSetAfterPRIOffs(pMsg, (pri == LOG_PRI_INVLD) ? 0 : msg - pMsg->pszRawMsg);
     }
     RETiRet;
 }

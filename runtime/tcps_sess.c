@@ -453,8 +453,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
         DBGPRINTF("tcps_sess: message discarded by ratelimit helper\n");
         iRet = RS_RET_OK;
     } else {
-        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
-        msgDestruct(&pMsg);
+        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, continuing\n", localRet);
         iRet = RS_RET_OK;
     }
 
@@ -893,7 +892,9 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(parser, CORE_COMPONENT);
+#ifdef FEATURE_REGEXP
     objRelease(regexp, LM_REGEXP_FILENAME);
+#endif
 ENDObjClassExit(tcps_sess)
 
 
@@ -907,7 +908,9 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
+#ifdef FEATURE_REGEXP
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
+#endif
 
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     objRelease(glbl, CORE_COMPONENT);

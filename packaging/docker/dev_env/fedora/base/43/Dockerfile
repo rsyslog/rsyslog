@@ -63,6 +63,8 @@ RUN	dnf -y install \
 	procps-ng \
 	python3-devel \
 	python3-docutils \
+	python3-autopep8 \
+	python3-pycodestyle \
 	python3-pysnmp \
 	python3-sphinx \
 	protobuf-c \

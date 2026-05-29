@@ -929,8 +929,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
     assert(pbFoundPositiveMatch != NULL);
 
     if (pThis->pPermPeers) { /* do we have configured peer IDs? */
-        pPeer = pThis->pPermPeers;
-        while (pPeer != NULL) {
+        for (pPeer = pThis->pPermPeers; pPeer != NULL; pPeer = pPeer->pNext) {
             CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
             if (*pbFoundPositiveMatch) break;
 
@@ -940,14 +939,19 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
              * if prioritizeSAN set, only check against SAN
              */
             if (!allowX509CheckHost || pPeer->etryType == PERM_PEER_TYPE_WILDCARD) {
-                pPeer = pPeer->pNext;
                 continue;
             } else if (pThis->bSANpriority == 1) {
     #if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER) && \
         defined(X509_CHECK_FLAG_NEVER_CHECK_SUBJECT)
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     #else
+                /* Security hard-stop: with older OpenSSL-compatible APIs (notably wolfSSL
+                 * compatibility mode), we cannot request SAN-only matching. Calling
+                 * X509_check_host() with default flags may fall back to CN, which would
+                 * violate PrioritizeSAN semantics and RFC 6125 behavior.
+                 */
                 dbgprintf("net_ossl_matchpeeridentity: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
+                continue;
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
             }
 
@@ -968,8 +972,6 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             }
 #endif
-            /* Check next peer */
-            pPeer = pPeer->pNext;
         }
     } else {
         LogMsg(0, RS_RET_TLS_NO_CERT, LOG_WARNING,
@@ -1759,6 +1761,7 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
     /* Store result in cache */
     char *cache_key = ocsp_make_cache_key(cert, issuer);
     if (cache_key) {
+        int should_cache = 1;
         time_t cache_ttl = OCSP_CACHE_DEFAULT_TTL;
         /* Use nextUpdate if available for more accurate cache expiry */
         if (nextupd) {
@@ -1769,12 +1772,19 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
                 time_t seconds_until_expiry = (pday * 86400) + psec;
                 if (seconds_until_expiry > 0) {
                     cache_ttl = seconds_until_expiry;
+                } else {
+                    /* avoid caching stale responses accepted only via OCSP leeway */
+                    should_cache = 0;
                 }
             } else {
                 dbgprintf("OCSP: ASN1_TIME_diff() failed, using default TTL\n");
             }
         }
-        ocsp_cache_store(cache_key, status, cache_ttl);
+        if (should_cache) {
+            ocsp_cache_store(cache_key, status, cache_ttl);
+        } else {
+            dbgprintf("OCSP: nextUpdate is not in the future, skipping cache store\n");
+        }
         free(cache_key);
     }
 

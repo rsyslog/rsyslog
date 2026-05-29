@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <limits.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -71,6 +72,9 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsob
 #define BASIC_AUTH_MAX_DECODED ((BASIC_AUTH_MAX_ENCODED / 4) * 3)
 #define DEFAULT_HEALTH_CHECK_PATH "/healthz"
 #define DEFAULT_PROM_METRICS_PATH "/metrics"
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
 
     struct option {
     const char *name;
@@ -116,6 +120,7 @@ struct modConfData_s {
     struct option docroot;
     struct option *options;
     int nOptions;
+    char *pszLstnPortFileName;
     char *pszHealthCheckPath;
     char *pszMetricsPath;
     char *pszHealthCheckAuthFile;
@@ -170,6 +175,7 @@ static size_t s_iMaxLine = 16384; /* get maximum size we currently support */
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"ports", eCmdHdlrString, 0},
+                                           {"listenportfilename", eCmdHdlrString, 0},
                                            {"documentroot", eCmdHdlrString, 0},
                                            {"liboptions", eCmdHdlrArray, 0},
                                            {"healthcheckpath", eCmdHdlrString, 0},
@@ -450,7 +456,9 @@ static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, st
         }
         json_object_object_add(json, (const char *const)connWrkr->pScratchBuf, jval);
     }
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", json, 0, 0));
+    struct json_object *const toAdd = json;
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", toAdd, 0, 0));
 
 finalize_it:
     if (iRet != RS_RET_OK && json) {
@@ -488,7 +496,9 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
                     json_object_object_add(json, (const char *)key, jval);
                 }
             }
-            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", json, 0, 0));
+            struct json_object *const toAdd = json;
+            json = NULL;
+            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", toAdd, 0, 0));
         }
     }
 finalize_it:
@@ -1497,6 +1507,7 @@ BEGINbeginCnfLoad
     loadModConf->docroot.name = NULL;
     loadModConf->nOptions = 0;
     loadModConf->options = NULL;
+    loadModConf->pszLstnPortFileName = NULL;
     loadModConf->pszHealthCheckAuthFile = NULL;
     loadModConf->pszMetricsAuthFile = NULL;
     loadModConf->pszHealthCheckApiKeyFile = NULL;
@@ -1528,6 +1539,9 @@ BEGINsetModCnf
             assert(loadModConf->ports.val == NULL);
             CHKmalloc(loadModConf->ports.name = strdup(CIVETWEB_OPTION_NAME_PORTS));
             CHKmalloc(loadModConf->ports.val = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "listenportfilename")) {
+            free(loadModConf->pszLstnPortFileName);
+            CHKmalloc(loadModConf->pszLstnPortFileName = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "documentroot")) {
             assert(loadModConf->docroot.name == NULL);
             assert(loadModConf->docroot.val == NULL);
@@ -1604,6 +1618,54 @@ static inline void std_checkRuleset_genErrMsg(ATTR_UNUSED modConfData_t *modConf
              "imhttp: ruleset '%s' for %s not found - "
              "using default ruleset instead",
              inst->pszBindRuleset, inst->pszEndpoint);
+}
+
+static rsRetVal writeListenPortFile(const modConfData_t *const conf) {
+    struct mg_server_port ports[2];
+    char portBuf[32];
+    int nPorts;
+    int fd = -1;
+    int len;
+    ssize_t wr;
+    DEFiRet;
+
+    if (conf->pszLstnPortFileName == NULL) FINALIZE;
+
+    nPorts = mg_get_server_ports(s_httpserv->ctx, sizeof(ports) / sizeof(ports[0]), ports);
+    if (nPorts != 1) {
+        LogError(0, RS_RET_ERR, "imhttp: listenPortFileName requires exactly one bound listener, got %d", nPorts);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    len = snprintf(portBuf, sizeof(portBuf), "%u", (unsigned)ports[0].port);
+    if (len < 0 || (size_t)len >= sizeof(portBuf)) {
+        LogError(0, RS_RET_ERR, "imhttp: listenPortFileName: internal port formatting error");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fd = open(conf->pszLstnPortFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to open file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    for (int off = 0; off < len;) {
+        wr = write(fd, portBuf + off, (size_t)(len - off));
+        if (wr < 0) {
+            if (errno == EINTR) continue;
+            LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        off += (int)wr;
+    }
+    if (close(fd) != 0) {
+        fd = -1;
+        LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to close file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
+
+finalize_it:
+    if (fd != -1) close(fd);
+    RETiRet;
 }
 
 BEGINcheckCnf
@@ -1730,6 +1792,7 @@ BEGINactivateCnf
         LogError(0, RS_RET_INTERNAL_ERROR, "Cannot start CivetWeb - mg_start failed.\n");
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
+    CHKiRet(writeListenPortFile(runModConf));
 
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -1774,6 +1837,7 @@ BEGINfreeCnf
     free((void *)pModConf->ports.val);
     free((void *)pModConf->docroot.name);
     free((void *)pModConf->docroot.val);
+    free((void *)pModConf->pszLstnPortFileName);
     free((void *)pModConf->pszHealthCheckPath);
     free((void *)pModConf->pszMetricsPath);
     free((void *)pModConf->pszHealthCheckAuthFile);

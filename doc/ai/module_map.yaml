@@ -75,6 +75,16 @@ mmjsonrewrite:
   notes:
     - Expands dotted JSON property names into nested containers per message.
 
+mmexternal:
+  paths: ["plugins/mmexternal/"]
+  requires_serialization: true
+  locks:
+    - type: mutex
+      field: pData.mut
+  notes:
+    - Default mode keeps one child process context per worker.
+    - forceSingleInstance shares one child context in pData and serializes helper access with pData.mut.
+
 omotel:
   paths: ["plugins/omotel/"]
   requires_serialization: false
@@ -96,3 +106,11 @@ imbeats:
     - The common Elastic Agent TLS setup validates the rsyslog server certificate but does not present a client certificate; use streamDriver.authMode=anon for that pattern and stricter auth modes only with sender client certificates.
     - Compressed Lumberjack v2 frames are supported and should be tested with Beats compression enabled.
     - A concrete sample container definition lives under packaging/docker/rsyslog/imbeats but is not wired into published container builds yet.
+
+imfifo:
+  paths: ["plugins/imfifo/"]
+  requires_serialization: true
+  notes:
+    - Reads log messages line-by-line from local POSIX named pipes (FIFOs).
+    - Utilizes non-blocking poll() loops with a 100ms timeout to ensure clean and immediate shutdown.
+    - Uses O_RDWR opening technique to keep a dummy writer in the daemon itself to avoid startup hangs and EOF reopening loops.

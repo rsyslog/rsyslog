@@ -50,10 +50,10 @@ jobs:
           platforms: ${{ matrix.qemu_platform }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Build ${{ matrix.arch }} dev image (cached)
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: devtools/ci/Dockerfile.arm
@@ -139,19 +139,33 @@ jobs:
           printf "%s,%s\n" "${{ matrix.arch }}" "$STATUS" > result.txt
           exit 0
 
-      - name: Collect test logs
-        if: always()
-        run: devtools/gather-check-logs.sh || true
+      # Use the same short-lived failure artifact contract as regular PR CI so
+      # the flake collector can process scheduled failures through the same
+      # path. The artifact name includes run attempt and lane so reruns do not
+      # overwrite the failed attempt that produced the evidence.
+      - name: Prepare CI failure evidence
+        if: steps.run_tests.outputs.status == 'failure'
+        run: |
+          devtools/gather-check-logs.sh || true
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
 
-      - name: Upload ${{ matrix.arch }} test logs
-        if: always()
+      - name: Upload CI failure evidence
+        if: steps.run_tests.outputs.status == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: weekly-${{ matrix.arch }}-test-logs
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arch }}
           path: |
-            tests/test-suite.log
             failed-tests.log
-          retention-days: 14
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 7
           if-no-files-found: ignore
 
       - name: Ensure result artifact exists
@@ -194,6 +208,11 @@ jobs:
           {
             echo "Weekly cross-arch matrix results"
             echo ""
+            echo "Use the linked run and ci-failure artifacts to decide"
+            echo "whether each failure was a one-off flake or a regression"
+            echo "that needs a fix. The long-term expectation is that"
+            echo "flakes become rarer as the recurring causes are fixed."
+            echo ""
             echo "| Arch | Status |"
             echo "| --- | --- |"
           } > summary.md
@@ -220,7 +239,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const query = `repo:${owner}/${repo} ` +
-                          `is:issue in:title Weekly cross-arch CI failures`;
+                          `is:issue is:open in:title Weekly cross-arch CI failures`;
             const { data: issues } =
               await github.rest.search.issuesAndPullRequests({
                 q: query,
@@ -240,7 +259,7 @@ jobs:
                 repo: context.repo.repo,
                 title: 'Weekly cross-arch CI failures',
                 body,
-                labels: ['ci']
+                labels: ['CI']
               });
             }
 

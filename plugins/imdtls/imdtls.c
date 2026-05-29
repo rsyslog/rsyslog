@@ -74,6 +74,9 @@ MODULE_CNFNAME("imdtls")
 #define DTLS_LISTEN_PORT "4433"
 // 1800 seconds = 30 minutes
 #define DTLS_DEFAULT_TIMEOUT 1800
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
 
 /* Module static data */
 DEF_OMOD_STATIC_DATA;
@@ -102,6 +105,7 @@ struct instanceConf_s {
     /* Network properties */
     uchar *pszBindAddr; /* Listening IP Address */
     uchar *pszBindPort; /* Port to bind socket to */
+    uchar *pszLstnPortFileName; /* file receiving port selected by bind(0) */
     int timeout; /* Default timeout for DTLS Sessions */
     /* Common properties */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -160,6 +164,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQUIRED},
                                            {"address", eCmdHdlrString, 0},
+                                           {"listenportfilename", eCmdHdlrString, 0},
                                            {"timeout", eCmdHdlrPositiveInt, 0},
                                            {"name", eCmdHdlrString, 0},
                                            {"ruleset", eCmdHdlrString, 0},
@@ -184,6 +189,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
 
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
+    inst->pszLstnPortFileName = NULL;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
@@ -239,6 +245,59 @@ static void DTLSCloseSocket(instanceConf_t *inst) {
         close(inst->sockfd);
         inst->sockfd = -1;
     }
+}
+
+static rsRetVal writeListenPortFile(instanceConf_t *const inst) {
+    struct sockaddr_in sa = {0};
+    socklen_t salen = sizeof(sa);
+    char portBuf[32];
+    int fd = -1;
+    int len;
+    ssize_t wr;
+    DEFiRet;
+
+    if (inst->pszLstnPortFileName == NULL) FINALIZE;
+
+    if (getsockname(inst->sockfd, (struct sockaddr *)&sa, &salen) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: could not determine bound UDP port");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (salen < sizeof(sa) || sa.sin_family != AF_INET) {
+        LogError(0, RS_RET_ERR, "imdtls: listenPortFileName: unexpected bound UDP socket address");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    inst->port = ntohs(sa.sin_port);
+    inst->server_addr.sin_port = sa.sin_port;
+
+    len = snprintf(portBuf, sizeof(portBuf), "%u", (unsigned)inst->port);
+    if (len < 0 || (size_t)len >= sizeof(portBuf)) {
+        LogError(0, RS_RET_ERR, "imdtls: listenPortFileName: internal port formatting error");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fd = open((const char *)inst->pszLstnPortFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to open file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    for (int off = 0; off < len;) {
+        wr = write(fd, portBuf + off, (size_t)(len - off));
+        if (wr < 0) {
+            if (errno == EINTR) continue;
+            LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        off += (int)wr;
+    }
+    if (close(fd) != 0) {
+        fd = -1;
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to close file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
+
+finalize_it:
+    if (fd != -1) close(fd);
+    RETiRet;
 }
 
 static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
@@ -301,6 +360,7 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
                  inst->port, inst->pszBindAddr);
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    CHKiRet(writeListenPortFile(inst));
 finalize_it:
     if (iRet != RS_RET_OK) {
         DTLSCloseSocket(inst);
@@ -852,6 +912,8 @@ BEGINnewInpInst
             CHKmalloc(inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
             CHKmalloc(inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
+            CHKmalloc(inst->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "timeout")) {
             inst->timeout = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -1047,6 +1109,7 @@ BEGINfreeCnf
         if (inst->pszBindAddr != NULL) {
             free(inst->pszBindAddr);
         }
+        free(inst->pszLstnPortFileName);
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
 

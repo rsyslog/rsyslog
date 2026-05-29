@@ -506,7 +506,6 @@ rsRetVal impstats_push_send(impstats_push_config_t *config, statsobj_if_t *stats
         batch_wr = prom_write_request_new_with_series(batch_series, batch_count);
         if (batch_wr == NULL) {
             prom_write_request_free_series(batch_series, batch_count);
-            free(batch_series);
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
 
@@ -527,7 +526,6 @@ finalize_it:
     if (wr) prom_write_request_free(wr);
     if (series) {
         prom_write_request_free_series(series, series_count);
-        free(series);
     }
     RETiRet;
 }

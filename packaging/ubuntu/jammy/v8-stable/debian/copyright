@@ -36,7 +36,7 @@ Public License can be found in `/usr/share/common-licenses/GPL'.
 
 Files: runtime/zstdw.c runtime/conf.h runtime/objomsr.h runtime/librsksi_read.c
        runtime/tcpsrv.h runtime/lookup.h runtime/ruleset.c tools/omshell.c
-       tools/gethostn.c contrib/omfile-hardened/omfile-hardened.c
+       tools/gethostn.c
        contrib/imbatchreport/imbatchreport.c plugins/omprog/omprog.c
 Copyright: 2003-2026 Rainer Gerhards and Adiscon GmbH, and others
 License: Apache-2.0

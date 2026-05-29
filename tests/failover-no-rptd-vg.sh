@@ -18,7 +18,7 @@ wait_shutdown_vg
 check_exit_vg
 # now we need our custom logic to see if the result file is empty
 # (what it should be!)
-if [ -f $RSYSLOG_OUT_LOG -a "$(cat $RSYSLOG_OUT_LOG)" != "" ]; then
+if [ -f "$RSYSLOG_OUT_LOG" ] && [ "$(cat "$RSYSLOG_OUT_LOG")" != "" ]; then
 	echo "ERROR, output file not empty"
 	cat -n "$RSYSLOG_OUT_LOG"
 	error_exit 1

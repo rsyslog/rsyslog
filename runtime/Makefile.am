@@ -93,13 +93,14 @@ librsyslog_la_SOURCES = \
 	cfsysline.c \
 	cfsysline.h \
 	\
-	../action.h \
-	../action.c \
-	../threads.c \
-	../threads.h \
+	action.h \
+	action.c \
+	threads.c \
+	threads.h \
+	dirty.h \
 	\
-	../parse.c \
-	../parse.h \
+	parse.c \
+	parse.h \
 	\
 	hashtable.c \
 	hashtable.h \
@@ -107,15 +108,12 @@ librsyslog_la_SOURCES = \
 	hashtable_itr.h \
 	hashtable_private.h \
 	\
-	../outchannel.c \
-	../outchannel.h \
-	../template.c \
-	../template.h \
+	outchannel.c \
+	outchannel.h \
+	template.c \
+	template.h \
 	timezones.c \
 	timezones.h
-# the files with ../ we need to work on - so that they either become part of the
-# runtime or will no longer be needed. -- rgerhards, 2008-06-13
-#
 #if OS_LINUX
 #librsyslog_la_SOURCES += \
 #endif

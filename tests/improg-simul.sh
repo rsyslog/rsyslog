@@ -38,12 +38,12 @@ done
 trap 'echo "SIGTERM Received" >> '$ERR';echo $0" SIGTERM Received" >&2;exit 0' 15
 if (( DELAY > 0 )); then $mysleep ${DELAY}; fi
 if [ ${ACK} == 1 ]; then
-	while [ "x$order" != "xSTART" ]; do 
+	while [ "$order" != "START" ]; do
 		read -r order
 		echo $order' Received' >> $ERR
 		echo $0' '$order' Received' >&2
 	done
-	while [ "x$order" != "xSTOP" ]; do
+	while [ "$order" != "STOP" ]; do
 		if (( NB > 0 )); then
 			echo ${MESSAGE}
 			echo "Message sent" >&2

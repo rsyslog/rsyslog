@@ -2,7 +2,8 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # imdocker unit tests are enabled with --enable-imdocker-tests
 . ${srcdir:=.}/diag.sh init
-export COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
+export COOKIE
 SIZE=17000
 generate_conf
 add_conf '
@@ -32,7 +33,7 @@ wait_shutdown
 echo "file name: $RSYSLOG_OUT_LOG"
 count=$(grep "aaaaaaa" $RSYSLOG_OUT_LOG | tr -d "\n" | wc -c)
 
-if [ "x$count" == "x$SIZE" ]; then
+if [ "$count" == "$SIZE" ]; then
   echo "correct log line length: $count"
 else
   echo "Incorrect log line length - found $count, expected: $SIZE"

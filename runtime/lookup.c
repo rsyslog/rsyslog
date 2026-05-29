@@ -123,7 +123,7 @@ static rsRetVal lookupNew(lookup_ref_t **ppThis) {
 
     CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
     CHKmalloc(t = calloc(1, sizeof(lookup_t)));
-    pThis->do_reload = pThis->do_stop = 0;
+    pThis->do_reload = pThis->is_reloading = pThis->do_stop = 0;
     pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
 
     pThis->next = NULL;
@@ -157,7 +157,7 @@ static rsRetVal lookupActivateTable(lookup_ref_t *pThis) {
     CHKiConcCtrl(pthread_attr_init(&pThis->reloader_thd_attr));
     pThis->reloader_attr_initialized = 1;
     initialized++; /*4*/
-    pThis->do_reload = pThis->do_stop = 0;
+    pThis->do_reload = pThis->is_reloading = pThis->do_stop = 0;
     CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis));
     pThis->reloader_started = 1;
     initialized++; /*5*/
@@ -205,6 +205,7 @@ static void lookupStopReloader(lookup_ref_t *pThis) {
     pthread_mutex_lock(&pThis->reloader_mut);
     freeStubValueForReloadFailure(pThis);
     pThis->do_reload = 0;
+    pThis->is_reloading = 0;
     pThis->do_stop = 1;
     pthread_cond_signal(&pThis->run_reloader);
     pthread_mutex_unlock(&pThis->reloader_mut);
@@ -965,7 +966,7 @@ finalize_it:
 static uint8_t lookupIsReloadPending(lookup_ref_t *pThis) {
     uint8_t reload_pending;
     pthread_mutex_lock(&pThis->reloader_mut);
-    reload_pending = pThis->do_reload;
+    reload_pending = pThis->do_reload || pThis->is_reloading;
     pthread_mutex_unlock(&pThis->reloader_mut);
     return reload_pending;
 }
@@ -1028,9 +1029,11 @@ void *lookupTableReloader(void *self) {
             uchar *stub_val = pThis->stub_value_for_reload_failure;
             pThis->stub_value_for_reload_failure = NULL;
             pThis->do_reload = 0;
+            pThis->is_reloading = 1;
             pthread_mutex_unlock(&pThis->reloader_mut);
             lookupDoReload(pThis, stub_val);
             pthread_mutex_lock(&pThis->reloader_mut);
+            pThis->is_reloading = 0;
         } else {
             pthread_cond_wait(&pThis->run_reloader, &pThis->reloader_mut);
         }

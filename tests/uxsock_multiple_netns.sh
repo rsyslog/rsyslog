@@ -104,8 +104,8 @@ startup
 injectmsg 0 10000
 wait_queueempty
 echo resetting uxsockrcvr
-for pid in ${BGPROCESS[@]}; do
-    kill -HUP $pid
+for pid in "${BGPROCESS[@]}"; do
+    kill -HUP "$pid"
 done
 injectmsg 10000 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
@@ -114,9 +114,9 @@ wait_shutdown
 # wait for the cp process to finish, do pipe-specific cleanup
 echo shutting down uxsockrcvr...
 # TODO: we should do this more reliable in the long run! (message counter? timeout?)
-for pid in ${BGPROCESS[@]}; do
-    kill $pid
-    wait $pid
+for pid in "${BGPROCESS[@]}"; do
+    kill "$pid"
+    wait "$pid"
 done
 echo background processes have terminated, continue test...
 

@@ -4,7 +4,7 @@
 # Errors are detected and will lead to abort of the startup.
 
 export CNF_CALL_LOG_TO_LOGFILES=
-if [ "$ENABLE_LOGFILES" == "on" ]; then
+if [ "$ENABLE_LOGFILES" = "on" ]; then
 	if [ -z $LOGFILES_STORE ]; then
 		echo "Error: ENABLE_LOGFILES set, but LOGFILES_STORE not set - please correct"
 		exit 1

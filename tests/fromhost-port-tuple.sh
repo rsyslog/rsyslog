@@ -23,6 +23,7 @@ startup
 tcpflood -m $NUMMESSAGES -w "${RSYSLOG_DYNNAME}.tcpflood-port"
 shutdown_when_empty
 wait_shutdown
-export EXPECTED="127.0.0.1:$(cat "${RSYSLOG_DYNNAME}.tcpflood-port")"
+EXPECTED="127.0.0.1:$(cat "${RSYSLOG_DYNNAME}.tcpflood-port")"
+export EXPECTED
 cmp_exact
 exit_test

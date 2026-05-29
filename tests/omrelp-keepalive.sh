@@ -8,7 +8,8 @@ if ! pkg-config --atleast-version=1.12.0 relp 2>/dev/null ; then
     exit 77
 fi
 
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR="$(get_free_port)"
+export PORT_RCVR
 
 generate_conf
 add_conf '

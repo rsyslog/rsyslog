@@ -218,6 +218,39 @@ static void _regfree(regex_t *preg) {
     pthread_mutex_unlock(&mut_regexp);
 }
 
+static void destroy_perthread_regexs(void) {
+    struct hashtable_itr *itr = NULL;
+    int ret = 0;
+
+    if (perthread_regexs == NULL) return;
+
+    pthread_mutex_lock(&mut_regexp);
+    if (hashtable_count(perthread_regexs)) {
+        itr = hashtable_iterator(perthread_regexs);
+        if (itr == NULL) {
+            hashtable_destroy(perthread_regexs, 0);
+            perthread_regexs = NULL;
+            pthread_mutex_unlock(&mut_regexp);
+            LogError(0, RS_RET_OUT_OF_MEMORY, "error creating per-thread regexp iterator during regexp class unload");
+            return;
+        }
+        do {
+            perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
+
+            ret = hashtable_iterator_advance(itr);
+            pthread_mutex_lock(&entry->lock);
+            pthread_mutex_unlock(&entry->lock);
+            pthread_mutex_destroy(&entry->lock);
+            regfree(&entry->preg);
+            free(entry);
+        } while (ret);
+        free(itr);
+    }
+    hashtable_destroy(perthread_regexs, 0);
+    perthread_regexs = NULL;
+    pthread_mutex_unlock(&mut_regexp);
+}
+
 static int _regcomp(regex_t *preg, const char *regex, int cflags) {
     int ret = 0;
     regex_t **ppreg = NULL;
@@ -343,9 +376,10 @@ ENDObjClassInit(regexp)
 BEGINObjClassExit(regexp, OBJ_IS_LOADABLE_MODULE) /* class, version */
     if (USE_PERTHREAD_REGEX) {
         /* release objects we no longer need */
-        pthread_mutex_destroy(&mut_regexp);
+        destroy_perthread_regexs();
         if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
-        if (perthread_regexs) hashtable_destroy(perthread_regexs, 1);
+        regex_to_uncomp = NULL;
+        pthread_mutex_destroy(&mut_regexp);
     }
 ENDObjClassExit(regexp)
 

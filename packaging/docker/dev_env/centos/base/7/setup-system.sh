@@ -1,3 +1,4 @@
+#!/bin/sh
 set -v
 
 echo STEP: essentials
@@ -8,7 +9,8 @@ echo STEP: essentials
 
 # Now build some custom libraries for whom there are not packages
 mkdir helper-projects
-cd helper-projects
+(
+cd helper-projects || exit 1
 
 if [ "$LIBDIR_PATH" != "" ]; then
 	export LIBDIR=--libdir=$LIBDIR_PATH
@@ -27,23 +29,24 @@ fi
 
 # we need Guardtime libksi here, otherwise we cannot check the KSI component
 git clone https://github.com/guardtime/libksi.git
-cd libksi
-autoreconf -fvi
-./configure --libdir=/usr/lib64
-make -j2
-make install
-cd ..
+(
+	cd libksi || exit 1
+	autoreconf -fvi
+	./configure --libdir=/usr/lib64
+	make -j2
+	make install
+)
 rm -r libksi
 
 # we need the latest librdkafka as there as always required updates
 git clone https://github.com/edenhill/librdkafka
-cd librdkafka
-(unset CFLAGS; ./configure --prefix=/usr $LIBDIR --CFLAGS="-g" ; make -j2)
-make install
-cd ..
+(
+	cd librdkafka || exit 1
+	(unset CFLAGS; ./configure --prefix=/usr $LIBDIR --CFLAGS="-g" ; make -j2)
+	make install
+)
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
 
 # finished installing helpers from source
-cd ..
-
+)

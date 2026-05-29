@@ -1,6 +1,11 @@
 #!/bin/bash
 # added 2017-09-29 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify RELP forwarding while omrelp reconnects aggressively with
+# rebindinterval=1. The receiver binds an ephemeral IPv4 listener and the
+# testbench discovers that bound port after startup, avoiding the get_free_port
+# race before the sender connects. Success is the full ordered delivery
+# sequence.
 . ${srcdir:=.}/diag.sh init
 echo testing sending and receiving via relp w/ rebind interval
 # uncomment for debugging support:
@@ -8,20 +13,19 @@ echo testing sending and receiving via relp w/ rebind interval
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port="'$PORT_RCVR'")
+input(type="imrelp" address="127.0.0.1" port="0")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
 

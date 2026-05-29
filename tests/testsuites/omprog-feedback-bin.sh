@@ -14,9 +14,9 @@ while [[ -n "$line" ]]; do
     echo "=> $message" >> $outfile
 
     if [[ $message == *04* || $message == *07* ]]; then
-        if [[ $retry_count < 2 ]]; then
+        if [ "$retry_count" -lt 2 ]; then
             status="Error: could not process log message"
-            let "retry_count++"
+            (( retry_count++ ))
         else
             status="OK"
             retry_count=0

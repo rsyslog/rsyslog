@@ -7,13 +7,25 @@
 # execute it under "timeout" control, which ensure it always is
 # terminated. It's not a 100% great method, but hopefully does the
 # trick. -- rgerhards, 2018-07-21
+#
+# Valgrind variant of mmkubernetes-basic.sh. It keeps the same enrichment and
+# statistics oracle while checking the mmkubernetes path under Valgrind.
 #export RSYSLOG_DEBUG="debug"
 USE_VALGRIND=true
 . ${srcdir:=.}/diag.sh init
 check_command_available timeout
 pwd=$( pwd )
-k8s_srv_port=$( get_free_port )
+k8s_srv_port_file="${RSYSLOG_DYNNAME}mmk8s-test-server.port"
 generate_conf
+testsrv=mmk8s-test-server
+echo starting kubernetes \"emulator\"
+timeout 2m $PYTHON -u $srcdir/mmkubernetes_test_server.py 0 ${RSYSLOG_DYNNAME}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started ${k8s_srv_port_file} > ${RSYSLOG_DYNNAME}.spool/mmk8s_srv.log 2>&1 &
+BGPROCESS=$!
+wait_file_exists "$k8s_srv_port_file"
+k8s_srv_port="$(cat "$k8s_srv_port_file")"
+wait_process_startup ${RSYSLOG_DYNNAME}${testsrv} ${RSYSLOG_DYNNAME}${testsrv}.started
+echo background mmkubernetes_test_server.py process id is $BGPROCESS
+
 add_conf '
 global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
 module(load="../plugins/impstats/.libs/impstats" interval="1"
@@ -35,13 +47,6 @@ action(type="mmkubernetes" busyretryinterval="1" token="dummy" kubernetesurl="ht
 )
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 '
-
-testsrv=mmk8s-test-server
-echo starting kubernetes \"emulator\"
-timeout 2m $PYTHON -u $srcdir/mmkubernetes_test_server.py $k8s_srv_port ${RSYSLOG_DYNNAME}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > ${RSYSLOG_DYNNAME}.spool/mmk8s_srv.log 2>&1 &
-BGPROCESS=$!
-wait_process_startup ${RSYSLOG_DYNNAME}${testsrv} ${RSYSLOG_DYNNAME}${testsrv}.started
-echo background mmkubernetes_test_server.py process id is $BGPROCESS
 
 cat > ${RSYSLOG_DYNNAME}.spool/pod-error1.log <<EOF
 {"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z","testid":1}

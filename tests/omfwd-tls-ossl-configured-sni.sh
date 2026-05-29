@@ -4,7 +4,9 @@
 
 . ${srcdir:=.}/diag.sh init
 
-port=$(get_free_port)
+port_file="$RSYSLOG_DYNNAME.sni-server.port"
+omfwd_sni_server "openssl" "$port_file"
+port=$(cat "$port_file")
 
 generate_conf
 add_conf '
@@ -22,7 +24,6 @@ action(type="omfwd"
         )
 '
 
-omfwd_sni_server "openssl" "$port"
 startup
 omfwd_sni_check "custom-sni"
 shutdown_immediate

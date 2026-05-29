@@ -78,6 +78,7 @@
 #include "statsobj.h"
 #include "ratelimit.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "atomic.h"
 
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
@@ -111,6 +112,14 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #define COMPRESS_SINGLE_MSG 1 /* old, single-message compression */
 /* all other settings are for stream-compression */
 #define COMPRESS_STREAM_ALWAYS 2
+/* auto-detect: sniff first 2 bytes of session, lock-in afterwards.
+ * Used when a single listener must accept both compressed and plain
+ * peers (typical for staged client roll-outs). After detection the
+ * per-session compressionMode is rewritten to either COMPRESS_STREAM_ALWAYS
+ * or COMPRESS_NEVER so the hot path stays branch-free.
+ */
+#define COMPRESS_STREAM_AUTO 3
+#define COMPRESS_AUTO_SNIFF_BYTES 2
 
 /* config settings */
 typedef struct configSettings_s {
@@ -285,10 +294,15 @@ struct ptcpsess_s {
     ptcpsess_t *prev, *next;
     int sock;
     epolld_t *epd;
+    int bWorkQueued; /* protects against concurrent helper work on this session */
+    DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
+    uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
+    uint8_t compressionAutoDetectLen; /* bytes buffered for sniffing (0..COMPRESS_AUTO_SNIFF_BYTES) */
+    uchar compressionAutoDetectBuf[COMPRESS_AUTO_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
     int iCurrLine; /* 2nd char of current line in regex framing mode */
     int bAtStrtOfFram; /* are we at the very beginning of a new frame? */
@@ -396,6 +410,7 @@ static void ATTR_NONNULL() destructSess(ptcpsess_t *const pSess) {
     free(pSess->pMsg);
     prop.Destruct(&pSess->peerName);
     prop.Destruct(&pSess->peerIP);
+    DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
     /* TODO: make these inits compile-time switch depending: */
     pSess->pMsg = NULL;
     free(pSess);
@@ -986,8 +1001,7 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
         DBGPRINTF("imptcp: message discarded by ratelimit helper\n");
         iRet = RS_RET_OK;
     } else {
-        DBGPRINTF("imptcp: ratelimit helper returned error %d, dropping message and continuing\n", localRet);
-        msgDestruct(&pMsg);
+        DBGPRINTF("imptcp: ratelimit helper returned error %d, continuing\n", localRet);
         iRet = RS_RET_OK;
     }
 
@@ -1391,14 +1405,81 @@ finalize_it:
     RETiRet;
 }
 
+/* AUTO mode: inspect the first COMPRESS_AUTO_SNIFF_BYTES bytes of the
+ * session and decide whether the peer is sending a zlib stream
+ * (RFC 1950) or plain syslog. The probe is restricted to byte 0 == 0x78
+ * (CMF: deflate, default 32 KiB window - what rsyslog's omfwd always
+ * emits via deflateInit()). A plain syslog frame never starts with 'x'
+ * (must be ASCII digit for octet-counted framing or '<' for
+ * non-transparent framing), so the test is conclusive for any
+ * rsyslog-to-rsyslog deployment and for every standard 3rd-party syslog
+ * sender we know of.
+ *
+ * Returns:
+ *   1  - decision taken; *pIsCompressed reflects the verdict
+ *   0  - not enough bytes yet; caller must wait for more data
+ */
+static int compressionAutoDetect(const uchar *const buf, const size_t len, sbool *const pIsCompressed) {
+    if (len < COMPRESS_AUTO_SNIFF_BYTES) {
+        return 0;
+    }
+    /* RFC 1950 zlib stream header:
+     *   - CMF byte: low nibble = 8 (deflate); we additionally require
+     *     the full byte to be 0x78 (window bits 15) which is what every
+     *     omfwd build emits via deflateInit().
+     *   - FLG byte: (CMF*256 + FLG) % 31 == 0; FDICT (bit 5) == 0 since
+     *     omfwd does not use a preset dictionary.
+     */
+    const unsigned cmf = buf[0];
+    const unsigned flg = buf[1];
+    if (cmf == 0x78 && ((cmf << 8) + flg) % 31u == 0u && (flg & 0x20u) == 0u) {
+        *pIsCompressed = 1;
+    } else {
+        *pIsCompressed = 0;
+    }
+    return 1;
+}
+
 static rsRetVal DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
     struct syslogTime stTime;
     DEFiRet;
     ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
+
+    if (pThis->compressionAutoDetectPending) {
+        /* buffer up to COMPRESS_AUTO_SNIFF_BYTES bytes spanning reads */
+        sbool bIsCompressed = 0;
+        while (pThis->compressionAutoDetectLen < COMPRESS_AUTO_SNIFF_BYTES && iLen > 0) {
+            pThis->compressionAutoDetectBuf[pThis->compressionAutoDetectLen++] = (uchar)*pData;
+            ++pData;
+            --iLen;
+        }
+        if (!compressionAutoDetect(pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen, &bIsCompressed)) {
+            /* still need more bytes; consume what we have and wait */
+            FINALIZE;
+        }
+        /* lock-in: rewrite mode so subsequent calls hit the fast path */
+        pThis->compressionMode = bIsCompressed ? COMPRESS_STREAM_ALWAYS : COMPRESS_NEVER;
+        pThis->compressionAutoDetectPending = 0;
+        DBGPRINTF("imptcp: AUTO compression detection: %s\n", bIsCompressed ? "compressed" : "plain");
+        /* re-inject the sniffed bytes into the chosen path */
+        if (bIsCompressed) {
+            CHKiRet(
+                DataRcvdCompressed(pThis, (char *)pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen));
+        } else {
+            CHKiRet(DataRcvdUncompressed(pThis, (char *)pThis->compressionAutoDetectBuf,
+                                         pThis->compressionAutoDetectLen, &stTime, 0));
+        }
+        if (iLen == 0) {
+            FINALIZE;
+        }
+    }
+
     if (pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
         iRet = DataRcvdCompressed(pThis, pData, iLen);
     else
         iRet = DataRcvdUncompressed(pThis, pData, iLen, &stTime, 0);
+
+finalize_it:
     RETiRet;
 }
 
@@ -1530,11 +1611,14 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
     int pmsg_size_factor;
+    sbool bWorkQueuedMutInit = 0;
 
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
 
     CHKmalloc(pSess = calloc(1, sizeof(ptcpsess_t)));
+    INIT_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+    bWorkQueuedMutInit = 1;
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
         pmsg_size_factor = 1;
@@ -1558,6 +1642,10 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->peerName = peerName;
     pSess->peerIP = peerIP;
     pSess->compressionMode = pLstn->pSrv->compressionMode;
+    /* AUTO mode starts in sniff state; first DataRcvd() locks in the
+     * effective compressionMode for the rest of the session. */
+    pSess->compressionAutoDetectPending = (pSess->compressionMode == COMPRESS_STREAM_AUTO) ? 1 : 0;
+    pSess->compressionAutoDetectLen = 0;
     pSess->startRegex = pLstn->pSrv->inst->startRegex;
     pSess->iAddtlFrameDelim = pLstn->pSrv->iAddtlFrameDelim;
 
@@ -1593,6 +1681,9 @@ finalize_it:
             }
             free(pSess->pMsg_save);
             free(pSess->pMsg);
+            if (bWorkQueuedMutInit) {
+                DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+            }
             free(pSess);
         }
     }
@@ -1654,8 +1745,12 @@ done:
  * NOTE: we do not need to remove the socket from the epoll set, as according
  * to the epoll man page it is automatically removed on close (Q6). The only
  * exception is duplicated file handles, which we do not create.
+ *
+ * The caller must serialize access to the session. If destruct is false, the
+ * caller remains responsible for destroying pSess after releasing any session
+ * mutex it currently holds.
  */
-static rsRetVal closeSess(ptcpsess_t *pSess) {
+static rsRetVal closeSess(ptcpsess_t *pSess, const sbool destruct) {
     rsRetVal localRet = RS_RET_OK;
     DEFiRet;
 
@@ -1676,8 +1771,10 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
     }
     STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 
-    /* unlinked, now remove structure */
-    destructSess(pSess);
+    if (destruct) {
+        /* unlinked, now remove structure */
+        destructSess(pSess);
+    }
 
     if (localRet != RS_RET_OK) {
         iRet = localRet;
@@ -1983,7 +2080,7 @@ finalize_it:
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
-static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling) {
+static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling, sbool *const close_session) {
     int lenRcv;
     int lenBuf;
     uchar *peerName;
@@ -2006,7 +2103,7 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
             iRet = DataRcvd(pSess, rcvBuf, lenRcv);
             if (iRet != RS_RET_OK) {
                 *continue_polling = 0;
-                closeSess(pSess);
+                *close_session = RSTRUE;
                 break;
             }
         } else if (lenRcv == 0) {
@@ -2022,37 +2119,61 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
                          "remote peer %s.",
                          remsock, peerName);
             }
-            CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
+            *close_session = RSTRUE;
             break;
         } else {
             if (CHK_EAGAIN_EWOULDBLOCK) break;
             DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
             *continue_polling = 0;
-            closeSess(pSess); /* try clean-up by dropping session */
+            *close_session = RSTRUE; /* try clean-up by dropping session */
             break;
         }
     }
 
-finalize_it:
     RETiRet;
 }
 
 
-/* This function is called to process a single request. This may
- * be carried out by the main worker or a helper. It can be run
- * concurrently.
+static sbool claimSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    return ATOMIC_CAS(&pSess->bWorkQueued, 0, 1, &pSess->mutWorkQueued) ? RSTRUE : RSFALSE;
+}
+
+static void releaseSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    ATOMIC_STORE_0_TO_INT(&pSess->bWorkQueued, &pSess->mutWorkQueued);
+}
+
+/* This function is called to process a single request. Listener work can run
+ * concurrently. Session work must already be claimed with claimSessWork(); the
+ * session parser, zlib stream, socket close, and epoll rearm are then handled
+ * by only one worker at a time.
  */
 static void processWorkItem(epolld_t *epd) {
     int continue_polling = 1;
+    sbool close_session = RSFALSE;
 
     switch (epd->typ) {
         case epolld_lstn:
             /* listener never stops polling (except server shutdown) */
             lstnActivity((ptcplstn_t *)epd->ptr);
             break;
-        case epolld_sess:
-            sessActivity((ptcpsess_t *)epd->ptr, &continue_polling);
-            break;
+        case epolld_sess: {
+            ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+            sessActivity(pSess, &continue_polling, &close_session);
+            if (close_session) {
+                closeSess(pSess, RSFALSE);
+                destructSess(pSess);
+                return;
+            }
+            releaseSessWork(epd);
+            if (continue_polling == 1) {
+                epoll_ctl(epollfd, EPOLL_CTL_MOD, epd->sock, &(epd->ev));
+            }
+            return;
+        }
         default:
             LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: error: invalid epolld_type_t %d after epoll", epd->typ);
             break;
@@ -2150,11 +2271,17 @@ static void processWorkSet(int nEvents, struct epoll_event events[]) {
 
     for (iEvt = 0; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0); ++iEvt) {
         epd = (epolld_t *)events[iEvt].data.ptr;
+        if (epd->typ == epolld_sess && !claimSessWork(epd)) {
+            --remainEvents;
+            continue;
+        }
         if (runModConf->bProcessOnPoller && remainEvents == 1) {
             /* process self, save context switch */
             processWorkItem(epd);
         } else {
-            enqueueIoWork(epd, runModConf->bProcessOnPoller);
+            if (enqueueIoWork(epd, runModConf->bProcessOnPoller) != RS_RET_OK && epd->typ == epolld_sess) {
+                releaseSessWork(epd);
+            }
         }
         --remainEvents;
     }
@@ -2281,6 +2408,8 @@ BEGINnewInpInst
             CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
                 inst->compressionMode = COMPRESS_STREAM_ALWAYS;
+            } else if (!strcasecmp(cstr, "stream:auto")) {
+                inst->compressionMode = COMPRESS_STREAM_AUTO;
             } else if (!strcasecmp(cstr, "none")) {
                 inst->compressionMode = COMPRESS_NEVER;
             } else {

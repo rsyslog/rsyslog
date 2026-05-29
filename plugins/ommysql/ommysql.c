@@ -352,6 +352,10 @@ BEGINcommitTransaction
         }
     }
 
+    if (pWrkrData->hmysql == NULL) {
+        DBGPRINTF("ommysql: transaction connection closed before commit\n");
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
     if (mysql_commit(pWrkrData->hmysql) != 0) {
         DBGPRINTF("ommysql: server error: transaction not committed\n");
         reportDBError(pWrkrData, 0);

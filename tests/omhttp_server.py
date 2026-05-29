@@ -8,9 +8,9 @@ import random
 import time
 
 try:
-    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer # Python 2
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer  # Python 2
 except ImportError:
-    from http.server import BaseHTTPRequestHandler, HTTPServer # Python 3
+    from http.server import BaseHTTPRequestHandler, HTTPServer  # Python 3
 
 # Keep track of data received at each path
 data = {}
@@ -131,8 +131,10 @@ if __name__ == '__main__':
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
     parser.add_argument('--fail-with', action='store', type=int, default=500, help='on failure, fail with this code')
-    parser.add_argument('--fail-with-400-after', action='store', type=int, default=-1, help='fail with 400 after n posts')
-    parser.add_argument('--fail-with-401-or-403-after', action='store', type=int, default=-1, help='fail with 401 or 403 after n posts')
+    parser.add_argument('--fail-with-400-after', action='store', type=int,
+                        default=-1, help='fail with 400 after n posts')
+    parser.add_argument('--fail-with-401-or-403-after', action='store', type=int,
+                        default=-1, help='fail with 401 or 403 after n posts')
     parser.add_argument('--fail-with-delay-secs', action='store', type=int, default=0, help='fail with n secs of delay')
     parser.add_argument('--decompress', action='store_true', default=False, help='decompress posted data')
     parser.add_argument('--userpwd', action='store', default='', help='only accept this user:password combination')
