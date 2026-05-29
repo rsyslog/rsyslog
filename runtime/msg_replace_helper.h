@@ -7,14 +7,14 @@
 
 #include "rsyslog.h"
 
-static inline rsRetVal msgReplaceRawMsgSegment(uchar **ppRawMsg,
-                                               uchar *stackBuf,
-                                               int stackBufSize,
-                                               int offMSG,
-                                               int lenOldMSG,
-                                               int *pLenRawMsg,
-                                               const uchar *pszMSG,
-                                               int lenMSG) {
+static rsRetVal msgReplaceRawMsgSegment(uchar **ppRawMsg,
+                                        uchar *stackBuf,
+                                        int stackBufSize,
+                                        int offMSG,
+                                        int lenOldMSG,
+                                        int *pLenRawMsg,
+                                        const uchar *pszMSG,
+                                        int lenMSG) {
     int lenNew;
     int lenSuffix;
     uchar *bufNew;
