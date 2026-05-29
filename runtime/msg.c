@@ -64,6 +64,7 @@
 #include "unicode-helper.h"
 #include "ruleset.h"
 #include "prop.h"
+#include "msg_replace_helper.h"
 #include "net.h"
 #include "var.h"
 #include "rsconf.h"
@@ -2668,8 +2669,6 @@ void MsgSetMSGoffs(smsg_t *const pMsg, int offs) {
  * rgerhards, 2009-06-23
  */
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
-    int lenNew;
-    uchar *bufNew;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, msg);
     assert(pszMSG != NULL);
@@ -2685,19 +2684,8 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
     } else if (pThis->iLenMSG < 0 || pThis->iLenMSG > pThis->iLenRawMsg - pThis->offMSG) {
         pThis->iLenMSG = pThis->iLenRawMsg - pThis->offMSG;
     }
-
-    lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
-    if (lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
-        /*  we have lost our "bet" and need to alloc a new buffer ;) */
-        CHKmalloc(bufNew = malloc(lenNew + 1));
-        memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
-        if (pThis->pszRawMsg != pThis->szRawMsg) free(pThis->pszRawMsg);
-        pThis->pszRawMsg = bufNew;
-    }
-
-    if (lenMSG > 0) memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
-    pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
-    pThis->iLenRawMsg = lenNew;
+    CHKiRet(msgReplaceRawMsgSegment(&pThis->pszRawMsg, pThis->szRawMsg, CONF_RAWMSG_BUFSIZE, pThis->offMSG,
+                                    pThis->iLenMSG, &pThis->iLenRawMsg, pszMSG, lenMSG));
     pThis->iLenMSG = lenMSG;
 
 finalize_it:
@@ -4713,10 +4701,14 @@ static rsRetVal jsonPathFindNext(
     DEFiRet;
 
     if (*p == '!' || (*name == namestart && (*p == '.' || *p == '/'))) ++p;
-    for (i = 0;
-         *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf && i < sizeof(namebuf) - 1;
-         ++i, ++p)
+    for (i = 0; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf; ++i, ++p) {
+        if (i >= sizeof(namebuf) - 1) {
+            LogError(0, RS_RET_INVLD_SETOP, "json path component too long in '%s' - refusing truncated lookup",
+                     namestart);
+            ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+        }
         namebuf[i] = *p;
+    }
     if (i > 0) {
         namebuf[i] = '\0';
         if (jsonVarExtract(root, (char *)namebuf, &json) == FALSE) {
@@ -4882,7 +4874,11 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
             json_object_object_add(parent, (char *)leaf, json);
         } else {
             if (json_object_get_type(json) == json_type_object) {
-                CHKiRet(jsonMerge(*jroot, json));
+                if (json_object_get_type(leafnode) == json_type_object) {
+                    CHKiRet(jsonMerge(leafnode, json));
+                } else {
+                    json_object_object_add(parent, (char *)leaf, json);
+                }
             } else {
                 /* TODO: improve the code below, however, the current
                  *       state is not really bad */
