@@ -2745,6 +2745,49 @@ static void ATTR_NONNULL() doFunct_ParseTime(struct cnffunc *__restrict__ const 
     varFreeMembers(&srcVal);
 }
 
+static void ATTR_NONNULL() doFunct_ParseTimeLocalTz(struct cnffunc *__restrict__ const func,
+                                             struct svar *__restrict__ const ret,
+                                             void *__restrict__ const usrptr,
+                                             wti_t *__restrict__ const pWti) {
+    struct svar srcVal;
+    int bMustFree;
+    cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+    char *str = (char *)var2CString(&srcVal, &bMustFree);
+    ret->datatype = 'N';
+    ret->d.n = 0;
+    wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
+
+    if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+        struct syslogTime s;
+        int len = strlen(str);
+        uchar *pszTS = (uchar *)str;
+        memset(&s, 0, sizeof(struct syslogTime));
+        // Attempt to parse the date/time string
+        if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+            ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
+            DBGPRINTF("parse_time_localtz: RFC3339 format found\n");
+        } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+            time_t t = time(NULL);
+            struct tm tm;
+            gmtime_r(&t, &tm);  // Get the current UTC date
+            // Since properly formatted RFC 3164 timestamps do not have a YEAR
+            // specified, we have to assume one that seems reasonable - SW.
+            s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
+            ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
+            DBGPRINTF("parse_time_localtz: RFC3164 format found\n");
+        } else {
+            DBGPRINTF("parse_time_localtz: no valid format found\n");
+            wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+        }
+    }
+
+    if (bMustFree) {
+        free(str);
+    }
+    varFreeMembers(&srcVal);
+}
+
 static int ATTR_NONNULL(1, 3, 4) doFunc_is_time(const char *__restrict__ const str,
                                                 const char *__restrict__ const fmt,
                                                 struct svar *__restrict__ const r,
@@ -4177,6 +4220,7 @@ static struct scriptFunct functions[] = {
     {"random", 1, 1, doFunct_RandomGen, NULL, NULL},
     {"format_time", 2, 2, doFunct_FormatTime, NULL, NULL},
     {"parse_time", 1, 1, doFunct_ParseTime, NULL, NULL},
+    {"parse_time_localtz", 1, 1, doFunct_ParseTimeLocalTz, NULL, NULL},
     {"is_time", 1, 2, doFunct_IsTime, NULL, NULL},
     {"parse_json", 2, 2, doFunc_parse_json, NULL, NULL},
     {"get_property", 2, 2, doFunc_get_property, NULL, NULL},

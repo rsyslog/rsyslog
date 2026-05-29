@@ -995,28 +995,8 @@ static int formatTimestamp3164(struct syslogTime *ts, char *pBuf, int bBuggyDay)
 }
 
 
-/**
- * convert syslog timestamp to time_t
- * Note: it would be better to use something similar to mktime() here.
- * Unfortunately, mktime() semantics are problematic: first of all, it
- * works on local time, on the machine's time zone. In syslog, we have
- * to deal with multiple time zones at once, so we cannot plainly rely
- * on the local zone, and so we cannot rely on mktime(). One solution would
- * be to refactor all time-related functions so that they are all guarded
- * by a mutex to ensure TZ consistency (which would also enable us to
- * change the TZ at will for specific function calls). But that would
- * potentially mean a lot of overhead.
- * Also, mktime() has some side effects, at least setting of tzname. With
- * a refactoring as described above that should probably not be a problem,
- * but would also need more work. For some more thoughts on this topic,
- * have a look here:
- * http://stackoverflow.com/questions/18355101/is-standard-c-mktime-thread-safe-on-linux
- * In conclusion, we keep our own code for generating the unix timestamp.
- * rgerhards, 2016-03-02
- */
-static time_t syslogTime2time_t(const struct syslogTime *ts) {
+static time_t func_syslogTime2time_t(const struct syslogTime *ts) {
     long MonthInDays, NumberOfYears, NumberOfDays;
-    int utcOffset;
     time_t TimeInUnixFormat;
 
     if (ts->year < 1970 || ts->year > 2100) {
@@ -1094,14 +1074,57 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
     TimeInUnixFormat += ts->hour * 60 * 60;
     TimeInUnixFormat += ts->minute * 60;
     TimeInUnixFormat += ts->second;
-    /* do UTC offset */
-    utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
-    if (ts->OffsetMode == '+') utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
-    TimeInUnixFormat += utcOffset;
 done:
     return TimeInUnixFormat;
 }
 
+/**
+ * convert syslog timestamp to time_t
+ * Note: it would be better to use something similar to mktime() here.
+ * Unfortunately, mktime() semantics are problematic: first of all, it
+ * works on local time, on the machine's time zone. In syslog, we have
+ * to deal with multiple time zones at once, so we cannot plainly rely
+ * on the local zone, and so we cannot rely on mktime(). One solution would
+ * be to refactor all time-related functions so that they are all guarded
+ * by a mutex to ensure TZ consistency (which would also enable us to
+ * change the TZ at will for specific function calls). But that would
+ * potentially mean a lot of overhead.
+ * Also, mktime() has some side effects, at least setting of tzname. With
+ * a refactoring as described above that should probably not be a problem,
+ * but would also need more work. For some more thoughts on this topic,
+ * have a look here:
+ * http://stackoverflow.com/questions/18355101/is-standard-c-mktime-thread-safe-on-linux
+ * In conclusion, we keep our own code for generating the unix timestamp.
+ * rgerhards, 2016-03-02
+ */
+static time_t syslogTime2time_t(const struct syslogTime *ts) {
+    
+    time_t timeWithoutOffset = func_syslogTime2time_t(&ts);
+    
+    /* do UTC offset */
+    int utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
+    if (ts->OffsetMode == '+') utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
+    timeWithoutOffset += utcOffset;
+    return timeWithoutOffset;
+}
+
+/**
+ * Same function as "syslogTime2time_t" 
+ * but return time_t value with offset of local TZ
+ */
+
+static time_t syslogTime2time_tLocalTZ(const struct syslogTime *ts) {
+    /* Time without offset */
+    time_t timeWithoutLocalOffset = syslogTime2time_t(&ts);
+    
+    struct tm tm_local;
+	time_t currtime = time(NULL);
+    if (localtime_r(&currtime, &tm_local) != NULL) {
+        timeWithoutLocalOffset -= tm_local.tm_gmtoff; 
+    }
+
+    return timeWithoutLocalOffset;  
+}
 
 /**
  * format a timestamp as a UNIX timestamp; subsecond resolution is

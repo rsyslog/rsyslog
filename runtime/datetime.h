@@ -56,6 +56,7 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
     time_t (*syslogTime2time_t)(const struct syslogTime *ts);
     /* v11, 2017-10-05 */
     int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, uint pBufMax);
+    time_t (*syslogTime2time_tLocalTZ)(const struct syslogTime *ts);
 ENDinterface(datetime)
 #define datetimeCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
     /* interface changes:
