@@ -1147,7 +1147,9 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
     while (alreadySent != len) {
         lenSend = len - alreadySent;
-        CHKiRet(netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend));
+        iRet = netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend);
+        if (iRet == RS_RET_RETRY) ABORT_FINALIZE(iRet);
+        CHKiRet(iRet);
         DBGPRINTF("omfwd: TCP sent %zd bytes, requested %u\n", lenSend, len - alreadySent);
         alreadySent += lenSend;
     }
@@ -1156,11 +1158,15 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        emitConnectionErrorMsg(pTarget, iRet);
-        if (!pTarget->bInDestruct) {
-            DestructTargetData(pTarget, 0);
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry\n");
+        } else {
+            emitConnectionErrorMsg(pTarget, iRet);
+            if (!pTarget->bInDestruct) {
+                DestructTargetData(pTarget, 0);
+            }
+            iRet = RS_RET_SUSPENDED;
         }
-        iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
 }

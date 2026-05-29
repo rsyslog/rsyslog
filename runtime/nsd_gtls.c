@@ -38,7 +38,6 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-#include <poll.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -79,30 +78,6 @@ static pthread_mutex_t mutGtlsStrerror;
 
 static inline nsd_gtls_t *nsd_gtls_from_nsd(nsd_t *const pNsd) {
     return (nsd_gtls_t *)(void *)pNsd;
-}
-
-static rsRetVal waitForSendSideRetryIO(nsd_gtls_t *const pThis, const unsigned nextIODirection) {
-    DEFiRet;
-    int sock;
-    struct pollfd pfd;
-    int pollRet;
-
-    CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
-    pfd.fd = sock;
-    pfd.events = (nextIODirection == NSDSEL_WR) ? POLLOUT : POLLIN;
-    pfd.revents = 0;
-
-    do {
-        pollRet = poll(&pfd, 1, -1);
-    } while (pollRet < 0 && errno == EINTR);
-
-    if (pollRet < 0) {
-        LogError(errno, RS_RET_POLL_ERR, "nsd_gtls: poll failed while waiting for send-side TLS retry");
-        ABORT_FINALIZE(RS_RET_POLL_ERR);
-    }
-
-finalize_it:
-    RETiRet;
 }
 
 static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
@@ -2346,9 +2321,8 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                     recvRet = gtlsRecordRecv(pThis, &nextIODirection);
                     if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                     if (recvRet == RS_RET_RETRY) {
-                        CHKiRet(waitForSendSideRetryIO(pThis, nextIODirection));
                         pThis->rtryCall = gtlsRtry_None;
-                        continue;
+                        ABORT_FINALIZE(RS_RET_RETRY);
                     }
                     if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                 }
