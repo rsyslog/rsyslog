@@ -498,7 +498,8 @@ TESTS_MMSNAREPARSE_MINIMAL = \
 	mmsnareparse-custom.sh \
 	mmsnareparse-realworld-4624-4634-5140.sh \
 	mmsnareparse-trailing-extradata.sh \
-	mmsnareparse-trailing-extradata-regex.sh
+	mmsnareparse-trailing-extradata-regex.sh \
+	mmsnareparse-trailing-extradata-regex-anchor.sh
 
 TESTS_MMSNAREPARSE_VALGRIND = \
 	mmsnareparse-comprehensive-vg.sh

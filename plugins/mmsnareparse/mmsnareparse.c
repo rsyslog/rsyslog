@@ -5187,7 +5187,8 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
             searchStart[pData->searchLimit] = '\0';
         }
 
-        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, 0);
+        const int regexecFlags = tokenWasTruncated ? REG_NOTEOL : 0;
+        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, regexecFlags);
         if (tokenWasTruncated) {
             searchStart[pData->searchLimit] = savedChar;
         }
