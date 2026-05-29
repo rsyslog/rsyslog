@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -62,6 +63,30 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(nsd_ptc
 
     /* Some prototypes for helper functions used inside openssl driver */
     static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
+
+static rsRetVal waitForSendSideRetryIO(nsd_ossl_t *const pThis, const unsigned nextIODirection) {
+    DEFiRet;
+    int sock;
+    struct pollfd pfd;
+    int pollRet;
+
+    CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+    pfd.fd = sock;
+    pfd.events = (nextIODirection == NSDSEL_WR) ? POLLOUT : POLLIN;
+    pfd.revents = 0;
+
+    do {
+        pollRet = poll(&pfd, 1, -1);
+    } while (pollRet < 0 && errno == EINTR);
+
+    if (pollRet < 0) {
+        LogError(errno, RS_RET_POLL_ERR, "nsd_ossl: poll failed while waiting for send-side TLS retry");
+        ABORT_FINALIZE(RS_RET_POLL_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
 
 /* retry an interrupted OSSL operation */
 static rsRetVal doRetry(nsd_ossl_t *pNsd) {
@@ -1280,9 +1305,10 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                         recvRet = osslRecordRecv(pThis, &nextIODirection);
                         if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                         if (recvRet == RS_RET_RETRY) {
+                            CHKiRet(waitForSendSideRetryIO(pThis, nextIODirection));
                             pThis->rtryCall = osslRtry_None;
                             pThis->rtryOsslErr = SSL_ERROR_NONE;
-                            ABORT_FINALIZE(RS_RET_RETRY);
+                            continue;
                         }
                         if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                     }
