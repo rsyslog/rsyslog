@@ -267,7 +267,7 @@ run_format_code_check() {
 		return 0
 	fi
 	if [ -x devtools/format-code.sh ]; then
-		devtools/format-code.sh --git-changed
+		RSYSLOG_LOCAL_VALIDATION_BASE="$base_ref" devtools/format-code.sh --git-changed --check --check-if-available
 	else
 		echo "warning: devtools/format-code.sh missing or not executable; skipping C format check" >&2
 	fi

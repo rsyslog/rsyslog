@@ -70,7 +70,13 @@ tool-presence guarded:
 - changed infrastructure/config files: `trivy config` on the changed paths or
   smallest relevant directory
 - larger source/test PRs: `jscpd` as an advisory duplication check
-- changed C sources or headers: `devtools/format-code.sh`
+- changed C sources or headers MUST run the exact read-only check:
+  `devtools/format-code.sh --git-changed --check --check-if-available`. This
+  is a read-only `clang-format-18` dry-run gate for deterministic validation;
+  if the exact formatter is unavailable, it warns and leaves hosted CI or a
+  fuller local environment to cover the gap. CI will not pass with improperly
+  formatted C/H code. Use `devtools/format-code.sh --git-changed` separately
+  when you intentionally want to rewrite local files.
 
 Do not run `cppcheck` routinely unless a maintainer explicitly asks for it; it
 is too noisy for routine rsyslog PR validation.
