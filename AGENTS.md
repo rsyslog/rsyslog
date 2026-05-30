@@ -192,6 +192,24 @@ Each major subtree contains a specialized `AGENTS.md` that points to area-specif
   changes that touch print statements, exception syntax, imports, or line
   continuations.
 
+## C Formatting Validation
+
+- C style is governed by `.clang-format` and the exact formatter configured in
+  `devtools/format-code.sh` (`clang-format-18` at the time of writing).
+- For C or header edits, agents MUST run
+  `devtools/format-code.sh --git-changed` before committing when local files
+  may need formatting.
+- For deterministic local validation, agents MUST use the read-only gate:
+  `devtools/format-code.sh --git-changed --check --check-if-available`.
+  This runs `clang-format` in dry-run mode and fails if changed C/H files would
+  be rewritten. If the exact formatter is missing, it warns and leaves hosted CI
+  or a fuller local environment to cover the gap.
+- CI will not pass with improperly formatted C/H code. A missing local
+  formatter is only a local tooling limitation, not permission to skip
+  formatting.
+- `devtools/local-validation-plan.sh --run` executes this read-only C format
+  check automatically for changed C/H files before heavier validation.
+
 ## Local Preflight Linters
 
 CodeFactor and CI provide centralized lint feedback, but agents SHOULD run
