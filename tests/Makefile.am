@@ -368,6 +368,7 @@ TESTS_DEFAULT = \
 	rcvr_fail_restore.sh \
 	snd-array-cmp-json.sh \
 	rscript_b64_decode.sh \
+	rscript_tocef.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
