@@ -2,9 +2,10 @@
 # creates the build environment
 # Note: this image currently uses in-container git checkouts to
 # build the "rsyslog libraries" - we do not have packages for them
-FROM	fedora:42
+FROM	fedora:44
 # search for packages that contain <file>: dnf whatprovides <file>
 RUN	dnf -y update
+# hadolint ignore=DL3041
 RUN	dnf -y install \
 	autoconf \
 	autoconf-archive \
@@ -23,11 +24,12 @@ RUN	dnf -y install \
 	gdb \
 	git \
 	gnutls-devel \
+	gnutls-utils \
 	hiredis \
 	hiredis-devel \
 	iproute \
-	java-21-openjdk \
-	java-21-openjdk-devel \
+	java-25-openjdk \
+	java-25-openjdk-devel \
 	apr-util-devel \
 	libcurl-devel \
 	libdbi-dbd-mysql \
@@ -74,7 +76,8 @@ RUN	dnf -y install \
 	tcl-devel \
 	valgrind \
 	wget \
-	zlib-devel
+	zlib-devel \
+	&& dnf clean all
 	# end of this RUN
 # unfortunately, tcl-devel does not properly setup required bits in the environment
 # so we now try to do that. In case this does no longer work with a version, search
@@ -176,7 +179,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/stricaud/faup.git && \
 	cd faup && \
 	cd build && \
-	cmake .. && make -j && \
+	cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. && make -j && \
 	make install && \
 	cd .. && \
 	cd .. && \
