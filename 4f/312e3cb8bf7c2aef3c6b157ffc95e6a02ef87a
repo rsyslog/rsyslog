@@ -1,0 +1,24 @@
+doc/source/concepts/queues.rst
+  s_6224eda96fc0da::t_660b656279222a 267-268,270-271
+  s_6224eda96fc0da::t_091dc1e897ffb8 186-191,290-296
+doc/source/rainerscript/queue_parameters.rst
+  s_6224eda96fc0da::t_091dc1e897ffb8 545-555
+doc/source/tutorials/reliable_forwarding.rst
+  s_6224eda96fc0da::t_091dc1e897ffb8 95-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4f312e3cb8bf7c2aef3c6b157ffc95e6a02ef87a",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
