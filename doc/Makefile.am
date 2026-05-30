@@ -448,6 +448,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/mo-http_request.rst \
     source/rainerscript/functions/mo-unflatten.rst \
     source/rainerscript/functions/rs-append_json.rst \
+    source/rainerscript/functions/rs-cef_ext_escape.rst \
     source/rainerscript/functions/rs-cnum.rst \
     source/rainerscript/functions/rs-cstr.rst \
     source/rainerscript/functions/rs-dyn_inc.rst \
@@ -477,6 +478,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/rs-split.rst \
     source/rainerscript/functions/rs-strlen.rst \
     source/rainerscript/functions/rs-substring.rst \
+    source/rainerscript/functions/rs-tocef.rst \
     source/rainerscript/functions/rs-tolower.rst \
     source/rainerscript/functions/rs-toupper.rst \
     source/rainerscript/functions/rs-trim.rst \
