@@ -515,8 +515,9 @@ static void warnIfOpenSSLPriorityStringConfigured(const instanceConf_t *const in
     if (inst->pristring != NULL && loadModConf != NULL && loadModConf->tlslib != NULL &&
         !strcasecmp(loadModConf->tlslib, "openssl")) {
         LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
-               "imrelp: tls.prioritystring is a GnuTLS priority string and is ignored when "
-               "tls.tlslib=\"openssl\"; use tls.tlscfgcmd for OpenSSL TLS policy");
+               "imrelp: tls.prioritystring with tls.tlslib=\"openssl\" is interpreted as an "
+               "OpenSSL cipher string, not as a GnuTLS priority string; use OpenSSL cipher "
+               "syntax or tls.tlscfgcmd for broader OpenSSL TLS policy");
     }
 }
 
