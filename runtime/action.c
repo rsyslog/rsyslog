@@ -1771,6 +1771,14 @@ static void markBatchCommittedFrom(batch_t *const pBatch, const int firstElem) {
     }
 }
 
+static void markBatchReadyFrom(batch_t *const pBatch, const int firstElem) {
+    for (int i = firstElem; i < batchNumMsgs(pBatch); ++i) {
+        if (batchIsValidElem(pBatch, i)) {
+            batchSetElemState(pBatch, i, BATCH_STATE_RDY);
+        }
+    }
+}
+
 /**
  * @brief Worker callback for action queues.
  *
@@ -1823,6 +1831,12 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
         STATSCOUNTER_INC(pAction->ctrBatchesProcessed, pAction->mutCtrBatchesProcessed);
     }
     iRet = actionCommit(pAction, pWti);
+    /* Transactional messages are tentatively marked committed when queued for
+     * the commit call. If shutdown interrupts retry handling, keep them on the
+     * queue so disk queues can persist and retry them after restart. */
+    if (iRet == RS_RET_FORCE_TERM && pAction->isTransactional) {
+        markBatchReadyFrom(pBatch, 0);
+    }
 
 finalize_it:
     RETiRet;
