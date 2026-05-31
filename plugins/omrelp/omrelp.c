@@ -486,13 +486,51 @@ static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
     }
 }
 
+static int relpPrioTokenMatches(const char *const token, const size_t len, const char *const gnutlsToken) {
+    const size_t gnutlsTokenLen = strlen(gnutlsToken);
+    if (gnutlsToken[gnutlsTokenLen - 1] == '-') {
+        return len >= gnutlsTokenLen && !strncasecmp(token, gnutlsToken, gnutlsTokenLen);
+    }
+    return len == gnutlsTokenLen && !strncasecmp(token, gnutlsToken, len);
+}
+
+static int relpPrioTokenLooksLikeGnuTLS(const char *const token, const size_t len) {
+    static const char *const gnutlsTokens[] = {"NORMAL",    "NONE",    "PERFORMANCE", "SECURE128", "SECURE192",
+                                               "SECURE256", "ANON-DH", "VERS-",       "GROUP-",    "SIGN-",
+                                               "KX-",       "CIPHER-", "MAC-",        "CURVE-",    "CTYPE-"};
+    size_t i;
+
+    for (i = 0; i < sizeof(gnutlsTokens) / sizeof(gnutlsTokens[0]); ++i) {
+        if (relpPrioTokenMatches(token, len, gnutlsTokens[i])) return 1;
+    }
+    return 0;
+}
+
+static int relpPrioStringLooksLikeGnuTLS(const uchar *const pristring) {
+    const char *p;
+    const char *token;
+    size_t len;
+
+    if (pristring == NULL) return 0;
+    p = (const char *)pristring;
+    while (*p != '\0') {
+        while (*p == ':' || *p == ',' || isspace((unsigned char)*p)) ++p;
+        while (*p == '+' || *p == '-' || *p == '!' || *p == '%') ++p;
+        token = p;
+        while (*p != '\0' && *p != ':' && *p != ',' && !isspace((unsigned char)*p)) ++p;
+        len = (size_t)(p - token);
+        if (len > 0 && relpPrioTokenLooksLikeGnuTLS(token, len)) return 1;
+    }
+    return 0;
+}
+
 static void warnIfOpenSSLPriorityStringConfigured(const instanceData *const pData) {
     if (pData->pristring != NULL && loadModConf != NULL && loadModConf->tlslib != NULL &&
-        !strcasecmp(loadModConf->tlslib, "openssl")) {
+        !strcasecmp(loadModConf->tlslib, "openssl") && relpPrioStringLooksLikeGnuTLS(pData->pristring)) {
         LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
-               "omrelp: tls.prioritystring with tls.tlslib=\"openssl\" is interpreted as an "
-               "OpenSSL cipher string, not as a GnuTLS priority string; use OpenSSL cipher "
-               "syntax or tls.tlscfgcmd for broader OpenSSL TLS policy");
+               "omrelp: tls.prioritystring with tls.tlslib=\"openssl\" appears to use GnuTLS "
+               "priority-string syntax; OpenSSL interprets this parameter as an OpenSSL cipher "
+               "string, so use OpenSSL cipher syntax or tls.tlscfgcmd for broader OpenSSL TLS policy");
     }
 }
 
