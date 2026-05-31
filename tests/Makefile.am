@@ -685,6 +685,39 @@ TESTS_IMTCP = \
 	sndrcv_gzip.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
+	imtcp-stream-always-zlib-basic.sh \
+	imtcp-stream-always-zlib-flushoff.sh \
+	imtcp-stream-always-zlib-corrupt.sh \
+	imtcp-stream-always-zlib-truncated.sh \
+	imtcp-stream-always-zlib-fragmented-ratio.sh \
+	imtcp-stream-always-zlib-expansion-guard.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS = \
+	imtcp-stream-always-zlib-impstats.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_ZSTD = \
+	imtcp-stream-always-zstd-basic.sh \
+	imtcp-stream-always-zstd-flushoff.sh \
+	imtcp-stream-always-zstd-corrupt.sh \
+	imtcp-stream-always-zstd-truncated.sh \
+	imtcp-stream-always-zstd-empty-close.sh \
+	imtcp-stream-always-zstd-expansion-guard.sh \
+	imtcp-stream-always-zstd-to-zlib-mismatch.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS = \
+	imtcp-stream-always-zstd-impstats.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_GNUTLS = \
+	imtcp-stream-always-zlib-tls-gtls.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_MBEDTLS = \
+	imtcp-stream-always-zlib-tls-mbedtls.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
+	imtcp-stream-always-zlib-tls-ossl.sh
+
 TESTS_IMTCP_YAML = \
 	imtcp-persource-ratelimit.sh
 
@@ -1843,6 +1876,63 @@ imfile-logrotate-copytruncate.log: imfile-logrotate-multiple.log
 imfile-logrotate-nocopytruncate.log: imfile-logrotate-copytruncate.log
 imfile-logrotate-state-files.log: imfile-logrotate-nocopytruncate.log
 
+# Keep imtcp listener-heavy tests serialized. macOS TSAN runners are prone to
+# transient EADDRINUSE failures when many dynamic TCP listeners start in
+# parallel.
+fromhost-port-tuple.log: fromhost-port.log
+fromhost-port-async-ruleset.log: fromhost-port-tuple.log
+allowed-sender-tcp-ok.log: fromhost-port-async-ruleset.log
+allowed-sender-tcp-fail.log: allowed-sender-tcp-ok.log
+allowed-sender-tcp-hostname-ok.log: allowed-sender-tcp-fail.log
+allowed-sender-tcp-hostname-fail.log: allowed-sender-tcp-hostname-ok.log
+imtcp-discard-truncated-msg.log: allowed-sender-tcp-hostname-fail.log
+imtcp-basic.log: imtcp-discard-truncated-msg.log
+imtcp_framing_regex.log: imtcp-basic.log
+imtcp_framing_regex_maxmsg_overflow.log: imtcp_framing_regex.log
+imtcp-multiline.log: imtcp_framing_regex_maxmsg_overflow.log
+imtcp-basic-hup.log: imtcp-multiline.log
+imtcp-impstats-single-thread.log: imtcp-basic-hup.log
+imtcp-starvation-0.log: imtcp-impstats-single-thread.log
+imtcp-starvation-1.log: imtcp-starvation-0.log
+imtcp-maxFrameSize.log: imtcp-starvation-1.log
+imtcp-msg-truncation-on-number.log: imtcp-maxFrameSize.log
+imtcp-msg-truncation-on-number2.log: imtcp-msg-truncation-on-number.log
+imtcp-netns.log: imtcp-msg-truncation-on-number2.log
+imtcp-NUL.log: imtcp-netns.log
+imtcp-NUL-rawmsg.log: imtcp-NUL.log
+imtcp_incomplete_frame_at_end.log: imtcp-NUL-rawmsg.log
+imtcp-multiport.log: imtcp_incomplete_frame_at_end.log
+imtcp-bigmessage-octetcounting.log: imtcp-multiport.log
+imtcp-bigmessage-octetstuffing.log: imtcp-bigmessage-octetcounting.log
+manytcp.log: imtcp-bigmessage-octetstuffing.log
+imtcp_conndrop.log: manytcp.log
+imtcp_addtlframedelim.log: imtcp_conndrop.log
+imtcp_no_octet_counted.log: imtcp_addtlframedelim.log
+imtcp_addtlframedelim_on_input.log: imtcp_no_octet_counted.log
+imtcp_spframingfix.log: imtcp_addtlframedelim_on_input.log
+imtcp-connection-msg-recieved.log: imtcp_spframingfix.log
+sndrcv.log: imtcp-connection-msg-recieved.log
+sndrcv_failover.log: sndrcv.log
+sndrcv_gzip.log: sndrcv_failover.log
+sndrcv_udp_nonstdpt.log: sndrcv_gzip.log
+sndrcv_udp_nonstdpt_v6.log: sndrcv_udp_nonstdpt.log
+imtcp-stream-always-zlib-basic.log: sndrcv_udp_nonstdpt_v6.log
+imtcp-stream-always-zlib-flushoff.log: imtcp-stream-always-zlib-basic.log
+imtcp-stream-always-zlib-corrupt.log: imtcp-stream-always-zlib-flushoff.log
+imtcp-stream-always-zlib-truncated.log: imtcp-stream-always-zlib-corrupt.log
+imtcp-stream-always-zlib-fragmented-ratio.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zlib-expansion-guard.log: imtcp-stream-always-zlib-fragmented-ratio.log
+imtcp-stream-always-zstd-basic.log: imtcp-stream-always-zlib-expansion-guard.log
+imtcp-stream-always-zstd-flushoff.log: imtcp-stream-always-zstd-basic.log
+imtcp-stream-always-zstd-corrupt.log: imtcp-stream-always-zstd-flushoff.log
+imtcp-stream-always-zstd-truncated.log: imtcp-stream-always-zstd-corrupt.log
+imtcp-stream-always-zstd-empty-close.log: imtcp-stream-always-zstd-truncated.log
+imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-empty-close.log
+imtcp-stream-always-zstd-to-zlib-mismatch.log: imtcp-stream-always-zstd-expansion-guard.log
+imtcp-impstats.log: imtcp-stream-always-zlib-truncated.log
+imtcp-stream-always-zlib-impstats.log: imtcp-impstats.log
+imtcp-stream-always-zstd-impstats.log: imtcp-stream-always-zlib-impstats.log
+
 TESTS_IMFILE_MMNORMALIZE = \
 	imfile-endmsg.regex-with-example.sh
 
@@ -1948,6 +2038,13 @@ EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_GNUTLS)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_MBEDTLS)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_OSSL)
 EXTRA_DIST += $(TESTS_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
@@ -2448,6 +2545,10 @@ endif # ENABLE_IMFILE_TESTS
 
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP)
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
+if ENABLE_LIBZSTD
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD)
+endif # ENABLE_LIBZSTD
 
 if HAVE_LIBYAML
 TESTS += $(TESTS_IMTCP_YAML)
@@ -2462,6 +2563,10 @@ endif # HAVE_VALGRIND
 if ENABLE_IMTCP_EPOLL
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_IMTCP_IMPSTATS)
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS)
+if ENABLE_LIBZSTD
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS)
+endif # ENABLE_LIBZSTD
 endif # ENABLE_IMPSTATS
 endif # ENABLE_IMTCP_EPOLL
 endif # ENABLE_IMTCP_TESTS
@@ -2988,6 +3093,9 @@ endif
 
 if ENABLE_GNUTLS_TESTS
 TESTS += $(TESTS_GNUTLS)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_GNUTLS)
+endif # ENABLE_IMTCP_TESTS
 if HAVE_VALGRIND
 TESTS += $(TESTS_GNUTLS_VALGRIND)
 endif
@@ -3000,6 +3108,9 @@ endif
 
 if ENABLE_MBEDTLS
 TESTS += $(TESTS_MBEDTLS)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_MBEDTLS)
+endif # ENABLE_IMTCP_TESTS
 if HAVE_VALGRIND
 TESTS += $(TESTS_MBEDTLS_VALGRIND)
 endif
@@ -3014,6 +3125,9 @@ TESTS += $(TESTS_OSSL)
 
 if ENABLE_OPENSSL
 TESTS += $(TESTS_OSSL_OPENSSL)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_OSSL)
+endif # ENABLE_IMTCP_TESTS
 if HAVE_VALGRIND
 TESTS += $(TESTS_OSSL_OPENSSL_VALGRIND)
 endif
