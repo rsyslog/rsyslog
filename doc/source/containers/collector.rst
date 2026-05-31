@@ -97,7 +97,7 @@ that loads or uses ``omkafka``.
 .. _containers-user-collector-tls_auth_mode:
 .. envvar:: TLS_AUTH_MODE
 
-   Netstream authentication mode for the TLS listener. Default ``anon``.
+   Netstream authentication mode for the TLS listener. Default ``x509/certvalid``.
 
 .. _containers-user-collector-write_all_file:
 .. envvar:: WRITE_ALL_FILE
