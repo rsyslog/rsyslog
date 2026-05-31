@@ -19,6 +19,12 @@ omfwd:
   paths: ["plugins/omfwd/"]
   requires_serialization: false
 
+omrelp:
+  paths: ["plugins/omrelp/"]
+  requires_serialization: false
+  notes:
+    - Each worker owns its RELP client while the optional action-local ratelimiter is shared in pData and must stay thread-safe.
+
 omelasticsearch:
   paths: ["plugins/omelasticsearch/"]
   requires_serialization: false

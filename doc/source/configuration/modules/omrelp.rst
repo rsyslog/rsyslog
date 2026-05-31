@@ -139,6 +139,18 @@ Action Parameters
      - .. include:: ../../reference/parameters/omrelp-localclientip.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omrelp-ratelimit-interval`
+     - .. include:: ../../reference/parameters/omrelp-ratelimit-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omrelp-ratelimit-burst`
+     - .. include:: ../../reference/parameters/omrelp-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omrelp-ratelimit-name`
+     - .. include:: ../../reference/parameters/omrelp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -166,6 +178,9 @@ Action Parameters
    ../../reference/parameters/omrelp-tls-tlscfgcmd
    ../../reference/parameters/omrelp-tls-permanentfailuredisablesaction
    ../../reference/parameters/omrelp-localclientip
+   ../../reference/parameters/omrelp-ratelimit-interval
+   ../../reference/parameters/omrelp-ratelimit-burst
+   ../../reference/parameters/omrelp-ratelimit-name
 
 
 Examples
@@ -206,6 +221,18 @@ actual deployments. For details, see parameter descriptions.
 		tls.permittedpeer="rsyslog")
 
 
+Limiting omrelp forwarding rate
+-------------------------------
+
+The following example throttles one RELP destination to at most five messages
+per two-second interval.
+
+.. code-block:: none
+
+   action(type="omrelp" target="centralserv" port="2514"
+          ratelimit.interval="2" ratelimit.burst="5")
+
+
 |FmtObsoleteName| directives
 ============================
 
@@ -216,4 +243,3 @@ be specified. To send a message via RELP, use
 .. code-block:: none
 
    *.*  :omrelp:<server>:<port>;<template>
-

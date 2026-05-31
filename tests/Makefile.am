@@ -612,6 +612,7 @@ TESTS_LIBYAML = \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
+	yaml-omrelp-ratelimit-name.sh \
 	yaml-omfile-dynafilecachesize-invalid.sh \
 	yaml-include.sh \
 	yaml-ruleset-script.sh \
@@ -1648,6 +1649,8 @@ TESTS_RELP = \
 	 imrelp-invld-tlslib.sh \
 	 imrelp-bigmessage.sh \
 	 imrelp_ratelimit_name.sh \
+	 omrelp_ratelimit.sh \
+	 omrelp_ratelimit_name.sh \
 	 omrelp-invld-tlslib.sh \
 	 sndrcv_relp_dflt_pt.sh \
 	 glbl-oversizeMsg-log.sh \

@@ -12,6 +12,8 @@
  *       definitely be optional and by default off due to the
  *       performance implications (and given the fact that message
  *       loss is pretty unlikely in usual cases).
+ * When output rate limiting is configured, the ratelimiter is shared
+ * across workers in pData and relies on the runtime ratelimit mutex.
  *
  *
  * File begun on 2008-03-13 by RGerhards
@@ -53,6 +55,7 @@
 #include "errmsg.h"
 #include "debug.h"
 #include "parserif.h"
+#include "ratelimit.h"
 #include "unicode-helper.h"
 #include "atomic.h"
 
@@ -97,6 +100,11 @@ typedef struct _instanceData {
 #endif
     uchar *tplName;
     uchar *localClientIP;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    uchar *pszRatelimitName;
+    uchar *pszRatelimitKey;
+    ratelimit_t *ratelimiter;
     sbool bKeepAlive; /* support keep-alive packets */
     int iKeepAliveProbes;
     int iKeepAliveTime;
@@ -157,6 +165,9 @@ static struct cnfparamdescr actpdescr[] = {{"target", eCmdHdlrGetWord, 1},
                                            {"keepalive.time", eCmdHdlrInt, 0},
                                            {"keepalive.interval", eCmdHdlrInt, 0},
                                            {"localclientip", eCmdHdlrGetWord, 0},
+                                           {"ratelimit.interval", eCmdHdlrInt, 0},
+                                           {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"template", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -333,6 +344,11 @@ BEGINcreateInstance
     pData->pristring = NULL;
     pData->authmode = NULL;
     pData->localClientIP = NULL;
+    pData->ratelimitInterval = -1;
+    pData->ratelimitBurst = -1;
+    pData->pszRatelimitName = NULL;
+    pData->pszRatelimitKey = NULL;
+    pData->ratelimiter = NULL;
     pData->caCertFile = NULL;
     pData->myCertFile = NULL;
     pData->myPrivKeyFile = NULL;
@@ -365,6 +381,9 @@ BEGINfreeInstance
     free(pData->pristring);
     free(pData->authmode);
     free(pData->localClientIP);
+    free(pData->pszRatelimitName);
+    free(pData->pszRatelimitKey);
+    if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
     free(pData->caCertFile);
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
@@ -397,6 +416,11 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->bTlsPermFailDisablesAction = DFLT_TLS_PERMFAIL_DISABLES_ACTION;
     pData->pristring = NULL;
     pData->authmode = NULL;
+    pData->ratelimitInterval = -1;
+    pData->ratelimitBurst = -1;
+    pData->pszRatelimitName = NULL;
+    pData->pszRatelimitKey = NULL;
+    pData->ratelimiter = NULL;
     if (glbl.GetSourceIPofLocalClient() == NULL)
         pData->localClientIP = NULL;
     else
@@ -490,7 +514,9 @@ BEGINnewActInst
     struct cnfparamvals *pvals;
     int i, j;
     FILE *fp;
+    const char *relpPt;
     relpClt_t *pRelpClt = NULL;
+    size_t ratelimitKeyLen;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -509,6 +535,12 @@ BEGINnewActInst
             CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "localclientip")) {
             CHKmalloc(pData->localClientIP = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
+            pData->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
+            pData->ratelimitBurst = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "timeout")) {
             pData->timeout = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "conn.timeout")) {
@@ -585,6 +617,26 @@ BEGINnewActInst
         }
     }
 
+    if (pData->pszRatelimitName != NULL) {
+        if (pData->ratelimitInterval != -1 || pData->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omrelp: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+        pData->ratelimitInterval = 0;
+        pData->ratelimitBurst = 0;
+    } else {
+        if (pData->ratelimitInterval == -1) pData->ratelimitInterval = 0;
+        if (pData->ratelimitBurst == -1) pData->ratelimitBurst = 200;
+    }
+    if (pData->target == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+    relpPt = (const char *)getRelpPt(pData);
+    ratelimitKeyLen = strlen((char *)pData->target) + strlen(relpPt) + 2;
+    CHKmalloc(pData->pszRatelimitKey = malloc(ratelimitKeyLen));
+    snprintf((char *)pData->pszRatelimitKey, ratelimitKeyLen, "%s:%s", pData->target, relpPt);
+
     CODE_STD_STRING_REQUESTnewActInst(1);
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0,
@@ -592,6 +644,19 @@ BEGINnewActInst
                          OMSR_NO_RQD_TPL_OPTS));
 
     warnIfPlainRelpActionConfigured(pData);
+
+    if (pData->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
+                                       "omrelp", (char *)pData->pszRatelimitKey));
+        ratelimitSetNoTimeCache(pData->ratelimiter);
+    } else if (pData->ratelimitInterval > 0) {
+        CHKiRet(ratelimitNew(&pData->ratelimiter, "omrelp", (char *)pData->pszRatelimitKey));
+        ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval, (unsigned)pData->ratelimitBurst);
+        ratelimitSetNoTimeCache(pData->ratelimiter);
+    }
+    if (pData->ratelimiter != NULL) {
+        ratelimitSetThreadSafe(pData->ratelimiter);
+    }
 
     iRet = doCreateRelpClient(pData, &pRelpClt);
     if (pRelpClt != NULL) relpEngineCltDestruct(pRelpEngine, &pRelpClt);
@@ -728,6 +793,16 @@ BEGINdoAction
 
     /* we need to truncate oversize msgs - no way around that... */
     if ((int)lenMsg > glbl.GetMaxLine(runModConf->pConf)) lenMsg = glbl.GetMaxLine(runModConf->pConf);
+
+    if (pData->ratelimiter != NULL) {
+        iRet = ratelimitMsgCount(pData->ratelimiter, 0, (char *)pData->pszRatelimitKey);
+        if (iRet == RS_RET_DISCARDMSG) {
+            iRet = RS_RET_OK;
+            goto finalize_it;
+        } else if (iRet != RS_RET_OK) {
+            LogError(0, RS_RET_ERR, "omrelp: error during rate limit for target %s: %d", pData->pszRatelimitKey, iRet);
+        }
+    }
 
     /* forward */
     ret = relpCltSendSyslog(pWrkrData->pRelpClt, (uchar *)pMsg, lenMsg);
