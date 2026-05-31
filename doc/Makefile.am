@@ -1138,6 +1138,9 @@ EXTRA_DIST = \
     source/reference/parameters/omrelp-keepalive-time.rst \
     source/reference/parameters/omrelp-keepalive.rst \
     source/reference/parameters/omrelp-localclientip.rst \
+    source/reference/parameters/omrelp-ratelimit-burst.rst \
+    source/reference/parameters/omrelp-ratelimit-interval.rst \
+    source/reference/parameters/omrelp-ratelimit-name.rst \
     source/reference/parameters/omrelp-port.rst \
     source/reference/parameters/omrelp-rebindinterval.rst \
     source/reference/parameters/omrelp-target.rst \
