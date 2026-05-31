@@ -239,6 +239,7 @@ TESTS_DEFAULT = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
@@ -653,6 +654,7 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp_framing_regex.sh \
