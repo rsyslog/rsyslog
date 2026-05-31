@@ -294,6 +294,10 @@ PRAGMA_IGNORE_Wempty_body
             wtiWakeupThrd(pThis->pWrkr[i]);
         }
     }
+    /* The final worker can transition to WAIT_JOIN and decrement the active
+     * count to zero just before the loop exits. Join it now so destructors see
+     * the stable STOPPED state instead of a joinable terminated worker. */
+    wtpJoinTerminatedWrkr(pThis);
     pthread_cleanup_pop(1);
 
     if (bTimedOut) iRet = RS_RET_TIMED_OUT;
