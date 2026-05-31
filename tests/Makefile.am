@@ -165,6 +165,7 @@ TESTS_DEFAULT = \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	prop-all-json-concurrency.sh \
 	rscript_privdropuser.sh \
 	rscript_privdropuserid.sh \
 	rscript_privdropgroup.sh \
@@ -484,7 +485,6 @@ TESTS_SKELETONS = \
 TESTS_INACTIVE = \
 	omfwd-errfile-maxsize.sh \
 	omfwd-errfile-maxsize-filled.sh \
-	prop-all-json-concurrency.sh \
 	imuxsock_hostname.sh \
 	sndrcv_ossl_cert_chain.sh \
 	imtcp-tls-ossl-basic-stress.sh \
