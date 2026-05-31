@@ -17,6 +17,10 @@ EXTRA_DIST = \
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
+TESTS_TEMPLATE_REGEX_BOUNDS = template-regex-index-bounds.sh
+TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML = yaml-template-regex-index-bounds.sh
+EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML)
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -192,6 +196,7 @@ TESTS_DEFAULT = \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
 	template-const-jsonf.sh \
+	$(TESTS_TEMPLATE_REGEX_BOUNDS) \
 	template-topos-neg.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
@@ -629,6 +634,7 @@ TESTS_LIBYAML = \
 	yaml-statements-call.sh \
 	yaml-statements-unset.sh \
 	yaml-template-list.sh \
+	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-statements-reload-lookup.sh \
 	yaml-lookup-table-duplicate.sh

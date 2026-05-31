@@ -785,6 +785,18 @@ static struct cnfparamblk pblkConstant = {
 
 #ifdef FEATURE_REGEXP
 DEFobjCurrIf(regexp) static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
+
+static rsRetVal tplValidateRegexMatchSelector(struct template *const pTpl,
+                                              const char *const paramName,
+                                              const int selector) {
+    if (selector < 0 || selector >= TPL_REGEX_MAX_MATCHES) {
+        LogError(0, RS_RET_ERR, "template %s error: %s=%d is invalid (supported range 0..%d)",
+                 pTpl->pszName != NULL ? pTpl->pszName : "<unnamed>", paramName, selector, TPL_REGEX_MAX_MATCHES - 1);
+        return RS_RET_ERR;
+    }
+
+    return RS_RET_OK;
+}
 #endif
 
 /* helper to tplToString and strgen's, extends buffer */
@@ -2506,6 +2518,12 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
                  "specified - this is not possible, remove one");
         ABORT_FINALIZE(RS_RET_ERR);
     }
+#ifdef FEATURE_REGEXP
+    if (re_expr != NULL) {
+        CHKiRet(tplValidateRegexMatchSelector(pTpl, "regex.match", re_matchToUse));
+        CHKiRet(tplValidateRegexMatchSelector(pTpl, "regex.submatch", re_submatchToUse));
+    }
+#endif
 
     /* apply */
     CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -3034,6 +3052,7 @@ void tplDeleteNew(rsconf_t *conf) {
                     // No action needed for other cases
                     break;
             }
+            free(pTpeDel->fieldName);
             free(pTpeDel);
         }
         pTplDel = pTpl;
