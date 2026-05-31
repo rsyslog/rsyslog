@@ -3202,7 +3202,10 @@ static void ATTR_NONNULL() doFunct_is_in_subnet(struct cnffunc *__restrict__ con
                                                 void *__restrict__ const usrptr,
                                                 wti_t *__restrict__ const pWti) {
     struct svar srcVal[2];
-    int bMustFree1, bMustFree2;
+    int bMustFree1 = 0, bMustFree2 = 0;
+    int bMustFreeEs1 = 0, bMustFreeEs2 = 0;
+    es_str_t *ip_estr = NULL;
+    es_str_t *cidr_estr = NULL;
     char *ip_str, *cidr_str;
     char *cidr_ip_part;
     char *cidr_mask_part;
@@ -3216,10 +3219,24 @@ static void ATTR_NONNULL() doFunct_is_in_subnet(struct cnffunc *__restrict__ con
     cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
     cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
 
-    ip_str = (char *)var2CString(&srcVal[0], &bMustFree1);
-    cidr_str = (char *)var2CString(&srcVal[1], &bMustFree2);
+    ip_estr = var2String(&srcVal[0], &bMustFreeEs1);
+    cidr_estr = var2String(&srcVal[1], &bMustFreeEs2);
+    if (ip_estr == NULL || cidr_estr == NULL) {
+        goto finalize_it;
+    }
+    ip_str = (char *)es_str2cstr(ip_estr, NULL);
+    cidr_str = (char *)es_str2cstr(cidr_estr, NULL);
+    bMustFree1 = 1;
+    bMustFree2 = 1;
 
     if (ip_str == NULL || cidr_str == NULL) {
+        goto finalize_it;
+    }
+    /*
+     * Reject embedded NUL bytes in length-counted string values. Otherwise
+     * C-string parsers may accept a truncated prefix and bypass validation.
+     */
+    if (strlen(ip_str) != es_strlen(ip_estr) || strlen(cidr_str) != es_strlen(cidr_estr)) {
         goto finalize_it;
     }
 
@@ -3291,6 +3308,8 @@ static void ATTR_NONNULL() doFunct_is_in_subnet(struct cnffunc *__restrict__ con
 finalize_it:
     if (bMustFree1) free(ip_str);
     if (bMustFree2) free(cidr_str);
+    if (bMustFreeEs1) es_deleteStr(ip_estr);
+    if (bMustFreeEs2) es_deleteStr(cidr_estr);
     varFreeMembers(&srcVal[0]);
     varFreeMembers(&srcVal[1]);
 
