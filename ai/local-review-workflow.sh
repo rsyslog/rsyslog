@@ -177,17 +177,15 @@ check_allocation_policy() {
       die "Forced --subcli codex but codex not found"
     fi
     debug "Using codex for policy check"
-    debug "Command: codex exec --model $POLICY_CHECK_MODEL --dangerously-bypass-approvals-and-sandbox <PROMPT>"
+    debug "Command: codex exec --model $POLICY_CHECK_MODEL <PROMPT>"
     if $DEBUG; then
       codex exec \
         --model "$POLICY_CHECK_MODEL" \
-        --dangerously-bypass-approvals-and-sandbox \
         "$PROMPT"
     else
       # Suppress codex's verbose output (stderr) when not in debug mode
       codex exec \
         --model "$POLICY_CHECK_MODEL" \
-        --dangerously-bypass-approvals-and-sandbox \
         "$PROMPT" 2>/dev/null
     fi
   elif [[ "$FORCE_SUBCLI" == "copilot" ]] || { [[ -z "$FORCE_SUBCLI" ]] && command -v copilot >/dev/null 2>&1; }; then
@@ -195,11 +193,9 @@ check_allocation_policy() {
       die "Forced --subcli copilot but copilot not found"
     fi
     debug "Using copilot for policy check"
-    debug "Command: copilot --model $POLICY_CHECK_MODEL --add-dir /tmp --allow-all-tools --prompt <PROMPT>"
+    debug "Command: copilot --model $POLICY_CHECK_MODEL --prompt <PROMPT>"
     copilot \
       --model "$POLICY_CHECK_MODEL" \
-      --add-dir /tmp \
-      --allow-all-tools \
       --prompt "$PROMPT"
   else
     debug "Neither codex nor copilot CLI found, skipping check"
@@ -306,34 +302,9 @@ if [[ "${DIFF_ARGS[*]}" != *"--cached"* ]]; then
   git diff --unified=0 --no-color >>"$TMP_DIFF" || true
 fi
 
-# Check for untracked files
-debug "Command: git ls-files --others --exclude-standard"
-UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
-if [[ -n "$UNTRACKED_FILES" ]]; then
-  debug "Found untracked files:"
-  $DEBUG && echo "$UNTRACKED_FILES" >&2
-
-  # Add untracked file contents to diff as proper unified diffs
-  # Skip: the script itself, build artifacts, and generated tarballs
-  while IFS= read -r file; do
-    if [[ -f "$file" && "$file" != "ai/copilot-policy-alloc.sh" && "$file" != rsyslog-*.daily/* && "$file" != *.tar.gz ]]; then
-      line_count=$(wc -l < "$file")
-      # Limit file size to prevent argument list too long
-      if [[ $line_count -lt 10000 ]]; then
-        echo "diff --git a/$file b/$file" >>"$TMP_DIFF"
-        echo "new file mode 100644" >>"$TMP_DIFF"
-        echo "index 0000000..0000000" >>"$TMP_DIFF"
-        echo "--- /dev/null" >>"$TMP_DIFF"
-        echo "+++ b/$file" >>"$TMP_DIFF"
-        echo "@@ -0,0 +1,$line_count @@" >>"$TMP_DIFF"
-        # Add all lines as additions with proper + prefix (no space)
-        sed 's/^/+/' "$file" >>"$TMP_DIFF"
-      else
-        debug "Skipping large untracked file: $file ($line_count lines)"
-      fi
-    fi
-  done <<< "$UNTRACKED_FILES"
-fi
+# Do not include untracked files in AI prompts.
+# Untracked content may contain sensitive local data and is not part of the
+# review target unless intentionally staged/tracked in git.
 
 DIFF_IS_EMPTY=false
 if [[ ! -s "$TMP_DIFF" ]]; then
