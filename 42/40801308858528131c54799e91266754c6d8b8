@@ -1,0 +1,30 @@
+doc/source/reference/parameters/omrelp-tls-prioritystring.rst
+  s_6224eda96fc0da::t_ec805a3aa8d8ab 28-45,56-57
+  s_6224eda96fc0da::t_0fa8a741b088c1 58-59
+plugins/imrelp/imrelp.c
+  s_6224eda96fc0da::t_3ab9da05ef3416 514-554,557,559-561
+doc/source/reference/parameters/imrelp-tls-prioritystring.rst
+  s_6224eda96fc0da::t_ec805a3aa8d8ab 28-31,34-43,57-58
+  s_6224eda96fc0da::t_0fa8a741b088c1 59-60
+plugins/omrelp/omrelp.c
+  s_6224eda96fc0da::t_3ab9da05ef3416 489-526,529,531-533
+tests/relp-openssl-prioritystring-warning.sh
+  s_6224eda96fc0da::t_b566e042a6ae1a 3-4,6-7,24,29-31,33,37-39,44,49-56
+  s_6224eda96fc0da::t_75f9cd84affba4 12-14,32,34-36,45-48,57-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4240801308858528131c54799e91266754c6d8b8",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
