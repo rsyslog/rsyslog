@@ -288,7 +288,11 @@ static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, const char *r
     fjson_object_object_add(errRoot, "request", req);
     fjson_object_object_add(errRoot, "reply", fjson_object_new_string(reply));
     *rendered = strdup((char *)fjson_object_to_json_string(errRoot));
-    if (*rendered == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (*rendered == NULL) {
+        fjson_object_put(errRoot);
+        req = NULL;
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
     req = NULL;
     fjson_object_put(errRoot);
