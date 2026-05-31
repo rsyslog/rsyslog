@@ -148,6 +148,8 @@ TESTS_DEFAULT = \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
+	omfwd-errfile-maxsize.sh \
+	omfwd-errfile-maxsize-filled.sh \
 	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
@@ -239,6 +241,7 @@ TESTS_DEFAULT = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
@@ -481,13 +484,7 @@ TESTS_SKELETONS = \
 	omfwd-lb-1target-retry-test_skeleton-TargetFail.sh
 
 TESTS_INACTIVE = \
-	omfwd-errfile-maxsize.sh \
-	omfwd-errfile-maxsize-filled.sh \
-	prop-all-json-concurrency.sh \
-	imuxsock_hostname.sh \
-	sndrcv_ossl_cert_chain.sh \
-	imtcp-tls-ossl-basic-stress.sh \
-	imtcp-tls-ossl-manycon.sh
+	prop-all-json-concurrency.sh
 
 TESTS_MMSNAREPARSE_MINIMAL = \
 	mmsnareparse-basic.sh \
@@ -653,6 +650,7 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp_framing_regex.sh \
@@ -1574,6 +1572,7 @@ TESTS_OSSL = \
 	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
+	imtcp-tls-ossl-manycon.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1584,6 +1583,7 @@ TESTS_OSSL = \
 TESTS_OSSL_OPENSSL = \
 	imtcp-tls-ossl-crl.sh \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-stress.sh \
 	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-error-key2.sh \
