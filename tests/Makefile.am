@@ -761,6 +761,7 @@ TESTS_MMANON = \
 	mmanon_truncated_dotted_suffix.sh
 
 TESTS_CLICKHOUSE = \
+	clickhouse-template-option-stdsql.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-dflt-tpl.sh \
