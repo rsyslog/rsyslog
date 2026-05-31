@@ -1,3 +1,21 @@
+/* msg_replace_helper.h
+ *
+ * Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifndef INCLUDED_MSG_REPLACE_HELPER_H
 #define INCLUDED_MSG_REPLACE_HELPER_H
 
@@ -32,7 +50,8 @@ static rsRetVal msgReplaceRawMsgSegment(uchar **ppRawMsg,
     lenSuffix = *pLenRawMsg - offMSG - lenOldMSG;
     bufNew = *ppRawMsg;
 
-    if (lenMSG > lenOldMSG && lenNew >= stackBufSize) {
+    if (lenMSG > lenOldMSG &&
+        ((bufNew == stackBuf && lenNew >= stackBufSize) || (bufNew != stackBuf && lenNew > *pLenRawMsg))) {
         if (bufNew == stackBuf) {
             bufNew = malloc(lenNew + 1);
             if (bufNew == NULL) {

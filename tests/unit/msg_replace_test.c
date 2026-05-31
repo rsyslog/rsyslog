@@ -16,6 +16,10 @@
     } while (0)
 
 static int test_stack_to_heap_growth(void) {
+    /* Replacing a stack-backed MSG with a longer value must preserve the suffix
+     * after moving storage to the heap. The exact raw message content is the
+     * oracle.
+     */
     static const uchar initialRawMsg[] = "prefix old suffix";
     static const uchar replacement[] = "much longer replacement";
     static const uchar expectedRawMsg[] = "prefix much longer replacement suffix";
@@ -40,10 +44,15 @@ static int test_stack_to_heap_growth(void) {
 }
 
 static int test_heap_realloc_growth(void) {
+    /* Replacing a heap-backed MSG with a longer value must realloc when the new
+     * length exceeds the current heap allocation even if it still fits inside
+     * CONF_RAWMSG_BUFSIZE. The preserved suffix and final full raw message are
+     * the oracle.
+     */
     static const uchar initialRawMsg[] = "prefix old suffix";
     static const uchar replacement[] = "much longer replacement";
     static const uchar expectedRawMsg[] = "prefix much longer replacement suffix";
-    uchar stackBuf[8];
+    uchar stackBuf[CONF_RAWMSG_BUFSIZE];
     uchar *rawMsg = malloc(sizeof(initialRawMsg));
     int lenRawMsg = sizeof(initialRawMsg) - 1;
     rsRetVal ret;
