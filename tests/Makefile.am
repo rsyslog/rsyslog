@@ -430,6 +430,7 @@ TESTS_DEFAULT = \
 	rscript_get_property.sh \
 	rscript_split.sh \
 	rscript_append_json.sh \
+	msg_json_set_regression.sh \
 	config_output-o-option.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
@@ -2134,8 +2135,8 @@ liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri
-TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri
+check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
+TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
@@ -2145,6 +2146,9 @@ runtime_unit_stringbuf_SOURCES = \
 
 runtime_unit_parser_pri_SOURCES = \
 	unit/parser_pri_test.c
+
+runtime_unit_msg_replace_SOURCES = \
+	unit/msg_replace_test.c
 
 if ENABLE_GSSAPI
 check_PROGRAMS += runtime_unit_gss_token_util
@@ -2177,15 +2181,19 @@ runtime_unit_stringbuf_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_parser_pri_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_msg_replace_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 if ENABLE_TESTBENCH
