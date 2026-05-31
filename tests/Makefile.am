@@ -1340,7 +1340,12 @@ TESTS_FMPCRE = \
 TESTS_MMPSTRUCDATA = \
 	mmpstrucdata.sh \
 	mmpstrucdata-escaping.sh \
-	mmpstrucdata-case.sh
+	mmpstrucdata-case.sh \
+	mmpstrucdata-container-null.sh \
+	mmpstrucdata-large-sd.sh \
+	mmpstrucdata-max-sd-size.sh \
+	mmpstrucdata-rfc3164-skip.sh \
+	yaml-mmpstrucdata-container-null.sh
 
 TESTS_MMPSTRUCDATA_VALGRIND = \
 	mmpstrucdata-vg.sh \
