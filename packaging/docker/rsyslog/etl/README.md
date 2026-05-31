@@ -13,3 +13,5 @@ ETL pipelines.
 - VESPA_DOCTYPE
 - VESPA_SERVER
 - VESPA_PORT
+- VESPA_USE_HTTPS (default: on)
+- VESPA_ALLOW_UNSIGNED_CERTS (default: off)

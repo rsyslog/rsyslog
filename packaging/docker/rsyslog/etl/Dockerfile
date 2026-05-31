@@ -71,6 +71,8 @@ ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
 ENV ENABLE_RELP=on
 ENV ENABLE_VESPA=on
+ENV VESPA_USE_HTTPS=on
+ENV VESPA_ALLOW_UNSIGNED_CERTS=off
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=collector
