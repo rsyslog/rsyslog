@@ -27,6 +27,16 @@ TESTS_GSSAPI_LIBYAML = \
 	imgssapi-yaml-include-listen-port-file.sh
 EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
+TESTS_DOC_SAMPLES = \
+	doc-sample-basic-configuration.sh \
+	doc-sample-basic-structure.sh \
+	doc-sample-config-examples.sh \
+	doc-sample-database.sh \
+	doc-sample-forwarding-logs.sh \
+	doc-sample-omfwd.sh \
+	doc-sample-reliable-forwarding.sh
+EXTRA_DIST += $(TESTS_DOC_SAMPLES) doc-sample-lib.sh
+
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
@@ -80,6 +90,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	$(TESTS_DOC_SAMPLES) \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
 	immark.sh \
