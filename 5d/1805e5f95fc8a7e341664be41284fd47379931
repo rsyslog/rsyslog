@@ -1,0 +1,26 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_4cff64869efb26 1658
+tests/relp-openssl-prioritystring-warning.sh
+  s_6224eda96fc0da::t_005f4e47a98acf 7-8,16,26
+  s_6224eda96fc0da::t_589d2ccf837c0e 1-6,9-15,17-25,27-33
+plugins/imrelp/imrelp.c
+  s_6224eda96fc0da::t_68ab72ee8fcafb 514-522,700
+plugins/omrelp/omrelp.c
+  s_6224eda96fc0da::t_bfac0275767622 489-496,603
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5d1805e5f95fc8a7e341664be41284fd47379931",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
