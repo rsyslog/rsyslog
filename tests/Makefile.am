@@ -35,7 +35,17 @@ TESTS_DOC_SAMPLES = \
 	doc-sample-default-config.sh \
 	doc-sample-first-config.sh \
 	doc-sample-forwarding-logs.sh \
+	doc-sample-message-app-name.sh \
 	doc-sample-message-pipeline.sh \
+	doc-sample-message-fromhost-ip.sh \
+	doc-sample-message-fromhost.sh \
+	doc-sample-message-hostname.sh \
+	doc-sample-message-inputname.sh \
+	doc-sample-message-msg.sh \
+	doc-sample-message-msgid.sh \
+	doc-sample-message-pri.sh \
+	doc-sample-message-programname.sh \
+	doc-sample-message-syslogtag.sh \
 	doc-sample-omfwd.sh \
 	doc-sample-order-matters.sh \
 	doc-sample-remote-server.sh \
