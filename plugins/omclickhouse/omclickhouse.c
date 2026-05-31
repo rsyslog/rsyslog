@@ -275,7 +275,7 @@ ENDtryResume
 /*
  * Dumps entire bulk request and response in error log
  */
-static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, char *reply, uchar *reqmsg, char **rendered) {
+static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, const char *reply, uchar *reqmsg, char **rendered) {
     DEFiRet;
     fjson_object *req = NULL;
     fjson_object *errRoot = NULL;
@@ -288,6 +288,7 @@ static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, char *reply, 
     fjson_object_object_add(errRoot, "request", req);
     fjson_object_object_add(errRoot, "reply", fjson_object_new_string(reply));
     *rendered = strdup((char *)fjson_object_to_json_string(errRoot));
+    if (*rendered == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
     req = NULL;
     fjson_object_put(errRoot);
@@ -305,7 +306,8 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrData, uchar *const reqmsg) {
     DEFiRet;
     instanceData *pData = pWrkrData->pData;
-    char *rendered = pWrkrData->reply;
+    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
+    char *rendered = NULL;
     size_t toWrite;
     ssize_t wrRet;
 
@@ -326,7 +328,7 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
         }
     }
 
-    if (getDataErrorDefault(pWrkrData, pWrkrData->reply, reqmsg, &rendered) != RS_RET_OK) {
+    if (getDataErrorDefault(pWrkrData, reply, reqmsg, &rendered) != RS_RET_OK) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
@@ -347,22 +349,25 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
     }
 
 finalize_it:
+    free(rendered);
     RETiRet;
 }
 
 
-static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
+static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, const long httpStatus) {
+    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
     DEFiRet;
 
-    if ((strstr(pWrkrData->reply, " = DB::Exception") != NULL) ||
-        (strstr(pWrkrData->reply, "DB::NetException") != NULL) ||
-        (strstr(pWrkrData->reply, "DB::ParsingException") != NULL)) {
-        dbgprintf("omclickhouse: action failed with error: %s\n", pWrkrData->reply);
+    if (httpStatus >= 400 || strstr(reply, " = DB::Exception") != NULL || strstr(reply, "DB::NetException") != NULL ||
+        strstr(reply, "DB::ParsingException") != NULL) {
+        dbgprintf("omclickhouse: action failed with HTTP status %ld and reply: %s\n", httpStatus, reply);
         iRet = RS_RET_DATAFAIL;
     }
 
     if (iRet == RS_RET_DATAFAIL) {
         STATSCOUNTER_INC(indexFail, mutIndexFail);
+        LogError(0, RS_RET_DATAFAIL, "omclickhouse: ClickHouse request failed with HTTP status %ld: %s", httpStatus,
+                 reply);
         writeDataError(pWrkrData, reqmsg);
         iRet = RS_RET_OK; /* we have handled the problem! */
     }
@@ -453,6 +458,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CURLcode code;
     CURL *const curl = pWrkrData->curlPostHandle;
     char errbuf[CURL_ERROR_SIZE] = "";
+    long httpStatus = 0;
     DEFiRet;
 
     if (!strstr((char *)message, "INSERT INTO") && !pWrkrData->insertErrorSent) {
@@ -474,6 +480,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
     dbgprintf("curl returned %lld\n", (long long)code);
     if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
@@ -485,17 +492,17 @@ static rsRetVal ATTR_NONNULL(1, 2)
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
-    if (pWrkrData->reply == NULL) {
+    if (pWrkrData->reply == NULL && httpStatus < 400) {
         dbgprintf("omclickhouse: pWrkrData reply==NULL, replyLen = '%d'\n", pWrkrData->replyLen);
         STATSCOUNTER_INC(indexSuccess, mutIndexSuccess);
     } else {
         dbgprintf("omclickhouse: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
-        if (pWrkrData->replyLen > 0) {
+        if (pWrkrData->reply != NULL && pWrkrData->replyLen > 0) {
             pWrkrData->reply[pWrkrData->replyLen] = '\0';
             /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
         }
-        dbgprintf("omclickhouse: pWrkrData reply: '%s'\n", pWrkrData->reply);
-        CHKiRet(checkResult(pWrkrData, message));
+        dbgprintf("omclickhouse: pWrkrData reply: '%s'\n", pWrkrData->reply == NULL ? "" : pWrkrData->reply);
+        CHKiRet(checkResult(pWrkrData, message, httpStatus));
     }
 
 finalize_it:
