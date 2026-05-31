@@ -1430,6 +1430,12 @@ static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThi
 
     DBGPRINTF("actionTryCommit[%s] enter\n", pThis->pszName);
     CHKiRet(actionPrepare(pThis, pWti));
+    if (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP ||
+        getActionState(pWti, pThis) == ACT_STATE_DISABLED) {
+        DBGPRINTF("actionTryCommit[%s]: skip transaction while state is %s\n", pThis->pszName,
+                  getActStateName(pThis, pWti));
+        ABORT_FINALIZE(getReturnCode(pThis, pWti));
+    }
 
     CHKiRet(doTransaction(pThis, pWti, iparams, nparams));
 
