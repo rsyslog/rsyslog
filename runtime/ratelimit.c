@@ -49,6 +49,7 @@
 #include "statsobj.h"
 #include "template.h"
 #include "hashtable_itr.h"
+#include "srUtils.h"
 #ifdef HAVE_LIBYAML
     #include <yaml.h>
 #endif
@@ -175,6 +176,25 @@ static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct temp
     return RL_PS_KEY_TPL;
 }
 
+static rsRetVal ratelimitLookupPerSourceTemplate(rsconf_t *conf,
+                                                 const char *tpl_name,
+                                                 struct template **tpl,
+                                                 sbool *is_default) {
+    const char *lookup_name;
+    DEFiRet;
+
+    if (conf == NULL || tpl == NULL || is_default == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    lookup_name = (tpl_name == NULL) ? "RSYSLOG_PerSourceKey" : tpl_name;
+    *tpl = tplFind(conf, (char *)lookup_name, (int)strlen(lookup_name));
+    if (*tpl == NULL) {
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    *is_default = (tpl_name == NULL);
+
+finalize_it:
+    RETiRet;
+}
+
 static void ratelimitFreeShared(void *ptr) {
     ratelimit_shared_t *shared = (ratelimit_shared_t *)ptr;
     if (shared == NULL) return;
@@ -273,11 +293,29 @@ struct ratelimit_ps_policy_s {
 
 typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
 
+typedef struct ratelimit_policy_file_s {
+    sbool has_interval;
+    sbool has_burst;
+    sbool has_severity;
+    unsigned int interval;
+    unsigned int burst;
+    int severity;
+    sbool has_per_source;
+    sbool per_source_enabled;
+    char *per_source_key_tpl_name;
+    unsigned int per_source_max_states;
+    unsigned int per_source_topn;
+    ratelimit_ps_policy_t *per_source_policy;
+} ratelimit_policy_file_t;
+
 enum ratelimit_watch_kind { RATELIMIT_WATCH_GLOBAL = 0, RATELIMIT_WATCH_PERSOURCE };
 
 static rsRetVal parseDurationMillis(const char *value, unsigned int *out);
 #ifdef HAVE_LIBYAML
+static rsRetVal parseUnsignedInt(const char *value, unsigned int *out);
 static rsRetVal parseDurationSeconds(const char *value, unsigned int *out);
+static void ratelimitFreePerSourceOverrideValue(void *ptr);
+static void ratelimitFreePerSourceOverrideDirect(void *ptr);
 #endif
 static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger);
 static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, const char *trigger);
@@ -398,7 +436,7 @@ static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared) {
                    shared->name, ratelimitWatchKindName(RATELIMIT_WATCH_GLOBAL), shared->policy_file);
         }
     }
-    if (shared->per_source_policy_file != NULL) {
+    if (shared->per_source_policy_file != NULL && !shared->per_source_policy_from_policy_file) {
         memset(&desc, 0, sizeof(desc));
         desc.id = shared->name;
         desc.path = shared->per_source_policy_file;
@@ -419,22 +457,79 @@ finalize_it:
 }
 
 
-static rsRetVal parsePolicyFile(const char *policy_file
-#ifdef HAVE_LIBYAML
-                                ,
-                                unsigned int *interval,
-                                unsigned int *burst,
-                                int *severity
-#endif
-) {
+static void ratelimitPolicyFileDestruct(ratelimit_policy_file_t *policy) {
+    if (policy == NULL) return;
+    free(policy->per_source_key_tpl_name);
+    if (policy->per_source_policy != NULL) {
+        if (policy->per_source_policy->overrides != NULL) hashtable_destroy(policy->per_source_policy->overrides, 1);
+        free(policy->per_source_policy);
+    }
+    memset(policy, 0, sizeof(*policy));
+}
+
+static rsRetVal parseBoolValue(const char *value, sbool *out) {
+    DEFiRet;
+
+    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (!strcasecmp(value, "on") || !strcasecmp(value, "yes") || !strcasecmp(value, "true") || !strcmp(value, "1")) {
+        *out = 1;
+    } else if (!strcasecmp(value, "off") || !strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+               !strcmp(value, "0")) {
+        *out = 0;
+    } else {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseSeverityValue(const char *value, int *out) {
+    char *end = NULL;
+    long numeric;
+    int severity;
+    DEFiRet;
+
+    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    while (isspace((unsigned char)*value)) value++;
+    if (*value == '-' || isdigit((unsigned char)*value)) {
+        errno = 0;
+        numeric = strtol(value, &end, 10);
+        if (errno != 0 || end == value || *end != '\0' || numeric < -1 || numeric > 127) {
+            ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+        }
+        severity = (int)numeric;
+    } else {
+        severity = decodeSyslogName((uchar *)value, syslogPriNames);
+        if (severity < 0 || severity > 127) {
+            ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+        }
+    }
+    *out = severity;
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parsePolicyFile(const char *policy_file, ratelimit_policy_file_t *policy) {
     DEFiRet;
 #ifdef HAVE_LIBYAML
     FILE *fh = NULL;
     yaml_parser_t yamlParser;
     int bParserInitialized = 0;
-    yaml_token_t token;
-    int state = 0; /* 0: generic, 1: expect key, 2: expect value */
-    char *curr_key = NULL;
+    yaml_event_t event;
+    unsigned int depth = 0;
+    enum policy_ctx { CTX_TOP = 0, CTX_PERSOURCE, CTX_PS_DEFAULT, CTX_PS_OVERRIDE_ITEM } ctxStack[8];
+    int expectKey[8] = {0};
+    char *last_key = NULL;
+    sbool inOverridesSeq = 0;
+    sbool default_max_seen = 0;
+    sbool default_window_seen = 0;
+    unsigned int override_count = 0;
+    ratelimit_ps_override_t *current_override = NULL;
+
+    if (policy == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    memset(policy, 0, sizeof(*policy));
 
     fh = fopen(policy_file, "r");
     if (fh == NULL) {
@@ -450,76 +545,226 @@ static rsRetVal parsePolicyFile(const char *policy_file
 
     yaml_parser_set_input_file(&yamlParser, fh);
 
-    int done = 0;
-    while (!done) {
-        if (!yaml_parser_scan(&yamlParser, &token)) {
+    while (1) {
+        if (!yaml_parser_parse(&yamlParser, &event)) {
             LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: yaml parser error in policy file %s: %s", policy_file,
                      yamlParser.problem ? yamlParser.problem : "unknown error");
             ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
         }
 
         PRAGMA_DIAGNOSTIC_PUSH
-        PRAGMA_IGNORE_Wswitch_enum switch (token.type) {
-            case YAML_KEY_TOKEN:
-                state = 1;
+        PRAGMA_IGNORE_Wswitch_enum switch (event.type) {
+            case YAML_NO_EVENT:
+            case YAML_STREAM_START_EVENT:
+            case YAML_DOCUMENT_START_EVENT:
+            case YAML_DOCUMENT_END_EVENT:
+            case YAML_ALIAS_EVENT:
                 break;
-            case YAML_VALUE_TOKEN:
-                state = 2;
+            case YAML_MAPPING_START_EVENT:
+                if (depth >= 8) {
+                    LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: yaml nesting too deep in %s", policy_file);
+                    ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                }
+                if (depth == 0) {
+                    ctxStack[depth] = CTX_TOP;
+                } else if (inOverridesSeq) {
+                    if (override_count >= 10000U) {
+                        LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: too many per-source overrides in %s (max %u)",
+                                 policy_file, 10000U);
+                        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                    }
+                    ctxStack[depth] = CTX_PS_OVERRIDE_ITEM;
+                    CHKmalloc(current_override = calloc(1, sizeof(*current_override)));
+                    override_count++;
+                } else if (last_key != NULL && !strcmp(last_key, "perSource")) {
+                    ctxStack[depth] = CTX_PERSOURCE;
+                    policy->has_per_source = 1;
+                    policy->per_source_enabled = 1;
+                    CHKmalloc(policy->per_source_policy = calloc(1, sizeof(*policy->per_source_policy)));
+                    policy->per_source_policy->overrides =
+                        create_hashtable(32, hash_from_string, key_equals_string, ratelimitFreePerSourceOverrideValue);
+                    if (policy->per_source_policy->overrides == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                } else if (depth > 0 && ctxStack[depth - 1] == CTX_PERSOURCE && last_key != NULL &&
+                           !strcmp(last_key, "default")) {
+                    ctxStack[depth] = CTX_PS_DEFAULT;
+                } else {
+                    ctxStack[depth] = CTX_TOP;
+                }
+                if (depth > 0 && last_key != NULL) {
+                    expectKey[depth - 1] = 1;
+                }
+                expectKey[depth] = 1;
+                depth++;
+                free(last_key);
+                last_key = NULL;
                 break;
-            case YAML_SCALAR_TOKEN:
-                if (state == 1) {
-                    if (curr_key) free(curr_key);
-                    curr_key = strdup((char *)token.data.scalar.value);
-                } else if (state == 2) {
-                    if (curr_key) {
-                        char *endptr;
-                        errno = 0;
-                        long val = 0;
-                        if (!strcmp(curr_key, "interval") || !strcmp(curr_key, "burst") ||
-                            !strcmp(curr_key, "severity")) {
-                            const int is_severity = !strcmp(curr_key, "severity");
-                            val = strtol((char *)token.data.scalar.value, &endptr, 10);
-                            const int out_of_range =
-                                is_severity ? (val < -1 || val > 127) : (val < 0 || (unsigned long)val > UINT_MAX);
-                            if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0) ||
-                                endptr == (char *)token.data.scalar.value || *endptr != '\0' || out_of_range) {
-                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid integer value for '%s': %s",
-                                         curr_key, (char *)token.data.scalar.value);
-                                /* ignore invalid values, keep parsing */
-                            } else {
-                                if (!strcmp(curr_key, "interval")) {
-                                    *interval = (unsigned int)val;
-                                } else if (!strcmp(curr_key, "burst")) {
-                                    *burst = (unsigned int)val;
-                                } else if (!strcmp(curr_key, "severity")) {
-                                    if (val > 127) {
-                                        LogError(0, RS_RET_CONF_PARAM_INVLD,
-                                                 "ratelimit: severity value %ld out of range (max 127) in %s", val,
-                                                 policy_file);
-                                    } else {
-                                        *severity = (int)val;
-                                    }
-                                }
-                            }
+            case YAML_MAPPING_END_EVENT:
+                if (depth > 0) {
+                    depth--;
+                    if (ctxStack[depth] == CTX_PS_OVERRIDE_ITEM && current_override != NULL) {
+                        if (current_override->key == NULL) {
+                            LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: per-source override missing key in %s",
+                                     policy_file);
+                            ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
                         }
+                        if (hashtable_insert(policy->per_source_policy->overrides, current_override->key,
+                                             current_override) == 0) {
+                            LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting per-source override '%s'",
+                                     current_override->key);
+                            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                        }
+                        current_override = NULL;
                     }
                 }
+                free(last_key);
+                last_key = NULL;
                 break;
+            case YAML_SEQUENCE_START_EVENT:
+                if (depth > 0 && ctxStack[depth - 1] == CTX_PERSOURCE && last_key != NULL &&
+                    !strcmp(last_key, "overrides")) {
+                    inOverridesSeq = 1;
+                }
+                if (depth > 0 && last_key != NULL) {
+                    expectKey[depth - 1] = 1;
+                }
+                free(last_key);
+                last_key = NULL;
+                break;
+            case YAML_SEQUENCE_END_EVENT:
+                inOverridesSeq = 0;
+                free(last_key);
+                last_key = NULL;
+                break;
+            case YAML_SCALAR_EVENT:
+                if (depth == 0) break;
+                if (expectKey[depth - 1]) {
+                    free(last_key);
+                    CHKmalloc(last_key = strdup((char *)event.data.scalar.value));
+                    expectKey[depth - 1] = 0;
+                } else {
+                    const char *val = (const char *)event.data.scalar.value;
+                    unsigned int uintval = 0;
+                    int severity = 0;
+                    sbool boolval = 0;
+
+                    if (ctxStack[depth - 1] == CTX_TOP) {
+                        if (last_key != NULL && !strcmp(last_key, "interval")) {
+                            if (parseUnsignedInt(val, &uintval) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid interval value '%s' in %s",
+                                         val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->interval = uintval;
+                            policy->has_interval = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "burst")) {
+                            if (parseUnsignedInt(val, &uintval) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid burst value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->burst = uintval;
+                            policy->has_burst = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "severity")) {
+                            if (parseSeverityValue(val, &severity) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid severity value '%s' in %s",
+                                         val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->severity = severity;
+                            policy->has_severity = 1;
+                        }
+                    } else if (ctxStack[depth - 1] == CTX_PERSOURCE) {
+                        if (last_key != NULL && !strcmp(last_key, "enabled")) {
+                            if (parseBoolValue(val, &boolval) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource.enabled value '%s' in %s", val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->per_source_enabled = boolval;
+                        } else if (last_key != NULL && !strcmp(last_key, "keyTemplate")) {
+                            free(policy->per_source_key_tpl_name);
+                            CHKmalloc(policy->per_source_key_tpl_name = strdup(val));
+                        } else if (last_key != NULL && !strcmp(last_key, "maxStates")) {
+                            if (parseUnsignedInt(val, &policy->per_source_max_states) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource.maxStates value '%s' in %s", val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                        } else if (last_key != NULL && !strcmp(last_key, "topN")) {
+                            if (parseUnsignedInt(val, &policy->per_source_topn) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource.topN value '%s' in %s", val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                        }
+                    } else if (ctxStack[depth - 1] == CTX_PS_DEFAULT && policy->per_source_policy != NULL) {
+                        if (last_key != NULL && !strcmp(last_key, "max")) {
+                            if (parseUnsignedInt(val, &policy->per_source_policy->default_max) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource.default.max value '%s' in %s", val, policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            default_max_seen = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "window")) {
+                            if (parseDurationSeconds(val, &policy->per_source_policy->default_window) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource.default.window value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            default_window_seen = 1;
+                        }
+                    } else if (ctxStack[depth - 1] == CTX_PS_OVERRIDE_ITEM && current_override != NULL) {
+                        if (last_key != NULL && !strcmp(last_key, "key")) {
+                            free(current_override->key);
+                            CHKmalloc(current_override->key = strdup(val));
+                        } else if (last_key != NULL && !strcmp(last_key, "max")) {
+                            if (parseUnsignedInt(val, &current_override->max) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource override.max value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            current_override->has_max = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "window")) {
+                            if (parseDurationSeconds(val, &current_override->window) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD,
+                                         "ratelimit: invalid perSource override.window value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            current_override->has_window = 1;
+                        }
+                    }
+                    expectKey[depth - 1] = 1;
+                }
+                break;
+            case YAML_STREAM_END_EVENT:
+                yaml_event_delete(&event);
+                goto finalize_it;
             default:
                 break;
         }
         PRAGMA_DIAGNOSTIC_POP
-
-        if (token.type == YAML_STREAM_END_TOKEN) done = 1;
-        yaml_token_delete(&token);
+        yaml_event_delete(&event);
     }
 
 finalize_it:
     if (bParserInitialized) {
         yaml_parser_delete(&yamlParser);
     }
-    if (curr_key) free(curr_key);
+    free(last_key);
+    if (current_override != NULL) ratelimitFreePerSourceOverrideDirect(current_override);
     if (fh) fclose(fh);
+    if (iRet == RS_RET_OK && policy->has_per_source && policy->per_source_enabled &&
+        (!default_max_seen || !default_window_seen)) {
+        LogError(0, RS_RET_CONF_PARAM_INVLD,
+                 "ratelimit: policy file %s perSource section missing default.max or default.window", policy_file);
+        iRet = RS_RET_CONF_PARAM_INVLD;
+    }
+    if (iRet != RS_RET_OK) {
+        ratelimitPolicyFileDestruct(policy);
+    }
 #else
     LogError(0, RS_RET_CONF_PARAM_INVLD,
              "ratelimit: policy file '%s' specified but rsyslog "
@@ -537,7 +782,13 @@ static void ratelimitFreePerSourceState(void *ptr) {
 }
 
 #ifdef HAVE_LIBYAML
-static void ratelimitFreePerSourceOverride(void *ptr) {
+static void ratelimitFreePerSourceOverrideValue(void *ptr) {
+    ratelimit_ps_override_t *ovr = (ratelimit_ps_override_t *)ptr;
+    if (ovr == NULL) return;
+    free(ovr);
+}
+
+static void ratelimitFreePerSourceOverrideDirect(void *ptr) {
     ratelimit_ps_override_t *ovr = (ratelimit_ps_override_t *)ptr;
     if (ovr == NULL) return;
     free(ovr->key);
@@ -582,7 +833,7 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
     yaml_parser_t yamlParser;
     yaml_event_t event;
     int parserInitialized = 0;
-    int depth = 0;
+    unsigned int depth = 0;
     int expectKey[8] = {0};
     enum { CTX_TOP = 0, CTX_DEFAULT, CTX_OVERRIDE_ITEM } ctxStack[8];
     sbool inOverridesSeq = 0;
@@ -597,7 +848,7 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
 
     CHKmalloc(policy = calloc(1, sizeof(*policy)));
     CHKmalloc(policy->overrides =
-                  create_hashtable(32, hash_from_string, key_equals_string, ratelimitFreePerSourceOverride));
+                  create_hashtable(32, hash_from_string, key_equals_string, ratelimitFreePerSourceOverrideValue));
 
     fh = fopen(policy_file, "r");
     if (fh == NULL) {
@@ -647,6 +898,9 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
                 } else {
                     ctxStack[depth] = CTX_TOP;
                 }
+                if (depth > 0 && last_key != NULL) {
+                    expectKey[depth - 1] = 1;
+                }
                 expectKey[depth] = 1;
                 depth++;
                 free(last_key);
@@ -675,6 +929,9 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
             case YAML_SEQUENCE_START_EVENT:
                 if (last_key != NULL && !strcmp(last_key, "overrides")) {
                     inOverridesSeq = 1;
+                }
+                if (depth > 0 && last_key != NULL) {
+                    expectKey[depth - 1] = 1;
                 }
                 free(last_key);
                 last_key = NULL;
@@ -753,7 +1010,7 @@ finalize_it:
     if (fh) fclose(fh);
     free(last_key);
     if (iRet != RS_RET_OK) {
-        if (current_override != NULL) ratelimitFreePerSourceOverride(current_override);
+        if (current_override != NULL) ratelimitFreePerSourceOverrideDirect(current_override);
         if (policy != NULL) {
             if (policy->overrides != NULL) hashtable_destroy(policy->overrides, 1);
             free(policy);
@@ -793,7 +1050,13 @@ static char *ratelimitSanitizeMetricName(const char *key) {
 }
 
 static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
-    if (shared == NULL || shared->per_source_stats == NULL || shared->per_source_topn == 0) return;
+    if (shared == NULL || shared->per_source_stats == NULL) return;
+
+    pthread_mutex_lock(&shared->per_source_mut);
+    if (shared->per_source_topn == 0) {
+        pthread_mutex_unlock(&shared->per_source_mut);
+        return;
+    }
 
     unsigned int topn = shared->per_source_topn;
     uint64_t *values = calloc(topn, sizeof(uint64_t));
@@ -801,10 +1064,10 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
     if (values == NULL || keys == NULL) {
         free(values);
         free(keys);
+        pthread_mutex_unlock(&shared->per_source_mut);
         return;
     }
 
-    pthread_mutex_lock(&shared->per_source_mut);
     if (shared->per_source_states != NULL && hashtable_count(shared->per_source_states) > 0) {
         struct hashtable_itr *itr = hashtable_iterator(shared->per_source_states);
         if (itr != NULL) {
@@ -831,7 +1094,6 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
             keys[i] = strdup(keys[i]);
         }
     }
-    pthread_mutex_unlock(&shared->per_source_mut);
 
     if (shared->per_source_top_ctrs == NULL) {
         shared->per_source_top_ctrs = calloc(topn, sizeof(ctr_t *));
@@ -839,9 +1101,16 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
         shared->per_source_top_keys = calloc(topn, sizeof(char *));
         if (shared->per_source_top_ctrs == NULL || shared->per_source_top_values == NULL ||
             shared->per_source_top_keys == NULL) {
+            free(shared->per_source_top_ctrs);
+            free(shared->per_source_top_values);
+            free(shared->per_source_top_keys);
+            shared->per_source_top_ctrs = NULL;
+            shared->per_source_top_values = NULL;
+            shared->per_source_top_keys = NULL;
             free(values);
             for (unsigned int i = 0; i < topn; ++i) free(keys[i]);
             free(keys);
+            pthread_mutex_unlock(&shared->per_source_mut);
             return;
         }
     }
@@ -886,6 +1155,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
         }
     }
 
+    pthread_mutex_unlock(&shared->per_source_mut);
     free(values);
     for (unsigned int i = 0; i < topn; ++i) free(keys[i]);
     free(keys);
@@ -926,6 +1196,8 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
 
     STATSCOUNTER_INIT(shared->ctrPerSourceAllowed, shared->mutCtrPerSourceAllowed);
     STATSCOUNTER_INIT(shared->ctrPerSourceDropped, shared->mutCtrPerSourceDropped);
+    STATSCOUNTER_INIT(shared->ctrPerSourceKeyTplEvals, shared->mutCtrPerSourceKeyTplEvals);
+    STATSCOUNTER_INIT(shared->ctrPerSourceKeyParseEvals, shared->mutCtrPerSourceKeyParseEvals);
 
     CHKiRet(statsobj.Construct(&shared->per_source_stats));
     snprintf(statname, sizeof(statname), "ratelimit.%s.per_source", shared->name);
@@ -936,6 +1208,10 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
                                 CTR_FLAG_RESETTABLE, &shared->ctrPerSourceAllowed));
     CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_dropped"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &shared->ctrPerSourceDropped));
+    CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_key_tpl_evals"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &shared->ctrPerSourceKeyTplEvals));
+    CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_key_parse_evals"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &shared->ctrPerSourceKeyParseEvals));
     CHKiRet(statsobj.SetReadNotifier(shared->per_source_stats, ratelimitPerSourceStatsRead, shared));
     CHKiRet(statsobj.ConstructFinalize(shared->per_source_stats));
 
@@ -964,10 +1240,106 @@ static void ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_p
     pthread_mutex_unlock(&shared->per_source_mut);
 }
 
+static void ratelimitResetPerSourceTopN(ratelimit_shared_t *shared) {
+    ctr_t **top_ctrs = NULL;
+    intctr_t *top_values = NULL;
+    char **top_keys = NULL;
+    unsigned int topn;
+
+    if (shared == NULL) return;
+
+    pthread_mutex_lock(&shared->per_source_mut);
+    if (shared->per_source_top_ctrs == NULL) {
+        pthread_mutex_unlock(&shared->per_source_mut);
+        return;
+    }
+    topn = shared->per_source_topn;
+    top_ctrs = shared->per_source_top_ctrs;
+    top_values = shared->per_source_top_values;
+    top_keys = shared->per_source_top_keys;
+    shared->per_source_top_ctrs = NULL;
+    shared->per_source_top_values = NULL;
+    shared->per_source_top_keys = NULL;
+    pthread_mutex_unlock(&shared->per_source_mut);
+
+    for (unsigned int i = 0; i < topn; ++i) {
+        if (top_ctrs[i] != NULL && shared->per_source_stats != NULL) {
+            statsobj.DestructCounter(shared->per_source_stats, top_ctrs[i]);
+        }
+        free(top_keys[i]);
+    }
+    free(top_ctrs);
+    free(top_values);
+    free(top_keys);
+}
+
+static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
+                                              ratelimit_policy_file_t *policy,
+                                              rsconf_t *conf,
+                                              const char *policy_file) {
+    struct template *key_tpl = NULL;
+    sbool key_tpl_default = 0;
+    char *key_tpl_name = NULL;
+    unsigned int effective_topn;
+    DEFiRet;
+
+    if (shared == NULL || policy == NULL || !policy->has_per_source) FINALIZE;
+
+    if (!policy->per_source_enabled) {
+        shared->per_source_enabled = 0;
+        shared->per_source_policy_from_policy_file = 1;
+        FINALIZE;
+    }
+
+    CHKiRet(ratelimitLookupPerSourceTemplate(conf, policy->per_source_key_tpl_name, &key_tpl, &key_tpl_default));
+    if (policy->per_source_key_tpl_name != NULL) {
+        CHKmalloc(key_tpl_name = strdup(policy->per_source_key_tpl_name));
+    }
+
+    if (shared->per_source_states == NULL) {
+        CHKiRet(ratelimitInitPerSourceShared(shared, policy->per_source_policy, policy_file,
+                                             policy->per_source_max_states, policy->per_source_topn));
+        policy->per_source_policy->overrides = NULL;
+    } else {
+        shared->per_source_enabled = 1;
+        ratelimitSwapPerSourcePolicy(shared, policy->per_source_policy);
+        policy->per_source_policy->overrides = NULL;
+    }
+
+    shared->per_source_policy_from_policy_file = 1;
+    if (shared->per_source_policy_file == NULL && policy_file != NULL) {
+        CHKmalloc(shared->per_source_policy_file = strdup(policy_file));
+    }
+    free(shared->per_source_key_tpl_name);
+    shared->per_source_key_tpl_name = key_tpl_name;
+    key_tpl_name = NULL;
+    shared->per_source_key_tpl = key_tpl;
+    shared->per_source_key_tpl_default = key_tpl_default;
+    shared->per_source_key_mode = perSourceKeyModeFromTemplate(shared->per_source_key_tpl);
+    shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
+
+    pthread_mutex_lock(&shared->per_source_mut);
+    shared->per_source_max_states =
+        (policy->per_source_max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : policy->per_source_max_states;
+    effective_topn = (policy->per_source_topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : policy->per_source_topn;
+    if (shared->per_source_topn != effective_topn) {
+        pthread_mutex_unlock(&shared->per_source_mut);
+        ratelimitResetPerSourceTopN(shared);
+        pthread_mutex_lock(&shared->per_source_mut);
+        shared->per_source_topn = effective_topn;
+    }
+    pthread_mutex_unlock(&shared->per_source_mut);
+
+finalize_it:
+    free(key_tpl_name);
+    RETiRet;
+}
+
 static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger) {
     unsigned int interval;
     unsigned int burst;
     int severity;
+    ratelimit_policy_file_t policy = {0};
     DEFiRet;
 
     if (shared == NULL || shared->policy_file == NULL) {
@@ -978,11 +1350,15 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
     burst = ratelimitSharedLoadUInt(&shared->burst, &shared->mut);
     severity = ratelimitSharedLoadSeverity(&shared->severity, &shared->mut);
 
-#ifdef HAVE_LIBYAML
-    CHKiRet(parsePolicyFile(shared->policy_file, &interval, &burst, &severity));
-#else
-    CHKiRet(parsePolicyFile(shared->policy_file));
-#endif
+    CHKiRet(parsePolicyFile(shared->policy_file, &policy));
+    if (policy.has_interval) interval = policy.interval;
+    if (policy.has_burst) burst = policy.burst;
+    if (policy.has_severity) severity = policy.severity;
+    if (policy.has_per_source) {
+        CHKiRet(ratelimitApplyPolicyPerSource(shared, &policy, runConf, shared->policy_file));
+    } else if (shared->per_source_policy_from_policy_file) {
+        shared->per_source_enabled = 0;
+    }
 
     ratelimitSharedStoreUInt(&shared->interval, &shared->mut, interval);
     ratelimitSharedStoreUInt(&shared->burst, &shared->mut, burst);
@@ -992,6 +1368,7 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
            shared->policy_file);
 
 finalize_it:
+    ratelimitPolicyFileDestruct(&policy);
     if (iRet != RS_RET_OK && shared != NULL && shared->policy_file != NULL) {
         LogError(0, iRet, "ratelimit: %s failed to reload policy '%s' from file '%s', keeping old values", trigger,
                  shared->name, shared->policy_file);
@@ -1155,7 +1532,9 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     ratelimit_shared_t *existing_shared = NULL;
     char *key = NULL;
     ratelimit_ps_policy_t *per_source_policy = NULL;
+    ratelimit_policy_file_t file_policy = {0};
     unsigned int debounce_ms = RATELIMIT_POLICY_WATCH_DEBOUNCE_DFLT_MS;
+    sbool per_source_from_policy_file = 0;
     sbool bLocked = 0;
 
 
@@ -1168,17 +1547,34 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     }
 
     if (policy_file != NULL) {
-#ifdef HAVE_LIBYAML
-        iRet = parsePolicyFile(policy_file, &interval, &burst, &severity);
-#else
-        iRet = parsePolicyFile(policy_file);
-#endif
-        if (iRet != RS_RET_OK) {
-            ABORT_FINALIZE(iRet);
+        CHKiRet(parsePolicyFile(policy_file, &file_policy));
+        if (file_policy.has_interval) interval = file_policy.interval;
+        if (file_policy.has_burst) burst = file_policy.burst;
+        if (file_policy.has_severity) severity = file_policy.severity;
+        if (file_policy.has_per_source) {
+            if (per_source_enabled || per_source_policy_file != NULL || per_source_key_tpl_name != NULL ||
+                per_source_max_states != 0 || per_source_topn != 0) {
+                LogError(0, RS_RET_CONFIG_ERROR,
+                         "ratelimit: policy file '%s' contains perSource for '%s'; do not mix it with legacy "
+                         "perSource/perSourcePolicy/perSourceKeyTpl/maxStates/topN parameters",
+                         policy_file, name);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
+            per_source_from_policy_file = 1;
+            per_source_enabled = file_policy.per_source_enabled;
+            if (per_source_enabled) {
+                per_source_policy = file_policy.per_source_policy;
+                file_policy.per_source_policy = NULL;
+                per_source_policy_file = policy_file;
+                per_source_key_tpl_name = file_policy.per_source_key_tpl_name;
+                file_policy.per_source_key_tpl_name = NULL;
+                per_source_max_states = file_policy.per_source_max_states;
+                per_source_topn = file_policy.per_source_topn;
+            }
         }
     }
 
-    if (per_source_enabled) {
+    if (per_source_enabled && per_source_policy == NULL) {
         if (per_source_policy_file == NULL) {
             LogError(0, RS_RET_CONFIG_ERROR,
                      "ratelimit: per-source rate limiting enabled but perSourcePolicy is missing for '%s'", name);
@@ -1227,27 +1623,21 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         free(per_source_policy);
         per_source_policy = NULL;
         CHKiRet(iRet);
-        if (per_source_key_tpl_name != NULL) {
-            CHKmalloc(shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name));
-            shared->per_source_key_tpl =
-                tplFind(conf, shared->per_source_key_tpl_name, (int)strlen(shared->per_source_key_tpl_name));
-            if (shared->per_source_key_tpl == NULL) {
+        shared->per_source_policy_from_policy_file = per_source_from_policy_file;
+        if (ratelimitLookupPerSourceTemplate(conf, per_source_key_tpl_name, &shared->per_source_key_tpl,
+                                             &shared->per_source_key_tpl_default) != RS_RET_OK) {
+            if (per_source_key_tpl_name != NULL) {
                 LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
                          per_source_key_tpl_name, name);
-                pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
-                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-            }
-            shared->per_source_key_tpl_default = 0;
-        } else {
-            char default_tpl[] = "RSYSLOG_PerSourceKey";
-            shared->per_source_key_tpl = tplFind(conf, default_tpl, (int)sizeof(default_tpl) - 1);
-            if (shared->per_source_key_tpl == NULL) {
+            } else {
                 LogError(0, RS_RET_CONFIG_ERROR,
                          "ratelimit: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found for '%s'", name);
-                pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
-                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
             }
-            shared->per_source_key_tpl_default = 1;
+            pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (per_source_key_tpl_name != NULL) {
+            CHKmalloc(shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name));
         }
         shared->per_source_key_mode = perSourceKeyModeFromTemplate(shared->per_source_key_tpl);
         shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
@@ -1304,6 +1694,7 @@ finalize_it:
         if (per_source_policy->overrides != NULL) hashtable_destroy(per_source_policy->overrides, 1);
         free(per_source_policy);
     }
+    ratelimitPolicyFileDestruct(&file_policy);
 
     RETiRet;
 }
@@ -1577,35 +1968,144 @@ int ratelimitChecked(ratelimit_t *ratelimit) {
  * settings.
  * if pMultiSub == NULL, a single-message enqueue happens (under reconsideration)
  */
-rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg) {
-    rsRetVal localRet;
-    smsg_t *repMsg;
+typedef struct per_source_key_ctx_s {
+    const char *key;
+    size_t key_len;
+    actWrkrIParams_t tpl_param;
+    char *combined;
+    uchar *free_host;
+    uchar *free_port;
+} per_source_key_ctx_t;
+
+static void ratelimitPerSourceKeyCtxFree(per_source_key_ctx_t *ctx) {
+    if (ctx == NULL) return;
+    free(ctx->tpl_param.param);
+    free(ctx->combined);
+    free(ctx->free_host);
+    free(ctx->free_port);
+    memset(ctx, 0, sizeof(*ctx));
+}
+
+static rsRetVal ratelimitGetMsgPropString(
+    smsg_t *pMsg, propid_t propid, const char **value, size_t *len, uchar **to_free) {
+    msgPropDescr_t prop;
+    rs_size_t prop_len = -1;
+    unsigned short must_be_freed = 0;
+    uchar *prop_value;
     DEFiRet;
 
-    assert(ratelimit != NULL);
-    assert(pMsg != NULL);
-    localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
+    if (pMsg == NULL || value == NULL || len == NULL || to_free == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    prop.id = propid;
+    prop.name = NULL;
+    prop.nameLen = 0;
+    prop_value = MsgGetProp(pMsg, NULL, &prop, &prop_len, &must_be_freed, NULL);
+    if (prop_value == NULL) {
+        *value = "";
+        *len = 0;
+        FINALIZE;
+    }
+    *value = (const char *)prop_value;
+    *len = (prop_len < 0) ? strlen((const char *)prop_value) : (size_t)prop_len;
+    if (must_be_freed) {
+        *to_free = prop_value;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ratelimitComposePerSourceHostPort(
+    per_source_key_ctx_t *ctx, const char *host, size_t host_len, const char *port, size_t port_len) {
+    DEFiRet;
+
+    if (ctx == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    CHKmalloc(ctx->combined = malloc(host_len + 1 + port_len + 1));
+    if (host_len > 0) memcpy(ctx->combined, host, host_len);
+    ctx->combined[host_len] = ':';
+    if (port_len > 0) memcpy(ctx->combined + host_len + 1, port, port_len);
+    ctx->combined[host_len + 1 + port_len] = '\0';
+    ctx->key = ctx->combined;
+    ctx->key_len = host_len + 1 + port_len;
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMsg, per_source_key_ctx_t *ctx) {
+    ratelimit_shared_t *shared;
+    const char *host = "";
+    const char *port = "";
+    size_t host_len = 0;
+    size_t port_len = 0;
+    DEFiRet;
+
+    if (ratelimit == NULL || pMsg == NULL || ctx == NULL || ratelimit->pShared == NULL)
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    memset(ctx, 0, sizeof(*ctx));
+    shared = ratelimit->pShared;
+    if (!shared->per_source_enabled) FINALIZE;
+
+    switch (shared->per_source_key_mode) {
+        case RL_PS_KEY_FROMHOST_IP:
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &ctx->key, &ctx->key_len, &ctx->free_host));
+            break;
+        case RL_PS_KEY_FROMHOST:
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
+            break;
+        case RL_PS_KEY_FROMHOST_IP_PORT:
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
+            break;
+        case RL_PS_KEY_FROMHOST_PORT:
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
+            break;
+        case RL_PS_KEY_TPL:
+        default:
+            if (shared->per_source_key_needs_parsing && (pMsg->msgFlags & NEEDS_PARSING) != 0) {
+                STATSCOUNTER_INC(shared->ctrPerSourceKeyParseEvals, shared->mutCtrPerSourceKeyParseEvals);
+                if (parser.ParseMsg(pMsg) != RS_RET_OK) {
+                    FINALIZE;
+                }
+            }
+            if (shared->per_source_key_tpl == NULL || shared->per_source_key_tpl_default) {
+                ctx->key = getHOSTNAME(pMsg);
+                ctx->key_len = getHOSTNAMELen(pMsg);
+                break;
+            }
+            STATSCOUNTER_INC(shared->ctrPerSourceKeyTplEvals, shared->mutCtrPerSourceKeyTplEvals);
+            if (tplToString(shared->per_source_key_tpl, pMsg, &ctx->tpl_param, NULL) == RS_RET_OK) {
+                ctx->key = (const char *)ctx->tpl_param.param;
+                ctx->key_len = ctx->tpl_param.lenStr;
+            }
+            break;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ratelimitSubmitCheckedMsg(multi_submit_t *pMultiSub, smsg_t **ppMsg) {
+    DEFiRet;
+
+    if (ppMsg == NULL || *ppMsg == NULL) FINALIZE;
+
     if (pMultiSub == NULL) {
-        if (repMsg != NULL) CHKiRet(submitMsg2(repMsg));
-        CHKiRet(localRet);
-        CHKiRet(submitMsg2(pMsg));
+        CHKiRet(submitMsg2(*ppMsg));
+        *ppMsg = NULL;
     } else {
-        if (repMsg != NULL) {
-            pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
-            if (pMultiSub->nElem == pMultiSub->maxElem) CHKiRet(multiSubmitMsg2(pMultiSub));
-        }
-        CHKiRet(localRet);
-        if (pMsg->iLenRawMsg > glblGetMaxLine(runConf)) {
-            /* oversize message needs special processing. We keep
-             * at least the previous batch as batch...
-             */
+        if ((*ppMsg)->iLenRawMsg > glblGetMaxLine(runConf)) {
             if (pMultiSub->nElem > 0) {
                 CHKiRet(multiSubmitMsg2(pMultiSub));
             }
-            CHKiRet(submitMsg2(pMsg));
+            CHKiRet(submitMsg2(*ppMsg));
+            *ppMsg = NULL;
             FINALIZE;
         }
-        pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
+        pMultiSub->ppMsgs[pMultiSub->nElem++] = *ppMsg;
+        *ppMsg = NULL;
         if (pMultiSub->nElem == pMultiSub->maxElem) CHKiRet(multiSubmitMsg2(pMultiSub));
     }
 
@@ -1613,62 +2113,59 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal ratelimitAddMsgPerSource(ratelimit_t *ratelimit,
-                                  multi_submit_t *pMultiSub,
-                                  smsg_t *pMsg,
-                                  const char *per_source_key,
-                                  size_t per_source_key_len,
-                                  time_t tt) {
-    rsRetVal localRet;
-    smsg_t *repMsg = NULL;
-    sbool per_source_dropped = 0;
+static rsRetVal ratelimitSubmitReportMsg(multi_submit_t *pMultiSub, smsg_t **ppRepMsg) {
     DEFiRet;
 
-    assert(ratelimit != NULL);
-    assert(pMsg != NULL);
-    assert(ratelimit->pShared != NULL);
+    if (ppRepMsg == NULL || *ppRepMsg == NULL) FINALIZE;
 
-    if (!ratelimit->pShared->per_source_enabled || per_source_key == NULL || per_source_key_len == 0) {
-        return ratelimitAddMsg(ratelimit, pMultiSub, pMsg);
-    }
-
-    localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
     if (pMultiSub == NULL) {
-        if (repMsg != NULL) CHKiRet(submitMsg2(repMsg));
-        CHKiRet(localRet);
-        if ((iRet = ratelimitPerSourceCheck(ratelimit, per_source_key, per_source_key_len, tt)) != RS_RET_OK) {
-            per_source_dropped = 1;
-            ABORT_FINALIZE(iRet);
-        }
-        CHKiRet(submitMsg2(pMsg));
+        CHKiRet(submitMsg2(*ppRepMsg));
+        *ppRepMsg = NULL;
     } else {
-        if (repMsg != NULL) {
-            pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
-            if (pMultiSub->nElem == pMultiSub->maxElem) CHKiRet(multiSubmitMsg2(pMultiSub));
-        }
-        CHKiRet(localRet);
-        if ((iRet = ratelimitPerSourceCheck(ratelimit, per_source_key, per_source_key_len, tt)) != RS_RET_OK) {
-            per_source_dropped = 1;
-            ABORT_FINALIZE(iRet);
-        }
-        if (pMsg->iLenRawMsg > glblGetMaxLine(runConf)) {
-            if (pMultiSub->nElem > 0) {
-                CHKiRet(multiSubmitMsg2(pMultiSub));
-            }
-            CHKiRet(submitMsg2(pMsg));
-            FINALIZE;
-        }
-        pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
+        pMultiSub->ppMsgs[pMultiSub->nElem++] = *ppRepMsg;
+        *ppRepMsg = NULL;
         if (pMultiSub->nElem == pMultiSub->maxElem) CHKiRet(multiSubmitMsg2(pMultiSub));
     }
 
 finalize_it:
-    if (per_source_dropped) {
+    RETiRet;
+}
+
+rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg) {
+    rsRetVal localRet;
+    smsg_t *repMsg = NULL;
+    sbool msg_owned = 0;
+    sbool per_source_dropped = 0;
+    per_source_key_ctx_t per_source_key = {0};
+    DEFiRet;
+
+    assert(ratelimit != NULL);
+    assert(pMsg != NULL);
+
+    localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
+    CHKiRet(localRet);
+    msg_owned = 1;
+    CHKiRet(ratelimitSubmitReportMsg(pMultiSub, &repMsg));
+    CHKiRet(ratelimitComputePerSourceKey(ratelimit, pMsg, &per_source_key));
+    if (per_source_key.key != NULL && per_source_key.key_len > 0) {
+        if ((iRet = ratelimitPerSourceCheck(ratelimit, per_source_key.key, per_source_key.key_len, pMsg->ttGenTime)) !=
+            RS_RET_OK) {
+            per_source_dropped = 1;
+            ABORT_FINALIZE(iRet);
+        }
+    }
+    CHKiRet(ratelimitSubmitCheckedMsg(pMultiSub, &pMsg));
+
+finalize_it:
+    ratelimitPerSourceKeyCtxFree(&per_source_key);
+    if (repMsg != NULL) {
+        msgDestruct(&repMsg);
+    }
+    if (pMsg != NULL && (msg_owned || per_source_dropped)) {
         msgDestruct(&pMsg);
     }
     RETiRet;
 }
-
 
 /* modname must be a static name (usually expected to be the module
  * name and MUST be present. dynname may be NULL and can be used for
@@ -1807,7 +2304,7 @@ void ratelimitDoHUP(void) {
             if (shared && shared->policy_file) {
                 ratelimitReloadPolicyFile(shared, "HUP");
             }
-            if (shared && shared->per_source_policy_file) {
+            if (shared && shared->per_source_policy_file && !shared->per_source_policy_from_policy_file) {
                 ratelimitReloadPerSourcePolicyFile(shared, "HUP");
             }
         } while (hashtable_iterator_advance(itr));
