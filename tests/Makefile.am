@@ -917,6 +917,7 @@ TESTS_OMPROG = \
 	omprog-close-unresponsive-noterm.sh \
 	omprog-restart-terminated.sh \
 	omprog-restart-terminated-outfile.sh \
+	omprog-diskq-restart-save.sh \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
 	omprog-invalid-args.sh \
@@ -3391,6 +3392,7 @@ EXTRA_DIST += \
 	testsuites/omprog-feedback-mt-bin.sh \
 	testsuites/omprog-feedback-timeout-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
+	testsuites/omprog-diskq-restart-save-bin.sh \
 	testsuites/omprog-invalid-args-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-single-instance-bin.sh \
