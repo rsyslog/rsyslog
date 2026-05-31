@@ -487,7 +487,8 @@ static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
 }
 
 static void warnIfOpenSSLPriorityStringConfigured(const instanceData *const pData) {
-    if (pData->pristring != NULL && loadModConf->tlslib != NULL && !strcasecmp(loadModConf->tlslib, "openssl")) {
+    if (pData->pristring != NULL && loadModConf != NULL && loadModConf->tlslib != NULL &&
+        !strcasecmp(loadModConf->tlslib, "openssl")) {
         LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
                "omrelp: tls.prioritystring is a GnuTLS priority string and is ignored when "
                "tls.tlslib=\"openssl\"; use tls.tlscfgcmd for OpenSSL TLS policy");
