@@ -1655,6 +1655,7 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-split.sh
 
 TESTS_RELP_OPENSSL = \
+	 relp-openssl-prioritystring-warning.sh \
 	 omrelp-tls-ossl-authfail-no-cacert.sh \
 	 omrelp-tls-ossl-authfail-suspend.sh
 

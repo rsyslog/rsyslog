@@ -486,6 +486,14 @@ static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
     }
 }
 
+static void warnIfOpenSSLPriorityStringConfigured(const instanceData *const pData) {
+    if (pData->pristring != NULL && loadModConf->tlslib != NULL && !strcasecmp(loadModConf->tlslib, "openssl")) {
+        LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
+               "omrelp: tls.prioritystring is a GnuTLS priority string and is ignored when "
+               "tls.tlslib=\"openssl\"; use tls.tlscfgcmd for OpenSSL TLS policy");
+    }
+}
+
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i, j;
@@ -592,6 +600,7 @@ BEGINnewActInst
                          OMSR_NO_RQD_TPL_OPTS));
 
     warnIfPlainRelpActionConfigured(pData);
+    warnIfOpenSSLPriorityStringConfigured(pData);
 
     iRet = doCreateRelpClient(pData, &pRelpClt);
     if (pRelpClt != NULL) relpEngineCltDestruct(pRelpEngine, &pRelpClt);

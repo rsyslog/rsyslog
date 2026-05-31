@@ -511,6 +511,15 @@ static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) 
 }
 
 
+static void warnIfOpenSSLPriorityStringConfigured(const instanceConf_t *const inst) {
+    if (inst->pristring != NULL && loadModConf->tlslib != NULL && !strcasecmp(loadModConf->tlslib, "openssl")) {
+        LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
+               "imrelp: tls.prioritystring is a GnuTLS priority string and is ignored when "
+               "tls.tlslib=\"openssl\"; use tls.tlscfgcmd for OpenSSL TLS policy");
+    }
+}
+
+
 BEGINnewInpInst
     struct cnfparamvals *pvals;
     instanceConf_t *inst = NULL;
@@ -688,6 +697,7 @@ BEGINnewInpInst
     }
 
     warnIfPlainRelpListenerConfigured(inst);
+    warnIfOpenSSLPriorityStringConfigured(inst);
 
     inst->bEnableLstn = -1; /* all ok, ready to start up */
 
