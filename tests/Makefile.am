@@ -182,6 +182,7 @@ TESTS_DEFAULT = \
 	json-nonstring.sh \
 	json-onempty-at-end.sh \
 	template-json.sh \
+	template-property-transformations.sh \
         template-pure-json.sh \
         template-jsonf-nested.sh \
 	template-jsonf-trailing-backslash.sh \
