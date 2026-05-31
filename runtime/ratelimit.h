@@ -43,6 +43,7 @@ typedef struct ratelimit_shared_s {
     rswatch_handle_t *per_source_policy_watch_handle;
     pthread_mutex_t mut;
     sbool per_source_enabled;
+    sbool per_source_policy_from_policy_file;
     char *per_source_policy_file;
     unsigned int per_source_default_max;
     unsigned int per_source_default_window;
@@ -67,6 +68,8 @@ typedef struct ratelimit_shared_s {
     statsobj_t *per_source_stats;
     STATSCOUNTER_DEF(ctrPerSourceAllowed, mutCtrPerSourceAllowed);
     STATSCOUNTER_DEF(ctrPerSourceDropped, mutCtrPerSourceDropped);
+    STATSCOUNTER_DEF(ctrPerSourceKeyTplEvals, mutCtrPerSourceKeyTplEvals);
+    STATSCOUNTER_DEF(ctrPerSourceKeyParseEvals, mutCtrPerSourceKeyParseEvals);
     ctr_t **per_source_top_ctrs;
     intctr_t *per_source_top_values;
     char **per_source_top_keys;
@@ -121,12 +124,6 @@ void ratelimitSetSeverity(ratelimit_t *ratelimit, int severity);
 rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
 rsRetVal ATTR_NONNULL(1, 2, 3) ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
 rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
-rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsgPerSource(ratelimit_t *ratelimit,
-                                                     multi_submit_t *pMultiSub,
-                                                     smsg_t *pMsg,
-                                                     const char *per_source_key,
-                                                     size_t per_source_key_len,
-                                                     time_t tt);
 void ratelimitDestruct(ratelimit_t *pThis);
 int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);
