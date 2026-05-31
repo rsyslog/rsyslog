@@ -84,7 +84,7 @@ policyWatch
 
 Enable automatic reload of configured external policy files when they change.
 When watch support is available, rsyslog monitors the configured ``policy`` and
-``perSourcePolicy`` files and reloads them after the debounce interval. When
+legacy ``perSourcePolicy`` files and reloads them after the debounce interval. When
 watch support is unavailable in the current build or runtime environment,
 rsyslog logs a warning and continues with HUP-only reload behavior.
 
@@ -116,6 +116,53 @@ perSource
 
 Enable per-source rate limiting using an external YAML policy.
 
+For new configurations, prefer defining the complete per-source policy inside
+the main ``policy`` YAML file. The inline ``perSource`` parameter remains
+available for split legacy configurations that use ``perSourcePolicy``.
+
+.. _ratelimit_policy:
+
+policy
+^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "string", "no", "none"
+
+Path to a YAML file that defines rate limit settings. The file can contain
+global settings and, for new configurations, a nested ``perSource`` section:
+
+.. code-block:: yaml
+
+   interval: 1
+   burst: 50
+   severity: info
+
+   perSource:
+     enabled: true
+     keyTemplate: "PerSourceIP"
+     maxStates: 10000
+     topN: 10
+     default:
+       max: 1000
+       window: 10s
+     overrides:
+       - key: "db01.corp.local"
+         max: 5000
+         window: 10s
+
+``perSource.keyTemplate`` is an rsyslog template name. On HUP or watched file
+reload, valid policy changes replace the previous global limits, per-source
+defaults and overrides, key template, ``maxStates``, and ``topN``. Invalid
+reloads keep the previous valid policy active.
+
+Do not mix a ``policy`` YAML file that contains ``perSource`` with legacy
+per-source parameters on the same ``ratelimit()`` object, such as
+``perSource``, ``perSourcePolicy``, ``perSourceKeyTpl``,
+``perSourceMaxStates``, or ``perSourceTopN``.
+
 .. _ratelimit_persourcepolicy:
 
 perSourcePolicy
@@ -127,7 +174,9 @@ perSourcePolicy
 
    "string", "no", "none"
 
-Path to the YAML file that defines per-source limits. Required when ``perSource`` is ``on``.
+Compatibility path to a YAML file that defines per-source limits separately
+from the main ``policy`` file. Required when the inline ``perSource`` parameter
+is ``on`` and the main ``policy`` file does not contain a ``perSource`` section.
 The YAML file must define a ``default`` block with ``max`` and ``window`` values
 and may optionally include ``overrides`` keyed by exact sender values.
 
@@ -152,8 +201,9 @@ perSourceKeyTpl
 
    "string", "no", "RSYSLOG_PerSourceKey"
 
-Template that computes the per-source key. The default template is equivalent to
-``%hostname%``.
+Template that computes the per-source key for split legacy configurations. The
+default template is equivalent to ``%hostname%``. In the canonical single-file
+``policy`` YAML, use ``perSource.keyTemplate`` instead.
 
 .. _ratelimit_persourcemaxstates:
 
@@ -203,10 +253,9 @@ Example
              policyWatchDebounce="500ms")
 
    # Define per-source policy for TCP inputs
+   template(name="PerSourceIP" type="string" string="%fromhost-ip%")
    ratelimit(name="per_source"
-             perSource="on"
-             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
-             perSourceKeyTpl="PerSourceKey")
+             policy="/etc/rsyslog/imtcp-ratelimits.yaml")
 
    # Apply it to a TCP listener
    input(type="imtcp" port="10514" rateLimit.Name="strict")
@@ -223,20 +272,50 @@ Example
 Per-source key examples
 -----------------------
 
+The policy file selects the template through ``perSource.keyTemplate``; defining
+the template alone is not enough.
+
+.. code-block:: yaml
+
+   # /etc/rsyslog/imtcp-ratelimits-ip.yaml
+   interval: 1
+   burst: 100
+   perSource:
+     enabled: true
+     keyTemplate: "PerSourceIP"
+     default:
+       max: 10
+       window: 1s
+
 .. code-block:: rsyslog
 
    # Key by IP address
    template(name="PerSourceIP" type="string" string="%fromhost-ip%")
    ratelimit(name="per_source_ip"
-             perSource="on"
-             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
-             perSourceKeyTpl="PerSourceIP")
+             policy="/etc/rsyslog/imtcp-ratelimits-ip.yaml")
    input(type="imtcp" port="514" rateLimit.Name="per_source_ip")
+
+.. code-block:: yaml
+
+   # /etc/rsyslog/imtcp-ratelimits-host.yaml
+   interval: 1
+   burst: 100
+   perSource:
+     enabled: true
+     keyTemplate: "PerSourceHost"
+     default:
+       max: 10
+       window: 1s
+
+.. code-block:: rsyslog
 
    # Key by hostname (default)
    template(name="PerSourceHost" type="string" string="%hostname%")
    ratelimit(name="per_source_host"
-             perSource="on"
-             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
-             perSourceKeyTpl="PerSourceHost")
+             policy="/etc/rsyslog/imtcp-ratelimits-host.yaml")
    input(type="imtcp" port="514" rateLimit.Name="per_source_host")
+
+Input modules only reference the named ratelimit object with
+``rateLimit.Name``. Per-source key evaluation and enforcement are handled by the
+shared ratelimit object so modules inherit new ratelimit features without
+module-specific API calls.

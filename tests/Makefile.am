@@ -686,7 +686,8 @@ TESTS_IMTCP = \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh
 TESTS_IMTCP_YAML = \
-	imtcp-persource-ratelimit.sh
+	imtcp-persource-ratelimit.sh \
+	ratelimit-policy-persource-mixed-invalid.sh
 
 TESTS_IMTCP_VALGRIND = \
 	imtcp-octet-framing-too-long-vg.sh \
@@ -700,6 +701,12 @@ TESTS_RATELIMIT = \
 	omelasticsearch_ratelimit_name.sh \
 	imklog_ratelimit_name.sh \
 	imuxsock_ratelimit_name.sh
+
+TESTS_RATELIMIT_YAML = \
+	imudp-persource-ratelimit-policy.sh
+
+TESTS_RATELIMIT_IMPTCP_YAML = \
+	imptcp-persource-ratelimit-policy.sh
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh
@@ -1648,6 +1655,9 @@ TESTS_RELP = \
 	 glbl-oversizeMsg-truncate.sh \
 	 glbl-oversizeMsg-split.sh
 
+TESTS_RELP_YAML = \
+	imrelp-persource-ratelimit-policy.sh
+
 TESTS_RELP_OPENSSL = \
 	 omrelp-tls-ossl-authfail-no-cacert.sh \
 	 omrelp-tls-ossl-authfail-suspend.sh
@@ -1946,6 +1956,8 @@ EXTRA_DIST += $(TESTS_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
 EXTRA_DIST += $(TESTS_RATELIMIT)
+EXTRA_DIST += $(TESTS_RATELIMIT_YAML)
+EXTRA_DIST += $(TESTS_RATELIMIT_IMPTCP_YAML)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -2059,6 +2071,7 @@ EXTRA_DIST += $(TESTS_GNUTLS_OPENSSL_INTEROP)
 EXTRA_DIST += $(TESTS_OMUXSOCK)
 EXTRA_DIST += $(TESTS_OMUXSOCK_VALGRIND)
 EXTRA_DIST += $(TESTS_RELP)
+EXTRA_DIST += $(TESTS_RELP_YAML)
 EXTRA_DIST += $(TESTS_RELP_OPENSSL)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS)
 EXTRA_DIST += $(TESTS_RELP_GNUTLS_CFG)
@@ -2442,6 +2455,9 @@ endif # HAVE_LIBYAML
 if ENABLE_IMPTCP
 TESTS += $(TESTS_RATELIMIT)
 endif # ENABLE_IMPTCP
+if HAVE_LIBYAML
+TESTS += $(TESTS_RATELIMIT_YAML)
+endif # HAVE_LIBYAML
 
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMTCP_VALGRIND)
@@ -2831,6 +2847,9 @@ if ENABLE_IMPTCP
 # need to be disabled if we do not have this module
 TESTS += $(TESTS_IMPTCP)
 TESTS += $(TESTS_IMPTCP_STREAM_ALWAYS)
+if HAVE_LIBYAML
+TESTS += $(TESTS_RATELIMIT_IMPTCP_YAML)
+endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMPTCP_VALGRIND)
 if ENABLE_FMHASH
@@ -3036,6 +3055,9 @@ endif
 
 if ENABLE_RELP
 TESTS += $(TESTS_RELP)
+if HAVE_LIBYAML
+TESTS += $(TESTS_RELP_YAML)
+endif # HAVE_LIBYAML
 if ENABLE_OPENSSL
 TESTS += $(TESTS_RELP_OPENSSL)
 endif # ENABLE_OPENSSL
