@@ -32,9 +32,15 @@ TESTS_DOC_SAMPLES = \
 	doc-sample-basic-structure.sh \
 	doc-sample-config-examples.sh \
 	doc-sample-database.sh \
+	doc-sample-default-config.sh \
+	doc-sample-first-config.sh \
 	doc-sample-forwarding-logs.sh \
+	doc-sample-message-pipeline.sh \
 	doc-sample-omfwd.sh \
-	doc-sample-reliable-forwarding.sh
+	doc-sample-order-matters.sh \
+	doc-sample-remote-server.sh \
+	doc-sample-reliable-forwarding.sh \
+	doc-sample-understanding-default-config.sh
 EXTRA_DIST += $(TESTS_DOC_SAMPLES) doc-sample-lib.sh
 
 TESTS_IMPTCP_TABESCAPE = \
