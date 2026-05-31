@@ -758,6 +758,7 @@ TESTS_MMANON = \
 
 TESTS_CLICKHOUSE = \
 	clickhouse-template-option-stdsql.sh \
+	clickhouse-http-status-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-dflt-tpl.sh \
