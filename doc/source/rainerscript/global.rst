@@ -148,6 +148,10 @@ The following parameters can be set:
   Set it to "ossl", "gtls" or "mbedtls" to select a TLS-capable driver.
   TLS is used only when stream driver mode is also set to TLS mode
   (for example, ``StreamDriverMode="1"`` on actions that use the driver).
+  With ``global(compatibility.defaults.secure="strict")``, ``omfwd`` and
+  ``imtcp`` promote an omitted stream-driver mode to TLS mode when this default
+  selects a TLS-capable driver. Explicit mode ``0`` remains an explicit
+  plain-TCP request and is rejected with a TLS-capable effective driver.
   This `guide <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
   shows how to use TLS.
 
