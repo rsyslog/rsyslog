@@ -511,12 +511,12 @@ static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) 
 }
 
 
-static int relpPrioTokenMatches(const char *const token, const size_t len, const char *const gnutlsToken) {
-    const size_t gnutlsTokenLen = strlen(gnutlsToken);
-    if (gnutlsToken[gnutlsTokenLen - 1] == '-') {
-        return len >= gnutlsTokenLen && !strncasecmp(token, gnutlsToken, gnutlsTokenLen);
+static int relpPrioTokenMatches(const char *const token, const size_t len, const char *const syntaxToken) {
+    const size_t syntaxTokenLen = strlen(syntaxToken);
+    if (syntaxToken[syntaxTokenLen - 1] == '-' || syntaxToken[syntaxTokenLen - 1] == '=') {
+        return len >= syntaxTokenLen && !strncasecmp(token, syntaxToken, syntaxTokenLen);
     }
-    return len == gnutlsTokenLen && !strncasecmp(token, gnutlsToken, len);
+    return len == syntaxTokenLen && !strncasecmp(token, syntaxToken, len);
 }
 
 
@@ -552,13 +552,59 @@ static int relpPrioStringLooksLikeGnuTLS(const uchar *const pristring) {
 }
 
 
-static void warnIfOpenSSLPriorityStringConfigured(const instanceConf_t *const inst) {
-    if (inst->pristring != NULL && loadModConf != NULL && loadModConf->tlslib != NULL &&
-        !strcasecmp(loadModConf->tlslib, "openssl") && relpPrioStringLooksLikeGnuTLS(inst->pristring)) {
+static int relpPrioTokenLooksLikeOpenSSL(const char *const token, const size_t len) {
+    static const char *const opensslTokens[] = {"DEFAULT",  "HIGH", "MEDIUM", "LOW",       "ALL",  "aNULL",
+                                                "eNULL",    "kRSA", "aRSA",   "ECDHE-",    "DHE-", "AES",
+                                                "CAMELLIA", "PSK-", "SRP-",   "@SECLEVEL="};
+    size_t i;
+
+    for (i = 0; i < sizeof(opensslTokens) / sizeof(opensslTokens[0]); ++i) {
+        if (relpPrioTokenMatches(token, len, opensslTokens[i])) return 1;
+    }
+    return 0;
+}
+
+
+static int relpPrioStringLooksLikeOpenSSL(const uchar *const pristring) {
+    const char *p;
+    const char *token;
+    size_t len;
+
+    if (pristring == NULL) return 0;
+    p = (const char *)pristring;
+    while (*p != '\0') {
+        while (*p == ':' || *p == ',' || isspace((unsigned char)*p)) ++p;
+        while (*p == '+' || *p == '-' || *p == '!' || *p == '%') ++p;
+        token = p;
+        while (*p != '\0' && *p != ':' && *p != ',' && !isspace((unsigned char)*p)) ++p;
+        len = (size_t)(p - token);
+        if (len > 0 && relpPrioTokenLooksLikeOpenSSL(token, len)) return 1;
+    }
+    return 0;
+}
+
+
+static int isRelpTLSLibOpenSSL(void) {
+    return loadModConf != NULL && loadModConf->tlslib != NULL && !strcasecmp(loadModConf->tlslib, "openssl");
+}
+
+
+static int isRelpTLSLibGnuTLS(void) {
+    return loadModConf == NULL || loadModConf->tlslib == NULL || !strcasecmp(loadModConf->tlslib, "gnutls");
+}
+
+
+static void warnIfMismatchedPriorityStringConfigured(const instanceConf_t *const inst) {
+    if (inst->pristring != NULL && isRelpTLSLibOpenSSL() && relpPrioStringLooksLikeGnuTLS(inst->pristring)) {
         LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
                "imrelp: tls.prioritystring with tls.tlslib=\"openssl\" appears to use GnuTLS "
                "priority-string syntax; OpenSSL interprets this parameter as an OpenSSL cipher "
                "string, so use OpenSSL cipher syntax or tls.tlscfgcmd for broader OpenSSL TLS policy");
+    } else if (inst->pristring != NULL && isRelpTLSLibGnuTLS() && relpPrioStringLooksLikeOpenSSL(inst->pristring)) {
+        LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
+               "imrelp: tls.prioritystring with the GnuTLS RELP backend appears to use OpenSSL "
+               "cipher-list syntax; GnuTLS interprets this parameter as a GnuTLS priority string, "
+               "so use GnuTLS priority-string syntax or switch tls.tlslib to \"openssl\"");
     }
 }
 
@@ -740,7 +786,7 @@ BEGINnewInpInst
     }
 
     warnIfPlainRelpListenerConfigured(inst);
-    warnIfOpenSSLPriorityStringConfigured(inst);
+    warnIfMismatchedPriorityStringConfigured(inst);
 
     inst->bEnableLstn = -1; /* all ok, ready to start up */
 

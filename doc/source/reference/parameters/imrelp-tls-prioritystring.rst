@@ -35,7 +35,9 @@ When :ref:`param-imrelp-tls-tlslib` is set to ``openssl``, the same rsyslog
 parameter is interpreted by librelp as an OpenSSL cipher-list string, not as a
 GnuTLS priority string. Use OpenSSL cipher-list syntax such as ``HIGH:!aNULL``,
 or use :ref:`param-imrelp-tls-tlscfgcmd` for broader OpenSSL TLS policy such as
-protocol minimums.
+protocol minimums. When switching between ``gnutls`` and ``openssl``, review the
+``tls.priorityString`` value as well as the driver name; the parameter name is
+shared, but the accepted value syntax is backend-specific.
 
 Full information about how to construct a GnuTLS priority string can be found in
 the GnuTLS manual. At the time of writing, this information was contained in
