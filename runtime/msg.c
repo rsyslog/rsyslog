@@ -505,9 +505,9 @@ rsRetVal propNameToID(const uchar *const pName, propid_t *const pPropID) {
         *pPropID = PROP_SYS_NOW_UXTIMESTAMP;
     } else if (!strcasecmp((char *)pName, "$MYHOSTNAME")) {
         *pPropID = PROP_SYS_MYHOSTNAME;
-    } else if (!strcasecmp((char *)pName, "$!all-json")) {
+    } else if (!strcasecmp((char *)pName, "$!all-json") || !strcasecmp((char *)pName, "!all-json")) {
         *pPropID = PROP_CEE_ALL_JSON;
-    } else if (!strcasecmp((char *)pName, "$!all-json-plain")) {
+    } else if (!strcasecmp((char *)pName, "$!all-json-plain") || !strcasecmp((char *)pName, "!all-json-plain")) {
         *pPropID = PROP_CEE_ALL_JSON_PLAIN;
     } else if (!strcasecmp((char *)pName, "$BOM")) {
         *pPropID = PROP_SYS_BOM;
@@ -3768,14 +3768,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     jflag = JSON_C_TO_STRING_PLAIN;
                 }
                 jstr = json_object_to_json_string_ext(pMsg->json, jflag);
-                MsgUnlock(pMsg);
                 if (jstr == NULL) {
+                    MsgUnlock(pMsg);
                     RET_OUT_OF_MEMORY;
                 }
                 pRes = (uchar *)strdup(jstr);
+                MsgUnlock(pMsg);
                 if (pRes == NULL) {
                     RET_OUT_OF_MEMORY;
                 }
+                bufLen = (int)ustrlen(pRes);
                 *pbMustBeFreed = 1;
             }
             break;
