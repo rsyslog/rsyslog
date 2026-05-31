@@ -4,6 +4,7 @@ RateLimit.Interval
 ^^^^^^^^^^^^^^^^^^
 
 .. summary-start
+
 Sets the omrelp action-local rate-limit interval in seconds. ``0`` disables
 rate limiting.
 .. summary-end

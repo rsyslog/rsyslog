@@ -4,6 +4,7 @@ RateLimit.Burst
 ^^^^^^^^^^^^^^^
 
 .. summary-start
+
 Sets how many messages one omrelp action may forward per rate-limit interval.
 .. summary-end
 

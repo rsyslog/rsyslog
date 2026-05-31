@@ -4,6 +4,7 @@ RateLimit.Name
 ^^^^^^^^^^^^^^
 
 .. summary-start
+
 Binds the omrelp action to a named ``ratelimit()`` object.
 .. summary-end
 
