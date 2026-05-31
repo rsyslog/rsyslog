@@ -1,0 +1,31 @@
+tests/omprog-diskq-restart-save.sh
+  s_6224eda96fc0da::t_da70be396275b6 10-11,75
+  s_6224eda96fc0da::t_47507967293838 64-65
+  s_6224eda96fc0da::t_844b9518d9d6c0 1-9,12-48,55-61,72-74,78-79
+  s_6224eda96fc0da::t_d2206ab41580df 49-54,62,68-71,76
+  s_6224eda96fc0da::t_d121fe06eaad79 63,66-67,77
+tests/testsuites/omprog-diskq-restart-save-bin.sh
+  s_6224eda96fc0da::t_277aeb591e4d03 3,7,9,12
+  s_6224eda96fc0da::t_844b9518d9d6c0 1-2,4-6,8,10-11,13-15
+tests/Makefile.am
+  s_6224eda96fc0da::t_844b9518d9d6c0 920,3395
+runtime/action.c
+  s_6224eda96fc0da::t_67224deb583406 1774-1781,1837-1839
+  s_6224eda96fc0da::t_10bf8f7b08c125 1834-1836
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "29aaf611717c90cc8648c1b8a92917a831a8dc31",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
