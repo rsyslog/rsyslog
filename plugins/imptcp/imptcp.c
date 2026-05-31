@@ -74,6 +74,7 @@
 #include "datetime.h"
 #include "ruleset.h"
 #include "msg.h"
+#include "parser.h"
 #include "parserif.h"
 #include "statsobj.h"
 #include "ratelimit.h"
@@ -90,7 +91,7 @@ MODULE_CNFNAME("imptcp")
 /* static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) DEFobjCurrIf(ruleset)
-    DEFobjCurrIf(statsobj)
+    DEFobjCurrIf(statsobj) DEFobjCurrIf(parser)
 
     /* forward references */
     static void *wrkr(void *myself);
@@ -994,7 +995,37 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     if (pThis->bFrameOversize) {
         writeOversizeMessageLog(pMsg);
     }
-    localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    assert(pSrv->ratelimiter != NULL);
+    if (pSrv->ratelimiter->pShared != NULL && pSrv->ratelimiter->pShared->per_source_enabled) {
+        actWrkrIParams_t perSourceKeyParam;
+        const char *per_source_key = NULL;
+        size_t per_source_key_len = 0;
+        uchar *peerIP = NULL;
+        rs_size_t lenPeerIP = 0;
+
+        memset(&perSourceKeyParam, 0, sizeof(perSourceKeyParam));
+        if (pSrv->ratelimiter->pShared->per_source_key_needs_parsing && (pMsg->msgFlags & NEEDS_PARSING) != 0) {
+            parser.ParseMsg(pMsg);
+        }
+        if (pSrv->ratelimiter->pShared->per_source_key_tpl != NULL &&
+            tplToString(pSrv->ratelimiter->pShared->per_source_key_tpl, pMsg, &perSourceKeyParam, NULL) == RS_RET_OK) {
+            per_source_key = (const char *)perSourceKeyParam.param;
+            per_source_key_len = perSourceKeyParam.lenStr;
+        } else {
+            prop.GetString(pThis->peerIP, &peerIP, &lenPeerIP);
+            per_source_key = (const char *)peerIP;
+            per_source_key_len = (size_t)lenPeerIP;
+        }
+        if (per_source_key != NULL && per_source_key_len > 0) {
+            localRet = ratelimitAddMsgPerSource(pSrv->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
+                                                ttGenTime);
+        } else {
+            localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+        }
+        free(perSourceKeyParam.param);
+    } else {
+        localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    }
     if (localRet == RS_RET_OK) {
         STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
     } else if (localRet == RS_RET_DISCARDMSG) {
@@ -2756,6 +2787,7 @@ BEGINmodExit
     objRelease(net, LM_NET_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -2806,6 +2838,7 @@ BEGINmodInit()
     CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
 
     /* initialize "read-only" thread attributes */
     pthread_attr_init(&wrkrThrdAttr);

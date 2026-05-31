@@ -56,6 +56,7 @@
 #include "glbl.h"
 #include "msg.h"
 #include "parser.h"
+#include "parserif.h"
 #include "datetime.h"
 #include "prop.h"
 #include "ruleset.h"
@@ -73,7 +74,7 @@ MODULE_CNFNAME("imudp")
 /* Module static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset)
-    DEFobjCurrIf(statsobj)
+    DEFobjCurrIf(statsobj) DEFobjCurrIf(parser)
 
 
         static struct lstn_s {
@@ -573,7 +574,39 @@ static rsRetVal processPacket(struct lstn_s *lstn,
             pMsg->msgFlags |= PRESERVE_CASE; /* preserve case of fromhost */
         }
         CHKiRet(msgSetFromSockinfo(pMsg, frominet));
-        CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
+        assert(lstn->ratelimiter != NULL);
+        if (lstn->ratelimiter->pShared != NULL && lstn->ratelimiter->pShared->per_source_enabled) {
+            actWrkrIParams_t perSourceKeyParam;
+            char fallbackKey[NI_MAXHOST];
+            const char *per_source_key = NULL;
+            size_t per_source_key_len = 0;
+            rsRetVal addRet;
+
+            memset(&perSourceKeyParam, 0, sizeof(perSourceKeyParam));
+            if (lstn->ratelimiter->pShared->per_source_key_needs_parsing && (pMsg->msgFlags & NEEDS_PARSING) != 0) {
+                parser.ParseMsg(pMsg);
+            }
+            if (lstn->ratelimiter->pShared->per_source_key_tpl != NULL &&
+                tplToString(lstn->ratelimiter->pShared->per_source_key_tpl, pMsg, &perSourceKeyParam, NULL) ==
+                    RS_RET_OK) {
+                per_source_key = (const char *)perSourceKeyParam.param;
+                per_source_key_len = perSourceKeyParam.lenStr;
+            } else if (getnameinfo((struct sockaddr *)frominet, socklen, fallbackKey, sizeof(fallbackKey), NULL, 0,
+                                   NI_NUMERICHOST) == 0) {
+                per_source_key = fallbackKey;
+                per_source_key_len = strlen(fallbackKey);
+            }
+            if (per_source_key != NULL && per_source_key_len > 0) {
+                addRet = ratelimitAddMsgPerSource(lstn->ratelimiter, multiSub, pMsg, per_source_key, per_source_key_len,
+                                                  ttGenTime);
+            } else {
+                addRet = ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg);
+            }
+            free(perSourceKeyParam.param);
+            CHKiRet(addRet);
+        } else {
+            CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
+        }
         STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
     }
 
@@ -1463,6 +1496,7 @@ BEGINmodExit
     objRelease(prop, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
     objRelease(net, LM_NET_FILENAME);
+    objRelease(parser, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -1506,6 +1540,7 @@ BEGINmodInit()
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(net, LM_NET_FILENAME));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
 
     DBGPRINTF("imudp: version %s initializing\n", VERSION);
 #ifdef HAVE_RECVMMSG
