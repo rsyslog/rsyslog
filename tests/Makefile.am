@@ -248,6 +248,7 @@ TESTS_DEFAULT = \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown-recovery.sh \
+	daqueue-drain-without-traffic.sh \
 	daqueue-truncated-segment-startup.sh \
 	diskq-rfc5424.sh \
 	diskqueue-truncated-segment-startup.sh \

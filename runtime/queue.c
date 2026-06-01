@@ -606,7 +606,9 @@ static rsRetVal StartDA(qqueue_t *pThis) {
 
     CHKiRet(qqueueSetpAction(pThis->pqDA, pThis->pAction));
     CHKiRet(qqueueSetsizeOnDiskMax(pThis->pqDA, pThis->sizeOnDiskMax));
-    CHKiRet(qqueueSetiDeqSlowdown(pThis->pqDA, pThis->iDeqSlowdown));
+    /* DA recovery must drain at full speed; the parent's deqSlowdown is a
+     * rate-limit for normal traffic and must not carry over to disk drain. */
+    CHKiRet(qqueueSetiDeqSlowdown(pThis->pqDA, 0));
     CHKiRet(qqueueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
     CHKiRet(qqueueSetFilePrefix(pThis->pqDA, pThis->pszFilePrefix, pThis->lenFilePrefix));
     CHKiRet(qqueueSetSpoolDir(pThis->pqDA, pThis->pszSpoolDir, pThis->lenSpoolDir));
@@ -619,7 +621,12 @@ static rsRetVal StartDA(qqueue_t *pThis) {
     CHKiRet(qqueueSettoQShutdown(pThis->pqDA, pThis->toQShutdown));
     CHKiRet(qqueueSetiHighWtrMrk(pThis->pqDA, 0));
     CHKiRet(qqueueSetiDiscardMrk(pThis->pqDA, 0));
-    pThis->pqDA->iDeqBatchSize = pThis->iDeqBatchSize;
+    /* Use a generous batch size for disk drain: small parent defaults (e.g. 8)
+     * cause thousands of short lock/dequeue/unlock cycles per second, each
+     * paying disk-read overhead, which makes large queues take days to drain.
+     * The floor of 1024 keeps drain fast without changing user-set values that
+     * are already larger. */
+    pThis->pqDA->iDeqBatchSize = pThis->iDeqBatchSize < 1024 ? 1024 : pThis->iDeqBatchSize;
     pThis->pqDA->iMinDeqBatchSize = pThis->iMinDeqBatchSize;
     pThis->pqDA->iMinMsgsPerWrkr = pThis->iMinMsgsPerWrkr;
     pThis->pqDA->iLowWtrMrk = pThis->iLowWtrMrk;
@@ -3138,6 +3145,14 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     DeleteProcessedBatch(pThis, &pWti->batch);
     qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    /* For the DA child queue (pqParent != NULL), ChkStopWrkrReg returns
+     * TERMINATE_WHEN_IDLE.  With no concurrent enqueue traffic the only
+     * wakeup signal comes from qqueueEnqMsg, which is never called during
+     * a pure drain.  Re-advise here so the worker is not prematurely
+     * retired between consecutive disk batches. */
+    if (pThis->pqParent != NULL && getLogicalQueueSize(pThis) > 0) {
+        qqueueAdviseMaxWorkers(pThis);
+    }
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
