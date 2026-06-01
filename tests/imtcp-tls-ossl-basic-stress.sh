@@ -2,10 +2,21 @@
 # added 2018-04-27 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 #
+# Stress anonymous imtcp over native OpenSSL with a TLSv1.3-only cipher suite.
+# Success is proved by receiving the full ordered message sequence; builds whose
+# native OpenSSL lacks the required TLSv1.3 SSL_CONF_cmd support must skip
+# instead of failing before traffic starts.
 # List available valid OpenSSL Engines for defaultopensslengine with this command:
 #	openssl engine -t
 #
 . ${srcdir:=.}/diag.sh init
+check_command_available openssl
+
+if ! openssl ciphers -s -tls1_3 -ciphersuites TLS_AES_256_GCM_SHA384 >/dev/null 2>&1; then
+	echo "SKIP: native OpenSSL build lacks TLSv1.3 ciphersuite support for this stress test"
+	skip_test
+fi
+
 export NUMMESSAGES=100000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
@@ -47,4 +58,3 @@ shutdown_when_empty
 wait_shutdown
 seq_check
 exit_test
-
