@@ -168,29 +168,61 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 
+template(name="shapefmt" type="list") {
+	constant(value="shape_msg=")
+	property(name="msg")
+	constant(value="\nshape_hostname=")
+	property(name="hostname")
+	constant(value="\nshape_syslogtag=")
+	property(name="syslogtag")
+	constant(value="\nshape_programname=")
+	property(name="programname")
+	constant(value="\nshape_protocol=")
+	property(name="protocol-version")
+	constant(value="\nshape_structured_data=")
+	property(name="structured-data")
+	constant(value="\nshape_app_name=")
+	property(name="app-name")
+	constant(value="\nshape_procid=")
+	property(name="procid")
+	constant(value="\nshape_msgid=")
+	property(name="msgid")
+	constant(value="\nshape_rawmsg_after_pri=")
+	property(name="rawmsg-after-pri")
+	constant(value="\n")
+}
+
 local4.* {
-	set $!fields = "one,two,,four";
-	set $!word = "alphabet";
-	set $!short = "xy";
-	set $!regexsrc = "abc-123 def-456";
-	set $!mixed = "MiXeD";
-	set $!spaces = "a   b  c";
-	set $!line = "tail\n";
-	set $!leading = " lead";
-	set $!control = "a\nb\tc";
-	set $!path = "a/b/c";
-	set $!empty = "";
-	set $!dot = ".";
-	set $!dotdot = "..";
-	set $!csvsrc = "a,\"b\"";
-	set $!jsonsrc = "a \\ \"b\"";
-	set $!jsonrsrc = "a \\n b";
-	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+	if ($rawmsg contains "shape") then {
+		action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="shapefmt")
+	} else {
+		set $!fields = "one,two,,four";
+		set $!word = "alphabet";
+		set $!short = "xy";
+		set $!regexsrc = "abc-123 def-456";
+		set $!mixed = "MiXeD";
+		set $!spaces = "a   b  c";
+		set $!line = "tail\n";
+		set $!leading = " lead";
+		set $!control = "a\nb\tc";
+		set $!path = "a/b/c";
+		set $!empty = "";
+		set $!dot = ".";
+		set $!dotdot = "..";
+		set $!csvsrc = "a,\"b\"";
+		set $!jsonsrc = "a \\ \"b\"";
+		set $!jsonrsrc = "a \\n b";
+		action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+	}
 }
 '
 
 startup
 injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 host app proc msgid - trigger'
+injectmsg_literal '<167>Aug 24 05:14:15 legacyhost legacyprog[42]: shape3164'
+injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 nilhost - - - - shape5424nil'
+injectmsg_literal '<167>Aug 24 05:14:15 oddhost shape3164notag'
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 90
 shutdown_when_empty
 wait_shutdown
 
@@ -253,6 +285,36 @@ reported_local_unix=1061727255
 reported_local_subseconds=000003
 reported_local_misc=Sun/0/07:00/-/236/35
 reported_utc_formats=20030824121415/2003-08-24 12:14:15/Aug 24 12:14:15/1061727255/000003
-reported_parts=2003-08-24T12:14:15'
+reported_parts=2003-08-24T12:14:15
+shape_msg= shape3164
+shape_hostname=legacyhost
+shape_syslogtag=legacyprog[42]:
+shape_programname=legacyprog
+shape_protocol=0
+shape_structured_data=-
+shape_app_name=legacyprog
+shape_procid=42
+shape_msgid=-
+shape_rawmsg_after_pri=Aug 24 05:14:15 legacyhost legacyprog[42]: shape3164
+shape_msg=shape5424nil
+shape_hostname=nilhost
+shape_syslogtag=-
+shape_programname=-
+shape_protocol=1
+shape_structured_data=-
+shape_app_name=-
+shape_procid=-
+shape_msgid=-
+shape_rawmsg_after_pri=1 2003-08-24T05:14:15.000003-07:00 nilhost - - - - shape5424nil
+shape_msg=
+shape_hostname=oddhost
+shape_syslogtag=shape3164notag
+shape_programname=shape3164notag
+shape_protocol=0
+shape_structured_data=-
+shape_app_name=shape3164notag
+shape_procid=-
+shape_msgid=-
+shape_rawmsg_after_pri=Aug 24 05:14:15 oddhost shape3164notag'
 cmp_exact
 exit_test

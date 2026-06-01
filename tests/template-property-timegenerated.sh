@@ -71,6 +71,7 @@ local4.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 export FAKETIME='2016-03-01 12:34:56'
 startup
 injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 host app proc msgid - trigger'
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 5
 shutdown_when_empty
 wait_shutdown
 
