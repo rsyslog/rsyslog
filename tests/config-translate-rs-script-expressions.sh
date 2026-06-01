@@ -35,7 +35,8 @@ ruleset(name="main") {
   }
 }
 RS_EOF
-sed -i "s|@TARGET_OUT@|${target_out}|g" "${RSYSLOG_DYNNAME}.conf"
+sed "s|@TARGET_OUT@|${target_out}|g" "${RSYSLOG_DYNNAME}.conf" >"${RSYSLOG_DYNNAME}.conf.tmp" &&
+	mv "${RSYSLOG_DYNNAME}.conf.tmp" "${RSYSLOG_DYNNAME}.conf"
 
 ../tools/rsyslogd -N1 -f "${RSYSLOG_DYNNAME}.conf" -F rainerscript -o "${RSYSLOG_DYNNAME}.out.conf" -M"$modpath" ||
 	error_exit $?
@@ -61,7 +62,8 @@ ruleset(name="main") {
 }
 
 RS_EOF
-sed -i "s|@TARGET_OUT@|${target_out}|g" "${RSYSLOG_DYNNAME}.expected.conf"
+sed "s|@TARGET_OUT@|${target_out}|g" "${RSYSLOG_DYNNAME}.expected.conf" >"${RSYSLOG_DYNNAME}.expected.conf.tmp" &&
+	mv "${RSYSLOG_DYNNAME}.expected.conf.tmp" "${RSYSLOG_DYNNAME}.expected.conf"
 cmp_exact_file "${RSYSLOG_DYNNAME}.expected.conf" "${RSYSLOG_DYNNAME}.out.conf"
 
 ../tools/rsyslogd -N1 -f "${RSYSLOG_DYNNAME}.out.conf" -M"$modpath" || error_exit $?

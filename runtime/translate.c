@@ -843,7 +843,7 @@ static int estrAppendChar(es_str_t **s, char c) {
 }
 
 static int estrAppendVarName(es_str_t **s, const char *name) {
-    if (name == NULL) return -1;
+    if (name == NULL || name[0] == '\0') return -1;
     if (name[0] != '$' && estrAppendChar(s, '$') != 0) return -1;
     return estrAppendCstr(s, name);
 }
