@@ -109,7 +109,7 @@ jobs:
               detect_stack_use_after_return=1:print_stacktrace=1"
           elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
             export TSAN_OPTIONS=":halt_on_error=1:\
-              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+              detect_deadlocks=1:history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           fi
           set +e
           make -j8 check
