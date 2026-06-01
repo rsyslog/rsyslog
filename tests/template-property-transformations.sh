@@ -79,8 +79,80 @@ template(name="outfmt" type="list") {
 	property(name="$!jsonrsrc" format="jsonr")
 	constant(value="\njsonfr=")
 	property(name="$!jsonrsrc" outname="jsonrsrc" format="jsonfr")
+	constant(value="\nmsg=")
+	property(name="msg")
+	constant(value="\nhostname=")
+	property(name="hostname")
+	constant(value="\nsyslogtag=")
+	property(name="syslogtag")
+	constant(value="\nrawmsg_after_pri=")
+	property(name="rawmsg-after-pri")
+	constant(value="\npri=")
+	property(name="pri")
+	constant(value="\npri_text=")
+	property(name="pri-text")
+	constant(value="\niut=")
+	property(name="iut")
+	constant(value="\nfacility=")
+	property(name="syslogfacility")
+	constant(value="\nfacility_text=")
+	property(name="syslogfacility-text")
+	constant(value="\nseverity=")
+	property(name="syslogseverity")
+	constant(value="\nseverity_text=")
+	property(name="syslogseverity-text")
+	constant(value="\nprogramname=")
+	property(name="programname")
+	constant(value="\nprotocol=")
+	property(name="protocol-version")
+	constant(value="\nstructured_data=")
+	property(name="structured-data")
+	constant(value="\napp_name=")
+	property(name="app-name")
+	constant(value="\nprocid=")
+	property(name="procid")
+	constant(value="\nmsgid=")
+	property(name="msgid")
+	constant(value="\nparsesuccess=")
+	property(name="parsesuccess")
 	constant(value="\nreported_utc=")
 	property(name="timereported" dateformat="rfc3339" date.inUTC="on")
+	constant(value="\nreported_local_mysql=")
+	property(name="timereported" dateformat="mysql")
+	constant(value="\nreported_local_pgsql=")
+	property(name="timereported" dateformat="pgsql")
+	constant(value="\nreported_local_rfc3164=")
+	property(name="timereported" dateformat="rfc3164")
+	constant(value="\nreported_local_rfc3164_buggy=")
+	property(name="timereported" dateformat="rfc3164-buggyday")
+	constant(value="\nreported_local_unix=")
+	property(name="timereported" dateformat="unixtimestamp")
+	constant(value="\nreported_local_subseconds=")
+	property(name="timereported" dateformat="subseconds")
+	constant(value="\nreported_local_misc=")
+	property(name="timereported" dateformat="wdayname")
+	constant(value="/")
+	property(name="timereported" dateformat="wday")
+	constant(value="/")
+	property(name="timereported" dateformat="tzoffshour")
+	constant(value=":")
+	property(name="timereported" dateformat="tzoffsmin")
+	constant(value="/")
+	property(name="timereported" dateformat="tzoffsdirection")
+	constant(value="/")
+	property(name="timereported" dateformat="ordinal")
+	constant(value="/")
+	property(name="timereported" dateformat="week")
+	constant(value="\nreported_utc_formats=")
+	property(name="timereported" dateformat="mysql" date.inUTC="on")
+	constant(value="/")
+	property(name="timereported" dateformat="pgsql" date.inUTC="on")
+	constant(value="/")
+	property(name="timereported" dateformat="rfc3164" date.inUTC="on")
+	constant(value="/")
+	property(name="timereported" dateformat="unixtimestamp" date.inUTC="on")
+	constant(value="/")
+	property(name="timereported" dateformat="subseconds" date.inUTC="on")
 	constant(value="\nreported_parts=")
 	property(name="timereported" dateformat="year" date.inUTC="on")
 	constant(value="-")
@@ -154,7 +226,33 @@ json=a \\ \"b\"
 jsonf="jsonsrc":"a \\ \"b\""
 jsonr=a \n b
 jsonfr="jsonrsrc":"a \n b"
+msg=trigger
+hostname=host
+syslogtag=app[proc]
+rawmsg_after_pri=1 2003-08-24T05:14:15.000003-07:00 host app proc msgid - trigger
+pri=167
+pri_text=local4.debug
+iut=1
+facility=20
+facility_text=local4
+severity=7
+severity_text=debug
+programname=app
+protocol=1
+structured_data=-
+app_name=app
+procid=proc
+msgid=msgid
+parsesuccess=FAIL
 reported_utc=2003-08-24T12:14:15.000003+00:00
+reported_local_mysql=20030824051415
+reported_local_pgsql=2003-08-24 05:14:15
+reported_local_rfc3164=Aug 24 05:14:15
+reported_local_rfc3164_buggy=Aug 24 05:14:15
+reported_local_unix=1061727255
+reported_local_subseconds=000003
+reported_local_misc=Sun/0/07:00/-/236/35
+reported_utc_formats=20030824121415/2003-08-24 12:14:15/Aug 24 12:14:15/1061727255/000003
 reported_parts=2003-08-24T12:14:15'
 cmp_exact
 exit_test
