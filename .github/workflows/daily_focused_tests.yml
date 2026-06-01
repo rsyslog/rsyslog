@@ -395,7 +395,7 @@ jobs:
                --rc geninfo_unexecuted_blocks=1 \
                --ignore-errors mismatch \
                --output-file coverage.raw.info
-          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info || true
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info
           rm -f coverage.raw.info
           lcov --list coverage.info | sed -n '1,60p' || true
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
