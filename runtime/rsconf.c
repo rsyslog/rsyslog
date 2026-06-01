@@ -30,6 +30,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <stdarg.h>
+#include <pthread.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -85,6 +87,54 @@ DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl)
     /* exported static data */
     rsconf_t *runConf = NULL; /* the currently running config */
 rsconf_t *loadConf = NULL; /* the config currently being loaded (no concurrent config load supported!) */
+
+#ifdef HAVE_LIBSYSTEMD
+/* module readiness barrier: modules that need startup time call rsconfRegisterReadiness(),
+ * then rsconfSignalReady() once initialised. rsconfWaitForModulesReady() blocks until all
+ * registered modules have signalled, then sd_notify(READY=1) can fire safely.
+ * The whole barrier is compiled only when systemd support is present; on non-systemd
+ * builds, rsconf.h provides inline no-ops for Register/Signal so opt-in modules
+ * (imfile, etc.) need no #ifdef guards of their own. */
+static pthread_mutex_t mutModulesReady = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t condModulesReady = PTHREAD_COND_INITIALIZER;
+static int nModulesPendingReady = 0;
+
+void rsconfRegisterReadiness(void) {
+    pthread_mutex_lock(&mutModulesReady);
+    ++nModulesPendingReady;
+    pthread_mutex_unlock(&mutModulesReady);
+}
+
+void rsconfSignalReady(void) {
+    pthread_mutex_lock(&mutModulesReady);
+    if (nModulesPendingReady > 0 && --nModulesPendingReady == 0) pthread_cond_broadcast(&condModulesReady);
+    pthread_mutex_unlock(&mutModulesReady);
+}
+
+/* Wait up to 60 s for all registered modules to signal readiness. */
+void rsconfWaitForModulesReady(void) {
+    struct timespec ts;
+    timeoutComp(&ts, 60000); /* 60 000 ms = 60 s */
+    pthread_mutex_lock(&mutModulesReady);
+    while (nModulesPendingReady > 0) {
+        const int rc = pthread_cond_timedwait(&condModulesReady, &mutModulesReady, &ts);
+        if (rc == ETIMEDOUT) {
+            LogError(0, RS_RET_TIMED_OUT,
+                     "rsyslogd: timed out waiting for input modules to signal readiness "
+                     "(%d module(s) outstanding) - sending READY=1 anyway",
+                     nModulesPendingReady);
+            break;
+        } else if (rc != 0) {
+            LogError(0, RS_RET_SYS_ERR,
+                     "rsyslogd: pthread_cond_timedwait error %d waiting for module "
+                     "readiness - sending READY=1 anyway",
+                     rc);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutModulesReady);
+}
+#endif /* HAVE_LIBSYSTEMD */
 
 /* hardcoded standard templates (used for defaults) */
 static uchar template_DebugFormat[] =
