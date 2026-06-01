@@ -56,8 +56,8 @@ jobs:
               --disable-elasticsearch-tests --disable-kafka-tests
               --disable-snmp-tests --enable-imdtls --enable-omdtls
             valgrind_supp: ''
-          - lane: fedora_42
-            container: rsyslog/rsyslog_dev_base_fedora:42
+          - lane: fedora_43
+            container: rsyslog/rsyslog_dev_base_fedora:43
             configure_extra: >-
               --disable-elasticsearch-tests --disable-kafka-tests
               --enable-debug --enable-imdtls --enable-omdtls

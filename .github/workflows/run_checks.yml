@@ -445,7 +445,7 @@ jobs:
       matrix:
         config: [centos_7, debian_13,
                  ubuntu_26_imtcp_no_epoll,
-                 fedora_43,
+                 fedora_44,
                  ubuntu_20, ubuntu_24,
                  ubuntu_26_san, ubuntu_26_tsan, ubuntu_22_distcheck,
                  openeuler, wolfssl, elasticsearch]
@@ -543,8 +543,8 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests"
               ;;
-          'fedora_43')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:43'
+          'fedora_44')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:44'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
@@ -614,7 +614,7 @@ jobs:
               export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
               # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
-              export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
+              export TSAN_OPTIONS="halt_on_error=1:detect_deadlocks=1:suppressions=/rsyslog/tests/tsan-rt.supp"
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
           'wolfssl')
@@ -1042,7 +1042,7 @@ jobs:
           elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
             echo "Configuring ThreadSanitizer options"
             export TSAN_OPTIONS=":halt_on_error=1:\
-              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+              detect_deadlocks=1:history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           else
             echo "Running without sanitizers"
           fi
