@@ -2510,15 +2510,6 @@ error_exit() {
 	printf '%s FAIL: Test %s (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	if [ $exitval -ne 77 ] && [ "$TESTBENCH_SUPPRESS_FAIL_MARKER" != "YES" ]; then
 		echo $0 > testbench_test_failed_rsyslog
-		# --- AI AGENT GUIDANCE ---
-		echo " "
-		echo " AI AGENT NOTICE:"
-		echo "   If this output is sparse or you ran 'make check', you are doing it wrong."
-		echo "   1. READ AGENTS.md NOW."
-		echo "   2. Run this test directly: ./tests/$(basename $0)"
-		echo "   3. Do NOT use specific make targets like 'check-TESTS'."
-		echo " "
-		# -------------------------
 	fi
 	exit $exitval
 }
@@ -2635,13 +2626,12 @@ _service_relevance_is_broad_change() {
 	local changed_file="$1"
 
 	# Broad relevance is the conservative fallback for service families that do
-	# not yet have focused dependency rules. It keeps the pre-gating behavior for
-	# those modules while allowing expensive Kafka, imfile, and Elasticsearch
-	# tests to use narrower rules below.
+	# not yet have focused dependency rules. Generic testbench files are not
+	# service-family signals here; higher-level local and CI validation decide
+	# how much core testbench coverage they need.
 	case "$changed_file" in
 		configure.ac|Makefile.am|m4/*|\
 		.github/workflows/*|devtools/run-ci.sh|devtools/run-configure.sh|\
-		tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*|\
 		grammar/lexer.l|grammar/grammar.y|grammar/Makefile.am|\
 		runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am)
 			return 0
@@ -2683,13 +2673,12 @@ _service_relevance_is_broad_change() {
 _service_relevance_is_selective_common_change() {
 	local changed_file="$1"
 
-	# Changes to build, CI, parser grammar, or testbench plumbing can alter the
-	# way the heavy service tests are configured or executed. Keep these changes
-	# relevant even for the focused Kafka/imfile/Elasticsearch gates.
+	# Changes to build, CI, or parser grammar can alter how heavy service tests
+	# are configured or executed. Generic testbench files are handled by the
+	# higher-level validation plan, not by per-service relevance.
 	case "$changed_file" in
 		configure.ac|Makefile.am|m4/*|\
 		.github/workflows/*|devtools/run-ci.sh|devtools/run-configure.sh|\
-		tests/Makefile.am|tests/diag.sh|tests/*.sh|tests/testsuites/*|\
 		grammar/lexer.l|grammar/grammar.y|grammar/Makefile.am|\
 		runtime/Makefile.am|compat/Makefile.am|tools/Makefile.am)
 			return 0
