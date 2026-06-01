@@ -464,6 +464,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/rs-lookup.rst \
     source/rainerscript/functions/rs-parse_json.rst \
     source/rainerscript/functions/rs-parse_time.rst \
+    source/rainerscript/functions/rs-parse_time_localtz.rst \
     source/rainerscript/functions/rs-percentile_observe.rst \
     source/rainerscript/functions/rs-previous_action_suspended.rst \
     source/rainerscript/functions/rs-prifilt.rst \

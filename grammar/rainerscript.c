@@ -2746,9 +2746,9 @@ static void ATTR_NONNULL() doFunct_ParseTime(struct cnffunc *__restrict__ const 
 }
 
 static void ATTR_NONNULL() doFunct_ParseTimeLocalTz(struct cnffunc *__restrict__ const func,
-                                             struct svar *__restrict__ const ret,
-                                             void *__restrict__ const usrptr,
-                                             wti_t *__restrict__ const pWti) {
+                                                    struct svar *__restrict__ const ret,
+                                                    void *__restrict__ const usrptr,
+                                                    wti_t *__restrict__ const pWti) {
     struct svar srcVal;
     int bMustFree;
     cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
@@ -2757,29 +2757,33 @@ static void ATTR_NONNULL() doFunct_ParseTimeLocalTz(struct cnffunc *__restrict__
     ret->d.n = 0;
     wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
 
-    if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
-        struct syslogTime s;
-        int len = strlen(str);
-        uchar *pszTS = (uchar *)str;
-        memset(&s, 0, sizeof(struct syslogTime));
-        // Attempt to parse the date/time string
-        if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
-            ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
-            DBGPRINTF("parse_time: RFC3339 format found\n");
-        } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
-                                               NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-            time_t t = time(NULL);
-            struct tm tm;
-            gmtime_r(&t, &tm);  // Get the current UTC date
-            // Since properly formatted RFC 3164 timestamps do not have a YEAR
-            // specified, we have to assume one that seems reasonable - SW.
-            s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
-            ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
-            DBGPRINTF("parse_time: RFC3164 format found\n");
-        } else {
-            DBGPRINTF("parse_time: no valid format found\n");
-            wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+    if (str != NULL) {
+        if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+            struct syslogTime s;
+            int len = strlen(str);
+            uchar *pszTS = (uchar *)str;
+            memset(&s, 0, sizeof(struct syslogTime));
+            // Attempt to parse the date/time string
+            if (datetime.ParseTIMESTAMP3339(&s, (uchar **)&pszTS, &len) == RS_RET_OK) {
+                ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
+                DBGPRINTF("parse_time: RFC3339 format found\n");
+            } else if (datetime.ParseTIMESTAMP3164(&s, (uchar **)&pszTS, &len, NO_PARSE3164_TZSTRING,
+                                                   NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+                time_t t = time(NULL);
+                struct tm tm;
+                gmtime_r(&t, &tm);  // Get the current UTC date
+                // Since properly formatted RFC 3164 timestamps do not have a YEAR
+                // specified, we have to assume one that seems reasonable - SW.
+                s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
+                ret->d.n = datetime.syslogTime2time_tLocalTZ(&s);
+                DBGPRINTF("parse_time: RFC3164 format found\n");
+            } else {
+                DBGPRINTF("parse_time: no valid format found\n");
+                wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+            }
         }
+    } else {
+        wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
     }
 
     if (bMustFree) {
