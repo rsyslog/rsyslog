@@ -69,6 +69,7 @@ jobs:
               default-jre-headless \
               faketime \
               gdb \
+              lcov \
               libaprutil1-dev \
               libbson-dev \
               libcap-ng-dev \
@@ -145,6 +146,7 @@ jobs:
               libtool-bin \
               libyaml-dev \
               libzstd-dev \
+              lcov \
               lsof \
               make \
               net-tools \
@@ -173,6 +175,7 @@ jobs:
               libsystemd-dev \
               libtirpc-dev \
               libtool-bin \
+              lcov \
               uuid-dev \
               valgrind
             ;;
@@ -215,7 +218,24 @@ jobs:
           restore-keys: |
             cfgcache-daily-focused-kafka-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: require Codecov token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "CODECOV_TOKEN secret is not configured" >&2
+            exit 1
+          fi
+
+      - name: enable coverage flags
+        run: |
+          echo 'CFLAGS=-g -O0 --coverage -fprofile-update=atomic' >> "$GITHUB_ENV"
+          echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
+
       - name: prepare for build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: |
           case "${{ matrix.lane }}" in
           'base')
@@ -352,6 +372,9 @@ jobs:
           esac
 
       - name: build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: |
           if [ "${{ matrix.lane }}" = "journal" ]; then
             make -j
@@ -360,7 +383,31 @@ jobs:
           fi
 
       - name: make check
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: make -j10 check
+
+      - name: generate coverage
+        if: always()
+        run: |
+          lcov --capture --directory . \
+               --rc geninfo_unexecuted_blocks=1 \
+               --ignore-errors mismatch \
+               --output-file coverage.raw.info
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info || true
+          rm -f coverage.raw.info
+          lcov --list coverage.info | sed -n '1,60p' || true
+          [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+
+      - name: upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: daily-${{ matrix.lane }}
+          fail_ci_if_error: true
 
       # Use the same short-lived failure artifact contract as regular PR CI so
       # the flake collector can process scheduled failures through the same
