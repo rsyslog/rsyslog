@@ -36,6 +36,7 @@ librsyslog_la_SOURCES = \
 	strgen.c \
 	msg.c \
 	msg.h \
+	msg_replace_helper.h \
 	linkedlist.c \
 	linkedlist.h \
 	objomsr.c \

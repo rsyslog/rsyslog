@@ -542,7 +542,17 @@ queue.saveOnShutdown
 
    "binary", "off", "no", "``$ActionQueueSaveOnShutdown``"
 
-This parameter specifies if data should be saved at shutdown.
+This parameter specifies if queued data should be saved during an
+orderly rsyslog shutdown. It applies to disk-assisted queues, letting
+rsyslog persist messages that are still in the memory portion of the
+queue before the process exits.
+
+The setting does not protect messages that are still in memory when the
+process is killed without graceful shutdown handling, for example by
+``SIGKILL``, the kernel OOM killer, a system crash, or power loss. Use a
+pure disk queue plus appropriate ``queue.checkpointInterval`` and
+``queue.syncqueuefiles`` settings when crash durability is more important
+than throughput.
 
 
 queue.dequeueSlowDown

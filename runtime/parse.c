@@ -46,6 +46,15 @@
  * public members                                                    *
  * ################################################################# */
 
+static void freeNetAddrContent(struct NetAddr *const pIP) {
+    if (pIP == NULL) return;
+
+    if (F_ISSET(pIP->flags, ADDR_NAME))
+        free(pIP->addr.HostWildcard);
+    else
+        free(pIP->addr.NetAddr);
+}
+
 
 /**
  * Destruct a rsPars object and its associated string.
@@ -419,9 +428,9 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
             /* mask bits follow, let's parse them! */
             ++pThis->iCurrPos; /* eat slash */
             if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-                free((*pIP)->addr.NetAddr);
-                free((*pIP)->addr.HostWildcard);
+                freeNetAddrContent(*pIP);
                 free(*pIP);
+                *pIP = NULL;
                 FINALIZE;
             }
             /* we need to refresh pointer (changed by parsInt()) */
@@ -455,9 +464,9 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
             /* mask bits follow, let's parse them! */
             ++pThis->iCurrPos; /* eat slash */
             if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-                free((*pIP)->addr.NetAddr);
-                free((*pIP)->addr.HostWildcard);
+                freeNetAddrContent(*pIP);
                 free(*pIP);
+                *pIP = NULL;
                 FINALIZE;
             }
             /* we need to refresh pointer (changed by parsInt()) */
