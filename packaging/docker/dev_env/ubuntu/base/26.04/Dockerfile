@@ -62,6 +62,7 @@ RUN 	apt-get update && \
 	libwolfssl-dev \
 	libyaml-dev \
 	libzstd-dev \
+	lcov \
 	logrotate \
 	lsof \
 	make \
