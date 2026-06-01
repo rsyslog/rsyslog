@@ -3477,8 +3477,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
 
 #ifdef FEATURE_REGEXP
     /* Variables necessary for regular expression matching */
-    size_t nmatch = 10;
-    regmatch_t pmatch[10];
+    size_t nmatch = TPL_REGEX_MAX_MATCHES;
+    regmatch_t pmatch[TPL_REGEX_MAX_MATCHES];
 #endif
 
     *pbMustBeFreed = 0;
