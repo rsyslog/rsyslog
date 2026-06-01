@@ -1342,7 +1342,9 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
                 DBGPRINTF(
                     "omkafka: onDestroyflushed remaining '%d' messages "
                     "to kafka topic '%s'\n",
-                    queuedCount, (pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)));
+                    queuedCount, (pData->dynaTopic ? (char *)pData->topic
+                                                   : (pData->pTopic ? rd_kafka_topic_name(pData->pTopic)
+                                                                     : "[unknown]")));
 
                 /* Trigger callbacks a last time before shutdown */
                 const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
@@ -1356,7 +1358,9 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
                          "omkafka: onDestroy "
                          "Failed to send remaining '%d' messages to "
                          "topic '%s' on shutdown with error: '%s'",
-                         queuedCount, (pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)),
+                         queuedCount, (pData->dynaTopic ? (char *)pData->topic
+                                                        : (pData->pTopic ? rd_kafka_topic_name(pData->pTopic)
+                                                                         : "[unknown]")),
                          rd_kafka_err2str(flushStatus));
 #if RD_KAFKA_VERSION >= 0x010001ff
                 rd_kafka_purge(pData->rk, RD_KAFKA_PURGE_F_QUEUE | RD_KAFKA_PURGE_F_INFLIGHT);
