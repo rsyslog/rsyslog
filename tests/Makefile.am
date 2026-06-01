@@ -145,9 +145,12 @@ TESTS_DEFAULT = \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-missing-target.sh \
+	omfwd-suspended-no-early-commit.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
+	omfwd-errfile-maxsize.sh \
+	omfwd-errfile-maxsize-filled.sh \
 	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
@@ -239,6 +242,7 @@ TESTS_DEFAULT = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
@@ -429,6 +433,7 @@ TESTS_DEFAULT = \
 	rscript_get_property.sh \
 	rscript_split.sh \
 	rscript_append_json.sh \
+	msg_json_set_regression.sh \
 	config_output-o-option.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
@@ -481,13 +486,7 @@ TESTS_SKELETONS = \
 	omfwd-lb-1target-retry-test_skeleton-TargetFail.sh
 
 TESTS_INACTIVE = \
-	omfwd-errfile-maxsize.sh \
-	omfwd-errfile-maxsize-filled.sh \
-	prop-all-json-concurrency.sh \
-	imuxsock_hostname.sh \
-	sndrcv_ossl_cert_chain.sh \
-	imtcp-tls-ossl-basic-stress.sh \
-	imtcp-tls-ossl-manycon.sh
+	prop-all-json-concurrency.sh
 
 TESTS_MMSNAREPARSE_MINIMAL = \
 	mmsnareparse-basic.sh \
@@ -653,6 +652,7 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp_framing_regex.sh \
@@ -758,6 +758,8 @@ TESTS_MMANON = \
 	mmanon_truncated_dotted_suffix.sh
 
 TESTS_CLICKHOUSE = \
+	clickhouse-template-option-stdsql.sh \
+	clickhouse-http-status-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-dflt-tpl.sh \
@@ -914,6 +916,7 @@ TESTS_OMPROG = \
 	omprog-close-unresponsive-noterm.sh \
 	omprog-restart-terminated.sh \
 	omprog-restart-terminated-outfile.sh \
+	omprog-diskq-restart-save.sh \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
 	omprog-invalid-args.sh \
@@ -947,6 +950,7 @@ TESTS_OMHTTP = \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
 	omhttp-retry-timeout.sh \
+	wti-shutdown-saveonshutdown-omhttp.sh \
 	omhttp-httpheaderkey.sh \
 	omhttp-multiplehttpheaders.sh \
 	omhttp-dynrestpath.sh \
@@ -1574,6 +1578,7 @@ TESTS_OSSL = \
 	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
+	imtcp-tls-ossl-manycon.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1584,6 +1589,7 @@ TESTS_OSSL = \
 TESTS_OSSL_OPENSSL = \
 	imtcp-tls-ossl-crl.sh \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-stress.sh \
 	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-error-key2.sh \
@@ -2132,8 +2138,8 @@ liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri
-TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri
+check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
+TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
@@ -2143,6 +2149,9 @@ runtime_unit_stringbuf_SOURCES = \
 
 runtime_unit_parser_pri_SOURCES = \
 	unit/parser_pri_test.c
+
+runtime_unit_msg_replace_SOURCES = \
+	unit/msg_replace_test.c
 
 if ENABLE_GSSAPI
 check_PROGRAMS += runtime_unit_gss_token_util
@@ -2175,15 +2184,19 @@ runtime_unit_stringbuf_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_parser_pri_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_msg_replace_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 if ENABLE_TESTBENCH
@@ -3380,6 +3393,7 @@ EXTRA_DIST += \
 	testsuites/omprog-feedback-mt-bin.sh \
 	testsuites/omprog-feedback-timeout-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
+	testsuites/omprog-diskq-restart-save-bin.sh \
 	testsuites/omprog-invalid-args-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-single-instance-bin.sh \

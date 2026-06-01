@@ -92,6 +92,13 @@ files. So that name should not be at the file size name length limit
 :doc:`../rainerscript/queue_parameters` for the full list of queue
 options.
 
+``queue.saveOnShutdown="on"`` applies to orderly rsyslog shutdowns. It
+does not make a disk-assisted queue equivalent to a pure disk queue
+after an immediate process kill, kernel OOM kill, system crash, or power
+loss. Use RELP plus a pure disk queue with durability-oriented queue
+checkpointing and synchronization settings when the deployment requires
+crash-resistant end-to-end delivery.
+
 Please note that actual spool files are only created if the remote
 server is down **and** there is no more space in the in-memory queue. By
 default, a short failure of the remote server will never result in the
@@ -199,4 +206,3 @@ Revision History
 
 -  2008-06-27 \* `Rainer Gerhards <https://rainer.gerhards.net/>`_ \*
    Initial Version created
-

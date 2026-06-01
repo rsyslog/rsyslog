@@ -28,7 +28,9 @@ Description
 -----------
 This is the message format that will be sent to ClickHouse. The resulting
 string needs to be a valid INSERT Query, otherwise ClickHouse will return an
-error. Defaults to:
+error. Custom INSERT templates must enable the template-level SQL escaping
+option, for example ``option.stdsql="on"`` in RainerScript. ``stdSQL`` is not
+an ``omclickhouse`` action parameter. Defaults to:
 
 .. note::
 
@@ -53,7 +55,9 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="omclickhouse")
-   action(type="omclickhouse" template="StdClickHouseFmt")
+   template(name="CustomClickHouseFmt" type="string" option.stdsql="on"
+            string="INSERT INTO rsyslog.SystemEvents (severity, facility, timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, '%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')")
+   action(type="omclickhouse" template="CustomClickHouseFmt")
 
 See also
 --------
