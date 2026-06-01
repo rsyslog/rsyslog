@@ -117,6 +117,11 @@ Note that this only specifies the **maximum** batch size. Batches will be slower
 rsyslog does not have as many messages inside the queue at time of dequeuing it.
 If you want to set a minimum Batch size as well, you can use `queue.minDequeueBatchSize`.
 
+**Note for disk-assisted queues:** the disk queue child (pqDA) used for recovery
+after a restart enforces a minimum batch size of 1024, regardless of this setting.
+This prevents excessively small batches from causing very large on-disk backlogs
+to take days to drain. If you set a value larger than 1024, that value is used.
+
 
 queue.minDequeueBatchSize
 -------------------------
@@ -560,6 +565,12 @@ in microseconds (1000000us is 1sec). It can be used to slow down rsyslog so
 it won't send things to fast.
 For example if this parameter is set to 10000 on a UDP send action, the action
 won't be able to put out more than 100 messages per second.
+
+**Note for disk-assisted queues:** this throttle applies only to the in-memory
+parent queue. The disk queue child (pqDA) that drains persisted data after a
+restart always runs at full speed regardless of this setting. This ensures that
+a recovery backlog is not artificially slowed by a rate-limit intended for
+normal operation.
 
 
 queue.dequeueTimeBegin
