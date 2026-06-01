@@ -2580,6 +2580,7 @@ int main(int argc, char **argv) {
 
     initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
+    rsconfWaitForModulesReady();
     if (sd_watchdog_enabled(0, &systemdWatchdogUsec) > 0) {
         systemdWatchdogEnabled = 1;
         dbgprintf("systemd watchdog enabled with interval %llu usec\n", (unsigned long long)systemdWatchdogUsec);
