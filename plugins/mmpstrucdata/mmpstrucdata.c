@@ -39,6 +39,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "parserif.h"
+#include "glbl.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -51,6 +52,8 @@ DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
     uchar *jsonRoot; /**< container where to store fields */
+    uchar *container; /**< child object where RFC5424 SD is stored */
+    rs_size_t maxStructuredDataSize; /**< maximum SD size this action parses */
     int lowercase_SD_ID;
 } instanceData;
 
@@ -67,7 +70,10 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {{"jsonroot", eCmdHdlrString, 0}, {"sd_name.lowercase", eCmdHdlrBinary, 0}};
+static struct cnfparamdescr actpdescr[] = {{"jsonroot", eCmdHdlrString, 0},
+                                           {"container", eCmdHdlrString, 0},
+                                           {"maxstructureddatasize", eCmdHdlrSize, 0},
+                                           {"sd_name.lowercase", eCmdHdlrBinary, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 BEGINbeginCnfLoad
@@ -111,6 +117,7 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->jsonRoot);
+    free(pData->container);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -120,6 +127,8 @@ ENDfreeWrkrInstance
 
 static inline void setInstParamDefaults(instanceData *pData) {
     pData->jsonRoot = NULL;
+    pData->container = NULL;
+    pData->maxStructuredDataSize = 0;
     pData->lowercase_SD_ID = 1;
 }
 
@@ -141,6 +150,7 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "jsonroot")) {
             size_t lenvar = es_strlen(pvals[i].val.d.estr);
+            free(pData->jsonRoot);
             CHKmalloc(pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->jsonRoot[0] == '$') {
                 /* pre 8.35, the jsonRoot name needed to be specified without
@@ -160,6 +170,23 @@ BEGINnewActInst
                     pData->jsonRoot);
                 ABORT_FINALIZE(RS_RET_INVALID_VAR);
             }
+        } else if (!strcmp(actpblk.descr[i].name, "container")) {
+            free(pData->container);
+            CHKmalloc(pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (pData->container[0] == '\0') {
+                parser_errmsg("mmpstrucdata: invalid empty container name");
+                ABORT_FINALIZE(RS_RET_INVALID_VAR);
+            }
+        } else if (!strcmp(actpblk.descr[i].name, "maxstructureddatasize")) {
+            if (pvals[i].val.d.n < 1) {
+                parser_errmsg("mmpstrucdata: maxStructuredDataSize must be greater than zero");
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            if (pvals[i].val.d.n > INT_MAX) {
+                parser_errmsg("mmpstrucdata: maxStructuredDataSize must not exceed INT_MAX");
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pData->maxStructuredDataSize = (rs_size_t)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "sd_name.lowercase")) {
             pData->lowercase_SD_ID = pvals[i].val.d.n;
         } else {
@@ -172,7 +199,9 @@ BEGINnewActInst
     if (pData->jsonRoot == NULL) {
         CHKmalloc(pData->jsonRoot = (uchar *)strdup("!"));
     }
-
+    if (pData->container == NULL) {
+        CHKmalloc(pData->container = (uchar *)strdup("rfc5424-sd"));
+    }
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -227,7 +256,7 @@ static rsRetVal ATTR_NONNULL()
     i = *curridx;
     for (j = 0; i < lenbuf && j < 32; ++j) {
         if (sdbuf[i] == '=' || sdbuf[i] == '"' || sdbuf[i] == ']' || sdbuf[i] == ' ') break;
-        namebuf[j] = pData->lowercase_SD_ID ? tolower(sdbuf[i]) : sdbuf[i];
+        namebuf[j] = pData->lowercase_SD_ID ? (uchar)tolower((unsigned char)sdbuf[i]) : sdbuf[i];
         ++i;
     }
     namebuf[j] = '\0';
@@ -240,7 +269,7 @@ static rsRetVal ATTR_NONNULL()
     parseSD_PARAM(instanceData *const pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot) {
     int i;
     uchar pName[33];
-    uchar pVal[32 * 1024];
+    uchar *pVal = NULL;
     struct json_object *jval;
     DEFiRet;
 
@@ -254,6 +283,7 @@ static rsRetVal ATTR_NONNULL()
         ABORT_FINALIZE(RS_RET_STRUC_DATA_INVLD);
     }
     ++i;
+    CHKmalloc(pVal = malloc(lenbuf - i + 1));
     CHKiRet(parsePARAM_VALUE(sdbuf, lenbuf, &i, pVal));
     if (sdbuf[i] != '"') {
         ABORT_FINALIZE(RS_RET_STRUC_DATA_INVLD);
@@ -265,6 +295,7 @@ static rsRetVal ATTR_NONNULL()
 
     *curridx = i;
 finalize_it:
+    free(pVal);
     RETiRet;
 }
 
@@ -306,14 +337,16 @@ static rsRetVal ATTR_NONNULL()
     ++i; /* eat ']' */
     *curridx = i;
     json_object_object_add(jroot, (char *)sd_id, json);
+    json = NULL;
 finalize_it:
     if (iRet != RS_RET_OK && json != NULL) json_object_put(json);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL() parse_sd(instanceData *const pData, smsg_t *const pMsg) {
-    struct json_object *json, *jroot;
+    struct json_object *json = NULL, *jroot = NULL;
     uchar *sdbuf;
+    rs_size_t sdLenbuf;
     int lenbuf;
     int i = 0;
     DEFiRet;
@@ -322,7 +355,11 @@ static rsRetVal ATTR_NONNULL() parse_sd(instanceData *const pData, smsg_t *const
     if (json == NULL) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    MsgGetStructuredData(pMsg, &sdbuf, &lenbuf);
+    MsgGetStructuredData(pMsg, &sdbuf, &sdLenbuf);
+    if (sdLenbuf > INT_MAX) {
+        ABORT_FINALIZE(RS_RET_OVERSIZE_MSG);
+    }
+    lenbuf = (int)sdLenbuf;
     while (i < lenbuf) {
         CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i, json));
     }
@@ -331,21 +368,55 @@ static rsRetVal ATTR_NONNULL() parse_sd(instanceData *const pData, smsg_t *const
     if (jroot == NULL) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    json_object_object_add(jroot, "rfc5424-sd", json);
-    msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
+    json_object_object_add(jroot, (char *)pData->container, json);
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0));
+    jroot = NULL;
 finalize_it:
     if (iRet != RS_RET_OK && json != NULL) json_object_put(json);
+    if (jroot != NULL) json_object_put(jroot);
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL() parse_null_sd(instanceData *const pData, smsg_t *const pMsg) {
+    struct json_object *jroot = NULL;
+    DEFiRet;
+
+    CHKmalloc(jroot = json_object_new_object());
+    json_object_object_add(jroot, (char *)pData->container, NULL);
+    CHKiRet(msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0));
+    jroot = NULL;
+
+finalize_it:
+    if (jroot != NULL) json_object_put(jroot);
+    RETiRet;
+}
 
 BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];
+    uchar *sdbuf;
+    rs_size_t lenbuf;
+    const rs_size_t maxStructuredDataSize = pWrkrData->pData->maxStructuredDataSize > 0
+                                                ? pWrkrData->pData->maxStructuredDataSize
+                                                : glblGetMaxLine(runModConf->pConf);
     CODESTARTdoAction;
     DBGPRINTF("mmpstrucdata: enter\n");
     if (!MsgHasStructuredData(pMsg)) {
         DBGPRINTF("mmpstrucdata: message does not have structured data\n");
+        FINALIZE;
+    }
+    MsgGetStructuredData(pMsg, &sdbuf, &lenbuf);
+    if (lenbuf == 1 && sdbuf[0] == '-') {
+        DBGPRINTF("mmpstrucdata: RFC5424 message has NILVALUE structured data\n");
+        parse_null_sd(pWrkrData->pData, pMsg);
+        FINALIZE;
+    }
+    if (lenbuf > maxStructuredDataSize) {
+        LogError(0, RS_RET_OVERSIZE_MSG,
+                 "mmpstrucdata: structured data size %lld exceeds "
+                 "maxStructuredDataSize %lld - not parsing",
+                 (long long)lenbuf, (long long)maxStructuredDataSize);
         FINALIZE;
     }
     /* don't check return code - we never want rsyslog to retry

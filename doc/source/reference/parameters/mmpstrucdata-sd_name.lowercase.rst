@@ -39,6 +39,14 @@ Action usage
 
    action(type="mmpstrucdata" sd_name.lowercase="off")
 
+YAML usage
+----------
+.. code-block:: yaml
+
+   actions:
+     - type: mmpstrucdata
+       sd_name.lowercase: off
+
 See also
 --------
 See also :doc:`../../configuration/modules/mmpstrucdata`.
