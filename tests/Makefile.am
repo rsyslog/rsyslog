@@ -186,6 +186,7 @@ TESTS_DEFAULT = \
 	json-nonstring.sh \
 	json-onempty-at-end.sh \
 	template-json.sh \
+	template-property-transformations.sh \
         template-pure-json.sh \
         template-jsonf-nested.sh \
 	template-jsonf-trailing-backslash.sh \
@@ -800,6 +801,7 @@ TESTS_LIBFAKETIME = \
 	timegenerated-uxtimestamp-invld.sh \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
+	template-property-timegenerated.sh \
 	timegenerated-utc.sh \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
