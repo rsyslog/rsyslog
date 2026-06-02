@@ -916,7 +916,8 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
      */
     pTpe = pTpl->pEntryRoot;
     iBuf = 0;
-    const int isJsonFlat = (pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled);
+    const int isJsonFlat = (pTpl->optFormatEscape == JSONF &&
+                            (!pTpl->bJsonTreeEnabled || pTpl->bJsonTreeBuilt == TPL_JSON_TREE_UNSUPPORTED));
     if (isJsonFlat) {
         if (iparam->lenBuf < 2) /* we reserve one char for the final \0! */
             CHKiRet(ExtendBuf(iparam, 2));
