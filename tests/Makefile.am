@@ -959,6 +959,7 @@ TESTS_OMHTTP = \
 	omhttp-profile-loki.sh \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
+	omhttp-retry-ruleset-recovery.sh \
 	omhttp-retry-timeout.sh \
 	wti-shutdown-saveonshutdown-omhttp.sh \
 	omhttp-httpheaderkey.sh \
