@@ -249,8 +249,8 @@ static int find_first_json_object(wrkrInstanceData_t *pWrkrData,
             return (i >= len) ? 1 : 2; /* no JSON found or scan truncated */
         }
 
-        /* Try to parse JSON starting from this position */
-        size_t remaining = len - i;
+        /* Try to parse JSON starting from this position, bounded by scan window */
+        size_t remaining = scan_end - i;
         json_tokener_reset(pWrkrData->tokener);
 
         struct json_object *json = json_tokener_parse_ex(pWrkrData->tokener, (const char *)(msg + i), remaining);
@@ -299,7 +299,9 @@ static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct 
      * msgAddJSON assumes ownership of json and may release it on both
      * success and error paths, so do not access json after this call.
      */
-    CHKiRet(msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0));
+    iRet = msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0);
+    json = NULL; /* msgAddJSON takes ownership, including on its error paths. */
+    CHKiRet(iRet);
 
 finalize_it:
     RETiRet;
