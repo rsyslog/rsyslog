@@ -249,7 +249,7 @@ fi
 
 if [ -f ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ] ; then
 	found=0
-	for ii in $(seq --format="x%08.f" 1 2 $(expr 2 \* $badarg)) ; do
+	for ii in $(seq --format="x%08.f" 1 2 $((2 * badarg))) ; do
 		if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 			(( found++ ))
 		else

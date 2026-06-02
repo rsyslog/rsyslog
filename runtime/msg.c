@@ -64,6 +64,7 @@
 #include "unicode-helper.h"
 #include "ruleset.h"
 #include "prop.h"
+#include "msg_replace_helper.h"
 #include "net.h"
 #include "var.h"
 #include "rsconf.h"
@@ -308,11 +309,12 @@ static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const
 static rsRetVal resolveDNS(smsg_t *const pMsg) {
     rsRetVal localRet;
     prop_t *propFromHost = NULL;
-    prop_t *ip;
-    prop_t *localName;
+    prop_t *ip = NULL;
+    prop_t *localName = NULL;
     prop_t *port = NULL;
     char portbuf[8];
     uint16_t pnum;
+    const struct sockaddr_storage *pfrominet;
     DEFiRet;
 
     MsgLock(pMsg);
@@ -324,15 +326,12 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
         }
         if (localRet == RS_RET_OK) {
-            /* we pass down the props, so no need for AddRef */
-            MsgSetRcvFromWithoutAddRef(pMsg, localName);
-            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
-
+            pfrominet = pMsg->rcvFrom.pfrominet;
             if (pMsg->pRcvFromPort == NULL) {
-                if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET)
-                    pnum = ntohs(((struct sockaddr_in *)pMsg->rcvFrom.pfrominet)->sin_port);
-                else if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET6)
-                    pnum = ntohs(((struct sockaddr_in6 *)pMsg->rcvFrom.pfrominet)->sin6_port);
+                if (pfrominet != NULL && pfrominet->ss_family == AF_INET)
+                    pnum = ntohs(((const struct sockaddr_in *)pfrominet)->sin_port);
+                else if (pfrominet != NULL && pfrominet->ss_family == AF_INET6)
+                    pnum = ntohs(((const struct sockaddr_in6 *)pfrominet)->sin6_port);
                 else
                     pnum = 0;
                 snprintf(portbuf, sizeof(portbuf), "%u", pnum);
@@ -340,6 +339,11 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
                 MsgSetRcvFromPortWithoutAddRef(pMsg, port);
                 port = NULL;
             }
+            /* we pass down the props, so no need for AddRef */
+            MsgSetRcvFromWithoutAddRef(pMsg, localName);
+            localName = NULL;
+            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
+            ip = NULL;
         }
     }
 finalize_it:
@@ -350,6 +354,8 @@ finalize_it:
     }
     MsgUnlock(pMsg);
     if (propFromHost != NULL) prop.Destruct(&propFromHost);
+    if (localName != NULL) prop.Destruct(&localName);
+    if (ip != NULL) prop.Destruct(&ip);
     if (port != NULL) prop.Destruct(&port);
     RETiRet;
 }
@@ -2002,6 +2008,16 @@ rsRetVal MsgSetFlowControlType(smsg_t *const pMsg, flowControl_t eFlowCtl) {
  */
 rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
     assert(pMsg != NULL);
+    assert(offs >= 0 && offs <= pMsg->iLenRawMsg);
+    if (offs < 0 || offs > pMsg->iLenRawMsg) {
+        pMsg->offAfterPRI = 0;
+        return RS_RET_ERR;
+    }
+    if (offs > 0) {
+        assert(pMsg->pszRawMsg != NULL);
+        assert(pMsg->pszRawMsg[0] == '<');
+        assert(pMsg->pszRawMsg[offs - 1] == '>');
+    }
     pMsg->offAfterPRI = offs;
     return RS_RET_OK;
 }
@@ -2288,10 +2304,18 @@ static void ATTR_NONNULL(1) tryEmulateTAG(smsg_t *const pM, const sbool bLockMut
             /* no process ID, use APP-NAME only */
             MsgSetTAG(pM, (uchar *)getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
         } else {
+            int snRet;
             /* now we can try to emulate */
-            lenTAG = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
-                              getPROCID(pM, MUTEX_ALREADY_LOCKED));
+            snRet = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+                             getPROCID(pM, MUTEX_ALREADY_LOCKED));
             bufTAG[sizeof(bufTAG) - 1] = '\0'; /* just to make sure... */
+            if (snRet < 0) {
+                lenTAG = 0;
+            } else if ((size_t)snRet >= sizeof(bufTAG)) {
+                lenTAG = sizeof(bufTAG) - 1;
+            } else {
+                lenTAG = snRet;
+            }
             MsgSetTAG(pM, bufTAG, lenTAG);
         }
         /* Signal change in TAG for acquireProgramName */
@@ -2645,24 +2669,23 @@ void MsgSetMSGoffs(smsg_t *const pMsg, int offs) {
  * rgerhards, 2009-06-23
  */
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
-    int lenNew;
-    uchar *bufNew;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, msg);
     assert(pszMSG != NULL);
 
-    lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
-    if (lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
-        /*  we have lost our "bet" and need to alloc a new buffer ;) */
-        CHKmalloc(bufNew = malloc(lenNew + 1));
-        memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
-        if (pThis->pszRawMsg != pThis->szRawMsg) free(pThis->pszRawMsg);
-        pThis->pszRawMsg = bufNew;
+    if (pThis->pszRawMsg == NULL) {
+        pThis->pszRawMsg = pThis->szRawMsg;
+        pThis->szRawMsg[0] = '\0';
     }
 
-    if (lenMSG > 0) memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
-    pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
-    pThis->iLenRawMsg = lenNew;
+    if (pThis->offMSG < 0 || pThis->offMSG > pThis->iLenRawMsg) {
+        pThis->offMSG = pThis->iLenRawMsg;
+        pThis->iLenMSG = 0;
+    } else if (pThis->iLenMSG < 0 || pThis->iLenMSG > pThis->iLenRawMsg - pThis->offMSG) {
+        pThis->iLenMSG = pThis->iLenRawMsg - pThis->offMSG;
+    }
+    CHKiRet(msgReplaceRawMsgSegment(&pThis->pszRawMsg, pThis->szRawMsg, CONF_RAWMSG_BUFSIZE, pThis->offMSG,
+                                    pThis->iLenMSG, &pThis->iLenRawMsg, pszMSG, lenMSG));
     pThis->iLenMSG = lenMSG;
 
 finalize_it:
@@ -3055,7 +3078,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
     uchar wrkbuf[100000];
     size_t dst_realloc_size;
     size_t dst_size;
-    uchar *dst_base;
+    uchar *dst_base = NULL;
     uchar *dst_w;
     uchar *newbuf;
     DEFiRet;
@@ -3184,7 +3207,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
         es_addBuf(dst, (const char *)dst_base, dst_w - dst_base);
     }
 finalize_it:
-    if (dst_base != wrkbuf) {
+    if (dst_base != NULL && dst_base != wrkbuf) {
         free(dst_base);
     }
     RETiRet;
@@ -3454,8 +3477,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
 
 #ifdef FEATURE_REGEXP
     /* Variables necessary for regular expression matching */
-    size_t nmatch = 10;
-    regmatch_t pmatch[10];
+    size_t nmatch = TPL_REGEX_MAX_MATCHES;
+    regmatch_t pmatch[TPL_REGEX_MAX_MATCHES];
 #endif
 
     *pbMustBeFreed = 0;
@@ -4678,10 +4701,14 @@ static rsRetVal jsonPathFindNext(
     DEFiRet;
 
     if (*p == '!' || (*name == namestart && (*p == '.' || *p == '/'))) ++p;
-    for (i = 0;
-         *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf && i < sizeof(namebuf) - 1;
-         ++i, ++p)
+    for (i = 0; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf; ++i, ++p) {
+        if (i >= sizeof(namebuf) - 1) {
+            LogError(0, RS_RET_INVLD_SETOP, "json path component too long in '%s' - refusing truncated lookup",
+                     namestart);
+            ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+        }
         namebuf[i] = *p;
+    }
     if (i > 0) {
         namebuf[i] = '\0';
         if (jsonVarExtract(root, (char *)namebuf, &json) == FALSE) {
@@ -4847,7 +4874,11 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
             json_object_object_add(parent, (char *)leaf, json);
         } else {
             if (json_object_get_type(json) == json_type_object) {
-                CHKiRet(jsonMerge(*jroot, json));
+                if (json_object_get_type(leafnode) == json_type_object) {
+                    CHKiRet(jsonMerge(leafnode, json));
+                } else {
+                    json_object_object_add(parent, (char *)leaf, json);
+                }
             } else {
                 /* TODO: improve the code below, however, the current
                  *       state is not really bad */

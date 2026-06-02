@@ -32,7 +32,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Validate and process log files for errors and responses.')
     parser.add_argument('--error', action='store', type=str, required=True, help='Path to the error file.')
     parser.add_argument('--response', action='store', type=str, required=True, help='Path to the response file.')
-    parser.add_argument('--max-errors', action='store', type=int, default=10, help='Maximum number of errors to display.')
+    parser.add_argument('--max-errors', action='store', type=int, default=10,
+                        help='Maximum number of errors to display.')
     args = parser.parse_args()
 
     messages = defaultdict(dict)
@@ -118,7 +119,9 @@ if __name__ == '__main__':
 
     # Report errors, limited by --max-errors
     if errors:
-        print(f"Validation completed with {len(errors)} errors. Showing the first {min(len(errors), args.max_errors)} errors:\n")
+        shown_errors = min(len(errors), args.max_errors)
+        print(f"Validation completed with {len(errors)} errors. "
+              f"Showing the first {shown_errors} errors:\n")
         for error in errors[:args.max_errors]:
             print(f"- {error}")
         # Exit with non-zero code to indicate errors

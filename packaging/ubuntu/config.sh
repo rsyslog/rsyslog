@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Ubuntu package build configuration for rsyslog packaging/ubuntu/
 # Sourced by build-ubuntu.sh and devtools/run-deb-ubuntu-build.sh.
 

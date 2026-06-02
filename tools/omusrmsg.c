@@ -592,6 +592,9 @@ BEGINnewActInst
         ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval, (unsigned)pData->ratelimitBurst);
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
+    if (pData->ratelimiter != NULL) {
+        ratelimitSetThreadSafe(pData->ratelimiter);
+    }
 
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);

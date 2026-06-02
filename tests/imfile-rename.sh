@@ -82,7 +82,7 @@ echo ls ${RSYSLOG_DYNNAME}.spool:
 ls -l ${RSYSLOG_DYNNAME}.spool
 ./msleep 500
 
-let msgcount="2* $TESTMESSAGES"
+msgcount=$((2 * TESTMESSAGES))
 wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
 
 shutdown_when_empty # shut down rsyslogd when done processing messages

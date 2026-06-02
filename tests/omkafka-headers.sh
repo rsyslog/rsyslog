@@ -7,7 +7,8 @@ export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 check_command_available kafkacat
 
 export KEEP_KAFKA_RUNNING="YES"
-export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+export RANDTOPIC
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
 

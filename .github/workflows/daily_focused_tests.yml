@@ -61,6 +61,7 @@ jobs:
           case "${{ matrix.lane }}" in
           'base')
             sudo apt-get install -y --no-install-recommends \
+              autoconf-archive \
               clang-tools \
               cmake \
               cmake-curses-gui \
@@ -68,6 +69,7 @@ jobs:
               default-jre-headless \
               faketime \
               gdb \
+              lcov \
               libaprutil1-dev \
               libbson-dev \
               libcap-ng-dev \
@@ -129,6 +131,7 @@ jobs:
             ;;
           'journal')
             sudo apt-get install -y \
+              autoconf-archive \
               libestr-dev \
               libgcrypt20-dev \
               libglib2.0-dev \
@@ -143,6 +146,7 @@ jobs:
               libtool-bin \
               libyaml-dev \
               libzstd-dev \
+              lcov \
               lsof \
               make \
               net-tools \
@@ -171,6 +175,7 @@ jobs:
               libsystemd-dev \
               libtirpc-dev \
               libtool-bin \
+              lcov \
               uuid-dev \
               valgrind
             ;;
@@ -201,25 +206,31 @@ jobs:
           sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
           cat -n /etc/hosts
 
-      - name: cache Kafka configure results
-        if: matrix.lane == 'kafka'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: config.cache
-          key: >
-            cfgcache-daily-focused-kafka-${{ runner.os }}-${{
-            runner.arch }}-cfg-${{
-            hashFiles('configure.ac','m4/*.m4','Makefile.am') }}
-          restore-keys: |
-            cfgcache-daily-focused-kafka-${{ runner.os }}-${{ runner.arch }}-
+      - name: require Codecov token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "CODECOV_TOKEN secret is not configured" >&2
+            exit 1
+          fi
+
+      - name: enable coverage flags
+        run: |
+          echo 'CFLAGS=-g -O0 --coverage -fprofile-update=atomic' >> "$GITHUB_ENV"
+          echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
 
       - name: prepare for build
+        id: prepare_build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: |
           case "${{ matrix.lane }}" in
           'base')
             autoreconf -fvi
             ./configure \
-              --enable-compile-warning=error \
+              --enable-compile-warnings=error \
               --enable-clickhouse \
               --enable-clickhouse-tests=no \
               --disable-elasticsearch \
@@ -325,8 +336,7 @@ jobs:
           'kafka')
             autoreconf -fvi
             ./configure \
-              --cache-file=config.cache \
-              --enable-compile-warning=error \
+              --enable-compile-warnings=error \
               --enable-testbench \
               --enable-omstdout \
               --enable-imdiag \
@@ -350,6 +360,9 @@ jobs:
           esac
 
       - name: build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: |
           if [ "${{ matrix.lane }}" = "journal" ]; then
             make -j
@@ -358,9 +371,37 @@ jobs:
           fi
 
       - name: make check
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: make -j10 check
 
-      - name: Prepare focused failure evidence
+      - name: generate coverage
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
+        run: |
+          lcov --capture --directory . \
+               --rc geninfo_unexecuted_blocks=1 \
+               --ignore-errors mismatch \
+               --output-file coverage.raw.info
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info
+          rm -f coverage.raw.info
+          lcov --list coverage.info | sed -n '1,60p' || true
+          [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+
+      - name: upload coverage to Codecov
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: daily-${{ matrix.lane }}
+          fail_ci_if_error: true
+
+      # Use the same short-lived failure artifact contract as regular PR CI so
+      # the flake collector can process scheduled failures through the same
+      # path. The artifact name includes run attempt and lane so reruns do not
+      # overwrite the failed attempt that produced the evidence.
+      - name: Prepare CI failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
@@ -374,15 +415,13 @@ jobs:
             fi
           done
 
-      - name: Upload focused failure evidence
+      - name: Upload CI failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: >-
-            daily-focused-failure-${{ github.run_id }}-${{
-            github.run_attempt }}-${{ matrix.lane }}
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.lane }}
           path: |
             failed-tests.log
             tests/failed-tests.log
@@ -390,5 +429,91 @@ jobs:
             tests/*.log
             tests/*.trs
             config.log
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: ignore
+
+  report:
+    name: Report daily focused failures
+    needs: focused_test
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    if: >-
+      always() &&
+      github.repository == 'rsyslog/rsyslog' &&
+      needs.focused_test.result == 'failure'
+    steps:
+      - name: Create or update tracking issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: workflowJobs } =
+              await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id: context.runId,
+                per_page: 100,
+              });
+            const failedJobs = workflowJobs.jobs
+              .filter((job) => job.conclusion === 'failure')
+              .filter((job) => /^daily .+ tests$/.test(job.name));
+            const failedLaneLines = failedJobs.map((job) => {
+              const match = job.name.match(/^daily (.+) tests$/);
+              const lane = match ? match[1] : job.name;
+              const artifact =
+                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-${lane}`;
+              return `- ${job.name}: ${job.html_url} (artifact: ${artifact})`;
+            });
+            const failedLaneSection = failedLaneLines.length > 0
+              ? ['Failed lanes:', '', ...failedLaneLines, '']
+              : [
+                  'Failed lanes could not be listed automatically.',
+                  'Inspect the linked run for failed jobs and artifacts.',
+                  '',
+                ];
+            const body = [
+              'Daily focused tests failed.',
+              '',
+              `Run: ${process.env.RUN_URL}`,
+              '',
+              ...failedLaneSection,
+              'This workflow contains historical focused daily lanes. Failure',
+              'artifacts are uploaded by the failing lane; this issue is',
+              'created or updated so scheduled failures are not silent.',
+              '',
+              'Use the linked run and ci-failure artifacts to decide whether',
+              'each failure was a one-off flake or a regression that needs a',
+              'fix. The long-term expectation is that flakes become rarer as',
+              'the recurring causes are fixed.'
+            ].join('\n');
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue is:open in:title Daily focused test failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Daily focused test failures',
+                body,
+                labels: ['CI']
+              });
+            }

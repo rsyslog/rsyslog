@@ -237,13 +237,13 @@ static int recv_token(int s, gss_buffer_t tok, size_t max_tok_len, unsigned int 
 static int send_token(int s, gss_buffer_t tok) {
     int ret;
     unsigned char lenbuf[4];
-    unsigned int len;
+    uint32_t len;
 
     if (tok->length > 0xffffffffUL) {
         LogError(0, NO_ERRCODE, "GSS-API token length %lu exceeds wire format limit", (unsigned long)tok->length);
         return -1;
     }
-    len = htonl(tok->length);
+    len = (uint32_t)tok->length;
     lenbuf[0] = (len >> 24) & 0xff;
     lenbuf[1] = (len >> 16) & 0xff;
     lenbuf[2] = (len >> 8) & 0xff;

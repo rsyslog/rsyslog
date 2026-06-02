@@ -31,7 +31,7 @@ do
    wait_queueempty 
    echo waiting for worker threads to timeout
    ./msleep 1000
-   let "strtnum = strtnum+5000"
+   (( strtnum += 5000 ))
 done
 
 

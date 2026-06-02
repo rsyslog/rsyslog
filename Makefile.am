@@ -51,10 +51,6 @@ if ENABLE_RELP
 SUBDIRS += plugins/omrelp plugins/imrelp
 endif
 
-if ENABLE_OMFILE_HARDENED
-SUBDIRS += contrib/omfile-hardened
-endif
-
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif
@@ -181,6 +177,10 @@ endif
 
 if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
+endif
+
+if ENABLE_IMFIFO
+SUBDIRS += plugins/imfifo
 endif
 
 if ENABLE_IMDOCKER
@@ -641,6 +641,10 @@ endif
 
 if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
+endif
+
+if ENABLE_IMFIFO
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imfifo
 endif
 
 if ENABLE_IMFILE_TESTS

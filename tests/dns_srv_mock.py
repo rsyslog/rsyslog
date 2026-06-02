@@ -45,7 +45,7 @@ def parse_name(data: bytes, offset: int) -> Tuple[str, int]:
                 jumped = True
             continue
         offset += 1
-        labels.append(data[offset : offset + length].decode('utf-8'))
+        labels.append(data[offset: offset + length].decode('utf-8'))
         offset += length
     return '.'.join(labels) + '.', (start_offset if jumped else offset)
 
@@ -56,7 +56,7 @@ def build_response(data: bytes, records: Dict[str, Dict[str, List[Dict[str, str]
     tid, flags, qdcount, _, _, _ = struct.unpack('!HHHHHH', data[:12])
     offset = 12
     qname, offset = parse_name(data, offset)
-    qtype, qclass = struct.unpack('!HH', data[offset : offset + 4])
+    qtype, qclass = struct.unpack('!HH', data[offset: offset + 4])
     offset += 4
 
     answers = []

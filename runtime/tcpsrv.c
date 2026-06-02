@@ -1163,14 +1163,18 @@ static rsRetVal ATTR_NONNULL(1)
     doAccept(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
     DEFiRet;
     int bRun = 1;
+#if defined(ENABLE_IMTCP_EPOLL)
     int nAccept = 0;
+#endif
 
     while (bRun) {
         iRet = doSingleAccept(pioDescr);
         if (iRet != RS_RET_OK) {
             bRun = 0;
         }
+#if defined(ENABLE_IMTCP_EPOLL)
         ++nAccept;
+#endif
     }
 #if defined(ENABLE_IMTCP_EPOLL)
     if (pioDescr->pSrv->workQueue.numWrkr > 1) {
@@ -2385,7 +2389,9 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+#ifdef FEATURE_REGEXP
     objRelease(regexp, LM_REGEXP_FILENAME);
+#endif
 ENDObjClassExit(tcpsrv)
 
 
@@ -2404,7 +2410,9 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+#ifdef FEATURE_REGEXP
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
+#endif
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

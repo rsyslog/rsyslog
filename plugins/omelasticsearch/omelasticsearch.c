@@ -156,6 +156,7 @@ typedef struct instanceConf_s {
     sbool dynBulkId;
     sbool dynPipelineName;
     sbool bulkmode;
+    int iNumTpls;
     size_t maxbytes;
     sbool useHttps;
     sbool allowUnsignedCerts;
@@ -526,6 +527,9 @@ struct versionDetectBuffer {
     size_t len;
 };
 
+/* Keep startup platform probes bounded: root endpoint metadata is tiny JSON. */
+#define ES_VERSION_DETECT_MAX_RESPONSE (1024U * 1024U)
+
 /**
  * @brief cURL write callback used during platform/version detection.
  *
@@ -540,12 +544,28 @@ struct versionDetectBuffer {
 static size_t ATTR_NONNULL(1, 4)
     curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
     struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
-    const size_t size_add = size * nmemb;
+    size_t size_add;
+    size_t newlen;
     char *tmp;
 
-    if (size_add == 0) return 0;
+    if (size == 0 || nmemb == 0) return 0;
+    if (nmemb > SIZE_MAX / size) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    size_add = size * nmemb;
+    if (buffer->len > SIZE_MAX - size_add) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    newlen = buffer->len + size_add;
+    if (newlen > ES_VERSION_DETECT_MAX_RESPONSE) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response exceeded %u-byte limit",
+                 (unsigned)ES_VERSION_DETECT_MAX_RESPONSE);
+        return 0;
+    }
 
-    tmp = realloc(buffer->data, buffer->len + size_add + 1);
+    tmp = realloc(buffer->data, newlen + 1);
     if (tmp == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: realloc failed in curlVersionResult");
         return 0;
@@ -553,7 +573,7 @@ static size_t ATTR_NONNULL(1, 4)
 
     memcpy(tmp + buffer->len, ptr, size_add);
     buffer->data = tmp;
-    buffer->len += size_add;
+    buffer->len = newlen;
     buffer->data[buffer->len] = '\0';
 
     return size_add;
@@ -972,6 +992,43 @@ static void ATTR_NONNULL(1) getIndexTypeAndParent(const instanceData *const pDat
 
 done:
     return;
+}
+
+
+static int ATTR_NONNULL(1) getTemplateCount(const instanceData *const pData) {
+    int iNumTpls = 1;
+    if (pData->dynSrchIdx) ++iNumTpls;
+    if (pData->dynSrchType) ++iNumTpls;
+    if (pData->dynParent) ++iNumTpls;
+    if (pData->dynBulkId) ++iNumTpls;
+    if (pData->dynPipelineName) ++iNumTpls;
+
+    return iNumTpls;
+}
+
+
+static rsRetVal ATTR_NONNULL(1) validateActionStrings(const instanceData *const pData, uchar **const tpls) {
+    DEFiRet;
+
+    if (tpls == NULL) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "omelasticsearch: action template strings are missing - "
+                 "cannot submit message");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+
+    for (int i = 0; i < pData->iNumTpls; ++i) {
+        if (tpls[i] == NULL) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omelasticsearch: rendered action template string %d is "
+                     "NULL - cannot submit message",
+                     i);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -2031,6 +2088,8 @@ BEGINdoAction
     CODESTARTdoAction;
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
+    CHKiRet(validateActionStrings(pWrkrData->pData, ppString));
+
     if (pWrkrData->pData->bulkmode) {
         const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
@@ -2181,6 +2240,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->dynSrchIdx = 0;
     pData->dynSrchType = 0;
     pData->dynParent = 0;
+    pData->iNumTpls = 1;
     pData->useHttps = 0;
     pData->bulkmode = 0;
     pData->maxbytes = 104857600;  // 100 MB Is the default max message size that ships with ElasticSearch
@@ -2433,14 +2493,9 @@ BEGINnewActInst
     if (pData->uid != NULL && pData->apiKey == NULL)
         CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
-    iNumTpls = 1;
-    if (pData->dynSrchIdx) ++iNumTpls;
-    if (pData->dynSrchType) ++iNumTpls;
-    if (pData->dynParent) ++iNumTpls;
-    if (pData->dynBulkId) ++iNumTpls;
-    if (pData->dynPipelineName) ++iNumTpls;
-    DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
-    CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
+    pData->iNumTpls = getTemplateCount(pData);
+    DBGPRINTF("omelasticsearch: requesting %d templates\n", pData->iNumTpls);
+    CODE_STD_STRING_REQUESTnewActInst(pData->iNumTpls);
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup((pData->tplName == NULL) ? " StdJSONFmt" : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));

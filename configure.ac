@@ -56,23 +56,14 @@ AC_CANONICAL_HOST
 
 if test "$GCC" = "yes"
 then
-	m4_ifdef([AX_IS_RELEASE], [
-		AX_IS_RELEASE([git-directory])
-		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
-			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
-			# the default -Wno-error=warning" flags. So we do this via sed below.
-			# Note: we *really* want to have this error out during CI testing!
-			# rgerhards, 2018-05-09
-			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
-		], [
-			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
-		])
-	], [
-		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-	])
+	m4_pattern_forbid([^AX_])
+	AX_IS_RELEASE([git-directory])
+	AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
+	# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
+	# the default -Wno-error=warning" flags. So we do this via sed below.
+	# Note: we *really* want to have this error out during CI testing!
+	# rgerhards, 2018-05-09
+	WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
 else
 	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
 fi
@@ -1470,7 +1461,7 @@ if test "x$enable_libgcrypt" = "xyes"; then
                         AC_CHECK_LIB(
                                 [gcrypt],
                                 [gcry_cipher_open],
-                                [],
+                                [:],
                                 [AC_MSG_FAILURE([libgcrypt is missing])],
                                 [${LIBGCRYPT_LIBS}]
                         )
@@ -1974,18 +1965,6 @@ AC_ARG_ENABLE(mmsnareparse,
 AM_CONDITIONAL(ENABLE_MMSNAREPARSE, test x$enable_mmsnareparse = xyes)
 
 
-# experimental omfile-hardened module
-AC_ARG_ENABLE(omfile-hardened,
-        [AS_HELP_STRING([--enable-omfile-hardened],[Enable omfile-hardened support @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omfile_hardened="yes" ;;
-          no) enable_omfile_hardened="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omfile-hardened) ;;
-         esac],
-        [enable_omfile_hardened=no]
-)
-AM_CONDITIONAL(ENABLE_OMFILE_HARDENED, test x$enable_omfile_hardened = xyes)
-
 
 # RELP support
 AC_ARG_ENABLE(relp,
@@ -2017,6 +1996,8 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [AC_DEFINE([HAVE_RELPENGINESETTLSCFGCMD], [1], [Define if relpSrvSetTlsConfigCmd exists.])])
+        AC_CHECK_FUNC([relpCltSetKeepAlive],
+                      [AC_DEFINE([HAVE_RELPCLTSETKEEPALIVE], [1], [Define if relpCltSetKeepAlive exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [HAVE_RELPENGINESETTLSCFGCMD=1])
 
@@ -2249,6 +2230,20 @@ if  test "x$enable_imfile_tests" = "xyes" && test "x$enable_imfile" != "xyes"; t
 		enable_imfile_tests="no"
 fi
 AM_CONDITIONAL(ENABLE_IMFILE_TESTS, test x$enable_imfile_tests = xyes)
+
+
+# settings for the fifo input module
+AC_ARG_ENABLE(imfifo,
+        [AS_HELP_STRING([--enable-imfifo],[fifo input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imfifo="yes" ;;
+          no) enable_imfifo="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfifo) ;;
+         esac],
+        [enable_imfifo=no]
+)
+AM_CONDITIONAL(ENABLE_IMFIFO, test x$enable_imfifo = xyes)
+
 
 
 # settings for the docker log input module
@@ -3557,6 +3552,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imfifo/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
 		plugins/impstats/Makefile \
@@ -3619,7 +3615,6 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
 		contrib/imbatchreport/Makefile \
-		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
@@ -3668,6 +3663,7 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    DTLS udp input module enabled:            $enable_imdtls"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    fifo input module enabled:                $enable_imfifo"
 echo "    docker log input module enabled:          $enable_imdocker"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
@@ -3690,7 +3686,6 @@ echo "    imhiredis input module enabled:           $enable_imhiredis"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omsendertrack module will be compiled:    $enable_omsendertrack"

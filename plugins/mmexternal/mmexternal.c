@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/wait.h>
 #include <sys/uio.h>
 #include "rsyslog.h"
@@ -48,9 +49,27 @@ MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmexternal")
 
+/* Concurrency & Locking
+ * ---------------------
+ * By default each worker owns a private helper process context, so helper
+ * pipes, response buffers, and debug-output fds stay in worker-local state.
+ * When forceSingleInstance="on", pData owns one shared helper context and
+ * pData->mut serializes startup, request/response exchange, and shutdown.
+ */
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+
+typedef struct childProcessCtx_s {
+    pid_t pid; /* pid of currently running process */
+    int fdOutput; /* debug output fd (-1 if closed) */
+    int fdPipeOut; /* file descriptor to write to */
+    int fdPipeIn; /* fd we receive messages from the program (if we want to) */
+    int bIsRunning; /* is binary currently running? 0-no, 1-yes */
+    char *respBuf; /* buffer to read external plugin's response */
+    size_t maxLenRespBuf; /* current maximum length of response buffer */
+} childProcessCtx_t;
 
 typedef struct _instanceData {
     uchar *szBinary; /* name of binary to call */
@@ -61,21 +80,18 @@ typedef struct _instanceData {
 #define INPUT_MSG 0
 #define INPUT_RAWMSG 1
 #define INPUT_JSON 2
+    int outputMode; /* what to expect from the external program? */
+#define OUTPUT_JSON 0
+#define OUTPUT_NONE 1
+    long responseTimeout; /* milliseconds to wait for JSON response, 0 means forever */
     uchar *outputFileName; /* name of file for std[out/err] or NULL if to discard */
     pthread_mutex_t mut; /* make sure only one instance is active */
+    childProcessCtx_t *pSingleChildCtx; /* shared child process state when forceSingleInstance=on */
 } instanceData;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
-    pid_t pid; /* pid of currently running process */
-    int fdOutput; /* it's fd (-1 if closed) */
-    int fdPipeOut; /* file descriptor to write to */
-    int fdPipeIn; /* fd we receive messages from the program (if we want to) */
-    int bIsRunning; /* is binary currently running? 0-no, 1-yes */
-    char *respBuf; /* buffer to read exernal plugin's response */
-    int maxLenRespBuf; /* (current) maximum length of response buffer */
-    int lenRespBuf; /* actual nbr of chars in response buffer */
-    int idxRespBuf; /* last char read from response buffer */
+    childProcessCtx_t *pChildCtx; /* child process context (shared or per-worker) */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -83,13 +99,25 @@ typedef struct configSettings_s {
 } configSettings_t;
 static configSettings_t cs;
 
+static rsRetVal allocChildCtx(childProcessCtx_t **const ppChildCtx);
+static void freeChildCtx(childProcessCtx_t *const pChildCtx);
+static void terminateChild(instanceData *__restrict__ const pData,
+                           childProcessCtx_t *__restrict__ const pChildCtx,
+                           const long timeoutMs);
+static rsRetVal cleanupChild(instanceData *pData, childProcessCtx_t *pChildCtx);
+static rsRetVal openPipe(instanceData *pData, childProcessCtx_t *pChildCtx);
+static rsRetVal tryRestart(instanceData *pData, childProcessCtx_t *pChildCtx);
+static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
+                                    childProcessCtx_t *__restrict__ const pChildCtx,
+                                    smsg_t *const pMsg);
+
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {{"binary", eCmdHdlrString, CNFPARAM_REQUIRED},
-                                           {"interface.input", eCmdHdlrString, 0},
-                                           {"output", eCmdHdlrString, 0},
-                                           {"forcesingleinstance", eCmdHdlrBinary, 0}};
+static struct cnfparamdescr actpdescr[] = {
+    {"binary", eCmdHdlrString, CNFPARAM_REQUIRED}, {"interface.input", eCmdHdlrString, 0},
+    {"interface.output", eCmdHdlrString, 0},       {"output", eCmdHdlrString, 0},
+    {"responsetimeout", eCmdHdlrNonNegInt, 0},     {"forcesingleinstance", eCmdHdlrBinary, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 BEGINinitConfVars /* (re)set config variables to default values */
@@ -102,19 +130,19 @@ ENDinitConfVars
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->inputProp = INPUT_MSG;
+    pData->outputMode = OUTPUT_JSON;
+    pData->responseTimeout = 0;
     pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
-    pWrkrData->fdPipeIn = -1;
-    pWrkrData->fdPipeOut = -1;
-    pWrkrData->fdOutput = -1;
-    pWrkrData->bIsRunning = 0;
-    pWrkrData->respBuf = NULL;
-    pWrkrData->maxLenRespBuf = 0;
-    pWrkrData->lenRespBuf = 0;
-    pWrkrData->idxRespBuf = 0;
+    pWrkrData->pChildCtx = NULL;
+    if (pWrkrData->pData->bForceSingleInst) {
+        pWrkrData->pChildCtx = pWrkrData->pData->pSingleChildCtx;
+    } else {
+        iRet = allocChildCtx(&pWrkrData->pChildCtx);
+    }
 ENDcreateWrkrInstance
 
 
@@ -127,7 +155,12 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
     int i;
     CODESTARTfreeInstance;
-    pthread_mutex_destroy(&pData->mut);
+    if (pData->pSingleChildCtx != NULL) {
+        if (pData->pSingleChildCtx->bIsRunning) {
+            terminateChild(pData, pData->pSingleChildCtx, 1000);
+        }
+        freeChildCtx(pData->pSingleChildCtx);
+    }
     free(pData->szBinary);
     free(pData->outputFileName);
     if (pData->aParams != NULL) {
@@ -136,11 +169,17 @@ BEGINfreeInstance
         }
         free(pData->aParams);
     }
+    pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
-    free(pWrkrData->respBuf);
+    if (!pWrkrData->pData->bForceSingleInst && pWrkrData->pChildCtx != NULL) {
+        if (pWrkrData->pChildCtx->bIsRunning) {
+            terminateChild(pWrkrData->pData, pWrkrData->pChildCtx, 1000);
+        }
+        freeChildCtx(pWrkrData->pChildCtx);
+    }
 ENDfreeWrkrInstance
 
 
@@ -158,33 +197,113 @@ ENDtryResume
  * best effort to write the message but do *not* try very
  * hard to handle errors. -- rgerhards, 2014-01-16
  */
-static void writeOutputDebug(wrkrInstanceData_t *__restrict__ const pWrkrData,
+static void writeOutputDebug(instanceData *__restrict__ const pData,
+                             childProcessCtx_t *__restrict__ const pChildCtx,
                              const char *__restrict__ const buf,
                              const ssize_t lenBuf) {
     char errStr[1024];
     ssize_t r;
 
-    if (pWrkrData->pData->outputFileName == NULL) goto done;
+    if (pData->outputFileName == NULL) goto done;
 
-    if (pWrkrData->fdOutput == -1) {
-        pWrkrData->fdOutput = open((char *)pWrkrData->pData->outputFileName, O_WRONLY | O_APPEND | O_CREAT, 0600);
-        if (pWrkrData->fdOutput == -1) {
-            DBGPRINTF("mmexternal: error opening output file %s: %s\n", pWrkrData->pData->outputFileName,
+    if (pChildCtx->fdOutput == -1) {
+        pChildCtx->fdOutput = open((char *)pData->outputFileName, O_WRONLY | O_APPEND | O_CREAT, 0600);
+        if (pChildCtx->fdOutput == -1) {
+            DBGPRINTF("mmexternal: error opening output file %s: %s\n", pData->outputFileName,
                       rs_strerror_r(errno, errStr, sizeof(errStr)));
             goto done;
         }
     }
 
-    r = write(pWrkrData->fdOutput, buf, (size_t)lenBuf);
+    r = write(pChildCtx->fdOutput, buf, (size_t)lenBuf);
     if (r != lenBuf) {
         DBGPRINTF(
             "mmexternal: problem writing output file %s: bytes "
             "requested %lld, written %lld, msg: %s\n",
-            pWrkrData->pData->outputFileName, (long long)lenBuf, (long long)r,
-            rs_strerror_r(errno, errStr, sizeof(errStr)));
+            pData->outputFileName, (long long)lenBuf, (long long)r, rs_strerror_r(errno, errStr, sizeof(errStr)));
     }
 done:
     return;
+}
+
+
+static rsRetVal allocChildCtx(childProcessCtx_t **const ppChildCtx) {
+    DEFiRet;
+
+    CHKmalloc(*ppChildCtx = calloc(1, sizeof(childProcessCtx_t)));
+    (*ppChildCtx)->fdOutput = -1;
+    (*ppChildCtx)->fdPipeOut = -1;
+    (*ppChildCtx)->fdPipeIn = -1;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static void freeChildCtx(childProcessCtx_t *const pChildCtx) {
+    if (pChildCtx == NULL) {
+        return;
+    }
+    free(pChildCtx->respBuf);
+    free(pChildCtx);
+}
+
+
+static void waitForChildExit(instanceData *__restrict__ const pData,
+                             childProcessCtx_t *__restrict__ const pChildCtx,
+                             const long timeoutMs) {
+    int status;
+    int ret = -1;
+    long counter;
+
+    counter = timeoutMs / 10;
+    while ((ret = waitpid(pChildCtx->pid, &status, WNOHANG)) == 0 && counter > 0) {
+        srSleep(0, 10000);
+        --counter;
+    }
+
+    if (ret == 0) {
+        if (kill(pChildCtx->pid, SIGKILL) == -1) {
+            LogError(errno, RS_RET_SYS_ERR, "mmexternal: could not send SIGKILL to child process");
+            return;
+        }
+        ret = waitpid(pChildCtx->pid, &status, 0);
+    }
+
+    /* waitpid may fail with ECHILD if rsyslogd's main loop already reaped the child. */
+    if (ret == pChildCtx->pid) {
+        glblReportChildProcessExit(runConf, pData->szBinary, pChildCtx->pid, status);
+    }
+}
+
+
+static void closeChildPipes(childProcessCtx_t *__restrict__ const pChildCtx) {
+    if (pChildCtx->fdOutput != -1) {
+        close(pChildCtx->fdOutput);
+        pChildCtx->fdOutput = -1;
+    }
+    if (pChildCtx->fdPipeIn != -1) {
+        close(pChildCtx->fdPipeIn);
+        pChildCtx->fdPipeIn = -1;
+    }
+    if (pChildCtx->fdPipeOut != -1) {
+        close(pChildCtx->fdPipeOut);
+        pChildCtx->fdPipeOut = -1;
+    }
+}
+
+
+static void terminateChild(instanceData *__restrict__ const pData,
+                           childProcessCtx_t *__restrict__ const pChildCtx,
+                           const long timeoutMs) {
+    if (pChildCtx->bIsRunning == 0) return;
+
+    if (kill(pChildCtx->pid, SIGTERM) == -1) {
+        LogError(errno, RS_RET_SYS_ERR, "mmexternal: could not send SIGTERM to child process");
+    }
+    closeChildPipes(pChildCtx);
+    waitForChildExit(pData, pChildCtx, timeoutMs);
+    pChildCtx->bIsRunning = 0;
 }
 
 
@@ -196,51 +315,108 @@ done:
  * things quite a bit simpler. So don't think the simple code does
  * not handle those border-cases that are describe to cannot exist!
  */
-static void processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *const pMsg) {
-    rsRetVal iRet;
-    char errStr[1024];
+static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
+                                    childProcessCtx_t *__restrict__ const pChildCtx,
+                                    smsg_t *const pMsg) {
+    DEFiRet;
     ssize_t r;
-    int numCharsRead;
+    size_t numCharsRead;
+    size_t newSize;
+    size_t maxResponseSize;
     char *newptr;
+    struct pollfd fdToPoll[1];
 
-    numCharsRead = 0;
-    do {
-        if (pWrkrData->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
-            pWrkrData->maxLenRespBuf += 4096;
-            if ((newptr = realloc(pWrkrData->respBuf, pWrkrData->maxLenRespBuf)) == NULL) {
-                DBGPRINTF("mmexternal: error realloc responseBuf: %s\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-                /* emergency - fake no update */
-                memcpy(pWrkrData->respBuf, "{}\n", sizeof("{}\n"));
-                numCharsRead = 3;
-                break;
-            }
-            pWrkrData->respBuf = newptr;
-        }
-        r = read(pWrkrData->fdPipeIn, pWrkrData->respBuf + numCharsRead, pWrkrData->maxLenRespBuf - numCharsRead - 1);
-        if (r > 0) {
-            numCharsRead += r;
-            pWrkrData->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
-        } else {
-            /* emergency - fake no update */
-            memcpy(pWrkrData->respBuf, "{}\n", sizeof("{}\n"));
-            numCharsRead = 3;
-        }
-        if (Debug && r == -1) {
-            DBGPRINTF("mmexternal: error reading from external program: %s\n",
-                      rs_strerror_r(errno, errStr, sizeof(errStr)));
-        }
-    } while (pWrkrData->respBuf[numCharsRead - 1] != '\n');
-
-    writeOutputDebug(pWrkrData, pWrkrData->respBuf, numCharsRead);
-    /* strip LF, which is not part of the JSON message but framing */
-    pWrkrData->respBuf[numCharsRead - 1] = '\0';
-    iRet = MsgSetPropsViaJSON(pMsg, (uchar *)pWrkrData->respBuf);
-    if (iRet != RS_RET_OK) {
-        LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'", pWrkrData->respBuf,
-                 pWrkrData->pData->szBinary);
+    if (pData->outputMode == OUTPUT_NONE) {
+        FINALIZE;
     }
 
-    return;
+    numCharsRead = 0;
+    maxResponseSize = (size_t)glblGetMaxLine(runConf);
+    if (maxResponseSize < 256) {
+        maxResponseSize = 256;
+    }
+    fdToPoll[0].fd = pChildCtx->fdPipeIn;
+    fdToPoll[0].events = POLLIN;
+    do {
+        if (pChildCtx->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
+            newSize = pChildCtx->maxLenRespBuf;
+            if (newSize == 0) {
+                newSize = 4096;
+            }
+            while (newSize < numCharsRead + 256 && newSize < maxResponseSize) {
+                newSize += 4096;
+            }
+            if (newSize > maxResponseSize) {
+                newSize = maxResponseSize;
+            }
+            if (newSize < numCharsRead + 256) {
+                LogMsg(0, RS_RET_ERR, LOG_WARNING,
+                       "mmexternal: program '%s' (pid %ld) returned a response longer than maxMessageSize "
+                       "(%zu bytes); will be restarted and current message skipped",
+                       pData->szBinary, (long)pChildCtx->pid, maxResponseSize);
+                terminateChild(pData, pChildCtx, 1000);
+                FINALIZE;
+            }
+            if ((newptr = realloc(pChildCtx->respBuf, newSize)) == NULL) {
+                LogError(errno, RS_RET_OUT_OF_MEMORY,
+                         "mmexternal: could not grow response buffer for program '%s'; "
+                         "will restart helper and skip current message",
+                         pData->szBinary);
+                terminateChild(pData, pChildCtx, 1000);
+                FINALIZE;
+            }
+            pChildCtx->respBuf = newptr;
+            pChildCtx->maxLenRespBuf = newSize;
+        }
+        if (pData->responseTimeout > 0) {
+            const int pollRet = poll(fdToPoll, 1, pData->responseTimeout);
+            if (pollRet == -1) {
+                if (errno == EINTR) continue;
+                LogError(errno, RS_RET_SYS_ERR, "mmexternal: error polling for response from program");
+                ABORT_FINALIZE(RS_RET_SYS_ERR);
+            } else if (pollRet == 0) {
+                LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
+                       "mmexternal: program '%s' (pid %ld) did not respond within timeout (%ld ms); "
+                       "will be restarted and current message skipped",
+                       pData->szBinary, (long)pChildCtx->pid, pData->responseTimeout);
+                terminateChild(pData, pChildCtx, 1000);
+                FINALIZE;
+            }
+        }
+        r = read(pChildCtx->fdPipeIn, pChildCtx->respBuf + numCharsRead, pChildCtx->maxLenRespBuf - numCharsRead - 1);
+        if (r > 0) {
+            numCharsRead += r;
+            pChildCtx->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
+        } else if (r == 0) {
+            LogMsg(0, RS_RET_READ_ERR, LOG_WARNING,
+                   "mmexternal: program '%s' (pid %ld) terminated while returning a response; "
+                   "will be restarted and current message skipped",
+                   pData->szBinary, (long)pChildCtx->pid);
+            cleanupChild(pData, pChildCtx);
+            FINALIZE;
+        } else if (errno == EINTR) {
+            continue;
+        } else {
+            LogError(errno, RS_RET_READ_ERR,
+                     "mmexternal: error reading response from program '%s'; "
+                     "will restart helper and skip current message",
+                     pData->szBinary);
+            terminateChild(pData, pChildCtx, 1000);
+            FINALIZE;
+        }
+    } while (numCharsRead == 0 || pChildCtx->respBuf[numCharsRead - 1] != '\n');
+
+    writeOutputDebug(pData, pChildCtx, pChildCtx->respBuf, (ssize_t)numCharsRead);
+    /* strip LF, which is not part of the JSON message but framing */
+    pChildCtx->respBuf[numCharsRead - 1] = '\0';
+    iRet = MsgSetPropsViaJSON(pMsg, (uchar *)pChildCtx->respBuf);
+    if (iRet != RS_RET_OK) {
+        LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'", pChildCtx->respBuf, pData->szBinary);
+        iRet = RS_RET_OK;
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -250,10 +426,9 @@ static void processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData
  * rsyslog will never see it except as script output. Do NOT
  * use dbgprintf() or LogError() and friends.
  */
-static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
-                                                 const int fdStdin,
-                                                 const int fdStdOutErr) {
+static void __attribute__((noreturn)) execBinary(instanceData *pData, const int fdStdin, const int fdStdOutErr) {
     int i;
+    int fdDevNull = -1;
     struct sigaction sigAct;
     sigset_t set;
     char *newenviron[] = {NULL};
@@ -261,11 +436,20 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
     if (dup2(fdStdin, STDIN_FILENO) == -1) {
         perror("mmexternal: dup() stdin failed\n");
     }
-    if (dup2(fdStdOutErr, STDOUT_FILENO) == -1) {
-        perror("mmexternal: dup() stdout failed\n");
+    if (fdStdOutErr == -1) {
+        fdDevNull = open("/dev/null", O_WRONLY);
+        if (fdDevNull == -1) {
+            perror("mmexternal: open(/dev/null) failed\n");
+        }
     }
-    if (dup2(fdStdOutErr, STDERR_FILENO) == -1) {
-        perror("mmexternal: dup() stderr failed\n");
+    const int targetFd = (fdStdOutErr == -1) ? fdDevNull : fdStdOutErr;
+    if (targetFd != -1) {
+        if (dup2(targetFd, STDOUT_FILENO) == -1) {
+            perror("mmexternal: dup() stdout failed\n");
+        }
+        if (dup2(targetFd, STDERR_FILENO) == -1) {
+            perror("mmexternal: dup() stderr failed\n");
+        }
     }
 
     /* we close all file handles as we fork soon
@@ -291,15 +475,15 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
     alarm(0);
 
     /* finally exec child */
-    execve((char *)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
+    execve((char *)pData->szBinary, pData->aParams, newenviron);
 
     /* we should never reach this point, but if we do, we complain and terminate */
     char errstr[1024];
     char errbuf[2048];
     rs_strerror_r(errno, errstr, sizeof(errstr));
     errstr[sizeof(errstr) - 1] = '\0';
-    const size_t lenbuf = snprintf(errbuf, sizeof(errbuf), "mmexternal: failed to execute binary '%s': %s\n",
-                                   pWrkrData->pData->szBinary, errstr);
+    const size_t lenbuf =
+        snprintf(errbuf, sizeof(errbuf), "mmexternal: failed to execute binary '%s': %s\n", pData->szBinary, errstr);
     errbuf[sizeof(errbuf) - 1] = '\0';
     if (write(2, errbuf, lenbuf) != (ssize_t)lenbuf) {
         /* just keep static analyzers happy... */
@@ -312,48 +496,54 @@ static void __attribute__((noreturn)) execBinary(wrkrInstanceData_t *pWrkrData,
 /* creates a pipe and starts program, uses pipe as stdin for program.
  * rgerhards, 2009-04-01
  */
-static rsRetVal openPipe(wrkrInstanceData_t *pWrkrData) {
+static rsRetVal openPipe(instanceData *pData, childProcessCtx_t *pChildCtx) {
     int pipestdin[2];
     int pipestdout[2];
+    int useOutputPipe = pData->outputMode != OUTPUT_NONE;
     pid_t cpid;
     DEFiRet;
 
     if (pipe(pipestdin) == -1) {
         ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
     }
-    if (pipe(pipestdout) == -1) {
+    if (useOutputPipe && pipe(pipestdout) == -1) {
         ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
     }
 
-    DBGPRINTF("mmexternal: executing program '%s' with '%d' parameters\n", pWrkrData->pData->szBinary,
-              pWrkrData->pData->iParams);
+    DBGPRINTF("mmexternal: executing program '%s' with '%d' parameters\n", pData->szBinary, pData->iParams);
 
     /* final sanity check */
-    assert(pWrkrData->pData->szBinary != NULL);
-    assert(pWrkrData->pData->aParams != NULL);
+    assert(pData->szBinary != NULL);
+    assert(pData->aParams != NULL);
 
     /* NO OUTPUT AFTER FORK! */
     cpid = fork();
     if (cpid == -1) {
         ABORT_FINALIZE(RS_RET_ERR_FORK);
     }
-    pWrkrData->pid = cpid;
+    pChildCtx->pid = cpid;
 
     if (cpid == 0) {
         /* we are now the child, just exec the binary. */
         close(pipestdin[1]); /* close those pipe "ports" that */
-        close(pipestdout[0]); /* we don't need */
-        execBinary(pWrkrData, pipestdin[0], pipestdout[1]);
+        if (useOutputPipe) {
+            close(pipestdout[0]); /* we don't need */
+            execBinary(pData, pipestdin[0], pipestdout[1]);
+        } else {
+            execBinary(pData, pipestdin[0], -1);
+        }
         /*NO CODE HERE - WILL NEVER BE REACHED!*/
     }
 
     DBGPRINTF("mmexternal: child has pid %d\n", (int)cpid);
-    pWrkrData->fdPipeIn = dup(pipestdout[0]);
+    if (useOutputPipe) {
+        pChildCtx->fdPipeIn = pipestdout[0];
+        close(pipestdout[1]);
+    }
     close(pipestdin[0]);
-    close(pipestdout[1]);
-    pWrkrData->pid = cpid;
-    pWrkrData->fdPipeOut = pipestdin[1];
-    pWrkrData->bIsRunning = 1;
+    pChildCtx->pid = cpid;
+    pChildCtx->fdPipeOut = pipestdin[1];
+    pChildCtx->bIsRunning = 1;
 finalize_it:
     RETiRet;
 }
@@ -361,45 +551,33 @@ finalize_it:
 
 /* clean up after a terminated child
  */
-static rsRetVal cleanup(wrkrInstanceData_t *pWrkrData) {
+static rsRetVal cleanupChild(instanceData *pData, childProcessCtx_t *pChildCtx) {
     int status;
     int ret;
     DEFiRet;
 
-    assert(pWrkrData->bIsRunning == 1);
-    ret = waitpid(pWrkrData->pid, &status, 0);
+    assert(pChildCtx->bIsRunning == 1);
+    ret = waitpid(pChildCtx->pid, &status, 0);
 
     /* waitpid will fail with errno == ECHILD if the child process has already
        been reaped by the rsyslogd main loop (see rsyslogd.c) */
-    if (ret == pWrkrData->pid) {
-        glblReportChildProcessExit(runConf, pWrkrData->pData->szBinary, pWrkrData->pid, status);
+    if (ret == pChildCtx->pid) {
+        glblReportChildProcessExit(runConf, pData->szBinary, pChildCtx->pid, status);
     }
 
-    if (pWrkrData->fdOutput != -1) {
-        close(pWrkrData->fdOutput);
-        pWrkrData->fdOutput = -1;
-    }
-    if (pWrkrData->fdPipeIn != -1) {
-        close(pWrkrData->fdPipeIn);
-        pWrkrData->fdPipeIn = -1;
-    }
-    if (pWrkrData->fdPipeOut != -1) {
-        close(pWrkrData->fdPipeOut);
-        pWrkrData->fdPipeOut = -1;
-    }
-    pWrkrData->bIsRunning = 0;
-    pWrkrData->bIsRunning = 0;
+    closeChildPipes(pChildCtx);
+    pChildCtx->bIsRunning = 0;
     RETiRet;
 }
 
 
 /* try to restart the binary when it has stopped.
  */
-static rsRetVal tryRestart(wrkrInstanceData_t *pWrkrData) {
+static rsRetVal tryRestart(instanceData *pData, childProcessCtx_t *pChildCtx) {
     DEFiRet;
-    assert(pWrkrData->bIsRunning == 0);
+    assert(pChildCtx->bIsRunning == 0);
 
-    iRet = openPipe(pWrkrData);
+    iRet = openPipe(pData, pChildCtx);
     RETiRet;
 }
 
@@ -408,7 +586,9 @@ static rsRetVal tryRestart(wrkrInstanceData_t *pWrkrData) {
  * may block (and this not be acceptable), the action should be run on its
  * own action queue.
  */
-static rsRetVal callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict__ const pMsg) {
+static rsRetVal callExtProg(instanceData *__restrict__ const pData,
+                            childProcessCtx_t *__restrict__ const pChildCtx,
+                            smsg_t *__restrict__ const pMsg) {
     int lenWritten;
     int lenWrite;
     int writeOffset;
@@ -418,11 +598,11 @@ static rsRetVal callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, sm
     const uchar *inputstr = NULL; /* string to be processed by external program */
     DEFiRet;
 
-    if (pWrkrData->pData->inputProp == INPUT_MSG) {
+    if (pData->inputProp == INPUT_MSG) {
         inputstr = getMSG(pMsg);
         lenWrite = getMSGLen(pMsg);
         bFreeInputstr = 0;
-    } else if (pWrkrData->pData->inputProp == INPUT_RAWMSG) {
+    } else if (pData->inputProp == INPUT_RAWMSG) {
         getRawMsg(pMsg, (uchar **)&inputstr, &lenWrite);
         bFreeInputstr = 0;
     } else {
@@ -432,7 +612,7 @@ static rsRetVal callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, sm
 
     writeOffset = 0;
     do {
-        DBGPRINTF("mmexternal: writing to prog (fd %d, offset %d): %s\n", pWrkrData->fdPipeOut, (int)writeOffset,
+        DBGPRINTF("mmexternal: writing to prog (fd %d, offset %d): %s\n", pChildCtx->fdPipeOut, (int)writeOffset,
                   inputstr);
         i_iov = 0;
         if (writeOffset < lenWrite) {
@@ -442,15 +622,15 @@ static rsRetVal callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, sm
         }
         iov[i_iov].iov_base = (void *)"\n";
         iov[i_iov].iov_len = 1;
-        lenWritten = writev(pWrkrData->fdPipeOut, iov, i_iov + 1);
+        lenWritten = writev(pChildCtx->fdPipeOut, iov, i_iov + 1);
         if (lenWritten == -1) {
             switch (errno) {
                 case EPIPE:
                     LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
-                           "mmexternal: program '%s' (pid %ld) terminated; will be restarted",
-                           pWrkrData->pData->szBinary, (long)pWrkrData->pid);
-                    CHKiRet(cleanup(pWrkrData));
-                    CHKiRet(tryRestart(pWrkrData));
+                           "mmexternal: program '%s' (pid %ld) terminated; will be restarted", pData->szBinary,
+                           (long)pChildCtx->pid);
+                    CHKiRet(cleanupChild(pData, pChildCtx));
+                    CHKiRet(tryRestart(pData, pChildCtx));
                     writeOffset = 0;
                     break;
                 default:
@@ -463,7 +643,7 @@ static rsRetVal callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, sm
         }
     } while (lenWritten != lenWrite + 1);
 
-    processProgramReply(pWrkrData, pMsg);
+    CHKiRet(processProgramReply(pData, pChildCtx, pMsg));
 
 finalize_it:
     /* we need to free json input strings, only. All others point to memory
@@ -480,15 +660,18 @@ BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];
     instanceData *pData;
+    childProcessCtx_t *pChildCtx;
     CODESTARTdoAction;
     pData = pWrkrData->pData;
+    pChildCtx = pWrkrData->pChildCtx;
     if (pData->bForceSingleInst) pthread_mutex_lock(&pData->mut);
-    if (pWrkrData->bIsRunning == 0) {
-        openPipe(pWrkrData);
+    if (pChildCtx->bIsRunning == 0) {
+        CHKiRet(openPipe(pData, pChildCtx));
     }
 
-    iRet = callExtProg(pWrkrData, pMsg);
+    iRet = callExtProg(pData, pChildCtx, pMsg);
 
+finalize_it:
     if (iRet != RS_RET_OK) iRet = RS_RET_SUSPENDED;
     if (pData->bForceSingleInst) pthread_mutex_unlock(&pData->mut);
 ENDdoAction
@@ -500,13 +683,18 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->outputFileName = NULL;
     pData->iParams = 0;
     pData->bForceSingleInst = 0;
+    pData->inputProp = INPUT_MSG;
+    pData->outputMode = OUTPUT_JSON;
+    pData->responseTimeout = 0;
+    pData->pSingleChildCtx = NULL;
 }
 
 
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i;
-    const char *cstr = NULL;
+    const char *inputCStr = NULL;
+    const char *outputCStr = NULL;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -522,30 +710,52 @@ BEGINnewActInst
             CHKiRet(split_binary_parameters(&pData->szBinary, &pData->aParams, &pData->iParams, pvals[i].val.d.estr));
         } else if (!strcmp(actpblk.descr[i].name, "output")) {
             CHKmalloc(pData->outputFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "responsetimeout")) {
+            pData->responseTimeout = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
             pData->bForceSingleInst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "interface.input")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (!strcmp(cstr, "msg"))
+            inputCStr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inputCStr);
+            if (!strcmp(inputCStr, "msg"))
                 pData->inputProp = INPUT_MSG;
-            else if (!strcmp(cstr, "rawmsg"))
+            else if (!strcmp(inputCStr, "rawmsg"))
                 pData->inputProp = INPUT_RAWMSG;
-            else if (!strcmp(cstr, "fulljson"))
+            else if (!strcmp(inputCStr, "fulljson"))
                 pData->inputProp = INPUT_JSON;
             else {
-                LogError(0, RS_RET_INVLD_INTERFACE_INPUT, "mmexternal: invalid interface.input parameter '%s'", cstr);
+                LogError(0, RS_RET_INVLD_INTERFACE_INPUT, "mmexternal: invalid interface.input parameter '%s'",
+                         inputCStr);
+                ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
+            }
+        } else if (!strcmp(actpblk.descr[i].name, "interface.output")) {
+            outputCStr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(outputCStr);
+            if (!strcmp(outputCStr, "json"))
+                pData->outputMode = OUTPUT_JSON;
+            else if (!strcmp(outputCStr, "none"))
+                pData->outputMode = OUTPUT_NONE;
+            else {
+                LogError(0, RS_RET_INVLD_INTERFACE_INPUT, "mmexternal: invalid interface.output parameter '%s'",
+                         outputCStr);
                 ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
             }
         } else {
             DBGPRINTF("mmexternal: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }
     }
+    if (pData->bForceSingleInst) {
+        CHKiRet(allocChildCtx(&pData->pSingleChildCtx));
+    }
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
     DBGPRINTF("mmexternal: bForceSingleInst %d\n", pData->bForceSingleInst);
-    DBGPRINTF("mmexternal: interface.input '%s', mode %d\n", cstr, pData->inputProp);
+    DBGPRINTF("mmexternal: interface.input '%s', mode %d\n", inputCStr == NULL ? "msg" : inputCStr, pData->inputProp);
+    DBGPRINTF("mmexternal: interface.output '%s', mode %d, responseTimeout %ld\n",
+              outputCStr == NULL ? "json" : outputCStr, pData->outputMode, pData->responseTimeout);
     CODE_STD_FINALIZERnewActInst;
-    free((void *)cstr);
+    free((void *)inputCStr);
+    free((void *)outputCStr);
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 

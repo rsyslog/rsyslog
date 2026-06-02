@@ -165,21 +165,37 @@ finalize_it:
     RETiRet;
 }
 
+#define AZURE_MAX_TOKEN_RESPONSE_BYTES (1024 * 1024)
+#define AZURE_MAX_INGEST_RESPONSE_BYTES (16 * 1024)
+
 typedef struct tokenRespBuf_s {
     char *data;
     size_t len;
+    size_t maxLen;
 } tokenRespBuf_t;
 
 static size_t tokenWriteCb(void *contents, size_t size, size_t nmemb, void *userp) {
-    const size_t realsz = size * nmemb;
+    size_t realsz;
+    size_t newLen;
     tokenRespBuf_t *buf = (tokenRespBuf_t *)userp;
-    char *newData = realloc(buf->data, buf->len + realsz + 1);
+    char *newData;
+
+    if (size != 0 && nmemb > SIZE_MAX / size) {
+        return 0;
+    }
+    realsz = size * nmemb;
+    newLen = buf->len + realsz;
+    if (newLen > buf->maxLen || newLen < buf->len) {
+        return 0;
+    }
+
+    newData = realloc(buf->data, newLen + 1);
     if (newData == NULL) {
         return 0;
     }
     buf->data = newData;
     memcpy(buf->data + buf->len, contents, realsz);
-    buf->len += realsz;
+    buf->len = newLen;
     buf->data[buf->len] = '\0';
     return realsz;
 }
@@ -235,7 +251,7 @@ static rsRetVal requestAccessToken(instanceData *pData) {
     long httpCode = 0;
     size_t bodyLen;
     struct curl_slist *headers = NULL;
-    tokenRespBuf_t response = {NULL, 0};
+    tokenRespBuf_t response = {NULL, 0, AZURE_MAX_TOKEN_RESPONSE_BYTES};
     char *token = NULL;
     struct json_object *tokenResp = NULL;
     struct json_object *tokenField = NULL;
@@ -295,7 +311,12 @@ static rsRetVal requestAccessToken(instanceData *pData) {
               safeStr(pData->clientID));
     curlRes = curl_easy_perform(curl);
     if (curlRes != CURLE_OK) {
-        LogError(0, RS_RET_IO_ERROR, "omazuredce: token request failed: %s", curl_easy_strerror(curlRes));
+        if (curlRes == CURLE_WRITE_ERROR) {
+            LogError(0, RS_RET_IO_ERROR, "omazuredce: token response exceeded %zu bytes or failed while buffering",
+                     response.maxLen);
+        } else {
+            LogError(0, RS_RET_IO_ERROR, "omazuredce: token request failed: %s", curl_easy_strerror(curlRes));
+        }
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
@@ -413,9 +434,11 @@ static size_t decimalDigits(size_t v) {
     return n;
 }
 
+#define GZIP_WRAPPER_OVERHEAD 32U
+
 static size_t estimatePayloadBytesForRequest(instanceData *pData, size_t payloadLen) {
     if (pData->compressionLevel != 0) {
-        return (size_t)compressBound((uLong)payloadLen);
+        return (size_t)compressBound((uLong)payloadLen) + GZIP_WRAPPER_OVERHEAD;
     }
 
     return payloadLen;
@@ -465,7 +488,7 @@ static rsRetVal gzipCompressBuffer(const uint8_t *input,
 
     *out = NULL;
     *outLen = 0;
-    bound = (size_t)compressBound((uLong)inputLen);
+    bound = (size_t)compressBound((uLong)inputLen) + GZIP_WRAPPER_OVERHEAD;
     if (*bufferCap < bound) {
         CHKmalloc(tmpBuf = (uint8_t *)realloc(*buffer, bound));
         *buffer = tmpBuf;
@@ -505,7 +528,7 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
     size_t sendLen = payloadLen;
     CURLcode curlRes;
     long httpCode = 0;
-    tokenRespBuf_t response = {NULL, 0};
+    tokenRespBuf_t response = {NULL, 0, AZURE_MAX_INGEST_RESPONSE_BYTES};
     struct curl_slist *headers = NULL;
     char *accessToken = NULL;
     int n;
@@ -571,7 +594,12 @@ static rsRetVal postBatchToAzure(instanceData *pData, wrkrInstanceData_t *pWrkrD
                   compressionLevelName(pData->compressionLevel));
         curlRes = curl_easy_perform(pWrkrData->curl);
         if (curlRes != CURLE_OK) {
-            LogError(0, RS_RET_SUSPENDED, "omazuredce: batch post failed: %s", curl_easy_strerror(curlRes));
+            if (curlRes == CURLE_WRITE_ERROR) {
+                LogError(0, RS_RET_SUSPENDED,
+                         "omazuredce: ingest response exceeded %zu bytes or failed while buffering", response.maxLen);
+            } else {
+                LogError(0, RS_RET_SUSPENDED, "omazuredce: batch post failed: %s", curl_easy_strerror(curlRes));
+            }
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
         curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &httpCode);

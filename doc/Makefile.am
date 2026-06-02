@@ -189,6 +189,7 @@ EXTRA_DIST = \
     source/configuration/modules/imdtls.rst \
     source/configuration/modules/imbeats.rst \
     source/configuration/modules/imfile.rst \
+    source/configuration/modules/imfifo.rst \
     source/configuration/modules/imgssapi.rst \
     source/configuration/modules/imhiredis.rst \
     source/configuration/modules/imhttp.rst \
@@ -514,6 +515,7 @@ EXTRA_DIST = \
     source/reference/parameters/imdocker-pollinginterval.rst \
     source/reference/parameters/imdocker-retrievenewlogsfromstart.rst \
     source/reference/parameters/imdtls-address.rst \
+    source/reference/parameters/imdtls-listenportfilename.rst \
     source/reference/parameters/imdtls-name.rst \
     source/reference/parameters/imdtls-port.rst \
     source/reference/parameters/imdtls-ruleset.rst \
@@ -560,6 +562,11 @@ EXTRA_DIST = \
     source/reference/parameters/imfile-tag.rst \
     source/reference/parameters/imfile-timeoutgranularity.rst \
     source/reference/parameters/imfile-trimlineoverbytes.rst \
+    source/reference/parameters/imfifo-facility.rst \
+    source/reference/parameters/imfifo-file.rst \
+    source/reference/parameters/imfifo-ruleset.rst \
+    source/reference/parameters/imfifo-severity.rst \
+    source/reference/parameters/imfifo-tag.rst \
     source/reference/parameters/imgssapi-inputgsslistenportfilename.rst \
     source/reference/parameters/imgssapi-inputgssserverkeepalive.rst \
     source/reference/parameters/imgssapi-inputgssservermaxsessions.rst \
@@ -834,7 +841,9 @@ EXTRA_DIST = \
     source/reference/parameters/mmexternal-binary.rst \
     source/reference/parameters/mmexternal-forcesingleinstance.rst \
     source/reference/parameters/mmexternal-interface-input.rst \
+    source/reference/parameters/mmexternal-interface-output.rst \
     source/reference/parameters/mmexternal-output.rst \
+    source/reference/parameters/mmexternal-responsetimeout.rst \
     source/reference/parameters/mmfields-jsonroot.rst \
     source/reference/parameters/mmfields-separator.rst \
     source/reference/parameters/mmjsonparse-allow_trailing.rst \
@@ -879,6 +888,8 @@ EXTRA_DIST = \
     source/reference/parameters/mmnormalize-userawmsg.rst \
     source/reference/parameters/mmnormalize-variable.rst \
     source/reference/parameters/mmpstrucdata-jsonroot.rst \
+    source/reference/parameters/mmpstrucdata-container.rst \
+    source/reference/parameters/mmpstrucdata-maxstructureddatasize.rst \
     source/reference/parameters/mmpstrucdata-sd_name.lowercase.rst \
     source/reference/parameters/mmrfc5424addhmac-hashfunction.rst \
     source/reference/parameters/mmrfc5424addhmac-key.rst \

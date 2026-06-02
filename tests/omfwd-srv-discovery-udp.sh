@@ -1,13 +1,48 @@
 #!/bin/bash
 ## @brief Validate SRV discovery for omfwd when resolving targets via DNS SRV over UDP.
+## The DNS mock and UDP receiver both bind dynamic ports and publish them before
+## rsyslog starts. Success is proved by the receiver collecting every injected
+## message through the SRV-discovered UDP target.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
 
 export NUMMESSAGES=40
 DNS_RECORDS="$RSYSLOG_DYNNAME.srv.json"
-UDP_PORT=$(get_free_port)
+UDP_PORT_FILE="$RSYSLOG_DYNNAME.udp_port"
 UDP_OUT="$RSYSLOG_OUT_LOG"
 DNS_PORT_FILE="$RSYSLOG_DYNNAME.dns_port"
+
+python3 - <<'PY' "$UDP_PORT_FILE" "$UDP_OUT" "$NUMMESSAGES" &
+import socket
+import sys
+import time
+
+portfile = sys.argv[1]
+outfile = sys.argv[2]
+expected = int(sys.argv[3])
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind(("127.0.0.1", 0))
+with open(portfile, "w", encoding="utf-8") as f:
+    f.write(str(sock.getsockname()[1]))
+sock.settimeout(15)
+received = 0
+end_time = time.time() + 20
+with open(outfile, "w", encoding="utf-8", errors="ignore") as f:
+    while received < expected and time.time() < end_time:
+        try:
+            data, _ = sock.recvfrom(65535)
+        except socket.timeout:
+            continue
+        message = data.decode(errors="ignore")
+        message = message.rstrip("\n")
+        f.write(message + "\n")
+        f.flush()
+        received += 1
+sys.exit(0)
+PY
+UDP_PID=$!
+wait_file_exists "$UDP_PORT_FILE"
+UDP_PORT=$(cat "$UDP_PORT_FILE")
 
 cat >"$DNS_RECORDS" <<EOFJSON
 {
@@ -27,34 +62,7 @@ DNS_PORT=$(cat "$DNS_PORT_FILE")
 export RSYSLOG_DNS_SERVER=127.0.0.1
 export RSYSLOG_DNS_PORT="$DNS_PORT"
 export RES_OPTIONS="attempts:1 timeout:1"
-trap 'kill $DNS_PID 2>/dev/null; kill $UDP_PID 2>/dev/null; rm -f "$DNS_PORT_FILE"' EXIT
-
-python3 - <<'PY' "$UDP_PORT" "$UDP_OUT" "$NUMMESSAGES" &
-import socket
-import sys
-import time
-port = int(sys.argv[1])
-outfile = sys.argv[2]
-expected = int(sys.argv[3])
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("127.0.0.1", port))
-sock.settimeout(15)
-received = 0
-end_time = time.time() + 20
-with open(outfile, "w", encoding="utf-8", errors="ignore") as f:
-    while received < expected and time.time() < end_time:
-        try:
-            data, _ = sock.recvfrom(65535)
-        except socket.timeout:
-            continue
-        message = data.decode(errors="ignore")
-        message = message.rstrip("\n")
-        f.write(message + "\n")
-        f.flush()
-        received += 1
-sys.exit(0)
-PY
-UDP_PID=$!
+trap 'kill $DNS_PID 2>/dev/null; kill $UDP_PID 2>/dev/null; rm -f "$DNS_PORT_FILE" "$UDP_PORT_FILE"' EXIT
 
 sleep 1
 
@@ -77,7 +85,7 @@ wait_shutdown
 
 kill $DNS_PID 2>/dev/null
 kill $UDP_PID 2>/dev/null
-rm -f "$DNS_PORT_FILE"
+rm -f "$DNS_PORT_FILE" "$UDP_PORT_FILE"
 unset RSYSLOG_DNS_SERVER RSYSLOG_DNS_PORT
 unset RES_OPTIONS
 trap - EXIT

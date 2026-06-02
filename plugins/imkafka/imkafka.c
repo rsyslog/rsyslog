@@ -170,6 +170,10 @@ typedef struct instanceConf_s {
     STATSCOUNTER_DEF(ctrMaxLag, mutCtrMaxLag);
 } instanceConf_t;
 
+/* Hard fan-out ceiling for split.json.records to avoid queue amplification
+ * from a single broker message. */
+#define IMKAFKA_MAX_JSON_SPLIT_RECORDS 10000
+
 typedef struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *topic;
@@ -492,6 +496,13 @@ static rsRetVal splitJsonRecords(instanceConf_t *const __restrict__ inst,
     if (record_count == 0) {
         /* Empty array - forward original message (not an error, just no records to split) */
         DBGPRINTF("imkafka: splitJsonRecords: empty records array, forwarding as-is\n");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    if (record_count > IMKAFKA_MAX_JSON_SPLIT_RECORDS) {
+        LogMsg(0, NO_ERRCODE, LOG_WARNING,
+               "imkafka: splitJsonRecords: records array has %d elements, limit is %d; forwarding batch as-is",
+               record_count, IMKAFKA_MAX_JSON_SPLIT_RECORDS);
         ABORT_FINALIZE(RS_RET_ERR);
     }
 

@@ -57,6 +57,21 @@ the format ``IP:Port``. For IPv6 addresses, enclose the IP in brackets, e.g., ``
 
 - `Civetweb listening_ports <https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#listening_ports-8080>`_
 
+listenPortFileName
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "filename", "none"
+
+When ``ports`` configures exactly one listener, writes the actual port number
+selected by CivetWeb to the named file after startup. This is useful with
+``ports="0"`` so tests and automation can avoid preselecting a free port before
+the listener binds.
+
 
 documentroot
 ^^^^^^^^^^^^^^^

@@ -183,6 +183,12 @@ disk for best performance and/or isolation by setting a dedicated
 ``queue.spoolDirectory`` on that queue definition. To create a disk
 queue, set ``queue.type="Disk"``.
 
+Disk queue durability is a configuration tradeoff, not an unconditional
+guarantee. A larger ``queue.checkpointInterval`` improves throughput but
+can require replay or recovery work after an ungraceful stop. Enabling
+``queue.syncqueuefiles`` and a very small checkpoint interval improves
+crash and power-loss resilience at a significant performance cost.
+
 If you happen to lose or otherwise need the housekeeping structures and
 have all your queue chunks you can use the ``recover_qi.pl`` script
 included in rsyslog to regenerate them::
@@ -258,10 +264,11 @@ parameters can be set. From the user's point of view, think of a DA
 queue like a "super-queue" which does all within a single queue.
 
 DA queues are typically used to de-couple potentially long-running and
-unreliable actions (to make them reliable). For example, it is
+unreliable actions and make them more resilient to destination outages.
+For example, it is
 recommended to use a disk-assisted linked list in-memory queue in front
-of each database and "send via tcp" action. Doing so makes these actions
-reliable and de-couples their potential low execution speed from the
+of each database and "send via tcp" action. Doing so de-couples their
+potential low execution speed from the
 rest of your rules (e.g. the local file writes). There is a howto on
 :doc:`massive database inserts </tutorials/high_database_rate>` which
 nicely describes this use case. It may even be a good read if you do not
@@ -279,6 +286,14 @@ eventually written to disk, but only if the high water mark is ever
 reached again. If it isn't, these items never touch the disk. So even
 when a queue runs disk-assisted, there is in-memory data present (this
 is a big difference to pure disk queues!).
+
+This also means that disk-assisted queues should not be treated like
+pure disk queues for crash durability. ``queue.saveOnShutdown="on"``
+persists the in-memory portion during an orderly rsyslog shutdown, but
+it cannot run after an immediate process kill, kernel OOM kill, system
+crash, or power loss. For scenarios where every accepted message must
+survive those events, use a pure disk queue and tune checkpointing and
+file synchronization for the required durability level.
 
 This algorithm prevents unnecessary disk writes but also leaves some
 additional buffer space for message bursts. Remember that creating disk

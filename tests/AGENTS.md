@@ -20,6 +20,56 @@ agents.
 - Use this guide together with the top-level `AGENTS.md` and the component
   guide that matches the module you are testing.
 
+## Flake-prone test antipatterns
+
+These patterns come from actual deflake fixes. They are not banned in every
+case, but new or changed tests must either avoid them or explain why they are
+safe in that specific test. Before adding or heavily changing tests, run the
+advisory scan:
+
+```bash
+devtools/check-test-antipatterns.sh tests/<changed-test>.sh
+```
+
+The tool uses `rg` when available and falls back to `grep`, so it can run in
+minimal containers. Findings are review prompts, not automatic blockers.
+
+- **Port preselection with `get_free_port`**: selecting a free port before the
+  listener binds is racy. Another process can take the port in the gap. Prefer
+  listener `port="0"` plus a port file, or helper-owned readiness where the file
+  is written only after `listen(2)` succeeds.
+- **Fixed sleeps as synchronization**: `sleep 1`, `msleep 3000`, and similar
+  waits usually encode host-speed assumptions. Prefer explicit readiness or
+  completion oracles such as port files, `wait_file_lines`, `wait_queueempty`,
+  stats counters, or imdiag waits. If a sleep intentionally creates retry
+  pressure, document that timing role and the success/failure oracle.
+- **Readiness files written too early**: a port or ready file must mean the
+  consumer can proceed now, not merely that setup has started or a port number
+  was chosen.
+- **Negative-path tests without a deterministic oracle**: auth failures,
+  retries, disconnects, timeouts, and shutdown-abort paths must wait for a
+  specific state, diagnostic, queue condition, or process result instead of
+  assuming it happened after a delay.
+- **CPU tick, runtime, or timeout thresholds without rationale**: thresholds
+  are acceptable only when the test header explains what the number proves and
+  why it is high enough under loaded CI runners.
+- **Background helpers without lifecycle control**: backgrounded servers,
+  clients, or probes need deterministic readiness and cleanup. Prefer existing
+  testbench helpers; if custom plumbing is required, make ownership and cleanup
+  explicit.
+- **Queue tests assuming immediate drain or shutdown ordering**: use
+  queue-specific synchronization where possible. Do not assume that input
+  completion, shutdown start, or a fixed delay means all queued messages reached
+  the tested stage.
+- **Shared external state**: fixed filenames, spool directories, service names,
+  ports, topics, databases, and state files can collide under parallel
+  `make check`. Use dynamic names derived from the testbench instance where
+  possible.
+- **Scope-reducing deflake fixes**: do not make a test pass by removing the
+  behavior, race window, or invariant it was meant to exercise. If the oracle or
+  setup changes, refresh the head comment and verify the original behavior is
+  still covered.
+
 ## Writing & updating tests
 - Base new shell tests on existing ones; include `. $srcdir/diag.sh` to gain the
   helper functions (timeouts, Valgrind integration, rsyslogd launch helpers).
@@ -39,8 +89,16 @@ agents.
   emission, startup before configuration is usable, or another documented case
   where the message cannot pass through rsyslog's normal output path. Explain
   such exceptions in the test header.
-- Prefer harness helpers such as `cmp_exact`, `command_deny`, and
-  `require_plugin` over ad-hoc shell to keep diagnostics uniform.
+- Prefer harness helpers such as `content_check`, `content_count_check`,
+  `custom_content_check`, `check_not_present`, `cmp_exact`, `command_deny`, and
+  `require_plugin` over ad-hoc shell to keep diagnostics uniform. In
+  particular, use `content_check "needle" "$file"` instead of hand-written
+  `grep ... || { cat "$file"; error_exit 1; }` blocks when asserting log or
+  output content.
+- Fix practical matches from `devtools/check-test-antipatterns.sh` when
+  touching a test. If a match is intentional, explain the deterministic oracle
+  in the test header instead of leaving the pattern as unexplained timing or
+  concurrency folklore.
 - **Config format coverage**: When a module parameter or config object is tested
   via RainerScript, add a companion YAML test (or extend an existing
   `yaml-<area>-*.sh`) that exercises the same parameter.  Both frontends share

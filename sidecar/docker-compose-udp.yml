@@ -28,8 +28,10 @@ services:
       LISTEN_ADDR: 0.0.0.0
       LISTEN_PORT: 9898
       LOG_LEVEL: INFO
-      # Optional: restrict UDP sources (comma-separated IPs)
-      # ALLOWED_UDP_SOURCES: "127.0.0.1,10.0.1.50"
+      # Strongly recommended for externally reachable UDP: restrict sources
+      # ALLOWED_UDP_SOURCES: "10.0.1.50"
+      # Optional: tighten burst payload memory cap (bytes, default 8388608)
+      # MAX_BURST_BUFFER_BYTES: "2097152"
       # Note: UDP mode requires a single gunicorn worker (default in image).
       # Increase workers only for file mode.
     ports:

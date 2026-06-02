@@ -912,6 +912,9 @@ static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
 }
 
 static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOverallQueueSize) {
+#ifndef ENABLE_IMDIAG
+    (void)adjustOverallQueueSize;
+#endif
     if (pThis->iQueueSize > 0) {
 #ifdef ENABLE_IMDIAG
         if (adjustOverallQueueSize) {
@@ -3528,6 +3531,10 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("enqueued"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrEnqueued));
 
+    STATSCOUNTER_INIT(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size.enqueued"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &pThis->ctrSizeEnqueued));
+
     STATSCOUNTER_INIT(pThis->ctrFull, pThis->mutCtrFull);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("full"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrFull));
@@ -3885,6 +3892,9 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     struct timespec t;
 
     STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
+    /* size.enqueued mirrors enqueued: counted on arrival, before discard checks,
+     * so it represents inbound byte volume (rejected slice tracked by ctrFDscrd). */
+    STATSCOUNTER_ADD(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued, (uint64_t)pMsg->iLenRawMsg);
     /* first check if we need to discard this message (which will cause CHKiRet() to exit)
      */
     CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg));

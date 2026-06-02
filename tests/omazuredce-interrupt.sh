@@ -21,7 +21,8 @@ if ! command -v ip6tables >/dev/null 2>&1; then
 fi
 
 export NUMMESSAGES=400
-export interrupt_port="$(omazuredce_url_port)"
+interrupt_port="$(omazuredce_url_port)"
+export interrupt_port
 export TEST_TIMEOUT_WAIT=180
 interrupt_status_file="$RSYSLOG_DYNNAME.interrupt.status"
 interrupt_detail_file="$RSYSLOG_DYNNAME.interrupt.detail"

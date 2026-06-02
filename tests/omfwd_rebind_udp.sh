@@ -1,9 +1,14 @@
 #!/bin/bash
 # This test reproduces the issue where RebindInterval causes action suspension
+# with UDP forwarding. The UDP receiver is only a blackhole that keeps the
+# target port genuinely bound; success is the expected rebind debug message
+# without any action suspension diagnostics.
 # added 2024-12-24 by Antigravity (Rgerhards). Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+start_udp_receiver "${RSYSLOG_DYNNAME}.udp_receiver.port"
+PORT_RCVR="$(cat "${RSYSLOG_DYNNAME}.udp_receiver.port")"
+export PORT_RCVR
 add_conf '
 module(load="builtin:omfwd")
 

@@ -180,8 +180,42 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           sha: ${{ github.event.pull_request.head.sha }}
           files: |
-            runtime/*.[ch]
+            Makefile.am
+            runtime/Makefile.am
+            runtime/action.[ch]
+            runtime/batch.[ch]
+            runtime/conf.[ch]
+            runtime/datetime.[ch]
+            runtime/debug.[ch]
+            runtime/errmsg.[ch]
+            runtime/glbl.[ch]
+            runtime/modules.[ch]
+            runtime/msg.[ch]
+            runtime/obj.[ch]
+            runtime/obj-types.h
+            runtime/objomsr.[ch]
+            runtime/parser.[ch]
+            runtime/prop.[ch]
+            runtime/queue.[ch]
+            runtime/ratelimit.[ch]
+            runtime/rsconf.[ch]
+            runtime/rsyslog.[ch]
+            runtime/ruleset.[ch]
+            runtime/statsobj.[ch]
+            runtime/stringbuf.[ch]
+            runtime/template.[ch]
+            runtime/var.[ch]
+            runtime/wti.[ch]
+            runtime/wtp.[ch]
+            runtime/yamlconf.[ch]
             plugins/omelasticsearch/*
+            tests/es*.sh
+            tests/elasticsearch*.sh
+            tests/omelasticsearch*.sh
+            tests/diag.sh
+            tests/Makefile.am
+            configure.ac
+            .github/workflows/run_checks.yml
 
       - name: Check VictoriaLogs changes
         id: victorialogs
@@ -208,12 +242,36 @@ jobs:
             runtime/Makefile.am
             plugins/imkafka/Makefile.am
             plugins/omkafka/Makefile.am
-            *.[ch]
-            runtime/*.[ch]
+            runtime/action.[ch]
+            runtime/batch.[ch]
+            runtime/conf.[ch]
+            runtime/datetime.[ch]
+            runtime/debug.[ch]
+            runtime/errmsg.[ch]
+            runtime/glbl.[ch]
+            runtime/modules.[ch]
+            runtime/msg.[ch]
+            runtime/obj.[ch]
+            runtime/obj-types.h
+            runtime/objomsr.[ch]
+            runtime/parser.[ch]
+            runtime/prop.[ch]
+            runtime/queue.[ch]
+            runtime/rsconf.[ch]
+            runtime/rsyslog.[ch]
+            runtime/ruleset.[ch]
+            runtime/statsobj.[ch]
+            runtime/stringbuf.[ch]
+            runtime/template.[ch]
+            runtime/var.[ch]
+            runtime/wti.[ch]
+            runtime/wtp.[ch]
+            runtime/yamlconf.[ch]
             plugins/imkafka/*.[ch]
             plugins/omkafka/*.[ch]
             tests/*kafka*.sh
-            diag.sh
+            tests/diag.sh
+            tests/Makefile.am
             configure.ac
             .github/workflows/run_checks.yml
           files_ignore: |
@@ -385,9 +443,9 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_7, centos_8, debian_sid, debian_13,
+        config: [centos_7, debian_13,
                  ubuntu_26_imtcp_no_epoll,
-                 fedora_42, fedora_43,
+                 fedora_44,
                  ubuntu_20, ubuntu_24,
                  ubuntu_26_san, ubuntu_26_tsan, ubuntu_22_distcheck,
                  openeuler, wolfssl, elasticsearch]
@@ -432,7 +490,7 @@ jobs:
           path: config.cache
           key: >
             cfgcache-ci-${{ matrix.config }}
-            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
+            -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/apply-service-relevance.sh','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
@@ -452,50 +510,12 @@ jobs:
           export CI_MAKE_CHECK_OPT='-j10'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
-          ci_service_family_needs_testing() {
-              local family="$1"
-
-              if tests/diag.sh module-needs-testing "$family"; then
-                  return 0
-              fi
-
-              return 1
-          }
-          ci_add_service_test_suppression() {
-              local family="$1"
-              local disable_opt="$2"
-
-              case " $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA $RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE " in
-              *" $disable_opt "*)
-                  return 0
-                  ;;
-              esac
-
-              if ci_service_family_needs_testing "$family"; then
-                  echo "info: service relevance: keeping $family tests enabled"
-              else
-                  echo "info: service relevance: adding $disable_opt for irrelevant $family tests"
-                  RSYSLOG_CONFIGURE_OPTIONS_EXTRA="${RSYSLOG_CONFIGURE_OPTIONS_EXTRA:+$RSYSLOG_CONFIGURE_OPTIONS_EXTRA }$disable_opt"
-                  export RSYSLOG_CONFIGURE_OPTIONS_EXTRA
-              fi
-          }
           case "${{ matrix.config }}" in
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --disable-snmp-tests"
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
-              ;;
-          'centos_8')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
-              ;;
-          'debian_sid')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:sid'
-              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
           'debian_13')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
@@ -523,13 +543,8 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests"
               ;;
-          'fedora_42')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
-              ;;
-          'fedora_43')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:43'
+          'fedora_44')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:44'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
@@ -584,12 +599,11 @@ jobs:
               # Clang 21 TSAN disables ASLR; Docker's default seccomp profile blocks that.
               export DOCKER_RUN_EXTRA_OPTS='--security-opt seccomp=unconfined'
               # impstats has known and OK races
-              # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
               # imhttp disabled because of race in civetweb (need to consider different lib)
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                     --enable-imfile-tests \
                     --disable-impstats --disable-impstats-push \
-                    --disable-kafka-tests --disable-mmpstrucdata \
+                    --disable-kafka-tests \
                     --enable-omotel \
                     --disable-clickhouse --disable-clickhouse-tests \
                     --disable-kafka-tests \
@@ -599,7 +613,7 @@ jobs:
               export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
               # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
-              export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
+              export TSAN_OPTIONS="halt_on_error=1:detect_deadlocks=1:suppressions=/rsyslog/tests/tsan-rt.supp"
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
           'wolfssl')
@@ -635,17 +649,8 @@ jobs:
           'elasticsearch'|'wolfssl'|'ubuntu_26_imtcp_no_epoll')
               ;;
           *)
-              ci_add_service_test_suppression clickhouse --disable-clickhouse-tests
-              ci_add_service_test_suppression pgsql --disable-pgsql-tests
-              ci_add_service_test_suppression hiredis --disable-redis-tests
-              ci_add_service_test_suppression imdocker --disable-imdocker-tests
-              ci_add_service_test_suppression imbeats --disable-imbeats
-              ci_add_service_test_suppression omrabbitmq --disable-omrabbitmq
-              ci_add_service_test_suppression journal --disable-journal-tests
-              ci_add_service_test_suppression snmp --disable-snmp-tests
-              ci_add_service_test_suppression omazureeventhubs --disable-omazureeventhubs-tests
-              ci_add_service_test_suppression omazuredce --disable-omazuredce-tests
-              ci_add_service_test_suppression impstats-push --disable-impstats-push
+              . devtools/apply-service-relevance.sh
+              rsyslog_apply_default_pr_service_suppressions
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
@@ -833,7 +838,7 @@ jobs:
           dnf install -y epel-release
           dnf install -y mock dnf-utils
           echo "== Install build tools for autoreconf/configure/make dist =="
-          dnf install -y autoconf automake libtool gcc make flex bison
+          dnf install -y autoconf autoconf-archive automake libtool gcc make flex bison
           echo "== Add Adiscon repo and install configure deps (libestr, libfastjson for make dist) =="
           curl -fsSL -o /etc/pki/rpm-gpg/RPM-GPG-KEY-Adiscon https://download.adiscon.com/rpms/RPM-GPG-KEY-Adiscon
           {
@@ -927,6 +932,7 @@ jobs:
             libfastjson \
             docutils \
             autoconf \
+            autoconf-archive \
             automake \
             libtool
 
@@ -939,6 +945,7 @@ jobs:
             flex \
             bison \
             autoconf \
+            autoconf-archive \
             automake \
             libtool \
             pkg-config \
@@ -1034,7 +1041,7 @@ jobs:
           elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
             echo "Configuring ThreadSanitizer options"
             export TSAN_OPTIONS=":halt_on_error=1:\
-              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+              detect_deadlocks=1:history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           else
             echo "Running without sanitizers"
           fi
@@ -1142,18 +1149,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check for code changes
-        id: code_changes
-        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
-        with:
-          base_sha: ${{ github.event.pull_request.base.sha }}
-          sha: ${{ github.event.pull_request.head.sha }}
-          files: |
-            runtime/*.[ch]
-            plugins/omelasticsearch/*
-
       - name: cache configure results
-        if: steps.code_changes.outputs.any_changed == 'true'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: config.cache
@@ -1162,7 +1158,6 @@ jobs:
             -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
       - name: run elasticsearch test matrix
-        if: steps.code_changes.outputs.any_changed == 'true'
         env:
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
@@ -1182,10 +1177,6 @@ jobs:
         run: |
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
-
-      - name: Skip elasticsearch CI, no relevant changes
-        if: steps.code_changes.outputs.any_changed != 'true'
-        run: echo "No relevant changes detected; skipping elasticsearch CI."
 
   victorialogs_CI:
     needs: [compile, changes]
@@ -1376,30 +1367,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check for code changes
-        id: code_changes
-        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
-        with:
-          base_sha: ${{ github.event.pull_request.base.sha }}
-          sha: ${{ github.event.pull_request.head.sha }}
-          files: |
-            Makefile.am
-            runtime/Makefile.am
-            plugins/imkafka/Makefile.am
-            plugins/omkafka/Makefile.am
-            *.[ch]
-            runtime/*.[ch]
-            plugins/imkafka/*.[ch]
-            plugins/omkafka/*.[ch]
-            tests/*kafka*.sh
-            diag.sh
-            configure.ac
-            .github/workflows/run_checks.yml
-          files_ignore: |
-            doc/Makefile.am
-
       - name: cache configure results
-        if: steps.code_changes.outputs.any_changed == 'true'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: config.cache
@@ -1408,7 +1376,6 @@ jobs:
             -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
       - name: run container CI pipeline
-        if: steps.code_changes.outputs.any_changed == 'true'
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
@@ -1431,9 +1398,125 @@ jobs:
           export VERBOSE=1
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
-      - name: Skip kafka distcheck CI, no relevant changes
-        if: steps.code_changes.outputs.any_changed != 'true'
-        run: echo "No relevant changes detected; skipping kafka distcheck CI."
+  dev_container_definition_CI:
+    needs: [changes]
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    name: dev container definition CI
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: fetch upstream (for changed-files diff)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          git remote add upstream "https://github.com/$GITHUB_REPOSITORY.git"
+          git fetch upstream "$BASE_REF"
+
+      - name: Check for dev container definition changes
+        id: dev_container_changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            devtools/ci/Dockerfile*
+            packaging/docker/dev_env/**/Dockerfile*
+            packaging/docker/dev_env/**/setup-system.sh
+            packaging/docker/dev_env/**/build.sh
+            packaging/docker/dev_env/common/**
+            .github/workflows/run_checks.yml
+
+      - name: Build changed dev containers
+        if: steps.dev_container_changes.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES: ${{ steps.dev_container_changes.outputs.all_changed_files }}
+        run: |
+          set -euo pipefail
+
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"; rm -rf packaging/docker/dev_env/alpine/common packaging/docker/dev_env/ubuntu/devel/common' EXIT
+
+          add_build() {
+            printf '%s\t%s\n' "$1" "$2" >> "$tmpdir/builds.tsv"
+          }
+
+          add_dir_dockerfiles() {
+            dir="$1"
+            for dockerfile in "$dir"/Dockerfile "$dir"/Dockerfile.arm; do
+              if [ -f "$dockerfile" ]; then
+                add_build "$dir" "$dockerfile"
+              fi
+            done
+          }
+
+          ensure_common_context() {
+            dir="$1"
+            case "$dir" in
+              packaging/docker/dev_env/alpine|packaging/docker/dev_env/ubuntu/devel)
+                rm -rf "$dir/common"
+                cp -r packaging/docker/dev_env/common "$dir/common"
+                ;;
+            esac
+          }
+
+          for changed in $CHANGED_FILES; do
+            case "$changed" in
+              devtools/ci/Dockerfile*)
+                add_build . "$changed"
+                ;;
+              packaging/docker/dev_env/common/*)
+                add_dir_dockerfiles packaging/docker/dev_env/alpine
+                add_dir_dockerfiles packaging/docker/dev_env/ubuntu/devel
+                ;;
+              packaging/docker/dev_env/*)
+                filename="$(basename "$changed")"
+                changed_dir="$(dirname "$changed")"
+                case "$filename" in
+                  Dockerfile|Dockerfile.arm)
+                    add_build "$changed_dir" "$changed"
+                    ;;
+                  setup-system.sh|build.sh)
+                    add_dir_dockerfiles "$changed_dir"
+                    ;;
+                  *)
+                    echo "Ignoring unmatched dev-container-related path: $changed"
+                    ;;
+                esac
+                ;;
+              .github/workflows/run_checks.yml)
+                echo "run_checks.yml changed; this job definition is validated by actionlint/zizmor and normal CI."
+                ;;
+              *)
+                echo "Ignoring unmatched dev-container-related path: $changed"
+                ;;
+            esac
+          done
+
+          if [ ! -s "$tmpdir/builds.tsv" ]; then
+            echo "No concrete dev-container Dockerfile build is required."
+            exit 0
+          fi
+
+          sort -u "$tmpdir/builds.tsv" > "$tmpdir/builds.unique.tsv"
+          while IFS="$(printf '\t')" read -r context dockerfile; do
+            ensure_common_context "$context"
+            tag_suffix="$(printf '%s' "$dockerfile" | tr '/:._' '----' | tr -cd '[:alnum:]-')"
+            tag="rsyslog-devcontainer-pr:${tag_suffix}"
+            echo "::group::docker build $dockerfile"
+            docker build --pull -f "$dockerfile" -t "$tag" "$context"
+            echo "::endgroup::"
+          done < "$tmpdir/builds.unique.tsv"
+
+      - name: Skip dev container build, no relevant changes
+        if: steps.dev_container_changes.outputs.any_changed != 'true'
+        run: echo "No dev container definition changes detected; required dev container build gate passes without building."
 
   arm_CI:
     needs: [compile, changes]
@@ -1480,11 +1563,11 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Build arm64 dev image (cached)
         if: steps.code_changes.outputs.any_changed == 'true'
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: devtools/ci/Dockerfile.arm
@@ -1617,7 +1700,7 @@ jobs:
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get install -y --no-install-recommends \
-                build-essential autoconf automake libtool libtool-bin \
+                build-essential autoconf autoconf-archive automake libtool libtool-bin \
                 pkg-config flex bison python3-docutils curl openssl \
                 libestr-dev libfastjson-dev libgnutls28-dev \
                 zlib1g-dev libgcrypt20-dev librelp-dev uuid-dev \

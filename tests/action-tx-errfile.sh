@@ -4,8 +4,10 @@
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50 # sufficient for our needs!
 export SEQ_CHECK_OPTIONS=-i2
-export EXPECTED_ERRFILE="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
-export EXPECTED_ERRFILE_LINES="$(printf '%s\n' "$EXPECTED_ERRFILE" | wc -l)"
+EXPECTED_ERRFILE="$(cat "${srcdir}/testsuites/action-tx-errfile.result")" || exit 1
+export EXPECTED_ERRFILE
+EXPECTED_ERRFILE_LINES="$(printf '%s\n' "$EXPECTED_ERRFILE" | wc -l)"
+export EXPECTED_ERRFILE_LINES
 check_sql_and_errfile_data_ready() {
 	mysql_get_data
 	seq_check --check-only 0 $((NUMMESSAGES - 2)) || return 1

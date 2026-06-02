@@ -69,6 +69,7 @@ typedef struct wrkrInstanceData {
     instanceData *pData;
     MMDB_s mmdb;
     pthread_mutex_t mmdbMutex;
+    sbool mmdb_mutex_initialized;
     sbool mmdb_is_open;
 } wrkrInstanceData_t;
 
@@ -168,10 +169,19 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
+    pWrkrData->mmdb_mutex_initialized = 0;
+    pWrkrData->mmdb_is_open = 0;
+    CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
+    pWrkrData->mmdb_mutex_initialized = 1;
     CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
     pWrkrData->mmdb_is_open = 1;
-    CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
+        if (pWrkrData->mmdb_mutex_initialized) pthread_mutex_destroy(&pWrkrData->mmdbMutex);
+        free(pWrkrData);
+        pWrkrData = NULL;
+    }
 ENDcreateWrkrInstance
 
 
@@ -199,7 +209,10 @@ BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
     if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
     pWrkrData->mmdb_is_open = 0;
-    pthread_mutex_destroy(&pWrkrData->mmdbMutex);
+    if (pWrkrData->mmdb_mutex_initialized) {
+        pthread_mutex_destroy(&pWrkrData->mmdbMutex);
+        pWrkrData->mmdb_mutex_initialized = 0;
+    }
 ENDfreeWrkrInstance
 
 

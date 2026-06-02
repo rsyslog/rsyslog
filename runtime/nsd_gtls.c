@@ -448,9 +448,13 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
                 /* do NOT break, because there may be multiple dNSName's! */
             } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
                 char ipAddress[INET6_ADDRSTRLEN];
+                const int family = (tmp == sizeof(struct in6_addr))
+                                       ? AF_INET6
+                                       : ((tmp == sizeof(struct in_addr)) ? AF_INET : AF_UNSPEC);
                 /* we found it! */
-                inet_ntop(((tmp == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szBuf, ipAddress, sizeof(ipAddress));
-                CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", ipAddress));
+                if (family != AF_UNSPEC && inet_ntop(family, szBuf, ipAddress, sizeof(ipAddress)) != NULL) {
+                    CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", ipAddress));
+                }
                 /* do NOT break, because there may be multiple ipAddr's! */
             }
             ++iAltName;
@@ -664,6 +668,27 @@ rsRetVal gtlsRecordRecv(nsd_gtls_t *const pThis, unsigned int *nextIODirection) 
 finalize_it:
     dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet,
               (int)lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+    RETiRet;
+}
+
+static rsRetVal retrySendSideRecordRecv(nsd_gtls_t *const pThis) {
+    DEFiRet;
+    unsigned int nextIODirection;
+    rsRetVal recvRet;
+
+    if (pThis->pszRcvBuf == NULL) {
+        CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+        pThis->lenRcvBuf = -1;
+    }
+    if (pThis->lenRcvBuf == -1) {
+        recvRet = gtlsRecordRecv(pThis, &nextIODirection);
+        if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
+        if (recvRet == RS_RET_RETRY) ABORT_FINALIZE(RS_RET_RETRY);
+        pThis->rtryCall = gtlsRtry_None;
+        if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
+    }
+
+finalize_it:
     RETiRet;
 }
 
@@ -1164,13 +1189,18 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
             /* do NOT break, because there may be multiple dNSName's! */
         } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
             bHaveSAN = 1;
-            char ipAddress[INET6_ADDRSTRLEN];
-            inet_ntop(((szAltNameLen == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szAltName, ipAddress,
-                      INET6_ADDRSTRLEN);
-            dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
-            snprintf((char *)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", ipAddress);
-            CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-            CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)ipAddress, &bFoundPositiveMatch));
+            const int family = (szAltNameLen == sizeof(struct in6_addr))
+                                   ? AF_INET6
+                                   : ((szAltNameLen == sizeof(struct in_addr)) ? AF_INET : AF_UNSPEC);
+            if (family != AF_UNSPEC) {
+                char ipAddress[INET6_ADDRSTRLEN];
+                if (inet_ntop(family, szAltName, ipAddress, INET6_ADDRSTRLEN) != NULL) {
+                    dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
+                    snprintf((char *)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", ipAddress);
+                    CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+                    CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)ipAddress, &bFoundPositiveMatch));
+                }
+            }
             /* do NOT break, because there may be multiple ipAddr's! */
         }
         ++iAltName;
@@ -2273,15 +2303,15 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-    if (pThis->rtryCall == gtlsRtry_recv) {
-        CHKiRet(doRetry(pThis));
-        FINALIZE;
-    }
     if (pThis->bAbortConn) ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
     if (pThis->iMode == 0) {
         CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
         FINALIZE;
+    }
+
+    if (pThis->rtryCall == gtlsRtry_recv) {
+        CHKiRet(retrySendSideRecordRecv(pThis));
     }
 
     while (1) { /* loop broken inside */
@@ -2293,16 +2323,15 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
         if (iSent == GNUTLS_E_AGAIN || iSent == GNUTLS_E_INTERRUPTED) {
             /*
              * GnuTLS may require us to read to make progress (e.g. KeyUpdate).
-             * If direction is READ, call the buffered recv helper so we do not lose data.
              */
             if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
-                unsigned nextIODirection ATTR_UNUSED;
-                rsRetVal rcvRet = gtlsRecordRecv(pThis, &nextIODirection);
-                if (rcvRet == RS_RET_CLOSED || pThis->lenRcvBuf == 0) { /* check for explicit close or 0-byte read */
-                    ABORT_FINALIZE(RS_RET_CLOSED);
-                } else if (rcvRet != RS_RET_OK && rcvRet != RS_RET_RETRY) {
-                    ABORT_FINALIZE(rcvRet);
-                }
+                /*
+                 * Preserve any application data read while driving send-side TLS
+                 * control traffic. TLS 1.3 post-handshake messages can make
+                 * gnutls_record_send() need a read, and gnutls_record_recv() may
+                 * return application bytes after processing that control traffic.
+                 */
+                CHKiRet(retrySendSideRecordRecv(pThis));
             }
             continue; /* retry send */
         } else {

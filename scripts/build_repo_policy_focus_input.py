@@ -220,7 +220,7 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
     relevant_paths = ["doc/Makefile.am"]
     for item in changed_docs:
         path = item["path"]
-        relative = path[len("doc/") :]
+        relative = path[len("doc/"):]
         if item["status"].startswith(("A", "R")) and relative not in doc_makefile:
             missing_entries.append(relative)
         if item["status"].startswith("D") and relative in doc_makefile:
@@ -228,7 +228,7 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
         if item["status"].startswith("R"):
             old_path = item["old_path"]
             if old_path:
-                old_relative = old_path[len("doc/") :]
+                old_relative = old_path[len("doc/"):]
                 if old_relative in doc_makefile:
                     stale_entries.append(old_relative)
         relevant_paths.append(path)
@@ -303,6 +303,8 @@ def build_doc_xref_check(name_status: list[dict[str, object]], base: str, head: 
             "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
         },
     }
+
+
 def build_module_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
     # Treat a brand-new plugins/ or contrib/ subtree with code or build files as
     # a module candidate, then check only for deterministic onboarding signals.

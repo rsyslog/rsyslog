@@ -18,6 +18,23 @@ The checker reports trailing whitespace, invalid indentation and lines
 that exceed the allowed length.  It exits with a non-zero status when
 violations are found.
 
+Local CI container user mode
+----------------------------
+
+Most local ``devtools/devcontainer.sh`` runs should use the default user mapping
+so generated files remain owned by the host developer.  Some CI-parity checks
+intentionally override this with ``RSYSLOG_CONTAINER_UID=''`` so the container
+runs with root semantics.  This is useful when a local run needs to mirror
+GitHub Actions behavior closely, including service startup and sudo-backed
+setup steps.
+
+The tradeoff is cleanup risk: root-mode container runs can leave root-owned
+generated files in the shared worktree.  Before switching compiler, sanitizer,
+configure options, container image, or returning to host-side testing, clean
+the tree and remove generated test helper binaries.  If a root-owned generated
+tree blocks cleanup, fix ownership only for that generated tree before removing
+it; do not use broad recursive cleanup outside the worktree.
+
 CI failure evidence artifacts
 -----------------------------
 

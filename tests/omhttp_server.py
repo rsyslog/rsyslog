@@ -7,10 +7,12 @@ import base64
 import random
 import time
 
+now = getattr(time, 'monotonic', time.time)
+
 try:
-    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer # Python 2
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer  # Python 2
 except ImportError:
-    from http.server import BaseHTTPRequestHandler, HTTPServer # Python 3
+    from http.server import BaseHTTPRequestHandler, HTTPServer  # Python 3
 
 # Keep track of data received at each path
 data = {}
@@ -56,6 +58,20 @@ class MyHandler(BaseHTTPRequestHandler):
 
         if metadata['userpwd']:
             if not self.validate_auth():
+                return
+
+        if metadata['fail_interval_start'] != -1 and metadata['fail_interval_stop'] != -1:
+            if metadata['fail_interval_base_time'] is None:
+                metadata['fail_interval_base_time'] = now()
+            time_since_start = now() - metadata['fail_interval_base_time']
+            if metadata['fail_interval_start'] <= time_since_start <= metadata['fail_interval_stop']:
+                if metadata['fail_with_delay_secs']:
+                    print("sleeping for: {0}".format(metadata['fail_with_delay_secs']))
+                    time.sleep(metadata['fail_with_delay_secs'])
+                code = metadata['fail_with'] if metadata['fail_with'] else 500
+                self.send_response(code)
+                self.end_headers()
+                self.wfile.write(b'INTERVAL FAILURE')
                 return
 
         if metadata['fail_with_400_after'] != -1 and metadata['posts'] > metadata['fail_with_400_after']:
@@ -131,9 +147,15 @@ if __name__ == '__main__':
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
     parser.add_argument('--fail-with', action='store', type=int, default=500, help='on failure, fail with this code')
-    parser.add_argument('--fail-with-400-after', action='store', type=int, default=-1, help='fail with 400 after n posts')
-    parser.add_argument('--fail-with-401-or-403-after', action='store', type=int, default=-1, help='fail with 401 or 403 after n posts')
+    parser.add_argument('--fail-with-400-after', action='store', type=int,
+                        default=-1, help='fail with 400 after n posts')
+    parser.add_argument('--fail-with-401-or-403-after', action='store', type=int,
+                        default=-1, help='fail with 401 or 403 after n posts')
     parser.add_argument('--fail-with-delay-secs', action='store', type=int, default=0, help='fail with n secs of delay')
+    parser.add_argument('--fail-interval-start', action='store', type=int,
+                        default=-1, help='start failing after n seconds from the first POST')
+    parser.add_argument('--fail-interval-stop', action='store', type=int,
+                        default=-1, help='stop failing after n seconds from the first POST')
     parser.add_argument('--decompress', action='store_true', default=False, help='decompress posted data')
     parser.add_argument('--userpwd', action='store', default='', help='only accept this user:password combination')
     args = parser.parse_args()
@@ -143,6 +165,9 @@ if __name__ == '__main__':
     metadata['fail_with_400_after'] = args.fail_with_400_after
     metadata['fail_with_401_or_403_after'] = args.fail_with_401_or_403_after
     metadata['fail_with_delay_secs'] = args.fail_with_delay_secs
+    metadata['fail_interval_start'] = args.fail_interval_start
+    metadata['fail_interval_stop'] = args.fail_interval_stop
+    metadata['fail_interval_base_time'] = None
     metadata['decompress'] = args.decompress
     metadata['userpwd'] = args.userpwd
     server = HTTPServer((args.interface, args.port), MyHandler)

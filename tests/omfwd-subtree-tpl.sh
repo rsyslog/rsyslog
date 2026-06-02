@@ -1,5 +1,8 @@
 #!/bin/bash
-# Verify omfwd forwards messages when using subtree-type templates
+# Verify omfwd forwards messages when using subtree-type templates. The oracle
+# is the received JSON subtree payload, and the receiver must be listening
+# before rsyslog starts so the single test message is not lost to startup
+# timing.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
 
@@ -15,8 +18,7 @@ if $msg contains "msgnum:" then {
 }
 '
 
-./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG &
-BGPROCESS=$!
+start_minitcpsrv_ready "$RSYSLOG_OUT_LOG" "$TCPFLOOD_PORT"
 
 startup
 injectmsg 0 1
@@ -25,4 +27,3 @@ wait_shutdown
 
 content_check '{ "foo": "bar" }' "$RSYSLOG_OUT_LOG"
 exit_test
-

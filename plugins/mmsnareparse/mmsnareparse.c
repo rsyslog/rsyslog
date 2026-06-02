@@ -3147,29 +3147,34 @@ static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
                       msWinEventLog);
             return msWinEventLog;
         }
-        // Look for the EventID pattern (4-digit number) which comes before the provider
-        const char *eventIdStart = cursor;
-        while (*eventIdStart != '\0') {
-            if (*eventIdStart >= '0' && *eventIdStart <= '9') {
-                // Found a digit, check if it's a 4-digit EventID
-                const char *eventIdEnd = eventIdStart;
-                while (*eventIdEnd >= '0' && *eventIdEnd <= '9') {
-                    eventIdEnd++;
-                }
-                if (eventIdEnd - eventIdStart == 4) {
-                    // Found a 4-digit number, check if it's followed by tab and provider
-                    if (*eventIdEnd == '\t' || *eventIdEnd == ' ') {
-                        const char *afterEventId = skip_lws_const(eventIdEnd);
-                        if (afterEventId != NULL &&
-                            strstr(afterEventId, "Microsoft-Windows-Security-Auditing") != NULL) {
-                            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
-                                      eventIdStart);
-                            return eventIdStart;
+        // Look for the EventID pattern (4-digit number) which comes before the provider.
+        // Search provider once to avoid repeated full-suffix scans on malformed input.
+        const char *providerPos = strstr(cursor, "Microsoft-Windows-Security-Auditing");
+        if (providerPos != NULL) {
+            const char *eventIdStart = cursor;
+            while (*eventIdStart != '\0' && eventIdStart < providerPos) {
+                if (*eventIdStart >= '0' && *eventIdStart <= '9') {
+                    // Found a digit, check if it's a 4-digit EventID
+                    const char *eventIdEnd = eventIdStart;
+                    while (*eventIdEnd >= '0' && *eventIdEnd <= '9') {
+                        eventIdEnd++;
+                    }
+                    if (eventIdEnd - eventIdStart == 4) {
+                        // Found a 4-digit number, check if it's followed by whitespace before the provider
+                        if (*eventIdEnd == '\t' || *eventIdEnd == ' ') {
+                            const char *afterEventId = skip_lws_const(eventIdEnd);
+                            if (afterEventId != NULL && afterEventId <= providerPos) {
+                                dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
+                                          eventIdStart);
+                                return eventIdStart;
+                            }
                         }
                     }
+                    eventIdStart = eventIdEnd;
+                    continue;
                 }
+                eventIdStart++;
             }
-            eventIdStart++;
         }
         // After syslog parsing, MSWinEventLog may be removed from the message
         // Try to find MSWinEventLog anywhere in the original message
@@ -3213,6 +3218,8 @@ static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
                                   searchStart);
                         return searchStart;
                     }
+                    searchStart = eventIdEnd;
+                    continue;
                 }
                 searchStart++;
             }
@@ -5169,8 +5176,22 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
     char *searchStart = lastTab + 1;
 
     if (pData->ignoreTrailingPattern_isRegex) {
-        /* Regex mode: apply regexec to the trailing token */
-        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, 0);
+        /* Regex mode: bound regex input to searchLimit trailing bytes to
+         * reduce risk from expensive non-matching expressions on untrusted
+         * message content while preserving start-anchored token patterns. */
+        const size_t trailingTokenLen = strlen(searchStart);
+        char savedChar = '\0';
+        const sbool tokenWasTruncated = trailingTokenLen > pData->searchLimit;
+        if (tokenWasTruncated) {
+            savedChar = searchStart[pData->searchLimit];
+            searchStart[pData->searchLimit] = '\0';
+        }
+
+        const int regexecFlags = tokenWasTruncated ? REG_NOTEOL : 0;
+        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, regexecFlags);
+        if (tokenWasTruncated) {
+            searchStart[pData->searchLimit] = savedChar;
+        }
         if (isMatch) {
             /* Pattern found in trailing position - truncate at the start of the last token
              * (after the last tab) to remove the entire enrichment section including any

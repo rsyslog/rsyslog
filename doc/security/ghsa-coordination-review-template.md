@@ -28,6 +28,12 @@ configuration preconditions, strongest evidence, uncertainties, proposed
 component-scoped wording, and next steps. Complex cases may need additional
 manual analysis or separate technical review before a response is sent.
 
+Keep the process proportional. A first acknowledgement normally only needs the
+current status, missing information, and maintainer review before sending. A
+substantive response or advisory draft should include claim labels,
+evidence/confidence notes, publication blockers, and a downstream coordination
+decision.
+
 Do not make meaningful advisory wording changes unilaterally. Changes to the
 title, impact, affected configurations, affected versions, or publication
 timing should be coordinated with the reporter before publication, especially
@@ -64,6 +70,10 @@ Context to consider:
 - The prompt may be used early for both an initial reporter response and later
   substantive follow-up. Treat this output as maintainer-draft material, not
   as an automatic acceptance, rejection, severity decision, or final advisory.
+- Keep first acknowledgements lightweight: status, missing information, and a
+  maintainer review before sending are usually enough. Use the fuller evidence/confidence,
+  publication-blocker, and downstream-coordination sections for substantive
+  responses or advisory drafts.
 - Keep the response collaborative and factual. Acknowledge useful work by the
   reporter without promising acceptance, CVE assignment, severity, affected
   versions, or publication timing before maintainer validation is complete.
@@ -89,23 +99,46 @@ Your task:
    - whether required non-default settings are common in production or
      enterprise deployments
    - attacker control, vulnerable sink, missing guard, and demonstrated impact
-3. Summarize the strongest evidence in favor of the report.
-4. Summarize the main uncertainties or wording concerns.
-5. Propose component-scoped advisory wording for:
+3. Label each important claim as one of:
+   - reporter claim
+   - maintainer-confirmed fact
+   - maintainer inference
+   - open question
+4. For substantive responses or advisory drafts, include an Evidence and
+   Confidence table with:
+   - claim
+   - evidence
+   - confidence: high, medium, or low
+   - what would change the assessment
+5. Summarize the strongest evidence in favor of the report.
+6. Summarize the main uncertainties or wording concerns.
+7. Propose component-scoped advisory wording for:
    - title
    - one-paragraph summary
    - affected configurations
    - impact
    - workarounds, if known
-6. Identify any wording that should be coordinated with the reporter before
+8. Identify any wording that should be coordinated with the reporter before
    publication.
-7. Draft a reporter response that is professional, concise, and collaborative.
+9. Include a Downstream Coordination Decision for substantive responses or
+   advisory drafts: likely needed, maybe needed, or likely not needed. Explain
+   why based on default exposure, package availability, common enterprise
+   configuration, severity, and embargo needs.
+10. Include Publication Blockers for substantive responses or advisory drafts.
+    List anything that must be resolved before publication, such as unclear
+    affected versions, unvalidated impact, unconfirmed fix, missing workaround,
+    uncoordinated wording changes, downstream coordination, or missing reporter
+    credit preference.
+11. Draft a reporter response that is professional, concise, and collaborative.
    If this is the first reply, acknowledge receipt and ask for missing
    validation details without promising acceptance, CVE assignment, severity,
    affected versions, or publication timing. If maintainer validation notes are
    provided, draft a more substantial follow-up that clearly separates
    confirmed facts from open questions.
-8. Suggest next maintainer steps, including validation, duplicate handling,
+12. Before the reporter response draft, include a "Maintainer Review Before
+    Sending" section with any sentences that are risky, premature, too broad,
+    or need human confirmation.
+13. Suggest next maintainer steps, including validation, duplicate handling,
    fix/review, CVE decision, release coordination, downstream coordination, and
    publication checks.
 
@@ -113,7 +146,15 @@ Output format:
 
 ## Assessment
 
+## Claims, Evidence, and Confidence
+
 ## Proposed Advisory Wording
+
+## Downstream Coordination
+
+## Publication Blockers
+
+## Maintainer Review Before Sending
 
 ## Reporter Response Draft
 

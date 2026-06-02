@@ -1,5 +1,8 @@
 #!/bin/bash
 # added 2013-12-10 by Rgerhards
+# Verify RELP forwarding with TLS and a custom priority string. The receiver
+# binds an ephemeral IPv4 listener and the testbench discovers that bound port
+# after startup, avoiding the get_free_port race before the sender connects.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 echo testing sending and receiving via relp with TLS enabled and priority string set
@@ -9,16 +12,16 @@ echo testing sending and receiving via relp with TLS enabled and priority string
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port="'$PORT_RCVR'" tls="on" tls.prioritystring="NORMAL:+ANON-DH")
+input(type="imrelp" address="127.0.0.1" port="0" tls="on" tls.prioritystring="NORMAL:+ANON-DH")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+assign_single_tcp_listener_port PORT_RCVR
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2

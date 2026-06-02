@@ -79,6 +79,34 @@ void ocsp_cache_cleanup(void);
 #endif
 rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
 
+#ifdef ENABLE_WOLFSSL
+static rsRetVal net_ossl_wolfssl_enable_leaf_crl(SSL_CTX *ctx, const char *crlFile) {
+    WOLFSSL_CERT_MANAGER *cm;
+    DEFiRet;
+
+    cm = wolfSSL_CTX_GetCertManager(ctx);
+    if (cm == NULL) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CertManager unavailable after loading CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+
+    /* wolfSSL_X509_STORE_add_crl enables chain-wide CRL checks, while the
+     * DER loader does not enable CRL checks at all. Normalize both paths to
+     * OpenSSL's X509_V_FLAG_CRL_CHECK behavior: verify the leaf certificate. */
+    if (wolfSSL_CertManagerDisableCRL(cm) != WOLFSSL_SUCCESS) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be reset for CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+    if (wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK) != WOLFSSL_SUCCESS) {
+        LogError(0, RS_RET_CRL_INVALID, "wolfSSL: CRL checking could not be enabled for CRL '%s'", crlFile);
+        ABORT_FINALIZE(RS_RET_CRL_INVALID);
+    }
+
+finalize_it:
+    RETiRet;
+}
+#endif
+
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 #ifndef ENABLE_WOLFSSL
@@ -522,15 +550,8 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
                 ABORT_FINALIZE(RS_RET_CRL_INVALID);
             }
             loaded = 1;
-        } else {
-            /* wolfSSL_X509_STORE_add_crl forces WOLFSSL_CRL_CHECKALL; reset
-             * to WOLFSSL_CRL_CHECK to match OpenSSL X509_V_FLAG_CRL_CHECK. */
-            WOLFSSL_CERT_MANAGER *cm = wolfSSL_CTX_GetCertManager(pThis->ctx);
-            if (cm != NULL) {
-                wolfSSL_CertManagerDisableCRL(cm);
-                wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK);
-            }
         }
+        CHKiRet(net_ossl_wolfssl_enable_leaf_crl(pThis->ctx, crlFile));
         dbgprintf("osslCtxInit: loaded %d CRL(s) from '%s' into wolfSSL CertManager\n", loaded, crlFile);
 #elif OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         // Get X509_STORE reference
@@ -908,8 +929,7 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
     assert(pbFoundPositiveMatch != NULL);
 
     if (pThis->pPermPeers) { /* do we have configured peer IDs? */
-        pPeer = pThis->pPermPeers;
-        while (pPeer != NULL) {
+        for (pPeer = pThis->pPermPeers; pPeer != NULL; pPeer = pPeer->pNext) {
             CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
             if (*pbFoundPositiveMatch) break;
 
@@ -919,14 +939,19 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
              * if prioritizeSAN set, only check against SAN
              */
             if (!allowX509CheckHost || pPeer->etryType == PERM_PEER_TYPE_WILDCARD) {
-                pPeer = pPeer->pNext;
                 continue;
             } else if (pThis->bSANpriority == 1) {
     #if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER) && \
         defined(X509_CHECK_FLAG_NEVER_CHECK_SUBJECT)
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
     #else
+                /* Security hard-stop: with older OpenSSL-compatible APIs (notably wolfSSL
+                 * compatibility mode), we cannot request SAN-only matching. Calling
+                 * X509_check_host() with default flags may fall back to CN, which would
+                 * violate PrioritizeSAN semantics and RFC 6125 behavior.
+                 */
                 dbgprintf("net_ossl_matchpeeridentity: PrioritizeSAN not supported by this OpenSSL-compatible API\n");
+                continue;
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
             }
 
@@ -947,8 +972,6 @@ static rsRetVal net_ossl_matchpeeridentity(net_ossl_t *pThis,
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             }
 #endif
-            /* Check next peer */
-            pPeer = pPeer->pNext;
         }
     } else {
         LogMsg(0, RS_RET_TLS_NO_CERT, LOG_WARNING,
@@ -1738,6 +1761,7 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
     /* Store result in cache */
     char *cache_key = ocsp_make_cache_key(cert, issuer);
     if (cache_key) {
+        int should_cache = 1;
         time_t cache_ttl = OCSP_CACHE_DEFAULT_TTL;
         /* Use nextUpdate if available for more accurate cache expiry */
         if (nextupd) {
@@ -1748,12 +1772,19 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
                 time_t seconds_until_expiry = (pday * 86400) + psec;
                 if (seconds_until_expiry > 0) {
                     cache_ttl = seconds_until_expiry;
+                } else {
+                    /* avoid caching stale responses accepted only via OCSP leeway */
+                    should_cache = 0;
                 }
             } else {
                 dbgprintf("OCSP: ASN1_TIME_diff() failed, using default TTL\n");
             }
         }
-        ocsp_cache_store(cache_key, status, cache_ttl);
+        if (should_cache) {
+            ocsp_cache_store(cache_key, status, cache_ttl);
+        } else {
+            dbgprintf("OCSP: nextUpdate is not in the future, skipping cache store\n");
+        }
         free(cache_key);
     }
 

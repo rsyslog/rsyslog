@@ -100,6 +100,17 @@ static void dynstats_destroyCtr(dynstats_ctr_t *ctr) {
     free(ctr);
 }
 
+static void dynstats_destroyStatsCounter(statsobj_t *stats, ctr_t **ref) {
+    if (*ref != NULL) {
+        if (stats != NULL) {
+            statsobj.DestructCounter(stats, *ref);
+        } else {
+            statsobj.DestructUnlinkedCounter(*ref);
+        }
+        *ref = NULL;
+    }
+}
+
 static void /* assumes exclusive access to bucket */
 dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *ctrs) {
     dynstats_ctr_t *ctr;
@@ -113,12 +124,6 @@ dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *
     }
     STATSCOUNTER_ADD(b->ctrMetricsPurged, b->mutCtrMetricsPurged, ctrs_purged);
     ATOMIC_SUB_unsigned(&b->metricCount, ctrs_purged, &b->mutMetricCount);
-}
-
-static void /* assumes exclusive access to bucket */
-dynstats_destroyCounters(dynstats_bucket_t *b) {
-    statsobj.UnlinkAllCounters(b->stats);
-    dynstats_destroyCountersIn(b, b->table, b->ctrs);
 }
 
 static void dynstats_destroyBucket(dynstats_bucket_t *b) {
@@ -151,24 +156,31 @@ static void dynstats_destroyBucket(dynstats_bucket_t *b) {
         pthread_rwlock_unlock(&b->lock);
     }
 
+    /* Drop stats registry visibility before taking the bucket lock for
+     * teardown. Stats scrapes hold mutStats while read notifiers take bucket
+     * locks, so statsobj destruction must not run under bucket locks. */
+    if (b->stats != NULL) {
+        statsobj.UnlinkAllCounters(b->stats);
+        statsobj.Destruct(&b->stats);
+    }
+
     pthread_rwlock_wrlock(&b->lock);
-    dynstats_destroyCounters(b);
+    dynstats_destroyCountersIn(b, b->table, b->ctrs);
     dynstats_destroyCountersIn(b, b->survivor_table, b->survivor_ctrs);
-    statsobj.DestructCounter(b->stats, b->pCtrFlushedBytes);
-    statsobj.DestructCounter(b->stats, b->pCtrFlushed);
-    statsobj.DestructCounter(b->stats, b->pCtrFlushedErrors);
-    statsobj.Destruct(&b->stats);
+    dynstats_destroyStatsCounter(NULL, &b->pCtrFlushedBytes);
+    dynstats_destroyStatsCounter(NULL, &b->pCtrFlushed);
+    dynstats_destroyStatsCounter(NULL, &b->pCtrFlushedErrors);
     free(b->name);
     free(b->state_file_directory);
     pthread_rwlock_unlock(&b->lock);
     pthread_rwlock_destroy(&b->lock);
     pthread_mutex_destroy(&b->mutMetricCount);
-    statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
-    statsobj.DestructCounter(bkts->global_stats, b->pNewMetricAddCtr);
-    statsobj.DestructCounter(bkts->global_stats, b->pNoMetricCtr);
-    statsobj.DestructCounter(bkts->global_stats, b->pMetricsPurgedCtr);
-    statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
-    statsobj.DestructCounter(bkts->global_stats, b->pPurgeTriggeredCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pOpsOverflowCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pNewMetricAddCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pNoMetricCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pMetricsPurgedCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pOpsIgnoredCtr);
+    dynstats_destroyStatsCounter(bkts->global_stats, &b->pPurgeTriggeredCtr);
     free(b);
 }
 
@@ -268,24 +280,12 @@ static rsRetVal dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_buc
 finalize_it:
     free(metric_name_buff);
     if (iRet != RS_RET_OK) {
-        if (b->pOpsOverflowCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
-        }
-        if (b->pNewMetricAddCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pNewMetricAddCtr);
-        }
-        if (b->pNoMetricCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pNoMetricCtr);
-        }
-        if (b->pMetricsPurgedCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pMetricsPurgedCtr);
-        }
-        if (b->pOpsIgnoredCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
-        }
-        if (b->pPurgeTriggeredCtr != NULL) {
-            statsobj.DestructCounter(bkts->global_stats, b->pPurgeTriggeredCtr);
-        }
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pOpsOverflowCtr);
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pNewMetricAddCtr);
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pNoMetricCtr);
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pMetricsPurgedCtr);
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pOpsIgnoredCtr);
+        dynstats_destroyStatsCounter(bkts->global_stats, &b->pPurgeTriggeredCtr);
     }
     RETiRet;
 }
@@ -720,18 +720,22 @@ void dynstats_destroyAllBuckets(rsconf_t *cnf) {
         } else {
             pthread_mutex_unlock(&bkts->work_q.mut);
         }
-        pthread_rwlock_wrlock(&bkts->lock);
         while (1) {
+            pthread_rwlock_wrlock(&bkts->lock);
             b = bkts->list;
             if (b == NULL) {
+                pthread_rwlock_unlock(&bkts->lock);
                 break;
-            } else {
-                bkts->list = b->next;
-                dynstats_destroyBucket(b);
             }
+            bkts->list = b->next;
+            b->next = NULL;
+            pthread_rwlock_unlock(&bkts->lock);
+            dynstats_destroyBucket(b);
         }
-        statsobj.Destruct(&bkts->global_stats);
-        pthread_rwlock_unlock(&bkts->lock);
+        if (bkts->global_stats != NULL) {
+            statsobj.UnlinkAllCounters(bkts->global_stats);
+            statsobj.Destruct(&bkts->global_stats);
+        }
         pthread_rwlock_destroy(&bkts->lock);
         destroyFileWriteWorker(bkts);
     }
@@ -1309,6 +1313,7 @@ static void ATTR_NONNULL(1) destroyFileWriteWorker(dynstats_buckets_t *bkts) {
 
 static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const char *file_name, const char *content) {
     file_write_entry_t *task;
+    file_write_entry_t *queued_task;
     dynstats_buckets_t *bkts;
     DEFiRet;
 
@@ -1318,7 +1323,27 @@ static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const
         FINALIZE;
     }
 
-    CHKmalloc(task = malloc(sizeof(file_write_entry_t)));
+    task = NULL;
+    pthread_mutex_lock(&bkts->work_q.mut);
+    STAILQ_FOREACH(queued_task, &bkts->work_q.q, link) {
+        if (queued_task->bucket == b) {
+            char *new_content = strdup(content);
+            if (new_content == NULL) {
+                pthread_mutex_unlock(&bkts->work_q.mut);
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free((void *)queued_task->content);
+            queued_task->content = new_content;
+            pthread_mutex_unlock(&bkts->work_q.mut);
+            FINALIZE;
+        }
+    }
+
+    task = malloc(sizeof(file_write_entry_t));
+    if (task == NULL) {
+        pthread_mutex_unlock(&bkts->work_q.mut);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     task->bucket = b;
     task->name = strdup(file_name);
     task->content = strdup(content);
@@ -1329,10 +1354,10 @@ static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const
         free(task);
         task =
             NULL; /* Prevent double-free in error handler if it existed, though here finalize handles NULL task check */
+        pthread_mutex_unlock(&bkts->work_q.mut);
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
-    pthread_mutex_lock(&bkts->work_q.mut);
     STAILQ_INSERT_TAIL(&bkts->work_q.q, task, link);
     bkts->work_q.size++;
     STATSCOUNTER_INC(bkts->work_q.ctrEnq, bkts->work_q.mutCtrEnq);

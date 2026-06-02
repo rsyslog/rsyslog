@@ -167,6 +167,7 @@ ENDgetFunctArray
 
 BEGINmodExit
     CODESTARTmodExit;
+    curl_global_cleanup();
 ENDmodExit
 
 
@@ -178,6 +179,13 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
+    CURLcode curlRet;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+
+    curlRet = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curlRet != CURLE_OK) {
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "fmhttp: curl_global_init failed: %s", curl_easy_strerror(curlRet));
+        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    }
     CODEmodInit_QueryRegCFSLineHdlr dbgprintf("rsyslog fmhttp init called, compiled with version %s\n", VERSION);
 ENDmodInit

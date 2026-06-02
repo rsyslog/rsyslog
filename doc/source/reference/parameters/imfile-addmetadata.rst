@@ -30,6 +30,15 @@ Used to control whether file metadata is added to the message object. By
 default it is enabled for ``input()`` statements that contain wildcards and
 disabled otherwise. This parameter overrides the default behavior.
 
+When metadata is enabled, imfile adds these fields below ``$!metadata``:
+
+* ``filename``: the monitored file name, or the symlink name when the input
+  matched a symlink.
+* ``fileoffset``: the byte offset at which the submitted record starts.
+* ``line_number``: the 1-based line or record number for the monitored file.
+  The value is persisted in the imfile state file and continues across
+  restarts when state is available.
+
 Input usage
 -----------
 .. _param-imfile-input-addmetadata:

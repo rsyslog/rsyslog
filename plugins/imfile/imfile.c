@@ -106,6 +106,7 @@ DEF_IMOD_STATIC_DATA /* must be present, starts static data */
                                   const size_t outlen); /* see siphash.c */
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
+static sbool havePendingDeletes = 0; /* set when files await deferred deletion after FILE_DELETE_DELAY */
 
 #define NUM_MULTISUB 1024 /* default max number of submits */
 #define DFLT_PollInterval 10
@@ -219,6 +220,7 @@ struct act_obj_s {
     int fd; /* fd to file in order to obtain file_id (needs to be preserved across move) */
     strm_t *pStrm; /* its stream (NULL if not assigned) */
     int nRecords; /**< How many records did we process before persisting the stream? */
+    uint64_t lineNum; /* 1-based line/record number used for metadata */
     ratelimit_t *ratelimiter;
     multi_submit_t multiSub;
     int is_symlink;
@@ -972,6 +974,7 @@ static void detect_updates(fs_edge_t *const edge) {
                         "detect_updates obj gone away, keep '%s' "
                         "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
                         act_name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
+                    havePendingDeletes = 1;
                     pollFile(act);
                 }
                 break;
@@ -1567,15 +1570,18 @@ finalize_it:
  * not freed - this must be done by the caller.
  */
 #define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20
+#define MAX_LINENUM_REPRESENTATION_NUM_BYTES 20
 static rsRetVal ATTR_NONNULL(1, 2)
-    enqLine(act_obj_t *const act, cstr_t *const __restrict__ cstrLine, const int64 strtOffs) {
+    enqLine(act_obj_t *const act, cstr_t *const __restrict__ cstrLine, const int64 strtOffs, const uint64_t lineNum) {
     DEFiRet;
     const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
     smsg_t *pMsg;
     uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES + 1];
-    const uchar *metadata_names[2] = {(uchar *)"filename", (uchar *)"fileoffset"};
-    const uchar *metadata_values[2];
+    uchar line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES + 1];
+    const uchar *metadata_names[3] = {(uchar *)"filename", (uchar *)"fileoffset", (uchar *)"line_number"};
+    const uchar *metadata_values[3];
     const size_t msgLen = cstrLen(cstrLine);
+    int lenBuf;
 
     if (msgLen == 0) {
         /* we do not process empty lines */
@@ -1608,9 +1614,21 @@ static rsRetVal ATTR_NONNULL(1, 2)
         } else {
             metadata_values[0] = (const uchar *)act->name;
         }
-        snprintf((char *)file_offset, MAX_OFFSET_REPRESENTATION_NUM_BYTES + 1, "%lld", strtOffs);
+        lenBuf = snprintf((char *)file_offset, sizeof(file_offset), "%lld", strtOffs);
+        if (lenBuf < 0) {
+            msgDestruct(&pMsg);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES] = '\0';
         metadata_values[1] = file_offset;
-        msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 2);
+        lenBuf = snprintf((char *)line_number, sizeof(line_number), "%llu", (unsigned long long)lineNum);
+        if (lenBuf < 0) {
+            msgDestruct(&pMsg);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES] = '\0';
+        metadata_values[2] = line_number;
+        msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 3);
     }
 
     if (inst->perMinuteRateLimits.maxBytesPerMinute || inst->perMinuteRateLimits.maxLinesPerMinute) {
@@ -1706,6 +1724,15 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
                       saved_gen, act->inode_gen);
             ABORT_FINALIZE(RS_RET_ERR);
         }
+    }
+
+    fjson_object_object_get_ex(json, "line_number", &jval);
+    if (jval != NULL) {
+        if (!fjson_object_is_type(jval, fjson_type_int)) {
+            LogError(0, RS_RET_ERR, "imfile: invalid line_number in state file for '%s'", act->name);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        act->lineNum = (uint64_t)fjson_object_get_int64(jval);
     }
 
     fjson_object_object_get_ex(json, "prev_line_segment", &jval);
@@ -1863,6 +1890,7 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             startOffs = act->pStrm->iCurrOffs; /* disable check */
         }
         runModConf->bHadFileData = 1; /* this is just a flag, so set it and forget it */
+        ++act->lineNum;
         /* account bytes and lines processed for this file */
         if (act->pStrm != NULL) {
             int64_t endOffs = act->pStrm->iCurrOffs;
@@ -1871,7 +1899,7 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             }
             STATSCOUNTER_INC(act->linesProcessed, act->mutLinesProcessed);
         }
-        CHKiRet(enqLine(act, *pCStr, strtOffs)); /* process line */
+        CHKiRet(enqLine(act, *pCStr, strtOffs, act->lineNum)); /* process line */
         rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
         if (inst->iPersistStateInterval > 0 && ++act->nRecords >= inst->iPersistStateInterval) {
             persistStrmState(act);
@@ -2409,10 +2437,9 @@ BEGINcheckCnf
         std_checkRuleset(pModConf, inst);
     }
     if (pModConf->root == NULL) {
-        LogError(0, RS_RET_NO_LISTNERS,
-                 "imfile: no files configured to be monitored - "
-                 "no input will be gathered");
-        iRet = RS_RET_NO_LISTNERS;
+        LogMsg(0, NO_ERRCODE, LOG_WARNING,
+               "imfile: no files configured to be monitored - "
+               "no input will be gathered");
     }
 ENDcheckCnf
 
@@ -2660,6 +2687,7 @@ static rsRetVal do_inotify(void) {
     int currev;
     static int last_timeout = 0;
     time_t last_fallback = 0;
+    time_t last_delete_check = 0;
     struct pollfd pollfd;
     DEFiRet;
 
@@ -2695,6 +2723,14 @@ static rsRetVal do_inotify(void) {
                 poll_timeout = fallback_timeout;
             }
         }
+        /* Cap poll() so we wake up to clean up deleted-file FDs even
+         * when no inotify events arrive. */
+        if (havePendingDeletes) {
+            const int delete_timeout = (FILE_DELETE_DELAY + 1) * 1000;
+            if (poll_timeout == -1 || delete_timeout < poll_timeout) {
+                poll_timeout = delete_timeout;
+            }
+        }
         r = poll(&pollfd, 1, poll_timeout);
 
         if (r == -1 && errno == EINTR) {
@@ -2713,6 +2749,14 @@ static rsRetVal do_inotify(void) {
                     in_doFallbackScan();
                     last_fallback = now;
                 }
+            }
+            /* poll() timed out — re-check deleted files whose
+             * FILE_DELETE_DELAY has now elapsed. */
+            if (havePendingDeletes) {
+                DBGPRINTF("pending deletes exist, running tree walk to re-check\n");
+                havePendingDeletes = 0;
+                fs_node_walk(runModConf->conf_tree, poll_tree);
+                last_delete_check = time(NULL);
             }
             continue;
         } else if (r == -1) {
@@ -2739,6 +2783,17 @@ static rsRetVal do_inotify(void) {
                 if (last_fallback == 0 || last_fallback + runModConf->inotifyFallbackInterval <= now) {
                     in_doFallbackScan();
                     last_fallback = now;
+                }
+            }
+            /* Under sustained event load poll() never times out, so
+             * also check here, rate-limited to once per FILE_DELETE_DELAY. */
+            if (havePendingDeletes) {
+                time_t now = time(NULL);
+                if (last_delete_check == 0 || last_delete_check + FILE_DELETE_DELAY + 1 <= now) {
+                    DBGPRINTF("pending deletes exist (event path), running tree walk to re-check\n");
+                    havePendingDeletes = 0;
+                    fs_node_walk(runModConf->conf_tree, poll_tree);
+                    last_delete_check = now;
                 }
             }
             rd = read(ino_fd, iobuf, sizeof(iobuf));
@@ -3060,6 +3115,8 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     json_object_object_add(json, "strt_offs", jval);
     jval = json_object_new_int64((int64_t)act->inode_gen);
     json_object_object_add(json, "inode_gen", jval);
+    jval = json_object_new_int64((int64_t)act->lineNum);
+    json_object_object_add(json, "line_number", jval);
 
     const uchar *const prevLineSegment = strmGetPrevLineSegment(act->pStrm);
     if (prevLineSegment != NULL) {

@@ -63,6 +63,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imdtls-port.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imdtls-listenportfilename`
+     - .. include:: ../../reference/parameters/imdtls-listenportfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imdtls-timeout`
      - .. include:: ../../reference/parameters/imdtls-timeout.rst
         :start-after: .. summary-start
@@ -105,6 +109,7 @@ Input Parameters
 
    ../../reference/parameters/imdtls-address
    ../../reference/parameters/imdtls-port
+   ../../reference/parameters/imdtls-listenportfilename
    ../../reference/parameters/imdtls-timeout
    ../../reference/parameters/imdtls-name
    ../../reference/parameters/imdtls-ruleset
@@ -174,4 +179,3 @@ The following sample does the following:
          tls.authmode="certvalid" )
 
    action( type="omfile" file="/var/log/dtls.log")
-

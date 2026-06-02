@@ -351,6 +351,7 @@ static void freeConfiguredPorts(instanceData *const pData) {
     pData->nPorts = 0;
 }
 
+#ifdef HAVE_RESOLV_NS_INITPARSE
 static int compareSrvPriority(const void *lhs, const void *rhs) {
     const srvRecord_t *const left = (const srvRecord_t *)lhs;
     const srvRecord_t *const right = (const srvRecord_t *)rhs;
@@ -421,10 +422,10 @@ static const char *resolverErrorString(const int err) {
             return "unrecoverable resolver failure";
         case NO_DATA:
             return "no data";
-#if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
+    #if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
         case NO_ADDRESS:
             return "no address";
-#endif
+    #endif
         default:
             return "unknown resolver error";
     }
@@ -433,19 +434,19 @@ static const char *resolverErrorString(const int err) {
 static rsRetVal initResolverState(res_state *const pres) {
     DEFiRet;
 
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     CHKmalloc(*pres = (res_state)calloc(1, sizeof(struct __res_state)));
     if (res_ninit(*pres) != 0) {
         LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
-#else
+    #else
     if (res_init() != 0) {
         LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
     *pres = &_res;
-#endif
+    #endif
 
 finalize_it:
     RETiRet;
@@ -455,25 +456,25 @@ static int queryResolverState(res_state const res,
                               const char *const srvName,
                               unsigned char *const answer,
                               const size_t answerSize) {
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     return res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, answerSize);
-#else
+    #else
     (void)res;
     return res_query(srvName, ns_c_in, ns_t_srv, answer, answerSize);
-#endif
+    #endif
 }
 
 static void closeResolverState(res_state const res) {
     if (res == NULL) {
         return;
     }
-#ifdef HAVE_RESOLV_RES_N_API
+    #ifdef HAVE_RESOLV_RES_N_API
     res_nclose(res);
     free(res);
-#else
+    #else
     /* Old resolver APIs use global state; musl's implementation is stateless. */
     (void)res;
-#endif
+    #endif
 }
 
 static rsRetVal applyResolverOverrides(res_state res) {
@@ -534,6 +535,7 @@ static rsRetVal applyResolverOverrides(res_state res) {
 finalize_it:
     RETiRet;
 }
+#endif
 
 static rsRetVal resolveSrvTargets(instanceData *const pData) {
 #ifndef HAVE_RESOLV_NS_INITPARSE
@@ -1147,7 +1149,9 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
     while (alreadySent != len) {
         lenSend = len - alreadySent;
-        CHKiRet(netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend));
+        iRet = netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend);
+        if (iRet == RS_RET_RETRY) ABORT_FINALIZE(iRet);
+        CHKiRet(iRet);
         DBGPRINTF("omfwd: TCP sent %zd bytes, requested %u\n", lenSend, len - alreadySent);
         alreadySent += lenSend;
     }
@@ -1156,11 +1160,15 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        emitConnectionErrorMsg(pTarget, iRet);
-        if (!pTarget->bInDestruct) {
-            DestructTargetData(pTarget, 0);
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry\n");
+        } else {
+            emitConnectionErrorMsg(pTarget, iRet);
+            if (!pTarget->bInDestruct) {
+                DestructTargetData(pTarget, 0);
+            }
+            iRet = RS_RET_SUSPENDED;
         }
-        iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
 }
@@ -1680,7 +1688,9 @@ static rsRetVal processMsg(targetData_t *__restrict__ const pTarget, actWrkrIPar
     } else {
         /* forward via TCP */
         iRet = tcpclt.Send(pTarget->pTCPClt, pTarget, (char *)psz, l);
-        if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry to %s:%s\n", pTarget->target_name, pTarget->port);
+        } else if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
             /* error! */
             LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending target", pTarget->target_name,
                      pTarget->port);
@@ -1701,17 +1711,19 @@ finalize_it:
 BEGINcommitTransaction
     unsigned i;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
+    sbool bFlushRetry = 0;
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
-     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to the
-     * new targets. This is done by the poolTryResume(), which needs to be made in any case.
+     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to
+     * the new targets. DestructInstanceData() drops the transport state and
+     * poolTryResume() creates the next connection. The per-worker tcpclt
+     * objects stay valid across rebinds and must not be reallocated here.
      */
     if (pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
         dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
                   pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
         pWrkrData->nXmit = 0; /* else we have an addtl wrap at 2^31-1 */
         DestructInstanceData(pWrkrData, 1);
-        initTCP(pWrkrData);
         LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING, "omfwd: dropped connections due to configured rebind interval");
     }
 
@@ -1781,6 +1793,11 @@ BEGINcommitTransaction
                               IS_FLUSH);
             if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                 pWrkrData->target[j].offsSndBuf = 0;
+            } else if (iRet == RS_RET_RETRY) {
+                DBGPRINTF("omfwd: TCP buffer flush deferred for retry to %s:%s\n", pWrkrData->target[j].target_name,
+                          pWrkrData->target[j].port);
+                bFlushRetry = 1;
+                iRet = RS_RET_OK;
             } else {
                 LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                        "omfwd: [wrkr %u] target %s:%s became unavailable during buffer flush. "
@@ -1805,11 +1822,15 @@ finalize_it:
      *   We determine this by calling countActiveTargets() and inspecting
      *   the atomic nActiveTargets value. When it is zero, the whole pool
      *   is unavailable and the action engine must enter retry logic.
-     * - If at least one target remains active, we keep returning OK here
-     *   so that the action is not suspended at pool level. Any buffered
-     *   frames for failed targets remain in that target's send buffer and
-     *   will be flushed once doTryResume() re-establishes the connection
-     *   on a subsequent transaction.
+     * - Also return RS_RET_SUSPENDED when a connected target reports
+     *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
+     *   connected, but the action engine still needs to schedule another commit
+     *   attempt for the retained buffered data.
+     * - If at least one target remains active and no flush retry is pending,
+     *   we keep returning OK here so that the action is not suspended at pool
+     *   level. Any buffered frames for failed targets remain in that target's
+     *   send buffer and will be flushed once doTryResume() re-establishes the
+     *   connection on a subsequent transaction.
      */
     /* do pool stats */
 
@@ -1817,11 +1838,11 @@ finalize_it:
     const int nActiveTargets =
         ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
-    if (nActiveTargets == 0) {
+    if (bFlushRetry || nActiveTargets == 0) {
         /*
-         * All pool members are currently unavailable. Only in this case we
-         * return RS_RET_SUSPENDED from commitTransaction, as required by the
-         * omfwd pool contract.
+         * All pool members are currently unavailable, or a connected target
+         * needs a retry to finish flushing retained TCP data. Return
+         * RS_RET_SUSPENDED so the action engine schedules retry handling.
          */
         iRet = RS_RET_SUSPENDED;
     }
@@ -2003,6 +2024,28 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
             "omfwd uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
             "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
     }
+}
+
+static rsRetVal validateTargetSrvTlsAuth(const instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->targetSrv == NULL || pData->protocol != FORW_TCP || pData->iStrmDrvrMode == 0) {
+        FINALIZE;
+    }
+
+    if (pData->pPermPeers != NULL) {
+        FINALIZE;
+    }
+
+    if (pData->pszStrmDrvrAuthMode == NULL || !strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "x509/name")) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: targetSrv with TLS requires streamdriverpermittedpeers when using streamdriverauthmode "
+                 "\"x509/name\" or the default auth mode (explicitly set permitted peers or use static target)");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -2259,6 +2302,7 @@ BEGINnewActInst
             parser_warnmsg("omfwd: targetSrv was set, ignoring explicit port list");
             freeConfiguredPorts(pData);
         }
+        CHKiRet(validateTargetSrvTlsAuth(pData));
         CHKiRet(resolveSrvTargets(pData));
     }
 

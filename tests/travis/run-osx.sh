@@ -42,7 +42,7 @@ export CONFIG_FLAGS="--prefix=/opt/rsyslog --enable-silent-rules --enable-testbe
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j
 
-if [ "x$CHECK" == "xYES" ]
+if [ "$CHECK" == "YES" ]
 then
     set +e  # begin testbench, here we do not want to abort
     make check

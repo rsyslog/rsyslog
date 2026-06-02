@@ -1,5 +1,6 @@
 #!/bin/bash
-# Validate mmjsontransform YAML policy rename/drop preprocessing, mode, and HUP reload.
+# Validate mmjsontransform YAML policy rename/drop preprocessing, mode, HUP reload,
+# and malformed dotted-key conflict handling without leaking or double-freeing values.
 . ${srcdir:=.}/diag.sh init
 
 policy_file="$RSYSLOG_DYNNAME.policy.yaml"
@@ -58,6 +59,13 @@ YAML
 issue_HUP
 tcpflood -m1 -M '"<166>Mar 10 01:00:00 host app: { \"usr\": \"carol\", \"debug\": true, \"ctx\": { \"old\": 3 } }"'
 
+# Regression coverage for conflict-path ownership: policy preprocessing passes
+# JSON values to dotted insertion, which consumes them even when malformed keys
+# such as a trailing-empty dotted path conflict.  The oracle is that rsyslogd
+# stays alive through shutdown, keeps the malformed message out of the output,
+# and logs the hierarchy conflict instead of double-freeing the input child.
+tcpflood -m1 -M '"<166>Mar 10 01:00:00 host app: { \"a.\": \"bad\" }"'
+
 shutdown_when_empty
 wait_shutdown
 
@@ -112,6 +120,11 @@ fi
 
 if ! grep -q "failed to reload policy file" "$RSYSLOG_DYNNAME.started"; then
     echo "FAIL: expected reload failure to be logged for invalid policy mode"
+    error_exit 1
+fi
+
+if ! grep -q "dotted path 'a.' ends with an empty segment" "$RSYSLOG_DYNNAME.started"; then
+    echo "FAIL: expected malformed dotted key conflict to be logged"
     error_exit 1
 fi
 

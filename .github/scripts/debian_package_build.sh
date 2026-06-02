@@ -51,6 +51,7 @@ install_prereqs() {
   apt-get update
   apt-get install -y --no-install-recommends \
     autoconf \
+    autoconf-archive \
     automake \
     autotools-dev \
     bison \
@@ -122,14 +123,13 @@ find_dist_tarball() {
 
   cd "$workspace"
 
-  local dist_tarball
-  dist_tarball="$(ls -1 rsyslog-*.tar.gz | head -1)"
-  if [ -z "$dist_tarball" ]; then
+  local dist_tarballs=(rsyslog-*.tar.gz)
+  if [ ${#dist_tarballs[@]} -eq 0 ] || [ ! -e "${dist_tarballs[0]}" ]; then
     echo "ERROR: make dist did not produce rsyslog-*.tar.gz" >&2
     return 1
   fi
 
-  printf '%s\n' "$dist_tarball"
+  printf '%s\n' "${dist_tarballs[0]}"
 }
 
 unpack_source_tree() {

@@ -314,7 +314,9 @@ static int Send(tcpclt_t *pThis, void *pData, char *msg, size_t len) {
         CHKiRet(pThis->initFunc(pData));
         iRet = pThis->sendFunc(pData, msg, len);
 
-        if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
+        if (iRet == RS_RET_RETRY) {
+            bDone = 1;
+        } else if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
             /* we are done, we also use this as indication that the previous
              * message was succesfully received (it's not always the case, but its at
              * least our best shot at it -- rgerhards, 2008-03-12

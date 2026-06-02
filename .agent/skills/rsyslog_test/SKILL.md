@@ -69,6 +69,39 @@ configured rsyslog output destination, usually testbench omfile output such as
 the oracle unless the test is specifically about process-level output or the
 exception is documented in the test header.
 
+### 3.1 Deflake Antipattern Review
+Before adding or heavily changing shell tests, run the advisory antipattern
+scanner on the touched files:
+
+```bash
+devtools/check-test-antipatterns.sh tests/<changed-test>.sh
+```
+
+The scanner prefers `rg` and falls back to `grep`/`find`, so it should also work
+in minimal CI-style containers. Findings are review prompts, not automatic
+failures. Fix practical matches; if a match is intentional, document the
+deterministic oracle in the test header.
+
+Known flake-prone patterns from prior fixes:
+
+- Port preselection with `get_free_port`; prefer listener `port="0"` plus a
+  port file or helper readiness written after `listen(2)` succeeds.
+- Fixed sleeps used as synchronization; prefer explicit readiness or completion
+  helpers such as port files, `wait_file_lines`, `wait_queueempty`, stats
+  counters, or imdiag waits.
+- Readiness files written before the underlying service is actually ready.
+- Negative-path tests that assume auth failure, retry, disconnect, or timeout
+  timing instead of waiting for a specific state or diagnostic.
+- CPU tick, runtime, or timeout thresholds without a header comment explaining
+  the oracle and why the value is safe under loaded CI runners.
+- Background helpers without deterministic readiness and cleanup.
+- Queue tests that assume immediate drain or shutdown ordering without
+  queue-specific synchronization.
+- Shared external state such as fixed ports, filenames, spool directories,
+  topics, databases, or service names.
+- Deflake changes that reduce the tested behavior or race window instead of
+  preserving the original invariant with a better oracle.
+
 ### 4. Using diag.sh Helpers
 All tests include `tests/diag.sh` using the POSIX `.` command. You should use its standardized helpers:
 - `cmp_exact`: Verify file content matches.
@@ -93,7 +126,10 @@ Certain modules (Kafka, Elasticsearch, Journald) have heavy integration tests re
 
 ### 8. Memory Lifecycle Validation (Mental Audit)
 Before committing C changes, agents SHOULD perform a self-audit of memory ownership and lifecycle.
-- **Rule**: Run the `/audit` workflow. It orchestrates multiple specialized passes (Memory Guardian, Concurrency Architect) using the [Canned Prompts](../../../ai/).
+- **Rule**: Follow the late prompt-audit stage in
+  [`rsyslog_local_container_testing`](../rsyslog_local_container_testing/SKILL.md).
+  Read and apply the relevant canned prompts under [`ai/`](../../../ai/)
+  directly; do not depend on another local AI CLI being installed.
 - **Critical Patterns**:
   - **NULL Checks**: `es_str2cstr()` can return `NULL`. Every call MUST be followed by a `NULL` check.
   - **Macro Usage**: Prefer `CHKmalloc()` for allocations as it automatically handles the `NULL` check and jumps to `finalize_it`.
@@ -108,7 +144,74 @@ make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)
 ```
 - **Pattern**: This uses the `MOCK-OK` mode in `tests/diag.sh` to exit tests with success immediately, skipping the overhead of actual execution while still verifying shell script invocability and distribution completeness.
 
-### 10. Container Validation Escalation
+
+### 10. Python Style Checks
+For Python-only changes, use the repository style configuration in `setup.cfg`.
+When `pycodestyle` is installed, run `devtools/format-python.sh
+<changed-python-files>` to check changed Python files. Use
+`devtools/format-python.sh --fix <changed-python-files>` only when you
+intentionally want `autopep8` rewrites before the style check. If the tools are
+missing in a local agent environment, suggest installing them (`sudo
+apt-get install -y pycodestyle python3-autopep8` on Debian/Ubuntu) but do
+not block unrelated build or test validation; `devtools/format-python.sh
+--check-if-available ...` implements that optional behavior.
+
+The pull-request workflow installs `pycodestyle` and intentionally checks only
+changed Python files to avoid reintroducing full-tree style noise. It does not
+run `autopep8`. Be cautious with legacy Python-2-style scripts: review
+formatting changes that touch print statements, exception syntax, imports, or
+line continuations before reporting the patch ready.
+
+### 11. Optional PR-Local Linters
+CodeFactor and CI provide central lint feedback, but local diff-scoped linter
+runs are useful before pushing because they catch simple review noise early.
+Run these only when the tools are installed; if a tool is missing, suggest the
+install command and continue with normal build/test validation.
+
+Fetch the base first when possible:
+
+```bash
+git fetch upstream main --prune
+```
+
+Recommended optional checks:
+
+```bash
+if command -v shellcheck >/dev/null 2>&1; then
+  git diff -z --name-only --diff-filter=ACMR upstream/main...HEAD -- \
+    '*.sh' | xargs -0 -r shellcheck -S warning
+fi
+
+if command -v checkbashisms >/dev/null 2>&1; then
+  git diff --name-only --diff-filter=ACMR upstream/main...HEAD -- '*.sh' |
+    while IFS= read -r f; do
+      case "$(head -n1 "$f")" in
+      '#!/bin/sh'|'#!/usr/bin/sh'|'#!/usr/bin/env sh')
+        checkbashisms -p "$f"
+        ;;
+      esac
+    done
+else
+  echo "info: checkbashisms is in Debian/Ubuntu package devscripts"
+fi
+
+if command -v hadolint >/dev/null 2>&1; then
+  git diff -z --name-only --diff-filter=ACMR upstream/main...HEAD -- \
+    '*Dockerfile*' 'Dockerfile' | xargs -0 -r hadolint
+fi
+```
+
+For changed infrastructure/config files, run `trivy config` on the changed
+paths or the smallest relevant directory when `trivy` is installed. For larger
+PRs, run `jscpd` on changed source/test files when installed to spot accidental
+copy/paste duplication. Treat duplication findings as review prompts, not
+automatic blockers.
+
+Do not include `cppcheck` in the routine local PR linter set unless a maintainer
+explicitly asks for it; prior test runs showed too much low-value noise on this
+code base.
+
+### 12. Container Validation Escalation
 If container support is available and the change is intended for a PR, prefer
 running `rsyslog_local_container_testing` before pushing. The local container
 flow is often faster than discovering CI-only failures after the PR is opened,

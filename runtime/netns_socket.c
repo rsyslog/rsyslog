@@ -114,19 +114,20 @@ rsRetVal ATTR_NONNULL() netns_save(int *fd) {
      * To avoid bugs, or possible descriptor leaks,
      * check that it is always -1 on entry.
      */
-#ifdef HAVE_SETNS
     if (*fd != -1) {
         LogError(0, RS_RET_CODE_ERR, "%s: called with uninitialized descriptor", __func__);
         ABORT_FINALIZE(RS_RET_CODE_ERR);
     }
+
+#ifdef HAVE_SETNS
     *fd = open("/proc/self/ns/net", O_RDONLY);
     if (*fd == -1) {
         LogError(errno, RS_RET_IO_ERROR, "%s: could not access startup namespace", __func__);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     dbgprintf("%s: saved startup network namespace\n", __func__);
+#endif
 finalize_it:
-#endif  // def HAVE_SETNS
     RETiRet;
 }
 

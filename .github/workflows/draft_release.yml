@@ -69,6 +69,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            autoconf-archive \
             libestr-dev \
             libglib2.0-dev \
             libgnutls28-dev \

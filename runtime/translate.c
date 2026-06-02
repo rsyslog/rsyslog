@@ -842,6 +842,12 @@ static int estrAppendChar(es_str_t **s, char c) {
     return es_addChar(s, (unsigned char)c);
 }
 
+static int estrAppendVarName(es_str_t **s, const char *name) {
+    if (name == NULL || name[0] == '\0') return -1;
+    if (name[0] != '$' && estrAppendChar(s, '$') != 0) return -1;
+    return estrAppendCstr(s, name);
+}
+
 static int estrAppendQuoted(es_str_t **s, const char *buf) {
     size_t i;
     if (estrAppendChar(s, '"') != 0) return -1;
@@ -949,7 +955,7 @@ static int exprToString(es_str_t **out, const struct cnfexpr *expr, struct rscon
             free(cstr);
             return i;
         case 'V':
-            return estrAppendCstr(out, ((const struct cnfvar *)expr)->name);
+            return estrAppendVarName(out, ((const struct cnfvar *)expr)->name);
         case 'A':
             ar = (const struct cnfarray *)expr;
             if (estrAppendChar(out, '[') != 0) return -1;
@@ -981,7 +987,7 @@ static int exprToString(es_str_t **out, const struct cnfexpr *expr, struct rscon
             return 0;
         case S_FUNC_EXISTS:
             if (estrAppendCstr(out, "exists(") != 0) return -1;
-            if (estrAppendCstr(out, ((const struct cnffuncexists *)expr)->varname) != 0) return -1;
+            if (estrAppendVarName(out, ((const struct cnffuncexists *)expr)->varname) != 0) return -1;
             return estrAppendChar(out, ')');
         case '&':
         case '+':
@@ -1146,13 +1152,13 @@ static int stmtListToString(es_str_t **out,
             case S_SET:
                 if (appendIndent(out, indent) != 0) return -1;
                 if (estrAppendCstr(out, stmt->d.s_set.force_reset ? "reset " : "set ") != 0 ||
-                    estrAppendCstr(out, (char *)stmt->d.s_set.varname) != 0 || estrAppendCstr(out, " = ") != 0 ||
+                    estrAppendVarName(out, (char *)stmt->d.s_set.varname) != 0 || estrAppendCstr(out, " = ") != 0 ||
                     exprToString(out, stmt->d.s_set.expr, warnings) != 0 || estrAppendCstr(out, ";\n") != 0)
                     return -1;
                 break;
             case S_UNSET:
                 if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "unset ") != 0 ||
-                    estrAppendCstr(out, (char *)stmt->d.s_unset.varname) != 0 || estrAppendCstr(out, ";\n") != 0)
+                    estrAppendVarName(out, (char *)stmt->d.s_unset.varname) != 0 || estrAppendCstr(out, ";\n") != 0)
                     return -1;
                 break;
             case S_IF:
@@ -1172,7 +1178,7 @@ static int stmtListToString(es_str_t **out,
                 break;
             case S_FOREACH:
                 if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "foreach (") != 0 ||
-                    estrAppendCstr(out, stmt->d.s_foreach.iter->var) != 0 || estrAppendCstr(out, " in ") != 0 ||
+                    estrAppendVarName(out, stmt->d.s_foreach.iter->var) != 0 || estrAppendCstr(out, " in ") != 0 ||
                     exprToString(out, stmt->d.s_foreach.iter->collection, warnings) != 0 ||
                     estrAppendCstr(out, ") do {\n") != 0 ||
                     stmtListToString(out, stmt->d.s_foreach.body, indent + 1, warnings) != 0 ||

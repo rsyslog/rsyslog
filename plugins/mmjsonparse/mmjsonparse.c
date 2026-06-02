@@ -295,7 +295,10 @@ static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct 
 
     DBGPRINTF("mmjsonparse: processing already parsed JSON object\n");
 
-    /* JSON is already parsed and validated, just add it to the message */
+    /* JSON is already parsed and validated, just add it to the message.
+     * msgAddJSON assumes ownership of json and may release it on both
+     * success and error paths, so do not access json after this call.
+     */
     iRet = msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0);
     json = NULL; /* msgAddJSON takes ownership, including on its error paths. */
     CHKiRet(iRet);

@@ -26,6 +26,9 @@ case "$RSYSLOG_ROLE" in
     echo "Remote log target: ${REMOTE_SERVER_NAME}:${REMOTE_SERVER_PORT}"
     ;;
   collector)
+    : "${VESPA_USE_HTTPS:=on}"
+    : "${VESPA_ALLOW_UNSIGNED_CERTS:=off}"
+    export VESPA_USE_HTTPS VESPA_ALLOW_UNSIGNED_CERTS
     ;;
   minimal|*)
     ;;

@@ -25,7 +25,8 @@ template(name="outfmt" type="list") {
 
 action(type="mmsnareparse"
        definition.file="../plugins/mmsnareparse/sysmon_definitions.json"
-       ignoreTrailingPattern.regex="^[0-9]+[[:space:]]+custom_section:")
+       ignoreTrailingPattern.regex="^[0-9]+[[:space:]]+custom_section:"
+       ignoreTrailingPattern.searchWindow="32")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 
