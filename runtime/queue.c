@@ -928,6 +928,9 @@ static void qqueueResetRecoveredQueueSize(qqueue_t *pThis, const sbool adjustOve
         pThis->iQueueSize = 0;
     }
     pThis->nLogDeq = 0;
+    if (pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) {
+        pThis->tVars.disk.sizeOnDisk = 0;
+    }
 }
 
 static void qqueueSubtractOverallQueueSize(const int nElem) {
