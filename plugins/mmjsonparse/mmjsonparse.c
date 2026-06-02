@@ -249,8 +249,8 @@ static int find_first_json_object(wrkrInstanceData_t *pWrkrData,
             return (i >= len) ? 1 : 2; /* no JSON found or scan truncated */
         }
 
-        /* Try to parse JSON starting from this position */
-        size_t remaining = len - i;
+        /* Try to parse JSON starting from this position, bounded by scan window */
+        size_t remaining = scan_end - i;
         json_tokener_reset(pWrkrData->tokener);
 
         struct json_object *json = json_tokener_parse_ex(pWrkrData->tokener, (const char *)(msg + i), remaining);
@@ -297,14 +297,9 @@ static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct 
 
     /* JSON is already parsed and validated, just add it to the message */
     CHKiRet(msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0));
-    /* Note: msgAddJSON takes ownership of the json object on success,
-     * but we need to clean up on failure */
+    /* msgAddJSON takes ownership of json, including on its error paths. */
 
 finalize_it:
-    if (iRet != RS_RET_OK) {
-        /* msgAddJSON failed, we need to clean up the JSON object */
-        json_object_put(json);
-    }
     RETiRet;
 }
 
