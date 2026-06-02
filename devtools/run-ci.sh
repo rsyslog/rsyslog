@@ -38,9 +38,9 @@ set +e
 echo CI_CHECK_CMD: "$CI_CHECK_CMD"
 if [ "$CI_MAKE_CHECK_TESTS" != "" ]; then
 	echo CI_MAKE_CHECK_TESTS: "$CI_MAKE_CHECK_TESTS"
-	make $CI_MAKE_CHECK_OPT TESTS="$CI_MAKE_CHECK_TESTS" "${CI_CHECK_CMD:-check}"
+	make $CI_MAKE_CHECK_OPT VERBOSE=1 TESTS="$CI_MAKE_CHECK_TESTS" "${CI_CHECK_CMD:-check}"
 else
-	make $CI_MAKE_CHECK_OPT "${CI_CHECK_CMD:-check}"
+	make $CI_MAKE_CHECK_OPT VERBOSE=1 "${CI_CHECK_CMD:-check}"
 fi
 rc=$?
 

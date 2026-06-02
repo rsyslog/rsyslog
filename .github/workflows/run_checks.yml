@@ -1047,7 +1047,7 @@ jobs:
           fi
 
           set +e
-          make -j10 check
+          make -j10 check VERBOSE=1
           EXIT_CODE=$?
           STATUS=success
           if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
@@ -1636,7 +1636,7 @@ jobs:
                 --disable-elasticsearch-tests \
                 --disable-kafka-tests --disable-snmp-tests
               time_phase build make -j8
-              time_phase check make -j10 check
+              time_phase check make -j10 check VERBOSE=1
             '
 
       - name: Skip arm64 CI, no relevant changes
@@ -1777,7 +1777,7 @@ jobs:
                 --disable-journal-tests"
               time_su_phase "config sanity" "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
               time_su_phase build "make -j8"
-              time_su_phase check "timeout 45m make -j10 check"
+              time_su_phase check "timeout 45m make -j10 check VERBOSE=1"
             '
 
       - name: Skip i386 CI, no relevant changes

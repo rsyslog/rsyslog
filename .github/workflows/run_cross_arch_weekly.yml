@@ -130,7 +130,7 @@ jobs:
               if [ "$ARCH" = "armhf" ]; then
                 make_check_jobs=3
               fi
-              su rsyslogci -c "make -j8 && timeout 100m make -j${make_check_jobs} check"
+              su rsyslogci -c "make -j8 && timeout 100m make -j${make_check_jobs} check VERBOSE=1"
             '
           EXIT_CODE=$?
           STATUS=success

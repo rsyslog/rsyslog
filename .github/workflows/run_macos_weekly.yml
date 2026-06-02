@@ -112,7 +112,7 @@ jobs:
               detect_deadlocks=1:history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           fi
           set +e
-          make -j8 check
+          make -j8 check VERBOSE=1
           EXIT_CODE=$?
           STATUS=success
           if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi

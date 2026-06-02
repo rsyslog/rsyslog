@@ -374,7 +374,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j10 check
+        run: make -j10 check VERBOSE=1
 
       - name: generate coverage
         if: ${{ always() && steps.prepare_build.outcome == 'success' }}
