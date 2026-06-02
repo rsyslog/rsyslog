@@ -154,7 +154,7 @@ If you prefer the manual route instead of the helper script above:
 1.  Ensure distro packages are installed (see "Linux distribution packages" above).
 2.  Create and activate a virtual environment:
         1.  `python3 -m venv rsyslog-docs-build || (python3 -m pip install --user virtualenv && python3 -m virtualenv rsyslog-docs-build)`
-        1.  `source rsyslog-docs-build/bin/activate`
+        1.  `. rsyslog-docs-build/bin/activate`
 3.  Install Git if not present and proceed below.
 
 #### Windows

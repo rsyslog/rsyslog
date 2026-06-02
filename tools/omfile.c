@@ -78,6 +78,7 @@ MODULE_CNFNAME("omfile")
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
+static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal);
 
 /* internal structures
  */
@@ -418,22 +419,29 @@ finalize_it:
  */
 static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) * pVal, int iNewVal) {
     DEFiRet;
+    iRet = normalizeDynaFileCacheSize(&iNewVal);
 
-    if (iNewVal < 1) {
+    cs.iDynaFileCacheSize = iNewVal;
+    DBGPRINTF("DynaFileCacheSize changed to %d.\n", iNewVal);
+    RETiRet;
+}
+
+static rsRetVal normalizeDynaFileCacheSize(int *const pNewVal) {
+    DEFiRet;
+    assert(pNewVal != NULL);
+
+    if (*pNewVal < 1) {
         errno = 0;
-        parser_errmsg("DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
+        parser_errmsg("DynaFileCacheSize must be greater 0 (%d given), changed to 1.", *pNewVal);
         iRet = RS_RET_VAL_OUT_OF_RANGE;
-        iNewVal = 1;
-    } else if (iNewVal > 25000) {
+        *pNewVal = 1;
+    } else if (*pNewVal > 25000) {
         errno = 0;
         parser_warnmsg(
             "DynaFileCacheSize is larger than 25,000 (%d given) - this looks very "
             "large. Is it intended?",
-            iNewVal);
+            *pNewVal);
     }
-
-    cs.iDynaFileCacheSize = iNewVal;
-    DBGPRINTF("DynaFileCacheSize changed to %d.\n", iNewVal);
 
     RETiRet;
 }
@@ -635,7 +643,9 @@ static rsRetVal sigprovPrepare(instanceData *__restrict__ const pData, uchar *__
  * @return RS_RET_OK on success, or an error code if file creation,
  * directory creation, or stream construction fails.
  */
-static rsRetVal prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName) {
+static rsRetVal prepareFile(instanceData *__restrict__ const pData,
+                            const uchar *__restrict__ const newFileName,
+                            const int bFailOnOpenErr) {
     int fd;
     char errStr[1024]; /* buffer for strerr() */
     DEFiRet;
@@ -679,6 +689,11 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData, const uchar 
                 }
             }
             close(fd); /* close again, as we need a stream further on */
+        } else if (bFailOnOpenErr) {
+            const int openErrno = errno;
+            rs_strerror_r(openErrno, errStr, sizeof(errStr));
+            parser_errmsg("omfile: open file '%s' failed: %s", newFileName, errStr);
+            ABORT_FINALIZE((openErrno == ENOENT) ? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR);
         }
     }
 
@@ -754,6 +769,7 @@ static rsRetVal ATTR_NONNULL()
     int iOldest;
     int i;
     int iFirstFree;
+    int bNewCacheSlot;
     rsRetVal localRet;
     dynaFileCacheEntry **pCache;
     DEFiRet;
@@ -761,10 +777,17 @@ static rsRetVal ATTR_NONNULL()
     assert(pData != NULL);
     assert(newFileName != NULL);
 
+    if (pData->iDynaFileCacheSize < 1 || pData->dynCache == NULL) {
+        parser_errmsg("omfile: invalid dynafile cache state for '%s' (size %d) - discarding message",
+                      (char *)pData->fname, pData->iDynaFileCacheSize);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
     pCache = pData->dynCache;
 
     /* first check, if we still have the current file */
-    if ((pData->iCurrElt != -1) && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
+    if ((pData->iCurrElt != -1) && (pCache[pData->iCurrElt] != NULL) && (pCache[pData->iCurrElt]->pName != NULL) &&
+        !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
         /* great, we are all set */
         pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
         STATSCOUNTER_INC(pData->ctrLevel0, pData->mutCtrLevel0);
@@ -788,6 +811,7 @@ static rsRetVal ATTR_NONNULL()
      */
     pData->iCurrElt = -1; /* invalid current element pointer */
     iFirstFree = -1; /* not yet found */
+    bNewCacheSlot = 0;
     iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
     ctOldest = getClockFileAccess(); /* there must always be an older one */
     for (i = 0; i < pData->iCurrCacheSize; ++i) {
@@ -822,8 +846,8 @@ static rsRetVal ATTR_NONNULL()
 
     if (iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
         /* there is space left, so set it to that index */
-        iFirstFree = pData->iCurrCacheSize++;
-        STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned)pData->iCurrCacheSize);
+        iFirstFree = pData->iCurrCacheSize;
+        bNewCacheSlot = 1;
     }
 
     /* Note that the following code sequence does not work with the cache entry itself,
@@ -834,16 +858,21 @@ static rsRetVal ATTR_NONNULL()
         dynaFileDelCacheEntry(pData, iOldest, 0);
         STATSCOUNTER_INC(pData->ctrEvict, pData->mutCtrEvict);
         iFirstFree = iOldest; /* this one *is* now free ;) */
-    } else {
+    }
+    if (pCache[iFirstFree] == NULL) {
         /* we need to allocate memory for the cache structure */
         CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry *)calloc(1, sizeof(dynaFileCacheEntry)));
     }
 
     /* Ok, we finally can open the file */
-    localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
+    localRet = prepareFile(pData, newFileName, 1);
 
     /* check if we had an error */
     if (localRet != RS_RET_OK) {
+        dynaFileDelCacheEntry(pData, iFirstFree, 1);
+        pData->iCurrElt = -1;
+        pData->pStrm = NULL;
+        pData->sigprovFileData = NULL;
         /* We do no longer care about internal messages. The errmsg rate limiter
          * will take care of too-frequent error messages.
          */
@@ -856,12 +885,20 @@ static rsRetVal ATTR_NONNULL()
 
     if ((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
         closeFile(pData); /* need to free failed entry! */
+        dynaFileDelCacheEntry(pData, iFirstFree, 1);
+        pData->iCurrElt = -1;
+        pData->pStrm = NULL;
+        pData->sigprovFileData = NULL;
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
     pCache[iFirstFree]->pStrm = pData->pStrm;
     if (pData->useSigprov) pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
     pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
     pData->iCurrElt = iFirstFree;
+    if (bNewCacheSlot) {
+        pData->iCurrCacheSize++;
+        STATSCOUNTER_SETMAX_NOMUT(pData->ctrMax, (unsigned)pData->iCurrCacheSize);
+    }
     DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
 finalize_it:
@@ -963,7 +1000,7 @@ static rsRetVal writeFile(instanceData *__restrict__ const pData,
         CHKiRet(prepareDynFile(pData, actParam(pParam, pData->iNumTpls, iMsg, 1).param));
     } else { /* "regular", non-dynafile */
         if (pData->pStrm == NULL) {
-            CHKiRet(prepareFile(pData, pData->fname));
+            CHKiRet(prepareFile(pData, pData->fname, 0));
             if (pData->pStrm == NULL) {
                 parser_errmsg("Could not open output file '%s'", pData->fname);
             }
@@ -1017,7 +1054,7 @@ BEGINsetModCnf
         }
 
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pszFileDfltTplName != NULL) {
                 parser_errmsg(
                     "omfile: warning: default template was already "
@@ -1209,6 +1246,7 @@ ENDbeginTransaction
 
 BEGINcommitTransaction
     instanceData *__restrict__ const pData = pWrkrData->pData;
+    rsRetVal localRet;
     unsigned i;
     CODESTARTcommitTransaction;
 
@@ -1219,7 +1257,10 @@ BEGINcommitTransaction
     pthread_mutex_lock(&pData->mutWrite);
 
     for (i = 0; i < nParams; ++i) {
-        writeFile(pData, pParams, i);
+        localRet = writeFile(pData, pParams, i);
+        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
+            iRet = localRet;
+        }
     }
     /* Note: pStrm may be NULL if there was an error opening the stream */
     /* if bFlushOnTXEnd is set, we need to flush on transaction end - in
@@ -1231,7 +1272,10 @@ BEGINcommitTransaction
      * rgerhards, 2017-01-13
      */
     if (pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-        CHKiRet(strm.Flush(pData->pStrm));
+        localRet = strm.Flush(pData->pStrm);
+        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
+            CHKiRet(localRet);
+        }
     }
 
 finalize_it:
@@ -1462,6 +1506,10 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
             pData->iDynaFileCacheSize = (int)pvals[i].val.d.n;
+            const rsRetVal localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
+            if (localRet != RS_RET_OK && localRet != RS_RET_VAL_OUT_OF_RANGE) {
+                ABORT_FINALIZE(localRet);
+            }
         } else if (!strcmp(actpblk.descr[i].name, "ziplevel")) {
             pData->iZipLevel = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "flushinterval")) {
@@ -1503,28 +1551,28 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "addlf")) {
             pData->bAddLF = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "file")) {
-            pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             CODE_STD_STRING_REQUESTnewActInst(1);
             pData->bDynamicName = 0;
         } else if (!strcmp(actpblk.descr[i].name, "dynafile")) {
             if (pData->fname != NULL) {
                 parser_errmsg("omfile: both \"file\" and \"dynafile\" set, will use dynafile");
             }
-            pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             CODE_STD_STRING_REQUESTnewActInst(2);
             pData->bDynamicName = 1;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sig.provider")) {
-            pData->sigprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sigprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "cry.provider")) {
-            pData->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->cryprovName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "closetimeout")) {
             pData->iCloseTimeout = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "rotation.sizelimit")) {
             pData->iSizeLimit = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommand")) {
-            pData->pszSizeLimitCmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszSizeLimitCmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommandpassfilename")) {
             pData->bSizeLimitCmdPassFileName = (int)pvals[i].val.d.n;
         } else {
@@ -1544,7 +1592,7 @@ BEGINnewActInst
 
     int allWhiteSpace = 1;
     for (const char *p = (const char *)pData->fname; *p; ++p) {
-        if (!isspace(*p)) {
+        if (!isspace((unsigned char)*p)) {
             allWhiteSpace = 0;
             break;
         }
@@ -1576,7 +1624,7 @@ BEGINnewActInst
         /* "filename" is actually a template name, we need this as string 1. So let's add it
          * to the pOMSR. -- rgerhards, 2007-07-27
          */
-        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_TPL_AS_DYNAFILE));
         pData->iNumTpls = 2;
         // TODO: create unified code for this (legacy+v6 system)
         /* we now allocate the cache table */
@@ -1651,7 +1699,7 @@ BEGINparseSelectorAct
             /* "filename" is actually a template name, we need this as string 1. So let's add it
              * to the pOMSR. -- rgerhards, 2007-07-27
              */
-            CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_NO_RQD_TPL_OPTS));
+            CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->fname), OMSR_TPL_AS_DYNAFILE));
             /* we now allocate the cache table */
             CHKmalloc(pData->dynCache =
                           (dynaFileCacheEntry **)calloc(cs.iDynaFileCacheSize, sizeof(dynaFileCacheEntry *)));

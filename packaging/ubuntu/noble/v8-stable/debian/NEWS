@@ -1,0 +1,77 @@
+rsyslog (8.2310.0-3) unstable; urgency=medium
+
+  The sandboxing features enabled in 8.2310.0-1, specifically
+  PrivateDevices=yes, broke the forwarding of messages to /dev/xconsole.
+  It is thus recommended to move the named pipe to /run/ and make
+  /dev/xconsole a symlink pointing at /run/xconsole.
+  The example files /usr/share/doc/rsyslog/examples/tmpfiles.d/xconsole.conf
+  and /usr/share/doc/rsyslog/examples/rsyslog.d/xconsole.conf haven been
+  updated to reflect this new setup.
+  If you have forwarding to xconsole enabled, please update your local
+  configuration in /etc/rsyslog.d and /etc/tmpfiles.d accordingly.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 27 Nov 2023 08:01:34 +0100
+
+rsyslog (8.2310.0-1) unstable; urgency=medium
+
+  Enable various systemd sandboxing and security hardening features in
+  rsyslog.service.
+
+  The command "systemd-analyze security rsyslog.service" provides an overview
+  of the active security and sandboxing settings.
+
+  Should you run a custom setup which is broken by those changes, you can
+  disable individual settings by creating a drop-in config file for
+  rsyslog.service via "systemctl edit rsyslog.service".
+
+  See also "man capabilities" and "man systemd.exec".
+
+ -- Michael Biebl <biebl@debian.org>  Tue, 10 Oct 2023 17:03:41 +0200
+
+rsyslog (8.2210.0-3ubuntu2) lunar; urgency=medium
+
+  The apparmor profile of rsyslog now defaults to be enforced on a fresh
+  install and upgrades from an earlier version. Upgrades from this version
+  forward won't change the enforcement status.
+
+  Packages that add an rsyslog configuration that might be blocked by the
+  apparmor profile, can add an apparmor configuration snippet in
+
+  /etc/apparmor.d/rsyslog.d/
+
+  This file should preferably be named like <pkg>.apparmor, but only standard
+  backup extensions are excluded. See
+  https://sources.debian.org/src/apparmor/3.0.8-2/libraries/libapparmor/src/private.c/#L68
+  for a list.
+
+  When the rsyslog service is started, its systemd unit file first executes
+  the /usr/lib/rsyslog/reload-apparmor-profile script via ExecStartPre. That
+  script will reload the rsyslogd apparmor profile including the configuration
+  snippets in /etc/apparmor.d/rsyslogd.d/, if any.
+
+  The confinement status is not changed.
+
+  After this, the unit proceeds to start rsyslog as usual.
+
+  For more information, check the README.apparmor file in the documentation
+  directory of this package.
+
+ -- Andreas Hasenack <andreas@canonical.com>  Sun, 05 Feb 2023 15:42:31 -0300
+
+rsyslog (5.8.1-1) unstable; urgency=low
+
+  The way rsyslog processes SIGHUP has changed. It no longer does a reload
+  of its configuration, but simply closes all open files, which is a much more
+  lightweight operation.
+  To apply a changed configuration, rsyslogd needs to be restarted now.
+  As a consequence, the reload action has been dropped from the init script.
+
+  A new action called "rotate" was added to the init script, which signals
+  rsyslogd to close all open files. This new action is used in the rsyslog
+  logrotate configuration file.
+
+  For more information, see:
+  http://www.rsyslog.com/doc/v4compatibility.html
+  http://www.rsyslog.com/doc/v5compatibility.html
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 30 May 2011 18:26:51 +0200

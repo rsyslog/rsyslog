@@ -65,6 +65,11 @@ def file_exists_at_ref(ref: str, path: str) -> bool:
     return result.returncode == 0
 
 
+def list_tree(ref: str, path: str) -> list[str]:
+    output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
+    return [line for line in output.splitlines() if line]
+
+
 def read_file_at_ref(ref: str, path: str) -> str:
     return run_git(["show", f"{ref}:{path}"])
 
@@ -119,7 +124,7 @@ def extract_parameter_names(content: str) -> set[str]:
 
 
 def wrapper_sources_base_script(content: str, base_script: str) -> bool:
-    pattern = re.compile(r"(?m)^\s*(?:\.|source)\s+(.*?)(\s*#.*)?$")
+    pattern = re.compile(r"(?m)^\s*\.\s+['\"]?(.*?)['\"]?(\s*#.*)?$")
     for match in pattern.finditer(content):
         path = match.group(1).strip()
         if path == base_script or path.endswith(f"/{base_script}"):
@@ -129,7 +134,7 @@ def wrapper_sources_base_script(content: str, base_script: str) -> bool:
 
 def build_tests_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
     # This rule is strict: new or renamed shell tests must stay wired into
-    # tests/Makefile.am, and lightweight -vg.sh wrappers should source the base
+    # tests/Makefile.am, and lightweight -vg.sh wrappers should include the base
     # scenario instead of cloning its logic.
     added_tests: list[str] = []
     renamed_tests: list[dict[str, str]] = []
@@ -215,7 +220,7 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
     relevant_paths = ["doc/Makefile.am"]
     for item in changed_docs:
         path = item["path"]
-        relative = path[len("doc/") :]
+        relative = path[len("doc/"):]
         if item["status"].startswith(("A", "R")) and relative not in doc_makefile:
             missing_entries.append(relative)
         if item["status"].startswith("D") and relative in doc_makefile:
@@ -223,7 +228,7 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
         if item["status"].startswith("R"):
             old_path = item["old_path"]
             if old_path:
-                old_relative = old_path[len("doc/") :]
+                old_relative = old_path[len("doc/"):]
                 if old_relative in doc_makefile:
                     stale_entries.append(old_relative)
         relevant_paths.append(path)
@@ -245,9 +250,59 @@ def build_doc_check(name_status: list[dict[str, object]], base: str, head: str) 
     }
 
 
-def list_tree(ref: str, path: str) -> list[str]:
-    output = run_git(["ls-tree", "-r", "--name-only", ref, "--", path], check=False)
-    return [line for line in output.splitlines() if line]
+def build_doc_xref_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
+    # Scan changed RST files for :doc: cross-references and verify each target
+    # is registered in doc/Makefile.am.  A reference that resolves to an
+    # unregistered file will cause a Sphinx "unknown document" warning (which CI
+    # treats as an error) but is invisible to the EXTRA_DIST check above.
+    doc_makefile = (ROOT_DIR / "doc" / "Makefile.am").read_text(encoding="utf-8")
+    doc_ref_re = re.compile(r":doc:`(?:[^`<]+\s*<)?([^`>]+)>?`")
+
+    changed_docs = [
+        str(entry.get("path", ""))
+        for entry in name_status
+        if str(entry.get("path", "")).startswith("doc/source/") and str(entry.get("path", "")).endswith(".rst")
+        and not str(entry.get("status", "")).startswith("D")
+    ]
+
+    broken_refs: list[dict[str, object]] = []
+    relevant_paths = list(changed_docs)
+
+    for doc_path in changed_docs:
+        try:
+            content = read_file_at_ref(head, doc_path)
+        except Exception:
+            continue
+        src_dir = Path(doc_path).parent  # e.g. doc/source/development
+        for ref_target in doc_ref_re.findall(content):
+            ref_target = ref_target.strip()
+            # Resolve relative to the source file's directory inside doc/source/
+            if ref_target.startswith("/"):
+                resolved = Path("doc/source") / ref_target.lstrip("/")
+            else:
+                resolved = src_dir / ref_target
+            # Normalize away any ../ components so the path can be matched
+            # against doc/Makefile.am entries (stored as source/.../.../file.rst)
+            rst_path = Path(os.path.normpath(str(resolved))).with_suffix(".rst")
+            # Normalise to doc/-relative string for Makefile.am lookup
+            try:
+                rel = str(rst_path.relative_to("doc"))
+            except ValueError:
+                rel = str(rst_path)
+            if rel not in doc_makefile:
+                broken_refs.append({"file": doc_path, "ref": ref_target, "resolved": rel})
+
+    applicable = bool(changed_docs)
+    return {
+        "id": "doc-xref-sync",
+        "title": "Documentation cross-reference sync",
+        "applicable": applicable,
+        "facts": {
+            "changed_docs": changed_docs,
+            "broken_refs": broken_refs,
+            "relevant_diff": limited_diff(base, head, relevant_paths) if applicable else "",
+        },
+    }
 
 
 def build_module_check(name_status: list[dict[str, object]], base: str, head: str) -> dict[str, object]:
@@ -432,6 +487,7 @@ def main() -> int:
     checks = [
         build_tests_check(name_status, diff_base, head),
         build_doc_check(name_status, diff_base, head),
+        build_doc_xref_check(name_status, diff_base, head),
         module_check,
         build_module_build_wiring_check(module_check, diff_base, head),
         build_parameter_doc_check(name_status, diff_base, head),

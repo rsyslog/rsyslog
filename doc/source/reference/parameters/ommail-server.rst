@@ -10,7 +10,8 @@ server
 
 .. summary-start
 
-Specifies the hostname or IP address of the SMTP server used by ommail actions.
+Specifies the hostname or IP address of the SMTP server used by ommail
+SMTP-mode actions.
 
 .. summary-end
 
@@ -25,9 +26,10 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Name or IP address of the SMTP server to be used. While a default of
-127.0.0.1 (the local machine) exists for legacy configurations, this
-parameter is required and must be set explicitly in modern configurations.
+Name or IP address of the SMTP server to be used by ``mode="smtp"``.
+While a default of 127.0.0.1 (the local machine) exists for legacy
+configurations, this parameter is required for modern SMTP-mode
+configurations. It is not used by ``mode="sendmail"``.
 
 Input usage
 ------------

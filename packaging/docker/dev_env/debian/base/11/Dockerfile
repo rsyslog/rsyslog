@@ -43,6 +43,8 @@ RUN	apt-get install -y \
 	pkg-config \
 	postgresql-client \
 	python3-docutils \
+	python3-autopep8 \
+	pycodestyle \
 	python3-pysnmp4 \
 	software-properties-common \
 	tcl-dev \

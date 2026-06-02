@@ -1,0 +1,135 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/architecture.mk
+
+# export DEB_HOST_MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CPPFLAGS_MAINT_APPEND = -DPATH_PIDFILE=\"/run/rsyslogd.pid\"
+export PYTHON=/usr/bin/python3
+
+# the default LDFLAGS="-Wl,-Bsymbolic-functions" caused rsyslog to
+# segfault on receipt of first message (see LP: #794230)
+export DEB_LDFLAGS_MAINT_STRIP = -Wl,-Bsymbolic-functions
+
+# Disable imfile tests in CI (GitHub Actions) - they fail due to logrotate permissions in containers
+imfile_tests = $(if $(GITHUB_ACTIONS),--disable-imfile-tests,--enable-imfile-tests)
+
+%:
+	dh $@
+
+ifeq ($(DEB_HOST_ARCH_OS), linux)
+confflags += 	--enable-imptcp \
+		--enable-imjournal \
+		--enable-omjournal \
+		--enable-kmsg
+endif
+
+override_dh_auto_configure: build-qpid-proton
+	PKG_CONFIG_PATH="$(CURDIR)/build-qpid/usr/lib/pkgconfig" \
+	LDFLAGS="-L$(CURDIR)/build-qpid/usr/lib" \
+	dh_auto_configure -- \
+		$(confflags) \
+		--enable-mysql \
+		--enable-pgsql \
+		--enable-ommongodb \
+		--enable-elasticsearch \
+		--enable-mmjsonparse \
+		--enable-imptcp \
+		--enable-imkafka \
+		--enable-omkafka \
+		--enable-mail \
+		--enable-imfile \
+		$(imfile_tests) \
+		--enable-impstats \
+		--enable-klog \
+		--enable-gssapi-krb5 \
+		--enable-gnutls \
+		--enable-openssl \
+		--enable-relp \
+		--enable-snmp \
+		--enable-pmaixforwardedfrom \
+		--enable-pmciscoios \
+		--enable-pmcisconames \
+		--enable-pmlastmsg \
+		--enable-pmsnare \
+		--enable-omstdout \
+		--enable-omprog \
+		--enable-omuxsock \
+		--enable-mmanon \
+		--enable-mmjsonparse \
+		--enable-mmutf8fix \
+		--enable-mmpstrucdata \
+		--enable-mmsequence \
+		--enable-mmfields \
+		--enable-mmrm1stspace \
+		--enable-mmkubernetes \
+		--enable-mmleefparse \
+		--enable-imczmq \
+		--enable-omczmq \
+		--enable-omhiredis \
+		--enable-fmhash \
+		--enable-testbench \
+		--disable-default-tests \
+		--disable-extended-tests \
+		--enable-imdiag \
+		--enable-libzstd \
+		--enable-impcap \
+		--enable-imdocker \
+		--enable-omhiredis \
+		--enable-mmdblookup \
+		--enable-mmsnareparse \
+		--enable-improg \
+		--enable-clickhouse \
+		--enable-omudpspoof \
+		--enable-mmnormalize \
+		--enable-omazureeventhubs \
+		--enable-omhttp \
+		--enable-qpidproton_static \
+		--enable-omsendertrack \
+		--enable-omhttp \
+		--enable-imhttp \
+		--disable-libgcrypt \
+		--disable-generate-man-pages \
+		--disable-fmhttp \
+		--disable-liblogging-stdlog \
+		--without-valgrind-testbench
+
+# Doc build: doc/requirements.txt needs sphinx>=4.5.0; noble has 7.x.
+# Using pip for consistency; Build-Depends: python3-pip.
+# PEP 668 (Ubuntu 24.04+): use --break-system-packages in isolated build env.
+override_dh_auto_build:
+	dh_auto_build
+	cd doc && pip3 install --break-system-packages -r requirements.txt && PATH="/usr/local/bin:$$PATH" make -j$$(nproc) html-local
+
+override_dh_auto_install:
+	dh_auto_install
+	install --mode=644 -D plugins/ommysql/createDB.sql \
+		debian/rsyslog-mysql/usr/share/dbconfig-common/data/rsyslog-mysql/install/mysql
+	install --mode=644 -D plugins/ompgsql/createDB.sql \
+		debian/rsyslog-pgsql/usr/share/dbconfig-common/data/rsyslog-pgsql/install/pgsql
+
+override_dh_install:
+	find debian/tmp -name '*.la' -print -delete
+	dh_install
+
+# Remove our custom build-qpid tree. Run dh_auto_clean (make distclean) when the
+# tree is configured; on fresh extract it may fail (no Makefile), so ignore errors.
+override_dh_auto_clean:
+	rm -rf build-qpid
+	-dh_auto_clean
+
+override_dh_installinit:
+	dh_apparmor --profile-name=usr.sbin.rsyslogd -prsyslog
+	dh_installinit
+
+# Skip tests on noble (make check disabled).
+override_dh_auto_test:
+	@echo "Skipping tests on noble (make check disabled)."
+
+build-qpid-proton:
+	chmod +x debian/build-qpid-proton.sh
+	# Ensure pkg-config can find the locally built proton
+	export PKG_CONFIG_PATH="$(CURDIR)/build-qpid/qpid-proton/lib/pkgconfig:$$PKG_CONFIG_PATH"
+	# Set DESTDIR to a local build directory for configure-time access
+	DESTDIR="$(CURDIR)/build-qpid" debian/build-qpid-proton.sh

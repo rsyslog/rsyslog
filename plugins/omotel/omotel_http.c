@@ -264,12 +264,12 @@ rsRetVal omotel_http_client_create(const omotel_http_client_config_t *config, om
     {
         const char *ct = (config->content_type != NULL && config->content_type[0] != '\0') ? config->content_type
                                                                                            : "application/json";
-        char ct_header[256];
-        int n = snprintf(ct_header, sizeof(ct_header), "Content-Type: %s", ct);
-        if (n < 0 || (size_t)n >= sizeof(ct_header)) {
-            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        char *ct_header = NULL;
+        if (asprintf(&ct_header, "Content-Type: %s", ct) == -1) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
         client->headers = curl_slist_append(client->headers, ct_header);
+        free(ct_header);
         if (client->headers == NULL) {
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }

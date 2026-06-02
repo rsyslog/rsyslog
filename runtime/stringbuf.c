@@ -275,14 +275,54 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar *const psz, con
     rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
     assert(psz != NULL);
 
-    /* does the string fit? */
-    if (pThis->iStrLen + iStrLen >= pThis->iBufSize) {
-        CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
+    /* Keep one spare byte for cstrFinalize(), which appends the trailing NUL. */
+    if (pThis->iStrLen + iStrLen + 1 > pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, iStrLen + 1)); /* need more memory! */
     }
 
     /* ok, now we always have sufficient continues memory to do a memcpy() */
     memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
     pThis->iStrLen += iStrLen;
+
+finalize_it:
+    RETiRet;
+}
+
+
+rsRetVal rsCStrAppendParts(cstr_t *const pThis, const rs_cstr_part_t *const parts, const size_t count) {
+    uchar *dst;
+    size_t total_len = 0;
+    size_t i;
+    DEFiRet;
+
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    assert(parts != NULL || count == 0);
+
+    for (i = 0; i < count; ++i) {
+        if (parts[i].len == 0) {
+            continue;
+        }
+        assert(parts[i].ptr != NULL);
+        total_len += parts[i].len;
+    }
+
+    if (total_len == 0) {
+        FINALIZE;
+    }
+
+    if (pThis->iStrLen + total_len + 1 > pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, total_len + 1));
+    }
+
+    dst = pThis->pBuf + pThis->iStrLen;
+    for (i = 0; i < count; ++i) {
+        if (parts[i].len == 0) {
+            continue;
+        }
+        memcpy(dst, parts[i].ptr, parts[i].len);
+        dst += parts[i].len;
+    }
+    pThis->iStrLen += total_len;
 
 finalize_it:
     RETiRet;
@@ -698,12 +738,13 @@ int ATTR_NONNULL(1, 2) rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
     assert(sz != NULL);
 
     if (pThis->iStrLen == 0) return 0;
+    if (pThis->iStrLen > len_sz) return -1;
 
     /* compute the largest index where a match could occur - after all,
      * the to-be-located string must be able to be present in the
      * searched string (it needs its size ;)).
      */
-    iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;
+    iMax = len_sz - pThis->iStrLen;
 
     bFound = 0;
     i = 0;

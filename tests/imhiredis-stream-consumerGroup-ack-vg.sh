@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/imhiredis-stream-consumerGroup-ack.sh
+. ${srcdir:=.}/imhiredis-stream-consumerGroup-ack.sh

@@ -156,6 +156,7 @@ typedef struct instanceConf_s {
     sbool dynBulkId;
     sbool dynPipelineName;
     sbool bulkmode;
+    int iNumTpls;
     size_t maxbytes;
     sbool useHttps;
     sbool allowUnsignedCerts;
@@ -486,9 +487,20 @@ static rsRetVal computeBaseUrl(const char *const serverParam,
                      : es_addBuf(&urlBuf, SCHEME_HTTP, sizeof(SCHEME_HTTP) - 1);
 
     if (r == 0) r = es_addBuf(&urlBuf, (char *)serverParam, strlen(serverParam));
-    if (r == 0 && !strchr(host, ':')) {
-        snprintf(portBuf, sizeof(portBuf), ":%d", defaultPort);
-        r = es_addBuf(&urlBuf, portBuf, strlen(portBuf));
+    /* Append serverport unless the server string already contains an explicit port. */
+    if (r == 0) {
+        int has_port = 0;
+        if (host[0] == '[') {
+            /* IPv6 bracket notation: port would appear after ']' */
+            const char *bracket_end = strchr(host, ']');
+            if (bracket_end && strchr(bracket_end, ':')) has_port = 1;
+        } else {
+            if (strchr(host, ':')) has_port = 1;
+        }
+        if (!has_port) {
+            snprintf(portBuf, sizeof(portBuf), ":%d", defaultPort);
+            r = es_addBuf(&urlBuf, portBuf, strlen(portBuf));
+        }
     }
     if (r == 0) r = es_addChar(&urlBuf, '/');
     if (r == 0) *baseUrl = (uchar *)es_str2cstr(urlBuf, NULL);
@@ -515,6 +527,9 @@ struct versionDetectBuffer {
     size_t len;
 };
 
+/* Keep startup platform probes bounded: root endpoint metadata is tiny JSON. */
+#define ES_VERSION_DETECT_MAX_RESPONSE (1024U * 1024U)
+
 /**
  * @brief cURL write callback used during platform/version detection.
  *
@@ -529,12 +544,28 @@ struct versionDetectBuffer {
 static size_t ATTR_NONNULL(1, 4)
     curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
     struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
-    const size_t size_add = size * nmemb;
+    size_t size_add;
+    size_t newlen;
     char *tmp;
 
-    if (size_add == 0) return 0;
+    if (size == 0 || nmemb == 0) return 0;
+    if (nmemb > SIZE_MAX / size) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    size_add = size * nmemb;
+    if (buffer->len > SIZE_MAX - size_add) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response size overflow");
+        return 0;
+    }
+    newlen = buffer->len + size_add;
+    if (newlen > ES_VERSION_DETECT_MAX_RESPONSE) {
+        LogError(0, RS_RET_ERR, "omelasticsearch: platform detection response exceeded %u-byte limit",
+                 (unsigned)ES_VERSION_DETECT_MAX_RESPONSE);
+        return 0;
+    }
 
-    tmp = realloc(buffer->data, buffer->len + size_add + 1);
+    tmp = realloc(buffer->data, newlen + 1);
     if (tmp == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: realloc failed in curlVersionResult");
         return 0;
@@ -542,7 +573,7 @@ static size_t ATTR_NONNULL(1, 4)
 
     memcpy(tmp + buffer->len, ptr, size_add);
     buffer->data = tmp;
-    buffer->len += size_add;
+    buffer->len = newlen;
     buffer->data[buffer->len] = '\0';
 
     return size_add;
@@ -890,11 +921,13 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         free(healthUrl);
 
         if (res == CURLE_OK) {
-            DBGPRINTF(
-                "omelasticsearch: checkConn %s completed with success "
-                "on attempt %d\n",
-                serverUrl, i);
-            ABORT_FINALIZE(RS_RET_OK);
+            long httpStatus = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
+            if (httpStatus >= 200 && httpStatus <= 299) {
+                DBGPRINTF("omelasticsearch: checkConn %s completed with success on attempt %d\n", serverUrl, i);
+                ABORT_FINALIZE(RS_RET_OK);
+            }
+            DBGPRINTF("omelasticsearch: checkConn %s HTTP status %ld on attempt %d\n", serverUrl, httpStatus, i);
         }
 
         DBGPRINTF("omelasticsearch: checkConn %s failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));
@@ -959,6 +992,43 @@ static void ATTR_NONNULL(1) getIndexTypeAndParent(const instanceData *const pDat
 
 done:
     return;
+}
+
+
+static int ATTR_NONNULL(1) getTemplateCount(const instanceData *const pData) {
+    int iNumTpls = 1;
+    if (pData->dynSrchIdx) ++iNumTpls;
+    if (pData->dynSrchType) ++iNumTpls;
+    if (pData->dynParent) ++iNumTpls;
+    if (pData->dynBulkId) ++iNumTpls;
+    if (pData->dynPipelineName) ++iNumTpls;
+
+    return iNumTpls;
+}
+
+
+static rsRetVal ATTR_NONNULL(1) validateActionStrings(const instanceData *const pData, uchar **const tpls) {
+    DEFiRet;
+
+    if (tpls == NULL) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "omelasticsearch: action template strings are missing - "
+                 "cannot submit message");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+
+    for (int i = 0; i < pData->iNumTpls; ++i) {
+        if (tpls[i] == NULL) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "omelasticsearch: rendered action template string %d is "
+                     "NULL - cannot submit message",
+                     i);
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -1177,7 +1247,7 @@ finalize_it:
  */
 static rsRetVal getSection(const char *bulkRequest, const char **bulkRequestNextSectionStart) {
     DEFiRet;
-    char *idx = 0;
+    const char *idx = 0;
     if ((idx = strchr(bulkRequest, '\n')) != 0) /*intermediate section*/
     {
         *bulkRequestNextSectionStart = ++idx;
@@ -1796,11 +1866,6 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
                 DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
                 ABORT_FINALIZE(RS_RET_ERR);
             }
-        } else if (pData->retryFailures) {
-            if (initializeRetryFailuresContext(pWrkrData, &ctx) != RS_RET_OK) {
-                DBGPRINTF("omelasticsearch: error initializing retry failures context.\n");
-                ABORT_FINALIZE(RS_RET_ERR);
-            }
         } else {
             DBGPRINTF("omelasticsearch: None of the modes match file write. No data to write.\n");
             ABORT_FINALIZE(RS_RET_ERR);
@@ -1924,17 +1989,17 @@ static rsRetVal ATTR_NONNULL(1, 2)
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 
     if ((pWrkrData->pData->rebindInterval > -1) && (pWrkrData->nOperations > pWrkrData->pData->rebindInterval)) {
-        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
+        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1L);
         pWrkrData->nOperations = 0;
         STATSCOUNTER_INC(rebinds, mutRebinds);
     } else {
         /* by default, reuse existing connections */
-        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0);
+        curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0L);
     }
     if ((pWrkrData->pData->rebindInterval > -1) && (pWrkrData->nOperations == pWrkrData->pData->rebindInterval)) {
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
     } else {
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 0);
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 0L);
     }
 
     if (pWrkrData->pData->numServers > 1) {
@@ -1945,7 +2010,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CHKiRet(setPostURL(pWrkrData, tpls));
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
@@ -1964,6 +2029,14 @@ static rsRetVal ATTR_NONNULL(1, 2)
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
         STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
         LogError(0, RS_RET_SUSPENDED, "omelasticsearch: authentication failed with status %ld",
+                 pWrkrData->httpStatusCode);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
+    if (pWrkrData->httpStatusCode >= 500 || pWrkrData->httpStatusCode == 429) {
+        STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+        STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
+        LogError(0, RS_RET_SUSPENDED, "omelasticsearch: server returned unexpected HTTP status code %ld",
                  pWrkrData->httpStatusCode);
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
@@ -2014,6 +2087,8 @@ ENDbeginTransaction
 BEGINdoAction
     CODESTARTdoAction;
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
+
+    CHKiRet(validateActionStrings(pWrkrData->pData, ppString));
 
     if (pWrkrData->pData->bulkmode) {
         const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
@@ -2084,11 +2159,11 @@ finalize_it:
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
     if (pWrkrData->pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -2165,6 +2240,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->dynSrchIdx = 0;
     pData->dynSrchType = 0;
     pData->dynParent = 0;
+    pData->iNumTpls = 1;
     pData->useHttps = 0;
     pData->bulkmode = 0;
     pData->maxbytes = 104857600;  // 100 MB Is the default max message size that ships with ElasticSearch
@@ -2216,7 +2292,7 @@ BEGINnewActInst
         if (!strcmp(actpblk.descr[i].name, "server")) {
             servers = pvals[i].val.d.ar;
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "erroronly")) {
             pData->errorOnly = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "interleaved")) {
@@ -2228,23 +2304,27 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "indextimeout")) {
             pData->indexTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "uid")) {
-            pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-            pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "apikey")) {
-            pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "searchindex")) {
-            pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
-            pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+                   "omelasticsearch: parameter 'searchType' is deprecated because "
+                   "Elasticsearch mapping types are obsolete; remove this parameter "
+                   "for Elasticsearch 8 and later");
+            CHKmalloc(pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pipelinename")) {
-            pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynpipelinename")) {
             pData->dynPipelineName = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "skippipelineifempty")) {
             pData->skipPipelineIfEmpty = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "parent")) {
-            pData->parent = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->parent = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynsearchindex")) {
             pData->dynSrchIdx = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "dynsearchtype")) {
@@ -2260,17 +2340,17 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
             pData->skipVerifyHost = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "timeout")) {
-            pData->timeout = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->timeout = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "usehttps")) {
             pData->useHttps = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynbulkid")) {
             pData->dynBulkId = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "bulkid")) {
-            pData->bulkId = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->bulkId = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.cacert' file %s couldn't be accessed",
@@ -2279,7 +2359,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.mycert' file %s couldn't be accessed",
@@ -2288,7 +2368,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.myprivkey' file %s couldn't be accessed",
@@ -2297,7 +2377,8 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "writeoperation")) {
-            char *writeop = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *writeop;
+            CHKmalloc(writeop = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (writeop && !strcmp(writeop, "create")) {
                 pData->writeOperation = ES_WRITE_CREATE;
             } else if (writeop && !strcmp(writeop, "index")) {
@@ -2317,9 +2398,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "retryruleset")) {
-            pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->retryRulesetName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "rebindinterval")) {
             pData->rebindInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "esversion.major")) {
@@ -2412,14 +2493,9 @@ BEGINnewActInst
     if (pData->uid != NULL && pData->apiKey == NULL)
         CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
-    iNumTpls = 1;
-    if (pData->dynSrchIdx) ++iNumTpls;
-    if (pData->dynSrchType) ++iNumTpls;
-    if (pData->dynParent) ++iNumTpls;
-    if (pData->dynBulkId) ++iNumTpls;
-    if (pData->dynPipelineName) ++iNumTpls;
-    DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
-    CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
+    pData->iNumTpls = getTemplateCount(pData);
+    DBGPRINTF("omelasticsearch: requesting %d templates\n", pData->iNumTpls);
+    CODE_STD_STRING_REQUESTnewActInst(pData->iNumTpls);
 
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup((pData->tplName == NULL) ? " StdJSONFmt" : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));

@@ -472,24 +472,24 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "server")) {
-            pData->szTarget = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szTarget = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             pData->iPort = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "transport")) {
-            pData->szTransport = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szTransport = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "version")) {
             pData->iSNMPVersion = pvals[i].val.d.n;
             if (pData->iSNMPVersion < 0 || cs.iSNMPVersion > 1) pData->iSNMPVersion = 1;
         } else if (!strcmp(actpblk.descr[i].name, "community")) {
-            pData->szCommunity = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szCommunity = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "enterpriseoid")) {
-            pData->szEnterpriseOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szEnterpriseOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "trapoid")) {
-            pData->szSnmpTrapOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szSnmpTrapOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "messageoid")) {
-            pData->szSyslogMessageOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szSyslogMessageOID = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "snmpv1dynsource")) {
-            pData->szSnmpV1Source = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szSnmpV1Source = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "traptype")) {
             pData->iTrapType = pvals[i].val.d.n;
             if (cs.iTrapType < 0 || cs.iTrapType > 6) {
@@ -499,7 +499,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "specifictype")) {
             pData->iSpecificType = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "ompipe: program error, non-handled "

@@ -1,0 +1,16 @@
+modules:
+  - load: "../plugins/omazuredce/.libs/omazuredce"
+
+rulesets:
+  - name: main
+    statements:
+      - type: omazuredce
+        client_id: "@AZURE_DCE_CLIENT_ID@"
+        client_secret: "@AZURE_DCE_CLIENT_SECRET@"
+        tenant_id: "@AZURE_DCE_TENANT_ID@"
+        dce_url: "@AZURE_DCE_URL@"
+        dcr_id: "@AZURE_DCE_DCR_ID@"
+        table_name: "@AZURE_DCE_TABLE_NAME@"
+        compression: default
+        max_batch_bytes: 1048576
+        flush_timeout_ms: 0

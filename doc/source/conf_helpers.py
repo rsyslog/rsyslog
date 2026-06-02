@@ -27,6 +27,7 @@ def _run_git(args):
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
+
 def get_current_branch():
     """Return the current branch we are on or the branch that the detached head
     is pointed to"""
@@ -53,10 +54,11 @@ def get_current_branch():
             if '*' in branch:
                 # Split on the remote/branch separator, grab the
                 # last entry in the list and then strip off the trailing
-                # parentheis
+                # parenthesis.
                 detached_from_branch = branch.split('/')[-1].replace(')', '')
 
                 return detached_from_branch
+        return 'unknown'
 
     else:
         # The assumption is that we are on a branch at this point. Return that.
@@ -67,17 +69,25 @@ def get_current_stable_version():
     """Return the current X.Y stable version number from the latest git tag"""
 
     def get_latest_tag():
-        """"Helper function: Return the latest git tag"""
+        """Helper function: Return the latest git tag"""
 
         git_tag_output = _run_git(['tag', '--list', 'v*'])
         if not git_tag_output:
             return None
 
-        git_tag_list = re.sub('[A-Za-z]', '', git_tag_output).split('\n')
-        git_tag_list.sort(key=lambda s: [int(u) for u in s.split('.')])
+        git_tag_list = []
+        for tag in git_tag_output.splitlines():
+            match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', tag.strip())
+            if match:
+                git_tag_list.append(tuple(int(part) for part in match.groups()))
+
+        if not git_tag_list:
+            return None
+
+        git_tag_list.sort()
 
         # The latest tag is the last in the list
-        git_tag_latest = git_tag_list[-1]
+        git_tag_latest = "{}.{}.{}".format(*git_tag_list[-1])
 
         return git_tag_latest
 
@@ -87,7 +97,7 @@ def get_current_stable_version():
         return '0.0'
 
     # Return 'X.Y' from 'X.Y.Z'
-    return latest_tag[:-2]
+    return '.'.join(latest_tag.split('.')[:2])
 
 
 def get_next_stable_version():

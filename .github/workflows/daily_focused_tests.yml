@@ -1,0 +1,519 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: daily focused tests
+
+'on':
+  schedule:
+    # Daily at 02:43 UTC. These lanes used to run during PR processing only
+    # to feed Codecov; keep the test value without making every PR pay for it.
+    - cron: '43 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RSYSLOG_UPLOAD_FAILURE_ARTIFACTS: '1'
+
+jobs:
+  focused_test:
+    name: daily ${{ matrix.lane }} tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: base
+            timeout: 50
+          - lane: journal
+            timeout: 30
+          - lane: kafka
+            timeout: 25
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: add extra dependencies
+        run: |
+          sudo apt-get update
+          case "${{ matrix.lane }}" in
+          'base')
+            sudo apt-get install -y --no-install-recommends \
+              autoconf-archive \
+              clang-tools \
+              cmake \
+              cmake-curses-gui \
+              curl \
+              default-jre-headless \
+              faketime \
+              gdb \
+              lcov \
+              libaprutil1-dev \
+              libbson-dev \
+              libcap-ng-dev \
+              libcap-ng0 \
+              libcivetweb-dev \
+              libcurl4-gnutls-dev \
+              libdbd-mysql \
+              libdbi-dev \
+              libevent-dev \
+              libgcrypt20-dev \
+              libglib2.0-dev \
+              libgnutls28-dev \
+              libhiredis-dev \
+              libkrb5-dev \
+              liblz4-dev \
+              libmaxminddb-dev \
+              libmongoc-dev \
+              libmysqlclient-dev \
+              libnet1-dev \
+              libpcap-dev \
+              libprotobuf-c-dev \
+              librabbitmq-dev \
+              librdkafka-dev \
+              libsnappy-dev \
+              libsnmp-dev \
+              libsodium-dev \
+              libsasl2-2 \
+              libsasl2-dev \
+              libsasl2-modules \
+              libssl-dev \
+              libsystemd-dev \
+              libtirpc-dev \
+              libtokyocabinet-dev \
+              libtool \
+              libtool-bin \
+              libyaml-dev \
+              libzstd-dev \
+              libestr-dev \
+              libfastjson-dev \
+              librelp-dev \
+              liblognorm-dev \
+              libczmq-dev \
+              mysql-server \
+              net-tools \
+              postgresql-client \
+              libpq-dev \
+              protobuf-c-compiler \
+              python3-dev \
+              python3-docutils \
+              python3-pip \
+              python3-pysnmp4 \
+              python3-sphinx \
+              ruby-dev \
+              software-properties-common \
+              tcl-dev \
+              uuid-dev \
+              valgrind \
+              zlib1g-dev
+            ;;
+          'journal')
+            sudo apt-get install -y \
+              autoconf-archive \
+              libestr-dev \
+              libgcrypt20-dev \
+              libglib2.0-dev \
+              libgnutls28-dev \
+              liblognorm-dev \
+              liblz4-dev \
+              libnet1-dev \
+              librelp-dev \
+              libssl-dev \
+              libsystemd-dev \
+              libtool \
+              libtool-bin \
+              libyaml-dev \
+              libzstd-dev \
+              lcov \
+              lsof \
+              make \
+              net-tools \
+              pkg-config \
+              python3-docutils \
+              software-properties-common \
+              valgrind \
+              wget \
+              zstd
+            ;;
+          'kafka')
+            sudo apt-get install -y --no-install-recommends \
+              autoconf-archive \
+              faketime \
+              gdb \
+              kcat \
+              libestr-dev \
+              libfastjson-dev \
+              libgcrypt20-dev \
+              libgnutls28-dev \
+              liblognorm-dev \
+              libnet1-dev \
+              librelp-dev \
+              librdkafka-dev \
+              libsasl2-dev \
+              libsystemd-dev \
+              libtirpc-dev \
+              libtool-bin \
+              lcov \
+              uuid-dev \
+              valgrind
+            ;;
+          *)
+            echo "unknown lane: ${{ matrix.lane }}" >&2
+            exit 1
+            ;;
+          esac
+
+      - name: build journal helper dependencies
+        if: matrix.lane == 'journal'
+        run: |
+          mkdir helper-projects
+          cd helper-projects
+          git clone https://github.com/rsyslog/libfastjson.git
+          cd libfastjson
+          autoreconf -fi
+          ./configure --prefix=/usr --enable-compile-warnings=yes \
+            --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include
+          make -j
+          sudo make install
+
+      - name: reset hosts for Kafka lane
+        if: matrix.lane == 'kafka'
+        run: |
+          cat -n /etc/hosts
+          echo resetting
+          sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
+          cat -n /etc/hosts
+
+      - name: require Codecov token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "CODECOV_TOKEN secret is not configured" >&2
+            exit 1
+          fi
+
+      - name: enable coverage flags
+        run: |
+          echo 'CFLAGS=-g -O0 --coverage -fprofile-update=atomic' >> "$GITHUB_ENV"
+          echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
+
+      - name: prepare for build
+        id: prepare_build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+        run: |
+          case "${{ matrix.lane }}" in
+          'base')
+            autoreconf -fvi
+            ./configure \
+              --enable-compile-warnings=error \
+              --enable-clickhouse \
+              --enable-clickhouse-tests=no \
+              --disable-elasticsearch \
+              --disable-elasticsearch-tests \
+              --disable-ffaup \
+              --enable-gnutls \
+              --enable-gssapi-krb5 \
+              --enable-imbatchreport \
+              --enable-imczmq \
+              --enable-imdiag \
+              --enable-imdocker \
+              --disable-imdocker-tests \
+              --enable-imfile \
+              --enable-imhttp \
+              --enable-imjournal \
+              --disable-imkafka \
+              --disable-omkafka \
+              --enable-impstats \
+              --enable-impcap \
+              --enable-imptcp \
+              --disable-kafka-tests \
+              --disable-ksi-ls12 \
+              --enable-libdbi \
+              --enable-libfaketime \
+              --enable-libgcrypt \
+              --enable-libzstd \
+              --enable-mail \
+              --enable-mmanon \
+              --enable-mmaudit \
+              --enable-mmcapture \
+              --enable-mmcount \
+              --enable-mmdarwin \
+              --enable-mmdblookup \
+              --enable-mmfields \
+              --enable-mmjsonparse \
+              --enable-mmkubernetes \
+              --enable-mmnormalize \
+              --enable-mmpstrucdata \
+              --enable-mmrm1stspace \
+              --enable-mmsequence \
+              --enable-mmsnmptrapd \
+              --enable-mmutf8fix \
+              --disable-mysql \
+              --disable-mysql-tests \
+              --disable-omamqp1 \
+              --enable-omczmq \
+              --enable-omhiredis \
+              --enable-omhttpfs \
+              --enable-omhttp \
+              --enable-omjournal \
+              --enable-ommongodb \
+              --enable-omprog \
+              --enable-omrabbitmq \
+              --enable-omrelp-default-port=13515 \
+              --enable-omruleset \
+              --enable-omsendertrack \
+              --enable-omstdout \
+              --enable-omtcl \
+              --enable-omudpspoof \
+              --enable-omuxsock \
+              --enable-openssl \
+              --enable-pgsql \
+              --enable-pmaixforwardedfrom \
+              --enable-pmciscoios \
+              --enable-pmcisconames \
+              --enable-pmlastmsg \
+              --enable-pmnormalize \
+              --enable-pmnull \
+              --enable-pmsnare \
+              --enable-relp \
+              --disable-snmp \
+              --disable-snmp-tests \
+              --enable-usertools \
+              --enable-imdtls \
+              --enable-omdtls \
+              --enable-mmaitag \
+              --enable-valgrind \
+              --enable-testbench
+            ;;
+          'journal')
+            autoreconf -fvi
+            ./configure --enable-silent-rules --enable-testbench \
+              --enable-imdiag --disable-imdocker --disable-imfile \
+              --disable-default-tests --disable-impstats \
+              --disable-impstats-push --disable-imptcp --disable-mmanon \
+              --disable-mmaudit --disable-mmfields --disable-mmjsonparse \
+              --disable-mmpstrucdata --disable-mmsequence \
+              --disable-mmutf8fix --disable-mail --disable-omprog \
+              --disable-improg --disable-omruleset --enable-omstdout \
+              --disable-omuxsock --disable-pmaixforwardedfrom \
+              --disable-pmciscoios --disable-pmcisconames \
+              --disable-pmlastmsg --disable-pmsnare --disable-libgcrypt \
+              --disable-mmnormalize --disable-omudpspoof --disable-relp \
+              --disable-mmsnmptrapd --disable-gnutls --enable-usertools \
+              --disable-mysql --enable-valgrind --enable-omjournal \
+              --enable-libsystemd=yes --disable-mmkubernetes \
+              --enable-imjournal --disable-omkafka --disable-imkafka \
+              --disable-ommongodb --disable-omrabbitmq \
+              --enable-journal-tests --disable-mmdarwin \
+              --enable-compile-warnings=error --disable-helgrind \
+              --disable-uuid --disable-fmhttp
+            ;;
+          'kafka')
+            autoreconf -fvi
+            ./configure \
+              --enable-compile-warnings=error \
+              --enable-testbench \
+              --enable-omstdout \
+              --enable-imdiag \
+              --disable-generate-man-pages \
+              --disable-impstats \
+              --disable-impstats-push \
+              --enable-imfile \
+              --disable-imfile-tests \
+              --disable-fmhttp \
+              --enable-valgrind \
+              --enable-valgrind-testbench \
+              --disable-helgrind \
+              --disable-default-tests \
+              --disable-imtcp-tests \
+              --enable-omkafka \
+              --enable-gnutls \
+              --disable-gnutls-tests \
+              --enable-kafka-tests \
+              --enable-imkafka
+            ;;
+          esac
+
+      - name: build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+        run: |
+          if [ "${{ matrix.lane }}" = "journal" ]; then
+            make -j
+          else
+            make -j10
+          fi
+
+      - name: make check
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+        run: make -j10 check
+
+      - name: generate coverage
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
+        run: |
+          lcov --capture --directory . \
+               --rc geninfo_unexecuted_blocks=1 \
+               --ignore-errors mismatch \
+               --output-file coverage.raw.info
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info
+          rm -f coverage.raw.info
+          lcov --list coverage.info | sed -n '1,60p' || true
+          [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+
+      - name: upload coverage to Codecov
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: daily-${{ matrix.lane }}
+          fail_ci_if_error: true
+
+      # Use the same short-lived failure artifact contract as regular PR CI so
+      # the flake collector can process scheduled failures through the same
+      # path. The artifact name includes run attempt and lane so reruns do not
+      # overwrite the failed attempt that produced the evidence.
+      - name: Prepare CI failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        run: |
+          if [ -f "devtools/gather-check-logs.sh" ]; then
+            devtools/gather-check-logs.sh || true
+          fi
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
+
+      - name: Upload CI failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.lane }}
+          path: |
+            failed-tests.log
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  report:
+    name: Report daily focused failures
+    needs: focused_test
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    if: >-
+      always() &&
+      github.repository == 'rsyslog/rsyslog' &&
+      needs.focused_test.result == 'failure'
+    steps:
+      - name: Create or update tracking issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: workflowJobs } =
+              await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id: context.runId,
+                per_page: 100,
+              });
+            const failedJobs = workflowJobs.jobs
+              .filter((job) => job.conclusion === 'failure')
+              .filter((job) => /^daily .+ tests$/.test(job.name));
+            const failedLaneLines = failedJobs.map((job) => {
+              const match = job.name.match(/^daily (.+) tests$/);
+              const lane = match ? match[1] : job.name;
+              const artifact =
+                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-${lane}`;
+              return `- ${job.name}: ${job.html_url} (artifact: ${artifact})`;
+            });
+            const failedLaneSection = failedLaneLines.length > 0
+              ? ['Failed lanes:', '', ...failedLaneLines, '']
+              : [
+                  'Failed lanes could not be listed automatically.',
+                  'Inspect the linked run for failed jobs and artifacts.',
+                  '',
+                ];
+            const body = [
+              'Daily focused tests failed.',
+              '',
+              `Run: ${process.env.RUN_URL}`,
+              '',
+              ...failedLaneSection,
+              'This workflow contains historical focused daily lanes. Failure',
+              'artifacts are uploaded by the failing lane; this issue is',
+              'created or updated so scheduled failures are not silent.',
+              '',
+              'Use the linked run and ci-failure artifacts to decide whether',
+              'each failure was a one-off flake or a regression that needs a',
+              'fix. The long-term expectation is that flakes become rarer as',
+              'the recurring causes are fixed.'
+            ].join('\n');
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue is:open in:title Daily focused test failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Daily focused test failures',
+                body,
+                labels: ['CI']
+              });
+            }

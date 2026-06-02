@@ -100,6 +100,7 @@
 
 #include <pthread.h>
 #include <string.h>
+#include "compat/asprintf.h"
 #include "typedefs.h"
 
 #if defined(__GNUC__)

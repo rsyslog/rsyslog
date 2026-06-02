@@ -386,7 +386,7 @@ Explanation of output
 Example output for illustration::
 
    Sep 17 11:43:49 localhost rsyslogd-pstats: imuxsock: submitted=16
-   Sep 17 11:43:49 localhost rsyslogd-pstats: main Q: size=1 enqueued=2403 full=0 maxqsize=2
+   Sep 17 11:43:49 localhost rsyslogd-pstats: main Q: size=1 enqueued=2403 size.enqueued=614168 full=0 maxqsize=2
 
 Explanation:
 
@@ -404,6 +404,8 @@ Line 2: shows details for the main queue:
 - ``main Q``, an object
 - ``size``, messages in the queue
 - ``enqueued``, all received messages thus far
+- ``size.enqueued``, cumulative byte volume of all received messages thus far
+  (counted on arrival, before discard/flow-control checks)
 - ``full``, how often was the queue was full
 - ``maxqsize``, the maximum amount of messages that have passed through the
   queue since rsyslog was started

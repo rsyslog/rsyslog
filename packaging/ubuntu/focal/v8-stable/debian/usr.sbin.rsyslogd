@@ -1,0 +1,60 @@
+# Last Modified: Sun Sep 25 08:58:35 2011
+#include <tunables/global>
+
+# Debugging the syslogger can be difficult if it can't write to the file
+# that the kernel is logging denials to. In these cases, you can do the
+# following:
+# watch -n 1 'dmesg | tail -5'
+
+/usr/sbin/rsyslogd {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  # Allow mapping the binary for confined starts (e.g. in containers)
+  /usr/sbin/rsyslogd mr,
+
+  capability sys_tty_config,
+  capability dac_override,
+  capability dac_read_search,
+  capability setuid,
+  capability setgid,
+  capability sys_nice,
+  capability syslog,
+
+  # rsyslog configuration
+  /etc/rsyslog.conf r,
+  /etc/rsyslog.d/ r,
+  /etc/rsyslog.d/** r,
+  /{,var/}run/rsyslogd.pid{,.tmp} rwk,
+  /var/spool/rsyslog/ r,
+  /var/spool/rsyslog/** rwk,
+
+  /usr/lib{,32,64}/{,@{multiarch}/}rsyslog/*.so mr,
+
+  /dev/tty*                     rw,
+  /dev/xconsole                 rw,
+  @{PROC}/kmsg                  r,
+
+  /dev/log                      wl,
+  /var/lib/*/dev/log            wl,
+  /var/spool/postfix/dev/log    wl,
+
+  # systemd Type=notify (READY/WATCHDOG)
+  /run/systemd/notify           w,
+
+  # 'r' is needed when using imfile
+  /var/log/**                   rw,
+
+  # Add these for mysql support
+  #/etc/mysql/my.cnf r,
+  #/{,var/}run/mysqld/mysqld.sock rw,
+
+  # Add thes for postgresql support
+  ##include <abstractions/openssl>
+  ##include <abstractions/ssl_certs>
+  #/{,var/}run/postgresql/.s.PGSQL.*[0-9] rw,
+
+  # Package-specific snippets (e.g. rsyslog-mysql, rsyslog-pgsql) via local include
+  # Site-specific additions and overrides. See local/README for details.
+  #include <local/usr.sbin.rsyslogd>
+}

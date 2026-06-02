@@ -94,14 +94,20 @@ To specify a different configuration file, use:
 Supported Configuration Formats
 -------------------------------
 
-Rsyslog historically supported three configuration syntaxes:
+Rsyslog currently supports four configuration syntaxes:
 
-1. **RainerScript (modern style)** – **recommended and actively maintained**  
+1. **RainerScript (modern style)** - **fully supported and actively maintained**
 
    This is the current, fully supported configuration format. It is
-   clean, structured, and best suited for new and complex configurations.
+   clean, structured, and a strong fit when you author rsyslog logic directly.
 
-2. **sysklogd style (legacy)** – **deprecated for new configs**  
+2. **YAML** - **fully supported for YAML-centric workflows**
+
+   Use this when rsyslog is part of a broader YAML-based deployment or
+   automation environment. YAML and RainerScript express the same underlying
+   rsyslog concepts and share the same core semantics.
+
+3. **sysklogd style (legacy)** - **deprecated for new configs**
 
    This format is widely known and still functional, but **hard to grasp for
    new users**. It remains an option for experienced admins who know it
@@ -112,20 +118,21 @@ Rsyslog historically supported three configuration syntaxes:
       mail.info    /var/log/mail.log
       mail.err     @server.example.net
 
-3. **Legacy rsyslog style (dollar-prefix)** – **deprecated**  
+4. **Legacy rsyslog style (dollar-prefix)** - **deprecated**
 
    This format, with directives starting with `$` (e.g.,
    `$ActionFileDefaultTemplate`), is fully supported for backward
    compatibility but **not recommended for any new configuration**.
 
-Why Prefer RainerScript?
-~~~~~~~~~~~~~~~~~~~~~~~~
+Why Use RainerScript Directly?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 RainerScript is easier to read and maintain, avoids side effects with
 include files, and supports modern features such as structured filters,
 templates, and complex control flow.
 
-**For new configurations, always use RainerScript.**  
+For direct rsyslog authoring, RainerScript remains the clearest default.
+If your environment is already YAML-centric, YAML is also a first-class fit.
 Legacy formats exist only for compatibility with older setups and
 distributions.
 
@@ -222,4 +229,3 @@ Example:
        Ruleset2 --> Action3[omelasticsearch]
 
 For details, see :doc:`../concepts/multi_ruleset`.
-

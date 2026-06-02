@@ -23,7 +23,9 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include <limits.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -51,10 +53,9 @@ struct curl_funcData {
 /* curl callback for doFunc_http_request */
 static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
     char *buf;
+    size_t chunkLen;
     size_t newlen;
-    struct cnffunc *const func = (struct cnffunc *)userdata;
-    assert(func != NULL);
-    struct curl_funcData *const curlData = (struct curl_funcData *)func->funcdata;
+    struct curl_funcData *const curlData = (struct curl_funcData *)userdata;
     assert(curlData != NULL);
 
     if (ptr == NULL) {
@@ -62,15 +63,25 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
         return 0;
     }
 
-    newlen = curlData->replyLen + size * nmemb;
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) {
+        LogError(0, RS_RET_ERR, "rainerscript: http_request reply too large");
+        return 0;
+    }
+    chunkLen = size * nmemb;
+    if (curlData->replyLen > SIZE_MAX - 1 || chunkLen > SIZE_MAX - curlData->replyLen - 1 ||
+        curlData->replyLen > UINT_MAX || chunkLen > UINT_MAX - curlData->replyLen) {
+        LogError(0, RS_RET_ERR, "rainerscript: http_request reply too large");
+        return 0;
+    }
+    newlen = curlData->replyLen + chunkLen;
     if ((buf = realloc((void *)curlData->reply, newlen + 1)) == NULL) {
         LogError(errno, RS_RET_ERR, "rainerscript: realloc failed in curlResult");
         return 0; /* abort due to failure */
     }
-    memcpy(buf + curlData->replyLen, (char *)ptr, size * nmemb);
+    memcpy(buf + curlData->replyLen, (char *)ptr, chunkLen);
     curlData->replyLen = newlen;
     curlData->reply = buf;
-    return size * nmemb;
+    return chunkLen;
 }
 
 static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ const func,
@@ -85,15 +96,14 @@ static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ cons
     int resultSet = 0;
     CURL *handle = NULL;
     CURLcode res;
+    struct curl_funcData curlData = {.reply = NULL, .replyLen = 0};
     assert(func != NULL);
-    struct curl_funcData *const curlData = (struct curl_funcData *)func->funcdata;
-    assert(curlData != NULL);
     rsRetVal iRet __attribute__((unused)) = RS_RET_OK;
 
     CHKmalloc(handle = curl_easy_init());
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-    curl_easy_setopt(handle, CURLOPT_WRITEDATA, func);
+    curl_easy_setopt(handle, CURLOPT_WRITEDATA, &curlData);
 
     curl_easy_setopt(handle, CURLOPT_URL, url);
     res = curl_easy_perform(handle);
@@ -104,14 +114,12 @@ static void ATTR_NONNULL() doFunc_http_request(struct cnffunc *__restrict__ cons
     }
 
 
-    CHKmalloc(ret->d.estr = es_newStrFromCStr(curlData->reply, curlData->replyLen));
+    CHKmalloc(ret->d.estr = es_newStrFromCStr(curlData.reply, curlData.replyLen));
     ret->datatype = 'S';
     resultSet = 1;
 
 finalize_it:
-    free((void *)curlData->reply);
-    curlData->reply = NULL;
-    curlData->replyLen = 0;
+    free((void *)curlData.reply);
 
     if (handle != NULL) {
         curl_easy_cleanup(handle);
@@ -130,8 +138,8 @@ finalize_it:
 static rsRetVal ATTR_NONNULL(1) initFunc_http_request(struct cnffunc *const func) {
     DEFiRet;
 
-    func->destructable_funcdata = 1;
-    CHKmalloc(func->funcdata = calloc(1, sizeof(struct curl_funcData)));
+    func->destructable_funcdata = 0;
+    func->funcdata = NULL;
     if (func->nParams != 1) {
         parser_errmsg("rsyslog logic error in line %d of file %s\n", __LINE__, __FILE__);
         FINALIZE;
@@ -142,9 +150,7 @@ finalize_it:
 }
 
 static void ATTR_NONNULL(1) destructFunc_http_request(struct cnffunc *const func) {
-    if (func->funcdata != NULL) {
-        free((void *)((struct curl_funcData *)func->funcdata)->reply);
-    }
+    (void)func;
 }
 
 static struct scriptFunct functions[] = {
@@ -161,6 +167,7 @@ ENDgetFunctArray
 
 BEGINmodExit
     CODESTARTmodExit;
+    curl_global_cleanup();
 ENDmodExit
 
 
@@ -172,6 +179,13 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
+    CURLcode curlRet;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+
+    curlRet = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (curlRet != CURLE_OK) {
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "fmhttp: curl_global_init failed: %s", curl_easy_strerror(curlRet));
+        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    }
     CODEmodInit_QueryRegCFSLineHdlr dbgprintf("rsyslog fmhttp init called, compiled with version %s\n", VERSION);
 ENDmodInit

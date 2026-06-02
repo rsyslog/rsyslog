@@ -1,5 +1,5 @@
 *******************************************
-pmrfc3164: Parse RFC3164-formatted messages
+pmrfc3164: RFC3164-formatted message parser
 *******************************************
 
 ===========================  ===========================================================================
@@ -12,7 +12,7 @@ Purpose
 =======
 
 This parser module is for parsing messages according to the traditional/legacy
-syslog standard :rfc:`3164`
+syslog standard :rfc:`3164`.
 
 It is part of the default parser chain.
 
@@ -28,7 +28,9 @@ Configuration Parameters
 ========================
 
 .. note::
-   Parameter names are case-insensitive; CamelCase is recommended for readability.
+
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Parser Parameters
 -----------------
@@ -126,7 +128,7 @@ Examples
 Receiving malformed RFC3164 messages
 ------------------------------------
 
-We assume a scenario where some of the devices send malformed RFC3164
+We assume a scenario where some devices send malformed RFC3164
 messages. The parser module will automatically detect the malformed
 sections and parse them accordingly.
 

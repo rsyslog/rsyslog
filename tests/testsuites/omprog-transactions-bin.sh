@@ -40,13 +40,13 @@ while [[ -n "$line" ]]; do
     # messages, forcing them to be retried twice. If --failed_commits is
     # specified, the error is returned when committing the transaction.
     if [[ "$1" != "" && ($message == *04* || $message == *07*) ]]; then
-        if [[ $retry_count < 2 ]]; then
+        if [ "$retry_count" -lt 2 ]; then
             if [[ "$1" == "--failed_commits" ]]; then
                 fail_on_commit=true
             else
                 status="Error: could not process log message"
             fi
-            let "retry_count++"
+            (( retry_count++ ))
         else
             retry_count=0
         fi

@@ -1,45 +1,82 @@
+.. _conf_formats:
+
 Configuration Formats
 =====================
 
-Rsyslog has evolved over several decades. For this reason, it supports three
-different configuration formats ("languages"):
+.. meta::
+   :description: Overview of rsyslog configuration formats: basic (sysklogd), advanced (RainerScript), YAML, and the obsolete legacy format.
+   :keywords: configuration format, rainerscript, yaml, sysklogd, legacy, conf_formats
+
+.. summary-start
+
+rsyslog supports four configuration formats. For modern configurations, choose
+RainerScript or YAML based on workflow fit: RainerScript for direct rsyslog
+authoring, YAML for YAML-centric environments and automation.
+
+.. summary-end
+
+Rsyslog has evolved over several decades. For this reason, it supports four
+different configuration formats:
 
 -  |FmtBasicName| - previously known as the :doc:`sysklogd  <sysklogd_format>`
-   format. This format is best used for expressing basic configurations on a single line,
-   stemming from the original syslog.conf format. The most common use case is matching
-   on facility/severity and writing matching messages to a log file.
+   format. Best for simple, one-line configurations matching on facility/severity
+   and writing to a log file.
 
--  |FmtAdvancedName| - previously known as the ``RainerScript`` format. This format,
-   first available in rsyslog v6, is the best and most precise format for non-trivial use cases
-   where more than one line is needed. This format is designed for advanced use cases
-   like forwarding to remote hosts that might be partially offline.
+-  |FmtAdvancedName| - previously known as the ``RainerScript`` format. The
+   recommended format when you author rsyslog logic directly. First available
+   in rsyslog v6, it handles advanced filtering, forwarding, queueing, and
+   custom actions.
 
--  |FmtObsoleteName| - previously known as the ``legacy`` format. This format is obsolete
-   and should not be used when writing new configurations. It was aimed at small additions
-   to the original sysklogd format and has been replaced due to its limitations.
+-  |FmtYamlName| - an additional syntax for YAML-centric environments such as
+   Kubernetes, Ansible, GitOps workflows, generated config, or other tooling
+   that already speaks YAML. Every YAML key maps directly to the equivalent
+   RainerScript parameter, so both formats share the same feature set and core
+   rsyslog model. See :doc:`yaml_config` for full reference.
+
+-  |FmtObsoleteName| - previously known as the ``legacy`` format. This format is
+   **obsolete** and must not be used in new configurations.
 
 Which Format Should I Use?
 --------------------------
 
-For New Configurations
-~~~~~~~~~~~~~~~~~~~~~~
+For Modern Configurations
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use the |FmtAdvancedName| format for all new configurations due to its flexibility, precision, and control. It handles complex use cases, such as advanced filtering, forwarding, and actions with specific parameters.
+Choose between |FmtAdvancedName| and |FmtYamlName| based on environment fit,
+not ideology:
+
+- Use |FmtAdvancedName| when your team already works effectively with
+  RainerScript, when you author rsyslog logic directly, or when that is the
+  clearer fit for your workflow.
+- Use |FmtYamlName| when rsyslog is part of a broader YAML-centric deployment
+  or automation workflow and you want to avoid conversion layers or embedded
+  RainerScript text.
+
+The two formats are functionally equivalent for the base configuration model.
+You can also mix them: a YAML main config may include RainerScript ``.conf``
+fragments and vice versa.
+
+Built-in translation is available when you want to migrate or inspect a config
+in the other format. See :doc:`../tutorials/config_format_translation` for a
+practical workflow.
 
 Existing Configurations in Basic Format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Some distributions ship default configurations in |FmtBasicName| format. These configurations are simple to convert to the |FmtAdvancedName| format, which is suggested if you plan to add complex constructs, like rulesets or actions with queues.
+Some distributions ship default configurations in |FmtBasicName| format.
+Converting them to |FmtAdvancedName| is straightforward and recommended
+if you plan to add complex constructs such as rulesets or queued actions.
 
 Retaining Basic Format
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Continue using the |FmtBasicName| format if there is a strong reliance on external documentation describing the |FmtBasicName| format or if there are many existing configurations in that format. This format is simple and widely understood, making it adequate for basic logging needs.
+Continue using the |FmtBasicName| format if there is a strong reliance on
+external documentation or many existing configurations in that format.
 
 Example - Basic Format
 ^^^^^^^^^^^^^^^^^^^^^^
 
-:: 
+::
 
     mail.info /var/log/mail.log
     mail.err @@server.example.net
@@ -47,26 +84,34 @@ Example - Basic Format
 Advanced Use Cases
 ~~~~~~~~~~~~~~~~~~
 
-For anything beyond basic logging, use the |FmtAdvancedName| format. Advantages include:
+For direct authoring beyond basic logging, |FmtAdvancedName| remains an
+excellent fit:
 
-- Fine control over rsyslog operations via advanced parameters
-- Easy to follow block structure
-- Easy to write and maintain
+- Fine control via advanced parameters
+- Easy-to-follow block structure
 - Safe for use with include files
 
 Example - Advanced Format
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:: 
+::
 
     mail.err action(type="omfwd" protocol="tcp" queue.type="linkedList")
 
 Deprecated Format
 ~~~~~~~~~~~~~~~~~
 
-**Do not use |FmtObsoleteName| format. It is obsolete and will make your life difficult.** This format is only supported to maintain compatibility with very old configurations. Users are strongly encouraged to migrate to the |FmtBasicName| or |FmtAdvancedName| formats as appropriate.
+Do not use |FmtObsoleteName| format. **It is obsolete and will make your
+life difficult.** It exists solely for backward compatibility with very
+old configurations.
 
 Conclusion
 ----------
 
-For new configurations or complex logging needs, the |FmtAdvancedName| format is the best choice. The |FmtBasicName| format should only be retained if there is a compelling reason, such as existing configurations or reliance on specific external documentation.
+Use |FmtAdvancedName| for new configurations, or the :doc:`YAML format
+<yaml_config>` when rsyslog lives inside a YAML-centric workflow. The
+|FmtBasicName| format is acceptable for simple, existing configurations.
+Never use |FmtObsoleteName|.
+
+For step-by-step translation examples, see
+:doc:`../tutorials/config_format_translation`.

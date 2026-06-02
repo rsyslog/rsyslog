@@ -66,12 +66,14 @@
 #include "srUtils.h"
 #include "rainerscript.h"
 #include "rsconf.h"
+#include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
 #include "operatingstate.h"
 #include "dirty.h"
 #include "janitor.h"
 #include "parserif.h"
+#include "rswatch.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -126,11 +128,16 @@ char *txt;
 int len;
 {
     struct srcrep reply;
+    const char *msgtxt;
 
+    msgtxt = (txt == NULL) ? "" : txt;
     reply.svrreply.rtncode = msgno;
     /* AIXPORT :  srv was corrected to syslogd */
     RS_COPY_LITERAL(reply.svrreply.objname, "syslogd");
-    snprintf(reply.svrreply.rtnmsg, SRCMIN(sizeof(reply.svrreply.rtnmsg) - 1, strlen(txt)), "%s", txt);
+    if (snprintf(reply.svrreply.rtnmsg, sizeof(reply.svrreply.rtnmsg), "%s", msgtxt) < 0) {
+        reply.svrreply.rtnmsg[0] = '\0';
+    }
+    reply.svrreply.rtnmsg[sizeof(reply.svrreply.rtnmsg) - 1] = '\0';
     srchdr = srcrrqs((char *)&srcpacket);
     srcsrpy(srchdr, (char *)&reply, len, cont);
 }
@@ -675,6 +682,17 @@ static void printVersion(void) {
 #else
     printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tNo\n");
 #endif
+#if defined(ENABLE_WOLFSSL)
+    printf("\tTLS network stream driver:\t\twolfSSL\n");
+#elif defined(ENABLE_OPENSSL)
+    printf("\tTLS network stream driver:\t\tOpenSSL\n");
+#elif defined(ENABLE_GNUTLS)
+    printf("\tTLS network stream driver:\t\tGnuTLS\n");
+#elif defined(ENABLE_MBEDTLS)
+    printf("\tTLS network stream driver:\t\tMbed TLS\n");
+#else
+    printf("\tTLS network stream driver:\t\tnone\n");
+#endif
     /* we keep the following message to so that users don't need
      * to wonder.
      */
@@ -1133,7 +1151,8 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
         }
     }
     if (emit_to_stderr || iConfigVerify) {
-        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR)
+        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
+            (iConfigVerify && pri2sev(pri) <= LOG_WARNING))
             fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char *)msg : bufModMsg);
     }
     if (emit_supress_msg) {
@@ -1431,6 +1450,8 @@ static void initAll(int argc, char **argv) {
     int iHelperUOpt;
     int bChDirRoot = 1; /* change the current working directory to "/"? */
     char *arg; /* for command line option processing */
+    char *configOutputPath = NULL;
+    enum rsconfTranslateFormat iTranslateFmt = RSCONF_TRANSLATE_NONE;
     char cwdbuf[128]; /* buffer to obtain/display current working directory */
     int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
     DEFiRet;
@@ -1453,15 +1474,16 @@ static void initAll(int argc, char **argv) {
      * before processing complex configurations that might depend on it.
      */
 #if defined(_AIX)
-    while ((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
+    while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
 #else
-    while ((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
+    while ((ch = getopt(argc, argv, "46ACDdf:F:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
 #endif
         switch ((char)ch) {
             case '4':
             case '6':
             case 'A':
             case 'f': /* configuration file */
+            case 'F': /* translation output format */
             case 'i': /* pid file name */
             case 'n': /* don't fork */
             case 'N': /* enable config verify mode */
@@ -1580,36 +1602,27 @@ static void initAll(int argc, char **argv) {
             case 'N': /* enable config verify mode */
                 iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
                 break;
+            case 'F':
+                if (arg == NULL) {
+                    fprintf(stderr, "rsyslogd: -F requires a format argument\n");
+                    exit(1);
+                }
+                if (!strcasecmp(arg, "yaml")) {
+                    iTranslateFmt = RSCONF_TRANSLATE_YAML;
+                } else if (!strcasecmp(arg, "rainerscript")) {
+                    iTranslateFmt = RSCONF_TRANSLATE_RAINERSCRIPT;
+                } else {
+                    fprintf(stderr, "rsyslogd: unsupported translation format '%s'\n", arg);
+                    exit(1);
+                }
+                break;
             case 'o':
-                if (fp_rs_full_conf_output != NULL) {
-                    fprintf(stderr,
-                            "warning: -o option given multiple times. Now "
-                            "using value %s\n",
+                if (configOutputPath != NULL) {
+                    fprintf(stderr, "warning: -o option given multiple times. Now using value %s\n",
                             (arg == NULL) ? "-" : arg);
-                    fclose(fp_rs_full_conf_output);
-                    fp_rs_full_conf_output = NULL;
                 }
-                if (arg == NULL || !strcmp(arg, "-")) {
-                    fp_rs_full_conf_output = stdout;
-                } else {
-                    fp_rs_full_conf_output = fopen(arg, "w");
-                }
-                if (fp_rs_full_conf_output == NULL) {
-                    perror(arg);
-                    fprintf(stderr,
-                            "rsyslogd: cannot open config output file %s - "
-                            "-o option will be ignored\n",
-                            arg);
-                } else {
-                    time_t tTime;
-                    struct tm tp;
-                    datetime.GetTime(&tTime);
-                    localtime_r(&tTime, &tp);
-                    fprintf(fp_rs_full_conf_output,
-                            "## full conf created by rsyslog version %s at "
-                            "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d ##\n",
-                            VERSION, tp.tm_year + 1900, tp.tm_mon + 1, tp.tm_mday, tp.tm_hour, tp.tm_min, tp.tm_sec);
-                }
+                configOutputPath = arg;
+                arg = NULL;
                 break;
             case 'q': /* add hostname if DNS resolving has failed */
                 fprintf(stderr,
@@ -1680,6 +1693,38 @@ static void initAll(int argc, char **argv) {
     }
 
     if (iRet != RS_RET_END_OF_LINKEDLIST) FINALIZE;
+
+    if (iTranslateFmt != RSCONF_TRANSLATE_NONE) {
+        if (!iConfigVerify) {
+            fprintf(stderr, "rsyslogd: -F requires -N1 config validation mode\n");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        if (configOutputPath == NULL) {
+            fprintf(stderr, "rsyslogd: -F requires -o <path>\n");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        rsconfTranslateConfigure(iTranslateFmt);
+    } else if (configOutputPath != NULL) {
+        if (!strcmp(configOutputPath, "-")) {
+            fp_rs_full_conf_output = stdout;
+        } else {
+            fp_rs_full_conf_output = fopen(configOutputPath, "w");
+        }
+        if (fp_rs_full_conf_output == NULL) {
+            perror(configOutputPath);
+            fprintf(stderr, "rsyslogd: cannot open config output file %s - -o option will be ignored\n",
+                    configOutputPath);
+        } else {
+            time_t tTime;
+            struct tm tp;
+            datetime.GetTime(&tTime);
+            localtime_r(&tTime, &tp);
+            fprintf(fp_rs_full_conf_output,
+                    "## full conf created by rsyslog version %s at "
+                    "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d ##\n",
+                    VERSION, tp.tm_year + 1900, tp.tm_mon + 1, tp.tm_mday, tp.tm_hour, tp.tm_min, tp.tm_sec);
+        }
+    }
 
     if (iConfigVerify) {
         doFork = 0;
@@ -1825,6 +1870,12 @@ static void initAll(int argc, char **argv) {
     }
     CHKiRet(localRet);
 
+    if (iTranslateFmt != RSCONF_TRANSLATE_NONE) {
+        CHKiRet(rsconfTranslateWriteFile(configOutputPath));
+        iRet = RS_RET_VALIDATION_RUN;
+        FINALIZE;
+    }
+
     CHKiRet(rsyslogd_InitStdRatelimiters());
 
     if (bChDirRoot) {
@@ -1888,6 +1939,7 @@ static void initAll(int argc, char **argv) {
     }
 
 finalize_it:
+    rsconfTranslateCleanup();
     if (iRet == RS_RET_VALIDATION_RUN) {
         fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
         exit(0);
@@ -2091,59 +2143,107 @@ void rsyslogdDoDie(int sig) {
 }
 
 
-static rsRetVal wait_timeout(const sigset_t *sigmask) {
-    struct timespec tvSelectTimeout;
-    DEFiRet;
+static uint64_t mainloopMonotonicMs(void) {
+    struct timespec ts;
 
-    tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
-    tvSelectTimeout.tv_nsec = 0;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    return ((uint64_t)ts.tv_sec * 1000ULL) + (uint64_t)(ts.tv_nsec / 1000000ULL);
+}
+
+/* The main loop sleeps until the earliest housekeeping deadline among the
+ * periodic janitor run, the systemd watchdog ping, and any pending rswatch
+ * debounce expiry.
+ */
+static int mainloopComputeTimeoutMs(uint64_t now_ms, uint64_t next_janitor_run_ms) {
+    uint64_t diff = 0;
+    int timeout_ms;
+
+    if (next_janitor_run_ms <= now_ms) {
+        timeout_ms = 0;
+    } else {
+        diff = next_janitor_run_ms - now_ms;
+        timeout_ms = (diff > (uint64_t)INT_MAX) ? INT_MAX : (int)diff;
+    }
 #ifdef HAVE_LIBSYSTEMD
     if (systemdWatchdogEnabled && systemdWatchdogUsec > 0) {
-        uint64_t watchdogWaitUsec = systemdWatchdogUsec / 2;
-        const uint64_t janitorTimeoutUsec = (uint64_t)tvSelectTimeout.tv_sec * 1000000 + tvSelectTimeout.tv_nsec / 1000;
+        uint64_t watchdogWaitMs = systemdWatchdogUsec / 2000;
 
-        if (watchdogWaitUsec == 0) {
-            watchdogWaitUsec = 1000; /* 1ms minimum to avoid a busy loop */
+        if (watchdogWaitMs == 0) {
+            watchdogWaitMs = 1;
         }
-
-        if (watchdogWaitUsec < janitorTimeoutUsec) {
-            tvSelectTimeout.tv_sec = watchdogWaitUsec / 1000000;
-            tvSelectTimeout.tv_nsec = (watchdogWaitUsec % 1000000) * 1000;
+        if (watchdogWaitMs < (uint64_t)timeout_ms) {
+            timeout_ms = (watchdogWaitMs > (uint64_t)INT_MAX) ? INT_MAX : (int)watchdogWaitMs;
         }
     }
 #endif
+    return rswatchComputeTimeoutMs(now_ms, timeout_ms);
+}
+
+static rsRetVal wait_timeout(const sigset_t *sigmask, int timeout_ms) {
+    struct timespec tvSelectTimeout;
+    int rswatch_fd;
+    DEFiRet;
+
+    if (timeout_ms < 0) {
+        timeout_ms = 0;
+    }
+    tvSelectTimeout.tv_sec = timeout_ms / 1000;
+    tvSelectTimeout.tv_nsec = (timeout_ms % 1000) * 1000000L;
+    rswatch_fd = rswatchGetWaitFd();
 
 #ifdef _AIX
     if (!src_exists) {
-        /* it looks like select() is NOT interrupted by HUP, even though
-         * SA_RESTART is not given in the signal setup. As this code is
-         * not expected to be used in production (when running as a
-         * service under src control), we simply make a kind of
-         * "somewhat-busy-wait" algorithm. We compute our own
-         * timeout value, which we count down to zero. We do this
-         * in useful subsecond steps.
-         */
-        const long wait_period = 500000000; /* wait period in nanoseconds */
-        int timeout = runConf->globals.janitorInterval * 60 * (1000000000 / wait_period);
+        long remaining_ms = timeout_ms;
 
-        tvSelectTimeout.tv_sec = 0;
-        tvSelectTimeout.tv_nsec = wait_period;
         do {
+            fd_set rfds;
+            int maxfd = -1;
+            struct timespec stepTimeout;
+            long step_ms = remaining_ms;
+
+            if (step_ms > 500) {
+                step_ms = 500;
+            }
+            if (step_ms < 0) {
+                step_ms = 0;
+            }
+            stepTimeout.tv_sec = step_ms / 1000;
+            stepTimeout.tv_nsec = (step_ms % 1000) * 1000000L;
+
             pthread_mutex_lock(&mutHadHUP);
             if (bFinished || bHadHUP) {
                 pthread_mutex_unlock(&mutHadHUP);
                 break;
             }
             pthread_mutex_unlock(&mutHadHUP);
-            pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
-        } while (--timeout > 0);
+
+            FD_ZERO(&rfds);
+            if (rswatch_fd != -1) {
+                FD_SET(rswatch_fd, &rfds);
+                maxfd = rswatch_fd;
+            }
+            pselect(maxfd + 1, maxfd >= 0 ? (fd_set *)&rfds : NULL, NULL, NULL, &stepTimeout, sigmask);
+            if (remaining_ms <= 500) {
+                break;
+            }
+            remaining_ms -= 500;
+        } while (remaining_ms > 0);
     } else {
         char buf[256];
         fd_set rfds;
+        int maxfd = SRC_FD;
 
         FD_ZERO(&rfds);
         FD_SET(SRC_FD, &rfds);
-        if (pselect(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout, sigmask)) {
+        if (rswatch_fd != -1) {
+            FD_SET(rswatch_fd, &rfds);
+            if (rswatch_fd > maxfd) {
+                maxfd = rswatch_fd;
+            }
+        }
+        if (pselect(maxfd + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout, sigmask)) {
             if (FD_ISSET(SRC_FD, &rfds)) {
                 rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
                 if (rc < 0) {
@@ -2151,7 +2251,7 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
                         LogError(errno, NO_ERRCODE, "%s: ERROR: recvfrom failed - disabling AIX SRC", progname);
                         src_exists = FALSE;
                         ABORT_FINALIZE(RS_RET_IO_ERROR);
-                    } else { /* punt on short read */
+                    } else {
                         FINALIZE;
                     }
                 }
@@ -2176,11 +2276,12 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
                             errno = 0;
                             logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
                             FINALIZE;
-                        } else
+                        } else {
                             dosrcpacket(SRC_SUBMSG,
                                         "ERROR: rsyslogd does not support "
                                         "this option.\n",
                                         sizeof(struct srcrep));
+                        }
                         break;
                     case REFRESH:
                         dosrcpacket(SRC_SUBMSG,
@@ -2196,7 +2297,14 @@ static rsRetVal wait_timeout(const sigset_t *sigmask) {
         }
     }
 #else
-    pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
+    if (rswatch_fd != -1) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(rswatch_fd, &rfds);
+        pselect(rswatch_fd + 1, &rfds, NULL, NULL, &tvSelectTimeout, sigmask);
+    } else {
+        pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
+    }
 #endif /* AIXPORT : SRC end */
 
 #ifdef _AIX
@@ -2241,13 +2349,17 @@ static void mainloop(void) {
     sigset_t origmask;
     sigset_t sigblockset;
     int need_free_mutex;
+    uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
     sigaddset(&sigblockset, SIGTERM);
     sigaddset(&sigblockset, SIGCHLD);
     sigaddset(&sigblockset, SIGHUP);
+    next_janitor_run_ms = mainloopMonotonicMs() + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
 
     do {
+        uint64_t now_ms;
+
         sigemptyset(&origmask);
         pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
         pthread_mutex_lock(&mutChildDied);
@@ -2280,8 +2392,16 @@ static void mainloop(void) {
 
         if (bFinished) break; /* exit as quickly as possible */
 
-        wait_timeout(&origmask);
+        now_ms = mainloopMonotonicMs();
+        wait_timeout(&origmask, mainloopComputeTimeoutMs(now_ms, next_janitor_run_ms));
         pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
+        now_ms = mainloopMonotonicMs();
+
+        /* File-watch I/O is handled before due dispatch so newly-read events can
+         * arm or extend debounce deadlines within the same wake cycle.
+         */
+        rswatchProcessIo(now_ms);
+        rswatchDispatchDue(now_ms);
 
 #ifdef HAVE_LIBSYSTEMD
         if (systemdWatchdogEnabled) {
@@ -2289,11 +2409,14 @@ static void mainloop(void) {
         }
 #endif
 
-        janitorRun();
+        if (now_ms >= next_janitor_run_ms) {
+            janitorRun();
 
-        assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
-        datetime.GetTime(&tTime);
-        checkGoneAwaySenders(tTime);
+            assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
+            datetime.GetTime(&tTime);
+            checkGoneAwaySenders(tTime);
+            next_janitor_run_ms = now_ms + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
+        }
 
     } while (!bFinished); /* end do ... while() */
 }
@@ -2414,7 +2537,7 @@ int main(int argc, char **argv) {
 
     pthread_mutex_init(&mutHadHUP, NULL);
     pthread_mutex_init(&mutChildDied, NULL);
-    strncpy(progname, argv[0], sizeof(progname) - 1);
+    rs_cstr_copy(progname, argv[0], sizeof(progname));
     addrsz = sizeof(srcaddr);
     if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
         fprintf(stderr, "%s: continuing without SRC support\n", progname);

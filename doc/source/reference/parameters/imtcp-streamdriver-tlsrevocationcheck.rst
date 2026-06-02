@@ -54,9 +54,22 @@ Controls whether TLS certificate revocation checking is performed during
 the TLS handshake. When enabled, rsyslog will query OCSP (Online Certificate
 Status Protocol) responders to verify that certificates have not been revoked.
 
-The revocation check is only performed for OpenSSL-based TLS connections
-(``StreamDriver.Name="ossl"``). The feature is not available when using
-GnuTLS or WolfSSL drivers.
+The revocation check is performed by the ``ossl`` network stream driver
+(``StreamDriver.Name="ossl"``) when rsyslog is compiled against OpenSSL or
+wolfSSL. The feature is not available when using the GnuTLS driver.
+
+OCSP stapling is not used on either backend. rsyslog always queries the
+OCSP responder URL embedded in the certificate's Authority Information
+Access extension, regardless of whether the peer offered a stapled
+response. This applies to both the OpenSSL and wolfSSL builds.
+
+**wolfSSL notes:**
+
+* wolfSSL must be built with ``--enable-crl`` and ``--enable-ocsp``.
+* OCSP responder I/O is performed by wolfSSL's built-in HTTP client; the
+  bounded-I/O, cache and DoS notes above describe the OpenSSL path — wolfSSL
+  keeps its own internal OCSP response cache inside the ``WOLFSSL_CERT_MANAGER``
+  that is not visible to rsyslog.
 
 **Important considerations:**
 

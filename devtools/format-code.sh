@@ -7,10 +7,14 @@
 # It's intended to enforce the canonical code format for the repository.
 #
 # Usage:
-#   ./devtools/format-code-exec.sh [-h]
+#   ./devtools/format-code.sh [-h] [--git-changed] [--check]
+#       [--check-if-available]
 #
 # Options:
-#   -h, --help    Display this help message and exit.
+#   -h, --help           Display this help message and exit.
+#   --git-changed        Format only changed .c/.h files known to Git.
+#   --check              Check formatting without modifying files.
+#   --check-if-available If clang-format is missing, warn and exit 0.
 #
 # Description:
 #   This script performs an in-place reformatting of all C source (.c) and
@@ -30,6 +34,15 @@
 #   parentheses `\( ... \)` to ensure that `clang-format` is executed for
 #   both `.c` and `.h` files as intended.
 #
+#   With '--git-changed', the script limits formatting to changed .c/.h files
+#   reported by Git. This includes committed branch changes relative to
+#   RSYSLOG_LOCAL_VALIDATION_BASE or origin/main, staged and unstaged tracked
+#   changes, and untracked files. If no such files exist, it exits 0.
+#
+#   With '--check', the script runs clang-format in dry-run mode and fails if
+#   any target file would be reformatted. This mode is intended for
+#   deterministic local validation gates.
+#
 #   Before running, ensure 'clang-format-18' is installed on your system.
 #   It is highly recommended to commit your current changes or create a backup
 #   before executing this script, as it modifies files directly.
@@ -46,6 +59,9 @@ set -euo pipefail # Exit on error, unset variables, and pipefail
 
 # --- Configuration ---
 readonly CLANG_FORMAT="clang-format-18"  # Specify the clang-format version to use
+git_changed_only=0
+check_only=0
+check_if_available=0
 
 # --- Functions ---
 
@@ -61,6 +77,15 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       show_help
       ;;
+    --git-changed)
+      git_changed_only=1
+      ;;
+    --check)
+      check_only=1
+      ;;
+    --check-if-available)
+      check_if_available=1
+      ;;
     *)
       echo "Error: Unknown option '$1'" >&2
       show_help
@@ -73,6 +98,11 @@ done
 
 # Check if clang-format is installed and executable
 if ! command -v "$CLANG_FORMAT" &> /dev/null; then
+  if [[ "$check_if_available" -eq 1 ]]; then
+    echo "Warning: '$CLANG_FORMAT' command not found; skipping C format check." >&2
+    echo "Install it on Ubuntu with: sudo apt install $CLANG_FORMAT" >&2
+    exit 0
+  fi
   echo "Error: '$CLANG_FORMAT' command not found." >&2
   echo "Please install it. On Ubuntu, you can run: sudo apt install $CLANG_FORMAT" >&2
   exit 1
@@ -86,33 +116,65 @@ if ! find . -maxdepth 2 -name ".clang-format" -print -quit | grep -q .; then
   echo ""
 fi
 
-echo "Starting code formatting for .c and .h files using 'find -exec ... +'..."
-echo "Using $CLANG_FORMAT -i -style=file"
-echo "This may take a moment. Any clang-format errors for individual files will be printed directly."
-echo "Note: '$CLANG_FORMAT' only modifies files that deviate from the specified style."
+if [[ "$check_only" -eq 1 ]]; then
+  CLANG_FORMAT_ARGS=(--dry-run --Werror -style=file)
+  echo "Checking code formatting for .c and .h files."
+  echo "Using $CLANG_FORMAT --dry-run --Werror -style=file"
+else
+  CLANG_FORMAT_ARGS=(-i -style=file)
+  echo "Starting code formatting for .c and .h files using 'find -exec ... +'..."
+  echo "Using $CLANG_FORMAT -i -style=file"
+  echo "This may take a moment. Any clang-format errors for individual files will be printed directly."
+  echo "Note: '$CLANG_FORMAT' only modifies files that deviate from the specified style."
+fi
 echo ""
 
 # --- Formatting Logic ---
-# Find all .c and .h files recursively and execute clang-format on them.
-# The '{} +' syntax passes multiple filenames to a single clang-format invocation,
-# which is more efficient.
-# The parentheses '\( ... \)' are crucial for correctly grouping the -name conditions.
-if ! find . \( -name "*.c" -o -name "*.h" \) -exec "$CLANG_FORMAT" -i -style=file {} +; then
-  echo "Error: The overall code formatting process failed." >&2
-  echo "Please review the output above for any specific clang-format errors." >&2
-  exit 2
-fi
+if [[ "$git_changed_only" -eq 1 ]]; then
+  if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+    echo "Error: '--git-changed' requires a Git working tree." >&2
+    exit 2
+  fi
 
-# Calculate total files found for summary
-# Update this find command as well to use the correct parentheses for consistency.
-TOTAL_FILES=$(find . \( -name "*.c" -o -name "*.h" \) | wc -l)
+  mapfile -t target_files < <(./devtools/list-git-changed-c-h-files.sh)
+
+  if [[ "${#target_files[@]}" -eq 0 ]]; then
+    echo "No changed .c/.h files detected. Nothing to format."
+    exit 0
+  fi
+
+  if ! "$CLANG_FORMAT" "${CLANG_FORMAT_ARGS[@]}" "${target_files[@]}"; then
+    echo "Error: The overall code formatting process failed." >&2
+    echo "Please review the output above for any specific clang-format errors." >&2
+    exit 2
+  fi
+
+  TOTAL_PROCESSED_FILES="${#target_files[@]}"
+else
+  # Find all .c and .h files recursively and execute clang-format on them.
+  # The '{} +' syntax passes multiple filenames to a single clang-format invocation,
+  # which is more efficient.
+  # The parentheses '\( ... \)' are crucial for correctly grouping the -name conditions.
+  if ! find . \( -name "*.c" -o -name "*.h" \) -exec "$CLANG_FORMAT" "${CLANG_FORMAT_ARGS[@]}" {} +; then
+    echo "Error: The overall code formatting process failed." >&2
+    echo "Please review the output above for any specific clang-format errors." >&2
+    exit 2
+  fi
+
+  # Calculate total files found for summary
+  # Update this find command as well to use the correct parentheses for consistency.
+  TOTAL_PROCESSED_FILES=$(find . \( -name "*.c" -o -name "*.h" \) | wc -l)
+fi
 
 echo ""
 echo "--- Formatting Summary ---"
-echo "Total .c/.h files found and processed: $TOTAL_FILES"
-echo "Code formatting completed successfully."
-echo "The number of files actually changed depends on their adherence to the style."
-echo "Please review changes using 'git diff' if in a Git repository."
+echo "Total .c/.h files processed: $TOTAL_PROCESSED_FILES"
+if [[ "$check_only" -eq 1 ]]; then
+  echo "Code formatting check completed successfully."
+else
+  echo "Code formatting completed successfully."
+  echo "The number of files actually changed depends on their adherence to the style."
+  echo "Please review changes using 'git diff' if in a Git repository."
+fi
 
 # --- Script End ---
-

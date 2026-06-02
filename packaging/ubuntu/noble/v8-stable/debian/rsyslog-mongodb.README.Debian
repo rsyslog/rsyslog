@@ -1,0 +1,41 @@
+How to use rsyslog and MongoDB
+==============================
+
+rsyslog since version 6.1.3 is capable of using an output module called
+“ommongodb” to write log messages to mongodb. To achieve this, make
+sure the following packages are installed:
+
+ mongodb-server
+ mongodb-clients
+
+After this, you need to make some adjustments to rsyslog.conf or better
+use a separate config file like /etc/rsyslog.d/mongodb.conf which will
+be included by the main config file.
+You need to load the module of course and configure an action:
+
+ module (load="ommongodb")
+ *.* action(type="ommongodb" server="127.0.0.1")
+
+In this case we send everything to the local MongoDB server. With the
+default settings, this should work directly. No username or password is
+needed if it isn’t configured in MongoDB. And the “db” and “collection”
+will automatically be created. The default database that rsyslog will
+use is “syslog” and the default name for the collection is “log“. These
+can be changed by various parameters, like:
+
+ *.* action(type="ommongodb" db="..." collection="..." template="...")
+
+To review what is written to the database, simply open a command line
+and enter “mongo“. This is to open the MongoDB Shell. You now need to
+change the database that is used with
+
+ use syslog
+
+That way all further commands will be used on the database that rsyslog
+uses. Next we let the shell show us the entries:
+
+ db.log.find()
+
+Please make sure to use the exact command. Of course there are a lot of
+other commands that you may find useful. Or information on how to secure
+the database. Please refer to the MongoDB documentation for that.

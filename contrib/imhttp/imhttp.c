@@ -28,6 +28,8 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <limits.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -57,11 +59,22 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsob
 #define CIVETWEB_OPTION_NAME_PORTS "listening_ports"
 #define CIVETWEB_OPTION_NAME_DOCUMENT_ROOT "document_root"
 #define MAX_READ_BUFFER_SIZE 16384
+#define MAX_REQUEST_BODY_SIZE (16 * 1024 * 1024)
 #define INIT_SCRATCH_BUF_SIZE 4096
 /* General purpose buffer size. */
+/**
+ * Basic-auth credentials are capped at 2 KiB of Base64 text. That is well
+ * above practical user-id/password sizes, yet still small enough to keep the
+ * parser on a fixed stack buffer and to reject oversized headers as hostile.
+ */
 #define IMHTTP_MAX_BUF_LEN (8192)
+#define BASIC_AUTH_MAX_ENCODED 2048
+#define BASIC_AUTH_MAX_DECODED ((BASIC_AUTH_MAX_ENCODED / 4) * 3)
 #define DEFAULT_HEALTH_CHECK_PATH "/healthz"
 #define DEFAULT_PROM_METRICS_PATH "/metrics"
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
 
     struct option {
     const char *name;
@@ -69,11 +82,21 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsob
 };
 
 struct auth_s {
-    char workbuf[IMHTTP_MAX_BUF_LEN];
-    char *pworkbuf;
-    size_t workbuf_len;
+    char workbuf[BASIC_AUTH_MAX_DECODED + 1];
     char *pszUser;
     char *pszPasswd;
+    const char *pszApiKey;
+};
+
+/**
+ * Route auth settings are borrowed from the finalized module config.
+ *
+ * CivetWeb handlers only keep references because the config lifetime covers
+ * the full server lifetime.
+ */
+struct route_auth_ctx_s {
+    const char *pszBasicAuthFile;
+    const char *pszApiKeyFile;
 };
 
 struct data_parse_s {
@@ -97,10 +120,15 @@ struct modConfData_s {
     struct option docroot;
     struct option *options;
     int nOptions;
+    char *pszLstnPortFileName;
     char *pszHealthCheckPath;
     char *pszMetricsPath;
     char *pszHealthCheckAuthFile;
     char *pszMetricsAuthFile;
+    char *pszHealthCheckApiKeyFile;
+    char *pszMetricsApiKeyFile;
+    struct route_auth_ctx_s healthCheckAuthCtx;
+    struct route_auth_ctx_s metricsAuthCtx;
 };
 
 struct instanceConf_s {
@@ -108,6 +136,7 @@ struct instanceConf_s {
     uchar *pszBindRuleset; /* name of ruleset to bind to */
     uchar *pszEndpoint; /* endpoint to configure */
     uchar *pszBasicAuthFile; /* file containing basic auth users/pass */
+    uchar *pszApiKeyFile; /* file containing accepted API keys */
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
     ratelimit_t *ratelimiter;
     int ratelimitInterval;
@@ -119,6 +148,7 @@ struct instanceConf_s {
     sbool bDisableLFDelim;
     sbool bSuppOctetFram;
     sbool bAddMetadata;
+    struct route_auth_ctx_s authCtx;
 };
 
 struct conn_wrkr_s {
@@ -145,17 +175,21 @@ static size_t s_iMaxLine = 16384; /* get maximum size we currently support */
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"ports", eCmdHdlrString, 0},
+                                           {"listenportfilename", eCmdHdlrString, 0},
                                            {"documentroot", eCmdHdlrString, 0},
                                            {"liboptions", eCmdHdlrArray, 0},
                                            {"healthcheckpath", eCmdHdlrString, 0},
                                            {"metricspath", eCmdHdlrString, 0},
                                            {"healthcheckbasicauthfile", eCmdHdlrString, 0},
-                                           {"metricsbasicauthfile", eCmdHdlrString, 0}};
+                                           {"metricsbasicauthfile", eCmdHdlrString, 0},
+                                           {"healthcheckapikeyfile", eCmdHdlrString, 0},
+                                           {"metricsapikeyfile", eCmdHdlrString, 0}};
 
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 static struct cnfparamdescr inppdescr[] = {{"endpoint", eCmdHdlrString, 0},
                                            {"basicauthfile", eCmdHdlrString, 0},
+                                           {"apikeyfile", eCmdHdlrString, 0},
                                            {"ruleset", eCmdHdlrString, 0},
                                            {"flowcontrol", eCmdHdlrBinary, 0},
                                            {"disablelfdelimiter", eCmdHdlrBinary, 0},
@@ -201,12 +235,47 @@ typedef struct httpserv_s {
 } httpserv_t;
 
 static httpserv_t *s_httpserv;
+static sbool s_civetweb_initialized = 0;
 
 /* FORWARD DECLARATIONS */
 static rsRetVal processData(const instanceConf_t *const inst,
                             struct conn_wrkr_s *connWrkr,
                             const char *buf,
                             size_t len);
+
+/**
+ * Install borrowed auth sources for a route.
+ *
+ * @param authCtx route-local auth state to populate
+ * @param basicAuthFile borrowed htpasswd path, or NULL
+ * @param apiKeyFile borrowed API-key file path, or NULL
+ *
+ * @note The pointers are borrowed from the module config and must outlive the
+ *       request handler registration.
+ */
+static void routeAuthCtxSet(struct route_auth_ctx_s *const authCtx,
+                            const char *const basicAuthFile,
+                            const char *const apiKeyFile) {
+    if (authCtx == NULL) {
+        return;
+    }
+
+    authCtx->pszBasicAuthFile = basicAuthFile;
+    authCtx->pszApiKeyFile = apiKeyFile;
+}
+
+/**
+ * Check whether a route needs auth handling.
+ *
+ * @param authCtx route-local auth state
+ * @return non-zero if Basic auth or API-key auth is configured
+ *
+ * @note Public routes skip auth handler registration entirely so the request
+ *       path stays on the fast path.
+ */
+static sbool routeAuthConfigured(const struct route_auth_ctx_s *const authCtx) {
+    return authCtx != NULL && (authCtx->pszBasicAuthFile != NULL || authCtx->pszApiKeyFile != NULL);
+}
 
 static rsRetVal createInstance(instanceConf_t **pinst) {
     instanceConf_t *inst;
@@ -217,6 +286,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
     inst->pszEndpoint = NULL;
     inst->pszBasicAuthFile = NULL;
+    inst->pszApiKeyFile = NULL;
     inst->ratelimiter = NULL;
     inst->pszInputName = NULL;
     inst->pInputName = NULL;
@@ -244,6 +314,10 @@ finalize_it:
 
 static rsRetVal processCivetwebOptions(char *const param, const char **const name, const char **const paramval) {
     DEFiRet;
+    char *parsedName = NULL;
+    char *parsedVal = NULL;
+    *name = NULL;
+    *paramval = NULL;
     char *val = strstr(param, "=");
     if (val == NULL) {
         LogError(0, RS_RET_PARAM_ERROR,
@@ -254,10 +328,16 @@ static rsRetVal processCivetwebOptions(char *const param, const char **const nam
     }
     *val = '\0'; /* terminates name */
     ++val; /* now points to begin of value */
-    CHKmalloc(*name = strdup(param));
-    CHKmalloc(*paramval = strdup(val));
+    CHKmalloc(parsedName = strdup(param));
+    CHKmalloc(parsedVal = strdup(val));
+    *name = parsedName;
+    parsedName = NULL;
+    *paramval = parsedVal;
+    parsedVal = NULL;
 
 finalize_it:
+    free(parsedName);
+    free(parsedVal);
     RETiRet;
 }
 
@@ -291,7 +371,7 @@ static void *init_thread(ATTR_UNUSED const struct mg_context *ctx, int thread_ty
         data->multiSub.maxElem = CONF_NUM_MULTISUB;
         data->multiSub.ppMsgs = data->pMsgs;
         data->multiSub.nElem = 0;
-        data->pReadBuf = malloc(MAX_READ_BUFFER_SIZE);
+        CHKmalloc(data->pReadBuf = malloc(MAX_READ_BUFFER_SIZE));
         data->readBufSize = MAX_READ_BUFFER_SIZE;
 
         data->parseState.bzInitDone = 0;
@@ -308,6 +388,8 @@ static void *init_thread(ATTR_UNUSED const struct mg_context *ctx, int thread_ty
 
 finalize_it:
     if (iRet != RS_RET_OK) {
+        free(data != NULL ? data->pReadBuf : NULL);
+        free(data != NULL ? data->pMsg : NULL);
         free(data);
         return NULL;
     }
@@ -329,6 +411,24 @@ static void exit_thread(ATTR_UNUSED const struct mg_context *ctx, ATTR_UNUSED in
     }
 }
 
+static void cleanupHttpServer(void) {
+    if (s_httpserv != NULL) {
+        if (s_httpserv->ctx != NULL) {
+            mg_stop(s_httpserv->ctx);
+            s_httpserv->ctx = NULL;
+        }
+        free(s_httpserv->civetweb_options);
+        s_httpserv->civetweb_options = NULL;
+        s_httpserv->civetweb_options_count = 0;
+        free(s_httpserv);
+        s_httpserv = NULL;
+    }
+    if (s_civetweb_initialized) {
+        mg_exit_library();
+        s_civetweb_initialized = 0;
+    }
+}
+
 static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, struct conn_wrkr_s *connWrkr) {
     struct json_object *json = NULL;
     DEFiRet;
@@ -341,16 +441,24 @@ static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, st
         struct json_object *const jval = json_object_new_string(ri->http_headers[i].value);
         CHKmalloc(jval);
         /* truncate header names bigger than INIT_SCRATCH_BUF_SIZE */
-        strncpy(connWrkr->pScratchBuf, ri->http_headers[i].name, connWrkr->scratchBufSize - 1);
+        if (connWrkr->scratchBufSize > 0) {
+            const size_t header_name_len = strlen(ri->http_headers[i].name);
+            const size_t copy_len =
+                header_name_len < connWrkr->scratchBufSize - 1 ? header_name_len : connWrkr->scratchBufSize - 1;
+            memcpy(connWrkr->pScratchBuf, ri->http_headers[i].name, copy_len);
+            connWrkr->pScratchBuf[copy_len] = '\0';
+        }
         /* make header lowercase */
         char *pname = connWrkr->pScratchBuf;
         while (pname && *pname != '\0') {
-            *pname = tolower(*pname);
+            *pname = tolower((unsigned char)*pname);
             pname++;
         }
         json_object_object_add(json, (const char *const)connWrkr->pScratchBuf, jval);
     }
-    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", json, 0, 0));
+    struct json_object *const toAdd = json;
+    json = NULL;
+    CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!httpheaders", toAdd, 0, 0));
 
 finalize_it:
     if (iRet != RS_RET_OK && json) {
@@ -365,7 +473,12 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
     const struct mg_request_info *ri = connWrkr->pri;
 
     if (ri && ri->query_string) {
-        strncpy(connWrkr->pScratchBuf, ri->query_string, connWrkr->scratchBufSize - 1);
+        if (connWrkr->scratchBufSize > 0) {
+            const size_t query_len = strlen(ri->query_string);
+            const size_t copy_len = query_len < connWrkr->scratchBufSize - 1 ? query_len : connWrkr->scratchBufSize - 1;
+            memcpy(connWrkr->pScratchBuf, ri->query_string, copy_len);
+            connWrkr->pScratchBuf[copy_len] = '\0';
+        }
         char *pquery_str = connWrkr->pScratchBuf;
         if (pquery_str) {
             CHKmalloc(json = json_object_new_object());
@@ -378,12 +491,14 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
                 char *key = strtok_r(kv_pair, "=", &saveptr2);
                 if (key) {
                     char *value = strtok_r(NULL, "=", &saveptr2);
-                    struct json_object *const jval = json_object_new_string(value);
+                    struct json_object *const jval = json_object_new_string(value != NULL ? value : "");
                     CHKmalloc(jval);
                     json_object_object_add(json, (const char *)key, jval);
                 }
             }
-            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", json, 0, 0));
+            struct json_object *const toAdd = json;
+            json = NULL;
+            CHKiRet(msgAddJSON(pMsg, (uchar *)"!metadata!queryparams", toAdd, 0, 0));
         }
     }
 finalize_it:
@@ -397,7 +512,7 @@ static rsRetVal doSubmitMsg(const instanceConf_t *const __restrict__ inst,
                             struct conn_wrkr_s *connWrkr,
                             const uchar *msg,
                             size_t len) {
-    smsg_t *pMsg;
+    smsg_t *pMsg = NULL;
     DEFiRet;
 
     assert(len <= s_iMaxLine);
@@ -429,11 +544,14 @@ static rsRetVal doSubmitMsg(const instanceConf_t *const __restrict__ inst,
         CHKiRet(msgAddMetadataFromHttpQueryParams(pMsg, connWrkr));
     }
 
-    ratelimitAddMsg(inst->ratelimiter, &connWrkr->multiSub, pMsg);
+    CHKiRet(ratelimitAddMsg(inst->ratelimiter, &connWrkr->multiSub, pMsg));
     STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 finalize_it:
     connWrkr->iMsg = 0;
     if (iRet != RS_RET_OK) {
+        if (pMsg != NULL && iRet != RS_RET_DISCARDMSG) {
+            msgDestruct(&pMsg);
+        }
         STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
     }
     RETiRet;
@@ -485,12 +603,12 @@ static rsRetVal processOctetMsgLen(const instanceConf_t *const inst, struct conn
                          "SP but has ASCII value %d.",
                          remoteAddr, ch);
             } else if (connWrkr->parseState.iOctetsRemain > s_iMaxLine) {
-                DBGPRINTF("truncating message with %lu octets - max msg size is %lu\n",
+                DBGPRINTF("truncating message with %zu octets - max msg size is %zu\n",
                           connWrkr->parseState.iOctetsRemain, s_iMaxLine);
                 LogError(0, NO_ERRCODE,
                          "received oversize message from peer: "
-                         "(hostname) (ip) %s: size is %lu bytes, max msg "
-                         "size is %lu, truncating...",
+                         "(hostname) (ip) %s: size is %zu bytes, max msg "
+                         "size is %zu, truncating...",
                          remoteAddr, connWrkr->parseState.iOctetsRemain, s_iMaxLine);
             }
             connWrkr->parseState.inputState = eInMsg;
@@ -534,21 +652,19 @@ static rsRetVal processOctetCounting(const instanceConf_t *const inst,
                 pbuf++;
             } else {
                 assert(connWrkr->parseState.framingMode == TCP_FRAMING_OCTET_COUNTING);
-                /* parsing payload */
-                size_t remainingBytes = pbufLast - pbuf;
-                // figure out how much is in block
-                size_t count = min(connWrkr->parseState.iOctetsRemain, remainingBytes);
-                if (connWrkr->iMsg + count >= s_iMaxLine) {
-                    count = s_iMaxLine - connWrkr->iMsg;
-                }
+                const size_t remainingBytes = pbufLast - pbuf;
+                const size_t frameBytes = min(connWrkr->parseState.iOctetsRemain, remainingBytes);
+                size_t copyBytes = 0;
 
-                // just copy the bytes
-                if (count) {
-                    memcpy(connWrkr->pMsg + connWrkr->iMsg, pbuf, count);
-                    pbuf += count;
-                    connWrkr->iMsg += count;
-                    connWrkr->parseState.iOctetsRemain -= count;
+                if (connWrkr->iMsg < s_iMaxLine) {
+                    copyBytes = min(frameBytes, s_iMaxLine - connWrkr->iMsg);
+                    if (copyBytes != 0) {
+                        memcpy(connWrkr->pMsg + connWrkr->iMsg, pbuf, copyBytes);
+                        connWrkr->iMsg += copyBytes;
+                    }
                 }
+                pbuf += frameBytes;
+                connWrkr->parseState.iOctetsRemain -= frameBytes;
 
                 if (connWrkr->parseState.iOctetsRemain == 0) {
                     doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
@@ -643,7 +759,7 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
     }
 
     connWrkr->parseState.zstrm.next_in = (Bytef *)buf;
-    connWrkr->parseState.zstrm.avail_in = len;
+    connWrkr->parseState.zstrm.avail_in = (uInt)len;
     /* run inflate() on buffer until everything has been uncompressed */
     int outtotal = 0;
     do {
@@ -660,6 +776,20 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
         if (outavail != 0) {
             outtotal += outavail;
             CHKiRet(processDataUncompressed(inst, connWrkr, (const char *)connWrkr->zipBuf, outavail));
+        }
+        if (zRet == Z_STREAM_END) {
+            break;
+        }
+        if (zRet == Z_BUF_ERROR) {
+            if (outavail == 0 && connWrkr->parseState.zstrm.avail_in != 0) {
+                LogError(0, RS_RET_ZLIB_ERR, "imhttp: zlib inflate made no progress while input remained");
+                ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+            }
+            break;
+        }
+        if (zRet != Z_OK) {
+            LogError(0, RS_RET_ZLIB_ERR, "imhttp: zlib inflate failed with status %d", zRet);
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
     } while (connWrkr->parseState.zstrm.avail_out == 0);
 
@@ -686,8 +816,24 @@ static rsRetVal processData(const instanceConf_t *const inst,
     RETiRet;
 }
 
-/* Return 1 on success. Always initializes the auth structure. */
-static int parse_auth_header(struct mg_connection *conn, struct auth_s *auth) {
+static const char *skipWhitespace(const char *str) {
+    while (str != NULL && isspace((unsigned char)*str)) {
+        ++str;
+    }
+    return str;
+}
+
+/**
+ * Parse a Basic-auth header into the reusable auth scratch state.
+ *
+ * @param conn CivetWeb request connection
+ * @param auth caller-owned auth scratch state
+ * @return non-zero when the header was present and decodes to user:password
+ *
+ * @note The decoded buffer is reused across calls so the parser can avoid
+ *       extra allocations for the common in-buffer case.
+ */
+static sbool parse_basic_auth_header(struct mg_connection *conn, struct auth_s *auth) {
     if (!auth || !conn) {
         return 0;
     }
@@ -697,21 +843,25 @@ static int parse_auth_header(struct mg_connection *conn, struct auth_s *auth) {
         return 0;
     }
 
-    /* Parse authorization header */
     const char *src = auth_header + 6;
-    size_t len = apr_base64_decode_len((const char *)src);
-    auth->pworkbuf = auth->workbuf;
-    if (len > sizeof(auth->workbuf)) {
-        auth->pworkbuf = calloc(0, len);
-        auth->workbuf_len = len;
-    }
-    len = apr_base64_decode(auth->pworkbuf, src);
-    if (len == 0) {
+    size_t encoded_len = strlen(src);
+    if (encoded_len > BASIC_AUTH_MAX_ENCODED) {
+        LogError(0, NO_ERRCODE, "imhttp: rejecting oversized Basic-auth header (%zu bytes, max %d bytes)", encoded_len,
+                 BASIC_AUTH_MAX_ENCODED);
         return 0;
     }
 
+    size_t len = apr_base64_decode(auth->workbuf, src);
+    if (len == 0 || len > BASIC_AUTH_MAX_DECODED) {
+        return 0;
+    }
+    if (memchr(auth->workbuf, '\0', len) != NULL) {
+        return 0;
+    }
+    auth->workbuf[len] = '\0';
+
     char *passwd = NULL, *saveptr = NULL;
-    char *user = strtok_r(auth->pworkbuf, ":", &saveptr);
+    char *user = strtok_r(auth->workbuf, ":", &saveptr);
     if (user) {
         passwd = strtok_r(NULL, ":", &saveptr);
     }
@@ -719,13 +869,50 @@ static int parse_auth_header(struct mg_connection *conn, struct auth_s *auth) {
     auth->pszUser = user;
     auth->pszPasswd = passwd;
 
-    return 1;
+    return (auth->pszUser != NULL && auth->pszPasswd != NULL);
 }
 
-static int read_auth_file(FILE *filep, struct auth_s *auth) {
-    if (!filep) {
+/**
+ * Parse an Elastic-style API-key header from the request.
+ *
+ * @param conn CivetWeb request connection
+ * @param auth parsed auth output
+ * @return non-zero when a usable API key token was found
+ *
+ * @note Accept both Authorization: ApiKey and X-API-Key because Elastic
+ *       agents and intermediaries do not always use the same header form.
+ *       Leading whitespace after the scheme is ignored for robustness.
+ */
+static sbool parse_api_key_header(struct mg_connection *conn, struct auth_s *auth) {
+    if (!auth || !conn) {
         return 0;
     }
+
+    const char *auth_header = mg_get_header(conn, "Authorization");
+    if (auth_header != NULL && strncasecmp(auth_header, "ApiKey ", 7) == 0) {
+        auth->pszApiKey = skipWhitespace(auth_header + 7);
+        return (auth->pszApiKey != NULL && auth->pszApiKey[0] != '\0');
+    }
+
+    auth->pszApiKey = skipWhitespace(mg_get_header(conn, "X-API-Key"));
+    return (auth->pszApiKey != NULL && auth->pszApiKey[0] != '\0');
+}
+
+/**
+ * Validate a Basic-auth credential pair against an htpasswd file.
+ *
+ * @param filep open htpasswd file
+ * @param auth parsed Basic-auth credentials
+ * @return non-zero if the first matching user/password pair validates
+ *
+ * @note Comments and blank lines are ignored so the file can stay human
+ *       maintainable without affecting auth behavior.
+ */
+static sbool read_auth_file(FILE *filep, struct auth_s *auth) {
+    if (filep == NULL || auth == NULL || auth->pszUser == NULL || auth->pszPasswd == NULL) {
+        return 0;
+    }
+
     char workbuf[IMHTTP_MAX_BUF_LEN];
     size_t l = 0;
     char *user;
@@ -734,19 +921,14 @@ static int read_auth_file(FILE *filep, struct auth_s *auth) {
     while (fgets(workbuf, sizeof(workbuf), filep)) {
         l = strnlen(workbuf, sizeof(workbuf));
         while (l > 0) {
-            if (isspace(workbuf[l - 1]) || iscntrl(workbuf[l - 1])) {
-                l--;
-                workbuf[l] = 0;
+            if (isspace((unsigned char)workbuf[l - 1]) || iscntrl((unsigned char)workbuf[l - 1])) {
+                workbuf[--l] = '\0';
             } else {
                 break;
             }
         }
 
-        if (l < 1) {
-            continue;
-        }
-
-        if (workbuf[0] == '#') {
+        if (l < 1 || workbuf[0] == '#') {
             continue;
         }
 
@@ -755,8 +937,7 @@ static int read_auth_file(FILE *filep, struct auth_s *auth) {
         if (!passwd) {
             continue;
         }
-        *passwd = '\0';
-        passwd++;
+        *passwd++ = '\0';
 
         if (!strcasecmp(auth->pszUser, user)) {
             return (apr_password_validate(auth->pszPasswd, passwd) == APR_SUCCESS);
@@ -765,57 +946,216 @@ static int read_auth_file(FILE *filep, struct auth_s *auth) {
     return 0;
 }
 
-/* Authorize against the opened passwords file. Return 1 if authorized. */
-static int authorize(struct mg_connection *conn, FILE *filep) {
-    if (!conn || !filep) {
+/**
+ * Validate an API key against a token file.
+ *
+ * @param filep open token file
+ * @param presentedApiKey key extracted from the request
+ * @return non-zero if the first matching token validates
+ *
+ * @note The file format is deliberately one token per line so the auth path
+ *       stays a simple string compare instead of a parser.
+ */
+static sbool read_api_key_file(FILE *filep, const char *presentedApiKey) {
+    char workbuf[IMHTTP_MAX_BUF_LEN];
+    size_t l = 0;
+
+    if (filep == NULL || presentedApiKey == NULL || presentedApiKey[0] == '\0') {
         return 0;
     }
 
-    struct auth_s auth = {.workbuf_len = 0, .pworkbuf = NULL, .pszUser = NULL, .pszPasswd = NULL};
-    if (!parse_auth_header(conn, &auth)) {
-        return 0;
+    while (fgets(workbuf, sizeof(workbuf), filep)) {
+        l = strnlen(workbuf, sizeof(workbuf));
+        while (l > 0) {
+            if (isspace((unsigned char)workbuf[l - 1]) || iscntrl((unsigned char)workbuf[l - 1])) {
+                workbuf[--l] = '\0';
+            } else {
+                break;
+            }
+        }
+
+        if (l < 1 || workbuf[0] == '#') {
+            continue;
+        }
+
+        if (strcmp(presentedApiKey, workbuf) == 0) {
+            return 1;
+        }
     }
 
-    /* validate against htpasswd file */
-    return read_auth_file(filep, &auth);
+    return 0;
 }
 
-/* Provides Basic Authorization handling that validates against a 'htpasswd' file.
-    see also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization
-*/
-static int basicAuthHandler(struct mg_connection *conn, void *cbdata) {
-    const char *authFile = (const char *)cbdata;
-    char errStr[512];
+/**
+ * Open an auth file and report failures through the rsyslog error path.
+ *
+ * @param conn CivetWeb request connection used for request-scoped logging
+ * @param authFile path to the auth file
+ * @return open FILE handle, or NULL on error
+ *
+ * @note LogError() is used so errno expansion flows through rsyslog's normal
+ *       message formatting instead of hand-formatting strerror strings here.
+ */
+static FILE *openAuthFile(struct mg_connection *conn, const char *authFile) {
     FILE *fp = NULL;
-    int ret = 1;
 
-    if (!authFile) {
+    if (authFile == NULL) {
         mg_cry(conn, "warning: auth file not configured for this endpoint.\n");
-        ret = 0;
-        goto finalize;
+        return NULL;
     }
 
     fp = fopen(authFile, "r");
     if (fp == NULL) {
-        if (strerror_r(errno, errStr, sizeof(errStr)) == 0) {
-            mg_cry(conn, "error: auth file '%s' could not be accessed: %s\n", authFile, errStr);
-        } else {
-            mg_cry(conn, "error: auth file '%s' could not be accessed: %d\n", authFile, errno);
-        }
-        ret = 0;
+        LogError(errno, RS_RET_NO_FILE_ACCESS, "imhttp: auth file '%s' could not be accessed", authFile);
+    }
+    return fp;
+}
+
+/**
+ * Validate a Basic-auth request against an htpasswd file.
+ *
+ * @param conn CivetWeb request connection
+ * @param authFile htpasswd file path
+ * @return non-zero on successful authorization
+ *
+ * @note This preserves the pre-existing Basic-auth contract while sharing the
+ *       file-open path with API-key auth.
+ */
+static sbool authorize_basic(struct mg_connection *conn, const char *authFile) {
+    sbool ret = 0;
+    FILE *fp = NULL;
+    struct auth_s auth = {.pszUser = NULL, .pszPasswd = NULL, .pszApiKey = NULL};
+
+    fp = openAuthFile(conn, authFile);
+    if (fp == NULL) {
         goto finalize;
     }
 
-    ret = authorize(conn, fp);
+    if (!parse_basic_auth_header(conn, &auth)) {
+        goto finalize;
+    }
+
+    ret = read_auth_file(fp, &auth);
 
 finalize:
-    if (!ret) {
-        mg_send_http_error(conn, 401, "WWW-Authenticate: Basic realm=\"User Visible Realm\"\n");
-    }
-    if (fp) {
+    if (fp != NULL) {
         fclose(fp);
     }
     return ret;
+}
+
+/**
+ * Validate an API-key request against a token file.
+ *
+ * @param conn CivetWeb request connection
+ * @param authFile API-key file path
+ * @return non-zero on successful authorization
+ *
+ * @note One token per line keeps matching deterministic and avoids parser
+ *       ambiguity in the auth path.
+ */
+static sbool authorize_api_key(struct mg_connection *conn, const char *authFile) {
+    sbool ret = 0;
+    FILE *fp = NULL;
+    struct auth_s auth = {.pszUser = NULL, .pszPasswd = NULL, .pszApiKey = NULL};
+
+    fp = openAuthFile(conn, authFile);
+    if (fp == NULL) {
+        goto finalize;
+    }
+
+    if (!parse_api_key_header(conn, &auth)) {
+        goto finalize;
+    }
+
+    ret = read_api_key_file(fp, auth.pszApiKey);
+
+finalize:
+    if (fp != NULL) {
+        fclose(fp);
+    }
+    return ret;
+}
+
+/**
+ * Send the 401 response matching the route's configured auth scheme.
+ *
+ * @param conn CivetWeb request connection
+ * @param authCtx route-local auth state
+ *
+ * @note Basic auth advertises a challenge header so standard clients can retry.
+ *       API-key-only routes intentionally avoid a browser-oriented challenge.
+ */
+static void sendUnauthorized(struct mg_connection *conn, const struct route_auth_ctx_s *authCtx) {
+    if (authCtx != NULL && authCtx->pszBasicAuthFile != NULL) {
+        mg_printf(conn,
+                  "HTTP/1.1 401 Unauthorized\r\n"
+                  "WWW-Authenticate: Basic realm=\"User Visible Realm\"\r\n"
+                  "Connection: close\r\n"
+                  "Content-Length: 0\r\n"
+                  "\r\n");
+    } else {
+        mg_printf(conn, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+    }
+}
+
+/**
+ * CivetWeb auth callback for imhttp routes.
+ *
+ * @param conn CivetWeb request connection
+ * @param cbdata route-local auth context
+ * @return non-zero when the request is authorized
+ *
+ * @note When both schemes are configured, explicit Basic auth wins first so we
+ *       preserve the existing htpasswd behavior; API key auth is the fallback.
+ */
+static int routeAuthHandler(struct mg_connection *conn, void *cbdata) {
+    const struct route_auth_ctx_s *authCtx = (const struct route_auth_ctx_s *)cbdata;
+    const char *authHeader = mg_get_header(conn, "Authorization");
+    int ret = 0;
+
+    if (!routeAuthConfigured(authCtx)) {
+        return 1;
+    }
+
+    if (authCtx->pszBasicAuthFile != NULL && authHeader != NULL && strncasecmp(authHeader, "Basic ", 6) == 0) {
+        ret = authorize_basic(conn, authCtx->pszBasicAuthFile);
+    } else if (authCtx->pszApiKeyFile != NULL) {
+        ret = authorize_api_key(conn, authCtx->pszApiKeyFile);
+    }
+
+    if (!ret) {
+        sendUnauthorized(conn, authCtx);
+    }
+
+    return ret;
+}
+
+/**
+ * Register a request handler and attach auth handling when needed.
+ *
+ * @param ctx CivetWeb context
+ * @param path request path
+ * @param handler request handler
+ * @param handlerCbdata handler-specific callback data
+ * @param authCtx optional route-local auth context
+ *
+ * @note Keeping handler and auth registration together makes it easier to add
+ *       more mock endpoints later without duplicating the wiring rules.
+ */
+static void registerRoute(struct mg_context *ctx,
+                          const char *path,
+                          int (*handler)(struct mg_connection *, void *),
+                          void *handlerCbdata,
+                          struct route_auth_ctx_s *authCtx) {
+    if (ctx == NULL || path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    mg_set_request_handler(ctx, path, handler, handlerCbdata);
+    if (routeAuthConfigured(authCtx)) {
+        mg_set_auth_handler(ctx, path, routeAuthHandler, authCtx);
+    }
 }
 
 /* cbdata should actually contain instance data and we can actually use this instance data
@@ -823,6 +1163,7 @@ finalize:
  */
 static int postHandler(struct mg_connection *conn, void *cbdata) {
     int rc = 1;
+    rsRetVal localRet = RS_RET_OK;
     instanceConf_t *inst = (instanceConf_t *)cbdata;
     const struct mg_request_info *ri = mg_get_request_info(conn);
     struct conn_wrkr_s *connWrkr = mg_get_thread_pointer(conn);
@@ -834,6 +1175,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
         connWrkr->pScratchBuf = calloc(1, INIT_SCRATCH_BUF_SIZE);
         if (!connWrkr->pScratchBuf) {
             mg_cry(conn, "%s() - could not alloc scratch buffer!\n", __FUNCTION__);
+            mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
             rc = 500;
             FINALIZE;
         }
@@ -861,12 +1203,25 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
 
     if (ri->content_length >= 0) {
         /* We know the content length in advance */
-        if (ri->content_length > (long long)connWrkr->readBufSize) {
-            connWrkr->pReadBuf = realloc(connWrkr->pReadBuf, ri->content_length + 1);
-            if (!connWrkr->pReadBuf) {
+        if ((uint64_t)ri->content_length > MAX_REQUEST_BODY_SIZE) {
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "imhttp: rejecting request body with Content-Length %lld exceeding maximum %d",
+                     (long long)ri->content_length, MAX_REQUEST_BODY_SIZE);
+            STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+            STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+            mg_printf(conn, "HTTP/1.1 413 Payload Too Large\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+            rc = 413;
+            FINALIZE;
+        }
+        if ((uint64_t)ri->content_length + 1 > connWrkr->readBufSize) {
+            char *newReadBuf = realloc(connWrkr->pReadBuf, (size_t)ri->content_length + 1);
+            if (newReadBuf == NULL) {
                 mg_cry(conn, "%s() - realloc failed!\n", __FUNCTION__);
+                mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+                rc = 500;
                 FINALIZE;
             }
+            connWrkr->pReadBuf = newReadBuf;
             connWrkr->readBufSize = ri->content_length + 1;
         }
     } else {
@@ -887,15 +1242,36 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
     while (1) {
         int count = mg_read(conn, connWrkr->pReadBuf, connWrkr->readBufSize);
         if (count > 0) {
-            processData(inst, connWrkr, (const char *)connWrkr->pReadBuf, count);
+            localRet = processData(inst, connWrkr, (const char *)connWrkr->pReadBuf, count);
+            if (localRet != RS_RET_OK) {
+                LogError(0, localRet, "imhttp: failed processing request payload");
+                STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+                mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+                rc = 500;
+                FINALIZE;
+            }
         } else {
             break;
         }
     }
 
     /* submit remainder */
-    doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
-    multiSubmitFlush(&connWrkr->multiSub);
+    localRet = doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
+    if (localRet != RS_RET_OK) {
+        LogError(0, localRet, "imhttp: failed submitting final request message");
+        STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+        rc = 500;
+        FINALIZE;
+    }
+    localRet = multiSubmitFlush(&connWrkr->multiSub);
+    if (localRet != RS_RET_OK) {
+        LogError(0, localRet, "imhttp: failed flushing submitted messages");
+        STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+        rc = 500;
+        FINALIZE;
+    }
 
     mg_send_http_ok(conn, "text/plain", 0);
     rc = 200;
@@ -933,9 +1309,13 @@ struct stats_buf {
 static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
     struct stats_buf *sb = (struct stats_buf *)usrptr;
     const size_t line_len = strlen(line);
-    if (sb->len + line_len >= sb->cap) {
+    if (line_len > ((size_t)-1) - sb->len - 1) {
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    const size_t needed = sb->len + line_len + 1;
+    if (needed > sb->cap) {
         size_t newcap = sb->cap ? sb->cap * 2 : 1024;
-        while (newcap <= sb->len + line_len) {
+        while (newcap < needed) {
             if (newcap > ((size_t)-1) / 2) {
                 return RS_RET_OUT_OF_MEMORY;
             }
@@ -1006,31 +1386,24 @@ static int runloop(void) {
         assert(inst->pszEndpoint);
         if (inst->pszEndpoint) {
             dbgprintf("setting request handler: '%s'\n", inst->pszEndpoint);
-            mg_set_request_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, postHandler, inst);
-            if (inst->pszBasicAuthFile) {
-                mg_set_auth_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, basicAuthHandler,
-                                    inst->pszBasicAuthFile);
-            }
+            routeAuthCtxSet(&inst->authCtx, (const char *)inst->pszBasicAuthFile, (const char *)inst->pszApiKeyFile);
+            registerRoute(s_httpserv->ctx, (const char *)inst->pszEndpoint, postHandler, inst, &inst->authCtx);
         }
     }
 
     if (runModConf->pszHealthCheckPath && runModConf->pszHealthCheckPath[0] != '\0') {
         dbgprintf("imhttp: setting request handler for global health check: '%s'\n", runModConf->pszHealthCheckPath);
-        mg_set_request_handler(s_httpserv->ctx, runModConf->pszHealthCheckPath, health_check_handler, NULL);
-        if (runModConf->pszHealthCheckAuthFile) {
-            mg_set_auth_handler(s_httpserv->ctx, runModConf->pszHealthCheckPath, basicAuthHandler,
-                                runModConf->pszHealthCheckAuthFile);
-        }
+        routeAuthCtxSet(&runModConf->healthCheckAuthCtx, runModConf->pszHealthCheckAuthFile,
+                        runModConf->pszHealthCheckApiKeyFile);
+        registerRoute(s_httpserv->ctx, runModConf->pszHealthCheckPath, health_check_handler, NULL,
+                      &runModConf->healthCheckAuthCtx);
     }
 
     if (runModConf->pszMetricsPath && runModConf->pszMetricsPath[0] != '\0') {
         dbgprintf("imhttp: setting request handler for Prometheus metrics: '%s'\n", runModConf->pszMetricsPath);
-        mg_set_request_handler(s_httpserv->ctx, runModConf->pszMetricsPath, prometheus_metrics_handler,
-                               NULL /* cbdata, not used */);
-        if (runModConf->pszMetricsAuthFile) {
-            mg_set_auth_handler(s_httpserv->ctx, runModConf->pszMetricsPath, basicAuthHandler,
-                                runModConf->pszMetricsAuthFile);
-        }
+        routeAuthCtxSet(&runModConf->metricsAuthCtx, runModConf->pszMetricsAuthFile, runModConf->pszMetricsApiKeyFile);
+        registerRoute(s_httpserv->ctx, runModConf->pszMetricsPath, prometheus_metrics_handler,
+                      NULL /* cbdata, not used */, &runModConf->metricsAuthCtx);
     }
 
     mg_unlock_context(s_httpserv->ctx);
@@ -1064,19 +1437,21 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "endpoint")) {
-            inst->pszEndpoint = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszEndpoint = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "basicauthfile")) {
-            inst->pszBasicAuthFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBasicAuthFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(inppblk.descr[i].name, "apikeyfile")) {
+            CHKmalloc(inst->pszApiKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             inst->flowControl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -1132,13 +1507,17 @@ BEGINbeginCnfLoad
     loadModConf->docroot.name = NULL;
     loadModConf->nOptions = 0;
     loadModConf->options = NULL;
+    loadModConf->pszLstnPortFileName = NULL;
     loadModConf->pszHealthCheckAuthFile = NULL;
     loadModConf->pszMetricsAuthFile = NULL;
+    loadModConf->pszHealthCheckApiKeyFile = NULL;
+    loadModConf->pszMetricsApiKeyFile = NULL;
 ENDbeginCnfLoad
 
 
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
+    char *cstr = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -1158,33 +1537,51 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "ports")) {
             assert(loadModConf->ports.name == NULL);
             assert(loadModConf->ports.val == NULL);
-            loadModConf->ports.name = strdup(CIVETWEB_OPTION_NAME_PORTS);
-            loadModConf->ports.val = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->ports.name = strdup(CIVETWEB_OPTION_NAME_PORTS));
+            CHKmalloc(loadModConf->ports.val = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "listenportfilename")) {
+            free(loadModConf->pszLstnPortFileName);
+            CHKmalloc(loadModConf->pszLstnPortFileName = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "documentroot")) {
             assert(loadModConf->docroot.name == NULL);
             assert(loadModConf->docroot.val == NULL);
-            loadModConf->docroot.name = strdup(CIVETWEB_OPTION_NAME_DOCUMENT_ROOT);
-            loadModConf->docroot.val = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->docroot.name = strdup(CIVETWEB_OPTION_NAME_DOCUMENT_ROOT));
+            CHKmalloc(loadModConf->docroot.val = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "liboptions")) {
-            loadModConf->nOptions = pvals[i].val.d.ar->nmemb;
-            CHKmalloc(loadModConf->options = malloc(sizeof(struct option) * pvals[i].val.d.ar->nmemb));
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+            if (pvals[i].val.d.ar->nmemb == 0) {
+                continue;
+            }
+            const int nmemb = pvals[i].val.d.ar->nmemb;
+            if (nmemb < 0 || (size_t)nmemb > ((size_t)-1) / sizeof(struct option)) {
+                LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many liboptions configured");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            CHKmalloc(loadModConf->options = calloc((size_t)nmemb, sizeof(struct option)));
+            for (int j = 0; j < nmemb; ++j) {
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
                 CHKiRet(processCivetwebOptions(cstr, &loadModConf->options[j].name, &loadModConf->options[j].val));
+                ++loadModConf->nOptions;
                 free(cstr);
+                cstr = NULL;
             }
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckpath")) {
             free(loadModConf->pszHealthCheckPath);
-            loadModConf->pszHealthCheckPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszHealthCheckPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "metricspath")) {
             free(loadModConf->pszMetricsPath);
-            loadModConf->pszMetricsPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMetricsPath = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckbasicauthfile")) {
             free(loadModConf->pszHealthCheckAuthFile);
-            loadModConf->pszHealthCheckAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszHealthCheckAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "metricsbasicauthfile")) {
             free(loadModConf->pszMetricsAuthFile);
-            loadModConf->pszMetricsAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMetricsAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "healthcheckapikeyfile")) {
+            free(loadModConf->pszHealthCheckApiKeyFile);
+            CHKmalloc(loadModConf->pszHealthCheckApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "metricsapikeyfile")) {
+            free(loadModConf->pszMetricsApiKeyFile);
+            CHKmalloc(loadModConf->pszMetricsApiKeyFile = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imhttp: program error, non-handled "
@@ -1205,6 +1602,7 @@ BEGINsetModCnf
     }
 
 finalize_it:
+    free(cstr);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
@@ -1220,6 +1618,54 @@ static inline void std_checkRuleset_genErrMsg(ATTR_UNUSED modConfData_t *modConf
              "imhttp: ruleset '%s' for %s not found - "
              "using default ruleset instead",
              inst->pszBindRuleset, inst->pszEndpoint);
+}
+
+static rsRetVal writeListenPortFile(const modConfData_t *const conf) {
+    struct mg_server_port ports[2];
+    char portBuf[32];
+    int nPorts;
+    int fd = -1;
+    int len;
+    ssize_t wr;
+    DEFiRet;
+
+    if (conf->pszLstnPortFileName == NULL) FINALIZE;
+
+    nPorts = mg_get_server_ports(s_httpserv->ctx, sizeof(ports) / sizeof(ports[0]), ports);
+    if (nPorts != 1) {
+        LogError(0, RS_RET_ERR, "imhttp: listenPortFileName requires exactly one bound listener, got %d", nPorts);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    len = snprintf(portBuf, sizeof(portBuf), "%u", (unsigned)ports[0].port);
+    if (len < 0 || (size_t)len >= sizeof(portBuf)) {
+        LogError(0, RS_RET_ERR, "imhttp: listenPortFileName: internal port formatting error");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fd = open(conf->pszLstnPortFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to open file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    for (int off = 0; off < len;) {
+        wr = write(fd, portBuf + off, (size_t)(len - off));
+        if (wr < 0) {
+            if (errno == EINTR) continue;
+            LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        off += (int)wr;
+    }
+    if (close(fd) != 0) {
+        fd = -1;
+        LogError(errno, RS_RET_IO_ERROR, "imhttp: listenPortFileName: error while trying to close file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
+
+finalize_it:
+    if (fd != -1) close(fd);
+    RETiRet;
 }
 
 BEGINcheckCnf
@@ -1244,7 +1690,7 @@ BEGINcheckCnf
                  "imhttp: healthCheckPath '%s' is invalid, must start with '/'. Using default '%s'.",
                  pModConf->pszHealthCheckPath ? pModConf->pszHealthCheckPath : "(null)", DEFAULT_HEALTH_CHECK_PATH);
         free(pModConf->pszHealthCheckPath);
-        pModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH);
+        CHKmalloc(pModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH));
     }
 
     if (pModConf->pszMetricsPath == NULL || pModConf->pszMetricsPath[0] != '/') {
@@ -1252,9 +1698,10 @@ BEGINcheckCnf
                  "imhttp: metricsPath '%s' is invalid, must start with '/'. Using default '%s'.",
                  pModConf->pszMetricsPath ? pModConf->pszMetricsPath : "(null)", DEFAULT_PROM_METRICS_PATH);
         free(pModConf->pszMetricsPath);
-        pModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH);
+        CHKmalloc(pModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH));
     }
 
+finalize_it:
 ENDcheckCnf
 
 
@@ -1273,7 +1720,16 @@ BEGINactivateCnf
     if (runModConf->docroot.val) {
         count += 2;
     }
+    if (runModConf->nOptions < 0 || (size_t)runModConf->nOptions > ((size_t)-1 - count) / 2 ||
+        (size_t)runModConf->nOptions > ((size_t)-1) / sizeof(*s_httpserv->civetweb_options)) {
+        LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many civetweb options configured");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
     count += (2 * runModConf->nOptions);
+    if (count > ((size_t)-1) / sizeof(*s_httpserv->civetweb_options)) {
+        LogError(0, RS_RET_PARAM_ERROR, "imhttp: too many civetweb options configured");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
     CHKmalloc(s_httpserv->civetweb_options = calloc(count, sizeof(*s_httpserv->civetweb_options)));
 
     const char **pcivetweb_options = s_httpserv->civetweb_options;
@@ -1324,6 +1780,7 @@ BEGINactivateCnf
 
     /* init civetweb libs and start server w/no input */
     mg_init_library(MG_FEATURES_TLS);
+    s_civetweb_initialized = 1;
     memset(&callbacks, 0, sizeof(callbacks));
     // callbacks.log_message = log_message;
     // callbacks.init_ssl = init_ssl;
@@ -1335,11 +1792,14 @@ BEGINactivateCnf
         LogError(0, RS_RET_INTERNAL_ERROR, "Cannot start CivetWeb - mg_start failed.\n");
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
+    CHKiRet(writeListenPortFile(runModConf));
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        free(s_httpserv);
-        s_httpserv = NULL;
+        cleanupHttpServer();
+        if (statsCounter.stats != NULL) {
+            statsobj.Destruct(&statsCounter.stats);
+        }
         LogError(0, NO_ERRCODE, "imhttp: error %d trying to activate configuration", iRet);
     }
     RETiRet;
@@ -1357,6 +1817,7 @@ BEGINfreeCnf
         }
         free(inst->pszEndpoint);
         free(inst->pszBasicAuthFile);
+        free(inst->pszApiKeyFile);
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
         free(inst->pszRatelimitName);
@@ -1376,10 +1837,13 @@ BEGINfreeCnf
     free((void *)pModConf->ports.val);
     free((void *)pModConf->docroot.name);
     free((void *)pModConf->docroot.val);
+    free((void *)pModConf->pszLstnPortFileName);
     free((void *)pModConf->pszHealthCheckPath);
     free((void *)pModConf->pszMetricsPath);
     free((void *)pModConf->pszHealthCheckAuthFile);
     free((void *)pModConf->pszMetricsAuthFile);
+    free((void *)pModConf->pszHealthCheckApiKeyFile);
+    free((void *)pModConf->pszMetricsApiKeyFile);
 
     if (statsCounter.stats) {
         statsobj.Destruct(&statsCounter.stats);
@@ -1401,12 +1865,7 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
-    if (s_httpserv) {
-        mg_stop(s_httpserv->ctx);
-        mg_exit_library();
-        free(s_httpserv->civetweb_options);
-        free(s_httpserv);
-    }
+    cleanupHttpServer();
 ENDafterRun
 
 

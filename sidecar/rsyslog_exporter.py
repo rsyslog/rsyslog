@@ -122,13 +122,13 @@ logger = logging.getLogger(__name__)
 
 class Metric:
     """Internal representation of a metric."""
-    
+
     def __init__(self, name: str, value: float, labels: Dict[str, str], metric_type: str = "gauge"):
         self.name = name
         self.value = value
         self.labels = labels
         self.metric_type = metric_type  # "gauge" or "counter"
-    
+
     def __repr__(self):
         return f"Metric({self.name}={self.value}, labels={self.labels}, type={self.metric_type})"
 
@@ -221,27 +221,27 @@ def parse_json_object(obj: Dict[str, object]) -> List[Metric]:
 def parse_json_impstats(file_path: str) -> List[Metric]:
     """
     Parse rsyslog impstats in JSON format from a file.
-    
+
     Expected format (one JSON object per line):
     {"name":"global","origin":"core","utime":"123456","stime":"78901",...}
     {"name":"action 0","origin":"core.action","processed":"1000","failed":"5",...}
     """
     metrics = []
-    
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
                     continue
-                
+
                 metrics.extend(parse_json_line(line, line_num))
-    
+
     except FileNotFoundError:
         logger.error(f"Impstats file not found: {file_path}")
     except Exception as e:
         logger.error(f"Error parsing JSON impstats: {e}", exc_info=True)
-    
+
     return metrics
 
 
@@ -276,50 +276,50 @@ def parse_json_lines(lines: List[str]) -> List[Metric]:
 def parse_prometheus_impstats(file_path: str) -> List[Metric]:
     """
     Parse rsyslog impstats in native Prometheus format.
-    
+
     This format is already Prometheus exposition format, so we parse it
     and convert to our internal representation for consistency.
-    
+
     Example format:
     # TYPE rsyslog_global_utime counter
     rsyslog_global_utime{origin="core"} 123456
     """
     metrics = []
-    
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             current_type = "gauge"
-            
+
             for line in f:
                 line = line.strip()
-                
+
                 # Skip empty lines and help comments
                 if not line or line.startswith("# HELP"):
                     continue
-                
+
                 # Parse TYPE directive
                 if line.startswith("# TYPE"):
                     parts = line.split()
                     if len(parts) >= 4:
                         current_type = parts[3]  # gauge, counter, etc.
                     continue
-                
+
                 # Skip other comments
                 if line.startswith("#"):
                     continue
-                
+
                 # Parse metric line: metric_name{labels} value
                 match = re.match(r'^([a-zA-Z_:][a-zA-Z0-9_:]*)\s*(\{[^}]*\})?\s+([0-9.eE+\-]+)', line)
                 if not match:
                     continue
-                
+
                 metric_name = match.group(1)
                 labels_str = match.group(2) or "{}"
                 try:
                     value = float(match.group(3))
                 except ValueError:
                     continue
-                
+
                 # Parse labels
                 labels = {}
                 if labels_str != "{}":
@@ -328,47 +328,47 @@ def parse_prometheus_impstats(file_path: str) -> List[Metric]:
                         if "=" in label_pair:
                             k, v = label_pair.split("=", 1)
                             labels[k.strip()] = v.strip().strip('"')
-                
+
                 metrics.append(Metric(
                     name=metric_name,
                     value=value,
                     labels=labels,
                     metric_type="counter" if current_type == "counter" else "gauge",
                 ))
-    
+
     except FileNotFoundError:
         logger.error(f"Impstats file not found: {file_path}")
     except Exception as e:
         logger.error(f"Error parsing Prometheus impstats: {e}", exc_info=True)
-    
+
     return metrics
 
 
 def parse_cee_impstats(file_path: str) -> List[Metric]:
     """
     Parse rsyslog impstats in CEE/Lumberjack format.
-    
+
     Format: Lines starting with "@cee:" followed by JSON.
     Example: @cee:{"name":"global","origin":"core","utime":"123456"}
-    
+
     Falls back to plain JSON parsing if no @cee cookie found.
     """
     metrics = []
-    
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
                     continue
-                
+
                 # Check for @cee cookie
                 if line.startswith("@cee:"):
                     json_str = line[5:].strip()
                 else:
                     # Fallback: treat as plain JSON
                     json_str = line
-                
+
                 try:
                     obj = json.loads(json_str)
                 except json.JSONDecodeError as e:
@@ -382,25 +382,25 @@ def parse_cee_impstats(file_path: str) -> List[Metric]:
                     continue
 
                 metrics.extend(parse_json_object(obj))
-    
+
     except FileNotFoundError:
         logger.error(f"Impstats file not found: {file_path}")
     except Exception as e:
         logger.error(f"Error parsing CEE impstats: {e}", exc_info=True)
-    
+
     return metrics
 
 
 class UdpStatsListener:
     """
     UDP listener for receiving impstats messages from rsyslog.
-    
+
     Handles burst reception with completion timeout:
     - Receives all messages in a burst
     - Waits STATS_COMPLETE_TIMEOUT seconds after last message
     - Then updates metrics atomically
     """
-    
+
     def __init__(self, addr: str, port: int, format_type: str, completion_timeout: float,
                  allowed_sources: List[str] = None):
         self.addr = addr
@@ -411,17 +411,17 @@ class UdpStatsListener:
         self.sock = None
         self.running = False
         self.thread = None
-        
+
         # Metrics storage
         self.cached_metrics: List[Metric] = []
         self.metrics_lock = threading.Lock()
         self.parse_count = 0
-        
+
         # Burst handling
         self.burst_buffer: List[str] = []
         self.last_receive_time = 0
         self.dropped_messages = 0  # Track dropped messages for security monitoring
-        
+
         # Select parser for lines
         if format_type == "json":
             self.line_parser = parse_json_lines
@@ -430,7 +430,7 @@ class UdpStatsListener:
         else:
             logger.warning(f"UDP mode does not support format '{format_type}', using json")
             self.line_parser = parse_json_lines
-    
+
     def _parse_cee_lines(self, lines: List[str]) -> List[Metric]:
         """Parse CEE format lines."""
         json_lines = []
@@ -440,27 +440,27 @@ class UdpStatsListener:
             else:
                 json_lines.append(line)
         return parse_json_lines(json_lines)
-    
+
     def start(self):
         """Start the UDP listener in a background thread."""
         if self.running:
             return
-        
+
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.bind((self.addr, self.port))
             self.sock.settimeout(1.0)  # 1 second timeout for receive
-            
+
             self.running = True
             self.thread = threading.Thread(target=self._listen_loop, daemon=True)
             self.thread.start()
-            
+
             logger.info(f"UDP listener started on {self.addr}:{self.port}")
         except Exception as e:
             logger.error(f"Failed to start UDP listener: {e}", exc_info=True)
             raise
-    
+
     def stop(self):
         """Stop the UDP listener."""
         self.running = False
@@ -469,11 +469,11 @@ class UdpStatsListener:
         if self.sock:
             self.sock.close()
         logger.info("UDP listener stopped")
-    
+
     def _listen_loop(self):
         """Main listening loop - runs in background thread."""
         logger.debug("UDP listener loop started")
-        
+
         while self.running:
             try:
                 # Try to receive data
@@ -486,53 +486,53 @@ class UdpStatsListener:
                             logger.warning(f"Rejected UDP packet from unauthorized source: {source_ip}")
                             self.dropped_messages += 1
                             continue
-                        
+
                         message = data.decode('utf-8', errors='ignore')
                         self._handle_message(message)
                 except socket.timeout:
                     # Check if burst is complete
                     self._check_burst_completion()
                     continue
-                
+
             except Exception as e:
                 if self.running:
                     logger.error(f"Error in UDP listener: {e}", exc_info=True)
-        
+
         logger.debug("UDP listener loop ended")
-    
+
     def _handle_message(self, message: str):
         """Handle received UDP message (may contain multiple lines)."""
         lines = message.splitlines()
-        
+
         with self.metrics_lock:
             # Prevent buffer overflow attacks
             if len(self.burst_buffer) + len(lines) > MAX_BURST_BUFFER_LINES:
                 logger.warning(f"Burst buffer limit reached ({MAX_BURST_BUFFER_LINES} lines), "
-                             f"dropping {len(lines)} new lines. Possible DoS attempt or misconfiguration.")
+                               f"dropping {len(lines)} new lines. Possible DoS attempt or misconfiguration.")
                 self.dropped_messages += 1
                 return
-            
+
             self.burst_buffer.extend(lines)
             self.last_receive_time = time.time()
             logger.debug(f"Received {len(lines)} lines, buffer now has {len(self.burst_buffer)} lines")
-    
+
     def _check_burst_completion(self):
         """Check if burst is complete and process if so."""
         burst_lines = None
         with self.metrics_lock:
             if not self.burst_buffer:
                 return
-            
+
             time_since_last = time.time() - self.last_receive_time
             if time_since_last < self.completion_timeout:
                 return
-            
+
             # Burst is complete, copy buffer and release lock before parsing
             burst_lines = self.burst_buffer
             self.burst_buffer = []
-        
+
         logger.debug(f"Burst complete ({len(burst_lines)} lines), processing...")
-        
+
         try:
             new_metrics = self.line_parser(burst_lines)
             with self.metrics_lock:
@@ -541,7 +541,7 @@ class UdpStatsListener:
             logger.info(f"Updated {len(new_metrics)} metrics from UDP burst (parse #{self.parse_count})")
         except Exception as e:
             logger.error(f"Error parsing UDP burst: {e}", exc_info=True)
-    
+
     def get_metrics(self) -> List[Metric]:
         """Get current metrics (thread-safe)."""
         with self.metrics_lock:
@@ -553,20 +553,20 @@ class ImpstatsCollector:
     Prometheus collector that reads and parses impstats.
     Supports both file-based and UDP listener modes.
     """
-    
-    def __init__(self, mode: str, file_path: str = None, format_type: str = "json", 
+
+    def __init__(self, mode: str, file_path: str = None, format_type: str = "json",
                  udp_addr: str = None, udp_port: int = None, completion_timeout: float = 5):
         self.mode = mode
         self.format_type = format_type
         self.parse_count = 0
-        
+
         if mode == "file":
             if not file_path:
                 raise ValueError("file_path required for file mode")
             self.file_path = file_path
             self.last_mtime = 0
             self.cached_metrics: List[Metric] = []
-            
+
             # Select parser
             if format_type == "json":
                 self.parser = parse_json_impstats
@@ -577,33 +577,33 @@ class ImpstatsCollector:
             else:
                 logger.warning(f"Unknown format: {format_type}, defaulting to json")
                 self.parser = parse_json_impstats
-            
+
             self.udp_listener = None
-            
+
         elif mode == "udp":
             if not udp_addr or not udp_port:
                 raise ValueError("udp_addr and udp_port required for UDP mode")
-            
+
             # Parse allowed sources
             allowed_sources = []
             if ALLOWED_UDP_SOURCES:
                 allowed_sources = [ip.strip() for ip in ALLOWED_UDP_SOURCES.split(',') if ip.strip()]
                 logger.info(f"UDP source filtering enabled: {allowed_sources}")
-            
-            self.udp_listener = UdpStatsListener(udp_addr, udp_port, format_type, 
-                                                completion_timeout, allowed_sources)
+
+            self.udp_listener = UdpStatsListener(udp_addr, udp_port, format_type,
+                                                 completion_timeout, allowed_sources)
             self.udp_listener.start()
             self.file_path = None
             self.cached_metrics = []
-        
+
         else:
             raise ValueError(f"Unknown mode: {mode}, must be 'file' or 'udp'")
-    
+
     def refresh_if_needed(self):
         """Check file mtime and refresh cache if file has changed (file mode only)."""
         if self.mode != "file":
             return
-        
+
         try:
             current_mtime = os.path.getmtime(self.file_path)
             if current_mtime != self.last_mtime:
@@ -611,14 +611,15 @@ class ImpstatsCollector:
                 self.cached_metrics = self.parser(self.file_path)
                 self.last_mtime = current_mtime
                 self.parse_count += 1
-                logger.info(f"Loaded {len(self.cached_metrics)} metrics from {self.file_path} (parse #{self.parse_count})")
+                logger.info(
+                    f"Loaded {len(self.cached_metrics)} metrics from {self.file_path} (parse #{self.parse_count})")
         except FileNotFoundError:
             if self.cached_metrics:
                 logger.warning(f"Impstats file disappeared: {self.file_path}")
                 self.cached_metrics = []
         except Exception as e:
             logger.error(f"Error checking file mtime: {e}", exc_info=True)
-    
+
     def get_current_metrics(self) -> List[Metric]:
         """Get current metrics based on mode."""
         if self.mode == "file":
@@ -627,7 +628,7 @@ class ImpstatsCollector:
         elif self.mode == "udp":
             return self.udp_listener.get_metrics()
         return []
-    
+
     def get_parse_count(self) -> int:
         """Get total number of times metrics were parsed/updated."""
         if self.mode == "file":
@@ -635,27 +636,27 @@ class ImpstatsCollector:
         elif self.mode == "udp":
             return self.udp_listener.parse_count
         return 0
-    
+
     def collect(self):
         """
         Called by Prometheus client library on each scrape.
         Returns metric families.
         """
         current_metrics = self.get_current_metrics()
-        
+
         # Group metrics by name
         metric_groups: Dict[str, List[Metric]] = defaultdict(list)
         for metric in current_metrics:
             metric_groups[metric.name].append(metric)
-        
+
         # Emit metric families
         for name, metrics in metric_groups.items():
             if not metrics:
                 continue
-            
+
             # Determine type from first metric
             metric_type = metrics[0].metric_type
-            
+
             if metric_type == "counter":
                 family = CounterMetricFamily(
                     name,
@@ -668,7 +669,7 @@ class ImpstatsCollector:
                     f"rsyslog metric {name}",
                     labels=list(metrics[0].labels.keys()) if metrics[0].labels else None,
                 )
-            
+
             for metric in metrics:
                 if metric.labels:
                     family.add_metric(
@@ -677,26 +678,26 @@ class ImpstatsCollector:
                     )
                 else:
                     family.add_metric([], metric.value)
-            
+
             yield family
 
 
 class ExporterApp:
     """WSGI application for the Prometheus exporter."""
-    
+
     def __init__(self, collector: ImpstatsCollector):
         self.collector = collector
         self.registry = CollectorRegistry()
         self.registry.register(collector)
         self.start_time = time.time()
-    
+
     def __call__(self, environ, start_response):
         request = Request(environ)
-        
+
         if request.path == "/metrics":
             # Check if we have any metrics to export
             current_metrics = self.collector.get_current_metrics()
-            
+
             if not current_metrics:
                 # Best practice: return 503 with explanatory comment when no metrics available
                 # This allows Prometheus to distinguish between "no data" and "service down"
@@ -704,7 +705,7 @@ class ExporterApp:
                     "# No metrics available\n"
                     "# The rsyslog exporter has not yet collected any statistics.\n"
                 )
-                
+
                 if self.collector.mode == "file":
                     if not os.path.exists(self.collector.file_path):
                         error_message += f"# Reason: impstats file does not exist: {self.collector.file_path}\n"
@@ -712,7 +713,7 @@ class ExporterApp:
                         error_message += f"# Reason: impstats file is empty or contains no valid metrics\n"
                 elif self.collector.mode == "udp":
                     error_message += "# Reason: No statistics received via UDP yet. Waiting for rsyslog to send data.\n"
-                
+
                 response = Response(
                     error_message,
                     status=503,
@@ -722,12 +723,12 @@ class ExporterApp:
                 # Generate Prometheus exposition format
                 output = generate_latest(self.registry)
                 response = Response(output, mimetype="text/plain; version=0.0.4")
-        
+
         elif request.path == "/health" or request.path == "/":
             # Health check endpoint
             uptime = time.time() - self.start_time
             current_metrics = self.collector.get_current_metrics()
-            
+
             # Derive simple health status
             status = "healthy"
             try:
@@ -750,7 +751,7 @@ class ExporterApp:
                 "metrics_count": len(current_metrics),
                 "parse_count": self.collector.get_parse_count(),
             }
-            
+
             if self.collector.mode == "file":
                 health_info["impstats_file"] = self.collector.file_path
                 health_info["impstats_format"] = self.collector.format_type
@@ -761,15 +762,15 @@ class ExporterApp:
                 health_info["dropped_messages"] = self.collector.udp_listener.dropped_messages
                 if self.collector.udp_listener.allowed_sources:
                     health_info["source_filtering"] = "enabled"
-            
+
             response = Response(
                 json.dumps(health_info, indent=2) + "\n",
                 mimetype="application/json",
             )
-        
+
         else:
             response = Response("Not Found\n", status=404)
-        
+
         return response(environ, start_response)
 
 
@@ -780,20 +781,20 @@ _collector = None
 def create_app():
     """WSGI application factory for production servers (gunicorn, uwsgi, etc.)."""
     global _collector
-    
+
     # Validate configuration
     if IMPSTATS_MODE not in ("file", "udp"):
         logger.error(f"Invalid IMPSTATS_MODE: {IMPSTATS_MODE}")
         sys.exit(1)
-    
+
     if IMPSTATS_FORMAT not in ("json", "prometheus", "cee"):
         logger.error(f"Invalid IMPSTATS_FORMAT: {IMPSTATS_FORMAT}")
         sys.exit(1)
-    
+
     if not (1 <= LISTEN_PORT <= 65535):
         logger.error(f"Invalid LISTEN_PORT: {LISTEN_PORT}")
         sys.exit(1)
-    
+
     if IMPSTATS_MODE == "udp" and not (1 <= IMPSTATS_UDP_PORT <= 65535):
         logger.error(f"Invalid IMPSTATS_UDP_PORT: {IMPSTATS_UDP_PORT}")
         sys.exit(1)
@@ -809,7 +810,8 @@ def create_app():
                     detected_workers = int(val)
                     break
                 except ValueError:
-                    pass
+                    # Ignore malformed values and keep probing other sources.
+                    continue
         if detected_workers == 1:
             # parse from GUNICORN_CMD_ARGS like "--workers 4" or "-w 4"
             cmd_args = os.getenv("GUNICORN_CMD_ARGS", "")
@@ -828,7 +830,7 @@ def create_app():
                 detected_workers,
             )
             sys.exit(1)
-    
+
     logger.info("=" * 60)
     logger.info("rsyslog Prometheus Exporter initializing")
     logger.info("=" * 60)
@@ -836,33 +838,33 @@ def create_app():
     logger.info(f"Impstats format: {IMPSTATS_FORMAT}")
     logger.info(f"HTTP bind: {LISTEN_ADDR}:{LISTEN_PORT}")
     logger.info(f"Log level: {LOG_LEVEL}")
-    
+
     if IMPSTATS_MODE == "file":
         logger.info(f"File path: {IMPSTATS_PATH}")
-        
+
         # Validate impstats file exists
         if not os.path.exists(IMPSTATS_PATH):
             logger.warning(f"Impstats file does not exist yet: {IMPSTATS_PATH}")
             logger.warning("Exporter will start but metrics will be empty until file is created")
-        
+
         # Create collector in file mode
         _collector = ImpstatsCollector(
             mode="file",
             file_path=IMPSTATS_PATH,
             format_type=IMPSTATS_FORMAT
         )
-        
+
         # Do initial load
         try:
             _collector.refresh_if_needed()
             logger.info(f"Initial load: {len(_collector.cached_metrics)} metrics")
         except Exception as e:
             logger.error(f"Initial load failed: {e}")
-    
+
     elif IMPSTATS_MODE == "udp":
         logger.info(f"UDP listen: {IMPSTATS_UDP_ADDR}:{IMPSTATS_UDP_PORT}")
         logger.info(f"Burst completion timeout: {STATS_COMPLETE_TIMEOUT}s")
-        
+
         # Create collector in UDP mode
         _collector = ImpstatsCollector(
             mode="udp",
@@ -872,17 +874,17 @@ def create_app():
             completion_timeout=STATS_COMPLETE_TIMEOUT
         )
         logger.info("UDP listener started, waiting for stats from rsyslog...")
-    
+
     else:
         logger.error(f"Invalid IMPSTATS_MODE: {IMPSTATS_MODE}, must be 'file' or 'udp'")
         sys.exit(1)
-    
+
     # Create WSGI app
     app = ExporterApp(_collector)
     logger.info("=" * 60)
     logger.info("Application initialized successfully")
     logger.info("=" * 60)
-    
+
     return app
 
 
@@ -890,11 +892,12 @@ def main():
     """Development server entry point (uses Werkzeug - not for production!)."""
     logger.warning("*" * 60)
     logger.warning("DEVELOPMENT MODE - Not suitable for production!")
-    logger.warning("For production, use: gunicorn --workers 1 -b %s:%d rsyslog_exporter:application", LISTEN_ADDR, LISTEN_PORT)
+    logger.warning("For production, use: gunicorn --workers 1 -b %s:%d rsyslog_exporter:application",
+                   LISTEN_ADDR, LISTEN_PORT)
     logger.warning("*" * 60)
-    
+
     logger.info(f"Starting development server at http://{LISTEN_ADDR}:{LISTEN_PORT}/metrics")
-    
+
     try:
         run_simple(
             LISTEN_ADDR,

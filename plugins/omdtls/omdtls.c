@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -225,7 +225,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "omdtls: program error, non-handled "
@@ -411,15 +411,16 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "target")) {
-            pData->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->target = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
-            pData->port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->port = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsname")) {
-            pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tls.authmode")) {
-            char *pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *pszAuthMode;
+            CHKmalloc(pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(pszAuthMode, "fingerprint"))
                 pData->pNetOssl->authMode = OSSL_AUTH_CERTFINGERPRINT;
             else if (!strcasecmp(pszAuthMode, "name"))
@@ -430,7 +431,7 @@ BEGINnewActInst
                 pData->pNetOssl->authMode = OSSL_AUTH_CERTANON;
             free(pszAuthMode);
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->pNetOssl->pszCAFile, "r");
             if (fp == NULL) {
                 char errStr[1024];
@@ -441,7 +442,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->pNetOssl->pszCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pNetOssl->pszCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->pNetOssl->pszCertFile, "r");
             if (fp == NULL) {
                 char errStr[1024];
@@ -452,7 +453,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->pNetOssl->pszKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pNetOssl->pszKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->pNetOssl->pszKeyFile, "r");
             if (fp == NULL) {
                 char errStr[1024];
@@ -463,7 +464,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.tlscfgcmd")) {
-            pData->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omdtls: program error, non-handled param '%s'\n",
                      actpblk.descr[i].name);
@@ -563,7 +564,7 @@ static rsRetVal dtls_send(wrkrInstanceData_t *pWrkrData,
 
     iErr = SSL_write(pWrkrData->sslClient, pszParamStr, tzParamStrLen);
     if (iErr > 0) {
-        DBGPRINTF("dtls_send[%p]: Successfully send message '%s' with %ld bytes to %s:%s\n", pWrkrData, pszParamStr,
+        DBGPRINTF("dtls_send[%p]: Successfully send message '%s' with %zu bytes to %s:%s\n", pWrkrData, pszParamStr,
                   tzParamStrLen, pData->target, pData->port);
 
         // Increment Stats Counter
@@ -745,6 +746,10 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
 
     // Connect the UDP socket to the receiver's address
     pWrkrData->sockout = socket(AF_INET, SOCK_DGRAM, 0);
+    if (pWrkrData->sockout < 0) {
+        LogError(errno, RS_RET_ERR, "dtls_init[%p]: Failed to create output socket", pWrkrData);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     if (connect(pWrkrData->sockout, pWrkrData->dtls_rcvr_addrinfo->ai_addr, pWrkrData->dtls_rcvr_addrinfo->ai_addrlen) <
         0) {
         LogError(errno, RS_RET_SUSPENDED, "dtls_init[%p]: Failed to connect to hostname '%s':'%s'", pWrkrData,

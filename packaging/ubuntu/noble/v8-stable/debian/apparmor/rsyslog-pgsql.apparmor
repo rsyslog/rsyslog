@@ -1,0 +1,9 @@
+# PostgreSQL local access
+
+include <abstractions/openssl>
+include <abstractions/ssl_certs>
+
+/etc/gss/mech.d/ r,
+/etc/gss/mech.d/* r,
+/{,var/}run/postgresql/.s.PGSQL.*[0-9] rw,
+

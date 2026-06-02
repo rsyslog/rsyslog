@@ -1,5 +1,391 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-??
+Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+This release has many commits in regard to
+  * general hardening
+  * testbench de-flaking
+These will not be mentioned individually, check commit log for details.
+
+- 2026-05-31: action: keep transactional queue batches on shutdown
+  Transactional action queue messages are now re-enqueued when shutdown
+  interrupts a retry loop before the action commit completes. Disk queues no
+  longer drop such dequeued records during shutdown cleanup, so they can be
+  retried after restart.
+- 2026-05-31: omclickhouse: report HTTP response errors
+  ClickHouse HTTP responses with status 400 and above are now treated as data
+  failures even when the response body does not match the legacy exception
+  probes. This makes rejected inserts visible through normal rsyslog
+  diagnostics while preserving errorFile handling.
+  Closes https://github.com/rsyslog/rsyslog/issues/3485
+  Closes https://github.com/rsyslog/rsyslog/issues/3487
+- 2026-05-29: omfwd: improve retry handling for TCP/TLS sends
+  Retryable TCP/TLS send conditions now keep the connection state needed for
+  the next attempt and schedule deferred flush retries correctly. Rebind
+  cleanup also avoids leaking per-worker TCP client objects.
+  Closes https://github.com/rsyslog/rsyslog/issues/6663
+- 2026-05-29: imjournal: diagnose future journal entries
+  When journald reports no next entry, imjournal now probes the journal tail
+  with a separate handle and emits a rate-limited warning if the newest entry
+  is ahead of the current wall clock. This gives operators a concrete hint for
+  stalls caused by post-crash or time-jump journal timestamps.
+  Closes https://github.com/rsyslog/rsyslog/issues/4945
+- 2026-05-29: runtime: fix raw message replacement edge cases
+  Raw message replacement now preserves suffix bytes when a heap-backed buffer
+  grows, and the JSON set path has additional regression coverage for
+  replacement handling. This avoids corrupting trailing raw message data in
+  realloc paths.
+- 2026-05-27: imfifo: add named pipe input module
+  The new imfifo input module reads line-oriented messages from local POSIX
+  FIFOs without blocking startup or spinning on writer disconnects. It supports
+  dynamic, non-blocking FIFO instances through the modern configuration path.
+  Closes https://github.com/rsyslog/rsyslog/issues/440
+- 2026-05-27: imptcp: add "stream:auto" compression mode
+  A single listener can now accept both zlib-compressed and plain
+  sessions from independent peers. The first two bytes of every new
+  session are matched against the zlib stream header (RFC 1950,
+  CMF=0x78, valid FCHECK, FDICT=0) and the per-session mode is
+  locked-in for the remainder of the connection, so the data path
+  stays branch-free after the initial probe. This enables staged
+  roll-outs of stream compression across large fleets of omfwd
+  clients without forking the receiver configuration.
+- 2026-05-27: parser: fix PRI offset calculation
+  The parser now validates and centralizes calculation of the raw-message
+  offset immediately after PRI. This keeps downstream parser modules aligned on
+  malformed or special inputs and fixes the legacy imuxsock offAfterPRI
+  calculation.
+  Closes https://github.com/rsyslog/rsyslog/issues/6017
+- 2026-05-27: ommysql: handle closed connections before commit
+  ommysql now detects a closed MySQL connection before transaction commit and
+  follows the failure path instead of treating the commit attempt as successful.
+  Closes https://github.com/rsyslog/rsyslog/issues/4199
+- 2026-05-26: queue: add size.enqueued impstats counter
+  Queue statistics now include a cumulative size.enqueued byte counter next to
+  the existing enqueued message counter. Operators can monitor the byte volume
+  entering named main, ruleset, and action queues without changing queue
+  behavior.
+- 2026-05-25: omfwd: require explicit peers for SRV-based TLS name auth
+  targetSrv actions that use TLS x509/name authentication now require explicit
+  streamdriverpermittedpeers. This avoids deriving the peer identity from a
+  DNS-discovered SRV target unless the configuration states the allowed peers.
+- 2026-05-24: gssapi: fix sender token length framing
+  GSSAPI sender framing now writes token lengths with the correct byte order,
+  avoiding interoperability problems in encrypted GSSAPI forwarding.
+- 2026-05-23: imjournal: improve invalidation recovery
+  imjournal now reopens the journal handle before seeking back to the saved
+  cursor after journal invalidation or recovery. Recovery failures are
+  propagated to the input loop instead of being ignored.
+  Closes https://github.com/rsyslog/rsyslog/issues/3578
+  Closes https://github.com/rsyslog/rsyslog/issues/5020
+- 2026-05-22: mmexternal: add one-way helpers and response timeouts
+  mmexternal now supports interface.output="none" for side-effect-only helpers
+  that do not return JSON, plus responseTimeout to bound stalled helper
+  replies.
+  Closes https://github.com/rsyslog/rsyslog/issues/260
+  Closes https://github.com/rsyslog/rsyslog/issues/5206
+- 2026-05-22: imfile: add line-number metadata
+  imfile addMetadata output can now include a per-file line_number counter.
+  Loading imfile without configured monitors remains a warning instead of a
+  configuration-check failure.
+  Closes https://github.com/rsyslog/rsyslog/issues/728
+  Closes https://github.com/rsyslog/rsyslog/issues/2752
+- 2026-05-22: config: warn for unmatched include globs
+  Non-optional IncludeConfig wildcards that match no files now emit a parser
+  warning while preserving the historical non-fatal startup behavior.
+  Closes https://github.com/rsyslog/rsyslog/issues/4415
+
+IMPORTANT FOR MAINTAINERS
+- libyaml support is now an explicit configure feature. It remains enabled by
+  default and must be satisfied by package builds unless
+  ``--disable-libyaml`` is passed. This removes the previous auto-detection
+  behavior where the presence or absence of libyaml development files silently
+  changed the feature set.
+
+- 2026-05-20: imptcp: harden concurrency, boundaries, and memory handling
+  imptcp received additional defense-in-depth work around listener statistics
+  synchronization, receive buffer boundaries, zero-initialized session and
+  instance state, local host name/address fallbacks, and EAGAIN/EWOULDBLOCK
+  handling. The related Unix-domain-socket and delimiter tests were adjusted
+  to cover the hardened behavior.
+- 2026-05-20: config: add global maxOpenFiles setting
+  The open-file limit can now be configured through the modern
+  global(maxOpenFiles="...") RainerScript form and YAML global.maxOpenFiles.
+  The legacy directive remains supported, but the new setting gives
+  RainerScript and YAML configurations a first-class equivalent.
+  Closes https://github.com/rsyslog/rsyslog/issues/4411
+- 2026-05-20: gtls: log peer IP for missing client certificates
+  GnuTLS server-side diagnostics for missing client certificates now prefer
+  the numeric peer IP address when it is available. This makes TLS auth
+  failures easier to correlate with IP-based monitoring and firewall tooling.
+  Closes https://github.com/rsyslog/rsyslog/issues/5465
+- 2026-05-20: wolfSSL: support CRL/OCSP revocation checks
+  The OpenSSL compatibility driver can now use wolfSSL-backed CRL and OCSP
+  certificate revocation checking. Documentation and TLS validation tests were
+  updated for the new wolfSSL-capable path.
+- 2026-05-19: imptcp: fix same-session discardTruncatedMsg recovery
+  When an oversized LF-framed message and the next message arrived in the same
+  TCP session, imptcp could prefix the next message with the first byte beyond
+  the truncation boundary. discardTruncatedMsg now consumes that byte correctly
+  and resumes at the next frame boundary.
+  Closes https://github.com/rsyslog/rsyslog/issues/5179
+- 2026-05-18: config: make backtick cat work with pseudo-files
+  Backtick cat expansion now reads chunked input until EOF, so pseudo-files
+  such as /proc and /sys entries no longer fail or appear empty when their
+  reported size metadata does not match the bytes that can actually be read.
+  Closes https://github.com/rsyslog/rsyslog/issues/5403
+- 2026-05-18: runtime: avoid undefined behavior in libgcrypt IV generation
+  Encrypted queue IV byte extraction no longer relies on a left-shifted mask
+  that UBSan reported as undefined behavior. Queue encryption behavior is
+  unchanged, and the sanitizer suppression for this path was removed.
+  Closes https://github.com/rsyslog/rsyslog/issues/5167
+- 2026-05-18: tcp: log pre-truncated oversize frames
+  imtcp and imptcp now write the configured oversizemsg.errorfile JSON record
+  when they detect and truncate an oversized frame before the core submit path
+  sees the raw message. Previously those cases only emitted the normal warning.
+  Closes https://github.com/rsyslog/rsyslog/issues/5228
+- 2026-05-17: build: honor cross pkg-config for libgcrypt
+  The libgcrypt configure check now respects the Autoconf-selected
+  PKG_CONFIG tool. This fixes cross builds where only a host-prefixed
+  pkg-config command is available, while keeping the existing
+  libgcrypt-config fallback for older systems.
+  Closes https://github.com/rsyslog/rsyslog/issues/6683
+- 2026-05-16: ommail: add sendmail delivery mode
+  ommail can now submit mail through a local sendmail-compatible binary via
+  mode="sendmail", with sendmail.binary available for explicit binary
+  selection. Existing SMTP configurations are unchanged.
+  Closes https://github.com/rsyslog/rsyslog/issues/1073
+- 2026-05-15: omelasticsearch: warn when searchType is configured
+  Explicit use of the legacy searchType action parameter now emits a
+  non-fatal warning because Elasticsearch mapping types are obsolete. Existing
+  configurations continue to run, but users receive a clear migration signal
+  for Elasticsearch 8 and later.
+  See https://github.com/rsyslog/rsyslog/issues/6835
+- 2026-05-14: omrelp: add opt-in suspension for TLS auth failures
+  omrelp now supports tls.permanentFailureDisablesAction="off". The default
+  behavior is unchanged, but when disabled TLS authentication failures suspend
+  the action instead of permanently disabling it, so the action queue can keep
+  accepting later messages while certificate or CA configuration is fixed.
+  This avoids a potential data-loss situation under extreme operational
+  circumstances.
+  Closes https://github.com/rsyslog/rsyslog/issues/5636
+- 2026-05-13: runtime: fix AIX build with missing STAILQ macros
+  Some AIX systems provide sys/queue.h without the BSD STAILQ macro subset,
+  which broke builds that use the dynstats file-write queue. Configure now
+  checks for the required STAILQ support and rsyslog provides a small local
+  fallback via runtime/compat_queue.h when the platform header lacks it.
+  Closes https://github.com/rsyslog/rsyslog/issues/6885
+- 2026-05-13: imbeats: add Elastic Beats/Lumberjack input module
+  The new imbeats input receives Elastic Beats and Elastic Agent
+  output.logstash traffic via Lumberjack v2 over TCP or TLS. It accepts JSON
+  event frames, compressed frames, cumulative acknowledgements, preserves the
+  original JSON payload, maps decoded fields into $!, and stores transport
+  metadata under $!metadata!imbeats.
+  The module includes bounds for frame, batch, window, decompressed payload,
+  and session limits, plus worker-based multiplexing so high client counts do
+  not require one thread per connection. Documentation, YAML/RainerScript
+  tests, and Elastic Agent/Filebeat pipeline coverage were added.
+- 2026-05-13: packaging/rpm: add rsyslog-imbeats subpackage
+  The RPM packaging now builds and ships imbeats as its own rsyslog-imbeats
+  subpackage for EL8/EL9. This continues the ongoing work to keep more module
+  packaging in the repository as part of the monorepo packaging effort.
+- 2026-05-13: agents: support local AI workflow overlays
+  Repository agent instructions now explicitly load AGENTS.local.md when it
+  exists. This gives local Codex/AI workflows a documented place for
+  machine-specific notes without putting them into the shared repository guide.
+- 2026-05-09: config: add compatibility controls and secure defaults
+  New global compatibility controls allow legacy $-syntax, classic syslogd
+  filters, and property-based filters to be enabled, warned, or disabled
+  explicitly. A compatibility.defaults.secure mode adds stricter defaults and
+  warnings for insecure transport settings, including TLS-disabled or anonymous
+  TLS configurations.
+  Closes https://github.com/rsyslog/rsyslog/issues/2383
+- 2026-05-08: config: fix operator precedence in condition handling
+  The allowed-sender parser and template regex compilation now assign helper
+  return codes before comparing them, avoiding incorrect condition handling
+  caused by operator precedence.
+  Closes https://github.com/rsyslog/rsyslog/issues/6741
+- 2026-05-11: rosi-collector: prevent Loki 400 queue stalls
+  ROSI Collector could get stuck when Loki rejected a pushed sample with
+  HTTP 400, for example because old or clock-skewed sender timestamps were
+  outside Loki's accepted time window. In that state one bad backlog entry
+  could keep the omhttp action retrying instead of advancing to newer logs.
+- 2026-05-06: omrelp: fix OpenSSL TLS auth failure CPU spin
+  omrelp with OpenSSL TLS and an action queue could consume a full CPU
+  after TLS authentication failed, for example when the action omitted
+  tls.caCert. The action was disabled, but queued messages from the
+  already-dequeued batch were retried immediately against the same
+  permanently disabled action.
+  omrelp now classifies librelp TLS authentication return codes as
+  permanent auth failures, and the action queue commits affected batch
+  entries from the queue's perspective when an action is disabled.
+  Transient suspend/retry behavior is unchanged.
+  Fixes https://github.com/rsyslog/rsyslog/issues/6612
+- 2026-05-06: ossl drvier: match PermittedPeer wildcards against cert identities
+  OpenSSL x509/name authorization only applied rsyslog wildcard matching to
+  the full OpenSSL subject string and then fell back to X509_check_host() for
+  configured peer names. That allowed exact FQDN entries to work, but wildcard
+  PermittedPeer entries such as "*.example.com" were not matched against the
+  certificate's SAN/CN identities the way gtls and mbedtls do.
+  Extract DNS SANs, IP SANs, and CN values in the OpenSSL path and match each
+  identity through the shared PermittedPeerWildcardMatch() helper. Keep the
+  legacy subject-DN check for existing configurations that authorize full
+  subject strings, and keep X509_check_host() as a fallback for non-wildcard
+  peer entries.
+  Add OpenSSL regression tests for both wildcard acceptance and wildcard
+  rejection.
+  Fixes https://github.com/rsyslog/rsyslog/issues/6686
+- 2026-05-06: CI; added zizmor workflow security checks
+- 2026-05-06: CI: new tests based on s390x architecture (via QEMU)
+- 2026-05-06: new development container based on Ubunutu 26.04
+- 2026-05-06: CI: github action now also test un der Ubuntu 26.04
+  This includes builds with newer compilers. Also some fixes were applied
+  that came up with new static analyzer and build incompatibilities with 26.04
+- 2026-05-05: github action hardening and cleanup
+- 2026-05-05: improg: stop on child stdout EOF
+  Issue https://github.com/rsyslog/rsyslog/issues/6791 reports that
+  improg can consume a full CPU after its configured child program is killed.
+  EOF on the child stdout pipe kept the fd readable forever, so the input
+  thread repeatedly selected and read the closed pipe.
+  improg now stops spinning and cleans up when the child closes stdout.
+  Closes https://github.com/rsyslog/rsyslog/issues/6791
+- 2026-04-24: imhttp: harden request parsing and cleanup
+  imhttp now bounds accepted request bodies, handles malformed gzip
+  and oversized octet-counted frames more robustly, returns proper
+  auth challenges, and cleans up CivetWeb/module resources consistently
+  on activation failures and shutdown. Additional regression tests cover
+  these paths.
+- 2026-04-23: omusrmsg: avoid potential segfault when used under systemd
+  Systemd hosts can hit the logind wall-message path with zero active
+  sessions. omusrmsg must not abort while handling that case.
+- 2026-04-22: core: harden string allocation and copy handling
+  improve bounded string-copy and string-building paths across the code base
+  and add portable asprintf/vasprintf compatibility support.
+- 2026-04-22: doc: update modules documentation
+  fix documentation nits and increase consistency
+  Thanks to Yury Bushmelev for the patch
+- 2026-04-22: imfile: harden state file handling
+  potential edge-cases are now better handled, leading to higher robustness
+  and stability.
+
+--------------------------------------------------------------------------------------
+Scheduled Release 8.2604.0 (aka 2026.04) 2026-04-21
+
+IMPORTANT FOR MAINTAINERS
+- this version very strongly depends on YAML - we highly recommend to
+  ADD LIBYAML TO PACKAGE BUILD. If libyaml is not available, rsyslog builds
+  but is missing many important features. The ability to build without
+  libyaml is mainly introduced as a capability for outdated systems.
+- the doc build process changed again in hope to make it more stable.
+  it was verified to work against Debian and other distros as good
+  as we could, still there may be some unexpected isuses.
+
+- 2026-04-17: overall hardening of components
+- 2026-04-20: queue: address potential segfault on startup
+  original report: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1031360
+  This was only partly addressed in previous hardening
+- 2026-04-17: imhttp: refactor to support additional auth methods
+  Feature-wise API key authentication was added. We may need other
+  authentication methods in the future, as such the module has been
+  generally refactored. This is also prep work for a future potential
+  mode where imhttp may accept request from Elastic Agent, with imhttp
+  acting as a mock ElasticSearch instance. This can be useful for projects
+  which want to do message enrichment and "drop noise" decisions before
+  this hits the backend.
+- 2026-04-15: omazuredce: add gzip request compression support
+  Thanks to Jan Kängsepp for implementing the new module.
+- 2026-04-15: omelasticsearch fix: port detection for IPv6 server addresses
+  The computeBaseUrl() function used strchr(host, ':') to detect whether
+  a port was already embedded in the server string. Since IPv6 addresses
+  contain colons, this always matched, causing serverport to never be
+  appended. Fix by looking for ':' only after the closing ']' when the
+  host is in bracket notation.
+  Thanks to Attila Lakatos for the patch.
+- 2026-04-14: omrelp: use stable data in librelp callbacks
+  The omrelp workaround now keeps callback logging on shared instance
+  data instead of worker-lifetime state. A regression test covers a
+  partial-session shutdown path, and the helper script was added to
+  reproduce the failure on older Python interpreters.
+  Closes https://github.com/rsyslog/rsyslog/issues/6547
+- 2026-04-14: Alpine compile check CI and musl resolver support
+  Alpine builds now run in the compile matrix, and omfwd can use the
+  portable resolver path when musl does not provide the glibc-style
+  res_n* APIs. The configure probe was tightened so the fallback links
+  cleanly.
+- 2026-04-13: runtime: move watched ratelimnt reloads into main loop
+  Watched policy reloads now run from the main loop via the new
+  rswatch helper. mmjsontransform gained policyWatch and
+  policyWatchDebounce, and the feature ships with docs plus YAML and
+  debounce regression coverage.
+- 2026-04-13: mmutf8fix: also fix invalid UTF-8 in RFC 5424 structured data
+  Structured-data values are now sanitized as well, so invalid UTF-8
+  no longer leaks through to downstream consumers. Thanks to
+  ca.mathieu for the patch.
+- 2026-04-13: ratelimit: keep TCP batch processing on drops
+  TCP inputs now continue batching after ratelimit drops or helper
+  errors instead of treating them as fatal submit failures.
+- 2026-04-13: imuxsock: bound per-pid ratelimiter cache
+  Per-PID ratelimiter state is now pruned and capped so local-socket
+  rate limiting cannot grow unbounded over time.
+- 2026-04-13: omfwd: add num.connects statistic for TCP connection tracking
+  The omfwd action now exports a num.connects counter for
+  connection-oriented forwarding, and the module documentation
+  describes the new statistic. Thanks to sagsango for the patch.
+- 2026-04-12: omhttp: harden payload length handling
+  Oversized omhttp payloads are now rejected explicitly instead of
+  relying on narrowing conversions inside the send and compression
+  helpers.
+- 2026-04-12: imtcp: harden limit validation and worker shutdown
+  Invalid frame, session, and listener limits are rejected during
+  config loading, and failed worker startups are skipped during
+  shutdown.
+- 2026-04-08: ratelimit: watch YAML policy files with debounce
+  policyWatch and policyWatchDebounce now reload YAML-backed ratelimit
+  policies automatically when inotify is available, while unsupported
+  builds keep the HUP-only behavior.
+  Closes https://github.com/rsyslog/rsyslog/issues/6599
+- 2026-04-04: testbench: rewrite dirty shutdown recovery test
+  The old daqueue dirty-shutdown test depended on a narrow timing window
+  and treated an empty spool directory as the only valid recovery
+  outcome. That no longer matches current queue corruption handling, so
+  CI could fail even when rsyslog behaved correctly.
+  The test now accepts both successful replay and safe quarantine.
+- 2026-04-04: imfile/ci: enable imfile tests in ARM CI and fix arm64 fallout
+  Enabling imfile coverage on ARM exposed two arm64 follow-up problems. The
+  impstats crash in imfile-statistics was caused by a generic stringbuf off-by-one
+  when a finalized cstr lands exactly on the allocation boundary, and the
+  rename-while-stopped test could shut rsyslog down before startup processing had
+  made the renamed-file backlog observable.
+- 2026-04-04: imjournal: fix for an exoctic bug that could lead to looping
+  Under some extreme conditions, imjournal could run in a 100% CPU load loop.
+  This has now been fixed. We assume very low practical relevance and never
+  had any bug reports even remoteloy showing into that direction.
+- 2026-04-02: testbench: add some (new) unit tests and plumbing
+  There is an initial set, which can be expanded. The idea is to get a small
+  deterministic set of high-profile component unit tests which can aid local
+  agentic coding verification without the full testbench. Full testbench run
+  is very expensive, so catching issues early is useful.
+- 2026-04-02: portability: remove bash "source" bash-ism accross the project
+- 2026-03-31: build: require --enable-openssl if imdtls or omdtls is used
+  The DTLS modules (imdtls and omdtls) depend on the OpenSSL network
+  stream driver. Previously, the build would succeed in a broken
+  state (missing lmnsd_ossl.la) if OpenSSL support was not also
+  explicitly enabled.
+  closes: https://github.com/rsyslog/rsyslog/issues/5339
+- 2026-03-30: mmjsontransform: add YAML policy preprocessing
+  mmjsontransform can now load a YAML policy file to rename or drop JSON
+  keys before flatten/unflatten processing. Policy files are documented
+  and reloaded on HUP when they change.
+- 2026-03-30: distribution tarballs no longer ship .gitignore files
+  Source tarballs should not impose repository ignore rules on downstream
+  packaging trees. This was a problem e.g. in Debian packaging.
+  closes: https://github.com/rsyslog/rsyslog/issues/6575
+- 2026-03-30: omhttps: optimize connection handling
+  This improves curl object handling and increases performance.
+  Thanks to github user shinigami35 for the patch.
+- 2026-03-26: feat: add YAML as an alternative configuration format
+  rsyslog now accepts .yaml / .yml files as a full alternative to
+  RainerScript configuration.  Whenever a .yaml or .yml file is
+  referenced (e.g. via $IncludeConfig or as the main config), it is
+  routed through the new yamlconf loader instead of the bison/flex
+  parser.  RainerScript and YAML configurations may coexist.
 - 2026-03-25: gtls: check CRL expiration, reject connections with expired CRL
   GnuTLS silently ignores expired CRLs -- it loads them into credentials
   without checking the validity period. This means rsyslog kept accepting
@@ -10739,8 +11125,6 @@ Version 7.4.3  [v7.4-stable] 2013-07-18
   This happened when permitted duplicate values existed in the very
   last lines, right before end-of-file.
   Thanks to Radu Gheorghe for reporting this bug.
----------------------------------------------------------------------------
-Version 7.4.3  [v7.4-stable] 2013-07-18
 - bugfix: memory leak if disk queues were used and json data present
 - bugfix: CEE/json data was lost during disk queue operation
 - bugfix: potential segfault during startup on invalid config
@@ -11093,8 +11477,6 @@ Version 7.3.3  [devel] 2012-11-07
 Version 7.3.2  [devel] 2012-10-30
 - mmnormalize: support for v6+ config interface added
 - mmjsonparse: support for v6+ config interface added
----------------------------------------------------------------------------
-Version 7.3.2  [devel] 2012-10-30
 - totally reworked ratelimiting and "last message repeated n times"
   all over rsyslog code. Each of the supported inputs now supports
   linux-like ratelimiting (formerly only imuxsock did). Also, the
@@ -15445,8 +15827,6 @@ Version 2.0.6 V2-STABLE (rgerhards), 2008-08-07
   code for some years (even v1 had it) and I think it never had any
   effect at all in practice. Though, it should be fixed - but definitely
   nothing to worry about.
----------------------------------------------------------------------------
-Version 2.0.6 V2-STABLE (rgerhards), 2008-08-07
 - bugfix: IPv6 addresses could not be specified in forwarding actions
   New syntax @[addr]:port introduced to enable that. Root problem was IPv6
   addresses contain colons. (backport from 3.21.3)
@@ -15491,1892 +15871,6 @@ Version 2.0.2 STABLE (rgerhards), 2008-02-12
   needed files suggested by him
 - cleaned up stringbuf.c to fix an annoyance reported by Anders Blomdell
 - fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
----------------------------------------------------------------------------
-Version 2.0.1 STABLE (rgerhards), 2008-01-24
-- fixed a bug in integer conversion - but this function was never called,
-  so it is not really a useful bug fix ;)
-- fixed a bug with standard template definitions (not a big deal) - thanks
-  to varmojfekoj for spotting it
-- fixed a bug that caused a potential hang in file and fwd output module
-  varmojfekoj provided the patch - many thanks!
----------------------------------------------------------------------------
-Version 2.0.0 STABLE (rgerhards), 2008-01-02
-- re-release of 1.21.2 as STABLE with no modifications except some
-  doc updates
----------------------------------------------------------------------------
-Version 1.21.2 (rgerhards), 2007-12-28
-- created a gss-api output module. This keeps GSS-API code and
-  TCP/UDP code separated. It is also important for forward-
-  compatibility with v3. Please note that this change breaks compatibility
-  with config files created for 1.21.0 and 1.21.1 - this was considered
-  acceptable.
-- fixed an error in forwarding retry code (could lead to message corruption
-  but surfaced very seldom)
-- increased portability for older platforms (AI_NUMERICSERV moved)
-- removed socket leak in omfwd.c
-- cross-platform patch for GSS-API compile problem on some platforms
-  thanks to darix for the patch!
----------------------------------------------------------------------------
-Version 1.21.1 (rgerhards), 2007-12-23
-- small doc fix for $IncludeConfig
-- fixed a bug in llDestroy()
-- bugfix: fixing memory leak when message queue is full and during
-  parsing. Thanks to varmojfekoj for the patch.
-- bugfix: when compiled without network support, unix sockets were
-  not properly closed
-- bugfix: memory leak in cfsysline.c/doGetWord() fixed
----------------------------------------------------------------------------
-Version 1.21.0 (rgerhards), 2007-12-19
-- GSS-API support for syslog/TCP connections was added. Thanks to
-  varmojfekoj for providing the patch with this functionality
-- code cleanup
-- enhanced $IncludeConfig directive to support wildcard filenames
-- changed some multithreading synchronization
----------------------------------------------------------------------------
-Version 1.20.1 (rgerhards), 2007-12-12
-- corrected a debug setting that survived release. Caused TCP connections
-  to be retried unnecessarily often.
-- When a hostname ACL was provided and DNS resolution for that name failed,
-  ACL processing was stopped at that point. Thanks to mildew for the patch.
-  Fedora Bugzilla: http://bugzilla.redhat.com/show_bug.cgi?id=395911
-- fixed a potential race condition, see link for details:
-  http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
-  Note that the probability of problems from this bug was very remote
-- fixed a memory leak that happened when PostgreSQL date formats were
-  used
----------------------------------------------------------------------------
-Version 1.20.0 (rgerhards), 2007-12-07
-- an output module for postgres databases has been added. Thanks to
-  sur5r for contributing this code
-- unloading dynamic modules has been cleaned up, we now have a
-  real implementation and not just a dummy "good enough for the time
-  being".
-- enhanced platform independence - thanks to Bartosz Kuzma and Michael
-  Biebl for their very useful contributions
-- some general code cleanup (including warnings on 64 platforms, only)
----------------------------------------------------------------------------
-Version 1.19.12 (rgerhards), 2007-12-03
-- cleaned up the build system (thanks to Michael Biebl for the patch)
-- fixed a bug where ommysql was still not compiled with -pthread option
----------------------------------------------------------------------------
-Version 1.19.11 (rgerhards), 2007-11-29
-- applied -pthread option to build when building for multi-threading mode
-  hopefully solves an issue with segfaulting
----------------------------------------------------------------------------
-Version 1.19.10 (rgerhards), 2007-10-19
-- introduced the new ":modulename:" syntax for calling module actions
-  in selector lines; modified ommysql to support it. This is primarily
-  an aid for further modules and a prerequisite to actually allow third
-  party modules to be created.
-- minor fix in slackware startup script, "-r 0" is now "-r0"
-- updated rsyslogd doc set man page; now in html format
-- undid creation of a separate thread for the main loop -- this did not
-  turn out to be needed or useful, so reduce complexity once again.
-- added doc fixes provided by Michael Biebl - thanks
----------------------------------------------------------------------------
-Version 1.19.9 (rgerhards), 2007-10-12
-- now packaging system which again contains all components in a single
-  tarball
-- modularized main() a bit more, resulting in less complex code
-- experimentally added an additional thread - will see if that affects
-  the segfault bug we experience on some platforms. Note that this change
-  is scheduled to be removed again later.
----------------------------------------------------------------------------
-Version 1.19.8 (rgerhards), 2007-09-27
-- improved repeated message processing
-- applied patch provided by varmojfekoj to support building ommysql
-  in its own way (now also resides in a plugin subdirectory);
-  ommysql is now a separate package
-- fixed a bug in cvthname() that lead to message loss if part
-  of the source hostname would have been dropped
-- created some support for distributing ommysql together with the
-  main rsyslog package. I need to re-think it in the future, but
-  for the time being the current mode is best. I now simply include
-  one additional tarball for ommysql inside the main distribution.
-  I look forward to user feedback on how this should be done best. In the
-  long term, a separate project should be spawend for ommysql, but I'd
-  like to do that only after the plugin interface is fully stable (what
-  it is not yet).
----------------------------------------------------------------------------
-Version 1.19.7 (rgerhards), 2007-09-25
-- added code to handle situations where senders send us messages ending with
-  a NUL character. It is now simply removed. This also caused trailing LF
-  reduction to fail, when it was followed by such a NUL. This is now also
-  handled.
-- replaced some non-thread-safe function calls by their thread-safe
-  counterparts
-- fixed a minor memory leak that occurred when the %APPNAME% property was
-  used (I think nobody used that in practice)
-- fixed a bug that caused signal handlers in cvthname() not to be restored when
-  a malicious pointer record was detected and processing of the message been
-  stopped for that reason (this should be really rare and can not be related
-  to the segfault bug we are hunting).
-- fixed a bug in cvthname that lead to passing a wrong parameter - in
-  practice, this had no impact.
-- general code cleanup (e.g. compiler warnings, comments)
----------------------------------------------------------------------------
-Version 1.19.6 (rgerhards), 2007-09-11
-- applied patch by varmojfekoj to change signal handling to the new
-  sigaction API set (replacing the depreciated signal() calls and its
-  friends.
-- fixed a bug that in --enable-debug mode caused an assertion when the
-  discard action was used
-- cleaned up compiler warnings
-- applied patch by varmojfekoj to FIX a bug that could cause
-  segfaults if empty properties were processed using modifying
-  options (e.g. space-cc, drop-cc)
-- fixed man bug: rsyslogd supports -l option
----------------------------------------------------------------------------
-Version 1.19.5 (rgerhards), 2007-09-07
-- changed part of the CStr interface so that better error tracking
-  is provided and the calling sequence is more intuitive (there were
-  invalid calls based on a too-weird interface)
-- (hopefully) fixed some remaining bugs rooted in wrong use of
-  the CStr class. These could lead to program abort.
-- applied patch by varmojfekoj two fix two potential segfault situations
-- added $ModDir config directive
-- modified $ModLoad so that an absolute path may be specified as
-  module name (e.g. /rsyslog/ommysql.so)
----------------------------------------------------------------------------
-Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
-- fixed a number of small memory leaks - thanks varmojfekoj for patching
-- fixed an issue with CString class that could lead to rsyslog abort
-  in tplToString() - thanks varmojfekoj for patching
-- added a man-version of the config file documentation - thanks to Michel
-  Samia for providing the man file
-- fixed bug: a template like this causes an infinite loop:
-  $template opts,"%programname:::a,b%"
-  thanks varmojfekoj for the patch
-- fixed bug: case changing options crash freeing the string pointer
-  because they modify it: $template opts2,"%programname::1:lowercase%"
-  thanks varmojfekoj for the patch
----------------------------------------------------------------------------
-Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
-- small mem leak fixed (after calling parseSelectorAct) - Thx varmojfekoj
-- documentation section "Regular File" und "Blocks" updated
-- solved an issue with dynamic file generation - Once again many thanks
-  to varmojfekoj
-- the negative selector for program name filter (Blocks) does not work as
-  expected - Thanks varmojfekoj for patching
-- added forwarding information to sysklogd (requires special template)
-  to config doc
----------------------------------------------------------------------------
-Version 1.19.2 (mmeckelein/varmojfekoj), 2007-08-28
-- a specifically formed message caused a segfault - Many thanks varmojfekoj
-  for providing a patch
-- a typo and a weird condition are fixed in msg.c - Thanks again
-  varmojfekoj
-- on file creation the file was always owned by root:root. This is fixed
-  now - Thanks ypsa for solving this issue
----------------------------------------------------------------------------
-Version 1.19.1 (mmeckelein), 2007-08-22
-- a bug that caused a high load when a TCP/UDP connection was closed is
-  fixed now - Thanks mildew for solving this issue
-- fixed a bug which caused a segfault on reinit - Thx varmojfekoj for the
-  patch
-- changed the hardcoded module path "/lib/rsyslog" to $(pkglibdir) in order
-  to avoid trouble e.g. on 64 bit platforms (/lib64) - many thanks Peter
-  Vrabec and darix, both provided a patch for solving this issue
-- enhanced the unloading of modules - thanks again varmojfekoj
-- applied a patch from varmojfekoj which fixes various little things in
-  MySQL output module
----------------------------------------------------------------------------
-Version 1.19.0 (varmojfekoj/rgerhards), 2007-08-16
-- integrated patch from varmojfekoj to make the mysql module a loadable one
-  many thanks for the patch, MUCH appreciated
----------------------------------------------------------------------------
-Version 1.18.2 (rgerhards), 2007-08-13
-- fixed a bug in outchannel code that caused templates to be incorrectly
-  parsed
-- fixed a bug in ommysql that caused a wrong ";template" missing message
-- added some code for unloading modules; not yet fully complete (and we do
-  not yet have loadable modules, so this is no problem)
-- removed debian subdirectory by request of a debian packager (this is a special
-  subdir for debian and there is also no point in maintaining it when there
-  is a debian package available - so I gladly did this) in some cases
-- improved overall doc quality (some pages were quite old) and linked to
-  more of the online resources.
-- improved /contrib/delete_mysql script by adding a host option and some
-  other minor modifications
----------------------------------------------------------------------------
-Version 1.18.1 (rgerhards), 2007-08-08
-- applied a patch from varmojfekoj which solved a potential segfault
-  of rsyslogd on HUP
-- applied patch from Michel Samia to fix compilation when the pthreads
-  feature is disabled
-- some code cleanup (moved action object to its own file set)
-- add config directive $MainMsgQueueSize, which now allows one to configure the
-  queue size dynamically
-- all compile-time settings are now shown in rsyslogd -v, not just the
-  active ones
-- enhanced performance a little bit more
-- added config file directive $ActionResumeInterval
-- fixed a bug that prevented compilation under debian sid
-- added a contrib directory for user-contributed useful things
----------------------------------------------------------------------------
-Version 1.18.0 (rgerhards), 2007-08-03
-- rsyslog now supports fallback actions when an action did not work. This
-  is a great feature e.g. for backup database servers or backup syslog
-  servers
-- modified rklogd to only change the console log level if -c is specified
-- added feature to use multiple actions inside a single selector
-- implemented $ActionExecOnlyWhenPreviousIsSuspended config directive
-- error messages during startup are now spit out to the configured log
-  destinations
----------------------------------------------------------------------------
-Version 1.17.6 (rgerhards), 2007-08-01
-- continued to work on output module modularization - basic stage of
-  this work is now FINISHED
-- fixed bug in OMSRcreate() - always returned SR_RET_OK
-- fixed a bug that caused ommysql to always complain about missing
-  templates
-- fixed a mem leak in OMSRdestruct - freeing the object itself was
-  forgotten - thanks to varmojfekoj for the patch
-- fixed a memory leak in syslogd/init() that happened when the config
-  file could not be read - thanks to varmojfekoj for the patch
-- fixed insufficient memory allocation in addAction() and its helpers.
-  The initial fix and idea was developed by mildew, I fine-tuned
-  it a bit. Thanks a lot for the fix, I'd probably had pulled out my
-  hair to find the bug...
-- added output of config file line number when a parsing error occurred
-- fixed bug in objomsr.c that caused program to abort in debug mode with
-  an invalid assertion (in some cases)
-- fixed a typo that caused the default template for MySQL to be wrong.
-  thanks to mildew for catching this.
-- added configuration file command $DebugPrintModuleList and
-  $DebugPrintCfSysLineHandlerList
-- fixed an invalid value for the MARK timer - unfortunately, there was
-  a testing aid left in place. This resulted in quite frequent MARK messages
-- added $IncludeConfig config directive
-- applied a patch from mildew to prevent rsyslogd from freezing under heavy
-  load. This could happen when the queue was full. Now, we drop messages
-  but rsyslogd remains active.
----------------------------------------------------------------------------
-Version 1.17.5 (rgerhards), 2007-07-30
-- continued to work on output module modularization
-- fixed a missing file bug - thanks to Andrea Montanari for reporting
-  this problem
-- fixed a problem with shutting down the worker thread and freeing the
-  selector_t list - this caused messages to be lost, because the
-  message queue was not properly drained before the selectors got
-  destroyed.
----------------------------------------------------------------------------
-Version 1.17.4 (rgerhards), 2007-07-27
-- continued to work on output module modularization
-- fixed a situation where rsyslogd could create zombie processes
-  thanks to mildew for the patch
-- applied patch from Michel Samia to fix compilation when NOT
-  compiled for pthreads
----------------------------------------------------------------------------
-Version 1.17.3 (rgerhards), 2007-07-25
-- continued working on output module modularization
-- fixed a bug that caused rsyslogd to segfault on exit (and
-  probably also on HUP), when there was an unsent message in a selector
-  that required forwarding and the dns lookup failed for that selector
-  (yes, it was pretty unlikely to happen;))
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- fixed a memory leak in config file parsing and die()
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- rsyslogd now checks on startup if it is capable to perform any work
-  at all. If it cant, it complains and terminates
-  thanks to Michel Samia for providing the patch!
-- fixed a small memory leak when HUPing syslogd. The allowed sender
-  list now gets freed. thanks to mildew for the patch.
-- changed the way error messages in early startup are logged. They
-  now do no longer use the syslogd code directly but are rather
-  send to stderr.
----------------------------------------------------------------------------
-Version 1.17.2 (rgerhards), 2007-07-23
-- made the port part of the -r option optional. Needed for backward
-  compatibility with sysklogd
-- replaced system() calls with something more reasonable. Please note that
-  this might break compatibility with some existing configuration files.
-  We accept this in favor of the gained security.
-- removed a memory leak that could occur if timegenerated was used in
-  RFC 3164 format in templates
-- did some preparation in msg.c for advanced multithreading - placed the
-  hooks, but not yet any active code
-- worked further on modularization
-- added $ModLoad MySQL (dummy) config directive
-- added DropTrailingLFOnReception config directive
----------------------------------------------------------------------------
-Version 1.17.1 (rgerhards), 2007-07-20
-- fixed a bug that caused make install to install rsyslogd and rklogd under
-  the wrong names
-- fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
-  also fixed but that could garble $AllowedSender wildcards. Thanks to
-  mildew@gmail.com for the patch
-- minor code cleanup - thanks to Peter Vrabec for the patch
-- fixed minimal memory leak on HUP (caused by templates)
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- fixed another memory leak on HUPing and on exiting rsyslogd
-  again thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- code cleanup (removed compiler warnings)
-- fixed portability bug in configure.ac - thanks to Bartosz Kuźma for patch
-- moved msg object into its own file set
-- added the capability to continue trying to write log files when the
-  file system is full. Functionality based on patch by Martin Schulze
-  to sysklogd package.
----------------------------------------------------------------------------
-Version 1.17.0 (RGer), 2007-07-17
-- added $RepeatedLineReduction config parameter
-- added $EscapeControlCharactersOnReceive config parameter
-- added $ControlCharacterEscapePrefix config parameter
-- added $DirCreateMode config parameter
-- added $CreateDirs config parameter
-- added $DebugPrintTemplateList config parameter
-- added $ResetConfigVariables config parameter
-- added $FileOwner config parameter
-- added $FileGroup config parameter
-- added $DirOwner config parameter
-- added $DirGroup config parameter
-- added $FailOnChownFailure config parameter
-- added regular expression support to the filter engine
-  thanks to Michel Samia for providing the patch!
-- enhanced $AllowedSender functionality. Credits to mildew@gmail.com for
-  the patch doing that
-  - added IPv6 support
-  - allowed DNS hostnames
-  - allowed DNS wildcard names
-- added new option $DropMsgsWithMaliciousDnsPTRRecords
-- added autoconf so that rfc3195d, rsyslogd and klogd are stored to /sbin
-- added capability to auto-create directories with dynaFiles
----------------------------------------------------------------------------
-Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
-- build system switched to autotools
-- removed SYSV preprocessor macro use, replaced with autotools equivalents
-- fixed a bug that caused rsyslogd to segfault when TCP listening was
-  disabled and it terminated
-- added new properties "syslogfacility-text" and "syslogseverity-text"
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- added the -x option to disable hostname dns resolution
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- begun to better modularize syslogd.c - this is an ongoing project; moved
-  type definitions to a separate file
-- removed some now-unused fields from struct filed
-- move file size limit fields in struct field to the "right spot" (the file
-  writing part of the union - f_un.f_file)
-- subdirectories linux and solaris are no longer part of the distribution
-  package. This is not because we cease support for them, but there are no
-  longer any files in them after the move to autotools
----------------------------------------------------------------------------
-Version 1.15.1 (RGer), 2007-07-10
-- fixed a bug that caused a dynaFile selector to stall when there was
-  an open error with one file
-- improved template processing for dynaFiles; templates are now only
-  looked up during initialization - speeds up processing
-- optimized memory layout in struct filed when compiled with MySQL
-  support
-- fixed a bug that caused compilation without SYSLOG_INET to fail
-- re-enabled the "last message repeated n times" feature. This
-  feature was not taken care of while rsyslogd evolved from sysklogd
-  and it was more or less defunct. Now it is fully functional again.
-- added system properties: $NOW, $YEAR, $MONTH, $DAY, $HOUR, $MINUTE
-- fixed a bug in iovAsString() that caused a memory leak under stress
-  conditions (most probably memory shortage). This was unlikely to
-  ever happen, but it doesn't hurt doing it right
-- cosmetic: defined type "uchar", change all unsigned chars to uchar
----------------------------------------------------------------------------
-Version 1.15.0 (RGer), 2007-07-05
-- added ability to dynamically generate file names based on templates
-  and thus properties. This was a much-requested feature. It makes
-  life easy when it e.g. comes to splitting files based on the sender
-  address.
-- added $umask and $FileCreateMode config file directives
-- applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
-- checks for extra (unexpected) characters in system config file lines
-  have been added
-- added IPv6 documentation - was accidentally missing from CVS
-- begun to change char to unsigned char
----------------------------------------------------------------------------
-Version 1.14.2 (RGer), 2007-07-03
-** this release fixes all known nits with IPv6 **
-- restored capability to do /etc/service lookup for "syslog"
-  service when -r 0 was given
-- documented IPv6 handling of syslog messages
-- integrate patch from Bartosz Kuźma to make rsyslog compile under
-  Solaris again (the patch replaced a strndup() call, which is not
-  available under Solaris
-- improved debug logging when waiting on select
-- updated rsyslogd man page with new options (-46A)
----------------------------------------------------------------------------
-Version 1.14.1 (RGer/Peter Vrabec), 2007-06-29
-- added Peter Vrabec's patch for IPv6 TCP
-- prefixed all messages send to stderr in rsyslogd with "rsyslogd: "
----------------------------------------------------------------------------
-Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
-- Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled
-  IPv6 Support is currently for UDP only, TCP is to come soon.
-  AllowedSender configuration does not yet work for IPv6.
-- fixed code in iovCreate() that broke C's strict aliasing rules
-- fixed some char/unsigned char differences that forced the compiler
-  to spit out warning messages
-- updated the Red Hat init script to fix a known issue (thanks to
-  Peter Vrabec)
----------------------------------------------------------------------------
-Version 1.13.5 (RGer), 2007-06-22
-- made the TCP session limit configurable via command line switch
-  now -t <port>,<max sessions>
-- added man page for rklogd(8) (basically a copy from klogd, but now
-  there is one...)
-- fixed a bug that caused internal messages (e.g. rsyslogd startup) to
-  appear without a tag.
-- removed a minor memory leak that occurred when TAG processing requalified
-  a HOSTNAME to be a TAG (and a TAG already was set).
-- removed potential small memory leaks in MsgSet***() functions. There
-  would be a leak if a property was re-set, something that happened
-  extremely seldom.
----------------------------------------------------------------------------
-Version 1.13.4 (RGer), 2007-06-18
-- added a new property "PRI-text", which holds the PRI field in
-  textual form (e.g. "syslog.info")
-- added alias "syslogseverity" for "syslogpriority", which is a
-  misleading property name that needs to stay for historical
-  reasons (and backward-compatibility)
-- added doc on how to record PRI value in log file
-- enhanced signal handling in klogd, including removal of an unsafe
-  call to the logging system during signal handling
----------------------------------------------------------------------------
-Version 1.13.3 (RGer), 2007-06-15
-- create a version of syslog.c from scratch. This is now
-  - highly optimized for rsyslog
-  - removes an incompatible license problem as the original
-    version had a BSD license with advertising clause
-  - fixed in the regard that rklogd will continue to work when
-    rsyslogd has been restarted (the original version, as well
-    as sysklogd, will remain silent then)
-  - solved an issue with an extra NUL char at message end that the
-    original version had
-- applied some changes to klogd to care for the new interface
-- fixed a bug in syslogd.c which prevented compiling under debian
----------------------------------------------------------------------------
-Version 1.13.2 (RGer), 2007-06-13
-- lib order in makefile patched to facilitate static linking - thanks
-  to Bennett Todd for providing the patch
-- Integrated a patch from Peter Vrabec (pvrabec@redhat.com):
-  - added klogd under the name of rklogd (remove dependency on
-    original sysklogd package
-  - createDB.sql now in UTF
-  - added additional config files for use on Red Hat
----------------------------------------------------------------------------
-Version 1.13.1 (RGer), 2007-02-05
-- changed the listen backlog limit to a more reasonable value based on
-  the maximum number of TCP connections configured (10% + 5) - thanks to Guy
-  Standen for the hint (actually, the limit was 5 and that was a
-  left-over from early testing).
-- fixed a bug in makefile which caused DB-support to be disabled when
-  NETZIP support was enabled
-- added the -e option to allow transmission of every message to remote
-  hosts (effectively turns off duplicate message suppression)
-- (somewhat) improved memory consumption when compiled with MySQL support
-- looks like we fixed an incompatibility with MySQL 5.x and above software
-  At least in one case, the remote server name was destroyed, leading to
-  a connection failure. The new, improved code does not have this issue and
-  so we see this as solved (the new code is generally somewhat better, so
-  there is a good chance we fixed this incompatibility).
----------------------------------------------------------------------------
-Version 1.13.0 (RGer), 2006-12-19
-- added '$' as ToPos property replacer specifier - means "up to the
-  end of the string"
-- property replacer option "escape-cc", "drop-cc" and "space-cc"  added
-- changed the handling of \0 characters inside syslog messages. We now
-  consistently escape them to "#000". This is somewhat recommended in
-  the draft-ietf-syslog-protocol-19 draft. While the real recommendation
-  is to not escape any characters at all, we can not do this without
-  considerable modification of the code. So we escape it to "#000", which
-  is consistent with a sample found in the Internet-draft.
-- removed message glue logic (see printchopped() comment for details)
-  Also caused removal of parts table and thus some improvements in
-  memory usage.
-- changed the default MAXLINE to 2048 to take care of recent syslog
-  standardization efforts (can easily be changed in syslogd.c)
-- added support for byte-counted TCP syslog messages (much like
-  syslog-transport-tls-05 Internet Draft). This was necessary to
-  support compression over TCP.
-- added support for receiving compressed syslog messages
-- added support for sending compressed syslog messages
-- fixed a bug where the last message in a syslog/tcp stream was
-  lost if it was not properly terminated by a LF character
----------------------------------------------------------------------------
-Version 1.12.3 (RGer), 2006-10-04
-- implemented some changes to support Solaris (but support is not
-  yet complete)
-- commented out (via #if 0) some methods that are currently not being use
-  but should be kept for further us
-- added (interim) -u 1 option to turn off hostname and tag parsing
-- done some modifications to better support Fedora
-- made the field delimiter inside property replace configurable via
-  template
-- fixed a bug in property replacer: if fields were used, the delimitor
-  became part of the field. Up until now, this was barely noticeable as
-  the delimiter as TAB only and thus invisible to a human. With other
-  delimiters available now, it quickly showed up. This bug fix might cause
-  some grief to existing installations if they used the extra TAB for
-  whatever reasons - sorry folks... Anyhow, a solution is easy: just add
-  a TAB character constant into your template. Thus, there has no attempt
-  been made to do this in a backwards-compatible way.
----------------------------------------------------------------------------
-Version 1.12.2 (RGer), 2006-02-15
-- fixed a bug in the RFC 3339 date formatter. An extra space was added
-  after the actual timestamp
-- added support for providing high-precision RFC3339 timestamps for
-  (rsyslogd-)internally-generated messages
-- very (!) experimental support for syslog-protocol internet draft
-  added (the draft is experimental, the code is solid ;))
-- added support for field-extracting in the property replacer
-- enhanced the legacy-syslog parser so that it can interpret messages
-  that do not contain a TIMESTAMP
-- fixed a bug that caused the default socket (usually /dev/log) to be
-  opened even when -o command line option was given
-- fixed a bug in the Debian sample startup script - it caused rsyslogd
-  to listen to remote requests, which it shouldn't by default
----------------------------------------------------------------------------
-Version 1.12.1 (RGer), 2005-11-23
-- made multithreading work with BSD. Some signal-handling needed to be
-  restructured. Also, there might be a slight delay of up to 10 seconds
-  when huping and terminating rsyslogd under BSD
-- fixed a bug where a NULL-pointer was passed to printf() in logmsg().
-- fixed a bug during "make install" where rc3195d was not installed
-  Thanks to Bennett Todd for spotting this.
-- fixed a bug where rsyslogd dumped core when no TAG was found in the
-  received message
-- enhanced message parser so that it can deal with missing hostnames
-  in many cases (may not be totally fail-safe)
-- fixed a bug where internally-generated messages did not have the correct
-  TAG
----------------------------------------------------------------------------
-Version 1.12.0 (RGer), 2005-10-26
-- moved to a multi-threaded design. single-threading is still optionally
-  available. Multi-threading is experimental!
-- fixed a potential race condition. In the original code, marking was done
-  by an alarm handler, which could lead to all sorts of bad things. This
-  has been changed now. See comments in syslogd.c/domark() for details.
-- improved debug output for property-based filters
-- not a code change, but: I have checked all exit()s to make sure that
-  none occurs once rsyslogd has started up. Even in unusual conditions
-  (like low-memory conditions) rsyslogd somehow remains active. Of course,
-  it might loose a message or two, but at least it does not abort and it
-  can also recover when the condition no longer persists.
-- fixed a bug that could cause loss of the last message received
-  immediately before rsyslogd was terminated.
-- added comments on thread-safety of global variables in syslogd.c
-- fixed a small bug: spurios printf() when TCP syslog was used
-- fixed a bug that causes rsyslogd to dump core on termination when one
-  of the selector lines did not receive a message during the run (very
-  unlikely)
-- fixed an one-too-low memory allocation in the TCP sender. Could result
-  in rsyslogd dumping core.
-- fixed a bug with regular expression support (thanks to Andres Riancho)
-- a little bit of code restructuring (especially main(), which was
-  horribly large)
----------------------------------------------------------------------------
-Version 1.11.1 (RGer), 2005-10-19
-- support for BSD-style program name and host blocks
-- added a new property "programname" that can be used in templates
-- added ability to specify listen port for rfc3195d
-- fixed a bug that rendered the "startswith" comparison operation
-  unusable.
-- changed more functions to "static" storage class to help compiler
-  optimize (should have been static in the first place...)
-- fixed a potential memory leak in the string buffer class destructor.
-  As the destructor was previously never called, the leak did not actually
-  appear.
-- some internal restructuring in anticipation/preparation of minimal
-  multi-threading support
-- rsyslogd still shares some code with the sysklogd project. Some patches
-  for this shared code have been brought over from the sysklogd CVS.
----------------------------------------------------------------------------
-Version 1.11.0 (RGer), 2005-10-12
-- support for receiving messages via RFC 3195; added rfc3195d for that
-  purpose
-- added an additional guard to prevent rsyslogd from aborting when the
-  2gb file size limit is hit. While a user can configure rsyslogd to
-  handle such situations, it would abort if that was not done AND large
-  file support was not enabled (ok, this is hopefully an unlikely scenario)
-- fixed a bug that caused additional Unix domain sockets to be incorrectly
-  processed - could lead to message loss in extreme cases
----------------------------------------------------------------------------
-Version 1.10.2 (RGer), 2005-09-27
-- added comparison operations in property-based filters:
-  * isequal
-  * startswith
-- added ability to negate all property-based filter comparison operations
-  by adding a !-sign right in front of the operation name
-- added the ability to specify remote senders for UDP and TCP
-  received messages. Allows to block all but well-known hosts
-- changed the $-config line directives to be case-INsensitive
-- new command line option -w added: "do not display warnings if messages
-  from disallowed senders are received"
-- fixed a bug that caused rsyslogd to dump core when the compare value
-  was not quoted in property-based filters
-- fixed a bug in the new CStr compare function which lead to invalid
-  results (fortunately, this function was not yet used widely)
-- added better support for "debugging" rsyslog.conf property filters
-  (only if -d switch is given)
-- changed some function definitions to static, which eventually enables
-  some compiler optimizations
-- fixed a bug in MySQL code; when a SQL error occurred, rsyslogd could
-  run in a tight loop. This was due to invalid sequence of error reporting
-  and is now fixed.
----------------------------------------------------------------------------
-Version 1.10.1 (RGer), 2005-09-23
-- added the ability to execute a shell script as an action.
-  Thanks to Bjoern Kalkbrenner for providing the code!
-- fixed a bug in the MySQL code; due to the bug the automatic one-time
-  retry after an error did not happen - this lead to error message in
-  cases where none should be seen (e.g. after a MySQL restart)
-- fixed a security issue with SQL-escaping in conjunction with
-  non-(SQL-)standard MySQL features.
----------------------------------------------------------------------------
-Version 1.10.0 (RGer), 2005-09-20
-  REMINDER: 1.10 is the first unstable version if the 1.x series!
-- added the capability to filter on any property in selector lines
-  (not just facility and priority)
-- changed stringbuf into a new counted string class
-- added support for a "discard" action. If a selector line with
-  discard (~ character) is found, no selector lines *after* that
-  line will be processed.
-- thanks to Andres Riancho, regular expression support has been
-  added to the template engine
-- added the FROMHOST property in the template processor, which could
-  previously not be obtained. Thanks to Cristian Testa for pointing
-  this out and even providing a fix.
-- added display of compile-time options to -v output
-- performance improvement for production build - made some checks
-  to happen only during debug mode
-- fixed a problem with compiling on SUSE and - while doing so - removed
-  the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
----------------------------------------------------------------------------
-Version 1.0.4 (RGer), 2006-02-01
-- a small but important fix: the tcp receiver had two forgotten printf's
-  in it that caused a lot of unnecessary output to stdout. This was
-  important enough to justify a new release
----------------------------------------------------------------------------
-Version 1.0.3 (RGer), 2005-11-14
-- added an additional guard to prevent rsyslogd from aborting when the
-  2gb file size limit is hit. While a user can configure rsyslogd to
-  handle such situations, it would abort if that was not done AND large
-  file support was not enabled (ok, this is hopefully an unlikely scenario)
-- fixed a bug that caused additional Unix domain sockets to be incorrectly
-  processed - could lead to message loss in extreme cases
-- applied some patches available from the sysklogd project to code
-  shared from there
-- fixed a bug that causes rsyslogd to dump core on termination when one
-  of the selector lines did not receive a message during the run (very
-  unlikely)
-- fixed an one-too-low memory allocation in the TCP sender. Could result
-  in rsyslogd dumping core.
-- fixed a bug in the TCP sender that caused the retry logic to fail
-  after an error or receiver overrun
-- fixed a bug in init() that could lead to dumping core
-- fixed a bug that could lead to dumping core when no HOSTNAME or no TAG
-  was present in the syslog message
----------------------------------------------------------------------------
-Version 1.0.2 (RGer), 2005-10-05
-- fixed an issue with MySQL error reporting. When an error occurred,
-  the MySQL driver went into an endless loop (at least in most cases).
----------------------------------------------------------------------------
-Version 1.0.1 (RGer), 2005-09-23
-- fixed a security issue with SQL-escaping in conjunction with
-  non-(SQL-)standard MySQL features.
----------------------------------------------------------------------------
-Version 1.0.0 (RGer), 2005-09-12
-- changed install doc to cover daily cron scripts - a trouble source
-- added rc script for slackware (provided by Chris Elvidge - thanks!)
-- fixed a really minor bug in usage() - the -r option was still
-  reported as without the port parameter
----------------------------------------------------------------------------
-Version 0.9.8 (RGer), 2005-09-05
-- made startup and shutdown message more consistent and included the
-  pid, so that they can be easier correlated. Used syslog-protocol
-  structured data format for this purpose.
-- improved config info in startup message, now tells not only
-  if it is listening remote on udp, but also for tcp. Also includes
-  the port numbers. The previous startup message was misleading, because
-  it did not say "remote reception" if rsyslogd was only listening via
-  tcp (but not via udp).
-- added a "how can you help" document to the doc set
----------------------------------------------------------------------------
-Version 0.9.7 (RGer), 2005-08-15
-- some of the previous doc files (like INSTALL) did not properly
-  reflect the changes to the build process and the new doc. Fixed
-  that.
-- changed syslogd.c so that when compiled without database support,
-  an error message is displayed when a database action is detected
-  in the config file (previously this was used as an user rule ;))
-- fixed a bug in the os-specific Makefiles which caused MySQL
-  support to not be compiled, even if selected
----------------------------------------------------------------------------
-Version 0.9.6 (RGer), 2005-08-09
-- greatly enhanced documentation. Now available in html format in
-  the "doc" folder and FreeBSD. Finally includes an install howto.
-- improved MySQL error messages a little - they now show up as log
-  messages, too (formerly only in debug mode)
-- added the ability to specify the listen port for udp syslog.
-  WARNING: This introduces an incompatibility. Formerly, udp
-  syslog was enabled by the -r command line option. Now, it is
-  "-r [port]", which is consistent with the tcp listener. However,
-  just -r will now return an error message.
-- added sample startup scripts for Debian and FreeBSD
-- added support for easy feature selection in the makefile. Un-
-  fortunately, this also means I needed to spilt the make file
-  for different OS and distros. There are some really bad syntax
-  differences between FreeBSD and Linux make.
----------------------------------------------------------------------------
-Version 0.9.5 (RGer), 2005-08-01
-- the "semicolon bug" was actually not (fully) solved in 0.9.4. One
-  part of the bug was solved, but another still existed. This one
-  is fixed now, too.
-- the "semicolon bug" actually turned out to be a more generic bug.
-  It appeared whenever an invalid template name was given. With some
-  selector actions, rsyslogd dumped core, with other it "just" had
-  a small resource leak with others all worked well. These anomalies
-  are now fixed. Note that they only appeared during system initialization
-  once the system was running, nothing bad happened.
-- improved error reporting for template errors on startup. They are now
-  shown on the console and the start-up tty. Formerly, they were only
-  visible in debug mode.
-- support for multiple instances of rsyslogd on a single machine added
-- added new option "-o" --> omit local unix domain socket. This option
-  enables rsyslogd NOT to listen to the local socket. This is most
-  helpful when multiple instances of rsyslogd (or rsyslogd and another
-  syslogd) shall run on a single system.
-- added new option "-i <pidfile>" which allows one to specify the pidfile.
-  This is needed when multiple instances of rsyslogd are to be run.
-- the new project home page is now online at www.rsyslog.com
----------------------------------------------------------------------------
-Version 0.9.4 (RGer), 2005-07-25
-- finally added the TCP sender. It now supports non-blocking mode, no
-  longer disabling message reception during connect. As it is now, it
-  is usable in production. The code could be more sophisticated, but
-  I've kept it short in anticipation of the move to liblogging, which
-  will lead to the removal of the code just written ;)
-- the "exiting on signal..." message still had the "syslogd" name in
-  it. Changed this to "rsyslogd", as we do not have a large user base
-  yet, this should pose no problem.
-- fixed "the semicolon" bug. rsyslogd dumped core if a write-db action
-  was specified but no semicolon was given after the password (an empty
-  template was ok, but the semicolon needed to be present).
-- changed a default for traditional output format. During testing, it
-  was seen that the timestamp written to file in default format was
-  the time of message reception, not the time specified in the TIMESTAMP
-  field of the message itself. Traditionally, the message TIMESTAMP is
-  used and this has been changed now.
----------------------------------------------------------------------------
-Version 0.9.3 (RGer), 2005-07-19
-- fixed a bug in the message parser. In June, the RFC 3164 timestamp
-  was not correctly parsed (yes, only in June and some other months,
-  see the code comment to learn why...)
-- added the ability to specify the destination port when forwarding
-  syslog messages (both for TCP and UDP)
-- added an very experimental TCP sender (activated by
-  @@machine:port in config). This is not yet for production use. If
-  the receiver is not alive, rsyslogd will wait quite some time until
-  the connection request times out, which most probably leads to
-  loss of incoming messages.
-
----------------------------------------------------------------------------
-Version 0.9.2 (RGer), around 2005-07-06
-- I intended to change the maxsupported message size to 32k to
-  support IHE - but given the memory inefficiency in the usual use
-  cases, I have not done this. I have, however, included very
-  specific instructions on how to do this in the source code. I have
-  also done some testing with 32k messages, so you can change the
-  max size without taking too much risk.
-- added a syslog/tcp receiver; we now can receive messages via
-  plain tcp, but we can still send only via UDP. The syslog/tcp
-  receiver is the primary enhancement of this release.
-- slightly changed some error messages that contained a spurios \n at
-  the end of the line (which gives empty lines in your log...)
-
----------------------------------------------------------------------------
-Version 0.9.1 (RGer)
-- fixed code so that it compiles without errors under FreeBSD
-- removed now unused function "allocate_log()" from syslogd.c
-- changed the make file so that it contains more defines for
-  different environments (in the long term, we need a better
-  system for disabling/enabling features...)
-- changed some printf's printing off_t types to %lld and
-  explicit (long long) casts. I tried to figure out the exact type,
-  but did not succeed in this. In the worst case, ultra-large peta-
-  byte files will now display funny informational messages on rollover,
-  something I think we can live with for the neersion 3.11.2 (rgerhards), 2008-02-??
----------------------------------------------------------------------------
-Version 3.11.1 (rgerhards), 2008-02-12
-- SNMP trap sender added thanks to Andre Lorbach (omsnmp)
-- added input-plugin interface specification in form of a (copy) template
-  input module
-- applied documentation fix by Michael Biebl -- many thanks!
-- bugfix: immark did not have MARK flags set...
-- added x-info field to rsyslogd startup/shutdown message. Hopefully
-  points users to right location for further info (many don't even know
-  they run rsyslog ;))
-- bugfix: trailing ":" of tag was lost while parsing legacy syslog messages
-  without timestamp - thanks to Anders Blomdell for providing a patch!
-- fixed a bug in stringbuf.c related to STRINGBUF_TRIM_ALLOCSIZE, which
-  wasn't supposed to be used with rsyslog. Put a warning message up that
-  tells this feature is not tested and probably not worth the effort.
-  Thanks to Anders Blomdell fro bringing this to our attention
-- somewhat improved performance of string buffers
-- fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
-- bugfix: setting for $EscapeControlCharactersOnReceive was not
-  properly initialized
-- clarified usage of space-cc property replacer option
-- improved abort diagnostic handler
-- some initial effort for malloc/free runtime debugging support
-- bugfix: using dynafile actions caused rsyslogd abort
-- fixed minor man errors thanks to Michael Biebl
----------------------------------------------------------------------------
-Version 3.11.0 (rgerhards), 2008-01-31
-- implemented queued actions
-- implemented simple rate limiting for actions
-- implemented deliberate discarding of lower priority messages over higher
-  priority ones when a queue runs out of space
-- implemented disk quotas for disk queues
-- implemented the $ActionResumeRetryCount config directive
-- added $ActionQueueFilename config directive
-- added $ActionQueueSize config directive
-- added $ActionQueueHighWaterMark config directive
-- added $ActionQueueLowWaterMark config directive
-- added $ActionQueueDiscardMark config directive
-- added $ActionQueueDiscardSeverity config directive
-- added $ActionQueueCheckpointInterval config directive
-- added $ActionQueueType config directive
-- added $ActionQueueWorkerThreads config directive
-- added $ActionQueueTimeoutshutdown config directive
-- added $ActionQueueTimeoutActionCompletion config directive
-- added $ActionQueueTimeoutenQueue config directive
-- added $ActionQueueTimeoutworkerThreadShutdown config directive
-- added $ActionQueueWorkerThreadMinimumMessages config directive
-- added $ActionQueueMaxFileSize config directive
-- added $ActionQueueSaveonShutdown config directive
-- addded $ActionQueueDequeueSlowdown config directive
-- addded $MainMsgQueueDequeueSlowdown config directive
-- bugfix: added forgotten docs to package
-- improved debugging support
-- fixed a bug that caused $MainMsgQueueCheckpointInterval to work incorrectly
-- when a long-running action needs to be cancelled on shutdown, the message
-  that was processed by it is now preserved. This finishes support for
-  guaranteed delivery of messages (if the output supports it, of course)
-- fixed bug in output module interface, see
-  http://sourceforge.net/tracker/index.php?func=detail&aid=1881008&group_id=123448&atid=696552
-- changed the ommysql output plugin so that the (lengthy) connection
-  initialization now takes place in message processing. This works much
-  better with the new queued action mode (fast startup)
-- fixed a bug that caused a potential hang in file and fwd output module
-  varmojfekoj provided the patch - many thanks!
-- bugfixed stream class offset handling on 32bit platforms
----------------------------------------------------------------------------
-Version 3.10.3 (rgerhards), 2008-01-28
-- fixed a bug with standard template definitions (not a big deal) - thanks
-  to varmojfekoj for spotting it
-- run-time instrumentation added
-- implemented disk-assisted queue mode, which enables on-demand disk
-  spooling if the queue's in-memory queue is exhausted
-- implemented a dynamic worker thread pool for processing incoming
-  messages; workers are started and shut down as need arises
-- implemented a run-time instrumentation debug package
-- implemented the $MainMsgQueueSaveOnShutdown config directive
-- implemented the $MainMsgQueueWorkerThreadMinimumMessages config directive
-- implemented the $MainMsgQueueTimeoutWorkerThreadShutdown config directive
----------------------------------------------------------------------------
-Version 3.10.2 (rgerhards), 2008-01-14
-- added the ability to keep stop rsyslogd without the need to drain
-  the main message queue. In disk queue mode, rsyslog continues to
-  run from the point where it stopped. In case of a system failure, it
-  continues to process messages from the last checkpoint.
-- fixed a bug that caused a segfault on startup when no $WorkDir directive
-  was specified in rsyslog.conf
-- provided more fine-grain control over shutdown timeouts and added a
-  way to specify the enqueue timeout when the main message queue is full
-- implemented $MainMsgQueueCheckpointInterval config directive
-- implemented $MainMsgQueueTimeoutActionCompletion config directive
-- implemented $MainMsgQueueTimeoutEnqueue config directive
-- implemented $MainMsgQueueTimeoutShutdown config directive
----------------------------------------------------------------------------
-Version 3.10.1 (rgerhards), 2008-01-10
-- implemented the "disk" queue mode. However, it currently is of very
-  limited use, because it does not support persistence over rsyslogd
-  runs. So when rsyslogd is stopped, the queue is drained just as with
-  the in-memory queue modes. Persistent queues will be a feature of
-  the next release.
-- performance-optimized string class, should bring an overall improvement
-- fixed a memory leak in imudp -- thanks to varmojfekoj for the patch
-- fixed a race condition that could lead to a rsyslogd hang when during
-  HUP or termination
-- done some doc updates
-- added $WorkDirectory config directive
-- added $MainMsgQueueFileName config directive
-- added $MainMsgQueueMaxFileSize config directive
----------------------------------------------------------------------------
-Version 3.10.0 (rgerhards), 2008-01-07
-- implemented input module interface and initial input modules
-- enhanced threading for input modules (each on its own thread now)
-- ability to bind UDP listeners to specific local interfaces/ports and
-  ability to run multiple of them concurrently
-- added ability to specify listen IP address for UDP syslog server
-- license changed to GPLv3
-- mark messages are now provided by loadble module immark
-- rklogd is no longer provided. Its functionality has now been taken over
-  by imklog, a loadable input module. This offers a much better integration
-  into rsyslogd and makes sure that the kernel logger process is brought
-  up and down at the appropriate times
-- enhanced $IncludeConfig directive to support wildcard characters
-  (thanks to Michael Biebl)
-- all inputs are now implemented as loadable plugins
-- enhanced threading model: each input module now runs on its own thread
-- enhanced message queue which now supports different queueing methods
-  (among others, this can be used for performance fine-tuning)
-- added a large number of new configuration directives for the new
-  input modules
-- enhanced multi-threading utilizing a worker thread pool for the
-  main message queue
-- compilation without pthreads is no longer supported
-- much cleaner code due to new objects and removal of single-threading
-  mode
----------------------------------------------------------------------------
-Version 2.0.1 STABLE (rgerhards), 2008-01-24
-- fixed a bug in integer conversion - but this function was never called,
-  so it is not really a useful bug fix ;)
-- fixed a bug with standard template definitions (not a big deal) - thanks
-  to varmojfekoj for spotting it
-- fixed a bug that caused a potential hang in file and fwd output module
-  varmojfekoj provided the patch - many thanks!
----------------------------------------------------------------------------
-Version 2.0.0 STABLE (rgerhards), 2008-01-02
-- re-release of 1.21.2 as STABLE with no modifications except some
-  doc updates
----------------------------------------------------------------------------
-Version 1.21.2 (rgerhards), 2007-12-28
-- created a gss-api output module. This keeps GSS-API code and
-  TCP/UDP code separated. It is also important for forward-
-  compatibility with v3. Please note that this change breaks compatibility
-  with config files created for 1.21.0 and 1.21.1 - this was considered
-  acceptable.
-- fixed an error in forwarding retry code (could lead to message corruption
-  but surfaced very seldom)
-- increased portability for older platforms (AI_NUMERICSERV moved)
-- removed socket leak in omfwd.c
-- cross-platform patch for GSS-API compile problem on some platforms
-  thanks to darix for the patch!
----------------------------------------------------------------------------
-Version 1.21.1 (rgerhards), 2007-12-23
-- small doc fix for $IncludeConfig
-- fixed a bug in llDestroy()
-- bugfix: fixing memory leak when message queue is full and during
-  parsing. Thanks to varmojfekoj for the patch.
-- bugfix: when compiled without network support, unix sockets were
-  not properly closed
-- bugfix: memory leak in cfsysline.c/doGetWord() fixed
----------------------------------------------------------------------------
-Version 1.21.0 (rgerhards), 2007-12-19
-- GSS-API support for syslog/TCP connections was added. Thanks to
-  varmojfekoj for providing the patch with this functionality
-- code cleanup
-- enhanced $IncludeConfig directive to support wildcard filenames
-- changed some multithreading synchronization
----------------------------------------------------------------------------
-Version 1.20.1 (rgerhards), 2007-12-12
-- corrected a debug setting that survived release. Caused TCP connections
-  to be retried unnecessarily often.
-- When a hostname ACL was provided and DNS resolution for that name failed,
-  ACL processing was stopped at that point. Thanks to mildew for the patch.
-  Fedora Bugzilla: http://bugzilla.redhat.com/show_bug.cgi?id=395911
-- fixed a potential race condition, see link for details:
-  http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
-  Note that the probability of problems from this bug was very remote
-- fixed a memory leak that happened when PostgreSQL date formats were
-  used
----------------------------------------------------------------------------
-Version 1.20.0 (rgerhards), 2007-12-07
-- an output module for postgres databases has been added. Thanks to
-  sur5r for contributing this code
-- unloading dynamic modules has been cleaned up, we now have a
-  real implementation and not just a dummy "good enough for the time
-  being".
-- enhanced platform independence - thanks to Bartosz Kuzma and Michael
-  Biebl for their very useful contributions
-- some general code cleanup (including warnings on 64 platforms, only)
----------------------------------------------------------------------------
-Version 1.19.12 (rgerhards), 2007-12-03
-- cleaned up the build system (thanks to Michael Biebl for the patch)
-- fixed a bug where ommysql was still not compiled with -pthread option
----------------------------------------------------------------------------
-Version 1.19.11 (rgerhards), 2007-11-29
-- applied -pthread option to build when building for multi-threading mode
-  hopefully solves an issue with segfaulting
----------------------------------------------------------------------------
-Version 1.19.10 (rgerhards), 2007-10-19
-- introduced the new ":modulename:" syntax for calling module actions
-  in selector lines; modified ommysql to support it. This is primarily
-  an aid for further modules and a prerequisite to actually allow third
-  party modules to be created.
-- minor fix in slackware startup script, "-r 0" is now "-r0"
-- updated rsyslogd doc set man page; now in html format
-- undid creation of a separate thread for the main loop -- this did not
-  turn out to be needed or useful, so reduce complexity once again.
-- added doc fixes provided by Michael Biebl - thanks
----------------------------------------------------------------------------
-Version 1.19.9 (rgerhards), 2007-10-12
-- now packaging system which again contains all components in a single
-  tarball
-- modularized main() a bit more, resulting in less complex code
-- experimentally added an additional thread - will see if that affects
-  the segfault bug we experience on some platforms. Note that this change
-  is scheduled to be removed again later.
----------------------------------------------------------------------------
-Version 1.19.8 (rgerhards), 2007-09-27
-- improved repeated message processing
-- applied patch provided by varmojfekoj to support building ommysql
-  in its own way (now also resides in a plugin subdirectory);
-  ommysql is now a separate package
-- fixed a bug in cvthname() that lead to message loss if part
-  of the source hostname would have been dropped
-- created some support for distributing ommysql together with the
-  main rsyslog package. I need to re-think it in the future, but
-  for the time being the current mode is best. I now simply include
-  one additional tarball for ommysql inside the main distribution.
-  I look forward to user feedback on how this should be done best. In the
-  long term, a separate project should be spawend for ommysql, but I'd
-  like to do that only after the plugin interface is fully stable (what
-  it is not yet).
----------------------------------------------------------------------------
-Version 1.19.7 (rgerhards), 2007-09-25
-- added code to handle situations where senders send us messages ending with
-  a NUL character. It is now simply removed. This also caused trailing LF
-  reduction to fail, when it was followed by such a NUL. This is now also
-  handled.
-- replaced some non-thread-safe function calls by their thread-safe
-  counterparts
-- fixed a minor memory leak that occurred when the %APPNAME% property was
-  used (I think nobody used that in practice)
-- fixed a bug that caused signal handlers in cvthname() not to be restored when
-  a malicious pointer record was detected and processing of the message been
-  stopped for that reason (this should be really rare and can not be related
-  to the segfault bug we are hunting).
-- fixed a bug in cvthname that lead to passing a wrong parameter - in
-  practice, this had no impact.
-- general code cleanup (e.g. compiler warnings, comments)
----------------------------------------------------------------------------
-Version 1.19.6 (rgerhards), 2007-09-11
-- applied patch by varmojfekoj to change signal handling to the new
-  sigaction API set (replacing the depreciated signal() calls and its
-  friends.
-- fixed a bug that in --enable-debug mode caused an assertion when the
-  discard action was used
-- cleaned up compiler warnings
-- applied patch by varmojfekoj to FIX a bug that could cause
-  segfaults if empty properties were processed using modifying
-  options (e.g. space-cc, drop-cc)
-- fixed man bug: rsyslogd supports -l option
----------------------------------------------------------------------------
-Version 1.19.5 (rgerhards), 2007-09-07
-- changed part of the CStr interface so that better error tracking
-  is provided and the calling sequence is more intuitive (there were
-  invalid calls based on a too-weird interface)
-- (hopefully) fixed some remaining bugs rooted in wrong use of
-  the CStr class. These could lead to program abort.
-- applied patch by varmojfekoj two fix two potential segfault situations
-- added $ModDir config directive
-- modified $ModLoad so that an absolute path may be specified as
-  module name (e.g. /rsyslog/ommysql.so)
----------------------------------------------------------------------------
-Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
-- fixed a number of small memory leaks - thanks varmojfekoj for patching
-- fixed an issue with CString class that could lead to rsyslog abort
-  in tplToString() - thanks varmojfekoj for patching
-- added a man-version of the config file documentation - thanks to Michel
-  Samia for providing the man file
-- fixed bug: a template like this causes an infinite loop:
-  $template opts,"%programname:::a,b%"
-  thanks varmojfekoj for the patch
-- fixed bug: case changing options crash freeing the string pointer
-  because they modify it: $template opts2,"%programname::1:lowercase%"
-  thanks varmojfekoj for the patch
----------------------------------------------------------------------------
-Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
-- small mem leak fixed (after calling parseSelectorAct) - Thx varmojfekoj
-- documentation section "Regular File" und "Blocks" updated
-- solved an issue with dynamic file generation - Once again many thanks
-  to varmojfekoj
-- the negative selector for program name filter (Blocks) does not work as
-  expected - Thanks varmojfekoj for patching
-- added forwarding information to sysklogd (requires special template)
-  to config doc
----------------------------------------------------------------------------
-Version 1.19.2 (mmeckelein/varmojfekoj), 2007-08-28
-- a specifically formed message caused a segfault - Many thanks varmojfekoj
-  for providing a patch
-- a typo and a weird condition are fixed in msg.c - Thanks again
-  varmojfekoj
-- on file creation the file was always owned by root:root. This is fixed
-  now - Thanks ypsa for solving this issue
----------------------------------------------------------------------------
-Version 1.19.1 (mmeckelein), 2007-08-22
-- a bug that caused a high load when a TCP/UDP connection was closed is
-  fixed now - Thanks mildew for solving this issue
-- fixed a bug which caused a segfault on reinit - Thx varmojfekoj for the
-  patch
-- changed the hardcoded module path "/lib/rsyslog" to $(pkglibdir) in order
-  to avoid trouble e.g. on 64 bit platforms (/lib64) - many thanks Peter
-  Vrabec and darix, both provided a patch for solving this issue
-- enhanced the unloading of modules - thanks again varmojfekoj
-- applied a patch from varmojfekoj which fixes various little things in
-  MySQL output module
----------------------------------------------------------------------------
-Version 1.19.0 (varmojfekoj/rgerhards), 2007-08-16
-- integrated patch from varmojfekoj to make the mysql module a loadable one
-  many thanks for the patch, MUCH appreciated
----------------------------------------------------------------------------
-Version 1.18.2 (rgerhards), 2007-08-13
-- fixed a bug in outchannel code that caused templates to be incorrectly
-  parsed
-- fixed a bug in ommysql that caused a wrong ";template" missing message
-- added some code for unloading modules; not yet fully complete (and we do
-  not yet have loadable modules, so this is no problem)
-- removed debian subdirectory by request of a debian packager (this is a special
-  subdir for debian and there is also no point in maintaining it when there
-  is a debian package available - so I gladly did this) in some cases
-- improved overall doc quality (some pages were quite old) and linked to
-  more of the online resources.
-- improved /contrib/delete_mysql script by adding a host option and some
-  other minor modifications
----------------------------------------------------------------------------
-Version 1.18.1 (rgerhards), 2007-08-08
-- applied a patch from varmojfekoj which solved a potential segfault
-  of rsyslogd on HUP
-- applied patch from Michel Samia to fix compilation when the pthreads
-  feature is disabled
-- some code cleanup (moved action object to its own file set)
-- add config directive $MainMsgQueueSize, which now allows one to configure the
-  queue size dynamically
-- all compile-time settings are now shown in rsyslogd -v, not just the
-  active ones
-- enhanced performance a little bit more
-- added config file directive $ActionResumeInterval
-- fixed a bug that prevented compilation under debian sid
-- added a contrib directory for user-contributed useful things
----------------------------------------------------------------------------
-Version 1.18.0 (rgerhards), 2007-08-03
-- rsyslog now supports fallback actions when an action did not work. This
-  is a great feature e.g. for backup database servers or backup syslog
-  servers
-- modified rklogd to only change the console log level if -c is specified
-- added feature to use multiple actions inside a single selector
-- implemented $ActionExecOnlyWhenPreviousIsSuspended config directive
-- error messages during startup are now spit out to the configured log
-  destinations
----------------------------------------------------------------------------
-Version 1.17.6 (rgerhards), 2007-08-01
-- continued to work on output module modularization - basic stage of
-  this work is now FINISHED
-- fixed bug in OMSRcreate() - always returned SR_RET_OK
-- fixed a bug that caused ommysql to always complain about missing
-  templates
-- fixed a mem leak in OMSRdestruct - freeing the object itself was
-  forgotten - thanks to varmojfekoj for the patch
-- fixed a memory leak in syslogd/init() that happened when the config
-  file could not be read - thanks to varmojfekoj for the patch
-- fixed insufficient memory allocation in addAction() and its helpers.
-  The initial fix and idea was developed by mildew, I fine-tuned
-  it a bit. Thanks a lot for the fix, I'd probably had pulled out my
-  hair to find the bug...
-- added output of config file line number when a parsing error occurred
-- fixed bug in objomsr.c that caused program to abort in debug mode with
-  an invalid assertion (in some cases)
-- fixed a typo that caused the default template for MySQL to be wrong.
-  thanks to mildew for catching this.
-- added configuration file command $DebugPrintModuleList and
-  $DebugPrintCfSysLineHandlerList
-- fixed an invalid value for the MARK timer - unfortunately, there was
-  a testing aid left in place. This resulted in quite frequent MARK messages
-- added $IncludeConfig config directive
-- applied a patch from mildew to prevent rsyslogd from freezing under heavy
-  load. This could happen when the queue was full. Now, we drop messages
-  but rsyslogd remains active.
----------------------------------------------------------------------------
-Version 1.17.5 (rgerhards), 2007-07-30
-- continued to work on output module modularization
-- fixed a missing file bug - thanks to Andrea Montanari for reporting
-  this problem
-- fixed a problem with shutting down the worker thread and freeing the
-  selector_t list - this caused messages to be lost, because the
-  message queue was not properly drained before the selectors got
-  destroyed.
----------------------------------------------------------------------------
-Version 1.17.4 (rgerhards), 2007-07-27
-- continued to work on output module modularization
-- fixed a situation where rsyslogd could create zombie processes
-  thanks to mildew for the patch
-- applied patch from Michel Samia to fix compilation when NOT
-  compiled for pthreads
----------------------------------------------------------------------------
-Version 1.17.3 (rgerhards), 2007-07-25
-- continued working on output module modularization
-- fixed a bug that caused rsyslogd to segfault on exit (and
-  probably also on HUP), when there was an unsent message in a selector
-  that required forwarding and the dns lookup failed for that selector
-  (yes, it was pretty unlikely to happen;))
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- fixed a memory leak in config file parsing and die()
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- rsyslogd now checks on startup if it is capable to perform any work
-  at all. If it cant, it complains and terminates
-  thanks to Michel Samia for providing the patch!
-- fixed a small memory leak when HUPing syslogd. The allowed sender
-  list now gets freed. thanks to mildew for the patch.
-- changed the way error messages in early startup are logged. They
-  now do no longer use the syslogd code directly but are rather
-  send to stderr.
----------------------------------------------------------------------------
-Version 1.17.2 (rgerhards), 2007-07-23
-- made the port part of the -r option optional. Needed for backward
-  compatibility with sysklogd
-- replaced system() calls with something more reasonable. Please note that
-  this might break compatibility with some existing configuration files.
-  We accept this in favor of the gained security.
-- removed a memory leak that could occur if timegenerated was used in
-  RFC 3164 format in templates
-- did some preparation in msg.c for advanced multithreading - placed the
-  hooks, but not yet any active code
-- worked further on modularization
-- added $ModLoad MySQL (dummy) config directive
-- added DropTrailingLFOnReception config directive
----------------------------------------------------------------------------
-Version 1.17.1 (rgerhards), 2007-07-20
-- fixed a bug that caused make install to install rsyslogd and rklogd under
-  the wrong names
-- fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
-  also fixed but that could garble $AllowedSender wildcards. Thanks to
-  mildew@gmail.com for the patch
-- minor code cleanup - thanks to Peter Vrabec for the patch
-- fixed minimal memory leak on HUP (caused by templates)
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- fixed another memory leak on HUPing and on exiting rsyslogd
-  again thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- code cleanup (removed compiler warnings)
-- fixed portability bug in configure.ac - thanks to Bartosz Kuźma for patch
-- moved msg object into its own file set
-- added the capability to continue trying to write log files when the
-  file system is full. Functionality based on patch by Martin Schulze
-  to sysklogd package.
----------------------------------------------------------------------------
-Version 1.17.0 (RGer), 2007-07-17
-- added $RepeatedLineReduction config parameter
-- added $EscapeControlCharactersOnReceive config parameter
-- added $ControlCharacterEscapePrefix config parameter
-- added $DirCreateMode config parameter
-- added $CreateDirs config parameter
-- added $DebugPrintTemplateList config parameter
-- added $ResetConfigVariables config parameter
-- added $FileOwner config parameter
-- added $FileGroup config parameter
-- added $DirOwner config parameter
-- added $DirGroup config parameter
-- added $FailOnChownFailure config parameter
-- added regular expression support to the filter engine
-  thanks to Michel Samia for providing the patch!
-- enhanced $AllowedSender functionality. Credits to mildew@gmail.com for
-  the patch doing that
-  - added IPv6 support
-  - allowed DNS hostnames
-  - allowed DNS wildcard names
-- added new option $DropMsgsWithMaliciousDnsPTRRecords
-- added autoconf so that rfc3195d, rsyslogd and klogd are stored to /sbin
-- added capability to auto-create directories with dynaFiles
----------------------------------------------------------------------------
-Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
-- build system switched to autotools
-- removed SYSV preprocessor macro use, replaced with autotools equivalents
-- fixed a bug that caused rsyslogd to segfault when TCP listening was
-  disabled and it terminated
-- added new properties "syslogfacility-text" and "syslogseverity-text"
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- added the -x option to disable hostname dns resolution
-  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- begun to better modularize syslogd.c - this is an ongoing project; moved
-  type definitions to a separate file
-- removed some now-unused fields from struct filed
-- move file size limit fields in struct field to the "right spot" (the file
-  writing part of the union - f_un.f_file)
-- subdirectories linux and solaris are no longer part of the distribution
-  package. This is not because we cease support for them, but there are no
-  longer any files in them after the move to autotools
----------------------------------------------------------------------------
-Version 1.15.1 (RGer), 2007-07-10
-- fixed a bug that caused a dynaFile selector to stall when there was
-  an open error with one file
-- improved template processing for dynaFiles; templates are now only
-  looked up during initialization - speeds up processing
-- optimized memory layout in struct filed when compiled with MySQL
-  support
-- fixed a bug that caused compilation without SYSLOG_INET to fail
-- re-enabled the "last message repeated n times" feature. This
-  feature was not taken care of while rsyslogd evolved from sysklogd
-  and it was more or less defunct. Now it is fully functional again.
-- added system properties: $NOW, $YEAR, $MONTH, $DAY, $HOUR, $MINUTE
-- fixed a bug in iovAsString() that caused a memory leak under stress
-  conditions (most probably memory shortage). This was unlikely to
-  ever happen, but it doesn't hurt doing it right
-- cosmetic: defined type "uchar", change all unsigned chars to uchar
----------------------------------------------------------------------------
-Version 1.15.0 (RGer), 2007-07-05
-- added ability to dynamically generate file names based on templates
-  and thus properties. This was a much-requested feature. It makes
-  life easy when it e.g. comes to splitting files based on the sender
-  address.
-- added $umask and $FileCreateMode config file directives
-- applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
-- checks for extra (unexpected) characters in system config file lines
-  have been added
-- added IPv6 documentation - was accidentally missing from CVS
-- begun to change char to unsigned char
----------------------------------------------------------------------------
-Version 1.14.2 (RGer), 2007-07-03
-** this release fixes all known nits with IPv6 **
-- restored capability to do /etc/service lookup for "syslog"
-  service when -r 0 was given
-- documented IPv6 handling of syslog messages
-- integrate patch from Bartosz Kuźma to make rsyslog compile under
-  Solaris again (the patch replaced a strndup() call, which is not
-  available under Solaris
-- improved debug logging when waiting on select
-- updated rsyslogd man page with new options (-46A)
----------------------------------------------------------------------------
-Version 1.14.1 (RGer/Peter Vrabec), 2007-06-29
-- added Peter Vrabec's patch for IPv6 TCP
-- prefixed all messages send to stderr in rsyslogd with "rsyslogd: "
----------------------------------------------------------------------------
-Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
-- Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled
-  IPv6 Support is currently for UDP only, TCP is to come soon.
-  AllowedSender configuration does not yet work for IPv6.
-- fixed code in iovCreate() that broke C's strict aliasing rules
-- fixed some char/unsigned char differences that forced the compiler
-  to spit out warning messages
-- updated the Red Hat init script to fix a known issue (thanks to
-  Peter Vrabec)
----------------------------------------------------------------------------
-Version 1.13.5 (RGer), 2007-06-22
-- made the TCP session limit configurable via command line switch
-  now -t <port>,<max sessions>
-- added man page for rklogd(8) (basically a copy from klogd, but now
-  there is one...)
-- fixed a bug that caused internal messages (e.g. rsyslogd startup) to
-  appear without a tag.
-- removed a minor memory leak that occurred when TAG processing requalified
-  a HOSTNAME to be a TAG (and a TAG already was set).
-- removed potential small memory leaks in MsgSet***() functions. There
-  would be a leak if a property was re-set, something that happened
-  extremely seldom.
----------------------------------------------------------------------------
-Version 1.13.4 (RGer), 2007-06-18
-- added a new property "PRI-text", which holds the PRI field in
-  textual form (e.g. "syslog.info")
-- added alias "syslogseverity" for "syslogpriority", which is a
-  misleading property name that needs to stay for historical
-  reasons (and backward-compatibility)
-- added doc on how to record PRI value in log file
-- enhanced signal handling in klogd, including removal of an unsafe
-  call to the logging system during signal handling
----------------------------------------------------------------------------
-Version 1.13.3 (RGer), 2007-06-15
-- create a version of syslog.c from scratch. This is now
-  - highly optimized for rsyslog
-  - removes an incompatible license problem as the original
-    version had a BSD license with advertising clause
-  - fixed in the regard that rklogd will continue to work when
-    rsyslogd has been restarted (the original version, as well
-    as sysklogd, will remain silent then)
-  - solved an issue with an extra NUL char at message end that the
-    original version had
-- applied some changes to klogd to care for the new interface
-- fixed a bug in syslogd.c which prevented compiling under debian
----------------------------------------------------------------------------
-Version 1.13.2 (RGer), 2007-06-13
-- lib order in makefile patched to facilitate static linking - thanks
-  to Bennett Todd for providing the patch
-- Integrated a patch from Peter Vrabec (pvrabec@redhat.com):
-  - added klogd under the name of rklogd (remove dependency on
-    original sysklogd package
-  - createDB.sql now in UTF
-  - added additional config files for use on Red Hat
----------------------------------------------------------------------------
-Version 1.13.1 (RGer), 2007-02-05
-- changed the listen backlog limit to a more reasonable value based on
-  the maximum number of TCP connections configured (10% + 5) - thanks to Guy
-  Standen for the hint (actually, the limit was 5 and that was a
-  left-over from early testing).
-- fixed a bug in makefile which caused DB-support to be disabled when
-  NETZIP support was enabled
-- added the -e option to allow transmission of every message to remote
-  hosts (effectively turns off duplicate message suppression)
-- (somewhat) improved memory consumption when compiled with MySQL support
-- looks like we fixed an incompatibility with MySQL 5.x and above software
-  At least in one case, the remote server name was destroyed, leading to
-  a connection failure. The new, improved code does not have this issue and
-  so we see this as solved (the new code is generally somewhat better, so
-  there is a good chance we fixed this incompatibility).
----------------------------------------------------------------------------
-Version 1.13.0 (RGer), 2006-12-19
-- added '$' as ToPos property replacer specifier - means "up to the
-  end of the string"
-- property replacer option "escape-cc", "drop-cc" and "space-cc"  added
-- changed the handling of \0 characters inside syslog messages. We now
-  consistently escape them to "#000". This is somewhat recommended in
-  the draft-ietf-syslog-protocol-19 draft. While the real recommendation
-  is to not escape any characters at all, we can not do this without
-  considerable modification of the code. So we escape it to "#000", which
-  is consistent with a sample found in the Internet-draft.
-- removed message glue logic (see printchopped() comment for details)
-  Also caused removal of parts table and thus some improvements in
-  memory usage.
-- changed the default MAXLINE to 2048 to take care of recent syslog
-  standardization efforts (can easily be changed in syslogd.c)
-- added support for byte-counted TCP syslog messages (much like
-  syslog-transport-tls-05 Internet Draft). This was necessary to
-  support compression over TCP.
-- added support for receiving compressed syslog messages
-- added support for sending compressed syslog messages
-- fixed a bug where the last message in a syslog/tcp stream was
-  lost if it was not properly terminated by a LF character
----------------------------------------------------------------------------
-Version 1.12.3 (RGer), 2006-10-04
-- implemented some changes to support Solaris (but support is not
-  yet complete)
-- commented out (via #if 0) some methods that are currently not being use
-  but should be kept for further us
-- added (interim) -u 1 option to turn off hostname and tag parsing
-- done some modifications to better support Fedora
-- made the field delimiter inside property replace configurable via
-  template
-- fixed a bug in property replacer: if fields were used, the delimitor
-  became part of the field. Up until now, this was barely noticeable as
-  the delimiter as TAB only and thus invisible to a human. With other
-  delimiters available now, it quickly showed up. This bug fix might cause
-  some grief to existing installations if they used the extra TAB for
-  whatever reasons - sorry folks... Anyhow, a solution is easy: just add
-  a TAB character constant into your template. Thus, there has no attempt
-  been made to do this in a backwards-compatible way.
----------------------------------------------------------------------------
-Version 1.12.2 (RGer), 2006-02-15
-- fixed a bug in the RFC 3339 date formatter. An extra space was added
-  after the actual timestamp
-- added support for providing high-precision RFC3339 timestamps for
-  (rsyslogd-)internally-generated messages
-- very (!) experimental support for syslog-protocol internet draft
-  added (the draft is experimental, the code is solid ;))
-- added support for field-extracting in the property replacer
-- enhanced the legacy-syslog parser so that it can interpret messages
-  that do not contain a TIMESTAMP
-- fixed a bug that caused the default socket (usually /dev/log) to be
-  opened even when -o command line option was given
-- fixed a bug in the Debian sample startup script - it caused rsyslogd
-  to listen to remote requests, which it shouldn't by default
----------------------------------------------------------------------------
-Version 1.12.1 (RGer), 2005-11-23
-- made multithreading work with BSD. Some signal-handling needed to be
-  restructured. Also, there might be a slight delay of up to 10 seconds
-  when huping and terminating rsyslogd under BSD
-- fixed a bug where a NULL-pointer was passed to printf() in logmsg().
-- fixed a bug during "make install" where rc3195d was not installed
-  Thanks to Bennett Todd for spotting this.
-- fixed a bug where rsyslogd dumped core when no TAG was found in the
-  received message
-- enhanced message parser so that it can deal with missing hostnames
-  in many cases (may not be totally fail-safe)
-- fixed a bug where internally-generated messages did not have the correct
-  TAG
----------------------------------------------------------------------------
-Version 1.12.0 (RGer), 2005-10-26
-- moved to a multi-threaded design. single-threading is still optionally
-  available. Multi-threading is experimental!
-- fixed a potential race condition. In the original code, marking was done
-  by an alarm handler, which could lead to all sorts of bad things. This
-  has been changed now. See comments in syslogd.c/domark() for details.
-- improved debug output for property-based filters
-- not a code change, but: I have checked all exit()s to make sure that
-  none occurs once rsyslogd has started up. Even in unusual conditions
-  (like low-memory conditions) rsyslogd somehow remains active. Of course,
-  it might loose a message or two, but at least it does not abort and it
-  can also recover when the condition no longer persists.
-- fixed a bug that could cause loss of the last message received
-  immediately before rsyslogd was terminated.
-- added comments on thread-safety of global variables in syslogd.c
-- fixed a small bug: spurios printf() when TCP syslog was used
-- fixed a bug that causes rsyslogd to dump core on termination when one
-  of the selector lines did not receive a message during the run (very
-  unlikely)
-- fixed an one-too-low memory allocation in the TCP sender. Could result
-  in rsyslogd dumping core.
-- fixed a bug with regular expression support (thanks to Andres Riancho)
-- a little bit of code restructuring (especially main(), which was
-  horribly large)
----------------------------------------------------------------------------
-Version 1.11.1 (RGer), 2005-10-19
-- support for BSD-style program name and host blocks
-- added a new property "programname" that can be used in templates
-- added ability to specify listen port for rfc3195d
-- fixed a bug that rendered the "startswith" comparison operation
-  unusable.
-- changed more functions to "static" storage class to help compiler
-  optimize (should have been static in the first place...)
-- fixed a potential memory leak in the string buffer class destructor.
-  As the destructor was previously never called, the leak did not actually
-  appear.
-- some internal restructuring in anticipation/preparation of minimal
-  multi-threading support
-- rsyslogd still shares some code with the sysklogd project. Some patches
-  for this shared code have been brought over from the sysklogd CVS.
----------------------------------------------------------------------------
-Version 1.11.0 (RGer), 2005-10-12
-- support for receiving messages via RFC 3195; added rfc3195d for that
-  purpose
-- added an additional guard to prevent rsyslogd from aborting when the
-  2gb file size limit is hit. While a user can configure rsyslogd to
-  handle such situations, it would abort if that was not done AND large
-  file support was not enabled (ok, this is hopefully an unlikely scenario)
-- fixed a bug that caused additional Unix domain sockets to be incorrectly
-  processed - could lead to message loss in extreme cases
----------------------------------------------------------------------------
-Version 1.10.2 (RGer), 2005-09-27
-- added comparison operations in property-based filters:
-  * isequal
-  * startswith
-- added ability to negate all property-based filter comparison operations
-  by adding a !-sign right in front of the operation name
-- added the ability to specify remote senders for UDP and TCP
-  received messages. Allows to block all but well-known hosts
-- changed the $-config line directives to be case-INsensitive
-- new command line option -w added: "do not display warnings if messages
-  from disallowed senders are received"
-- fixed a bug that caused rsyslogd to dump core when the compare value
-  was not quoted in property-based filters
-- fixed a bug in the new CStr compare function which lead to invalid
-  results (fortunately, this function was not yet used widely)
-- added better support for "debugging" rsyslog.conf property filters
-  (only if -d switch is given)
-- changed some function definitions to static, which eventually enables
-  some compiler optimizations
-- fixed a bug in MySQL code; when a SQL error occurred, rsyslogd could
-  run in a tight loop. This was due to invalid sequence of error reporting
-  and is now fixed.
----------------------------------------------------------------------------
-Version 1.10.1 (RGer), 2005-09-23
-- added the ability to execute a shell script as an action.
-  Thanks to Bjoern Kalkbrenner for providing the code!
-- fixed a bug in the MySQL code; due to the bug the automatic one-time
-  retry after an error did not happen - this lead to error message in
-  cases where none should be seen (e.g. after a MySQL restart)
-- fixed a security issue with SQL-escaping in conjunction with
-  non-(SQL-)standard MySQL features.
----------------------------------------------------------------------------
-Version 1.10.0 (RGer), 2005-09-20
-  REMINDER: 1.10 is the first unstable version if the 1.x series!
-- added the capability to filter on any property in selector lines
-  (not just facility and priority)
-- changed stringbuf into a new counted string class
-- added support for a "discard" action. If a selector line with
-  discard (~ character) is found, no selector lines *after* that
-  line will be processed.
-- thanks to Andres Riancho, regular expression support has been
-  added to the template engine
-- added the FROMHOST property in the template processor, which could
-  previously not be obtained. Thanks to Cristian Testa for pointing
-  this out and even providing a fix.
-- added display of compile-time options to -v output
-- performance improvement for production build - made some checks
-  to happen only during debug mode
-- fixed a problem with compiling on SUSE and - while doing so - removed
-  the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
----------------------------------------------------------------------------
-Version 1.0.4 (RGer), 2006-02-01
-- a small but important fix: the tcp receiver had two forgotten printf's
-  in it that caused a lot of unnecessary output to stdout. This was
-  important enough to justify a new release
----------------------------------------------------------------------------
-Version 1.0.3 (RGer), 2005-11-14
-- added an additional guard to prevent rsyslogd from aborting when the
-  2gb file size limit is hit. While a user can configure rsyslogd to
-  handle such situations, it would abort if that was not done AND large
-  file support was not enabled (ok, this is hopefully an unlikely scenario)
-- fixed a bug that caused additional Unix domain sockets to be incorrectly
-  processed - could lead to message loss in extreme cases
-- applied some patches available from the sysklogd project to code
-  shared from there
-- fixed a bug that causes rsyslogd to dump core on termination when one
-  of the selector lines did not receive a message during the run (very
-  unlikely)
-- fixed an one-too-low memory allocation in the TCP sender. Could result
-  in rsyslogd dumping core.
-- fixed a bug in the TCP sender that caused the retry logic to fail
-  after an error or receiver overrun
-- fixed a bug in init() that could lead to dumping core
-- fixed a bug that could lead to dumping core when no HOSTNAME or no TAG
-  was present in the syslog message
----------------------------------------------------------------------------
-Version 1.0.2 (RGer), 2005-10-05
-- fixed an issue with MySQL error reporting. When an error occurred,
-  the MySQL driver went into an endless loop (at least in most cases).
----------------------------------------------------------------------------
-Version 1.0.1 (RGer), 2005-09-23
-- fixed a security issue with SQL-escaping in conjunction with
-  non-(SQL-)standard MySQL features.
----------------------------------------------------------------------------
-Version 1.0.0 (RGer), 2005-09-12
-- changed install doc to cover daily cron scripts - a trouble source
-- added rc script for slackware (provided by Chris Elvidge - thanks!)
-- fixed a really minor bug in usage() - the -r option was still
-  reported as without the port parameter
----------------------------------------------------------------------------
-Version 0.9.8 (RGer), 2005-09-05
-- made startup and shutdown message more consistent and included the
-  pid, so that they can be easier correlated. Used syslog-protocol
-  structured data format for this purpose.
-- improved config info in startup message, now tells not only
-  if it is listening remote on udp, but also for tcp. Also includes
-  the port numbers. The previous startup message was misleading, because
-  it did not say "remote reception" if rsyslogd was only listening via
-  tcp (but not via udp).
-- added a "how can you help" document to the doc set
----------------------------------------------------------------------------
-Version 0.9.7 (RGer), 2005-08-15
-- some of the previous doc files (like INSTALL) did not properly
-  reflect the changes to the build process and the new doc. Fixed
-  that.
-- changed syslogd.c so that when compiled without database support,
-  an error message is displayed when a database action is detected
-  in the config file (previously this was used as an user rule ;))
-- fixed a bug in the os-specific Makefiles which caused MySQL
-  support to not be compiled, even if selected
----------------------------------------------------------------------------
-Version 0.9.6 (RGer), 2005-08-09
-- greatly enhanced documentation. Now available in html format in
-  the "doc" folder and FreeBSD. Finally includes an install howto.
-- improved MySQL error messages a little - they now show up as log
-  messages, too (formerly only in debug mode)
-- added the ability to specify the listen port for udp syslog.
-  WARNING: This introduces an incompatibility. Formerly, udp
-  syslog was enabled by the -r command line option. Now, it is
-  "-r [port]", which is consistent with the tcp listener. However,
-  just -r will now return an error message.
-- added sample startup scripts for Debian and FreeBSD
-- added support for easy feature selection in the makefile. Un-
-  fortunately, this also means I needed to spilt the make file
-  for different OS and distros. There are some really bad syntax
-  differences between FreeBSD and Linux make.
----------------------------------------------------------------------------
-Version 0.9.5 (RGer), 2005-08-01
-- the "semicolon bug" was actually not (fully) solved in 0.9.4. One
-  part of the bug was solved, but another still existed. This one
-  is fixed now, too.
-- the "semicolon bug" actually turned out to be a more generic bug.
-  It appeared whenever an invalid template name was given. With some
-  selector actions, rsyslogd dumped core, with other it "just" had
-  a small resource leak with others all worked well. These anomalies
-  are now fixed. Note that they only appeared during system initialization
-  once the system was running, nothing bad happened.
-- improved error reporting for template errors on startup. They are now
-  shown on the console and the start-up tty. Formerly, they were only
-  visible in debug mode.
-- support for multiple instances of rsyslogd on a single machine added
-- added new option "-o" --> omit local unix domain socket. This option
-  enables rsyslogd NOT to listen to the local socket. This is most
-  helpful when multiple instances of rsyslogd (or rsyslogd and another
-  syslogd) shall run on a single system.
-- added new option "-i <pidfile>" which allows one to specify the pidfile.
-  This is needed when multiple instances of rsyslogd are to be run.
-- the new project home page is now online at www.rsyslog.com
----------------------------------------------------------------------------
-Version 0.9.4 (RGer), 2005-07-25
-- finally added the TCP sender. It now supports non-blocking mode, no
-  longer disabling message reception during connect. As it is now, it
-  is usable in production. The code could be more sophisticated, but
-  I've kept it short in anticipation of the move to liblogging, which
-  will lead to the removal of the code just written ;)
-- the "exiting on signal..." message still had the "syslogd" name in
-  it. Changed this to "rsyslogd", as we do not have a large user base
-  yet, this should pose no problem.
-- fixed "the semicolon" bug. rsyslogd dumped core if a write-db action
-  was specified but no semicolon was given after the password (an empty
-  template was ok, but the semicolon needed to be present).
-- changed a default for traditional output format. During testing, it
-  was seen that the timestamp written to file in default format was
-  the time of message reception, not the time specified in the TIMESTAMP
-  field of the message itself. Traditionally, the message TIMESTAMP is
-  used and this has been changed now.
----------------------------------------------------------------------------
-Version 0.9.3 (RGer), 2005-07-19
-- fixed a bug in the message parser. In June, the RFC 3164 timestamp
-  was not correctly parsed (yes, only in June and some other months,
-  see the code comment to learn why...)
-- added the ability to specify the destination port when forwarding
-  syslog messages (both for TCP and UDP)
-- added an very experimental TCP sender (activated by
-  @@machine:port in config). This is not yet for production use. If
-  the receiver is not alive, rsyslogd will wait quite some time until
-  the connection request times out, which most probably leads to
-  loss of incoming messages.
-
----------------------------------------------------------------------------
-Version 0.9.2 (RGer), around 2005-07-06
-- I intended to change the maxsupported message size to 32k to
-  support IHE - but given the memory inefficiency in the usual use
-  cases, I have not done this. I have, however, included very
-  specific instructions on how to do this in the source code. I have
-  also done some testing with 32k messages, so you can change the
-  max size without taking too much risk.
-- added a syslog/tcp receiver; we now can receive messages via
-  plain tcp, but we can still send only via UDP. The syslog/tcp
-  receiver is the primary enhancement of this release.
-- slightly changed some error messages that contained a spurios \n at
-  the end of the line (which gives empty lines in your log...)
-
----------------------------------------------------------------------------
-Version 0.9.1 (RGer)
-- fixed code so that it compiles without errors under FreeBSD
-- removed now unused function "allocate_log()" from syslogd.c
-- changed the make file so that it contains more defines for
-  different environments (in the long term, we need a better
-  system for disabling/enabling features...)
-- changed some printf's printing off_t types to %lld and
-  explicit (long long) casts. I tried to figure out the exact type,
-  but did not succeed in this. In the worst case, ultra-large peta-
-  byte files will now display funny informational messages on rollover,
-  something I think we can live with for the neersion 3.11.2 (rgerhards), 2008-02-??
----------------------------------------------------------------------------
-Version 3.11.1 (rgerhards), 2008-02-12
-- SNMP trap sender added thanks to Andre Lorbach (omsnmp)
-- added input-plugin interface specification in form of a (copy) template
-  input module
-- applied documentation fix by Michael Biebl -- many thanks!
-- bugfix: immark did not have MARK flags set...
-- added x-info field to rsyslogd startup/shutdown message. Hopefully
-  points users to right location for further info (many don't even know
-  they run rsyslog ;))
-- bugfix: trailing ":" of tag was lost while parsing legacy syslog messages
-  without timestamp - thanks to Anders Blomdell for providing a patch!
-- fixed a bug in stringbuf.c related to STRINGBUF_TRIM_ALLOCSIZE, which
-  wasn't supposed to be used with rsyslog. Put a warning message up that
-  tells this feature is not tested and probably not worth the effort.
-  Thanks to Anders Blomdell fro bringing this to our attention
-- somewhat improved performance of string buffers
-- fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
-- bugfix: setting for $EscapeControlCharactersOnReceive was not
-  properly initialized
-- clarified usage of space-cc property replacer option
-- improved abort diagnostic handler
-- some initial effort for malloc/free runtime debugging support
-- bugfix: using dynafile actions caused rsyslogd abort
-- fixed minor man errors thanks to Michael Biebl
----------------------------------------------------------------------------
-Version 3.11.0 (rgerhards), 2008-01-31
-- implemented queued actions
-- implemented simple rate limiting for actions
-- implemented deliberate discarding of lower priority messages over higher
-  priority ones when a queue runs out of space
-- implemented disk quotas for disk queues
-- implemented the $ActionResumeRetryCount config directive
-- added $ActionQueueFilename config directive
-- added $ActionQueueSize config directive
-- added $ActionQueueHighWaterMark config directive
-- added $ActionQueueLowWaterMark config directive
-- added $ActionQueueDiscardMark config directive
-- added $ActionQueueDiscardSeverity config directive
-- added $ActionQueueCheckpointInterval config directive
-- added $ActionQueueType config directive
-- added $ActionQueueWorkerThreads config directive
-- added $ActionQueueTimeoutshutdown config directive
-- added $ActionQueueTimeoutActionCompletion config directive
-- added $ActionQueueTimeoutenQueue config directive
-- added $ActionQueueTimeoutworkerThreadShutdown config directive
-- added $ActionQueueWorkerThreadMinimumMessages config directive
-- added $ActionQueueMaxFileSize config directive
-- added $ActionQueueSaveonShutdown config directive
-- addded $ActionQueueDequeueSlowdown config directive
-- addded $MainMsgQueueDequeueSlowdown config directive
-- bugfix: added forgotten docs to package
-- improved debugging support
-- fixed a bug that caused $MainMsgQueueCheckpointInterval to work incorrectly
-- when a long-running action needs to be cancelled on shutdown, the message
-  that was processed by it is now preserved. This finishes support for
-  guaranteed delivery of messages (if the output supports it, of course)
-- fixed bug in output module interface, see
-  http://sourceforge.net/tracker/index.php?func=detail&aid=1881008&group_id=123448&atid=696552
-- changed the ommysql output plugin so that the (lengthy) connection
-  initialization now takes place in message processing. This works much
-  better with the new queued action mode (fast startup)
-- fixed a bug that caused a potential hang in file and fwd output module
-  varmojfekoj provided the patch - many thanks!
-- bugfixed stream class offset handling on 32bit platforms
----------------------------------------------------------------------------
-Version 3.10.3 (rgerhards), 2008-01-28
-- fixed a bug with standard template definitions (not a big deal) - thanks
-  to varmojfekoj for spotting it
-- run-time instrumentation added
-- implemented disk-assisted queue mode, which enables on-demand disk
-  spooling if the queue's in-memory queue is exhausted
-- implemented a dynamic worker thread pool for processing incoming
-  messages; workers are started and shut down as need arises
-- implemented a run-time instrumentation debug package
-- implemented the $MainMsgQueueSaveOnShutdown config directive
-- implemented the $MainMsgQueueWorkerThreadMinimumMessages config directive
-- implemented the $MainMsgQueueTimeoutWorkerThreadShutdown config directive
----------------------------------------------------------------------------
-Version 3.10.2 (rgerhards), 2008-01-14
-- added the ability to keep stop rsyslogd without the need to drain
-  the main message queue. In disk queue mode, rsyslog continues to
-  run from the point where it stopped. In case of a system failure, it
-  continues to process messages from the last checkpoint.
-- fixed a bug that caused a segfault on startup when no $WorkDir directive
-  was specified in rsyslog.conf
-- provided more fine-grain control over shutdown timeouts and added a
-  way to specify the enqueue timeout when the main message queue is full
-- implemented $MainMsgQueueCheckpointInterval config directive
-- implemented $MainMsgQueueTimeoutActionCompletion config directive
-- implemented $MainMsgQueueTimeoutEnqueue config directive
-- implemented $MainMsgQueueTimeoutShutdown config directive
----------------------------------------------------------------------------
-Version 3.10.1 (rgerhards), 2008-01-10
-- implemented the "disk" queue mode. However, it currently is of very
-  limited use, because it does not support persistence over rsyslogd
-  runs. So when rsyslogd is stopped, the queue is drained just as with
-  the in-memory queue modes. Persistent queues will be a feature of
-  the next release.
-- performance-optimized string class, should bring an overall improvement
-- fixed a memory leak in imudp -- thanks to varmojfekoj for the patch
-- fixed a race condition that could lead to a rsyslogd hang when during
-  HUP or termination
-- done some doc updates
-- added $WorkDirectory config directive
-- added $MainMsgQueueFileName config directive
-- added $MainMsgQueueMaxFileSize config directive
----------------------------------------------------------------------------
-Version 3.10.0 (rgerhards), 2008-01-07
-- implemented input module interface and initial input modules
-- enhanced threading for input modules (each on its own thread now)
-- ability to bind UDP listeners to specific local interfaces/ports and
-  ability to run multiple of them concurrently
-- added ability to specify listen IP address for UDP syslog server
-- license changed to GPLv3
-- mark messages are now provided by loadble module immark
-- rklogd is no longer provided. Its functionality has now been taken over
-  by imklog, a loadable input module. This offers a much better integration
-  into rsyslogd and makes sure that the kernel logger process is brought
-  up and down at the appropriate times
-- enhanced $IncludeConfig directive to support wildcard characters
-  (thanks to Michael Biebl)
-- all inputs are now implemented as loadable plugins
-- enhanced threading model: each input module now runs on its own thread
-- enhanced message queue which now supports different queueing methods
-  (among others, this can be used for performance fine-tuning)
-- added a large number of new configuration directives for the new
-  input modules
-- enhanced multi-threading utilizing a worker thread pool for the
-  main message queue
-- compilation without pthreads is no longer supported
-- much cleaner code due to new objects and removal of single-threading
-  mode
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,

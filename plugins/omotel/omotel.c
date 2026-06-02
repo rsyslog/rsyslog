@@ -1294,7 +1294,7 @@ static const char *cstrToConst(cstr_t *value) {
     return value == NULL ? NULL : (const char *)rsCStrGetSzStrNoNULL(value);
 }
 
-static const char *extractAppName(const smsg_t *msg) {
+static const char *extractAppName(smsg_t *msg) {
     const char *candidate;
 
     if (msg == NULL) {
@@ -1306,8 +1306,8 @@ static const char *extractAppName(const smsg_t *msg) {
         return candidate;
     }
 
-    if (msg->iLenPROGNAME > 0 && msg->PROGNAME.ptr != NULL) {
-        return (const char *)msg->PROGNAME.ptr;
+    if (msg->iLenPROGNAME > 0) {
+        return (const char *)getProgramName(msg, LOCK_MUTEX);
     }
 
     return NULL;
@@ -2542,13 +2542,11 @@ BEGINnewActInst
             if (bearer_token == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
-            bearer_auth = (char *)malloc(strlen(bearer_token) + strlen("Bearer ") + 1u);
-            if (bearer_auth == NULL) {
+            if (asprintf(&bearer_auth, "Bearer %s", bearer_token) == -1) {
                 free(bearer_token);
                 bearer_token = NULL;
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
-            snprintf(bearer_auth, strlen(bearer_token) + sizeof("Bearer "), "Bearer %s", bearer_token);
             CHKiRet(header_list_add_kv(&pData->headers, "Authorization", bearer_auth));
             pData->bearerConfigured = 1;
             /* Free local allocations after successful header addition */

@@ -43,6 +43,7 @@ RUN	yum -y update && \
 	libstdc++ \
 	libtool \
 	libuuid-devel \
+	libyaml-devel \
 	lsof \
 	mysql-devel \
 	nc \
@@ -260,6 +261,7 @@ RUN	cd helper-projects \
 RUN	cd helper-projects && \
 	git clone https://github.com/civetweb/civetweb.git \
 	&& cd civetweb \
+	&& git checkout v1.16 \
 	&& (unset CFLAGS; make -j build ; make install-headers ; make install-slib ) \
 	&& cd .. \
 	&& rm -rf civetweb \

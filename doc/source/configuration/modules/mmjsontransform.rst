@@ -1,13 +1,14 @@
 .. _ref-mmjsontransform:
 
-JSON Dotted Key Transformer (mmjsontransform)
-=============================================
+********************************************
+mmjsontransform: JSON Dotted Key Transformer
+********************************************
 
-===========================  ==========================================================================
-**Module Name:**             **mmjsontransform**
-**Author:**                  `rsyslog project <https://github.com/rsyslog/rsyslog>`_
-**Available since:**         8.2410.0
-===========================  ==========================================================================
+====================  ==========================================================================
+**Module Name:**      **mmjsontransform**
+**Author:**           `rsyslog project <https://github.com/rsyslog/rsyslog>`_
+**Available since:**  8.2410.0
+====================  ==========================================================================
 
 .. note::
 
@@ -20,7 +21,7 @@ Purpose
 
 ``mmjsontransform`` restructures JSON properties whose names contain dotted
 segments. The action reads a JSON object from the configured input property and
-stores the transformed tree under a dedicated output property. By default the
+stores the transformed tree under a dedicated output property. By default, the
 module expands dotted keys into nested containers (``unflatten`` mode) so
 pipelines that consume ``option.jsonfTree`` data can normalize payloads inline.
 When ``mode="flatten"`` is selected, the action collapses nested objects back
@@ -43,14 +44,18 @@ Notable Features
   and nested containers.
 - :ref:`mmjsontransform-conflict-handling` — detailed conflict reporting to
   locate incompatible payloads quickly.
+- :ref:`mmjsontransform-policy` — optional YAML policy-based mode selection,
+  key renaming, and field dropping before processing.
+- watched policy reloads — optional automatic policy refresh with debounce
+  when ``policyWatch`` is enabled.
 
 Configuration Parameters
 ========================
 
 .. note::
 
-   Parameter names are case-insensitive. For readability, camelCase is
-   recommended.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------
@@ -73,6 +78,18 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmjsontransform-mode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policy`
+     - .. include:: ../../reference/parameters/mmjsontransform-policy.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policywatch`
+     - .. include:: ../../reference/parameters/mmjsontransform-policywatch.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policywatchdebounce`
+     - .. include:: ../../reference/parameters/mmjsontransform-policywatchdebounce.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _mmjsontransform-modes:
 
@@ -80,8 +97,9 @@ Transformation modes
 ====================
 
 ``mmjsontransform`` supports two modes controlled by the :ref:`mode
-<param-mmjsontransform-mode>` parameter. Both modes rewrite the entire input
-object before assigning it to the configured output property.
+<param-mmjsontransform-mode>` parameter or, when configured, by the reloadable
+:ref:`policy <param-mmjsontransform-policy>` file. Both modes rewrite the
+entire input object before assigning it to the configured output property.
 
 .. _mmjsontransform-mode-unflatten:
 
@@ -104,6 +122,21 @@ key paths (``{"nested": {"value": 1}}`` is rewritten to
 ``{"nested.value": 1}``), while arrays are preserved with their elements
 recursively flattened. If flattening would overwrite an existing scalar with a
 different value, the action fails and reports the mismatch.
+
+.. _mmjsontransform-policy-reload:
+
+Policy reloads
+==============
+
+When :ref:`policy <param-mmjsontransform-policy>` is configured,
+``mmjsontransform`` loads the YAML file during startup and reloads it on
+``HUP``. When :ref:`policyWatch <param-mmjsontransform-policywatch>` is enabled,
+rsyslog also watches the file for changes and reloads it after the configured
+:ref:`policyWatchDebounce <param-mmjsontransform-policywatchdebounce>` quiet
+period when watch support is available. If watched reloads are unavailable in
+the current build or runtime environment, rsyslog logs a warning and continues
+with ``HUP``-only reload behavior. Invalid updates are rejected and the
+previous in-memory policy remains active.
 
 .. _mmjsontransform-conflict-handling:
 
@@ -155,3 +188,6 @@ input property needs to be renamed or moved before retrying the transformation.
    ../../reference/parameters/mmjsontransform-input
    ../../reference/parameters/mmjsontransform-output
    ../../reference/parameters/mmjsontransform-mode
+   ../../reference/parameters/mmjsontransform-policy
+   ../../reference/parameters/mmjsontransform-policywatch
+   ../../reference/parameters/mmjsontransform-policywatchdebounce

@@ -1,5 +1,10 @@
 #!/bin/bash
-# test for mysql with multithread actionq
+# Verify that ommysql preserves all messages when a bounded linked-list action
+# queue is drained by multiple worker threads.  The queue size is intentionally
+# small compared to the injected message count so the test covers backpressure.
+# The 80s enqueue timeout is a CI tolerance budget: if a stressed MySQL service
+# cannot drain the action queue in that time, the failure should be investigated
+# instead of silently turning the test into an unbounded wait.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=150000
@@ -14,7 +19,7 @@ module(load="../plugins/ommysql/.libs/ommysql")
 	queue.workerthreads="5"
 	queue.workerthreadMinimumMessages="500"
 	queue.timeoutWorkerthreadShutdown="1000"
-	queue.timeoutEnqueue="10000"
+	queue.timeoutEnqueue="80000"
 	queue.timeoutShutdown="30000"
 	)
 } 

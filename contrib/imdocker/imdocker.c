@@ -51,6 +51,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "ratelimit.h"
+#include "stringbuf.h"
 #include "hashtable.h"
 #include "hashtable_itr.h"
 
@@ -198,6 +199,10 @@ static void dockerContainerInfoDestruct(docker_container_info_t *pThis);
 /* utility functions */
 static CURLcode docker_get(imdocker_req_t *req, const char *url);
 static char *dupDockerContainerName(const char *pname);
+static rsRetVal allocContainerLogsUrl(
+    char **out, const uchar *apiAddr, const uchar *apiVersion, const char *containerId, const uchar *options);
+static rsRetVal allocContainersListUrl(
+    char **out, const uchar *apiAddr, const uchar *apiVersion, const uchar *options, const uchar *sinceId);
 static rsRetVal SubmitMsg(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, const uchar *pszTag);
 /* support multi-line */
 static rsRetVal SubmitMsg2(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, const uchar *pszTag);
@@ -320,6 +325,10 @@ static rsRetVal dockerContLogsBufWrite(docker_cont_logs_buf_t *const pThis,
     DEFiRet;
 
     imdocker_buf_t *const mem = pThis->buf;
+    if (mem->len == SIZE_MAX || write_size > SIZE_MAX - mem->len - 1) {
+        LogError(0, RS_RET_ERR, "%s() - buffer size overflow\n", __FUNCTION__);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     if (mem->len + write_size + 1 > mem->data_size) {
         uchar *const pbuf = realloc(mem->data, mem->len + write_size + 1);
         if (pbuf == NULL) {
@@ -341,6 +350,78 @@ static rsRetVal dockerContLogsBufWrite(docker_cont_logs_buf_t *const pThis,
     }
 
 finalize_it:
+    RETiRet;
+}
+
+static rsRetVal allocContainerLogsUrl(
+    char **out, const uchar *apiAddr, const uchar *apiVersion, const char *containerId, const uchar *options) {
+    DEFiRet;
+    int needed;
+
+    assert(out != NULL);
+    assert(apiAddr != NULL);
+    assert(apiVersion != NULL);
+    assert(containerId != NULL);
+    assert(options != NULL);
+
+    *out = NULL;
+    needed = snprintf(NULL, 0, "%s/%s/containers/%s/logs?%s", apiAddr, apiVersion, containerId, options);
+    if (needed < 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    CHKmalloc(*out = malloc((size_t)needed + 1));
+    if (snprintf(*out, (size_t)needed + 1, "%s/%s/containers/%s/logs?%s", apiAddr, apiVersion, containerId, options) !=
+        needed) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(*out);
+        *out = NULL;
+    }
+    RETiRet;
+}
+
+static rsRetVal allocContainersListUrl(
+    char **out, const uchar *apiAddr, const uchar *apiVersion, const uchar *options, const uchar *sinceId) {
+    DEFiRet;
+    int needed;
+
+    assert(out != NULL);
+    assert(apiAddr != NULL);
+    assert(apiVersion != NULL);
+    assert(options != NULL);
+
+    *out = NULL;
+    if (sinceId != NULL) {
+        needed = snprintf(NULL, 0, "%s/%s/containers/json?%s&filters={\"since\":[\"%s\"]}", apiAddr, apiVersion,
+                          options, sinceId);
+        if (needed < 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        CHKmalloc(*out = malloc((size_t)needed + 1));
+        if (snprintf(*out, (size_t)needed + 1, "%s/%s/containers/json?%s&filters={\"since\":[\"%s\"]}", apiAddr,
+                     apiVersion, options, sinceId) != needed) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    } else {
+        needed = snprintf(NULL, 0, "%s/%s/containers/json?%s", apiAddr, apiVersion, options);
+        if (needed < 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        CHKmalloc(*out = malloc((size_t)needed + 1));
+        if (snprintf(*out, (size_t)needed + 1, "%s/%s/containers/json?%s", apiAddr, apiVersion, options) != needed) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(*out);
+        *out = NULL;
+    }
     RETiRet;
 }
 
@@ -458,6 +539,10 @@ static rsRetVal parseLabels(docker_cont_logs_inst_t *inst, const uchar *json) {
     DBGPRINTF("%s() - parsing json=%s\n", __FUNCTION__, json);
 
     struct fjson_object *json_obj = fjson_tokener_parse((const char *)json);
+    if (json_obj == NULL || !fjson_object_is_type(json_obj, fjson_type_object)) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imdocker: ignoring malformed container labels payload");
+        FINALIZE;
+    }
     struct fjson_object_iterator it = fjson_object_iter_begin(json_obj);
     struct fjson_object_iterator itEnd = fjson_object_iter_end(json_obj);
     while (!fjson_object_iter_equal(&it, &itEnd)) {
@@ -467,7 +552,7 @@ static rsRetVal parseLabels(docker_cont_logs_inst_t *inst, const uchar *json) {
         }
 
         if (strcmp(fjson_object_iter_peek_name(&it), DOCKER_CONTAINER_LABEL_KEY_STARTREGEX) == 0) {
-            inst->start_regex = (uchar *)strdup(fjson_object_get_string(fjson_object_iter_peek_value(&it)));
+            CHKmalloc(inst->start_regex = (uchar *)strdup(fjson_object_get_string(fjson_object_iter_peek_value(&it))));
             // compile the regex for future use.
             int err =
                 regcomp(&inst->start_preg, fjson_object_get_string(fjson_object_iter_peek_value(&it)), REG_EXTENDED);
@@ -497,25 +582,26 @@ static rsRetVal dockerContLogsInstNew(docker_cont_logs_inst_t **ppThis,
     docker_cont_logs_inst_t *pThis = NULL;
     CHKmalloc(pThis = calloc(1, sizeof(docker_cont_logs_inst_t)));
 
-    pThis->id = strdup((char *)id);
-    strncpy((char *)pThis->short_id, id, sizeof(pThis->short_id) - 1);
+    CHKmalloc(pThis->id = strdup((char *)id));
+    rs_cstr_copy(pThis->short_id, (const char *)id, sizeof(pThis->short_id));
     CHKiRet(dockerContLogsReqNew(&pThis->logsReq, submitMsg));
     /* make a copy */
     if (container_info) {
         CHKiRet(dockerContainerInfoNew(&pThis->container_info));
         if (container_info->image) {
-            pThis->container_info->image = (uchar *)strdup((char *)container_info->image);
+            CHKmalloc(pThis->container_info->image = (uchar *)strdup((char *)container_info->image));
         }
         if (container_info->image_id) {
-            pThis->container_info->image_id = (uchar *)strdup((char *)container_info->image_id);
+            CHKmalloc(pThis->container_info->image_id = (uchar *)strdup((char *)container_info->image_id));
         }
         if (container_info->name) {
             const char *pname = (const char *)container_info->name;
             /* removes un-needed characters */
-            pThis->container_info->name = (uchar *)dupDockerContainerName(pname);
+            CHKmalloc(pThis->container_info->name = (uchar *)dupDockerContainerName(pname));
         }
         if (container_info->json_str_labels) {
-            pThis->container_info->json_str_labels = (uchar *)strdup((char *)container_info->json_str_labels);
+            CHKmalloc(pThis->container_info->json_str_labels =
+                          (uchar *)strdup((char *)container_info->json_str_labels));
         }
         pThis->container_info->created = container_info->created;
     }
@@ -523,7 +609,7 @@ static rsRetVal dockerContLogsInstNew(docker_cont_logs_inst_t **ppThis,
     pThis->prevSegEnd = 0;
     /* initialize based on labels found */
     if (pThis->container_info && pThis->container_info->json_str_labels) {
-        parseLabels(pThis, pThis->container_info->json_str_labels);
+        CHKiRet(parseLabels(pThis, pThis->container_info->json_str_labels));
     }
 
     *ppThis = pThis;
@@ -597,7 +683,8 @@ static rsRetVal dockerContLogsInstSetUrlById(sbool isInit,
                                              docker_cont_logs_inst_t *pThis,
                                              CURLM *curlm,
                                              const char *containerId) {
-    char url[256];
+    DEFiRet;
+    char *url = NULL;
     const uchar *container_log_options = runModConf->getContainerLogOptionsWithoutTail;
 
     if (isInit || !runModConf->retrieveNewLogsFromStart) {
@@ -609,11 +696,14 @@ static rsRetVal dockerContLogsInstSetUrlById(sbool isInit,
         pApiAddr = runModConf->dockerApiAddr;
     }
 
-    snprintf(url, sizeof(url), "%s/%s/containers/%s/logs?%s", pApiAddr, runModConf->apiVersionStr, containerId,
-             container_log_options);
+    CHKiRet(allocContainerLogsUrl(&url, pApiAddr, runModConf->apiVersionStr, containerId, container_log_options));
     DBGPRINTF("%s() - url: %s\n", __FUNCTION__, url);
 
-    return dockerContLogsInstSetUrl(pThis, curlm, url);
+    CHKiRet(dockerContLogsInstSetUrl(pThis, curlm, url));
+
+finalize_it:
+    free(url);
+    RETiRet;
 }
 
 /* special destructor for hashtable object. */
@@ -715,20 +805,19 @@ static rsRetVal dockerContLogReqsPrint(docker_cont_log_instances_t *pThis) {
 /* NOTE: not thread safe */
 static rsRetVal dockerContLogReqsAdd(docker_cont_log_instances_t *pThis, docker_cont_logs_inst_t *pContLogsReqInst) {
     DEFiRet;
+    uchar *keyName = NULL;
+
     if (!pContLogsReqInst) {
         return RS_RET_ERR;
     }
 
-    uchar *keyName = (uchar *)strdup((char *)pContLogsReqInst->id);
-
-    if (keyName) {
-        docker_cont_logs_inst_t *pFind;
-        if (RS_RET_NOT_FOUND == dockerContLogReqsGet(pThis, &pFind, (void *)keyName)) {
-            if (!hashtable_insert(pThis->ht_container_log_insts, keyName, pContLogsReqInst)) {
-                ABORT_FINALIZE(RS_RET_ERR);
-            }
-            keyName = NULL;
+    CHKmalloc(keyName = (uchar *)strdup((char *)pContLogsReqInst->id));
+    docker_cont_logs_inst_t *pFind;
+    if (RS_RET_NOT_FOUND == dockerContLogReqsGet(pThis, &pFind, (void *)keyName)) {
+        if (!hashtable_insert(pThis->ht_container_log_insts, keyName, pContLogsReqInst)) {
+            ABORT_FINALIZE(RS_RET_ERR);
         }
+        keyName = NULL;
     }
 finalize_it:
     free(keyName);
@@ -810,6 +899,7 @@ BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     int i;
     char *buf = NULL;
+    cstr_t *option_cstr = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -835,15 +925,12 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "trimlineoverbytes")) {
             loadModConf->trimLineOverBytes = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "listcontainersoptions")) {
-            loadModConf->listContainersOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->listContainersOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
             CHKmalloc(loadModConf->getContainerLogOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             /* also initialize the non-tail version */
-            size_t offset = 0;
-            size_t option_str_len = strlen((char *)loadModConf->getContainerLogOptions);
             CHKmalloc(buf = strdup((char *)loadModConf->getContainerLogOptions));
-            uchar *option_str = calloc(1, option_str_len + 1);
-            CHKmalloc(option_str);
+            CHKiRet(rsCStrConstruct(&option_cstr));
 
             const char *search_str = "tail=";
             size_t search_str_len = strlen(search_str);
@@ -854,26 +941,20 @@ BEGINsetModCnf
                     token = strtok(NULL, "&");
                     continue;
                 }
-                int len = strlen(token);
-                if (offset + len + 1 >= option_str_len + 1) {
-                    break;
-                }
-                int bytes = snprintf((char *)option_str + offset, (option_str_len + 1 - offset), "%s&", token);
-                if (bytes <= 0) {
-                    break;
-                }
-                offset += bytes;
+                const rs_cstr_part_t parts[] = {{(const uchar *)token, strlen(token)}, {UCHAR_CONSTANT("&"), 1}};
+                CHKiRet(rsCStrAppendParts(option_cstr, parts, sizeof(parts) / sizeof(parts[0])));
                 token = strtok(NULL, "&");
             }
-            loadModConf->getContainerLogOptionsWithoutTail = option_str;
+            cstrFinalize(option_cstr);
+            CHKiRet(cstrConvSzStrAndDestruct(&option_cstr, &loadModConf->getContainerLogOptionsWithoutTail, 0));
             free(buf);
             buf = NULL;
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiunixsockaddr")) {
-            loadModConf->dockerApiUnixSockAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->dockerApiUnixSockAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiaddr")) {
-            loadModConf->dockerApiAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->dockerApiAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "apiversionstr")) {
-            loadModConf->apiVersionStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->apiVersionStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "retrievenewlogsfromstart")) {
             loadModConf->retrieveNewLogsFromStart = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "defaultseverity")) {
@@ -895,6 +976,7 @@ BEGINsetModCnf
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
+    if (option_cstr != NULL) rsCStrDestruct(&option_cstr);
     free(buf);
 ENDsetModCnf
 
@@ -909,19 +991,20 @@ ENDcheckCnf
 BEGINactivateCnf
     CODESTARTactivateCnf;
     if (!loadModConf->dockerApiUnixSockAddr) {
-        loadModConf->dockerApiUnixSockAddr = (uchar *)strdup(DFLT_dockerAPIUnixSockAddr);
+        CHKmalloc(loadModConf->dockerApiUnixSockAddr = (uchar *)strdup(DFLT_dockerAPIUnixSockAddr));
     }
     if (!loadModConf->apiVersionStr) {
-        loadModConf->apiVersionStr = (uchar *)strdup(DFLT_apiVersionStr);
+        CHKmalloc(loadModConf->apiVersionStr = (uchar *)strdup(DFLT_apiVersionStr));
     }
     if (!loadModConf->listContainersOptions) {
-        loadModConf->listContainersOptions = (uchar *)strdup(DFLT_listContainersOptions);
+        CHKmalloc(loadModConf->listContainersOptions = (uchar *)strdup(DFLT_listContainersOptions));
     }
     if (!loadModConf->getContainerLogOptions) {
-        loadModConf->getContainerLogOptions = (uchar *)strdup(DFLT_getContainerLogOptions);
+        CHKmalloc(loadModConf->getContainerLogOptions = (uchar *)strdup(DFLT_getContainerLogOptions));
     }
     if (!loadModConf->getContainerLogOptionsWithoutTail) {
-        loadModConf->getContainerLogOptionsWithoutTail = (uchar *)strdup(DFLT_getContainerLogOptionsWithoutTail);
+        CHKmalloc(loadModConf->getContainerLogOptionsWithoutTail =
+                      (uchar *)strdup(DFLT_getContainerLogOptionsWithoutTail));
     }
     runModConf = loadModConf;
 
@@ -1024,7 +1107,7 @@ static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
         size_t lenMsg = pMsg->iLenRawMsg;
         uchar *pszMsg = pMsg->pszRawMsg;
 
-        if (pszMsg[lenMsg - 1] == '\0') {
+        if (lenMsg > 0 && pszMsg[lenMsg - 1] == '\0') {
             DBGPRINTF("dropped NULL at very end of message\n");
             lenMsg--;
         }
@@ -1100,10 +1183,13 @@ static void debug_byte_buffer(const uchar *data, size_t size) {
 static size_t imdocker_container_list_curlCB(void *data, size_t size, size_t nmemb, void *buffer) {
     DEFiRet;
 
-    size_t realsize = size * nmemb;
+    size_t realsize;
     uchar *pbuf = NULL;
     imdocker_buf_t *mem = (imdocker_buf_t *)buffer;
 
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) ABORT_FINALIZE(RS_RET_ERR);
+    realsize = size * nmemb;
+    if (mem->len == SIZE_MAX || realsize > SIZE_MAX - mem->len - 1) ABORT_FINALIZE(RS_RET_ERR);
     if ((pbuf = realloc(mem->data, mem->len + realsize + 1)) == NULL) {
         LogError(errno, RS_RET_ERR, "%s() - realloc failed!\n", __FUNCTION__);
         ABORT_FINALIZE(RS_RET_ERR);
@@ -1249,9 +1335,12 @@ static size_t imdocker_container_logs_curlCB(void *data, size_t size, size_t nme
     docker_cont_logs_inst_t *pInst = (docker_cont_logs_inst_t *)buffer;
     docker_cont_logs_req_t *req = pInst->logsReq;
 
-    size_t realsize = size * nmemb;
+    size_t realsize;
     const uchar *pdata = data;
     size_t write_size = 0;
+
+    if (nmemb != 0 && size > SIZE_MAX / nmemb) ABORT_FINALIZE(RS_RET_ERR);
+    realsize = size * nmemb;
 
 #ifdef ENABLE_DEBUG_BYTE_BUFFER
     debug_byte_buffer((const uchar *)data, realsize);
@@ -1449,6 +1538,7 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
                 docker_cont_logs_inst_t *pInst = NULL;
                 iRet = dockerContLogReqsGet(pInstances, &pInst, containerId);
                 if (iRet == RS_RET_NOT_FOUND) {
+                    uchar *new_last_container_id = NULL;
 #ifdef USE_MULTI_LINE
                     if (dockerContLogsInstNew(&pInst, containerId, &containerInfo, SubmitMsg2)
 #else
@@ -1456,16 +1546,32 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
 #endif
                         == RS_RET_OK) {
                         if (pInstances->last_container_created < containerInfo.created) {
+                            CHKmalloc(new_last_container_id = (uchar *)strdup(containerId));
                             pInstances->last_container_created = containerInfo.created;
-                            if (pInstances->last_container_id) {
-                                free(pInstances->last_container_id);
-                            }
-                            pInstances->last_container_id = (uchar *)strdup(containerId);
+                            free(pInstances->last_container_id);
+                            pInstances->last_container_id = new_last_container_id;
+                            new_last_container_id = NULL;
                             DBGPRINTF("last_container_id updated: ('%s', %u)\n", pInstances->last_container_id,
                                       (unsigned)pInstances->last_container_created);
                         }
-                        CHKiRet(dockerContLogsInstSetUrlById(isInit, pInst, pInstances->curlm, containerId));
-                        CHKiRet(dockerContLogReqsAdd(pInstances, pInst));
+                        iRet = dockerContLogsInstSetUrlById(isInit, pInst, pInstances->curlm, containerId);
+                        if (iRet != RS_RET_OK) {
+                            dockerContLogsInstDestruct(pInst);
+                            pInst = NULL;
+                            free(new_last_container_id);
+                            new_last_container_id = NULL;
+                            ABORT_FINALIZE(iRet);
+                        }
+
+                        iRet = dockerContLogReqsAdd(pInstances, pInst);
+                        if (iRet != RS_RET_OK) {
+                            dockerContLogsInstDestruct(pInst);
+                            pInst = NULL;
+                            free(new_last_container_id);
+                            new_last_container_id = NULL;
+                            ABORT_FINALIZE(iRet);
+                        }
+                        pInst = NULL;
                     }
                 }
             }
@@ -1506,7 +1612,7 @@ finalize_it:
 static rsRetVal getContainerIdsAndAppend(sbool isInit, docker_cont_log_instances_t *pInstances) {
     DEFiRet;
 
-    char url[256];
+    char *url = NULL;
     const uchar *pApiAddr = (uchar *)"http:";
 
     if (runModConf->dockerApiAddr) {
@@ -1518,11 +1624,11 @@ static rsRetVal getContainerIdsAndAppend(sbool isInit, docker_cont_log_instances
      * and i'm almost certain Travis CI will complain its not used.
      */
     if (pInstances->last_container_id) {
-        snprintf(url, sizeof(url), "%s/%s/containers/json?%s&filters={\"since\":[\"%s\"]}", pApiAddr,
-                 runModConf->apiVersionStr, runModConf->listContainersOptions, pInstances->last_container_id);
+        CHKiRet(allocContainersListUrl(&url, pApiAddr, runModConf->apiVersionStr, runModConf->listContainersOptions,
+                                       pInstances->last_container_id));
     } else {
-        snprintf(url, sizeof(url), "%s/%s/containers/json?%s", pApiAddr, runModConf->apiVersionStr,
-                 runModConf->listContainersOptions);
+        CHKiRet(
+            allocContainersListUrl(&url, pApiAddr, runModConf->apiVersionStr, runModConf->listContainersOptions, NULL));
     }
     DBGPRINTF("listcontainers url: %s\n", url);
 
@@ -1532,6 +1638,7 @@ static rsRetVal getContainerIdsAndAppend(sbool isInit, docker_cont_log_instances
     }
 
 finalize_it:
+    free(url);
     RETiRet;
 }
 
@@ -1614,7 +1721,12 @@ static void *getContainersTask(void *pdata) {
     docker_cont_log_instances_t *pInstances = (docker_cont_log_instances_t *)pdata;
 
     while (glbl.GetGlobalInputTermState() == 0) {
-        srSleep(runModConf->iPollInterval, 10);
+        for (int i = 0; i < runModConf->iPollInterval * 10 && glbl.GetGlobalInputTermState() == 0; ++i) {
+            srSleep(0, 100000);
+        }
+        if (glbl.GetGlobalInputTermState() != 0) {
+            break;
+        }
         getContainerIdsAndAppend(false, pInstances);
     }
     return pdata;
@@ -1626,13 +1738,20 @@ BEGINrunInput
     docker_cont_log_instances_t *pInstances = NULL;
     pthread_t thrd_id; /* the worker's thread ID */
     pthread_attr_t thrd_attr;
+    CURLcode curlRet;
+    int curl_initialized = 0;
     int get_containers_thread_initialized = 0;
     time_t now;
     CODESTARTrunInput;
     datetime.GetTime(&now);
 
     CHKiRet(ratelimitNew(&ratelimiter, "imdocker", NULL));
-    curl_global_init(CURL_GLOBAL_ALL);
+    curlRet = curl_global_init(CURL_GLOBAL_ALL);
+    if (curlRet != CURLE_OK) {
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "imdocker: curl_global_init failed: %s", curl_easy_strerror(curlRet));
+        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    }
+    curl_initialized = 1;
     localRet = dockerContLogReqsNew(&pInstances);
     if (localRet != RS_RET_OK) {
         return localRet;
@@ -1657,15 +1776,18 @@ BEGINrunInput
 
 finalize_it:
     if (get_containers_thread_initialized) {
-        pthread_kill(thrd_id, SIGTTIN);
         pthread_join(thrd_id, NULL);
         pthread_attr_destroy(&thrd_attr);
     }
     if (pInstances) {
         dockerContLogReqsDestruct(pInstances);
     }
+    if (curl_initialized) {
+        curl_global_cleanup();
+    }
     if (ratelimiter) {
         ratelimitDestruct(ratelimiter);
+        ratelimiter = NULL;
     }
 ENDrunInput
 

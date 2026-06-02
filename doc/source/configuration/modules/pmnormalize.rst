@@ -1,6 +1,6 @@
-*****************************************************
-Log Message Normalization Parser Module (pmnormalize)
-*****************************************************
+*********************************************
+pmnormalize: Log Message Normalization parser
+*********************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **pmnormalize**
@@ -21,13 +21,13 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-
-Action Parameters
+Parser Parameters
 -----------------
 
-Rulebase
+rulebase
 ^^^^^^^^
 
 .. csv-table::
@@ -46,7 +46,7 @@ how to create the rulebase can be found in the `liblognorm
 manual <http://www.liblognorm.com/files/manual/index.html>`_.
 
 
-Rule
+rule
 ^^^^
 
 .. csv-table::
@@ -61,7 +61,7 @@ This parameter or **rulebase** MUST be given, because normalization can
 only happen based on a rulebase.
 
 
-UndefinedPropertyError
+undefinedPropertyError
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -78,8 +78,8 @@ every time pmnormalize can't normalize a message.
 Examples
 ========
 
-Normalize msgs received via imtcp
----------------------------------
+Normalize messages with rulebase
+--------------------------------
 
 In this sample messages are received via imtcp. Then they are normalized with
 the given rulebase and written to a file.
@@ -98,11 +98,10 @@ the given rulebase and written to a file.
    }
 
 
-Write normalized messages to file
----------------------------------
+Normalize messages with rules specified
+---------------------------------------
 
-In this sample messages are received via imtcp. Then they are normalized with
-the given rule array. After that they are written in a file.
+Same as above, but messages are  normalized with the given rule array.
 
 .. code-block:: none
 

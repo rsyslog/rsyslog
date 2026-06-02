@@ -31,6 +31,24 @@
    fun:main
 }
 
+# Ubuntu 20.04 ships old librdkafka/valgrind bits that report small
+# producer-init leaks while omkafka opens the handle at first action.
+# omkafka destroys the topic and Kafka handle during shutdown, and the
+# allocation frame is inside librdkafka, so this is treated as a CI-only
+# third-party false positive.
+{
+   librdkafka issue during runtime producer open
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   obj:*librdkafka*
+   ...
+   fun:openKafka
+   fun:setupKafkaHandle
+   fun:doAction
+}
+
 {
    invalid atexit call - seems to stem back to libcurl
    Helgrind:Misc

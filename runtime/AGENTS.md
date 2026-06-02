@@ -15,10 +15,20 @@ collection, and process orchestration).
 - `modules.c`, `module-template.h`: module loader contracts shared with
   `plugins/` and `contrib/`.
 - `queue.c`, `wti.c`, `wtp.c`: work queue implementation and worker threads.
+  Disk-assisted mode creates two queue objects: an in-memory parent and a
+  first-class disk child (`pqDA`). Disk queue semantics for `.qi` state,
+  segment files, `queue.onCorruption`, quarantine, and runtime corruption
+  handling apply to the DA child just as they apply to pure disk queues.
 - `tcpsrv.c`, `tcpclt.c`, `net*.c`: TCP/TLS listeners and clients.
 - `parser.c`, `prop.c`, `template.c`: core message parsing and property engine.
 - `statsobj.c`, `dynstats*.c`: statistics registry and dynamic counters.
 - `timezones.c`, `datetime.c`: time conversion helpers.
+- `yamlconf.c` / `yamlconf.h`: YAML configuration frontend — parses `.yaml`/`.yml`
+  files and produces the same `cnfobj`+`nvlst` trees that the RainerScript grammar
+  produces, then feeds them into the shared `cnfDoObj()` backend in `conf.c`.
+  **Any change to config objects, statement types, template modifiers, or global
+  parameters must be reflected here as well as in `grammar/`.** See the
+  `rsyslog_config` skill for parity rules.
 
 ## Build & validation
 - **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the core, shared libraries, and test dependencies. This ensures that tests can dynamically load the runtime via `-M../runtime/.libs`.

@@ -9,9 +9,9 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 
 template(name="outfmt" type="string" string="%msg%\n")
 
-ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rfc3164"]) {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
-	       template="outfmt")
+    ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rfc3164"]) {
+    	action(type="omfile" file="'$RSYSLOG_OUT_LOG'"
+    	       template="outfmt")
 }
 
 '

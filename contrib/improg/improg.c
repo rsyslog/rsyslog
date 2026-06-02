@@ -401,7 +401,7 @@ static rsRetVal readChild(instanceConf_t *const pInst) {
             cstrAppendChar(pInst->ppCStr, c);
         }
     }
-    return (retval == 0) ? RS_RET_OK : RS_RET_IO_ERROR;
+    return (retval == 0) ? RS_RET_EOF : RS_RET_IO_ERROR;
 }
 
 /* create input instance, set default parameters, and
@@ -501,10 +501,10 @@ BEGINnewInpInst
         if (!strcmp(inppblk.descr[i].name, "binary")) {
             CHKiRet(split_binary_parameters(&pInst->pszBinary, &pInst->aParams, &pInst->iParams, pvals[i].val.d.estr));
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            pInst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pInst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pInst->lenTag = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            pInst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pInst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "severity")) {
             pInst->iSeverity = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "facility")) {
@@ -553,6 +553,7 @@ BEGINrunInput
     struct timeval tv;
     int retval;
     instanceConf_t *pInst;
+    rsRetVal readRet;
     CODESTARTrunInput;
     FD_ZERO(&rfds);
 
@@ -581,9 +582,16 @@ BEGINrunInput
         /* retval is the number of fd with data to read */
         while (retval > 0) {
             for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
-                if (FD_ISSET(pInst->fdPipeFromChild, &temp)) {
+                if (pInst->fdPipeFromChild != -1 && FD_ISSET(pInst->fdPipeFromChild, &temp)) {
                     DBGPRINTF("read child %s\n", pInst->pszBinary);
-                    readChild(pInst);
+                    readRet = readChild(pInst);
+                    if (readRet == RS_RET_EOF) {
+                        DBGPRINTF("improg: program '%s' closed stdout pipe\n", pInst->pszBinary);
+                        terminateChild(pInst);
+                    } else if (readRet != RS_RET_OK) {
+                        LogError(errno, readRet, "improg: error reading from child process");
+                        terminateChild(pInst);
+                    }
                     retval--;
                 }
             }

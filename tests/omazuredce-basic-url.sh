@@ -7,7 +7,8 @@ require_plugin "omazuredce"
 omazuredce_require_env
 
 export NUMMESSAGES=10
-export AZURE_DCE_URL_ALT="$(omazuredce_url_with_trailing_slash)"
+AZURE_DCE_URL_ALT="$(omazuredce_url_with_trailing_slash)"
+export AZURE_DCE_URL_ALT
 
 generate_conf
 add_conf '

@@ -5,6 +5,8 @@
 # Build arguments passed from the Makefile
 ARG UBUNTU_VERSION="24.04"
 ARG RSYSLOG_IMG_VERSION="unset" # New ARG to pick up version from Makefile
+ARG RSYSLOG_APT_PPA="ppa:adiscon/v8-stable"
+ARG RSYSLOG_APT_ORIGIN="LP-PPA-adiscon-v8-stable"
 ARG BUILD_DATE="unknown"
 ARG VCS_REF="unknown"
 
@@ -13,6 +15,8 @@ FROM ubuntu:${UBUNTU_VERSION}
 # Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
+ARG RSYSLOG_APT_PPA
+ARG RSYSLOG_APT_ORIGIN
 ARG BUILD_DATE
 ARG VCS_REF
 
@@ -35,7 +39,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 1. Combined RUN instruction for all apt operations:
 #    - Update apt cache.
 #    - Install software-properties-common (provides add-apt-repository) and ca-certificates.
-#    - Add the Adiscon PPA for rsyslog (using the correct v8-stable PPA).
+#    - Add the selected Adiscon PPA for rsyslog.
 #    - Update apt cache again after adding the PPA to fetch package lists from it.
 #    - Install rsyslog with --no-install-recommends for minimal footprint.
 #    - Purge build-time-only dependencies (software-properties-common) and auto-remove any unused packages.
@@ -45,14 +49,23 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
         ca-certificates \
-    && add-apt-repository -y ppa:adiscon/daily-stable \
-    && apt-get update && \
-    apt-get install -y --no-install-recommends rsyslog rsyslog-omstdout \
+    && add-apt-repository -y "${RSYSLOG_APT_PPA}" \
+    && printf '%s\n' \
+        'Package: rsyslog*' \
+        "Pin: release o=${RSYSLOG_APT_ORIGIN}" \
+        'Pin-Priority: 1001' \
+        '' \
+        'Package: rsyslog*' \
+        'Pin: release o=Ubuntu' \
+        'Pin-Priority: -1' \
+        > /etc/apt/preferences.d/rsyslog-adiscon \
+    && apt-get -o APT::Update::Error-Mode=any update && \
+    apt-get install -y --no-install-recommends tzdata rsyslog rsyslog-omstdout \
     && apt-get purge -y --auto-remove software-properties-common \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /etc/rsyslog.d/50-default.conf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && mkdir -p /etc/rsyslog.d /var/log /var/spool/rsyslog \
+    && mkdir -p /etc/rsyslog /etc/rsyslog.d /var/log /var/spool/rsyslog \
     && chown root:syslog /var/log \
     && chmod 0775 /var/log \
     && chown syslog:adm /var/spool/rsyslog \
@@ -62,7 +75,8 @@ RUN apt-get update && \
 # This file defines how rsyslog behaves (e.g., inputs, outputs, rules).
 # For Docker best practices, consider directing logs to stdout/stderr in your rsyslog.conf.
 COPY rsyslog.conf /etc/rsyslog.conf
-COPY 01-main-queue.conf /etc/rsyslog.d/
+COPY noise-drop.lkp_tbl /etc/rsyslog/noise-drop.lkp_tbl
+COPY 01-main-queue.conf 02-noise-drop.conf /etc/rsyslog.d/
 COPY start.sh /usr/local/bin/start.sh
 RUN chmod 0755 /usr/local/bin/start.sh
 # Set the entrypoint (this will run the script when the container starts)

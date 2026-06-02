@@ -4,13 +4,16 @@
 : "${STARTUP_MAX_RUNTIME:=300}"
 export STARTUP_MAX_RUNTIME
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
-export RANDTOPIC1="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
-export RANDTOPIC2="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC1="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC1
+RANDTOPIC2="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC2
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -31,7 +34,6 @@ export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

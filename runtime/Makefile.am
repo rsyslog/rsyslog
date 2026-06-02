@@ -36,6 +36,7 @@ librsyslog_la_SOURCES = \
 	strgen.c \
 	msg.c \
 	msg.h \
+	msg_replace_helper.h \
 	linkedlist.c \
 	linkedlist.h \
 	objomsr.c \
@@ -58,6 +59,7 @@ librsyslog_la_SOURCES = \
 	modules.h \
 	statsobj.c \
 	statsobj.h \
+	compat_queue.h \
 	dynstats.c \
 	dynstats.h \
 	perctile_ringbuf.c \
@@ -77,22 +79,29 @@ librsyslog_la_SOURCES = \
 	queue.h \
 	ruleset.c \
 	ruleset.h \
+	rswatch.c \
+	rswatch.h \
 	prop.c \
 	prop.h \
 	ratelimit.c \
 	ratelimit.h \
+	translate.c \
+	translate.h \
+	yamlconf.c \
+	yamlconf.h \
 	lookup.c \
 	lookup.h \
 	cfsysline.c \
 	cfsysline.h \
 	\
-	../action.h \
-	../action.c \
-	../threads.c \
-	../threads.h \
+	action.h \
+	action.c \
+	threads.c \
+	threads.h \
+	dirty.h \
 	\
-	../parse.c \
-	../parse.h \
+	parse.c \
+	parse.h \
 	\
 	hashtable.c \
 	hashtable.h \
@@ -100,15 +109,12 @@ librsyslog_la_SOURCES = \
 	hashtable_itr.h \
 	hashtable_private.h \
 	\
-	../outchannel.c \
-	../outchannel.h \
-	../template.c \
-	../template.h \
+	outchannel.c \
+	outchannel.h \
+	template.c \
+	template.h \
 	timezones.c \
 	timezones.h
-# the files with ../ we need to work on - so that they either become part of the
-# runtime or will no longer be needed. -- rgerhards, 2008-06-13
-#
 #if OS_LINUX
 #librsyslog_la_SOURCES += \
 #endif
@@ -116,7 +122,7 @@ librsyslog_la_SOURCES = \
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
 else
-librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
+librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar -I\$(top_builddir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS} $(LIBYAML_CFLAGS)
@@ -216,10 +222,10 @@ lmnsd_ossl_la_LDFLAGS = -module -avoid-version
 
 if ENABLE_WOLFSSL
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(WOLFSSL_CFLAGS)
-lmnsd_ossl_la_LIBADD = $(WOLFSSL_LIBS)
+lmnsd_ossl_la_LIBADD = $(WOLFSSL_LIBS) $(GAI_LIBS)
 else
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
-lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS)
+lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS) $(GAI_LIBS)
 
 endif
 endif
@@ -295,8 +301,8 @@ endif
 #
 if ENABLE_GSSAPI
 pkglib_LTLIBRARIES += lmgssutil.la
-lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
-lmgssutil_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmgssutil_la_SOURCES = gss-misc.c gss-misc.h gss-token-util.h
+lmgssutil_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(GSS_CFLAGS)
 lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(GSS_LIBS)
 endif
@@ -334,7 +340,6 @@ if ENABLE_LIBLOGGING_STDLOG
 lmtcpclt_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 lmtcpclt_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)
 endif
-
 
 #
 # support library for Guardtime KSI-LS12

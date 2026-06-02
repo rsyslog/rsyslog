@@ -33,7 +33,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "hashtable_itr.h"
-#include <sys/queue.h>
+#include "compat_queue.h"
 
 /* definitions for objects we access */
 DEFobjStaticHelpers;
@@ -912,8 +912,11 @@ static uchar *ATTR_NONNULL(1, 2)
     if (strchr((const char *)pbucket->name, '/') != NULL) {
         /* Basic path traversal protection - bucket names should not contain slashes */
         char sanitized_name[MAXFNAME];
-        strncpy(sanitized_name, (const char *)pbucket->name, sizeof(sanitized_name) - 1);
-        sanitized_name[sizeof(sanitized_name) - 1] = '\0';
+        const size_t bucket_name_len = strlen((const char *)pbucket->name);
+        const size_t name_len =
+            bucket_name_len < sizeof(sanitized_name) - 1 ? bucket_name_len : sizeof(sanitized_name) - 1;
+        memcpy(sanitized_name, pbucket->name, name_len);
+        sanitized_name[name_len] = '\0';
         for (char *p = sanitized_name; *p; p++) {
             if (*p == '/') *p = '_';
         }
@@ -1306,6 +1309,7 @@ static void ATTR_NONNULL(1) destroyFileWriteWorker(dynstats_buckets_t *bkts) {
 
 static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const char *file_name, const char *content) {
     file_write_entry_t *task;
+    file_write_entry_t *queued_task;
     dynstats_buckets_t *bkts;
     DEFiRet;
 
@@ -1315,7 +1319,27 @@ static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const
         FINALIZE;
     }
 
-    CHKmalloc(task = malloc(sizeof(file_write_entry_t)));
+    task = NULL;
+    pthread_mutex_lock(&bkts->work_q.mut);
+    STAILQ_FOREACH(queued_task, &bkts->work_q.q, link) {
+        if (queued_task->bucket == b) {
+            char *new_content = strdup(content);
+            if (new_content == NULL) {
+                pthread_mutex_unlock(&bkts->work_q.mut);
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free((void *)queued_task->content);
+            queued_task->content = new_content;
+            pthread_mutex_unlock(&bkts->work_q.mut);
+            FINALIZE;
+        }
+    }
+
+    task = malloc(sizeof(file_write_entry_t));
+    if (task == NULL) {
+        pthread_mutex_unlock(&bkts->work_q.mut);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     task->bucket = b;
     task->name = strdup(file_name);
     task->content = strdup(content);
@@ -1326,10 +1350,10 @@ static rsRetVal ATTR_NONNULL(1) enqueueFileWriteTask(dynstats_bucket_t *b, const
         free(task);
         task =
             NULL; /* Prevent double-free in error handler if it existed, though here finalize handles NULL task check */
+        pthread_mutex_unlock(&bkts->work_q.mut);
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
-    pthread_mutex_lock(&bkts->work_q.mut);
     STAILQ_INSERT_TAIL(&bkts->work_q.q, task, link);
     bkts->work_q.size++;
     STATSCOUNTER_INC(bkts->work_q.ctrEnq, bkts->work_q.mutCtrEnq);

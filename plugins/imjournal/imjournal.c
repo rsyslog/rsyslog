@@ -57,6 +57,16 @@
 #include "unicode-helper.h"
 #include "ratelimit.h"
 
+#ifndef O_CLOEXEC
+    #define O_CLOEXEC 0
+#endif
+#ifndef O_NOCTTY
+    #define O_NOCTTY 0
+#endif
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
+
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -144,6 +154,7 @@ struct instanceConf_s {
 #define DFLT_SEVERITY pri2sev(LOG_NOTICE)
 #define DFLT_FACILITY pri2fac(LOG_USER)
 #define DFLT_TAG "journal"
+#define FUTURE_JOURNAL_WARN_SKEW_USEC (60ULL * 1000000ULL)
 
 static int bLegacyCnfModGlobalsPermitted = 1; /* are legacy module-global config parameters permitted? */
 
@@ -163,18 +174,21 @@ static struct {
     STATSCOUNTER_DEF(ctrRecoveryAttempts, mutCtrRecoveryAttempts);
     uint64 ratelimitDiscardedInInterval;
     uint64 diskUsageBytes;
+    DEF_ATOMIC_HELPER_MUT64(mut_diskUsageBytes);
 } statsCounter;
 struct journalContext_s { /* structure encapsulating all the journald_API-related stuff  */
     sd_journal *j; /* main object encapsulating journal for us, has to be used in every sd_journal*() call */
     sbool reloaded; /* we have reloaded journal after detecting rotation */
     sbool atHead; /* true if we are at start of journal (no seek was done) */
+    sbool warnedFutureJournalTime; /* warning already emitted for journal entries ahead of current system time */
+    uint64_t nextFutureJournalProbeUsec; /* next permitted future-time diagnostic probe */
     char *cursor; /* should point to last valid journald entry we processed */
 };
 
 #define MAX_JOURNAL 8
 static struct journalContext_s journalContextArray[MAX_JOURNAL] = {
-    {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL},
-    {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL}, {NULL, 0, 1, NULL},
+    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
+    {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL}, {NULL, 0, 1, 0, 0, NULL},
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
@@ -183,6 +197,103 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process *
 
 static rsRetVal persistJournalState(struct journalContext_s *journalContext, char *stateFile);
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile);
+
+/**
+ * Create a unique temporary state file next to the final cursor file.
+ *
+ * The temp file must live in the target directory so that the later rename()
+ * stays atomic on the same filesystem. Callers receive ownership of *tmpPath
+ * and must free it. On success, *fd is an open descriptor positioned at the
+ * beginning of an empty file created with the configured mode and protected
+ * against symlink traversal.
+ */
+static rsRetVal openStateFileTemp(const char *stateFile, char **tmpPath, int *fd) {
+    struct timespec ts;
+    char *candidate = NULL;
+    int localFd = -1;
+    int attempt;
+    DEFiRet;
+
+    if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        ts.tv_sec = time(NULL);
+        ts.tv_nsec = 0;
+    }
+
+    for (attempt = 0; attempt < 100; ++attempt) {
+        free(candidate);
+        candidate = NULL;
+        if (asprintf(&candidate, "%s.tmp.%ld.%ld.%d", stateFile, (long)getpid(), (long)ts.tv_nsec, attempt) == -1) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        localFd = open(candidate, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW, cs.fCreateMode);
+        if (localFd >= 0) {
+            *tmpPath = candidate;
+            *fd = localFd;
+            candidate = NULL;
+            FINALIZE;
+        }
+
+        if (errno != EEXIST) {
+            LogError(errno, RS_RET_FILE_OPEN_ERROR, "imjournal: open() failed for path: '%s'", candidate);
+            ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+        }
+    }
+
+    LogError(0, RS_RET_FILE_OPEN_ERROR, "imjournal: could not create a unique temp state file for '%s'", stateFile);
+    ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+
+finalize_it:
+    free(candidate);
+    RETiRet;
+}
+
+/**
+ * Fsync the directory that contains the persisted cursor file.
+ *
+ * After the caller has fsync'd the file contents and renamed the temporary
+ * file into place, syncing the parent directory is required to make the name
+ * update durable across power loss. The path may be absolute or relative.
+ */
+static rsRetVal fsyncStateFileParentDir(const char *stateFile) {
+    DIR *dir = NULL;
+    char *dirPath = NULL;
+    const char *slash;
+    int dfd;
+    DEFiRet;
+
+    slash = strrchr(stateFile, '/');
+    if (slash == NULL) {
+        CHKmalloc(dirPath = strdup("."));
+    } else if (slash == stateFile) {
+        CHKmalloc(dirPath = strdup("/"));
+    } else {
+        const size_t len = (size_t)(slash - stateFile);
+        CHKmalloc(dirPath = strndup(stateFile, len));
+    }
+
+    if ((dir = opendir(dirPath)) == NULL) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    dfd = dirfd(dir);
+    if (dfd < 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to get '%s' directory fd", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (fsync(dfd) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", dirPath);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+finalize_it:
+    if (dir != NULL) {
+        closedir(dir);
+    }
+    free(dirPath);
+    RETiRet;
+}
 
 static rsRetVal openJournal(struct journalContext_s *journalContext) {
     int r;
@@ -193,13 +304,15 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
     }
     if ((r = sd_journal_open(&journalContext->j, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY)) < 0) {
         LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
-        iRet = RS_RET_IO_ERROR;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     if ((r = sd_journal_set_data_threshold(journalContext->j, glbl.GetMaxLine(runModConf->pConf))) < 0) {
         LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_set_data_threshold() failed");
-        iRet = RS_RET_IO_ERROR;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     journalContext->atHead = 1;
+
+finalize_it:
     RETiRet;
 }
 
@@ -317,8 +430,8 @@ static rsRetVal readJSONfromJournalMsg(struct journalContext_s *journalContext, 
         if (equal_sign == NULL) {
             LogError(0, RS_RET_ERR,
                      "SD_JOURNAL_FOREACH_DATA()"
-                     "returned a malformed field (has no '='): '%s'",
-                     (char *)get);
+                     " returned a malformed field without '=' (length %zu)",
+                     l);
             continue; /* skip the entry */
         }
 
@@ -341,6 +454,12 @@ static rsRetVal readJSONfromJournalMsg(struct journalContext_s *journalContext, 
         free(name);
     }
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (*json != NULL) {
+            fjson_object_put(*json);
+            *json = NULL;
+        }
+    }
     RETiRet;
 }
 
@@ -377,7 +496,7 @@ static rsRetVal enqMsg(uchar *msg,
                        int sharedJsonProperties,
                        ruleset_t *pBindRuleset) {
     struct syslogTime st;
-    smsg_t *pMsg;
+    smsg_t *pMsg = NULL;
     size_t len;
     DEFiRet;
 
@@ -407,7 +526,9 @@ static rsRetVal enqMsg(uchar *msg,
     pMsg->iSeverity = iSeverity;
 
     if (json != NULL) {
-        msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedJsonProperties);
+        iRet = msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedJsonProperties);
+        json = NULL;
+        CHKiRet(iRet);
     }
 
     CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
@@ -418,6 +539,12 @@ finalize_it:
         STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
     } else if (iRet != RS_RET_OK) {
         LogError(0, RS_RET_ERR, "imjournal: error during enqMsg().\n");
+        if (pMsg != NULL) {
+            msgDestruct(&pMsg);
+        }
+        if (json != NULL) {
+            fjson_object_put(json);
+        }
     }
 
     RETiRet;
@@ -519,8 +646,8 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
         } else {
             DBGPRINTF(
                 "The value of the 'FACILITY' field has an "
-                "unexpected length: %zu value: '%s'\n",
-                length, (const char *)get);
+                "unexpected length: %zu\n",
+                length);
         }
     }
 
@@ -579,12 +706,22 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
         tv.tv_usec = timestamp % 1000000;
     }
 
-    iRet = updateJournalCursor(journalContext);
+    CHKiRet(updateJournalCursor(journalContext));
 
     /* submit message */
-    enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    iRet = enqMsg((uchar *)message, (uchar *)sys_iden_help, facility, severity, &tv, json, 0, pBindRuleset);
+    json = NULL;
+    if (iRet == RS_RET_DISCARDMSG) {
+        iRet = RS_RET_OK;
+    }
+    CHKiRet(iRet);
 
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (json != NULL) {
+            fjson_object_put(json);
+        }
+    }
     free(sys_iden_help);
     free(message);
     RETiRet;
@@ -596,7 +733,7 @@ finalize_it:
  */
 static rsRetVal persistJournalState(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
-    char tmp_sf[MAXFNAME];
+    char *tmp_sf = NULL;
     int fd = -1;
     size_t len;
     ssize_t wr_ret;
@@ -609,31 +746,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
         ABORT_FINALIZE(RS_RET_OK);
     }
 
-    /* we create a temporary name by adding a ".tmp"
-     * suffix to the end of our state file's name
-     *
-     * we use snprintf() to safely honor the boundaries
-     * of the temporary state file name buffer by using
-     * a precision specifier, which will limit the number
-     * of bytes taken from stateFile to what will fit
-     *
-     * TODO: figure out a better way to avoid the PATH_MAX
-     * problem. The truncated stateFile with .tmp at the
-     * end is not optimal
-     */
-#define IM_SF_TMP_SUFFIX ".tmp"
-    snprintf(tmp_sf, sizeof(tmp_sf), "%.*s%s",
-             /* this calculates the max size for state file name, note that
-              * sizeof() NOT -1 is intentional - it reserves spaces for the
-              * NUL terminator.
-              */
-             (int)(sizeof(tmp_sf) - sizeof(IM_SF_TMP_SUFFIX)), stateFile, IM_SF_TMP_SUFFIX);
-
-    fd = open((char *)tmp_sf, O_WRONLY | O_CREAT | O_CLOEXEC, cs.fCreateMode);
-    if (fd == -1) {
-        LogError(errno, RS_RET_FILE_OPEN_ERROR, "imjournal: open() failed for path: '%s'", tmp_sf);
-        ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
-    }
+    CHKiRet(openStateFileTemp(stateFile, &tmp_sf, &fd));
 
     len = strlen(journalContext->cursor);
     wr_ret = write(fd, journalContext->cursor, len);
@@ -641,9 +754,23 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
         LogError(errno, RS_RET_IO_ERROR,
                  "imjournal: failed to save cursor to: '%s',"
                  "write returned %zd, expected %zu",
-                 cs.stateFile, wr_ret, len);
+                 stateFile, wr_ret, len);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+
+    if (cs.bFsync) {
+        if (fsync(fd) != 0) {
+            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", tmp_sf);
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+    }
+
+    if (close(fd) == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: close() failed for path: '%s'", tmp_sf);
+        fd = -1;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
 
     /* change the name of the file to the configured one */
     if (rename(tmp_sf, stateFile) < 0) {
@@ -652,23 +779,7 @@ static rsRetVal persistJournalState(struct journalContext_s *journalContext, cha
     }
 
     if (cs.bFsync) {
-        if (fsync(fd) != 0) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", stateFile);
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        /* In order to guarantee physical write we need to force parent sync as well */
-        DIR *wd;
-        if (!(wd = opendir((char *)glbl.GetWorkDir(runModConf->pConf)))) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to open '%s' directory",
-                     glbl.GetWorkDir(runModConf->pConf));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        if (fsync(dirfd(wd)) != 0) {
-            LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", glbl.GetWorkDir(runModConf->pConf));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-
-        closedir(wd);
+        CHKiRet(fsyncStateFileParentDir(stateFile));
     }
 
     DBGPRINTF("Persisted journal to '%s'\n", stateFile);
@@ -680,17 +791,19 @@ finalize_it:
             iRet = RS_RET_IO_ERROR;
         }
     }
+    if (iRet != RS_RET_OK && tmp_sf != NULL) {
+        unlink(tmp_sf);
+    }
+    free(tmp_sf);
     RETiRet;
 }
 
 
 static rsRetVal skipOldMessages(struct journalContext_s *journalContext);
 
-static rsRetVal handleRotation(struct journalContext_s *journalContext, char *stateFile) {
+static rsRetVal restoreJournalPosition(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
-
-    LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
-    STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
+    int r;
 
     /* outside error scenarios we should always have a cursor available at this point */
     if (!journalContext->cursor) {
@@ -703,20 +816,50 @@ static rsRetVal handleRotation(struct journalContext_s *journalContext, char *st
         FINALIZE;
     }
 
-    if (sd_journal_seek_cursor(journalContext->j, journalContext->cursor) != 0) {
-        LogError(0, RS_RET_ERR,
+    if ((r = sd_journal_seek_cursor(journalContext->j, journalContext->cursor)) != 0) {
+        LogError(-r, RS_RET_ERR,
                  "imjournal: "
                  "couldn't seek to cursor `%s'\n",
                  journalContext->cursor);
-        iRet = RS_RET_ERR;
+        LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: saved cursor is unavailable, seeking to the head of journal\n");
+        if ((r = sd_journal_seek_head(journalContext->j)) < 0) {
+            LogError(-r, RS_RET_ERR,
+                     "imjournal: "
+                     "sd_journal_seek_head() failed while recovering cursor position\n");
+            iRet = RS_RET_ERR;
+            FINALIZE;
+        }
+        journalContext->atHead = 1;
+    } else {
+        journalContext->atHead = 0;
     }
-    journalContext->atHead = 0;
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal handleRotation(struct journalContext_s *journalContext, char *stateFile) {
+    DEFiRet;
+
+    LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
+    STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
+    CHKiRet(restoreJournalPosition(journalContext, stateFile));
 
 finalize_it:
     RETiRet;
 }
 
 #define POLL_TIMEOUT 900000 /* timeout for poll is 900ms */
+
+static rsRetVal reopenJournal(struct journalContext_s *journalContext) {
+    DEFiRet;
+
+    closeJournal(journalContext);
+    CHKiRet(openJournal(journalContext));
+
+finalize_it:
+    RETiRet;
+}
 
 static rsRetVal pollJournal(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
@@ -729,7 +872,11 @@ static rsRetVal pollJournal(struct journalContext_s *journalContext, char *state
             LogError(-processRet, RS_RET_ERR, "imjournal: sd_journal_process() failed during rotation handling");
             ABORT_FINALIZE(RS_RET_ERR);
         }
+        CHKiRet(reopenJournal(journalContext));
         CHKiRet(handleRotation(journalContext, stateFile));
+    } else if (err < 0) {
+        LogError(-err, RS_RET_ERR, "imjournal: sd_journal_wait() failed");
+        ABORT_FINALIZE(RS_RET_ERR);
     }
 
 finalize_it:
@@ -755,18 +902,85 @@ finalize_it:
     RETiRet;
 }
 
+static void warnIfNewestJournalEntryIsInFuture(struct journalContext_s *journalContext) {
+    sd_journal *probe = NULL;
+    struct timespec now;
+    uint64_t tail_usec;
+    uint64_t now_usec;
+    int r;
+
+    if (journalContext->warnedFutureJournalTime) {
+        return;
+    }
+
+    if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+        DBGPRINTF("imjournal: future-time probe clock_gettime() failed: %d\n", errno);
+        goto done;
+    }
+    now_usec = ((uint64_t)now.tv_sec * 1000000ULL) + ((uint64_t)now.tv_nsec / 1000ULL);
+    if (now_usec < journalContext->nextFutureJournalProbeUsec) {
+        if (journalContext->nextFutureJournalProbeUsec - now_usec <= FUTURE_JOURNAL_WARN_SKEW_USEC) {
+            return;
+        }
+        DBGPRINTF("imjournal: future-time probe detected backward clock jump; resetting throttle\n");
+    }
+    journalContext->nextFutureJournalProbeUsec = now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC;
+
+    r = sd_journal_open(&probe, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_open() failed: %d\n", r);
+        goto done;
+    }
+
+    r = sd_journal_seek_tail(probe);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_seek_tail() failed: %d\n", r);
+        goto done;
+    }
+
+    r = sd_journal_previous(probe);
+    if (r <= 0) {
+        if (r < 0) {
+            DBGPRINTF("imjournal: future-time probe sd_journal_previous() failed: %d\n", r);
+        }
+        goto done;
+    }
+
+    r = sd_journal_get_realtime_usec(probe, &tail_usec);
+    if (r < 0) {
+        DBGPRINTF("imjournal: future-time probe sd_journal_get_realtime_usec() failed: %d\n", r);
+        goto done;
+    }
+
+    if (tail_usec > now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+               "imjournal: sd_journal_next() reports no new entries, "
+               "but the newest journal entry timestamp is %llu seconds ahead of current system time; "
+               "journal delivery may remain stalled until system time catches up or the journal is repaired",
+               (unsigned long long)((tail_usec - now_usec) / 1000000ULL));
+        journalContext->warnedFutureJournalTime = 1;
+    }
+
+done:
+    if (probe != NULL) {
+        sd_journal_close(probe);
+    }
+}
+
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *stateFile) {
     DEFiRet;
+    struct stat st;
     int r;
+    int fd = -1;
     FILE *r_sf;
 
     DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n", journalContext->atHead,
               journalContext->reloaded);
 
-    /* if state file not exists (on very first run), skip */
-    if (access(stateFile, F_OK | R_OK) == -1 && errno == ENOENT) {
+    fd = open(stateFile, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NOFOLLOW);
+    if (fd == -1 && errno == ENOENT) {
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
@@ -777,8 +991,27 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
                stateFile);
         FINALIZE;
     }
+    if (fd == -1) {
+        LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: open on state file `%s' failed\n", stateFile);
+        if (cs.bIgnorePrevious) {
+            /* Seek to the very end of the journal and ignore all older messages. */
+            skipOldMessages(journalContext);
+        }
+        FINALIZE;
+    }
+    if (fstat(fd, &st) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imjournal: fstat on state file `%s' failed\n", stateFile);
+        iRet = RS_RET_IO_ERROR;
+        FINALIZE;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        LogError(0, RS_RET_IO_ERROR, "imjournal: state file `%s' is not a regular file\n", stateFile);
+        iRet = RS_RET_IO_ERROR;
+        FINALIZE;
+    }
 
-    if ((r_sf = fopen(stateFile, "rb")) != NULL) {
+    if ((r_sf = fdopen(fd, "rb")) != NULL) {
+        fd = -1;
         char readCursor[128 + 1];
         if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
             if (sd_journal_seek_cursor(journalContext->j, readCursor) != 0) {
@@ -836,7 +1069,7 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
             }
         }
     } else {
-        LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: open on state file `%s' failed\n", stateFile);
+        LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fdopen on state file `%s' failed\n", stateFile);
         if (cs.bIgnorePrevious) {
             /* Seek to the very end of the journal and ignore all older messages. */
             skipOldMessages(journalContext);
@@ -844,15 +1077,33 @@ static rsRetVal loadJournalState(struct journalContext_s *journalContext, char *
     }
 
 finalize_it:
+    if (fd != -1) {
+        close(fd);
+    }
     RETiRet;
 }
 
-static void tryRecover(struct journalContext_s *journalContext) {
-    LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
-    STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
-    closeJournal(journalContext);
-    srSleep(0, 200000);  // do not hammer machine with too-frequent retries
-    openJournal(journalContext);
+static rsRetVal tryRecover(struct journalContext_s *journalContext, char *stateFile) {
+    DEFiRet;
+
+    do {
+        LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
+        STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
+        srSleep(0, 200000);  // do not hammer machine with too-frequent retries
+        iRet = reopenJournal(journalContext);
+        if (iRet == RS_RET_OK) {
+            iRet = restoreJournalPosition(journalContext, stateFile);
+        }
+        if (iRet == RS_RET_OK) {
+            FINALIZE;
+        }
+        LogError(0, iRet, "imjournal: journal recovery attempt failed, will retry");
+    } while (glbl.GetGlobalInputTermState() == 0);
+
+    LogError(0, iRet, "imjournal: journal recovery stopped before success because shutdown was requested");
+
+finalize_it:
+    RETiRet;
 }
 
 static rsRetVal addListner(instanceConf_t *inst, u_int8_t index) {
@@ -862,13 +1113,14 @@ static rsRetVal addListner(instanceConf_t *inst, u_int8_t index) {
         RETiRet;
     }
 
-    journal_etry_t *etry;
+    journal_etry_t *etry = NULL;
     CHKmalloc(etry = (journal_etry_t *)calloc(1, sizeof(journal_etry_t)));
     etry->journalContext = &journalContextArray[index];
     if (inst) {
         etry->pBindRuleset = inst->pBindRuleset;
         etry->stateFile = inst->stateFile;
     }
+    /* Link into the global list only after success is guaranteed */
     etry->next = journal_root;
     journal_root = etry;
     ++n_journal;
@@ -934,27 +1186,37 @@ static rsRetVal doRun(journal_etry_t const *etry) {
              * we need to manually advance the cursor. This is because, after calling sd_journal_next,
              * the cursor should point to a new entry; otherwise, we read the same entry twice.
              */
-            int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
-            if (test == 1) {
-                DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
-                continue;
+            if (etry->journalContext->cursor != NULL) {
+                int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
+                if (test == 1) {
+                    DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
+                    continue;
+                } else if (test < 0) {
+                    LogError(-test, RS_RET_ERR, "imjournal: sd_journal_test_cursor() failed");
+                    CHKiRet(tryRecover(etry->journalContext, stateFile));
+                    continue;
+                }
             }
 
             /*
              * update journal disk usage before reading the new message.
              */
-            const int e = sd_journal_get_usage(etry->journalContext->j, (uint64_t *)&statsCounter.diskUsageBytes);
+            uint64_t usage;
+            const int e = sd_journal_get_usage(etry->journalContext->j, &usage);
             if (e < 0) {
                 LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+            } else {
+                ATOMIC_STORE_uint64(&statsCounter.diskUsageBytes, &statsCounter.mut_diskUsageBytes, (uint64)usage);
             }
 
             if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
-                tryRecover(etry->journalContext);
+                CHKiRet(tryRecover(etry->journalContext, stateFile));
                 continue;
             }
 
             count++;
             etry->journalContext->atHead = 0;
+            etry->journalContext->warnedFutureJournalTime = 0;
             if (stateFile) {
                 /* TODO: This could use some finer metric. */
                 if ((count % cs.iPersistStateInterval) == 0) {
@@ -965,7 +1227,7 @@ static rsRetVal doRun(journal_etry_t const *etry) {
 
         if (r < 0) {
             LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-            tryRecover(etry->journalContext);
+            CHKiRet(tryRecover(etry->journalContext, stateFile));
             continue;
         }
 
@@ -975,10 +1237,11 @@ static rsRetVal doRun(journal_etry_t const *etry) {
                    "imjournal: "
                    "Journal indicates no msgs when positioned at head.\n");
         }
+        warnIfNewestJournalEntryIsInFuture(etry->journalContext);
 
         /* No new messages, wait for activity. */
         if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK) {
-            tryRecover(etry->journalContext);
+            CHKiRet(tryRecover(etry->journalContext, stateFile));
         }
     }
 finalize_it:
@@ -1153,6 +1416,8 @@ BEGINactivateCnf
                                 CTR_FLAG_RESETTABLE, &(statsCounter.ctrRecoveryAttempts)));
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("ratelimit_discarded_in_interval"), ctrType_IntCtr,
                                 CTR_FLAG_NONE, &(statsCounter.ratelimitDiscardedInInterval)));
+    INIT_ATOMIC_HELPER_MUT64(statsCounter.mut_diskUsageBytes);
+    statsCounter.diskUsageBytes = 0;
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("disk_usage_bytes"), ctrType_IntCtr, CTR_FLAG_NONE,
                                 &(statsCounter.diskUsageBytes)));
     CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
@@ -1319,7 +1584,7 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "persiststateinterval")) {
             cs.iPersistStateInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "statefile")) {
-            cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "filecreatemode")) {
             cs.fCreateMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
@@ -1328,7 +1593,7 @@ BEGINsetModCnf
             cs.ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
             free(cs.pszRatelimitName);
-            cs.pszRatelimitName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.pszRatelimitName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
             cs.bIgnorePrevious = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
@@ -1341,13 +1606,13 @@ BEGINsetModCnf
 
             char *fac, *p;
 
-            fac = p = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(fac = p = es_str2cstr(pvals[i].val.d.estr, NULL));
             facilityHdlr((uchar **)&p, (void *)&cs.iDfltFacility);
             free(fac);
         } else if (!strcmp(modpblk.descr[i].name, "usepidfromsystem")) {
             cs.bUseJnlPID = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "usepid")) {
-            cs.usePid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.usePid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "workaroundjournalbug")) {
             cs.bWorkAroundJournalBug = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "fsync")) {
@@ -1355,7 +1620,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "remote")) {
             cs.bRemote = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "defaulttag")) {
-            cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imjournal: program error, non-handled "
@@ -1426,7 +1691,7 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "main")) {
             inst->bMain = (int)pvals[i].val.d.n;
         } else {

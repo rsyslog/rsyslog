@@ -48,7 +48,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install the rsyslog-imdocker module.
 # This module is necessary to read logs directly from the Docker daemon's logging driver.
 # apt-get update is run to ensure the package lists are fresh before installing.
-RUN apt-get update && \
+RUN apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends rsyslog-imdocker && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

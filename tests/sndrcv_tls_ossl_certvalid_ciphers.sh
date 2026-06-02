@@ -69,7 +69,12 @@ if [ $ret == 0 ]; then
 else
 	# Kindly check for a failed session
 	content_check "OpenSSL Error Stack"
-	content_check "no shared cipher"
+	if [ "$(tls_backend)" = "wolfssl" ]; then
+		# wolfSSL reports cipher mismatch as "can't match cipher suite"
+		content_check "can't match cipher suite"
+	else
+		content_check "no shared cipher"
+	fi
 fi
 
 exit_test

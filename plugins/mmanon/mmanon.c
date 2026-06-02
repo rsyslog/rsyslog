@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <netinet/in.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -38,6 +39,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "parserif.h"
+#include "unicode-helper.h"
 #include "hashtable.h"
 #include <pthread.h>
 
@@ -595,6 +597,15 @@ static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, s
     }
 }
 
+static uint32_t random_u32(wrkrInstanceData_t *pWrkrData) {
+    uint32_t value = 0;
+
+    for (size_t i = 0; i < sizeof(value); ++i) {
+        value = (value << 8) | (uint32_t)(rand_r(&(pWrkrData->randstatus)) & 0xffu);
+    }
+    return value;
+}
+
 /**
  * \brief Check whether a buffer starts with an IPv4 address.
  *
@@ -619,6 +630,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -628,6 +642,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -637,6 +654,9 @@ static int syntax_ipv4(const uchar *const __restrict__ buf,
         goto done;
     }
     i++;
+    if (i >= buflen) {
+        goto done;
+    }
     if (isdigit(buf[i]) == 0 || isPosByte(buf + i, buflen - i, &nproc) == 0) {
         goto done;
     }
@@ -881,8 +901,12 @@ static unsigned code_ipv4_int(unsigned ip, wrkrInstanceData_t *pWrkrData, int bi
             return (unsigned)shiftIP_subst;
         case RANDOMINT:
             shiftIP_subst = ((shiftIP_subst >> bits) << bits);
-            // multiply the random number between 0 and 1 with a mask of (2^n)-1:
-            random = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * ((1ull << bits) - 1));
+            // mask random bits directly so every suffix value remains reachable.
+            {
+                const uint32_t mask = (bits == 32) ? UINT32_MAX : (uint32_t)((1ull << bits) - 1);
+                const uint32_t random32 = random_u32(pWrkrData);
+                random = (unsigned)(random32 & mask);
+            }
             return (unsigned)shiftIP_subst + random;
         case SIMPLE:  // can't happen, since this case is caught at the start of anonipv4()
         default:
@@ -1007,7 +1031,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         CurrentCharPtr = current->ips.ip_low;
     }
     if (CurrentCharPtr[0] != '\0') {
-        strcpy(address, CurrentCharPtr);
+        rs_cstr_copy(address, CurrentCharPtr, sizeof(current->ips.ip_high));
     } else {
         if (pWrkrData->pData->ipv4.randConsisUnique && pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs == NULL) {
             CHKmalloc(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs =
@@ -1059,7 +1083,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
             uniqueKey = NULL;
         }
 
-        strcpy(address, CurrentCharPtr);
+        rs_cstr_copy(address, CurrentCharPtr, sizeof(current->ips.ip_high));
     }
 finalize_it:
     if (locked) {
@@ -1153,7 +1177,7 @@ static void anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
         assert(iplen < sizeof(address));
         getip(*msg + offset, iplen, address);
         offset += iplen;
-        strcpy(caddress, address);
+        rs_cstr_copy(caddress, address, sizeof(caddress));
         process_IPv4(caddress, pWrkrData);
         caddresslen = strlen(caddress);
         *hasChanged = 1;
@@ -1218,17 +1242,17 @@ static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, in
         case RANDOMINT:
             if (bits == 128) {
                 for (int i = 0; i < 8; i++) {
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     ip->high <<= 8;
                     ip->high |= tmpRand;
 
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     ip->low <<= 8;
                     ip->low |= tmpRand;
                 }
             } else if (bits > 64) {
                 for (int i = 0; i < 8; i++) {
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     ip->low <<= 8;
                     ip->low |= tmpRand;
                 }
@@ -1237,19 +1261,19 @@ static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, in
                 fullbits = bits / 8;
                 bits = bits % 8;
                 while (fullbits > 0) {
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     randhigh <<= 8;
                     randhigh |= tmpRand;
                     fullbits--;
                 }
-                tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * ((1 << bits) - 1));
+                tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & ((1u << bits) - 1));
                 randhigh <<= bits;
                 randhigh |= tmpRand;
 
                 ip->high |= randhigh;
             } else if (bits == 64) {
                 for (int i = 0; i < 8; i++) {
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     ip->low <<= 8;
                     ip->low |= tmpRand;
                 }
@@ -1257,12 +1281,12 @@ static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, in
                 fullbits = bits / 8;
                 bits = bits % 8;
                 while (fullbits > 0) {
-                    tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * 0xff);
+                    tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & 0xff);
                     randlow <<= 8;
                     randlow |= tmpRand;
                     fullbits--;
                 }
-                tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus)) / (double)RAND_MAX) * ((1 << bits) - 1));
+                tmpRand = (unsigned)(rand_r(&(pWrkrData->randstatus)) & ((1u << bits) - 1));
                 randlow <<= bits;
                 randlow |= tmpRand;
 
@@ -1546,7 +1570,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     char *val = (char *)(hashtable_search(randConsisIPs, num));
 
     if (val != NULL) {
-        strcpy(address, val);
+        rs_cstr_copy(address, val, INET6_ADDRSTRLEN);
     } else {
         CHKmalloc(hashKey = (struct ipv6_int *)malloc(sizeof(struct ipv6_int)));
         *hashKey = original;
@@ -1692,9 +1716,9 @@ static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
         }
         dotPos--;
     }
-    assert(!"embedded IPv4 must have a ':' before its first '.'");
-    /* If assertions are disabled, fall back to start-of-substring; parsing will
-     * then fail and the caller will treat the sequence as non-IPv4. */
+    /* No ':' was found before the first dot. Treat this as a non-embedded
+     * IPv4 case by returning the start of the substring. The subsequent
+     * syntax_ipv4() check will fail and the caller will reject the candidate. */
     return 0;
 }
 
@@ -1758,8 +1782,17 @@ static int syntax_embedded(const uchar *const __restrict__ buf,
                 goto done;
             }
             *v4Start = findV4Start(buf, (*nprocessed) - 1);
-            if (syntax_ipv4(buf + (*v4Start), buflen, &ipv4Len)) {
-                *nprocessed += (ipv4Len - ((*nprocessed) - (*v4Start)));
+            if (*v4Start >= buflen) {
+                isIP = 0;
+                goto done;
+            }
+            if (syntax_ipv4(buf + (*v4Start), buflen - *v4Start, &ipv4Len)) {
+                const size_t ipv4BytesAlreadyScanned = *nprocessed - *v4Start;
+                if (ipv4Len < ipv4BytesAlreadyScanned) {
+                    isIP = 0;
+                    goto done;
+                }
+                *nprocessed += ipv4Len - ipv4BytesAlreadyScanned;
                 isIP = 1;
                 goto done;
             } else {

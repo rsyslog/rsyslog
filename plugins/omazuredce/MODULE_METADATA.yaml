@@ -1,9 +1,10 @@
 support_status: core-supported
 maturity_level: fresh
 primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
-last_reviewed: 2026-03-17
+last_reviewed: 2026-04-10
 build_dependencies:
   - libcurl development headers
+  - zlib development headers
 runtime_dependencies:
   - Azure Monitor Logs Ingestion API reachable over HTTPS
   - Microsoft Entra ID application credentials for the `https://monitor.azure.com/.default` scope
@@ -14,6 +15,7 @@ ci_targets:
   - omazuredce-bad-template.sh
   - omazuredce-good-template.sh
   - omazuredce-basic.sh
+  - omazuredce-compression.sh
   - omazuredce-basic-url.sh
   - omazuredce-batch.sh
   - omazuredce-interrupt.sh

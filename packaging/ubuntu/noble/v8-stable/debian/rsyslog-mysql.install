@@ -1,0 +1,3 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/ommysql.so
+debian/rsyslog-mysql.conf.template usr/share/rsyslog-mysql/
+debian/apparmor/rsyslog-mysql.apparmor etc/apparmor.d/rsyslog.d/

@@ -1,5 +1,5 @@
 .. _param-imdiag-serverrun:
-.. _imdiag.parameter.input.serverrun:
+.. _imdiag.parameter.module.serverrun:
 
 ServerRun
 =========
@@ -18,9 +18,9 @@ ephemeral port).
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerRun
-:Scope: input
+:Scope: module
 :Type: integer (port)
-:Default: input=none
+:Default: module=none
 :Required?: yes
 :Introduced: at least 5.x, possibly earlier
 
@@ -46,17 +46,17 @@ more than once logs an error and the additional configuration is ignored. Set
 module-level parameters such as :ref:`MaxSessions <param-imdiag-maxsessions>`
 before invoking ``ServerRun``.
 
-Input usage
------------
-.. _param-imdiag-input-serverrun:
-.. _imdiag.parameter.input.serverrun-usage:
+Module usage
+------------
+.. _param-imdiag-module-serverrun:
+.. _imdiag.parameter.module.serverrun-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag" maxSessions="20")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverRun="0")
+   module(load="imdiag"
+          maxSessions="20"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverRun="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -40,8 +40,13 @@
 #include "rsyslog.h"
 
 
-#include <amqp.h>
-#include <amqp_framing.h>
+#ifdef HAVE_RABBITMQ_C_AMQP_H
+    #include <rabbitmq-c/amqp.h>
+    #include <rabbitmq-c/framing.h>
+#else
+    #include <amqp.h>
+    #include <amqp_framing.h>
+#endif
 
 #define AMQP_STARTING ((uchar)0x10)
 #define AMQP_STOP ((uchar)0x00)

@@ -1,15 +1,8 @@
 # Security-sensitive repository metadata
+/.github/CODEOWNERS @rgerhards @alorbach
 /.gitmodules @rgerhards @alorbach
-/.gitattributes @rgerhards @alorbach
 
-# CI workflows
-/.github/workflows/* @rgerhards @alorbach
-
-# Build and release tooling
-/autogen.sh @rgerhards @alorbach
-/configure.ac @rgerhards @alorbach
-/Makefile.am @rgerhards @alorbach
-/devtools/ @rgerhards @alorbach
-
-# Default ownership for the core source tree and all other repository paths
-* @rgerhards @alorbach
+# Workflows that can publish, deploy, or write security findings
+/.github/workflows/codeql.yml @rgerhards @alorbach
+/.github/workflows/doc_deploy_main.yml @rgerhards @alorbach
+/.github/workflows/draft_release.yml @rgerhards @alorbach

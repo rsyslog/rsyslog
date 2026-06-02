@@ -3,7 +3,8 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 INCLFILE="${srcdir}/testsuites/include-std-omfile-action.conf"
-export CONF_SNIPPET=`cat $INCLFILE`
+CONF_SNIPPET=$(cat $INCLFILE)
+export CONF_SNIPPET
 printf "\nThis SNIPPET will be included via env var:\n$CONF_SNIPPET\n\nEND SNIPPET\n"
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

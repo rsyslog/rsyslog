@@ -4,6 +4,10 @@
 echo ===============================================================================
 echo \[json_object_looping.sh\]: basic test for looping over json object / associative-array
 . ${srcdir:=.}/diag.sh init
+# ARM ASan can abort inside libsanitizer quarantine during worker-thread startup
+# before rsyslog emits a useful ASan report. Keep this scoped to ARM+ASan so
+# x86 ASan and non-ASan ARM lanes continue to cover the foreach behavior.
+skip_ARM_ASAN "libsanitizer quarantine CHECK failure during threaded foreach startup"
 generate_conf
 add_conf '
 template(name="garply" type="string" string="garply: %$.garply%\n")

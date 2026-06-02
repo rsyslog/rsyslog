@@ -113,7 +113,7 @@ RUN     pip3 install --no-cache-dir pysnmp
 RUN     mkdir /local_dep_cache
 
 ENV     RSYSLOG_CONFIGURE_OPTIONS=" \
-        --enable-compile-warning=error \
+        --enable-compile-warnings=error \
         --enable-elasticsearch \
         --disable-elasticsearch-tests \
         --disable-ffaup \

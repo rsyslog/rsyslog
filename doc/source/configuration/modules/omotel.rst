@@ -14,8 +14,9 @@ corporate networks and firewalled environments.
 
 .. summary-end
 
+***********************************
 omotel: OpenTelemetry output module
-====================================
+***********************************
 
 .. note::
 
@@ -25,7 +26,7 @@ omotel: OpenTelemetry output module
    ``protocol`` parameter.
 
 Overview
---------
+========
 
 ``omotel`` provides native :abbr:`OTLP (OpenTelemetry Log Protocol)` exports
 from rsyslog. The module maps rsyslog metadata into the canonical OTLP
@@ -40,7 +41,7 @@ Batching thresholds, gzip compression, retry and backoff policies, custom
 headers, TLS/mTLS authentication, and HTTP proxy support are all configurable.
 
 Availability
-------------
+============
 
 The module is built only when ``./configure`` is invoked with
 ``--enable-omotel=yes``. The build requires ``libcurl``, ``libfastjson``,
@@ -49,7 +50,15 @@ The default ``--enable-omotel`` setting is ``no``, so you must opt in
 explicitly.
 
 Configuration
--------------
+=============
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+Action Parameters
+-----------------
 
 The action parameters listed below mirror the current transport design. All
 parameters are optional and fall back to sensible defaults inspired by the
@@ -99,23 +108,30 @@ sent when either the timeout elapses or rsyslog finishes the current queue
 transaction.
 
 Environment variables from the OpenTelemetry specification are consulted when a
-configuration omits explicit values. ``endpoint`` falls back to
-``OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`` and then ``OTEL_EXPORTER_OTLP_ENDPOINT``;
-``protocol`` and ``compression`` honour the matching ``*_PROTOCOL`` and
-``*_COMPRESSION`` variables; ``timeout.ms`` defaults to
-``OTEL_EXPORTER_OTLP_LOGS_TIMEOUT`` or ``OTEL_EXPORTER_OTLP_TIMEOUT``; and
-``headers`` consumes ``OTEL_EXPORTER_OTLP_LOGS_HEADERS`` or the generic
-``OTEL_EXPORTER_OTLP_HEADERS`` when no explicit headers are configured. Action
-parameters always take precedence, giving operators an easy override when
-reusing existing collector deployments.
+configuration omits explicit values.
+
+- ``endpoint`` falls back to ``OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`` and then
+  ``OTEL_EXPORTER_OTLP_ENDPOINT``;
+- ``protocol`` and ``compression`` honor the matching ``*_PROTOCOL`` and
+  ``*_COMPRESSION`` variables;
+- ``timeout.ms`` defaults to ``OTEL_EXPORTER_OTLP_LOGS_TIMEOUT`` or
+  ``OTEL_EXPORTER_OTLP_TIMEOUT``;
+- ``headers`` consumes ``OTEL_EXPORTER_OTLP_LOGS_HEADERS`` or the generic
+  ``OTEL_EXPORTER_OTLP_HEADERS`` when no explicit headers are configured.
+
+Action parameters always take precedence, giving operators an easy override
+when reusing existing collector deployments.
 
 When the endpoint string includes an explicit path (for example,
 ``https://otel:4318/v1/logs``), the module automatically splits the final path
 segment into the ``path`` parameter so that future HTTP transport code can join
 the pieces without duplicating ``/v1/logs``.
 
-Example
--------
+Examples
+========
+
+JSON Encoding Example
+---------------------
 
 The example below batches up to 200 records or 256 KiB every two seconds, uses
 gzip compression, and adds a custom tenant header alongside an Authorization
@@ -144,7 +160,7 @@ other non-success responses discard the message and log an error.
    )
 
 Protobuf Encoding Example
---------------------------
+-------------------------
 
 To use the more compact protobuf encoding instead of JSON:
 
@@ -330,7 +346,7 @@ For proxies that require authentication, provide both username and password:
 The proxy parameters support:
 
 - **proxy**: Full proxy server URL including scheme and port. Supported schemes:
-  
+
   - ``http://`` - HTTP proxy (most common for corporate proxies)
   - ``https://`` - HTTPS proxy (secure proxy connection)
   - ``socks4://`` - SOCKS4 proxy
@@ -389,89 +405,8 @@ characters (128 bits), span IDs must be exactly 16 hexadecimal characters (64 bi
 and trace flags are parsed as hexadecimal values (0-255). Invalid values are logged
 but do not cause message processing to fail.
 
-OTLP Payload Structure
-----------------------
-
-The module generates OTLP/HTTP payloads conforming to the OpenTelemetry
-log data model. When ``protocol`` is ``http/json``, the payload is a JSON
-``ExportLogsServiceRequest``; when ``http/protobuf``, it is the same message
-serialized as a protobuf binary. Each batch wraps log records in the
-following hierarchy:
-
-**Resource attributes** (per-batch, automatically populated):
-
-.. csv-table::
-   :header: "Attribute", "Value"
-   :widths: auto
-
-   "``service.name``", "``rsyslog``"
-   "``telemetry.sdk.name``", "``rsyslog-omotel``"
-   "``telemetry.sdk.language``", "``C``"
-   "``telemetry.sdk.version``", "rsyslog version string"
-   "``host.name``", "hostname (only if uniform across all records in batch)"
-
-**Scope metadata** (per-batch):
-
-.. csv-table::
-   :header: "Field", "Value"
-   :widths: auto
-
-   "``scope.name``", "``rsyslog.omotel``"
-   "``scope.version``", "rsyslog version string"
-
-**Per-record attributes** (derived from syslog metadata):
-
-.. csv-table::
-   :header: "Attribute", "Source"
-   :widths: auto
-
-   "``log.syslog.appname``", "syslog APP-NAME field (customizable via ``attributeMap``)"
-   "``log.syslog.procid``", "syslog PROCID field (customizable via ``attributeMap``)"
-   "``log.syslog.msgid``", "syslog MSGID field (customizable via ``attributeMap``)"
-   "``log.syslog.facility``", "syslog facility code (integer, customizable via ``attributeMap``)"
-   "``log.syslog.hostname``", "syslog HOSTNAME field (customizable via ``attributeMap``)"
-
-**Per-record fields**:
-
-- ``body.stringValue``: rendered template output
-- ``timeUnixNano``: message timestamp in nanoseconds
-- ``observedTimeUnixNano``: reception timestamp in nanoseconds
-- ``severityNumber``: mapped OTLP severity (see table below)
-- ``severityText``: severity name string
-- ``traceId``: trace ID string (32 hex characters, if present in message properties)
-- ``spanId``: span ID string (16 hex characters, if present in message properties)
-- ``flags``: trace flags integer (0-255, if present in message properties)
-
-All of the attributes and fields above are emitted for every record; values are
-only omitted when the originating syslog message does not carry the associated
-property (for example, when ``APP-NAME`` is empty). Trace correlation fields
-(traceId, spanId, flags) are populated from message JSON variables when present
-and valid.
-
-Severity Mapping
-^^^^^^^^^^^^^^^^
-
-Syslog priority values are mapped to OTLP severity numbers following the
-OpenTelemetry semantic conventions. The default mapping can be overridden using
-the ``severity.map`` parameter.
-
-Default severity mapping:
-
-.. csv-table::
-   :header: "Syslog Priority", "OTLP SeverityNumber", "OTLP SeverityText"
-   :widths: auto
-
-   "0 (Emergency)", "24", "EMERGENCY"
-   "1 (Alert)", "23", "ALERT"
-   "2 (Critical)", "22", "CRITICAL"
-   "3 (Error)", "17", "ERROR"
-   "4 (Warning)", "13", "WARNING"
-   "5 (Notice)", "11", "NOTICE"
-   "6 (Info)", "9", "INFO"
-   "7 (Debug)", "5", "DEBUG"
-
 Custom Attribute and Severity Mapping Example
-----------------------------------------------
+---------------------------------------------
 
 The following example demonstrates how to customize attribute names and severity
 mapping to match collector expectations or custom severity schemes:
@@ -504,13 +439,104 @@ mapping to match collector expectations or custom severity schemes:
 
 The ``attributeMap`` parameter allows you to remap standard syslog properties
 to different OTLP attribute names. This is useful when integrating with
-collectors that expect different attribute naming conventions.
+collectors that expect different attribute naming conventions. See `OTLP
+Payload Structure`_ below for more details.
 
 The ``severity.map`` parameter allows you to customize the mapping of syslog
 priorities (0-7) to OTLP severity numbers and text. All 8 priorities must be
 specified in the mapping, or defaults will be used for missing priorities.
 Custom severity numbers should follow OTLP severity conventions (0-24 range
-recommended).
+recommended). See `Severity Mapping`_ below for more details.
+
+OTLP Payload Structure
+======================
+
+The module generates OTLP/HTTP payloads conforming to the OpenTelemetry
+log data model. When ``protocol`` is ``http/json``, the payload is a JSON
+``ExportLogsServiceRequest``; when ``http/protobuf``, it is the same message
+serialized as a protobuf binary. Each batch wraps log records in the
+following hierarchy:
+
+**Resource attributes** (per-batch, automatically populated):
+
+.. csv-table::
+   :header: "Attribute", "Value"
+   :widths: auto
+   :align: left
+
+   "``service.name``", "``rsyslog``"
+   "``telemetry.sdk.name``", "``rsyslog-omotel``"
+   "``telemetry.sdk.language``", "``C``"
+   "``telemetry.sdk.version``", "rsyslog version string"
+   "``host.name``", "hostname (only if uniform across all records in batch)"
+
+**Scope metadata** (per-batch):
+
+.. csv-table::
+   :header: "Field", "Value"
+   :widths: auto
+   :align: left
+
+   "``scope.name``", "``rsyslog.omotel``"
+   "``scope.version``", "rsyslog version string"
+
+**Per-record attributes** (derived from syslog metadata):
+
+.. csv-table::
+   :header: "Attribute", "Source"
+   :widths: auto
+   :align: left
+
+   "``log.syslog.appname``", "syslog APP-NAME field (customizable via ``attributeMap``)"
+   "``log.syslog.procid``", "syslog PROCID field (customizable via ``attributeMap``)"
+   "``log.syslog.msgid``", "syslog MSGID field (customizable via ``attributeMap``)"
+   "``log.syslog.facility``", "syslog facility code (integer, customizable via ``attributeMap``)"
+   "``log.syslog.hostname``", "syslog HOSTNAME field (customizable via ``attributeMap``)"
+
+**Per-record fields**:
+
+.. csv-table::
+   :header: "Field", "Description"
+   :widths: auto
+   :align: left
+
+   "``body.stringValue``", "rendered template output"
+   "``timeUnixNano``", "message timestamp in nanoseconds"
+   "``observedTimeUnixNano``", "reception timestamp in nanoseconds"
+   "``severityNumber``", "mapped OTLP severity (see table below)"
+   "``severityText``", "severity name string"
+   "``traceId``", "trace ID string (32 hex characters, if present in message properties)"
+   "``spanId``", "span ID string (16 hex characters, if present in message properties)"
+   "``flags``", "trace flags integer (0-255, if present in message properties)"
+
+All of the attributes and fields above are emitted for every record; values are
+only omitted when the originating syslog message does not carry the associated
+property (for example, when ``APP-NAME`` is empty). Trace correlation fields
+(traceId, spanId, flags) are populated from message JSON variables when present
+and valid.
+
+Severity Mapping
+================
+
+Syslog priority values are mapped to OTLP severity numbers following the
+OpenTelemetry semantic conventions. The default mapping can be overridden using
+the ``severity.map`` parameter.
+
+Default severity mapping:
+
+.. csv-table::
+   :header: "Syslog Priority", "OTLP SeverityNumber", "OTLP SeverityText"
+   :widths: auto
+   :align: left
+
+   "0 (Emergency)", "24", "EMERGENCY"
+   "1 (Alert)", "23", "ALERT"
+   "2 (Critical)", "22", "CRITICAL"
+   "3 (Error)", "17", "ERROR"
+   "4 (Warning)", "13", "WARNING"
+   "5 (Notice)", "11", "NOTICE"
+   "6 (Info)", "9", "INFO"
+   "7 (Debug)", "5", "DEBUG"
 
 Statistic Counter
 =================

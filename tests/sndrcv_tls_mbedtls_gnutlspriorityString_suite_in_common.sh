@@ -1,12 +1,18 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+# TSAN instrumentation on Ubuntu 26.04/clang-21 breaks this mbedTLS priority-string
+# handshake test before message transfer. This coverage remains exercised by
+# non-TSAN lanes, where the same test passes.
+skip_TSAN "Ubuntu 26.04/clang-21 TSAN breaks the mbedTLS priority-string handshake before message transfer"
+# ASAN/UBSAN sanitizer instrumentation hits the same mbedTLS priority-string
+# handshake incompatibility; non-sanitizer lanes still cover this test.
+skip_ASAN "Ubuntu 26.04 ASAN/UBSAN breaks the mbedTLS priority-string handshake before message transfer"
 export NUMMESSAGES=1000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 MBEDTLS_MAJOR=$(pkg-config --modversion mbedtls | cut -d . -f 1)
 if [ "$MBEDTLS_MAJOR" -ge 3 ]; then
     GNUTLS_1_3_CS="TLS1-3-AES-256-GCM-SHA384,"
@@ -24,17 +30,17 @@ module( load="../plugins/imtcp/.libs/imtcp"
 	PermittedPeer="rsyslog client"
 	gnutlspriorityString="'${GNUTLS_1_3_CS}'TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256,TLS-ECDHE-ECDSA-WITH-CAMELLIA-256-GCM-SHA384")
 # then SENDER sends to this port (not tcpflood!)
-input(	type="imtcp" port="'$PORT_RCVR'" )
+input(	type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port" )
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
+assign_file_content PORT_RCVR "$RSYSLOG_DYNNAME.rcvr_port"
 #export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 global( defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"

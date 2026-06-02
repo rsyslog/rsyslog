@@ -25,7 +25,7 @@ ruleset(name="kafka") {
 }
 
 if prifilt("local4.*") then
-	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
+	action( type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt" )
 else
 	action( type="omfile" file="'$RSYSLOG_OUT_LOG.syslog.log'" template="outfmt" )
 '

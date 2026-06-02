@@ -47,7 +47,7 @@ LABEL org.opencontainers.image.revision="${VCS_REF}"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional rsyslog modules/packages specific to the collector's role.
-RUN apt-get update && \
+RUN apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
         rsyslog-omhttp \
@@ -71,6 +71,8 @@ ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
 ENV ENABLE_RELP=on
 ENV ENABLE_VESPA=on
+ENV VESPA_USE_HTTPS=on
+ENV VESPA_ALLOW_UNSIGNED_CERTS=off
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=collector

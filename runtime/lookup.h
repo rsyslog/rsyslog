@@ -85,7 +85,14 @@ struct lookup_ref_s {
     pthread_t reloader;
     pthread_attr_t reloader_thd_attr;
     uchar *stub_value_for_reload_failure;
+    uint8_t rwlock_initialized;
+    uint8_t reloader_mut_initialized;
+    uint8_t run_reloader_initialized;
+    uint8_t reloader_attr_initialized;
+    uint8_t reloader_started;
     uint8_t do_reload;
+    /* Set after do_reload is consumed until the table swap is complete. */
+    uint8_t is_reloading;
     uint8_t do_stop;
     uint8_t reload_on_hup;
 };
@@ -119,6 +126,7 @@ void lookupInitCnf(lookup_tables_t *lu_tabs);
 rsRetVal lookupTableDefProcessCnf(struct cnfobj *o);
 lookup_ref_t *lookupFindTable(uchar *name);
 es_str_t *lookupKey(lookup_ref_t *pThis, lookup_key_t key);
+es_str_t *lookupKeyLocked(lookup_ref_t *pThis, lookup_key_t key);
 void lookupDestroyCnf(void);
 void lookupClassExit(void);
 void lookupDoHUP(void);

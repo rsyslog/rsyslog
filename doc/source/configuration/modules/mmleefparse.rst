@@ -1,9 +1,12 @@
 .. _ref-mmleefparse:
 
-LEEF Structured Content Extraction Module (mmleefparse)
-=======================================================
+******************************************************
+mmleefparse: LEEF Structured Content Extraction Module
+******************************************************
 
-**Module Name:**            **mmleefparse**
+================  ===========================================================================
+**Module Name:**  **mmleefparse**
+================  ===========================================================================
 
 Purpose
 =======
@@ -25,9 +28,9 @@ Parsing Result
 The module stores the extracted data under the configured container (default
 ``$!``).  Two JSON objects are created:
 
-* ``header`` – contains the LEEF metadata: protocol version, vendor, product,
+* ``header`` - contains the LEEF metadata: protocol version, vendor, product,
   product version, and event identifier.
-* ``fields`` – contains all key/value pairs from the extension section.  Empty
+* ``fields`` - contains all key/value pairs from the extension section.  Empty
   values are preserved as empty strings.  Elements such as descriptions or
   severities are represented as regular fields (for example ``EventName=``
   or ``sev=``) when present in the payload.
@@ -41,7 +44,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------

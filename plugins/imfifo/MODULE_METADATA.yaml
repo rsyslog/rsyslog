@@ -1,0 +1,11 @@
+support_status: core-supported
+maturity_level: fresh
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-05-24
+build_dependencies: []
+runtime_dependencies: []
+ci_targets: []
+documentation:
+  - "doc/source/configuration/modules/imfifo.rst"
+notes: |-
+  Reads log messages line-by-line from local POSIX named pipes (FIFOs).

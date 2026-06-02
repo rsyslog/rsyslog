@@ -9,7 +9,7 @@
  * -d may be specified, in which case duplicate messages are permitted.
  * -m number of messages permitted to be missing without triggering a
  *    failure. This is necessary for some failover tests, where it is
- *    impossible to totally guard against messagt loss. By default, NO
+ *    impossible to totally guard against message loss. By default, NO
  *    message is permitted to be lost.
  * -T anticipate truncation (which means specified payload length may be
  *    more than actual payload (which may have been truncated)
@@ -51,7 +51,7 @@
 
 int main(int argc, char *argv[]) {
     FILE *fp;
-    int val;
+    int val = -1;
     int i;
     int ret = 0;
     int scanfOK;
@@ -64,9 +64,9 @@ int main(int argc, char *argv[]) {
     int lostok = 0; /* how many messages are OK to be lost? */
     int nDups = 0;
     int increment = 1;
-    int reachedEOF;
+    int reachedEOF = 0;
     int edLen; /* length of extra data */
-    static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the save side...) */
+    static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the safe side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
     char extraFmt[64];
     char *file = NULL;
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                 break;
             default:
                 printf("Invalid call of chkseq, optchar='%c'\n", opt);
-                printf("Usage: chkseq file -sstart -eend -d -E\n");
+                printf("Usage: chkseq -f<file> -s<start> -e<end> [-d] [-E] [-T] [-v] [-m<lostok>] [-i<increment>]\n");
                 exit(1);
         }
     }
@@ -163,13 +163,21 @@ int main(int argc, char *argv[]) {
             }
         }
         if (!scanfOK) {
+            if (feof(fp) && lostok > 0) {
+                while (i <= end && lostok > 0) {
+                    --lostok;
+                    printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
+                    i += increment;
+                }
+                if (i > end) break;
+            }
             printf("scanf error in index i=%d\n", i);
             exit(1);
         }
         while (val > i && lostok > 0) {
             --lostok;
             printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
-            ++i;
+            i += increment;
         }
         if (val != i) {
             if (val == i - increment && dupsPermitted) {
@@ -233,8 +241,8 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                if (val != i) {
-                    reachedEOF = 0;
+                if (!scanfOK || val != i) {
+                    reachedEOF = !scanfOK && feof(fp);
                     goto breakIF;
                 }
             }

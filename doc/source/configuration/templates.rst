@@ -247,6 +247,8 @@ For modern JSON pipelines, prefer custom list or subtree templates.
      - High-precision forwarding format
    * - RSYSLOG_SyslogProtocol23Format
      - Format from IETF draft syslog-protocol-23
+   * - RSYSLOG_SyslogRFC5424Format
+     - RFC 5424 syslog format without trailing line feed
    * - RSYSLOG_DebugFormat
      - Troubleshooting format listing all properties
    * - RSYSLOG_WallFmt
@@ -259,8 +261,6 @@ For modern JSON pipelines, prefer custom list or subtree templates.
      - Insert command for PostgreSQL
    * - RSYSLOG_spoofadr
      - Sender IP address only
-   * - RSYSLOG_StdJSONFmt
-     - JSON structure of message properties
 
 
 Legacy ``$template`` statement

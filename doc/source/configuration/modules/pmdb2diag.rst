@@ -1,6 +1,6 @@
-**************************************
-pmdb2diag: DB2 Diag file parser module
-**************************************
+*******************************
+pmdb2diag: DB2 Diag file parser
+*******************************
 
 ===========================  ===========================================================================
 **Module Name:**             **pmdb2diag**
@@ -11,25 +11,31 @@ pmdb2diag: DB2 Diag file parser module
 Purpose
 =======
 
-The objective of this module is to extract timestamp, procid and appname form the log
-lines without altering it
+The objective of this module is to extract ``timestamp``, ``procid`` and
+``appname`` from the log lines without altering it.
 
-The parser is acting after an imfile input. This implies that imfile must be configured
-with needParse to set to on.
+The parser is acting after an ``imfile`` input. This implies that ``imfile``
+must be configured with ``needParse`` set to ``on``.
 
 Compile
 =======
 
 To successfully compile pmdb2diag module you need to add it via configure.
 
-    ./configure --enable-pmdb2diag ...
+.. code-block:: none
+
+   ./configure --enable-pmdb2diag ...
 
 Configuration Parameters
 ========================
 
-**Parser Name:** "db2.diag"
+.. note::
 
-The default value of parameter are defined with escapeLF on in imfile.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+Parser Parameters
+-----------------
 
 timeformat
 ^^^^^^^^^^
@@ -79,13 +85,17 @@ pidstarttoprogstartshift
 
 Position of the prog related to the pid (form beginning to beginning) in the db2 diag log.
 
+
+Default Parser Name
+===================
+
+Default parser name is ``db2.diag``.
+
 Examples
 ========
 
-Example 1
-^^^^^^^^^
-
-This is the simplest parsing with default values
+Simple parsing with default values
+----------------------------------
 
 .. code-block:: none
 
@@ -93,28 +103,27 @@ This is the simplest parsing with default values
     ruleset(name="ruleDB2" parser="db2.diag") {
         ... do something
     }
-    input(type="imfile" file="db2diag.log" ruleset="ruleDB2" tag="db2diag" 
+    input(type="imfile" file="db2diag.log" ruleset="ruleDB2" tag="db2diag"
         startmsg.regex="^[0-9]{4}-[0-9]{2}-[0-9]{2}" escapelf="on" needparse="on")
 
 
-Example 2
-^^^^^^^^^
-
 Parsing with custom values
+--------------------------
 
 .. code-block:: none
 
     module(load="pmdb2diag")
-    parser(type="pmdb2diag" name="custom.db2.diag" levelpos="57" 
+    parser(type="pmdb2diag" name="custom.db2.diag" levelpos="57"
         timeformat=""%y-%m-%d:%H.%M.%S.")
     ruleset(name="ruleDB2" parser="custom.db2.diag") {
         ... do something
     }
-    input(type="imfile" file="db2diag.log" ruleset="ruleDB2" tag="db2diag" 
+    input(type="imfile" file="db2diag.log" ruleset="ruleDB2" tag="db2diag"
         startmsg.regex="^[0-9]{4}-[0-9]{2}-[0-9]{2}" escapelf="on" needparse="on")
 
+
 DB2 Log sample
-^^^^^^^^^^^^^^
+--------------
 
 .. code-block:: none
 

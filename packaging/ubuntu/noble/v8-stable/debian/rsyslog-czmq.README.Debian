@@ -1,0 +1,64 @@
+How to use rsyslog and CZMQ
+===========================
+
+Starting with version 8.6.0, rsyslog comes with output and input modules named
+"imczmq" and "omczmq", allowing one to publish log messages via the ZeroMQ
+protocol. More information about the protocol can be found on the website
+http://zeromq.org/
+
+Example configurations, taken from rsyslog upstream, follow.
+
+-------------------------------------------------------------------------------
+module(load="imczmq")
+
+input(
+	type="imczmq"
+	endpoints="tcp://*:24555"
+	topics="topic1,topic2,topic3"
+	socktype="PULL"
+	authtype="CURVESERVER"
+	clientcertpath="/etc/curve.d/"
+	servercertpath="/etc/curve.d/example_curve_server_cert"
+)
+-------------------------------------------------------------------------------
+
+Explanation of options:
+
+type: type of action (imczmq for this plugin)
+endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
+socktype: zeromq socket type (currently supports PULL and SUB)
+authtype: CURVECLIENT or CURVESERVER
+clientcertpath:
+	if CURVECLIENT, this client's cert
+	if CURVESERVER, "*" for all, or a directory of allowed public certs
+servercertpath:
+	if CURVECLIENT, the servers public cert you wish to connect to
+	if CURVESERVER, this servers cert
+
+-------------------------------------------------------------------------------
+module(load="omczmq")
+
+action(
+	name="curve_server_socket"
+	type="omczmq"
+	endpoints="tcp://some.server.com:24445"
+	socktype="PUSH"
+	authtype="CURVECLIENT"
+	clientcertpath="/etc/curve.d/example_curve_client_cert"
+	servercertpath="/etc/curve.d/example_curve_server_cert"
+)
+-------------------------------------------------------------------------------
+
+Explanation of options:
+
+name: name of this action
+type: type of action (omczmq for this plugin)
+endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
+socktype: zeromq socket type (currently supports PUSH and PUB)
+authtype: CURVECLIENT or CURVESERVER
+clientcertpath:
+	if CURVECLIENT, this client's cert
+	if CURVESERVER, "*" for all, or a directory of allowed public certs
+servercertpath:
+	if CURVECLIENT, the servers public cert you wish to connect to
+	if CURVESERVER, this servers cert

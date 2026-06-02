@@ -43,6 +43,7 @@ RUN	dnf -y install \
 	librabbitmq-devel \
 	libtool \
 	libuuid-devel \
+	libyaml-devel \
 	libzstd-devel \
 	logrotate \
 	lsof \
@@ -62,6 +63,8 @@ RUN	dnf -y install \
 	procps-ng \
 	python3-devel \
 	python3-docutils \
+	python3-autopep8 \
+	python3-pycodestyle \
 	python3-pysnmp \
 	python3-sphinx \
 	protobuf-c \
@@ -299,7 +302,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-usertools \
 	--enable-valgrind \
 	\
-	--enable-compile-warning=error \
+	--enable-compile-warnings=error \
 	--enable-testbench
 
 # build errors at the moment: --enable-kmsg 

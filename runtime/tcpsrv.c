@@ -48,6 +48,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <pthread.h>
@@ -385,13 +386,19 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     CHKmalloc(pEntry = (tcpLstnPortList_t *)calloc(1, sizeof(tcpLstnPortList_t)));
     pEntry->cnf_params = cnf_params;
 
-    strcpy((char *)pEntry->cnf_params->dfltTZ, (char *)pThis->dfltTZ);
+    u_cstr_copy(pEntry->cnf_params->dfltTZ, pThis->dfltTZ, sizeof(pEntry->cnf_params->dfltTZ));
     pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
     pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
     pEntry->pSrv = pThis;
 
 #ifdef FEATURE_REGEXP
     if (cnf_params->pszStartRegex != NULL) {
+        if (glbl.GetMaxLine(runConf) > (INT_MAX - 1) / 2) {
+            LogError(0, RS_RET_ERR,
+                     "imtcp: framing.delimiter.regex requires maxMessageSize <= %d to avoid session buffer overflow",
+                     (INT_MAX - 1) / 2);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
         const int errcode = regexp.regcomp(&pEntry->start_preg, (char *)cnf_params->pszStartRegex, REG_EXTENDED);
         if (errcode != 0) {
             char errbuff[512];
@@ -585,8 +592,12 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         }
 #endif
         freeLstnParams(pEntry->cnf_params);
-        ratelimitDestruct(pEntry->ratelimiter);
-        statsobj.Destruct(&(pEntry->stats));
+        if (pEntry->ratelimiter != NULL) {
+            ratelimitDestruct(pEntry->ratelimiter);
+        }
+        if (pEntry->stats != NULL) {
+            statsobj.Destruct(&(pEntry->stats));
+        }
         pDel = pEntry;
         pEntry = pEntry->pNext;
         free(pDel);
@@ -697,6 +708,7 @@ finalize_it:
 static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
                                           tcpLstnPortList_t *const pLstnInfo,
                                           tcps_sess_t **ppSess,
+                                          int *const piSessIdx,
                                           netstrm_t *pStrm,
                                           char *const connInfo) {
     DEFiRet;
@@ -714,6 +726,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pLstnInfo != NULL);
+    assert(piSessIdx != NULL);
 
     CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
@@ -808,9 +821,8 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     }
 
     *ppSess = pSess;
-#if !defined(ENABLE_IMTCP_EPOLL)
     pThis->pSessions[iSess] = pSess;
-#endif
+    *piSessIdx = iSess;
     pSess = NULL; /* this is now also handed over */
 
     if (pThis->bEmitMsgOnOpen) {
@@ -877,12 +889,11 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     pThis->pOnRegularClose(pSess);
 
     tcps_sess.Destruct(&pSess);
+    pThis->pSessions[pioDescr->id] = NULL;
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
     free(pioDescr);
-#else
-    pThis->pSessions[pioDescr->id] = NULL;
 #endif
     RETiRet;
 }
@@ -1001,6 +1012,7 @@ static rsRetVal ATTR_NONNULL(1)
     while (state == RS_READING || state == RS_STARVATION) {
         switch (state) {
             case RS_READING:
+                /* maxReads==0 is intentional and documented: it disables starvation protection. */
                 while (state == RS_READING && (maxReads == 0 || read_calls < maxReads)) {
                     iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 
@@ -1095,12 +1107,13 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
     tcps_sess_t *pNewSess = NULL;
     tcpsrv_io_descr_t *pDescrNew = NULL;
     const int idx = pioDescr->id;
+    int iSess = -1;
     tcpsrv_t *const pThis = pioDescr->pSrv;
     char connInfo[TCPSRV_CONNINFO_SIZE] = "\0";
     DEFiRet;
 
     DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-    iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx], connInfo);
+    iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, &iSess, pThis->ppLstn[idx], connInfo);
     if (iRet == RS_RET_NO_MORE_DATA) {
         goto no_more_data;
     }
@@ -1110,7 +1123,7 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
         /* pDescrNew is only dyn allocated in epoll mode! */
         CHKmalloc(pDescrNew = (tcpsrv_io_descr_t *)calloc(1, sizeof(tcpsrv_io_descr_t)));
         pDescrNew->pSrv = pThis;
-        pDescrNew->id = idx;
+        pDescrNew->id = iSess;
         pDescrNew->isInError = 0;
         INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
         pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
@@ -1150,14 +1163,18 @@ static rsRetVal ATTR_NONNULL(1)
     doAccept(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
     DEFiRet;
     int bRun = 1;
+#if defined(ENABLE_IMTCP_EPOLL)
     int nAccept = 0;
+#endif
 
     while (bRun) {
         iRet = doSingleAccept(pioDescr);
         if (iRet != RS_RET_OK) {
             bRun = 0;
         }
+#if defined(ENABLE_IMTCP_EPOLL)
         ++nAccept;
+#endif
     }
 #if defined(ENABLE_IMTCP_EPOLL)
     if (pioDescr->pSrv->workQueue.numWrkr > 1) {
@@ -1504,9 +1521,11 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
  */
 static rsRetVal ATTR_NONNULL() processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[]) {
     int i;
-    assert(numEntries > 0);
-    const unsigned numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
+    unsigned numWrkr;
     DEFiRet;
+    assert(numEntries > 0);
+    if (numEntries <= 0 || pioDescr[0] == NULL || pioDescr[0]->pSrv == NULL) return RS_RET_INTERNAL_ERROR;
+    numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
 
     DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
@@ -2007,8 +2026,7 @@ static rsRetVal ATTR_NONNULL(1) SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSiz
 static rsRetVal ATTR_NONNULL(1) SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    strncpy((char *)pThis->dfltTZ, (char *)tz, sizeof(pThis->dfltTZ));
-    pThis->dfltTZ[sizeof(pThis->dfltTZ) - 1] = '\0';
+    u_cstr_copy(pThis->dfltTZ, tz, sizeof(pThis->dfltTZ));
     RETiRet;
 }
 
@@ -2371,7 +2389,9 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+#ifdef FEATURE_REGEXP
     objRelease(regexp, LM_REGEXP_FILENAME);
+#endif
 ENDObjClassExit(tcpsrv)
 
 
@@ -2390,7 +2410,9 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+#ifdef FEATURE_REGEXP
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
+#endif
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

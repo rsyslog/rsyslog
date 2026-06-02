@@ -244,7 +244,7 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
 
     curl_easy_setopt(curl, CURLOPT_URL, pWrkrData->restURL);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, healthCheckMessage);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(healthCheckMessage));
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(healthCheckMessage));
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     res = curl_easy_perform(curl);
 
@@ -275,7 +275,7 @@ ENDtryResume
 /*
  * Dumps entire bulk request and response in error log
  */
-static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, char *reply, uchar *reqmsg, char **rendered) {
+static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, const char *reply, uchar *reqmsg, char **rendered) {
     DEFiRet;
     fjson_object *req = NULL;
     fjson_object *errRoot = NULL;
@@ -288,6 +288,11 @@ static rsRetVal getDataErrorDefault(wrkrInstanceData_t *pWrkrData, char *reply, 
     fjson_object_object_add(errRoot, "request", req);
     fjson_object_object_add(errRoot, "reply", fjson_object_new_string(reply));
     *rendered = strdup((char *)fjson_object_to_json_string(errRoot));
+    if (*rendered == NULL) {
+        fjson_object_put(errRoot);
+        req = NULL;
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
     req = NULL;
     fjson_object_put(errRoot);
@@ -305,7 +310,8 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrData, uchar *const reqmsg) {
     DEFiRet;
     instanceData *pData = pWrkrData->pData;
-    char *rendered = pWrkrData->reply;
+    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
+    char *rendered = NULL;
     size_t toWrite;
     ssize_t wrRet;
 
@@ -326,7 +332,7 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
         }
     }
 
-    if (getDataErrorDefault(pWrkrData, pWrkrData->reply, reqmsg, &rendered) != RS_RET_OK) {
+    if (getDataErrorDefault(pWrkrData, reply, reqmsg, &rendered) != RS_RET_OK) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
@@ -347,22 +353,25 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
     }
 
 finalize_it:
+    free(rendered);
     RETiRet;
 }
 
 
-static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
+static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, const long httpStatus) {
+    const char *const reply = pWrkrData->reply == NULL ? "" : pWrkrData->reply;
     DEFiRet;
 
-    if ((strstr(pWrkrData->reply, " = DB::Exception") != NULL) ||
-        (strstr(pWrkrData->reply, "DB::NetException") != NULL) ||
-        (strstr(pWrkrData->reply, "DB::ParsingException") != NULL)) {
-        dbgprintf("omclickhouse: action failed with error: %s\n", pWrkrData->reply);
+    if (httpStatus >= 400 || strstr(reply, " = DB::Exception") != NULL || strstr(reply, "DB::NetException") != NULL ||
+        strstr(reply, "DB::ParsingException") != NULL) {
+        dbgprintf("omclickhouse: action failed with HTTP status %ld and reply: %s\n", httpStatus, reply);
         iRet = RS_RET_DATAFAIL;
     }
 
     if (iRet == RS_RET_DATAFAIL) {
         STATSCOUNTER_INC(indexFail, mutIndexFail);
+        LogError(0, RS_RET_DATAFAIL, "omclickhouse: ClickHouse request failed with HTTP status %ld: %s", httpStatus,
+                 reply);
         writeDataError(pWrkrData, reqmsg);
         iRet = RS_RET_OK; /* we have handled the problem! */
     }
@@ -405,15 +414,15 @@ finalize_it:
  */
 static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
                                  const uchar *const message,
-                                 char **newMessage) {
+                                 const char **newMessage) {
     size_t r = 0;
-    char *v;
+    const char *v;
     if (pWrkrData->batch.nmemb != 0 && (v = strstr((const char *)message, "VALUES")) != NULL &&
         (v = strchr(v, '(')) != NULL) {
         *newMessage = v;
         r = strlen(*newMessage);
     } else {
-        *newMessage = (char *)message;
+        *newMessage = (const char *)message;
         r = strlen(*newMessage);
     }
     dbgprintf("omclickhouse: computeBulkMessage: new message part: %s\n", *newMessage);
@@ -424,7 +433,7 @@ static size_t computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
 
 /* This method builds the batch, that will be submitted.
  */
-static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, char *message) {
+static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, const char *message) {
     DEFiRet;
     int length = strlen(message);
     int r;
@@ -453,6 +462,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CURLcode code;
     CURL *const curl = pWrkrData->curlPostHandle;
     char errbuf[CURL_ERROR_SIZE] = "";
+    long httpStatus = 0;
     DEFiRet;
 
     if (!strstr((char *)message, "INSERT INTO") && !pWrkrData->insertErrorSent) {
@@ -471,9 +481,10 @@ static rsRetVal ATTR_NONNULL(1, 2)
     CHKiRet(setPostURL(pWrkrData));
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpStatus);
     dbgprintf("curl returned %lld\n", (long long)code);
     if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
@@ -485,17 +496,17 @@ static rsRetVal ATTR_NONNULL(1, 2)
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
-    if (pWrkrData->reply == NULL) {
+    if (pWrkrData->reply == NULL && httpStatus < 400) {
         dbgprintf("omclickhouse: pWrkrData reply==NULL, replyLen = '%d'\n", pWrkrData->replyLen);
         STATSCOUNTER_INC(indexSuccess, mutIndexSuccess);
     } else {
         dbgprintf("omclickhouse: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
-        if (pWrkrData->replyLen > 0) {
+        if (pWrkrData->reply != NULL && pWrkrData->replyLen > 0) {
             pWrkrData->reply[pWrkrData->replyLen] = '\0';
             /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
         }
-        dbgprintf("omclickhouse: pWrkrData reply: '%s'\n", pWrkrData->reply);
-        CHKiRet(checkResult(pWrkrData, message));
+        dbgprintf("omclickhouse: pWrkrData reply: '%s'\n", pWrkrData->reply == NULL ? "" : pWrkrData->reply);
+        CHKiRet(checkResult(pWrkrData, message, httpStatus));
     }
 
 finalize_it:
@@ -532,7 +543,7 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-    char *batchPart = NULL;
+    const char *batchPart = NULL;
     CODESTARTdoAction;
     dbgprintf("CODESTARTdoAction: entered\n");
     STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
@@ -550,7 +561,7 @@ BEGINdoAction
                 pWrkrData->batch.nmemb);
             CHKiRet(submitBatch(pWrkrData));
             initializeBatch(pWrkrData);
-            batchPart = (char *)ppString[0];
+            batchPart = (const char *)ppString[0];
         }
 
         CHKiRet(buildBatch(pWrkrData, batchPart));
@@ -586,7 +597,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->authBuf = NULL;
     pData->tplName = NULL;
     pData->useHttps = 1;
-    pData->allowUnsignedCerts = 1;
+    pData->allowUnsignedCerts = 0;
     pData->skipVerifyHost = 0;
     pData->errorFile = NULL;
     pData->bulkmode = 1;
@@ -615,11 +626,11 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
 
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
     if (pWrkrData->pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -768,19 +779,19 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "server")) {
-            server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             pData->port = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "user")) {
-            pData->user = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->user = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-            pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
             pData->healthCheckTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "timeout")) {
             pData->timeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "usehttps")) {
             pData->useHttps = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
@@ -788,13 +799,13 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
             pData->skipVerifyHost = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "bulkmode")) {
             pData->bulkmode = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "maxbytes")) {
             pData->maxbytes = (size_t)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -805,7 +816,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -816,7 +827,7 @@ BEGINnewActInst
                 fclose(fp);
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));

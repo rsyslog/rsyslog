@@ -1,0 +1,26 @@
+How to use rsyslog and Apache Kafka
+===================================
+
+Starting with version 8.7.0, rsyslog comes with an output module named
+“omkafka”, allowing to publish log messages to an Apache Kafka message broker.
+
+Apache Kafka isn't part of the Debian archive, and documenting how to set it up
+is out of the scope of this document. Fortunately, setting up a single-node
+Kafka service is quite easy. The following instructions should be enough to get
+started: https://kafka.apache.org/documentation.html#quickstart
+
+At this point, you'll have to alter your rsyslog configuration, typically by
+adding the following lines to rsyslog.conf (or to a separate files such as
+/etc/rsyslog.d/kafka.conf, which will be included by the main config file):
+
+ module(load="omkafka")
+ *.* action(type="omkafka" topic="test")
+
+Don't forget to restart the rsyslogd daemon, and make sure the “topic”
+parameter matches one of the topics in Kafka. You should then be able to start
+consuming the logs stored in Kafka with the consumer of your choice. A trivial
+consumer comes with the Kafka server installation.
+
+The full configuration details of this module, are found in the following file
+(which is part of the rsyslog-doc package):
+/usr/share/doc/rsyslog-doc/html/configuration/modules/omkafka.html

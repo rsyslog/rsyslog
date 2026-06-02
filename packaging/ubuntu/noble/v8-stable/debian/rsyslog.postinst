@@ -1,0 +1,71 @@
+#!/bin/sh
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <postinst> `abort-remove'
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+case "$1" in
+    configure)
+	adduser --system --group --no-create-home --quiet syslog || true
+	adduser syslog adm || true
+
+	# Fix permissions of the spool/work directory (Bug: #693099)
+	chmod 700 /var/spool/rsyslog
+
+	# fix ownership of work directory (LP: #1075901)
+	chown syslog:adm /var/spool/rsyslog
+
+	# ensure that rsyslogd can create log files after dropping
+	# privileges
+	chgrp syslog /var/log
+	chmod g+w /var/log
+
+	user_conf=/etc/rsyslog.d/50-default.conf
+	default_conf=/usr/share/rsyslog/50-default.conf
+
+	ucf --three-way --debconf-ok $default_conf $user_conf
+	ucfr rsyslog $user_conf
+
+	if which systemd-tmpfiles >/dev/null
+	then
+	    systemd-tmpfiles --create /usr/lib/tmpfiles.d/00rsyslog.conf || true
+	fi
+
+	if dpkg --compare-versions "$2" lt-nl "8.2110.0-2"; then
+		update-rc.d -f rsyslog remove || true
+	fi
+
+	if dpkg --compare-versions "$2" lt-nl "8.2210.0-3ubuntu2~"; then
+	    # In this version we removed the disabling of the rsyslog apparmor
+	    # profile, i.e., it's enabled by default.  Gate on it to avoid
+	    # re-enabling it if the user has explicitly disabled it afterwards.
+	    rm -f /etc/apparmor.d/disable/usr.sbin.rsyslogd
+	fi
+    ;;
+
+    triggered)
+	# Try to restart rsyslog
+	invoke-rc.d rsyslog try-restart || true
+	exit 0
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+    ;;
+esac
+
+#DEBHELPER#

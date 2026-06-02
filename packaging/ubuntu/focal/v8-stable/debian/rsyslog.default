@@ -1,0 +1,8 @@
+# Options for rsyslogd
+# -m 0 disables 'MARK' messages (deprecated, only used in compat mode < 3)
+# -r enables logging from remote machines (deprecated, only used in compat mode < 3)
+# -x disables DNS lookups on messages received with -r
+# -c compatibility mode
+# See rsyslogd(8) for more details
+RSYSLOGD_OPTIONS="-c5"
+

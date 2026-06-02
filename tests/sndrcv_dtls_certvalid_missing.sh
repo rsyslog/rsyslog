@@ -1,6 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify cert-valid DTLS behavior when the sender lacks a usable certificate.
+# The receiver output must stay empty after the rejected handshake.
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 export NUMMESSAGES=1
 # export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
@@ -8,7 +11,7 @@ export NUMMESSAGES=1
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imdtls.port"
 
 add_conf '
 global(
@@ -18,7 +21,8 @@ global(
 
 module(	load="../plugins/imdtls/.libs/imdtls" )
 input(	type="imdtls"
-	port="'$PORT_RCVR'"
+	port="0"
+	listenPortFileName="'$PORT_RCVR_FILE'"
 	tls.cacert="'$srcdir'/tls-certs/ca.pem"
 	tls.mycert="'$srcdir'/tls-certs/cert.pem"
 	tls.myprivkey="'$srcdir'/tls-certs/key.pem"
@@ -28,6 +32,7 @@ input(	type="imdtls"
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
@@ -43,7 +48,6 @@ global(
 module(load="../plugins/impstats/.libs/impstats"
 	log.file="'$RSYSLOG_DYNNAME.pstats'"
 	interval="1" log.syslog="off")
-$imdiagInjectDelayMode full
 
 # Load modules
 module(	load="../plugins/omdtls/.libs/omdtls" )

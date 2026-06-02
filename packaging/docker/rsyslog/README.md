@@ -19,9 +19,30 @@ The script reads credentials from `DOCKERHUB_USERNAME` /
 `DOCKERHUB_PASSWORD` or the local `~/.docker/config.json` and defaults
 to a dry run.
 
+## Inherited noise filter
+
+The minimal image ships an empty regex lookup table at
+`/etc/rsyslog/noise-drop.lkp_tbl` and a default filter snippet in
+`/etc/rsyslog.d/02-noise-drop.conf`. All derived images inherit this
+filter. Operators can mount or replace the lookup table with native
+rsyslog lookup-table JSON:
+
+```json
+{ "version": 1, "nomatch": "", "type": "regex", "table": [
+  { "regex": "healthcheck succeeded", "tag": "drop" }
+] }
+```
+
+The default filter matches `$rawmsg`, which is the most robust property
+for source-side filtering because it includes the full received event.
+Any non-empty tag returned by the lookup table causes rsyslog to `stop`
+processing that event. Replace the filter snippet if a deployment needs
+to match another property such as `$msg`.
+
 ## Version and tag contract
 
-Local builds default to a non-release tag on purpose:
+Local builds default to a non-release tag on purpose and use the stable
+Adiscon PPA by default:
 
 ```bash
 make all
@@ -40,6 +61,13 @@ make all VERSION=2026-03
 The build system treats `VERSION` as the source of truth for image tags.
 Release automation must pass the intended stable version explicitly
 instead of relying on the Makefile default.
+
+To build against the daily package stream instead of stable, pass the
+channel explicitly:
+
+```bash
+make all PPA_CHANNEL=daily-stable
+```
 
 Stable container tags are expected to follow the rsyslog release train:
 
@@ -65,6 +93,19 @@ Valid publishing examples:
 ```bash
 make VERSION=2026-03 all_push
 make VERSION=2026-03 push_latest
+```
+
+The plain Makefile push targets above are single-platform compatibility
+targets. The manual release push and publish targets use Docker Buildx and
+publish multi-platform manifests by default for:
+
+- `linux/amd64`
+- `linux/arm64`
+
+Override the release platform list only when needed:
+
+```bash
+./release-images.sh publish --rsyslog-version 8.2604.0 --platforms linux/amd64,linux/arm64
 ```
 
 ## PPA readiness comes first
@@ -111,12 +152,16 @@ modify the host system's apt sources.
 
 ## Manual release flow
 
+For release-tagged builds and pushes, prefer the wrapper script in this
+directory. It uses the stable channel by default and exposes explicit
+long options for channel selection.
+
 1. Determine the container tag from the rsyslog release tag.
    Example: `8.2602.0` and `v.26-02.0` both map to `2026-02`.
 2. Verify PPA readiness:
 
 ```bash
-make check_ppa_release_ready RSYSLOG_VERSION=8.2602.0
+./release-images.sh check --rsyslog-version 8.2602.0
 ```
 
 This looks up the newest `8.2602.0-*` package published in the Adiscon
@@ -126,30 +171,51 @@ early. If subpackages are still missing, the actual image build fails.
 3. Build the release-tagged image family:
 
 ```bash
-make release_build RSYSLOG_VERSION=8.2602.0
+./release-images.sh build --rsyslog-version 8.2602.0
 ```
 
-4. Push the release-tagged images:
+4. Push the release-tagged images as multi-platform manifests:
 
 ```bash
-make release_push RSYSLOG_VERSION=8.2602.0
+./release-images.sh push --rsyslog-version 8.2602.0
 ```
+
+This publishes the five image variants for `linux/amd64,linux/arm64`
+by default. Derived images are pushed after their base images so Buildx
+can resolve the correct platform-specific base layers from Docker Hub.
 
 5. Update `latest` only when that is intended:
 
 ```bash
-make release_publish RSYSLOG_VERSION=8.2602.0 PUSH_LATEST=yes
+./release-images.sh publish --rsyslog-version 8.2602.0 --latest
 ```
 
 If `PUSH_LATEST` is not set to `yes`, `release_publish` pushes only the
-versioned images and leaves `latest` unchanged.
+versioned images and leaves `latest` unchanged. When `latest` is enabled,
+the manifest tags are created from the already-pushed versioned manifests
+instead of retagging local single-platform images.
+
+To override the default release platforms:
+
+```bash
+./release-images.sh publish --rsyslog-version 8.2604.0 --platforms linux/amd64,linux/arm64
+```
 
 For the daily channel:
 
 ```bash
-make check_ppa_release_ready RELEASE_CHANNEL=daily-stable
-make release_build RELEASE_CHANNEL=daily-stable
-make release_push RELEASE_CHANNEL=daily-stable
+./release-images.sh check --daily
+./release-images.sh build --daily
+./release-images.sh push --daily
+```
+
+The underlying Makefile targets remain available when needed:
+
+```bash
+make check_ppa_release_ready RSYSLOG_VERSION=8.2602.0
+make release_build RSYSLOG_VERSION=8.2602.0
+make release_push RSYSLOG_VERSION=8.2602.0
+make all PPA_CHANNEL=daily-stable VERSION=ci-example
 ```
 
 ## CI guidance
@@ -157,3 +223,6 @@ make release_push RELEASE_CHANNEL=daily-stable
 CI validation jobs should use non-release tags such as `ci-<sha>`.
 Release publishing jobs should inject the stable release version
 explicitly, for example `VERSION=2026-03`.
+
+Container CI should validate Dockerfile buildability without publishing.
+Release publishing remains a manual PPA-gated operation.

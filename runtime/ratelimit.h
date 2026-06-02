@@ -23,6 +23,7 @@
 
 #include <stddef.h>
 #include "rsyslog.h"
+#include "rswatch.h"
 #include "statsobj.h"
 
 struct hashtable;
@@ -34,8 +35,12 @@ typedef struct ratelimit_shared_s {
     char *name;
     unsigned int interval;
     unsigned int burst;
-    intTiny severity;
+    int severity;
     char *policy_file;
+    sbool policy_watch;
+    unsigned int policy_watch_debounce_ms;
+    rswatch_handle_t *policy_watch_handle;
+    rswatch_handle_t *per_source_policy_watch_handle;
     pthread_mutex_t mut;
     sbool per_source_enabled;
     char *per_source_policy_file;
@@ -80,6 +85,7 @@ struct ratelimit_s {
     smsg_t *pMsg;
     sbool bThreadSafe; /**< do we need to operate in Thread-Safe mode? */
     sbool bNoTimeCache; /**< if we shall not used cached reception time */
+    sbool bMutInitialized; /**< if mut has been initialized */
     pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
@@ -97,8 +103,10 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *name,
                             unsigned int interval,
                             unsigned int burst,
-                            intTiny severity,
+                            int severity,
                             const char *policy_file,
+                            sbool policy_watch,
+                            const char *policy_watch_debounce,
                             sbool per_source_enabled,
                             const char *per_source_policy_file,
                             const char *per_source_key_tpl_name,
@@ -109,7 +117,7 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst);
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
-void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
+void ratelimitSetSeverity(ratelimit_t *ratelimit, int severity);
 rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
 rsRetVal ATTR_NONNULL(1, 2, 3) ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
 rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);

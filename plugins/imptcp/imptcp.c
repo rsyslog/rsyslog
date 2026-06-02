@@ -50,7 +50,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/epoll.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <netinet/tcp.h>
 #include <stdint.h>
 #include <zlib.h>
@@ -78,6 +78,7 @@
 #include "statsobj.h"
 #include "ratelimit.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "atomic.h"
 
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
@@ -101,7 +102,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #if EAGAIN == EWOULDBLOCK
     #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN)
 #else
-    #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN | errno == EWOULDBLOCK)
+    #define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN || errno == EWOULDBLOCK)
 #endif /* #if EAGAIN == EWOULDBOLOCK */
 
 #define DFLT_wrkrMax 2
@@ -111,6 +112,14 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) D
 #define COMPRESS_SINGLE_MSG 1 /* old, single-message compression */
 /* all other settings are for stream-compression */
 #define COMPRESS_STREAM_ALWAYS 2
+/* auto-detect: sniff first 2 bytes of session, lock-in afterwards.
+ * Used when a single listener must accept both compressed and plain
+ * peers (typical for staged client roll-outs). After detection the
+ * per-session compressionMode is rewritten to either COMPRESS_STREAM_ALWAYS
+ * or COMPRESS_NEVER so the hot path stays branch-free.
+ */
+#define COMPRESS_STREAM_AUTO 3
+#define COMPRESS_AUTO_SNIFF_BYTES 2
 
 /* config settings */
 typedef struct configSettings_s {
@@ -285,15 +294,22 @@ struct ptcpsess_s {
     ptcpsess_t *prev, *next;
     int sock;
     epolld_t *epd;
+    int bWorkQueued; /* protects against concurrent helper work on this session */
+    DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
+    sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
+    uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
+    uint8_t compressionAutoDetectLen; /* bytes buffered for sniffing (0..COMPRESS_AUTO_SNIFF_BYTES) */
+    uchar compressionAutoDetectBuf[COMPRESS_AUTO_SNIFF_BYTES];
     int iMsg; /* index of next char to store in msg */
     int iCurrLine; /* 2nd char of current line in regex framing mode */
     int bAtStrtOfFram; /* are we at the very beginning of a new frame? */
     sbool bSuppOctetFram; /**< copy from listener, to speed up access */
     sbool bSPFramingFix;
     enum { eAtStrtFram, eInOctetCnt, eInMsg, eInMsgTruncation } inputState; /* our current state */
+    sbool bFrameOversize; /* current frame exceeded maxMessageSize before submit */
     int iOctetsRemain; /* Number of Octets remaining in message */
     TCPFRAMINGMODE eFraming;
     uchar *pMsg; /* message (fragment) received */
@@ -322,6 +338,7 @@ struct ptcplstn_s {
     STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
     STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
     DEF_ATOMIC_HELPER_MUT64(mut_rcvdBytes);
+    DEF_ATOMIC_HELPER_MUT64(mut_rcvdDecompressed);
 };
 
 
@@ -393,6 +410,7 @@ static void ATTR_NONNULL() destructSess(ptcpsess_t *const pSess) {
     free(pSess->pMsg);
     prop.Destruct(&pSess->peerName);
     prop.Destruct(&pSess->peerIP);
+    DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
     /* TODO: make these inits compile-time switch depending: */
     pSess->pMsg = NULL;
     free(pSess);
@@ -446,8 +464,9 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
     }
 
+    memset(&local, 0, sizeof(local));
     local.sun_family = AF_UNIX;
-    strncpy(local.sun_path, (char *)path, sizeof(local.sun_path) - 1);
+    rs_cstr_copy(local.sun_path, (const char *)path, sizeof(local.sun_path));
     if (pSrv->bUnlink) {
         unlink(local.sun_path);
     }
@@ -731,10 +750,17 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
     *peerIP = NULL;
 
     if (bUXServer) {
-        strncpy((char *)szHname, (char *)glbl.GetLocalHostName(), NI_MAXHOST);
-        strncpy((char *)szIP, (char *)glbl.GetLocalHostIP(), NI_MAXHOST);
-        szHname[NI_MAXHOST] = '\0';
-        szIP[NI_MAXHOST] = '\0';
+        const uchar *lhName = glbl.GetLocalHostName();
+        prop_t *lhIP_prop = glbl.GetLocalHostIP();
+        const uchar *lhIP = (lhIP_prop != NULL) ? propGetSzStr(lhIP_prop) : NULL;
+        const size_t hname_src_len = lhName ? strlen((const char *)lhName) : 9;
+        const size_t ip_src_len = lhIP ? strlen((const char *)lhIP) : 9;
+        const size_t hname_len = hname_src_len < NI_MAXHOST ? hname_src_len : NI_MAXHOST;
+        const size_t ip_len = ip_src_len < NI_MAXHOST ? ip_src_len : NI_MAXHOST;
+        memcpy(szHname, lhName ? lhName : (const uchar *)"localhost", hname_len);
+        memcpy(szIP, lhIP ? lhIP : (const uchar *)"127.0.0.1", ip_len);
+        szHname[hname_len] = '\0';
+        szIP[ip_len] = '\0';
     } else {
         error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if (error) {
@@ -762,10 +788,10 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
                     bMaliciousHName = 1;
                 }
             } else {
-                strcpy((char *)szHname, (char *)szIP);
+                u_cstr_copy(szHname, szIP, sizeof(szHname));
             }
         } else {
-            strcpy((char *)szHname, (char *)szIP);
+            u_cstr_copy(szHname, szIP, sizeof(szHname));
         }
     }
 
@@ -945,6 +971,7 @@ finalize_it:
 static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub) {
     smsg_t *pMsg;
     ptcpsrv_t *pSrv;
+    rsRetVal localRet;
     DEFiRet;
 
     if (pThis->iMsg == 0) {
@@ -964,14 +991,25 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
     MsgSetRuleset(pMsg, pSrv->pRuleset);
-    STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
-
-    ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    if (pThis->bFrameOversize) {
+        writeOversizeMessageLog(pMsg);
+    }
+    localRet = ratelimitAddMsg(pSrv->ratelimiter, pMultiSub, pMsg);
+    if (localRet == RS_RET_OK) {
+        STATSCOUNTER_INC(pThis->pLstn->ctrSubmit, pThis->pLstn->mutCtrSubmit);
+    } else if (localRet == RS_RET_DISCARDMSG) {
+        DBGPRINTF("imptcp: message discarded by ratelimit helper\n");
+        iRet = RS_RET_OK;
+    } else {
+        DBGPRINTF("imptcp: ratelimit helper returned error %d, continuing\n", localRet);
+        iRet = RS_RET_OK;
+    }
 
 finalize_it:
     /* reset status variables */
     pThis->bAtStrtOfFram = 1;
     pThis->iMsg = 0;
+    pThis->bFrameOversize = 0;
 
     RETiRet;
 }
@@ -1013,13 +1051,13 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(ptcpsess_t *const __
         const int isMatch = !regexec(&inst->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
         if (isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
-            strcpy((char *)pThis->pMsg_save, (char *)pThis->pMsg + pThis->iCurrLine);
+            memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, ustrlen(pThis->pMsg + pThis->iCurrLine) + 1);
             pThis->iMsg = pThis->iCurrLine - 1;
 
             doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
             ++(*pnMsgs);
 
-            strcpy((char *)pThis->pMsg, (char *)pThis->pMsg_save);
+            memmove(pThis->pMsg, pThis->pMsg_save, ustrlen(pThis->pMsg_save) + 1);
             pThis->iMsg = ustrlen(pThis->pMsg_save);
             pThis->iCurrLine = 1;
         }
@@ -1055,6 +1093,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
     if (pThis->inputState == eAtStrtFram) {
         if (pThis->bSuppOctetFram && isdigit((int)c)) {
             pThis->inputState = eInOctetCnt;
+            pThis->bFrameOversize = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (pThis->bSPFramingFix && c == ' ') {
@@ -1066,6 +1105,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
             FINALIZE;
         } else {
             pThis->inputState = eInMsg;
+            pThis->bFrameOversize = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -1101,6 +1141,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                          propPeerName, propPeerIP, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > iMaxLine) {
+                pThis->bFrameOversize = 1;
                 /* while we can not do anything against it, we can at least log an indication
                  * that something went wrong) -- rgerhards, 2008-03-14
                  */
@@ -1131,6 +1172,8 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
         assert(pThis->inputState == eInMsg);
         if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
             int iMsg = pThis->iMsg; /* cache value for faster access */
+            const sbool isFrameDelim = (c == '\n') || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) &&
+                                                       (c == pThis->iAddtlFrameDelim));
             if (iMsg >= iMaxLine) {
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 int i = 1;
@@ -1144,11 +1187,14 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                          "imptcp %s: message received is at least %d byte larger than "
                          "max msg size; message will be split starting at: \"%.*s\"\n",
                          pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
+                pThis->bFrameOversize = 1;
                 doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
                 iMsg = 0;
                 ++(*pnMsgs);
                 if (pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
-                    pThis->inputState = eInMsgTruncation;
+                    pThis->inputState = isFrameDelim ? eAtStrtFram : eInMsgTruncation;
+                    pThis->iMsg = iMsg;
+                    FINALIZE;
                 }
                 /* we might think if it is better to ignore the rest of the
                  * message than to treat it as a new one. Maybe this is a good
@@ -1156,8 +1202,7 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
                  * rgerhards, 2006-12-04
                  */
             }
-            if ((c == '\n') || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) &&
-                                (c == pThis->iAddtlFrameDelim))) { /* record delimiter? */
+            if (isFrameDelim) { /* record delimiter? */
                 if (pThis->pLstn->pSrv->multiLine) {
                     if ((buffLen == 1) || ((*buff)[1] == '<')) {
                         doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
@@ -1193,7 +1238,10 @@ static rsRetVal ATTR_NONNULL(1, 2) processDataRcvd(ptcpsess_t *const __restrict_
             if (buffLen < octetsToCopy) {
                 octetsToCopy = buffLen;
             }
-            if (octetsToCopy + pThis->iMsg > iMaxLine) {
+            if (pThis->iMsg >= iMaxLine) {
+                octetsToDiscard = octetsToCopy;
+                octetsToCopy = 0;
+            } else if (octetsToCopy + pThis->iMsg > iMaxLine) {
                 octetsToDiscard = octetsToCopy - (iMaxLine - pThis->iMsg);
                 octetsToCopy = iMaxLine - pThis->iMsg;
             }
@@ -1263,6 +1311,38 @@ finalize_it:
     RETiRet;
 }
 
+static const char *zlibRetName(const int zRet) {
+    switch (zRet) {
+        case Z_OK:
+            return "Z_OK";
+        case Z_STREAM_END:
+            return "Z_STREAM_END";
+        case Z_NEED_DICT:
+            return "Z_NEED_DICT";
+        case Z_ERRNO:
+            return "Z_ERRNO";
+        case Z_STREAM_ERROR:
+            return "Z_STREAM_ERROR";
+        case Z_DATA_ERROR:
+            return "Z_DATA_ERROR";
+        case Z_MEM_ERROR:
+            return "Z_MEM_ERROR";
+        case Z_BUF_ERROR:
+            return "Z_BUF_ERROR";
+        case Z_VERSION_ERROR:
+            return "Z_VERSION_ERROR";
+        default:
+            return "Z_UNKNOWN";
+    }
+}
+
+static rsRetVal logCompressedStreamFailure(ptcpsess_t *const pThis, const char *const failure, const int zRet) {
+    LogError(0, RS_RET_ZLIB_ERR, "imptcp: %s compressed stream from peer %s[%s]: zlib state %s (%d)", failure,
+             propGetSzStrOrDefault(pThis->peerName, "(hostname unknown)"),
+             propGetSzStrOrDefault(pThis->peerIP, "(IP unknown)"), zlibRetName(zRet), zRet);
+    return RS_RET_ZLIB_ERR;
+}
+
 static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
     struct syslogTime stTime;
     time_t ttGenTime;
@@ -1276,6 +1356,10 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
 
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
     outtotal = 0;
+
+    if (pThis->bZipStreamEnd) {
+        ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received trailing data after end of", Z_STREAM_END));
+    }
 
     if (!pThis->bzInitDone) {
         /* allocate deflate state */
@@ -1299,13 +1383,20 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         pThis->zstrm.avail_out = sizeof(zipBuf);
         pThis->zstrm.next_out = zipBuf;
         zRet = inflate(&pThis->zstrm, Z_SYNC_FLUSH); /* no bad return value */
-        // zRet = inflate(&pThis->zstrm, Z_NO_FLUSH);    /* no bad return value */
         DBGPRINTF("after inflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
+        if (zRet == Z_STREAM_END) {
+            pThis->bZipStreamEnd = RSTRUE;
+        } else if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
+            ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received invalid", zRet));
+        }
         outavail = sizeof(zipBuf) - pThis->zstrm.avail_out;
         if (outavail != 0) {
             outtotal += outavail;
-            pThis->pLstn->rcvdDecompressed += outavail;
+            ATOMIC_ADD_uint64(&pThis->pLstn->rcvdDecompressed, &pThis->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressed(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
+        }
+        if (pThis->bZipStreamEnd && pThis->zstrm.avail_in != 0) {
+            ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received trailing data after end of", Z_STREAM_END));
         }
     } while (pThis->zstrm.avail_out == 0);
 
@@ -1314,14 +1405,81 @@ finalize_it:
     RETiRet;
 }
 
+/* AUTO mode: inspect the first COMPRESS_AUTO_SNIFF_BYTES bytes of the
+ * session and decide whether the peer is sending a zlib stream
+ * (RFC 1950) or plain syslog. The probe is restricted to byte 0 == 0x78
+ * (CMF: deflate, default 32 KiB window - what rsyslog's omfwd always
+ * emits via deflateInit()). A plain syslog frame never starts with 'x'
+ * (must be ASCII digit for octet-counted framing or '<' for
+ * non-transparent framing), so the test is conclusive for any
+ * rsyslog-to-rsyslog deployment and for every standard 3rd-party syslog
+ * sender we know of.
+ *
+ * Returns:
+ *   1  - decision taken; *pIsCompressed reflects the verdict
+ *   0  - not enough bytes yet; caller must wait for more data
+ */
+static int compressionAutoDetect(const uchar *const buf, const size_t len, sbool *const pIsCompressed) {
+    if (len < COMPRESS_AUTO_SNIFF_BYTES) {
+        return 0;
+    }
+    /* RFC 1950 zlib stream header:
+     *   - CMF byte: low nibble = 8 (deflate); we additionally require
+     *     the full byte to be 0x78 (window bits 15) which is what every
+     *     omfwd build emits via deflateInit().
+     *   - FLG byte: (CMF*256 + FLG) % 31 == 0; FDICT (bit 5) == 0 since
+     *     omfwd does not use a preset dictionary.
+     */
+    const unsigned cmf = buf[0];
+    const unsigned flg = buf[1];
+    if (cmf == 0x78 && ((cmf << 8) + flg) % 31u == 0u && (flg & 0x20u) == 0u) {
+        *pIsCompressed = 1;
+    } else {
+        *pIsCompressed = 0;
+    }
+    return 1;
+}
+
 static rsRetVal DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
     struct syslogTime stTime;
     DEFiRet;
     ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
+
+    if (pThis->compressionAutoDetectPending) {
+        /* buffer up to COMPRESS_AUTO_SNIFF_BYTES bytes spanning reads */
+        sbool bIsCompressed = 0;
+        while (pThis->compressionAutoDetectLen < COMPRESS_AUTO_SNIFF_BYTES && iLen > 0) {
+            pThis->compressionAutoDetectBuf[pThis->compressionAutoDetectLen++] = (uchar)*pData;
+            ++pData;
+            --iLen;
+        }
+        if (!compressionAutoDetect(pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen, &bIsCompressed)) {
+            /* still need more bytes; consume what we have and wait */
+            FINALIZE;
+        }
+        /* lock-in: rewrite mode so subsequent calls hit the fast path */
+        pThis->compressionMode = bIsCompressed ? COMPRESS_STREAM_ALWAYS : COMPRESS_NEVER;
+        pThis->compressionAutoDetectPending = 0;
+        DBGPRINTF("imptcp: AUTO compression detection: %s\n", bIsCompressed ? "compressed" : "plain");
+        /* re-inject the sniffed bytes into the chosen path */
+        if (bIsCompressed) {
+            CHKiRet(
+                DataRcvdCompressed(pThis, (char *)pThis->compressionAutoDetectBuf, pThis->compressionAutoDetectLen));
+        } else {
+            CHKiRet(DataRcvdUncompressed(pThis, (char *)pThis->compressionAutoDetectBuf,
+                                         pThis->compressionAutoDetectLen, &stTime, 0));
+        }
+        if (iLen == 0) {
+            FINALIZE;
+        }
+    }
+
     if (pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
         iRet = DataRcvdCompressed(pThis, pData, iLen);
     else
         iRet = DataRcvdUncompressed(pThis, pData, iLen, &stTime, 0);
+
+finalize_it:
     RETiRet;
 }
 
@@ -1378,6 +1536,7 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
     DEFiRet;
     ptcplstn_t *pLstn = NULL;
     uchar statname[64];
+    int bMutInit = 0;
 
     CHKmalloc(pLstn = calloc(1, sizeof(ptcplstn_t)));
     pLstn->pSrv = pSrv;
@@ -1413,6 +1572,8 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
      * that they may not be 100% correct */
     pLstn->rcvdBytes = 0, pLstn->rcvdDecompressed = 0;
     INIT_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdBytes);
+    INIT_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdDecompressed);
+    bMutInit = 1;
     CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.received"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pLstn->rcvdBytes)));
     CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.decompressed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
@@ -1430,6 +1591,10 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pLstn != NULL) {
+            if (bMutInit) {
+                DESTROY_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdBytes);
+                DESTROY_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdDecompressed);
+            }
             if (pLstn->stats != NULL) statsobj.Destruct(&(pLstn->stats));
             free(pLstn);
         }
@@ -1446,11 +1611,14 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
     int pmsg_size_factor;
+    sbool bWorkQueuedMutInit = 0;
 
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
 
-    CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
+    CHKmalloc(pSess = calloc(1, sizeof(ptcpsess_t)));
+    INIT_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+    bWorkQueuedMutInit = 1;
     pSess->next = NULL;
     if (pLstn->pSrv->inst->startRegex == NULL) {
         pmsg_size_factor = 1;
@@ -1469,10 +1637,15 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->iMsg = 0;
     pSess->iCurrLine = 1;
     pSess->bzInitDone = 0;
+    pSess->bZipStreamEnd = 0;
     pSess->bAtStrtOfFram = 1;
     pSess->peerName = peerName;
     pSess->peerIP = peerIP;
     pSess->compressionMode = pLstn->pSrv->compressionMode;
+    /* AUTO mode starts in sniff state; first DataRcvd() locks in the
+     * effective compressionMode for the rest of the session. */
+    pSess->compressionAutoDetectPending = (pSess->compressionMode == COMPRESS_STREAM_AUTO) ? 1 : 0;
+    pSess->compressionAutoDetectLen = 0;
     pSess->startRegex = pLstn->pSrv->inst->startRegex;
     pSess->iAddtlFrameDelim = pLstn->pSrv->iAddtlFrameDelim;
 
@@ -1508,6 +1681,9 @@ finalize_it:
             }
             free(pSess->pMsg_save);
             free(pSess->pMsg);
+            if (bWorkQueuedMutInit) {
+                DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
+            }
             free(pSess);
         }
     }
@@ -1526,6 +1702,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
     uchar zipBuf[32 * 1024];  // TODO: use "global" one from pSess
 
     if (!pSess->bzInitDone) goto done;
+    if (pSess->bZipStreamEnd) goto finalize_it;
 
     pSess->zstrm.avail_in = 0;
     /* run inflate() on buffer until everything has been compressed */
@@ -1536,13 +1713,22 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         pSess->zstrm.next_out = zipBuf;
         zRet = inflate(&pSess->zstrm, Z_FINISH); /* no bad return value */
         DBGPRINTF("after inflate, ret %d, avail_out %d\n", zRet, pSess->zstrm.avail_out);
+        if (zRet == Z_STREAM_END) {
+            pSess->bZipStreamEnd = RSTRUE;
+        } else if (zRet != Z_OK && zRet != Z_BUF_ERROR) {
+            iRet = logCompressedStreamFailure(pSess, "received invalid", zRet);
+            break;
+        }
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
-            pSess->pLstn->rcvdDecompressed += outavail;
+            ATOMIC_ADD_uint64(&pSess->pLstn->rcvdDecompressed, &pSess->pLstn->mut_rcvdDecompressed, outavail);
             CHKiRet(DataRcvdUncompressed(pSess, (char *)zipBuf, outavail, &stTime, 0));
             // TODO: query time!
         }
     } while (pSess->zstrm.avail_out == 0);
+    if (iRet == RS_RET_OK && !pSess->bZipStreamEnd) {
+        iRet = logCompressedStreamFailure(pSess, "detected truncated", zRet);
+    }
 
 finalize_it:
     zRet = inflateEnd(&pSess->zstrm);
@@ -1559,11 +1745,18 @@ done:
  * NOTE: we do not need to remove the socket from the epoll set, as according
  * to the epoll man page it is automatically removed on close (Q6). The only
  * exception is duplicated file handles, which we do not create.
+ *
+ * The caller must serialize access to the session. If destruct is false, the
+ * caller remains responsible for destroying pSess after releasing any session
+ * mutex it currently holds.
  */
-static rsRetVal closeSess(ptcpsess_t *pSess) {
+static rsRetVal closeSess(ptcpsess_t *pSess, const sbool destruct) {
+    rsRetVal localRet = RS_RET_OK;
     DEFiRet;
 
-    if (pSess->compressionMode >= COMPRESS_STREAM_ALWAYS) doZipFinish(pSess);
+    if (pSess->compressionMode >= COMPRESS_STREAM_ALWAYS) {
+        localRet = doZipFinish(pSess);
+    }
 
     const int sock = pSess->sock;
     close(sock);
@@ -1578,9 +1771,14 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
     }
     STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 
-    /* unlinked, now remove structure */
-    destructSess(pSess);
+    if (destruct) {
+        /* unlinked, now remove structure */
+        destructSess(pSess);
+    }
 
+    if (localRet != RS_RET_OK) {
+        iRet = localRet;
+    }
     DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
     RETiRet;
 }
@@ -1592,7 +1790,7 @@ static rsRetVal closeSess(ptcpsess_t *pSess) {
 static rsRetVal createInstance(instanceConf_t **pinst) {
     instanceConf_t *inst;
     DEFiRet;
-    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+    CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
     inst->next = NULL;
 
     inst->pszBindPort = NULL;
@@ -1622,7 +1820,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
     inst->ratelimitBurst = -1;
     inst->ratelimitInterval = -1;
-    inst->compressionMode = COMPRESS_SINGLE_MSG;
+    inst->compressionMode = COMPRESS_NEVER;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
     inst->pszLstnPortFileName = NULL;
@@ -1882,7 +2080,7 @@ finalize_it:
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
-static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling) {
+static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_polling, sbool *const close_session) {
     int lenRcv;
     int lenBuf;
     uchar *peerName;
@@ -1902,7 +2100,12 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
         if (lenRcv > 0) {
             /* have data, process it */
             DBGPRINTF("imptcp: data(%d) on socket %d: %s\n", lenBuf, pSess->sock, rcvBuf);
-            CHKiRet(DataRcvd(pSess, rcvBuf, lenRcv));
+            iRet = DataRcvd(pSess, rcvBuf, lenRcv);
+            if (iRet != RS_RET_OK) {
+                *continue_polling = 0;
+                *close_session = RSTRUE;
+                break;
+            }
         } else if (lenRcv == 0) {
             /* session was closed, do clean-up */
             if (pSess->pLstn->pSrv->bEmitMsgOnClose) {
@@ -1916,37 +2119,61 @@ static rsRetVal sessActivity(ptcpsess_t *const pSess, int *const continue_pollin
                          "remote peer %s.",
                          remsock, peerName);
             }
-            CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
+            *close_session = RSTRUE;
             break;
         } else {
             if (CHK_EAGAIN_EWOULDBLOCK) break;
             DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
             *continue_polling = 0;
-            closeSess(pSess); /* try clean-up by dropping session */
+            *close_session = RSTRUE; /* try clean-up by dropping session */
             break;
         }
     }
 
-finalize_it:
     RETiRet;
 }
 
 
-/* This function is called to process a single request. This may
- * be carried out by the main worker or a helper. It can be run
- * concurrently.
+static sbool claimSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    return ATOMIC_CAS(&pSess->bWorkQueued, 0, 1, &pSess->mutWorkQueued) ? RSTRUE : RSFALSE;
+}
+
+static void releaseSessWork(epolld_t *const epd) {
+    ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+
+    ATOMIC_STORE_0_TO_INT(&pSess->bWorkQueued, &pSess->mutWorkQueued);
+}
+
+/* This function is called to process a single request. Listener work can run
+ * concurrently. Session work must already be claimed with claimSessWork(); the
+ * session parser, zlib stream, socket close, and epoll rearm are then handled
+ * by only one worker at a time.
  */
 static void processWorkItem(epolld_t *epd) {
     int continue_polling = 1;
+    sbool close_session = RSFALSE;
 
     switch (epd->typ) {
         case epolld_lstn:
             /* listener never stops polling (except server shutdown) */
             lstnActivity((ptcplstn_t *)epd->ptr);
             break;
-        case epolld_sess:
-            sessActivity((ptcpsess_t *)epd->ptr, &continue_polling);
-            break;
+        case epolld_sess: {
+            ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
+            sessActivity(pSess, &continue_polling, &close_session);
+            if (close_session) {
+                closeSess(pSess, RSFALSE);
+                destructSess(pSess);
+                return;
+            }
+            releaseSessWork(epd);
+            if (continue_polling == 1) {
+                epoll_ctl(epollfd, EPOLL_CTL_MOD, epd->sock, &(epd->ev));
+            }
+            return;
+        }
         default:
             LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: error: invalid epolld_type_t %d after epoll", epd->typ);
             break;
@@ -2044,11 +2271,17 @@ static void processWorkSet(int nEvents, struct epoll_event events[]) {
 
     for (iEvt = 0; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0); ++iEvt) {
         epd = (epolld_t *)events[iEvt].data.ptr;
+        if (epd->typ == epolld_sess && !claimSessWork(epd)) {
+            --remainEvents;
+            continue;
+        }
         if (runModConf->bProcessOnPoller && remainEvents == 1) {
             /* process self, save context switch */
             processWorkItem(epd);
         } else {
-            enqueueIoWork(epd, runModConf->bProcessOnPoller);
+            if (enqueueIoWork(epd, runModConf->bProcessOnPoller) != RS_RET_OK && epd->typ == epolld_sess) {
+                releaseSessWork(epd);
+            }
         }
         --remainEvents;
     }
@@ -2127,11 +2360,11 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
-            inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "path")) {
-            inst->pszBindPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "unlink")) {
             inst->bUnlink = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
@@ -2151,7 +2384,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "failonpermsfailure")) {
             inst->bFailOnPerms = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
             if (max <= 200000000) {
@@ -2164,17 +2397,19 @@ BEGINnewInpInst
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
         } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
-            inst->startRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->startRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
             inst->bSuppOctetFram = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
             inst->bSPFramingFix = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "compression.mode")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
                 inst->compressionMode = COMPRESS_STREAM_ALWAYS;
+            } else if (!strcasecmp(cstr, "stream:auto")) {
+                inst->compressionMode = COMPRESS_STREAM_AUTO;
             } else if (!strcasecmp(cstr, "none")) {
                 inst->compressionMode = COMPRESS_NEVER;
             } else {
@@ -2203,17 +2438,17 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "notifyonconnectionopen")) {
             inst->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
-            inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->multiLine = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-            inst->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
             inst->socketBacklog = (int)pvals[i].val.d.n;
         } else {
@@ -2470,6 +2705,8 @@ static void shutdownSrv(ptcpsrv_t *pSrv) {
             "imptcp shutdown listen socket %d (rcvd %lld bytes, "
             "decompressed %lld)\n",
             lstnDel->sock, lstnDel->rcvdBytes, lstnDel->rcvdDecompressed);
+        DESTROY_ATOMIC_HELPER_MUT64(lstnDel->mut_rcvdBytes);
+        DESTROY_ATOMIC_HELPER_MUT64(lstnDel->mut_rcvdDecompressed);
         free(lstnDel->epd);
         free(lstnDel);
     }

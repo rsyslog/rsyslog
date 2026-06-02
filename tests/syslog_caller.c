@@ -3,10 +3,14 @@
  *
  * Options
  *
- * -s severity (0..7 accoding to syslog spec, r "rolling", default 6)
+ * -s severity (0..7 according to syslog spec, r "rolling", default 6)
  * -m number of messages to generate (default 500)
  * -C liblognorm-stdlog channel description
  * -f message format to use
+ * -u Unix datagram socket path
+ * -L generated message length for Unix datagram mode
+ * -n send a short Unix datagram message with an embedded NUL byte
+ * -w milliseconds to wait after sending messages
  *
  * Part of the testbench for rsyslog.
  *
@@ -38,7 +42,10 @@
 #endif
 #include <errno.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <syslog.h>
+#include <unistd.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
     #include <liblogging/stdlog.h>
 #endif
@@ -46,8 +53,92 @@
 static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C } fmt = FMT_NATIVE;
 
 static void usage(void) {
-    fprintf(stderr, "usage: syslog_caller num-messages\n");
+    fprintf(stderr, "usage: syslog_caller [-m messages] [-s severity] [-u socket] [-L length] [-w milliseconds]\n");
     exit(1);
+}
+
+/*
+ * Generate a raw syslog message with a priority prefix in `buf`.
+ *
+ * Parameters:
+ * - buf: destination buffer to receive the generated message.
+ * - buflen: size of `buf` in bytes.
+ * - sev: severity value; only the low syslog severity range is used via (sev % 8).
+ * - iRun: message index used in the formatted test message variant.
+ * - msgLen: if greater than zero, generate a fixed-length payload (after "<PRI>")
+ *           filled with 'A' bytes and truncated to fit `buf`; if zero, generate
+ *           a formatted test message including run number and severity.
+ *
+ * Returns the generated message length in bytes.
+ */
+static size_t genRawMsg(
+    char *buf, const size_t buflen, const int sev, const int iRun, const size_t msgLen, const int embeddedNul) {
+    if (buflen == 0) return 0;
+    buf[0] = '\0';
+
+    if (embeddedNul) {
+        const int n = snprintf(buf, buflen, "<%d>", sev % 8);
+        buf[buflen - 1] = '\0';
+        if (n < 0) return 0;
+        const size_t prefixLen = (size_t)n;
+        if (prefixLen >= buflen || buflen - prefixLen < 4) return prefixLen < buflen ? prefixLen : buflen - 1;
+        buf[prefixLen] = 'a';
+        buf[prefixLen + 1] = '\0';
+        buf[prefixLen + 2] = 'b';
+        return prefixLen + 3;
+    }
+
+    if (msgLen > 0) {
+        const int n = snprintf(buf, buflen, "<%d>", sev % 8);
+        buf[buflen - 1] = '\0';
+        if (n < 0) return 0;
+        const size_t prefixLen = (size_t)n;
+        if (prefixLen >= buflen) return buflen - 1;
+        const size_t avail = buflen - prefixLen - 1;
+        const size_t len = msgLen < avail ? msgLen : avail;
+        memset(buf + prefixLen, 'A', len);
+        buf[prefixLen + len] = '\0';
+        return prefixLen + len;
+    } else {
+        const int n = snprintf(buf, buflen, "<%d>test message nbr %d, severity=%d", sev % 8, iRun, sev % 8);
+        buf[buflen - 1] = '\0';
+        if (n < 0) return 0;
+        return (size_t)n < buflen ? (size_t)n : buflen - 1;
+    }
+}
+
+/* Send one raw syslog message to a Unix domain datagram socket.
+ * sockName: path to the destination Unix socket.
+ * sev: syslog severity value used when generating the PRI part.
+ * iRun: message sequence number used by the generated text format.
+ * msgLen: payload length for raw/fill mode; 0 uses formatted text mode.
+ */
+static void sendRawUnix(
+    const char *sockName, const int sev, const int iRun, const size_t msgLen, const int embeddedNul) {
+    int sock;
+    struct sockaddr_un sa;
+    char msgbuf[4096];
+    size_t lenMsg;
+
+    if (sockName == NULL || strlen(sockName) >= sizeof(sa.sun_path)) {
+        fprintf(stderr, "Unix socket path invalid or too long: %s\n", sockName ? sockName : "(null)");
+        exit(1);
+    }
+    if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+        perror("socket");
+        exit(1);
+    }
+    memset(&sa, 0, sizeof(sa));
+    sa.sun_family = AF_UNIX;
+    strncpy(sa.sun_path, sockName, sizeof(sa.sun_path) - 1);
+    sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
+    lenMsg = genRawMsg(msgbuf, sizeof(msgbuf), sev, iRun, msgLen, embeddedNul);
+    if (sendto(sock, msgbuf, lenMsg, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        perror("sendto");
+        close(sock);
+        exit(1);
+    }
+    close(sock);
 }
 
 
@@ -56,13 +147,13 @@ static void usage(void) {
 static void genMsg(char *buf, const int sev, const int iRun) {
     switch (fmt) {
         case FMT_NATIVE:
-            sprintf(buf, "test message nbr %d, severity=%d", iRun, sev);
+            snprintf(buf, 4096, "test message nbr %d, severity=%d", iRun, sev);
             break;
         case FMT_SYSLOG_INJECT_L:
-            sprintf(buf, "test\n");
+            snprintf(buf, 4096, "%s", "test\n");
             break;
         case FMT_SYSLOG_INJECT_C:
-            sprintf(buf, "test 1\t2");
+            snprintf(buf, 4096, "%s", "test 1\t2");
             break;
     }
 }
@@ -74,6 +165,10 @@ int main(int argc, char *argv[]) {
     int bRollingSev = 0;
     int sev = 6;
     int msgs = 500;
+    const char *unixSockName = NULL;
+    size_t msgLen = 0;
+    int waitMs = 0;
+    int embeddedNul = 0;
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_channel_t logchan = NULL;
     const char *chandesc = "syslog:";
@@ -82,9 +177,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_LIBLOGGING_STDLOG
     stdlog_init(STDLOG_USE_DFLT_OPTS);
-    while ((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:C:f:u:L:nw:")) != -1) {
 #else
-    while ((opt = getopt(argc, argv, "m:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:s:u:L:nw:")) != -1) {
 #endif
         switch (opt) {
             case 's':
@@ -101,6 +196,19 @@ int main(int argc, char *argv[]) {
             case 'm':
                 msgs = atoi(optarg);
                 break;
+            case 'u':
+                unixSockName = optarg;
+                break;
+            case 'L':
+                msgLen = (size_t)atoi(optarg);
+                if (msgLen >= 4096) msgLen = 4095;
+                break;
+            case 'w':
+                waitMs = atoi(optarg);
+                break;
+            case 'n':
+                embeddedNul = 1;
+                break;
 #ifdef HAVE_LIBLOGGING_STDLOG
             case 'C':
                 chandesc = optarg;
@@ -116,11 +224,17 @@ int main(int argc, char *argv[]) {
 #endif
             default:
                 usage();
-#ifdef HAVE_LIBLOGGING_STDLOG
-                exit(1);
-#endif
                 break;
         }
+    }
+
+    if (unixSockName != NULL) {
+        for (i = 0; i < msgs; ++i) {
+            sendRawUnix(unixSockName, sev, i, msgLen, embeddedNul);
+            if (bRollingSev) sev++;
+        }
+        if (waitMs > 0) usleep((unsigned int)waitMs * 1000U);
+        return 0;
     }
 
 #ifdef HAVE_LIBLOGGING_STDLOG

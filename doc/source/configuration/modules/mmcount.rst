@@ -1,20 +1,17 @@
-*******
-mmcount
-*******
+********************************
+mmcount: Message counting module
+********************************
 
-===========================  ===========================================================================
-**Module Name:**             **mmcount**
-**Author:**                  Bala.FA <barumuga@redhat.com>
-**Available since:**         7.5.0
-===========================  ===========================================================================
-
-
-**Status:**\ Non project-supported module - contact author or rsyslog
-mailing list for questions
-
+====================  =============================
+**Module Name:**      **mmcount**
+**Author:**           Bala.FA <barumuga@redhat.com>
+**Available since:**  7.5.0
+**Status:**           Non project-supported module - contact author or rsyslog
+                      mailing list for questions
+====================  =============================
 
 Purpose
---------
+=======
 
 Message modification plugin which counts messages.
 
@@ -23,14 +20,16 @@ or json property of given app-name. The count value is added into the
 log message as json property named 'mmcount'.
 
 
-Parameters
-----------
-
-**Input Parameters**
+Configuration Parameters
+========================
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -61,7 +60,7 @@ Parameters
 
 
 Examples
---------
+========
 
 Example usage of the module in the configuration file.
 

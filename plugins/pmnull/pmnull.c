@@ -117,7 +117,7 @@ BEGINnewParserInst
     for (i = 0; i < parserpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(parserpblk.descr[i].name, "tag")) {
-            inst->tag = (const char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->tag = (const char *)es_str2cstr(pvals[i].val.d.estr, NULL));
             inst->lenTag = strlen(inst->tag);
         } else if (!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
             syslogfacility = pvals[i].val.d.n;

@@ -35,6 +35,8 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #ifdef HAVE_SYSINFO_UPTIME
@@ -62,6 +64,7 @@
 #include "unicode-helper.h"
 #include "ruleset.h"
 #include "prop.h"
+#include "msg_replace_helper.h"
 #include "net.h"
 #include "var.h"
 #include "rsconf.h"
@@ -306,11 +309,12 @@ static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const
 static rsRetVal resolveDNS(smsg_t *const pMsg) {
     rsRetVal localRet;
     prop_t *propFromHost = NULL;
-    prop_t *ip;
-    prop_t *localName;
+    prop_t *ip = NULL;
+    prop_t *localName = NULL;
     prop_t *port = NULL;
     char portbuf[8];
     uint16_t pnum;
+    const struct sockaddr_storage *pfrominet;
     DEFiRet;
 
     MsgLock(pMsg);
@@ -322,15 +326,12 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
         }
         if (localRet == RS_RET_OK) {
-            /* we pass down the props, so no need for AddRef */
-            MsgSetRcvFromWithoutAddRef(pMsg, localName);
-            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
-
+            pfrominet = pMsg->rcvFrom.pfrominet;
             if (pMsg->pRcvFromPort == NULL) {
-                if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET)
-                    pnum = ntohs(((struct sockaddr_in *)pMsg->rcvFrom.pfrominet)->sin_port);
-                else if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET6)
-                    pnum = ntohs(((struct sockaddr_in6 *)pMsg->rcvFrom.pfrominet)->sin6_port);
+                if (pfrominet != NULL && pfrominet->ss_family == AF_INET)
+                    pnum = ntohs(((const struct sockaddr_in *)pfrominet)->sin_port);
+                else if (pfrominet != NULL && pfrominet->ss_family == AF_INET6)
+                    pnum = ntohs(((const struct sockaddr_in6 *)pfrominet)->sin6_port);
                 else
                     pnum = 0;
                 snprintf(portbuf, sizeof(portbuf), "%u", pnum);
@@ -338,6 +339,11 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
                 MsgSetRcvFromPortWithoutAddRef(pMsg, port);
                 port = NULL;
             }
+            /* we pass down the props, so no need for AddRef */
+            MsgSetRcvFromWithoutAddRef(pMsg, localName);
+            localName = NULL;
+            MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
+            ip = NULL;
         }
     }
 finalize_it:
@@ -348,6 +354,8 @@ finalize_it:
     }
     MsgUnlock(pMsg);
     if (propFromHost != NULL) prop.Destruct(&propFromHost);
+    if (localName != NULL) prop.Destruct(&localName);
+    if (ip != NULL) prop.Destruct(&ip);
     if (port != NULL) prop.Destruct(&port);
     RETiRet;
 }
@@ -1132,8 +1140,10 @@ finalize_it:
 static void reinitVar(var_t *pVar) {
     rsCStrDestruct(&pVar->pcsName); /* no longer needed */
     if (pVar->varType == VARTYPE_STR) {
-        if (pVar->val.pStr != NULL) rsCStrDestruct(&pVar->val.pStr);
+        rsCStrDestruct(&pVar->val.pStr);
     }
+    memset(&pVar->val, 0, sizeof(pVar->val));
+    pVar->varType = VARTYPE_NONE;
 }
 /* deserialize the message again
  * we deserialize the properties in the same order that we serialized them. Except
@@ -2008,6 +2018,16 @@ rsRetVal MsgSetFlowControlType(smsg_t *const pMsg, flowControl_t eFlowCtl) {
  */
 rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
     assert(pMsg != NULL);
+    assert(offs >= 0 && offs <= pMsg->iLenRawMsg);
+    if (offs < 0 || offs > pMsg->iLenRawMsg) {
+        pMsg->offAfterPRI = 0;
+        return RS_RET_ERR;
+    }
+    if (offs > 0) {
+        assert(pMsg->pszRawMsg != NULL);
+        assert(pMsg->pszRawMsg[0] == '<');
+        assert(pMsg->pszRawMsg[offs - 1] == '>');
+    }
     pMsg->offAfterPRI = offs;
     return RS_RET_OK;
 }
@@ -2294,10 +2314,18 @@ static void ATTR_NONNULL(1) tryEmulateTAG(smsg_t *const pM, const sbool bLockMut
             /* no process ID, use APP-NAME only */
             MsgSetTAG(pM, (uchar *)getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
         } else {
+            int snRet;
             /* now we can try to emulate */
-            lenTAG = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
-                              getPROCID(pM, MUTEX_ALREADY_LOCKED));
+            snRet = snprintf((char *)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+                             getPROCID(pM, MUTEX_ALREADY_LOCKED));
             bufTAG[sizeof(bufTAG) - 1] = '\0'; /* just to make sure... */
+            if (snRet < 0) {
+                lenTAG = 0;
+            } else if ((size_t)snRet >= sizeof(bufTAG)) {
+                lenTAG = sizeof(bufTAG) - 1;
+            } else {
+                lenTAG = snRet;
+            }
             MsgSetTAG(pM, bufTAG, lenTAG);
         }
         /* Signal change in TAG for acquireProgramName */
@@ -2486,8 +2514,7 @@ void MsgSetInputName(smsg_t *pThis, prop_t *inputName) {
  * otherwise overrun our buffer!
  */
 void MsgSetDfltTZ(smsg_t *pThis, char *tz) {
-    strncpy(pThis->dfltTZ, tz, 7);
-    pThis->dfltTZ[7] = '\0'; /* ensure 0-Term in case of overflow! */
+    rs_cstr_copy(pThis->dfltTZ, tz, sizeof(pThis->dfltTZ));
 }
 
 
@@ -2652,24 +2679,23 @@ void MsgSetMSGoffs(smsg_t *const pMsg, int offs) {
  * rgerhards, 2009-06-23
  */
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar *pszMSG, int lenMSG) {
-    int lenNew;
-    uchar *bufNew;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, msg);
     assert(pszMSG != NULL);
 
-    lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
-    if (lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
-        /*  we have lost our "bet" and need to alloc a new buffer ;) */
-        CHKmalloc(bufNew = malloc(lenNew + 1));
-        memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
-        if (pThis->pszRawMsg != pThis->szRawMsg) free(pThis->pszRawMsg);
-        pThis->pszRawMsg = bufNew;
+    if (pThis->pszRawMsg == NULL) {
+        pThis->pszRawMsg = pThis->szRawMsg;
+        pThis->szRawMsg[0] = '\0';
     }
 
-    if (lenMSG > 0) memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
-    pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
-    pThis->iLenRawMsg = lenNew;
+    if (pThis->offMSG < 0 || pThis->offMSG > pThis->iLenRawMsg) {
+        pThis->offMSG = pThis->iLenRawMsg;
+        pThis->iLenMSG = 0;
+    } else if (pThis->iLenMSG < 0 || pThis->iLenMSG > pThis->iLenRawMsg - pThis->offMSG) {
+        pThis->iLenMSG = pThis->iLenRawMsg - pThis->offMSG;
+    }
+    CHKiRet(msgReplaceRawMsgSegment(&pThis->pszRawMsg, pThis->szRawMsg, CONF_RAWMSG_BUFSIZE, pThis->offMSG,
+                                    pThis->iLenMSG, &pThis->iLenRawMsg, pszMSG, lenMSG));
     pThis->iLenMSG = lenMSG;
 
 finalize_it:
@@ -3175,15 +3201,21 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
     uchar wrkbuf[100000];
     size_t dst_realloc_size;
     size_t dst_size;
-    uchar *dst_base;
+    uchar *dst_base = NULL;
     uchar *dst_w;
     uchar *newbuf;
     DEFiRet;
 
     assert(len_none_escaped_head <= buflen);
     /* first copy over unescaped head string */
-    if (len_none_escaped_head + 10 > sizeof(wrkbuf)) {
-        dst_size = 2 * len_none_escaped_head;
+    if ((size_t)len_none_escaped_head > sizeof(wrkbuf) - 10) {
+        /* The following condition is not expected to occur in normal operation. */
+#if UINT_MAX > SIZE_MAX / 2
+        if ((size_t)len_none_escaped_head > SIZE_MAX / 2) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+#endif
+        dst_size = (size_t)len_none_escaped_head * 2;
         CHKmalloc(dst_base = malloc(dst_size));
     } else {
         dst_size = sizeof(wrkbuf);
@@ -3198,6 +3230,9 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
     for (i = len_none_escaped_head; i < buflen; ++i) {
         const size_t dst_offset = dst_w - dst_base;
         if (dst_offset >= dst_realloc_size) {
+            if (dst_size > SIZE_MAX / 2) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
             const size_t new_size = 2 * dst_size;
             if (dst_base == wrkbuf) {
                 CHKmalloc(newbuf = malloc(new_size));
@@ -3237,7 +3272,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
                 case '\\':
                     if (escapeAll == RSFALSE) {
                         ni = i + 1;
-                        if (ni <= buflen) {
+                        if (ni < buflen) {
                             nc = pSrc[ni];
 
                             /* Attempt to not double encode */
@@ -3295,7 +3330,7 @@ static rsRetVal ATTR_NONNULL(1, 4) jsonAddVal_escaped(uchar *const pSrc,
         es_addBuf(dst, (const char *)dst_base, dst_w - dst_base);
     }
 finalize_it:
-    if (dst_base != wrkbuf) {
+    if (dst_base != NULL && dst_base != wrkbuf) {
         free(dst_base);
     }
     RETiRet;
@@ -3403,7 +3438,11 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
         }
     }
     /* we hope we have only few escapes... */
-    dst = es_newStr(buflen + pTpe->lenFieldName + 15);
+    if (pTpe->lenFieldName < 0 || (size_t)pTpe->lenFieldName > (size_t)INT_MAX - 15 ||
+        buflen > (size_t)INT_MAX - (size_t)pTpe->lenFieldName - 15) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    CHKmalloc(dst = es_newStr(buflen + pTpe->lenFieldName + 15));
     es_addChar(&dst, '"');
     es_addBuf(&dst, (char *)pTpe->fieldName, pTpe->lenFieldName);
     es_addBufConstcstr(&dst, "\":");
@@ -3521,6 +3560,9 @@ static rsRetVal msgPropStrGen(
     uchar *pBuf = NULL;
     DEFiRet;
 
+    if (len > (size_t)INT_MAX || len == SIZE_MAX) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
     CHKmalloc(pBuf = malloc(len + 1));
 
     memcpy(pBuf, pSrc, len);
@@ -3558,8 +3600,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
 
 #ifdef FEATURE_REGEXP
     /* Variables necessary for regular expression matching */
-    size_t nmatch = 10;
-    regmatch_t pmatch[10];
+    size_t nmatch = TPL_REGEX_MAX_MATCHES;
+    regmatch_t pmatch[TPL_REGEX_MAX_MATCHES];
 #endif
 
     *pbMustBeFreed = 0;
@@ -4393,7 +4435,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  * enhancement.
                  */
                 for (pDst = pRes; *pDst; pDst++) {
-                    if (*pDst == '/') *pDst++ = '_';
+                    if (*pDst == '/') *pDst = '_';
                 }
             } else {
                 if (bufLen == -1) bufLen = ustrlen(pRes);
@@ -4745,25 +4787,29 @@ static uchar *jsonPathGetLeaf(uchar *name, int lenName) {
 
 static json_bool jsonVarExtract(struct json_object *root, const char *key, struct json_object **value) {
     char namebuf[MAX_VARIABLE_NAME_LEN];
-    int key_len = strlen(key);
-    char *array_idx_start = strstr(key, "[");
-    char *array_idx_end = NULL;
+    const size_t key_len = strlen(key);
+    const char *array_idx_start = strstr(key, "[");
+    const char *array_idx_end = NULL;
     char *array_idx_num_end_discovered = NULL;
     struct json_object *arr = NULL;
     if (array_idx_start != NULL) {
         array_idx_end = strstr(array_idx_start, "]");
     }
-    if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
+    if (array_idx_end != NULL && (size_t)(array_idx_end - key + 1) == key_len) {
         errno = 0;
-        int idx = (int)strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
-        if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
-            memcpy(namebuf, key, array_idx_start - key);
-            namebuf[array_idx_start - key] = '\0';
+        const long idx = strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
+        if (errno == 0 && idx >= 0 && array_idx_num_end_discovered == array_idx_end) {
+            const size_t name_len = (size_t)(array_idx_start - key);
+            if (name_len >= sizeof(namebuf)) {
+                return json_object_object_get_ex(root, key, value);
+            }
+            memcpy(namebuf, key, name_len);
+            namebuf[name_len] = '\0';
             json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
             if (found_obj && json_object_is_type(arr, json_type_array)) {
-                int len = json_object_array_length(arr);
-                if (len > idx) {
-                    *value = json_object_array_get_idx(arr, idx);
+                const size_t len = json_object_array_length(arr);
+                if (len > (size_t)idx) {
+                    *value = json_object_array_get_idx(arr, (size_t)idx);
                     if (*value != NULL) return TRUE;
                 }
                 return FALSE;
@@ -4783,10 +4829,14 @@ static rsRetVal jsonPathFindNext(
     DEFiRet;
 
     if (*p == '!' || (*name == namestart && (*p == '.' || *p == '/'))) ++p;
-    for (i = 0;
-         *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf && i < sizeof(namebuf) - 1;
-         ++i, ++p)
+    for (i = 0; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf; ++i, ++p) {
+        if (i >= sizeof(namebuf) - 1) {
+            LogError(0, RS_RET_INVLD_SETOP, "json path component too long in '%s' - refusing truncated lookup",
+                     namestart);
+            ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+        }
         namebuf[i] = *p;
+    }
     if (i > 0) {
         namebuf[i] = '\0';
         if (jsonVarExtract(root, (char *)namebuf, &json) == FALSE) {
@@ -4955,7 +5005,11 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
             json_object_object_add(parent, (char *)leaf, json);
         } else {
             if (json_object_get_type(json) == json_type_object) {
-                CHKiRet(jsonMerge(*jroot, json));
+                if (json_object_get_type(leafnode) == json_type_object) {
+                    CHKiRet(jsonMerge(leafnode, json));
+                } else {
+                    json_object_object_add(parent, (char *)leaf, json);
+                }
             } else {
                 /* TODO: improve the code below, however, the current
                  *       state is not really bad */

@@ -15,6 +15,12 @@ hub.
 The packaged default configuration uses ``/var/spool/rsyslog`` as the
 work directory and writes to standard output via ``omstdout``.
 
+The image includes an empty native regex lookup table at
+``/etc/rsyslog/noise-drop.lkp_tbl``. Mount or replace it with an rsyslog
+``type="regex"`` lookup table to drop known noisy events. The default
+filter matches ``$rawmsg`` and stops processing when the lookup result is
+non-empty.
+
 This image now runs as ``syslog:adm`` by default. That fits simple
 container deployments that use unprivileged ports and do not depend on
 host log sockets or other root-only resources.

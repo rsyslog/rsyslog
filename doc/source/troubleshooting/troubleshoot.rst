@@ -120,6 +120,16 @@ rsyslog interactively. Do as such::
 
  $ /path/to/rsyslogd -f/path/to/config-file -N3 -o /path/to/full-conf-file
 
+rsyslog can also translate supported configurations into canonical YAML or
+canonical RainerScript during validation. For example::
+
+ $ /path/to/rsyslogd -f/path/to/config-file -N1 -F yaml -o /path/to/output.yaml
+ $ /path/to/rsyslogd -f/path/to/config-file -N1 -F rainerscript -o /path/to/output.conf
+
+This translation output is semantic, not source-preserving: include trees are
+flattened, output is normalized, and warning comments may be inserted for
+constructs that deserve closer review. For the recommended workflow, see
+:doc:`../tutorials/config_format_translation`.
 
 Checking Connection Problems
 ----------------------------

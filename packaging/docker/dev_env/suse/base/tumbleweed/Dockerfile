@@ -44,6 +44,8 @@ RUN	zypper --non-interactive install \
 	pcre-devel \
 	postgresql-devel \
 	python3-docutils \
+	python3-autopep8 \
+	python3-pycodestyle \
 	python-devel \
 	python310-Sphinx \
 	python310-pysnmp \

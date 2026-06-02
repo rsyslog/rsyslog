@@ -38,8 +38,20 @@ specify module parameters, use
 
 
 Note that legacy parameters **do not** affect new-style RainerScript configuration
-objects. See :doc:`basic configuration structure doc <../basic_structure>` to
-learn about different configuration languages in use by rsyslog.
+objects. The reverse direction is also not a supported configuration pattern:
+module-level ``omfile`` parameters are defaults for RainerScript
+``action(type="omfile" ...)`` objects, not a reliable way to configure legacy
+selector actions such as ``*.* /var/log/messages`` or ``*.* ?dynafile``.
+
+For new configurations, keep file output configuration in RainerScript and put
+ownership, permission, template, and destination settings either on the
+``module(load="builtin:omfile" ...)`` default or directly on each
+``action(type="omfile" ...)`` object. Do not mix legacy selector actions with
+RainerScript ``omfile`` module/action parameters when exact ownership,
+permission, or template behavior matters.
+
+See :doc:`basic configuration structure doc <../basic_structure>` to learn
+about different configuration languages in use by rsyslog.
 
 .. note::
 

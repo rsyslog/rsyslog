@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -eu
+
+# if rsyslog is already running then merely doing 'start+stop'
+# will not reload the new config
+systemctl stop rsyslog 2>&1 #(redirect stderr because systemd tells us that syslog.socket will restart rsyslog)
+# Wait until log is written
+sleep 3
+
+echo "* Checking logcheck rules"
+# tell rsyslog to output to a file other than /var/log/syslog to isolate
+# rsyslog messages. nb that rsyslog.service is hardened so this file
+# cannot be in /tmp (#1053898)
+cat > /etc/rsyslog.d/rsyslog-logcheck.conf <<EOF
+:programname, contains, "rsyslog" /var/log/test-rsyslog-syslog.log
+EOF
+
+: > /var/log/test-rsyslog-syslog.log
+chown syslog:syslog /var/log/test-rsyslog-syslog.log
+
+echo "** Starting and stopping rsyslog"
+timestamp="$(date '+%Y-%m-%d %T')"
+systemctl start rsyslog
+systemctl stop rsyslog 2>&1
+
+# Give rsyslog time to write the file
+sleep 3
+
+echo "** rsyslog generated the following lines in syslog:"
+cat /var/log/test-rsyslog-syslog.log
+if [ ! -s /var/log/test-rsyslog-syslog.log ]; then
+	echo >&2 "ERROR: rsyslog produced no syslog entries (in /var/log/test-rsyslog-syslog.log) at all"
+	echo "/var/log/syslog contained:"
+	cat /var/log/syslog
+fi
+
+echo "** rsyslog generated the following lines in the systemd journal:"
+journalctl --since="$timestamp" _COMM=rsyslogd \
+	| tee /tmp/test-rsyslog-journal.log
+if [ ! -s /tmp/test-rsyslog-journal.log ]; then
+	echo >&2 "ERROR: rsyslog produced no journal entries at all"
+fi
+
+
+echo "** Running logcheck"
+# check both syslog and journal lines with logcheck
+# no need to change config, but set -o and hide state and logfiles-list-directory
+cat > /tmp/logcheck.logfiles <<EOF
+/tmp/test-rsyslog-journal.log
+/var/log/test-rsyslog-syslog.log
+EOF
+
+mkdir /tmp/logcheck.state
+chown logcheck:logcheck /tmp/logcheck.state
+chmod 0750 /tmp/logcheck.state
+# nb: su is used because logcheck refuses to run as root
+# nb: add '-d' option to logcheck if you need to debug
+su -s /bin/bash -c "/usr/sbin/logcheck -L /tmp/logcheck.logfiles -S /tmp/logcheck.state -D /dev/null -o" logcheck \
+	| tee  /tmp/test-rsyslog-unmatched
+
+# result should be empty
+if [ -s /tmp/test-rsyslog-unmatched ]; then
+	echo >&2 "* FAIL: unmatched lines - logcheck rules may need updating"
+else
+	echo "* OK: no unmatched lines"
+fi
+cat /tmp/test-rsyslog-unmatched
+
+rm -rf \
+	/etc/rsyslog.d/rsyslog-logcheck.conf \
+	/tmp/logcheck.state /tmp/logcheck.logfiles \
+	/tmp/test-rsyslog-journal.log \
+	/var/log/test-rsyslog-syslog.log \
+	/tmp/test-rsyslog-unmatched

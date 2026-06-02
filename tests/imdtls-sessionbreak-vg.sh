@@ -6,4 +6,4 @@ if [ "$(valgrind --version)" == "valgrind-3.11.0" ]; then
 fi
 export USE_VALGRIND="YES"
 export RS_TEST_VALGRIND_EXTRA_OPTS="--keep-debuginfo=yes"
-source ${srcdir:-.}/imdtls-sessionbreak.sh
+. ${srcdir:-.}/imdtls-sessionbreak.sh

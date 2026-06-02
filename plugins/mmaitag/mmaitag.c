@@ -161,17 +161,17 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "provider")) {
             free(pData->provider_name);
-            pData->provider_name = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->provider_name = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tag")) {
             free(pData->tag);
-            pData->tag = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tag = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->tag[0] == '$') memmove(pData->tag, pData->tag + 1, strlen(pData->tag));
         } else if (!strcmp(actpblk.descr[i].name, "model")) {
             free(pData->model);
-            pData->model = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->model = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "expert.initial_prompt")) {
             free(pData->prompt);
-            pData->prompt = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->prompt = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "inputproperty")) {
             char *c = es_str2cstr(pvals[i].val.d.estr, NULL);
             CHKmalloc(pData->inputProp = malloc(sizeof(msgPropDescr_t)));
@@ -179,10 +179,10 @@ BEGINnewActInst
             free(c);
         } else if (!strcmp(actpblk.descr[i].name, "apikey")) {
             free(pData->apikey);
-            pData->apikey = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->apikey = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "apikey_file")) {
             free(pData->apikey_file);
-            pData->apikey_file = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->apikey_file = es_str2cstr(pvals[i].val.d.estr, NULL));
         }
     }
 

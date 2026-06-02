@@ -1,5 +1,5 @@
 .. _param-imdiag-serverinputname:
-.. _imdiag.parameter.input.serverinputname:
+.. _imdiag.parameter.module.serverinputname:
 
 ServerInputName
 ================
@@ -18,9 +18,9 @@ own log messages.
 This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerInputName
-:Scope: input
+:Scope: module
 :Type: string
-:Default: input=imdiag
+:Default: module=imdiag
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -33,18 +33,17 @@ always remains ``imdiag``. This parameter must be configured before using
 :ref:`ServerRun <param-imdiag-serverrun>`. This ensures the listener logs use
 the desired identifier from startup onward.
 
-Input usage
------------
-.. _param-imdiag-input-serverinputname:
-.. _imdiag.parameter.input.serverinputname-usage:
+Module usage
+------------
+.. _param-imdiag-module-serverinputname:
+.. _imdiag.parameter.module.serverinputname-usage:
 
 .. code-block:: rsyslog
 
-   module(load="imdiag")
-   input(type="imdiag"
-         listenPortFileName="/var/run/rsyslog/imdiag.port"
-         serverInputName="diag-main"
-         serverRun="19998")
+   module(load="imdiag"
+          listenPortFileName="/var/run/rsyslog/imdiag.port"
+          serverInputName="diag-main"
+          serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

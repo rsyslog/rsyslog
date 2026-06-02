@@ -28,6 +28,7 @@
  * limitations under the License.
  */
 #include "config.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -89,6 +90,8 @@ DEFobjCurrIf(parser)
 
 /* Standard-Constructor */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
+    size_t bufSize;
+
     pThis->iMsg = 0; /* just make sure... */
     pThis->iMaxLine = glbl.GetMaxLine(runConf);
     pThis->inputState = eAtStrtFram; /* indicate frame header expected */
@@ -105,7 +108,8 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
-    CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
+    bufSize = (size_t)pThis->iMaxLine + 1;
+    CHKmalloc(pThis->pMsg = (uchar *)malloc(bufSize));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -117,9 +121,20 @@ static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
     ISOBJ_TYPE_assert(pThis, tcps_sess);
 #ifdef FEATURE_REGEXP
     if (pThis->pLstnInfo->bHasStartRegex) {
+        size_t regexBufSize;
+        uchar *pMsgTmp;
+
+        if (pThis->iMaxLine > (INT_MAX - 1) / 2) {
+            LogError(0, RS_RET_ERR,
+                     "imtcp: framing.delimiter.regex requires maxMessageSize <= %d to avoid session buffer overflow",
+                     (INT_MAX - 1) / 2);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        regexBufSize = ((size_t)pThis->iMaxLine * 2) + 1;
         /* in this case, we need a second buffer and a larger primary one */
-        CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, (2 * pThis->iMaxLine) + 1));
-        CHKmalloc(pThis->pMsg_save = (uchar *)malloc((2 * pThis->iMaxLine) + 1));
+        CHKmalloc(pMsgTmp = (uchar *)realloc(pThis->pMsg, regexBufSize));
+        pThis->pMsg = pMsgTmp;
+        CHKmalloc(pThis->pMsg_save = (uchar *)malloc(regexBufSize));
     }
 #endif
     if (pThis->pSrv->OnSessConstructFinalize != NULL) {
@@ -317,6 +332,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
                                        time_t ttGenTime,
                                        multi_submit_t *pMultiSub) {
     smsg_t *pMsg;
+    rsRetVal localRet;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -343,8 +359,10 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
     CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
+    if (pThis->bFrameOversize) {
+        writeOversizeMessageLog(pMsg);
+    }
 
-    STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
     if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
         const char *per_source_key = NULL;
         size_t per_source_key_len = 0;
@@ -423,15 +441,26 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
                     break;
             }
         }
-        ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
-                                 ttGenTime);
+        localRet = ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key,
+                                            per_source_key_len, ttGenTime);
     } else {
-        ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+        localRet = ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    }
+
+    if (localRet == RS_RET_OK) {
+        STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
+    } else if (localRet == RS_RET_DISCARDMSG) {
+        DBGPRINTF("tcps_sess: message discarded by ratelimit helper\n");
+        iRet = RS_RET_OK;
+    } else {
+        DBGPRINTF("tcps_sess: ratelimit helper returned error %d, continuing\n", localRet);
+        iRet = RS_RET_OK;
     }
 
 finalize_it:
     /* reset status variables */
     pThis->iMsg = 0;
+    pThis->bFrameOversize = 0;
 
     RETiRet;
 }
@@ -552,7 +581,9 @@ static rsRetVal Close(tcps_sess_t *pThis) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcps_sess);
-    netstrm.Destruct(&pThis->pStrm);
+    if (pThis->pStrm != NULL) {
+        netstrm.Destruct(&pThis->pStrm);
+    }
     if (pThis->fromHost != NULL) {
         prop.Destruct(&pThis->fromHost);
     }
@@ -606,6 +637,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
     if (pThis->inputState == eAtStrtFram) {
         if (c >= '0' && c <= '9' && pThis->bSuppOctetFram) {
             pThis->inputState = eInOctetCnt;
+            pThis->bFrameOversize = 0;
             pThis->iOctetsRemain = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
         } else if (c == ' ' && pThis->bSPFramingFix) {
@@ -617,6 +649,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
             FINALIZE;
         } else {
             pThis->inputState = eInMsg;
+            pThis->bFrameOversize = 0;
             pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
         }
     }
@@ -662,6 +695,7 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 /* emergency, we now need to flush, no matter if we are at end of message or not... */
                 DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
                           pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+                pThis->bFrameOversize = 1;
                 defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
                 ++(*pnMsgs);
                 if (pThis->pSrv->discardTruncatedMsg == 1) {
@@ -724,13 +758,13 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                          cnf_params->pszInputName, peerName, peerIP, peerPort, c);
             }
             if (pThis->iOctetsRemain < 1) {
-                /* TODO: handle the case where the octet count is 0! */
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
                          "peer: (hostname) %s, (ip) %s, (port) %s: invalid octet count %d.",
                          cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > pThis->iMaxLine) {
+                pThis->bFrameOversize = 1;
                 /* while we can not do anything against it, we can at least log an indication
                  * that something went wrong) -- rgerhards, 2008-03-14
                  */
@@ -858,7 +892,9 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(parser, CORE_COMPONENT);
+#ifdef FEATURE_REGEXP
     objRelease(regexp, LM_REGEXP_FILENAME);
+#endif
 ENDObjClassExit(tcps_sess)
 
 
@@ -872,7 +908,9 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
+#ifdef FEATURE_REGEXP
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
+#endif
 
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     objRelease(glbl, CORE_COMPONENT);

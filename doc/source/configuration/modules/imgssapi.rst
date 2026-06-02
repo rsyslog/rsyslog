@@ -59,6 +59,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imgssapi-inputgssservermaxsessions.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgssservertokeniotimeout`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssservertokeniotimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imgssapi-inputgssserverkeepalive`
      - .. include:: ../../reference/parameters/imgssapi-inputgssserverkeepalive.rst
         :start-after: .. summary-start
@@ -75,6 +79,7 @@ Input Parameters
    ../../reference/parameters/imgssapi-inputgssserverservicename
    ../../reference/parameters/imgssapi-inputgssserverpermitplaintcp
    ../../reference/parameters/imgssapi-inputgssservermaxsessions
+   ../../reference/parameters/imgssapi-inputgssservertokeniotimeout
    ../../reference/parameters/imgssapi-inputgssserverkeepalive
    ../../reference/parameters/imgssapi-inputgsslistenportfilename
 
@@ -96,5 +101,4 @@ plain tcp syslog messages (on the same port):
    $ModLoad imgssapi # needs to be done just once
    $InputGSSServerRun 1514
    $InputGSSServerPermitPlainTCP on
-
 

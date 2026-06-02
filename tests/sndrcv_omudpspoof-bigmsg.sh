@@ -17,7 +17,7 @@ export MESSAGESIZE=65000 #65000 #32768 #16384
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_UDP="$(get_free_port)"
+export PORT_UDP_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
@@ -25,7 +25,8 @@ global (
     maxMessageSize="64k"
 )
 
-input(type="imudp" port="'$PORT_UDP'" ruleset="rsImudp")
+input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_UDP_FILE'"
+      ruleset="rsImudp")
 $template outfmt,"%msg%\n" 
 
 ruleset(name="rsImudp") {
@@ -36,6 +37,7 @@ ruleset(name="rsImudp") {
 }
 '
 startup
+assign_file_content PORT_UDP "$PORT_UDP_FILE"
 
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"

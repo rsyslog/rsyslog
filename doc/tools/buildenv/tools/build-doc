@@ -1,10 +1,10 @@
 if [ ! -e /rsyslog-doc/source ]; then
 	if [ -e /output ]; then
-		source tools/git-clone
+		. tools/git-clone
 	else
 		echo "ERROR: /rsyslog-doc is either not mounted or does not point to correct path"
 		echo "       and /output is also not present, so we do not know what to do"
-		source tools/help
+		. tools/help
 		exit 1
 	fi
 fi

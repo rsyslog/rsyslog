@@ -261,7 +261,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (cs.tplName != NULL) {
                 LogError(0, RS_RET_DUP_PARAM,
                          "omuxsock: default template "
@@ -271,11 +271,11 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "abstract")) {
             loadModConf->bAbstract = !!(int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "socketname")) {
-            loadModConf->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "sockettype")) {
             CHKiRet(_decodeSockType(pvals[i].val.d.estr, &loadModConf->sockType, &loadModConf->bConnected));
         } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
-            loadModConf->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->namespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "omuxsock: program error, non-handled "
@@ -358,17 +358,17 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "abstract")) {
             pData->bAbstract = !!(int)pvals[i].val.d.n;
             bHaveAbstract = 1;
         } else if (!strcmp(actpblk.descr[i].name, "socketname")) {
-            pData->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sockettype")) {
             CHKiRet(_decodeSockType(pvals[i].val.d.estr, &pData->sockType, &pData->bConnected));
             bHaveSocketType = 1;
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
-            pData->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->namespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         }
     }
 
@@ -431,7 +431,7 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
     DEFiRet;
-    unsigned lenSent = 0;
+    ssize_t lenSent = 0;
 
     if (pData->sock == INVLD_SOCK) {
         CHKiRet(doTryResume(pData));
@@ -448,17 +448,29 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
         } else {
             lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, pData->addrLen);
         }
-        if (lenSent != len) {
+        if ((size_t)lenSent != len) {
             int eno = errno;
             char errStr[1024];
 
+            if (lenSent != -1) {
+                eno = 0;
+            }
+
             /*
-             * XXX/rgerhards: how is this message correct, in that we are returning OK still?
-             * In reality, the remainder of the partially sent message (or never sent message)
-             * is simply dropped, and we do not change the state of the socket.
+             * For connected sockets, we'll let the infrastructure resume us according to its own
+             * criteria.  For unconnected sockets, we'll simply try again on the next message received.
              */
-            DBGPRINTF("omuxsock suspending: send%s(), socket %d, error: %d = %s.\n", pData->bConnected ? "" : "to",
-                      pData->sock, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+            if (pData->bConnected) {
+                LogError(eno, RS_RET_SUSPENDED, "omuxsock suspending: send(), socket %d, len %zu, sent %zd",
+                         pData->sock, len, lenSent);
+                if (iRet == RS_RET_OK) {
+                    iRet = RS_RET_SUSPENDED;
+                }
+            } else {
+                DBGPRINTF("omuxsock: sendto(), socket %d, len %zu, sent %zd, error: %d = %s.\n", pData->sock, len,
+                          lenSent, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+            }
+            closeSocket(pData);
         }
     }
 
@@ -494,7 +506,7 @@ static rsRetVal openSocket(instanceData *pData) {
      * Note destination is all \0 initially, so a non-abstract name is properly terminated,
      * and an abstract name doesn't care what follows (and may consume the entire sun_path).
      */
-    strncpy(pData->addr.sun_path + pData->bAbstract, (char *)pData->sockName, nameLen);
+    memcpy(pData->addr.sun_path + pData->bAbstract, pData->sockName, nameLen);
 
     /*
      * Note that connect is legal even for non-connected sockets, and the parameters so passed

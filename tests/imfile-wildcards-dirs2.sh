@@ -62,14 +62,16 @@ do
 	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
-		touch $RSYSLOG_DYNNAME.input.dir$i/file.logfile
-		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
+		./inputfilegen -m 1 -i $(((j - 1) * IMFILEINPUTFILES + i - 1)) > \
+			$RSYSLOG_DYNNAME.input.dir$i/file.tmp
+		mv $RSYSLOG_DYNNAME.input.dir$i/file.tmp \
+			$RSYSLOG_DYNNAME.input.dir$i/file.logfile
 	done
 	ls -d $RSYSLOG_DYNNAME.input.*
 
 	# Check correct amount of input files each time
 	IMFILEINPUTFILESALL=$((IMFILEINPUTFILES * j))
-	content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
+	content_check_with_count "HEADER msgnum:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
 	
 	# Delete all but first!
 	for i in $(seq 1 $IMFILEINPUTFILES);

@@ -22,12 +22,12 @@ template(name="t_analytics_msg_normalized_vc" type="string" string="%timereporte
 template(name="t_analytics" type="string" string="[][][%$!v_fromhost-ip%][%timestamp:::date-unixtimestamp%][] %$!v_analytics_msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_processing_tests.rulebase` useRawMsg="on")
+	action(type="mmnormalize" rulebase="'$srcdir/testsuites/mmnormalize_processing_tests.rulebase'" useRawMsg="on")
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
-	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_record")
-	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_path")
+	action(type="omfile" File="'$RSYSLOG_OUT_LOG'" template="t_file_record")
+	action(type="omfile" File="'$RSYSLOG_OUT_LOG'" template="t_file_path")
 
 	set $!v_forward="PCI";
 
@@ -50,7 +50,7 @@ ruleset(name="ruleset1") {
 				set $!v_analytics_msg=exec_template("t_analytics_msg_normalized");
 			}
 		}
-		action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_analytics")
+		action(type="omfile" File="'$RSYSLOG_OUT_LOG'" template="t_analytics")
 	}	
 }
 '

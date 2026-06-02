@@ -530,11 +530,11 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "cookie")) {
             free(pData->cookie);
-            pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "container")) {
             free(pData->container);
             size_t lenvar = es_strlen(pvals[i].val.d.estr);
-            pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->container = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pData->container[0] == '$') {
                 memmove(pData->container, pData->container + 1, lenvar);
                 --lenvar;
@@ -549,8 +549,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "userawmsg")) {
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "delimiter")) {
-            char *tmp = es_str2cstr(pvals[i].val.d.estr, NULL);
-            if (tmp == NULL || tmp[0] == '\0') {
+            char *tmp;
+            CHKmalloc(tmp = es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (tmp[0] == '\0') {
                 free(tmp);
                 parser_errmsg("mmleefparse: delimiter must not be empty");
                 ABORT_FINALIZE(RS_RET_INVALID_VALUE);

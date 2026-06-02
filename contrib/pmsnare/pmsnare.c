@@ -94,15 +94,33 @@ static struct cnfparamdescr parserpdescr[] = {{"parser.controlcharacterescapepre
                                               {"parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0}};
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
+enum { PMSNARE_TAB_REPR_SIZE = 5 };
+
+#define PMSNARE_SET_TAB_REPR(dst, literal)                                                                         \
+    do {                                                                                                           \
+        RS_STATIC_ASSERT(sizeof(literal) <= PMSNARE_TAB_REPR_SIZE, "pmsnare tabRepresentation literal too large"); \
+        memset((dst), 0, PMSNARE_TAB_REPR_SIZE);                                                                   \
+        memcpy((dst), (literal), sizeof(literal));                                                                 \
+    } while (0)
+
 struct instanceConf_s {
     int bEscapeCCOnRcv;
     int bEscapeTab;
     int bParserEscapeCCCStyle;
     uchar cCCEscapeChar;
     int tabLength;
-    char tabRepresentation[5];
+    char tabRepresentation[PMSNARE_TAB_REPR_SIZE];
     struct instanceConf_s *next;
 };
+
+static int hasPrefixWithFollowingTab(const uchar *const p,
+                                     const int len,
+                                     const char *const prefix,
+                                     const int prefixLen,
+                                     const instanceConf_t *const pInst) {
+    return len >= prefixLen + pInst->tabLength && strncasecmp((const char *)p, prefix, prefixLen) == 0 &&
+           strncasecmp((const char *)(p + prefixLen), pInst->tabRepresentation, pInst->tabLength) == 0;
+}
 
 /* Creates the instance and adds it to the list of instances. */
 static rsRetVal createInstance(instanceConf_t **pinst) {
@@ -164,7 +182,12 @@ BEGINnewParserInst
         } else if (!strcmp(parserpblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
             inst->bParserEscapeCCCStyle = pvals[i].val.d.n;
         } else if (!strcmp(parserpblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
-            inst->cCCEscapeChar = (uchar)*es_str2cstr(pvals[i].val.d.estr, NULL);
+            {
+                char *cstr;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
+                inst->cCCEscapeChar = (uchar)*cstr;
+                free(cstr);
+            }
         } else {
             dbgprintf("pmsnare: program error, non-handled param '%s'\n", parserpblk.descr[i].name);
         }
@@ -226,13 +249,13 @@ BEGINendCnfLoad
          */
         if (inst->bEscapeCCOnRcv && inst->bEscapeTab) {
             if (inst->bParserEscapeCCCStyle) {
-                strncpy(inst->tabRepresentation, "\\t", 5);
+                PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "\\t");
             } else {
-                strncpy(inst->tabRepresentation, "#011", 5);
+                PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "#011");
                 inst->tabRepresentation[0] = inst->cCCEscapeChar;
             }
         } else {
-            strncpy(inst->tabRepresentation, "\t", 5);
+            PMSNARE_SET_TAB_REPR(inst->tabRepresentation, "\t");
         }
         inst->tabLength = strlen(inst->tabRepresentation);
         /* TODO: This debug message would be more useful if it told which Snare instance! */
@@ -251,19 +274,16 @@ BEGINactivateCnf
 ENDactivateCnf
 
 BEGINfreeCnf
-    instanceConf_t *inst, *del;
     CODESTARTfreeCnf;
-    for (inst = modInstances->root; inst != NULL;) {
-        del = inst;
-        inst = inst->next;
-        free(del);
-    }
     free(modInstances);
+    modInstances = NULL;
 ENDfreeCnf
 
 BEGINparse2
     uchar *p2parse;
+    const uchar *tagStart;
     int lenMsg;
+    int tagLen;
     int snaremessage; /* 0 means not a snare message, otherwise it's the index of the tab after the tag  */
 
     CODESTARTparse2;
@@ -308,11 +328,13 @@ BEGINparse2
         dbgprintf("pmsnare: tab [%d]'%s'	msg at the first separator: [%d]'%s'\n", pInst->tabLength,
                   pInst->tabRepresentation, lenMsg, p2parse);
 
-        /* Look for the Snare tag. */
-        if (strncasecmp((char *)(p2parse + pInst->tabLength), "MSWinEventLog", 13) == 0) {
+        /* Look for the Snare tag plus the following separator we rewrite below. */
+        tagStart = p2parse + pInst->tabLength;
+        tagLen = lenMsg - pInst->tabLength;
+        if (hasPrefixWithFollowingTab(tagStart, tagLen, "MSWinEventLog", 13, pInst)) {
             dbgprintf("Found a non-syslog Windows Snare message.\n");
             snaremessage = p2parse - pMsg->pszRawMsg + pInst->tabLength + 13;
-        } else if (strncasecmp((char *)(p2parse + pInst->tabLength), "LinuxKAudit", 11) == 0) {
+        } else if (hasPrefixWithFollowingTab(tagStart, tagLen, "LinuxKAudit", 11, pInst)) {
             dbgprintf("Found a non-syslog Linux Snare message.\n");
             snaremessage = p2parse - pMsg->pszRawMsg + pInst->tabLength + 11;
         } else {
@@ -363,10 +385,10 @@ BEGINparse2
                   pInst->tabRepresentation, lenMsg, p2parse);
 
         /* Look for the Snare tag. */
-        if (lenMsg > 13 && strncasecmp((char *)p2parse, "MSWinEventLog", 13) == 0) {
+        if (hasPrefixWithFollowingTab(p2parse, lenMsg, "MSWinEventLog", 13, pInst)) {
             dbgprintf("Found a syslog Windows Snare message.\n");
             snaremessage = p2parse - pMsg->pszRawMsg + 13;
-        } else if (lenMsg > 11 && strncasecmp((char *)p2parse, "LinuxKAudit", 11) == 0) {
+        } else if (hasPrefixWithFollowingTab(p2parse, lenMsg, "LinuxKAudit", 11, pInst)) {
             dbgprintf("pmsnare: Found a syslog Linux Snare message.\n");
             snaremessage = p2parse - pMsg->pszRawMsg + 11;
         }
@@ -378,6 +400,9 @@ BEGINparse2
         lenMsg = pMsg->iLenRawMsg - snaremessage;
 
         /* Remove the tab after the tag. */
+        if (lenMsg < pInst->tabLength) {
+            ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+        }
         *p2parse = ' ';
         p2parse++;
         lenMsg--;

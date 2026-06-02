@@ -1,0 +1,2 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/lmnsd_ossl.so
+debian/apparmor/rsyslog-openssl.apparmor etc/apparmor.d/rsyslog.d/

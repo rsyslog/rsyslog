@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/imhiredis-queue-lpop.sh
+. ${srcdir:=.}/imhiredis-queue-lpop.sh

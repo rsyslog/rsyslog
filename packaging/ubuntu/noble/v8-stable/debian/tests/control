@@ -1,0 +1,23 @@
+Tests: logcheck
+Depends: rsyslog, logcheck, coreutils
+Restrictions: needs-root, breaks-testbed
+
+Tests: apparmor-include-mechanism
+Depends: rsyslog, apparmor
+Restrictions: needs-root allow-stderr
+
+Tests: simple-logger
+Depends: rsyslog, bsdutils, apparmor-utils, uuid-runtime
+Restrictions: needs-root allow-stderr
+
+Tests: simple-mysql
+# rsyslog-mysql has to be installed by the test script, because it pulls in dbconfig-common
+# which will be setup *before* mysql-server is configured and running, which fails.
+Depends: bsdutils, apparmor-utils, mysql-server, uuid-runtime
+Restrictions: needs-root allow-stderr
+
+Tests: simple-pgsql
+# rsyslog-pgsql has to be installed by the test script, because it pulls in dbconfig-common
+# which will be setup *before* postgresql is configured and running, which fails.
+Depends: bsdutils, apparmor-utils, postgresql, postgresql-client, uuid-runtime
+Restrictions: needs-root allow-stderr

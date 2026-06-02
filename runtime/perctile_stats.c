@@ -456,16 +456,16 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal perctileAddBucketMetrics(perctile_buckets_t *bkts, perctile_bucket_t *b, const uchar *name) {
+static rsRetVal perctileAddBucketMetrics(perctile_buckets_t *bkts, perctile_bucket_t *b) {
     uchar *metric_name_buff, *metric_suffix;
     const uchar *suffix_litteral;
-    int name_len;
+    const size_t name_len = ustrlen(b->name);
     DEFiRet;
 
-    name_len = ustrlen(name);
     CHKmalloc(metric_name_buff = malloc((name_len + PERCTILE_MAX_BUCKET_NS_METRIC_LENGTH + 1) * sizeof(uchar)));
 
-    strcpy((char *)metric_name_buff, (char *)name);
+    /* b->name is our owned duplicate created during bucket construction. */
+    memcpy(metric_name_buff, b->name, name_len + 1);
     metric_suffix = metric_name_buff + name_len;
     *metric_suffix = PERCTILE_METRIC_NAME_SEPARATOR;
     metric_suffix++;
@@ -543,7 +543,7 @@ static rsRetVal perctile_newBucket(
 
         // create the statsobj for this bucket
         CHKiRet(perctileInitNewBucketStats(b));
-        CHKiRet(perctileAddBucketMetrics(bkts, b, name));
+        CHKiRet(perctileAddBucketMetrics(bkts, b));
     } else {
         LogError(0, RS_RET_INTERNAL_ERROR,
                  "perctile: bucket creation failed, as "
@@ -588,7 +588,19 @@ rsRetVal perctile_processCnf(struct cnfobj *o) {
                     CHKmalloc(perctiles = calloc(perctilesCount, sizeof(uint8_t)));
                     for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                         char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                        perctiles[j] = atoi(cstr);
+                        CHKmalloc(cstr);
+                        char *endptr = NULL;
+                        errno = 0;
+                        const long val = strtol(cstr, &endptr, 10);
+                        if (errno == ERANGE || endptr == cstr || *endptr != '\0' || val < 0 || val > 100) {
+                            LogError(
+                                0, RS_RET_PARAM_ERROR,
+                                "perctile: percentile value '%s' is invalid - must be an integer between 0 and 100",
+                                cstr);
+                            free(cstr);
+                            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+                        }
+                        perctiles[j] = (uint8_t)val;
                         free(cstr);
                     }
                 }

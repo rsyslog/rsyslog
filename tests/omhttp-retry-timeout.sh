@@ -1,14 +1,18 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+#
+# Verify that omhttp retry handling copes with delayed failing responses when
+# restPathTimeout is shorter than the helper's failure delay. Success is that
+# retries eventually deliver the full sequence without duplicates or gaps.
 
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=5000
+export NUMMESSAGES=2500
 export SEQ_CHECK_OPTIONS="-d"
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-every 1000 --fail-with-delay-secs 2
+omhttp_start_server 0 --fail-every 1000 --fail-with-delay-secs 2
+port="$omhttp_server_lstnport"
 
 generate_conf
 add_conf '

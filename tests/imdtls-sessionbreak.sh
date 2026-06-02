@@ -1,11 +1,19 @@
 #!/bin/bash
 # added 2020-04-10 by alorbach, released under ASL 2.0
+#
+# Exercise imdtls cleanup after repeated abrupt DTLS client termination. The
+# receiver binds an ephemeral UDP port and the testbench discovers the actual
+# port from the running rsyslog process, avoiding get_free_port races with
+# parallel tests. Success is proven by all killed tcpflood clients leaving no
+# established DTLS session owned by the receiver before shutdown.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
+export DTLS_SESSIONBREAK_ROUNDS=${DTLS_SESSIONBREAK_ROUNDS:-16}
 export USE_VALGRIND="yes"
 # TODO remote leak check skip and fix memory leaks caused by session break
 export RS_TESTBENCH_LEAK_CHECK=no
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR=0
+export PORT_RCVR
 
 mkdir $RSYSLOG_DYNNAME.workdir
 generate_conf
@@ -38,9 +46,9 @@ ruleset(name="spool" queue.type="direct") {
 }
 '
 startup
-# How many tcpfloods we run at the same tiem
-for ((i=1;i<=10;i++)); do 
-        # How many times tcpflood runs in each threads
+assign_single_udp_listener_port PORT_RCVR
+# Stress repeated DTLS client churn to exercise session cleanup and fd reuse.
+for ((i=1;i<=DTLS_SESSIONBREAK_ROUNDS;i++)); do
 	./tcpflood -Tdtls -p$PORT_RCVR -m$NUMMESSAGES -W1000 -d102400 -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem -s &
 	tcpflood_pid=$!
 
@@ -49,13 +57,14 @@ for ((i=1;i<=10;i++)); do
 	# Give it time to actually connect
 	./msleep 1000;
 
-	kill -9 $tcpflood_pid # >/dev/null 2>&1;
+	kill -9 $tcpflood_pid >/dev/null 2>&1 || true
+	wait $tcpflood_pid >/dev/null 2>&1 || true
 	echo "killed tcpflood instance $i (PID $tcpflood_pid)"
 done;
 
 wait_queueempty
 
-netstatresult=$(netstat --all --program 2>&1 | grep "ESTABLISHED" | grep $(cat $RSYSLOG_PIDBASE.pid) | grep $TCPFLOOD_PORT)
+netstatresult=$(netstat --all --program 2>&1 | grep "ESTABLISHED" | grep "$(cat "$RSYSLOG_PIDBASE.pid")" | grep "$PORT_RCVR")
 openfd=$(ls -l "/proc/$(cat $RSYSLOG_PIDBASE$1.pid)/fd" | wc -l)
 
 shutdown_when_empty

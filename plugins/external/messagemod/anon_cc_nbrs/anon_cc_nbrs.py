@@ -30,6 +30,7 @@ import json
 
 # App logic global variables
 
+
 def onInit():
     """ Do everything that is needed to initialize processing (e.g.
         open files, create handles, connect to systems...)
@@ -39,13 +40,13 @@ def onInit():
     patterns = {'(^|[^A-Za-z0-9.])(34|37)[0-9]{13}([^A-Za-z0-9]|$)': 'XXXX-Amex-XXXX',           # Amex
                 '(^|[^A-Za-z0-9.])(5020|5038|6759)[0-9]{12}([^A-Za-z0-9]|$)': 'XXXX-Maes-XXXX',  # Maes
                 '(^|[^A-Za-z0-9.])4([0-9]{12}|[0-9]{15})([^A-Za-z0-9]|$)': 'XXXX-Visa-XXXX'      # Visa
-               }
+                }
     rc = re.compile("("+")|(".join(patterns.keys())+")")
 
 
 def onReceive(msg):
     """This is the entry point where actual work needs to be done. It receives
-       the messge from rsyslog and now needs to examine it, do any processing
+       the message from rsyslog and now needs to examine it, do any processing
        necessary. The to-be-modified properties (one or many) need to be pushed
        back to stdout, in JSON format, with no interim line breaks and a line
        break at the end of the JSON. If no field is to be modified, empty
@@ -62,12 +63,14 @@ def onReceive(msg):
             res = re.match(pat, match.group(0))
             if res:
                 return str(res.group(1))+patterns[pat]+str(res.group(res.lastindex))
+        return match.group(0)
 
     res_msg = rc.sub(lambda m: lookup(m), msg)
     if res_msg == msg:
         print json.dumps({})
     else:
         print json.dumps({'msg': res_msg})
+
 
 def onExit():
     """ Do everything that is needed to finish processing (e.g.
@@ -81,8 +84,8 @@ def onExit():
 -------------------------------------------------------
 This is plumbing that DOES NOT need to be CHANGED
 -------------------------------------------------------
-Implementor's note: Python seems to very agressively
-buffer stdouot. The end result was that rsyslog does not
+Implementor's note: Python seems to very aggressively
+buffer stdout. The end result was that rsyslog does not
 receive the script's messages in a timely manner (sometimes
 even never, probably due to races). To prevent this, we
 flush stdout after we have done processing. This is especially
@@ -95,10 +98,10 @@ keepRunning = 1
 while keepRunning == 1:
     msg = sys.stdin.readline()
     if msg:
-        msg = msg[:-1] # remove LF
+        msg = msg[:-1]  # remove LF
         onReceive(msg)
-        sys.stdout.flush() # very important, Python buffers far too much!
-    else: # an empty line means stdin has been closed
+        sys.stdout.flush()  # very important, Python buffers far too much!
+    else:  # an empty line means stdin has been closed
         keepRunning = 0
 onExit()
-sys.stdout.flush() # very important, Python buffers far too much!
+sys.stdout.flush()  # very important, Python buffers far too much!

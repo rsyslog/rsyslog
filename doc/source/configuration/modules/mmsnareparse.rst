@@ -1,5 +1,13 @@
-mmsnareparse - NXLog Snare Windows Security parser
-===================================================
+*************************************************
+mmsnareparse: NXLog Snare Windows Security parser
+*************************************************
+
+====================  =======================================
+**Module Name:**      **mmsnareparse**
+====================  =======================================
+
+Purpose
+=======
 
 The ``mmsnareparse`` parser module extracts structured metadata from NXLog
 Snare-formatted Windows Security events and Microsoft Sysinternals Sysmon events
@@ -9,7 +17,7 @@ original payload while exposing a normalized JSON view under a configurable
 container (``!win`` by default).
 
 Highlights
-----------
+==========
 
 * Supports classic tab-delimited ``MSWinEventLog`` payloads as well as the
   Snare JSON variant (``MSWinEventLog\t0\t{...}``).
@@ -57,7 +65,7 @@ Highlights
   ``definition.json`` so new fields can be mapped without recompilation.
 
 Build & Runtime Requirements
------------------------------
+============================
 
 * No external libraries beyond the rsyslog core dependencies (libfastjson is
   already required by rsyslog).
@@ -67,7 +75,7 @@ Build & Runtime Requirements
   worker keeps its own scratch buffers.
 
 JSON Field Overview
--------------------
+===================
 
 The module emits a hierarchical JSON document under the configured root path. Key
 nodes include:
@@ -90,7 +98,7 @@ nodes include:
   Update for Business deployment events).
 * ``Validation`` — Per-message warnings raised by strict or moderate validation
   policies.
-* ``Stats`` — Parsing counters (``ParsingStats``) summarising how many fields
+* ``Stats`` — Parsing counters (``ParsingStats``) summarizing how many fields
   were extracted successfully.
 * ``Raw`` / ``RawJSON`` — Optional copies of the original Snare payload when
   ``emit.rawpayload="on"``.
@@ -98,7 +106,7 @@ nodes include:
   the current release (or an empty array when ``emit.debugjson="on"``).
 
 Event ID Mapping
-----------------
+================
 
 .. csv-table::
    :header: "Event ID", "Category", "Subtype", "Outcome"
@@ -124,150 +132,47 @@ and others are mapped to ``Event.Category``, ``Event.Subtype``, and
 * Logon type codes are translated to ``Logon.TypeName``.
 * NTSTATUS and Kerberos result codes are preserved in hex form; additional maps
   can be added easily in ``mmsnareparse.c``.
-* Timestamps are normalised to ISO 8601 UTC using the rsyslog message timestamp
-  if the payload does not contain a parseable value.
+* Timestamps are normalized to ISO 8601 UTC using the rsyslog message timestamp
+  if the payload does not contain a parsable value.
 
-Error Handling & Observability
-------------------------------
+Configuration Parameters
+========================
 
-* Invalid or partial payloads are routed to ``Unparsed`` and flagged via
-  the ``partial`` counter in the instance's impstats object.
-* Parse failures increment the ``failed`` counter and can be redirected by a
-  secondary action when ``$parsesuccess`` evaluates to anything other than ``OK``.
-* Enable ``emit.debugjson="on"`` to force-create ``!win!Unparsed`` (even when
-  empty) so assertions and log collection pipelines can detect previously
-  unseen sections.
-* ``!win!Validation!Errors`` captures parse-time warnings when ``validation.mode``
-  is ``moderate`` or ``strict`` and ``!win!Stats!ParsingStats`` exposes
-  ``total_fields``, ``successful_parses`` and ``failed_parses`` for telemetry.
-* Placeholder values such as ``-`` or ``N/A`` are ignored and therefore neither
-  counted as stored fields nor as parse failures in the telemetry counters.
+.. note::
 
-Configuration
--------------
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-Basic Configuration with Error Handling
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Module parameters
+-----------------
 
-.. code-block:: none
+``definition.file``
+    Absolute or relative path to a JSON file that contains custom definitions.
+    The file is loaded during activation and merged with the built-in tables.
+    See `Extending Pattern Tables at Runtime`_ for more information.
 
-   module(load="imtcp")
-   module(load="omfile")
-   module(load="mmsnareparse")
+``definition.json``
+    Inline JSON string with the same schema as ``definition.file``. This is
+    convenient for smaller overrides delivered directly in the rsyslog config.
+    The value is parsed after ``definition.file``, so inline snippets can adjust
+    or replace objects loaded from disk. See `Extending Pattern Tables at
+    Runtime`_ for more information.
 
-   template(name="snareWin" type="string" string="%!win%\n")
-   input(type="imtcp" port="5514")
+``validation.mode``
+    Controls how both configuration and runtime parsing react to malformed
+    data. ``permissive`` (the default; aliases: ``lenient``, ``default``)
+    accepts issues silently, ``moderate`` records warnings under
+    ``!win!Validation!Errors`` while continuing, and ``strict`` aborts the
+    configuration or message when thresholds are exceeded.
 
-   action(type="mmsnareparse"
-          container="!win"
-          enable.network="on"
-          enable.laps="on"
-          enable.tls="on"
-          enable.wdac="on")
-   if $parsesuccess == "OK" then {
-       action(type="omfile" file="/var/log/winsec.json" template="snareWin")
-   } else {
-       action(type="omfile" file="/var/log/winsec.parsefail" template="RSYSLOG_DebugFormat")
-   }
+``runtime.config``
+    Path to a JSON file containing persistent overrides. The file shares the
+    same schema as ``definition.file`` and additionally supports an ``options``
+    object (``enable_debug``, ``enable_fallback``) to influence parse-time
+    behavior.
 
-JSON Template Output for SIEM Integration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This configuration extracts specific fields into a structured JSON format suitable for SIEM platforms:
-
-.. code-block:: none
-
-   module(load="mmsnareparse")
-
-   template(name="jsonfmt" type="list" option.jsonf="on") {
-     property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
-     property(outname="LogonType" name="$!win!LogonInformation!LogonType" format="jsonf")
-     property(outname="LogonTypeName" name="$!win!LogonInformation!LogonTypeName" format="jsonf")
-     property(outname="LAPSPolicyVersion" name="$!win!LAPS!PolicyVersion" format="jsonf")
-     property(outname="LAPSCredentialRotation" name="$!win!LAPS!CredentialRotation" format="jsonf")
-     property(outname="TLSReason" name="$!win!TLSInspection!Reason" format="jsonf")
-     property(outname="WDACPolicyVersion" name="$!win!WDAC!PolicyVersion" format="jsonf")
-     property(outname="WUFBPolicyID" name="$!win!WUFB!PolicyID" format="jsonf")
-   }
-
-   action(type="mmsnareparse")
-   action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
-
-Comprehensive Field Extraction with Ruleset
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This configuration demonstrates comprehensive field extraction using a ruleset approach, suitable for detailed analysis and compliance reporting:
-
-.. code-block:: none
-
-   module(load="imtcp")
-   module(load="mmsnareparse")
-
-   # Template to extract comprehensive structured JSON output
-   template(name="jsonfmt" type="list" option.jsonf="on") {
-       # Event fields
-       property(outname="eventid" name="$!win!Event!EventID" format="jsonf")
-       property(outname="channel" name="$!win!Event!Channel" format="jsonf")
-       property(outname="eventtype" name="$!win!Event!EventType" format="jsonf")
-       property(outname="categorytext" name="$!win!Event!CategoryText" format="jsonf")
-       property(outname="computer" name="$!win!Event!Computer" format="jsonf")
-       property(outname="provider" name="$!win!Event!Provider" format="jsonf")
-       
-       # Subject fields
-       property(outname="subjectsecurityid" name="$!win!Subject!SecurityID" format="jsonf")
-       property(outname="subjectaccountname" name="$!win!Subject!AccountName" format="jsonf")
-       property(outname="subjectaccountdomain" name="$!win!Subject!AccountDomain" format="jsonf")
-       property(outname="subjectlogonid" name="$!win!Subject!LogonID" format="jsonf")
-       
-       # LogonInformation fields
-       property(outname="logontype" name="$!win!LogonInformation!LogonType" format="jsonf")
-       property(outname="logontypename" name="$!win!LogonInformation!LogonTypeName" format="jsonf")
-       property(outname="restrictedadminmode" name="$!win!LogonInformation!RestrictedAdminMode" format="jsonf")
-       property(outname="virtualaccount" name="$!win!LogonInformation!VirtualAccount" format="jsonf")
-       property(outname="elevatedtoken" name="$!win!LogonInformation!ElevatedToken" format="jsonf")
-       property(outname="impersonationlevel" name="$!win!LogonInformation!ImpersonationLevel" format="jsonf")
-       
-       # NewLogon fields
-       property(outname="newlogonsecurityid" name="$!win!NewLogon!SecurityID" format="jsonf")
-       property(outname="newlogonaccountname" name="$!win!NewLogon!AccountName" format="jsonf")
-       property(outname="newlogonaccountdomain" name="$!win!NewLogon!AccountDomain" format="jsonf")
-       property(outname="newlogonlogonid" name="$!win!NewLogon!LogonID" format="jsonf")
-       property(outname="linkedlogonid" name="$!win!NewLogon!LinkedLogonID" format="jsonf")
-       property(outname="networkaccountname" name="$!win!NewLogon!NetworkAccountName" format="jsonf")
-       property(outname="logonguid" name="$!win!NewLogon!LogonGUID" format="jsonf")
-       
-       # Process fields
-       property(outname="processid" name="$!win!Process!ProcessID" format="jsonf")
-       property(outname="processname" name="$!win!Process!ProcessName" format="jsonf")
-       property(outname="processcommandline" name="$!win!Process!ProcessCommandLine" format="jsonf")
-       property(outname="tokenelevationtype" name="$!win!Process!TokenElevationType" format="jsonf")
-       property(outname="mandatorylabel" name="$!win!Process!MandatoryLabel" format="jsonf")
-       
-       # Network fields
-       property(outname="workstationname" name="$!win!Network!WorkstationName" format="jsonf")
-       property(outname="sourcenetworkaddress" name="$!win!Network!SourceNetworkAddress" format="jsonf")
-       property(outname="sourceport" name="$!win!Network!SourcePort" format="jsonf")
-       
-       # DetailedAuthentication fields
-       property(outname="logonprocess" name="$!win!DetailedAuthentication!LogonProcess" format="jsonf")
-       property(outname="authenticationpackage" name="$!win!DetailedAuthentication!AuthenticationPackage" format="jsonf")
-       property(outname="transitedservices" name="$!win!DetailedAuthentication!TransitedServices" format="jsonf")
-       property(outname="packagename" name="$!win!DetailedAuthentication!PackageName" format="jsonf")
-       property(outname="keylength" name="$!win!DetailedAuthentication!KeyLength" format="jsonf")
-       
-       # Privileges fields
-       property(outname="privilegelist" name="$!win!Privileges!PrivilegeList" format="jsonf")
-   }
-
-   ruleset(name="winsec") {
-       action(type="mmsnareparse")
-       action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
-   }
-
-   input(type="imtcp" port="5514" ruleset="winsec")
-
-Parameters
-----------
+Action Parameters
+-----------------
 
 .. csv-table::
    :header: "Parameter", "Type", "Default", "Description"
@@ -285,12 +190,91 @@ Parameters
    "``definition.json``", "string", "``unset``", "Inline JSON descriptor following the same schema as ``definition.file``. Processed after the file-based overrides."
    "``runtime.config``", "string", "``unset``", "Persistent runtime configuration file. Supports the definition schema plus ``options`` such as ``enable_debug`` and ``enable_fallback``."
    "``validation.mode`` / ``validation_mode``", "string", "``permissive``", "Selects parser strictness: ``permissive`` ignores issues, ``moderate`` records warnings, ``strict`` aborts when thresholds are exceeded."
-   "``ignoreTrailingPattern``", "string", "``unset``", "Pattern that marks the start of a trailing extra-data section to be ignored during parsing. When set, the parser searches for this pattern in trailing positions (after the last tab-separated token). If found, the message is truncated at the last tab character (removing the entire last token), and the truncated extra-data section (including any dynamic data like numbers preceding the pattern) is stored in the ``!extradata_section`` message property. This is useful for removing non-standard trailing custom data that may be added by third-party enrichers. The pattern is a literal string match (not a regex). This parameter is mutually exclusive with ``ignoreTrailingPattern.regex``."
-   "``ignoreTrailingPattern.regex``", "string", "``unset``", "POSIX extended regular expression that marks the start of a trailing extra-data section to be ignored during parsing. When set, the parser applies the regex to the trailing token (content after the last tab-separated token). If the regex matches, the message is truncated at the last tab character (removing the entire last token), and the truncated extra-data section is stored in the ``!extradata_section`` message property. This is useful for removing non-standard trailing custom data with dynamic prefixes (e.g., random integers) that may be added by third-party enrichers. Example: ``^[0-9]+\\s+custom_section:`` matches a number followed by whitespace and then the marker. This parameter is mutually exclusive with ``ignoreTrailingPattern``."
+   "``ignoreTrailingPattern``", "string", "``unset``", "Pattern that marks the start of a trailing extra-data section to be ignored during parsing. When set, the parser searches for this pattern in trailing positions (after the last tab-separated token). If found, the message is truncated at the last tab character (removing the entire last token), and the truncated extra-data section (including any dynamic data like numbers preceding the pattern) is stored in the ``$!extradata_section`` message property. This is useful for removing non-standard trailing custom data that may be added by third-party enrichers. The pattern is a literal string match (not a regex). This parameter is mutually exclusive with ``ignoreTrailingPattern.regex``."
+   "``ignoreTrailingPattern.regex``", "string", "``unset``", "POSIX extended regular expression that marks the start of a trailing extra-data section to be ignored during parsing. When set, the parser applies the regex to the trailing token (content after the last tab-separated token). If the regex matches, the message is truncated at the last tab character (removing the entire last token), and the truncated extra-data section is stored in the ``$!extradata_section`` message property. This is useful for removing non-standard trailing custom data with dynamic prefixes (e.g., random integers) that may be added by third-party enrichers. Example: ``^[0-9]+\\s+custom_section:`` matches a number followed by whitespace and then the marker. This parameter is mutually exclusive with ``ignoreTrailingPattern``."
    "``ignoreTrailingPattern.searchWindow``", "integer", "``256``", "Maximum number of characters to search at the end of the message when using ``ignoreTrailingPattern`` or ``ignoreTrailingPattern.regex``. The parser searches for the trailing pattern within the last 20% of the message length, but caps the search window at this limit to optimize performance. This parameter is useful when messages contain extensive enrichment data that extends beyond the default limit. The default value is 256 characters (increased from the previous hardcoded limit of 200)."
 
+Extending Pattern Tables at Runtime
+===================================
+
+``mmsnareparse`` ships with curated defaults for section detection, field
+normalization and event metadata, but environments frequently contain
+organization-specific extensions. The module can import supplemental
+definitions at startup using declarative JSON descriptors. See `Module
+parameters`_ for related configuration options.
+
+Sysmon Event Support
+--------------------
+
+The module includes built-in support for Microsoft Sysinternals Sysmon events
+via a definition file located at ``plugins/mmsnareparse/sysmon_definitions.json``.
+This file provides event mappings and field patterns for common Sysmon Event IDs
+(1-29), including:
+
+* Process events (creation, termination, access, tampering)
+* Network events (connections, DNS queries)
+* File events (creation, deletion, time changes, stream hashes)
+* Registry events (value sets, key renames, object create/delete)
+* System events (service state changes, config changes)
+* Driver and image load events
+* Pipe events (creation, connections)
+* WMI events (filters, consumers, bindings)
+* Clipboard changes
+* File blocking events
+
+To enable Sysmon parsing, load the definition file:
+
+.. code-block:: none
+
+   module(load="mmsnareparse"
+          definition.file="../plugins/mmsnareparse/sysmon_definitions.json")
+
+   action(type="mmsnareparse" container="!win")
+
+The definition file maps Sysmon Event IDs to semantic categories and subtypes,
+and provides field patterns for common Sysmon fields such as ``ProcessGuid``,
+``ProcessId``, ``Image``, ``CommandLine``, ``SourceIp``, ``DestinationIp``,
+``Protocol``, and many others. Fields are automatically routed to appropriate
+JSON sections (``EventData``, ``Network``, etc.) based on their type and
+context.
+
+You can extend or customize the Sysmon definitions by creating your own JSON
+file that merges with or overrides the built-in patterns. See the
+``sysmon_definitions.json`` file for the complete schema and examples.
+
+Definition schema
+-----------------
+
+The JSON document accepts the following top-level arrays:
+
+``sections``
+    Adds or overrides description section matchers. Each entry supports the
+    keys ``pattern`` (required, literal with optional ``*`` wildcard),
+    ``canonical`` (default: auto-generated CamelCase), ``behavior`` (``standard``,
+    ``inline``, ``semicolon`` or ``list``), ``priority`` (integer, higher wins),
+    ``sensitivity`` (``case_sensitive``, ``case_insensitive``, ``canonical``) and
+    ``flags`` (array of ``network``, ``laps``, ``tls``, ``wdac``).
+
+``fields``
+    Declares global field patterns. Fields map a ``pattern`` to a ``canonical``
+    name, optionally assign a ``section`` (``EventData``, ``Logon``, custom),
+    override ``priority``, and set ``value_type`` (``string``, ``int64``,
+    ``int64_with_raw``, ``bool``, ``json``, ``logon_type``,
+    ``remote_credential_guard``, ``privilege_list``) and ``sensitivity``.
+
+``eventFields``
+    Supplies event-specific field matchers. Each object requires an
+    ``event_id`` and a ``patterns`` array containing the same keys as ``fields``.
+    Optional ``required_flags`` gate the override on module toggles (for example
+    only when TLS inspection is enabled).
+
+``events``
+    Defines or updates the derived ``Event.Category``, ``Event.Subtype`` and
+    ``Event.Outcome`` for specific Windows event IDs.
+
+
 Extracted fields
-----------------
+================
 
 A non-exhaustive list of notable properties exposed by the module:
 
@@ -331,138 +315,154 @@ A non-exhaustive list of notable properties exposed by the module:
 * ``!win!WUFB!PolicyID``, ``!win!WUFB!Ring``, ``!win!WUFB!FromService``,
   ``!win!WUFB!EnforcementResult``
 
-Unknown fragments are preserved under ``!win!Unparsed`` to aid future
-normalization efforts.
 
-Error handling and observability
---------------------------------
+Error Handling & Observability
+==============================
 
 * Residual tokens and unexpected sections are collected in ``!win!Unparsed``
-  for follow-up analysis.
-* Messages that do not contain an ``MSWinEventLog`` payload are ignored and
-  ``$parsesuccess`` remains ``off``.
+  and flagged via the ``partial`` counter in the instance's impstats object.
 * When Snare JSON payloads cannot be parsed, the raw text is stored under
   ``!win!RawJSON`` so downstream tooling can inspect the failure.
-* Optional raw payload storage (``emit.rawpayload``) simplifies error triage and
-  regression analysis.
+* Messages that do not contain a ``MSWinEventLog`` payload are ignored and
+  ``$parsesuccess`` remains ``off``.
+* Parse failures increment the ``failed`` counter and can be redirected by a
+  secondary action when ``$parsesuccess`` evaluates to anything other than ``OK``.
+* Enable ``emit.debugjson="on"`` to force-create ``!win!Unparsed`` (even when
+  empty) so assertions and log collection pipelines can detect previously
+  unseen sections.
+* ``!win!Validation!Errors`` captures parse-time warnings when ``validation.mode``
+  is ``moderate`` or ``strict`` and ``!win!Stats!ParsingStats`` exposes
+  ``total_fields``, ``successful_parses`` and ``failed_parses`` for telemetry.
+* Placeholder values such as ``-`` or ``N/A`` are ignored and therefore neither
+  counted as stored fields nor as parse failures in the telemetry counters.
 
-Testing
--------
 
-The regression suite (``tests/mmsnareparse-basic.sh``,
-``tests/mmsnareparse-json.sh``, ``tests/mmsnareparse-syslog.sh``,
-``tests/mmsnareparse-comprehensive.sh``, ``tests/mmsnareparse-custom.sh``,
-``tests/mmsnareparse-sysmon.sh``) replays canonical Windows Security samples
-and Sysmon events, and injects custom JSON overrides to verify extracted fields
-remain stable (for example, 4624 with LAPS, 5157 TLS inspection, 6281 WDAC
-enforcement, 1243 WUFB deployment, Sysmon process and network events, and
-bespoke definitions supplied at runtime).
+Examples
+========
 
-Extending Pattern Tables at Runtime
------------------------------------
-
-``mmsnareparse`` ships with curated defaults for section detection, field
-normalisation and event metadata, but environments frequently contain
-organisation-specific extensions. The module can import supplemental
-definitions at startup using declarative JSON descriptors.
-
-Sysmon Event Support
-~~~~~~~~~~~~~~~~~~~~
-
-The module includes built-in support for Microsoft Sysinternals Sysmon events
-via a definition file located at ``plugins/mmsnareparse/sysmon_definitions.json``.
-This file provides event mappings and field patterns for common Sysmon Event IDs
-(1-29), including:
-
-* Process events (creation, termination, access, tampering)
-* Network events (connections, DNS queries)
-* File events (creation, deletion, time changes, stream hashes)
-* Registry events (value sets, key renames, object create/delete)
-* System events (service state changes, config changes)
-* Driver and image load events
-* Pipe events (creation, connections)
-* WMI events (filters, consumers, bindings)
-* Clipboard changes
-* File blocking events
-
-To enable Sysmon parsing, load the definition file:
+Basic Configuration with Error Handling
+---------------------------------------
 
 .. code-block:: none
 
-   module(load="mmsnareparse"
-          definition.file="../plugins/mmsnareparse/sysmon_definitions.json")
+   module(load="imtcp")
+   module(load="omfile")
+   module(load="mmsnareparse")
 
-   action(type="mmsnareparse" container="!win")
+   template(name="snareWin" type="string" string="%!win%\n")
+   input(type="imtcp" port="5514")
 
-The definition file maps Sysmon Event IDs to semantic categories and subtypes,
-and provides field patterns for common Sysmon fields such as ``ProcessGuid``,
-``ProcessId``, ``Image``, ``CommandLine``, ``SourceIp``, ``DestinationIp``,
-``Protocol``, and many others. Fields are automatically routed to appropriate
-JSON sections (``EventData``, ``Network``, etc.) based on their type and
-context.
+   action(type="mmsnareparse"
+          container="!win"
+          enable.network="on"
+          enable.laps="on"
+          enable.tls="on"
+          enable.wdac="on")
+   if $parsesuccess == "OK" then {
+       action(type="omfile" file="/var/log/winsec.json" template="snareWin")
+   } else {
+       action(type="omfile" file="/var/log/winsec.parsefail" template="RSYSLOG_DebugFormat")
+   }
 
-You can extend or customize the Sysmon definitions by creating your own JSON
-file that merges with or overrides the built-in patterns. See the
-``sysmon_definitions.json`` file for the complete schema and examples.
+JSON Template Output for SIEM Integration
+-----------------------------------------
 
-New module parameters
-~~~~~~~~~~~~~~~~~~~~~
+This configuration extracts specific fields into a structured JSON format suitable for SIEM platforms:
 
-``definition.file``
-    Absolute or relative path to a JSON file that contains custom definitions.
-    The file is loaded during activation and merged with the built-in tables.
+.. code-block:: none
 
-``definition.json``
-    Inline JSON string with the same schema as ``definition.file``. This is
-    convenient for smaller overrides delivered directly in the rsyslog config.
-    The value is parsed after ``definition.file`` so inline snippets can adjust
-    or replace objects loaded from disk.
+   module(load="mmsnareparse")
 
-``validation.mode``
-    Controls how both configuration and runtime parsing react to malformed
-    data. ``permissive`` (the default; aliases: ``lenient``, ``default``)
-    accepts issues silently, ``moderate`` records warnings under
-    ``!win!Validation!Errors`` while continuing, and ``strict`` aborts the
-    configuration or message when thresholds are exceeded.
+   template(name="jsonfmt" type="list" option.jsonf="on") {
+     property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
+     property(outname="LogonType" name="$!win!LogonInformation!LogonType" format="jsonf")
+     property(outname="LogonTypeName" name="$!win!LogonInformation!LogonTypeName" format="jsonf")
+     property(outname="LAPSPolicyVersion" name="$!win!LAPS!PolicyVersion" format="jsonf")
+     property(outname="LAPSCredentialRotation" name="$!win!LAPS!CredentialRotation" format="jsonf")
+     property(outname="TLSReason" name="$!win!TLSInspection!Reason" format="jsonf")
+     property(outname="WDACPolicyVersion" name="$!win!WDAC!PolicyVersion" format="jsonf")
+     property(outname="WUFBPolicyID" name="$!win!WUFB!PolicyID" format="jsonf")
+   }
 
-``runtime.config``
-    Path to a JSON file containing persistent overrides. The file shares the
-    same schema as ``definition.file`` and additionally supports an ``options``
-    object (``enable_debug``, ``enable_fallback``) to influence parse-time
-    behaviour.
+   action(type="mmsnareparse")
+   action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
 
-Definition schema
-~~~~~~~~~~~~~~~~~
+Comprehensive Field Extraction with Ruleset
+-------------------------------------------
 
-The JSON document accepts the following top-level arrays:
+This configuration demonstrates comprehensive field extraction using a ruleset approach, suitable for detailed analysis and compliance reporting:
 
-``sections``
-    Adds or overrides description section matchers. Each entry supports the
-    keys ``pattern`` (required, literal with optional ``*`` wildcard),
-    ``canonical`` (default: auto-generated CamelCase), ``behavior`` (``standard``,
-    ``inline``, ``semicolon`` or ``list``), ``priority`` (integer, higher wins),
-    ``sensitivity`` (``case_sensitive``, ``case_insensitive``, ``canonical``) and
-    ``flags`` (array of ``network``, ``laps``, ``tls``, ``wdac``).
+.. code-block:: none
 
-``fields``
-    Declares global field patterns. Fields map a ``pattern`` to a ``canonical``
-    name, optionally assign a ``section`` (``EventData``, ``Logon``, custom),
-    override ``priority``, and set ``value_type`` (``string``, ``int64``,
-    ``int64_with_raw``, ``bool``, ``json``, ``logon_type``,
-    ``remote_credential_guard``, ``privilege_list``) and ``sensitivity``.
+   module(load="imtcp")
+   module(load="mmsnareparse")
 
-``eventFields``
-    Supplies event-specific field matchers. Each object requires an
-    ``event_id`` and a ``patterns`` array containing the same keys as ``fields``.
-    Optional ``required_flags`` gate the override on module toggles (for example
-    only when TLS inspection is enabled).
+   # Template to extract comprehensive structured JSON output
+   template(name="jsonfmt" type="list" option.jsonf="on") {
+       # Event fields
+       property(outname="eventid" name="$!win!Event!EventID" format="jsonf")
+       property(outname="channel" name="$!win!Event!Channel" format="jsonf")
+       property(outname="eventtype" name="$!win!Event!EventType" format="jsonf")
+       property(outname="categorytext" name="$!win!Event!CategoryText" format="jsonf")
+       property(outname="computer" name="$!win!Event!Computer" format="jsonf")
+       property(outname="provider" name="$!win!Event!Provider" format="jsonf")
 
-``events``
-    Defines or updates the derived ``Event.Category``, ``Event.Subtype`` and
-    ``Event.Outcome`` for specific Windows event IDs.
+       # Subject fields
+       property(outname="subjectsecurityid" name="$!win!Subject!SecurityID" format="jsonf")
+       property(outname="subjectaccountname" name="$!win!Subject!AccountName" format="jsonf")
+       property(outname="subjectaccountdomain" name="$!win!Subject!AccountDomain" format="jsonf")
+       property(outname="subjectlogonid" name="$!win!Subject!LogonID" format="jsonf")
 
-Example: merging custom sections and fields
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       # LogonInformation fields
+       property(outname="logontype" name="$!win!LogonInformation!LogonType" format="jsonf")
+       property(outname="logontypename" name="$!win!LogonInformation!LogonTypeName" format="jsonf")
+       property(outname="restrictedadminmode" name="$!win!LogonInformation!RestrictedAdminMode" format="jsonf")
+       property(outname="virtualaccount" name="$!win!LogonInformation!VirtualAccount" format="jsonf")
+       property(outname="elevatedtoken" name="$!win!LogonInformation!ElevatedToken" format="jsonf")
+       property(outname="impersonationlevel" name="$!win!LogonInformation!ImpersonationLevel" format="jsonf")
+
+       # NewLogon fields
+       property(outname="newlogonsecurityid" name="$!win!NewLogon!SecurityID" format="jsonf")
+       property(outname="newlogonaccountname" name="$!win!NewLogon!AccountName" format="jsonf")
+       property(outname="newlogonaccountdomain" name="$!win!NewLogon!AccountDomain" format="jsonf")
+       property(outname="newlogonlogonid" name="$!win!NewLogon!LogonID" format="jsonf")
+       property(outname="linkedlogonid" name="$!win!NewLogon!LinkedLogonID" format="jsonf")
+       property(outname="networkaccountname" name="$!win!NewLogon!NetworkAccountName" format="jsonf")
+       property(outname="logonguid" name="$!win!NewLogon!LogonGUID" format="jsonf")
+
+       # Process fields
+       property(outname="processid" name="$!win!Process!ProcessID" format="jsonf")
+       property(outname="processname" name="$!win!Process!ProcessName" format="jsonf")
+       property(outname="processcommandline" name="$!win!Process!ProcessCommandLine" format="jsonf")
+       property(outname="tokenelevationtype" name="$!win!Process!TokenElevationType" format="jsonf")
+       property(outname="mandatorylabel" name="$!win!Process!MandatoryLabel" format="jsonf")
+
+       # Network fields
+       property(outname="workstationname" name="$!win!Network!WorkstationName" format="jsonf")
+       property(outname="sourcenetworkaddress" name="$!win!Network!SourceNetworkAddress" format="jsonf")
+       property(outname="sourceport" name="$!win!Network!SourcePort" format="jsonf")
+
+       # DetailedAuthentication fields
+       property(outname="logonprocess" name="$!win!DetailedAuthentication!LogonProcess" format="jsonf")
+       property(outname="authenticationpackage" name="$!win!DetailedAuthentication!AuthenticationPackage" format="jsonf")
+       property(outname="transitedservices" name="$!win!DetailedAuthentication!TransitedServices" format="jsonf")
+       property(outname="packagename" name="$!win!DetailedAuthentication!PackageName" format="jsonf")
+       property(outname="keylength" name="$!win!DetailedAuthentication!KeyLength" format="jsonf")
+
+       # Privileges fields
+       property(outname="privilegelist" name="$!win!Privileges!PrivilegeList" format="jsonf")
+   }
+
+   ruleset(name="winsec") {
+       action(type="mmsnareparse")
+       action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
+   }
+
+   input(type="imtcp" port="5514" ruleset="winsec")
+
+
+Merging custom sections and fields
+-------------------------------------------
 
 .. code-block:: json
 
@@ -518,10 +518,25 @@ activated, ensuring worker threads share a consistent view.
 
 
 Troubleshooting
----------------
+===============
 
 * Inspect ``$parsesuccess`` and the instance's impstats counters (``recordseen``,
-  ``parsed``, ``partial``, ``failed``) to verify parsing behaviour.
-* Use ``emit.debugjson="on"`` to guarantee an ``!win!Unparsed`` array is present
+  ``parsed``, ``partial``, ``failed``) to verify parsing behavior.
+* Use ``emit.debugjson="on"`` to guarantee a ``!win!Unparsed`` array is present
   for assertions when new Windows releases add previously unknown sections.
-* Extend section handlers or lookup tables in ``plugins/mmsnareparse/mmsnareparse.c`` when Microsoft introduces additional telemetry fields.
+* Extend section handlers or lookup tables in
+  ``plugins/mmsnareparse/mmsnareparse.c`` when Microsoft introduces additional
+  telemetry fields.
+
+
+Testing
+=======
+
+The regression suite (``tests/mmsnareparse-basic.sh``,
+``tests/mmsnareparse-json.sh``, ``tests/mmsnareparse-syslog.sh``,
+``tests/mmsnareparse-comprehensive.sh``, ``tests/mmsnareparse-custom.sh``,
+``tests/mmsnareparse-sysmon.sh``) replays canonical Windows Security samples
+and Sysmon events, and injects custom JSON overrides to verify extracted fields
+remain stable (for example, 4624 with LAPS, 5157 TLS inspection, 6281 WDAC
+enforcement, 1243 WUFB deployment, Sysmon process and network events, and
+bespoke definitions supplied at runtime).

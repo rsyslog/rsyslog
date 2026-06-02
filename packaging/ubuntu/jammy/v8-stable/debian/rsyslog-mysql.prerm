@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+. /usr/share/debconf/confmodule
+. /usr/share/dbconfig-common/dpkg/prerm.mysql
+
+dbc_go rsyslog-mysql $@
+
+#DEBHELPER#
+
+exit 0

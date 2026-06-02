@@ -1,14 +1,14 @@
 .. index:: ! mmaitag
 
-*********************************
-AI-based classification (mmaitag)
-*********************************
+********************************
+mmaitag: AI-based classification
+********************************
 
-================  ================================
-**Module Name:**  mmaitag
-**Author:**:      Adiscon
-**Available:**:   9.0+
-================  ================================
+================  =======
+**Module Name:**  mmaitag
+**Author:**       Adiscon
+**Available:**    9.0+
+================  =======
 
 Purpose
 =======
@@ -20,20 +20,25 @@ individually and the resulting tag is stored in a custom variable.
 Default labels
 --------------
 
-| Label     | Description                                                |
-| --------- | ---------------------------------------------------------- |
-| NOISE     | Can be ignored, redundant, or irrelevant for most purposes |
-| REGULAR   | Normal messages of operational interest                    |
-| IMPORTANT | Should be logged and may indicate early signs of issues    |
-| CRITICAL  | Indicates immediate or serious problems                    |
+=========  ============================================================
+**Label**  **Description**
+NOISE      Can be ignored, redundant, or irrelevant for most purposes
+REGULAR    Normal messages of operational interest
+IMPORTANT  Should be logged and may indicate early signs of issues
+CRITICAL   Indicates immediate or serious problems
+=========  ============================================================
 
-Action Parameters
-=================
+
+Configuration Parameters
+========================
 
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for
    readability.
+
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70

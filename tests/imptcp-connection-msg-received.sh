@@ -9,7 +9,7 @@ input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_por
 	notifyonconnectionclose="on" notifyonconnectionopen="on")
 
 :msg, contains, "msgnum:" {
-	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
+	action(type="omfile" file="'$RSYSLOG2_OUT_LOG'")
 }
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")

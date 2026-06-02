@@ -50,7 +50,9 @@ ls -l "$RSYSLOG_DYNNAME".links/container-1.log
 # Start rsyslog now
 startup
 
-PID=$(cat "$RSYSLOG_PIDBASE".pid)
+# Slow ARM/ASAN runners can see the imdiag startup marker before the pidfile is
+# populated; wait for a valid pid before inspecting /proc.
+PID=$(getpid)
 echo "Rsyslog pid $RSYSLOG_PIDBASE.pid=$PID"
 if [[ "$PID" == "" ]]; then
 	error_exit 1

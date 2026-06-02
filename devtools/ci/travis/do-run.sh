@@ -5,6 +5,6 @@ if [ "$TRAVIS_EVENT_TYPE" == "cron" ] &&  [ "$DO_CRON" != "YES" ]; then
 	exit 0 # this must not run under PRs
 fi
 
-export RSYSLOG_HOME=`pwd`
+export RSYSLOG_HOME=$(pwd)
 echo running tests/travis/$RUN, home: $RSYSLOG_HOME
 $RSYSLOG_HOME/tests/travis/$RUN

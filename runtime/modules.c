@@ -1146,7 +1146,10 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
         }
 
         /* ... add actual name ... */
-        strncat((char *)pPathBuf, (char *)pModName, lenPathBuf - iPathLen - 1);
+        const size_t modNameLen = strlen((char *)pModName);
+        memcpy(pPathBuf + iPathLen, pModName, modNameLen);
+        iPathLen += modNameLen;
+        pPathBuf[iPathLen] = '\0';
 
         /* now see if we have an extension and, if not, append ".so" */
         if (!bHasExtension) {
@@ -1154,7 +1157,7 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
              * TODO: I guess this is highly importable, so we should change the
              * algo over time... -- rgerhards, 2008-03-05
              */
-            strncat((char *)pPathBuf, ".so", lenPathBuf - strlen((char *)pPathBuf) - 1);
+            memcpy(pPathBuf + iPathLen, ".so", sizeof(".so"));
         }
 
         /* complete load path constructed, so ... GO! */

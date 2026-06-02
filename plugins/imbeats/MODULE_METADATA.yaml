@@ -1,0 +1,9 @@
+support_status: core-supported
+maturity_level: fresh
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-04-09
+build_dependencies:
+  - "zlib (--enable-imbeats)"
+notes:
+  - "Accepts Elastic Beats via Lumberjack protocol v2 over netstrm-backed TCP or TLS transports."
+  - "Initial event mapping is optimized for Elasticsearch-oriented downstream flow; representation configurability is deferred."

@@ -95,6 +95,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imudp-port.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imudp-listenportfilename`
+     - .. include:: ../../reference/parameters/imudp-listenportfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imudp-ipfreebind`
      - .. include:: ../../reference/parameters/imudp-ipfreebind.rst
         :start-after: .. summary-start
@@ -354,6 +358,7 @@ Additional Resources
    ../../reference/parameters/imudp-preservecase
    ../../reference/parameters/imudp-address
    ../../reference/parameters/imudp-port
+   ../../reference/parameters/imudp-listenportfilename
    ../../reference/parameters/imudp-ipfreebind
    ../../reference/parameters/imudp-device
    ../../reference/parameters/imudp-ruleset

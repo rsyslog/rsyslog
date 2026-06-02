@@ -167,7 +167,7 @@ BEGINnewParserInst
         if (!strcmp(parserpblk.descr[i].name, "undefinedpropertyerror")) {
             inst->undefPropErr = (int)pvals[i].val.d.n;
         } else if (!strcmp(parserpblk.descr[i].name, "rulebase")) {
-            inst->rulebase = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->rulebase = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "rule")) {
             es_str_t *rules;
             CHKmalloc(rules = es_newStr(128));

@@ -1,0 +1,2 @@
+<167>Mar  6 16:57:54 host tag @cee:{"items": [{"type": "info", "val": "audit1"}, {"type": "error", "val": "audit2"}], "txt": "this is an AUDIT message"}
+<167>Mar  6 16:57:54 host tag @cee:{"items": [{"type": "info", "val": "std1"}, {"type": "error", "val": "err1"}], "txt": "this is a NORMAL message"}

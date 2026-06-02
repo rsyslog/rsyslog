@@ -77,7 +77,7 @@ static const long long yearInSecs[] = {
     3629145599, 3660681599, 3692217599, 3723753599, 3755375999, 3786911999, 3818447999, 3849983999, 3881606399,
     3913142399, 3944678399, 3976214399, 4007836799, 4039372799, 4070908799, 4102444799};
 
-/* note ramge is 1969 -> 2100 because it needs to access previous/next year */
+/* note range is 1969 -> 2100 because it needs to access previous/next year */
 /* for x in $(seq 1969 2100) ; do
  *   printf %s', ' $(date --date="Dec 28 ${x} UTC 12:00:00" +%V)
  * done | fold -w 70 -s */
@@ -831,6 +831,24 @@ static int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf) {
 }
 
 
+static int getNormalizedSecFracPower(const struct syslogTime *ts, int *secfrac) {
+    int precision;
+
+    assert(ts != NULL);
+    assert(secfrac != NULL);
+    assert(ts->secfracPrecision > 0);
+
+    precision = ts->secfracPrecision;
+    *secfrac = ts->secfrac;
+    while (precision > 6) {
+        *secfrac /= 10;
+        --precision;
+    }
+
+    return tenPowers[precision - 1];
+}
+
+
 /**
  * Format a syslogTimestamp to just the fractional seconds.
  * The caller must provide the timestamp as well as a character
@@ -851,8 +869,7 @@ static int formatTimestampSecFrac(struct syslogTime *ts, char *pBuf) {
 
     iBuf = 0;
     if (ts->secfracPrecision > 0) {
-        power = tenPowers[(ts->secfracPrecision - 1) % 6];
-        secfrac = ts->secfrac;
+        power = getNormalizedSecFracPower(ts, &secfrac);
         while (power > 0) {
             digit = secfrac / power;
             secfrac -= digit * power;
@@ -916,8 +933,7 @@ static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
 
     if (ts->secfracPrecision > 0) {
         pBuf[iBuf++] = '.';
-        power = tenPowers[(ts->secfracPrecision - 1) % 6];
-        secfrac = ts->secfrac;
+        power = getNormalizedSecFracPower(ts, &secfrac);
         while (power > 0) {
             digit = secfrac / power;
             secfrac -= digit * power;
@@ -943,11 +959,11 @@ static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
 }
 
 /**
- * Format a syslogTimestamp to a RFC3164 timestamp sring.
+ * Format a syslogTimestamp to a RFC3164 timestamp string.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string termnator). If 0 is returend, an error occurred.
+ * the string terminator). If 0 is returend, an error occurred.
  * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
  * where a zero-digit is written instead of a space for the first
  * day character if day < 10. syslog-ng seems to do that, and some
@@ -1029,7 +1045,7 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
             MonthInDays = 90;  // until 01 of April
             break;
         case 5:
-            MonthInDays = 120;  // until 01 of Mai
+            MonthInDays = 120;  // until 01 of May
             break;
         case 6:
             MonthInDays = 151;  // until 01 of June
@@ -1044,7 +1060,7 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
             MonthInDays = 243;  // until 01 of September
             break;
         case 10:
-            MonthInDays = 273;  // until 01 of Oktober
+            MonthInDays = 273;  // until 01 of October
             break;
         case 11:
             MonthInDays = 304;  // until 01 of November

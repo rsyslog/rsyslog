@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "install" -a -n "$2" ] ; then
+	[ -f /etc/logrotate.d/rsyslog.disabled ] && mv -f /etc/logrotate.d/rsyslog.disabled /etc/logrotate.d/rsyslog
+fi
+
+if [ "$1" = "upgrade" ] && dpkg --compare-versions "$2" lt "5.7.8-1" ; then
+	rm -f /etc/systemd/system/sockets.target.wants/rsyslog.socket
+fi
+
+disable_profile() {
+    APP_CONFFILE="/etc/apparmor.d/usr.sbin.rsyslogd"
+    APP_DISABLE="/etc/apparmor.d/disable/usr.sbin.rsyslogd"
+    # Create a symlink to the yet-to-be-unpacked profile
+    if [ ! -e "$APP_CONFFILE" ]; then
+        mkdir -p `dirname $APP_DISABLE` 2>/dev/null || true
+        ln -sf $APP_CONFFILE $APP_DISABLE
+    fi
+}
+
+if [ "$1" = "install" ]; then
+    # Disable AppArmor profile on install
+    disable_profile
+elif [ "$1" = "upgrade" ] && dpkg --compare-versions "$2" lt "5.8.6-1ubuntu5" ; then
+    # Disable AppArmor on upgrade from earlier than when we first shipped
+    # the profile if the user does not already have a profile defined
+    disable_profile
+fi
+
+#DEBHELPER#
+
+exit 0

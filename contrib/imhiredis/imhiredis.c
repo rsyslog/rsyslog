@@ -67,7 +67,7 @@ MODULE_CNFNAME("imhiredis")
 DEF_IMOD_STATIC_DATA;
 #define BATCH_SIZE 10
 #define WAIT_TIME_MS 500
-#define STREAM_INDEX_STR_MAXLEN 44  // "18446744073709551615-18446744073709551615"
+#define STREAM_INDEX_STR_BUFSZ 44 /* max stream index text plus NUL */
 #define IMHIREDIS_MODE_QUEUE 1
 #define IMHIREDIS_MODE_SUBSCRIBE 2
 #define IMHIREDIS_MODE_STREAM 3
@@ -230,7 +230,7 @@ static struct json_object *_redisParseArrayReply(const redisReply *reply);
 static struct json_object *_redisParseDoubleReply(const redisReply *reply);
 #endif
 static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen);
-static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata);
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json, struct json_object **metadata);
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
 rsRetVal redisAuthentAsynchronous(redisAsyncContext *aconn, uchar *password);
 rsRetVal redisActualizeCurrentNode(instanceConf_t *inst);
@@ -262,6 +262,28 @@ void insertNodeAfter(redisNode *root, redisNode *elem);
 void dbgPrintNode(redisNode *node);
 
 
+static rsRetVal copyStreamIndexText(
+    char *dst, size_t dstSize, const char *src, size_t srcLen, rsRetVal err, const char *context) {
+    DEFiRet;
+
+    assert(dst != NULL);
+    assert(src != NULL);
+    assert(context != NULL);
+
+    if (srcLen >= dstSize) {
+        LogError(0, err, "imhiredis: %s exceeds maximum supported stream index length of %zu bytes", context,
+                 dstSize - 1);
+        ABORT_FINALIZE(err);
+    }
+
+    memcpy(dst, src, srcLen);
+    dst[srcLen] = '\0';
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
@@ -278,7 +300,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->useLPop = 0;
     inst->streamConsumerGroup = NULL;
     inst->streamConsumerName = NULL;
-    CHKmalloc(inst->streamReadFrom = calloc(1, STREAM_INDEX_STR_MAXLEN));
+    CHKmalloc(inst->streamReadFrom = calloc(1, STREAM_INDEX_STR_BUFSZ));
     inst->streamAutoclaimIdleTime = 0;
     inst->streamConsumerACK = 1;
     inst->pszBindRuleset = NULL;
@@ -356,14 +378,20 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
 
     // Check and initialize SSL context
     if (inst->use_tls) {
+        const char *tls_peer_name = inst->sni;
+
         if ((inst->client_cert == NULL) ^ (inst->client_key == NULL)) {
             LogMsg(0, RS_RET_CONFIG_ERROR, LOG_ERR,
                    "imhiredis: \"client_cert\" and \"client_key\" must be specified together!");
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
 
+        if (tls_peer_name == NULL && inst->redisNodesList->usesSocket == 0) {
+            tls_peer_name = (const char *)inst->redisNodesList->server;
+        }
+
         inst->ssl_conn = redisCreateSSLContext(inst->ca_cert_bundle, inst->ca_cert_dir, inst->client_cert,
-                                               inst->client_key, inst->sni, &ssl_error);
+                                               inst->client_key, tls_peer_name, &ssl_error);
 
         if (!inst->ssl_conn || ssl_error != REDIS_SSL_CTX_NONE) {
             LogError(0, RS_RET_REDIS_ERROR, "imhiredis: TLS configuration Error: %s",
@@ -483,31 +511,31 @@ BEGINnewInpInst
         if (!pvals[i].bUsed) continue;
 
         if (!strcmp(inppblk.descr[i].name, "server")) {
-            inst->redisNodesList->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->redisNodesList->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "socketPath")) {
-            inst->redisNodesList->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->redisNodesList->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "port")) {
             inst->redisNodesList->port = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "password")) {
-            inst->password = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->password = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "stream.consumerGroup")) {
-            inst->streamConsumerGroup = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->streamConsumerGroup = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "stream.consumerName")) {
-            inst->streamConsumerName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->streamConsumerName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "stream.consumerACK")) {
             inst->streamConsumerACK = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "stream.readFrom")) {
-            // inst->streamReadFrom is already allocated, only copy contents
-            memcpy(inst->streamReadFrom, es_getBufAddr(pvals[i].val.d.estr), es_strlen(pvals[i].val.d.estr));
-            inst->streamReadFrom[es_strlen(pvals[i].val.d.estr)] = '\0';
+            CHKiRet(copyStreamIndexText(
+                (char *)inst->streamReadFrom, STREAM_INDEX_STR_BUFSZ, (const char *)es_getBufAddr(pvals[i].val.d.estr),
+                es_strlen(pvals[i].val.d.estr), RS_RET_PARAM_ERROR, "configured stream.readFrom value"));
         } else if (!strcmp(inppblk.descr[i].name, "stream.autoclaimIdleTime")) {
             inst->streamAutoclaimIdleTime = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "uselpop")) {
             inst->useLPop = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "mode")) {
-            inst->modeDescription = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->modeDescription = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcmp((const char *)inst->modeDescription, "queue")) {
                 inst->mode = IMHIREDIS_MODE_QUEUE;
             } else if (!strcmp((const char *)inst->modeDescription, "subscribe")) {
@@ -551,20 +579,20 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "batchsize")) {
             inst->batchsize = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "key")) {
-            inst->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #ifdef HIREDIS_SSL
         } else if (!strcmp(inppblk.descr[i].name, "use_tls")) {
             inst->use_tls = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ca_cert_bundle")) {
-            inst->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ca_cert_dir")) {
-            inst->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "client_cert")) {
-            inst->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "client_key")) {
-            inst->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "sni")) {
-            inst->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #endif
         } else {
             dbgprintf(
@@ -664,7 +692,13 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
         iRet = checkInstance(inst);
-        if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE) inst->evtBase = event_base_new();
+        if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
+            if ((inst->evtBase = event_base_new()) == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "imhiredis: could not create libevent base");
+                iRet = RS_RET_OUT_OF_MEMORY;
+                break;
+            }
+        }
     }
 ENDactivateCnf
 
@@ -1071,12 +1105,12 @@ finalize_it:
 }
 
 
-static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata) {
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object **json, struct json_object **metadata) {
     DEFiRet;
     smsg_t *pMsg;
     struct json_object *tempJson = NULL;
 
-    assert(json != NULL);
+    assert(json != NULL && *json != NULL);
 
     CHKiRet(msgConstruct(&pMsg));  // In case of allocation error -> needs to break
     MsgSetInputName(pMsg, pInputName);
@@ -1096,14 +1130,12 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json,
             /* case 2: dynamic field. We retrieve its value from the JSON logline and add it */
             else {
                 DBGPRINTF("field is dynamic, searching in root object...\n");
-                if (!json_object_object_get_ex(json, inst->fieldList.name[i] + 1, &tempJson)) {
+                if (!json_object_object_get_ex(*json, inst->fieldList.name[i] + 1, &tempJson)) {
                     DBGPRINTF("Did not find value %s in message\n", inst->fieldList.name[i]);
                     continue;
                 }
                 // Getting object as it will not keep the same lifetime as its origin object
                 tempJson = json_object_get(tempJson);
-                // original object is put: no need for it anymore
-                json_object_put(json);
             }
 
             DBGPRINTF("got value of field '%s'\n", inst->fieldList.name[i]);
@@ -1116,15 +1148,23 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json,
 
             tempJson = NULL;
         }
+        json_object_put(*json);
+        *json = NULL;
     } else {
-        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)"!", json, 0, 0)) {
+        struct json_object *const toAdd = *json;
+        *json = NULL;
+        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)"!", toAdd, 0, 0)) {
             LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add json info to message!");
             ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
         }
     }
-    if (metadata != NULL && RS_RET_OK != msgAddJSON(pMsg, (uchar *)".", metadata, 0, 0)) {
-        LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add metadata to message!");
-        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    if (metadata != NULL && *metadata != NULL) {
+        struct json_object *const toAddMeta = *metadata;
+        *metadata = NULL;
+        if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)".", toAddMeta, 0, 0)) {
+            LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to add metadata to message!");
+            ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+        }
     }
     if (RS_RET_OK != submitMsg2(pMsg)) {
         LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR, "Failed to submit message to main queue!");
@@ -1835,7 +1875,7 @@ static rsRetVal enqueueRedisStreamReply(instanceConf_t *const inst, redisReply *
     // no need to free/destroy/put redis object
     json_object_object_add(metadata, "redis", redis);
 
-    CHKiRet(enqMsgJson(inst, json, metadata));
+    CHKiRet(enqMsgJson(inst, &json, &metadata));
     // enqueued message successfully, json and metadata objects are now owned by enqueued message
     // no need to free/destroy/put json objects
     json = NULL;
@@ -1947,8 +1987,9 @@ static rsRetVal handleRedisXREADReply(instanceConf_t *const inst, const redisRep
                 CHKiRet(enqueueRedisStreamReply(inst, msgObj));
 
                 // Update current stream index
-                memcpy(inst->streamReadFrom, msgObj->element[0]->str, msgObj->element[0]->len);
-                inst->streamReadFrom[msgObj->element[0]->len] = '\0';
+                CHKiRet(copyStreamIndexText((char *)inst->streamReadFrom, STREAM_INDEX_STR_BUFSZ,
+                                            msgObj->element[0]->str, msgObj->element[0]->len, RS_RET_REDIS_ERROR,
+                                            "Redis XREAD stream index"));
                 DBGPRINTF("handleRedisXREADReply: current stream index is %s\n", inst->streamReadFrom);
             }
         }
@@ -2048,8 +2089,8 @@ static rsRetVal handleRedisXAUTOCLAIMReply(instanceConf_t *const inst, const red
 
         // Update current stream index with next index from XAUTOCLAIM
         // No message has to be claimed after that if value is "0-0"
-        memcpy(*autoclaimIndex, reply->element[0]->str, reply->element[0]->len);
-        (*autoclaimIndex)[reply->element[0]->len] = '\0';
+        CHKiRet(copyStreamIndexText(*autoclaimIndex, STREAM_INDEX_STR_BUFSZ, reply->element[0]->str,
+                                    reply->element[0]->len, RS_RET_REDIS_ERROR, "Redis XAUTOCLAIM stream index"));
         DBGPRINTF("handleRedisXAUTOCLAIMReply: next stream index is %s\n", (*autoclaimIndex));
     }
 
@@ -2080,15 +2121,18 @@ rsRetVal redisStreamRead(instanceConf_t *inst) {
     if (inst->streamAutoclaimIdleTime != 0) {
         DBGPRINTF("redisStreamRead: getting pending entries for stream '%s' from '%s', with idle time %d\n", inst->key,
                   inst->streamReadFrom, inst->streamAutoclaimIdleTime);
-        CHKmalloc(autoclaimIndex = calloc(1, STREAM_INDEX_STR_MAXLEN));
+        CHKmalloc(autoclaimIndex = calloc(1, STREAM_INDEX_STR_BUFSZ));
         // Cannot claim from '$', will have to claim from the beginning of the stream
         if (inst->streamReadFrom[0] == '$') {
             LogMsg(0, RS_RET_OK, LOG_WARNING,
                    "Cannot claim pending entries from '$', "
                    "will have to claim from the beginning of the stream");
-            memcpy(autoclaimIndex, "0-0", 4);
+            CHKiRet(copyStreamIndexText(autoclaimIndex, STREAM_INDEX_STR_BUFSZ, "0-0", strlen("0-0"),
+                                        RS_RET_REDIS_ERROR, "default XAUTOCLAIM stream index"));
         } else {
-            memcpy(autoclaimIndex, inst->streamReadFrom, STREAM_INDEX_STR_MAXLEN);
+            CHKiRet(copyStreamIndexText(autoclaimIndex, STREAM_INDEX_STR_BUFSZ, (const char *)inst->streamReadFrom,
+                                        strlen((const char *)inst->streamReadFrom), RS_RET_REDIS_ERROR,
+                                        "stored stream.readFrom value"));
         }
         mustClaimIdle = 1;
     } else {

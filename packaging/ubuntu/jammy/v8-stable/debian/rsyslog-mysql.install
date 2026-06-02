@@ -1,0 +1,2 @@
+debian/tmp/usr/lib/rsyslog/ommysql.so
+debian/rsyslog-mysql.conf.template usr/share/rsyslog-mysql/

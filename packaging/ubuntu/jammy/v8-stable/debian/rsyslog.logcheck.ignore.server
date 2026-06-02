@@ -1,0 +1,7 @@
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?: \[origin software="rsyslogd" swVersion="[0-9.]+[^"]*" x-pid="[0-9]+" x-info="https://www.rsyslog.com"\] exiting on signal [0-9]+\.$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?: \[origin software="rsyslogd" swVersion="[0-9.]+[^"]*" x-pid="[0-9]+" x-info="https://www.rsyslog.com"\] rsyslogd was HUPed$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?: \[origin software="rsyslogd" swVersion="[0-9.]+[^"]*" x-pid="[0-9]+" x-info="https://www.rsyslog.com"\] start$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?: imuxsock: Acquired UNIX socket '/run/systemd/journal/syslog' \(fd [0-9]+\) from systemd\.\s+\[v[0-9.]+\]$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?: rsyslogd's (groupid|userid) changed to [0-9]+$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?:( rsyslogd:)? imklog: cannot open kernel log \(\/proc\/kmsg\): (Permission denied|Operation not permitted)\.$
+^(\w{3} [ :0-9]{11}|[0-9T:.+-]{32}) [._[:alnum:]-]+ rsyslogd(\[[0-9]+\])?:( rsyslogd:)? activation of module imklog failed \[v[.0-9]+ try https:\/\/www.rsyslog.com\/e\/2145 \]$

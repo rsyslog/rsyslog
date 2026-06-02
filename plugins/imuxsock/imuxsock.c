@@ -36,6 +36,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/stat.h>
@@ -65,6 +66,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "hashtable.h"
+#include "hashtable_itr.h"
 #include "ratelimit.h"
 
 
@@ -160,6 +162,11 @@ typedef struct lstn_s {
 } lstn_t;
 static lstn_t *listeners;
 
+static void removePidRatelimiter(lstn_t *pLstn, pid_t pid);
+static void prunePidRatelimiters(lstn_t *pLstn);
+static void enforcePidRatelimiterCap(lstn_t *pLstn);
+static void releasePidRatelimiterCache(lstn_t *pLstn);
+
 static prop_t *pLocalHostIP = NULL; /* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL; /* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
@@ -179,6 +186,11 @@ static int sd_fds = 0; /* number of systemd activated sockets */
 #define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
 #define DFLT_ratelimitSeverity 1 /* do not rate-limit emergency messages */
+/*
+ * Bound per-PID ratelimiter state so a stream of short-lived local senders
+ * cannot grow the cache without limit for the lifetime of the daemon.
+ */
+#define MAX_DYNAMIC_RATELIMITERS 4096U
 /* config vars for the legacy config system */
 static struct configSettings_s {
     int bOmitLocalLogging;
@@ -403,7 +415,7 @@ static rsRetVal addListner(instanceConf_t *inst) {
         CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
         CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
     }
-    if (inst->pszRatelimitName != NULL || inst->ratelimitInterval > 0) {
+    if (inst->ratelimitInterval > 0) {
         if ((listeners[nfd].ht =
                  create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))ratelimitDestruct)) == NULL) {
             /* in this case, we simply turn off rate-limiting */
@@ -424,8 +436,8 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
     listeners[nfd].bCreatePath = inst->bCreatePath;
     listeners[nfd].sockName = ustrdup(inst->sockName);
-    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval ||
-                                inst->pszRatelimitName || inst->bAnnotate || inst->bUseSysTimeStamp)
+    listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval > 0 ||
+                                inst->bAnnotate || inst->bUseSysTimeStamp)
                                    ? 1
                                    : 0;
     listeners[nfd].bAnnotate = inst->bAnnotate;
@@ -459,7 +471,7 @@ static rsRetVal discardLogSockets(void) {
     if (startIndexUxLocalSockets == 0) {
         /* Clean up rate limiting data for the system socket */
         if (listeners[0].ht != NULL) {
-            hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+            releasePidRatelimiterCache(&listeners[0]);
         }
         ratelimitDestruct(listeners[0].dflt_ratelimiter);
     }
@@ -474,7 +486,7 @@ static rsRetVal discardLogSockets(void) {
             prop.Destruct(&(listeners[i].hostName));
         }
         if (listeners[i].ht != NULL) {
-            hashtable_destroy(listeners[i].ht, 1); /* 1 => free all values automatically */
+            releasePidRatelimiterCache(&listeners[i]);
         }
         ratelimitDestruct(listeners[i].dflt_ratelimiter);
     }
@@ -507,8 +519,7 @@ static rsRetVal
     if (pLstn->bCreatePath) {
         makeFileParentDirs((uchar *)pLstn->sockName, ustrlen(pLstn->sockName), 0755, -1, -1, 0);
     }
-    strncpy(sunx.sun_path, (char *)pLstn->sockName, sizeof(sunx.sun_path));
-    sunx.sun_path[sizeof(sunx.sun_path) - 1] = '\0';
+    rs_cstr_copy(sunx.sun_path, (const char *)pLstn->sockName, sizeof(sunx.sun_path));
     pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (pLstn->fd < 0) {
         ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
@@ -521,7 +532,17 @@ static rsRetVal
     }
 finalize_it:
     if (iRet != RS_RET_OK) {
-        LogError(errno, iRet, "cannot create '%s'", pLstn->sockName);
+        const int savedErrno = errno;
+        if (savedErrno == EADDRINUSE && !pLstn->bUnlink) {
+            LogError(savedErrno, iRet,
+                     "cannot create '%s': socket path already exists and "
+                     "Unlink=\"off\" prevents rsyslog from replacing it; "
+                     "remove the stale socket or set Unlink=\"on\" if "
+                     "rsyslog should manage this socket",
+                     pLstn->sockName);
+        } else {
+            LogError(savedErrno, iRet, "cannot create '%s'", pLstn->sockName);
+        }
         if (pLstn->fd != -1) {
             close(pLstn->fd);
             pLstn->fd = -1;
@@ -610,6 +631,7 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
     int r;
     pid_t *keybuf;
     char pinfobuf[512];
+    char procName[256];
     DEFiRet;
 
     if (cred == NULL) FINALIZE;
@@ -626,22 +648,24 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
 
     rl = hashtable_search(pLstn->ht, &cred->pid);
     if (rl == NULL) {
+        prunePidRatelimiters(pLstn);
+        enforcePidRatelimiterCap(pLstn);
         /* we need to add a new ratelimiter, process not seen before! */
         DBGPRINTF("imuxsock: no ratelimiter for pid %lu, creating one\n", (unsigned long)cred->pid);
         STATSCOUNTER_INC(ctrNumRatelimiters, mutCtrNumRatelimiters);
         /* read process name from system  */
-        char procName[256]; /* enough for any sane process name  */
+        procName[0] = '\0';
+        snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu", (unsigned long)cred->pid);
         snprintf(procName, sizeof(procName), "/proc/%lu/cmdline", (unsigned long)cred->pid);
         FILE *f = fopen(procName, "r");
         if (f) {
             size_t len;
-            len = fread(procName, sizeof(char), 256, f);
+            len = fread(procName, sizeof(char), sizeof(procName) - 1, f);
             if (len > 0) {
+                procName[len] = '\0';
                 snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu, name: %s", (unsigned long)cred->pid, procName);
             }
             fclose(f);
-        } else {
-            snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu", (unsigned long)cred->pid);
         }
         pinfobuf[sizeof(pinfobuf) - 1] = '\0'; /* to be on safe side */
         CHKiRet(ratelimitNew(&rl, "imuxsock", pinfobuf));
@@ -660,6 +684,90 @@ finalize_it:
     if (rl != NULL) ratelimitDestruct(rl);
     if (*prl == NULL) *prl = pLstn->dflt_ratelimiter;
     RETiRet;
+}
+
+static void removePidRatelimiter(lstn_t *pLstn, pid_t pid) {
+    ratelimit_t *rl;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL) {
+        return;
+    }
+
+    rl = hashtable_remove(pLstn->ht, &pid);
+    if (rl != NULL) {
+        ratelimitDestruct(rl);
+        STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+    }
+}
+
+static void prunePidRatelimiters(lstn_t *pLstn) {
+    struct hashtable_itr *itr;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) == 0) {
+        return;
+    }
+
+    itr = hashtable_iterator(pLstn->ht);
+    if (itr == NULL) {
+        return;
+    }
+
+    while (itr->e != NULL) {
+        const pid_t pid = *((pid_t *)hashtable_iterator_key(itr));
+        ratelimit_t *rl = hashtable_iterator_value(itr);
+        const int is_alive = (kill(pid, 0) == 0 || errno == EPERM);
+
+        if (!is_alive) {
+            hashtable_iterator_remove(itr);
+            ratelimitDestruct(rl);
+            STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+        } else if (!hashtable_iterator_advance(itr)) {
+            break;
+        }
+    }
+
+    free(itr);
+}
+
+static void enforcePidRatelimiterCap(lstn_t *pLstn) {
+    struct hashtable_itr *itr;
+    pid_t pid;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) < MAX_DYNAMIC_RATELIMITERS) {
+        return;
+    }
+
+    itr = hashtable_iterator(pLstn->ht);
+    if (itr == NULL || itr->e == NULL) {
+        free(itr);
+        return;
+    }
+
+    pid = *((pid_t *)hashtable_iterator_key(itr));
+    free(itr);
+
+    DBGPRINTF("imuxsock: evicting pid %lu ratelimiter to keep cache bounded\n", (unsigned long)pid);
+    removePidRatelimiter(pLstn, pid);
+}
+
+static void releasePidRatelimiterCache(lstn_t *pLstn) {
+    unsigned int i;
+    unsigned int count;
+
+    assert(pLstn != NULL);
+    if (pLstn == NULL || pLstn->ht == NULL) {
+        return;
+    }
+
+    count = hashtable_count(pLstn->ht);
+    hashtable_destroy(pLstn->ht, 1);
+    pLstn->ht = NULL;
+    for (i = 0; i < count; ++i) {
+        STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+    }
 }
 
 
@@ -773,6 +881,34 @@ static int copyescaped(uchar *dstbuf, uchar *inbuf, int inlen) {
 }
 
 
+static size_t escapedLen(uchar *inbuf, int inlen) {
+    size_t len = 2; /* surrounding quotes */
+
+    for (int i = 0; i < inlen; ++i) {
+        if (inbuf[i] == '"' || inbuf[i] == '\\') {
+            ++len;
+        }
+        ++len;
+    }
+    return len;
+}
+
+
+static rsRetVal appendTrustedProp(
+    uchar *const dst, const size_t dstLen, size_t *const offs, const uchar *const src, const size_t len) {
+    DEFiRet;
+
+    if (len > dstLen || *offs > dstLen - len) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    memcpy(dst + *offs, src, len);
+    *offs += len;
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* submit received message to the queue engine
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
@@ -781,9 +917,11 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
     smsg_t *pMsg = NULL;
     int lenMsg;
     int offs;
+    int priDigitCount;
     int i;
     uchar *parse;
     syslog_pri_t pri;
+    sbool priValid;
     uchar bufParseTAG[CONF_TAG_MAXSIZE];
     struct syslogTime st;
     time_t tt;
@@ -806,10 +944,17 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
 
     parse++;
     pri = 0;
+    priDigitCount = 0;
     while (offs < lenMsg && isdigit(*parse)) {
         pri = pri * 10 + *parse - '0';
         ++parse;
         ++offs;
+        ++priDigitCount;
+    }
+    priValid = lenRcv >= 3 && pRcv[0] == '<' && priDigitCount >= 1 && priDigitCount <= 3 && offs < lenMsg &&
+               *parse == '>' && pri <= LOG_MAXPRI;
+    if (!priValid) {
+        pri = LOG_PRI_INVLD;
     }
 
     findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
@@ -876,10 +1021,23 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
         } else {
             uchar msgbuf[8192];
             uchar *pmsgbuf = msgbuf;
-            int toffs; /* offset for trusted properties */
+            const size_t trustedPropBufLen = sizeof(propBuf) - 1;
+            const size_t trustedPropMaxExtra = 3 + /* " @[" */
+                                               96 + /* _PID/_UID/_GID tags plus maximum decimal values */
+                                               7 + trustedPropBufLen + /* _COMM= */
+                                               6 + trustedPropBufLen + /* _EXE= */
+                                               10 + 2 + 2 * trustedPropBufLen + /* _CMDLINE= plus escaped value */
+                                               2; /* closing bracket and NUL */
+            size_t msgbuf_size = sizeof(msgbuf);
+            size_t toffs; /* offset for trusted properties */
+            size_t escaped;
 
-            if ((unsigned)(lenRcv + 4096) >= sizeof(msgbuf)) {
-                CHKmalloc(pmsgbuf = malloc(lenRcv + 4096));
+            if ((size_t)lenRcv > (size_t)-1 - trustedPropMaxExtra) {
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            if ((size_t)lenRcv + trustedPropMaxExtra > sizeof(msgbuf)) {
+                msgbuf_size = (size_t)lenRcv + trustedPropMaxExtra;
+                CHKmalloc(pmsgbuf = malloc(msgbuf_size));
             }
 
             memcpy(pmsgbuf, pRcv, lenRcv);
@@ -887,29 +1045,51 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
             toffs = lenRcv + 3; /* next free location */
             lenProp = snprintf((char *)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu", (long unsigned)cred->pid,
                                (long unsigned)cred->uid, (long unsigned)cred->gid);
-            memcpy(pmsgbuf + toffs, propBuf, lenProp);
-            toffs = toffs + lenProp;
+            if (lenProp < 0) {
+                iRet = RS_RET_ERR;
+            } else {
+                iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp);
+            }
+            if (iRet != RS_RET_OK) {
+                if (pmsgbuf != msgbuf) free(pmsgbuf);
+                FINALIZE;
+            }
 
             if (getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _COMM=", 7);
-                memcpy(pmsgbuf + toffs + 7, propBuf, lenProp);
-                toffs = toffs + 7 + lenProp;
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _COMM=", 7)) != RS_RET_OK ||
+                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
             }
             if (getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _EXE=", 6);
-                memcpy(pmsgbuf + toffs + 6, propBuf, lenProp);
-                toffs = toffs + 6 + lenProp;
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _EXE=", 6)) != RS_RET_OK ||
+                    (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, propBuf, (size_t)lenProp)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
             }
             if (getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-                memcpy(pmsgbuf + toffs, " _CMDLINE=", 10);
-                toffs = toffs + 10 + copyescaped(pmsgbuf + toffs + 10, propBuf, lenProp);
+                if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)" _CMDLINE=", 10)) != RS_RET_OK) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    FINALIZE;
+                }
+                escaped = escapedLen(propBuf, lenProp);
+                if (escaped > msgbuf_size || toffs > msgbuf_size - escaped) {
+                    if (pmsgbuf != msgbuf) free(pmsgbuf);
+                    ABORT_FINALIZE(RS_RET_ERR);
+                }
+                toffs += (size_t)copyescaped(pmsgbuf + toffs, propBuf, lenProp);
             }
 
             /* finalize string */
-            pmsgbuf[toffs] = ']';
-            pmsgbuf[toffs + 1] = '\0';
+            if ((iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)"]", 1)) != RS_RET_OK ||
+                (iRet = appendTrustedProp(pmsgbuf, msgbuf_size, &toffs, (uchar *)"\0", 1)) != RS_RET_OK) {
+                if (pmsgbuf != msgbuf) free(pmsgbuf);
+                FINALIZE;
+            }
 
-            MsgSetRawMsg(pMsg, (char *)pmsgbuf, toffs + 1);
+            MsgSetRawMsg(pMsg, (char *)pmsgbuf, toffs - 1);
             if (pmsgbuf != msgbuf) {
                 free(pmsgbuf);
             }
@@ -935,8 +1115,9 @@ static rsRetVal SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *
          */
         parser.SanitizeMsg(pMsg);
         lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
+        parse = pMsg->pszRawMsg + offs;
         msgSetPRI(pMsg, pri);
-        MsgSetAfterPRIOffs(pMsg, offs);
+        MsgSetAfterPRIOffs(pMsg, priValid ? offs + 1 : 0);
 
         parse++;
         lenMsg--; /* '>' */
@@ -1119,7 +1300,7 @@ static rsRetVal activateListeners(void) {
             }
         }
 #endif
-        if (runModConf->pszRatelimitNameSysSock != NULL || runModConf->ratelimitIntervalSysSock > 0) {
+        if (runModConf->ratelimitIntervalSysSock > 0) {
             if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
@@ -1138,11 +1319,11 @@ static rsRetVal activateListeners(void) {
         listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
         listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
         listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-        listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock ||
-                                  runModConf->pszRatelimitNameSysSock || runModConf->bAnnotateSysSock ||
-                                  runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
-                                     ? 1
-                                     : 0;
+        listeners[0].bUseCreds =
+            (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock > 0 || runModConf->bAnnotateSysSock ||
+             runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp)
+                ? 1
+                : 0;
         listeners[0].bWritePid = runModConf->bWritePidSysSock;
         listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
         listeners[0].bParseTrusted = runModConf->bParseTrusted;
@@ -1245,7 +1426,7 @@ BEGINsetModCnf
         if (!strcmp(modpblk.descr[i].name, "syssock.use")) {
             loadModConf->bOmitLocalLogging = ((int)pvals[i].val.d.n) ? 0 : 1;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.name")) {
-            loadModConf->pLogSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pLogSockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ignoretimestamp")) {
             loadModConf->bIgnoreTimestamp = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ignoreownmessages")) {
@@ -1273,7 +1454,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.severity")) {
             loadModConf->ratelimitSeveritySysSock = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "syssock.ratelimit.name")) {
-            loadModConf->pszRatelimitNameSysSock = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszRatelimitNameSysSock = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "
@@ -1325,7 +1506,7 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "socket")) {
-            inst->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "createpath")) {
             inst->bCreatePath = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "parsetrusted")) {
@@ -1335,7 +1516,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "unlink")) {
             inst->bUnlink = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "hostname")) {
-            inst->pLogHostName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pLogHostName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ignoretimestamp")) {
             inst->bIgnoreTimestamp = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
@@ -1351,7 +1532,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "usespecialparser")) {
             inst->bUseSpecialParser = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
@@ -1359,7 +1540,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
             inst->ratelimitSeverity = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imuxsock: program error, non-handled "
@@ -1377,6 +1558,15 @@ BEGINnewInpInst
     } else {
         if (inst->ratelimitInterval == -1) inst->ratelimitInterval = DFLT_ratelimitInterval;
         if (inst->ratelimitBurst == -1) inst->ratelimitBurst = DFLT_ratelimitBurst;
+    }
+
+    if (inst->bCreatePath && !inst->bUnlink) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imuxsock: CreatePath=\"on\" cannot be combined with "
+                 "Unlink=\"off\" for socket '%s'; use Unlink=\"on\" when "
+                 "rsyslog creates/manages the socket path",
+                 inst->sockName);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
 finalize_it:
@@ -1455,7 +1645,7 @@ BEGINactivateCnfPrePrivDrop
         lstn_t *const listeners_new = realloc(listeners, (1 + nLstn) * sizeof(lstn_t));
         CHKmalloc(listeners_new);
         listeners = listeners_new;
-        for (i = 1; i < nLstn; ++i) {
+        for (i = 0; i <= nLstn; ++i) {
             listeners[i].sockName = NULL;
             listeners[i].fd = -1;
         }

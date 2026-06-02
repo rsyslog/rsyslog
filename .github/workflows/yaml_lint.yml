@@ -20,6 +20,9 @@ name: yamllint check
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -29,14 +32,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 2
 
       - name: Identify changed YAML files
         id: changed
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
+          json: "true"
           separator: "\n"
           files: |
             **/*.yml
@@ -49,14 +54,27 @@ jobs:
       - name: Run yamllint
         if: steps.changed.outputs.any_changed == 'true'
         env:
-          CHANGED_YAML_FILES: ${{ steps.changed.outputs.all_changed_files }}
+          CHANGED_YAML_FILES_JSON: ${{ steps.changed.outputs.all_changed_files }}
         run: |
+          python3 - <<'PY' > /tmp/changed-yaml-files.txt
+          import json
+          import os
+
+          raw = os.environ["CHANGED_YAML_FILES_JSON"]
+          try:
+              paths = json.loads(raw)
+          except json.JSONDecodeError:
+              paths = json.loads(raw.encode("utf-8").decode("unicode_escape"))
+
+          for path in paths:
+              print(path)
+          PY
           while IFS= read -r file; do
             [ -n "$file" ] || continue
             yamllint \
               -d '{extends: relaxed, rules: {line-length: {max: 120}}}' \
               "$file"
-          done <<< "$CHANGED_YAML_FILES"
+          done < /tmp/changed-yaml-files.txt
 
       - name: Skip yamllint, no YAML changes
         if: steps.changed.outputs.any_changed != 'true'

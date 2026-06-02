@@ -31,7 +31,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/uio.h>
-#include <sys/queue.h>
+#include "compat_queue.h"
 #include <sys/types.h>
 #include <math.h>
 #ifdef HAVE_SYS_STAT_H
@@ -1128,32 +1128,37 @@ static void deliveryCallback(rd_kafka_t __attribute__((unused)) * rk,
                              void *opaque) {
     instanceData *const pData = (instanceData *)opaque;
     failedmsg_entry *fmsgEntry;
+    const char *const topicname = (rkmessage->rkt != NULL) ? rd_kafka_topic_name(rkmessage->rkt) : (char *)pData->topic;
+    const char *const logTopic = (topicname != NULL) ? topicname : "[unknown]";
+    const char *const payload = (rkmessage->payload != NULL) ? rkmessage->payload : "";
+    const size_t payloadLen = (rkmessage->payload != NULL) ? rkmessage->len : 0;
+    const int payloadLogLen = (payloadLen > 0 && (payload[payloadLen - 1] == '\n' || payload[payloadLen - 1] == '\0'))
+                                  ? (int)payloadLen - 1
+                                  : (int)payloadLen;
+    const char *const key = (rkmessage->key != NULL) ? rkmessage->key : "";
+    const size_t keyLen = (rkmessage->key != NULL) ? rkmessage->key_len : 0;
     DEFiRet;
 
     if (rkmessage->err) {
         updateKafkaFailureCounts(rkmessage->err);
 
         /* Put into kafka queue, again if configured! */
-        if (pData->bResubmitOnFailure) {
+        if (pData->bResubmitOnFailure && rkmessage->payload != NULL) {
             DBGPRINTF(
                 "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' -"
                 " adding to FAILED MSGs for RETRY!\n",
-                rd_kafka_topic_name(rkmessage->rkt), (int)(rkmessage->len - 1), (char *)rkmessage->payload,
-                (int)(rkmessage->key_len), (char *)rkmessage->key);
-            CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->key, rkmessage->key_len, rkmessage->payload,
-                                                            rkmessage->len, rd_kafka_topic_name(rkmessage->rkt)));
+                logTopic, payloadLogLen, payload, (int)keyLen, key);
+            CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->key, keyLen, payload, payloadLen, logTopic));
             SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
         } else {
-            LogError(0, RS_RET_ERR, "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
-                     rd_kafka_topic_name(rkmessage->rkt), (int)(rkmessage->len - 1), (char *)rkmessage->payload,
-                     (int)(rkmessage->key_len), (char *)rkmessage->key);
-            writeDataError(pData, (char *)rkmessage->payload, rkmessage->len, rkmessage->err);
+            LogError(0, RS_RET_ERR, "omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n", logTopic,
+                     payloadLogLen, payload, (int)keyLen, key);
+            writeDataError(pData, payload, payloadLen, rkmessage->err);
         }
         STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
         INST_STATSCOUNTER_INC(pData, pData->ctrKafkaFail, pData->mutCtrKafkaFail);
     } else {
-        DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len - 1),
-                  (char *)rkmessage->payload);
+        DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", payloadLogLen, payload);
         STATSCOUNTER_INC(ctrKafkaAck, mutCtrKafkaAck);
         INST_STATSCOUNTER_INC(pData, pData->ctrKafkaAck, pData->mutCtrKafkaAck);
     }
@@ -1712,7 +1717,7 @@ static rsRetVal loadFailedMsgs(instanceData *const __restrict__ pData) {
         } else {
             puStr = rsCStrGetSzStrNoNULL(pCStr);  // topic
             pStrTabPos = index((char *)puStr, '\t');  // key
-            pStrTabPos2 = index((char *)pStrTabPos + 1, '\t');  // msg
+            pStrTabPos2 = (pStrTabPos == NULL) ? NULL : index((char *)pStrTabPos + 1, '\t');  // msg
             if ((pStrTabPos != NULL) && (pStrTabPos2 != NULL)) {
                 *pStrTabPos = '\0'; /* split string into two */
                 *pStrTabPos2 = '\0'; /* split string into two */
@@ -1767,6 +1772,12 @@ finalize_it:
 
 BEGINdoHUP
     CODESTARTdoHUP;
+    /* Keep doHUP in the same outer serialization domain as doAction and
+     * the callback poller.  Those paths hold mut_doAction while polling
+     * librdkafka, and callbacks from that poll path may take the error or
+     * stats file mutexes.  Preserve one order here:
+     * mut_doAction -> file mutexes / kafka handle locks. */
+    pthread_mutex_lock(&pData->mut_doAction);
     pthread_mutex_lock(&pData->mutErrFile);
     if (pData->fdErrFile != -1) {
         close(pData->fdErrFile);
@@ -1790,6 +1801,7 @@ BEGINdoHUP
                pData->tplName, rd_kafka_outq_len(pData->rk), callbacksCalled);
     }
 finalize_it:
+    pthread_mutex_unlock(&pData->mut_doAction);
 ENDdoHUP
 
 BEGINcreateInstance
@@ -2088,7 +2100,7 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "topic")) {
-            pData->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->topic = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
             pData->dynaKey = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "dynatopic")) {
@@ -2144,13 +2156,13 @@ BEGINnewActInst
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 #endif
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
-            pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsfile")) {
-            pData->statsFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "reopenonhup")) {
             pData->bReopenOnHup = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "resubmitonfailure")) {
@@ -2158,9 +2170,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "keepfailedmessages")) {
             pData->bKeepFailedMessages = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
-            pData->failedMsgFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->failedMsgFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "statsname")) {
-            pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statsName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omkafka: program error, non-handled param '%s'\n",
                      actpblk.descr[i].name);

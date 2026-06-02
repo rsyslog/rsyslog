@@ -33,14 +33,25 @@ from datetime import datetime, timedelta
 err = 0
 
 # Make tests below a little easier to read.
-JAN = 1; FEB =  2; MAR =  3; APR =  4
-MAY = 5; JUN =  6; JUL =  7; AUG =  8
-SEP = 9; OCT = 10; NOV = 11; DEC = 12
+JAN = 1
+FEB = 2
+MAR = 3
+APR = 4
+MAY = 5
+JUN = 6
+JUL = 7
+AUG = 8
+SEP = 9
+OCT = 10
+NOV = 11
+DEC = 12
 
 # Run the provided expression and compare its result with the
 # expected value. The function expects the expression to be
 # passed in as a string so it can be printed to the screen
 # as-is when there is an error.
+
+
 def do_test(expr, val):
     global err
 
@@ -57,6 +68,8 @@ def do_test(expr, val):
 # cy - Current Year
 # cm - Current Month
 # im - Incoming Month
+
+
 def estimate_year(cy, cm, im):
     im += 12
 
@@ -71,6 +84,8 @@ def estimate_year(cy, cm, im):
 
 # A quick and dirty unit test to validate that our
 # estimate_year() function is working as it should.
+
+
 def self_test():
 
     # Where the incoming month is within one month
@@ -104,6 +119,8 @@ def self_test():
     do_test("estimate_year(2017, JAN, MAR)", 2016)
 
 # Convert a datetime.timedelta object to a UNIX timestamp
+
+
 def get_total_seconds(dt):
     # timedelta.total_seconds() wasn't added until
     # Python 2.7, which CentOS 6 doesn't have.
@@ -111,6 +128,7 @@ def get_total_seconds(dt):
     if hasattr(timedelta, "total_seconds"):
         return dt.total_seconds()
     return dt.seconds + dt.days * 24 * 3600
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -149,4 +167,4 @@ if __name__ == "__main__":
     calculated_datetime = datetime.strptime("%s %d" % (incoming_datetime, estimated_year), "%b %d %H:%M:%S %Y")
 
     # Convert the datetime object to a UNIX timestamp by subtracting it from the epoch
-    print(int( get_total_seconds(calculated_datetime - datetime(1970,1,1)) ))
+    print(int(get_total_seconds(calculated_datetime - datetime(1970, 1, 1))))

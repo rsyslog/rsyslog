@@ -562,18 +562,18 @@ BEGINsetModCnf
             continue;
         } else if (!strcmp(modpblk.descr[i].name, "kubernetesurl")) {
             free(loadModConf->kubernetesUrl);
-            loadModConf->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "srcmetadatapath")) {
             free(loadModConf->srcMetadataPath);
-            loadModConf->srcMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->srcMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             /* todo: sanitize the path */
         } else if (!strcmp(modpblk.descr[i].name, "dstmetadatapath")) {
             free(loadModConf->dstMetadataPath);
-            loadModConf->dstMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->dstMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             /* todo: sanitize the path */
         } else if (!strcmp(modpblk.descr[i].name, "tls.cacert")) {
             free(loadModConf->caCertFile);
-            loadModConf->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->caCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -587,7 +587,7 @@ BEGINsetModCnf
             }
         } else if (!strcmp(modpblk.descr[i].name, "tls.mycert")) {
             free(loadModConf->myCertFile);
-            loadModConf->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->myCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -599,7 +599,7 @@ BEGINsetModCnf
                 fp = NULL;
             }
         } else if (!strcmp(modpblk.descr[i].name, "tls.myprivkey")) {
-            loadModConf->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->myPrivKeyFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -616,10 +616,10 @@ BEGINsetModCnf
             loadModConf->skipVerifyHost = pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "token")) {
             free(loadModConf->token);
-            loadModConf->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "tokenfile")) {
             free(loadModConf->tokenFile);
-            loadModConf->tokenFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tokenFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->tokenFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -637,7 +637,7 @@ BEGINsetModCnf
             loadModConf->de_dot = pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "de_dot_separator")) {
             free(loadModConf->de_dot_separator);
-            loadModConf->de_dot_separator = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->de_dot_separator = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #if HAVE_LOADSAMPLESFROMSTRING == 1
         } else if (!strcmp(modpblk.descr[i].name, "filenamerules")) {
             free(loadModConf->fnRules);
@@ -645,7 +645,7 @@ BEGINsetModCnf
 #endif
         } else if (!strcmp(modpblk.descr[i].name, "filenamerulebase")) {
             free(loadModConf->fnRulebase);
-            loadModConf->fnRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->fnRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->fnRulebase, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -664,7 +664,7 @@ BEGINsetModCnf
 #endif
         } else if (!strcmp(modpblk.descr[i].name, "containerrulebase")) {
             free(loadModConf->contRulebase);
-            loadModConf->contRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->contRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)loadModConf->contRulebase, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -906,8 +906,8 @@ BEGINcreateWrkrInstance
     if (pWrkrData->pData->caCertFile) curl_easy_setopt(ctx, CURLOPT_CAINFO, pWrkrData->pData->caCertFile);
     if (pWrkrData->pData->myCertFile) curl_easy_setopt(ctx, CURLOPT_SSLCERT, pWrkrData->pData->myCertFile);
     if (pWrkrData->pData->myPrivKeyFile) curl_easy_setopt(ctx, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYPEER, 0);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYHOST, 0);
+    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYHOST, 0L);
 #if defined(SUPPORT_SSL_PARTIAL_CHAIN)
     if (pWrkrData->pData->sslPartialChain) {
         curl_easy_setopt(ctx, CURLOPT_SSL_CTX_FUNCTION, set_ssl_partial_chain);
@@ -1115,13 +1115,16 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
     DEFiRet;
     struct cache_entry_s *cache_entry = NULL;
     struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+    char *dup_key = NULL;
 
+    if (key == NULL) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     /* see if it is time for a general cache expiration */
     (void)cache_delete_expired_entries(pWrkrData, isnsmd, now);
     CHKmalloc(cache_entry = cache_entry_new(now + pWrkrData->pData->cacheEntryTTL, jso));
     if (cache_entry) {
-        if (!hashtable_insert(ht, (void *)(bDupKey ? strdup(key) : key), cache_entry))
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (bDupKey) CHKmalloc(dup_key = strdup(key));
+        if (!hashtable_insert(ht, (void *)(bDupKey ? dup_key : key), cache_entry)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        dup_key = NULL;
 
         if (isnsmd) {
             STATSCOUNTER_INC(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
@@ -1131,6 +1134,7 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
         cache_entry = NULL;
     }
 finalize_it:
+    free(dup_key);
     if (cache_entry) cache_entry_free(cache_entry);
     return iRet;
 }
@@ -1201,21 +1205,21 @@ BEGINnewActInst
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "kubernetesurl")) {
             free(pData->kubernetesUrl);
-            pData->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "srcmetadatapath")) {
             msgPropDescrDestruct(pData->srcMetadataDescr);
             free(pData->srcMetadataDescr);
             CHKmalloc(pData->srcMetadataDescr = malloc(sizeof(msgPropDescr_t)));
-            srcMetadataPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(srcMetadataPath = es_str2cstr(pvals[i].val.d.estr, NULL));
             CHKiRet(msgPropDescrFill(pData->srcMetadataDescr, (uchar *)srcMetadataPath, strlen(srcMetadataPath)));
             /* todo: sanitize the path */
         } else if (!strcmp(actpblk.descr[i].name, "dstmetadatapath")) {
             free(pData->dstMetadataPath);
-            pData->dstMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->dstMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             /* todo: sanitize the path */
         } else if (!strcmp(actpblk.descr[i].name, "tls.cacert")) {
             free(pData->caCertFile);
-            pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1227,7 +1231,7 @@ BEGINnewActInst
                 fp = NULL;
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.mycert")) {
-            pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1238,7 +1242,7 @@ BEGINnewActInst
                 fp = NULL;
             }
         } else if (!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
-            pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1255,10 +1259,10 @@ BEGINnewActInst
             pData->skipVerifyHost = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "token")) {
             free(pData->token);
-            pData->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tokenfile")) {
             free(pData->tokenFile);
-            pData->tokenFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tokenFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->tokenFile, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1277,7 +1281,7 @@ BEGINnewActInst
             pData->de_dot = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "de_dot_separator")) {
             free(pData->de_dot_separator);
-            pData->de_dot_separator = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->de_dot_separator = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #if HAVE_LOADSAMPLESFROMSTRING == 1
         } else if (!strcmp(modpblk.descr[i].name, "filenamerules")) {
             free(pData->fnRules);
@@ -1285,7 +1289,7 @@ BEGINnewActInst
 #endif
         } else if (!strcmp(modpblk.descr[i].name, "filenamerulebase")) {
             free(pData->fnRulebase);
-            pData->fnRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->fnRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->fnRulebase, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1304,7 +1308,7 @@ BEGINnewActInst
 #endif
         } else if (!strcmp(modpblk.descr[i].name, "containerrulebase")) {
             free(pData->contRulebase);
-            pData->contRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->contRulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)pData->contRulebase, "r");
             if (fp == NULL) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));

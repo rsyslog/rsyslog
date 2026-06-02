@@ -1,11 +1,13 @@
 #!/bin/bash
-# This test points multiple symlinks (all watched by rsyslog via wildcard)
-# to single file and checks that message is reported once for each symlink
-# with correct corresponding metadata.
+# Verifies imfile wildcard handling for multiple symlinks to one target file.
+# The oracle is exact output metadata: rsyslog must report one record for the
+# original watched file and one record for each wildcard symlink, each with the
+# corresponding symlink filename and file offset.
 # This is part of the rsyslog testbench, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
+export IMFILECHECKTIMEOUT="60"
 
 mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
@@ -42,20 +44,23 @@ mkdir $RSYSLOG_DYNNAME.targets
 startup
 
 cp $imfilebefore $RSYSLOG_DYNNAME.targets/target.log
-for i in `seq 2 $IMFILEINPUTFILES`;
+for i in $(seq 2 $IMFILEINPUTFILES);
 do
 	ln -s $RSYSLOG_DYNNAME.targets/target.log $RSYSLOG_DYNNAME.input.$i.log
-	# Wait little for correct timing
+	# Let imfile observe each newly-created symlink before adding the next.
 	./msleep 50
 done
 
+# Symlink creation is asynchronous from imfile's point of view. Wait until all
+# expected records are visible before shutdown, then keep the exact comparison.
+content_check_with_count "HEADER msgnum:000000" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown        # we need to wait until rsyslogd is finished!
 
 sort ${RSYSLOG_OUT_LOG} > ${RSYSLOG_OUT_LOG}.sorted
 
 echo HEADER msgnum:00000000:, filename: ./$RSYSLOG_DYNNAME.input-symlink.log, fileoffset: 0 > $RSYSLOG_DYNNAME.expected
-for i in `seq 2 $IMFILEINPUTFILES` ; do
+for i in $(seq 2 $IMFILEINPUTFILES) ; do
 	echo HEADER msgnum:00000000:, filename: ./$RSYSLOG_DYNNAME.input.${i}.log, fileoffset: 0 >> $RSYSLOG_DYNNAME.expected
 done
 sort < $RSYSLOG_DYNNAME.expected | cmp - ${RSYSLOG_OUT_LOG}.sorted

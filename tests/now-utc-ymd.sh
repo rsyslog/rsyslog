@@ -17,7 +17,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 template(name="outfmt" type="string"
 	 string="%$year%-%$month%-%$day%,%$year-utc%-%$month-utc%-%$day-utc%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file=`echo $RSYSLOG_OUT_LOG`)
+						 file="'$RSYSLOG_OUT_LOG'")
 '
 FAKETIME='2016-01-01 01:00:00' startup
 # what we send actually is irrelevant, as we just use system properties.

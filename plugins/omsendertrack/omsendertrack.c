@@ -33,6 +33,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -186,8 +187,8 @@ static rsRetVal addSender(instanceData *const pData,
     sender_stats_t *stat;
     DEFiRet;
 
-    DBGPRINTF("addSender: Sender: %s, Messages: %" PRIu64 ", FirstSeen: %ld, LastSeen: %ld\n", sender, nMsgs, firstSeen,
-              lastSeen);
+    DBGPRINTF("addSender: Sender: %s, Messages: %" PRIu64 ", FirstSeen: %" PRIdMAX ", LastSeen: %" PRIdMAX "\n", sender,
+              nMsgs, (intmax_t)firstSeen, (intmax_t)lastSeen);
 
     CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
     stat->sender = (const uchar *)strdup((const char *)sender);
@@ -472,6 +473,10 @@ static ATTR_NONNULL() rsRetVal writeSenderInfo(instanceData *const pData) {
     int tmp_alloc = 0;
 
     dbgprintf("writeSenderInfo, file %s\n", pData->statefile);
+    if (pData->statefile == NULL) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omsendertrack: statefile is not configured");
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
     if (tmpname == NULL) {
         /* safety fallback if not yet built */
         const size_t statefile_len = strlen((const char *)pData->statefile);
@@ -753,10 +758,10 @@ BEGINnewActInst
             pData->interval = (int)pvals[i].val.d.n;
             // TODO: add cmdfile
         } else if (!strcmp(actpblk.descr[i].name, "statefile")) {
-            pData->statefile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->statefile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "senderid")) {
             free((void *)pData->senderidTemplate);  // free default template
-            pData->senderidTemplate = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->senderidTemplate = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             DBGPRINTF(
                 "omsendertrack: program error, non-handled "

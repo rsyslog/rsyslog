@@ -16,7 +16,35 @@
 
 #define MAX_FQDN_LENGTH 255 /* Defined in RFC 1035 (DNS) */
 
-int create_socket(const char *port) {
+static void write_listen_port_file(const int sock, const char *const port_file) {
+    if (port_file == NULL) {
+        return;
+    }
+
+    struct sockaddr_storage addr;
+    socklen_t addrlen = sizeof(addr);
+    char port[NI_MAXSERV];
+    FILE *fp;
+
+    if (getsockname(sock, (struct sockaddr *)&addr, &addrlen) != 0) {
+        perror("getsockname failed");
+        exit(EXIT_FAILURE);
+    }
+    if (getnameinfo((struct sockaddr *)&addr, addrlen, NULL, 0, port, sizeof(port), NI_NUMERICSERV) != 0) {
+        perror("getnameinfo failed");
+        exit(EXIT_FAILURE);
+    }
+
+    fp = fopen(port_file, "w");
+    if (fp == NULL) {
+        perror("Unable to open port file");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(fp, "%s\n", port);
+    fclose(fp);
+}
+
+int create_socket(const char *port, const char *port_file) {
     struct addrinfo hints;
     struct addrinfo *res = NULL;
     struct addrinfo *rp;
@@ -47,6 +75,7 @@ int create_socket(const char *port) {
 
         if (bind(s, rp->ai_addr, rp->ai_addrlen) == 0) {
             if (listen(s, 1) == 0) {
+                write_listen_port_file(s, port_file);
                 break;
             }
         }
@@ -108,7 +137,7 @@ void configure_context(SSL_CTX *ctx, char *cert_file_path, char *key_file_path) 
 
 int main(int argc, char **argv) {
     if (argc < 4) {
-        printf("Usage: openssl_sni_server PORT CERT_FILE_PATH KEY_FILE_PATH\n");
+        printf("Usage: openssl_sni_server PORT CERT_FILE_PATH KEY_FILE_PATH [PORT_FILE]\n");
         exit(EXIT_SUCCESS);
     }
 
@@ -124,7 +153,7 @@ int main(int argc, char **argv) {
 
     fprintf(stderr, "configured context\n");
 
-    sock = create_socket(argv[1]);
+    sock = create_socket(argv[1], argc > 4 ? argv[4] : NULL);
 
     fprintf(stderr, "Server ready, listening on port %s\n", argv[1]);
 

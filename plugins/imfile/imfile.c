@@ -219,6 +219,7 @@ struct act_obj_s {
     int fd; /* fd to file in order to obtain file_id (needs to be preserved across move) */
     strm_t *pStrm; /* its stream (NULL if not assigned) */
     int nRecords; /**< How many records did we process before persisting the stream? */
+    uint64_t lineNum; /* 1-based line/record number used for metadata */
     ratelimit_t *ratelimiter;
     multi_submit_t multiSub;
     int is_symlink;
@@ -259,6 +260,47 @@ static int ATTR_NONNULL()
     getFullStateFileName(const uchar *const, const char *const, uchar *const pszout, const size_t ilenout);
 static void ATTR_NONNULL(1) getFileID(act_obj_t *const act);
 
+static rsRetVal ATTR_NONNULL(1, 2, 3)
+    getRequiredStateJsonField(struct json_object *json, const char *fieldName, struct json_object **out) {
+    DEFiRet;
+
+    assert(json != NULL);
+    assert(fieldName != NULL);
+    assert(out != NULL);
+
+    if (!fjson_object_object_get_ex(json, fieldName, out) || *out == NULL) {
+        LogError(0, RS_RET_ERR, "imfile: missing required state file field '%s'", fieldName);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(2) writeAllStateFileData(const int fd, const char *const data, const size_t len) {
+    DEFiRet;
+    size_t written = 0;
+
+    assert(data != NULL);
+
+    while (written < len) {
+        const ssize_t w = write(fd, data + written, len - written);
+        if (w < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        if (w == 0) {
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        written += (size_t)w;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 #define OPMODE_POLLING 0
 #define OPMODE_INOTIFY 1
@@ -295,6 +337,8 @@ static modConfData_t *currModConf = NULL; /* modConf ptr to CURRENT mod conf (ru
 
 
 #ifdef HAVE_INOTIFY_INIT
+enum { IN_FILE_UPDATE_EVENTS = IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE };
+
 /* We need to map watch descriptors to our actual objects. Unfortunately, the
  * inotify API does not provide us with any cookie, so a simple O(1) algorithm
  * cannot be done (what a shame...). We assume that maintaining the array is much
@@ -549,9 +593,9 @@ static int in_setupWatch(act_obj_t *const act, const int is_file) {
         goto done;
     }
 
-    wd =
-        inotify_add_watch(ino_fd, act->name,
-                          (is_file) ? IN_MODIFY | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
+    wd = inotify_add_watch(
+        ino_fd, act->name,
+        (is_file) ? IN_FILE_UPDATE_EVENTS | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
     if (wd < 0) {
         if (errno == EACCES) { /* There is high probability of selinux denial on top-level paths */
             DBGPRINTF("imfile: permission denied when adding watch for '%s'\n", act->name);
@@ -1457,7 +1501,7 @@ get_file_id_hash(const char *data, size_t lendata, char *const hash_str, const s
  */
 static void ATTR_NONNULL(1) getFileID(act_obj_t *const act) {
     char tmp_id[FILE_ID_HASH_SIZE];
-    strncpy(tmp_id, (const char *)act->file_id, FILE_ID_HASH_SIZE);
+    memcpy(tmp_id, act->file_id, sizeof(tmp_id));
     act->file_id[0] = '\0';
     assert(act->fd >= 0); /* fd must have been opened at act_obj_t creation! */
     char filedata[FILE_ID_SIZE];
@@ -1469,7 +1513,7 @@ static void ATTR_NONNULL(1) getFileID(act_obj_t *const act) {
         DBGPRINTF("getFileID partial or error read, ret %d\n", r);
     }
     if (strncmp(tmp_id, act->file_id, FILE_ID_HASH_SIZE)) { /* save the old id for cleaning purposes */
-        strncpy(act->file_id_prev, tmp_id, FILE_ID_HASH_SIZE);
+        memcpy(act->file_id_prev, tmp_id, sizeof(act->file_id_prev));
     }
     DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, act->file_id);
 }
@@ -1524,15 +1568,18 @@ finalize_it:
  * not freed - this must be done by the caller.
  */
 #define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20
+#define MAX_LINENUM_REPRESENTATION_NUM_BYTES 20
 static rsRetVal ATTR_NONNULL(1, 2)
-    enqLine(act_obj_t *const act, cstr_t *const __restrict__ cstrLine, const int64 strtOffs) {
+    enqLine(act_obj_t *const act, cstr_t *const __restrict__ cstrLine, const int64 strtOffs, const uint64_t lineNum) {
     DEFiRet;
     const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
     smsg_t *pMsg;
     uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES + 1];
-    const uchar *metadata_names[2] = {(uchar *)"filename", (uchar *)"fileoffset"};
-    const uchar *metadata_values[2];
+    uchar line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES + 1];
+    const uchar *metadata_names[3] = {(uchar *)"filename", (uchar *)"fileoffset", (uchar *)"line_number"};
+    const uchar *metadata_values[3];
     const size_t msgLen = cstrLen(cstrLine);
+    int lenBuf;
 
     if (msgLen == 0) {
         /* we do not process empty lines */
@@ -1547,8 +1594,8 @@ static rsRetVal ATTR_NONNULL(1, 2)
         size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
         char *ceeMsg;
         CHKmalloc(ceeMsg = malloc(ceeMsgSize));
-        strcpy(ceeMsg, CONST_CEE_COOKIE);
-        strcat(ceeMsg, (char *)rsCStrGetSzStrNoNULL(cstrLine));
+        memcpy(ceeMsg, CONST_CEE_COOKIE, CONST_LEN_CEE_COOKIE);
+        memcpy(ceeMsg + CONST_LEN_CEE_COOKIE, rsCStrGetSzStrNoNULL(cstrLine), msgLen + 1);
         MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
         free(ceeMsg);
     } else {
@@ -1565,9 +1612,21 @@ static rsRetVal ATTR_NONNULL(1, 2)
         } else {
             metadata_values[0] = (const uchar *)act->name;
         }
-        snprintf((char *)file_offset, MAX_OFFSET_REPRESENTATION_NUM_BYTES + 1, "%lld", strtOffs);
+        lenBuf = snprintf((char *)file_offset, sizeof(file_offset), "%lld", strtOffs);
+        if (lenBuf < 0) {
+            msgDestruct(&pMsg);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES] = '\0';
         metadata_values[1] = file_offset;
-        msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 2);
+        lenBuf = snprintf((char *)line_number, sizeof(line_number), "%llu", (unsigned long long)lineNum);
+        if (lenBuf < 0) {
+            msgDestruct(&pMsg);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES] = '\0';
+        metadata_values[2] = line_number;
+        msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 3);
     }
 
     if (inst->perMinuteRateLimits.maxBytesPerMinute || inst->perMinuteRateLimits.maxLinesPerMinute) {
@@ -1592,6 +1651,8 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     uchar pszSFNam[MAXFNAME];
     uchar statefile[MAXFNAME];
     int fd = -1;
+    struct json_object *json = NULL;
+    struct json_object *jval;
     const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
 
     uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
@@ -1632,10 +1693,10 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     DBGPRINTF("opened state file %s for %s\n", pszSFNam, act->name);
     CHKiRet(strm.Construct(&act->pStrm));
 
-    struct json_object *jval;
-    struct json_object *json = fjson_object_from_fd(fd);
-    if (json == NULL) {
+    json = fjson_object_from_fd(fd);
+    if (json == NULL || !fjson_object_is_type(json, fjson_type_object)) {
         LogError(0, RS_RET_ERR, "imfile: error reading state file for '%s'", act->name);
+        ABORT_FINALIZE(RS_RET_ERR);
     }
 
     /* we access some data items a bit dirty, as we need to refactor the whole
@@ -1644,13 +1705,13 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     /* Note: we ignore filname property - it is just an aid to the user. Most
      * importantly it *is wrong* after a file move!
      */
-    fjson_object_object_get_ex(json, "prev_was_nl", &jval);
+    CHKiRet(getRequiredStateJsonField(json, "prev_was_nl", &jval));
     act->pStrm->bPrevWasNL = fjson_object_get_int(jval);
 
-    fjson_object_object_get_ex(json, "curr_offs", &jval);
+    CHKiRet(getRequiredStateJsonField(json, "curr_offs", &jval));
     act->pStrm->iCurrOffs = fjson_object_get_int64(jval);
 
-    fjson_object_object_get_ex(json, "strt_offs", &jval);
+    CHKiRet(getRequiredStateJsonField(json, "strt_offs", &jval));
     act->pStrm->strtOffs = fjson_object_get_int64(jval);
 
     fjson_object_object_get_ex(json, "inode_gen", &jval);
@@ -1659,14 +1720,26 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
         if (saved_gen != act->inode_gen) {
             DBGPRINTF("imfile: inode generation mismatch in state file: saved %u, current %u - ignoring state file\n",
                       saved_gen, act->inode_gen);
-            fjson_object_put(json);
             ABORT_FINALIZE(RS_RET_ERR);
         }
     }
 
-    fjson_object_object_get_ex(json, "prev_line_segment", &jval);
-    const uchar *const prev_line_segment = (const uchar *)fjson_object_get_string(jval);
+    fjson_object_object_get_ex(json, "line_number", &jval);
     if (jval != NULL) {
+        if (!fjson_object_is_type(jval, fjson_type_int)) {
+            LogError(0, RS_RET_ERR, "imfile: invalid line_number in state file for '%s'", act->name);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        act->lineNum = (uint64_t)fjson_object_get_int64(jval);
+    }
+
+    fjson_object_object_get_ex(json, "prev_line_segment", &jval);
+    if (jval != NULL) {
+        if (!fjson_object_is_type(jval, fjson_type_string)) {
+            LogError(0, RS_RET_ERR, "imfile: invalid prev_line_segment in state file for '%s'", act->name);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        const uchar *const prev_line_segment = (const uchar *)fjson_object_get_string(jval);
         CHKiRet(rsCStrConstructFromszStr(&act->pStrm->prevLineSegment, prev_line_segment));
         cstrFinalize(act->pStrm->prevLineSegment);
         uchar *ret = rsCStrGetSzStrNoNULL(act->pStrm->prevLineSegment);
@@ -1674,14 +1747,19 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     }
 
     fjson_object_object_get_ex(json, "prev_msg_segment", &jval);
-    const uchar *const prev_msg_segment = (const uchar *)fjson_object_get_string(jval);
     if (jval != NULL) {
+        if (!fjson_object_is_type(jval, fjson_type_string)) {
+            LogError(0, RS_RET_ERR, "imfile: invalid prev_msg_segment in state file for '%s'", act->name);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        const uchar *const prev_msg_segment = (const uchar *)fjson_object_get_string(jval);
         CHKiRet(rsCStrConstructFromszStr(&act->pStrm->prevMsgSegment, prev_msg_segment));
         cstrFinalize(act->pStrm->prevMsgSegment);
         uchar *ret = rsCStrGetSzStrNoNULL(act->pStrm->prevMsgSegment);
         DBGPRINTF("prev_msg_segment present in state file 2, is: %s\n", ret);
     }
     fjson_object_put(json);
+    json = NULL;
 
     CHKiRet(strm.SetFName(act->pStrm, (uchar *)act->name, strlen(act->name)));
     CHKiRet(strm.SettOperationsMode(act->pStrm, STREAMMODE_READ));
@@ -1692,6 +1770,9 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     CHKiRet(strm.SeekCurrOffs(act->pStrm));
 
 finalize_it:
+    if (json != NULL) {
+        fjson_object_put(json);
+    }
     if (fd >= 0) {
         close(fd);
     }
@@ -1807,6 +1888,7 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             startOffs = act->pStrm->iCurrOffs; /* disable check */
         }
         runModConf->bHadFileData = 1; /* this is just a flag, so set it and forget it */
+        ++act->lineNum;
         /* account bytes and lines processed for this file */
         if (act->pStrm != NULL) {
             int64_t endOffs = act->pStrm->iCurrOffs;
@@ -1815,7 +1897,7 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             }
             STATSCOUNTER_INC(act->linesProcessed, act->mutLinesProcessed);
         }
-        CHKiRet(enqLine(act, *pCStr, strtOffs)); /* process line */
+        CHKiRet(enqLine(act, *pCStr, strtOffs, act->lineNum)); /* process line */
         rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
         if (inst->iPersistStateInterval > 0 && ++act->nRecords >= inst->iPersistStateInterval) {
             persistStrmState(act);
@@ -1974,7 +2056,7 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
                 ABORT_FINALIZE(RS_RET_ERR);
             }
             curr_wd[len_curr_wd] = '/';
-            strcpy((char *)curr_wd + len_curr_wd + 1, (char *)inst->pszFileName);
+            memcpy(curr_wd + len_curr_wd + 1, inst->pszFileName, ustrlen(inst->pszFileName) + 1);
             free(inst->pszFileName);
             CHKmalloc(inst->pszFileName = ustrdup(curr_wd));
         }
@@ -2082,18 +2164,18 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "file")) {
-            inst->pszFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "statefile")) {
-            inst->pszStateFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStateFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "removestateondelete") ||
                    !strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
             inst->bRMStateOnDel = (uint8_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "deletestateonfilemove")) {
             inst->bRMStateOnMove = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tag")) {
-            inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszTag = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "severity")) {
             inst->iSeverity = pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "facility")) {
@@ -2101,9 +2183,9 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "readmode")) {
             inst->readMode = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
-            inst->startRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->startRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "endmsg.regex")) {
-            inst->endRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->endRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
             inst->discardTruncatedMsg = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "msgdiscardingerror")) {
@@ -2121,7 +2203,7 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "escapelf")) {
             inst->escapeLF = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "escapelf.replacement")) {
-            inst->escapeLFString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->escapeLFString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
             inst->reopenOnTruncate = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
@@ -2272,7 +2354,7 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "sortfiles")) {
             loadModConf->sortFiles = ((sbool)pvals[i].val.d.n) ? 0 : GLOB_NOSORT;
         } else if (!strcmp(modpblk.descr[i].name, "statefile.directory")) {
-            loadModConf->stateFileDirectory = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->stateFileDirectory = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "normalizepath")) {
             loadModConf->normalizePath = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "mode")) {
@@ -2295,7 +2377,8 @@ BEGINsetModCnf
             } else if (!es_strconstcmp(pvals[i].val.d.estr, "fen"))
                 loadModConf->opMode = OPMODE_FEN;
             else {
-                char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+                char *cstr = NULL;
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_PARAM_ERROR,
                          "imfile: unknown "
                          "mode '%s'",
@@ -2352,10 +2435,9 @@ BEGINcheckCnf
         std_checkRuleset(pModConf, inst);
     }
     if (pModConf->root == NULL) {
-        LogError(0, RS_RET_NO_LISTNERS,
-                 "imfile: no files configured to be monitored - "
-                 "no input will be gathered");
-        iRet = RS_RET_NO_LISTNERS;
+        LogMsg(0, NO_ERRCODE, LOG_WARNING,
+               "imfile: no files configured to be monitored - "
+               "no input will be gathered");
     }
 ENDcheckCnf
 
@@ -2403,12 +2485,14 @@ BEGINfreeCnf
     instanceConf_t *inst, *del;
     CODESTARTfreeCnf;
     fs_node_destroy(pModConf->conf_tree);
+    free(pModConf->stateFileDirectory);
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->pszBindRuleset);
         free(inst->pszFileName);
         free(inst->pszTag);
         free(inst->pszStateFile);
         free(inst->pszFileName_forOldStateFile);
+        free(inst->escapeLFString);
         if (inst->startRegex != NULL) {
             regfree(&inst->start_preg);
             free(inst->startRegex);
@@ -2488,6 +2572,9 @@ static void ATTR_NONNULL(1) in_dbg_showEv(const struct inotify_event *ev) {
     if (ev->mask & IN_CLOSE_WRITE) {
         dbgprintf("INOTIFY event: watch IN_CLOSE_WRITE\n");
     }
+    if (ev->mask & IN_Q_OVERFLOW) {
+        dbgprintf("INOTIFY event: watch IN_Q_OVERFLOW\n");
+    }
     if (ev->mask & IN_CLOSE_NOWRITE) {
         dbgprintf("INOTIFY event: watch IN_CLOSE_NOWRITE\n");
     }
@@ -2519,7 +2606,7 @@ static void ATTR_NONNULL(1) in_dbg_showEv(const struct inotify_event *ev) {
 
 
 static void ATTR_NONNULL(1, 2) in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry) {
-    if (ev->mask & IN_MODIFY) {
+    if (ev->mask & IN_FILE_UPDATE_EVENTS) {
         DBGPRINTF("fs_node_notify_file_update: act->name '%s'\n", etry->act->name);
         pollFile(etry->act);
     } else {
@@ -2552,6 +2639,12 @@ static void flag_in_move(fs_edge_t *const edge, const char *name_moved) {
 }
 
 static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
+    if (ev->mask & IN_Q_OVERFLOW) {
+        LogMsg(0, RS_RET_ERR, LOG_WARNING, "imfile: inotify queue overflow, scanning configured files");
+        fs_node_walk(runModConf->conf_tree, poll_tree);
+        goto done;
+    }
+
     if (ev->mask & IN_IGNORED) {
         DBGPRINTF("imfile: got IN_IGNORED event\n");
         goto done;
@@ -2867,7 +2960,15 @@ ENDwillRun
 // all kinds of "state files"
 static rsRetVal ATTR_NONNULL() atomicWriteStateFile(const char *fn, const char *content) {
     DEFiRet;
-    const int fd = open(fn, O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = -1;
+    char *tmpfn = NULL;
+    const size_t fnlen = strlen(fn);
+
+    CHKmalloc(tmpfn = malloc(fnlen + sizeof(".tmp.XXXXXX")));
+    memcpy(tmpfn, fn, fnlen);
+    memcpy(tmpfn + fnlen, ".tmp.XXXXXX", sizeof(".tmp.XXXXXX"));
+
+    fd = mkstemp(tmpfn);
     if (fd < 0) {
         LogError(errno, RS_RET_IO_ERROR,
                  "imfile: cannot open state file '%s' for "
@@ -2877,22 +2978,47 @@ static rsRetVal ATTR_NONNULL() atomicWriteStateFile(const char *fn, const char *
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
-    const size_t toWrite = strlen(content);
-    const ssize_t w = write(fd, content, toWrite);
-    if (w != (ssize_t)toWrite) {
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imfile: cannot set close-on-exec on state file '%s'", tmpfn);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+
+    CHKiRet(writeAllStateFileData(fd, content, strlen(content)));
+    if (fsync(fd) != 0) {
         LogError(errno, RS_RET_IO_ERROR,
-                 "imfile: partial write to state file '%s' "
+                 "imfile: could not flush state file '%s' "
                  "this may cause trouble in the future. We will try to delete the "
-                 "state file, as this provides most consistent state",
+                 "temporary state file, as this provides most consistent state",
+                 tmpfn);
+        unlink(tmpfn);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (close(fd) != 0) {
+        fd = -1;
+        LogError(errno, RS_RET_IO_ERROR,
+                 "imfile: could not close temporary state file '%s' "
+                 "after persisting file state",
+                 tmpfn);
+        unlink(tmpfn);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
+
+    if (rename(tmpfn, fn) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imfile: could not move temporary state file '%s' into place as '%s'", tmpfn,
                  fn);
-        unlink(fn);
+        unlink(tmpfn);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && tmpfn != NULL) {
+        unlink(tmpfn);
+    }
     if (fd >= 0) {
         close(fd);
     }
+    free(tmpfn);
     RETiRet;
 }
 
@@ -2959,6 +3085,8 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     json_object_object_add(json, "strt_offs", jval);
     jval = json_object_new_int64((int64_t)act->inode_gen);
     json_object_object_add(json, "inode_gen", jval);
+    jval = json_object_new_int64((int64_t)act->lineNum);
+    json_object_object_add(json, "line_number", jval);
 
     const uchar *const prevLineSegment = strmGetPrevLineSegment(act->pStrm);
     if (prevLineSegment != NULL) {
@@ -2975,7 +3103,6 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     const char *jstr = json_object_to_json_string_ext(json, JSON_C_TO_STRING_SPACED);
 
     CHKiRet(atomicWriteStateFile((const char *)statefname, jstr));
-    json_object_put(json);
 
     /* file-id changed remove the old statefile */
     if (strncmp((const char *)act->file_id_prev, (const char *)act->file_id, FILE_ID_HASH_SIZE)) {
@@ -2983,6 +3110,9 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     }
 
 finalize_it:
+    if (json != NULL) {
+        json_object_put(json);
+    }
     if (iRet != RS_RET_OK) {
         LogError(0, iRet,
                  "imfile: could not persist state "

@@ -30,8 +30,11 @@ Description
 If turned on, the files will be written in asynchronous mode via a
 separate thread. In that case, double buffers will be used so that
 one buffer can be filled while the other buffer is being written.
-Note that in order to enable FlushInterval, AsyncWriting must be set
-to "on". Otherwise, the flush interval will be ignored.
+
+The :ref:`param-omfile-flushinterval` setting is applied when
+``asyncWriting`` is enabled for the action. Set ``asyncWriting="on"`` when
+using ``flushInterval`` to bound how long buffered data may remain
+unflushed.
 
 Action usage
 ------------
@@ -40,7 +43,17 @@ Action usage
 .. _omfile.parameter.action.asyncwriting:
 .. code-block:: rsyslog
 
-   action(type="omfile" asyncWriting="...")
+   action(type="omfile" file="/var/log/app.log" asyncWriting="on")
+
+YAML usage
+----------
+
+.. code-block:: yaml
+
+   actions:
+     - type: omfile
+       file: /var/log/app.log
+       asyncWriting: "on"
 
 Notes
 -----

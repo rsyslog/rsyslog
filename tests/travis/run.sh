@@ -10,8 +10,8 @@ echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 
-source tests/travis/install.sh
-source /etc/lsb-release
+. tests/travis/install.sh
+. /etc/lsb-release
 
 #
 # ACTUAL MAIN CI PART OF THE SCRIPT
@@ -29,7 +29,7 @@ if [ "$MERGE" == "YES" ]; then
     # we need to use source as we must exit on inability to merge!
     set +v
     set +e
-    source tests/CI/try_merge.sh --merge-only
+    . tests/CI/try_merge.sh --merge-only
     set -v
     set -e
 fi
@@ -42,14 +42,14 @@ set -e
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-5.0"; CC=clang-5.0; else SCAN_BUILD="scan-build"; fi
 
 set +e
-ls -l *.tar.gz
-rm -f *.tar.gz # safety check: we must not have tarballs at this stage
-if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then
+ls -l ./*.tar.gz
+rm -f ./*.tar.gz # safety check: we must not have tarballs at this stage
+if [ "$BUILD_FROM_TARBALL" == "YES" ]; then
 	autoreconf -fvi
 	./configure
 	make dist
-	ls -l *.tar.gz
-	mv *.tar.gz rsyslog.tar.gz
+	ls -l ./*.tar.gz
+	mv ./*.tar.gz rsyslog.tar.gz
 	mkdir unpack
 	cd unpack
 	tar xzf ../rsyslog.tar.gz
@@ -117,9 +117,9 @@ fi
 pwd
 set -e
 autoreconf --force --verbose --install
-if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
-if [ "x$IMHTTP" == "xYES" ]; then export IMHTTP="--enable-imhttp"; fi
-if [ "x$ESTEST" == "xYES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elasticsearch-tests=minimal" ; fi
+if [ "$GROK" == "YES" ]; then export GROK="--enable-mmgrok"; fi
+if [ "$IMHTTP" == "YES" ]; then export IMHTTP="--enable-imhttp"; fi
+if [ "$ESTEST" == "YES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elasticsearch-tests=minimal" ; fi
 # at this point, the environment should be setup for ./configure
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="clang-3.6"; fi
 $CC -v
@@ -159,7 +159,7 @@ set +xv
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j
 
-if [ "x$CHECK" == "xYES" ]
+if [ "$CHECK" == "YES" ]
 then
     set +e  # begin testbench, here we do not want to abort
     devtools/prep-mysql-db.sh  # prepare mysql for testbench
@@ -179,5 +179,5 @@ then
     #make distcheck
 fi
 
-if [ "x$STAT_AN" == "xYES" ] ; then make clean; export CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi
-if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi
+if [ "$STAT_AN" == "YES" ] ; then make clean; export CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi
+if [ "$STAT_AN" == "YES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi

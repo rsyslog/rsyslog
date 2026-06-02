@@ -29,6 +29,12 @@ If turned on (default), the socket is unlinked and re-created when opened
 and also unlinked when finally closed. Set it to off if you handle socket
 creation yourself.
 
+``Unlink="off"`` is for sockets whose lifecycle is managed outside rsyslog.
+If rsyslog should create the socket path, leave ``Unlink`` at its default
+``on`` value. In particular, ``CreatePath="on"`` cannot be combined with
+``Unlink="off"``: rsyslog would be asked to create the socket path but then
+forbidden from replacing or removing it on restart.
+
 .. note::
 
    Note that handling socket creation oneself has the

@@ -8,8 +8,9 @@ ommail: Mail Output Module
 
 .. summary-start
 
-Ommail sends selected syslog messages as email alerts via SMTP, with
-optional templates for the subject and body.
+Ommail sends selected syslog messages as email alerts via SMTP or a
+sendmail-compatible local submission program, with optional templates
+for the subject and body.
 .. summary-end
 
 .. index:: ! imudp
@@ -30,6 +31,11 @@ rigorous filtering, otherwise your mailbox (and mail server) will be
 heavily spammed. The ommail plugin is primarily meant for alerting
 users. As such, it is assumed that mails will only be sent in an
 extremely limited number of cases.
+
+Ommail supports two delivery modes. The default ``smtp`` mode talks
+directly to an SMTP server. The ``sendmail`` mode invokes a
+sendmail-compatible binary, normally ``/usr/sbin/sendmail``, and writes
+the generated message to its standard input.
 
 Ommail uses up to two templates, one for the mail body and optionally
 one for the subject line. Note that the subject line can also be set to
@@ -80,6 +86,10 @@ Input Parameters
 
    * - Parameter
      - Summary
+   * - :ref:`param-ommail-mode`
+     - .. include:: ../../reference/parameters/ommail-mode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-ommail-server`
      - .. include:: ../../reference/parameters/ommail-server.rst
         :start-after: .. summary-start
@@ -112,10 +122,15 @@ Input Parameters
      - .. include:: ../../reference/parameters/ommail-template.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-ommail-sendmail-binary`
+     - .. include:: ../../reference/parameters/ommail-sendmail-binary.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
 
+   ../../reference/parameters/ommail-mode
    ../../reference/parameters/ommail-server
    ../../reference/parameters/ommail-port
    ../../reference/parameters/ommail-mailfrom
@@ -124,34 +139,22 @@ Input Parameters
    ../../reference/parameters/ommail-subject-text
    ../../reference/parameters/ommail-body-enable
    ../../reference/parameters/ommail-template
+   ../../reference/parameters/ommail-sendmail-binary
 
 
 Caveats/Known Bugs
 ==================
 
-The current ommail implementation supports SMTP-direct mode only. In
-that mode, the plugin talks to the mail server via SMTP protocol. No
-other process is involved. This mode offers best reliability as it is
-not depending on any external entity except the mail server. Mail server
-downtime is acceptable if the action is put onto its own action queue,
-so that it may wait for the SMTP server to come back online. However,
-the module implements only the bare SMTP essentials. Most importantly,
-it does not provide any authentication capabilities. So your mail server
-must be configured to accept incoming mail from ommail without any
-authentication needs (this may be change in the future as need arises,
-but you may also be referred to sendmail-mode).
+SMTP mode implements only the bare SMTP essentials. Most importantly,
+it does not provide SMTP authentication capabilities. Your mail server
+must be configured to accept incoming mail from ommail without
+authentication, or you can use sendmail mode and let the local mail
+submission program handle authentication and relay policy.
 
-In theory, ommail should also offer a mode where it uses the sendmail
-utility to send its mail (sendmail-mode). This is somewhat less reliable
-(because we depend on an entity we do not have close control over -
-sendmail). It also requires dramatically more system resources, as we
-need to load the external process (but that should be no problem given
-the expected infrequent number of calls into this plugin). The big
-advantage of sendmail mode is that it supports all the bells and
-whistles of a full-blown SMTP implementation and may even work for local
-delivery without an SMTP server being present. Sendmail mode will be
-implemented as need arises. So if you need it, please drop us a line (If
-nobody does, sendmail mode will probably never be implemented).
+Sendmail mode depends on an external process. This can block while the
+local submission program runs and is less directly controlled by
+rsyslog than SMTP mode. Use a dedicated action queue if blocking is not
+acceptable for your configuration.
 
 
 Examples

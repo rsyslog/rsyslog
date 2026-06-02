@@ -11,6 +11,7 @@
 .. |FmtBasicName| replace:: ``basic``
 .. |FmtAdvancedName| replace:: ``advanced``
 .. |FmtObsoleteName| replace:: ``obsolete legacy``
+.. |FmtYamlName| replace:: ``yaml``
 
 .. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 

@@ -14,7 +14,6 @@ export NUMMESSAGES=1000
 export RSYSLOG_DEBUGLOG="log"
 export OSSL_PQ_CFG='MinProtocol=TLSv1.3\nMaxProtocol=TLSv1.3\nGroups=X25519MLKEM768'
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -28,13 +27,14 @@ module(load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="anon"
 	gnutlsPriorityString="'$OSSL_PQ_CFG'")
 
-input(type="imtcp" port="'$PORT_RCVR'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'"
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
+assign_file_content PORT_RCVR "$RSYSLOG_DYNNAME.rcvr_port"
 
 export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2

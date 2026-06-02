@@ -1,3 +1,4 @@
+#!/bin/sh
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_centos:8 .
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:\n"

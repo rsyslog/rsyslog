@@ -17,20 +17,20 @@ $DynaFileCacheSize 4
 local0.* ?dynfile;outfmt
 '
 startup
-# we send handcrafted message. We have a dynafile cache of 4, and now send one message
-# each to fill up the cache.
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:0"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:1"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:2"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:3"
-# the next one has caused a segfault in practice
-# note that /proc/rsyslog.error.file must not be creatable
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom"
-# some more writes
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:4"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:5"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:6"
-injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:7"
+# Send the handcrafted messages in one imdiag session so the invalid open
+# and first following valid dynafile write can be processed in one batch.
+cat > "$RSYSLOG_DYNNAME.input" <<EOF
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:0
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:1
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:2
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:3
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:4
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:5
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:6
+<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:7
+EOF
+injectmsg_file "$RSYSLOG_DYNNAME.input"
 # done message generation
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

@@ -4,6 +4,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo Init Testbench
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 
 # *** ==============================================================================
 export TESTMESSAGES=50000
@@ -11,7 +12,8 @@ export TESTMESSAGES2=50001
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -67,7 +69,6 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 

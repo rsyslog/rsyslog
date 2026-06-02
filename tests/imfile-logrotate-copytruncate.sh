@@ -1,4 +1,8 @@
 #!/bin/bash
+# Verifies imfile reopenOnTruncate with logrotate copytruncate. The oracle is
+# the exact sequence 0..19999: rsyslog must read the pre-rotate file, finish
+# that batch before the destructive copytruncate, notice the truncation, resume
+# with the post-truncate sentinel, and then read all remaining post-rotate data.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh check-inotify-only
 . ${srcdir:=.}/diag.sh init
@@ -7,6 +11,7 @@ check_command_available logrotate
 export TESTMESSAGES=10000
 export RETRIES=50
 export TESTMESSAGESFULL=19999
+export POST_ROTATE_SENTINEL=1
 
 generate_conf
 add_conf '
@@ -59,14 +64,23 @@ ls -l $RSYSLOG_DYNNAME.input*
 
 startup
 
-# Wait until testmessages are processed by imfile!
+# Wait until the initial file content is visible, then drain the main queue
+# before copytruncate so the test rotates only after the pre-rotate batch is
+# fully processed.
 wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
+wait_queueempty
 
 # Logrotate on logfile
 logrotate --state $RSYSLOG_DYNNAME.logrotate.state -f $RSYSLOG_DYNNAME.logrotate
 
+# First write a small sentinel after copytruncate and wait for it. This keeps
+# the test focused on the invariant that imfile notices the truncation and
+# resumes reading before the large follow-up batch is appended.
+./inputfilegen -m $POST_ROTATE_SENTINEL -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.1.log
+wait_file_lines $RSYSLOG_OUT_LOG $((TESTMESSAGES + POST_ROTATE_SENTINEL)) $RETRIES
+
 # generate more input after logrotate into new logfile
-./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.1.log
+./inputfilegen -m $((TESTMESSAGES - POST_ROTATE_SENTINEL)) -i $((TESTMESSAGES + POST_ROTATE_SENTINEL)) >> $RSYSLOG_DYNNAME.input.1.log
 ls -l $RSYSLOG_DYNNAME.input*
 echo ls ${RSYSLOG_DYNNAME}.spool:
 ls -l ${RSYSLOG_DYNNAME}.spool

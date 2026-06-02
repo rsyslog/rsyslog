@@ -136,7 +136,7 @@ BEGINnewActInst
     for (i = 0; i < parserpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(parserpblk.descr[i].name, "tag")) {
-            pData->pszTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pData->lenTag = strlen(pData->pszTag);
         } else if (!strcmp(parserpblk.descr[i].name, "forcelocalhostname")) {
             pData->bForceLocalHostname = pvals[i].val.d.n;

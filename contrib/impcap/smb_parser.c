@@ -92,7 +92,7 @@ data_ret_t *smb_parse(const uchar *packet, int pktSize, struct json_object *jpar
     int pktSizeCpy = pktSize;
     const uchar *packetCpy = packet;
 
-    while (pktSizeCpy > 0) {
+    while (pktSizeCpy >= 4) {
         /* don't check packetCpy[0] to include SMB version byte at the beginning */
         if (packetCpy[1] == 'S') {
             if (packetCpy[2] == 'M') {

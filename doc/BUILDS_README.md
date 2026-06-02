@@ -72,7 +72,7 @@ steps in this document.
 1. Optional: use helper scripts to create venv and build:
    - Linux: `./tools/build-doc-linux.sh --strict --clean --format html`
    - Windows: `powershell -ExecutionPolicy Bypass -File .\tools\build-doc-windows.ps1 -Strict -Clean -Format html`
-1. Or manually create a venv and install deps: `python3 -m venv .venv-docs && source .venv-docs/bin/activate && pip install -r requirements.txt`
+1. Or manually create a venv and install deps: `python3 -m venv .venv-docs && . .venv-docs/bin/activate && pip install -r requirements.txt`
 1. Change to the `doc/` folder within the rsyslog repository
 1. Merge `main` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch

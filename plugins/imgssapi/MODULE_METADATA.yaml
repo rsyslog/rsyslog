@@ -1,0 +1,11 @@
+support_status: contributor-supported
+maturity_level: mature
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-04-16
+build_dependencies:
+  - MIT Kerberos or compatible GSSAPI development headers (`--enable-gssapi-krb5`)
+documentation:
+  - doc/source/configuration/modules/imgssapi.rst
+notes:
+  - Legacy-format-only input module with contributor-maintained GSSAPI support.
+  - Negative-path coverage exists for listen port file and max session handling; full Kerberos integration tests are still absent.

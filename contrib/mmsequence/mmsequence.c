@@ -175,7 +175,7 @@ BEGINnewActInst
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"key", sizeof("key") - 1)) {
                 pData->mode = mmSequencePerKey;
             } else {
-                cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_INVLD_MODE, "mmsequence: invalid mode '%s' - ignored", cstr);
                 free(cstr);
             }
@@ -194,11 +194,11 @@ BEGINnewActInst
             continue;
         }
         if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL));
             continue;
         }
         if (!strcmp(actpblk.descr[i].name, "var")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (strlen(cstr) < 3) {
                 LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                          "mmsequence: valid variable name should be at least "
@@ -347,9 +347,16 @@ BEGINdoAction_NoStrings
     json = json_object_new_int(val);
     if (json == NULL) {
         LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to create JSON");
-    } else if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, json, 0, 0)) {
-        LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to pass out the value");
-        json_object_put(json);
+    } else {
+        struct json_object *const toAdd = json;
+        json = NULL;
+        rsRetVal local_ret = msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, toAdd, 0, 0);
+        if (RS_RET_OK != local_ret) {
+            LogError(0, RS_RET_OBJ_CREATION_FAILED, "mmsequence: unable to pass out the value");
+            if (local_ret == RS_RET_NON_JSON_PROP) {
+                json_object_put(toAdd);
+            }
+        }
     }
 ENDdoAction
 

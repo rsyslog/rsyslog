@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/omhiredis-queue.sh
+. ${srcdir:=.}/omhiredis-queue.sh

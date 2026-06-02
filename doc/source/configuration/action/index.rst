@@ -7,6 +7,15 @@ Actions defined via the action() object are **not** affected by the
 legacy statements listed here. Use the action() object properties
 instead.
 
+The separation also applies in the other direction. New-style module defaults
+and action parameters are not a migration layer for legacy selector actions.
+For example, ``module(load="builtin:omfile" fileOwner="..." template="...")``
+is intended to configure RainerScript ``action(type="omfile" ...)`` objects.
+Do not rely on it to make legacy file actions such as ``*.* /var/log/messages``
+or ``*.* ?dynafile`` use the same file ownership, permissions, or template
+settings. Convert those outputs to explicit ``action(type="omfile" ...)``
+objects instead.
+
 Generic action configuration Statements
 ---------------------------------------
 These statements can be used with all types of actions.
@@ -79,10 +88,10 @@ These statements are specific to omfile-based actions.
 -  **$OMFileAsyncWriting** [on/**off**], if turned on, the files will be
    written in asynchronous mode via a separate thread. In that case,
    double buffers will be used so that one buffer can be filled while
-   the other buffer is being written. Note that in order to enable
-   $OMFileFlushInterval, $OMFileAsyncWriting must be set to "on".
-   Otherwise, the flush interval will be ignored. Also note that when
-   $OMFileFlushOnTXEnd is "on" but $OMFileAsyncWriting is off, output
+   the other buffer is being written. In order to use
+   $OMFileFlushInterval, $OMFileAsyncWriting must be set to "on";
+   otherwise the flush interval is not applied. Also note that when
+   $OMFileFlushOnTXEnd is "off" but $OMFileAsyncWriting is "off", output
    will only be written when the buffer is full. This may take several
    hours, or even require a rsyslog shutdown. However, a buffer flush
    can be forced in that case by sending rsyslogd a HUP signal.

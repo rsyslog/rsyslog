@@ -2,6 +2,7 @@
 # added 2019-01-12 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kcat
 
@@ -9,7 +10,8 @@ export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
-export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
+export RANDTOPIC
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -33,7 +35,6 @@ module(load="../plugins/impstats/.libs/impstats"
 	log.file="'$RSYSLOG_DYNNAME.pstats'"
 	interval="1" log.syslog="off")
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
-$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
 
@@ -94,7 +95,7 @@ while [ $timecounter -lt $timeoutend ]; do
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
 		break
 	else
-		if [ "x$timecounter" == "x$timeoutend" ]; then
+			if [ "$timecounter" == "$timeoutend" ]; then
 			echo wait-kafka-lines failed, expected $TESTMESSAGESFULL got $count
 			shutdown_when_empty
 			wait_shutdown

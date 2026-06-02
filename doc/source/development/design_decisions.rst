@@ -35,3 +35,30 @@ Use `libyaml` (https://github.com/yaml/libyaml) as the YAML parser.
     
     *   `libfyaml`: While feature-rich and supporting YAML 1.2, it is newer and less proven on obscure architectures compared to `libyaml`.
     *   `libcyaml`: Adds a layer of convenience but introduces an additional dependency on top of `libyaml`.
+
+Watched-file reload scheduling
+------------------------------
+
+**Context:**
+Policy-driven features such as ``ratelimit()`` and ``mmjsontransform`` need a
+way to reload one external YAML file without triggering a full process-wide
+``HUP`` sweep.
+
+**Decision:**
+Use one runtime-internal watched-file manager integrated into rsyslogd's main
+housekeeping loop.
+
+**Reasoning:**
+
+1. **Targeted reloads:** Each watched file can debounce and reload
+   independently, so policy edits do not force unrelated subsystems through a
+   broad ``HUP`` path.
+2. **Main-loop integration:** The manager exposes one wait fd and one computed
+   next-deadline, which fits naturally into the existing housekeeping sleep
+   cycle without creating a dedicated watcher thread.
+3. **Operational safety:** Callbacks are dispatched unlocked, so subsystem
+   reload code can keep its own locking without inheriting a new global lock
+   ordering.
+4. **Failure handling:** Builds without inotify support fall back to HUP-only
+   behavior, and runtime watcher failures disable watched reloads without
+   affecting normal processing.

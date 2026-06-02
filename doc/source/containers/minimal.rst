@@ -19,6 +19,30 @@ Runtime Notes
 The packaged default configuration uses ``/var/spool/rsyslog`` as the
 work directory and writes to standard output via ``omstdout``.
 
+The image also includes an empty native regex lookup table at
+``/etc/rsyslog/noise-drop.lkp_tbl``. Replace or mount this file to drop
+known noisy events before packaged outputs process them. The shipped
+filter matches against ``$rawmsg`` because it preserves the full received
+event and is usually the most robust property for source-side filtering.
+If a regex table entry matches and returns any non-empty tag, rsyslog
+calls ``stop`` for that event. To match another property, such as
+``$msg``, replace the shipped ``/etc/rsyslog.d/02-noise-drop.conf``
+snippet with custom rsyslog configuration.
+
+The lookup table uses the standard rsyslog lookup-table JSON format and
+POSIX extended regular expressions. The first matching entry wins:
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "nomatch": "",
+     "type": "regex",
+     "table": [
+       { "regex": "healthcheck succeeded", "tag": "drop" }
+     ]
+   }
+
 The image runs as ``syslog:adm`` by default. That fits simple container
 deployments that use unprivileged ports and do not depend on privileged
 inputs such as host log sockets or other root-only resources.

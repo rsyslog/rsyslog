@@ -710,7 +710,7 @@ BEGINnewActInst
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(actpblk.descr[i].name, "rulebase")) {
-            pData->rulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->rulebase = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "rule")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
@@ -719,27 +719,30 @@ BEGINnewActInst
             }
             buffer = malloc(size + pvals[i].val.d.ar->nmemb + 1);
             tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[0], NULL);
-            strcpy(buffer, tStr);
+            char *dst = buffer;
+            memcpy(dst, tStr, strlen(tStr));
+            dst += strlen(tStr);
             free(tStr);
-            strcat(buffer, "\n");
+            *dst++ = '\n';
             for (int j = 1; j < pvals[i].val.d.ar->nmemb; ++j) {
                 tStr = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                strcat(buffer, tStr);
+                memcpy(dst, tStr, strlen(tStr));
+                dst += strlen(tStr);
                 free(tStr);
-                strcat(buffer, "\n");
+                *dst++ = '\n';
             }
-            strcat(buffer, "\0");
+            *dst = '\0';
             pData->rule = (uchar *)buffer;
         } else if (!strcmp(actpblk.descr[i].name, "userawmsg")) {
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "variable")) {
-            varName = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(varName = es_str2cstr(pvals[i].val.d.estr, NULL));
 #ifdef HAVE_LOGNORM_TURBO
         } else if (!strcmp(actpblk.descr[i].name, "turbo")) {
             pData->bTurbo = (int)pvals[i].val.d.n;
 #endif
         } else if (!strcmp(actpblk.descr[i].name, "path")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (strlen(cstr) < 2) {
                 LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                          "mmnormalize: valid path name should be at least "

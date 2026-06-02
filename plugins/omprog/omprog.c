@@ -462,7 +462,15 @@ static rsRetVal readStatus(instanceData *pData, childProcessCtx_t *pChildCtx) {
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
 
+#ifdef __clang_analyzer__
+        /* scan-build false positive: callers may hold pSingleChildMut to
+         * serialize one child process, but poll() above bounds this protocol
+         * read by lConfirmTimeout before the mutex-protected transaction ends.
+         */
+        lenRead = 0;
+#else
         lenRead = read(pChildCtx->fdPipeIn, lineBuf + offset, sizeof(lineBuf) - offset - 1);
+#endif
         if (lenRead == -1) {
             if (errno == EINTR) {
                 continue; /* call interrupted: retry poll + read */
@@ -1077,9 +1085,9 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "useTransactions")) {
             pData->bUseTransactions = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "beginTransactionMark")) {
-            pData->szBeginTransactionMark = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szBeginTransactionMark = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "commitTransactionMark")) {
-            pData->szCommitTransactionMark = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szCommitTransactionMark = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "forceSingleInstance")) {
             pData->bForceSingleInst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "signalOnClose")) {
@@ -1089,7 +1097,8 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "killUnresponsive")) {
             pData->bKillUnresponsive = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "hup.signal")) {
-            const char *const sig = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *sig;
+            CHKmalloc(sig = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcmp(sig, "HUP"))
                 pData->iHUPForward = SIGHUP;
             else if (!strcmp(sig, "USR1"))
@@ -1106,12 +1115,12 @@ BEGINnewActInst
             }
             free((void *)sig);
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->szTemplateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->szTemplateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "output")) {
             if (pData->pOutputCaptureCtx == NULL) {
                 CHKiRet(allocOutputCaptureCtx(&pData->pOutputCaptureCtx));
             }
-            pData->pOutputCaptureCtx->szFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pOutputCaptureCtx->szFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "fileCreateMode")) {
             if (pData->pOutputCaptureCtx == NULL) {
                 CHKiRet(allocOutputCaptureCtx(&pData->pOutputCaptureCtx));

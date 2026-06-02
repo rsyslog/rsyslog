@@ -1,0 +1,91 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+include_dir="/etc/apparmor.d/rsyslog.d"
+apparmor_profile="/etc/apparmor.d/usr.sbin.rsyslogd"
+declare -i ret
+ret=0
+
+cleanup() {
+    rm -f "${include_dir}"/do-not-include*
+    rm -f "${include_dir}"/README
+    rm -f "${include_dir}"/pkg1.apparmor
+    rm -f "${include_dir}"/randomfile
+}
+
+trap cleanup EXIT
+
+standard_backup_files_are_not_included() {
+    local -a ignored_suffixes
+    local -a exclusions
+    local -a inclusions
+    local -i lines=0
+    local fname
+    local suffix
+    local full_profile
+
+    cleanup
+
+    # taken from https://sources.debian.org/src/apparmor/3.0.8-2/libraries/libapparmor/src/private.c/#L65
+    # and https://sources.debian.org/src/apparmor/3.0.8-2/libraries/libapparmor/src/private.c/#L133
+    ignored_suffixes=(.dpkg-new .dpkg-old .dpkg-dist .dpkg-bak .dpkg-remove .pacsave .pacnew .rpmnew .rpmsave .orig .rej \~)
+    exclusions+=("README" ".somedotfile")
+    for suffix in "${ignored_suffixes[@]}"; do
+        exclusions+=("do-not-include${suffix}")
+    done
+
+    echo "## Files with known backup extensions, that start with a dot, and a README file, are not included. Testing with:"
+    echo "${exclusions[*]}"
+    echo
+
+    for fname in "${exclusions[@]}"; do
+        echo "# BUG this should not be included: ${fname}" > "${include_dir}/${fname}"
+    done
+
+    # just a few, for a sanity check
+    inclusions=(pkg1.apparmor randomfile)
+    echo "## These, however, should be included: ${inclusions[*]}"
+    for fname in "${inclusions[@]}"; do
+        echo "# must be included: ${fname}" > "${include_dir}/${fname}"
+    done
+
+    echo "## Generated test files:"
+    ls -la /etc/apparmor.d/rsyslog.d/
+
+    full_profile=$(apparmor_parser -p "${apparmor_profile}")
+
+    echo "## Verifying that none of the excluded files were included in the apparmor profile:"
+    if echo "${full_profile}" | grep -F "BUG this should not be included"; then
+        return 1 # the caller will print ## FAIL
+    else
+        echo "## OK"
+    fi
+
+    echo "## Verifying that all the allowed files were included:"
+    lines=$(echo "${full_profile}" | grep -F "must be included" | wc -l)
+    if [ ${lines} -ne ${#inclusions[@]} ]; then
+        echo "## Found ${lines} inclusions, expected ${#inclusions[@]}"
+        return 1
+    fi
+}
+
+
+# shellcheck disable=SC2043
+for t in standard_backup_files_are_not_included; do
+    echo
+    if "${t}"; then
+        echo "## OK"
+    else
+        ret=1
+        echo "## FAIL"
+    fi
+done
+
+echo
+if [ ${ret} -ne 0 ]; then
+    echo "## One or more tests FAILED"
+fi
+
+exit ${ret}

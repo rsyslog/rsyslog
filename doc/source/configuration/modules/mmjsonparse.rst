@@ -1,16 +1,21 @@
 .. _ref-mmjsonparse:
 
-*******************************************************
-JSON Structured Content Extraction Module (mmjsonparse)
-*******************************************************
+******************************************************
+mmjsonparse: JSON Structured Content Extraction Module
+******************************************************
 
-:Module name: **mmjsonparse**
-:Introduced: 6.6.0 (find-json mode added in 8.2510)
-:Author: Rainer Gerhards <rgerhards@adiscon.com>
+====================  =======================================
+**Module Name:**      **mmjsonparse**
+**Author:**           Rainer Gerhards <rgerhards@adiscon.com>
+**Available since:**  6.6.0 (find-json mode added in 8.2510)
+====================  =======================================
 
 .. meta::
    :keywords: rsyslog, mmjsonparse, JSON, structured logging, parsing, find-json, cookie mode
    :description: Extracts JSON-structured fields from messages; supports legacy cookie-prefixed and find-json scanning modes. Exposes scan counters usable with Prometheus via imhttp.
+
+Purpose
+=======
 
 .. summary-start
 
@@ -19,7 +24,6 @@ Supports legacy cookie-prefixed parsing and a flexible find-json scan mode.
 Provides scan counters to assess success, failure, and truncation.
 
 .. summary-end
-
 
 Overview
 ========
@@ -39,7 +43,8 @@ Introduced and Compatibility
 ----------------------------
 
 The module has been available since rsyslog **6.6.0**.
-The enhanced **find-json** scanning mode was introduced in version **8.2510** and is present in all later releases.
+The enhanced **find-json** scanning mode was introduced in version **8.2510**
+and is present in all later releases.
 
 Behavior Notes
 --------------
@@ -76,6 +81,11 @@ Parsing Modes
 
 Configuration Parameters
 ========================
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------

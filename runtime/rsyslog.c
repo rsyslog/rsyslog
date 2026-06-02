@@ -78,6 +78,7 @@
 #include "ruleset.h"
 #include "parser.h"
 #include "lookup.h"
+#include "rswatch.h"
 #include "strgen.h"
 #include "statsobj.h"
 #include "atomic.h"
@@ -257,6 +258,7 @@ rsRetVal rsrtExit(void) {
 
     if (iRefCount == 1) {
         /* do actual de-init only if we are the last runtime user */
+        rswatchExit();
         confClassExit();
         glblClassExit();
         rulesetClassExit();

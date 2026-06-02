@@ -39,7 +39,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Install Packages (cpp)
         if: ${{ matrix.language == 'cpp' }}
@@ -85,6 +87,7 @@ jobs:
               libtokyocabinet-dev \
               libtool \
               libtool-bin \
+              libyaml-dev \
               logrotate \
               net-tools \
               postgresql-client libpq-dev \
@@ -103,16 +106,16 @@ jobs:
           ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi --enable-snmp --enable-elasticsearch --enable-gnutls --enable-mail --enable-imdiag --enable-mmjsonparse --enable-mmaudit --enable-mmanon --enable-mmrm1stspace --enable-mmutf8fix --enable-mmcount --enable-mmdblookup --enable-mmfields --enable-mmpstrucdata --enable-imptcp --enable-impstats --enable-omprog --enable-omudpspoof --enable-omstdout --enable-omjournal --enable-pmlastmsg --enable-pmcisconames --enable-pmciscoios --enable-pmnull --enable-pmaixforwardedfrom --enable-pmsnare --enable-pmpanngfw --enable-omuxsock --enable-omkafka --enable-imkafka --enable-ommongodb --enable-omhiredis --enable-omhttpfs --enable-gssapi-krb5 --enable-mmkubernetes --enable-relp --enable-mmnormalize --enable-pmnormalize --enable-openssl --disable-mmgrok --enable-omtcl --enable-omhttp --enable-improg --enable-imtuxedoulog --enable-mmtaghostname --enable-imbatchreport --enable-imdocker --enable-mmdarwin --enable-pmdb2diag --enable-omrabbitmq --enable-libzstd
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql.yml
           queries: +security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
         with:
           category: "/language:${{ matrix.language }}"

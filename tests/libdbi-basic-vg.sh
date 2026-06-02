@@ -3,4 +3,4 @@
 # this test is currently not included in the testbench as libdbi
 # itself seems to have a memory leak
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/libdbi-basic.sh
+. ${srcdir:=.}/libdbi-basic.sh

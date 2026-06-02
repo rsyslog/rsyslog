@@ -291,9 +291,11 @@ BEGINdoAction_NoStrings
     if (pWrkrData->pData->mode == MODE_CC) {
         doCC(pWrkrData->pData, msg, lenMsg);
         doCC(pWrkrData->pData, tag, lenTag);
+        if (MsgHasStructuredData(pMsg)) doCC(pWrkrData->pData, pMsg->pszStrucData, (int)pMsg->lenStrucData);
     } else {
         doUTF8(pWrkrData->pData, msg, lenMsg);
         doUTF8(pWrkrData->pData, tag, lenTag);
+        if (MsgHasStructuredData(pMsg)) doUTF8(pWrkrData->pData, pMsg->pszStrucData, (int)pMsg->lenStrucData);
     }
     MsgUnlock(pMsg);
 ENDdoAction

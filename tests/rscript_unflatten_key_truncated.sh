@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2021-03-09 by Julien Thomas, released under ASL 2.0
 
-source "${srcdir:=.}/diag.sh" init
+. "${srcdir:=.}/diag.sh" init
 export RSYSLOG_DEBUG="debug nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debug"
 

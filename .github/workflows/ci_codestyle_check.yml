@@ -3,6 +3,9 @@ name: "Code Style Check"
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -13,11 +16,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Detect changed files
         id: code_changes
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.c
@@ -25,8 +30,10 @@ jobs:
             devtools/format-code.sh
 
       - name: Enforce code style
+        env:
+          ANY_CHANGED: ${{ steps.code_changes.outputs.any_changed }}
         run: |
-          if [ "${{ steps.code_changes.outputs.any_changed }}" != "true" ]; then
+          if [ "$ANY_CHANGED" != "true" ]; then
             echo "No code changes detected; skipping style check."
             exit 0
           fi
@@ -40,4 +47,3 @@ jobs:
             echo "can help apply formatting fixes if needed."
             exit 1
           fi
-

@@ -7,31 +7,34 @@ if [ "$TRAVIS_EVENT_TYPE" != "cron" ]; then
 	exit
 fi
 
-source tests/travis/install.sh
-source /etc/lsb-release
+. tests/travis/install.sh
+. /etc/lsb-release
 
 # download coverity tool
 mkdir coverity
-cd coverity
-wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz
-if [ $? -ne 0 ]; then
-	echo Download Coverity analysis tool failed!
-	exit 1
-fi
-tar xzf cov*.tar.gz
-rm -f cov*.tar.gz
-export PATH="coverity/$(ls -d cov*)/bin:$PATH"
-cd ..
+(
+	cd coverity
+	if ! wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz; then
+		echo Download Coverity analysis tool failed!
+		exit 1
+	fi
+	tar xzf cov*.tar.gz
+	rm -f cov*.tar.gz
+) || exit 1
+COVERITY_DIR="$(cd coverity && ls -d cov*)" || exit 1
+export PATH="coverity/$COVERITY_DIR/bin:$PATH"
 # Coverity scan tool installed
 
 # we need Guardtime libksi here, otherwise we cannot check the KSI component
 git clone https://github.com/guardtime/libksi.git
-cd libksi
-autoreconf -fvi
-./configure --prefix=/usr
-make -j
-sudo make install
-cd ..
+(
+	set -e
+	cd libksi || exit 1
+	autoreconf -fvi
+	./configure --prefix=/usr
+	make -j
+	sudo make install
+) || exit 1
 
 # prep rsyslog for submission
 autoreconf -vfi

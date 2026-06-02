@@ -81,6 +81,7 @@ DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(nets
 typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
     pthread_t tid; /* the worker's thread ID */
+    int thread_started;
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
 static tcpsrv_etry_t *tcpsrv_root = NULL;
@@ -88,7 +89,7 @@ static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
-/* default number of workes to configure. We choose 2, as this is probably good for
+/* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
  */
 #define DEFAULT_NUMWRKR 2
@@ -195,7 +196,7 @@ struct modConfData_s {
     char *pszNetworkNamespace; /**< default network namespace to use */
     uchar *pszStrmDrvrName; /* stream driver to use */
     uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
-    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handle expired certificates */
     uchar *pszStrmDrvrCAFile;
     uchar *pszStrmDrvrCRLFile;
     uchar *pszStrmDrvrKeyFile;
@@ -296,6 +297,64 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
+
+#define MAX_FRAME_SIZE_LIMIT 200000000
+
+static rsRetVal validateMaxFrameSize(const int maxFrameSize) {
+    if (maxFrameSize < 1 || maxFrameSize > MAX_FRAME_SIZE_LIMIT) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for 'maxFrameSize' parameter given is %d, valid range is 1..%d", maxFrameSize,
+                 MAX_FRAME_SIZE_LIMIT);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    return RS_RET_OK;
+}
+
+static rsRetVal validateLegacySessionLimits(void) {
+    if (cs.iTCPSessMax < 1) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for legacy 'inputtcpmaxsessions' parameter given is %d, minimum is 1",
+                 cs.iTCPSessMax);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    if (cs.iTCPLstnMax < 1) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp: invalid value for legacy 'inputtcpmaxlisteners' parameter given is %d, minimum is 1",
+                 cs.iTCPLstnMax);
+        return RS_RET_PARAM_ERROR;
+    }
+
+    return RS_RET_OK;
+}
+
+/** Warn in secure warn mode when imtcp listener transport/auth settings reduce security. */
+static void warnIfInsecureListenerConfigured(const int streamDriverMode,
+                                             const uchar *const streamDriverName,
+                                             const uchar *const authMode) {
+    if (streamDriverMode == 0) {
+        const int tlsHintsConfigured =
+            (authMode != NULL) || (streamDriverName != NULL && strcasecmp((const char *)streamDriverName, "ptcp") != 0);
+        if (tlsHintsConfigured) {
+            glblWarnIfInsecureDefault(loadConf,
+                                      "imtcp has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
+                                      "TCP so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else {
+            glblWarnIfInsecureDefault(loadConf,
+                                      "imtcp input uses streamdriver.mode=\"0\" (plain TCP without TLS); "
+                                      "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
+    }
+
+    if (streamDriverMode != 0 && authMode != NULL && strcasecmp((const char *)authMode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadConf,
+            "imtcp uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
 
 /* callbacks */
 /* this shall go into a specific ACL module! */
@@ -472,13 +531,11 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->iKeepAliveProbes = cs.iKeepAliveProbes;
     inst->iKeepAliveIntvl = cs.iKeepAliveIntvl;
     inst->iKeepAliveTime = cs.iKeepAliveTime;
-    inst->iKeepAliveTime = cs.iKeepAliveTime;
     inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
     inst->iTCPLstnMax = cs.iTCPLstnMax;
     inst->iTCPSessMax = cs.iTCPSessMax;
     inst->numWrkr = DEFAULT_NUMWRKR;
     inst->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
-    inst->iStrmDrvrMode = cs.iStrmDrvrMode;
 
 finalize_it:
     free(pNewVal);
@@ -492,7 +549,7 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     char *ns; /**< network namespace */
     permittedPeers_t *peers;
 
-    tcpsrv_t *pOurTcpsrv;
+    tcpsrv_t *pOurTcpsrv = NULL;
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -593,6 +650,9 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(0, NO_ERRCODE, "imtcp: error %d trying to add listener", iRet);
+        if (pOurTcpsrv != NULL) {
+            tcpsrv.Destruct(&pOurTcpsrv);
+        }
     }
     RETiRet;
 }
@@ -621,19 +681,19 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
-            inst->cnf_params->pszPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->cnf_params->pszPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "networknamespace")) {
-            inst->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            inst->cnf_params->pszAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->cnf_params->pszAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
-            inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
             inst->bSPFramingFix = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.mode")) {
             inst->iStrmDrvrMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
@@ -649,23 +709,23 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
             inst->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.authmode")) {
-            inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
-            inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.crlfile")) {
-            inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
-            inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
-            inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
-            inst->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "starvationprotection.maxreads")) {
             inst->starvationMaxReads = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
-            inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
@@ -686,15 +746,8 @@ BEGINnewInpInst
             inst->iAddtlFrameDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
-            if (max <= 200000000) {
-                inst->maxFrameSize = max;
-            } else {
-                LogError(0, RS_RET_PARAM_ERROR,
-                         "imtcp: invalid value for 'maxFrameSize' "
-                         "parameter given is %d, max is 200000000",
-                         max);
-                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-            }
+            CHKiRet(validateMaxFrameSize(max));
+            inst->maxFrameSize = max;
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "maxlisteners")) {
@@ -716,17 +769,17 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
             inst->bPreserveCase = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
             inst->iSynBacklog = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-            inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
-            inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "
@@ -750,6 +803,7 @@ BEGINnewInpInst
             inst->ratelimitBurst = 10000;
         }
     }
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, inst->pszStrmDrvrName, inst->pszStrmDrvrAuthMode);
 
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
@@ -835,15 +889,8 @@ BEGINsetModCnf
             loadModConf->iAddtlFrameDelim = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
             const int max = (int)pvals[i].val.d.n;
-            if (max <= 200000000) {
-                loadModConf->maxFrameSize = max;
-            } else {
-                LogError(0, RS_RET_PARAM_ERROR,
-                         "imtcp: invalid value for 'maxFrameSize' "
-                         "parameter given is %d, max is 200000000",
-                         max);
-                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-            }
+            CHKiRet(validateMaxFrameSize(max));
+            loadModConf->maxFrameSize = max;
         } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
             loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
@@ -862,9 +909,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
             loadModConf->iKeepAliveIntvl = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
-            loadModConf->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
-            loadModConf->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
             loadModConf->iStrmDrvrMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
@@ -880,19 +927,19 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
             loadModConf->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
-            loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
-            loadModConf->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
-            loadModConf->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
-            loadModConf->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
-            loadModConf->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
-            loadModConf->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
@@ -914,6 +961,8 @@ BEGINsetModCnf
      */
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
+    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, loadModConf->pszStrmDrvrName,
+                                     loadModConf->pszStrmDrvrAuthMode);
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
@@ -923,6 +972,13 @@ ENDsetModCnf
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
     if (!loadModConf->configSetViaV2Method) {
+        iRet = validateLegacySessionLimits();
+        if (iRet != RS_RET_OK) {
+            free(cs.pszStrmDrvrAuthMode);
+            cs.pszStrmDrvrAuthMode = NULL;
+            loadModConf = NULL;
+            return iRet;
+        }
         /* persist module-specific settings from legacy config system */
         pModConf->iTCPSessMax = cs.iTCPSessMax;
         pModConf->iTCPLstnMax = cs.iTCPLstnMax;
@@ -949,6 +1005,8 @@ BEGINendCnfLoad
             cs.pszStrmDrvrAuthMode = NULL;
         }
         pModConf->bPreserveCase = cs.bPreserveCase;
+        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, pModConf->pszStrmDrvrName,
+                                         pModConf->pszStrmDrvrAuthMode);
     }
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
@@ -1092,6 +1150,9 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
     if (r != 0) {
         LogError(r, NO_ERRCODE, "imtcp error creating server thread");
         /* we do NOT abort, as other servers may run - after all, we logged an error */
+        etry->thread_started = 0;
+    } else {
+        etry->thread_started = 1;
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
@@ -1100,9 +1161,14 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
 /* stop server worker thread
  */
 static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
+    if (!etry->thread_started) {
+        return;
+    }
+
     DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
     pthread_kill(etry->tid, SIGTTIN);
     pthread_join(etry->tid, NULL);
+    etry->thread_started = 0;
     DBGPRINTF("input %p terminated\n", etry);
 }
 
@@ -1184,6 +1250,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszInputName);
     cs.pszInputName = NULL;
+    free(cs.pszBindRuleset);
+    cs.pszBindRuleset = NULL;
     free(cs.lstnPortFile);
     cs.lstnPortFile = NULL;
     return RS_RET_OK;

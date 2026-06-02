@@ -1,6 +1,6 @@
 
 *******************************
-Impcap: network traffic capture
+impcap: network traffic capture
 *******************************
 
 ====================  =====================================
@@ -11,11 +11,10 @@ Impcap: network traffic capture
 Purpose
 =======
 
-Impcap is an input module based upon `tcpdump's libpcap <https://www.tcpdump.org/>`_ library for network traffic capture.
+This is an input module based upon `tcpdump's libpcap <https://www.tcpdump.org/>`_ library for network traffic capture.
 
 Its goal is to capture network traffic with efficiency, parse network packets metadata AND data, and allow users/modules
 to make full use of it.
-
 
 
 Configuration Parameters
@@ -117,7 +116,7 @@ for the module to run.**
 
 .. Warning::
     This functionality is not intended for production environments,
-    it is designed for development/tests. 
+    it is designed for development/tests.
 
 
 promiscuous

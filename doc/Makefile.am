@@ -47,7 +47,6 @@ help:
 .PHONY: html-local html-with-sitemap singlehtml json alljson rag-db json-formatter clean-local help
 
 EXTRA_DIST = \
-    .gitignore \
     AGENTS.md \
     BUILDS_README.md \
     CONTRIBUTING.md \
@@ -62,6 +61,7 @@ EXTRA_DIST = \
     ai/drift_monitoring.md \
     ai/mermaid_rules.md \
     ai/module_map.yaml \
+    ai/security_triage_rubric.md \
     ai/structure_and_paths.md \
     ai/templates/template-concept.rst \
     ai/templates/template-tutorial.rst \
@@ -69,6 +69,9 @@ EXTRA_DIST = \
     build_rag_db.py \
     contrib/README.md \
     contrib/cron_build_all_branches.sh \
+    security/distro-component-package-map.json \
+    security/distro-component-package-map.md \
+    security/ghsa-coordination-review-template.md \
     proposed-toc \
     requirements.txt \
     source/_ext/edit_on_github.py \
@@ -184,7 +187,9 @@ EXTRA_DIST = \
     source/configuration/modules/imdiag.rst \
     source/configuration/modules/imdocker.rst \
     source/configuration/modules/imdtls.rst \
+    source/configuration/modules/imbeats.rst \
     source/configuration/modules/imfile.rst \
+    source/configuration/modules/imfifo.rst \
     source/configuration/modules/imgssapi.rst \
     source/configuration/modules/imhiredis.rst \
     source/configuration/modules/imhttp.rst \
@@ -227,6 +232,37 @@ EXTRA_DIST = \
     source/configuration/modules/mmtaghostname.rst \
     source/configuration/modules/mmutf8fix.rst \
     source/configuration/modules/module_workflow.png \
+    source/reference/parameters/imbeats-address.rst \
+    source/reference/parameters/imbeats-gnutlsprioritystring.rst \
+    source/reference/parameters/imbeats-keepalive.rst \
+    source/reference/parameters/imbeats-keepalive-interval.rst \
+    source/reference/parameters/imbeats-keepalive-probes.rst \
+    source/reference/parameters/imbeats-keepalive-time.rst \
+    source/reference/parameters/imbeats-listenportfilename.rst \
+    source/reference/parameters/imbeats-maxbatchbytes.rst \
+    source/reference/parameters/imbeats-maxdecompressedsize.rst \
+    source/reference/parameters/imbeats-maxframesize.rst \
+    source/reference/parameters/imbeats-maxsessions.rst \
+    source/reference/parameters/imbeats-maxwindowsize.rst \
+    source/reference/parameters/imbeats-name.rst \
+    source/reference/parameters/imbeats-networknamespace.rst \
+    source/reference/parameters/imbeats-permittedpeer.rst \
+    source/reference/parameters/imbeats-port.rst \
+    source/reference/parameters/imbeats-ruleset.rst \
+    source/reference/parameters/imbeats-starvationprotection-maxreads.rst \
+    source/reference/parameters/imbeats-streamdriver-authmode.rst \
+    source/reference/parameters/imbeats-streamdriver-cafile.rst \
+    source/reference/parameters/imbeats-streamdriver-certfile.rst \
+    source/reference/parameters/imbeats-streamdriver-checkextendedkeypurpose.rst \
+    source/reference/parameters/imbeats-streamdriver-crlfile.rst \
+    source/reference/parameters/imbeats-streamdriver-keyfile.rst \
+    source/reference/parameters/imbeats-streamdriver-mode.rst \
+    source/reference/parameters/imbeats-streamdriver-name.rst \
+    source/reference/parameters/imbeats-streamdriver-permitexpiredcerts.rst \
+    source/reference/parameters/imbeats-streamdriver-prioritizesan.rst \
+    source/reference/parameters/imbeats-streamdriver-tlsrevocationcheck.rst \
+    source/reference/parameters/imbeats-streamdriver-tlsverifydepth.rst \
+    source/reference/parameters/imbeats-workerthreads.rst \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omazureeventhubs.rst \
@@ -269,7 +305,6 @@ EXTRA_DIST = \
     source/configuration/modules/pmnormalize.rst \
     source/configuration/modules/pmnull.rst \
     source/configuration/modules/pmrfc3164.rst \
-    source/configuration/modules/pmrfc3164sd.rst \
     source/configuration/modules/pmrfc5424.rst \
     source/configuration/modules/sigprov_gt.rst \
     source/configuration/modules/sigprov_ksi.rst \
@@ -289,10 +324,12 @@ EXTRA_DIST = \
     source/configuration/sysklogd_format.rst \
     source/configuration/templates.rst \
     source/configuration/timezone.rst \
+    source/configuration/yaml_config.rst \
     source/containers/collector.rst \
     source/containers/development_images.rst \
     source/containers/dockerlogs.rst \
     source/containers/etl.rst \
+    source/containers/imbeats.rst \
     source/containers/index.rst \
     source/containers/minimal.rst \
     source/containers/standard.rst \
@@ -316,6 +353,7 @@ EXTRA_DIST = \
     source/development/coding_practices/externalized_helper_contracts.rst \
     source/development/config_data_model.rst \
     source/development/debugging.rst \
+    source/development/design_decisions.rst \
     source/development/dev_action_threads.rst \
     source/development/dev_codestyle.rst \
     source/development/dev_oplugins.rst \
@@ -327,6 +365,7 @@ EXTRA_DIST = \
     source/development/generic_design.rst \
     source/development/index.rst \
     source/development/internal_tooling.rst \
+    source/development/yaml_config_architecture.rst \
     source/development/queueWorkerLogic.jpg \
     source/direct_queue0.png \
     source/direct_queue1.png \
@@ -346,6 +385,8 @@ EXTRA_DIST = \
     source/faq/impstats-push-mode.rst \
     source/faq/imudp-packet-loss.rst \
     source/faq/index.rst \
+    source/faq/tls_anon_auth_mitm.rst \
+    source/faq/tls_mode0_disables_tls.rst \
     source/faq/vespa-ai-integration.rst \
     source/features.rst \
     source/getting_started/ai-assistants.rst \
@@ -450,8 +491,14 @@ EXTRA_DIST = \
     source/rainerscript/variable_property_types.rst \
     source/reference/parameters/im3195-input3195listenport.rst \
     source/reference/parameters/imdiag-aborttimeout.rst \
+    source/reference/parameters/imdiag-defaultactionqueuetimeoutenqueue.rst \
+    source/reference/parameters/imdiag-defaultactionqueuetimeoutshutdown.rst \
     source/reference/parameters/imdiag-injectdelaymode.rst \
+    source/reference/parameters/imdiag-inputshutdowntimeout.rst \
     source/reference/parameters/imdiag-listenportfilename.rst \
+    source/reference/parameters/imdiag-listenportfilename-module.rst \
+    source/reference/parameters/imdiag-mainmsgqueuetimeoutenqueue.rst \
+    source/reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst \
     source/reference/parameters/imdiag-maxsessions.rst \
     source/reference/parameters/imdiag-serverinputname.rst \
     source/reference/parameters/imdiag-serverrun.rst \
@@ -468,6 +515,7 @@ EXTRA_DIST = \
     source/reference/parameters/imdocker-pollinginterval.rst \
     source/reference/parameters/imdocker-retrievenewlogsfromstart.rst \
     source/reference/parameters/imdtls-address.rst \
+    source/reference/parameters/imdtls-listenportfilename.rst \
     source/reference/parameters/imdtls-name.rst \
     source/reference/parameters/imdtls-port.rst \
     source/reference/parameters/imdtls-ruleset.rst \
@@ -514,12 +562,24 @@ EXTRA_DIST = \
     source/reference/parameters/imfile-tag.rst \
     source/reference/parameters/imfile-timeoutgranularity.rst \
     source/reference/parameters/imfile-trimlineoverbytes.rst \
+    source/reference/parameters/imfifo-facility.rst \
+    source/reference/parameters/imfifo-file.rst \
+    source/reference/parameters/imfifo-ruleset.rst \
+    source/reference/parameters/imfifo-severity.rst \
+    source/reference/parameters/imfifo-tag.rst \
     source/reference/parameters/imgssapi-inputgsslistenportfilename.rst \
     source/reference/parameters/imgssapi-inputgssserverkeepalive.rst \
     source/reference/parameters/imgssapi-inputgssservermaxsessions.rst \
     source/reference/parameters/imgssapi-inputgssserverpermitplaintcp.rst \
     source/reference/parameters/imgssapi-inputgssserverrun.rst \
+    source/reference/parameters/imgssapi-inputgssservertokeniotimeout.rst \
     source/reference/parameters/imgssapi-inputgssserverservicename.rst \
+    source/reference/parameters/imhttp-apikeyfile.rst \
+    source/reference/parameters/imhttp-basicauthfile.rst \
+    source/reference/parameters/imhttp-healthcheckapikeyfile.rst \
+    source/reference/parameters/imhttp-healthcheckbasicauthfile.rst \
+    source/reference/parameters/imhttp-metricsapikeyfile.rst \
+    source/reference/parameters/imhttp-metricsbasicauthfile.rst \
     source/reference/parameters/imhttp-ratelimit-name.rst \
     source/reference/parameters/imjournal-defaultfacility.rst \
     source/reference/parameters/imjournal-defaultseverity.rst \
@@ -689,6 +749,7 @@ EXTRA_DIST = \
     source/reference/parameters/imudp-defaulttz.rst \
     source/reference/parameters/imudp-device.rst \
     source/reference/parameters/imudp-ipfreebind.rst \
+    source/reference/parameters/imudp-listenportfilename.rst \
     source/reference/parameters/imudp-name-appendport.rst \
     source/reference/parameters/imudp-name.rst \
     source/reference/parameters/imudp-port.rst \
@@ -780,7 +841,9 @@ EXTRA_DIST = \
     source/reference/parameters/mmexternal-binary.rst \
     source/reference/parameters/mmexternal-forcesingleinstance.rst \
     source/reference/parameters/mmexternal-interface-input.rst \
+    source/reference/parameters/mmexternal-interface-output.rst \
     source/reference/parameters/mmexternal-output.rst \
+    source/reference/parameters/mmexternal-responsetimeout.rst \
     source/reference/parameters/mmfields-jsonroot.rst \
     source/reference/parameters/mmfields-separator.rst \
     source/reference/parameters/mmjsonparse-allow_trailing.rst \
@@ -793,6 +856,9 @@ EXTRA_DIST = \
     source/reference/parameters/mmjsonrewrite-output.rst \
     source/reference/parameters/mmjsontransform-input.rst \
     source/reference/parameters/mmjsontransform-mode.rst \
+    source/reference/parameters/mmjsontransform-policy.rst \
+    source/reference/parameters/mmjsontransform-policywatch.rst \
+    source/reference/parameters/mmjsontransform-policywatchdebounce.rst \
     source/reference/parameters/mmjsontransform-output.rst \
     source/reference/parameters/mmkubernetes-allowunsignedcerts.rst \
     source/reference/parameters/mmkubernetes-annotation-match.rst \
@@ -846,6 +912,7 @@ EXTRA_DIST = \
     source/reference/parameters/omazuredce-client_secret.rst \
     source/reference/parameters/omazuredce-dce_url.rst \
     source/reference/parameters/omazuredce-dcr_id.rst \
+    source/reference/parameters/omazuredce-compression.rst \
     source/reference/parameters/omazuredce-flush_timeout_ms.rst \
     source/reference/parameters/omazuredce-max_batch_bytes.rst \
     source/reference/parameters/omazuredce-table_name.rst \
@@ -884,9 +951,11 @@ EXTRA_DIST = \
     source/reference/parameters/omelasticsearch-dynsearchindex.rst \
     source/reference/parameters/omelasticsearch-dynsearchtype.rst \
     source/reference/parameters/omelasticsearch-errorfile.rst \
+    source/reference/parameters/omelasticsearch-erroronly.rst \
     source/reference/parameters/omelasticsearch-esversion-major.rst \
     source/reference/parameters/omelasticsearch-healthchecktimeout.rst \
     source/reference/parameters/omelasticsearch-indextimeout.rst \
+    source/reference/parameters/omelasticsearch-interleaved.rst \
     source/reference/parameters/omelasticsearch-maxbytes.rst \
     source/reference/parameters/omelasticsearch-parent.rst \
     source/reference/parameters/omelasticsearch-pipelinename.rst \
@@ -948,6 +1017,7 @@ EXTRA_DIST = \
     source/reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst \
     source/reference/parameters/omgssapi-gssforwardservicename.rst \
     source/reference/parameters/omgssapi-gssmode.rst \
+    source/reference/parameters/omgssapi-gsstokeniotimeout.rst \
     source/reference/parameters/omhdfs-omhdfsdefaulttemplate.rst \
     source/reference/parameters/omhdfs-omhdfsfilename.rst \
     source/reference/parameters/omhdfs-omhdfshost.rst \
@@ -1025,7 +1095,9 @@ EXTRA_DIST = \
     source/reference/parameters/ommail-body-enable.rst \
     source/reference/parameters/ommail-mailfrom.rst \
     source/reference/parameters/ommail-mailto.rst \
+    source/reference/parameters/ommail-mode.rst \
     source/reference/parameters/ommail-port.rst \
+    source/reference/parameters/ommail-sendmail-binary.rst \
     source/reference/parameters/ommail-server.rst \
     source/reference/parameters/ommail-subject-template.rst \
     source/reference/parameters/ommail-subject-text.rst \
@@ -1078,6 +1150,7 @@ EXTRA_DIST = \
     source/reference/parameters/omrelp-tls-mycert.rst \
     source/reference/parameters/omrelp-tls-myprivkey.rst \
     source/reference/parameters/omrelp-tls-permittedpeer.rst \
+    source/reference/parameters/omrelp-tls-permanentfailuredisablesaction.rst \
     source/reference/parameters/omrelp-tls-prioritystring.rst \
     source/reference/parameters/omrelp-tls-tlscfgcmd.rst \
     source/reference/parameters/omrelp-tls-tlslib.rst \
@@ -1190,9 +1263,10 @@ EXTRA_DIST = \
     source/troubleshooting/selinux.rst \
     source/troubleshooting/troubleshoot.rst \
     source/tutorials/cert-script.tar.gz \
+    source/tutorials/config_format_translation.rst \
     source/tutorials/database.rst \
     source/tutorials/deploy_rsyslog_rosi_stack.rst \
-    source/tutorials/rosi_stack_architecture.png \
+    source/tutorials/rosi_stack_architecture.jpg \
     source/tutorials/rosi_stack_grafana_dashboard.png \
     source/tutorials/failover_syslog_server.rst \
     source/tutorials/gelf_forwarding.rst \

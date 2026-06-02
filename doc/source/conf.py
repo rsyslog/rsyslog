@@ -11,6 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import importlib
 import json
 import os
 import re
@@ -21,7 +22,7 @@ from docutils import nodes
 
 # Module for our custom functions. Used with automating build info.
 sys.path.append(os.getcwd())
-import conf_helpers
+import conf_helpers  # noqa: E402
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -39,7 +40,7 @@ extensions = ['edit_on_github',
               'sphinx.ext.todo',
               'rsyslog_lexer',
               'sphinxcontrib.mermaid',
-             ]
+              ]
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
 
@@ -65,7 +66,7 @@ mermaid_init_js = ""
 try:
     import sphinxcontrib.mermaid as _sphinx_mermaid  # type: ignore
 except Exception:  # pragma: no cover - fallback for doc builds without the extension
-    _sphinx_mermaid = None
+    pass
 else:
     _sphinx_mermaid._MERMAID_RUN_NO_D3_ZOOM = """
 window.addEventListener("load", () => {{
@@ -84,27 +85,7 @@ window.addEventListener("load", () => {{
         const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
         if (mermaids_to_add_zoom > 0) {{
             const svgs = d3.selectAll("{d3_selector}");
-            if (all_mermaids.length !== mermaids_processed.length) {{
-                setTimeout(() => {{
-                    const svgs = d3.selectAll("{d3_selector}");
-                    if (svgs.size() !== mermaids_to_add_zoom) {{
-                        setTimeout(arguments.callee, 200);
-                        return;
-                    }}
-                    svgs.each(function() {{
-                        const svg = d3.select(this);
-                        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
-                        const inner = svg.select("g");
-                        const zoom = d3.zoom().on("zoom", function(event) {{
-                            inner.attr("transform", event.transform);
-                        }});
-                        svg.call(zoom);
-                    }});
-                }}, 200);
-            }} else if (svgs.size() !== mermaids_to_add_zoom) {{
-                setTimeout(arguments.callee, 200);
-                return;
-            }} else {{
+            function addZoomToSvgs(svgs) {{
                 svgs.each(function() {{
                     const svg = d3.select(this);
                     svg.html("<g class='wrapper'>" + svg.html() + "</g>");
@@ -114,6 +95,20 @@ window.addEventListener("load", () => {{
                     }});
                     svg.call(zoom);
                 }});
+            }}
+            if (all_mermaids.length !== mermaids_processed.length || svgs.size() !== mermaids_to_add_zoom) {{
+                function waitForSvgsReady() {{
+                    const svgs = d3.selectAll("{d3_selector}");
+                    if (svgs.size() !== mermaids_to_add_zoom) {{
+                        setTimeout(waitForSvgsReady, 200);
+                        return;
+                    }}
+                    addZoomToSvgs(svgs);
+                }}
+                setTimeout(waitForSvgsReady, 200);
+                return;
+            }} else {{
+                addZoomToSvgs(svgs);
             }}
         }}
     }}
@@ -167,7 +162,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+# source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -205,9 +200,6 @@ rst_epilog = """
 """
 
 
-
-
-
 ###############################################################################
 # Placeholder/template values to be filled in by the release_build.sh script
 #
@@ -216,8 +208,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2604'
-#release = '8.2604.0'
+version = '8.2606'
+# release = '8.2606.0'
 release = version + ' daily stable'
 
 # Allow override from environment (e.g. Docker/CI builds without .git)
@@ -236,23 +228,20 @@ if _env_version and _env_release_type:
 # For this to be true, it means that we are not attempting to build from
 # a release tarball, as otherwise the values above would have been replaced
 # with official stable release values.
-elif version == '8':
+elif version.split('.')[0] == '8':
+    release_type = 'stable'
 
     # Confirm that a .git folder is available. If not, skip all
     # following steps intended to generate daily stable build values for
     # 'version' and 'release' build configuration variables. In that
     # case, keep the placeholder values already set.
 
-    # The directory where this conf.py file is located
-    source_conf_dir = os.getcwd()
+    # If building from a Git repo, then this entry should be present at
+    # the repository root.
+    git_dir = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), os.pardir, os.pardir, '.git'))
 
-    # If building from a Git repo, then this directory should be present
-    # in the parent directory.
-    git_dir = \
-        os.path.abspath(os.path.join(os.getcwd(), os.pardir)) \
-        + os.sep + '.git'
-
-    if os.path.isdir(git_dir):
+    if os.path.exists(git_dir):
 
         # If the 'version' variable is left with a placeholder it means
         # that this build configuration is being called from a Git repo
@@ -268,7 +257,7 @@ elif version == '8':
         # having detailed build details in the doc are useful to help
         # differentiate multiple document builds (even from different branches)
         # from each other.
-        #release_string_detail = 'detailed'
+        # release_string_detail = 'detailed'
         release_string_detail = 'simple'
 
         # Some items in the source are wrapped with the ".. only:: TAG_NAME_HERE"
@@ -295,7 +284,6 @@ elif version == '8':
             release_string_detail,
             version)
 
-
         # Additions that are used by dev builds
         rst_prolog = rst_prolog.format(
             doc_build=release,
@@ -310,13 +298,13 @@ else:
 
 # The language for content autogenerated by Sphinx. Refer to documentation
 # for a list of supported languages.
-#language = None
+# language = None
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
-#today = ''
+# today = ''
 # Else, today_fmt is used as the format for a strftime call.
-#today_fmt = '%B %d, %Y'
+# today_fmt = '%B %d, %Y'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -332,24 +320,24 @@ exclude_patterns = ['*.inc.rst', 'includes']
 
 
 # The reST default role (used for this markup: `text`) to use for all documents.
-#default_role = None
+# default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
+# add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+# add_module_names = True
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
-#show_authors = False
+# show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
+# modindex_common_prefix = []
 
 # Warn about all references where the target cannot be found. Default is False.
 nitpicky = True
@@ -366,6 +354,15 @@ suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------
 
+
+def has_optional_extension(name):
+    try:
+        importlib.import_module(name)
+    except ImportError:
+        return False
+    return True
+
+
 # The base URL which points to the root of the HTML documentation.
 # It is used to indicate the location of document like canonical_url and sitemap.
 # DOC_BASE_URL env (e.g. https://docs.rsyslog.com) overrides when set (CI deploy).
@@ -378,18 +375,18 @@ ENABLE_JSON_LD = not DISABLE_JSON_LD
 
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):
-    try:
-        import sphinx_sitemap  # type: ignore
-    except ImportError:
+    if not has_optional_extension('sphinx_sitemap'):
         # Optional extension - sitemap generation skipped if not installed
         pass
     else:
         extensions.append('sphinx_sitemap')
 
         # Sitemap configuration to remove language/version from URLs
-        sitemap_url_scheme = "{link}"
-        sitemap_localtolinks = False
-        sitemap_filename = "sitemap.xml"
+        globals().update({
+            'sitemap_url_scheme': "{link}",
+            'sitemap_localtolinks': False,
+            'sitemap_filename': "sitemap.xml",
+        })
 
 # Enable Google Analytics tracking when a tracking ID is provided via
 # the GOOGLE_ANALYTICS_ID environment variable.
@@ -400,53 +397,53 @@ if _ga_id and not re.match(r'^(UA-\d+-\d+|G-[A-Za-z0-9]+)$', _ga_id):
     _ga_id = ''
 _ga_use_extension = False
 if _ga_id:
-    try:
-        import sphinxcontrib.googleanalytics  # type: ignore  # noqa: F401
-    except ImportError:
+    if not has_optional_extension('sphinxcontrib.googleanalytics'):
         # Extension not installed – fall back to metatags injection in setup().
         pass
     else:
         extensions.append('sphinxcontrib.googleanalytics')
-        googleanalytics_id = _ga_id
-        googleanalytics_enabled = True
+        globals().update({
+            'googleanalytics_id': _ga_id,
+            'googleanalytics_enabled': True,
+        })
         _ga_use_extension = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'furo'
-#html_theme = 'default'
-#html_theme = 'basic'
-#html_style = 'rsyslog.css'
+# html_theme = 'default'
+# html_theme = 'basic'
+# html_style = 'rsyslog.css'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+# html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+# html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 if release_type == 'dev':
 
-    html_title = "{} {} docs".format(
+    globals()['html_title'] = "{} {} docs".format(
         project,
         conf_helpers.get_release_string(
             release_type, release_string_detail, version)
     )
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-#html_short_title = None
+# html_short_title = None
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+# html_logo = None
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+# html_favicon = None
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -455,30 +452,30 @@ html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+# html_last_updated_fmt = '%b %d, %Y'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
-#html_use_smartypants = True
+# html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+# html_sidebars = {}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
-#html_additional_pages = {}
+# html_additional_pages = {}
 
 # If false, no module index is generated.
-#html_domain_indices = True
+# html_domain_indices = True
 
 # If false, no index is generated.
-#html_use_index = True
+# html_use_index = True
 
 # If true, the index is split into individual pages for each letter.
-#html_split_index = False
+# html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+# html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 html_show_sphinx = False
@@ -489,10 +486,10 @@ html_show_copyright = False
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
 # base URL from which the finished HTML is served.
-#html_use_opensearch = ''
+# html_use_opensearch = ''
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
-#html_file_suffix = None
+# html_file_suffix = None
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'rsyslogdoc'
@@ -501,42 +498,42 @@ htmlhelp_basename = 'rsyslogdoc'
 # -- Options for LaTeX output --------------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    # 'papersize': 'letterpaper',
 
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    # 'pointsize': '10pt',
 
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    # 'preamble': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'RsyslogDoc.tex', u'Rsyslog Doc Documentation',
-   u'foo bar', 'manual'),
+    ('index', 'RsyslogDoc.tex', u'Rsyslog Doc Documentation',
+     u'foo bar', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-#latex_logo = None
+# latex_logo = None
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
-#latex_use_parts = False
+# latex_use_parts = False
 
 # If true, show page references after internal links.
-#latex_show_pagerefs = False
+# latex_show_pagerefs = False
 
 # If true, show URL addresses after external links.
-#latex_show_urls = False
+# latex_show_urls = False
 
 # Documents to append as an appendix to all manuals.
-#latex_appendices = []
+# latex_appendices = []
 
 # If false, no module index is generated.
-#latex_domain_indices = True
+# latex_domain_indices = True
 
 
 # -- Options for manual page output --------------------------------------------
@@ -551,7 +548,7 @@ man_pages = [
 ]
 
 # If true, show URL addresses after external links.
-#man_show_urls = False
+# man_show_urls = False
 
 
 # -- Options for Texinfo output ------------------------------------------------
@@ -560,16 +557,16 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'RsyslogDoc', u'Rsyslog Doc Documentation',
-   u'foo bar', 'RsyslogDoc', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'RsyslogDoc', u'Rsyslog Doc Documentation',
+     u'foo bar', 'RsyslogDoc', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
-#texinfo_appendices = []
+# texinfo_appendices = []
 
 # If false, no module index is generated.
-#texinfo_domain_indices = True
+# texinfo_domain_indices = True
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
@@ -584,7 +581,7 @@ if release_type == 'dev':
     # Override "simple" dev build string for epub format
     release_string_detail = 'detailed'
 
-    epub_title = "{} {} docs".format(
+    globals()['epub_title'] = "{} {} docs".format(
         project,
         conf_helpers.get_release_string(
             release_type,
@@ -718,15 +715,17 @@ def _extract_faq_entries(doctree):
 # This block is activated by the '-t minimal_build' tag passed from the Makefile
 # for the 'singlehtml' target. It strips the output for AI ingestion.
 
+
 if tags.has('minimal_build'):
     # Point to a directory with empty templates to remove entire theme sections
     # The files inside _templates_minimal are intentionally blank.
     templates_path = ['_templates_minimal']
 
-    # Disable all sidebars
-    html_sidebars = {'**': []}
-
-    # Turn off other non-content elements
-    html_show_sourcelink = False
-    html_show_sphinx = False
-    html_show_copyright = False
+    globals().update({
+        # Disable all sidebars
+        'html_sidebars': {'**': []},
+        # Turn off other non-content elements
+        'html_show_sourcelink': False,
+        'html_show_sphinx': False,
+        'html_show_copyright': False,
+    })

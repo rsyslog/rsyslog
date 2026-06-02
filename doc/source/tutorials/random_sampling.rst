@@ -9,7 +9,7 @@ If we want to get 20% of these logs uniformly sampled we use random sampling.
 .. code-block:: none
 
   set $.rand = random(100);
-  if ($.rand <= 20) then {
+  if ($.rand < 20) then {
     //send out
   }
 

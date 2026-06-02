@@ -49,6 +49,7 @@ if $msg contains "msgnum:" then
 ls -li $RSYSLOG_DYNNAME.input*
 
 startup
+wait_file_lines "$RSYSLOG_OUT_LOG" "$TESTMESSAGES"
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 
@@ -62,6 +63,7 @@ echo ls ${RSYSLOG_DYNNAME}.spool:
 ls -l ${RSYSLOG_DYNNAME}.spool
 
 startup
+wait_file_lines "$RSYSLOG_OUT_LOG" "$((TESTMESSAGES + TESTMESSAGES))"
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 

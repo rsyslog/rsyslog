@@ -38,6 +38,11 @@ activated and permits the processing of 20,000 messages within 10
 minutes, which should be sufficient for most use cases. If insufficient,
 use the parameters described below to adjust the permitted volume.
 
+If you need severity-aware throttling similar to ``imuxsock``, use a shared
+``ratelimit()`` object together with ``RateLimit.Name``. ``imjournal`` derives
+the severity from the journal ``PRIORITY`` field and falls back to
+``DefaultSeverity`` when the field is missing or invalid.
+
 
 Notable Features
 ================

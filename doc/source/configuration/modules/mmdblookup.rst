@@ -1,15 +1,14 @@
 .. index:: ! mmdblookup
 
-************************************
-MaxMind/GeoIP DB lookup (mmdblookup)
-************************************
+***********************************
+mmdblookup: MaxMind/GeoIP DB lookup
+***********************************
 
 ================  ==================================
 **Module Name:**  mmdblookup
 **Author:**       `chenryn <rao.chenlin@gmail.com>`_
 **Available:**    8.24+
 ================  ==================================
-
 
 Purpose
 =======
@@ -24,19 +23,19 @@ Plugin author claimed a MaxMindDB vs GeoIP speed around 4 to 6 times.
 How to build the module
 =======================
 
-To compile Rsyslog with mmdblookup you'll need to:
+To compile rsyslog with mmdblookup you'll need to:
 
-* install *libmaxminddb-devel* package
-* set *--enable-mmdblookup* on configure
+* install ``libmaxminddb-devel`` package
+* set ``--enable-mmdblookup`` on configure
 
 
-Configuration Parameter
-=======================
+Configuration Parameters
+========================
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
-
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Module Parameters
 -----------------
@@ -44,6 +43,7 @@ Module Parameters
 .. list-table::
    :widths: 30 70
    :header-rows: 1
+   :align: left
 
    * - Parameter
      - Summary
@@ -53,8 +53,8 @@ Module Parameters
         :end-before: .. summary-end
 
 
-Input Parameters
-----------------
+Action Parameters
+-----------------
 
 .. list-table::
    :widths: 30 70
@@ -91,10 +91,10 @@ This example shows the minimum configuration.
 .. code-block:: none
 
    # load module
-   module( load="mmdblookup" )
+   module(load="mmdblookup")
 
-   action( type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
-                fields=["!continent!code","!location"] key="!clientip" )
+   action(type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
+          fields=["!continent!code","!location"] key="!clientip")
 
 
 Custom container and field name
@@ -105,11 +105,11 @@ The following example uses a custom container and custom field name
 .. code-block:: none
 
    # load module
-   module( load="mmdblookup" container="!geo_ip")
+   module(load="mmdblookup" container="!geo_ip")
 
-   action( type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
-                fields=[":continent:!continent!code", ":loc:!location"]
-                key="!clientip")
+   action(type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
+          fields=[":continent:!continent!code", ":loc:!location"]
+          key="!clientip")
 
 
 .. toctree::

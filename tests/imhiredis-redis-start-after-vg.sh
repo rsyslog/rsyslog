@@ -4,4 +4,4 @@
 #export RS_REDIR=-d
 
 export USE_VALGRIND="YES"
-source ${srcdir:=.}/imhiredis-redis-start-after.sh
+. ${srcdir:=.}/imhiredis-redis-start-after.sh

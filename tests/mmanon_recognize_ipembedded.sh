@@ -12,7 +12,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv4.enable="off" ipv6.enable="off" embeddedipv4.bits="128" embeddedipv4.anonmode="zero")
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }'
 
 startup

@@ -1,0 +1,62 @@
+---
+name: Python style check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pycodestyle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Identify changed Python files
+        id: changed
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          json: "true"
+          separator: "\n"
+          files: |
+            **/*.py
+
+      - name: Install pycodestyle
+        if: steps.changed.outputs.any_changed == 'true'
+        run: python3 -m pip install pycodestyle
+
+      - name: Run pycodestyle
+        if: steps.changed.outputs.any_changed == 'true'
+        env:
+          CHANGED_PYTHON_FILES_JSON: ${{ steps.changed.outputs.all_changed_files }}
+        run: |
+          python3 - <<'PY' > /tmp/changed-python-files.txt
+          import json
+          import os
+
+          raw = os.environ["CHANGED_PYTHON_FILES_JSON"]
+          try:
+              paths = json.loads(raw)
+          except json.JSONDecodeError:
+              paths = json.loads(raw.encode("utf-8").decode("unicode_escape"))
+
+          for path in paths:
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            pycodestyle "$file"
+          done < /tmp/changed-python-files.txt
+
+      - name: Skip pycodestyle, no Python changes
+        if: steps.changed.outputs.any_changed != 'true'
+        run: echo "No Python files modified"

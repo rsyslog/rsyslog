@@ -339,7 +339,7 @@ static rsRetVal wallmsg(uchar *pMsg, instanceData *pData) {
     if (sd_booted() > 0) {
         register int j;
         int sdRet;
-        char **sessions_list;
+        char **sessions_list = NULL;
         int sessions = sd_get_sessions(&sessions_list);
 
         for (j = 0; j < sessions; j++) {
@@ -548,13 +548,13 @@ BEGINnewActInst
                 populateUsers(pData, pvals[i].val.d.estr);
             }
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
             pData->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "omusrmsg: program error, non-handled "
@@ -591,6 +591,9 @@ BEGINnewActInst
         CHKiRet(ratelimitNew(&pData->ratelimiter, "omusrmsg", NULL));
         ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval, (unsigned)pData->ratelimitBurst);
         ratelimitSetNoTimeCache(pData->ratelimiter);
+    }
+    if (pData->ratelimiter != NULL) {
+        ratelimitSetThreadSafe(pData->ratelimiter);
     }
 
     CODE_STD_FINALIZERnewActInst;

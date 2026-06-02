@@ -56,7 +56,7 @@ Architecture Overview
 ROSI Collector uses a central server that receives logs and metrics from
 multiple client systems.
 
-.. figure:: rosi_stack_architecture.png
+.. figure:: rosi_stack_architecture.jpg
    :alt: ROSI Collector architecture showing clients, rsyslog, Loki, Grafana, Prometheus, and Traefik.
 
    ROSI Collector architecture.

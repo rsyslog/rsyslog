@@ -73,6 +73,15 @@ IETF draft *ietf-syslog-protocol-23*, close to `RFC5424
    template(name="RSYSLOG_SyslogProtocol23Format" type="string"
         string="<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n")
 
+**RSYSLOG_SyslogRFC5424Format** – RFC 5424 syslog format without a
+trailing line feed. Use this when the transport or framing layer provides
+message separation.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_SyslogRFC5424Format" type="string"
+        string="<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%")
+
 **RSYSLOG_DebugFormat** – used for troubleshooting property problems.
 Write to a log file only; do **not** use for production or forwarding.
 
@@ -160,12 +169,12 @@ MariaDB/MySQL.
    }
 
 **RSYSLOG_StdPgSQLFmt** – insert command for table ``SystemEvents`` in
-pgsql.
+PostgreSQL.
 
 .. code-block:: none
 
    template(name="RSYSLOG_StdPgSQLFmt" type="string"
-   string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
+        string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
         ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%',
         %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%,
         '%syslogtag%')")
@@ -175,11 +184,3 @@ pgsql.
 .. code-block:: none
 
    template(name="RSYSLOG_spoofadr" type="string" string="%fromhost-ip%")
-
-**RSYSLOG_StdJSONFmt** – JSON structure containing message properties.
-
-.. code-block:: none
-
-   template(name="RSYSLOG_StdJSONFmt" type="string"
-        string="{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":\"%timereported:::date-rfc3339%\",\"timegenerated\":\"%timegenerated:::date-rfc3339%\"}")
-

@@ -12,7 +12,7 @@ if [ "$DIRECTORY" == "" ]; then
 	DIRECTORY="/"
 fi
 
-COREFILES=`ls $DIRECTORY/core* 2> /dev/null`
+COREFILES=$(ls $DIRECTORY/core* 2> /dev/null)
 # &> /dev/null`
 
 select COREFILE in $COREFILES

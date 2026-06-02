@@ -5,7 +5,6 @@ This script modifies generated HTML files to work with file:// URLs and
 HTTP-served docs (e.g. GitHub Pages PR previews).
 """
 
-import os
 import re
 import sys
 from pathlib import Path
@@ -29,31 +28,31 @@ def _static_relpath(html_path: Path, html_file: Path) -> str:
 def fix_mermaid_offline(html_dir):
     """Fix Mermaid ES modules for offline viewing."""
     html_path = Path(html_dir)
-    
+
     if not html_path.exists():
         print(f"Error: Directory {html_dir} does not exist")
         return False
-    
+
     # Find all HTML files
     html_files = list(html_path.rglob("*.html"))
-    
+
     if not html_files:
         print(f"No HTML files found in {html_dir}")
         return False
-    
+
     print(f"Found {len(html_files)} HTML files to process...")
-    
+
     fixed_count = 0
-    
+
     for html_file in html_files:
         try:
             with open(html_file, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
             relpath = _static_relpath(html_path, html_file)
             mermaid_src = relpath + MERMAID_STATIC_PATH
-            
+
             # 1. Remove ELK layout script first (before step 2). If we did step 2 first,
             #    its regex would also match mermaid-layout-elk.min.js, strip type="module",
             #    and then this step would no longer see the tag to remove.
@@ -62,14 +61,14 @@ def fix_mermaid_offline(html_dir):
                 '',
                 content
             )
-            
+
             # 2. Remove type="module" from Mermaid UMD script (monkey-patched build)
             content = re.sub(
                 r'<script type="module" src="([^"]*mermaid[^"]*\.min\.js[^"]*)"',
                 r'<script src="\1"',
                 content
             )
-            
+
             # 3. Replace inline ESM import with UMD script (unpatched sphinxcontrib-mermaid)
             #    e.g. <script type="module">import mermaid from "vendor/mermaid/mermaid.min.js";
             #    The import path "vendor/..." is wrong for HTTP; use correct _static path.
@@ -83,7 +82,7 @@ def fix_mermaid_offline(html_dir):
                     content,
                     count=1
                 )
-            
+
             # 4. Add fallback script for offline viewing - only once per file
             content = re.sub(
                 r'(<script src="[^"]*mermaid[^"]*\.min\.js[^"]*"></script>)(?!\s*\n\s*<script>console\.info)',
@@ -91,17 +90,17 @@ def fix_mermaid_offline(html_dir):
                 content,
                 count=1
             )
-            
+
             # Only write if content changed
             if content != original_content:
                 with open(html_file, 'w', encoding='utf-8') as f:
                     f.write(content)
                 fixed_count += 1
                 print(f"Fixed: {html_file.relative_to(html_path)}")
-        
+
         except Exception as e:
             print(f"Error processing {html_file}: {e}")
-    
+
     print(f"\nFixed {fixed_count} HTML files for offline Mermaid viewing")
     print("Note: ELK layout functionality is not available in offline mode")
     return True
@@ -112,9 +111,9 @@ def main():
         print("Usage: python3 doc/tools/fix-mermaid-offline.py <html_directory>")
         print("Example: python3 doc/tools/fix-mermaid-offline.py doc/build")
         sys.exit(1)
-    
+
     html_dir = sys.argv[1]
-    
+
     if fix_mermaid_offline(html_dir):
         print("\n✅ Mermaid offline fix completed successfully!")
         print("You can now open HTML files directly in your browser without CORS issues.")

@@ -1,0 +1,2 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/lmnsd_gtls.so
+debian/apparmor/rsyslog-gnutls.apparmor etc/apparmor.d/rsyslog.d/

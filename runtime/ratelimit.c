@@ -26,11 +26,20 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <limits.h>
+#include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#ifdef HAVE_SYS_INOTIFY_H
+    #include <sys/inotify.h>
+#endif
 
 #include "rsyslog.h"
 #include "errmsg.h"
 #include "ratelimit.h"
 #include "datetime.h"
+#include "atomic.h"
 #include "parser.h"
 #include "unicode-helper.h"
 #include "msg.h"
@@ -48,18 +57,69 @@
 DEFobjStaticHelpers;
 DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(parser) DEFobjCurrIf(statsobj)
 
-    /**
-     * Classify the per-source key template for parsing requirements.
-     *
-     * Allowed exceptions (no parse):
-     * - %fromhost-ip%
-     * - %fromhost%
-     * - %fromhost-ip%:%fromhost-port%
-     * - %fromhost%:%fromhost-port%
-     *
-     * Everything else falls back to template evaluation and requires parsing.
-     */
-    static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct template *const pTpl) {
+
+    static inline unsigned int ratelimitSharedLoadUInt(const unsigned int *value, pthread_mutex_t *mut) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    (void)mut;
+    return __atomic_load_n(value, __ATOMIC_RELAXED);
+#else
+    unsigned int snapshot;
+    pthread_mutex_lock(mut);
+    snapshot = *value;
+    pthread_mutex_unlock(mut);
+    return snapshot;
+#endif
+}
+
+static inline void ratelimitSharedStoreUInt(unsigned int *value, pthread_mutex_t *mut, unsigned int newval) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    (void)mut;
+    __atomic_store_n(value, newval, __ATOMIC_RELAXED);
+#else
+    pthread_mutex_lock(mut);
+    *value = newval;
+    pthread_mutex_unlock(mut);
+#endif
+}
+
+static inline int ratelimitSharedLoadSeverity(const int *value, pthread_mutex_t *mut) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    (void)mut;
+    return __atomic_load_n(value, __ATOMIC_RELAXED);
+#else
+    int snapshot;
+    pthread_mutex_lock(mut);
+    snapshot = *value;
+    pthread_mutex_unlock(mut);
+    return snapshot;
+#endif
+}
+
+static inline void ratelimitSharedStoreSeverity(int *value, pthread_mutex_t *mut, int newval) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    (void)mut;
+    __atomic_store_n(value, newval, __ATOMIC_RELAXED);
+#else
+    pthread_mutex_lock(mut);
+    *value = newval;
+    pthread_mutex_unlock(mut);
+#endif
+}
+
+static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared);
+
+/**
+ * Classify the per-source key template for parsing requirements.
+ *
+ * Allowed exceptions (no parse):
+ * - %fromhost-ip%
+ * - %fromhost%
+ * - %fromhost-ip%:%fromhost-port%
+ * - %fromhost%:%fromhost-port%
+ *
+ * Everything else falls back to template evaluation and requires parsing.
+ */
+static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct template *const pTpl) {
     const struct templateEntry *entry;
 
     if (pTpl == NULL) {
@@ -118,6 +178,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(parser) DEFobjCurrIf(stat
 static void ratelimitFreeShared(void *ptr) {
     ratelimit_shared_t *shared = (ratelimit_shared_t *)ptr;
     if (shared == NULL) return;
+    ratelimitUnregisterSharedWatchers(shared);
     pthread_mutex_destroy(&shared->mut);
     free(shared->policy_file);
     if (shared->per_source_overrides != NULL) {
@@ -152,6 +213,16 @@ void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
 }
 
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
+    struct hashtable_itr *itr;
+
+    if (cfgs->ht != NULL && hashtable_count(cfgs->ht) > 0) {
+        itr = hashtable_iterator(cfgs->ht);
+        do {
+            ratelimit_shared_t *shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
+            ratelimitUnregisterSharedWatchers(shared);
+        } while (hashtable_iterator_advance(itr));
+        free(itr);
+    }
     if (cfgs->ht != NULL) {
         hashtable_destroy(cfgs->ht, 1); /* 1 = free values */
     }
@@ -169,6 +240,7 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
 
 #define RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES 10000U
 #define RATELIMIT_PERSOURCE_DEFAULT_TOPN 10U
+#define RATELIMIT_POLICY_WATCH_DEBOUNCE_DFLT_MS 5000U
 
 struct ratelimit_ps_override_s {
     char *key;
@@ -201,13 +273,158 @@ struct ratelimit_ps_policy_s {
 
 typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
 
+enum ratelimit_watch_kind { RATELIMIT_WATCH_GLOBAL = 0, RATELIMIT_WATCH_PERSOURCE };
+
+static rsRetVal parseDurationMillis(const char *value, unsigned int *out);
+#ifdef HAVE_LIBYAML
+static rsRetVal parseDurationSeconds(const char *value, unsigned int *out);
+#endif
+static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger);
+static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, const char *trigger);
+static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared);
+
+static rsRetVal parseDurationMillis(const char *value, unsigned int *out) {
+    char *end = NULL;
+    unsigned long val;
+    unsigned long long multiplier = 1000ULL;
+    unsigned long long total;
+    DEFiRet;
+
+    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    while (isspace((unsigned char)*value)) value++;
+    if (*value == '-') ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+
+    errno = 0;
+    val = strtoul(value, &end, 10);
+    if (errno != 0 || end == value) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+    while (isspace((unsigned char)*end)) end++;
+    if (*end == '\0' || (!strcmp(end, "s"))) {
+        multiplier = 1000ULL;
+    } else if (!strcmp(end, "ms")) {
+        multiplier = 1ULL;
+    } else if (!strcmp(end, "m")) {
+        multiplier = 60ULL * 1000ULL;
+    } else if (!strcmp(end, "h")) {
+        multiplier = 60ULL * 60ULL * 1000ULL;
+    } else {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    if ((unsigned long long)val > ((unsigned long long)UINT_MAX / multiplier)) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    total = (unsigned long long)val * multiplier;
+    if (total > UINT_MAX) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+    *out = (unsigned int)total;
+finalize_it:
+    RETiRet;
+}
+
+#ifdef HAVE_LIBYAML
+static rsRetVal parseDurationSeconds(const char *value, unsigned int *out) {
+    unsigned int ms = 0;
+    DEFiRet;
+
+    CHKiRet(parseDurationMillis(value, &ms));
+    if (ms % 1000U != 0) {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+    *out = ms / 1000U;
+finalize_it:
+    RETiRet;
+}
+#endif
+
+static const char *ratelimitWatchKindName(enum ratelimit_watch_kind kind) {
+    return (kind == RATELIMIT_WATCH_PERSOURCE) ? "per-source policy" : "policy";
+}
+
+static void ratelimitWatchReloadPolicyCb(void *ctx, const char *trigger) {
+    ratelimitReloadPolicyFile((ratelimit_shared_t *)ctx, trigger);
+}
+
+static void ratelimitWatchReloadPerSourcePolicyCb(void *ctx, const char *trigger) {
+    ratelimitReloadPerSourcePolicyFile((ratelimit_shared_t *)ctx, trigger);
+}
+
+static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared) {
+    if (shared == NULL) {
+        return;
+    }
+    if (shared->policy_watch_handle != NULL) {
+        rswatchUnregister(shared->policy_watch_handle);
+        shared->policy_watch_handle = NULL;
+    }
+    if (shared->per_source_policy_watch_handle != NULL) {
+        rswatchUnregister(shared->per_source_policy_watch_handle);
+        shared->per_source_policy_watch_handle = NULL;
+    }
+}
+
+static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared) {
+    DEFiRet;
+    rsRetVal localRet;
+    rswatch_desc_t desc;
+
+    if (shared == NULL || !shared->policy_watch) {
+        FINALIZE;
+    }
+
+    if (shared->policy_file == NULL && shared->per_source_policy_file == NULL) {
+        LogMsg(0, RS_RET_OK, LOG_WARNING,
+               "ratelimit: policyWatch enabled for '%s' but no policy file is configured; using HUP-only reload",
+               shared->name);
+        FINALIZE;
+    }
+
+    if (shared->policy_file != NULL) {
+        memset(&desc, 0, sizeof(desc));
+        desc.id = shared->name;
+        desc.path = shared->policy_file;
+        desc.debounce_ms = shared->policy_watch_debounce_ms;
+        desc.cb = ratelimitWatchReloadPolicyCb;
+        desc.ctx = shared;
+        localRet = rswatchRegister(&desc, &shared->policy_watch_handle);
+        if (localRet != RS_RET_OK) {
+            LogMsg(0, localRet, LOG_WARNING,
+                   "ratelimit: policyWatch requested for '%s' but automatic reload unavailable for %s '%s'; using "
+                   "HUP-only reload",
+                   shared->name, ratelimitWatchKindName(RATELIMIT_WATCH_GLOBAL), shared->policy_file);
+        }
+    }
+    if (shared->per_source_policy_file != NULL) {
+        memset(&desc, 0, sizeof(desc));
+        desc.id = shared->name;
+        desc.path = shared->per_source_policy_file;
+        desc.debounce_ms = shared->policy_watch_debounce_ms;
+        desc.cb = ratelimitWatchReloadPerSourcePolicyCb;
+        desc.ctx = shared;
+        localRet = rswatchRegister(&desc, &shared->per_source_policy_watch_handle);
+        if (localRet != RS_RET_OK) {
+            LogMsg(0, localRet, LOG_WARNING,
+                   "ratelimit: policyWatch requested for '%s' but automatic reload unavailable for %s '%s'; using "
+                   "HUP-only reload",
+                   shared->name, ratelimitWatchKindName(RATELIMIT_WATCH_PERSOURCE), shared->per_source_policy_file);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 static rsRetVal parsePolicyFile(const char *policy_file
 #ifdef HAVE_LIBYAML
                                 ,
                                 unsigned int *interval,
                                 unsigned int *burst,
-                                intTiny *severity
+                                int *severity
 #endif
 ) {
     DEFiRet;
@@ -260,10 +477,12 @@ static rsRetVal parsePolicyFile(const char *policy_file
                         long val = 0;
                         if (!strcmp(curr_key, "interval") || !strcmp(curr_key, "burst") ||
                             !strcmp(curr_key, "severity")) {
+                            const int is_severity = !strcmp(curr_key, "severity");
                             val = strtol((char *)token.data.scalar.value, &endptr, 10);
+                            const int out_of_range =
+                                is_severity ? (val < -1 || val > 127) : (val < 0 || (unsigned long)val > UINT_MAX);
                             if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0) ||
-                                endptr == (char *)token.data.scalar.value || *endptr != '\0' || val < 0 ||
-                                val > UINT_MAX) {
+                                endptr == (char *)token.data.scalar.value || *endptr != '\0' || out_of_range) {
                                 LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid integer value for '%s': %s",
                                          curr_key, (char *)token.data.scalar.value);
                                 /* ignore invalid values, keep parsing */
@@ -278,7 +497,7 @@ static rsRetVal parsePolicyFile(const char *policy_file
                                                  "ratelimit: severity value %ld out of range (max 127) in %s", val,
                                                  policy_file);
                                     } else {
-                                        *severity = (intTiny)val;
+                                        *severity = (int)val;
                                     }
                                 }
                             }
@@ -340,30 +559,6 @@ static rsRetVal parseUnsignedInt(const char *value, unsigned int *out) {
         ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
     }
     if (*end != '\0') {
-        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
-    }
-    *out = (unsigned int)val;
-finalize_it:
-    RETiRet;
-}
-
-static rsRetVal parseDurationSeconds(const char *value, unsigned int *out) {
-    char *end = NULL;
-    unsigned long val;
-    DEFiRet;
-
-    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-    while (isspace((unsigned char)*value)) value++;
-    if (*value == '-') ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
-
-    errno = 0;
-    val = strtoul(value, &end, 10);
-    if (errno != 0 || end == value || val > UINT_MAX) {
-        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
-    }
-    if (*end == 's' && *(end + 1) == '\0') {
-        /* ok */
-    } else if (*end != '\0') {
         ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
     }
     *out = (unsigned int)val;
@@ -769,6 +964,76 @@ static void ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_p
     pthread_mutex_unlock(&shared->per_source_mut);
 }
 
+static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger) {
+    unsigned int interval;
+    unsigned int burst;
+    int severity;
+    DEFiRet;
+
+    if (shared == NULL || shared->policy_file == NULL) {
+        FINALIZE;
+    }
+
+    interval = ratelimitSharedLoadUInt(&shared->interval, &shared->mut);
+    burst = ratelimitSharedLoadUInt(&shared->burst, &shared->mut);
+    severity = ratelimitSharedLoadSeverity(&shared->severity, &shared->mut);
+
+#ifdef HAVE_LIBYAML
+    CHKiRet(parsePolicyFile(shared->policy_file, &interval, &burst, &severity));
+#else
+    CHKiRet(parsePolicyFile(shared->policy_file));
+#endif
+
+    ratelimitSharedStoreUInt(&shared->interval, &shared->mut, interval);
+    ratelimitSharedStoreUInt(&shared->burst, &shared->mut, burst);
+    ratelimitSharedStoreSeverity(&shared->severity, &shared->mut, severity);
+
+    LogMsg(0, RS_RET_OK, LOG_INFO, "ratelimit: %s reloaded policy '%s' from file '%s'", trigger, shared->name,
+           shared->policy_file);
+
+finalize_it:
+    if (iRet != RS_RET_OK && shared != NULL && shared->policy_file != NULL) {
+        LogError(0, iRet, "ratelimit: %s failed to reload policy '%s' from file '%s', keeping old values", trigger,
+                 shared->name, shared->policy_file);
+    }
+    RETiRet;
+}
+
+static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, const char *trigger) {
+    ratelimit_ps_policy_t *policy = NULL;
+    DEFiRet;
+
+    if (shared == NULL || shared->per_source_policy_file == NULL) {
+        FINALIZE;
+    }
+
+    CHKiRet(parsePerSourcePolicyFile(shared->per_source_policy_file, &policy));
+    if (policy != NULL) {
+        ratelimitSwapPerSourcePolicy(shared, policy);
+        if (policy->overrides != NULL) {
+            policy->overrides = NULL;
+        }
+        free(policy);
+        policy = NULL;
+    }
+
+    LogMsg(0, RS_RET_OK, LOG_INFO, "ratelimit: %s reloaded per-source policy '%s' from file '%s'", trigger,
+           shared->name, shared->per_source_policy_file);
+
+finalize_it:
+    if (policy != NULL) {
+        if (policy->overrides != NULL) {
+            hashtable_destroy(policy->overrides, 1);
+        }
+        free(policy);
+    }
+    if (iRet != RS_RET_OK && shared != NULL && shared->per_source_policy_file != NULL) {
+        LogError(0, iRet, "ratelimit: %s failed to reload per-source policy '%s' from file '%s', keeping old values",
+                 trigger, shared->name, shared->per_source_policy_file);
+    }
+    RETiRet;
+}
+
 static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key, size_t key_len, time_t tt) {
     ratelimit_shared_t *shared;
     ratelimit_ps_state_t *state;
@@ -876,8 +1141,10 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *name,
                             unsigned int interval,
                             unsigned int burst,
-                            intTiny severity,
+                            int severity,
                             const char *policy_file,
+                            sbool policy_watch,
+                            const char *policy_watch_debounce,
                             sbool per_source_enabled,
                             const char *per_source_policy_file,
                             const char *per_source_key_tpl_name,
@@ -888,11 +1155,16 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     ratelimit_shared_t *existing_shared = NULL;
     char *key = NULL;
     ratelimit_ps_policy_t *per_source_policy = NULL;
+    unsigned int debounce_ms = RATELIMIT_POLICY_WATCH_DEBOUNCE_DFLT_MS;
     sbool bLocked = 0;
 
 
     if (name == NULL) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (policy_watch_debounce != NULL) {
+        CHKiRet(parseDurationMillis(policy_watch_debounce, &debounce_ms));
     }
 
     if (policy_file != NULL) {
@@ -943,6 +1215,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     shared->interval = interval;
     shared->burst = burst;
     shared->severity = severity;
+    shared->policy_watch = policy_watch;
+    shared->policy_watch_debounce_ms = debounce_ms;
     if (policy_file) {
         CHKmalloc(shared->policy_file = strdup(policy_file));
     }
@@ -987,9 +1261,11 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     }
 
     /* shared ownership now in hashtable */
+    existing_shared = shared;
     shared = NULL;
     pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
     bLocked = 0;
+    CHKiRet(ratelimitRegisterWatchTargets(existing_shared));
 
 finalize_it:
     if (bLocked) {
@@ -1130,10 +1406,12 @@ finalize_it:
 /* helper: tell how many messages we lost due to linux-like ratelimiting */
 static void tellLostCnt(ratelimit_t *ratelimit) {
     uchar msgbuf[1024];
+
     if (ratelimit->missed) {
         snprintf((char *)msgbuf, sizeof(msgbuf),
                  "%s: %u messages lost due to rate-limiting (%u allowed within %u seconds)", ratelimit->name,
-                 ratelimit->missed, ratelimit->pShared->burst, ratelimit->pShared->interval);
+                 ratelimit->missed, ratelimitSharedLoadUInt(&ratelimit->pShared->burst, &ratelimit->pShared->mut),
+                 ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut));
         ratelimit->missed = 0;
         logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG | LOG_INFO, msgbuf, 0);
     }
@@ -1154,10 +1432,8 @@ static int ATTR_NONNULL()
         pthread_mutex_lock(&ratelimit->mut);
     }
 
-    /* Snapshot shared values to ensure consistency during check */
-    /* Note: we do not lock pShared->mut for reading as integer reads are atomic enough */
-    unsigned int interval = ratelimit->pShared->interval;
-    unsigned int burst = ratelimit->pShared->burst;
+    unsigned int interval = ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut);
+    unsigned int burst = ratelimitSharedLoadUInt(&ratelimit->pShared->burst, &ratelimit->pShared->mut);
 
     if (interval == 0) {
         ret = 1;
@@ -1216,7 +1492,7 @@ finalize_it:
  */
 rsRetVal ratelimitMsgCount(ratelimit_t *__restrict__ const ratelimit, time_t tt, const char *const appname) {
     DEFiRet;
-    if (ratelimit->pShared->interval) {
+    if (ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut)) {
         if (withinRatelimit(ratelimit, tt, appname) == 0) {
             ABORT_FINALIZE(RS_RET_DISCARDMSG);
         }
@@ -1247,13 +1523,18 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     DEFiRet;
     rsRetVal localRet;
     int severity = 0;
+    unsigned int interval;
+    int threshold;
 
     assert(ratelimit != NULL);
     assert(pMsg != NULL);
     assert(ppRepMsg != NULL);
     *ppRepMsg = NULL;
 
-    if (runConf->globals.bReduceRepeatMsgs || ratelimit->pShared->severity > 0) {
+    interval = ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut);
+    threshold = ratelimitSharedLoadSeverity(&ratelimit->pShared->severity, &ratelimit->pShared->mut);
+
+    if (runConf->globals.bReduceRepeatMsgs || threshold > 0) {
         /* consider early parsing only if really needed */
         if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
             if ((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
@@ -1266,7 +1547,7 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
 
     /* Only the messages having severity level at or below the
      * treshold (the value is >=) are subject to ratelimiting. */
-    if (ratelimit->pShared->interval && (severity >= ratelimit->pShared->severity)) {
+    if (interval && (severity >= threshold)) {
         char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
         snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
         if (withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
@@ -1286,7 +1567,8 @@ finalize_it:
 
 /* returns 1, if the ratelimiter performs any checks and 0 otherwise */
 int ratelimitChecked(ratelimit_t *ratelimit) {
-    return ratelimit->pShared->interval || ratelimit->pShared->per_source_enabled || runConf->globals.bReduceRepeatMsgs;
+    return ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut) ||
+           ratelimit->pShared->per_source_enabled || runConf->globals.bReduceRepeatMsgs;
 }
 
 
@@ -1429,13 +1711,20 @@ finalize_it:
 
 /* enable linux-like ratelimiting */
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst) {
-    ratelimit->pShared->interval = interval;
-    ratelimit->pShared->burst = burst;
+    ratelimitSharedStoreUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut, interval);
+    ratelimitSharedStoreUInt(&ratelimit->pShared->burst, &ratelimit->pShared->mut, burst);
     ratelimit->done = 0;
     ratelimit->missed = 0;
     ratelimit->begin = 0;
 }
 
+
+static void ratelimitEnsureMutexInitialized(ratelimit_t *ratelimit) {
+    if (!ratelimit->bMutInitialized) {
+        pthread_mutex_init(&ratelimit->mut, NULL);
+        ratelimit->bMutInitialized = 1;
+    }
+}
 
 /* enable thread-safe operations mode. This make sure that
  * a single ratelimiter can be called from multiple threads. As
@@ -1445,18 +1734,18 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
  */
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit) {
     ratelimit->bThreadSafe = 1;
-    pthread_mutex_init(&ratelimit->mut, NULL);
+    ratelimitEnsureMutexInitialized(ratelimit);
 }
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
     ratelimit->bNoTimeCache = 1;
-    pthread_mutex_init(&ratelimit->mut, NULL);
+    ratelimitEnsureMutexInitialized(ratelimit);
 }
 
 /* Severity level determines which messages are subject to
  * ratelimiting. Default (no value set) is all messages.
  */
-void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity) {
-    ratelimit->pShared->severity = severity;
+void ratelimitSetSeverity(ratelimit_t *ratelimit, int severity) {
+    ratelimitSharedStoreSeverity(&ratelimit->pShared->severity, &ratelimit->pShared->mut, severity);
 }
 
 void ratelimitDestruct(ratelimit_t *ratelimit) {
@@ -1469,7 +1758,7 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
         msgDestruct(&ratelimit->pMsg);
     }
     tellLostCnt(ratelimit);
-    if (ratelimit->bThreadSafe) pthread_mutex_destroy(&ratelimit->mut);
+    if (ratelimit->bMutInitialized) pthread_mutex_destroy(&ratelimit->mut);
 
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);
@@ -1501,9 +1790,6 @@ finalize_it:
 void ratelimitDoHUP(void) {
     struct hashtable_itr *itr;
     ratelimit_shared_t *shared;
-    unsigned int interval, burst;
-    intTiny severity;
-    rsRetVal iRet;
 
     if (runConf == NULL || runConf->ratelimit_cfgs.ht == NULL) {
         return;
@@ -1519,46 +1805,10 @@ void ratelimitDoHUP(void) {
         do {
             shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
             if (shared && shared->policy_file) {
-                interval = shared->interval;
-                burst = shared->burst;
-                severity = shared->severity;
-
-                /* Re-parse the file */
-#ifdef HAVE_LIBYAML
-                iRet = parsePolicyFile(shared->policy_file, &interval, &burst, &severity);
-#else
-                iRet = parsePolicyFile(shared->policy_file);
-#endif
-
-                if (iRet == RS_RET_OK) {
-                    pthread_mutex_lock(&shared->mut);
-                    shared->interval = interval;
-                    shared->burst = burst;
-                    shared->severity = severity;
-                    pthread_mutex_unlock(&shared->mut);
-                    DBGPRINTF("ratelimit: HUP updated policy '%s' from file '%s'\n", shared->name, shared->policy_file);
-                } else {
-                    LogError(0, iRet, "ratelimit: HUP failed to reload policy '%s' from file '%s', keeping old values",
-                             shared->name, shared->policy_file);
-                }
+                ratelimitReloadPolicyFile(shared, "HUP");
             }
             if (shared && shared->per_source_policy_file) {
-                ratelimit_ps_policy_t *policy = NULL;
-                iRet = parsePerSourcePolicyFile(shared->per_source_policy_file, &policy);
-                if (iRet == RS_RET_OK && policy != NULL) {
-                    ratelimitSwapPerSourcePolicy(shared, policy);
-                    if (policy->overrides != NULL) {
-                        policy->overrides = NULL;
-                    }
-                    free(policy);
-                    DBGPRINTF("ratelimit: HUP updated per-source policy '%s' from file '%s'\n", shared->name,
-                              shared->per_source_policy_file);
-                } else {
-                    LogError(
-                        0, iRet,
-                        "ratelimit: HUP failed to reload per-source policy '%s' from file '%s', keeping old values",
-                        shared->name, shared->per_source_policy_file);
-                }
+                ratelimitReloadPerSourcePolicyFile(shared, "HUP");
             }
         } while (hashtable_iterator_advance(itr));
         free(itr);

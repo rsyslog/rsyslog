@@ -1,20 +1,17 @@
 .. _ref-mmaudit:
 
-Linux Audit Log Parser (mmaudit)
-================================
+*******************************
+mmaudit: Linux Audit Log Parser
+*******************************
 
-.. list-table::
-   :widths: 25 75
-
-   * - **Module Name:**
-     - **mmaudit**
-   * - **Author:**
-     - `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-   * - **Available since:**
-     - 7.x series (introduced during the rsyslog v7 development cycle)
+====================  =========================================================================
+**Module Name:**      **mmaudit**
+**Author:**           `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Available since:**  7.x series (introduced during the rsyslog v7 development cycle)
+====================  =========================================================================
 
 Purpose
--------
+=======
 
 The **mmaudit** message modification module detects Linux Audit records
 and exposes their data as structured properties. When a message
@@ -27,7 +24,7 @@ The plugin is optional at build time. Use
 from source.
 
 Message detection and parsing
------------------------------
+=============================
 
 ``mmaudit`` operates on the raw message string. After trimming leading
 whitespace the module expects the record to start with
@@ -56,7 +53,7 @@ stored without surrounding quotes.
    ``get_property()`` function to fetch the value by key.
 
 JSON output structure
----------------------
+=====================
 
 After a successful parse the following properties become available:
 
@@ -70,7 +67,7 @@ parse flag, so later actions can test ``if $parsesuccess == "on"`` to
 check whether ``mmaudit`` produced structured data.
 
 Configuration Parameters
-------------------------
+========================
 
 .. note::
 
@@ -78,18 +75,18 @@ Configuration Parameters
    readability.
 
 Module Parameters
-~~~~~~~~~~~~~~~~~
+-----------------
 
 This module has no module parameters.
 
 Action Parameters
-~~~~~~~~~~~~~~~~~
+-----------------
 
 This module has no action parameters. Simply configure
 ``action(type="mmaudit")`` in the processing chain.
 
-Usage example
--------------
+Example
+=======
 
 The snippet below parses audit records, writes the structured payload to
 an auxiliary file, and demonstrates how to access one of the generated
@@ -113,7 +110,7 @@ fields.
    }
 
 Caveats
--------
+=======
 
 * ``mmaudit`` performs no authenticity checks. Any log line that matches
   the expected syntax is treated as an audit record.

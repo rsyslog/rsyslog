@@ -85,8 +85,10 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(netstrms) DEFobjCurrIf(netstrm
     statsobj_t *stats;
     intctr_t sentBytes;
     intctr_t sentMsgs;
+    intctr_t numConnects;
     DEF_ATOMIC_HELPER_MUT64(mut_sentBytes);
     DEF_ATOMIC_HELPER_MUT64(mut_sentMsgs);
+    DEF_ATOMIC_HELPER_MUT64(mut_numConnects);
 } targetStats_t;
 
 typedef struct _instanceData {
@@ -164,6 +166,7 @@ typedef struct targetData {
     int bIsConnected; /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
     int nXmit; /* number of transmissions since last (re-)bind */
     tcpclt_t *pTCPClt; /* our tcpclt object */
+    sbool bInDestruct; /* guard against recursive teardown on send failure */
     sbool bzInitDone; /* did we do an init of zstrm already? */
     z_stream zstrm; /* zip stream to use for tcp compression */
     /* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
@@ -293,6 +296,7 @@ ENDinitConfVars
 
 static rsRetVal doTryResume(targetData_t *);
 static rsRetVal doZipFinish(targetData_t *);
+static rsRetVal TCPSendBuf(targetData_t *, uchar *, unsigned, sbool);
 
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
@@ -347,6 +351,7 @@ static void freeConfiguredPorts(instanceData *const pData) {
     pData->nPorts = 0;
 }
 
+#ifdef HAVE_RESOLV_NS_INITPARSE
 static int compareSrvPriority(const void *lhs, const void *rhs) {
     const srvRecord_t *const left = (const srvRecord_t *)lhs;
     const srvRecord_t *const right = (const srvRecord_t *)rhs;
@@ -417,13 +422,59 @@ static const char *resolverErrorString(const int err) {
             return "unrecoverable resolver failure";
         case NO_DATA:
             return "no data";
-#if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
+    #if defined(NO_ADDRESS) && (!defined(NO_DATA) || (NO_ADDRESS != NO_DATA))
         case NO_ADDRESS:
             return "no address";
-#endif
+    #endif
         default:
             return "unknown resolver error";
     }
+}
+
+static rsRetVal initResolverState(res_state *const pres) {
+    DEFiRet;
+
+    #ifdef HAVE_RESOLV_RES_N_API
+    CHKmalloc(*pres = (res_state)calloc(1, sizeof(struct __res_state)));
+    if (res_ninit(*pres) != 0) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    #else
+    if (res_init() != 0) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    *pres = &_res;
+    #endif
+
+finalize_it:
+    RETiRet;
+}
+
+static int queryResolverState(res_state const res,
+                              const char *const srvName,
+                              unsigned char *const answer,
+                              const size_t answerSize) {
+    #ifdef HAVE_RESOLV_RES_N_API
+    return res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, answerSize);
+    #else
+    (void)res;
+    return res_query(srvName, ns_c_in, ns_t_srv, answer, answerSize);
+    #endif
+}
+
+static void closeResolverState(res_state const res) {
+    if (res == NULL) {
+        return;
+    }
+    #ifdef HAVE_RESOLV_RES_N_API
+    res_nclose(res);
+    free(res);
+    #else
+    /* Old resolver APIs use global state; musl's implementation is stateless. */
+    (void)res;
+    #endif
 }
 
 static rsRetVal applyResolverOverrides(res_state res) {
@@ -484,6 +535,7 @@ static rsRetVal applyResolverOverrides(res_state res) {
 finalize_it:
     RETiRet;
 }
+#endif
 
 static rsRetVal resolveSrvTargets(instanceData *const pData) {
 #ifndef HAVE_RESOLV_NS_INITPARSE
@@ -506,15 +558,11 @@ static rsRetVal resolveSrvTargets(instanceData *const pData) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
-    CHKmalloc(res = (res_state)calloc(1, sizeof(struct __res_state)));
-    if (res_ninit(res) != 0) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to init resolver state: %s", strerror(errno));
-        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-    }
+    CHKiRet(initResolverState(&res));
 
     CHKiRet(applyResolverOverrides(res));
 
-    const int ansLen = res_nquery(res, srvName, ns_c_in, ns_t_srv, answer, sizeof(answer));
+    const int ansLen = queryResolverState(res, srvName, answer, sizeof(answer));
     if (ansLen < 0) {
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: failed to resolve SRV records for '%s': %s", srvName,
                  resolverErrorString(res->res_h_errno));
@@ -642,16 +690,24 @@ static rsRetVal resolveSrvTargets(instanceData *const pData) {
 finalize_it:
     free(records);
     free(ordered);
-    if (res != NULL) {
-        res_nclose(res);
-        free(res);
-    }
+    closeResolverState(res);
     RETiRet;
 #endif
 }
 
 static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebind) {
-    // TODO: do we need to do a final send? if so, old bug!
+    if (pTarget->bInDestruct) {
+        return;
+    }
+
+    pTarget->bInDestruct = RSTRUE;
+    if (pTarget->bIsConnected && pTarget->offsSndBuf != 0) {
+        rsRetVal localRet = TCPSendBuf(pTarget, pTarget->sndBuf, pTarget->offsSndBuf, IS_FLUSH);
+        if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_PREVIOUS_COMMITTED) {
+            pTarget->offsSndBuf = 0;
+        }
+    }
+
     doZipFinish(pTarget);
 
     if (pTarget->pNetstrm != NULL) {
@@ -677,6 +733,7 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         pTarget->ttResume += pTarget->pData->poolResumeInterval;
     }
     pTarget->bIsConnected = 0;
+    pTarget->bInDestruct = RSFALSE;
     DBGPRINTF("omfwd: DestructTargetData: %p %s:%s, connected %d, ttResume %lld\n", pTarget, pTarget->target_name,
               pTarget->port, pTarget->bIsConnected, (long long)pTarget->ttResume);
 }
@@ -723,7 +780,7 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "template")) {
-            loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (cs.pszTplName != NULL) {
                 LogError(0, RS_RET_DUP_PARAM,
                          "omfwd: warning: default template "
@@ -814,6 +871,7 @@ BEGINcreateWrkrInstance
         pWrkrData->target[i].port = pData->ports[(i < pData->nPorts) ? i : 0];
         pWrkrData->target[i].maxLenSndBuf =
             (runModConf->maxLenSndBuf == -1) ? SNDBUF_FIXED_BUFFER_SIZE : runModConf->maxLenSndBuf;
+        pWrkrData->target[i].bInDestruct = RSFALSE;
         pWrkrData->target[i].offsSndBuf = 0;
         pWrkrData->target[i].ttResume = ttNow;
     }
@@ -951,13 +1009,15 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
             int try_send = 1;
             size_t lenThisTry = len;
             while (try_send) {
+                int sendErrno;
                 lsent = sendto(pTarget->pSockArray[i + 1], msg, lenThisTry, 0, r->ai_addr, r->ai_addrlen);
+                sendErrno = errno;
                 if (lsent == (ssize_t)lenThisTry) {
                     bSendSuccess = RSTRUE;
                     ATOMIC_ADD_uint64(&pTargetStats->sentBytes, &pTargetStats->mut_sentBytes, lenThisTry);
                     try_send = 0;
                     runSockArrayLoop = 0;
-                } else if (errno == EMSGSIZE) {
+                } else if (sendErrno == EMSGSIZE) {
                     const size_t newlen = (lenThisTry > 1024) ? lenThisTry - 1024 : 512;
                     LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
                              "omfwd/udp: send failed due to message being too "
@@ -967,7 +1027,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
                     lenThisTry = newlen;
                 } else {
                     reInit = RSTRUE;
-                    lasterrno = errno;
+                    lasterrno = sendErrno;
                     lasterr_sock = pTarget->pSockArray[i + 1];
                     LogError(lasterrno, RS_RET_ERR_UDPSEND, "omfwd/udp: socket %d: sendto() error", lasterr_sock);
                     try_send = 0;
@@ -1067,7 +1127,9 @@ static rsRetVal CheckConnection(targetData_t *const pTarget) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         emitConnectionErrorMsg(pTarget, iRet);
-        DestructTargetData(pTarget, 0);
+        if (!pTarget->bInDestruct) {
+            DestructTargetData(pTarget, 0);
+        }
         iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
@@ -1087,7 +1149,9 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
     while (alreadySent != len) {
         lenSend = len - alreadySent;
-        CHKiRet(netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend));
+        iRet = netstrm.Send(pTarget->pNetstrm, buf + alreadySent, &lenSend);
+        if (iRet == RS_RET_RETRY) ABORT_FINALIZE(iRet);
+        CHKiRet(iRet);
         DBGPRINTF("omfwd: TCP sent %zd bytes, requested %u\n", lenSend, len - alreadySent);
         alreadySent += lenSend;
     }
@@ -1096,9 +1160,15 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        emitConnectionErrorMsg(pTarget, iRet);
-        DestructTargetData(pTarget, 0);
-        iRet = RS_RET_SUSPENDED;
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry\n");
+        } else {
+            emitConnectionErrorMsg(pTarget, iRet);
+            if (!pTarget->bInDestruct) {
+                DestructTargetData(pTarget, 0);
+            }
+            iRet = RS_RET_SUSPENDED;
+        }
     }
     RETiRet;
 }
@@ -1285,6 +1355,8 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
         }
         CHKiRet(netstrm.Connect(pTarget->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf), (uchar *)pTarget->port,
                                 (uchar *)pTarget->target_name, pData->device));
+
+        ATOMIC_INC_uint64(&pTarget->pTargetStats->numConnects, &pTarget->pTargetStats->mut_numConnects);
 
         /* set keep-alive if enabled */
         if (pData->bKeepAlive) {
@@ -1616,7 +1688,9 @@ static rsRetVal processMsg(targetData_t *__restrict__ const pTarget, actWrkrIPar
     } else {
         /* forward via TCP */
         iRet = tcpclt.Send(pTarget->pTCPClt, pTarget, (char *)psz, l);
-        if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
+        if (iRet == RS_RET_RETRY) {
+            DBGPRINTF("omfwd: TCP send deferred for retry to %s:%s\n", pTarget->target_name, pTarget->port);
+        } else if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
             /* error! */
             LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending target", pTarget->target_name,
                      pTarget->port);
@@ -1637,17 +1711,19 @@ finalize_it:
 BEGINcommitTransaction
     unsigned i;
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
+    sbool bFlushRetry = 0;
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
-     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to the
-     * new targets. This is done by the poolTryResume(), which needs to be made in any case.
+     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to
+     * the new targets. DestructInstanceData() drops the transport state and
+     * poolTryResume() creates the next connection. The per-worker tcpclt
+     * objects stay valid across rebinds and must not be reallocated here.
      */
     if (pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
         dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
                   pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
         pWrkrData->nXmit = 0; /* else we have an addtl wrap at 2^31-1 */
         DestructInstanceData(pWrkrData, 1);
-        initTCP(pWrkrData);
         LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING, "omfwd: dropped connections due to configured rebind interval");
     }
 
@@ -1717,6 +1793,11 @@ BEGINcommitTransaction
                               IS_FLUSH);
             if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
                 pWrkrData->target[j].offsSndBuf = 0;
+            } else if (iRet == RS_RET_RETRY) {
+                DBGPRINTF("omfwd: TCP buffer flush deferred for retry to %s:%s\n", pWrkrData->target[j].target_name,
+                          pWrkrData->target[j].port);
+                bFlushRetry = 1;
+                iRet = RS_RET_OK;
             } else {
                 LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                        "omfwd: [wrkr %u] target %s:%s became unavailable during buffer flush. "
@@ -1741,11 +1822,15 @@ finalize_it:
      *   We determine this by calling countActiveTargets() and inspecting
      *   the atomic nActiveTargets value. When it is zero, the whole pool
      *   is unavailable and the action engine must enter retry logic.
-     * - If at least one target remains active, we keep returning OK here
-     *   so that the action is not suspended at pool level. Any buffered
-     *   frames for failed targets remain in that target's send buffer and
-     *   will be flushed once doTryResume() re-establishes the connection
-     *   on a subsequent transaction.
+     * - Also return RS_RET_SUSPENDED when a connected target reports
+     *   RS_RET_RETRY while flushing its pending TCP buffer. The target remains
+     *   connected, but the action engine still needs to schedule another commit
+     *   attempt for the retained buffered data.
+     * - If at least one target remains active and no flush retry is pending,
+     *   we keep returning OK here so that the action is not suspended at pool
+     *   level. Any buffered frames for failed targets remain in that target's
+     *   send buffer and will be flushed once doTryResume() re-establishes the
+     *   connection on a subsequent transaction.
      */
     /* do pool stats */
 
@@ -1753,11 +1838,11 @@ finalize_it:
     const int nActiveTargets =
         ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
-    if (nActiveTargets == 0) {
+    if (bFlushRetry || nActiveTargets == 0) {
         /*
-         * All pool members are currently unavailable. Only in this case we
-         * return RS_RET_SUSPENDED from commitTransaction, as required by the
-         * omfwd pool contract.
+         * All pool members are currently unavailable, or a connected target
+         * needs a retry to finish flushing retained TCP data. Return
+         * RS_RET_SUSPENDED so the action engine schedules retry handling.
          */
         iRet = RS_RET_SUSPENDED;
     }
@@ -1896,7 +1981,67 @@ static rsRetVal setupInstStatsCtrs(instanceData *const pData) {
         CHKiRet(statsobj.AddCounter(pData->target_stats[i].stats, UCHAR_CONSTANT("messages.sent"), ctrType_IntCtr,
                                     CTR_FLAG_RESETTABLE, &(pData->target_stats[i].sentMsgs)));
 
+
+        pData->target_stats[i].numConnects = 0;
+        INIT_ATOMIC_HELPER_MUT64(pData->target_stats[i].mut_numConnects);
+        CHKiRet(statsobj.AddCounter(pData->target_stats[i].stats, UCHAR_CONSTANT("num.connects"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &(pData->target_stats[i].numConnects)));
+
         CHKiRet(statsobj.ConstructFinalize(pData->target_stats[i].stats));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
+static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
+    if (pData->protocol == FORW_UDP) {
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "omfwd action uses protocol=\"udp\" (without TLS); "
+                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
+        const int tlsHintsConfigured =
+            (pData->pszStrmDrvrAuthMode != NULL) ||
+            (pData->pszStrmDrvr != NULL && strcasecmp((const char *)pData->pszStrmDrvr, "ptcp") != 0);
+        if (tlsHintsConfigured) {
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
+                                      "TCP so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else {
+            glblWarnIfInsecureDefault(
+                loadModConf->pConf,
+                "omfwd action uses protocol=\"tcp\" with streamdriver.mode=\"0\" "
+                "(plain TCP without TLS); see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
+    }
+
+    if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode != 0 && pData->pszStrmDrvrAuthMode != NULL &&
+        strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadModConf->pConf,
+            "omfwd uses streamdriver.authmode=\"anon\"; server identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
+static rsRetVal validateTargetSrvTlsAuth(const instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->targetSrv == NULL || pData->protocol != FORW_TCP || pData->iStrmDrvrMode == 0) {
+        FINALIZE;
+    }
+
+    if (pData->pPermPeers != NULL) {
+        FINALIZE;
+    }
+
+    if (pData->pszStrmDrvrAuthMode == NULL || !strcasecmp((const char *)pData->pszStrmDrvrAuthMode, "x509/name")) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: targetSrv with TLS requires streamdriverpermittedpeers when using streamdriverauthmode "
+                 "\"x509/name\" or the default auth mode (explicitly set permitted peers or use static target)");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
 finalize_it:
@@ -1936,19 +2081,19 @@ BEGINnewActInst
             pData->nTargets = nTargets;
             CHKmalloc(pData->target_name = (char **)calloc(pData->nTargets, sizeof(char *)));
             for (int j = 0; j < nTargets; ++j) {
-                pData->target_name[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(pData->target_name[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
             }
         } else if (!strcmp(actpblk.descr[i].name, "targetsrv")) {
-            pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "address")) {
-            pData->address = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->address = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "device")) {
-            pData->device = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->device = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "port")) {
             pData->nPorts = pvals[i].val.d.ar->nmemb;
             CHKmalloc(pData->ports = (char **)calloc(pData->nPorts, sizeof(char *)));
             for (int j = 0; j < pData->nPorts; ++j) {
-                pData->ports[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(pData->ports[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
             }
         } else if (!strcmp(actpblk.descr[i].name, "protocol")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"udp", 3)) {
@@ -1965,13 +2110,13 @@ BEGINnewActInst
                 pData->protocol = FORW_TCP;
             } else {
                 uchar *str;
-                str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_INVLD_PROTOCOL, "omfwd: invalid protocol \"%s\"", str);
                 free(str);
                 ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
             }
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
-            pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tcp_framing")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"traditional", 11)) {
                 pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -1979,7 +2124,7 @@ BEGINnewActInst
                 pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
             } else {
                 uchar *str;
-                str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_CNF_INVLD_FRAMING, "omfwd: invalid framing \"%s\"", str);
                 free(str);
                 ABORT_FINALIZE(RS_RET_CNF_INVLD_FRAMING);
@@ -1997,12 +2142,12 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "conerrskip")) {
             pData->iConErrSkip = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
-            pData->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver") ||
                    !strcmp(actpblk.descr[i].name, "streamdriver.name")) {
-            pData->pszStrmDrvr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdrivermode") ||
-                   !strcmp(actpblk.descr[i].name, "streamdrivermode")) {
+                   !strcmp(actpblk.descr[i].name, "streamdriver.mode")) {
             pData->iStrmDrvrMode = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
             pData->iStrmDrvrExtendedCertCheck = pvals[i].val.d.n;
@@ -2015,10 +2160,11 @@ BEGINnewActInst
                 parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
             }
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverauthmode") ||
-                   !strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
-            pData->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                   !strcmp(actpblk.descr[i].name, "streamdriver.authmode")) {
+            CHKmalloc(pData->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            uchar *val = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            uchar *val;
+            CHKmalloc(val = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"off", 3) &&
                 es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"on", 2) &&
                 es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"warn", 4)) {
@@ -2032,20 +2178,20 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverremotesni") ||
                    !strcmp(actpblk.descr[i].name, "streamdriver.remotesni")) {
-            pData->pszStrmDrvrRemoteSNI = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrRemoteSNI = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.cafile")) {
-            pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.crlfile")) {
-            pData->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.keyfile")) {
-            pData->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.certfile")) {
-            pData->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
             uchar *start, *str;
             uchar *p;
             int lenStr;
-            str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(str = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             start = str;
             lenStr = ustrlen(start); /* we need length after '\0' has been dropped... */
             while (lenStr > 0) {
@@ -2092,11 +2238,11 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "udp.sendbuf")) {
             pData->UDPSendBuf = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
             pData->strmCompFlushOnTxEnd = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "compression.mode")) {
-            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
                 pData->compressionMode = COMPRESS_STREAM_ALWAYS;
             } else if (!strcasecmp(cstr, "none")) {
@@ -2121,7 +2267,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
-            pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: program error, non-handled parameter '%s'",
                      actpblk.descr[i].name);
@@ -2156,6 +2302,7 @@ BEGINnewActInst
             parser_warnmsg("omfwd: targetSrv was set, ignoring explicit port list");
             freeConfiguredPorts(pData);
         }
+        CHKiRet(validateTargetSrvTlsAuth(pData));
         CHKiRet(resolveSrvTargets(pData));
     }
 
@@ -2215,6 +2362,8 @@ BEGINnewActInst
     if (pData->address && (pData->protocol == FORW_TCP)) {
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter \"address\" not supported for tcp -- ignored");
     }
+
+    warnIfNonTlsForwardingConfigured(pData);
 
     if (pData->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
@@ -2404,6 +2553,7 @@ BEGINparseSelectorAct
             cs.pPermPeers = NULL;
         }
     }
+    warnIfNonTlsForwardingConfigured(pData);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {
         setupInstStatsCtrs(pData);
     }

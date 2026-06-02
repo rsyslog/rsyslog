@@ -352,6 +352,10 @@ BEGINcommitTransaction
         }
     }
 
+    if (pWrkrData->hmysql == NULL) {
+        DBGPRINTF("ommysql: transaction connection closed before commit\n");
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
     if (mysql_commit(pWrkrData->hmysql) != 0) {
         DBGPRINTF("ommysql: server error: transaction not committed\n");
         reportDBError(pWrkrData, 0);
@@ -443,13 +447,13 @@ BEGINnewActInst
             memcpy(pData->dbpwd, cstr, len + 1);
             free(cstr);
         } else if (!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
-            pData->configfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->configfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "mysqlconfig.section")) {
-            pData->configsection = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->configsection = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "socket")) {
-            pData->socket = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->socket = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "ommysql: program error, non-handled "

@@ -1,13 +1,12 @@
-****************************************
-IP Address Anonymization Module (mmanon)
-****************************************
+***************************************
+mmanon: IP Address Anonymization Module
+***************************************
 
-===========================  ===========================================================================
-**Module Name:**             **mmanon**
-**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-**Available since:**         7.3.7
-===========================  ===========================================================================
-
+====================  ===========================================================================
+**Module Name:**      **mmanon**
+**Author:**           `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Available since:**  7.3.7
+====================  ===========================================================================
 
 Purpose
 =======
@@ -22,7 +21,8 @@ Please note that log files can also be anonymized via
 `SLFA <https://jan.gerhards.net/2017/10/12/slfa-release/>`_ after they
 have been created.
 
-*How are IP-Addresses defined?*
+How are IP-Addresses defined?
+-----------------------------
 
 We assume that an IPv4 address consists of four octets in dotted notation,
 where each of the octets has a value between 0 and 255, inclusively.
@@ -41,8 +41,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
-
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 Action Parameters
 -----------------

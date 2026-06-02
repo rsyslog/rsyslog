@@ -1,0 +1,5 @@
+### Configuration file for rsyslog-mysql
+### Changes are preserved
+
+module (load="ommysql")
+*.* action(type="ommysql" server="_DBC_DBSERVER_" serverport="_DBC_DBPORT_" db="_DBC_DBNAME_" uid="_DBC_DBUSER_" pwd="_DBC_DBPASS_")

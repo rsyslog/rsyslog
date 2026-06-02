@@ -7,7 +7,7 @@ add_conf '
 $ModLoad ../plugins/omlibdbi/.libs/omlibdbi
 
 $ActionQueueType LinkedList
-$ActionQueueTimeoutEnqueue 15000
+$ActionQueueTimeoutEnqueue 30000
 
 $ActionLibdbiDriver mysql
 $ActionLibdbiHost 127.0.0.1
@@ -19,7 +19,7 @@ $ActionLibdbiDBName '$RSYSLOG_DYNNAME'
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")
 }
 '
-mysql_prep_for_test
+mysql_prep_for_test libdbi
 startup
 injectmsg
 wait_file_lines $RSYSLOG_DYNNAME.syncfile $NUMMESSAGES 2500

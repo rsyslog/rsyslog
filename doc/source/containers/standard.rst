@@ -19,6 +19,10 @@ Like :doc:`minimal`, this image runs as ``syslog:adm`` by default. That
 fits the packaged general-purpose role because the shipped configuration
 does not bind privileged ports.
 
+The inherited regex lookup-table noise filter from the minimal image is
+available at ``/etc/rsyslog/noise-drop.lkp_tbl``. It matches ``$rawmsg``
+by default and drops events when the lookup result is non-empty.
+
 Environment Variables
 ---------------------
 

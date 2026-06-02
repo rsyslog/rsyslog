@@ -86,6 +86,10 @@ data_ret_t *ipv4_parse(const uchar *packet, int pktSize, struct json_object *jpa
 
     char addrSrc[20], addrDst[20];
     uint8_t hdrLen = 4 * ipv4_header->ihl; /* 4 x length in words */
+    if (ipv4_header->ihl < 5 || hdrLen > pktSize) {
+        DBGPRINTF("IPv4 invalid header length : %u packet size %d\n", hdrLen, pktSize);
+        RETURN_DATA_AFTER(0)
+    }
 
     inet_ntop(AF_INET, (void *)&ipv4_header->addrSrc, addrSrc, 20);
     inet_ntop(AF_INET, (void *)&ipv4_header->addrDst, addrDst, 20);

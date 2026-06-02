@@ -7,6 +7,8 @@
 skip_platform "SunOS" "This test is currently not supported on solaris due to too-different timing"
 generate_conf
 export NUMMESSAGES=20000
+export OMFWD_RETRY_MAX_LOSS=${OMFWD_RETRY_MAX_LOSS:-500}
+export IMDIAG_INJECTMSG_DELAY_MS=${IMDIAG_INJECTMSG_DELAY_MS:-3}
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
@@ -33,13 +35,17 @@ if $msg contains "msgnum:" then {
 # now do the usual run
 startup
 
+# Throttle injection instead of sleeping after a full burst. The receiver is
+# intentionally restarted; pacing keeps the assertion focused on retry/reconnect
+# behavior rather than on how much data was already buffered before the forced
+# close.
 injectmsg
-sleep 20 # This is just an experiment! TODO: remove or adjust after experiment.
+export SEQ_CHECK_OPTIONS=-d
+wait_seq_check 0 $((NUMMESSAGES-1)) -m"$OMFWD_RETRY_MAX_LOSS"
 shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
-export SEQ_CHECK_OPTIONS=-d
 # permit message loss - note that TCP loses messages on disconnect, and we do some!
-seq_check 0 $((NUMMESSAGES-1)) -m500
+seq_check 0 $((NUMMESSAGES-1)) -m"$OMFWD_RETRY_MAX_LOSS"
 exit_test

@@ -1,0 +1,91 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
+---
+name: distro component package map
+
+'on':
+  schedule:
+    # Weekly on Monday at 03:27 UTC. This queries public distro package
+    # metadata, so keep it off the critical PR path.
+    - cron: '27 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update-map:
+    name: update distro component package map
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install metadata tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-defusedxml \
+            zstd
+
+      - name: Generate map
+        run: |
+          python3 scripts/generate_distro_component_map.py \
+            --output doc/security/distro-component-package-map.json
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet -- doc/security/distro-component-package-map.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="automation/distro-component-package-map"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git checkout -B "$branch"
+          git add doc/security/distro-component-package-map.json
+          git commit -m "docs: update distro component package map" \
+            -m "Regenerate best-effort rsyslog component-to-distro-package support data from public package metadata."
+          git push --force-with-lease origin "$branch"
+          cat > /tmp/distro-component-package-map-pr.md <<'EOF'
+          Regenerates the best-effort rsyslog component-to-distro-package
+          support data from public package metadata.
+
+          This is advisory support data only and is not authoritative for any
+          distribution.
+          EOF
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$branch" --repo "$GITHUB_REPOSITORY" \
+              --title "docs: update distro component package map" \
+              --body-file /tmp/distro-component-package-map-pr.md
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$branch" \
+              --title "docs: update distro component package map" \
+              --body-file /tmp/distro-component-package-map-pr.md \
+              --label documentation \
+              --label security
+          fi

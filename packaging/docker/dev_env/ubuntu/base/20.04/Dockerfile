@@ -58,6 +58,8 @@ RUN 	apt-get update && \
 	pkg-config \
 	postgresql-client libpq-dev \
 	python3-docutils  \
+	python3-autopep8 \
+	pycodestyle \
 	python3-pip \
 	python3-pysnmp4 \
 	software-properties-common \
@@ -134,7 +136,8 @@ VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "ALL ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # mysql needs a little help:
 RUN	mkdir -p /var/run/mysqld && \
@@ -279,6 +282,7 @@ RUN	cd helper-projects \
 RUN	cd helper-projects && \
 	git clone https://github.com/civetweb/civetweb.git \
 	&& cd civetweb \
+	&& git checkout v1.16 \
 	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
 	&& cd .. \
 	&& rm -rf civetweb \
@@ -293,7 +297,7 @@ ENV	SCAN_BUILD=scan-build-9 \
 RUN	chmod o+rx /var/run/mysqld && ls -ld /var/run/mysqld
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
-	--enable-compile-warning=error \
+	--enable-compile-warnings=error \
 	--enable-clickhouse \
 	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \

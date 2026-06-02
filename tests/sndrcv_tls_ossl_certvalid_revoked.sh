@@ -3,4 +3,4 @@
 export RS_TLS_DRIVER=ossl
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-source ${srcdir:=.}/sndrcv_tls_certvalid_revoked.sh
+. ${srcdir:=.}/sndrcv_tls_certvalid_revoked.sh

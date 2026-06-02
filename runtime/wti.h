@@ -90,6 +90,7 @@ struct wti_s {
                                     * this is usually set for batches with 0 element, but may
                                     * also be added as a user-selectable option (not implemented yet)
                                     */
+            uint16_t rulesetCallDepth; /* synchronous ruleset call nesting depth */
         } execState; /* state for the execution engine */
 };
 
@@ -138,6 +139,7 @@ static inline void __attribute__((unused)) wtiResetExecState(wti_t *const pWti, 
     wtiSetScriptErrno(pWti, 0);
     pWti->execState.bPrevWasSuspended = 0;
     pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
+    pWti->execState.rulesetCallDepth = 0;
 }
 
 

@@ -13,7 +13,7 @@ $ActionLibdbiPassword testbench
 $ActionLibdbiDBName '$RSYSLOG_DYNNAME'
 :msg, contains, "msgnum:" :omlibdbi:
 '
-mysql_prep_for_test
+mysql_prep_for_test libdbi
 startup
 injectmsg
 shutdown_when_empty

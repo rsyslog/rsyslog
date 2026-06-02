@@ -13,6 +13,7 @@ ruleset(name="ruleset") {
 }
 '
 startup
+wait_content "program data" "$RSYSLOG_OUT_LOG"
 shutdown_when_empty
 wait_shutdown
 content_check "program data"

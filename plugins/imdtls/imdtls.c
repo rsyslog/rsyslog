@@ -74,6 +74,9 @@ MODULE_CNFNAME("imdtls")
 #define DTLS_LISTEN_PORT "4433"
 // 1800 seconds = 30 minutes
 #define DTLS_DEFAULT_TIMEOUT 1800
+#ifndef O_NOFOLLOW
+    #define O_NOFOLLOW 0
+#endif
 
 /* Module static data */
 DEF_OMOD_STATIC_DATA;
@@ -102,6 +105,7 @@ struct instanceConf_s {
     /* Network properties */
     uchar *pszBindAddr; /* Listening IP Address */
     uchar *pszBindPort; /* Port to bind socket to */
+    uchar *pszLstnPortFileName; /* file receiving port selected by bind(0) */
     int timeout; /* Default timeout for DTLS Sessions */
     /* Common properties */
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -160,6 +164,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQUIRED},
                                            {"address", eCmdHdlrString, 0},
+                                           {"listenportfilename", eCmdHdlrString, 0},
                                            {"timeout", eCmdHdlrPositiveInt, 0},
                                            {"name", eCmdHdlrString, 0},
                                            {"ruleset", eCmdHdlrString, 0},
@@ -180,18 +185,33 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     DEFiRet;
     CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
     inst->next = NULL;
+    inst->prev = NULL;
 
     inst->pszBindAddr = NULL;
     inst->pszBindPort = NULL;
+    inst->pszLstnPortFileName = NULL;
     inst->timeout = 1800;
     inst->pszBindRuleset = loadModConf->pszBindRuleset;
     inst->pszInputName = NULL;
+    inst->pInputName = NULL;
     inst->pBindRuleset = NULL;
     inst->bEnableLstn = 0;
 
     inst->tlscfgcmd = NULL;
     inst->pPermPeersRoot = NULL;
     inst->CertVerifyDepth = 2;
+    inst->pszRcvBuf = NULL;
+    inst->lenRcvBuf = -1;
+    inst->ptrRcvBuf = 0;
+    inst->pNetOssl = NULL;
+    inst->nClients = 0;
+    inst->dtlsClients = NULL;
+    inst->sockfd = -1;
+    memset(&inst->server_addr, 0, sizeof(inst->server_addr));
+    inst->port = 0;
+    inst->id = 0;
+    inst->pThrd = NULL;
+    memset(&inst->tid, 0, sizeof(inst->tid));
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -221,9 +241,63 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
 
 static void DTLSCloseSocket(instanceConf_t *inst) {
     DBGPRINTF("imdtls: DTLSCloseSocket for %s:%d\n", inst->pszBindAddr, inst->port);
-    // Close UDP Socket
-    close(inst->sockfd);
-    inst->sockfd = 0;
+    if (inst->sockfd >= 0) {
+        close(inst->sockfd);
+        inst->sockfd = -1;
+    }
+}
+
+static rsRetVal writeListenPortFile(instanceConf_t *const inst) {
+    struct sockaddr_in sa = {0};
+    socklen_t salen = sizeof(sa);
+    char portBuf[32];
+    int fd = -1;
+    int len;
+    ssize_t wr;
+    DEFiRet;
+
+    if (inst->pszLstnPortFileName == NULL) FINALIZE;
+
+    if (getsockname(inst->sockfd, (struct sockaddr *)&sa, &salen) != 0) {
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: could not determine bound UDP port");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (salen < sizeof(sa) || sa.sin_family != AF_INET) {
+        LogError(0, RS_RET_ERR, "imdtls: listenPortFileName: unexpected bound UDP socket address");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    inst->port = ntohs(sa.sin_port);
+    inst->server_addr.sin_port = sa.sin_port;
+
+    len = snprintf(portBuf, sizeof(portBuf), "%u", (unsigned)inst->port);
+    if (len < 0 || (size_t)len >= sizeof(portBuf)) {
+        LogError(0, RS_RET_ERR, "imdtls: listenPortFileName: internal port formatting error");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fd = open((const char *)inst->pszLstnPortFileName, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd == -1) {
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to open file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    for (int off = 0; off < len;) {
+        wr = write(fd, portBuf + off, (size_t)(len - off));
+        if (wr < 0) {
+            if (errno == EINTR) continue;
+            LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to write file");
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
+        off += (int)wr;
+    }
+    if (close(fd) != 0) {
+        fd = -1;
+        LogError(errno, RS_RET_IO_ERROR, "imdtls: listenPortFileName: error while trying to close file");
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fd = -1;
+
+finalize_it:
+    if (fd != -1) close(fd);
+    RETiRet;
 }
 
 static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
@@ -249,7 +323,17 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
 
     // Set NON Blcoking Flags
     flags = fcntl(inst->sockfd, F_GETFL, 0);
-    fcntl(inst->sockfd, F_SETFL, flags | O_NONBLOCK);
+    if (flags < 0) {
+        LogError(errno, NO_ERRCODE, "imdtls: Unable to query listener socket flags, ignoring port %d bind-address %s.",
+                 inst->port, inst->pszBindAddr);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (fcntl(inst->sockfd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        LogError(errno, NO_ERRCODE,
+                 "imdtls: Unable to set listener socket nonblocking mode, ignoring port %d bind-address %s.",
+                 inst->port, inst->pszBindAddr);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
     // Convert IP Address into numeric
     if (inet_pton(AF_INET, (char *)inst->pszBindAddr, &ip_struct) <= 0) {
@@ -265,7 +349,7 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     memset(&inst->server_addr, 0, sizeof(struct sockaddr_in));
     inst->server_addr.sin_family = AF_INET;
     inst->server_addr.sin_port = htons(inst->port);
-    inst->server_addr.sin_addr.s_addr = htonl(ip_struct.s_addr);
+    inst->server_addr.sin_addr = ip_struct;
 
     // Bind UDP Socket
     if (bind(inst->sockfd, (struct sockaddr *)&inst->server_addr, sizeof(struct sockaddr_in)) < 0) {
@@ -276,7 +360,11 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
                  inst->port, inst->pszBindAddr);
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    CHKiRet(writeListenPortFile(inst));
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        DTLSCloseSocket(inst);
+    }
     RETiRet;
 }
 
@@ -392,6 +480,13 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     CHKiRet(DTLSCreateSocket(inst));
 finalize_it:
     if (iRet != RS_RET_OK) {
+        inst->bEnableLstn = 0;
+        if (inst->pInputName != NULL) {
+            prop.Destruct(&inst->pInputName);
+        }
+        if (inst->stats != NULL) {
+            statsobj.Destruct(&(inst->stats));
+        }
         LogError(0, NO_ERRCODE,
                  "DTLS Listener for thread failed to create UDP socket "
                  "for thread %s is not functional!",
@@ -562,12 +657,12 @@ static void DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
 }
 
 static void DTLSHandleSessions(instanceConf_t *inst) {
-    int fdToIndex[MAX_DTLS_CLIENTS + 1];
+    int clientIdxByPollSlot[MAX_DTLS_CLIENTS + 1];
     struct pollfd fds[MAX_DTLS_CLIENTS + 1];
     int optval = 1;
     int fdcount = 0;
     int ret, err;
-    memset(fdToIndex, 0, sizeof(fdToIndex));
+    memset(clientIdxByPollSlot, -1, sizeof(clientIdxByPollSlot));
     memset(fds, 0, sizeof(fds));
     fds[0].fd = inst->sockfd;
     fds[0].events = POLLIN;
@@ -577,12 +672,16 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
         if (inst->dtlsClients[i]->sslClient != NULL) {
             int clientfd = -1;
-            fdcount++;
             BIO_get_fd(SSL_get_wbio(inst->dtlsClients[i]->sslClient), &clientfd);
+            if (clientfd < 0) {
+                DBGPRINTF("imdtls: skip client idx %d with invalid fd %d\n", i, clientfd);
+                continue;
+            }
+            fdcount++;
             DBGPRINTF("imdtls: DTLSHandleSessions handle client %d (%d)\n", fdcount, clientfd);
             fds[fdcount].fd = clientfd;
             fds[fdcount].events = POLLIN;
-            fdToIndex[clientfd] = i;  // Map fd to dtlsClients index
+            clientIdxByPollSlot[fdcount] = i;
         }
     }
 
@@ -600,7 +699,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
     // Process pending Client Data first!
     DBGPRINTF("imdtls: DTLSHandleSessions handle client sockets (%d) \n", fdcount);
     for (int i = 1; i <= fdcount; ++i) {
-        DTLSReadClient(inst, fdToIndex[fds[i].fd], fds[i].revents);
+        if (clientIdxByPollSlot[i] >= 0) {
+            DTLSReadClient(inst, clientIdxByPollSlot[i], fds[i].revents);
+        }
     }
 
     // Check session timeouts
@@ -620,10 +721,19 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
 
         // Create BIO Object for potential new client
         BIO *sbio = BIO_new_dgram(inst->sockfd, BIO_NOCLOSE);
+        if (sbio == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS listener BIO");
+            return;
+        }
         BIO_ctrl(sbio, BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
 
         // Create SSL Object for new client and apply default callbacks
         SSL *ssl = SSL_new(inst->pNetOssl->ctx);
+        if (ssl == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS SSL object");
+            BIO_free(sbio);
+            return;
+        }
         SSL_set_bio(ssl, sbio, sbio);
         SSL_set_accept_state(ssl);
         if (inst->pNetOssl->authMode != OSSL_AUTH_CERTANON) {
@@ -645,6 +755,11 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
 
         // Connect the new Client
         BIO_ADDR *client_addr = BIO_ADDR_new();
+        if (client_addr == NULL) {
+            LogError(0, NO_ERRCODE, "imdtls: unable to allocate DTLS client address helper");
+            SSL_free(ssl);
+            return;
+        }
 
         // Start DTLS Listen and Session
         do {
@@ -657,7 +772,8 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     LogError(0, NO_ERRCODE,
                              "imdtls: DTLSHandleSessions unable to create"
                              " client socket");
-                    return;
+                    SSL_free(ssl);
+                    break;
                 }
                 setsockopt(clientfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
                 setsockopt(clientfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
@@ -668,7 +784,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                              " client socket"
                              " ignoring port %d bind-address %s.",
                              inst->port, inst->pszBindAddr);
-                    return;
+                    close(clientfd);
+                    SSL_free(ssl);
+                    break;
                 }
                 // Set new fd and set BIO to connected
                 BIO *rbio = SSL_get_rbio(ssl);
@@ -687,8 +805,10 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                     DBGPRINTF("imdtls: DTLSHandleSessions BIO_connect ERROR %d\n", err);
                     net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING, "DTLSHandleSessions", "BIO_connect");
                     LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls: BIO_connect failed for DTLS client");
+                    close(clientfd);
                     SSL_free(ssl);
                 } else {
+                    int addedClient = 0;
                     BIO_ctrl_set_connected(rbio, client_addr);
                     DBGPRINTF("imdtls: BIO_connect succeeded.\n");
 
@@ -699,8 +819,15 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                             inst->dtlsClients[i]->lastActivityTime = time(NULL);
                             DBGPRINTF("imdtls: New Client added at idx %d.\n", i);
                             DTLSAcceptSession(inst, i);
+                            addedClient = 1;
                             break;
                         }
+                    }
+                    if (!addedClient) {
+                        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+                               "imdtls: maximum number of DTLS clients reached, dropping new client");
+                        close(clientfd);
+                        SSL_free(ssl);
                     }
                 }
                 break;
@@ -782,15 +909,17 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
-            inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
+            CHKmalloc(inst->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "timeout")) {
             inst->timeout = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls.authmode")) {
             char *pszAuthMode = es_str2cstr(pvals[i].val.d.estr, NULL);
             if (!strcasecmp(pszAuthMode, "fingerprint"))
@@ -803,7 +932,7 @@ BEGINnewInpInst
                 inst->pNetOssl->authMode = OSSL_AUTH_CERTANON;
             free(pszAuthMode);
         } else if (!strcmp(inppblk.descr[i].name, "tls.cacert")) {
-            inst->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->pNetOssl->pszCAFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -812,7 +941,7 @@ BEGINnewInpInst
                 fclose(fp);
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.mycert")) {
-            inst->pNetOssl->pszCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pNetOssl->pszCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->pNetOssl->pszCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -821,7 +950,7 @@ BEGINnewInpInst
                 fclose(fp);
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
-            inst->pNetOssl->pszKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pNetOssl->pszKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->pNetOssl->pszKeyFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -830,7 +959,7 @@ BEGINnewInpInst
                 fclose(fp);
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.tlscfgcmd")) {
-            inst->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
             for (j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
@@ -980,6 +1109,7 @@ BEGINfreeCnf
         if (inst->pszBindAddr != NULL) {
             free(inst->pszBindAddr);
         }
+        free(inst->pszLstnPortFileName);
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
 
@@ -1041,13 +1171,17 @@ BEGINrunInput
 
     DBGPRINTF("imdtls: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        pthread_kill(inst->tid, SIGTTIN);
-        DTLSCloseSocket(inst);
+        if (inst->bEnableLstn) {
+            pthread_kill(inst->tid, SIGTTIN);
+            DTLSCloseSocket(inst);
+        }
     }
 
     DBGPRINTF("imdtls: threads signaled, waiting for join...");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        pthread_join(inst->tid, NULL);
+        if (inst->bEnableLstn) {
+            pthread_join(inst->tid, NULL);
+        }
     }
 
     DBGPRINTF("imdtls: finished threads, stopping\n");

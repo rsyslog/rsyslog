@@ -1,0 +1,2 @@
+debian/tmp/usr/lib/rsyslog/omczmq.so
+debian/tmp/usr/lib/rsyslog/imczmq.so

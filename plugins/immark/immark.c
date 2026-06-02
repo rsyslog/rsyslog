@@ -82,6 +82,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current runtime process */
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 static prop_t *pInternalInputName = NULL;
 
@@ -94,6 +95,7 @@ ENDisCompatibleWithFeature
 
 BEGINafterRun
     CODESTARTafterRun;
+    runModConf = NULL;
 ENDafterRun
 
 
@@ -159,9 +161,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "use.markflag")) {
             loadModConf->bUseMarkFlag = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
-            loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "markmessagetext")) {
-            loadModConf->pszMarkMsgText = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszMarkMsgText = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "immark: program error, non-handled "
@@ -184,6 +186,7 @@ BEGINendCnfLoad
     if (!loadModConf->configSetViaV2Method) {
         pModConf->iMarkMessagePeriod = iMarkMessagePeriod;
     }
+    loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
@@ -213,6 +216,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
     CODESTARTactivateCnf;
+    runModConf = pModConf;
     MarkInterval = pModConf->iMarkMessagePeriod;
     DBGPRINTF("immark set MarkInterval to %d\n", MarkInterval);
 ENDactivateCnf
@@ -228,21 +232,21 @@ BEGINfreeCnf
 ENDfreeCnf
 
 
-static rsRetVal injectMarkMessage(const int pri) {
+static rsRetVal injectMarkMessage(const modConfData_t *const modConf, const int pri) {
     smsg_t *pMsg;
     DEFiRet;
 
     CHKiRet(msgConstruct(&pMsg));
-    pMsg->msgFlags = loadModConf->flags;
+    pMsg->msgFlags = modConf->flags;
     MsgSetInputName(pMsg, pInternalInputName);
-    MsgSetRawMsg(pMsg, loadModConf->pszMarkMsgText, loadModConf->lenMarkMsgText);
+    MsgSetRawMsg(pMsg, modConf->pszMarkMsgText, modConf->lenMarkMsgText);
     MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
     MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
     MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
     MsgSetMSGoffs(pMsg, 0);
     MsgSetTAG(pMsg, (const uchar *)"rsyslogd:", sizeof("rsyslogd:") - 1);
     msgSetPRI(pMsg, pri);
-    MsgSetRuleset(pMsg, loadModConf->pBindRuleset);
+    MsgSetRuleset(pMsg, modConf->pBindRuleset);
     submitMsg2(pMsg);
 finalize_it:
     RETiRet;
@@ -271,11 +275,15 @@ BEGINrunInput
 
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
 
-        dbgprintf("immark: injecting mark message\n");
-        if (loadModConf->bUseSyslogAPI) {
-            logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)loadModConf->pszMarkMsgText, loadModConf->flags);
-        } else {
-            injectMarkMessage(LOG_SYSLOG | LOG_INFO);
+        {
+            const modConfData_t *const modConf = runModConf;
+            dbgprintf("immark: injecting mark message\n");
+            if (modConf == NULL) continue;
+            if (modConf->bUseSyslogAPI) {
+                logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)modConf->pszMarkMsgText, modConf->flags);
+            } else {
+                injectMarkMessage(modConf, LOG_SYSLOG | LOG_INFO);
+            }
         }
     }
 ENDrunInput

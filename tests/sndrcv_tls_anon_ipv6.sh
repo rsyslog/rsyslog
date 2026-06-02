@@ -35,7 +35,6 @@ export PORT_RCVR=$TCPFLOOD_PORT
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"

@@ -4,6 +4,41 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test does not work on FreeBSD - problems with os utility option switches"
 skip_ARM "disk-assisted queue receiver restore timing is flaky on ARM CI"
+MAINQ_SEGMENT="${RSYSLOG_DYNNAME}.spool/mainq.00000001"
+
+sender_mainqueuesize() {
+	response="$(echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2)" || error_exit $?
+	echo "$response" | awk '{print $NF}'
+}
+
+mainq_segment_size() {
+	if [ -f "$MAINQ_SEGMENT" ]; then
+		stat -c%s "$MAINQ_SEGMENT"
+	else
+		echo 0
+	fi
+}
+
+wait_sender_queues_outage_data() {
+	initial_segment_size="$1"
+	echo "waiting for sender queue and DA segment growth from $initial_segment_size bytes"
+	i=0
+	while [ $i -le $TB_TIMEOUT_STARTSTOP ]; do
+		qsize="$(sender_mainqueuesize)"
+		segment_size="$(mainq_segment_size)"
+		if [ "${qsize:-0}" -gt 0 ] 2>/dev/null && [ "${segment_size:-0}" -gt "${initial_segment_size:-0}" ]; then
+			echo "sender queue size $qsize, DA segment size $segment_size"
+			return
+		fi
+		$TESTTOOL_DIR/msleep 100
+		i=$((i + 1))
+	done
+	echo "FAIL: sender did not queue outage data before receiver restart"
+	echo "last sender queue size: $qsize"
+	echo "last DA segment size: $segment_size, expected > $initial_segment_size"
+	ls -l ${RSYSLOG_DYNNAME}.spool
+	error_exit 1
+}
 #
 # STEP1: start both instances and send 1000 messages.
 # Note: receiver is instance 1, sender instance 2.
@@ -29,7 +64,6 @@ export PORT_RCVR="$TCPFLOOD_PORT"
 #valgrind="valgrind"
 echo starting sender
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueSize 2000
@@ -67,8 +101,9 @@ echo step 2
 shutdown_when_empty
 wait_shutdown
 
+INITIALFILESIZE="$(mainq_segment_size)"
 injectmsg2  1001 10000
-./msleep 3000 # make sure some retries happen (retry interval is set to 3 second)
+wait_sender_queues_outage_data "$INITIALFILESIZE"
 get_mainqueuesize 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 
@@ -132,9 +167,9 @@ echo "*** done primary test *** now checking if DA can be restarted"
 shutdown_when_empty
 wait_shutdown
 
+INITIALFILESIZE="$(mainq_segment_size)"
 injectmsg2  11011 10000
-sleep 1 # we need to wait, otherwise we may be so fast that the receiver
-# comes up before we have finally suspended the action
+wait_sender_queues_outage_data "$INITIALFILESIZE"
 get_mainqueuesize 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 

@@ -1,0 +1,3 @@
+usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/ompgsql.so
+debian/rsyslog-pgsql.conf.template usr/share/rsyslog-pgsql/
+debian/apparmor/rsyslog-pgsql.apparmor etc/apparmor.d/rsyslog.d/

@@ -46,12 +46,23 @@
 #include "nsd_mbedtls.h"
 #include "rsconf.h"
 #include "net.h"
+#include "atomic.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_KEEP
 
 /* static data */
-DEFobjStaticHelpers DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(nsd_ptcp)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(net);
+DEFobjCurrIf(nsd_ptcp);
+static int bTlsVersionWorkaroundReported = 0;
+#ifndef HAVE_ATOMIC_BUILTINS
+static DEF_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+    #define MUT_TLS_VERSION_WORKAROUND_REPORTED &mutTlsVersionWorkaroundReported
+#else
+    #define MUT_TLS_VERSION_WORKAROUND_REPORTED NULL
+#endif
 /* Mbed TLS debug level (0..5)
  * 5 is the most logs.
  */
@@ -59,12 +70,16 @@ DEFobjStaticHelpers DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(nsd_ptcp)
 
 #define DEFAULT_MAX_DEPTH 5
 
+static inline nsd_mbedtls_t *nsd_mbedtls_from_nsd(nsd_t *const pNsd) {
+    return (nsd_mbedtls_t *)(void *)pNsd;
+}
+
 #if MBEDTLS_DEBUG_LEVEL > 0
-    static void debug(void __attribute__((unused)) * ctx,
-                      int __attribute__((unused)) level,
-                      const char *file,
-                      int line,
-                      const char *str) {
+static void debug(void __attribute__((unused)) * ctx,
+                  int __attribute__((unused)) level,
+                  const char *file,
+                  int line,
+                  const char *str) {
     dbgprintf("%s:%04d: %s", file, line, str);
 }
 #endif
@@ -162,8 +177,8 @@ static rsRetVal get_custom_string(char **out) {
     if (localtime_r(&(tv.tv_sec), &tm) == NULL) {
         ABORT_FINALIZE(RS_RET_NO_ERRCODE);
     }
-    if (asprintf(out, "nsd_mbedtls-%04d-%02d-%02d %02d:%02d:%02d:%08ld", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                 tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec) == -1) {
+    if (asprintf(out, "nsd_mbedtls-%04d-%02d-%02d %02d:%02d:%02d:%08lld", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                 tm.tm_hour, tm.tm_min, tm.tm_sec, (long long)tv.tv_usec) == -1) {
         *out = NULL;
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
@@ -268,7 +283,7 @@ ENDobjDestruct(nsd_mbedtls)
  */
 static rsRetVal SetMode(nsd_t *const pNsd, const int mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     dbgprintf("(tls) mode: %d\n", mode);
@@ -296,7 +311,7 @@ finalize_it:
  */
 static rsRetVal SetAuthMode(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (mode == NULL || !strcasecmp((char *)mode, "x509/name")) {
@@ -329,7 +344,7 @@ finalize_it:
  */
 static rsRetVal SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     /* default is set to off! */
@@ -361,7 +376,7 @@ finalize_it:
  */
 static rsRetVal SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (pPermPeers == NULL) FINALIZE;
@@ -384,7 +399,7 @@ finalize_it:
  */
 static rsRetVal SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int nCipherSuiteId;
     char *pCurrentPos;
     char *pSave;
@@ -433,7 +448,7 @@ finalize_it:
  */
 static rsRetVal SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
@@ -458,7 +473,7 @@ finalize_it:
  */
 static rsRetVal SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     if (prioritizeSan != 0 && prioritizeSan != 1) {
@@ -480,7 +495,7 @@ finalize_it:
  */
 static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     pThis->DrvrVerifyDepth = verifyDepth;
@@ -491,7 +506,7 @@ static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
 
 static rsRetVal SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -509,7 +524,7 @@ finalize_it:
 
 static rsRetVal SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -527,7 +542,7 @@ finalize_it:
 
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -545,7 +560,7 @@ finalize_it:
 
 static rsRetVal SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -561,9 +576,22 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetRemoteSNI(nsd_t __attribute__((unused)) * pNsd, uchar *pszRemoteSNI) {
+    DEFiRet;
+    if (pszRemoteSNI != NULL) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: remote SNI setting not supported by "
+                 "mbedtls netstream driver");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
@@ -585,7 +613,7 @@ finalize_it:
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
 
@@ -599,7 +627,7 @@ static rsRetVal SetSock(nsd_t *pNsd, int sock) {
  */
 static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveIntvl >= 0);
@@ -613,7 +641,7 @@ static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
  */
 static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveProbes >= 0);
@@ -627,7 +655,7 @@ static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
  */
 static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
     assert(keepAliveTime >= 0);
@@ -641,7 +669,7 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
 static rsRetVal Abort(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     DEFiRet;
 
     ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
@@ -726,6 +754,31 @@ static int mbedtlsAuthMode(nsd_mbedtls_t *const pThis) {
             break;
     }
     return mode;
+}
+
+static void mbedtlsApplyTlsVersionWorkaround(nsd_mbedtls_t *const pThis, mbedtls_ssl_config *const conf) {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    const char *reason = NULL;
+
+    if (MBEDTLS_VERSION_NUMBER < 0x03060100) {
+        reason = "because Mbed TLS versions before 3.6.1 have known TLS 1.3 regressions";
+    } else if (pThis->authMode == MBEDTLS_AUTH_CERTANON || pThis->authMode == MBEDTLS_AUTH_CERTVALID) {
+        reason =
+            "because Mbed TLS with TLS 1.3 fails rsyslog mixed-driver interoperability tests in weak authentication "
+            "modes";
+    } else {
+        return;
+    }
+
+    mbedtls_ssl_conf_max_tls_version(conf, MBEDTLS_SSL_VERSION_TLS1_2);
+    if (ATOMIC_CAS(&bTlsVersionWorkaroundReported, 0, 1, MUT_TLS_VERSION_WORKAROUND_REPORTED)) {
+        LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+               "mbedtls netstream driver: limiting TLS protocol version to TLS 1.2 %s", reason);
+    }
+#else
+    (void)pThis;
+    (void)conf;
+#endif
 }
 
 /* Obtain fingerprint of crt in buf of size *len.
@@ -873,6 +926,25 @@ finalize_it:
     RETiRet;
 }
 
+static int mbedtlsNameHasEmbeddedNul(const unsigned char *name, size_t nameLen) {
+    if (name == NULL || nameLen == 0) {
+        return 0;
+    }
+    return memchr(name, '\0', nameLen) != NULL;
+}
+
+static int mbedtlsCnHasEmbeddedNul(const mbedtls_x509_crt *crt) {
+    const mbedtls_x509_name *name;
+
+    for (name = &crt->subject; name != NULL; name = name->next) {
+        if (MBEDTLS_OID_CMP(MBEDTLS_OID_AT_CN, &name->oid) == 0 &&
+            mbedtlsNameHasEmbeddedNul(name->val.p, name->val.len)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Get the common name (CN) from a certificate
  * Caller must free() the returned string
  */
@@ -902,6 +974,15 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
     /* Check SANs */
     for (san = &crt->subject_alt_names; !bFoundPositiveMatch && san != NULL && san->buf.p != NULL; san = san->next) {
         if (san->buf.tag == (MBEDTLS_ASN1_CONTEXT_SPECIFIC | MBEDTLS_X509_SAN_DNS_NAME)) {
+            if (mbedtlsNameHasEmbeddedNul(san->buf.p, san->buf.len)) {
+                if (pThis->bReportAuthErr == 1) {
+                    errno = 0;
+                    LogError(0, RS_RET_INVALID_FINGERPRINT,
+                             "error: certificate SAN dNSName contains embedded NUL byte");
+                    pThis->bReportAuthErr = 0;
+                }
+                ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+            }
             CHKmalloc(str = strndup((const char *)(san->buf.p), san->buf.len));
             bHaveSAN = 1;
             dbgprintf("subject alt dnsName: '%s'\n", str);
@@ -915,6 +996,14 @@ static rsRetVal mbedtlsChkPeerName(nsd_mbedtls_t *pThis, mbedtls_x509_crt *crt) 
 
     /* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
     if (!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
+        if (mbedtlsCnHasEmbeddedNul(crt)) {
+            if (pThis->bReportAuthErr == 1) {
+                errno = 0;
+                LogError(0, RS_RET_INVALID_FINGERPRINT, "error: certificate commonName contains embedded NUL byte");
+                pThis->bReportAuthErr = 0;
+            }
+            ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+        }
         str = mbedtlsCnFromCrt(crt);
         if (str != NULL) { /* NULL if there was no CN present */
             dbgprintf("mbedtls now checking auth for CN '%s'\n", str);
@@ -1044,7 +1133,7 @@ finalize_it:
 static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) {
     DEFiRet;
     nsd_mbedtls_t *pNew = NULL;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int mbedtlsRet;
 
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
@@ -1077,6 +1166,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     CHKiRet(mbedtlsInitCred(pNew));
     CHKiRet(mbedtls_ssl_config_defaults(&(pNew->conf), MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT));
+    mbedtlsApplyTlsVersionWorkaround(pNew, &(pNew->conf));
 
     mbedtls_ssl_conf_rng(&(pNew->conf), mbedtls_ctr_drbg_random, &(pNew->ctr_drbg));
     mbedtls_ssl_conf_authmode(&(pNew->conf), mbedtlsAuthMode(pNew));
@@ -1106,7 +1196,9 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
         logMbedtlsError(RS_RET_TLS_HANDSHAKE_ERR, mbedtlsRet);
         ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
     }
-    CHKiRet(CheckVerifyResult(pNew));
+    if (mbedtlsRet == 0) {
+        CHKiRet(CheckVerifyResult(pNew));
+    }
 
     pNew->bHaveSess = 1;
     *ppNew = (nsd_t *)pNew;
@@ -1127,7 +1219,7 @@ finalize_it:
  */
 static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     int n = 0;
 
@@ -1172,7 +1264,7 @@ finalize_it:
  */
 static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     int iSent;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
 
@@ -1203,7 +1295,7 @@ finalize_it:
  * rgerhards, 2009-06-02
  */
 static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
@@ -1212,7 +1304,7 @@ static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
  */
 static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     int mbedtlsRet;
 
     dbgprintf("Connect to %s:%s\n", host, port);
@@ -1230,6 +1322,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     /* we reach this point if in TLS mode */
     CHKiRet(mbedtls_ssl_config_defaults(&(pThis->conf), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
                                         MBEDTLS_SSL_PRESET_DEFAULT));
+    mbedtlsApplyTlsVersionWorkaround(pThis, &(pThis->conf));
 
     mbedtls_ssl_conf_rng(&(pThis->conf), mbedtls_ctr_drbg_random, &(pThis->ctr_drbg));
     mbedtls_ssl_conf_authmode(&(pThis->conf), mbedtlsAuthMode(pThis));
@@ -1260,7 +1353,9 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
         logMbedtlsError(RS_RET_TLS_HANDSHAKE_ERR, mbedtlsRet);
         ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
     }
-    CHKiRet(CheckVerifyResult(pThis));
+    if (mbedtlsRet == 0) {
+        CHKiRet(CheckVerifyResult(pThis));
+    }
 
     pThis->bHaveSess = 1;
 
@@ -1290,7 +1385,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
  * rgerhards, 2008-06-09
  */
 static rsRetVal CheckConnection(nsd_t *pNsd) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
 
     dbgprintf("CheckConnection for %p\n", pNsd);
@@ -1300,7 +1395,7 @@ static rsRetVal CheckConnection(nsd_t *pNsd) {
 /* Provide access to the underlying OS socket.
  */
 static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     return nsd_ptcp.GetSock(pThis->pTcp, pSock);
 }
@@ -1310,7 +1405,7 @@ static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
  */
 static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
     RETiRet;
@@ -1322,7 +1417,7 @@ static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
  */
 static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
     RETiRet;
@@ -1331,10 +1426,20 @@ static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 /* get the remote host's IP address. Caller must Destruct the object. */
 static rsRetVal GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
     DEFiRet;
-    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
     ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
     iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
     RETiRet;
+}
+
+static rsRetVal GetRemotePort(nsd_t *pNsd, int *port) {
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
+    ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
+    return nsd_ptcp.GetRemotePort(pThis->pTcp, port);
+}
+
+static rsRetVal FmtRemotePortStr(const int port, uchar *const buf, const size_t len) {
+    return nsd_ptcp.FmtRemotePortStr(port, buf, len);
 }
 
 /* queryInterface function */
@@ -1377,9 +1482,12 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
-    pIf->SetTlsCRLFile = SetTlsCRLFile;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
+    pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->GetRemotePort = GetRemotePort;
+    pIf->FmtRemotePortStr = FmtRemotePortStr;
+    pIf->SetRemoteSNI = SetRemoteSNI;
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
 finalize_it:
 ENDobjQueryInterface(nsd_mbedtls)
@@ -1393,6 +1501,9 @@ BEGINObjClassExit(nsd_mbedtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in E
     objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
     objRelease(net, LM_NET_FILENAME);
     objRelease(glbl, CORE_COMPONENT);
+#ifndef HAVE_ATOMIC_BUILTINS
+    DESTROY_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+#endif
 ENDObjClassExit(nsd_mbedtls)
 
 /* Initialize the nsd_mbedtls class. Must be called as the very first method
@@ -1400,6 +1511,11 @@ ENDObjClassExit(nsd_mbedtls)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(nsd_mbedtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+#ifndef HAVE_ATOMIC_BUILTINS
+    INIT_ATOMIC_HELPER_MUT(mutTlsVersionWorkaroundReported);
+#endif
+    bTlsVersionWorkaroundReported = 0;
+
     /* request objects we use */
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));

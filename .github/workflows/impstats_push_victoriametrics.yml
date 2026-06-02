@@ -25,6 +25,9 @@ name: impstats push to VictoriaMetrics
       - 'configure.ac'
       - '.github/workflows/impstats_push_victoriametrics.yml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event.pull_request.number ||
@@ -44,7 +47,9 @@ jobs:
 
     steps:
       - name: checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: wait for VictoriaMetrics to be ready
         run: |
@@ -62,7 +67,7 @@ jobs:
 
       - name: run impstats push test
         env:
-          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:24.04
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
           RSYSLOG_TESTBENCH_EXTERNAL_VM_URL: http://host.docker.internal:8428
           DOCKER_RUN_EXTRA_OPTS: --add-host=host.docker.internal:host-gateway
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
@@ -162,6 +167,6 @@ jobs:
           devtools/gather-check-logs.sh
           cat failed-tests.log || echo "No failed-tests.log found"
           echo "=== VictoriaMetrics logs ==="
-          docker logs $(docker ps -q \
-            -f ancestor=victoriametrics/victoria-metrics:v1.134.0) || \
+          docker logs "$(docker ps -q \
+            -f ancestor=victoriametrics/victoria-metrics:v1.134.0)" || \
             echo "Could not get VM logs"

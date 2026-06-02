@@ -27,6 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
+#include <limits.h>
 #include <glob.h>
 #include <errno.h>
 #include <pwd.h>
@@ -58,6 +60,10 @@
 #include "wti.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
+#include "glbl.h"
+#ifdef HAVE_LIBYAML
+    #include "yamlconf.h"
+#endif
 
 extern int yylineno;
 
@@ -530,7 +536,7 @@ void readConfFile(FILE *const fp, es_str_t **str) {
         ++lineno;
         if (bWriteLineno) {
             bWriteLineno = 0;
-            lenBuf = sprintf(buf, "PreprocFileLineNumber(%d)\n", lineno);
+            lenBuf = snprintf(buf, sizeof(buf), "PreprocFileLineNumber(%d)\n", lineno);
             es_addBuf(str, buf, lenBuf);
         }
         len = strlen(ln);
@@ -1475,7 +1481,7 @@ long long var2Number(struct svar *r, int *bSuccess) {
 static es_str_t *var2String(struct svar *__restrict__ const r, int *__restrict__ const bMustFree) {
     es_str_t *estr;
     const char *cstr;
-    rs_size_t lenstr;
+    size_t lenstr;
     if (r->datatype == 'N') {
         *bMustFree = 1;
         estr = es_newStrFromNumber(r->d.n);
@@ -1485,9 +1491,18 @@ static es_str_t *var2String(struct svar *__restrict__ const r, int *__restrict__
             cstr = "", lenstr = 0;
         } else {
             cstr = (char *)json_object_get_string(r->d.json);
-            lenstr = strlen(cstr);
+            if (json_object_get_type(r->d.json) == json_type_string) {
+                lenstr = json_object_get_string_len(r->d.json);
+            } else {
+                lenstr = strlen(cstr);
+            }
+#if SIZE_MAX > UINT_MAX
+            if (lenstr > (size_t)UINT_MAX) {
+                cstr = "", lenstr = 0;
+            }
+#endif
         }
-        estr = es_newStrFromCStr(cstr, lenstr);
+        estr = es_newStrFromCStr(cstr, (es_size_t)lenstr);
     } else {
         *bMustFree = 0;
         estr = r->d.estr;
@@ -1933,7 +1948,11 @@ static void ATTR_NONNULL() doFunc_get_property(struct cnffunc *__restrict__ cons
         case json_type_array: {
             int success = 0;
             long long index = var2Number(&srcVal[1], &success);
-            if (!success || index < 0 || (size_t)index >= sizeof(size_t)) {
+            if (!success || index < 0
+#if LLONG_MAX > SIZE_MAX
+                || (unsigned long long)index > SIZE_MAX
+#endif
+                || (size_t)index >= (size_t)json_object_array_length(json)) {
                 retVal = RS_SCRIPT_EINVAL;
                 FINALIZE;
             }
@@ -2445,8 +2464,24 @@ static void ATTR_NONNULL()
     cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
     es_str_t *es = var2String(&srcVal[0], &bMustFree);
     const int lenSrcStr = es_strlen(es);
-    int start = var2Number(&srcVal[1], NULL);
-    int subStrLen = var2Number(&srcVal[2], NULL);
+    long long startNum = var2Number(&srcVal[1], NULL);
+    long long subStrLenNum = var2Number(&srcVal[2], NULL);
+    int start;
+    int subStrLen;
+    if (startNum < 0) {
+        start = 0;
+    } else if (startNum > INT_MAX) {
+        start = lenSrcStr;
+    } else {
+        start = (int)startNum;
+    }
+    if (subStrLenNum < INT_MIN) {
+        subStrLen = INT_MIN;
+    } else if (subStrLenNum > INT_MAX) {
+        subStrLen = INT_MAX;
+    } else {
+        subStrLen = (int)subStrLenNum;
+    }
     if (start >= lenSrcStr) {
         /* begin PAST the source string - ensure nothing is copied at all */
         start = subStrLen = 0;
@@ -2558,7 +2593,7 @@ static void ATTR_NONNULL() doFunct_Lookup(struct cnffunc *__restrict__ const fun
             DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n", __FILE__, __LINE__);
             key.k_uint = 0;
         }
-        ret->d.estr = lookupKey((lookup_ref_t *)func->funcdata, key);
+        ret->d.estr = lookupKeyLocked((lookup_ref_t *)func->funcdata, key);
         if (bMustFree) {
             free(key.k_str);
         }
@@ -2630,8 +2665,10 @@ static void ATTR_NONNULL() doFunct_FormatTime(struct cnffunc *__restrict__ const
         ret->d.estr = es_newStr(0);
     } else {
         if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
-            strncpy(result, str, resMax);
-            result[resMax - 1] = '\0';
+            const size_t src_len = strlen(str);
+            const size_t copy_len = src_len < (size_t)(resMax - 1) ? src_len : (size_t)(resMax - 1);
+            memcpy(result, str, copy_len);
+            result[copy_len] = '\0';
         }
         ret->d.estr = es_newStrFromCStr(result, strlen(result));
     }
@@ -3493,7 +3530,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
     int bMustFree, bMustFree2;
     int64_t n_r, n_l;
     int convok_r, convok_l;
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     int ret;
 
     cnfexprEval(expr->l, &l, usrptr, pWti);
@@ -3529,7 +3566,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                                 struct svar *__restrict__ const ret,
                                 void *__restrict__ const usrptr,
                                 wti_t *__restrict__ const pWti) {
-    struct svar r, l; /* memory for subexpression results */
+    struct svar r = {{0}, 0}, l = {{0}, 0}; /* memory for subexpression results */
     es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
     int convok_r, convok_l;
     int bMustFree, bMustFree2;
@@ -3558,7 +3595,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l == r.d.n); /*CMP*/
+                            ret->d.n = (n_l == var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree);
                             ret->d.n = !es_strcmp(l.d.estr, estr_r); /*CMP*/
@@ -3580,7 +3617,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l == r.d.n); /*CMP*/
+                            ret->d.n = (n_l == var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree2);
                             ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
@@ -3602,7 +3639,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                         if (bMustFree) es_deleteStr(estr_l);
                     }
                 } else {
-                    ret->d.n = (l.d.n == r.d.n); /*CMP*/
+                    ret->d.n = (l.d.n == var2Number(&r, NULL)); /*CMP*/
                 }
                 varFreeMembers(&r);
             }
@@ -3610,7 +3647,6 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
             break;
         case CMP_NE:
             cnfexprEval(expr->l, &l, usrptr, pWti);
-            cnfexprEval(expr->r, &r, usrptr, pWti);
             ret->datatype = 'N';
             if (l.datatype == 'S') {
                 if (expr->r->nodetype == 'S') {
@@ -3618,35 +3654,46 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                 } else if (expr->r->nodetype == 'A') {
                     ret->d.n = evalStrArrayCmp(l.d.estr, (struct cnfarray *)expr->r, CMP_NE);
                 } else {
+                    cnfexprEval(expr->r, &r, usrptr, pWti);
                     if (r.datatype == 'S') {
                         ret->d.n = es_strcmp(l.d.estr, r.d.estr); /*CMP*/
                     } else {
                         n_l = var2Number(&l, &convok_l);
                         if (convok_l) {
-                            ret->d.n = (n_l != r.d.n); /*CMP*/
+                            ret->d.n = (n_l != var2Number(&r, NULL)); /*CMP*/
                         } else {
                             estr_r = var2String(&r, &bMustFree);
                             ret->d.n = es_strcmp(l.d.estr, estr_r); /*CMP*/
                             if (bMustFree) es_deleteStr(estr_r);
                         }
                     }
+                    varFreeMembers(&r);
                 }
             } else if (l.datatype == 'J') {
                 estr_l = var2String(&l, &bMustFree);
-                if (r.datatype == 'S') {
-                    ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
+                if (expr->r->nodetype == 'S') {
+                    ret->d.n = es_strcmp(estr_l, ((struct cnfstringval *)expr->r)->estr); /*CMP*/
+                } else if (expr->r->nodetype == 'A') {
+                    ret->d.n = evalStrArrayCmp(estr_l, (struct cnfarray *)expr->r, CMP_NE);
                 } else {
-                    n_l = var2Number(&l, &convok_l);
-                    if (convok_l) {
-                        ret->d.n = (n_l != r.d.n); /*CMP*/
+                    cnfexprEval(expr->r, &r, usrptr, pWti);
+                    if (r.datatype == 'S') {
+                        ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
                     } else {
-                        estr_r = var2String(&r, &bMustFree2);
-                        ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
-                        if (bMustFree2) es_deleteStr(estr_r);
+                        n_l = var2Number(&l, &convok_l);
+                        if (convok_l) {
+                            ret->d.n = (n_l != var2Number(&r, NULL)); /*CMP*/
+                        } else {
+                            estr_r = var2String(&r, &bMustFree2);
+                            ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
+                            if (bMustFree2) es_deleteStr(estr_r);
+                        }
                     }
+                    varFreeMembers(&r);
                 }
                 if (bMustFree) es_deleteStr(estr_l);
             } else {
+                cnfexprEval(expr->r, &r, usrptr, pWti);
                 if (r.datatype == 'S') {
                     n_r = var2Number(&r, &convok_r);
                     if (convok_r) {
@@ -3657,10 +3704,11 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
                         if (bMustFree) es_deleteStr(estr_l);
                     }
                 } else {
-                    ret->d.n = (l.d.n != r.d.n); /*CMP*/
+                    ret->d.n = (l.d.n != var2Number(&r, NULL)); /*CMP*/
                 }
+                varFreeMembers(&r);
             }
-            FREE_BOTH_RET;
+            varFreeMembers(&l);
             break;
         case CMP_LE:
             ret->datatype = 'N';
@@ -4901,7 +4949,11 @@ struct cnfstmt *cnfstmtNewUnset(char *var) {
 }
 
 struct cnfstmt *cnfstmtNewContinue(void) {
-    return cnfstmtNew(S_NOP);
+    struct cnfstmt *cnfstmt = cnfstmtNew(S_NOP);
+    if (cnfstmt != NULL) {
+        cnfstmt->printable = (uchar *)strdup("continue");
+    }
+    return cnfstmt;
 }
 
 struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
@@ -4910,7 +4962,15 @@ struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
         cnfstmt->printable = (uchar *)prifilt;
         cnfstmt->d.s_prifilt.t_then = t_then;
         cnfstmt->d.s_prifilt.t_else = NULL;
-        DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
+        if (glblPermitSyslogdConfigFilter(loadConf, prifilt)) {
+            DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
+        } else {
+            free(cnfstmt->printable);
+            cnfstmt->printable = NULL;
+            cnfstmt->nodetype = S_NOP;
+            cnfstmtDestructLst(t_then);
+            cnfstmt->d.s_prifilt.t_then = NULL;
+        }
     }
     return cnfstmt;
 }
@@ -4922,7 +4982,13 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
         cnfstmt->d.s_propfilt.t_then = t_then;
         cnfstmt->d.s_propfilt.regex_cache = NULL;
         cnfstmt->d.s_propfilt.pCSCompValue = NULL;
-        if (DecodePropFilter((uchar *)propfilt, cnfstmt) != RS_RET_OK) {
+        if (!glblPermitPropertyConfigFilter(loadConf, propfilt)) {
+            free(cnfstmt->printable);
+            cnfstmt->printable = NULL;
+            cnfstmt->nodetype = S_NOP;
+            cnfstmtDestructLst(t_then);
+            cnfstmt->d.s_propfilt.t_then = NULL;
+        } else if (DecodePropFilter((uchar *)propfilt, cnfstmt) != RS_RET_OK) {
             cnfstmt->nodetype = S_NOP; /* disable action! */
             cnfstmtDestructLst(t_then); /* we do no longer need this */
         }
@@ -5676,7 +5742,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     const char *finalName;
     int i;
     int result;
-    glob_t cfgFiles;
+    glob_t cfgFiles = {0};
     int ret = 0;
     struct stat fileInfo;
     struct stat linkInfo;
@@ -5698,20 +5764,22 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
 /* Use GLOB_MARK to append a trailing slash for directories. */
 /* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
 #ifdef HAVE_GLOB_NOMAGIC
-    /* Silently ignore wildcards that match nothing */
     result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH) {
 #else
     result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
 #endif /* HAVE_GLOB_NOMAGIC */
+        if (optional == 0) {
+            parser_warnmsg("IncludeConfig pattern '%s' did not match any files", finalName);
+        }
         goto done;
     }
 
     if (result == GLOB_NOSPACE || result == GLOB_ABORTED) {
         if (optional == 0) {
             rs_strerror_r(errno, errStr, sizeof(errStr));
-            if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+            if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
             parser_errmsg(
                 "error accessing config file or directory '%s' "
                 "[cwd:%s]: %s",
@@ -5731,7 +5799,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
         if (lstat(cfgFile, &linkInfo) != 0) {
             if (optional == 0) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
                 parser_errmsg(
                     "error accessing config file or directory '%s' "
                     "[cwd: %s]: %s",
@@ -5746,7 +5814,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
             if (stat(cfgFile, &fileInfo) != 0) {
                 if (optional == 0) {
                     rs_strerror_r(errno, errStr, sizeof(errStr));
-                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
                     parser_errmsg(
                         "error accessing config file or directory '%s' "
                         "[cwd: %s]: %s",
@@ -5762,7 +5830,26 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
 
         if (S_ISREG(fileInfo.st_mode)) { /* config file */
             DBGPRINTF("requested to include config file '%s'\n", cfgFile);
-            cnfSetLexFile(cfgFile);
+            /* Route .yaml / .yml files to the YAML loader */
+            const char *ext = strrchr(cfgFile, '.');
+            int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+#ifdef HAVE_LIBYAML
+            if (is_yaml) {
+                if (yamlconf_load(cfgFile) != RS_RET_OK) ret = 1;
+            } else {
+                cnfSetLexFile(cfgFile);
+            }
+#else
+            if (is_yaml) {
+                LogError(0, RS_RET_ERR,
+                         "YAML include file '%s' requested but rsyslog was "
+                         "built without libyaml support",
+                         cfgFile);
+                ret = 1; /* treat as hard failure — config is incomplete */
+            } else {
+                cnfSetLexFile(cfgFile);
+            }
+#endif
         } else if (S_ISDIR(fileInfo.st_mode)) { /* config directory */
             DBGPRINTF("requested to include directory '%s'\n", cfgFile);
             cnfDoInclude(cfgFile, optional);

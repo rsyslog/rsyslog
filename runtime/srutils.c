@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <assert.h>
+#include <limits.h>
 #include <sys/wait.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -49,6 +50,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "rsconf.h"
+#include "unicode-helper.h"
 
 #if _POSIX_TIMERS <= 0
     #include <sys/time.h>
@@ -284,19 +286,19 @@ int execProg(uchar *program, int bWait, uchar *arg1, uchar *arg2) {
     int pid;
     int sig;
     struct sigaction sigAct;
-    int i;
-    char **exec_argv;
-    uchar *args[2];
-    int argc = 0;
+    char *exec_argv[4];
+    int argc = 1;
 
+    exec_argv[0] = (char *)program;
     if (arg1 == NULL && arg2 != NULL) {
         arg1 = arg2;
         arg2 = NULL;
     }
-    if (arg1 != NULL) args[argc++] = arg1;
-    if (arg2 != NULL) args[argc++] = arg2;
+    if (arg1 != NULL) exec_argv[argc++] = (char *)arg1;
+    if (arg2 != NULL) exec_argv[argc++] = (char *)arg2;
+    exec_argv[argc] = NULL;
 
-    dbgprintf("exec program '%s' with %d args\n", program, argc);
+    dbgprintf("exec program '%s' with %d args\n", program, argc - 1);
     pid = fork();
     if (pid < 0) {
         return 0;
@@ -328,18 +330,6 @@ int execProg(uchar *program, int bWait, uchar *arg1, uchar *arg2) {
     sigAct.sa_handler = SIG_DFL;
 
     for (sig = 1; sig < NSIG; ++sig) sigaction(sig, &sigAct, NULL);
-
-    exec_argv = (char **)malloc(sizeof(char *) * (argc + 2));
-    if (exec_argv == NULL) {
-        perror("exec");
-        fprintf(stderr, "malloc failed for exec argv\n");
-        exit(1);
-    }
-    exec_argv[0] = (char *)program;
-    for (i = 0; i < argc; ++i) {
-        exec_argv[i + 1] = (char *)args[i];
-    }
-    exec_argv[argc + 1] = NULL;
 
     execvp((char *)program, exec_argv);
     /* In the long term, it's a good idea to implement some enhanced error
@@ -562,13 +552,16 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #ifndef HAVE_STRERROR_R
     char *pszErr;
     pszErr = strerror(errnum);
-    snprintf(buf, buflen, "%s", pszErr);
+    if (buflen > 0) {
+        rs_cstr_copy(buf, pszErr, buflen);
+    }
 #else
     #ifdef STRERROR_R_CHAR_P
     char *p = strerror_r(errnum, buf, buflen);
     if (p != buf) {
-        strncpy(buf, p, buflen);
-        buf[buflen - 1] = '\0';
+        if (buflen > 0) {
+            rs_cstr_copy(buf, p, buflen);
+        }
     }
     #else
     strerror_r(errnum, buf, buflen);
@@ -582,6 +575,8 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 int decodeSyslogName(uchar *name, syslogName_t *codetab) {
     register syslogName_t *c;
     register uchar *p;
+    char *end = NULL;
+    long val;
     uchar buf[80];
 
     assert(name != NULL);
@@ -590,9 +585,14 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab) {
     DBGPRINTF("symbolic name: %s", name);
     if (isdigit((int)*name)) {
         DBGPRINTF("\n");
-        return (atoi((char *)name));
+        errno = 0;
+        val = strtol((char *)name, &end, 10);
+        if (errno != 0 || end == (char *)name || *end != '\0' || val < INT_MIN || val > INT_MAX) {
+            return -1;
+        }
+        return (int)val;
     }
-    strncpy((char *)buf, (char *)name, 79);
+    u_cstr_copy(buf, name, sizeof(buf));
     for (p = buf; *p; p++) {
         if (isupper((int)*p)) *p = tolower((int)*p);
     }

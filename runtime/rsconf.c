@@ -30,7 +30,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <stdarg.h>
-#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -70,6 +69,10 @@
 #include "template.h"
 #include "timezones.h"
 #include "ratelimit.h"
+#include "translate.h"
+#ifdef HAVE_LIBYAML
+    #include "yamlconf.h"
+#endif
 
 extern char *yytext;
 extern int yylineno;
@@ -155,6 +158,8 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"burst", eCmdHdlrInt, 0},
                                                  {"severity", eCmdHdlrSeverity, 0},
                                                  {"policy", eCmdHdlrString, 0},
+                                                 {"policyWatch", eCmdHdlrBinary, 0},
+                                                 {"policyWatchDebounce", eCmdHdlrString, 0},
                                                  {"perSource", eCmdHdlrBinary, 0},
                                                  {"perSourcePolicy", eCmdHdlrString, 0},
                                                  {"perSourceKeyTpl", eCmdHdlrString, 0},
@@ -174,6 +179,10 @@ static void cnfSetDefaults(rsconf_t *pThis) {
 #endif
     pThis->globals.bAbortOnUncleanConfig = 0;
     pThis->globals.bAbortOnFailedQueueStartup = 0;
+    pThis->globals.compatConfigFormatLegacy = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatConfigFormatSyslogd = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatConfigFormatProperty = COMPAT_CONFIGFORMAT_ENABLE;
+    pThis->globals.compatDefaultsSecure = COMPAT_DEFAULTS_SECURE_WARN;
     pThis->globals.bReduceRepeatMsgs = 0;
     pThis->globals.bDebugPrintTemplateList = 1;
     pThis->globals.bDebugPrintModuleList = 0;
@@ -219,6 +228,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.bProcessInternalMessages = 0;
     const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
     if (log_dflt != NULL && !strcmp(log_dflt, "1")) pThis->globals.bProcessInternalMessages = 1;
+    pThis->globals.iMaxOpenFiles = 0;
     pThis->globals.glblDevOptions = 0;
     pThis->globals.intMsgRateLimitItv = 60;
     pThis->globals.intMsgRateLimitBurst = 100;
@@ -489,6 +499,8 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     int burst = 10000;
     int severity = -1; /* -1 means not set/all */
     uchar *policy = NULL;
+    int policy_watch = 0;
+    uchar *policy_watch_debounce = NULL;
     int per_source_enabled = 0;
     uchar *per_source_policy = NULL;
     uchar *per_source_key_tpl = NULL;
@@ -504,7 +516,7 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     for (i = 0; i < ratelimitpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(ratelimitpblk.descr[i].name, "name")) {
-            name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "interval")) {
             interval = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "burst")) {
@@ -512,13 +524,17 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
         } else if (!strcmp(ratelimitpblk.descr[i].name, "severity")) {
             severity = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
-            policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatch")) {
+            policy_watch = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatchDebounce")) {
+            CHKmalloc(policy_watch_debounce = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
             per_source_enabled = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
-            per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceKeyTpl")) {
-            per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
             per_source_max_states = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {
@@ -543,13 +559,15 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
-    CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
-                               (char *)policy, per_source_enabled, (char *)per_source_policy,
-                               (char *)per_source_key_tpl, (unsigned)per_source_max_states, (unsigned)per_source_topn));
+    CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, severity, (char *)policy,
+                               policy_watch, (char *)policy_watch_debounce, per_source_enabled,
+                               (char *)per_source_policy, (char *)per_source_key_tpl, (unsigned)per_source_max_states,
+                               (unsigned)per_source_topn));
 
 finalize_it:
     free(name);
     free(policy);
+    free(policy_watch_debounce);
     free(per_source_policy);
     free(per_source_key_tpl);
     cnfparamvalsDestruct(pvals, &ratelimitpblk);
@@ -593,7 +611,6 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
     int bDestructObj = 1;
     int bChkUnuse = 1;
     assert(o != NULL);
-
     dbgprintf("cnf:global:obj: ");
     cnfobjPrint(o);
 
@@ -604,6 +621,10 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
         return;
+    }
+
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateCaptureObj(o, cnfcurrfn, yylineno);
     }
 
     switch (o->objType) {
@@ -661,18 +682,33 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
+    }
     dbgprintf("cnf:global:script\n");
     ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
+                                      ln);
+    }
     DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
+    if (!glblPermitLegacyConfigDirective(loadConf, ln)) {
+        free(ln);
+        return;
+    }
     /* the legacy system needs the "$" stripped */
     conf.cfsysline((uchar *)ln + 1);
     free(ln);
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
+                                      "BSD-style tag block '%s' is not supported by the translator", ln);
+    }
     DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
     LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
              "BSD-style blocks are no longer supported in rsyslog, "
@@ -683,6 +719,10 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsconfTranslateEnabled()) {
+        rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
+                                      "BSD-style host block '%s' is not supported by the translator", ln);
+    }
     DBGPRINTF("cnf:global:BSD host: %s\n", ln);
     LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
              "BSD-style blocks are no longer supported in rsyslog, "
@@ -695,7 +735,7 @@ void cnfDoBSDHost(char *ln) {
 
 
 /* drop to specified group
- * if something goes wrong, the function never returns
+ * Returns RS_RET_ERR_DROP_PRIV if the requested group privileges cannot be set.
  */
 static rsRetVal doDropPrivGid(rsconf_t *cnf) {
     int res;
@@ -705,14 +745,17 @@ static rsRetVal doDropPrivGid(rsconf_t *cnf) {
     if (!cnf->globals.gidDropPrivKeepSupplemental) {
         res = setgroups(0, NULL); /* remove all supplemental group IDs */
         if (res) {
-            LogError(errno, RS_RET_ERR_DROP_PRIV, "could not remove supplemental group IDs");
+            LogError(errno, RS_RET_ERR_DROP_PRIV,
+                     "could not remove supplemental group IDs via setgroups(): missing CAP_SETGID or insufficient "
+                     "privilege");
             ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
         }
         DBGPRINTF("setgroups(0, NULL): %d\n", res);
     }
     res = setgid(cnf->globals.gidDropPriv);
     if (res) {
-        LogError(errno, RS_RET_ERR_DROP_PRIV, "could not set requested group id %d via setgid()",
+        LogError(errno, RS_RET_ERR_DROP_PRIV,
+                 "could not set requested group id %d via setgid(): missing CAP_SETGID or insufficient privilege",
                  cnf->globals.gidDropPriv);
         ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
     }
@@ -726,15 +769,14 @@ finalize_it:
 
 
 /* drop to specified user
- * if something goes wrong, the function never returns
- * Note that such an abort can cause damage to on-disk structures, so we should
- * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
+ * Returns RS_RET_ERR_DROP_PRIV if the requested user privileges cannot be set.
  */
-static void doDropPrivUid(rsconf_t *cnf) {
+static rsRetVal doDropPrivUid(rsconf_t *cnf) {
     int res;
     uchar szBuf[1024];
     struct passwd *pw;
     gid_t gid;
+    DEFiRet;
 
     /* Try to set appropriate supplementary groups for this user.
      * Failure is not fatal.
@@ -743,6 +785,12 @@ static void doDropPrivUid(rsconf_t *cnf) {
     if (pw) {
         gid = getgid();
         res = initgroups(pw->pw_name, gid);
+        if (res) {
+            LogError(errno, RS_RET_ERR_DROP_PRIV,
+                     "could not initialize supplemental groups for user id %d via initgroups(): missing CAP_SETGID or "
+                     "insufficient privilege",
+                     cnf->globals.uidDropPriv);
+        }
         DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long)gid, res);
     } else {
         LogError(errno, NO_ERRCODE, "could not get username for userid '%d'", cnf->globals.uidDropPriv);
@@ -750,14 +798,18 @@ static void doDropPrivUid(rsconf_t *cnf) {
 
     res = setuid(cnf->globals.uidDropPriv);
     if (res) {
-        /* if we can not set the userid, this is fatal, so let's unconditionally abort */
-        perror("could not set requested userid");
-        exit(1);
+        LogError(errno, RS_RET_ERR_DROP_PRIV,
+                 "could not set requested user id %d via setuid(): missing CAP_SETUID or insufficient privilege",
+                 cnf->globals.uidDropPriv);
+        ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
     }
 
     DBGPRINTF("setuid(%d): %d\n", cnf->globals.uidDropPriv, res);
     snprintf((char *)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", cnf->globals.uidDropPriv);
     logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, szBuf, 0);
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -774,7 +826,7 @@ static rsRetVal dropPrivileges(rsconf_t *cnf) {
     }
 
     if (cnf->globals.uidDropPriv != 0) {
-        doDropPrivUid(cnf);
+        CHKiRet(doDropPrivUid(cnf));
         DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)cnf->globals.uidDropPriv);
     }
 
@@ -1046,6 +1098,9 @@ static rsRetVal activate(rsconf_t *cnf) {
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
 #endif
     setUmask(cnf->globals.umask);
+    if (cnf->globals.iMaxOpenFiles > 0) {
+        CHKiRet(glblSetMaxOpenFiles(NULL, cnf->globals.iMaxOpenFiles));
+    }
 
     /* the output part and the queue is now ready to run. So it is a good time
      * to initialize the inputs. Please note that the net code above should be
@@ -1084,6 +1139,14 @@ finalize_it:
 /* legacy config system: set the action resume interval */
 static rsRetVal setActionResumeInterval(void __attribute__((unused)) * pVal, int iNewVal) {
     return actionSetGlobalResumeInterval(iNewVal);
+}
+
+
+/* set the processes max number of files immediately for legacy $MaxOpenFiles
+ * configs.
+ */
+static rsRetVal setMaxFiles(void *pVal, int iFiles) {
+    return glblSetMaxOpenFiles(pVal, iFiles);
 }
 
 
@@ -1159,36 +1222,6 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 
 
 /* -------------------- end legacy config handlers -------------------- */
-
-
-/* set the processes max number ob files (upon configuration request)
- * 2009-04-14 rgerhards
- */
-static rsRetVal setMaxFiles(void __attribute__((unused)) * pVal, int iFiles) {
-    // TODO this must use a local var, then carry out action during activate!
-    struct rlimit maxFiles;
-
-    DEFiRet;
-
-    maxFiles.rlim_cur = iFiles;
-    maxFiles.rlim_max = iFiles;
-
-    if (setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
-        /* NOTE: under valgrind, we seem to be unable to extend the size! */
-        LogError(errno, RS_RET_ERR_RLIM_NOFILE,
-                 "could not set process file limit to %d "
-                 "[kernel max %ld]",
-                 iFiles, (long)maxFiles.rlim_max);
-        ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
-    }
-#ifdef USE_UNLIMITED_SELECT
-    glbl.SetFdSetSize(howmany(iFiles, __NFDBITS) * sizeof(fd_mask));
-#endif
-    DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long)maxFiles.rlim_max);
-
-finalize_it:
-    RETiRet;
-}
 
 
 /* legacy config system: reset config variables to default values.  */
@@ -1348,7 +1381,7 @@ static rsRetVal initLegacyConf(void) {
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL,
                              &loadConf->globals.mainQ.bMainMsgQSyncQeueFiles, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
-    CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL,
+    CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrPositiveInt, NULL,
                              &loadConf->globals.mainQ.iMainMsgQueueNumWorkers, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL,
                              &loadConf->globals.mainQ.iMainMsgQtoQShutdown, NULL));
@@ -1480,11 +1513,42 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(loadBuildInModules());
     CHKiRet(initLegacyConf());
 
-    /* open the configuration file */
-    r = cnfSetLexFile((char *)confFile);
-    if (r == 0) {
-        r = yyparse();
-        conf.GetNbrActActions(loadConf, &iNbrActions);
+    /* open the configuration file; route .yaml/.yml to the YAML loader */
+    {
+        const char *ext = strrchr((const char *)confFile, '.');
+        int is_yaml = (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml")));
+#ifdef HAVE_LIBYAML
+        if (is_yaml) {
+            rsRetVal yr = yamlconf_load((const char *)confFile);
+            if (yr == RS_RET_OK) {
+                r = 0;
+            } else if (yr == RS_RET_CONF_FILE_NOT_FOUND) {
+                r = 2;
+            } else {
+                r = 1;
+            }
+            /* Flush any inline RainerScript script: blocks that were queued
+             * into the flex buffer stack by cnfAddConfigBuffer(). */
+            if (r == 0 && cnfHasPendingBuffers()) {
+                r = yyparse();
+            }
+        } else {
+#endif
+            r = cnfSetLexFile((char *)confFile);
+            if (r == 0) r = yyparse();
+#ifdef HAVE_LIBYAML
+        }
+#else
+        if (is_yaml) {
+            LogError(0, RS_RET_ERR,
+                     "YAML config file '%s' requested but rsyslog was built "
+                     "without libyaml support (install libyaml-dev and "
+                     "recompile)",
+                     confFile);
+            r = 1;
+        }
+#endif
+        if (r == 0) conf.GetNbrActActions(loadConf, &iNbrActions);
     }
 
     /* we run the optimizer even if we have an error, as it may spit out
@@ -1519,18 +1583,17 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
 
-    /* we are done checking the config - now validate if we should actually run or not.
-     * If not, terminate. -- rgerhards, 2008-07-25
-     * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
-     */
-    if (iConfigVerify) {
+    if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;
         FINALIZE;
     }
 
     /* all OK, pass loaded conf to caller */
     *cnf = loadConf;
-    // TODO: enable this once all config code is moved to here!	loadConf = NULL;
+    /* Keep loadConf valid until activation. If the config system is ever
+     * extended beyond a single in-flight load and explicit config context is
+     * threaded through all load-time helpers, reconsider clearing it here.
+     */
 
     dbgprintf("rsyslog finished loading master config %p\n", loadConf);
     rsconfDebugPrint(loadConf);

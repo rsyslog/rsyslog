@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2604.0.daily],[rsyslog@lists.adiscon.com])     # UPDATE on release
+AC_INIT([rsyslog],[8.2606.0.daily],[rsyslog@lists.adiscon.com])     # UPDATE on release
 AC_DEFINE(VERSION_YEAR,  26, [year part of real rsyslog version])   # UPDATE on release
-AC_DEFINE(VERSION_MONTH,  4, [month part of real rsyslog version])  # UPDATE on release
+AC_DEFINE(VERSION_MONTH,  6, [month part of real rsyslog version])  # UPDATE on release
 
 AM_INIT_AUTOMAKE([tar-pax subdir-objects])
 
@@ -56,23 +56,14 @@ AC_CANONICAL_HOST
 
 if test "$GCC" = "yes"
 then
-	m4_ifdef([AX_IS_RELEASE], [
-		AX_IS_RELEASE([git-directory])
-		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
-			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
-			# the default -Wno-error=warning" flags. So we do this via sed below.
-			# Note: we *really* want to have this error out during CI testing!
-			# rgerhards, 2018-05-09
-			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
-		], [
-			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
-		])
-	], [
-		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-	])
+	m4_pattern_forbid([^AX_])
+	AX_IS_RELEASE([git-directory])
+	AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
+	# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
+	# the default -Wno-error=warning" flags. So we do this via sed below.
+	# Note: we *really* want to have this error out during CI testing!
+	# rgerhards, 2018-05-09
+	WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
 else
 	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
 fi
@@ -166,14 +157,28 @@ AC_COMPILE_IFELSE( [AC_LANG_PROGRAM([[#include <limits.h>]],
                  )
 
 # Checks for libraries.
-PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
-	AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
-	have_libyaml=yes
+AC_ARG_ENABLE(libyaml,
+	[AS_HELP_STRING([--disable-libyaml],
+		[Disable libyaml-backed YAML configuration and policy file support @<:@default=enabled@:>@])],
+	[case "${enableval}" in
+	 yes) enable_libyaml="yes" ;;
+	  no) enable_libyaml="no" ;;
+	   *) AC_MSG_ERROR(bad value ${enableval} for --enable-libyaml) ;;
+	 esac],
+	[enable_libyaml="yes"]
+)
+AS_IF([test "x$enable_libyaml" = "xyes"], [
+	PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
+		AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
+		have_libyaml=yes
+	], [
+		AC_MSG_ERROR([libyaml support is enabled by default but yaml-0.1 was not found. Install libyaml development files or configure with --disable-libyaml.])
+	])
 ], [
-	AC_MSG_WARN([libyaml not found, rate limiting policies from files will be disabled])
 	have_libyaml=no
 ])
 AM_CONDITIONAL(HAVE_LIBYAML, test x$have_libyaml = xyes)
+AC_MSG_NOTICE([YAML configuration support: $have_libyaml])
 save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
@@ -183,10 +188,14 @@ RT_LIBS="$RT_LIBS $LIBS"
 LIBS=
 AC_SEARCH_LIBS(dlopen, dl)
 DL_LIBS=$LIBS
+LIBS=
+AC_SEARCH_LIBS(gai_error, anl)
+GAI_LIBS=$LIBS
 LIBS=$save_LIBS
 
 AC_SUBST(RT_LIBS)
 AC_SUBST(DL_LIBS)
+AC_SUBST(GAI_LIBS)
 
 # Checks for header files.
 AC_HEADER_RESOLV
@@ -210,7 +219,30 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h linux/fs.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/queue.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h linux/fs.h])
+
+AC_MSG_CHECKING([for STAILQ macros in sys/queue.h])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [[
+#include <sys/queue.h>
+struct stailq_test_entry {
+    STAILQ_ENTRY(stailq_test_entry) link;
+};
+STAILQ_HEAD(stailq_test_head, stailq_test_entry);
+        ]],
+        [[
+struct stailq_test_head head;
+STAILQ_INIT(&head);
+return STAILQ_EMPTY(&head) ? 0 : 1;
+        ]]
+    )],
+    [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_SYS_QUEUE_STAILQ], [1], [Define if sys/queue.h provides STAILQ macros])
+    ],
+    [AC_MSG_RESULT([no])]
+)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -243,7 +275,8 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf close_range pthread_setname_np])
+AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf vasprintf close_range pthread_setname_np])
+AC_CHECK_DECLS([asprintf, vasprintf], [], [], [[#include <stdio.h>]])
 AC_CHECK_FUNC([setns], [AC_DEFINE([HAVE_SETNS], [1], [Define if setns exists.])])
 AC_CHECK_TYPES([off64_t])
 
@@ -256,14 +289,25 @@ AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set def
 
 AC_CHECK_HEADERS([arpa/nameser.h resolv.h])
 AC_SEARCH_LIBS([ns_initparse], [resolv])
-LIBRESOLV_LIBS=$ac_cv_search_ns_initparse
-AS_CASE([$LIBRESOLV_LIBS],
-        ["none required"], [LIBRESOLV_LIBS=""],
-        ["no"], [LIBRESOLV_LIBS=""])
+AC_SEARCH_LIBS([res_query], [resolv])
+LIBRESOLV_LIBS=
+AS_CASE([$ac_cv_search_ns_initparse],
+        ["none required"], [],
+        ["no"], [],
+        [*], [LIBRESOLV_LIBS="$ac_cv_search_ns_initparse"])
+AS_CASE([$ac_cv_search_res_query],
+        ["none required"], [],
+        ["no"], [],
+        [*], [AS_CASE([" $LIBRESOLV_LIBS "], [*" $ac_cv_search_res_query "*], [], [LIBRESOLV_LIBS="$LIBRESOLV_LIBS $ac_cv_search_res_query"])])
+LIBRESOLV_LIBS=${LIBRESOLV_LIBS# }
 AC_SUBST([LIBRESOLV_LIBS])
 AS_IF([test "x$ac_cv_search_ns_initparse" != "xno"],
       [AC_DEFINE([HAVE_RESOLV_NS_INITPARSE], [1],
                  [Define if resolver provides ns_initparse])])
+AC_CHECK_FUNCS([res_ninit res_nquery res_nclose])
+AS_IF([test "x$ac_cv_func_res_ninit" = "xyes" -a "x$ac_cv_func_res_nquery" = "xyes" -a "x$ac_cv_func_res_nclose" = "xyes"],
+      [AC_DEFINE([HAVE_RESOLV_RES_N_API], [1],
+                 [Define if resolver provides res_n* APIs])])
 AM_CONDITIONAL([HAVE_SRV_DISCOVERY], [test "x$ac_cv_search_ns_initparse" != "xno"])
 
 # the check below is probably ugly. If someone knows how to do it in a better way, please
@@ -469,7 +513,8 @@ if test "$enable_ffaup" = "yes"; then
 		AC_CHECK_HEADER([faup/faup.h], [
 			FAUP_LIBS="-lfaupl"
 			AC_SUBST(FAUP_LIBS)],
-			[AC_MSG_ERROR([Unable to add faup support for URL parsing.])])
+			[AC_MSG_ERROR([Unable to add faup support for URL parsing.])],
+			[#include <stdint.h>])
 	])
 fi
 
@@ -525,17 +570,43 @@ solaris) GSSLIB=gss ;;
 *)       GSSLIB=gssapi_krb5 ;;
 esac
 
+gssapi_found=no
+GSS_CFLAGS=""
+GSS_LIBS=""
 if test $enable_gssapi_krb5 = yes; then
-	AC_CHECK_LIB($GSSLIB, gss_acquire_cred, [
-		AC_CHECK_HEADER(gssapi/gssapi.h, [
-			AC_DEFINE(USE_GSSAPI,,
-				  Define if you want to use GSSAPI)
-			GSS_LIBS="-l$GSSLIB"
-			AC_SUBST(GSS_LIBS)
-		])
-	])
+	AC_CHECK_HEADER(gssapi/gssapi.h, [
+		if test "x$PKG_CONFIG" != "xno" && $PKG_CONFIG --exists krb5-gssapi; then
+			GSS_CFLAGS=`$PKG_CONFIG --cflags krb5-gssapi`
+			GSS_LIBS=`$PKG_CONFIG --libs krb5-gssapi`
+			gssapi_found=yes
+		else
+			save_LIBS="$LIBS"
+			LIBS="-l$GSSLIB $LIBS"
+			AC_LINK_IFELSE(
+				[AC_LANG_PROGRAM(
+					[[#include <gssapi/gssapi.h>]],
+					[[OM_uint32 maj = 0, min = 0; gss_cred_id_t cred = GSS_C_NO_CREDENTIAL;
+					  return gss_acquire_cred(&min, GSS_C_NO_NAME, 0, GSS_C_NULL_OID_SET,
+						GSS_C_ACCEPT, &cred, 0, 0) == maj;]]
+				)],
+				[
+					GSS_LIBS="-l$GSSLIB"
+					gssapi_found=yes
+				]
+			)
+			LIBS="$save_LIBS"
+		fi
+	], [])
+	if test "x$gssapi_found" = "xyes"; then
+		AC_DEFINE(USE_GSSAPI,,
+			  Define if you want to use GSSAPI)
+	else
+		AC_MSG_ERROR([--enable-gssapi-krb5 requested, but usable GSSAPI headers/libraries were not found])
+	fi
 fi
-AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
+AC_SUBST(GSS_CFLAGS)
+AC_SUBST(GSS_LIBS)
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$gssapi_found = xyes)
 
 
 # shall the testbench try to run test that require root permissions?
@@ -1236,6 +1307,22 @@ AC_ARG_ENABLE(wolfssl,
 ])
 AM_CONDITIONAL(ENABLE_WOLFSSL, [test "x$enable_wolfssl" = "xyes"])
 
+rsyslog_wolfssl_has_crl=no
+rsyslog_wolfssl_has_ocsp=no
+if test "x$enable_wolfssl" = "xyes"; then
+	save_CFLAGS=$CFLAGS
+	CFLAGS="$CFLAGS $WOLFSSL_CFLAGS"
+	AC_CHECK_DECL([HAVE_CRL],
+		[rsyslog_wolfssl_has_crl=yes],
+		[AC_MSG_ERROR([wolfSSL must be built with --enable-crl to support rsyslog certificate revocation lists])],
+		[[#include <wolfssl/options.h>]])
+	AC_CHECK_DECL([HAVE_OCSP],
+		[rsyslog_wolfssl_has_ocsp=yes],
+		[AC_MSG_ERROR([wolfSSL must be built with --enable-ocsp to support rsyslog OCSP revocation checking])],
+		[[#include <wolfssl/options.h>]])
+	CFLAGS=$save_CFLAGS
+fi
+
 # openssl support
 AC_ARG_ENABLE(openssl,
         [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=no@:>@])],
@@ -1367,38 +1454,23 @@ AC_ARG_ENABLE(libgcrypt,
         [enable_libgcrypt=yes]
 )
 if test "x$enable_libgcrypt" = "xyes"; then
-        # Check for the modern pkg-config method first
-        AC_CHECK_PROG([HAVE_PKG_CONFIG], [pkg-config], [yes], [no])
-        if test "x${HAVE_PKG_CONFIG}" = "xno"; then
-                # Fallback to the outdated libgcrypt-config approach
-                AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
-                if test "x${LIBGCRYPT_CONFIG}" = "xno"; then
-                        AC_MSG_FAILURE([libgcrypt-config not found in PATH and pkg-config is not available. libgcrypt is missing.])
-                fi
-                AC_CHECK_LIB(
-                        [gcrypt],
-                        [gcry_cipher_open],
-                        [LIBGCRYPT_CFLAGS="`${LIBGCRYPT_CONFIG} --cflags`"
-                        LIBGCRYPT_LIBS="`${LIBGCRYPT_CONFIG} --libs`"
-                        ],
-                        [AC_MSG_FAILURE([libgcrypt is missing])],
-                        [`${LIBGCRYPT_CONFIG} --libs --cflags`]
-                )
-        else
-                # Use the preferred pkg-config approach
-                AC_CHECK_LIB(
-                        [gcrypt],
-                        [gcry_cipher_open],
-                        [LIBGCRYPT_CFLAGS="`pkg-config --cflags libgcrypt gpg-error`"
-                        LIBGCRYPT_LIBS="`pkg-config --libs libgcrypt gpg-error`"
-                        ],
-                        [AC_MSG_FAILURE([libgcrypt is missing])],
-                        [`pkg-config --libs --cflags libgcrypt gpg-error`]
-                )
-		if test "x${LIBGCRYPT_CFLAGS}" = "x" && test "x${LIBGCRYPT_LIBS}" = "x";then
-			AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
+        PKG_CHECK_MODULES(
+                [LIBGCRYPT],
+                [libgcrypt gpg-error],
+                [
+                        AC_CHECK_LIB(
+                                [gcrypt],
+                                [gcry_cipher_open],
+                                [:],
+                                [AC_MSG_FAILURE([libgcrypt is missing])],
+                                [${LIBGCRYPT_LIBS}]
+                        )
+                ],
+                [
+                        # Fallback to the outdated libgcrypt-config approach
+                        AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
                         if test "x${LIBGCRYPT_CONFIG}" = "xno"; then
-                                AC_MSG_FAILURE([libgcrypt-config not found in PATH and pkgconfig file of libgcrypt is not available. libgcrypt is missing.])
+                                AC_MSG_FAILURE([libgcrypt-config not found in PATH and pkg-config is unavailable or could not find libgcrypt/gpg-error. libgcrypt is missing.])
                         fi
                         AC_CHECK_LIB(
                                 [gcrypt],
@@ -1409,8 +1481,8 @@ if test "x$enable_libgcrypt" = "xyes"; then
                                 [AC_MSG_FAILURE([libgcrypt is missing])],
                                 [`${LIBGCRYPT_CONFIG} --libs --cflags`]
                         )
-		fi
-        fi
+                ]
+        )
         AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
 fi
 AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
@@ -1601,6 +1673,17 @@ AC_ARG_ENABLE(imdiag,
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdiag) ;;
          esac],
         [enable_imdiag=no]
+)
+
+# imbeats support
+AC_ARG_ENABLE(imbeats,
+        [AS_HELP_STRING([--enable-imbeats],[Enable Beats/Lumberjack v2 input module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imbeats="yes" ;;
+          no) enable_imbeats="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imbeats) ;;
+         esac],
+        [enable_imbeats=no]
 )
 
 
@@ -1924,18 +2007,6 @@ AC_ARG_ENABLE(mmsnareparse,
 AM_CONDITIONAL(ENABLE_MMSNAREPARSE, test x$enable_mmsnareparse = xyes)
 
 
-# experimental omfile-hardened module
-AC_ARG_ENABLE(omfile-hardened,
-        [AS_HELP_STRING([--enable-omfile-hardened],[Enable omfile-hardened support @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omfile_hardened="yes" ;;
-          no) enable_omfile_hardened="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omfile-hardened) ;;
-         esac],
-        [enable_omfile_hardened=no]
-)
-AM_CONDITIONAL(ENABLE_OMFILE_HARDENED, test x$enable_omfile_hardened = xyes)
-
 
 # RELP support
 AC_ARG_ENABLE(relp,
@@ -1967,6 +2038,8 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [AC_DEFINE([HAVE_RELPENGINESETTLSCFGCMD], [1], [Define if relpSrvSetTlsConfigCmd exists.])])
+        AC_CHECK_FUNC([relpCltSetKeepAlive],
+                      [AC_DEFINE([HAVE_RELPCLTSETKEEPALIVE], [1], [Define if relpCltSetKeepAlive exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [HAVE_RELPENGINESETTLSCFGCMD=1])
 
@@ -2199,6 +2272,20 @@ if  test "x$enable_imfile_tests" = "xyes" && test "x$enable_imfile" != "xyes"; t
 		enable_imfile_tests="no"
 fi
 AM_CONDITIONAL(ENABLE_IMFILE_TESTS, test x$enable_imfile_tests = xyes)
+
+
+# settings for the fifo input module
+AC_ARG_ENABLE(imfifo,
+        [AS_HELP_STRING([--enable-imfifo],[fifo input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imfifo="yes" ;;
+          no) enable_imfifo="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfifo) ;;
+         esac],
+        [enable_imfifo=no]
+)
+AM_CONDITIONAL(ENABLE_IMFIFO, test x$enable_imfifo = xyes)
+
 
 
 # settings for the docker log input module
@@ -2546,6 +2633,7 @@ if test "x$enable_imdiag" = "xyes"; then
 	AC_DEFINE([ENABLE_IMDIAG], [1], [Indicator that IMDIAG is present])
 fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
+AM_CONDITIONAL(ENABLE_IMBEATS, test x$enable_imbeats = xyes)
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS_PUSH, test x$enable_impstats_push = xyes)
@@ -3062,9 +3150,9 @@ fi
 AM_CONDITIONAL(ENABLE_OMDTLS, test x$enable_omdtls = xyes)
 # END OMDTLS INPUT
 
-if test "x$enable_wolfssl" = "xyes"; then
-	if test "x$enable_imdtls" = "xyes" -o "x$enable_omdtls" = "xyes"; then
-		AC_MSG_ERROR([DTLS modules (imdtls/omdtls) require OpenSSL; they cannot be built with wolfSSL enabled])
+if test "x$enable_imdtls" = "xyes" -o "x$enable_omdtls" = "xyes"; then
+	if test "x$enable_openssl" != "xyes"; then
+		AC_MSG_ERROR([DTLS modules (imdtls/omdtls) require OpenSSL support to be enabled (--enable-openssl)])
 	fi
 fi
 
@@ -3506,11 +3594,13 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imfifo/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
+		plugins/imbeats/Makefile \
 		plugins/imkafka/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
@@ -3567,7 +3657,6 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
 		contrib/imbatchreport/Makefile \
-		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
@@ -3616,6 +3705,7 @@ echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    DTLS udp input module enabled:            $enable_imdtls"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    fifo input module enabled:                $enable_imfifo"
 echo "    docker log input module enabled:          $enable_imdocker"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
@@ -3624,6 +3714,7 @@ echo "    imjournal input module enabled:           $enable_imjournal"
 if test "$enable_imjournal" = "optional"; then
 echo "        imjournal use dummy:                  $imjournal_use_dummy"
 fi
+echo "    imbeats input module enabled:             $enable_imbeats"
 echo "    imbatchreport input module enabled:       $enable_imbatchreport"
 echo "    imkafka module will be compiled:          $enable_imkafka"
 if test "$enable_imkafka" = "optional"; then
@@ -3637,7 +3728,6 @@ echo "    imhiredis input module enabled:           $enable_imhiredis"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omsendertrack module will be compiled:    $enable_omsendertrack"
@@ -3706,6 +3796,8 @@ echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
 echo "    wolfssl network stream driver enabled:    $enable_wolfssl"
+echo "        with CRL support:                     $rsyslog_wolfssl_has_crl"
+echo "        with OCSP support:                    $rsyslog_wolfssl_has_ocsp"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    Mbed TLS network stream driver enabled:   $enable_mbedtls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"

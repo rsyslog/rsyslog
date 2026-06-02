@@ -23,7 +23,7 @@ fi
 
 conf_flags="--cache-file=config.cache"
 
-if test x$NOCONFIGURE = x; then
+if test -z "$NOCONFIGURE"; then
   echo Running $srcdir/configure $conf_flags "$@" ...
   $srcdir/configure $conf_flags "$@" \
   && echo Now type \`make\' to compile. || exit 1

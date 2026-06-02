@@ -60,7 +60,16 @@ The `<version>` tag corresponds to the rsyslog version, which follows a `YYYY-MM
 
 ### Runtime Configuration
 
-Many features and modules within these images (especially `standard` and above) can be enabled or disabled at runtime using environment variables in conjunction with rsyslog's `config.enable=\`cat $ENVVAR\`` directive in the rsyslog configuration. This allows for flexible deployments without needing a custom image for every minor configuration change.
+These images support environment-driven configuration for the packaged rsyslog
+snippets that explicitly use `config.enabled=\`echo $ENVVAR\`` or shell-backed
+property values. This allows the built-in roles to toggle listeners, file
+outputs, and similar defaults without rebuilding the image.
+
+That mechanism is intentionally limited to the shipped configuration. It should
+not be read as a promise that every installed module has a corresponding
+environment-variable interface. For example, the collector image includes
+`omkafka`, but Kafka forwarding still requires mounting an additional rsyslog
+configuration snippet under `/etc/rsyslog.d/`.
 
 ---
 ## Building the Images
@@ -102,7 +111,7 @@ The following sections describe previous efforts and image bases that are **no l
 * `/appliance` - This directory represents an early experiment at creating an all-in-one rsyslog logging appliance. This approach did not align with current containerization best practices and was discontinued. The images are outdated and should not be used.
 
 ### Legacy Base Images
-* Legacy Alpine and CentOS base images previously existed in a `/base` directory. These are no longer maintained. Development now focuses exclusively on Ubuntu-based images, which integrate best with our daily stable package builds.
+* Legacy Alpine and CentOS base images previously existed in a `/base` directory. These are no longer maintained. Development now focuses exclusively on Ubuntu-based images, which integrate with the Adiscon stable and daily-stable package feeds.
 
 ### CentOS Notes (Historical)
 * Older CentOS 7 definitions can be found under `/base/centos7`. Like the Alpine files, these are no longer maintained but remain for reference.

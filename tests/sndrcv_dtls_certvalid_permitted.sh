@@ -1,6 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Verify successful cert-valid DTLS transfer when the peer name is explicitly
+# permitted. The receiver must record the exact injected message sequence.
 . ${srcdir:=.}/diag.sh init
+export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 export NUMMESSAGES=1000
 export NUMMESSAGESFULL=$NUMMESSAGES
@@ -10,7 +13,7 @@ export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
+PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imdtls.port"
 
 add_conf '
 global(
@@ -20,7 +23,8 @@ global(
 
 module(	load="../plugins/imdtls/.libs/imdtls" )
 input(	type="imdtls"
-	port="'$PORT_RCVR'"
+	port="0"
+	listenPortFileName="'$PORT_RCVR_FILE'"
 	tls.cacert="'$srcdir'/tls-certs/ca.pem"
 	tls.mycert="'$srcdir'/tls-certs/cert.pem"
 	tls.myprivkey="'$srcdir'/tls-certs/key.pem"
@@ -32,6 +36,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
@@ -47,7 +52,6 @@ global(
 module(load="../plugins/impstats/.libs/impstats"
 	log.file="'$RSYSLOG_DYNNAME.pstats'"
 	interval="1" log.syslog="off")
-$imdiagInjectDelayMode full
 
 # Load modules
 module(	load="../plugins/omdtls/.libs/omdtls" )

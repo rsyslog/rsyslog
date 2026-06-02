@@ -1,0 +1,31 @@
+---
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - "CI"
+      - "cleanup"
+    commit-message:
+      prefix: "ci"
+  - package-ecosystem: "pip"
+    directory: "/.github"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-ci:
+        patterns:
+          - "*"
+    labels:
+      - "CI"
+      - "cleanup"
+    commit-message:
+      prefix: "ci"

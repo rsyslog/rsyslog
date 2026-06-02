@@ -276,9 +276,15 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
 
 #ifdef HIREDIS_SSL
     if (pWrkrData->pData->use_tls) {
+        const char *tls_server_name = pWrkrData->pData->sni;
+
+        if (tls_server_name == NULL && pWrkrData->pData->server != NULL) {
+            tls_server_name = (const char *)pWrkrData->pData->server;
+        }
+
         pWrkrData->ssl_conn = redisCreateSSLContext(pWrkrData->pData->ca_cert_bundle, pWrkrData->pData->ca_cert_dir,
                                                     pWrkrData->pData->client_cert, pWrkrData->pData->client_key,
-                                                    pWrkrData->pData->sni, &pWrkrData->ssl_error);
+                                                    tls_server_name, &pWrkrData->ssl_error);
         if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
             LogError(0, NO_ERRCODE, "omhiredis[%s]: SSL Context error: %s", actionGetName(pWrkrData->pData->pAction),
                      redisSSLContextGetError(pWrkrData->ssl_error));
@@ -592,31 +598,31 @@ BEGINnewActInst
         if (!pvals[i].bUsed) continue;
 
         if (!strcmp(actpblk.descr[i].name, "server")) {
-            pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
             pData->port = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "socketpath")) {
-            pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "serverpassword")) {
-            pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
             pData->dynaKey = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "userpush")) {
             pData->useRPush = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.outField")) {
-            pData->streamOutField = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamOutField = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.keyAck")) {
-            pData->streamKeyAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamKeyAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaKeyAck")) {
             pData->streamDynaKeyAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.groupAck")) {
-            pData->streamGroupAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamGroupAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaGroupAck")) {
             pData->streamDynaGroupAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.indexAck")) {
-            pData->streamIndexAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->streamIndexAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "stream.dynaIndexAck")) {
             pData->streamDynaIndexAck = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "stream.capacityLimit")) {
@@ -626,7 +632,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "stream.del")) {
             pData->streamDel = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "mode")) {
-            pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcmp(pData->modeDescription, "template")) {
                 pData->mode = OMHIREDIS_MODE_TEMPLATE;
             } else if (!strcmp(pData->modeDescription, "queue")) {
@@ -642,7 +648,7 @@ BEGINnewActInst
                 ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
             }
         } else if (!strcmp(actpblk.descr[i].name, "key")) {
-            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "expiration")) {
             pData->expiration = pvals[i].val.d.n;
             dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
@@ -650,15 +656,15 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "use_tls")) {
             pData->use_tls = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ca_cert_bundle")) {
-            pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "ca_cert_dir")) {
-            pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "client_cert")) {
-            pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "client_key")) {
-            pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sni")) {
-            pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #endif
         } else {
             dbgprintf(
@@ -673,6 +679,11 @@ BEGINnewActInst
 #ifdef HIREDIS_SSL
     if ((pData->client_cert == NULL) ^ (pData->client_key == NULL)) {
         parser_errmsg("omhiredis: \"client_cert\" and \"client_key\" must be specified together!");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->use_tls && pData->sni == NULL && pData->server == NULL) {
+        parser_errmsg("omhiredis: TLS requires either \"server\" or \"sni\" to validate server identity");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 #endif

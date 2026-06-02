@@ -46,9 +46,9 @@ Best Practices
   If you need **encrypted UDP**, consider :doc:`omdtls <omdtls>`.
 
 - **Use TLS where possible:**  
-  When sending logs over untrusted networks, configure TLS (`StreamDriver="ossl"`, 
-  `StreamDriver="gtls"` or `StreamDriver="mbedtls"`) with `omfwd` (for TCP) or switch 
-  to `omdtls` (for UDP).
+  When sending logs over untrusted networks, configure TLS with TCP by setting a TLS-capable
+  driver (``StreamDriver="ossl"``, ``StreamDriver="gtls"`` or ``StreamDriver="mbedtls"``)
+  **and** ``StreamDriverMode="1"``, or switch to ``omdtls`` (for UDP).
 
 - **Enable queues for TCP forwarding:**  
   Always define a queue (`queue.type="linkedList"`) to avoid blocking if the 
@@ -988,6 +988,12 @@ The statistic is named "target-port-protocol" where "target", "port", and
 The following properties are maintained for each action:
 
 -  **bytes.sent** - total number of bytes sent to the network
+-  **messages.sent** - total number of messages sent to the network
+-  **num.connects** - total number of successful TCP/TLS connections established
+
+The ``num.connects`` counter is updated only for connection-oriented
+forwarding actions. UDP actions do not establish sessions and therefore do not
+increment it.
 
 See Also
 ========

@@ -1,12 +1,29 @@
 #!/bin/bash
-# added 2024-02-24 by rgerhards. Released under ASL 2.0
+# Verifies that native omfwd load balancing can resume a target that was
+# unavailable during the first message batch. Phase 1 keeps target 2 bound but
+# not listening, so all initial messages must go to target 1. Phase 2 releases
+# target 2, waits until minitcpsrv has actually called listen(), then waits
+# until the one-second pool retry interval is certainly eligible in omfwd's
+# whole-second timer model before injecting another full batch. After injection
+# the test waits for minitcpsrv to accept the retry connection. Before shutdown,
+# the test waits until both receivers show the expected exact line counts; this
+# is the oracle that target 2 resumed and the second batch was split evenly
+# rather than still flowing only to target 1.
+# Added 2024-02-24 by rgerhards. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 export NUMMESSAGES=10000  # MUST be an EVEN number!
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
+TARGET2_LISTEN_RELEASE="$RSYSLOG_DYNNAME.minitcpsrvr2.listen"
+TARGET2_LISTEN_READY="$RSYSLOG_DYNNAME.minitcpsrvr2.ready"
+TARGET2_ACCEPT_READY="$RSYSLOG_DYNNAME.minitcpsrvr2.accepted"
+rm -f "$TARGET2_LISTEN_RELEASE"
+rm -f "$TARGET2_LISTEN_READY"
+rm -f "$TARGET2_ACCEPT_READY"
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
+start_minitcpsrvr $RSYSLOG2_OUT_LOG 2 "$TARGET2_LISTEN_RELEASE" "$TARGET2_LISTEN_READY" "$TARGET2_ACCEPT_READY"
 
 # regular startup
 add_conf '
@@ -18,7 +35,7 @@ module(load="builtin:omfwd" template="outfmt")
 
 if $msg contains "msgnum:" then {
 	action(type="omfwd" target=["127.0.0.1", "127.0.0.1"]
-	                    port=["'$MINITCPSRVR_PORT1'", "'$TCPFLOOD_PORT'"]
+	                    port=["'$MINITCPSRVR_PORT1'", "'$MINITCPSRVR_PORT2'"]
 		protocol="tcp"
 		pool.resumeInterval="1"
 		action.resumeRetryCount="-1" action.resumeInterval="5")
@@ -37,27 +54,32 @@ cp "$RSYSLOG_OUT_LOG" tmp.log
 seq_check
 printf "\nSUCCESS for part 1 of the test\n\n"
 
-echo WARNING: The next part of this test is flacky, because there is an
-echo inevitable race on the port number for minitcpsrvr. If another
-echo parallel test has aquired it in the interim, this test here will
-echo invalidly fail.
-./minitcpsrv -t127.0.0.1 -p $TCPFLOOD_PORT -f "$RSYSLOG2_OUT_LOG" \
-	-P "$RSYSLOG_DYNNAME.minitcpsrvr_port2"  &
-# Note: we use the port file just to make sure minitcpsrvr has initialized!
-wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port2"
-BGPROCESS=$!
-echo "### background minitcpsrv process id is $BGPROCESS port $TCPFLOOD_PORT ###"
-echo "waiting a bit to ensure rsyslog retries the currently suspended pool member"
-
-sleep 3
+# target2 has held its port bound but not listening since before rsyslog
+# startup. This keeps phase 1 offline without exposing a get_free_port race.
+touch "$TARGET2_LISTEN_RELEASE"
+echo "waiting until the previously suspended pool member is listening"
+wait_file_exists "$TARGET2_LISTEN_READY"
+retry_ready_after=$(( $(date +%s) + 2 ))
+echo "waiting until the target-pool retry interval is eligible"
+while [ "$(date +%s)" -lt "$retry_ready_after" ]; do
+	$TESTTOOL_DIR/msleep 100
+done
 
 injectmsg $NUMMESSAGES $NUMMESSAGES
+echo "waiting until omfwd retries and reconnects the previously suspended pool member"
+wait_file_exists "$TARGET2_ACCEPT_READY"
+
+target2_expected=$(( NUMMESSAGES / 2 ))
+target1_expected=$(( NUMMESSAGES + target2_expected ))
+wait_file_lines --abort-on-oversize "$RSYSLOG2_OUT_LOG" "$target2_expected"
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$target1_expected"
 
 shutdown_when_empty
 wait_shutdown
 
-if [ "$(wc -l < $RSYSLOG2_OUT_LOG)" != "$(( NUMMESSAGES / 2 ))" ]; then
-	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages $(( NUMMESSAGES / 2 ))"
+target2_actual="$(wc -l < "$RSYSLOG2_OUT_LOG")"
+if [ "$target2_actual" != "$target2_expected" ]; then
+	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages $target2_actual, expected $target2_expected"
 	cat -n  $RSYSLOG2_OUT_LOG | head -10
 	error_exit 100
 fi

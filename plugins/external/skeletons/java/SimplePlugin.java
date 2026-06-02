@@ -19,29 +19,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 */
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 public class SimplePlugin {
 	
 	public static void main(String[] args) throws IOException {
-    		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-    		String s;
-		File outFile = new File("out.txt");
-      		if (! outFile.exists())  {
-         		outFile.createNewFile();
-      		}
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile, true)));
+		try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			BufferedWriter writer = Files.newBufferedWriter(Paths.get("out.txt"), StandardCharsets.UTF_8,
+				StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+			String s;
 
- 		while ((s = in.readLine()) != null && s.length() != 0) 	{
-			MsgOut(s, writer);
+			while ((s = in.readLine()) != null) {
+				msgOut(s, writer);
+			}
 		}
-		 writer.close();
 	}
 
-	public static void MsgOut (String msg, BufferedWriter writerMsg)  throws IOException {
-		writerMsg.newLine();		
+	public static void msgOut(String msg, BufferedWriter writerMsg) throws IOException {
 		writerMsg.write(msg);
+		writerMsg.newLine();
+		writerMsg.flush();
 	}
 
-} 
-
+}

@@ -496,6 +496,20 @@ finalize_it:
     RETiRet;
 }
 
+/** Warn in secure warn mode when an imrelp listener is configured without TLS. */
+static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) {
+    if (!inst->bEnableTLS) {
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "imrelp input uses tls=\"off\" (plain RELP without TLS); "
+                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (inst->authmode != NULL && strcasecmp((const char *)inst->authmode, "anon") == 0) {
+        glblWarnIfInsecureDefault(
+            loadModConf->pConf,
+            "imrelp uses tls.authmode=\"anon\"; peer identity is not authenticated, so MITM is possible "
+            "(see https://docs.rsyslog.com/doc/faq/tls_anon_auth_mitm.html)");
+    }
+}
+
 
 BEGINnewInpInst
     struct cnfparamvals *pvals;
@@ -519,10 +533,10 @@ BEGINnewInpInst
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(inppblk.descr[i].name, "port")) {
-            inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "address")) {
 #if defined(HAVE_RELPSRVSETLSTNADDR)
-            inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #else
             parser_errmsg(
                 "imrelp: librelp does not support input parameter 'address'; "
@@ -530,9 +544,9 @@ BEGINnewInpInst
                 "listening on all interfaces");
 #endif
         } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "maxdatasize")) {
             inst->maxDataSize = (size_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
@@ -543,7 +557,8 @@ BEGINnewInpInst
             } else if (!es_strconstcmp(pvals[i].val.d.estr, "full")) {
                 inst->flowCtlType = eFLOWCTL_FULL_DELAY;
             } else {
-                const char *const mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+                char *mode = NULL;
+                CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
                 parser_errmsg(
                     "imrelp: wrong flowcontrol parameter "
                     "value '%s', using default: 'light'; possible "
@@ -553,7 +568,8 @@ BEGINnewInpInst
             }
         } else if (!strcmp(inppblk.descr[i].name, "oversizemode")) {
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
-            char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            char *mode;
+            CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcmp(mode, "abort")) {
                 inst->oversizeMode = RELP_OVERSIZE_ABORT;
             } else if (!strcmp(mode, "truncate")) {
@@ -585,19 +601,19 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls")) {
             inst->bEnableTLS = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tls.dhbits")) {
             inst->dhBits = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
-            inst->pristring = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pristring = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls.authmode")) {
-            inst->authmode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->authmode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls.compression")) {
             inst->bEnableTLSZip = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tls.cacert")) {
-            inst->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->caCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -606,7 +622,7 @@ BEGINnewInpInst
                 fclose(fp);
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.mycert")) {
-            inst->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->myCertFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -615,7 +631,7 @@ BEGINnewInpInst
                 fclose(fp);
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
-            inst->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             fp = fopen((const char *)inst->myPrivKeyFile, "r");
             if (fp == NULL) {
                 LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
@@ -625,7 +641,7 @@ BEGINnewInpInst
             }
         } else if (!strcmp(inppblk.descr[i].name, "tls.tlscfgcmd")) {
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
-            inst->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->tlscfgcmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 #else
             parser_errmsg(
                 "imrelp: librelp does not support input parameter 'tls.tlscfgcmd'; "
@@ -670,6 +686,8 @@ BEGINnewInpInst
         if (inst->ratelimitInterval == -1) inst->ratelimitInterval = 0;
         if (inst->ratelimitBurst == -1) inst->ratelimitBurst = 10000;
     }
+
+    warnIfPlainRelpListenerConfigured(inst);
 
     inst->bEnableLstn = -1; /* all ok, ready to start up */
 
@@ -718,10 +736,10 @@ BEGINsetModCnf
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "ruleset")) {
-            loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "tls.tlslib")) {
 #if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
-            loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL));
 #else
             LogError(0, RS_RET_NOT_IMPLEMENTED,
                      "imrelp warning: parameter tls.tlslib ignored - librelp does not support "
