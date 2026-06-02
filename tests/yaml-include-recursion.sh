@@ -17,6 +17,9 @@ cat > "${RSYSLOG_DYNNAME}.yaml" << YAMLEOF
 include:
   - path: "${RSYSLOG_DYNNAME}.yaml"
 
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+
 templates:
   - name: outfmt
     type: string

@@ -2079,6 +2079,8 @@ finalize_it:
     for (int ki = 0; ki < seen_count; ++ki) free(seen_keys[ki]);
     if (parserInit) yaml_parser_delete(&parser);
     if (fh) fclose(fh);
+    if (yamlIncludeStack == &frame) yamlIncludeStack = frame.prev;
+    free(frame.path);
     cnfcurrfn = prev_cnfcurrfn;
     RETiRet;
 }
