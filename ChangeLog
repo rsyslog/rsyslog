@@ -5,6 +5,39 @@ This release has many commits in regard to
   * testbench de-flaking
 These will not be mentioned individually, check commit log for details.
 
+- 2026-05-31: action: keep transactional queue batches on shutdown
+  Transactional action queue messages are now re-enqueued when shutdown
+  interrupts a retry loop before the action commit completes. Disk queues no
+  longer drop such dequeued records during shutdown cleanup, so they can be
+  retried after restart.
+- 2026-05-31: omclickhouse: report HTTP response errors
+  ClickHouse HTTP responses with status 400 and above are now treated as data
+  failures even when the response body does not match the legacy exception
+  probes. This makes rejected inserts visible through normal rsyslog
+  diagnostics while preserving errorFile handling.
+  Closes https://github.com/rsyslog/rsyslog/issues/3485
+  Closes https://github.com/rsyslog/rsyslog/issues/3487
+- 2026-05-29: omfwd: improve retry handling for TCP/TLS sends
+  Retryable TCP/TLS send conditions now keep the connection state needed for
+  the next attempt and schedule deferred flush retries correctly. Rebind
+  cleanup also avoids leaking per-worker TCP client objects.
+  Closes https://github.com/rsyslog/rsyslog/issues/6663
+- 2026-05-29: imjournal: diagnose future journal entries
+  When journald reports no next entry, imjournal now probes the journal tail
+  with a separate handle and emits a rate-limited warning if the newest entry
+  is ahead of the current wall clock. This gives operators a concrete hint for
+  stalls caused by post-crash or time-jump journal timestamps.
+  Closes https://github.com/rsyslog/rsyslog/issues/4945
+- 2026-05-29: runtime: fix raw message replacement edge cases
+  Raw message replacement now preserves suffix bytes when a heap-backed buffer
+  grows, and the JSON set path has additional regression coverage for
+  replacement handling. This avoids corrupting trailing raw message data in
+  realloc paths.
+- 2026-05-27: imfifo: add named pipe input module
+  The new imfifo input module reads line-oriented messages from local POSIX
+  FIFOs without blocking startup or spinning on writer disconnects. It supports
+  dynamic, non-blocking FIFO instances through the modern configuration path.
+  Closes https://github.com/rsyslog/rsyslog/issues/440
 - 2026-05-27: imptcp: add "stream:auto" compression mode
   A single listener can now accept both zlib-compressed and plain
   sessions from independent peers. The first two bytes of every new
@@ -14,6 +47,50 @@ These will not be mentioned individually, check commit log for details.
   stays branch-free after the initial probe. This enables staged
   roll-outs of stream compression across large fleets of omfwd
   clients without forking the receiver configuration.
+- 2026-05-27: parser: fix PRI offset calculation
+  The parser now validates and centralizes calculation of the raw-message
+  offset immediately after PRI. This keeps downstream parser modules aligned on
+  malformed or special inputs and fixes the legacy imuxsock offAfterPRI
+  calculation.
+  Closes https://github.com/rsyslog/rsyslog/issues/6017
+- 2026-05-27: ommysql: handle closed connections before commit
+  ommysql now detects a closed MySQL connection before transaction commit and
+  follows the failure path instead of treating the commit attempt as successful.
+  Closes https://github.com/rsyslog/rsyslog/issues/4199
+- 2026-05-26: queue: add size.enqueued impstats counter
+  Queue statistics now include a cumulative size.enqueued byte counter next to
+  the existing enqueued message counter. Operators can monitor the byte volume
+  entering named main, ruleset, and action queues without changing queue
+  behavior.
+- 2026-05-25: omfwd: require explicit peers for SRV-based TLS name auth
+  targetSrv actions that use TLS x509/name authentication now require explicit
+  streamdriverpermittedpeers. This avoids deriving the peer identity from a
+  DNS-discovered SRV target unless the configuration states the allowed peers.
+- 2026-05-24: gssapi: fix sender token length framing
+  GSSAPI sender framing now writes token lengths with the correct byte order,
+  avoiding interoperability problems in encrypted GSSAPI forwarding.
+- 2026-05-23: imjournal: improve invalidation recovery
+  imjournal now reopens the journal handle before seeking back to the saved
+  cursor after journal invalidation or recovery. Recovery failures are
+  propagated to the input loop instead of being ignored.
+  Closes https://github.com/rsyslog/rsyslog/issues/3578
+  Closes https://github.com/rsyslog/rsyslog/issues/5020
+- 2026-05-22: mmexternal: add one-way helpers and response timeouts
+  mmexternal now supports interface.output="none" for side-effect-only helpers
+  that do not return JSON, plus responseTimeout to bound stalled helper
+  replies.
+  Closes https://github.com/rsyslog/rsyslog/issues/260
+  Closes https://github.com/rsyslog/rsyslog/issues/5206
+- 2026-05-22: imfile: add line-number metadata
+  imfile addMetadata output can now include a per-file line_number counter.
+  Loading imfile without configured monitors remains a warning instead of a
+  configuration-check failure.
+  Closes https://github.com/rsyslog/rsyslog/issues/728
+  Closes https://github.com/rsyslog/rsyslog/issues/2752
+- 2026-05-22: config: warn for unmatched include globs
+  Non-optional IncludeConfig wildcards that match no files now emit a parser
+  warning while preserving the historical non-fatal startup behavior.
+  Closes https://github.com/rsyslog/rsyslog/issues/4415
 
 IMPORTANT FOR MAINTAINERS
 - libyaml support is now an explicit configure feature. It remains enabled by
