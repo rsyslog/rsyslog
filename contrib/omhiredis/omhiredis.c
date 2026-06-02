@@ -288,7 +288,9 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
         if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
             LogError(0, NO_ERRCODE, "omhiredis[%s]: SSL Context error: %s", actionGetName(pWrkrData->pData->pAction),
                      redisSSLContextGetError(pWrkrData->ssl_error));
-            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "omhiredis[%s]: can not initialize TLS context");
+            if (!bSilent)
+                LogError(0, RS_RET_SUSPENDED, "omhiredis[%s]: can not initialize TLS context",
+                         actionGetName(pWrkrData->pData->pAction));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
         if (redisInitiateSSLWithContext(pWrkrData->conn, pWrkrData->ssl_conn) != REDIS_OK) {
