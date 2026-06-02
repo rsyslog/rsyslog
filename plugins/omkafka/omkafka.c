@@ -1772,6 +1772,12 @@ finalize_it:
 
 BEGINdoHUP
     CODESTARTdoHUP;
+    /* Keep doHUP in the same outer serialization domain as doAction and
+     * the callback poller.  Those paths hold mut_doAction while polling
+     * librdkafka, and callbacks from that poll path may take the error or
+     * stats file mutexes.  Preserve one order here:
+     * mut_doAction -> file mutexes / kafka handle locks. */
+    pthread_mutex_lock(&pData->mut_doAction);
     pthread_mutex_lock(&pData->mutErrFile);
     if (pData->fdErrFile != -1) {
         close(pData->fdErrFile);
@@ -1795,6 +1801,7 @@ BEGINdoHUP
                pData->tplName, rd_kafka_outq_len(pData->rk), callbacksCalled);
     }
 finalize_it:
+    pthread_mutex_unlock(&pData->mut_doAction);
 ENDdoHUP
 
 BEGINcreateInstance
