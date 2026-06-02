@@ -608,6 +608,7 @@ TESTS_LIBYAML = \
 	yaml-basic-yamlonly.sh \
 	yaml-omfile-dynafilecachesize-invalid.sh \
 	yaml-include.sh \
+	yaml-include-recursion.sh \
 	yaml-ruleset-script.sh \
 	yaml-error.sh \
 	yaml-filter-actions.sh \

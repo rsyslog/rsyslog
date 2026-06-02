@@ -90,6 +90,19 @@ static rsRetVal expect_event(
     yaml_parser_t *parser, yaml_event_t *ev, yaml_event_type_t expected, const char *ctx, const char *fname);
 static void skip_node(yaml_parser_t *parser);
 
+typedef struct yamlIncludeFrame_s {
+    char *path;
+    struct yamlIncludeFrame_s *prev;
+} yamlIncludeFrame_t;
+
+static yamlIncludeFrame_t *yamlIncludeStack = NULL;
+
+static char *yamlconf_canonical_path(const char *fname) {
+    char *resolved = realpath(fname, NULL);
+    if (resolved != NULL) return resolved;
+    return strdup(fname);
+}
+
 /* --------------------------------------------------------------------------
  * Helpers
  * -------------------------------------------------------------------------- */
@@ -1936,6 +1949,20 @@ rsRetVal yamlconf_load(const char *fname) {
     int seen_count = 0;
     DEFiRet;
     char *prev_cnfcurrfn = cnfcurrfn;
+    yamlIncludeFrame_t frame = {0};
+
+    frame.path = yamlconf_canonical_path(fname);
+    if (frame.path == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    for (yamlIncludeFrame_t *it = yamlIncludeStack; it != NULL; it = it->prev) {
+        if (!strcmp(it->path, frame.path)) {
+            LogError(0, RS_RET_CONF_PARSE_ERROR,
+                     "yamlconf: trying to include file '%s', which is already included - ignored", fname);
+            iRet = RS_RET_OK;
+            goto finalize_it;
+        }
+    }
+    frame.prev = yamlIncludeStack;
+    yamlIncludeStack = &frame;
 
     cnfcurrfn = (char *)fname;
 
