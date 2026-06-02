@@ -5584,11 +5584,9 @@ struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root) {
                 cnfstmtOptimizeReloadLookupTable(stmt);
                 break;
             case S_NOP:
-                // TODO: fix optimizer, re-enable. see:
-                // https://github.com/rsyslog/rsyslog/issues/2524
-                // LogError(0, RS_RET_INTERNAL_ERROR,
-                //	"optimizer error: we see a NOP, how come?");
-                dbgprintf("optimizer error: we see a NOP, how come?");
+                /* NOPs are normal optimizer intermediates, for example when
+                 * a user intentionally writes "continue" inside an if branch.
+                 * removeNOPs() drops them after this traversal. */
                 break;
             default:
                 LogError(0, RS_RET_INTERNAL_ERROR, "internal error: unknown stmt type %u during optimizer run\n",
