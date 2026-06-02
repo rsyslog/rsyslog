@@ -306,6 +306,7 @@ TESTS_DEFAULT = \
 	compat-defaults-secure-dynafile-rainerscript.sh \
 	abort-uncleancfg-goodcfg.sh \
 	abort-uncleancfg-goodcfg-check.sh \
+	abort-uncleancfg-continue-nop.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	variable_leading_underscore.sh \
