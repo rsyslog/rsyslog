@@ -206,18 +206,6 @@ jobs:
           sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
           cat -n /etc/hosts
 
-      - name: cache Kafka configure results
-        if: matrix.lane == 'kafka'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: config.cache
-          key: >
-            cfgcache-daily-focused-kafka-${{ runner.os }}-${{
-            runner.arch }}-cfg-${{
-            hashFiles('configure.ac','m4/*.m4','Makefile.am') }}
-          restore-keys: |
-            cfgcache-daily-focused-kafka-${{ runner.os }}-${{ runner.arch }}-
-
       - name: require Codecov token
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -233,6 +221,7 @@ jobs:
           echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
 
       - name: prepare for build
+        id: prepare_build
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
@@ -347,7 +336,6 @@ jobs:
           'kafka')
             autoreconf -fvi
             ./configure \
-              --cache-file=config.cache \
               --enable-compile-warnings=error \
               --enable-testbench \
               --enable-omstdout \
@@ -389,7 +377,7 @@ jobs:
         run: make -j10 check
 
       - name: generate coverage
-        if: always()
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
         run: |
           lcov --capture --directory . \
                --rc geninfo_unexecuted_blocks=1 \
@@ -401,7 +389,7 @@ jobs:
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
 
       - name: upload coverage to Codecov
-        if: always()
+        if: ${{ always() && steps.prepare_build.outcome == 'success' }}
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -449,6 +437,7 @@ jobs:
     needs: focused_test
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       issues: write
     if: >-
@@ -460,13 +449,41 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         with:
           script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: workflowJobs } =
+              await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id: context.runId,
+                per_page: 100,
+              });
+            const failedJobs = workflowJobs.jobs
+              .filter((job) => job.conclusion === 'failure')
+              .filter((job) => /^daily .+ tests$/.test(job.name));
+            const failedLaneLines = failedJobs.map((job) => {
+              const match = job.name.match(/^daily (.+) tests$/);
+              const lane = match ? match[1] : job.name;
+              const artifact =
+                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-${lane}`;
+              return `- ${job.name}: ${job.html_url} (artifact: ${artifact})`;
+            });
+            const failedLaneSection = failedLaneLines.length > 0
+              ? ['Failed lanes:', '', ...failedLaneLines, '']
+              : [
+                  'Failed lanes could not be listed automatically.',
+                  'Inspect the linked run for failed jobs and artifacts.',
+                  '',
+                ];
             const body = [
               'Daily focused tests failed.',
               '',
               `Run: ${process.env.RUN_URL}`,
               '',
+              ...failedLaneSection,
               'This workflow contains historical focused daily lanes. Failure',
               'artifacts are uploaded by the failing lane; this issue is',
               'created or updated so scheduled failures are not silent.',
@@ -476,8 +493,6 @@ jobs:
               'fix. The long-term expectation is that flakes become rarer as',
               'the recurring causes are fixed.'
             ].join('\n');
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
             const query = `repo:${owner}/${repo} ` +
                           `is:issue is:open in:title Daily focused test failures`;
             const { data: issues } =
