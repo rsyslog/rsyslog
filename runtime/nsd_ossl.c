@@ -50,6 +50,7 @@
 #include "net_ossl.h"  // Include OpenSSL Helpers
 #include "nsd_ptcp.h"
 #include "nsd_ossl.h"
+#include "srUtils.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
 
@@ -1246,6 +1247,9 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
     DEFiRet;
     int iSent;
     int err;
+#ifdef ENABLE_WOLFSSL
+    unsigned wolfsslSendReadRetries = 0;
+#endif
     nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
     DBGPRINTF("Send for %p\n", pNsd);
 
@@ -1318,9 +1322,15 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                         recvRet = osslRecordRecv(pThis, &nextIODirection);
                         if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
                         if (recvRet == RS_RET_RETRY) {
+                            if (++wolfsslSendReadRetries >= 100) ABORT_FINALIZE(RS_RET_RETRY);
+                            srSleep(0, 10000);
                             pThis->rtryCall = osslRtry_None;
                             pThis->rtryOsslErr = SSL_ERROR_NONE;
+                            continue;
                         }
+                        wolfsslSendReadRetries = 0;
+                        pThis->rtryCall = osslRtry_None;
+                        pThis->rtryOsslErr = SSL_ERROR_NONE;
                         if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
                     }
 #else
