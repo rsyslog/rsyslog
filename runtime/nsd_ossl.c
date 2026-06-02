@@ -50,6 +50,7 @@
 #include "net_ossl.h"  // Include OpenSSL Helpers
 #include "nsd_ptcp.h"
 #include "nsd_ossl.h"
+#include "srUtils.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
 
@@ -1317,7 +1318,12 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                     if (pThis->lenRcvBuf == -1) {
                         recvRet = osslRecordRecv(pThis, &nextIODirection);
                         if (recvRet != RS_RET_OK && recvRet != RS_RET_RETRY) ABORT_FINALIZE(recvRet);
-                        if (recvRet == RS_RET_RETRY) ABORT_FINALIZE(RS_RET_RETRY);
+                        if (recvRet == RS_RET_RETRY) {
+                            srSleep(0, 10000);
+                            pThis->rtryCall = osslRtry_None;
+                            pThis->rtryOsslErr = SSL_ERROR_NONE;
+                            continue;
+                        }
                         pThis->rtryCall = osslRtry_None;
                         pThis->rtryOsslErr = SSL_ERROR_NONE;
                         if (pThis->lenRcvBuf == 0) ABORT_FINALIZE(RS_RET_CLOSED);
