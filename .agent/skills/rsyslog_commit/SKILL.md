@@ -41,7 +41,10 @@ This skill standardizes the final step of the development workflow: committing a
 - **Validation**: Ensure the relevant build/test path passed. For PR-ready
   implementation work, prefer the local container-testing skill's change-gated
   validation over unconditional full-suite local runs.
-  - **Multi-Pass AI Audit**: Run the `/audit` workflow for a rigorous, persona-based review (Memory, Concurrency, Standards) using the project's canned prompts.
+  - **Late Prompt Audits**: For non-trivial C/H, concurrency, or test/build
+    plumbing changes, follow the local container-testing skill's late
+    prompt-audit stage. Read and apply the project's canned prompts directly;
+    do not launch another AI CLI from repository scripts.
   - **Local Cubic**: Run local Cubic review for code changes when `cubic` is
     installed and reachable. Skip Cubic for documentation-only changes. For
     tests, workflows, build tooling, and mixed changes, use Cubic when the

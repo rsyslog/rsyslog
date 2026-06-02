@@ -16,7 +16,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 |-------|---------|
 | [`rsyslog_build`](.agent/skills/rsyslog_build/SKILL.md) | Environment setup and incremental parallel builds. |
 | [`rsyslog_test`](.agent/skills/rsyslog_test/SKILL.md) | Standardized validation and debugging via `diag.sh`. |
-| [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, analyzer-first flow, service-skip checks, and clean-tree rules. |
+| [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, change-gated Ubuntu 26.04 first, late prompt audits, service-skip checks, and clean-tree rules. |
 | [`rsyslog_pr_babysitting`](.agent/skills/rsyslog_pr_babysitting/SKILL.md) | Post-push PR monitoring, including CI failures, reruns, and unresolved review-thread checks. |
 | [`rsyslog_changelog`](.agent/skills/rsyslog_changelog/SKILL.md) | Selective ChangeLog maintenance that follows release-note style and avoids low-signal churn. |
 | [`rsyslog_doc`](.agent/skills/rsyslog_doc/SKILL.md) | Structured, RAG-optimized documentation and metadata. |
@@ -103,11 +103,12 @@ validation as the final validation gate when container tooling is available.
   [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md)
   skill's PR-ready local validation before reporting the task complete.
 - PR-ready local container validation means the skill's ordered
-  change-gated sequence: local Cubic where applicable, the Ubuntu 26.04 static
-  analyzer, and the Ubuntu 26.04 `run-ci.sh` check run using the same relevance
-  gates as regular PR CI. Focused container tests are useful targeted evidence,
-  but they are not the final gate unless the skill explicitly allows the
-  reduced lane for the touched area.
+  change-gated sequence: the Ubuntu 26.04 `run-ci.sh` check run using the same
+  relevance gates as regular PR CI, the Ubuntu 26.04 static analyzer where
+  applicable, late prompt-based audit passes where applicable, and local Cubic
+  where applicable. Focused container tests are useful targeted evidence, but
+  they are not the final gate unless the skill explicitly allows the reduced
+  lane for the touched area.
 - Use the skill's configured CI-equivalent dev image, including Docker Hub dev
   images when appropriate. Use a locally built image only when validating that
   local image or the runtime container produced by the task.
