@@ -113,6 +113,16 @@ struct msg {
         struct syslogTime tTIMESTAMP; /* (parsed) value of the timestamp */
         struct json_object *json;
         struct json_object *localvars;
+    #ifdef HAVE_LOGNORM_TURBO
+        /* Opaque turbo result slot — set by mmnormalize turbo path.
+         * Enables zero-JSON data flow: template resolution reads fields
+         * directly from the snapshot without building a json-c tree.
+         * No liblognorm dependency: uses void* + function pointer callbacks. */
+        void *turbo_result;
+        void (*turbo_result_free)(void *);
+        void (*turbo_result_to_json)(void *, struct json_object **);
+        int (*turbo_result_get_str)(void *, const uchar *, int, const uchar **, rs_size_t *);
+    #endif
         /* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
         uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
         /* most messages are small, and these are stored here (without malloc/free!) */
