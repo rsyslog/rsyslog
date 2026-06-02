@@ -439,9 +439,8 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
 
         /* flags out-param is NULL: nesting is detected via memchr below,
          * which does not rely on the LN_FFIELD_NESTED flag being set. */
-        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len,
-                                           &ftype, NULL, &sval, &slen,
-                                           &ival, &dval) != 0)
+        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len, &ftype, NULL, &sval, &slen, &ival, &dval) !=
+            0)
             continue;
 
         switch (ftype) {
