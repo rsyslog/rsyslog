@@ -25,7 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/mmpstrucdata`.
 
 Description
 -----------
-Specifies into which json container the data shall be parsed to.
+Specifies into which JSON container the module writes its structured-data
+object. The object member name below this root is controlled by
+:ref:`param-mmpstrucdata-container`.
 
 Action usage
 ------------
@@ -35,6 +37,14 @@ Action usage
 .. code-block:: rsyslog
 
    action(type="mmpstrucdata" jsonRoot="!")
+
+YAML usage
+----------
+.. code-block:: yaml
+
+   actions:
+     - type: mmpstrucdata
+       jsonRoot: "!"
 
 See also
 --------
