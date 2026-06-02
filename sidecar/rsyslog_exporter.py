@@ -39,7 +39,8 @@ Configuration via environment variables:
 Security configuration (UDP mode):
 - ALLOWED_UDP_SOURCES: Comma-separated list of allowed source IPs (default: empty = allow all)
 - MAX_UDP_MESSAGE_SIZE: Maximum UDP packet size in bytes (default: 65535)
-- MAX_BURST_BUFFER_LINES: Maximum lines in burst buffer (default: 10000, prevents DoS)
+- MAX_BURST_BUFFER_LINES: Maximum lines in burst buffer (default: 10000)
+- MAX_BURST_BUFFER_BYTES: Maximum total buffered burst payload bytes (default: 8388608)
 
 Security Notes:
 - IMPSTATS_UDP_ADDR: Defaults to 127.0.0.1 (loopback). Use this for same-host rsyslog.
@@ -108,7 +109,8 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Security limits
 MAX_UDP_MESSAGE_SIZE = _int_env("MAX_UDP_MESSAGE_SIZE", "65535")  # Max UDP packet size
-MAX_BURST_BUFFER_LINES = _int_env("MAX_BURST_BUFFER_LINES", "10000")  # Prevent memory exhaustion
+MAX_BURST_BUFFER_LINES = _int_env("MAX_BURST_BUFFER_LINES", "10000")  # Prevent line-buffer exhaustion
+MAX_BURST_BUFFER_BYTES = _int_env("MAX_BURST_BUFFER_BYTES", "8388608")  # 8MiB total buffered payload cap
 ALLOWED_UDP_SOURCES = os.getenv("ALLOWED_UDP_SOURCES", "")  # Comma-separated IPs, empty = allow all
 
 # Logging setup
@@ -419,6 +421,7 @@ class UdpStatsListener:
 
         # Burst handling
         self.burst_buffer: List[str] = []
+        self.burst_buffer_bytes = 0
         self.last_receive_time = 0
         self.dropped_messages = 0  # Track dropped messages for security monitoring
 
@@ -503,18 +506,28 @@ class UdpStatsListener:
     def _handle_message(self, message: str):
         """Handle received UDP message (may contain multiple lines)."""
         lines = message.splitlines()
+        line_count = len(lines)
+        payload_bytes = len(message.encode("utf-8"))
 
         with self.metrics_lock:
             # Prevent buffer overflow attacks
-            if len(self.burst_buffer) + len(lines) > MAX_BURST_BUFFER_LINES:
-                logger.warning(f"Burst buffer limit reached ({MAX_BURST_BUFFER_LINES} lines), "
-                               f"dropping {len(lines)} new lines. Possible DoS attempt or misconfiguration.")
+            if len(self.burst_buffer) + line_count > MAX_BURST_BUFFER_LINES:
+                logger.warning(f"Burst buffer line limit reached ({MAX_BURST_BUFFER_LINES}), "
+                               f"dropping {line_count} new lines.")
+                self.dropped_messages += 1
+                return
+
+            if self.burst_buffer_bytes + payload_bytes > MAX_BURST_BUFFER_BYTES:
+                logger.warning(f"Burst buffer byte limit reached ({MAX_BURST_BUFFER_BYTES} bytes), "
+                               f"dropping {payload_bytes} new bytes.")
                 self.dropped_messages += 1
                 return
 
             self.burst_buffer.extend(lines)
+            self.burst_buffer_bytes += payload_bytes
             self.last_receive_time = time.time()
-            logger.debug(f"Received {len(lines)} lines, buffer now has {len(self.burst_buffer)} lines")
+            logger.debug(f"Received {line_count} lines/{payload_bytes} bytes, "
+                         f"buffer now has {len(self.burst_buffer)} lines/{self.burst_buffer_bytes} bytes")
 
     def _check_burst_completion(self):
         """Check if burst is complete and process if so."""
@@ -530,6 +543,7 @@ class UdpStatsListener:
             # Burst is complete, copy buffer and release lock before parsing
             burst_lines = self.burst_buffer
             self.burst_buffer = []
+            self.burst_buffer_bytes = 0
 
         logger.debug(f"Burst complete ({len(burst_lines)} lines), processing...")
 
