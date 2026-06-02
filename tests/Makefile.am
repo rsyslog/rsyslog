@@ -1379,7 +1379,8 @@ TESTS_OMSTDOUT = \
 
 TESTS_LIBYAML_IMTCP = \
 	config-translate-rs-roundtrip.sh \
-	config-translate-yaml-roundtrip.sh
+	config-translate-yaml-roundtrip.sh \
+	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \
