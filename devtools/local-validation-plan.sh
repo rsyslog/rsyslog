@@ -22,7 +22,11 @@
 set -eu
 
 mode=plan
-base_ref="${RSYSLOG_LOCAL_VALIDATION_BASE:-origin/main}"
+base_ref="${RSYSLOG_LOCAL_VALIDATION_BASE:-}"
+base_ref_source=environment
+if [ -z "$base_ref" ]; then
+	base_ref_source=auto
+fi
 
 usage() {
 	cat <<'EOF'
@@ -34,10 +38,16 @@ unstaged tracked changes, and untracked files. Generated build products should
 be cleaned before using this helper.
 
 Environment knobs:
-  RSYSLOG_LOCAL_VALIDATION_BASE  Base ref for committed branch changes (default: origin/main)
+  RSYSLOG_LOCAL_VALIDATION_BASE  Base ref for committed branch changes
   RSYSLOG_LOCAL_BUILD_JOBS       Local build concurrency (default: 10)
   RSYSLOG_LOCAL_CHECK_JOBS       Local make check concurrency (default: 10)
   RSYSLOG_LOCAL_DOC_JOBS         Local Sphinx doc build jobs (default: nproc)
+
+Without --base or RSYSLOG_LOCAL_VALIDATION_BASE, the helper uses
+rsyslog.localValidationBase from git config when set, then the oldest HEAD
+reflog entry for this worktree, then origin/main as a fallback. In normal
+dedicated worktrees this makes local review compare against the commit that was
+HEAD when the worktree was created, even after origin/main moves.
 
 The --run mode exits on the first validation finding from a tool that actually
 runs. Missing local tools produce warnings, not failures; hosted CI or a fuller
@@ -57,6 +67,7 @@ while [ "$#" -gt 0 ]; do
 			exit 2
 		fi
 		base_ref="$2"
+		base_ref_source=cli
 		shift 2
 		;;
 	-h | --help)
@@ -74,12 +85,33 @@ done
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+resolve_default_base_ref() {
+	configured_base="$(git config --get rsyslog.localValidationBase 2>/dev/null || true)"
+	if [ -n "$configured_base" ]; then
+		printf '%s\n' "$configured_base"
+		return
+	fi
+
+	reflog_base="$(git reflog --format=%H HEAD 2>/dev/null | tail -n 1 || true)"
+	if [ -n "$reflog_base" ] && git rev-parse --verify "$reflog_base^{commit}" >/dev/null 2>&1; then
+		printf '%s\n' "$reflog_base"
+		return
+	fi
+
+	printf '%s\n' origin/main
+}
+
+if [ -z "$base_ref" ]; then
+	base_ref="$(resolve_default_base_ref)"
+fi
+
 tmp_changed="$(mktemp)"
+tmp_status="$(mktemp)"
 tmp_shell="$(mktemp)"
 tmp_python="$(mktemp)"
 tmp_c="$(mktemp)"
 cleanup() {
-	rm -f "$tmp_changed" "$tmp_shell" "$tmp_python" "$tmp_c"
+	rm -f "$tmp_changed" "$tmp_status" "$tmp_shell" "$tmp_python" "$tmp_c"
 }
 trap cleanup EXIT
 
@@ -89,8 +121,14 @@ if ! git rev-parse --verify "$base_ref" >/dev/null 2>&1; then
 fi
 
 {
-	git diff --name-only --diff-filter=d "$base_ref"...HEAD
-	git diff --name-only --diff-filter=d HEAD
+	git diff --name-status --diff-filter=ACMRD "$base_ref"...HEAD
+	git diff --name-status --diff-filter=ACMRD HEAD
+	git ls-files --others --exclude-standard | sed 's/^/A	/'
+} | sort -u > "$tmp_status"
+
+{
+	git diff --name-only "$base_ref"...HEAD
+	git diff --name-only HEAD
 	git ls-files --others --exclude-standard
 } | sort -u > "$tmp_changed"
 
@@ -116,6 +154,7 @@ has_testbench_plumbing=0
 has_test_shell_only=0
 has_c=0
 has_runtime_ci=0
+has_dist_risk=0
 
 if matches_any '^(doc/source/|doc/Makefile\.am$|doc/tools/|doc/requirements\.txt$|doc/source/conf\.py$)'; then
 	has_rendered_docs=1
@@ -139,6 +178,22 @@ fi
 if matches_any '^((runtime|grammar|tools|plugins|contrib|compat)/|tests/|[^/]+\.(c|h)$|configure\.ac$|Makefile\.am$|m4/|\.github/workflows/run_checks\.yml$)'; then
 	has_runtime_ci=1
 fi
+if awk '
+	BEGIN { FS = "\t" }
+	/^[ACDMR]/ {
+		for (i = 2; i <= NF; i++) {
+			if ($i ~ /^tests\/[^/]+\.sh$/ ||
+			    $i ~ /(^|\/)Makefile\.am$/ ||
+			    $i == "configure.ac" ||
+			    $i ~ /^m4\//) {
+				found = 1
+			}
+		}
+	}
+	END { exit found ? 0 : 1 }
+' "$tmp_status"; then
+	has_dist_risk=1
+fi
 
 agent_docs_only=0
 if matches_only '(^|/)AGENTS(\.local)?\.md$|^\.agent/skills/|^\.codex/skills/'; then
@@ -155,9 +210,17 @@ if [ "$has_rendered_docs" -eq 0 ] && matches_only '(^|/)AGENTS(\.local)?\.md$|^\
 	validation_tooling_only=1
 fi
 
-grep -E '\.sh$' "$tmp_changed" > "$tmp_shell" || true
-grep -E '\.py$' "$tmp_changed" > "$tmp_python" || true
-grep -E '\.(c|h)$' "$tmp_changed" > "$tmp_c" || true
+: > "$tmp_shell"
+: > "$tmp_python"
+: > "$tmp_c"
+while IFS= read -r file; do
+	[ -f "$file" ] || continue
+	case "$file" in
+	*.sh) printf '%s\n' "$file" >> "$tmp_shell" ;;
+	*.py) printf '%s\n' "$file" >> "$tmp_python" ;;
+	*.c | *.h) printf '%s\n' "$file" >> "$tmp_c" ;;
+	esac
+done < "$tmp_changed"
 
 classification=general
 if [ "$agent_docs_only" -eq 1 ]; then
@@ -190,7 +253,7 @@ check_jobs="${RSYSLOG_LOCAL_CHECK_JOBS:-10}"
 
 print_plan() {
 	echo "Local validation classification: $classification"
-	echo "Base ref: $base_ref"
+	echo "Base ref: $base_ref ($base_ref_source)"
 	echo
 	echo "Changed files:"
 	sed 's/^/  /' "$tmp_changed"
@@ -212,16 +275,23 @@ print_plan() {
 		;;
 	test-shell-only)
 		echo "  - shellcheck changed tests if shellcheck is installed."
+		echo "  - devtools/check-test-antipatterns.sh on changed tests."
 		echo "  - Focused container test with CI_MAKE_CHECK_TESTS set to changed tests."
 		echo "  - Add broad Ubuntu 26.04 run if the test changes timing, ports, process lifecycle, or shared behavior."
 		;;
 	testbench-plumbing | code-or-ci | general)
 		echo "  - Available cheap diff-scoped linters."
-		echo "  - Cubic where applicable."
-		echo "  - Ubuntu 26.04 static analyzer for C/testbench/code changes."
+		echo "  - Advisory raw allocation scan for changed C/H files."
+		echo "  - devtools/check-test-antipatterns.sh on changed tests."
 		echo "  - Change-gated Ubuntu 26.04 run-ci.sh check."
+		echo "  - Ubuntu 26.04 static analyzer for C/testbench/code changes."
+		echo "  - Late prompt-based audit passes for applicable C/H, concurrency, test, or build changes."
+		echo "  - Cubic where applicable."
 		;;
 	esac
+	if [ "$has_dist_risk" -eq 1 ]; then
+		echo "  - make distcheck TEST_RUN_TYPE=MOCK-OK -j<jobs> for distribution-risk changes."
+	fi
 }
 
 run_shellcheck() {
@@ -270,6 +340,82 @@ run_format_code_check() {
 		RSYSLOG_LOCAL_VALIDATION_BASE="$base_ref" devtools/format-code.sh --git-changed --check --check-if-available
 	else
 		echo "warning: devtools/format-code.sh missing or not executable; skipping C format check" >&2
+	fi
+}
+
+run_raw_alloc_scan() {
+	if [ ! -s "$tmp_c" ]; then
+		return 0
+	fi
+
+	findings="$(
+		{
+			git diff --unified=0 --no-color "$base_ref"...HEAD -- '*.c' '*.h'
+			git diff --unified=0 --no-color HEAD -- '*.c' '*.h'
+			while IFS= read -r file; do
+				case "$file" in
+				*.c | *.h)
+					if git ls-files --others --exclude-standard -- "$file" | grep -q .; then
+						printf '+++ b/%s\n' "$file"
+						awk '{ print "+" $0 }' "$file"
+					fi
+					;;
+				esac
+			done < "$tmp_c"
+		} | awk '
+			/^\+\+\+ / {
+				file = substr($0, 7)
+				sub(/^b\//, "", file)
+				next
+			}
+			/^\+[^+]/ {
+				line = substr($0, 2)
+				if (line ~ /(^|[^A-Za-z0-9_])(malloc|calloc|realloc|strdup|strndup)[[:space:]]*\(/ &&
+				    line !~ /(^|[^A-Za-z0-9_])CHK(malloc|realloc)[[:space:]]*\(/) {
+					if (file == "") {
+						file = "(untracked C/H file)"
+					}
+					print file ": " line
+				}
+			}
+		'
+	)"
+
+	if [ -n "$findings" ]; then
+		echo "warning: raw allocation calls found in changed C/H lines; prefer rsyslog allocation helpers where practical" >&2
+		printf '%s\n' "$findings" >&2
+	fi
+}
+
+run_test_antipattern_scan() {
+	found_tests=0
+	while IFS= read -r file; do
+		case "$file" in
+		tests/*/*.sh)
+			;;
+		tests/*.sh)
+			[ -f "$file" ] || continue
+			found_tests=1
+			;;
+		esac
+	done < "$tmp_changed"
+	if [ "$found_tests" -eq 0 ]; then
+		return 0
+	fi
+	if [ -x devtools/check-test-antipatterns.sh ]; then
+		# This helper is advisory and exits successfully even with findings.
+		while IFS= read -r file; do
+			case "$file" in
+			tests/*/*.sh)
+				;;
+			tests/*.sh)
+				[ -f "$file" ] || continue
+				devtools/check-test-antipatterns.sh "$file"
+				;;
+			esac
+		done < "$tmp_changed"
+	else
+		echo "warning: devtools/check-test-antipatterns.sh missing or not executable; skipping test antipattern scan" >&2
 	fi
 }
 
@@ -324,10 +470,34 @@ run_cubic_if_available() {
 		;;
 	esac
 	if command -v cubic >/dev/null 2>&1; then
-		cubic review --print-logs --base HEAD
+		cubic review --print-logs --base "$base_ref"
 	else
 		echo "warning: cubic not installed; skipping local Cubic review" >&2
 	fi
+}
+
+run_mock_distcheck_if_needed() {
+	if [ "$has_dist_risk" -ne 1 ]; then
+		return 0
+	fi
+	if ! command -v make >/dev/null 2>&1; then
+		echo "warning: make not installed; skipping mock distcheck" >&2
+		return 0
+	fi
+	make distcheck TEST_RUN_TYPE=MOCK-OK -j"$(nproc_jobs)"
+}
+
+run_prompt_audit_reminder() {
+	case "$classification" in
+	agent-doc-only | internal-doc-only | rendered-docs | local-validation-tooling)
+		return 0
+		;;
+	esac
+	echo "Prompt audit reminder: after deterministic checks, apply relevant canned prompts manually." >&2
+	echo "  - C/H memory lifecycle: ai/rsyslog_memory_auditor/base_prompt.txt" >&2
+	echo "  - Locks/queues/threads/resources: ai/rsyslog_bug_finder/base_prompt.txt" >&2
+	echo "  - Test/build plumbing: project standards audit from rsyslog_local_container_testing skill" >&2
+	echo "Do not launch another AI CLI from this helper." >&2
 }
 
 run_static_analyzer() {
@@ -370,7 +540,17 @@ run_change_gated_ubuntu26() {
 }
 
 run_focused_test_shell() {
-	tests="$(grep -E '^tests/[^/]+\.sh$' "$tmp_changed" | sed 's#^tests/##' | tr '\n' ' ')"
+	tests="$(awk '
+		BEGIN { FS = "\t" }
+		$1 !~ /^D/ {
+			for (i = 2; i <= NF; i++) {
+				if ($i ~ /^tests\/[^/]+\.sh$/) {
+					sub(/^tests\//, "", $i)
+					printf "%s ", $i
+				}
+			}
+		}
+	' "$tmp_status")"
 	if [ -z "$tests" ]; then
 		return 0
 	fi
@@ -400,6 +580,8 @@ echo "Executing local validation plan..."
 run_shellcheck
 run_python_style
 run_format_code_check
+run_raw_alloc_scan
+run_test_antipattern_scan
 git diff --check "$base_ref"...HEAD
 git diff --cached --check
 git diff --check
@@ -415,11 +597,14 @@ rendered-docs)
 	run_docs_build
 	;;
 test-shell-only)
+	run_mock_distcheck_if_needed
 	run_focused_test_shell
 	;;
 testbench-plumbing | code-or-ci | general)
-	run_cubic_if_available
-	run_static_analyzer
+	run_mock_distcheck_if_needed
 	run_change_gated_ubuntu26
+	run_static_analyzer
+	run_prompt_audit_reminder
+	run_cubic_if_available
 	;;
 esac

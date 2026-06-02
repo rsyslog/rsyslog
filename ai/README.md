@@ -1,30 +1,29 @@
-# AI and Machine Learning Tooling for rsyslog
+# AI Prompt Assets for rsyslog
 
-This directory contains AI and Machine Learning (ML) tools that
+This directory contains maintained prompt assets that agents may read during
+rsyslog development, review, documentation, and support workflows.
 
----
 ## Purpose
 
-The `ai` directory is designated for a new generation of tooling that will
-interface with rsyslog. It will house external AI and ML models and
-applications. This approach ensures the rsyslog core remains lean and
-robust while allowing for flexible and powerful extensions.
+The `ai` directory keeps reusable AI-facing context outside the rsyslog core.
+These files are not executable validation scripts and should not launch local
+AI tooling by themselves. Active agents read the relevant prompt text and apply
+it to the current diff or task.
 
----
-## Current Status
+## Current Assets
 
-**No tools exist yet.**
+- `rsyslog_memory_auditor/`: memory ownership, cleanup, leak, and NULL-check
+  review prompts for C changes.
+- `rsyslog_bug_finder/`: resource, concurrency, lock-order, and lifecycle
+  review prompt.
+- `rsyslog_commit_assistant/`: commit message guidance.
+- `rsyslog_doc_assistant/` and `rsyslog_code_doc_builder/`: documentation
+  prompt assets.
+- `rsyslog_issue_assistant/` and `support_gpt/`: issue and support prompt
+  assets.
 
-This directory and its `README.md` have been created to provide a
-consistent and official location for this work as it progresses.
-Active development is ongoing, and tools will be added here once they
-reach a stable state.
+## Workflow
 
----
-## Vision
-
-Future tools in this directory will leverage artificial intelligence and
-machine learning for tasks like advanced log analysis, anomaly detection,
-and intelligent system monitoring. The goal is to enhance rsyslog's
-capabilities without integrating complex models directly into the core
-daemon.
+Prompt-based audits are intentionally manual from repository tooling. See
+`.agent/skills/rsyslog_local_container_testing/SKILL.md` for when agents should
+apply these prompts as late validation passes.

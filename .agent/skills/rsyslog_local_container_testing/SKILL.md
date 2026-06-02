@@ -1,6 +1,6 @@
 ---
 name: rsyslog_local_container_testing
-description: Mirror rsyslog run_checks.yml container validation locally, including Cubic review where applicable, the clang static analyzer job, the change-gated Ubuntu 26.04 run-ci.sh check run, service-skip validation, clean-tree rules, and container path caveats.
+description: Mirror rsyslog run_checks.yml container validation locally, including the change-gated Ubuntu 26.04 run-ci.sh check run, the clang static analyzer job, late prompt-based audit passes, Cubic review where applicable, service-skip validation, clean-tree rules, and container path caveats.
 ---
 
 # rsyslog_local_container_testing
@@ -54,6 +54,14 @@ Optional local linters still remain tool-presence guarded, so missing optional
 developer tools do not turn a documentation or tooling-only change into a
 container validation failure.
 
+By default the helper compares committed branch changes against the worktree's
+creation baseline: `RSYSLOG_LOCAL_VALIDATION_BASE` when set, otherwise
+`rsyslog.localValidationBase` from git config when present, otherwise the
+oldest `HEAD` reflog entry for the worktree. This keeps local Cubic and local
+diff classification tied to the commit that was `HEAD` when the dedicated
+worktree was created, even after `origin/main` moves. Use `--base REF` for an
+intentional one-off override.
+
 Before starting any heavy local validation, run the relevant cheap local checks
 that are available in the environment. These checks should be diff-scoped and
 tool-presence guarded:
@@ -77,6 +85,14 @@ tool-presence guarded:
   fuller local environment to cover the gap. CI will not pass with improperly
   formatted C/H code. Use `devtools/format-code.sh --git-changed` separately
   when you intentionally want to rewrite local files.
+- changed C sources or headers also get an advisory raw-allocation scan in
+  `devtools/local-validation-plan.sh --run`. Treat matches for `malloc`,
+  `calloc`, `realloc`, `strdup`, and `strndup` as review prompts; prefer
+  rsyslog allocation helpers where practical, but inspect low-level exceptions
+  before changing code.
+- changed shell tests should run `devtools/check-test-antipatterns.sh` through
+  the helper. Its findings are advisory prompts for flake-prone constructs such
+  as fixed sleeps, port preselection, fixed ports, and ad-hoc assertions.
 
 Do not run `cppcheck` routinely unless a maintainer explicitly asks for it; it
 is too noisy for routine rsyslog PR validation.
@@ -98,11 +114,12 @@ is too noisy for routine rsyslog PR validation.
   edits. Internal docs that are not rendered into the user manual, such as
   `doc/ai/**`, repository agent guides, and skill files, do not require this
   docs build unless they also change rendered Sphinx inputs.
-- **Tier 1: default PR-ready gate for code or testbench changes**. Run the
-  local Cubic review when applicable, the existing static-analyzer pass, and a
-  change-gated Ubuntu 26.04 `devtools/run-ci.sh` check. This is the normal
-  local confidence gate for C, parser, module, runtime, `tests/*.sh`,
-  `diag.sh`, `Makefile.am`, `configure.ac`, and `run_checks.yml` changes.
+- **Tier 1: default PR-ready gate for code or testbench changes**. Run a
+  change-gated Ubuntu 26.04 `devtools/run-ci.sh` check first, then the existing
+  static-analyzer pass, then late prompt-based audit passes and local Cubic
+  review when applicable. This is the normal local confidence gate for C,
+  parser, module, runtime, `tests/*.sh`, `diag.sh`, `Makefile.am`,
+  `configure.ac`, and `run_checks.yml` changes.
 - **Tier 2: compile portability gate for non-trivial C/header changes**. Add
   the two build-only compile lanes from `run_checks.yml`:
   `clang21-ndebug` and `gcc15-gnu23-debug`. Use this when a change touches
@@ -147,11 +164,48 @@ It should be set by the user or machine profile, for example in `.bashrc`.
 Deflake and overload experiments are prompt-driven and must use explicit
 one-off `-jN` values instead of changing this normal validation knob.
 
+## Late Prompt Audits
+
+Run prompt-based audits late in the process, after cheap deterministic checks,
+mock distcheck when needed, the change-gated Ubuntu 26.04 container run, and
+the static analyzer have either passed or the implementation is otherwise
+stable enough that no major rewrite is expected. This keeps review tokens spent
+on the candidate that is likely to ship instead of on intermediate churn.
+
+Do not launch `codex`, `copilot`, or another AI CLI from repository scripts.
+The active agent must read the canned prompt and apply it to the current diff,
+changed functions, and nearby lifecycle paths. When a separate reviewer session
+or subagent is explicitly available, it may be used, but local validation must
+not depend on unknown local AI tooling, authentication, or model availability.
+
+Use these prompt passes when they match the change:
+
+- changed C sources or headers: read
+  `ai/rsyslog_memory_auditor/base_prompt.txt` and audit changed functions plus
+  nearby allocation, ownership, and cleanup paths. For focused allocation
+  changes, also consult `audit_leaks.txt`, `audit_lifecycle.txt`, and
+  `audit_null_checks.txt` as needed.
+- lock, queue, worker, thread, timer, atomic, shutdown, retry, or resource
+  ownership changes: read `ai/rsyslog_bug_finder/base_prompt.txt` and perform a
+  path-sensitive resource and concurrency audit, including lock ordering and
+  branch-specific counterexamples for any non-clean findings.
+- testbench, build, or distribution plumbing changes: perform a project
+  standards audit: check `tests/Makefile.am` registration, `EXTRA_DIST`,
+  "define at top, distribute unconditionally, register conditionally" patterns,
+  RainerScript syntax in touched tests, and mock distcheck coverage.
+
+Report the prompt audits in the validation summary: which prompts were applied,
+which findings were fixed, which findings were dismissed with rationale, or
+that the audit was clean. Skip prompt audits for documentation-only and
+instruction-only changes unless the edited instructions themselves change audit
+or validation behavior.
+
 ## Cubic Review
 
 Run the local `cubic` CLI as an AI review gate when it applies. Cubic is a small
 local shim that forwards the review request to the configured cloud AI service,
-so it can normally run in parallel with the local static analyzer.
+so it should run late on the stabilized candidate. It is a broad review pass,
+not a fast compile detector.
 
 - **Docs-only changes**: do not run Cubic.
 - **Code changes (`*.c`, `*.h`, grammar/parser/runtime/module logic)**: always
@@ -190,7 +244,10 @@ change-gated Ubuntu 26.04 check would not expose. Do not add lanes by habit.
 - **Distribution checks (`ubuntu_22_distcheck`, mock distcheck, or
   `kafka_distcheck_CI`)**: run when adding, renaming, or deleting files/tests,
   changing `Makefile.am`, `configure.ac`, `m4`, packaging lists, generated
-  artifacts, or Kafka build/test plumbing.
+  artifacts, or Kafka build/test plumbing. The local validation helper runs the
+  fast `make distcheck TEST_RUN_TYPE=MOCK-OK` variant for changed, added,
+  renamed, or deleted test and build-manifest distribution risks before
+  escalating to heavier container lanes.
 - **Service-specific lanes**: run only when directly relevant to the touched
   module, tests, helpers, build plumbing, or relevance logic. This includes
   Kafka, Elasticsearch, VictoriaLogs/omhttp, MySQL/libdbi, imfile, and similar
