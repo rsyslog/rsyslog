@@ -3754,13 +3754,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             break;
         case PROP_CEE_ALL_JSON:
         case PROP_CEE_ALL_JSON_PLAIN:
+            MsgLock(pMsg);
             if (pMsg->json == NULL) {
+                MsgUnlock(pMsg);
                 pRes = (uchar *)"{}";
                 bufLen = 2;
                 *pbMustBeFreed = 0;
             } else {
                 const char *jstr;
-                MsgLock(pMsg);
                 int jflag = 0;
                 if (pProp->id == PROP_CEE_ALL_JSON) {
                     jflag = JSON_C_TO_STRING_SPACED;
@@ -3768,11 +3769,12 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     jflag = JSON_C_TO_STRING_PLAIN;
                 }
                 jstr = json_object_to_json_string_ext(pMsg->json, jflag);
-                MsgUnlock(pMsg);
                 if (jstr == NULL) {
+                    MsgUnlock(pMsg);
                     RET_OUT_OF_MEMORY;
                 }
                 pRes = (uchar *)strdup(jstr);
+                MsgUnlock(pMsg);
                 if (pRes == NULL) {
                     RET_OUT_OF_MEMORY;
                 }
