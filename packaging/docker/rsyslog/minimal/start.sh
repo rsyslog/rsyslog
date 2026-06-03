@@ -6,7 +6,7 @@ if [ -n "$RSYSLOG_HOSTNAME" ]; then
     echo "Using pre-set container hostname"
 else
     echo "Obtaining RSYSLOG_HOSTNAME from /etc/hostname"
-    RSYSLOG_HOSTNAME="$(cat /etc/hostname)"
+    RSYSLOG_HOSTNAME="$(cat /etc/hostname 2>/dev/null || echo "${HOSTNAME:-rsyslog}")"
     export RSYSLOG_HOSTNAME
 fi
 echo "rsyslog uses hostname '$RSYSLOG_HOSTNAME'"
@@ -30,11 +30,11 @@ case "$RSYSLOG_ROLE" in
     : "${VESPA_USE_HTTPS:=on}"
     : "${VESPA_ALLOW_UNSIGNED_CERTS:=off}"
     if [ "$ENABLE_TCP" = "on" ] || [ "$ENABLE_TLS" = "on" ]; then
-        ENABLE_IMTCP=on
+        NEED_IMTCP=on
     else
-        ENABLE_IMTCP=off
+        NEED_IMTCP=off
     fi
-    export VESPA_USE_HTTPS VESPA_ALLOW_UNSIGNED_CERTS ENABLE_IMTCP
+    export VESPA_USE_HTTPS VESPA_ALLOW_UNSIGNED_CERTS NEED_IMTCP
     ;;
   minimal|*)
     ;;
