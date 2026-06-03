@@ -301,6 +301,11 @@ BEGINrunInput
 
     iMaxLine = (size_t)glbl.GetMaxLine(runConf);
 
+    if (runModConf == NULL) {
+        DBGPRINTF("imfifo: module configuration is not active\n");
+        FINALIZE;
+    }
+
     /* Open all pipes */
     for (pInst = runModConf->root; pInst != NULL; pInst = pInst->next) {
         /* Open O_RDWR to prevent blocking on startup and receiving EOF on disconnect */
@@ -431,6 +436,9 @@ ENDendCnfLoad
 BEGINcheckCnf
     instanceConf_t *pInst;
     CODESTARTcheckCnf;
+    if (pModConf == NULL) {
+        FINALIZE;
+    }
     for (pInst = pModConf->root; pInst != NULL; pInst = pInst->next) {
         std_checkRuleset(pModConf, pInst);
     }
@@ -444,6 +452,10 @@ ENDactivateCnf
 BEGINfreeCnf
     instanceConf_t *pInst, *nextInst;
     CODESTARTfreeCnf;
+
+    if (pModConf == NULL) {
+        FINALIZE;
+    }
 
     for (pInst = pModConf->root; pInst != NULL;) {
         nextInst = pInst->next;
