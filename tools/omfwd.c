@@ -38,6 +38,9 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <zlib.h>
+#ifdef ENABLE_LIBZSTD
+    #include <zstd.h>
+#endif
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
@@ -117,6 +120,9 @@ typedef struct _instanceData {
     char *address;
     char *device;
     int compressionLevel; /* 0 - no compression, else level for zlib */
+#define COMPRESS_DRIVER_ZLIB 0
+#define COMPRESS_DRIVER_ZSTD 1
+    uint8_t compressionDriver;
     int protocol;
     char *networkNamespace;
     int originalNamespace;
@@ -169,6 +175,9 @@ typedef struct targetData {
     sbool bInDestruct; /* guard against recursive teardown on send failure */
     sbool bzInitDone; /* did we do an init of zstrm already? */
     z_stream zstrm; /* zip stream to use for tcp compression */
+#ifdef ENABLE_LIBZSTD
+    ZSTD_CCtx *zstdCctx;
+#endif
     /* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
     int maxLenSndBuf; /* max usable length of sendbuf - primarily for testing */
     int offsSndBuf; /* next free spot in send buffer */
@@ -228,6 +237,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"tcp_framedelimiter", eCmdHdlrInt, 0},
     {"ziplevel", eCmdHdlrInt, 0},
     {"compression.mode", eCmdHdlrGetWord, 0},
+    {"compression.driver", eCmdHdlrGetWord, 0},
     {"compression.stream.flushontxend", eCmdHdlrBinary, 0},
     {"ipfreebind", eCmdHdlrInt, 0},
     {"maxerrormessages", eCmdHdlrInt, CNFPARAM_DEPRECATED},
@@ -295,7 +305,7 @@ ENDinitConfVars
 
 
 static rsRetVal doTryResume(targetData_t *);
-static rsRetVal doZipFinish(targetData_t *);
+static rsRetVal doCompressionFinish(targetData_t *);
 static rsRetVal TCPSendBuf(targetData_t *, uchar *, unsigned, sbool);
 
 /* this function gets the default template. It coordinates action between
@@ -708,7 +718,7 @@ static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebin
         }
     }
 
-    doZipFinish(pTarget);
+    doCompressionFinish(pTarget);
 
     if (pTarget->pNetstrm != NULL) {
         netstrm.Destruct(&pTarget->pNetstrm);
@@ -1173,7 +1183,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal TCPSendBufCompressed(targetData_t *pTarget, uchar *const buf, unsigned len, sbool bIsFlush) {
+static rsRetVal TCPSendBufCompressedZlib(targetData_t *pTarget, uchar *const buf, unsigned len, sbool bIsFlush) {
     wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)pTarget->pWrkrData;
     int zRet; /* zlib return state */
     unsigned outavail;
@@ -1220,6 +1230,67 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal TCPSendBufCompressedZstd(targetData_t *pTarget, uchar *const buf, unsigned len, sbool bIsFlush) {
+#ifdef ENABLE_LIBZSTD
+    wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)pTarget->pWrkrData;
+    uchar zipBuf[32 * 1024];
+    DEFiRet;
+
+    if (!pTarget->bzInitDone) {
+        pTarget->zstdCctx = ZSTD_createCCtx();
+        if (pTarget->zstdCctx == NULL) {
+            LogError(0, RS_RET_ZLIB_ERR, "omfwd: error creating zstd compression context");
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        size_t zRet =
+            ZSTD_CCtx_setParameter(pTarget->zstdCctx, ZSTD_c_compressionLevel, pWrkrData->pData->compressionLevel);
+        if (ZSTD_isError(zRet)) {
+            LogError(0, RS_RET_ZLIB_ERR, "omfwd: error setting zstd compression level: %s", ZSTD_getErrorName(zRet));
+            ZSTD_freeCCtx(pTarget->zstdCctx);
+            pTarget->zstdCctx = NULL;
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        pTarget->bzInitDone = RSTRUE;
+    }
+
+    ZSTD_inBuffer input = {buf, len, 0};
+    const ZSTD_EndDirective op = (pWrkrData->pData->strmCompFlushOnTxEnd && bIsFlush) ? ZSTD_e_flush : ZSTD_e_continue;
+
+    size_t remaining;
+    do {
+        ZSTD_outBuffer output = {zipBuf, sizeof(zipBuf), 0};
+        remaining = ZSTD_compressStream2(pTarget->zstdCctx, &output, &input, op);
+        if (ZSTD_isError(remaining)) {
+            LogError(0, RS_RET_ZLIB_ERR, "omfwd: error returned from ZSTD_compressStream2(): %s",
+                     ZSTD_getErrorName(remaining));
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        if (output.pos != 0) {
+            CHKiRet(TCPSendBufUncompressed(pTarget, zipBuf, output.pos));
+        }
+    } while (input.pos != input.size || (op == ZSTD_e_flush && remaining != 0));
+
+finalize_it:
+    RETiRet;
+#else
+    (void)pTarget;
+    (void)buf;
+    (void)len;
+    (void)bIsFlush;
+    LogError(0, RS_RET_PARAM_ERROR, "omfwd: zstd stream compression requested but rsyslog was built without libzstd");
+    return RS_RET_PARAM_ERROR;
+#endif
+}
+
+static rsRetVal TCPSendBufCompressed(targetData_t *pTarget, uchar *const buf, unsigned len, sbool bIsFlush) {
+    wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)pTarget->pWrkrData;
+
+    if (pWrkrData->pData->compressionDriver == COMPRESS_DRIVER_ZSTD)
+        return TCPSendBufCompressedZstd(pTarget, buf, len, bIsFlush);
+    else
+        return TCPSendBufCompressedZlib(pTarget, buf, len, bIsFlush);
+}
+
 static rsRetVal TCPSendBuf(targetData_t *pTarget, uchar *buf, unsigned len, sbool bIsFlush) {
     wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *)pTarget->pWrkrData;
     DEFiRet;
@@ -1230,10 +1301,8 @@ static rsRetVal TCPSendBuf(targetData_t *pTarget, uchar *buf, unsigned len, sboo
     RETiRet;
 }
 
-/* finish zlib buffer, to be called before closing the ZIP file (if
- * running in stream mode).
- */
-static rsRetVal doZipFinish(targetData_t *pTarget) {
+/* finish zlib buffer, to be called before closing the ZIP file (if running in stream mode). */
+static rsRetVal doZlibFinish(targetData_t *pTarget) {
     int zRet; /* zlib return state */
     DEFiRet;
     unsigned outavail;
@@ -1265,6 +1334,51 @@ finalize_it:
     pTarget->bzInitDone = 0;
 done:
     RETiRet;
+}
+
+static rsRetVal doZstdFinish(targetData_t *pTarget) {
+#ifdef ENABLE_LIBZSTD
+    DEFiRet;
+    uchar zipBuf[32 * 1024];
+
+    if (!pTarget->bzInitDone) goto done;
+
+    ZSTD_inBuffer input = {zipBuf, 0, 0};
+    size_t remaining;
+    do {
+        ZSTD_outBuffer output = {zipBuf, sizeof(zipBuf), 0};
+        remaining = ZSTD_compressStream2(pTarget->zstdCctx, &output, &input, ZSTD_e_end);
+        if (ZSTD_isError(remaining)) {
+            LogError(0, RS_RET_ZLIB_ERR, "omfwd: error finishing zstd stream: %s", ZSTD_getErrorName(remaining));
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
+        if (output.pos != 0) {
+            CHKiRet(TCPSendBufUncompressed(pTarget, zipBuf, output.pos));
+        }
+    } while (remaining != 0);
+
+finalize_it:
+    if (pTarget->zstdCctx != NULL) {
+        const size_t zRet = ZSTD_freeCCtx(pTarget->zstdCctx);
+        if (ZSTD_isError(zRet)) {
+            LogError(0, RS_RET_ZLIB_ERR, "omfwd: error from ZSTD_freeCCtx(): %s", ZSTD_getErrorName(zRet));
+        }
+        pTarget->zstdCctx = NULL;
+    }
+    pTarget->bzInitDone = 0;
+done:
+    RETiRet;
+#else
+    (void)pTarget;
+    return RS_RET_OK;
+#endif
+}
+
+static rsRetVal doCompressionFinish(targetData_t *pTarget) {
+    if (pTarget->pData->compressionDriver == COMPRESS_DRIVER_ZSTD)
+        return doZstdFinish(pTarget);
+    else
+        return doZlibFinish(pTarget);
 }
 
 
@@ -1931,6 +2045,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->UDPSendBuf = 0;
     pData->pPermPeers = NULL;
     pData->compressionLevel = 9;
+    pData->compressionDriver = COMPRESS_DRIVER_ZLIB;
     pData->strmCompFlushOnTxEnd = 1;
     pData->compressionMode = COMPRESS_NEVER;
     pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
@@ -2241,6 +2356,28 @@ BEGINnewActInst
             CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
             pData->strmCompFlushOnTxEnd = (sbool)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "compression.driver")) {
+            CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (!strcasecmp(cstr, "zlib")) {
+                pData->compressionDriver = COMPRESS_DRIVER_ZLIB;
+            } else if (!strcasecmp(cstr, "zstd")) {
+#ifdef ENABLE_LIBZSTD
+                pData->compressionDriver = COMPRESS_DRIVER_ZSTD;
+#else
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "omfwd: compression.driver=\"zstd\" requires rsyslog to be built with libzstd support");
+                free(cstr);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+#endif
+            } else {
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "omfwd: invalid value for 'compression.driver' "
+                         "parameter (given is '%s')",
+                         cstr);
+                free(cstr);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            free(cstr);
         } else if (!strcmp(actpblk.descr[i].name, "compression.mode")) {
             CHKmalloc(cstr = es_str2cstr(pvals[i].val.d.estr, NULL));
             if (!strcasecmp(cstr, "stream:always")) {
@@ -2342,6 +2479,21 @@ BEGINnewActInst
              */
             pData->compressionMode = COMPRESS_SINGLE_MSG;
         }
+    }
+
+    if (pData->compressionDriver == COMPRESS_DRIVER_ZSTD && pData->compressionMode != COMPRESS_STREAM_ALWAYS) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: compression.driver=\"zstd\" is supported only with "
+                 "compression.mode=\"stream:always\"");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->compressionDriver == COMPRESS_DRIVER_ZSTD && pData->compressionMode == COMPRESS_STREAM_ALWAYS &&
+        pData->compressionLevel == 0) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "omfwd: compression.driver=\"zstd\" with compression.mode=\"stream:always\" requires non-zero "
+                 "zipLevel because libzstd treats level 0 as its default compression level");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     CODE_STD_STRING_REQUESTnewActInst(1);

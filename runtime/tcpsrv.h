@@ -73,6 +73,13 @@ struct tcpLstnPortList_s {
     statsobj_t *stats; /**< associated stats object */
     ratelimit_t *ratelimiter;
     STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+    STATSCOUNTER_DEF(ctrBytesRcvd, mutCtrBytesRcvd)
+    STATSCOUNTER_DEF(ctrBytesDecompressed, mutCtrBytesDecompressed)
+    STATSCOUNTER_DEF(ctrDecompressErr, mutCtrDecompressErr)
+    uint8_t compressionMode;
+    uint8_t compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
 #ifdef FEATURE_REGEXP
     regex_t start_preg;
     sbool bHasStartRegex;
@@ -179,6 +186,10 @@ struct tcpsrv_s {
         int addtlFrameDelim; /**< additional frame delimiter for plain TCP syslog
                      framing (e.g. to handle NetScreen) */
         int maxFrameSize; /**< max frame size for octet counted*/
+        uint8_t compressionMode;
+        uint8_t compressionDriver;
+        uint64_t compressionMaxExpansionRatio;
+        uint64_t compressionMaxDecompressedBytesPerReceive;
         int bDisableLFDelim; /**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
         int discardTruncatedMsg; /**< discard msg part that has been truncated*/
         sbool bPreserveCase; /**< preserve case in fromhost */
@@ -235,6 +246,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* set methods */
     rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t *, int);
     rsRetVal (*SetMaxFrameSize)(tcpsrv_t *, int);
+    rsRetVal (*SetCompressionMode)(tcpsrv_t *, int);
+    rsRetVal (*SetCompressionDriver)(tcpsrv_t *, int);
+    rsRetVal (*SetCompressionMaxExpansionRatio)(tcpsrv_t *, uint64_t);
+    rsRetVal (*SetCompressionMaxDecompressedBytesPerReceive)(tcpsrv_t *, uint64_t);
     /**
      * Set the input name for a listener configuration.
      *
@@ -331,7 +346,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
                                     const char *const networkNamespace);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 29 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 31 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

@@ -39,6 +39,13 @@ rsyslogd_SOURCES = \
 	../runtime/dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 
+if ENABLE_LIBZSTD
+rsyslogd_CPPFLAGS += $(ZSTD_CFLAGS)
+rsyslogd_LDADD_ZSTD = $(ZSTD_LIBS)
+else
+rsyslogd_LDADD_ZSTD =
+endif
+
 if ENABLE_LIBLOGGING_STDLOG
 rsyslogd_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
@@ -48,7 +55,7 @@ rsyslogd_CPPFLAGS += -DSD_EXPORT_SYMBOLS
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
+rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/compat.la $(ZLIB_LIBS) $(rsyslogd_LDADD_ZSTD) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) $(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
 
 # Note: do NOT indent the if chain - it will not work!
 if OS_LINUX

@@ -25,9 +25,19 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "prop.h"
+#include <zlib.h>
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
+
+#define TCPSRV_COMPRESS_NEVER 0
+#define TCPSRV_COMPRESS_STREAM_ALWAYS 2
+
+#define TCPSRV_COMPRESS_DRIVER_ZLIB 0
+#define TCPSRV_COMPRESS_DRIVER_ZSTD 1
+
+#define TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT 1024
+#define TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT (64ULL * 1024ULL * 1024ULL)
 
 /* the tcps_sess object */
 struct tcps_sess_s {
@@ -64,6 +74,17 @@ struct tcps_sess_s {
         uchar tlsProbeBuf[5]; /**< first bytes received for TLS client detection */
         sbool tlsProbeDone; /**< indicates TLS client detection has been completed */
         sbool tlsMismatchWarned; /**< avoids logging the same TLS mismatch twice */
+        uint8_t compressionMode;
+        uint8_t compressionDriver;
+        uint64_t compressionMaxExpansionRatio;
+        uint64_t compressionMaxDecompressedBytesPerReceive;
+        uint64_t compressionTotalBytesIn;
+        uint64_t compressionTotalBytesOut;
+        sbool zipInitDone;
+        sbool compressedStreamEnded;
+        sbool compressedStreamFailed;
+        z_stream zstrm;
+        void *zstdDctx;
 };
 
 
