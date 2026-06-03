@@ -242,7 +242,13 @@ static void destroy_perthread_regexs(void) {
             pthread_mutex_unlock(&entry->lock);
             pthread_mutex_destroy(&entry->lock);
             regfree(&entry->preg);
-            free(entry);
+
+            /*
+             * perthread_regexs uses the perthread_regex_t object as both
+             * key and value. hashtable_destroy() always frees keys, so leave
+             * the entry allocation owned by the hash table after cleaning the
+             * resources embedded in it.
+             */
         } while (ret);
         free(itr);
     }
