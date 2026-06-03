@@ -90,7 +90,12 @@ STATSCOUNTER_DEF(potentialArtificialDelayMs, mutPotentialArtificialDelayMs)
 STATSCOUNTER_DEF(actualArtificialDelayMs, mutActualArtificialDelayMs)
 STATSCOUNTER_DEF(delayInvocationCount, mutDelayInvocationCount)
 
-static pthread_mutex_t statsReportingBlocker;
+/* statsReportingBlocker gates impstats reads across imdiag command and stats
+ * callback threads; use a condition variable instead of mutex ownership
+ * handoff so the command thread can unblock a callback thread safely. */
+static pthread_mutex_t statsReportingBlockerMut;
+static pthread_cond_t statsReportingBlockerCond;
+static int statsReportingBlocked = 0;
 static long long statsReportingBlockStartTimeMs = 0;
 static int allowOnlyOnce = 0;
 DEF_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
@@ -489,17 +494,23 @@ finalize_it:
 static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
                                      void __attribute__((unused)) *const ignore_ctx) {
     long long waitStartTimeMs = currentTimeMills();
-    if (pthread_mutex_lock(&statsReportingBlocker) != 0) {
+    if (pthread_mutex_lock(&statsReportingBlockerMut) != 0) {
         return;
     }
+    while (statsReportingBlocked) {
+        if (pthread_cond_wait(&statsReportingBlockerCond, &statsReportingBlockerMut) != 0) {
+            pthread_mutex_unlock(&statsReportingBlockerMut);
+            return;
+        }
+    }
     long delta = currentTimeMills() - waitStartTimeMs;
-    if ((int)ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
-        (void)pthread_mutex_unlock(&statsReportingBlocker);
-    } else {
+    if ((int)ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) >= 0) {
+        statsReportingBlocked = 1;
         LogError(0, RS_RET_OK,
                  "imdiag(stats-read-callback): current stats-reporting "
                  "cycle will proceed now, next reporting cycle will again be blocked");
     }
+    pthread_mutex_unlock(&statsReportingBlockerMut);
 
     if (pthread_mutex_lock(&mutStatsReporterWatch) == 0) {
         statsReported = 1;
@@ -515,7 +526,9 @@ static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const i
 static rsRetVal blockStatsReporting(tcps_sess_t *pSess) {
     DEFiRet;
 
-    CHKiConcCtrl(pthread_mutex_lock(&statsReportingBlocker));
+    CHKiConcCtrl(pthread_mutex_lock(&statsReportingBlockerMut));
+    statsReportingBlocked = 1;
+    CHKiConcCtrl(pthread_mutex_unlock(&statsReportingBlockerMut));
     CHKiConcCtrl(pthread_mutex_lock(&mutStatsReporterWatch));
     statsReported = 0;
     CHKiConcCtrl(pthread_mutex_unlock(&mutStatsReporterWatch));
@@ -549,7 +562,10 @@ static rsRetVal awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
             statsReportingBlockStartTimeMs = 0;
             LogError(0, RS_RET_OK, "imdiag: un-blocking stats reporting");
         }
-        CHKiConcCtrl(pthread_mutex_unlock(&statsReportingBlocker));
+        CHKiConcCtrl(pthread_mutex_lock(&statsReportingBlockerMut));
+        statsReportingBlocked = 0;
+        CHKiConcCtrl(pthread_cond_signal(&statsReportingBlockerCond));
+        CHKiConcCtrl(pthread_mutex_unlock(&statsReportingBlockerMut));
         LogError(0, RS_RET_OK, "imdiag: stats reporting unblocked");
         STATSCOUNTER_ADD(potentialArtificialDelayMs, mutPotentialArtificialDelayMs, delta);
         STATSCOUNTER_INC(delayInvocationCount, mutDelayInvocationCount);
@@ -1103,7 +1119,8 @@ BEGINmodExit
     free(pszStrmDrvrAuthMode);
 
     statsobj.Destruct(&diagStats);
-    pthread_mutex_destroy(&statsReportingBlocker);
+    pthread_cond_destroy(&statsReportingBlockerCond);
+    pthread_mutex_destroy(&statsReportingBlockerMut);
     DESTROY_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
     pthread_cond_destroy(&statsReporterWatch);
     pthread_mutex_destroy(&mutStatsReporterWatch);
@@ -1220,7 +1237,9 @@ BEGINmodInit()
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler, resetConfigVariables,
                                NULL, STD_LOADABLE_MODULE_ID));
 
-    CHKiConcCtrl(pthread_mutex_init(&statsReportingBlocker, NULL));
+    CHKiConcCtrl(pthread_mutex_init(&statsReportingBlockerMut, NULL));
+    CHKiConcCtrl(pthread_cond_init(&statsReportingBlockerCond, NULL));
+    statsReportingBlocked = 0;
     INIT_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
     CHKiConcCtrl(pthread_mutex_init(&mutStatsReporterWatch, NULL));
     CHKiConcCtrl(pthread_cond_init(&statsReporterWatch, NULL));
