@@ -5174,24 +5174,20 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
 
     /* Pattern must appear after the last tab to be considered trailing */
     char *searchStart = lastTab + 1;
+    size_t msgLenVal = strlen(mutableMsg);
+    size_t trailingTokenLen = strlen(searchStart);
+    size_t trailingSearchLen = msgLenVal / 5; /* Last 20% of whole message */
+    if (trailingSearchLen > pData->searchLimit) {
+        trailingSearchLen = pData->searchLimit;
+    }
+    if (trailingSearchLen > trailingTokenLen) {
+        trailingSearchLen = trailingTokenLen;
+    }
+    char *cappedSearchStart = searchStart + trailingTokenLen - trailingSearchLen;
 
     if (pData->ignoreTrailingPattern_isRegex) {
-        /* Regex mode: bound regex input to searchLimit trailing bytes to
-         * reduce risk from expensive non-matching expressions on untrusted
-         * message content while preserving start-anchored token patterns. */
-        const size_t trailingTokenLen = strlen(searchStart);
-        char savedChar = '\0';
-        const sbool tokenWasTruncated = trailingTokenLen > pData->searchLimit;
-        if (tokenWasTruncated) {
-            savedChar = searchStart[pData->searchLimit];
-            searchStart[pData->searchLimit] = '\0';
-        }
-
-        const int regexecFlags = tokenWasTruncated ? REG_NOTEOL : 0;
-        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, regexecFlags);
-        if (tokenWasTruncated) {
-            searchStart[pData->searchLimit] = savedChar;
-        }
+        /* Regex mode: apply regexec to the capped trailing window */
+        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, cappedSearchStart, 0, NULL, 0);
         if (isMatch) {
             /* Pattern found in trailing position - truncate at the start of the last token
              * (after the last tab) to remove the entire enrichment section including any
@@ -5212,8 +5208,9 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
         /* Static pattern mode: use strstr */
         const char *pattern = (const char *)pData->ignoreTrailingPattern;
         /* Defensive check: ensure pattern is not empty to avoid unintended matches */
-        if (strlen(pattern) > 0) {
-            char *patternPos = strstr(searchStart, pattern);
+        size_t patternLen = strlen(pattern);
+        if (patternLen > 0 && trailingSearchLen >= patternLen) {
+            char *patternPos = strstr(cappedSearchStart, pattern);
 
             if (patternPos != NULL) {
                 /* Pattern found in trailing position - truncate at the start of the last token
