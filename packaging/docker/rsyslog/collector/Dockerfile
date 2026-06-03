@@ -76,6 +76,7 @@ ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
 ENV ENABLE_RELP=off
 ENV ENABLE_TLS=off
+ENV NEED_IMTCP=off
 ENV WRITE_ALL_FILE=on
 ENV WRITE_JSON_FILE=on
 # TLS configuration paths (can be overridden via volume mounts or environment)
