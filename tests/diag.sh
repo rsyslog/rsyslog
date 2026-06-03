@@ -2804,7 +2804,11 @@ module_needs_testing() {
 			elasticsearch:tests/omelasticsearch*.sh)
 				return 0
 				;;
+			# imbeats listens directly through netstrm-backed TCP/TLS
+			# transports, so transport runtime changes must keep its
+			# service tests enabled.
 			imbeats:plugins/imbeats/*|imbeats:plugins/omelasticsearch/*|\
+			imbeats:runtime/net*|imbeats:runtime/nsd*|imbeats:runtime/tcps*|\
 			imbeats:tests/imbeats*.sh|\
 			imbeats:tests/yaml-imbeats*.sh)
 				return 0
