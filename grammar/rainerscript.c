@@ -2633,7 +2633,7 @@ static void ATTR_NONNULL() doFunct_FormatTime(struct cnffunc *__restrict__ const
     char *str;
     int retval;
     long long unixtime;
-    const int resMax = 64;
+    enum { resMax = 64 };
     char result[resMax];
     char *formatstr = NULL;
 
@@ -3151,6 +3151,156 @@ done:
     if (bMustFree2) free(separator);
     varFreeMembers(&srcVal[0]);
     varFreeMembers(&srcVal[1]);
+}
+
+/* Append s to *pOut with CEF header escaping:
+ *   backslash  ->  \\
+ *   pipe       ->  \|
+ * Used for all seven pipe-delimited header fields. */
+static void cef_escape_header(es_str_t **pOut, const char *s) {
+    if (s == NULL) return;
+    while (*s != '\0') {
+        if (*s == '\\' || *s == '|') es_addChar(pOut, '\\');
+        es_addChar(pOut, (unsigned char)*s);
+        ++s;
+    }
+}
+
+/* Append s to *pOut with CEF deviceEventClassId escaping.
+ * The spec requires additional escaping beyond normal header fields:
+ *   backslash  ->  \\
+ *   pipe       ->  \|
+ *   equals     ->  \=
+ *   percent    ->  \%
+ *   hash       ->  \#
+ */
+static void cef_escape_eventclassid(es_str_t **pOut, const char *s) {
+    if (s == NULL) return;
+    while (*s != '\0') {
+        if (*s == '\\' || *s == '|' || *s == '=' || *s == '%' || *s == '#') es_addChar(pOut, '\\');
+        es_addChar(pOut, (unsigned char)*s);
+        ++s;
+    }
+}
+
+/**
+ * tocef(version, vendor, product, devversion, eventclassid, name, severity, extensions)
+ *
+ * Builds a CEF (Common Event Format) header string from eight positional
+ * arguments and returns it as a RainerScript string variable.  The seven
+ * header fields are automatically escaped per the CEF spec (backslash and
+ * pipe are escaped with a leading backslash).  The extensions argument is
+ * appended verbatim; callers are responsible for escaping extension values
+ * (backslash -> \\, equals -> \=, newline -> \n, CR -> \r).
+ *
+ * Example:
+ *   set $!cef = tocef("0", "MyVendor", "rsyslog", "1.0",
+ *                     $syslogtag, $msg, "5",
+ *                     "src=" & $fromhost-ip & " spt=" & $fromhost);
+ *
+ * Produces:
+ *   CEF:0|MyVendor|rsyslog|1.0|<tag>|<msg>|5|src=... spt=...
+ */
+static void ATTR_NONNULL() doFunct_tocef(struct cnffunc *__restrict__ const func,
+                                         struct svar *__restrict__ const ret,
+                                         void *const usrptr,
+                                         wti_t *const pWti) {
+    struct svar srcVal[8];
+    int bMustFree[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    char *params[8] = {NULL};
+    es_str_t *out = NULL;
+
+    for (int i = 0; i < 8; ++i) {
+        cnfexprEval(func->expr[i], &srcVal[i], usrptr, pWti);
+        params[i] = (char *)var2CString(&srcVal[i], &bMustFree[i]);
+    }
+
+    out = es_newStr(256);
+    if (out == NULL) goto done;
+
+    es_addBufConstcstr(&out, "CEF:");
+    cef_escape_header(&out, params[0] ? params[0] : "0"); /* version */
+    es_addChar(&out, '|');
+    cef_escape_header(&out, params[1] ? params[1] : ""); /* vendor */
+    es_addChar(&out, '|');
+    cef_escape_header(&out, params[2] ? params[2] : ""); /* product */
+    es_addChar(&out, '|');
+    cef_escape_header(&out, params[3] ? params[3] : ""); /* devversion */
+    es_addChar(&out, '|');
+    cef_escape_eventclassid(&out, params[4] ? params[4] : ""); /* eventclassid */
+    es_addChar(&out, '|');
+    cef_escape_header(&out, params[5] ? params[5] : ""); /* name */
+    es_addChar(&out, '|');
+    cef_escape_header(&out, params[6] ? params[6] : ""); /* severity */
+    es_addChar(&out, '|');
+    if (params[7] != NULL) /* extensions - verbatim */
+        es_addBuf(&out, params[7], strlen(params[7]));
+
+done:
+    ret->datatype = 'S';
+    ret->d.estr = (out != NULL) ? out : es_newStrFromCStr("", 0);
+
+    for (int i = 0; i < 8; ++i) {
+        if (bMustFree[i]) free(params[i]);
+        varFreeMembers(&srcVal[i]);
+    }
+}
+
+/**
+ * cef_ext_escape(value) -> string
+ *
+ * Escapes a single CEF extension field VALUE per the CEF spec:
+ *   backslash  ->  \\
+ *   equals     ->  \=
+ *   newline    ->  \n  (literal two characters)
+ *   CR         ->  \r  (literal two characters)
+ *
+ * Use this to safely embed dynamic rsyslog property values inside a
+ * pre-formed extension string passed to tocef():
+ *
+ *   set $!cef = tocef("0","V","P","1.0",$syslogtag,$msg,"5",
+ *                     "src=" & $fromhost-ip &
+ *                     " msg=" & cef_ext_escape($msg));
+ */
+static void ATTR_NONNULL() doFunct_cef_ext_escape(struct cnffunc *__restrict__ const func,
+                                                  struct svar *__restrict__ const ret,
+                                                  void *const usrptr,
+                                                  wti_t *const pWti) {
+    struct svar srcVal;
+    int bMustFree = 0;
+    es_str_t *out = NULL;
+
+    cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+    char *const orig = (char *)var2CString(&srcVal, &bMustFree);
+    const char *s = orig;
+
+    out = es_newStr(64);
+    if (out == NULL || s == NULL) goto done;
+
+    while (*s != '\0') {
+        if (*s == '\\') {
+            es_addChar(&out, '\\');
+            es_addChar(&out, '\\');
+        } else if (*s == '=') {
+            es_addChar(&out, '\\');
+            es_addChar(&out, '=');
+        } else if (*s == '\n') {
+            es_addChar(&out, '\\');
+            es_addChar(&out, 'n');
+        } else if (*s == '\r') {
+            es_addChar(&out, '\\');
+            es_addChar(&out, 'r');
+        } else {
+            es_addChar(&out, (unsigned char)*s);
+        }
+        ++s;
+    }
+
+done:
+    ret->datatype = 'S';
+    ret->d.estr = (out != NULL) ? out : es_newStrFromCStr("", 0);
+    if (bMustFree) free(orig);
+    varFreeMembers(&srcVal);
 }
 
 /**
@@ -4186,6 +4336,8 @@ static struct scriptFunct functions[] = {
     {"split", 2, 2, doFunct_split, NULL, NULL},
     {"is_in_subnet", 2, 2, doFunct_is_in_subnet, NULL, NULL},
     {"append_json", 2, 3, doFunct_append_json, NULL, NULL},
+    {"tocef", 8, 8, doFunct_tocef, NULL, NULL},
+    {"cef_ext_escape", 1, 1, doFunct_cef_ext_escape, NULL, NULL},
     {NULL, 0, 0, NULL, NULL, NULL}  // last element to check end of array
 };
 
