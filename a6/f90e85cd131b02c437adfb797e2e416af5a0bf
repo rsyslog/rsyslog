@@ -1,0 +1,19 @@
+runtime/msg.c
+  s_a9719629ed5597::t_3060abe5c47a64 3757,3759,3773,3777
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a6f90e85cd131b02c437adfb797e2e416af5a0bf",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
