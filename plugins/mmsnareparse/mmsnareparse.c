@@ -5174,12 +5174,17 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
 
     /* Pattern must appear after the last tab to be considered trailing */
     char *searchStart = lastTab + 1;
+    const size_t trailingTokenLen = strlen(searchStart);
+    size_t trailingSearchLen = pData->searchLimit;
+    if (trailingSearchLen > trailingTokenLen) {
+        trailingSearchLen = trailingTokenLen;
+    }
+    char *cappedSearchStart = searchStart + trailingTokenLen - trailingSearchLen;
 
     if (pData->ignoreTrailingPattern_isRegex) {
         /* Regex mode: bound regex input to searchLimit trailing bytes to
          * reduce risk from expensive non-matching expressions on untrusted
          * message content while preserving start-anchored token patterns. */
-        const size_t trailingTokenLen = strlen(searchStart);
         char savedChar = '\0';
         const sbool tokenWasTruncated = trailingTokenLen > pData->searchLimit;
         if (tokenWasTruncated) {
@@ -5212,8 +5217,9 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
         /* Static pattern mode: use strstr */
         const char *pattern = (const char *)pData->ignoreTrailingPattern;
         /* Defensive check: ensure pattern is not empty to avoid unintended matches */
-        if (strlen(pattern) > 0) {
-            char *patternPos = strstr(searchStart, pattern);
+        size_t patternLen = strlen(pattern);
+        if (patternLen > 0 && trailingSearchLen >= patternLen) {
+            char *patternPos = strstr(cappedSearchStart, pattern);
 
             if (patternPos != NULL) {
                 /* Pattern found in trailing position - truncate at the start of the last token
