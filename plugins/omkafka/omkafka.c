@@ -1327,6 +1327,10 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
         DBGPRINTF("omkafka: onDestroy can't close, handle wasn't open\n");
         goto done;
     }
+    const char *const actName = pData->statsName ? (const char *)pData->statsName : rd_kafka_name(pData->rk);
+    const char *const topicName =
+        pData->dynaTopic ? (const char *)pData->topic
+                         : (pData->pTopic ? rd_kafka_topic_name(pData->pTopic) : (const char *)pData->topic);
     int queuedCount = rd_kafka_outq_len(pData->rk);
     DBGPRINTF("omkafka: onDestroy closing - items left in outqueue: %d\n", queuedCount);
 
@@ -1340,9 +1344,9 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
             const int flushStatus = rd_kafka_flush(pData->rk, pData->closeTimeout);
             if (flushStatus == RD_KAFKA_RESP_ERR_NO_ERROR) {
                 DBGPRINTF(
-                    "omkafka: onDestroyflushed remaining '%d' messages "
+                    "omkafka: onDestroy flushed remaining '%d' messages "
                     "to kafka topic '%s'\n",
-                    queuedCount, (pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)));
+                    queuedCount, topicName);
 
                 /* Trigger callbacks a last time before shutdown */
                 const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
@@ -1353,11 +1357,10 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
             } else /* TODO: Handle unsend messages here! */ {
                 /* timeout = RD_KAFKA_RESP_ERR__TIMED_OUT */
                 LogError(0, RS_RET_KAFKA_ERROR,
-                         "omkafka: onDestroy "
-                         "Failed to send remaining '%d' messages to "
-                         "topic '%s' on shutdown with error: '%s'",
-                         queuedCount, (pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)),
-                         rd_kafka_err2str(flushStatus));
+                         "omkafka[%s]: onDestroy "
+                         "failed to flush remaining '%d' messages to "
+                         "topic '%s' on shutdown: %s",
+                         actName, queuedCount, topicName, rd_kafka_err2str(flushStatus));
 #if RD_KAFKA_VERSION >= 0x010001ff
                 rd_kafka_purge(pData->rk, RD_KAFKA_PURGE_F_QUEUE | RD_KAFKA_PURGE_F_INFLIGHT);
                 /* Trigger callbacks a last time before shutdown */
@@ -1374,9 +1377,9 @@ static void do_rd_kafka_destroy(instanceData *const __restrict__ pData) {
     }
     if (queuedCount > 0) {
         LogMsg(0, RS_RET_ERR, LOG_WARNING,
-               "omkafka: queue-drain for close timed-out took too long, "
+               "omkafka[%s]: queue-drain on shutdown timed out for topic '%s', "
                "items left in outqueue: %d -- this may indicate data loss",
-               rd_kafka_outq_len(pData->rk));
+               actName, topicName, rd_kafka_outq_len(pData->rk));
     }
     if (pData->dynaTopic) {
         dynaTopicFreeCacheEntries(pData);
