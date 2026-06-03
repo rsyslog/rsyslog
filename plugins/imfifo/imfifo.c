@@ -73,6 +73,8 @@ struct instanceConf_s {
 /* config variables */
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
+    instanceConf_t *root;
+    instanceConf_t *tail;
 };
 
 /* Module static data */
@@ -80,7 +82,8 @@ DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset)
 
     static prop_t *pInputName = NULL;
-static instanceConf_t *confRoot = NULL;
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current runtime process */
 static size_t iMaxLine = 0;
 
 
@@ -132,16 +135,19 @@ finalize_it:
  * it does NOT initialize any data members except for the list
  * pointers themselves.
  */
-static rsRetVal ATTR_NONNULL() lstnAdd(instanceConf_t *pInst) {
+static rsRetVal ATTR_NONNULL() lstnAdd(modConfData_t *const modConf, instanceConf_t *const pInst) {
     DEFiRet;
 
-    /* insert it at the begin of the list */
-    pInst->prev = NULL;
-    pInst->next = confRoot;
+    /* insert it at the end of this configuration's instance list */
+    pInst->next = NULL;
+    pInst->prev = modConf->tail;
 
-    if (confRoot != NULL) confRoot->prev = pInst;
-
-    confRoot = pInst;
+    if (modConf->tail == NULL) {
+        modConf->root = pInst;
+    } else {
+        modConf->tail->next = pInst;
+    }
+    modConf->tail = pInst;
 
     RETiRet;
 }
@@ -204,7 +210,7 @@ BEGINnewInpInst
 
     CHKiRet(cstrConstruct(&pInst->ppCStr));
 
-    if ((iRet = lstnAdd(pInst)) != RS_RET_OK) {
+    if ((iRet = lstnAdd(loadModConf, pInst)) != RS_RET_OK) {
         ABORT_FINALIZE(iRet);
     }
 
@@ -296,7 +302,7 @@ BEGINrunInput
     iMaxLine = (size_t)glbl.GetMaxLine(runConf);
 
     /* Open all pipes */
-    for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
+    for (pInst = runModConf->root; pInst != NULL; pInst = pInst->next) {
         /* Open O_RDWR to prevent blocking on startup and receiving EOF on disconnect */
         pInst->fd = open((char *)pInst->pszFileName, O_RDWR);
         if (pInst->fd == -1) {
@@ -333,7 +339,7 @@ BEGINrunInput
     /* Main read/poll loop */
     while (glbl.GetGlobalInputTermState() == 0) {
         int nfd = 0;
-        for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
+        for (pInst = runModConf->root; pInst != NULL; pInst = pInst->next) {
             if (pInst->fd != -1) {
                 pollfds[nfd].fd = pInst->fd;
                 pollfds[nfd].events = POLLIN;
@@ -360,7 +366,7 @@ BEGINrunInput
 
         if (retval > 0) {
             int current_fd_idx = 0;
-            for (pInst = confRoot; pInst != NULL && current_fd_idx < nfd; pInst = pInst->next) {
+            for (pInst = runModConf->root; pInst != NULL && current_fd_idx < nfd; pInst = pInst->next) {
                 if (pInst->fd != -1) {
                     if (pollfds[current_fd_idx].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL)) {
                         readRet = readFIFO(pInst);
@@ -385,22 +391,18 @@ ENDrunInput
 
 BEGINafterRun
     CODESTARTafterRun;
-    instanceConf_t *pInst = confRoot, *nextInst;
-    confRoot = NULL;
+    instanceConf_t *pInst;
 
     DBGPRINTF("imfifo: afterRun\n");
 
-    while (pInst != NULL) {
-        nextInst = pInst->next;
-
-        if (pInst->fd != -1) {
-            close(pInst->fd);
-            pInst->fd = -1;
+    if (runModConf != NULL) {
+        for (pInst = runModConf->root; pInst != NULL; pInst = pInst->next) {
+            if (pInst->fd != -1) {
+                close(pInst->fd);
+                pInst->fd = -1;
+            }
         }
-
-        lstnFree(pInst);
-
-        pInst = nextInst;
+        runModConf = NULL;
     }
 
     if (pInputName != NULL) prop.Destruct(&pInputName);
@@ -415,27 +417,51 @@ ENDisCompatibleWithFeature
 
 BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
+    loadModConf = pModConf;
     pModConf->pConf = pConf;
+    pModConf->root = NULL;
+    pModConf->tail = NULL;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
+    loadModConf = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
     instanceConf_t *pInst;
     CODESTARTcheckCnf;
-    for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
+    for (pInst = pModConf->root; pInst != NULL; pInst = pInst->next) {
         std_checkRuleset(pModConf, pInst);
     }
 ENDcheckCnf
 
 BEGINactivateCnf
     CODESTARTactivateCnf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
+    instanceConf_t *pInst, *nextInst;
     CODESTARTfreeCnf;
+
+    for (pInst = pModConf->root; pInst != NULL;) {
+        nextInst = pInst->next;
+        if (pInst->fd != -1) {
+            close(pInst->fd);
+            pInst->fd = -1;
+        }
+        lstnFree(pInst);
+        pInst = nextInst;
+    }
+    pModConf->root = NULL;
+    pModConf->tail = NULL;
+    if (loadModConf == pModConf) {
+        loadModConf = NULL;
+    }
+    if (runModConf == pModConf) {
+        runModConf = NULL;
+    }
 ENDfreeCnf
 
 BEGINmodExit
