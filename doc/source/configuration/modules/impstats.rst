@@ -108,7 +108,7 @@ The configuration parameters are grouped below by use case.
 .. note::
 
    Parameter names are case-insensitive, but punctuation such as dots is
-   significant. Use dotted names exactly as shown.
+   significant. Use the parameter names exactly as shown.
 
 .. note::
 
