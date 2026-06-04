@@ -189,7 +189,7 @@ typedef struct modConfData_s {
 pthread_attr_t wrkrThrdAttr; /* Attribute for worker threads ; read only after startup */
 static int activeKafkaworkers = 0;
 static int stopKafkaWorkers = 0;
-DEF_ATOMIC_HELPER_MUT(mutStopKafkaWorkers);
+DEF_ATOMIC_HELPER_MUT(mutStopImkafkaWorkers);
 /* The following structure controls the worker threads. Global data is
  * needed for their access.
  */
@@ -1174,7 +1174,7 @@ static void shutdownKafkaWorkers(void) {
     instanceConf_t *inst;
 
     assert(kafkaWrkrInfo != NULL);
-    ATOMIC_STORE_1_TO_INT(&stopKafkaWorkers, &mutStopKafkaWorkers);
+    ATOMIC_STORE_1_TO_INT(&stopKafkaWorkers, &mutStopImkafkaWorkers);
     DBGPRINTF("imkafka: waiting on imkafka workerthread termination\n");
     for (i = 0; i < activeKafkaworkers; ++i) {
         pthread_join(kafkaWrkrInfo[i].tid, NULL);
@@ -1222,7 +1222,7 @@ BEGINrunInput
     CODESTARTrunInput;
     DBGPRINTF("imkafka: runInput loop started ...\n");
     activeKafkaworkers = 0;
-    ATOMIC_STORE_0_TO_INT(&stopKafkaWorkers, &mutStopKafkaWorkers);
+    ATOMIC_STORE_0_TO_INT(&stopKafkaWorkers, &mutStopImkafkaWorkers);
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->rk != NULL) {
             ++workerSlots;
@@ -1293,7 +1293,7 @@ ENDafterRun
 BEGINmodExit
     CODESTARTmodExit;
     pthread_attr_destroy(&wrkrThrdAttr);
-    DESTROY_ATOMIC_HELPER_MUT(mutStopKafkaWorkers);
+    DESTROY_ATOMIC_HELPER_MUT(mutStopImkafkaWorkers);
     /* release objects we used */
     if (kafkaStats) {
         statsobj.Destruct(&kafkaStats);
@@ -1335,7 +1335,7 @@ BEGINmodInit()
     /* initialize "read-only" thread attributes */
     pthread_attr_init(&wrkrThrdAttr);
     pthread_attr_setstacksize(&wrkrThrdAttr, 4096 * 1024);
-    INIT_ATOMIC_HELPER_MUT(mutStopKafkaWorkers);
+    INIT_ATOMIC_HELPER_MUT(mutStopImkafkaWorkers);
 
     DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n", VERSION, rd_kafka_version_str(), rd_kafka_version());
 
@@ -1395,7 +1395,7 @@ static void *imkafkawrkr(void *myself) {
     DBGPRINTF("imkafka: started kafka consumer workerthread on group %s/%s with %d topics\n", me->inst->consumergroup,
               me->inst->brokers, me->inst->nTopics);
     do {
-        if (ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopKafkaWorkers) || glbl.GetGlobalInputTermState() == 1) {
+        if (ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) || glbl.GetGlobalInputTermState() == 1) {
             break; /* terminate input! */
         }
         if (me->inst->rk == NULL) {
@@ -1413,8 +1413,10 @@ static void *imkafkawrkr(void *myself) {
          * of 0 seconds. It doesn't hurt any other valid scenario. So do not remove.
          * rgerhards, 2008-02-14
          */
-        if (glbl.GetGlobalInputTermState() == 0) srSleep(0, 100000);
-    } while (!ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopKafkaWorkers) && glbl.GetGlobalInputTermState() == 0);
+        if (glbl.GetGlobalInputTermState() == 0 && !ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers)) {
+            srSleep(0, 100000);
+        }
+    } while (!ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) && glbl.GetGlobalInputTermState() == 0);
     DBGPRINTF("imkafka: stopped kafka consumer workerthread on group %s/%s with %d topics\n", me->inst->consumergroup,
               me->inst->brokers, me->inst->nTopics);
     return NULL;
