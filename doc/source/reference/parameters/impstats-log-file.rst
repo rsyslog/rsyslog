@@ -34,7 +34,7 @@ go wrong stats records will probably be lost. Logging to file can be a useful
 alternative if for some reasons (e.g. full queues) the regular syslog stream
 method shall not be used solely. Note that turning on file logging does NOT turn
 off syslog logging. If that is desired, :ref:`param-impstats-log-syslog`
-(``logSyslog`` in camelCase examples) must be explicitly set to ``off``.
+(``log.syslog``) must be explicitly set to ``off``.
 
 Module usage
 ------------
@@ -42,7 +42,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" logFile="/var/log/rsyslog-stats")
+   module(load="impstats" log.file="/var/log/rsyslog-stats")
 
 See also
 --------

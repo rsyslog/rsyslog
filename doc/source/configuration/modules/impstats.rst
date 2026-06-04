@@ -107,7 +107,8 @@ The configuration parameters are grouped below by use case.
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for improved readability.
+   Parameter names are case-insensitive, but punctuation such as dots is
+   significant. Use the parameter names exactly as shown.
 
 .. note::
 
@@ -295,7 +296,7 @@ Caveats/Known Bugs
 -  This module MUST be loaded right at the top of rsyslog.conf,
    otherwise stats may not get turned on in all places.
 -  When using the format "zabbix", it is not recommended to use
-   logSyslog="on". This can cause message truncation in stats.
+   log.syslog="on". This can cause message truncation in stats.
 
 
 Examples
@@ -325,8 +326,8 @@ Load module, format the output to Zabbix, and output to a local file
           interval="60"
           severity="7"
           format="zabbix"
-          logSyslog="off"
-          logFile="/var/log/stats.log")
+          log.syslog="off"
+          log.file="/var/log/stats.log")
 
 
 Load module, send stats data to local file
@@ -340,9 +341,9 @@ data is NOT emitted to the syslog stream but to a local file instead.
    module(load="impstats"
           interval="600"
           severity="7"
-          logSyslog="off"
+          log.syslog="off"
           # need to turn log stream logging off!
-          logFile="/path/to/local/stats.log")
+          log.file="/path/to/local/stats.log")
 
 
 Load module, send stats data to local file and syslog stream
@@ -357,7 +358,7 @@ server:
    module(load="impstats"
           interval="600"
           severity="7"
-          logFile="/path/to/local/stats.log")
+          log.file="/path/to/local/stats.log")
 
    syslog.=debug @central.example.net
 
@@ -373,7 +374,7 @@ VictoriaMetrics using Prometheus Remote Write:
    module(load="impstats"
           interval="30"
           format="json"
-          logFile="/var/log/rsyslog-stats.log"
+          log.file="/var/log/rsyslog-stats.log"
           push.url="http://localhost:8428/api/v1/write"
           push.labels=["env=prod", "cluster=edge"]
           push.label.origin="on"
