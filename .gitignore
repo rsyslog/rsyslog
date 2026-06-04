@@ -126,6 +126,11 @@ _codeql_detected_source_root
 doc/.venv-docs/
 plugins/impstats/remote.pb-c.c
 plugins/impstats/remote.pb-c.h
+plugins/impstats/remote.pb-c.stamp
+tests/runtime_unit_gss_token_util
+tests/runtime_unit_linkedlist
+tests/runtime_unit_parser_pri
+tests/runtime_unit_stringbuf
 
 # Python cache artifacts
 __pycache__/

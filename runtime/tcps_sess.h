@@ -55,7 +55,6 @@ struct tcps_sess_s {
         prop_t *fromHostPort;
         int iCurrLine; /* 2nd char of current line in regex framing mode */
         uchar *pMsg_save; /* message (fragment) save area in regex framing mode */
-        actWrkrIParams_t perSourceKeyParam; /**< reusable template buffer */
         void *pUsr; /* a user-pointer */
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */
