@@ -294,9 +294,13 @@ struct ratelimit_ps_policy_s {
 typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
 
 typedef struct ratelimit_policy_file_s {
+    sbool has_scope;
+    sbool has_output_mode;
     sbool has_interval;
     sbool has_burst;
     sbool has_severity;
+    ratelimit_scope_t scope;
+    ratelimit_output_mode_t output_mode;
     unsigned int interval;
     unsigned int burst;
     int severity;
@@ -484,6 +488,38 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal parsePolicyScopeValue(const char *value, ratelimit_scope_t *out) {
+    DEFiRet;
+
+    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (!strcasecmp(value, "input")) {
+        *out = RATELIMIT_SCOPE_INPUT;
+    } else if (!strcasecmp(value, "output")) {
+        *out = RATELIMIT_SCOPE_OUTPUT;
+    } else {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseOutputModeValue(const char *value, ratelimit_output_mode_t *out) {
+    DEFiRet;
+
+    if (value == NULL || out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (!strcasecmp(value, "drop")) {
+        *out = RATELIMIT_OUTPUT_MODE_DROP;
+    } else if (!strcasecmp(value, "pace")) {
+        *out = RATELIMIT_OUTPUT_MODE_PACE;
+    } else {
+        ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal parseSeverityValue(const char *value, int *out) {
     char *end = NULL;
     long numeric;
@@ -648,7 +684,21 @@ static rsRetVal parsePolicyFile(const char *policy_file, ratelimit_policy_file_t
                     sbool boolval = 0;
 
                     if (ctxStack[depth - 1] == CTX_TOP) {
-                        if (last_key != NULL && !strcmp(last_key, "interval")) {
+                        if (last_key != NULL && !strcmp(last_key, "scope")) {
+                            if (parsePolicyScopeValue(val, &policy->scope) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid scope value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->has_scope = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "mode")) {
+                            if (parseOutputModeValue(val, &policy->output_mode) != RS_RET_OK) {
+                                LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid mode value '%s' in %s", val,
+                                         policy_file);
+                                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+                            }
+                            policy->has_output_mode = 1;
+                        } else if (last_key != NULL && !strcmp(last_key, "interval")) {
                             if (parseUnsignedInt(val, &uintval) != RS_RET_OK) {
                                 LogError(0, RS_RET_CONF_PARAM_INVLD, "ratelimit: invalid interval value '%s' in %s",
                                          val, policy_file);
@@ -1339,6 +1389,8 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
     unsigned int interval;
     unsigned int burst;
     int severity;
+    ratelimit_scope_t scope;
+    ratelimit_output_mode_t output_mode;
     ratelimit_policy_file_t policy = {0};
     DEFiRet;
 
@@ -1349,11 +1401,68 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
     interval = ratelimitSharedLoadUInt(&shared->interval, &shared->mut);
     burst = ratelimitSharedLoadUInt(&shared->burst, &shared->mut);
     severity = ratelimitSharedLoadSeverity(&shared->severity, &shared->mut);
+    pthread_mutex_lock(&shared->mut);
+    output_mode = shared->output_mode;
+    pthread_mutex_unlock(&shared->mut);
 
     CHKiRet(parsePolicyFile(shared->policy_file, &policy));
+    scope = policy.has_scope ? policy.scope : RATELIMIT_SCOPE_INPUT;
+    if (scope != shared->scope) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "ratelimit: %s reload of policy '%s' from file '%s' rejected because scope changed", trigger,
+                 shared->name, shared->policy_file);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if (shared->scope == RATELIMIT_SCOPE_OUTPUT) {
+        if (!policy.has_output_mode) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: %s reload of output policy '%s' from file '%s' rejected because mode is missing",
+                     trigger, shared->name, shared->policy_file);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (!policy.has_interval || !policy.has_burst) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: %s reload of output policy '%s' from file '%s' rejected because interval or burst "
+                     "is missing",
+                     trigger, shared->name, shared->policy_file);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (policy.has_severity || policy.has_per_source) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: %s reload of output policy '%s' from file '%s' rejected due to unsupported fields",
+                     trigger, shared->name, shared->policy_file);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        output_mode = policy.output_mode;
+    } else if (policy.has_output_mode) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "ratelimit: %s reload of input policy '%s' from file '%s' rejected because output mode is set",
+                 trigger, shared->name, shared->policy_file);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
     if (policy.has_interval) interval = policy.interval;
     if (policy.has_burst) burst = policy.burst;
     if (policy.has_severity) severity = policy.severity;
+    if (shared->scope == RATELIMIT_SCOPE_OUTPUT && output_mode == RATELIMIT_OUTPUT_MODE_PACE) {
+        sbool output_pace_forbidden;
+        if (burst == 0) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: %s reload of output policy '%s' from file '%s' rejected because pace mode requires "
+                     "burst greater than zero",
+                     trigger, shared->name, shared->policy_file);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        pthread_mutex_lock(&shared->mut);
+        output_pace_forbidden = shared->output_pace_forbidden;
+        pthread_mutex_unlock(&shared->mut);
+        if (output_pace_forbidden) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: %s reload of output policy '%s' from file '%s' rejected because a direct action uses "
+                     "this policy",
+                     trigger, shared->name, shared->policy_file);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
     if (policy.has_per_source) {
         CHKiRet(ratelimitApplyPolicyPerSource(shared, &policy, runConf, shared->policy_file));
     } else if (shared->per_source_policy_from_policy_file) {
@@ -1363,6 +1472,9 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
     ratelimitSharedStoreUInt(&shared->interval, &shared->mut, interval);
     ratelimitSharedStoreUInt(&shared->burst, &shared->mut, burst);
     ratelimitSharedStoreSeverity(&shared->severity, &shared->mut, severity);
+    pthread_mutex_lock(&shared->mut);
+    shared->output_mode = output_mode;
+    pthread_mutex_unlock(&shared->mut);
 
     LogMsg(0, RS_RET_OK, LOG_INFO, "ratelimit: %s reloaded policy '%s' from file '%s'", trigger, shared->name,
            shared->policy_file);
@@ -1526,7 +1638,9 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *per_source_policy_file,
                             const char *per_source_key_tpl_name,
                             unsigned int per_source_max_states,
-                            unsigned int per_source_topn) {
+                            unsigned int per_source_topn,
+                            sbool has_inline_policy_params,
+                            sbool has_legacy_per_source_params) {
     DEFiRet;
     ratelimit_shared_t *shared = NULL;
     ratelimit_shared_t *existing_shared = NULL;
@@ -1536,6 +1650,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     unsigned int debounce_ms = RATELIMIT_POLICY_WATCH_DEBOUNCE_DFLT_MS;
     sbool per_source_from_policy_file = 0;
     sbool bLocked = 0;
+    ratelimit_scope_t scope = RATELIMIT_SCOPE_INPUT;
+    ratelimit_output_mode_t output_mode = RATELIMIT_OUTPUT_MODE_DROP;
 
 
     if (name == NULL) {
@@ -1548,6 +1664,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
 
     if (policy_file != NULL) {
         CHKiRet(parsePolicyFile(policy_file, &file_policy));
+        if (file_policy.has_scope) scope = file_policy.scope;
+        if (file_policy.has_output_mode) output_mode = file_policy.output_mode;
         if (file_policy.has_interval) interval = file_policy.interval;
         if (file_policy.has_burst) burst = file_policy.burst;
         if (file_policy.has_severity) severity = file_policy.severity;
@@ -1572,6 +1690,41 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                 per_source_topn = file_policy.per_source_topn;
             }
         }
+    }
+
+    if (scope == RATELIMIT_SCOPE_OUTPUT) {
+        if (policy_file == NULL) {
+            LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: output policy '%s' must use a YAML policy file", name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (has_inline_policy_params || has_legacy_per_source_params) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: output policy '%s' must define limits only in the YAML policy file", name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (!file_policy.has_output_mode) {
+            LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: output policy '%s' must define mode in the YAML policy file",
+                     name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (!file_policy.has_interval || !file_policy.has_burst) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: output policy '%s' must define interval and burst in the YAML policy file", name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (file_policy.has_severity || file_policy.has_per_source) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "ratelimit: output policy '%s' does not support severity or perSource in this version", name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (output_mode == RATELIMIT_OUTPUT_MODE_PACE && burst == 0) {
+            LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: output policy '%s' pace mode requires burst greater than zero",
+                     name);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    } else if (file_policy.has_output_mode) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: input policy '%s' must not define output mode", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
     if (per_source_enabled && per_source_policy == NULL) {
@@ -1608,6 +1761,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     CHKmalloc(shared = calloc(1, sizeof(ratelimit_shared_t)));
     CHKmalloc(key = strdup(name));
     shared->name = key;
+    shared->scope = scope;
+    shared->output_mode = output_mode;
     shared->interval = interval;
     shared->burst = burst;
     shared->severity = severity;
@@ -1699,8 +1854,12 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal ratelimitNewFromConfig(
-    ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname) {
+rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
+                                        rsconf_t *conf,
+                                        const char *configname,
+                                        const char *modname,
+                                        const char *dynname,
+                                        ratelimit_scope_t scope) {
     DEFiRet;
     ratelimit_shared_t *shared;
 
@@ -1714,6 +1873,11 @@ rsRetVal ratelimitNewFromConfig(
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
         LogError(0, RS_RET_NOT_FOUND, "ratelimit config '%s' not found", configname);
         ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+    if (shared->scope != scope) {
+        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit config '%s' has incompatible scope for %s", configname, modname);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
     pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
 
@@ -1732,6 +1896,11 @@ rsRetVal ratelimitNewFromConfig(
 
 finalize_it:
     RETiRet;
+}
+
+rsRetVal ratelimitNewFromConfig(
+    ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname) {
+    return ratelimitNewFromConfigForScope(ppThis, conf, configname, modname, dynname, RATELIMIT_SCOPE_INPUT);
 }
 
 /* generate a "repeated n times" message */
@@ -1893,6 +2062,78 @@ finalize_it:
         if (iRet == RS_RET_DISCARDMSG) DBGPRINTF("message discarded by ratelimiting\n");
     }
     RETiRet;
+}
+
+rsRetVal ratelimitMsgCountWait(ratelimit_t *__restrict__ const ratelimit,
+                               time_t tt,
+                               const char *const appname,
+                               unsigned int *const wait_usec) {
+    unsigned int interval;
+    unsigned int burst;
+    time_t resume_time;
+    time_t wait_sec;
+    DEFiRet;
+
+    if (ratelimit == NULL || wait_usec == NULL) return RS_RET_PARAM_ERROR;
+    (void)appname;
+    *wait_usec = 0;
+
+    if (ratelimit->bThreadSafe) {
+        pthread_mutex_lock(&ratelimit->mut);
+    }
+
+    interval = ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut);
+    burst = ratelimitSharedLoadUInt(&ratelimit->pShared->burst, &ratelimit->pShared->mut);
+    if (interval == 0) goto finalize_it;
+
+    if (ratelimit->bNoTimeCache || tt == 0) tt = time(NULL);
+    if (ratelimit->begin == 0) ratelimit->begin = tt;
+
+    if ((tt >= (time_t)(ratelimit->begin + interval)) || (tt < ratelimit->begin)) {
+        ratelimit->begin = tt;
+        ratelimit->done = 0;
+        tellLostCnt(ratelimit);
+    }
+
+    if (burst > ratelimit->done) {
+        ratelimit->done++;
+    } else {
+        resume_time = ratelimit->begin + interval;
+        wait_sec = (resume_time > tt) ? resume_time - tt : 1;
+        if (wait_sec > (time_t)(UINT_MAX / 1000000U)) {
+            *wait_usec = UINT_MAX;
+        } else {
+            *wait_usec = (unsigned int)wait_sec * 1000000U;
+        }
+        ABORT_FINALIZE(RS_RET_DISCARDMSG);
+    }
+
+finalize_it:
+    if (ratelimit->bThreadSafe) {
+        pthread_mutex_unlock(&ratelimit->mut);
+    }
+    RETiRet;
+}
+
+ratelimit_scope_t ratelimitGetScope(const ratelimit_t *ratelimit) {
+    if (ratelimit == NULL || ratelimit->pShared == NULL) return RATELIMIT_SCOPE_INPUT;
+    return ratelimit->pShared->scope;
+}
+
+ratelimit_output_mode_t ratelimitGetOutputMode(const ratelimit_t *ratelimit) {
+    ratelimit_output_mode_t mode;
+    if (ratelimit == NULL || ratelimit->pShared == NULL) return RATELIMIT_OUTPUT_MODE_DROP;
+    pthread_mutex_lock(&ratelimit->pShared->mut);
+    mode = ratelimit->pShared->output_mode;
+    pthread_mutex_unlock(&ratelimit->pShared->mut);
+    return mode;
+}
+
+void ratelimitForbidOutputPace(ratelimit_t *ratelimit) {
+    if (ratelimit == NULL || ratelimit->pShared == NULL) return;
+    pthread_mutex_lock(&ratelimit->pShared->mut);
+    ratelimit->pShared->output_pace_forbidden = 1;
+    pthread_mutex_unlock(&ratelimit->pShared->mut);
 }
 
 /* ratelimit a message, that means:
@@ -2191,6 +2432,8 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
     /* Allocate default shared structure for standalone instance */
     CHKmalloc(pThis->pShared = calloc(1, sizeof(ratelimit_shared_t)));
     pThis->bOwnsShared = 1;
+    pThis->pShared->scope = RATELIMIT_SCOPE_INPUT;
+    pThis->pShared->output_mode = RATELIMIT_OUTPUT_MODE_DROP;
     pthread_mutex_init(&pThis->pShared->mut, NULL);
 
     DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);

@@ -40,6 +40,8 @@
 #include "syslogd-types.h"
 #include "queue.h"
 
+typedef struct ratelimit_s ratelimit_t;
+
 /* external data */
 extern int glbliActionResumeRetryCount;
 
@@ -95,6 +97,8 @@ struct action_s {
     qqueue_t *pQueue; /* action queue */
     pthread_mutex_t mutAction; /* primary action mutex */
     uchar *pszName; /* action name */
+    uchar *pszRatelimitName; /* optional output ratelimit policy name */
+    ratelimit_t *ratelimiter; /* optional action-level output ratelimiter */
     DEF_ATOMIC_HELPER_MUT(mutCAS);
     /* error file */
     const char *pszErrFile;
@@ -117,6 +121,10 @@ struct action_s {
     STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend)
     STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration)
     STATSCOUNTER_DEF(ctrResume, mutCtrResume)
+    STATSCOUNTER_DEF(ctrRateLimitAllowed, mutCtrRateLimitAllowed)
+    STATSCOUNTER_DEF(ctrRateLimitDropped, mutCtrRateLimitDropped)
+    STATSCOUNTER_DEF(ctrRateLimitPaced, mutCtrRateLimitPaced)
+    STATSCOUNTER_DEF(ctrRateLimitPacedUsec, mutCtrRateLimitPacedUsec)
 };
 
 static inline int actionLoadDisabled(action_t *const pAction) {

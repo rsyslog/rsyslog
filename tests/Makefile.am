@@ -632,6 +632,10 @@ TESTS_LIBYAML = \
 	compat-configformat-yaml.sh \
 	compat-defaults-secure-dynafile-yaml.sh \
 	global-maxopenfiles-yaml.sh \
+	action-ratelimit-drop.sh \
+	action-ratelimit-pace.sh \
+	action-ratelimit-reload.sh \
+	action-ratelimit-validation.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
