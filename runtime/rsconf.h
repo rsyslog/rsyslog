@@ -309,6 +309,18 @@ extern rsconf_t *loadConf; /* the config currently being loaded (no concurrent c
 
 int rsconfNeedDropPriv(rsconf_t *const cnf);
 
+/* module readiness barrier (see rsconf.c for details).
+ * Only meaningful when rsyslog is managed by systemd; stubs compile away
+ * otherwise so imfile and other opt-in modules need no #ifdef guards. */
+#ifdef HAVE_LIBSYSTEMD
+void rsconfRegisterReadiness(void);
+void rsconfSignalReady(void);
+void rsconfWaitForModulesReady(void);
+#else
+static inline void rsconfRegisterReadiness(void) {}
+static inline void rsconfSignalReady(void) {}
+#endif
+
 /* some defaults (to be removed?) */
 #define DFLT_bLogStatusMsgs 1
 

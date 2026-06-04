@@ -57,6 +57,7 @@
     #include <sys/port.h>
 #endif
 #include "rsyslog.h" /* error codes etc... */
+#include "rsconf.h"
 #include "dirty.h"
 #include "cfsysline.h" /* access to config file objects */
 #include "module-template.h" /* generic module interface code - very important, read it! */
@@ -2528,6 +2529,7 @@ static void do_initial_poll_run(void) {
     for (instanceConf_t *inst = runModConf->root; inst != NULL; inst = inst->next) {
         inst->freshStartTail = 0;
     }
+    rsconfSignalReady();
 }
 
 
@@ -2689,6 +2691,7 @@ static rsRetVal do_inotify(void) {
     time_t last_fallback = 0;
     time_t last_delete_check = 0;
     struct pollfd pollfd;
+    int bSignaledReady = 0;
     DEFiRet;
 
     CHKiRet(wdmapInit());
@@ -2697,11 +2700,12 @@ static rsRetVal do_inotify(void) {
         LogError(errno, RS_RET_INOTIFY_INIT_FAILED,
                  "imfile: Init inotify "
                  "instance failed ");
-        return RS_RET_INOTIFY_INIT_FAILED;
+        ABORT_FINALIZE(RS_RET_INOTIFY_INIT_FAILED);
     }
     DBGPRINTF("inotify fd %d\n", ino_fd);
 
     do_initial_poll_run();
+    bSignaledReady = 1;
 
     while (glbl.GetGlobalInputTermState() == 0) {
         int r;
@@ -2824,6 +2828,7 @@ static rsRetVal do_inotify(void) {
     }
 
 finalize_it:
+    if (!bSignaledReady) rsconfSignalReady();
     close(ino_fd);
     RETiRet;
 }
@@ -2883,6 +2888,7 @@ static rsRetVal do_fen(void) {
     /* create port instance */
     if ((glport = port_create()) == -1) {
         LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen INIT Port failed ");
+        rsconfSignalReady();
         return RS_RET_FEN_INIT_FAILED;
     }
 
@@ -2983,6 +2989,7 @@ BEGINwillRun
     CHKiRet(prop.Construct(&pInputName));
     CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imfile"), sizeof("imfile") - 1));
     CHKiRet(prop.ConstructFinalize(pInputName));
+    rsconfRegisterReadiness();
 finalize_it:
 ENDwillRun
 
