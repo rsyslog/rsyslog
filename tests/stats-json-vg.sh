@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 
 uname
-if [ $(uname) = "FreeBSD" ] ; then
+if [ "$(uname)" = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi
@@ -32,6 +32,6 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
 check_exit_vg
-custom_content_check '{ "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "batchesprocessed": 0, "failed": 0, "suspended": 0, "suspended.duration": 0, "resumed": 0 }' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check '{ "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "batchesprocessed": 0, "failed": 0, "suspended": 0, "suspended.duration": 0, "resumed": 0, "ratelimit.allowed": 0, "ratelimit.dropped": 0, "ratelimit.paced": 0, "ratelimit.paced_usec": 0 }' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing '@cee' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

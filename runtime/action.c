@@ -90,6 +90,7 @@
 #include "parserif.h"
 #include "statsobj.h"
 #include "runtime/translate.h"
+#include "ratelimit.h"
 
 /* AIXPORT : cs renamed to legacy_cs as clashes with libpthreads variable in complete file*/
 #ifdef _AIX
@@ -175,6 +176,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"action.resumeintervalmax", eCmdHdlrPositiveInt, 0},
     {"action.resumeinterval", eCmdHdlrInt, 0},
     {"action.externalstate.file", eCmdHdlrString, 0},
+    {"action.ratelimit.name", eCmdHdlrString, 0},
     {"action.copymsg", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfparamdescr) / sizeof(struct cnfparamdescr),
                                   cnfparamdescr};
@@ -317,12 +319,14 @@ rsRetVal actionDestruct(action_t *const pThis) {
      */
     if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
 
+    if (pThis->ratelimiter != NULL) ratelimitDestruct(pThis->ratelimiter);
     if (pThis->fdErrFile != -1) close(pThis->fdErrFile);
     pthread_mutex_destroy(&pThis->mutErrFile);
     pthread_mutex_destroy(&pThis->mutAction);
     pthread_mutex_destroy(&pThis->mutWrkrDataTable);
     free((void *)pThis->pszErrFile);
     free((void *)pThis->pszExternalStateFile);
+    free(pThis->pszRatelimitName);
     free(pThis->pszName);
     nvlstDestruct(pThis->pSyntaxLst);
     free(pThis->ppTpl);
@@ -371,6 +375,8 @@ rsRetVal actionConstruct(action_t **ppThis) {
     pThis->maxErrFileSize = 0;
     pThis->currentErrFileSize = 0;
     pThis->pszExternalStateFile = NULL;
+    pThis->pszRatelimitName = NULL;
+    pThis->ratelimiter = NULL;
     pThis->fdErrFile = -1;
     pThis->bWriteAllMarkMsgs = 1;
     pThis->iExecEveryNthOccur = 0;
@@ -500,6 +506,19 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("resumed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrResume));
 
+    STATSCOUNTER_INIT(pThis->ctrRateLimitAllowed, pThis->mutCtrRateLimitAllowed);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("ratelimit.allowed"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrRateLimitAllowed));
+    STATSCOUNTER_INIT(pThis->ctrRateLimitDropped, pThis->mutCtrRateLimitDropped);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("ratelimit.dropped"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrRateLimitDropped));
+    STATSCOUNTER_INIT(pThis->ctrRateLimitPaced, pThis->mutCtrRateLimitPaced);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("ratelimit.paced"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &pThis->ctrRateLimitPaced));
+    STATSCOUNTER_INIT(pThis->ctrRateLimitPacedUsec, pThis->mutCtrRateLimitPacedUsec);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("ratelimit.paced_usec"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrRateLimitPacedUsec));
+
     CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
     /* create our queue */
@@ -581,6 +600,24 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
         qqueueApplyCnfParam(pThis->pQueue, lst);
     }
     qqueueCorrectParams(pThis->pQueue);
+
+    if (pThis->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfigForScope(&pThis->ratelimiter, loadConf, (char *)pThis->pszRatelimitName, "action",
+                                               (char *)pThis->pszName, RATELIMIT_SCOPE_OUTPUT));
+        ratelimitSetNoTimeCache(pThis->ratelimiter);
+        ratelimitSetThreadSafe(pThis->ratelimiter);
+        if (pThis->pQueue->qType == QUEUETYPE_DIRECT) {
+            ratelimitForbidOutputPace(pThis->ratelimiter);
+        }
+        if (ratelimitGetOutputMode(pThis->ratelimiter) == RATELIMIT_OUTPUT_MODE_PACE &&
+            pThis->pQueue->qType == QUEUETYPE_DIRECT) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "action '%s': action.ratelimit.name='%s' uses pace mode, which requires a non-direct action "
+                     "queue",
+                     pThis->pszName, pThis->pszRatelimitName);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
 
 #undef setQPROP
 #undef setQPROPstr
@@ -705,6 +742,45 @@ static void actionCommitted(action_t *const pThis, wti_t *const pWti) {
     actionSetState(pThis, __func__, pWti, ACT_STATE_RDY);
 }
 
+static rsRetVal ATTR_NONNULL() actionCheckOutputRatelimit(action_t *const pAction, wti_t *const pWti) {
+    unsigned int wait_usec;
+    unsigned int sleep_usec;
+    ratelimit_output_mode_t mode;
+    DEFiRet;
+
+    if (pAction->ratelimiter == NULL) FINALIZE;
+
+    mode = ratelimitGetOutputMode(pAction->ratelimiter);
+    if (mode == RATELIMIT_OUTPUT_MODE_DROP) {
+        iRet = ratelimitMsgCount(pAction->ratelimiter, NO_TIME_PROVIDED, (char *)pAction->pszName);
+        if (iRet == RS_RET_OK) {
+            STATSCOUNTER_INC(pAction->ctrRateLimitAllowed, pAction->mutCtrRateLimitAllowed);
+        } else if (iRet == RS_RET_DISCARDMSG) {
+            STATSCOUNTER_INC(pAction->ctrRateLimitDropped, pAction->mutCtrRateLimitDropped);
+        }
+        FINALIZE;
+    }
+
+    for (;;) {
+        wait_usec = 0;
+        iRet = ratelimitMsgCountWait(pAction->ratelimiter, NO_TIME_PROVIDED, (char *)pAction->pszName, &wait_usec);
+        if (iRet == RS_RET_OK) {
+            STATSCOUNTER_INC(pAction->ctrRateLimitAllowed, pAction->mutCtrRateLimitAllowed);
+            FINALIZE;
+        }
+        if (iRet != RS_RET_DISCARDMSG) FINALIZE;
+        if (wtiIsShutdownImmediate(pWti)) {
+            ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        }
+        sleep_usec = wait_usec > 1000000U ? 1000000U : wait_usec;
+        STATSCOUNTER_INC(pAction->ctrRateLimitPaced, pAction->mutCtrRateLimitPaced);
+        STATSCOUNTER_ADD(pAction->ctrRateLimitPacedUsec, pAction->mutCtrRateLimitPacedUsec, sleep_usec);
+        srSleep(sleep_usec / 1000000U, sleep_usec % 1000000U);
+    }
+
+finalize_it:
+    RETiRet;
+}
 
 /* set action state according to external state file (if configured)
  */
@@ -1906,6 +1982,13 @@ static rsRetVal processMsgMain(action_t *__restrict__ const pAction,
         ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
     }
 
+    iRet = actionCheckOutputRatelimit(pAction, pWti);
+    if (iRet == RS_RET_DISCARDMSG) {
+        iRet = RS_RET_OK;
+        FINALIZE;
+    }
+    CHKiRet(iRet);
+
     CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
     if (pAction->isTransactional) {
@@ -1918,10 +2001,11 @@ static rsRetVal processMsgMain(action_t *__restrict__ const pAction,
 
     iRet = actionProcessMessage(pAction, pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams, pWti);
     if (pAction->bNeedReleaseBatch) releaseDoActionParams(pAction, pWti, 0);
-finalize_it:
     if (iRet == RS_RET_OK) {
         if (pWti->execState.bDoAutoCommit) iRet = actionCommit(pAction, pWti);
     }
+
+finalize_it:
     RETiRet;
 }
 
@@ -2336,6 +2420,7 @@ static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *cons
  */
 static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals *const pvals) {
     int i;
+    DEFiRet;
 
     for (i = 0; i < pblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
@@ -2373,6 +2458,8 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
             pAction->iResumeInterval = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "action.resumeintervalmax")) {
             pAction->iResumeIntervalMax = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "action.ratelimit.name")) {
+            CHKmalloc(pAction->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             dbgprintf(
                 "action: program error, non-handled "
@@ -2380,7 +2467,9 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
                 pblk.descr[i].name);
         }
     }
-    return RS_RET_OK;
+
+finalize_it:
+    RETiRet;
 }
 
 
