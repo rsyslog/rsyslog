@@ -361,7 +361,10 @@ static json_object *entry_data_to_json(const MMDB_entry_data_s *data) {
             }
 
             char uint64Buf[sizeof("18446744073709551615")];
-            snprintf(uint64Buf, sizeof(uint64Buf), "%" PRIu64, data->uint64);
+            if (snprintf(uint64Buf, sizeof(uint64Buf), "%" PRIu64, data->uint64) < 0) {
+                return NULL;
+            }
+            uint64Buf[sizeof(uint64Buf) - 1] = '\0';
             return json_object_new_string(uint64Buf);
 #endif
         case MMDB_DATA_TYPE_BOOLEAN:
