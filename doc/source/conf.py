@@ -249,8 +249,9 @@ def _has_sphinx_config_override(*names):
 
 
 def _get_sphinx_config_override(name):
-    """Return a Sphinx CLI config override value for name, if present."""
+    """Return the final Sphinx CLI config override value for name, if present."""
 
+    override_value = None
     use_next_arg = False
 
     for arg in sys.argv[1:]:
@@ -269,9 +270,9 @@ def _get_sphinx_config_override(name):
 
         key, sep, value = setting.partition('=')
         if sep and key.strip() == name:
-            return value
+            override_value = value
 
-    return None
+    return override_value
 
 
 _cli_overrides_doc_version = _has_sphinx_config_override('version', 'release')
