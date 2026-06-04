@@ -215,6 +215,40 @@ release = version + ' daily stable'
 # Allow override from environment (e.g. Docker/CI builds without .git)
 _env_version = os.environ.get('RSYSLOG_DOC_VERSION')
 _env_release_type = os.environ.get('RSYSLOG_DOC_RELEASE_TYPE')
+
+
+def _has_sphinx_config_override(*names):
+    """Return True if Sphinx CLI overrides any named config value.
+
+    Sphinx applies ``-D``/``--define`` overrides after executing this file, so
+    inspect argv before enabling Git-derived development build metadata.
+    """
+
+    override_names = set(names)
+    use_next_arg = False
+
+    for arg in sys.argv[1:]:
+        if use_next_arg:
+            setting = arg
+            use_next_arg = False
+        elif arg in ('-D', '--define'):
+            use_next_arg = True
+            continue
+        elif arg.startswith('-D') and len(arg) > 2:
+            setting = arg[2:]
+        elif arg.startswith('--define='):
+            setting = arg.split('=', 1)[1]
+        else:
+            continue
+
+        key = setting.split('=', 1)[0].strip()
+        if key in override_names:
+            return True
+
+    return False
+
+
+_cli_overrides_doc_version = _has_sphinx_config_override('version', 'release')
 if _env_version and _env_release_type:
     version = _env_version
     release_type = _env_release_type
@@ -241,12 +275,11 @@ elif version.split('.')[0] == '8':
     git_dir = os.path.abspath(os.path.join(
         os.path.dirname(__file__), os.pardir, os.pardir, '.git'))
 
-    if os.path.exists(git_dir):
+    if os.path.exists(git_dir) and not _cli_overrides_doc_version:
 
-        # If the 'version' variable is left with a placeholder it means
-        # that this build configuration is being called from a Git repo
-        # and that we should pull info from the repo to dynamically
-        # fill in values that were not specified by a build script.
+        # If the 'version' and 'release' variables are not overridden by the
+        # Sphinx command line, treat this as a Git development docs build and
+        # pull info from the repo to dynamically fill in build metadata.
         release_type = 'dev'
 
         # Valid options are "simple" and "detailed". "Simple" contains a short
