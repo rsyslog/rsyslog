@@ -2145,21 +2145,6 @@ CLEANFILES+= \
 
 pkglib_LTLIBRARIES =
 
-pkglib_LTLIBRARIES += liboverride_gethostname.la
-liboverride_gethostname_la_SOURCES = override_gethostname.c
-liboverride_gethostname_la_CFLAGS =
-liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
-
-pkglib_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
-liboverride_gethostname_nonfqdn_la_SOURCES = override_gethostname_nonfqdn.c
-liboverride_gethostname_nonfqdn_la_CFLAGS =
-liboverride_gethostname_nonfqdn_la_LDFLAGS = -avoid-version -shared
-
-pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
-liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
-liboverride_getaddrinfo_la_CFLAGS =
-liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
-
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace
@@ -2223,6 +2208,21 @@ runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 if ENABLE_TESTBENCH
+pkglib_LTLIBRARIES += liboverride_gethostname.la
+liboverride_gethostname_la_SOURCES = override_gethostname.c
+liboverride_gethostname_la_CFLAGS =
+liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
+
+pkglib_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
+liboverride_gethostname_nonfqdn_la_SOURCES = override_gethostname_nonfqdn.c
+liboverride_gethostname_nonfqdn_la_CFLAGS =
+liboverride_gethostname_nonfqdn_la_LDFLAGS = -avoid-version -shared
+
+pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
+liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
+liboverride_getaddrinfo_la_CFLAGS =
+liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
+
 check_PROGRAMS += $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
@@ -2562,7 +2562,7 @@ TESTS += $(TESTS_LIBFAKETIME)
 
 # now come faketime tests that utilize mmnormalize - aka "no endif here"
 if ENABLE_MMNORMALIZE
-TESTS += $(TESTS_MMNORMALIZE)
+TESTS += $(TESTS_MMNORMALIZE_FAKETIME)
 endif
 endif
 
