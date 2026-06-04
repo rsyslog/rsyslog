@@ -252,7 +252,8 @@ enum cnffuncid {
     CNFFUNC_HTTP_REQUEST,
     CNFFUNC_IS_TIME,
     CNFFUNC_SPLIT,
-    CNFFUNC_APPEND_JSON
+    CNFFUNC_APPEND_JSON,
+    CNFFUNC_PARSE_TIME_LOCALTZ
 };
 
 typedef struct cnffunc cnffunc_t;

@@ -1102,6 +1102,53 @@ done:
     return TimeInUnixFormat;
 }
 
+/**
+ * Same function as "syslogTime2time_t"
+ * but return time_t value with offset of local TZ
+ */
+
+static time_t syslogTime2time_tLocalTZ(const struct syslogTime *ts) {
+    struct tm tm_local;
+    time_t currtime = time(NULL);
+    long gmtoff = 0;
+
+    /* Time without offset */
+    time_t timeWithoutLocalOffset = syslogTime2time_t(ts);
+
+    if (ts->timeType == TIME_TYPE_RFC5424 || ts->OffsetMode == '+' || ts->OffsetMode == '-') {
+        /* Offset TZ already done, and time is in UTC */
+        goto done;
+    }
+
+    if (localtime_r(&currtime, &tm_local) != NULL) {
+#if defined(_AIX) || defined(__sun)
+        struct tm tm_utc;
+        if (gmtime_r(&currtime, &tm_utc) != NULL) {
+            /* Safely calculate total seconds elapsed in the day for both local and UTC */
+            long local_secs = tm_local.tm_sec + (tm_local.tm_min * 60) + (tm_local.tm_hour * 3600);
+            long utc_secs = tm_utc.tm_sec + (tm_utc.tm_min * 60) + (tm_utc.tm_hour * 3600);
+
+            gmtoff = local_secs - utc_secs;
+
+            /* Account for day wrapping boundaries (including New Year thresholds) */
+            if (tm_local.tm_year == tm_utc.tm_year) {
+                gmtoff += (tm_local.tm_yday - tm_utc.tm_yday) * 86400;
+            } else if (tm_local.tm_year > tm_utc.tm_year) {
+                gmtoff += 86400; /* Local time rolled into the next year first */
+            } else {
+                gmtoff -= 86400; /* UTC rolled into the next year first */
+            }
+        }
+#else
+        gmtoff = tm_local.tm_gmtoff;
+#endif
+
+        timeWithoutLocalOffset -= gmtoff;
+    }
+done:
+    return timeWithoutLocalOffset;
+}
+
 
 /**
  * format a timestamp as a UNIX timestamp; subsecond resolution is
@@ -1323,6 +1370,7 @@ BEGINobjQueryInterface(datetime)
     pIf->formatTimestamp3164 = formatTimestamp3164;
     pIf->formatTimestampUnix = formatTimestampUnix;
     pIf->syslogTime2time_t = syslogTime2time_t;
+    pIf->syslogTime2time_tLocalTZ = syslogTime2time_tLocalTZ;
     pIf->formatUnixTimeFromTime_t = formatUnixTimeFromTime_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
