@@ -126,9 +126,10 @@ like this:
    template(
        name="sqlInsertMessage"
        type="list"
+       option.sql="on"
    ) {
        constant(value="insert into syslog(message) values ('")
-       property(name="msg" sql="on")
+       property(name="msg")
        constant(value="')")
    }
 
