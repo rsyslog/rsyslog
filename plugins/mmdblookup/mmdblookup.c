@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -352,7 +353,17 @@ static json_object *entry_data_to_json(const MMDB_entry_data_s *data) {
         case MMDB_DATA_TYPE_INT32:
             return json_object_new_int(data->int32);
         case MMDB_DATA_TYPE_UINT64:
-            return json_object_new_int64((int64_t)data->uint64);
+#ifdef json_type_uint64
+            return json_object_new_uint64(data->uint64);
+#else
+            if (data->uint64 <= (uint64_t)INT64_MAX) {
+                return json_object_new_int64((int64_t)data->uint64);
+            }
+
+            char uint64Buf[sizeof("18446744073709551615")];
+            snprintf(uint64Buf, sizeof(uint64Buf), "%" PRIu64, data->uint64);
+            return json_object_new_string(uint64Buf);
+#endif
         case MMDB_DATA_TYPE_BOOLEAN:
             return json_object_new_boolean(data->boolean);
         default:
