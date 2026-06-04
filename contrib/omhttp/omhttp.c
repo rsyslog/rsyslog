@@ -2360,7 +2360,7 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
 
                 /* Set a custom template */
                 if (pData->tplName == NULL) {
-                    pData->tplName = (uchar *)NAME_TPL_SPLK_RAW;
+                    CHKmalloc(pData->tplName = ustrdup((uchar *)NAME_TPL_SPLK_RAW));
                 }
             } else if (strcasecmp(endpoint, "event") == 0) {
                 LogMsg(0, RS_RET_OK, LOG_INFO, "omhttp: applying 'hec:splunk:event' profile");
@@ -2383,7 +2383,7 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
 
                 /* Set a custom template */
                 if (pData->tplName == NULL) {
-                    pData->tplName = (uchar *)NAME_TPL_SPLK_EVENT;
+                    CHKmalloc(pData->tplName = ustrdup((uchar *)NAME_TPL_SPLK_EVENT));
                 }
             } else {
                 LogError(0, RS_RET_PARAM_ERROR, "omhttp: unknown Splunk HEC endpoint '%s' in profile", endpoint);
