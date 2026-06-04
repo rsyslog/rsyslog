@@ -185,6 +185,14 @@ Note: parameter names are case-insensitive.
   causes queue to refer to the original message object, with
   reference-counting. (Introduced with 8.10.0).
 
+- **action.ratelimit.name** string
+
+  References a named :doc:`ratelimit object <../rainerscript/configuration_objects/ratelimit>`
+  whose external YAML policy has ``scope: output``. The action carries only
+  the policy name; interval, burst, mode, and future output-limit settings are
+  defined in the policy file so they can be reloaded. ``mode: pace`` requires a
+  non-direct action queue.
+
 Useful Links
 ------------
 

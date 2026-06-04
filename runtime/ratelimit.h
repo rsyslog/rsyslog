@@ -31,8 +31,18 @@ struct ratelimit_ps_state_s;
 struct template;
 typedef struct statsobj_s statsobj_t;
 
+typedef enum ratelimit_scope_e { RATELIMIT_SCOPE_INPUT = 0, RATELIMIT_SCOPE_OUTPUT } ratelimit_scope_t;
+
+typedef enum ratelimit_output_mode_e {
+    RATELIMIT_OUTPUT_MODE_DROP = 0,
+    RATELIMIT_OUTPUT_MODE_PACE
+} ratelimit_output_mode_t;
+
 typedef struct ratelimit_shared_s {
     char *name;
+    ratelimit_scope_t scope;
+    ratelimit_output_mode_t output_mode;
+    sbool output_pace_forbidden;
     unsigned int interval;
     unsigned int burst;
     int severity;
@@ -102,6 +112,12 @@ typedef struct rsconf_s rsconf_t;
 rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname);
 rsRetVal ratelimitNewFromConfig(
     ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname);
+rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
+                                        rsconf_t *conf,
+                                        const char *configname,
+                                        const char *modname,
+                                        const char *dynname,
+                                        ratelimit_scope_t scope);
 rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *name,
                             unsigned int interval,
@@ -114,7 +130,9 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *per_source_policy_file,
                             const char *per_source_key_tpl_name,
                             unsigned int per_source_max_states,
-                            unsigned int per_source_topn);
+                            unsigned int per_source_topn,
+                            sbool has_inline_policy_params,
+                            sbool has_legacy_per_source_params);
 void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
@@ -122,6 +140,13 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
 void ratelimitSetSeverity(ratelimit_t *ratelimit, int severity);
 rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
+rsRetVal ratelimitMsgCountWait(ratelimit_t *ratelimit,
+                               time_t tt,
+                               const char *const appname,
+                               unsigned int *const wait_usec);
+ratelimit_scope_t ratelimitGetScope(const ratelimit_t *ratelimit);
+ratelimit_output_mode_t ratelimitGetOutputMode(const ratelimit_t *ratelimit);
+void ratelimitForbidOutputPace(ratelimit_t *ratelimit);
 rsRetVal ATTR_NONNULL(1, 2, 3) ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
 rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);
