@@ -43,8 +43,8 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" 
-          logFile="/var/log/rsyslog-stats"
+   module(load="impstats"
+          log.file="/var/log/rsyslog-stats"
           log.file.overwrite="on")
 
 See also

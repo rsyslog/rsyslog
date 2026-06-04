@@ -29,7 +29,7 @@ Description
 Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 **Note** that setting ``ruleset`` and setting :ref:`param-impstats-log-syslog`
-(``logSyslog`` in camelCase examples) to ``off`` are mutually exclusive because
+(``log.syslog``) to ``off`` are mutually exclusive because
 syslog stream processing must be enabled to use a ruleset.
 
 Module usage
