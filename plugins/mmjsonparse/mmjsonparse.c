@@ -259,8 +259,8 @@ static int find_first_json_object(wrkrInstanceData_t *pWrkrData,
             /* Valid JSON object found */
             size_t parsed_len = pWrkrData->tokener->char_offset;
 
-            /* Check for trailing data if allow_trailing is false */
-            if (!allow_trailing && parsed_len < remaining) {
+            /* Check full message for trailing data if allow_trailing is false */
+            if (!allow_trailing) {
                 size_t check_pos = i + parsed_len;
                 while (check_pos < len && isspace(msg[check_pos])) {
                     check_pos++;
