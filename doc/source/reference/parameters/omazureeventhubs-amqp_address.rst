@@ -28,7 +28,7 @@ Description
 Specifies the "Event Hubs connection string", a full AMQPS URL used to connect
 to the target Event Hubs instance. When this parameter is set, the host, key
 name, and key are parsed from the URL, overriding ``azureHost``,
-``azureKeyName``, and ``azureKey``. The port is not parsed from the URL; it
+``azure_key_name``, and ``azure_key``. The port is not parsed from the URL; it
 always defaults to ``5671`` and any configured ``azurePort`` value is ignored.
 
 A sample Event Hubs connection string URL is:
@@ -43,7 +43,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omazureeventhubs" amqpAddress="amqps://user:key@namespace.servicebus.windows.net/hub" ...)
+   action(type="omazureeventhubs" amqp_address="amqps://user:key@namespace.servicebus.windows.net/hub" ...)
 
 See also
 --------

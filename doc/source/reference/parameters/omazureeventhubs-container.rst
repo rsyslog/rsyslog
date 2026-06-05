@@ -27,7 +27,7 @@ Description
 -----------
 Specifies the name of the "Event Hubs Instance"—the specific event hub within
 the namespace—that should receive the forwarded log data. Define it unless
-``amqpAddress`` already points at the desired event hub.
+``amqp_address`` already points at the desired event hub.
 
 Input usage
 -----------
