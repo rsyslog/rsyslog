@@ -29,7 +29,7 @@ Specifies the fully qualified domain name (FQDN) of the Event Hubs instance that
 rsyslog output plugin should connect to. The format of the hostname should be
 ``<namespace>.servicebus.windows.net``, where ``<namespace>`` is the name of the
 Event Hubs namespace that was created in Microsoft Azure. This setting is required
-unless ``amqpAddress`` supplies the complete connection string.
+unless ``amqp_address`` supplies the complete connection string.
 
 Input usage
 -----------

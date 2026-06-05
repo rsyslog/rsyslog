@@ -27,7 +27,7 @@ Description
 -----------
 Specifies the "Event Hubs shared access key name" (the shared access policy
 name) used to authenticate and authorize connections to the Event Hubs
-instance. Provide this value unless ``amqpAddress`` already supplies the
+instance. Provide this value unless ``amqp_address`` already supplies the
 credentials.
 
 Input usage
@@ -36,7 +36,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omazureeventhubs" azureKeyName="MyPolicy" ...)
+   action(type="omazureeventhubs" azure_key_name="MyPolicy" ...)
 
 See also
 --------

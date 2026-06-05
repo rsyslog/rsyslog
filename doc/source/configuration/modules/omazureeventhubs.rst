@@ -49,7 +49,9 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive. Keep documented underscores in names such
+   as ``amqp_address``, ``azure_key_name``, and ``azure_key``; camelCase
+   spellings are not aliases for underscore-separated parameters.
 
 .. warning::
 

@@ -27,7 +27,7 @@ Description
 -----------
 Specifies the value of the "Event Hubs shared access key". This secret key
 string authenticates the connection and signs requests to the Event Hubs
-instance. Supply it unless ``amqpAddress`` already embeds the key.
+instance. Supply it unless ``amqp_address`` already embeds the key.
 
 Input usage
 -----------
@@ -35,7 +35,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omazureeventhubs" azureKeyName="MyPolicy" azureKey="MySecretKey" ...)
+   action(type="omazureeventhubs" azure_key_name="MyPolicy" azure_key="MySecretKey" ...)
 
 See also
 --------
