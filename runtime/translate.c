@@ -671,6 +671,7 @@ static void yamlStatementsAppend(struct rsconfTranslateYamlStatement_s **dst,
 
 static int promoteSimpleYamlToStatements(struct rsconfTranslateItem_s *it, int *oom) {
     char *if_expr;
+    struct rsconfTranslateYamlAction_s *actions;
     struct rsconfTranslateYamlStatement_s *stmt;
 
     if (it->yaml_ruleset_kind == RS_TRANSLATE_YAML_RULESET_STATEMENTS) return 1;
@@ -683,10 +684,11 @@ static int promoteSimpleYamlToStatements(struct rsconfTranslateItem_s *it, int *
         *oom = 1;
         return 0;
     }
-    stmt = newYamlStatement(if_expr, it->yaml_actions, oom);
+    actions = it->yaml_actions;
+    it->yaml_actions = NULL;
+    stmt = newYamlStatement(if_expr, actions, oom);
     if (stmt == NULL) return 0;
 
-    it->yaml_actions = NULL;
     free(it->yaml_filter);
     it->yaml_filter = NULL;
     it->yaml_statements = stmt;
