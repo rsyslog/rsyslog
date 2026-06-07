@@ -376,9 +376,6 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
         }
         if (pData->responseTimeout > 0) {
             pollTimeout = timeoutVal(&responseDeadline);
-            if (pollTimeout < 0) {
-                pollTimeout = 0;
-            }
 #if LONG_MAX > INT_MAX
             if (pollTimeout > INT_MAX) {
                 pollTimeout = INT_MAX;
