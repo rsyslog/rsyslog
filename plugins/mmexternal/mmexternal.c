@@ -402,8 +402,8 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
         if (r > 0) {
             numCharsRead += r;
             pChildCtx->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
-            if (pData->responseTimeout > 0 && timeoutVal(&responseDeadline) <= 0
-                && pChildCtx->respBuf[numCharsRead - 1] != '\n') {
+            if (pData->responseTimeout > 0 && timeoutVal(&responseDeadline) <= 0 &&
+                pChildCtx->respBuf[numCharsRead - 1] != '\n') {
                 LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
                        "mmexternal: program '%s' (pid %ld) did not respond within timeout (%ld ms); "
                        "will be restarted and current message skipped",
