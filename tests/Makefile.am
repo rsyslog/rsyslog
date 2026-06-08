@@ -138,6 +138,7 @@ TESTS_DEFAULT = \
 	mmexternal-single-instance.sh \
 	mmexternal-response-too-long.sh \
 	mmexternal-response-timeout.sh \
+	mmexternal-response-timeout-trickle.sh \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
@@ -3287,6 +3288,7 @@ EXTRA_DIST += \
 	testsuites/mmexternal-no-output.sh \
 	testsuites/mmexternal-single-instance-bin.sh \
 	testsuites/mmexternal-too-long-reply-bin.sh \
+	testsuites/mmexternal-trickle-no-lf.sh \
 	testsuites/mmsnareparse/sample-custom-pattern.data \
 	testsuites/mmsnareparse/sample-windows2022-security.data \
 	testsuites/mmsnareparse/sample-windows2025-security.data \

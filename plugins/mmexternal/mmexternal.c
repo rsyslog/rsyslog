@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
@@ -325,6 +326,8 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
     size_t maxResponseSize;
     char *newptr;
     struct pollfd fdToPoll[1];
+    struct timespec responseDeadline = {0};
+    long pollTimeout;
 
     if (pData->outputMode == OUTPUT_NONE) {
         FINALIZE;
@@ -337,6 +340,9 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
     }
     fdToPoll[0].fd = pChildCtx->fdPipeIn;
     fdToPoll[0].events = POLLIN;
+    if (pData->responseTimeout > 0) {
+        timeoutComp(&responseDeadline, pData->responseTimeout);
+    }
     do {
         if (pChildCtx->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
             newSize = pChildCtx->maxLenRespBuf;
@@ -369,7 +375,13 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
             pChildCtx->maxLenRespBuf = newSize;
         }
         if (pData->responseTimeout > 0) {
-            const int pollRet = poll(fdToPoll, 1, pData->responseTimeout);
+            pollTimeout = timeoutVal(&responseDeadline);
+#if LONG_MAX > INT_MAX
+            if (pollTimeout > INT_MAX) {
+                pollTimeout = INT_MAX;
+            }
+#endif
+            const int pollRet = poll(fdToPoll, 1, (int)pollTimeout);
             if (pollRet == -1) {
                 if (errno == EINTR) continue;
                 LogError(errno, RS_RET_SYS_ERR, "mmexternal: error polling for response from program");
@@ -387,6 +399,15 @@ static rsRetVal processProgramReply(instanceData *__restrict__ const pData,
         if (r > 0) {
             numCharsRead += r;
             pChildCtx->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
+            if (pData->responseTimeout > 0 && timeoutVal(&responseDeadline) <= 0 &&
+                pChildCtx->respBuf[numCharsRead - 1] != '\n') {
+                LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
+                       "mmexternal: program '%s' (pid %ld) did not respond within timeout (%ld ms); "
+                       "will be restarted and current message skipped",
+                       pData->szBinary, (long)pChildCtx->pid, pData->responseTimeout);
+                terminateChild(pData, pChildCtx, 1000);
+                FINALIZE;
+            }
         } else if (r == 0) {
             LogMsg(0, RS_RET_READ_ERR, LOG_WARNING,
                    "mmexternal: program '%s' (pid %ld) terminated while returning a response; "
