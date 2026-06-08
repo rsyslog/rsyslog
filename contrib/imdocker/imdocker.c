@@ -1139,7 +1139,10 @@ static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
     STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 
 finalize_it:
-    if (iRet == RS_RET_DISCARDMSG) STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit)
+    if (iRet == RS_RET_DISCARDMSG) {
+        STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
+        iRet = RS_RET_OK;
+    }
 
     RETiRet;
 }
@@ -1224,20 +1227,30 @@ static rsRetVal SubmitMultiLineMsg(docker_cont_logs_inst_t *pInst,
     uchar *message = (uchar *)mem->data;
     int facility = loadModConf->iDfltFacility;
     int severity = pBufData->stream_type == dst_stderr ? LOG_ERR : loadModConf->iDfltSeverity;
-    enqMsg(pInst, message, len, (const uchar *)pszTag, facility, severity, NULL);
-
-    size_t size = mem->len - pInst->prevSegEnd;
-    memmove(mem->data, mem->data + pInst->prevSegEnd, size);
+    if (len > mem->len) {
+        LogError(0, RS_RET_ERR, "imdocker: multiline segment length %zu exceeds buffer length %zu", len, mem->len);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    uchar savedChar = mem->data[len];
     mem->data[len] = '\0';
+    const rsRetVal localRet = enqMsg(pInst, message, len, (const uchar *)pszTag, facility, severity, NULL);
+    mem->data[len] = savedChar;
+    CHKiRet(localRet);
+
+    size_t size = mem->len - len;
+    memmove(mem->data, mem->data + len, size);
+    mem->data[size] = '\0';
     mem->len = size;
     pBufData->bytes_remaining = 0;
 
+finalize_it:
     RETiRet;
 }
 
 static rsRetVal SubmitMsgWithStartRegex(docker_cont_logs_inst_t *pInst,
                                         docker_cont_logs_buf_t *pBufData,
                                         const uchar *pszTag) {
+    DEFiRet;
     imdocker_buf_t *mem = (imdocker_buf_t *)pBufData->buf;
     /* must be null terminated string */
     assert(mem->data[mem->len] == 0 || mem->data[mem->len] == '\0');
@@ -1254,7 +1267,7 @@ static rsRetVal SubmitMsgWithStartRegex(docker_cont_logs_inst_t *pInst,
     const int isStartMatch = start_preg ? !regexec(start_preg, (char *)thisLine, 0, NULL, 0) : 0;
 
     if (isStartMatch && pInst->prevSegEnd != 0) {
-        SubmitMultiLineMsg(pInst, pBufData, pszTag, pInst->prevSegEnd);
+        CHKiRet(SubmitMultiLineMsg(pInst, pBufData, pszTag, pInst->prevSegEnd));
         pInst->prevSegEnd = 0;
         FINALIZE;
     } else {
@@ -1263,36 +1276,41 @@ static rsRetVal SubmitMsgWithStartRegex(docker_cont_logs_inst_t *pInst,
     }
 
 finalize_it:
-    return RS_RET_OK;
+    RETiRet;
 }
 
 static rsRetVal SubmitMsg2(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, const uchar *pszTag) {
+    DEFiRet;
     imdocker_buf_t *mem = (imdocker_buf_t *)pBufData->buf;
     DBGPRINTF("%s() - {type=%d, len=%u} %s\n", __FUNCTION__, pBufData->stream_type, (unsigned int)mem->len, mem->data);
 
     if (pInst->start_regex) {
-        SubmitMsgWithStartRegex(pInst, pBufData, pszTag);
+        CHKiRet(SubmitMsgWithStartRegex(pInst, pBufData, pszTag));
     } else {
-        SubmitMsg(pInst, pBufData, pszTag);
+        CHKiRet(SubmitMsg(pInst, pBufData, pszTag));
     }
-    return RS_RET_OK;
+
+finalize_it:
+    RETiRet;
 }
 
 static rsRetVal SubmitMsg(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, const uchar *pszTag) {
+    DEFiRet;
     imdocker_buf_t *mem = (imdocker_buf_t *)pBufData->buf;
     DBGPRINTF("%s() - {type=%d, len=%u} %s\n", __FUNCTION__, pBufData->stream_type, (unsigned int)mem->len, mem->data);
 
     uchar *message = mem->data;
     int facility = loadModConf->iDfltFacility;
     int severity = pBufData->stream_type == dst_stderr ? LOG_ERR : loadModConf->iDfltSeverity;
-    enqMsg(pInst, message, mem->len, (const uchar *)pszTag, facility, severity, NULL);
+    CHKiRet(enqMsg(pInst, message, mem->len, (const uchar *)pszTag, facility, severity, NULL));
 
     /* clear existing buffer. */
     mem->len = 0;
     memset(mem->data, 0, mem->data_size);
     pBufData->bytes_remaining = 0;
 
-    return RS_RET_OK;
+finalize_it:
+    RETiRet;
 }
 
 /** imdocker_container_logs_curlCB
@@ -1382,7 +1400,7 @@ static size_t imdocker_container_logs_curlCB(void *data, size_t size, size_t nme
                              curl_easy_strerror(ccode));
                     ABORT_FINALIZE(RS_RET_ERR);
                 }
-                req->submitMsg(pInst, pDataBuf, (const uchar *)DOCKER_TAG_NAME);
+                CHKiRet(req->submitMsg(pInst, pDataBuf, (const uchar *)DOCKER_TAG_NAME));
             }
         }
 
@@ -1420,7 +1438,7 @@ static size_t imdocker_container_logs_curlCB(void *data, size_t size, size_t nme
     CHKiRet(dockerContLogsBufWrite(pDataBuf, pread, write_size));
     if (pDataBuf->bytes_remaining == 0) {
         DBGPRINTF("%s() - write size is same as payload_size\n", __FUNCTION__);
-        req->submitMsg(pInst, pDataBuf, (const uchar *)DOCKER_TAG_NAME);
+        CHKiRet(req->submitMsg(pInst, pDataBuf, (const uchar *)DOCKER_TAG_NAME));
     }
 
 finalize_it:
