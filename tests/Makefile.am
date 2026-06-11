@@ -2226,6 +2226,10 @@ runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
+# Shipped even when testbench is disabled: dist tarballs are often built with
+# --disable-testbench, but downstream builds may enable testbench + imptcp.
+EXTRA_DIST += override_epoll_ctl.c
+
 if ENABLE_TESTBENCH
 pkglib_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
@@ -2241,8 +2245,6 @@ pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
 liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
-
-EXTRA_DIST += override_epoll_ctl.c
 
 if ENABLE_IMPTCP
 check_DATA += liboverride_epoll_ctl.so
