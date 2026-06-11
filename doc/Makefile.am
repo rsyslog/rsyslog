@@ -265,6 +265,7 @@ EXTRA_DIST = \
     source/reference/parameters/imbeats-workerthreads.rst \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
+    source/configuration/modules/omawslogshlc.rst \
     source/configuration/modules/omazureeventhubs.rst \
     source/configuration/modules/omclickhouse.rst \
     source/configuration/modules/omczmq.rst \
@@ -922,6 +923,12 @@ EXTRA_DIST = \
     source/reference/parameters/omazuredce-table_name.rst \
     source/reference/parameters/omazuredce-template.rst \
     source/reference/parameters/omazuredce-tenant_id.rst \
+    source/reference/parameters/omawslogshlc-bearer_token.rst \
+    source/reference/parameters/omawslogshlc-log_group.rst \
+    source/reference/parameters/omawslogshlc-log_stream.rst \
+    source/reference/parameters/omawslogshlc-max_batch_size.rst \
+    source/reference/parameters/omawslogshlc-region.rst \
+    source/reference/parameters/omawslogshlc-template.rst \
     source/reference/parameters/omclickhouse-allowunsignedcerts.rst \
     source/reference/parameters/omclickhouse-bulkmode.rst \
     source/reference/parameters/omclickhouse-errorfile.rst \
