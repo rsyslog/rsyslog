@@ -19,7 +19,7 @@ set $!url = "https://user:pass@www.rsyslog.com:443/doc/v8-stable/rainerscript/fu
 
 set $.faup = faup_fragment($!url);
 set $.ret = script_error();
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 tcpflood -m 1

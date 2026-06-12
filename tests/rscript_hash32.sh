@@ -15,7 +15,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 set $.hash_no_1 = hash32("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e");
 set $.hash_no_2 = hash32mod("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e", 100);
 
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 tcpflood -m 20

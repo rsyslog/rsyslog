@@ -19,7 +19,7 @@ set $!a!b = "foo";
 set $!a.b.c = "bar";
 set $.unflatten = unflatten($!, ".");
 set $.ret = script_error();
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 tcpflood -m 1
