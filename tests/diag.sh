@@ -625,20 +625,27 @@ rsyslogd_config_check() {
 
 # wait for appearance of a specific pid file, given as $1
 wait_startup_pid() {
+	local pid
+
 	if [ "$1" == "" ]; then
 		echo "FAIL: testbench bug: wait_startup_called without \$1"
 		error_exit 100
 	fi
-	while test ! -f $1; do
+	while test ! -f "$1"; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+		if [ "$(date +%s)" -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
 		   printf '%s ABORT! Timeout waiting on startup (pid file %s) after %d seconds\n' "$(tb_timestamp)" "$1" $TB_STARTUP_MAX_RUNTIME
 		   ls -l "$1"
-		   ps -fp $($SUDO cat "$1")
+		   if [ -f "$1" ]; then
+			   pid=$($SUDO cat "$1")
+			   if [[ "$pid" =~ ^[0-9]+$ ]]; then
+				   ps -fp "$pid"
+			   fi
+		   fi
 		   error_exit 1
 		fi
 	done
-	printf '%s %s found, pid %s\n' "$(tb_timestamp)" "$1" "$(cat $1)"
+	printf '%s %s found, pid %s\n' "$(tb_timestamp)" "$1" "$(cat "$1")"
 }
 
 # special version of wait_startup_pid() for rsyslog startup
