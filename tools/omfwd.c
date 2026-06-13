@@ -835,7 +835,7 @@ BEGINcreateInstance
     /* We always have at least one target and port */
     pData->nTargets = 1;
     pData->nActiveTargets = 0;
-    INIT_ATOMIC_HELPER_MUT64(pData->mut_nActiveTargets);
+    INIT_ATOMIC_HELPER_MUT(pData->mut_nActiveTargets);
     pData->nPorts = 1;
     pData->target_name = NULL;
     if (cs.pszStrmDrvr != NULL) CHKmalloc(pData->pszStrmDrvr = (uchar *)strdup((char *)cs.pszStrmDrvr));
