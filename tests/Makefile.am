@@ -106,6 +106,7 @@ TESTS_DEFAULT = \
 	mangle_qi_usage_output.sh \
 	minitcpsrv_usage_output.sh \
 	test_id_usage_output.sh \
+	uxsockrcvr_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
