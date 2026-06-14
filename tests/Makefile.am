@@ -748,6 +748,7 @@ TESTS_MMAITAG = \
 
 TESTS_MAIL = \
 	ommail_errmsg_no_params.sh \
+	ommail-smtp.sh \
 	ommail-sendmail.sh \
 	ommail-sendmail-body-off.sh \
 	ommail-sendmail-fail.sh \
@@ -3470,6 +3471,7 @@ EXTRA_DIST += \
 	omotel_proxy_server.py \
 	otel_collector_find_port.py \
 	testsuites/ommail-sendmail-bin.sh \
+	testsuites/ommail-smtp-server.py \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
 	imfile-endmsg.regex.crio.rulebase \
 	imfile-endmsg.regex.json.rulebase \
