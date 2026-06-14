@@ -252,6 +252,16 @@ The following parameters can be set:
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
+- **parser.dropTrailingCROnReception** [on/off] available 8.2606.0+
+
+  **Default:** off
+
+  If "on", remove a single carriage return (CR) character from the end
+  of each received message after the normal trailing LF handling has run.
+  This is useful for senders that include CRLF line endings in the message
+  payload. The default is "off" so existing configurations keep the CR
+  byte when it is part of the original message.
+
 - **parser.parseHostnameAndTag** [on/off] available 8.6.0+
 
   **Default:** on

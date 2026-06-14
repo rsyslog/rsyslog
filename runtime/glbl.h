@@ -101,6 +101,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
     SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar *);
     SIMP_PROP(ParserControlCharacterEscapePrefix, uchar);
     SIMP_PROP(ParserDropTrailingLFOnReception, int);
+    SIMP_PROP(ParserDropTrailingCROnReception, int);
     SIMP_PROP(ParserEscapeControlCharactersOnReceive, int);
     SIMP_PROP(ParserSpaceLFOnReceive, int);
     SIMP_PROP(ParserEscape8BitCharactersOnReceive, int);
@@ -111,7 +112,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 
 #undef SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */

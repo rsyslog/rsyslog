@@ -681,6 +681,7 @@ TESTS_IMTCP = \
 	imtcp-netns.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
+	parser-drop-trailing-cr.sh \
 	omfwd-rebind-tcp.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
@@ -699,6 +700,7 @@ TESTS_IMTCP = \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh
 TESTS_IMTCP_YAML = \
+	yaml-parser-drop-trailing-cr.sh \
 	imtcp-persource-ratelimit.sh \
 	ratelimit-legacy-persource-discard.sh \
 	ratelimit-persource-repeat-summary.sh \
