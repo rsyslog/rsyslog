@@ -1,6 +1,7 @@
 TEST_EXTENSIONS=.sh
 EXTRA_DIST = \
 	tabescape_dflt.sh \
+	template-escape-cc-octal.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
@@ -33,6 +34,7 @@ EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
+	template-escape-cc-octal.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \

@@ -4238,8 +4238,6 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             if (iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
                 /* OK, let's do the escaping... */
                 uchar *pBStart;
-                uchar szCCEsc[8]; /* buffer for escape sequence */
-                int i;
 
                 iLenBuf += iNumCC * 4;
                 pBStart = pB = malloc(iLenBuf + 1);
@@ -4249,8 +4247,11 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
                 for (pSrc = pRes; *pSrc; pSrc++) {
                     if (iscntrl((int)*pSrc)) {
-                        snprintf((char *)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
-                        for (i = 0; i < 4; ++i) *pB++ = szCCEsc[i];
+                        const uchar cc = *pSrc;
+                        *pB++ = '#';
+                        *pB++ = '0' + ((cc >> 6) & 7);
+                        *pB++ = '0' + ((cc >> 3) & 7);
+                        *pB++ = '0' + (cc & 7);
                     } else {
                         *pB++ = *pSrc;
                     }
