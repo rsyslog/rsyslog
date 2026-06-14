@@ -1238,6 +1238,8 @@ TESTS_IMPSTATS = \
 	dynstats_reset_without_pstats_reset.sh \
 	dynstats_prevent_premature_eviction.sh \
 	dynstats-persist.sh \
+	dynstats-duplicate-name.sh \
+	yaml-dynstats-duplicate-name.sh \
 	omfwd-lb-2target-impstats.sh \
 	omfwd_fast_imuxsock.sh \
 	omfwd_impstats-udp.sh \
