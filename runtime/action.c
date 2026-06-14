@@ -399,6 +399,43 @@ finalize_it:
 }
 
 
+static rsRetVal actionRegisterName(action_t *const pThis) {
+    DEFiRet;
+    size_t i;
+    char *name = NULL;
+    char **names = NULL;
+    struct actions_s *const actions = &loadConf->actions;
+
+    if (pThis->pszName == NULL) {
+        FINALIZE;
+    }
+
+    for (i = 0; i < actions->n_action_names; ++i) {
+        if (!strcmp(actions->action_names[i], (char *)pThis->pszName)) {
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "action: duplicate name '%s' in current config set; impstats counters may be ambiguous",
+                   pThis->pszName);
+            FINALIZE;
+        }
+    }
+
+    CHKmalloc(name = strdup((char *)pThis->pszName));
+    if (actions->n_action_names == actions->n_action_names_alloc) {
+        const size_t newAlloc = (actions->n_action_names_alloc == 0) ? 8 : actions->n_action_names_alloc * 2;
+        CHKmalloc(names = realloc(actions->action_names, newAlloc * sizeof(char *)));
+        actions->action_names = names;
+        actions->n_action_names_alloc = newAlloc;
+    }
+
+    actions->action_names[actions->n_action_names++] = name;
+    name = NULL;
+
+finalize_it:
+    free(name);
+    RETiRet;
+}
+
+
 /* action construction finalizer
  */
 rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst) {
@@ -564,6 +601,8 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
 
     /* and now reset the queue params (see comment in its function header!) */
     actionResetQueueParams();
+
+    CHKiRet(actionRegisterName(pThis));
 
 finalize_it:
     RETiRet;

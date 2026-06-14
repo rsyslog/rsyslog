@@ -199,6 +199,9 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->templates.lastStatic = NULL;
     pThis->actions.nbrActions = 0;
     pThis->actions.iActionNbr = 0;
+    pThis->actions.action_names = NULL;
+    pThis->actions.n_action_names = 0;
+    pThis->actions.n_action_names_alloc = 0;
     pThis->globals.pszWorkDir = NULL;
     pThis->globals.bDropMalPTRMsgs = 0;
     pThis->globals.operatingStateFile = NULL;
@@ -339,6 +342,19 @@ static void freeCnf(rsconf_t *pThis) {
     }
 }
 
+
+static void freeActionNames(rsconf_t *pThis) {
+    size_t i;
+
+    for (i = 0; i < pThis->actions.n_action_names; ++i) {
+        free(pThis->actions.action_names[i]);
+    }
+    free(pThis->actions.action_names);
+    pThis->actions.action_names = NULL;
+    pThis->actions.n_action_names = 0;
+    pThis->actions.n_action_names_alloc = 0;
+}
+
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
@@ -366,6 +382,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
 #endif
     lookupDestroyCnf();
     ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
+    freeActionNames(pThis);
     llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 
@@ -1227,6 +1244,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 /* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
     free(loadConf->globals.mainQ.pszMainMsgQFName);
+    freeActionNames(loadConf);
 
     cnfSetDefaults(loadConf);
 
