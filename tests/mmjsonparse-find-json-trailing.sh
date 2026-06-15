@@ -17,21 +17,21 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 # Test allow_trailing=on (default)
 if $msg contains "TRAILING_ON" then {
     action(type="mmjsonparse" mode="find-json" allow_trailing="on")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 
 # Test allow_trailing=off
 if $msg contains "TRAILING_OFF" then {
     action(type="mmjsonparse" mode="find-json" allow_trailing="off")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 
 # Test allow_trailing=off when JSON ends exactly at the scan boundary.
 if $msg contains "BOUNDARY" then {
     action(type="mmjsonparse" mode="find-json" allow_trailing="off" max_scan_bytes="17")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 '

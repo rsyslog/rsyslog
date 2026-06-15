@@ -13,7 +13,7 @@ input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_por
 
 action(type="mmjsonparse" cookie="@cim:" container="$.")
 if $parsesuccess == "OK" then {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 startup

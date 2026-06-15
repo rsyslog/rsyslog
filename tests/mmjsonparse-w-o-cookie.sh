@@ -13,7 +13,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 
 action(type="mmjsonparse" cookie="")
 if $parsesuccess == "OK" then {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest

@@ -12,14 +12,14 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 # Legacy cookie mode (default) - should NOT parse text with JSON
 if $msg contains "LEGACY" then {
     action(type="mmjsonparse")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 
 # Find-JSON mode - should parse text with embedded JSON
 if $msg contains "FINDJSON" then {
     action(type="mmjsonparse" mode="find-json")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 '
