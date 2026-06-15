@@ -12,14 +12,14 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 # Test invalid JSON
 if $msg contains "INVALID" then {
     action(type="mmjsonparse" mode="find-json")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 
 # Test no JSON present
 if $msg contains "NOJSON" then {
     action(type="mmjsonparse" mode="find-json")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 '

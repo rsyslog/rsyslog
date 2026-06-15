@@ -12,14 +12,14 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 # Test with very small max_scan_bytes to force truncation
 if $msg contains "SCAN_LIMIT" then {
     action(type="mmjsonparse" mode="find-json" max_scan_bytes="10")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 
 # Test with sufficient max_scan_bytes
 if $msg contains "SCAN_OK" then {
     action(type="mmjsonparse" mode="find-json" max_scan_bytes="100")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 '
