@@ -28,6 +28,9 @@ Description
 This is the character that invalid sequences are replaced by. It is
 strongly recommended to use a printable US-ASCII character. Note that
 only the first byte of the provided string is used without validation.
+Use :ref:`param-mmutf8fix-replacementsequence` instead when the
+replacement marker needs more than one byte. The two parameters are
+mutually exclusive.
 
 Input usage
 -----------
@@ -38,6 +41,19 @@ Input usage
    module(load="mmutf8fix")
 
    action(type="mmutf8fix" replacementChar="#")
+
+YAML usage
+----------
+
+.. code-block:: yaml
+
+   modules:
+     - load: "mmutf8fix"
+
+   rulesets:
+     - name: main
+       script: |
+         action(type="mmutf8fix" replacementChar="#")
 
 See also
 --------
