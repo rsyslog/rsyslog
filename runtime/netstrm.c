@@ -390,6 +390,17 @@ finalize_it:
     RETiRet;
 }
 
+/* TCP user timeout option
+ */
+static rsRetVal SetTcpUserTimeout(netstrm_t *pThis, int tcpUserTimeout) {
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTcpUserTimeout(pThis->pDrvrData, tcpUserTimeout);
+
+finalize_it:
+    RETiRet;
+}
+
 /* gnutls priority string */
 static rsRetVal SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString) {
     DEFiRet;
@@ -509,6 +520,7 @@ BEGINobjQueryInterface(netstrm)
     pIf->SetKeepAliveProbes = SetKeepAliveProbes;
     pIf->SetKeepAliveTime = SetKeepAliveTime;
     pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+    pIf->SetTcpUserTimeout = SetTcpUserTimeout;
     pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
     pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
     pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;

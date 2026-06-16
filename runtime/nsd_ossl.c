@@ -793,6 +793,21 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     RETiRet;
 }
 
+/* TCP user timeout option
+ */
+static rsRetVal SetTcpUserTimeout(nsd_t *pNsd, int tcpUserTimeout) {
+    DEFiRet;
+    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+
+    ISOBJ_TYPE_assert((pThis), nsd_ossl);
+    assert(tcpUserTimeout >= 0);
+
+    dbgprintf("SetTcpUserTimeout: tcpUserTimeout=%d\n", tcpUserTimeout);
+    nsd_ptcp.SetTcpUserTimeout(pThis->pTcp, tcpUserTimeout);
+
+    RETiRet;
+}
+
 
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
@@ -1697,6 +1712,7 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
     pIf->SetKeepAliveProbes = SetKeepAliveProbes;
     pIf->SetKeepAliveTime = SetKeepAliveTime;
+    pIf->SetTcpUserTimeout = SetTcpUserTimeout;
     pIf->SetGnutlsPriorityString = SetGnutlsPriorityString; /* we don't NEED this interface! */
     pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;

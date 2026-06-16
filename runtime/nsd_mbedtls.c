@@ -665,6 +665,20 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     RETiRet;
 }
 
+/* TCP user timeout option
+ */
+static rsRetVal SetTcpUserTimeout(nsd_t *pNsd, int tcpUserTimeout) {
+    DEFiRet;
+    nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
+
+    ISOBJ_TYPE_assert((pThis), nsd_mbedtls);
+    assert(tcpUserTimeout >= 0);
+
+    nsd_ptcp.SetTcpUserTimeout(pThis->pTcp, tcpUserTimeout);
+
+    RETiRet;
+}
+
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
@@ -1477,6 +1491,7 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
     pIf->SetKeepAliveProbes = SetKeepAliveProbes;
     pIf->SetKeepAliveTime = SetKeepAliveTime;
+    pIf->SetTcpUserTimeout = SetTcpUserTimeout;
     pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
     pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;

@@ -393,6 +393,19 @@ static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
     RETiRet;
 }
 
+/* TCP user timeout option
+ */
+static rsRetVal SetTcpUserTimeout(nsd_t *pNsd, int tcpUserTimeout) {
+    nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
+    DEFiRet;
+
+    ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+
+    pThis->tcp_user_timeout_ms = tcpUserTimeout;
+
+    RETiRet;
+}
+
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
@@ -956,6 +969,41 @@ finalize_it:
 }
 
 
+/* Set TCP_USER_TIMEOUT on platforms that support it.
+ */
+static rsRetVal ApplyTcpUserTimeout(nsd_ptcp_t *pThis) {
+    static int bWarned = 0;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+
+    if (pThis->tcp_user_timeout_ms <= 0) {
+        FINALIZE;
+    }
+
+#if defined(IPPROTO_TCP) && defined(TCP_USER_TIMEOUT)
+    int ret;
+    int optval;
+    socklen_t optlen;
+
+    optval = pThis->tcp_user_timeout_ms;
+    optlen = sizeof(optval);
+    ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, optlen);
+    if (ret < 0 && !bWarned) {
+        LogError(errno, NO_ERRCODE, "nsd_ptcp cannot set TCP_USER_TIMEOUT - ignored");
+        bWarned = 1;
+    }
+#else
+    if (!bWarned) {
+        LogError(0, NO_ERRCODE, "nsd_ptcp cannot set TCP_USER_TIMEOUT on this platform - ignored");
+        bWarned = 1;
+    }
+#endif
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
@@ -1015,6 +1063,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
 #endif
         }
 
+        CHKiRet(ApplyTcpUserTimeout(pThis));
         if (connect(pThis->sock, currAddr->ai_addr, currAddr->ai_addrlen) == 0) {
             break;
         }
@@ -1217,6 +1266,7 @@ BEGINobjQueryInterface(nsd_ptcp)
     pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
     pIf->SetKeepAliveProbes = SetKeepAliveProbes;
     pIf->SetKeepAliveTime = SetKeepAliveTime;
+    pIf->SetTcpUserTimeout = SetTcpUserTimeout;
     pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;

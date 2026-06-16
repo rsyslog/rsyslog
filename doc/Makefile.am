@@ -985,6 +985,7 @@ EXTRA_DIST = \
     source/reference/parameters/omelasticsearch-usehttps.rst \
     source/reference/parameters/omelasticsearch-writeoperation.rst \
     source/reference/parameters/omfwd-ratelimit-name.rst \
+    source/reference/parameters/omfwd-tcp-user-timeout.rst \
     source/reference/parameters/omfile-addlf.rst \
     source/reference/parameters/omfile-asyncwriting.rst \
     source/reference/parameters/omfile-closetimeout.rst \
