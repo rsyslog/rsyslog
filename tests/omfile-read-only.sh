@@ -1,5 +1,9 @@
 #!/bin/bash
 # addd 2016-06-16 by RGerhards, released under ASL 2.0
+# Verifies that omfile suspends a read-only primary file action and then uses
+# the fallback action. The oracle requires the current user and filesystem to
+# reject appends to a 0400 file; if the platform still permits that write, the
+# test environment cannot exercise the intended failure path and is skipped.
 . ${srcdir:=.}/diag.sh init
 skip_ASAN "omfile read-only suspend behavior differs under ASan"
 messages=20000 # how many messages to inject?
@@ -20,6 +24,10 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 touch ${RSYSLOG2_OUT_LOG}
 chmod 0400 ${RSYSLOG2_OUT_LOG}
+if (: >> "${RSYSLOG2_OUT_LOG}") 2>/dev/null; then
+	echo "SKIP: environment can append to a 0400 file; read-only omfile failure path is not testable"
+	skip_test
+fi
 ls -l rsyslog.ou*
 startup
 injectmsg 0 $messages
