@@ -2007,6 +2007,12 @@ finalize_it:
     varFreeMembers(&srcVal[1]);
 }
 
+static unsigned long randomNumberMagnitude(void) {
+    const long n = randomNumber();
+    if (n >= 0) return (unsigned long)n;
+    return (unsigned long)(-(n + 1)) + 1;
+}
+
 static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const func,
                                              struct svar *__restrict__ const ret,
                                              void *__restrict__ const usrptr,
@@ -2014,7 +2020,7 @@ static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const 
     int success = 0;
     struct svar srcVal;
     long long retVal;
-    long int x;
+    unsigned long x;
 
     cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
     long long max = var2Number(&srcVal, &success);
@@ -2030,7 +2036,10 @@ static void ATTR_NONNULL() doFunct_RandomGen(struct cnffunc *__restrict__ const 
         retVal = 0;
         goto done;
     }
-    x = labs(randomNumber());
+    if (max < 0) {
+        max = (max == LLONG_MIN) ? LLONG_MAX : -max;
+    }
+    x = randomNumberMagnitude();
     if (max > MAX_RANDOM_NUMBER) {
         DBGPRINTF(
             "rainerscript: desired random-number range [0 - %lld] "
