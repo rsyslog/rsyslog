@@ -248,6 +248,9 @@ struct actions_s {
      * is no better name available.
      */
     int iActionNbr;
+    char **action_names;
+    size_t n_action_names;
+    size_t n_action_names_alloc;
 };
 
 

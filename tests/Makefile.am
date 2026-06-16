@@ -466,6 +466,7 @@ TESTS_DEFAULT = \
 	array_lookup_table.sh \
 	sparse_array_lookup_table.sh \
 	lookup_table_duplicate.sh \
+	action-duplicate-name.sh \
 	lookup_table_bad_configs.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
@@ -644,7 +645,8 @@ TESTS_LIBYAML = \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
 	yaml-statements-reload-lookup.sh \
-	yaml-lookup-table-duplicate.sh
+	yaml-lookup-table-duplicate.sh \
+	yaml-action-duplicate-name.sh
 
 TESTS_RATELIMIT_WATCH = \
 	ratelimit_policy_watch.sh \
