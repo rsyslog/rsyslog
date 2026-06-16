@@ -222,6 +222,7 @@ TESTS_DEFAULT = \
 	pmrfc3164-AtSignsInHostname.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164-parsehostnameandtag-off.sh \
 	pmrfc3164_force_tag_no_colon.sh \
 	pmrfc3164-defaultTag.sh \
 	pmrfc3164-headerless.sh \
