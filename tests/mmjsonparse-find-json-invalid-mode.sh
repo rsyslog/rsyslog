@@ -10,7 +10,7 @@ module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 template(name="outfmt" type="string" string="%msg%\n")
 
 action(type="mmjsonparse" mode="INVALID")
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 
 startup

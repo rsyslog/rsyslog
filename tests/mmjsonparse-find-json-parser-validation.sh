@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 # Test various JSON edge cases that manual brace counting might miss
 if $msg contains "TEST" then {
     action(type="mmjsonparse" mode="find-json")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
     stop
 }
 '

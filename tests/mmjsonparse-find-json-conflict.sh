@@ -16,7 +16,7 @@ template(name="outfmt" type="string" string="%msg% parsesuccess=%parsesuccess% j
 if $msg contains "CONFLICT" then {
     set $!conflict = "scalar";
     action(type="mmjsonparse" mode="find-json" container="$!conflict!parsed")
-    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 startup
