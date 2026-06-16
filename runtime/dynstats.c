@@ -539,6 +539,11 @@ static rsRetVal dynstats_newBucket(const uchar *name,
     bkts = &loadConf->dynstats_buckets;
 
     if (bkts->initialized) {
+        if (dynstats_findBucket(name) != NULL) {
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "dynstats: duplicate bucket name '%s' in current config set; impstats output may be ambiguous",
+                   name);
+        }
         CHKmalloc(b = calloc(1, sizeof(dynstats_bucket_t)));
         b->bkts = bkts;
         b->resettable = resettable;
