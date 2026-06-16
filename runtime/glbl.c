@@ -1410,7 +1410,7 @@ rsRetVal glblDoneLoadCnf(void) {
             free((void *)tmp);
         } else if (!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
             loadConf->globals.debugOnShutdown = (int)cnfparamvals[i].val.d.n;
-            LogError(0, RS_RET_OK, "debug: onShutdown set to %d", loadConf->globals.debugOnShutdown);
+            LogMsg(0, RS_RET_OK, LOG_INFO, "debug: onShutdown set to %d", loadConf->globals.debugOnShutdown);
         } else if (!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
             loadConf->globals.iGnuTLSLoglevel = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "debug.abortonprogramerror")) {
@@ -1456,7 +1456,7 @@ rsRetVal glblDoneLoadCnf(void) {
                     LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened", pszAltDbgFileName);
                 }
             }
-            LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
+            LogMsg(0, RS_RET_OK, LOG_INFO, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
         } else if (!strcmp(paramblk.descr[i].name, "janitor.interval")) {
             loadConf->globals.janitorInterval = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
