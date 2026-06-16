@@ -36,8 +36,10 @@ Parameters
 
 - ``date.inUTC`` – show date in UTC. Available since 8.18.0.
 - ``caseConversion`` – convert text case; ``lower`` or ``upper``
-- ``controlCharacters`` – handle control characters: ``escape``, ``space``,
-  or ``drop``
+- ``controlCharacters`` – handle control characters: ``escape``,
+  ``escape-octal``, ``space``, or ``drop``. ``escape`` keeps the legacy
+  decimal ``#010`` style, while ``escape-octal`` uses the octal ``#012`` style
+  used by receive-time control-character escaping.
 - ``securePath`` – create safe paths for dynafile templates; ``drop`` or
   ``replace``
 - ``format`` – field format. Supported values:
@@ -88,4 +90,3 @@ Parameters
 
 - ``onEmpty`` – for ``jsonf`` format only; handling of empty values:
   ``keep``, ``skip``, or ``null``
-

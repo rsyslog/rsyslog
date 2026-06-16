@@ -300,6 +300,16 @@ options are defined:
   :doc:`$EscapeControlCharactersOnReceive </configuration/input_directives/rsconf1_escapecontrolcharactersonreceive>`
   is set to off.
 
+**escape-cc-octal**
+  replace control characters with an escape sequence whose value is the
+  3-digit octal value of the control character. This matches the octal
+  escaping used by
+  :doc:`$EscapeControlCharactersOnReceive </configuration/input_directives/rsconf1_escapecontrolcharactersonreceive>`.
+  For example, a carriage return would be replaced by "#015".
+  Note: using this option requires that
+  :doc:`$EscapeControlCharactersOnReceive </configuration/input_directives/rsconf1_escapecontrolcharactersonreceive>`
+  is set to off.
+
 **space-cc**
   replace control characters by spaces
   Note: using this option requires that

@@ -1465,10 +1465,24 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe) {
             pTpe->data.field.options.bCompressSP = 1;
         } else if (!strcmp((char *)Buf, "escape-cc")) {
             pTpe->data.field.options.bEscapeCC = 1;
+            pTpe->data.field.options.bEscapeCCOctal = 0;
+            pTpe->data.field.options.bDropCC = 0;
+            pTpe->data.field.options.bSpaceCC = 0;
+        } else if (!strcmp((char *)Buf, "escape-cc-octal")) {
+            pTpe->data.field.options.bEscapeCCOctal = 1;
+            pTpe->data.field.options.bEscapeCC = 0;
+            pTpe->data.field.options.bDropCC = 0;
+            pTpe->data.field.options.bSpaceCC = 0;
         } else if (!strcmp((char *)Buf, "drop-cc")) {
             pTpe->data.field.options.bDropCC = 1;
+            pTpe->data.field.options.bEscapeCC = 0;
+            pTpe->data.field.options.bEscapeCCOctal = 0;
+            pTpe->data.field.options.bSpaceCC = 0;
         } else if (!strcmp((char *)Buf, "space-cc")) {
             pTpe->data.field.options.bSpaceCC = 1;
+            pTpe->data.field.options.bEscapeCC = 0;
+            pTpe->data.field.options.bEscapeCCOctal = 0;
+            pTpe->data.field.options.bDropCC = 0;
         } else if (!strcmp((char *)Buf, "drop-last-lf")) {
             pTpe->data.field.options.bDropLastLF = 1;
         } else if (!strcmp((char *)Buf, "secpath-drop")) {
@@ -2245,7 +2259,7 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
     char *re_expr = NULL;
     struct cnfparamvals *pvals = NULL;
     enum { F_NONE, F_CSV, F_JSON, F_JSONF, F_JSONR, F_JSONFR } formatType = F_NONE;
-    enum { CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP } controlchr = CC_NONE;
+    enum { CC_NONE, CC_ESCAPE, CC_ESCAPE_OCTAL, CC_SPACE, CC_DROP } controlchr = CC_NONE;
     enum { SP_NONE, SP_DROP, SP_REPLACE } secpath = SP_NONE;
     enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
     enum tplFormatTypes datefmt = tplFmtDefault;
@@ -2387,6 +2401,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             bComplexProcessing = 1;
             if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"escape", sizeof("escape") - 1)) {
                 controlchr = CC_ESCAPE;
+            } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"escape-octal", sizeof("escape-octal") - 1)) {
+                controlchr = CC_ESCAPE_OCTAL;
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"space", sizeof("space") - 1)) {
                 controlchr = CC_SPACE;
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"drop", sizeof("drop") - 1)) {
@@ -2567,6 +2583,9 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             break;
         case CC_ESCAPE:
             pTpe->data.field.options.bEscapeCC = 1;
+            break;
+        case CC_ESCAPE_OCTAL:
+            pTpe->data.field.options.bEscapeCCOctal = 1;
             break;
         case CC_SPACE:
             pTpe->data.field.options.bSpaceCC = 1;
