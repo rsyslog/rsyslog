@@ -2261,6 +2261,11 @@ void MsgSetTAG(smsg_t *__restrict__ const pMsg, const uchar *pszBuf, const size_
     assert(pMsg != NULL);
 
     freeTAG(pMsg);
+    if (pMsg->iLenPROGNAME >= CONF_PROGNAME_BUFSIZE) {
+        free(pMsg->PROGNAME.ptr);
+        pMsg->PROGNAME.ptr = NULL;
+    }
+    pMsg->iLenPROGNAME = -1;
 
     pMsg->iLenTAG = lenBuf;
     if (pMsg->iLenTAG < CONF_TAG_BUFSIZE) {
