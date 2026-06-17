@@ -28,6 +28,7 @@
 #include <sys/socket.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #if defined(__FreeBSD__)
@@ -57,6 +58,7 @@ char *portFileName = NULL;
 char *waitListenFileName = NULL;
 char *listenReadyFileName = NULL;
 char *acceptReadyFileName = NULL;
+char *fixedResponse = NULL;
 size_t totalWritten = 0;
 int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
 struct sockaddr_in server_addr;
@@ -72,9 +74,27 @@ static void errout(char *reason) {
 
 static void usage(void) {
     fprintf(stderr,
-            "usage: minitcpsrv [-R] [-w listenFile] [-L listenReadyFile] [-A acceptReadyFile] "
+            "usage: minitcpsrv [-R] [-r response] [-w listenFile] [-L listenReadyFile] [-A acceptReadyFile] "
             "-t ip-addr -p port -P portFile -f outfile\n");
     exit(1);
+}
+
+static void sendFixedResponse(int fd) {
+    const char *response;
+    size_t len;
+
+    if (fixedResponse == NULL) return;
+
+    response = fixedResponse;
+    len = strlen(fixedResponse);
+    while (len > 0) {
+        const ssize_t nSent = send(fd, response, len, 0);
+        if (nSent <= 0) {
+            errout("send fixed response");
+        }
+        response += nSent;
+        len -= (size_t)nSent;
+    }
 }
 
 static void writeListenReadyMarker(void) {
@@ -219,7 +239,7 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aA:B:D:L:Rt:p:P:f:s:S:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "aA:B:D:L:Rr:t:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
@@ -229,6 +249,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'R':
                 useReusePort = 1;
+                break;
+            case 'r':
+                fixedResponse = optarg;
                 break;
             case 'S':  // sleep time after connection drop
                 sleepAfterConnDrop = atoi(optarg);
@@ -284,6 +307,9 @@ int main(int argc, char *argv[]) {
     if (fdf == -1) {
         fprintf(stderr, "-f parameter missing -- terminating\n");
         usage();
+    }
+    if (fixedResponse != NULL) {
+        signal(SIGPIPE, SIG_IGN);
     }
 
     if (sleepStartup) {
@@ -355,6 +381,7 @@ int main(int argc, char *argv[]) {
                         const int written_bytes = write(fdf, buffer[i], bytes_to_write);
                         if (written_bytes != bytes_to_write) errout("write");
                         totalWritten += bytes_to_write;
+                        sendFixedResponse(fd);
                         if (bytes_to_write == last_byte + 1) {
                             buffer_offs[i] = 0;
                         } else {
