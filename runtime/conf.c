@@ -405,10 +405,12 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
                         else
                             pmask[i] = TABLE_NOPRI;
                     } else if (singlpri) {
-                        if (ignorepri)
+                        if (ignorepri) {
+                            if (pmask[i] == TABLE_NOPRI) pmask[i] = TABLE_ALLPRI;
                             pmask[i] &= ~(1 << pri);
-                        else
+                        } else {
                             pmask[i] |= (1 << pri);
+                        }
                     } else {
                         if (pri == TABLE_ALLPRI) {
                             if (ignorepri)
@@ -416,10 +418,12 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
                             else
                                 pmask[i] = TABLE_ALLPRI;
                         } else {
-                            if (ignorepri)
+                            if (ignorepri) {
+                                if (pmask[i] == TABLE_NOPRI) pmask[i] = TABLE_ALLPRI;
                                 for (i2 = 0; i2 <= pri; ++i2) pmask[i] &= ~(1 << i2);
-                            else
+                            } else {
                                 for (i2 = 0; i2 <= pri; ++i2) pmask[i] |= (1 << i2);
+                            }
                         }
                     }
                 }
@@ -437,10 +441,12 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
                     else
                         pmask[i >> 3] = TABLE_NOPRI;
                 } else if (singlpri) {
-                    if (ignorepri)
+                    if (ignorepri) {
+                        if (pmask[i >> 3] == TABLE_NOPRI) pmask[i >> 3] = TABLE_ALLPRI;
                         pmask[i >> 3] &= ~(1 << pri);
-                    else
+                    } else {
                         pmask[i >> 3] |= (1 << pri);
+                    }
                 } else {
                     if (pri == TABLE_ALLPRI) {
                         if (ignorepri)
@@ -448,10 +454,12 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
                         else
                             pmask[i >> 3] = TABLE_ALLPRI;
                     } else {
-                        if (ignorepri)
+                        if (ignorepri) {
+                            if (pmask[i >> 3] == TABLE_NOPRI) pmask[i >> 3] = TABLE_ALLPRI;
                             for (i2 = 0; i2 <= pri; ++i2) pmask[i >> 3] &= ~(1 << i2);
-                        else
+                        } else {
                             for (i2 = 0; i2 <= pri; ++i2) pmask[i >> 3] |= (1 << i2);
+                        }
                     }
                 }
             }
