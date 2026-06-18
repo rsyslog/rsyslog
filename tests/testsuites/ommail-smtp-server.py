@@ -37,7 +37,7 @@ def main():
         srv.listen(1)
         port = srv.getsockname()[1]
         with open(args.port_file, "w", encoding="ascii") as fh:
-            fh.write(f"{port}\n")
+            fh.write("{}\n".format(port))
 
         srv.settimeout(30)
         conn, _addr = srv.accept()
@@ -62,7 +62,7 @@ def main():
                         data_lines.append(line)
                     continue
 
-                transcript.append(f"CMD:{line}")
+                transcript.append("CMD:{}".format(line))
                 command = line.split(" ", 1)[0].upper()
                 if command == "DATA":
                     in_data = True
