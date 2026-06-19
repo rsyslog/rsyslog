@@ -5448,6 +5448,15 @@ static struct cnfexpr *cnfexprOptimize_NOT(struct cnfexpr *expr) {
 static struct cnfexpr *cnfexprOptimize_AND_OR(struct cnfexpr *expr) {
     struct cnffunc *funcl, *funcr;
 
+    if (expr->l->nodetype == 'N' || expr->l->nodetype == 'S') {
+        parser_warnmsg("boolean operator '%s' has constant left operand; did you mean to repeat the comparison?",
+                       tokenToString(expr->nodetype));
+    }
+    if (expr->r->nodetype == 'N' || expr->r->nodetype == 'S') {
+        parser_warnmsg("boolean operator '%s' has constant right operand; did you mean to repeat the comparison?",
+                       tokenToString(expr->nodetype));
+    }
+
     if (expr->l->nodetype == 'F') {
         if (expr->r->nodetype == 'F') {
             funcl = (struct cnffunc *)expr->l;

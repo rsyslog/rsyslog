@@ -474,6 +474,7 @@ TESTS_DEFAULT = \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	config_multiple_include.sh \
+	rscript_bool_constant_warning.sh \
 	include-obj-text-from-file.sh \
 	include-obj-text-from-file-noexist.sh \
 	multiple_lookup_tables.sh \
