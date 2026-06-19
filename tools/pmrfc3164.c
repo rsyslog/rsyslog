@@ -60,10 +60,6 @@ DEFobjCurrIf(datetime);
 DEFobjCurrIf(ruleset);
 
 
-/* static data */
-static int bParseHOSTNAMEandTAG; /* cache for the equally-named global param - performance enhancement */
-
-
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
     {"detect.yearaftertimestamp", eCmdHdlrBinary, 0},
@@ -99,6 +95,7 @@ struct instanceConf_s {
     FILE* fpHeaderlessErr; /**< file pointer for error file (headerless) */
     pthread_mutex_t mutErrFile;
     int bDropHeaderless;
+    int bParseHOSTNAMEandTAG;
 };
 
 
@@ -132,7 +129,7 @@ static rsRetVal createInstance(instanceConf_t** pinst) {
     inst->fpHeaderlessErr = NULL;
     pthread_mutex_init(&inst->mutErrFile, NULL);
     inst->bDropHeaderless = 0;
-    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
+    inst->bParseHOSTNAMEandTAG = 1;
     *pinst = inst;
 finalize_it:
     RETiRet;
@@ -211,6 +208,8 @@ ENDfreeParserInst
 
 BEGINcheckParserInst
     CODESTARTcheckParserInst;
+
+    pInst->bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 
     if (pInst->pszHeaderlessRulesetName != NULL) {
         ruleset_t* myRuleset = NULL;
@@ -381,7 +380,7 @@ BEGINparse2
      * machine that we received the message from and the tag will be empty. This
      * is meant to be an interim solution, but for now it is in the code.
      */
-    if (bParseHOSTNAMEandTAG && !(pMsg->msgFlags & INTERNAL_MSG)) {
+    if (pInst->bParseHOSTNAMEandTAG && !(pMsg->msgFlags & INTERNAL_MSG)) {
         /* parse HOSTNAME - but only if this is network-received!
          * rger, 2005-11-14: we still have a problem with BSD messages. These messages
          * do NOT include a host name. In most cases, this leads to the TAG to be treated
@@ -546,6 +545,4 @@ BEGINmodInit(pmrfc3164)
 
     DBGPRINTF("rfc3164 parser init called\n");
 
-    /* cache value, is set only during rsyslogd option processing */
-    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 ENDmodInit
