@@ -5341,6 +5341,72 @@ static void constFoldConcat(struct cnfexpr *expr) {
     }
 }
 
+/* constant folding for literal string/number comparisons */
+static int constFoldCmp(struct cnfexpr *expr) {
+    long long ln, rn;
+    int convok_l, convok_r;
+    int folded = 0;
+    int result = 0;
+
+    if (expr->l->nodetype == 'S' && expr->r->nodetype == 'S') {
+        result = es_strcmp(((struct cnfstringval *)expr->l)->estr, ((struct cnfstringval *)expr->r)->estr);
+        if (expr->nodetype == CMP_EQ)
+            result = !result;
+        else
+            result = !!result;
+        folded = 1;
+    } else if (expr->l->nodetype == 'N' && expr->r->nodetype == 'N') {
+        ln = ((struct cnfnumval *)expr->l)->val;
+        rn = ((struct cnfnumval *)expr->r)->val;
+        result = (expr->nodetype == CMP_EQ) ? (ln == rn) : (ln != rn);
+        folded = 1;
+    } else if (expr->l->nodetype == 'S' && expr->r->nodetype == 'N') {
+        ln = str2num(((struct cnfstringval *)expr->l)->estr, &convok_l);
+        if (convok_l) {
+            rn = ((struct cnfnumval *)expr->r)->val;
+            result = (expr->nodetype == CMP_EQ) ? (ln == rn) : (ln != rn);
+            folded = 1;
+        } else {
+            es_str_t *numstr = es_newStrFromNumber(((struct cnfnumval *)expr->r)->val);
+            if (numstr != NULL) {
+                result = es_strcmp(((struct cnfstringval *)expr->l)->estr, numstr);
+                es_deleteStr(numstr);
+                if (expr->nodetype == CMP_EQ)
+                    result = !result;
+                else
+                    result = !!result;
+                folded = 1;
+            }
+        }
+    } else if (expr->l->nodetype == 'N' && expr->r->nodetype == 'S') {
+        rn = str2num(((struct cnfstringval *)expr->r)->estr, &convok_r);
+        if (convok_r) {
+            ln = ((struct cnfnumval *)expr->l)->val;
+            result = (expr->nodetype == CMP_EQ) ? (ln == rn) : (ln != rn);
+            folded = 1;
+        } else {
+            es_str_t *numstr = es_newStrFromNumber(((struct cnfnumval *)expr->l)->val);
+            if (numstr != NULL) {
+                result = es_strcmp(((struct cnfstringval *)expr->r)->estr, numstr);
+                es_deleteStr(numstr);
+                if (expr->nodetype == CMP_EQ)
+                    result = !result;
+                else
+                    result = !!result;
+                folded = 1;
+            }
+        }
+    }
+
+    if (folded) {
+        cnfexprDestruct(expr->l);
+        cnfexprDestruct(expr->r);
+        expr->nodetype = 'N';
+        ((struct cnfnumval *)expr)->val = result;
+    }
+    return folded;
+}
+
 
 /* optimize comparisons with syslog severity/facility. This is a special
  * handler as the numerical values also support GT, LT, etc ops.
@@ -5546,6 +5612,7 @@ struct cnfexpr *cnfexprOptimize(struct cnfexpr *expr) {
         case CMP_EQ:
             expr->l = cnfexprOptimize(expr->l);
             expr->r = cnfexprOptimize(expr->r);
+            if (constFoldCmp(expr)) break;
             if (expr->l->nodetype == 'A') {
                 if (expr->r->nodetype == 'A') {
                     parser_errmsg(
@@ -5649,6 +5716,18 @@ static void cnfstmtOptimizeIf(struct cnfstmt *stmt) {
         DBGPRINTF("optimizer: if with both empty then and else - remove\n");
         cnfexprDestruct(stmt->d.s_if.expr);
         /* set to NOP, this will be removed in later stage */
+        stmt->nodetype = S_NOP;
+        goto done;
+    }
+
+    assert(stmt->nodetype == S_IF);
+    if (stmt->d.s_if.expr->nodetype == 'N' && ((struct cnfnumval *)stmt->d.s_if.expr)->val == 0 &&
+        stmt->d.s_if.t_else == NULL) {
+        DBGPRINTF("optimizer: if with constant false expression and no else - remove\n");
+        cnfexprDestruct(stmt->d.s_if.expr);
+        cnfstmtDestructLst(stmt->d.s_if.t_then);
+        stmt->d.s_if.expr = NULL;
+        stmt->d.s_if.t_then = NULL;
         stmt->nodetype = S_NOP;
         goto done;
     }
