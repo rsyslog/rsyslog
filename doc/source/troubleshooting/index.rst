@@ -7,6 +7,7 @@ Typical Problems
    :maxdepth: 1
 
    file_not_written
+   service_sandboxing
    selinux
 
 General Procedure

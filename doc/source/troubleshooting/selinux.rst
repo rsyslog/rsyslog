@@ -5,6 +5,11 @@ SELinux by its very nature can block many features of rsyslog (or any
 other process, of course), even when run under root. Actually, this is
 what it is supposed to do, so there is nothing bad about it.
 
+SELinux is one possible source of service confinement. The systemd sandbox,
+AppArmor, Linux capabilities, and private mount namespaces can cause similar
+symptoms. See :doc:`service sandboxing and external programs
+<service_sandboxing>` for the broader troubleshooting workflow.
+
 If you suspect that some issues stems back to SELinux configuration,
 do the following:
 
