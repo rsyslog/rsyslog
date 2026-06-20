@@ -1510,11 +1510,28 @@ static es_str_t *var2String(struct svar *__restrict__ const r, int *__restrict__
     return estr;
 }
 
+/**
+ * Convert a script value to a newly allocated C string.
+ *
+ * This function is intentionally a C-string boundary, not a byte-string
+ * preserving conversion. Received messages are sanitized before script
+ * evaluation and config literals are parsed through C-string based lexer paths.
+ * Internally, however, some length-aware script functions may produce string
+ * values that contain embedded NUL bytes. Those bytes are escaped as "#000",
+ * matching rsyslog's established message-content convention, so callers do not
+ * silently operate on a truncated prefix. Callers that need to preserve such
+ * bytes must use var2String() and length-aware APIs instead.
+ *
+ * We deliberately do not scan for embedded NUL bytes here: this routine is on
+ * hot script evaluation paths, and the libestr conversion already performs the
+ * required escape while callers opt into C-string semantics by using this
+ * helper.
+ */
 uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree) {
     uchar *cstr;
     es_str_t *estr;
     estr = var2String(r, bMustFree);
-    cstr = (uchar *)es_str2cstr(estr, NULL);
+    cstr = (uchar *)es_str2cstr(estr, "#000");
     if (*bMustFree) es_deleteStr(estr);
     *bMustFree = 1;
     return cstr;
@@ -3424,7 +3441,6 @@ static void ATTR_NONNULL() doFunct_is_in_subnet(struct cnffunc *__restrict__ con
 
     ip_str = (char *)var2CString(&srcVal[0], &bMustFree1);
     cidr_str = (char *)var2CString(&srcVal[1], &bMustFree2);
-
     if (ip_str == NULL || cidr_str == NULL) {
         goto finalize_it;
     }

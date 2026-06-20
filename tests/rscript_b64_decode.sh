@@ -1,5 +1,9 @@
 #!/bin/bash
-# test for b64_decode function in rainerscript
+# Test the b64_decode() RainerScript function, including binary output.
+# The var10 case routes a decoded NUL byte through re_match(), a C-string
+# consumer. This documents the intentional C-string truncation boundary and
+# catches debug-build assertions that incorrectly assume all script string
+# values are NUL-free after length-aware functions have produced them.
 # added 2024-06-11 by KGuillemot
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -16,6 +20,7 @@ set $!str!var6 = b64_decode("AQI=");      # \x01\x02 base64 (binary) - with padd
 set $!str!var7 = b64_decode("dGVzdA==dGVzdA==");  # Early ended payload
 set $!str!var8 = b64_decode("YWJjZAplZmdoCg==");  # \n in encoded data
 set $!str!var9 = b64_decode("YWJjZA1lZmdoCg==");  # \r in encoded data
+set $!str!var10 = re_match(b64_decode("AA=="), ".*");  # decoded NUL consumed as a C string
 template(name="outfmt" type="string" string="%!str%\n")
 local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
@@ -25,6 +30,6 @@ shutdown_when_empty
 wait_shutdown
 # var1 is empty
 # var2 is empty (invalid base64)
-export EXPECTED='{ "var1": "", "var2": "", "var3": "test", "var4": "test", "var5": "\u0001\u0002", "var6": "\u0001\u0002", "var7": "test", "var8": "abcd\nefgh\n", "var9": "abcd\refgh\n" }'
+export EXPECTED='{ "var1": "", "var2": "", "var3": "test", "var4": "test", "var5": "\u0001\u0002", "var6": "\u0001\u0002", "var7": "test", "var8": "abcd\nefgh\n", "var9": "abcd\refgh\n", "var10": 1 }'
 cmp_exact
 exit_test
