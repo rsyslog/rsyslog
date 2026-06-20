@@ -85,7 +85,7 @@ struct instanceConf_s {
     int bPermitAtSignsInHostname;
     int bForceTagEndingByColon;
     int bRemoveMsgFirstSpace;
-    int bHdrLessMode; /** < is headerless mode activated? 0 - no, other - yes */
+    int bHdrLessMode; /**< is headerless mode activated? 0 - no, other - yes */
     uchar* pszHeaderlessHostname; /** < HOSTNAME to use for headerless messages */
     uchar* pszHeaderlessTag; /** < TAG to use for headerless messages */
     uchar* pszHeaderlessRulesetName; /** < name of Ruleset to use for headerless messages */
