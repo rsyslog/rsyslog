@@ -8,6 +8,7 @@ Typical Problems
 
    file_not_written
    selinux
+   service_sandboxing
 
 General Procedure
 -----------------
