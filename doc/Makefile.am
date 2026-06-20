@@ -1264,8 +1264,8 @@ EXTRA_DIST = \
     source/troubleshooting/file_not_written.rst \
     source/troubleshooting/howtodebug.rst \
     source/troubleshooting/index.rst \
-    source/troubleshooting/service_sandboxing.rst \
     source/troubleshooting/selinux.rst \
+    source/troubleshooting/service_sandboxing.rst \
     source/troubleshooting/troubleshoot.rst \
     source/tutorials/cert-script.tar.gz \
     source/tutorials/config_format_translation.rst \

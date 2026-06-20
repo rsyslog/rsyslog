@@ -7,8 +7,8 @@ what it is supposed to do, so there is nothing bad about it.
 
 SELinux is one possible source of service confinement. The systemd sandbox,
 AppArmor, Linux capabilities, and private mount namespaces can cause similar
-symptoms. See :doc:`service sandboxing and external programs
-<service_sandboxing>` for the broader troubleshooting workflow.
+symptoms. See :ref:`troubleshooting_service_sandboxing` for the broader
+troubleshooting workflow.
 
 If you suspect that some issues stems back to SELinux configuration,
 do the following:

@@ -32,8 +32,7 @@ but root is not always unrestricted either. When rsyslog is started as a
 system service, ``omprog`` children inherit the service's execution
 context. The systemd sandbox, Linux capabilities, AppArmor, SELinux, and
 private mount namespaces can restrict the child even when ``rsyslogd``
-runs as root. See :doc:`service sandboxing and external programs
-<../../troubleshooting/service_sandboxing>` for troubleshooting steps.
+runs as root. See :ref:`troubleshooting_service_sandboxing` for troubleshooting steps.
 
 Starting with 8.4.0, rsyslogd emits an error message via the ``syslog()``
 API call when there is a problem executing the binary. This can be

@@ -33,6 +33,5 @@ child process may read, write, execute, or change into.
 This is also why ``sudo`` may fail inside an ``omprog`` helper even though
 ``rsyslogd`` is running as root and the command works from a root shell. Inspect
 the active ``rsyslog.service`` unit and security logs before changing the
-rsyslog configuration. See
-:doc:`service sandboxing and external programs <../troubleshooting/service_sandboxing>`
+rsyslog configuration. See :ref:`troubleshooting_service_sandboxing`
 for the diagnostic workflow.
