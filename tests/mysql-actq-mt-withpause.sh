@@ -2,12 +2,40 @@
 # Verify that ommysql keeps multi-worker action queue delivery lossless across
 # worker idle timeout cycles.  The test injects three batches separated by
 # queue-empty waits and short sleeps so action workers can time out and be
-# restarted.  The 80s enqueue timeout is a CI tolerance budget: if a stressed
+# restarted.  Each batch wait is synchronized on the corresponding MySQL row
+# count and sequence range, not just the main queue, because a slow CI database
+# can still be draining the action queue after imdiag reports the main queue
+# empty.
+# The 80s enqueue timeout is a CI tolerance budget: if a stressed
 # MySQL service cannot drain the action queue in that time, the failure should
 # be reevaluated instead of masking a persistent service or test issue.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=150000
+mysql_actq_count_ready() {
+	if [ "${MYSQL_ACTQ_LAST_MSG:-}" = "" ]; then
+		printf 'FAIL: MYSQL_ACTQ_LAST_MSG is unset before MySQL sequence check\n'
+		error_exit 1
+	fi
+	expected_count=$((MYSQL_ACTQ_LAST_MSG + 1))
+	count=$(mysql -N -s --user=rsyslog --password=testbench \
+		--database "$RSYSLOG_DYNNAME" \
+		-e "select count(*) from SystemEvents;" \
+		2> "$RSYSLOG_DYNNAME.mysqlerr")
+	ret=$?
+	grep -iv "Using a password on the command line interface can be insecure." \
+		< "$RSYSLOG_DYNNAME.mysqlerr"
+	if [ "$ret" -ne 0 ]; then
+		error_exit "$ret"
+	fi
+	[ "$count" -ge "$expected_count" ]
+}
+mysql_actq_data_ready() {
+	mysql_actq_count_ready || return 1
+	mysql_get_data
+	seq_check --check-only 0 "$MYSQL_ACTQ_LAST_MSG"
+}
+export QUEUE_EMPTY_CHECK_FUNC=mysql_actq_data_ready
 generate_conf
 add_conf '
 module(load="../plugins/ommysql/.libs/ommysql")
@@ -26,14 +54,17 @@ module(load="../plugins/ommysql/.libs/ommysql")
 mysql_prep_for_test
 startup
 injectmsg 0 50000
+MYSQL_ACTQ_LAST_MSG=49999
 wait_queueempty 
 echo waiting for worker threads to timeout
 ./msleep 3000
 injectmsg 50000 50000
+MYSQL_ACTQ_LAST_MSG=99999
 wait_queueempty 
 echo waiting for worker threads to timeout
 ./msleep 2000
 injectmsg 100000 50000
+MYSQL_ACTQ_LAST_MSG=149999
 shutdown_when_empty
 wait_shutdown 
 mysql_get_data
