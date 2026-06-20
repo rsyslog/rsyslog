@@ -287,7 +287,7 @@ finalize_it:
     RETiRet;
 }
 
-/* parse a legay-formatted syslog message.
+/* parse a legacy-formatted syslog message.
  * We apply heuristics during header detection. These are not 100% failure
  * prove, but the best compromise we came up within 20+ years of adapting
  * the heuristics.
