@@ -70,6 +70,28 @@ successfully relied on for more than five years.
   change control a predictable update cadence. Every scheduled stable build is
   therefore a tested point-in-time capture of the daily stable branch.
 
+Security and hardening fixes
+============================
+
+Daily stable is the fastest track for validated bug fixes, hardening changes,
+and security-relevant fixes. This matters in modular deployments because
+rsyslog includes many optional inputs, outputs, parsers, and contributed
+modules. A fix for an optional component or unusual configuration may appear in
+daily stable before the next scheduled stable release.
+
+Scheduled stable remains supported and receives fixes on the regular release
+cadence. The project may publish an out-of-cycle scheduled stable release for
+issues with broad exposure, default reachability, active exploitation, or
+severe confidentiality or integrity impact. Issues limited to optional modules,
+uncommon settings, specialized deployments, malicious configuration control, or
+primarily denial-of-service impact normally ship first in daily stable and then
+in the next scheduled stable release.
+
+Users who want the fastest access to fixes should consider daily stable. Users
+with strict change-control requirements may prefer scheduled stable, but should
+review security advisories and check whether their configuration actually uses
+the affected component, module, or setting.
+
 Quick reference for newcomers
 =============================
 
