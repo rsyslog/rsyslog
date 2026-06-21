@@ -51,7 +51,9 @@ If the variable is set to ``off``, the module will **not** be loaded.
 Statement Terminators
 ---------------------
 
-Configuration objects are complete when their closing parenthesis is reached.
+Configuration objects without body blocks are complete when their closing
+parenthesis is reached. Objects with body blocks, such as ``ruleset()`` and
+list-type ``template()``, are complete at their closing curly brace ``}``.
 Do not add a semicolon after object statements such as ``action()``,
 ``module()``, ``input()``, ``template()``, or ``ruleset()``:
 
