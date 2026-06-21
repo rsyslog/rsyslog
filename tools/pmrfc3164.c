@@ -85,7 +85,7 @@ struct instanceConf_s {
     int bPermitAtSignsInHostname;
     int bForceTagEndingByColon;
     int bRemoveMsgFirstSpace;
-    int bHdrLessMode; /** < is headerless mode activated? 0 - no, other - yes */
+    int bHdrLessMode; /**< is headerless mode activated? 0 - no, other - yes */
     uchar* pszHeaderlessHostname; /** < HOSTNAME to use for headerless messages */
     uchar* pszHeaderlessTag; /** < TAG to use for headerless messages */
     uchar* pszHeaderlessRulesetName; /** < name of Ruleset to use for headerless messages */
@@ -287,7 +287,7 @@ finalize_it:
     RETiRet;
 }
 
-/* parse a legay-formatted syslog message.
+/* parse a legacy-formatted syslog message.
  * We apply heuristics during header detection. These are not 100% failure
  * prove, but the best compromise we came up within 20+ years of adapting
  * the heuristics.
