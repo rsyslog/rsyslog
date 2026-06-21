@@ -39,6 +39,18 @@ downstream distribution maintainers.
 The current stable release is listed on the
 [rsyslog download page](https://www.rsyslog.com/downloads/).
 
+rsyslog provides both daily stable builds and scheduled stable releases. Both
+tracks are intended to be stable, but they serve different update models. Daily
+stable receives validated bug fixes, hardening changes, and security-relevant
+fixes as soon as they are ready. Scheduled stable releases receive fixes on the
+regular release cadence, unless an issue requires an out-of-cycle scheduled
+stable release.
+
+Users who want the fastest access to bug fixes, hardening changes, and
+security-relevant fixes should consider daily stable. Users with strict change
+control may prefer scheduled stable, but should review advisories for affected
+components and configuration prerequisites.
+
 ## Response
 
 rsyslog is maintained by a small team. Security reports receive priority
@@ -84,6 +96,42 @@ rsyslog has a modular architecture. During triage, maintainers evaluate:
   proof
 - whether the issue affects released rsyslog software, repository automation,
   test infrastructure, packaging, or documentation only
+
+CVSS is one input to this process, but it is not the sole driver for release
+urgency. CVSS describes the technical severity of a vulnerable code path once
+its prerequisites are met. For rsyslog, maintainers also evaluate practical
+exposure: whether the affected component is built in, packaged, loaded by
+default, commonly configured, reachable from untrusted input, and whether common
+distribution hardening such as SELinux, AppArmor, systemd sandboxing, file
+permissions, or network defaults materially limits impact.
+
+Issues affecting default or common configurations, broad network exposure,
+active exploitation, or severe confidentiality or integrity impact may require
+coordinated disclosure and out-of-cycle scheduled stable releases. Issues
+limited to optional modules, uncommon settings, specialized deployments,
+malicious configuration control, or deployments that deliberately relax normal
+hardening are still fixed, but normally flow through daily stable and the next
+scheduled stable release, with advisory text documenting the affected
+configuration and mitigations.
+
+## Optional and Contributed Modules
+
+rsyslog includes many optional plugins and contributed modules. Some are widely
+used and actively maintained by the core team. Others have limited maintainer
+ownership, may not be packaged by all distributions, and are not loaded by
+default.
+
+Security advisories and release decisions take this component status into
+account. A vulnerability in an optional or contributed module can still be
+serious for affected deployments, but it is not automatically treated as
+affecting all rsyslog installations. Advisories should state whether the module
+must be installed, loaded, explicitly configured, or exposed to untrusted input.
+
+Contributed modules are welcome, but they require realistic maintenance
+expectations. If a contributed module has no active maintainer and repeatedly
+requires substantial security, compatibility, or release-engineering work from
+the core team, we may deprecate, disable, or remove it rather than continue to
+carry risk that the project cannot responsibly maintain.
 
 ## Advisory Scope and Wording
 
