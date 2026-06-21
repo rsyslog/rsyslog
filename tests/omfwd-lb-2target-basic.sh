@@ -1,5 +1,11 @@
 #!/bin/bash
-# added 2024-02-24 by rgerhards. Released under ASL 2.0
+# Verify that native omfwd load balancing splits a single message burst evenly
+# across two healthy TCP targets. The oracle is exact: each minitcpsrv receiver
+# must persist half of the messages, and the combined output must contain the
+# full sequence. Wait for the receiver files before shutdown so the test does
+# not mistake an action/output drain still in progress for a load-balancing
+# failure.
+# Added 2024-02-24 by rgerhards. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 export NUMMESSAGES=1000  # MUST be an EVEN number!
@@ -28,16 +34,23 @@ if $msg contains "msgnum:" then {
 # now do the usual run
 startup
 injectmsg
+
+expected_per_target=$(( NUMMESSAGES / 2 ))
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$expected_per_target"
+wait_file_lines --abort-on-oversize "$RSYSLOG2_OUT_LOG" "$expected_per_target"
+
 shutdown_when_empty
 wait_shutdown
 
-if [ "$(wc -l < $RSYSLOG_OUT_LOG)" != "$(( NUMMESSAGES / 2 ))" ]; then
-	echo "ERROR: RSYSLOG_OUT_LOG has invalid number of messages $(( NUMMESSAGES / 2 ))"
+target1_actual="$(wc -l < "$RSYSLOG_OUT_LOG")"
+if [ "$target1_actual" -ne "$expected_per_target" ]; then
+	echo "ERROR: RSYSLOG_OUT_LOG has invalid number of messages $target1_actual, expected $expected_per_target"
 	error_exit 100
 fi
 
-if [ "$(wc -l < $RSYSLOG2_OUT_LOG)" != "$(( NUMMESSAGES / 2 ))" ]; then
-	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages $(( NUMMESSAGES / 2 ))"
+target2_actual="$(wc -l < "$RSYSLOG2_OUT_LOG")"
+if [ "$target2_actual" -ne "$expected_per_target" ]; then
+	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages $target2_actual, expected $expected_per_target"
 	error_exit 100
 fi
 
