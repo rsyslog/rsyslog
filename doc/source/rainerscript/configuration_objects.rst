@@ -1,6 +1,18 @@
 configuration objects
 =====================
 
+.. meta::
+   :description: RainerScript configuration objects and common object syntax rules.
+   :keywords: rsyslog, RainerScript, configuration objects, action, module, input, semicolon
+
+.. summary-start
+
+RainerScript configuration objects define inputs, actions, modules, templates,
+rulesets, and other rsyslog configuration elements. Object parameters are
+case-insensitive, and objects are closed by their final parenthesis.
+
+.. summary-end
+
 .. note::
 
   Configuration object parameters are case-insensitive.
@@ -35,6 +47,24 @@ Then we can use this config construct:
         config.enabled=`echo $LOAD_IMPTCP`)
 
 If the variable is set to ``off``, the module will **not** be loaded.
+
+Statement Terminators
+---------------------
+
+Configuration objects are complete when their closing parenthesis is reached.
+Do not add a semicolon after object statements such as ``action()``,
+``module()``, ``input()``, ``template()``, or ``ruleset()``:
+
+.. code-block:: rsyslog
+
+   action(type="omfile" file="/var/log/messages")    # correct
+   action(type="omfile" file="/var/log/messages");   # invalid
+
+Semicolons are used by expression-style RainerScript statements where they are
+documented, for example ``set``, ``reset``, ``unset``, and
+``call_indirect``. Legacy selector and action syntax also has semicolon
+meanings of its own; those legacy uses do not make ``;`` a universal
+RainerScript statement terminator.
 
 Objects
 -------

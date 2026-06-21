@@ -1,12 +1,20 @@
 Common Configuration Mistakes and Misunderstandings
 ====================================================
 
+.. meta::
+   :description: Common rsyslog configuration mistakes when moving from legacy syntax to modern RainerScript.
+   :keywords: rsyslog, configuration mistakes, RainerScript, legacy syntax, action, stop, semicolon
+
+.. summary-start
+
 This section documents syntax patterns that are often misunderstood,
 invalid, or misused in rsyslog configurations — especially when transitioning
 from legacy syntax to modern RainerScript.
 
 It is intended to help both human users and automated tools avoid common traps
 when writing or validating rsyslog configuration files.
+
+.. summary-end
 
 .. list-table::
    :header-rows: 1
@@ -50,6 +58,16 @@ when writing or validating rsyslog configuration files.
      - There is no such module. ``stop`` is a statement, not an action.
      - Use bare ``stop`` as a control flow statement
 
+   * - ``action(type="omfile" file="/var/log/example.log");``
+     - Looks like C-style statement termination
+     - Modern RainerScript objects are not terminated by semicolons. The
+       trailing ``;`` is parsed as an invalid character.
+     - Remove the semicolon:
+
+       .. code-block:: rainerscript
+
+          action(type="omfile" file="/var/log/example.log")
+
    * - ``if (...) then stop();``
      - Combines multiple errors: function call and syntax mismatch
      - Parentheses are invalid, and ``stop`` is not a function
@@ -63,4 +81,3 @@ when writing or validating rsyslog configuration files.
    .. code-block:: bash
 
       rsyslogd -N1
-

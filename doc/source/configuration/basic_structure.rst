@@ -1,11 +1,20 @@
 Basic Structure
 ===============
 
+.. meta::
+   :description: Introduction to rsyslog configuration structure, formats,
+      rulesets, actions, and common RainerScript syntax.
+   :keywords: rsyslog, configuration, RainerScript, ruleset, action, input, semicolon
+
+.. summary-start
+
 This page introduces the core concepts and structure of rsyslog configuration.
 Rsyslog is best thought of as a **highly extensible logging and event
 processing framework**. While the general message flow is fixed, almost every
 aspect of its processing pipeline can be customized by configuring rsyslog
 objects.
+
+.. summary-end
 
 Message Flow Overview
 ---------------------
@@ -143,6 +152,14 @@ Example RainerScript rule:
    if $syslogfacility-text == 'mail' and $syslogseverity-text == 'err' then {
        action(type="omfile" file="/var/log/mail-errors.log")
    }
+
+Configuration objects such as ``action()``, ``module()``, and ``input()`` end
+at the closing parenthesis. Do not add a semicolon after them:
+
+.. code-block:: rsyslog
+
+   action(type="omfile" file="/var/log/messages")    # correct
+   action(type="omfile" file="/var/log/messages");   # invalid
 
 Comments
 --------
