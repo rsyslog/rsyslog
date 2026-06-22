@@ -382,6 +382,7 @@ TESTS_DEFAULT = \
 	rscript_stop2.sh \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
+	rscript_optimizer_const_cmp.sh \
 	rscript_ruleset_call.sh \
 	rscript_ruleset_call-recursion-limit.sh \
 	rscript_ruleset_call_indirect-basic.sh \
