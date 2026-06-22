@@ -1,6 +1,8 @@
 #!/bin/bash
-# the goal here is to detect memleaks when structured data is not
-# correctly parsed.
+# Verify malformed RFC5424 structured data is rejected without invalid memory
+# reads or leaks. The oracle is Valgrind; the malformed cases include
+# delimiter errors plus truncated wire messages so this CI path keeps covering
+# the module's invalid-SD handling.
 # This file is part of the rsyslog project, released  under ASL 2.0
 # rgerhards, 2015-04-30
 . ${srcdir:=.}/diag.sh init
@@ -28,6 +30,9 @@ tcpflood -m100 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpfl
 tcpflood -m200 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 MSGNUM ] invalid structured data!\""
 tcpflood -m300 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 MSGNUM= ] invalid structured data!\""
 tcpflood -m400 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 = ] invalid structured data!\""
+tcpflood -m500 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 MSGNUM\""
+tcpflood -m600 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 MSGNUM=\""
+tcpflood -m700 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 MSGNUM=\\\"unterminated\""
 shutdown_when_empty
 wait_shutdown
 exit_test
