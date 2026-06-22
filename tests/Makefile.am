@@ -381,6 +381,7 @@ TESTS_DEFAULT = \
 	rscript_stop.sh \
 	rscript_stop2.sh \
 	rscript_prifilt.sh \
+	rscript_prifilt_negated_exact.sh \
 	rscript_optimizer1.sh \
 	rscript_optimizer_const_cmp.sh \
 	rscript_ruleset_call.sh \
