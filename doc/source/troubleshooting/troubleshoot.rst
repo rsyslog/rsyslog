@@ -78,6 +78,12 @@ value   meaning
 Where 2 automatically turns on config checking mode, if not given. In that
 sense ``-N2`` and ``-N3`` are equivalent.
 
+``-N2`` and ``-N3`` are **partial configuration** checks. They are useful when
+checking one include file without the rest of the configuration, but they are
+not stricter or more complete variants of ``-N1``. Some full-configuration
+checks are intentionally relaxed in this mode, so a file can pass ``-N2`` or
+``-N3`` while the complete configuration still fails under ``-N1``.
+
 Values other than given in the table above are **not** supported and may lead
 to unpredictable results.
 
