@@ -1,5 +1,6 @@
 tests/Makefile.am
   s_a9719629ed5597::t_cacadc8754738f 750
+  s_a9719629ed5597::t_a5272e4631c2e8 721,1984-1985
 tests/yaml-imtcp-stream-always-zlib-basic.sh
   s_a9719629ed5597::t_cacadc8754738f 1-29,31-61
   s_a9719629ed5597::t_8a3898070bb574 30
