@@ -104,9 +104,11 @@ TESTS_DEFAULT = \
 	timestamp-subseconds.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
+	chkseq_usage_output.sh \
 	minitcpsrv_usage_output.sh \
 	diagtalker-retry.sh \
 	test_id_usage_output.sh \
+	uxsockrcvr_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
