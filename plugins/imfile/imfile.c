@@ -1574,13 +1574,12 @@ finalize_it:
 static rsRetVal ATTR_NONNULL(1, 2)
     enqLine(act_obj_t *const act, cstr_t *const __restrict__ cstrLine, const int64 strtOffs, const uint64_t lineNum) {
     DEFiRet;
-    const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
-    smsg_t *pMsg;
     uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES + 1];
     uchar line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES + 1];
     const uchar *metadata_names[3] = {(uchar *)"filename", (uchar *)"fileoffset", (uchar *)"line_number"};
     const uchar *metadata_values[3];
     const size_t msgLen = cstrLen(cstrLine);
+    smsg_t **msgs = NULL;
     int lenBuf;
 
     if (msgLen == 0) {
@@ -1588,61 +1587,92 @@ static rsRetVal ATTR_NONNULL(1, 2)
         FINALIZE;
     }
 
-    CHKiRet(msgConstruct(&pMsg));
-    MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-    MsgSetInputName(pMsg, pInputName);
-    if (inst->addCeeTag) {
-        /* Make sure we account for terminating null byte */
-        size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
-        char *ceeMsg;
-        CHKmalloc(ceeMsg = malloc(ceeMsgSize));
-        memcpy(ceeMsg, CONST_CEE_COOKIE, CONST_LEN_CEE_COOKIE);
-        memcpy(ceeMsg + CONST_LEN_CEE_COOKIE, rsCStrGetSzStrNoNULL(cstrLine), msgLen + 1);
-        MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
-        free(ceeMsg);
-    } else {
-        MsgSetRawMsg(pMsg, (char *)rsCStrGetSzStrNoNULL(cstrLine), msgLen);
-    }
-    MsgSetMSGoffs(pMsg, 0); /* we do not have a header... */
-    MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-    MsgSetTAG(pMsg, inst->pszTag, inst->lenTag);
-    msgSetPRI(pMsg, inst->iFacility | inst->iSeverity);
-    MsgSetRuleset(pMsg, inst->pBindRuleset);
-    if (inst->addMetadata) {
-        if (act->source_name) {
-            metadata_values[0] = (const uchar *)act->source_name;
+    CHKmalloc(msgs = calloc(act->edge->ninst, sizeof(smsg_t *)));
+
+    for (int inst_idx = 0; inst_idx < act->edge->ninst; ++inst_idx) {
+        const instanceConf_t *const inst = act->edge->instarr[inst_idx];
+
+        CHKiRet(msgConstruct(&msgs[inst_idx]));
+        MsgSetFlowControlType(msgs[inst_idx], eFLOWCTL_FULL_DELAY);
+        MsgSetInputName(msgs[inst_idx], pInputName);
+        if (inst->addCeeTag) {
+            /* Make sure we account for terminating null byte */
+            size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
+            char *ceeMsg;
+            CHKmalloc(ceeMsg = malloc(ceeMsgSize));
+            memcpy(ceeMsg, CONST_CEE_COOKIE, CONST_LEN_CEE_COOKIE);
+            memcpy(ceeMsg + CONST_LEN_CEE_COOKIE, rsCStrGetSzStrNoNULL(cstrLine), msgLen + 1);
+            MsgSetRawMsg(msgs[inst_idx], ceeMsg, ceeMsgSize);
+            free(ceeMsg);
         } else {
-            metadata_values[0] = (const uchar *)act->name;
+            MsgSetRawMsg(msgs[inst_idx], (char *)rsCStrGetSzStrNoNULL(cstrLine), msgLen);
         }
-        lenBuf = snprintf((char *)file_offset, sizeof(file_offset), "%lld", strtOffs);
-        if (lenBuf < 0) {
-            msgDestruct(&pMsg);
-            ABORT_FINALIZE(RS_RET_ERR);
+        MsgSetMSGoffs(msgs[inst_idx], 0); /* we do not have a header... */
+        MsgSetHOSTNAME(msgs[inst_idx], glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
+        MsgSetTAG(msgs[inst_idx], inst->pszTag, inst->lenTag);
+        msgSetPRI(msgs[inst_idx], inst->iFacility | inst->iSeverity);
+        MsgSetRuleset(msgs[inst_idx], inst->pBindRuleset);
+        if (inst->addMetadata) {
+            if (act->source_name) {
+                metadata_values[0] = (const uchar *)act->source_name;
+            } else {
+                metadata_values[0] = (const uchar *)act->name;
+            }
+            lenBuf = snprintf((char *)file_offset, sizeof(file_offset), "%lld", strtOffs);
+            if (lenBuf < 0) {
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES] = '\0';
+            metadata_values[1] = file_offset;
+            lenBuf = snprintf((char *)line_number, sizeof(line_number), "%llu", (unsigned long long)lineNum);
+            if (lenBuf < 0) {
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES] = '\0';
+            metadata_values[2] = line_number;
+            msgAddMultiMetadata(msgs[inst_idx], metadata_names, metadata_values, 3);
         }
-        file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES] = '\0';
-        metadata_values[1] = file_offset;
-        lenBuf = snprintf((char *)line_number, sizeof(line_number), "%llu", (unsigned long long)lineNum);
-        if (lenBuf < 0) {
-            msgDestruct(&pMsg);
-            ABORT_FINALIZE(RS_RET_ERR);
-        }
-        line_number[MAX_LINENUM_REPRESENTATION_NUM_BYTES] = '\0';
-        metadata_values[2] = line_number;
-        msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 3);
+
+        msgs[inst_idx]->msgFlags = msgs[inst_idx]->msgFlags | inst->msgFlag;
     }
 
-    if (inst->perMinuteRateLimits.maxBytesPerMinute || inst->perMinuteRateLimits.maxLinesPerMinute) {
-        CHKiRet(checkPerMinuteRateLimits((per_minute_rate_limit_t *)&inst->perMinuteRateLimits, msgLen));
+    for (int inst_idx = 0; inst_idx < act->edge->ninst; ++inst_idx) {
+        const instanceConf_t *const inst = act->edge->instarr[inst_idx];
+
+        if (inst->perMinuteRateLimits.maxBytesPerMinute || inst->perMinuteRateLimits.maxLinesPerMinute) {
+            const rsRetVal localRet =
+                checkPerMinuteRateLimits((per_minute_rate_limit_t *)&inst->perMinuteRateLimits, msgLen);
+            if (localRet == RS_RET_RATE_LIMITED && act->edge->ninst > 1) {
+                msgDestruct(&msgs[inst_idx]);
+                continue;
+            } else if (localRet != RS_RET_OK) {
+                if (inst->delay_perMsg) {
+                    srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+                }
+                ABORT_FINALIZE(localRet);
+            }
+        }
+
+        if (inst->delay_perMsg) {
+            srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+        }
     }
 
-    if (inst->delay_perMsg) {
-        srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+    for (int inst_idx = 0; inst_idx < act->edge->ninst; ++inst_idx) {
+        if (msgs[inst_idx] != NULL) {
+            ratelimitAddMsg(act->ratelimiter, &act->multiSub, msgs[inst_idx]);
+            msgs[inst_idx] = NULL;
+        }
     }
-
-    pMsg->msgFlags = pMsg->msgFlags | inst->msgFlag;
-
-    ratelimitAddMsg(act->ratelimiter, &act->multiSub, pMsg);
 finalize_it:
+    if (msgs != NULL) {
+        for (int inst_idx = 0; inst_idx < act->edge->ninst; ++inst_idx) {
+            if (msgs[inst_idx] != NULL) {
+                msgDestruct(&msgs[inst_idx]);
+            }
+        }
+    }
+    free(msgs);
     RETiRet;
 }
 /* try to open a file which has a state file. If the state file does not
