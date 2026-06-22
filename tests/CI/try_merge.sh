@@ -6,7 +6,7 @@ git config user.email "buildbot@rsyslog.com"
 git config user.name "buildbot"
 
 # we need to make sure we can pull in new code from the main
-# repo. Travis, for example, checks us out into a different repo.
+# repo. Some CI systems check us out into a different repo.
 git remote add github https://github.com/rsyslog/rsyslog.git
 git fetch github &> /dev/null
 

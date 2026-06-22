@@ -1240,9 +1240,9 @@ AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
 
 
 # capability to enable elasticsearch testbench tests. This requries that an ES test
-# environment is present on the local (127.0.0.1) machine.
-# we support a "minimal" mode to take care of travis where we cannot run all tests
-# due to runtime constraints
+# environment is present on the local (127.0.0.1) machine. The "minimal" mode is
+# kept for CI jobs that need a reduced Elasticsearch test set due to runtime
+# constraints.
 AC_ARG_ENABLE(elasticsearch_tests,
         [AS_HELP_STRING([--enable-elasticsearch-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
         [case "${enableval}" in

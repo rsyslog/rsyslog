@@ -1637,10 +1637,6 @@ static rsRetVal getContainerIdsAndAppend(sbool isInit, docker_cont_log_instances
         pApiAddr = runModConf->dockerApiAddr;
     }
 
-    /*
-     * TODO: consider if we really need 'isInit' parameter. I suspect we don't need it
-     * and i'm almost certain Travis CI will complain its not used.
-     */
     if (pInstances->last_container_id) {
         CHKiRet(allocContainersListUrl(&url, pApiAddr, runModConf->apiVersionStr, runModConf->listContainersOptions,
                                        pInstances->last_container_id));
