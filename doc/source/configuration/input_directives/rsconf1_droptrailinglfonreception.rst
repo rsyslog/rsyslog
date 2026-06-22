@@ -7,6 +7,12 @@ $DropTrailingLFOnReception
 
 **Description:**
 
+This is a legacy directive. For new configurations, prefer the modern
+``global(parser.dropTrailingLFOnReception="...")`` form. To remove a trailing
+carriage return (CR) after LF handling, use
+``global(parser.dropTrailingCROnReception="on")`` or the legacy
+``$DropTrailingCROnReception on`` directive.
+
 Syslog messages frequently have the line feed character (LF) as the last
 character of the message. In almost all cases, this LF should not really
 become part of the message. However, recent IETF syslog standardization

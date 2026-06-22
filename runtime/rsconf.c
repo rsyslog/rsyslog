@@ -290,6 +290,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
 
     pThis->globals.parser.cCCEscapeChar = '#';
     pThis->globals.parser.bDropTrailingLF = 1;
+    pThis->globals.parser.bDropTrailingCR = 0;
     pThis->globals.parser.bEscapeCCOnRcv = 1;
     pThis->globals.parser.bSpaceLFOnRcv = 0;
     pThis->globals.parser.bEscape8BitChars = 0;

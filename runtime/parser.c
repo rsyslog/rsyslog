@@ -367,6 +367,13 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
         bUpdatedLen = RSTRUE;
     }
 
+    if (glbl.GetParserDropTrailingCROnReception(runConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\r') {
+        DBGPRINTF("dropped CR at very end of message (DropTrailingCR is set)\n");
+        lenMsg--;
+        pszMsg[lenMsg] = '\0';
+        bUpdatedLen = RSTRUE;
+    }
+
     /* it is much quicker to sweep over the message and see if it actually
      * needs sanitation than to do the sanitation in any case. So we first do
      * this and terminate when it is not needed - which is expectedly the case
