@@ -359,6 +359,16 @@ static rsRetVal ATTR_NONNULL() parse_sd(instanceData *const pData, smsg_t *const
     if (sdLenbuf > INT_MAX) {
         ABORT_FINALIZE(RS_RET_OVERSIZE_MSG);
     }
+    /**
+     * MsgGetStructuredData() returns message-owned structured data created by
+     * MsgSetStructuredData(), which stores a NUL-terminated strdup() and a
+     * strlen() length. The parser below intentionally relies on that sentinel
+     * when rejecting malformed data at the exact logical end of the SD field.
+     * Do not add per-character defensive bounds checks unless a caller path is
+     * proven to pass non-sentinel storage; those checks would sit in the hot
+     * parsing path for high-throughput deployments.
+     */
+    assert(sdbuf != NULL && sdbuf[sdLenbuf] == '\0');
     lenbuf = (int)sdLenbuf;
     while (i < lenbuf) {
         CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i, json));
