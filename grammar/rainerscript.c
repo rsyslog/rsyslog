@@ -2244,6 +2244,71 @@ static void ATTR_NONNULL() doFunct_CNum(struct cnffunc *__restrict__ const func,
     DBGPRINTF("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int)ret->d.n);
 }
 
+static int rsyslogBoolTextToNumber(const uchar *const str) {
+    const uchar *p = str;
+    size_t len;
+
+    if (str == NULL) {
+        return 0;
+    }
+    while (isspace((int)*p)) {
+        ++p;
+    }
+    len = ustrlen(p);
+    while (len > 0 && isspace((int)p[len - 1])) {
+        --len;
+    }
+    if (len == 0) {
+        return 0;
+    }
+    if (len == 1 && p[0] == '0') {
+        return 0;
+    }
+    if (len == 2 && strncasecmp((char *)p, "no", 2) == 0) {
+        return 0;
+    }
+    if (len == 3 && strncasecmp((char *)p, "off", 3) == 0) {
+        return 0;
+    }
+    if (len == 5 && strncasecmp((char *)p, "false", 5) == 0) {
+        return 0;
+    }
+    return 1;
+}
+
+static void ATTR_NONNULL() doFunct_CBool(struct cnffunc *__restrict__ const func,
+                                         struct svar *__restrict__ const ret,
+                                         void *__restrict__ const usrptr,
+                                         wti_t *__restrict__ const pWti) {
+    struct svar srcVal;
+    uchar *str;
+    int bMustFree;
+
+    if (func->expr[0]->nodetype == 'N') {
+        ret->d.n = (((struct cnfnumval *)func->expr[0])->val != 0);
+    } else if (func->expr[0]->nodetype == 'S') {
+        str = (uchar *)es_str2cstr(((struct cnfstringval *)func->expr[0])->estr, NULL);
+        if (str == NULL) {
+            ret->d.n = 0;
+        } else {
+            ret->d.n = rsyslogBoolTextToNumber(str);
+            free(str);
+        }
+    } else {
+        cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+        if (srcVal.datatype == 'N') {
+            ret->d.n = (srcVal.d.n != 0);
+        } else {
+            str = var2CString(&srcVal, &bMustFree);
+            ret->d.n = rsyslogBoolTextToNumber(str);
+            if (bMustFree) free(str);
+        }
+        varFreeMembers(&srcVal);
+    }
+    ret->datatype = 'N';
+    DBGPRINTF("JSONorString: cbool node type %c result %d\n", func->expr[0]->nodetype, (int)ret->d.n);
+}
+
 static void ATTR_NONNULL() doFunct_ReMatch(struct cnffunc *__restrict__ const func,
                                            struct svar *__restrict__ const ret,
                                            void *__restrict__ const usrptr,
@@ -4382,6 +4447,7 @@ static struct scriptFunct functions[] = {
     {"toupper", 1, 1, doFunct_ToUpper, NULL, NULL},
     {"cstr", 1, 1, doFunct_CStr, NULL, NULL},
     {"cnum", 1, 1, doFunct_CNum, NULL, NULL},
+    {"cbool", 1, 1, doFunct_CBool, NULL, NULL},
     {"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
     {"ipv42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
     {"re_match", 2, 2, doFunct_ReMatch, initFunc_re_match, regex_destruct},

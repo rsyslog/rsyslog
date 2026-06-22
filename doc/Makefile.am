@@ -449,6 +449,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/mo-unflatten.rst \
     source/rainerscript/functions/rs-append_json.rst \
     source/rainerscript/functions/rs-cef_ext_escape.rst \
+    source/rainerscript/functions/rs-cbool.rst \
     source/rainerscript/functions/rs-cnum.rst \
     source/rainerscript/functions/rs-cstr.rst \
     source/rainerscript/functions/rs-dyn_inc.rst \

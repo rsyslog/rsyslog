@@ -449,6 +449,7 @@ TESTS_DEFAULT = \
 	rscript_append_json.sh \
 	msg_json_set_regression.sh \
 	config_output-o-option.sh \
+	rs-cbool.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
 	rs-int2hex.sh \
