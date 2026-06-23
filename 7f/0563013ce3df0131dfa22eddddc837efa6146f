@@ -1,0 +1,20 @@
+tools/Makefile.am
+  s_6224eda96fc0da::t_86b5e725da2683 97,125
+  s_6224eda96fc0da::t_67bb0f39b32f8e 3-4,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "7f0563013ce3df0131dfa22eddddc837efa6146f",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
