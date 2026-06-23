@@ -1,0 +1,23 @@
+doc/source/reference/parameters/imudp-preservecase.rst
+  s_6224eda96fc0da::t_1664e167db0de9 33-36
+doc/source/reference/properties/message-fromhost.rst
+  s_6224eda96fc0da::t_faa3ef05024f34 33-39
+doc/source/reference/parameters/imtcp-preservecase.rst
+  s_6224eda96fc0da::t_1664e167db0de9 29-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "bcf1bdb761a5e06b97240931e3565196fb914c3f",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
