@@ -1,0 +1,21 @@
+.github/workflows/debian_daily_staging.yml
+  s_6cd9c239d726e4::t_bdd09a632dfcd4 276-347
+devtools/release/debian-daily-staging.sh
+  s_6cd9c239d726e4::t_e65f8049a5292c 14-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "373541cbe5b1549b773cf848dce971f10bca487e",
+  "prompts": {},
+  "sessions": {
+    "s_6cd9c239d726e4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eed8d-dc2d-7ff2-b233-55590b3b18b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
