@@ -71,6 +71,7 @@
  * -A	do NOT abort if an error occured during sending messages
  * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
+ * -g	GnuTLS priority string for TLS mode when tcpflood is built with GnuTLS
  * -j	format message in json, parameter is JSON cookie
  * -o   number of threads to use for connection establishment (default: 25)
  * -O	Use octet-count framing
@@ -259,6 +260,7 @@ static int abortOnSendFail = 1; /* abort run if sending fails? */
 static char *tlsCAFile = NULL;
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
+static char *tlsPriorityString = NULL;
 static char *relpAuthMode = NULL;
 static char *relpPermittedPeer = NULL;
 #if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
@@ -274,6 +276,7 @@ static bool handshakeOnly = false;
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray; /* array of TLS sessions to use */
 static gnutls_certificate_credentials_t tlscred;
+static gnutls_priority_t tlsPriorityCache = NULL;
 #endif
 
 #ifdef ENABLE_OSSL
@@ -1880,7 +1883,14 @@ static void tlsLogFunction(int level, const char *msg) {
     printf("GnuTLS (level %d): %s", level, msg);
 }
 
-static void exitTLS(void) {}
+static void exitTLS(void) {
+    if (tlsPriorityCache != NULL) {
+        gnutls_priority_deinit(tlsPriorityCache);
+        tlsPriorityCache = NULL;
+    }
+    gnutls_certificate_free_credentials(tlscred);
+    gnutls_global_deinit();
+}
 
 /* global init GnuTLS
  */
@@ -1920,6 +1930,18 @@ static void initTLS(void) {
             exit(1);
         }
     }
+    if (tlsPriorityString != NULL) {
+        const char *err_pos = NULL;
+        r = gnutls_priority_init(&tlsPriorityCache, tlsPriorityString, &err_pos);
+        if (r != GNUTLS_E_SUCCESS) {
+            fprintf(stderr, "tcpflood: invalid GnuTLS priority string '%s': %s", tlsPriorityString, gnutls_strerror(r));
+            if (err_pos != NULL && *err_pos != '\0') {
+                fprintf(stderr, " near '%s'", err_pos);
+            }
+            fputc('\n', stderr);
+            exit(1);
+        }
+    }
 }
 
 
@@ -1929,8 +1951,16 @@ static void initTLSSess(const int i) {
     int r;
     gnutls_init(sessArray + i, GNUTLS_CLIENT);
 
-    /* Use default priorities */
-    gnutls_set_default_priority(sessArray[i]);
+    if (tlsPriorityCache != NULL) {
+        r = gnutls_priority_set(sessArray[i], tlsPriorityCache);
+    } else {
+        r = gnutls_set_default_priority(sessArray[i]);
+    }
+    if (r != GNUTLS_E_SUCCESS) {
+        fprintf(stderr, "Setting GnuTLS priority failed\n");
+        gnutls_perror(r);
+        exit(1);
+    }
 
     /* put our credentials to the current session */
     r = gnutls_credentials_set(sessArray[i], GNUTLS_CRD_CERTIFICATE, tlscred);
@@ -2107,7 +2137,7 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, buf, _IONBF, 48);
 
     while ((opt = getopt(argc, argv,
-                         "a:ABb:c:C:d:DeE:f:F:h:i:I:j:K:k:l:L:m:M:n:o:OP:p:rR:"
+                         "a:ABb:c:C:d:DeE:f:F:g:h:i:I:j:K:k:l:L:m:M:n:o:OP:p:rR:"
                          "sS:t:T:u:vW:w:x:XyYz:Z:H")) != -1) {
         switch (opt) {
             case 'b':
@@ -2176,6 +2206,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'f':
                 dynFileIDs = atoi(optarg);
+                break;
+            case 'g':
+                tlsPriorityString = optarg;
                 break;
             case 'F':
                 frameDelim = atoi(optarg);
@@ -2355,6 +2388,17 @@ int main(int argc, char *argv[]) {
     if (handshakeOnly && portFile != NULL) {
         fprintf(stderr, "-H cannot be combined with -w\n");
         exit(1);
+    }
+
+    if (tlsPriorityString != NULL) {
+        if (transport != TP_TLS) {
+            fprintf(stderr, "-g requires TLS transport (-Ttls)\n");
+            exit(1);
+        }
+#if !defined(ENABLE_GNUTLS) || defined(ENABLE_OSSL)
+        fprintf(stderr, "-g requires tcpflood to use the GnuTLS TLS implementation\n");
+        exit(1);
+#endif
     }
 
     if (holdOpenSeconds >= 0) {
