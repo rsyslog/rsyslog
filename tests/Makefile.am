@@ -3450,7 +3450,6 @@ EXTRA_DIST += \
 	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	known_issues.supp \
 	libmaxmindb.supp \
-	travis/trusty.supp \
 	linux_localtime_r.supp \
 	CI/centos6-9.supp \
 	CI/centos7.supp \
