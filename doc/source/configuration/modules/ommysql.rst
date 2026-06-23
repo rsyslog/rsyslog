@@ -84,6 +84,30 @@ Action Parameters
    ../../reference/parameters/ommysql-template
 
 
+Failure and retry behavior
+==========================
+
+``ommysql`` treats MariaDB/MySQL client and connection failures differently
+from SQL data errors returned by the server.
+
+Connection-level failures, such as an unavailable server or a broken
+connection, suspend the action. In that state, the usual action retry settings,
+including ``action.resumeInterval`` and ``action.resumeRetryCount``, control
+when rsyslog tries to resume delivery.
+
+Server-side SQL errors, such as a rejected ``INSERT`` or stored procedure call,
+are treated as permanent data failures for the affected messages. rsyslog logs
+the MySQL error and the failed SQL statement, then handles the failed message
+through the action error-file path. These failures are not retried (and thus not
+throttled by ``action.resumeInterval``) because retrying the same malformed
+statement later would normally fail in the same way.
+
+For production setups, configure ``action.errorfile`` on the ``ommysql`` action
+when failed messages must be retained for inspection or replay. Without an error
+file, permanently failed messages are discarded after rsyslog reports the action
+failure.
+
+
 Examples
 ========
 
