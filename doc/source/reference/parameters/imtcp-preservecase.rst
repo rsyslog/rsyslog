@@ -26,7 +26,10 @@ This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 Description
 -----------
-This parameter is for controlling the case in fromhost.  If preservecase is set to "off", the case in fromhost is not preserved.  E.g., 'host1.example.org' the message was received from 'Host1.Example.Org'.  Default to "on" for the backward compatibility.
+This parameter controls the case in ``fromhost``. If ``PreserveCase`` is set to
+"off", rsyslog normalizes the resolved host name to lowercase, e.g.,
+``host1.example.org`` when the message was received from
+``Host1.Example.Org``. The default is "on" for backward compatibility.
 
 The same-named input parameter can override this module setting.
 
@@ -52,4 +55,3 @@ Input usage
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.
-
