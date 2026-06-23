@@ -1290,6 +1290,23 @@ static int checkReplyStatus(fjson_object *ok) {
             fjson_object_get_int(ok) > 299);
 }
 
+static int ATTR_NONNULL(1) isRetryableBulkStatus(fjson_object *response_body, const int status) {
+    fjson_object *error = NULL;
+    fjson_object *errtype = NULL;
+    const char *type = NULL;
+
+    if (status == 429 || status >= 500) return 1;
+
+    if (status != 403) return 0;
+
+    if (fjson_object_object_get_ex(response_body, "error", &error) &&
+        fjson_object_object_get_ex(error, "type", &errtype)) {
+        type = fjson_object_get_string(errtype);
+    }
+
+    return type != NULL && strcmp(type, "cluster_block_exception") == 0;
+}
+
 /*
  * Context object for error file content creation or status check
  * response_item - the full {"create":{"_index":"idxname",.....}}
@@ -1325,6 +1342,9 @@ static rsRetVal parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,
     int i;
     int numitems;
     fjson_object *items = NULL, *jo_errors = NULL;
+    int sawRetriableError = 0;
+    int sawPermanentError = 0;
+    int sawSuccess = 0;
 
     /*iterate over items*/
     if (!fjson_object_object_get_ex(replyRoot, "items", &items)) {
@@ -1381,6 +1401,18 @@ static rsRetVal parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,
 
         fjson_object_object_get_ex(result, "status", &ok);
         itemStatus = checkReplyStatus(ok);
+        const int status = (ok != NULL && fjson_object_is_type(ok, fjson_type_int)) ? fjson_object_get_int(ok) : 0;
+        if (ctx->statusCheckOnly) {
+            if (itemStatus) {
+                if (isRetryableBulkStatus(result, status)) {
+                    sawRetriableError = 1;
+                } else {
+                    sawPermanentError = 1;
+                }
+            } else {
+                sawSuccess = 1;
+            }
+        }
 
         char *request = 0;
         char *response = 0;
@@ -1389,9 +1421,11 @@ static rsRetVal parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,
                 DBGPRINTF(
                     "omelasticsearch: error in elasticsearch reply: item %d, "
                     "status is %d\n",
-                    i, fjson_object_get_int(ok));
-                DBGPRINTF("omelasticsearch: status check found error.\n");
-                ABORT_FINALIZE(RS_RET_DATAFAIL);
+                    i, status);
+                if (!ctx->statusCheckOnly) {
+                    DBGPRINTF("omelasticsearch: status check found error.\n");
+                    ABORT_FINALIZE(RS_RET_DATAFAIL);
+                }
             }
 
         } else {
@@ -1421,6 +1455,18 @@ static rsRetVal parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,
             }
         }
     }
+    if (ctx->statusCheckOnly && sawRetriableError) {
+        if (!sawPermanentError && !sawSuccess) {
+            LogError(0, RS_RET_SUSPENDED,
+                     "omelasticsearch: suspending action because bulk response contains only retryable item errors");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        DBGPRINTF(
+            "omelasticsearch: retryable bulk item errors are mixed with "
+            "successful or permanent responses; preserving per-item data-failure handling\n");
+        ABORT_FINALIZE(RS_RET_DATAFAIL);
+    }
+    if (ctx->statusCheckOnly && sawPermanentError) ABORT_FINALIZE(RS_RET_DATAFAIL);
 
 finalize_it:
     RETiRet;
@@ -1923,12 +1969,14 @@ static rsRetVal checkResultBulkmode(wrkrInstanceData_t *pWrkrData, fjson_object 
     ctx.statusCheckOnly = 1;
     ctx.jTokener = NULL;
     if (pWrkrData->pData->retryFailures) {
+        /* retryFailures owns per-item retry routing via retryRuleset. */
         ctx.statusCheckOnly = 0;
         CHKiRet(initializeRetryFailuresContext(pWrkrData, &ctx));
     }
-    if (parseRequestAndResponseForContext(pWrkrData, &root, reqmsg, &ctx) != RS_RET_OK) {
+    iRet = parseRequestAndResponseForContext(pWrkrData, &root, reqmsg, &ctx);
+    if (iRet != RS_RET_OK) {
         DBGPRINTF("omelasticsearch: error found in elasticsearch reply\n");
-        ABORT_FINALIZE(RS_RET_DATAFAIL);
+        if (iRet != RS_RET_SUSPENDED) ABORT_FINALIZE(RS_RET_DATAFAIL);
     }
 
 finalize_it:

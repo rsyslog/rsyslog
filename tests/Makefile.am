@@ -287,6 +287,7 @@ TESTS_DEFAULT = \
 	imudp_ratelimit_name.sh \
 	omfwd_ratelimit_name.sh \
 	omelasticsearch_ratelimit_name.sh \
+	omelasticsearch-bulk-readonly-retry.sh \
 	omelasticsearch-dynsearch-template.sh \
 	omelasticsearch-searchtype-deprecated.sh \
 	omhttp_ratelimit_name.sh \
