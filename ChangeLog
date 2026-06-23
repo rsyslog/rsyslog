@@ -5,6 +5,151 @@ This release has many commits in regard to
   * testbench de-flaking
 These will not be mentioned individually, check commit log for details.
 
+- 2026-06-22: core: fix negated exact priority filters
+  Standalone selectors such as local4.!=debug now initialize the selected
+  facility mask before clearing the excluded priority, so they match all
+  documented priorities except the negated one. Configurations that
+  accidentally relied on these selectors matching nothing may now see the
+  documented messages.
+  Closes https://github.com/rsyslog/rsyslog/issues/1030
+- 2026-06-21: rainerscript: preserve embedded NULs at C-string boundaries
+  Script values containing embedded NUL bytes are now converted to C strings
+  with rsyslog's #000 escape instead of being silently truncated. This keeps
+  C-string-based helpers such as is_in_subnet() from accepting only a valid
+  prefix while discarding trailing data.
+- 2026-06-18: config: warn on constant boolean operands
+  RainerScript now emits a parser warning when boolean AND/OR operators
+  receive an immediate string or number constant operand. Existing syntax and
+  truthiness behavior are unchanged, but likely mistakes such as
+  ``$msg contains "a" or "b"`` are easier to spot during config checks.
+  Closes https://github.com/rsyslog/rsyslog/issues/1046
+- 2026-06-16: imfile: deliver same-file monitors independently
+  Multiple imfile monitors attached to the same file now receive independent
+  copies of completed lines. Per-monitor rate limiting or message construction
+  no longer suppresses delivery to unrelated monitors on the same file.
+  Closes https://github.com/rsyslog/rsyslog/issues/2532
+- 2026-06-16: parser: honor parseHostnameAndTag at runtime
+  The RFC3164 parser now reads parser.parseHostnameAndTag from the active
+  runtime configuration instead of using a startup-time cached value. Settings
+  such as global(parser.parseHostnameAndTag="off") now apply to network
+  messages as documented.
+  Closes https://github.com/rsyslog/rsyslog/issues/1190
+- 2026-06-16: msg: invalidate programname when tag changes
+  Updating a message tag now invalidates the cached programname. This fixes
+  RFC5424 UDP messages processed with imudp rate limiting enabled, where early
+  APP-NAME inspection could otherwise leave the accepted message with an empty
+  programname.
+  Closes https://github.com/rsyslog/rsyslog/issues/4313
+- 2026-06-16: rainerscript: add cbool() conversion function
+  The new cbool(expr) function converts string and numeric values to 0/1 for
+  use with jsonf datatype="bool". This gives configurations an explicit way to
+  render values such as "false" as JSON false while preserving existing legacy
+  string-to-bool template semantics.
+  Closes https://github.com/rsyslog/rsyslog/issues/3836
+- 2026-06-16: rainerscript: keep random(max) non-negative
+  random(max) now maps negative OS random-source values through unsigned
+  arithmetic instead of taking the absolute value of a signed long. This avoids
+  the most-negative-long edge case and keeps generated results non-negative.
+  Closes https://github.com/rsyslog/rsyslog/issues/3039
+- 2026-06-14: parser: add optional trailing CR stripping
+  The new parser.dropTrailingCROnReception setting removes one final carriage
+  return after normal trailing-LF handling. It defaults to off, preserving
+  existing behavior while giving CRLF senders a direct way to avoid #015 in
+  received messages.
+  Closes https://github.com/rsyslog/rsyslog/issues/241
+- 2026-06-14: config: warn for duplicate action and dynstats names
+  Repeated action names and dyn_stats bucket names now emit warnings during
+  configuration validation and startup. The configurations remain valid for
+  compatibility, but operators get a clear diagnostic when impstats output may
+  be ambiguous.
+  Closes https://github.com/rsyslog/rsyslog/issues/539
+  Closes https://github.com/rsyslog/rsyslog/issues/1532
+- 2026-06-14: ompgsql: accept long server hostnames
+  Modern ompgsql action parameters now store server names dynamically, so
+  cloud and Kubernetes PostgreSQL endpoints longer than the historical fixed
+  buffer are accepted without switching to conninfo.
+  Closes https://github.com/rsyslog/rsyslog/issues/4698
+- 2026-06-08: imdocker: harden multiline and rate-limit handling
+  Compacted multiline buffers are now kept NUL-terminated at the active length
+  and segment compaction validates its bounds. Rate-limit drops are counted
+  without aborting the Docker log stream, so normal discard decisions do not
+  stop later ingestion.
+- 2026-06-08: imptcp: unlink failed accepted sessions
+  Accepted sessions that fail while being added to epoll are now unlinked from
+  the server session list before cleanup. This avoids stale session counts and
+  shutdown crashes after post-accept registration failures.
+- 2026-06-04: ratelimit: centralize per-source policy handling
+  Per-source rate limiting now lives behind the shared ratelimit object, and
+  policy YAML can define perSource key templates, state limits, top-N
+  reporting, defaults, and overrides. imtcp, imptcp, imudp, and imrelp inherit
+  the same enforcement path while legacy split configuration remains supported.
+- 2026-06-04: mmjsonparse: reject boundary trailing data
+  find-json mode with allow_trailing="off" now checks for non-whitespace bytes
+  after the parsed object across the full message, even when the JSON object
+  ends exactly at max_scan_bytes. This closes a bounded-scan policy bypass.
+- 2026-06-04: mmdblookup: preserve large uint64 values
+  MaxMind DB uint64 values above INT64_MAX no longer wrap into negative JSON
+  numbers. Builds with unsigned JSON support emit uint64 values directly;
+  older libfastjson builds preserve out-of-range values as decimal strings.
+- 2026-06-03: mmsnareparse: honor tabbed trailing search windows
+  Tab-delimited Snare parsing now applies ignoreTrailingPattern.searchWindow
+  to the main trailing-token scan. Regex and literal matching are bounded to
+  the configured window while existing truncation behavior is preserved.
+- 2026-06-03: imfifo: bind FIFO instances to the parsed config
+  imfifo input instances are now owned by the rsconf object that parsed them
+  instead of process-global module state. Reload and failed-validation paths no
+  longer keep stale FIFO instances from rejected configurations.
+- 2026-06-03: regexp: avoid per-thread shutdown double-free
+  Per-thread regex cache shutdown now leaves entry allocation ownership with
+  the hashtable key destructor after destroying embedded mutex and regex
+  resources. Module shutdown no longer risks freeing the same entry twice.
+- 2026-06-02: imkafka: support multiple topics per input
+  imkafka input() now accepts topic=["t1","t2",...] and subscribes to all
+  listed topics with one consumer instance. Existing single-topic
+  configurations continue to work unchanged.
+  See https://github.com/rsyslog/rsyslog/issues/3520
+- 2026-06-02: omkafka: improve reload and DNS-failure handling
+  omkafka now serializes HUP handling with in-flight Kafka action work to avoid
+  reload deadlocks, and DNS resolution failures now trigger the normal action
+  suspension and retry diagnostics instead of only librdkafka error output.
+  Fixes https://github.com/rsyslog/rsyslog/issues/4230
+  Fixes https://github.com/rsyslog/rsyslog/issues/4374
+- 2026-06-02: omhttp: avoid retry-ruleset self-stalls
+  retry.ruleset messages now use light-delay flow control, so an omhttp worker
+  can continue draining retry work after a short HTTP outage instead of waiting
+  on its own full-delay retry queue.
+  See https://github.com/rsyslog/rsyslog/issues/5693
+- 2026-06-02: mmpstrucdata: support custom SD containers
+  mmpstrucdata can now write parsed RFC5424 structured data below a
+  configurable container name and bound parsed structured-data length with
+  maxStructuredDataSize. Large structured-data storage now uses rs_size_t and
+  RFC5424 NILVALUE is represented as JSON null under the selected container.
+  Closes https://github.com/rsyslog/rsyslog/issues/3297
+  Closes https://github.com/rsyslog/rsyslog/issues/1891
+- 2026-06-02: queue: reset disk byte accounting after safe recovery
+  Safe disk queue recovery now clears sizeOnDisk together with the other
+  reconstructed queue counters. Recovered disk and disk-assisted queues no
+  longer appear full because of stale pre-recovery byte accounting.
+- 2026-06-02: yaml: guard against recursive includes
+  YAML configuration loading now detects recursive include chains and fails the
+  configuration instead of recursing indefinitely.
+- 2026-06-02: rainerscript: add CEF output helpers
+  New tocef() and cef_ext_escape() functions make it possible to build
+  Common Event Format output with the required header and extension escaping.
+  Existing configurations are unaffected.
+  Fixes https://github.com/rsyslog/rsyslog/issues/3880
+- 2026-06-02: packaging/docker: default ETL Vespa output to HTTPS
+  The ETL Vespa container configuration now defaults Vespa output to HTTPS and
+  exposes environment toggles for TLS mode, certificate verification, CA files,
+  and client certificates.
+- 2026-06-02: imfile: release deleted-file descriptors in inotify mode
+  Pending deleted files now cap the inotify poll timeout so stale descriptors
+  are closed after FILE_DELETE_DELAY even when no later inotify events arrive.
+  This lets disk space be reclaimed after monitored files are deleted.
+- 2026-06-01: rainerscript: add parse_time_localtz()
+  The new parse_time_localtz() function parses timestamps using local timezone
+  semantics, complementing the existing RainerScript timestamp conversion
+  helpers.
 - 2026-05-31: action: keep transactional queue batches on shutdown
   Transactional action queue messages are now re-enqueued when shutdown
   interrupts a retry loop before the action commit completes. Disk queues no
@@ -33,6 +178,10 @@ These will not be mentioned individually, check commit log for details.
   grows, and the JSON set path has additional regression coverage for
   replacement handling. This avoids corrupting trailing raw message data in
   realloc paths.
+- 2026-05-27: template: fix jsonftree conflict fallback
+  option.jsonftree templates with conflicting output names now fall back to the
+  flat JSONF framing path and still emit valid JSON instead of malformed
+  concatenated fragments.
 - 2026-05-27: imfifo: add named pipe input module
   The new imfifo input module reads line-oriented messages from local POSIX
   FIFOs without blocking startup or spinning on writer disconnects. It supports
