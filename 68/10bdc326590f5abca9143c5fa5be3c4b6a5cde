@@ -1,0 +1,32 @@
+runtime/msg.c
+  s_6224eda96fc0da::t_4e6d71a5c2c186 2532-2534
+  s_6224eda96fc0da::t_af3ef8533575ed 2527
+  s_6224eda96fc0da::t_e44e62f278e6bc 2525
+  s_6224eda96fc0da::t_39f52166d1bb61 2541
+tests/imudp-headerless-fromhost-ip.sh
+  s_6224eda96fc0da::t_dd73132d38d844 3-6,18,20-21,30
+  s_6224eda96fc0da::t_39f52166d1bb61 1-2,7-17,19,22-29,31-33
+plugins/imudp/imudp.c
+  s_6224eda96fc0da::t_39f52166d1bb61 575,620,705
+  s_6224eda96fc0da::t_09338cdb4beaa3 534-536
+runtime/msg.h
+  s_6224eda96fc0da::t_59c73c86b85f9a 194
+tests/Makefile.am
+  s_6224eda96fc0da::t_39f52166d1bb61 490
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "6810bdc326590f5abca9143c5fa5be3c4b6a5cde",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
