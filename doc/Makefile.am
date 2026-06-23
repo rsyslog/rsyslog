@@ -593,6 +593,7 @@ EXTRA_DIST = \
     source/reference/parameters/imjournal-ignorenonvalidstatefile.rst \
     source/reference/parameters/imjournal-ignorepreviousmessages.rst \
     source/reference/parameters/imjournal-main.rst \
+    source/reference/parameters/imjournal-namespace.rst \
     source/reference/parameters/imjournal-persiststateinterval.rst \
     source/reference/parameters/imjournal-ratelimit-burst.rst \
     source/reference/parameters/imjournal-ratelimit-interval.rst \

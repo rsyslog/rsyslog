@@ -122,6 +122,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imjournal-remote.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imjournal-namespace`
+     - .. include:: ../../reference/parameters/imjournal-namespace.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imjournal-defaulttag`
      - .. include:: ../../reference/parameters/imjournal-defaulttag.rst
         :start-after: .. summary-start
@@ -162,6 +166,7 @@ Parameters specific to the input module.
    ../../reference/parameters/imjournal-workaroundjournalbug
    ../../reference/parameters/imjournal-fsync
    ../../reference/parameters/imjournal-remote
+   ../../reference/parameters/imjournal-namespace
    ../../reference/parameters/imjournal-defaulttag
    ../../reference/parameters/imjournal-main
 
