@@ -1545,6 +1545,7 @@ static rsRetVal qqueueLoadPersStrmInfoFixup(strm_t *pStrm, qqueue_t __attribute_
     ISOBJ_TYPE_assert(pThis, qqueue);
     CHKiRet(strm.SetDir(pStrm, pThis->pszSpoolDir, pThis->lenSpoolDir));
     CHKiRet(strm.SetbSync(pStrm, pThis->bSyncQueueFiles));
+    CHKiRet(strm.SetbNoFollowFinal(pStrm, 1));
 finalize_it:
     RETiRet;
 }
@@ -1577,6 +1578,7 @@ static rsRetVal qqueueTryLoadPersistedInfo(qqueue_t *pThis) {
     CHKiRet(strm.Construct(&psQIF));
     CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_READ));
     CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
+    CHKiRet(strm.SetbNoFollowFinal(psQIF, 1));
     CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
     CHKiRet(strm.ConstructFinalize(psQIF));
 
@@ -1673,6 +1675,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
+        CHKiRet(strm.SetbNoFollowFinal(pThis->tVars.disk.pWrite, 1));
         if (pThis->useCryprov) {
             CHKiRet(strm.Setcryprov(pThis->tVars.disk.pWrite, &pThis->cryprov));
             CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pWrite, pThis->cryprovData));
@@ -1685,6 +1688,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDeq, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDeq, STREAMMODE_READ));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDeq, STREAMTYPE_FILE_CIRCULAR));
+        CHKiRet(strm.SetbNoFollowFinal(pThis->tVars.disk.pReadDeq, 1));
         if (pThis->useCryprov) {
             CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDeq, &pThis->cryprov));
             CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDeq, pThis->cryprovData));
@@ -1698,6 +1702,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDel, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDel, STREAMMODE_READ));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDel, STREAMTYPE_FILE_CIRCULAR));
+        CHKiRet(strm.SetbNoFollowFinal(pThis->tVars.disk.pReadDel, 1));
         if (pThis->useCryprov) {
             CHKiRet(strm.Setcryprov(pThis->tVars.disk.pReadDel, &pThis->cryprov));
             CHKiRet(strm.SetcryprovData(pThis->tVars.disk.pReadDel, pThis->cryprovData));
@@ -3614,6 +3619,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
     CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
     CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
+    CHKiRet(strm.SetbNoFollowFinal(psQIF, 1));
     CHKiRet(strm.SetFName(psQIF, (uchar *)tmpQIFName, lentmpQIFName));
     CHKiRet(strm.ConstructFinalize(psQIF));
 

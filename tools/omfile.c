@@ -47,6 +47,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #ifdef HAVE_ATOMIC_BUILTINS
     #include <pthread.h>
@@ -201,6 +202,8 @@ typedef struct _instanceData {
     sbool bUseAsyncWriter; /**< use async stream writer? */
     sbool bVeryRobustZip;
     sbool bAddLF; /**< append LF to records that are missing it? */
+    int bFollowSymlinks; /**< allow final output path component to be a symlink? */
+    sbool bFollowSymlinksExplicit; /**< was symlink policy configured explicitly? */
     statsobj_t *stats; /**< dynafile, primarily cache stats */
     STATSCOUNTER_DEF(ctrRequests, mutCtrRequests);
     STATSCOUNTER_DEF(ctrLevel0, mutCtrLevel0);
@@ -262,6 +265,8 @@ struct modConfData_s {
     gid_t fileGID;
     gid_t dirGID;
     int bDynafileDoNotSuspend;
+    int bFollowSymlinks;
+    sbool bFollowSymlinksExplicit;
     strm_compressionDriver_t compressionDriver;
     int compressionDriver_workers;
     sbool bAddLF; /**< default setting for addLF action parameter */
@@ -287,6 +292,7 @@ static struct cnfparamdescr modpdescr[] = {
     {"fileownernum", eCmdHdlrInt, 0},
     {"filegroup", eCmdHdlrGID, 0},
     {"dynafile.donotsuspend", eCmdHdlrBinary, 0},
+    {"followsymlinks", eCmdHdlrBinary, 0},
     {"filegroupnum", eCmdHdlrInt, 0},
 };
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
@@ -314,6 +320,7 @@ static struct cnfparamdescr actpdescr[] = {{"dynafilecachesize", eCmdHdlrInt, 0}
                                            {"sync", eCmdHdlrBinary, 0}, /* legacy: actionfileenablesync */
                                            {"file", eCmdHdlrString, 0}, /* either "file" or ... */
                                            {"dynafile", eCmdHdlrString, 0}, /* "dynafile" MUST be present */
+                                           {"followsymlinks", eCmdHdlrBinary, 0},
                                            {"sig.provider", eCmdHdlrGetWord, 0},
                                            {"cry.provider", eCmdHdlrGetWord, 0},
                                            {"closetimeout", eCmdHdlrPositiveInt, 0},
@@ -629,6 +636,27 @@ static rsRetVal sigprovPrepare(instanceData *__restrict__ const pData, uchar *__
     RETiRet;
 }
 
+static int getCompatDefaultFollowSymlinks(const rsconf_t *const cnf) {
+    return cnf == NULL || cnf->globals.compatDefaultsSecure != COMPAT_DEFAULTS_SECURE_STRICT;
+}
+
+static void warnIfFollowingSymlink(const instanceData *__restrict__ const pData,
+                                   const uchar *__restrict__ const fileName) {
+    struct stat st;
+
+    if (!pData->bFollowSymlinks || pData->bFollowSymlinksExplicit || runModConf == NULL || runModConf->pConf == NULL ||
+        runModConf->pConf->globals.compatDefaultsSecure != COMPAT_DEFAULTS_SECURE_WARN) {
+        return;
+    }
+    if (lstat((const char *)fileName, &st) == 0 && S_ISLNK(st.st_mode)) {
+        LogMsg(0, RS_RET_OK, LOG_WARNING,
+               "omfile: following symbolic link output file '%s'; "
+               "set action(type=\"omfile\" followSymlinks=\"off\") or "
+               "global(compatibility.defaults.secure=\"strict\") to reject final-component symlinks",
+               fileName);
+    }
+}
+
 /**
  * @brief Prepares file access for a given file name.
  *
@@ -671,7 +699,13 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData,
         /* no matter if we needed to create directories or not, we now try to create
          * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
          */
-        fd = open((char *)newFileName, O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY | O_CLOEXEC, pData->fCreateMode);
+        int openFlags = O_WRONLY | O_APPEND | O_CREAT | O_NOCTTY | O_CLOEXEC;
+#ifdef O_NOFOLLOW
+        if (!pData->bFollowSymlinks) {
+            openFlags |= O_NOFOLLOW;
+        }
+#endif
+        fd = open((char *)newFileName, openFlags, pData->fCreateMode);
         if (fd != -1) {
             /* check and set uid/gid */
             if (pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t)-1) {
@@ -696,6 +730,7 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData,
             ABORT_FINALIZE((openErrno == ENOENT) ? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR);
         }
     }
+    warnIfFollowingSymlink(pData, newFileName);
 
     /* the copies below are clumpsy, but there is no way around given the
      * anomalies in dirname() and basename() [they MODIFY the provided buffer...]
@@ -720,6 +755,7 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData,
     CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t)pData->iIOBufSize));
     CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
     CHKiRet(strm.SettOpenMode(pData->pStrm, cs.fCreateMode));
+    CHKiRet(strm.SetbNoFollowFinal(pData->pStrm, !pData->bFollowSymlinks));
     CHKiRet(strm.SetcompressionDriver(pData->pStrm, runModConf->compressionDriver));
     CHKiRet(strm.SetCompressionWorkers(pData->pStrm, runModConf->compressionDriver_workers));
     CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
@@ -1029,6 +1065,8 @@ BEGINbeginCnfLoad
     pModConf->dirGID = -1;
     pModConf->bDynafileDoNotSuspend = 1;
     pModConf->bAddLF = 1;
+    pModConf->bFollowSymlinks = -1;
+    pModConf->bFollowSymlinksExplicit = 0;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -1098,6 +1136,9 @@ BEGINsetModCnf
             loadModConf->fileGID = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "dynafile.donotsuspend")) {
             loadModConf->bDynafileDoNotSuspend = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "followsymlinks")) {
+            loadModConf->bFollowSymlinks = (int)pvals[i].val.d.n;
+            loadModConf->bFollowSymlinksExplicit = 1;
         } else {
             dbgprintf(
                 "omfile: program error, non-handled "
@@ -1316,6 +1357,11 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->iFlushInterval = FLUSH_INTRVL_DFLT;
     pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
     pData->bAddLF = loadModConf->bAddLF;
+    pData->bFollowSymlinks = loadModConf->bFollowSymlinks;
+    pData->bFollowSymlinksExplicit = loadModConf->bFollowSymlinksExplicit;
+    if (pData->bFollowSymlinks == -1) {
+        pData->bFollowSymlinks = getCompatDefaultFollowSymlinks(loadConf);
+    }
     pData->sigprovName = NULL;
     pData->cryprovName = NULL;
     pData->useSigprov = 0;
@@ -1561,6 +1607,9 @@ BEGINnewActInst
             CHKmalloc(pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             CODE_STD_STRING_REQUESTnewActInst(2);
             pData->bDynamicName = 1;
+        } else if (!strcmp(actpblk.descr[i].name, "followsymlinks")) {
+            pData->bFollowSymlinks = (int)pvals[i].val.d.n;
+            pData->bFollowSymlinksExplicit = 1;
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
             CHKmalloc(pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sig.provider")) {
