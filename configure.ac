@@ -1503,28 +1503,39 @@ AC_ARG_ENABLE(libzstd,
         [enable_libzstd=no]
 )
 if test "x$enable_libzstd" = "xyes"; then
+    save_CFLAGS="$CFLAGS"
     save_LIBS="$LIBS"
     PKG_CHECK_MODULES([ZSTD], zstd >= 1.4.0, [],
         [
-	LIBS="$LIBS -lzstd"
-	ZSTD_LIBS="-lzstd"
-	AC_SUBST(ZSTD_LIBS)
-	AC_SEARCH_LIBS(ZSTD_compressStream2, zstd,
-            [AC_COMPILE_IFELSE(
-                [AC_LANG_PROGRAM(
-                    [[ #include <zstd.h> ]],
-                    [[
-		       ZSTD_CCtx* cctx = ZSTD_createCCtx();
-		       ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers, 5);
-                    ]]
-                )],
-                [],
-                [AC_MSG_ERROR([libzstd version must be >= 1.4.0])]
-            )],
-            [AC_MSG_ERROR([libzstd not found])]
-        )]
+		LIBS="$LIBS -lzstd"
+		ZSTD_LIBS="-lzstd"
+		AC_SUBST(ZSTD_LIBS)
+		AC_SEARCH_LIBS(ZSTD_compressStream2, zstd, [], [AC_MSG_ERROR([libzstd not found])])
+	]
     )
+    CFLAGS="$CFLAGS $ZSTD_CFLAGS"
+    LIBS="$LIBS $ZSTD_LIBS"
+    AC_MSG_CHECKING([for libzstd streaming API >= 1.4.0])
+    AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM(
+            [[ #include <zstd.h> ]],
+            [[
+	       ZSTD_CCtx* cctx = ZSTD_createCCtx();
+	       ZSTD_inBuffer input = {0};
+	       ZSTD_outBuffer output = {0};
+	       size_t ret = ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, 1);
+	       ret = ZSTD_compressStream2(cctx, &output, &input, ZSTD_e_continue) + ret;
+	       ZSTD_freeCCtx(cctx);
+	       return ZSTD_isError(ret) ? 1 : 0;
+            ]]
+        )],
+        [AC_MSG_RESULT([yes])],
+        [AC_MSG_RESULT([no])
+         AC_MSG_ERROR([libzstd version must provide ZSTD_CCtx_setParameter and ZSTD_compressStream2])]
+    )
+    CFLAGS="$save_CFLAGS"
     LIBS="$save_LIBS"
+    AC_DEFINE([ENABLE_LIBZSTD], [1], [Indicator that LIBZSTD is present])
 fi
 AM_CONDITIONAL(ENABLE_LIBZSTD, test x$enable_libzstd = xyes)
 
