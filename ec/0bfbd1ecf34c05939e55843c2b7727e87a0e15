@@ -1,0 +1,34 @@
+tests/imdocker-since-deleted-anchor.sh
+  s_6224eda96fc0da::t_62116a7391aed3 1-11,13-46
+  s_6224eda96fc0da::t_62d151abae6349 12
+tests/Makefile.am
+  s_6224eda96fc0da::t_2e9b45cbf571e7 1123
+contrib/imdocker/imdocker.c
+  s_6224eda96fc0da::t_be39c4036fb91a 1691,1698-1723,1727,1747
+  s_6224eda96fc0da::t_2c6c42c9a7b409 1745-1746,1748-1750
+  s_6224eda96fc0da::t_c7e9128c7b33a4 196,758,1690,1733-1734,1751-1752,1779-1780,1783-1791,1798
+  s_6224eda96fc0da::t_fc1f24db6380fc 1649-1650,1777,1782
+  s_6224eda96fc0da::t_bf2afdd83416b9 725,754-756
+  s_6224eda96fc0da::t_f6e9743ad0b223 146,195,1778
+  s_6224eda96fc0da::t_67bf98a44b0d0e 1724-1726,1728
+  s_6224eda96fc0da::t_92c732adfbb51d 854-856,858,860-865,916-918
+  s_6224eda96fc0da::t_84d5fd75479cff 853,857,859,866-915,1648,1689
+  s_6224eda96fc0da::t_3246a7bed4b41c 1651-1652,1781
+  s_6224eda96fc0da::t_588fafe9242c17 919-932,1729
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "ec0bfbd1ecf34c05939e55843c2b7727e87a0e15",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
