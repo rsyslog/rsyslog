@@ -1,0 +1,28 @@
+tests/yaml-imtcp-stream-always-zlib-basic.sh
+  s_a9719629ed5597::t_cacadc8754738f 1-29,31-61
+  s_a9719629ed5597::t_8a3898070bb574 30
+tests/Makefile.am
+  s_a9719629ed5597::t_a5272e4631c2e8 721,1984-1985
+  s_a9719629ed5597::t_cacadc8754738f 750
+doc/source/reference/parameters/imtcp-compression-maxexpansionratio.rst
+  s_a9719629ed5597::t_cacadc8754738f 17-36,44
+runtime/tcps_sess.c
+  s_a9719629ed5597::t_658a74c6767fa2 868,892-895
+  s_a9719629ed5597::t_a5360fc11e877a 37-39,69,89-96,140-149,299-302,406-407,733,746-748,771-867,869-891,896-1032
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "47f732e118dbcf09994464c11a3ead6067dd0ab2",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
