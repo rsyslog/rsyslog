@@ -86,6 +86,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 TESTS_DEFAULT = \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
+	net-enabledns-off-localhostname.sh \
 	immark.sh \
 	immark-inputname.sh \
 	immark-ruleset.sh \
