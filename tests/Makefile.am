@@ -1574,6 +1574,7 @@ TESTS_MMDBLOOKUP_VALGRIND = \
     mmdb-multilevel-vg.sh
 
 TESTS_GNUTLS = \
+	gtls-absolute-module-path.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-input-basic.sh \
 	imtcp-tls-input-2certs.sh \

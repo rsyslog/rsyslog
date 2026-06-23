@@ -219,7 +219,14 @@ int glblGetMaxLine(rsconf_t *cnf) {
 
 
 int GetGnuTLSLoglevel(rsconf_t *cnf) {
-    return (cnf->globals.iGnuTLSLoglevel);
+    /*
+     * Loadable netstream drivers can be initialized while a configuration is
+     * still being parsed, before runConf points at an active configuration.
+     */
+    if (cnf == NULL) {
+        cnf = loadConf;
+    }
+    return ((cnf != NULL) ? cnf->globals.iGnuTLSLoglevel : 0);
 }
 
 /* define a macro for the simple properties' set and get functions
