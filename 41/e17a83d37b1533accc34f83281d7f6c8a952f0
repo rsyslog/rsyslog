@@ -1,0 +1,30 @@
+tests/imptcp-oversize-errorfile-truncate.sh
+  s_6224eda96fc0da::t_a3e563f12ea660 6-10
+  s_6224eda96fc0da::t_76293f1bcf2f58 31,37
+  s_6224eda96fc0da::t_8cdef7db202dbc 30
+  s_6224eda96fc0da::t_0f24eb98a39bf1 5,32-36
+runtime/errmsg.c
+  s_6224eda96fc0da::t_d59a9473bbaddf 40,65-69,71-95,97-107,109-157,161-164
+  s_6224eda96fc0da::t_cfbb306322983c 322-324,326
+  s_6224eda96fc0da::t_f3a6aa4255121d 158-160
+  s_6224eda96fc0da::t_103699a5a54cc8 70,96,108
+  s_6224eda96fc0da::t_f3a97fe111f69b 320
+runtime/errmsg.h
+  s_6224eda96fc0da::t_d306a9b1e39a55 112-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "41e17a83d37b1533accc34f83281d7f6c8a952f0",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
