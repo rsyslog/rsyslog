@@ -1679,6 +1679,7 @@ TESTS_GNUTLS_OPENSSL_INTEROP = \
 TESTS_OMUXSOCK = \
 	uxsock_simple.sh \
 	 uxsock_simple_abstract.sh \
+	 uxsock_action_isolation.sh \
 	 uxsock_multiple.sh \
 	 uxsock_multiple_netns.sh
 
