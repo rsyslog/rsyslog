@@ -212,13 +212,13 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
      */
     rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags,
                                   void *pCtr, ctr_t **ref, int8_t linked);
-    void (*AddPreCreatedCtr)(statsobj_t *pThis, ctr_t *ctr);
+    rsRetVal (*AddPreCreatedCtr)(statsobj_t *pThis, ctr_t *ctr);
     void (*DestructCounter)(statsobj_t *pThis, ctr_t *ref);
     void (*DestructUnlinkedCounter)(ctr_t *ctr);
     ctr_t *(*UnlinkAllCounters)(statsobj_t *pThis);
     rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
@@ -226,6 +226,7 @@ ENDinterface(statsobj)
  *                  - GetAllStatsLines got parameter telling if ctrs shall be reset
  * v13, 2016-05-19: GetAllStatsLines cb data type changed (char* instead of cstr)
  * v14, 2026-02-01: Add GetAllCounters() native counter iteration API
+ * v15, 2026-06-23: AddPreCreatedCtr returns rsRetVal for lock failure propagation
  */
 
 
