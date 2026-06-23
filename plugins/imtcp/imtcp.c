@@ -122,6 +122,10 @@ static struct configSettings_s {
     uchar *pszBindRuleset;
     uchar *lstnIP; /* which IP we should listen on? */
     uchar *lstnPortFile;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
 } cs;
 
 struct instanceConf_s {
@@ -165,6 +169,10 @@ struct instanceConf_s {
     int iKeepAliveProbes;
     int iKeepAliveTime;
     unsigned starvationMaxReads;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
     struct instanceConf_s *next;
 };
 
@@ -205,6 +213,10 @@ struct modConfData_s {
     sbool configSetViaV2Method;
     sbool bPreserveCase; /* preserve case of fromhost; true by default */
     unsigned starvationMaxReads;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -243,6 +255,10 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"keepalive.interval", eCmdHdlrNonNegInt, 0},
                                            {"gnutlsprioritystring", eCmdHdlrString, 0},
                                            {"preservecase", eCmdHdlrBinary, 0},
+                                           {"compression.mode", eCmdHdlrString, 0},
+                                           {"compression.driver", eCmdHdlrString, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -290,6 +306,10 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"ratelimit.name", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0},
+                                           {"compression.mode", eCmdHdlrString, 0},
+                                           {"compression.driver", eCmdHdlrString, 0},
+                                           {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
                                            {"multiline", eCmdHdlrBinary, 0},
                                            {"framing.delimiter.regex", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
@@ -327,6 +347,79 @@ static rsRetVal validateLegacySessionLimits(void) {
     }
 
     return RS_RET_OK;
+}
+
+static rsRetVal parseCompressionModeStr(const char *const str, int *const mode) {
+    DEFiRet;
+
+    if (strcasecmp(str, "none") == 0) {
+        *mode = TCPSRV_COMPRESS_NEVER;
+    } else if (strcasecmp(str, "stream:always") == 0) {
+        *mode = TCPSRV_COMPRESS_STREAM_ALWAYS;
+    } else {
+        parser_errmsg("imtcp: invalid compression.mode '%s', supported values are 'none' and 'stream:always'", str);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseCompressionMode(es_str_t *const val, int *const mode) {
+    DEFiRet;
+    char *const str = es_str2cstr(val, NULL);
+    CHKmalloc(str);
+    CHKiRet(parseCompressionModeStr(str, mode));
+finalize_it:
+    free(str);
+    RETiRet;
+}
+
+static rsRetVal parseCompressionDriverStr(const char *const str, int *const driver) {
+    DEFiRet;
+
+    if (strcasecmp(str, "zlib") == 0) {
+        *driver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    } else if (strcasecmp(str, "zstd") == 0) {
+#ifdef ENABLE_LIBZSTD
+        *driver = TCPSRV_COMPRESS_DRIVER_ZSTD;
+#else
+        parser_errmsg("imtcp: compression.driver='zstd' requires rsyslog to be built with libzstd support");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+#endif
+    } else {
+        parser_errmsg("imtcp: invalid compression.driver '%s', supported values are 'zlib' and 'zstd'", str);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal parseCompressionDriver(es_str_t *const val, int *const driver) {
+    DEFiRet;
+    char *const str = es_str2cstr(val, NULL);
+    CHKmalloc(str);
+    CHKiRet(parseCompressionDriverStr(str, driver));
+finalize_it:
+    free(str);
+    RETiRet;
+}
+
+static rsRetVal setLegacyCompressionMode(void __attribute__((unused)) * pVal, uchar *pNewVal) {
+    DEFiRet;
+    CHKiRet(parseCompressionModeStr((const char *)pNewVal, &cs.compressionMode));
+finalize_it:
+    free(pNewVal);
+    RETiRet;
+}
+
+static rsRetVal setLegacyCompressionDriver(void __attribute__((unused)) * pVal, uchar *pNewVal) {
+    DEFiRet;
+    CHKiRet(parseCompressionDriverStr((const char *)pNewVal, &cs.compressionDriver));
+finalize_it:
+    free(pNewVal);
+    RETiRet;
 }
 
 /** Warn in secure warn mode when imtcp listener transport/auth settings reduce security. */
@@ -383,12 +476,14 @@ static rsRetVal doRcvData(
 
 static rsRetVal onRegularClose(tcps_sess_t *pSess) {
     DEFiRet;
+    rsRetVal closeRet;
     assert(pSess != NULL);
 
     /* process any incomplete frames left over */
-    tcps_sess.PrepareClose(pSess);
+    iRet = tcps_sess.PrepareClose(pSess);
     /* Session closed */
-    tcps_sess.Close(pSess);
+    closeRet = tcps_sess.Close(pSess);
+    if (iRet == RS_RET_OK) iRet = closeRet;
     RETiRet;
 }
 
@@ -465,6 +560,10 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->iTCPSessMax = loadModConf->iTCPSessMax;
     inst->numWrkr = loadModConf->numWrkr;
     inst->starvationMaxReads = loadModConf->starvationMaxReads;
+    inst->compressionMode = loadModConf->compressionMode;
+    inst->compressionDriver = loadModConf->compressionDriver;
+    inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
 
     inst->cnf_params->pszLstnPortFileName = NULL;
     inst->cnf_params->bMultiLine = 0;
@@ -536,6 +635,10 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->iTCPSessMax = cs.iTCPSessMax;
     inst->numWrkr = DEFAULT_NUMWRKR;
     inst->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
+    inst->compressionMode = cs.compressionMode;
+    inst->compressionDriver = cs.compressionDriver;
+    inst->compressionMaxExpansionRatio = cs.compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = cs.compressionMaxDecompressedBytesPerReceive;
 
 finalize_it:
     free(pNewVal);
@@ -574,6 +677,11 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, inst->bUseFlowControl));
     CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, inst->iAddtlFrameDelim));
     CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, inst->maxFrameSize));
+    CHKiRet(tcpsrv.SetCompressionMode(pOurTcpsrv, inst->compressionMode));
+    CHKiRet(tcpsrv.SetCompressionDriver(pOurTcpsrv, inst->compressionDriver));
+    CHKiRet(tcpsrv.SetCompressionMaxExpansionRatio(pOurTcpsrv, inst->compressionMaxExpansionRatio));
+    CHKiRet(tcpsrv.SetCompressionMaxDecompressedBytesPerReceive(pOurTcpsrv,
+                                                                inst->compressionMaxDecompressedBytesPerReceive));
     CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, inst->bDisableLFDelim));
     CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, inst->discardTruncatedMsg));
     CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
@@ -776,6 +884,14 @@ BEGINnewInpInst
             inst->iSynBacklog = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
             CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(inppblk.descr[i].name, "compression.mode")) {
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode));
+        } else if (!strcmp(inppblk.descr[i].name, "compression.driver")) {
+            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver));
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
+            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
@@ -848,6 +964,10 @@ BEGINbeginCnfLoad
     loadModConf->pPermPeersRoot = NULL;
     loadModConf->configSetViaV2Method = 0;
     loadModConf->bPreserveCase = 1; /* default to true */
+    loadModConf->compressionMode = TCPSRV_COMPRESS_NEVER;
+    loadModConf->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    loadModConf->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    loadModConf->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config variables */
     resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
@@ -948,6 +1068,14 @@ BEGINsetModCnf
             }
         } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
             loadModConf->bPreserveCase = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.mode")) {
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &loadModConf->compressionMode));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
+            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &loadModConf->compressionDriver));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
+            loadModConf->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            loadModConf->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "
@@ -993,6 +1121,8 @@ BEGINendCnfLoad
         pModConf->iKeepAliveProbes = cs.iKeepAliveProbes;
         pModConf->iKeepAliveIntvl = cs.iKeepAliveIntvl;
         pModConf->iKeepAliveTime = cs.iKeepAliveTime;
+        pModConf->compressionMode = cs.compressionMode;
+        pModConf->compressionDriver = cs.compressionDriver;
         if (pPermPeersRoot != NULL) {
             assert(pModConf->pPermPeersRoot == NULL);
             pModConf->pPermPeersRoot = pPermPeersRoot;
@@ -1246,6 +1376,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.maxFrameSize = 200000;
     cs.bDisableLFDelim = 0;
     cs.bPreserveCase = 1;
+    cs.compressionMode = TCPSRV_COMPRESS_NEVER;
+    cs.compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    cs.compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    cs.compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszInputName);
@@ -1323,6 +1457,11 @@ BEGINmodInit()
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverlistenportfile"), 1, eCmdHdlrGetWord, NULL,
                               &cs.lstnPortFile, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservercompressionmode"), 0, eCmdHdlrGetWord,
+                              setLegacyCompressionMode, NULL, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+    CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpservercompressiondriver"), 0, eCmdHdlrGetWord,
+                              setLegacyCompressionDriver, NULL, STD_LOADABLE_MODULE_ID,
+                              &bLegacyCnfModGlobalsPermitted));
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler, resetConfigVariables,
                                NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

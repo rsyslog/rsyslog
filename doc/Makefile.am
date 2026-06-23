@@ -709,6 +709,10 @@ EXTRA_DIST = \
     source/reference/parameters/imsolaris-imsolarislogsocketname.rst \
     source/reference/parameters/imtcp-address.rst \
     source/reference/parameters/imtcp-addtlframedelimiter.rst \
+    source/reference/parameters/imtcp-compression-driver.rst \
+    source/reference/parameters/imtcp-compression-maxdecompressedbytesperreceive.rst \
+    source/reference/parameters/imtcp-compression-maxexpansionratio.rst \
+    source/reference/parameters/imtcp-compression-mode.rst \
     source/reference/parameters/imtcp-disablelfdelimiter.rst \
     source/reference/parameters/imtcp-discardtruncatedmsg.rst \
     source/reference/parameters/imtcp-flowcontrol.rst \
@@ -985,6 +989,7 @@ EXTRA_DIST = \
     source/reference/parameters/omelasticsearch-uid.rst \
     source/reference/parameters/omelasticsearch-usehttps.rst \
     source/reference/parameters/omelasticsearch-writeoperation.rst \
+    source/reference/parameters/omfwd-compression-driver.rst \
     source/reference/parameters/omfwd-ratelimit-name.rst \
     source/reference/parameters/omfile-addlf.rst \
     source/reference/parameters/omfile-asyncwriting.rst \
