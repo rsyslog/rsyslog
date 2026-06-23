@@ -1,0 +1,31 @@
+plugins/imfile/imfile.c
+  s_6224eda96fc0da::t_3d92200f413f6f 2148
+  s_6224eda96fc0da::t_a74f142f78f707 2105-2114,2117-2120,2131-2139,2142-2145,2147,2149-2152
+  s_6224eda96fc0da::t_6decf65ff25f48 2115-2116,2121-2130,2140-2141,2146
+tests/imfile-duplicate-monitor-warning.sh
+  s_6224eda96fc0da::t_6605b179f3a1aa 1-2,8-20,22-29,36-53
+  s_6224eda96fc0da::t_e1370f3ec414fa 30-35
+  s_6224eda96fc0da::t_3d92200f413f6f 3-7,21
+tests/Makefile.am
+  s_6224eda96fc0da::t_6605b179f3a1aa 1888
+tests/imfile-same-file-monitors.sh
+  s_6224eda96fc0da::t_7fdda6e386191b 44-45
+  s_6224eda96fc0da::t_503c4230401a56 5-9,59-60
+  s_6224eda96fc0da::t_08310478d48400 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "7184a02455c0743add2981f25ed1ec5e79cb6c6d",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
