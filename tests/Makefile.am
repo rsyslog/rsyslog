@@ -264,6 +264,7 @@ TESTS_DEFAULT = \
 	omfile-dynafilecachesize-invalid.sh \
 	omfile-dynafile-mmnormalize-property.sh \
 	omfile-read-only-errmsg.sh \
+	omfile-followsymlinks.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
@@ -751,6 +752,7 @@ TESTS_LIBYAML = \
 	action-ratelimit-reload.sh \
 	action-ratelimit-validation.sh \
 	ratelimit-many-named-configs.sh \
+	yaml-omfile-followsymlinks.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
