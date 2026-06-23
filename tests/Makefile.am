@@ -1803,6 +1803,9 @@ TESTS_OMUDPSPOOF = \
 	sndrcv_omudpspoof-bigmsg.sh \
 	sndrcv_omudpspoof_nonstdpt.sh
 
+TESTS_OMUDPSPOOF_IMTCP = \
+	omudpspoof-fragment-send-failure.sh
+
 TESTS_OMRULESET = \
 	omruleset.sh \
 	omruleset-queue.sh
@@ -2235,7 +2238,7 @@ EXTRA_DIST += $(TESTS_IMDTLS)
 EXTRA_DIST += $(TESTS_IMDTLS_VALGRIND)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS)
 EXTRA_DIST += $(TESTS_IMDTLS_OMDTLS_VALGRIND)
-EXTRA_DIST += $(TESTS_OMUDPSPOOF)
+EXTRA_DIST += $(TESTS_OMUDPSPOOF) $(TESTS_OMUDPSPOOF_IMTCP)
 EXTRA_DIST += $(TESTS_OMRULESET)
 EXTRA_DIST += $(TESTS_PMDB2DIAG)
 EXTRA_DIST += $(TESTS_PMCISCOIOS)
@@ -2349,7 +2352,7 @@ endif
 
 # Shipped even when testbench is disabled: dist tarballs are often built with
 # --disable-testbench, but downstream builds may enable testbench + imptcp.
-EXTRA_DIST += override_epoll_ctl.c
+EXTRA_DIST += override_epoll_ctl.c override_libnet_write_fail.c
 
 if ENABLE_TESTBENCH
 pkglib_LTLIBRARIES += liboverride_gethostname.la
@@ -2377,6 +2380,18 @@ liboverride_epoll_ctl.so: override_epoll_ctl.c
 		-o $@ $< $(DL_LIBS)
 
 imptcp-epoll-add-failure.log: liboverride_epoll_ctl.so
+endif
+
+if ENABLE_OMUDPSPOOF
+check_DATA += liboverride_libnet_write_fail.so
+CLEANFILES += liboverride_libnet_write_fail.so
+
+liboverride_libnet_write_fail.so: override_libnet_write_fail.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+		$(AM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) -fPIC -shared \
+		-o $@ $<
+
+omudpspoof-fragment-send-failure.log: liboverride_libnet_write_fail.so
 endif
 
 check_PROGRAMS += $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
@@ -3291,6 +3306,9 @@ endif # ENABLE_IMDTLS
 
 if ENABLE_OMUDPSPOOF
 TESTS += $(TESTS_OMUDPSPOOF)
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_OMUDPSPOOF_IMTCP)
+endif # ENABLE_IMTCP_TESTS
 endif
 
 #disabled as array-passing mode is no longer supported:	omod-if-array.sh
