@@ -51,6 +51,20 @@ returning ``DEFER_COMMIT`` (instead of ``OK``). Refer to the link below for deta
    <https://github.com/rsyslog/rsyslog/issues/2420>`_ with the use of
    transactions together with ``confirmMessages=on``.
 
+Implementation status
+---------------------
+
+``omprog`` currently implements this option through rsyslog's legacy output
+transaction callbacks. That is intentional for the existing module: the option
+is action-specific, so one ``omprog`` action can run in transaction mode while
+another action can keep the normal per-message processing path.
+
+The newer output transaction interface expects a module to be transactional as
+a module capability instead of switching that behavior per action. Moving this
+option to that interface would therefore need either a compatible core design
+change, a separate transactional module, or an incompatible change to this
+parameter. It is not a drop-in implementation detail.
+
 Action usage
 ------------
 .. _param-omprog-action-usetransactions:
