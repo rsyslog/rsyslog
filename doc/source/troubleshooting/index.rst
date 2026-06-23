@@ -7,6 +7,7 @@ Typical Problems
    :maxdepth: 1
 
    file_not_written
+   queue_full
    selinux
    service_sandboxing
 
