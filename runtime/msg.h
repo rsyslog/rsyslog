@@ -191,6 +191,7 @@ rsRetVal MsgSetStructuredData(smsg_t *const pMsg, const char *pszStrucData);
 rsRetVal MsgAddToStructuredData(smsg_t *pMsg, uchar *toadd, rs_size_t len);
 void MsgGetStructuredData(smsg_t *pM, uchar **pBuf, rs_size_t *len);
 rsRetVal msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa);
+rsRetVal msgSetFromSockinfoLen(smsg_t *pThis, const struct sockaddr_storage *sa, size_t salen);
 void MsgSetRcvFrom(smsg_t *pMsg, prop_t *);
 void MsgSetRcvFromStr(smsg_t *const pMsg, const uchar *pszRcvFrom, const int, prop_t **);
 rsRetVal MsgSetRcvFromIP(smsg_t *pMsg, prop_t *);

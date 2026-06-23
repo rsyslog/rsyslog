@@ -2522,15 +2522,24 @@ void MsgSetDfltTZ(smsg_t *pThis, char *tz) {
  * this is always the case and without extra effort required.
  * rgerhards, 2009-11-17
  */
-rsRetVal msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa) {
+rsRetVal msgSetFromSockinfoLen(smsg_t *pThis, const struct sockaddr_storage *sa, const size_t salen) {
     DEFiRet;
+    const size_t copyLen =
+        (sa == NULL) ? 0 : ((salen < sizeof(struct sockaddr_storage)) ? salen : sizeof(struct sockaddr_storage));
     assert(pThis->rcvFrom.pRcvFrom == NULL);
 
     CHKmalloc(pThis->rcvFrom.pfrominet = malloc(sizeof(struct sockaddr_storage)));
-    memcpy(pThis->rcvFrom.pfrominet, sa, sizeof(struct sockaddr_storage));
+    memset(pThis->rcvFrom.pfrominet, 0, sizeof(struct sockaddr_storage));
+    if (copyLen > 0) {
+        memcpy(pThis->rcvFrom.pfrominet, sa, copyLen);
+    }
 
 finalize_it:
     RETiRet;
+}
+
+rsRetVal msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa) {
+    return msgSetFromSockinfoLen(pThis, sa, sizeof(struct sockaddr_storage));
 }
 
 /* rgerhards 2008-09-10: set RcvFrom name in msg object. This calls AddRef()

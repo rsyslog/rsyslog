@@ -531,9 +531,9 @@ static rsRetVal processPacket(struct lstn_s *lstn,
     /* if we reach this point, we had a good receive and can process the packet received */
     /* check if we have a different sender than before, if so, we need to query some new values */
     if (bDoACLCheck) {
-        socklen = sizeof(struct sockaddr_storage);
-        if (net.CmpHost(frominet, frominetPrev, socklen) != 0) {
-            memcpy(frominetPrev, frominet, socklen); /* update cache indicator */
+        const socklen_t cmpSocklen = sizeof(struct sockaddr_storage);
+        if (net.CmpHost(frominet, frominetPrev, cmpSocklen) != 0) {
+            memcpy(frominetPrev, frominet, cmpSocklen); /* update cache indicator */
             /* Here we check if a host is permitted to send us syslog messages. If it isn't,
              * we do not further process the message but log a warning (if we are
              * configured to do this). However, if the check would require name resolution,
@@ -572,7 +572,7 @@ static rsRetVal processPacket(struct lstn_s *lstn,
         if (runModConf->bPreserveCase) {
             pMsg->msgFlags |= PRESERVE_CASE; /* preserve case of fromhost */
         }
-        CHKiRet(msgSetFromSockinfo(pMsg, frominet));
+        CHKiRet(msgSetFromSockinfoLen(pMsg, frominet, socklen));
         CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
         STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
     }
@@ -617,6 +617,7 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
         if (pWrkr->pThrd->bShallStop == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
         memset(pWrkr->recvmsg_iov, 0, runModConf->batchSize * sizeof(struct iovec));
         memset(pWrkr->recvmsg_mmh, 0, runModConf->batchSize * sizeof(struct mmsghdr));
+        memset(pWrkr->frominet, 0, runModConf->batchSize * sizeof(struct sockaddr_storage));
         for (i = 0; i < runModConf->batchSize; ++i) {
             pWrkr->recvmsg_iov[i].iov_base = pWrkr->pRcvBuf + (i * (iMaxLine + 1));
             pWrkr->recvmsg_iov[i].iov_len = iMaxLine;
@@ -701,6 +702,7 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
     iNbrTimeUsed = 0;
     while (1) { /* loop is terminated if we have a bad receive, done below in the body */
         if (pWrkr->pThrd->bShallStop == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        memset(&frominet, 0, sizeof(frominet));
         memset(iov, 0, sizeof(iov));
         iov[0].iov_base = pWrkr->pRcvBuf;
         iov[0].iov_len = iMaxLine;
