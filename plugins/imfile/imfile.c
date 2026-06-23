@@ -2102,6 +2102,55 @@ finalize_it:
     RETiRet;
 }
 
+static int imfileOptStrEq(const uchar *const a, const uchar *const b) {
+    if (a == NULL || b == NULL) {
+        return a == b;
+    }
+    return !strcmp((const char *)a, (const char *)b);
+}
+
+
+static int imfileInstancesEquivalent(const instanceConf_t *const a, const instanceConf_t *const b) {
+    return imfileOptStrEq(a->pszFileName, b->pszFileName) && imfileOptStrEq(a->pszTag, b->pszTag) &&
+           imfileOptStrEq(a->pszStateFile, b->pszStateFile) && imfileOptStrEq(a->pszBindRuleset, b->pszBindRuleset) &&
+           a->nMultiSub == b->nMultiSub &&
+           a->perMinuteRateLimits.maxBytesPerMinute == b->perMinuteRateLimits.maxBytesPerMinute &&
+           a->perMinuteRateLimits.maxLinesPerMinute == b->perMinuteRateLimits.maxLinesPerMinute &&
+           a->iPersistStateInterval == b->iPersistStateInterval &&
+           a->bPersistStateAfterSubmission == b->bPersistStateAfterSubmission && a->iFacility == b->iFacility &&
+           a->iSeverity == b->iSeverity && a->readTimeout == b->readTimeout && a->delay_perMsg == b->delay_perMsg &&
+           a->bRMStateOnDel == b->bRMStateOnDel && a->bRMStateOnMove == b->bRMStateOnMove &&
+           a->readMode == b->readMode && imfileOptStrEq(a->startRegex, b->startRegex) &&
+           imfileOptStrEq(a->endRegex, b->endRegex) && a->discardTruncatedMsg == b->discardTruncatedMsg &&
+           a->msgDiscardingError == b->msgDiscardingError && a->escapeLF == b->escapeLF &&
+           a->reopenOnTruncate == b->reopenOnTruncate && a->addCeeTag == b->addCeeTag &&
+           a->addMetadata == b->addMetadata && a->freshStartTail == b->freshStartTail &&
+           a->fileNotFoundError == b->fileNotFoundError && a->maxLinesAtOnce == b->maxLinesAtOnce &&
+           a->trimLineOverBytes == b->trimLineOverBytes && a->ignoreOlderThan == b->ignoreOlderThan &&
+           a->msgFlag == b->msgFlag && imfileOptStrEq(a->escapeLFString, b->escapeLFString);
+}
+
+
+static void imfileWarnDuplicateInstances(const modConfData_t *const modConf) {
+    const instanceConf_t *inst;
+    const instanceConf_t *other;
+    for (inst = modConf->root; inst != NULL; inst = inst->next) {
+        for (other = inst->next; other != NULL; other = other->next) {
+            if (imfileInstancesEquivalent(inst, other)) {
+                const uchar *const fileName =
+                    (inst->pszFileName == NULL) ? UCHAR_CONSTANT("(unset)") : inst->pszFileName;
+                const uchar *const tag = (inst->pszTag == NULL) ? UCHAR_CONSTANT("(unset)") : inst->pszTag;
+                LogMsg(0, NO_ERRCODE, LOG_WARNING,
+                       "imfile: duplicate file monitor for '%s' with tag '%s' has identical "
+                       "delivery parameters; this is valid but usually indicates a duplicate "
+                       "configuration entry",
+                       fileName, tag);
+                break;
+            }
+        }
+    }
+}
+
 
 /* add a new monitor */
 static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal) {
@@ -2466,6 +2515,7 @@ BEGINcheckCnf
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
         std_checkRuleset(pModConf, inst);
     }
+    imfileWarnDuplicateInstances(pModConf);
     if (pModConf->root == NULL) {
         LogMsg(0, NO_ERRCODE, LOG_WARNING,
                "imfile: no files configured to be monitored - "
