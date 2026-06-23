@@ -1,10 +1,33 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-??
+Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-23
+
+IMPORTANT FOR MAINTAINERS
+- libyaml support is now an explicit configure feature. It remains enabled by
+  default and must be satisfied by package builds unless
+  ``--disable-libyaml`` is passed. This removes the previous auto-detection
+  behavior where the presence or absence of libyaml development files silently
+  changed the feature set.
+
 This release has many commits in regard to
   * general hardening
-  * testbench de-flaking
+  * testbench de-flaking (with a small set of flakes remaining - ongoing effort)
 These will not be mentioned individually, check commit log for details.
 
+- 2026-06-23: imtcp/omfwd: add experimental stream compression support
+  imtcp can now decompress omfwd TCP streams sent with
+  compression.mode="stream:always", using matching zlib or zstd drivers on
+  both sides. The receiver includes expansion and per-receive decompression
+  guardrails, impstats coverage, documentation, and RainerScript/YAML tests.
+  This is rsyslog stream compression, not TLS-native compression. Layering it
+  with TLS is supported by the new tests but should be treated as experimental
+  in this release.
+  See https://github.com/rsyslog/rsyslog/pull/6941
+- 2026-06-23: docs: add queue-full troubleshooting
+  The troubleshooting guide now has a dedicated page for apparent hangs caused
+  by full queues and downstream backpressure. It points operators at impstats
+  counters, queue-full diagnostics, per-action disk-assisted queues, and
+  explicit overload policies.
+  Closes https://github.com/rsyslog/rsyslog/issues/3572
 - 2026-06-22: core: fix negated exact priority filters
   Standalone selectors such as local4.!=debug now initialize the selected
   facility mask before clearing the excluded priority, so they match all
@@ -107,11 +130,13 @@ These will not be mentioned individually, check commit log for details.
   imkafka input() now accepts topic=["t1","t2",...] and subscribes to all
   listed topics with one consumer instance. Existing single-topic
   configurations continue to work unchanged.
+  Thanks to Tamir Suliman for the patch.
   See https://github.com/rsyslog/rsyslog/issues/3520
 - 2026-06-02: omkafka: improve reload and DNS-failure handling
   omkafka now serializes HUP handling with in-flight Kafka action work to avoid
   reload deadlocks, and DNS resolution failures now trigger the normal action
   suspension and retry diagnostics instead of only librdkafka error output.
+  Thanks to Tamir Suliman for the patches.
   Fixes https://github.com/rsyslog/rsyslog/issues/4230
   Fixes https://github.com/rsyslog/rsyslog/issues/4374
 - 2026-06-02: omhttp: avoid retry-ruleset self-stalls
@@ -124,6 +149,7 @@ These will not be mentioned individually, check commit log for details.
   configurable container name and bound parsed structured-data length with
   maxStructuredDataSize. Large structured-data storage now uses rs_size_t and
   RFC5424 NILVALUE is represented as JSON null under the selected container.
+  Thanks to Bogoslovskii Fedor for analysis and implementation help.
   Closes https://github.com/rsyslog/rsyslog/issues/3297
   Closes https://github.com/rsyslog/rsyslog/issues/1891
 - 2026-06-02: queue: reset disk byte accounting after safe recovery
@@ -137,6 +163,7 @@ These will not be mentioned individually, check commit log for details.
   New tocef() and cef_ext_escape() functions make it possible to build
   Common Event Format output with the required header and extension escaping.
   Existing configurations are unaffected.
+  Thanks to Tamir Suliman for the patch.
   Fixes https://github.com/rsyslog/rsyslog/issues/3880
 - 2026-06-02: packaging/docker: default ETL Vespa output to HTTPS
   The ETL Vespa container configuration now defaults Vespa output to HTTPS and
@@ -146,10 +173,12 @@ These will not be mentioned individually, check commit log for details.
   Pending deleted files now cap the inotify poll timeout so stale descriptors
   are closed after FILE_DELETE_DELAY even when no later inotify events arrive.
   This lets disk space be reclaimed after monitored files are deleted.
+  Thanks to Attila Lakatos for the patch.
 - 2026-06-01: rainerscript: add parse_time_localtz()
   The new parse_time_localtz() function parses timestamps using local timezone
   semantics, complementing the existing RainerScript timestamp conversion
   helpers.
+  Thanks to github user shinigami35 for the patch.
 - 2026-05-31: action: keep transactional queue batches on shutdown
   Transactional action queue messages are now re-enqueued when shutdown
   interrupts a retry loop before the action commit completes. Disk queues no
@@ -240,14 +269,6 @@ These will not be mentioned individually, check commit log for details.
   Non-optional IncludeConfig wildcards that match no files now emit a parser
   warning while preserving the historical non-fatal startup behavior.
   Closes https://github.com/rsyslog/rsyslog/issues/4415
-
-IMPORTANT FOR MAINTAINERS
-- libyaml support is now an explicit configure feature. It remains enabled by
-  default and must be satisfied by package builds unless
-  ``--disable-libyaml`` is passed. This removes the previous auto-detection
-  behavior where the presence or absence of libyaml development files silently
-  changed the feature set.
-
 - 2026-05-20: imptcp: harden concurrency, boundaries, and memory handling
   imptcp received additional defense-in-depth work around listener statistics
   synchronization, receive buffer boundaries, zero-initialized session and
