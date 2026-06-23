@@ -109,7 +109,10 @@ void __attribute__((format(printf, 4, 5))) LogMsg(
  * - No-op if the oversize message error file is not configured.
  * - Lazily opens the file on first use and reuses the file descriptor.
  * - Access is serialized via oversizeMsgLogMut.
- * - Writes one JSON line per entry with fields: "rawmsg" (original raw bytes) and "input" (input name).
+ * - Writes one full-message JSON line per entry, including fields such as
+ *   "rawmsg", "msg", "inputname", "fromhost-ip", "timereported", and
+ *   "timegenerated".
+ * - Also writes "input" as a compatibility alias for "inputname".
  * - On open/write errors, emits LogError(...) but returns no error; no further recovery is attempted.
  *   The reason is that there is nothing useful that could be done in that case.
  *
