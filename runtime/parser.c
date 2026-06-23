@@ -273,7 +273,8 @@ static rsRetVal uncompressMessage(smsg_t *pMsg) {
     /* we first need to check if we have a compressed record. If so,
      * we must decompress it.
      */
-    if (lenMsg > 0 && *pszMsg == 'z' && runConf->globals.bSupportCompressionExtension) { /* compressed data present? */
+    if (lenMsg > 0 && *pszMsg == 'z' && runConf->globals.bSupportCompressionExtension &&
+        !(pMsg->msgFlags & NO_LEGACY_Z_DECOMPRESS)) { /* compressed data present? */
         /* we have compressed data, so let's deflate it. We support a maximum
          * message size of iMaxLine. If it is larger, an error message is logged
          * and the message is dropped. We do NOT try to decompress larger messages

@@ -299,6 +299,7 @@ struct ptcpsess_s {
     DEF_ATOMIC_HELPER_MUT(mutWorkQueued);
     sbool bzInitDone; /* did we do an init of zstrm already? */
     sbool bZipStreamEnd; /* did inflate() already reach the end of the zlib stream? */
+    sbool bStreamDecompressed; /* current bytes came from stream decompression */
     z_stream zstrm; /* zip stream to use for tcp compression */
     uint8_t compressionMode;
     uint8_t compressionAutoDetectPending; /* AUTO mode: still sniffing? */
@@ -392,7 +393,6 @@ static io_q_t io_q;
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6);
-
 
 /* function to suppress TSAN known-good case
  * We do not use a mutex an epd, but we do always access it in
@@ -989,6 +989,9 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     if (pSrv->dfltTZ != NULL) MsgSetDfltTZ(pMsg, (char *)pSrv->dfltTZ);
     MsgSetFlowControlType(pMsg, pSrv->flowControl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
+    if (pThis->bStreamDecompressed) {
+        pMsg->msgFlags |= NO_LEGACY_Z_DECOMPRESS;
+    }
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
     MsgSetRuleset(pMsg, pSrv->pRuleset);
@@ -1312,6 +1315,16 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL(1, 2) DataRcvdUncompressedFromStream(
+    ptcpsess_t *pThis, char *pData, const size_t iLen, struct syslogTime *stTime, time_t ttGenTime) {
+    const sbool previous = pThis->bStreamDecompressed;
+    pThis->bStreamDecompressed = RSTRUE;
+
+    const rsRetVal localRet = DataRcvdUncompressed(pThis, pData, iLen, stTime, ttGenTime);
+    pThis->bStreamDecompressed = previous;
+    return localRet;
+}
+
 static const char *zlibRetName(const int zRet) {
     switch (zRet) {
         case Z_OK:
@@ -1394,7 +1407,7 @@ static rsRetVal DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
         if (outavail != 0) {
             outtotal += outavail;
             ATOMIC_ADD_uint64(&pThis->pLstn->rcvdDecompressed, &pThis->pLstn->mut_rcvdDecompressed, outavail);
-            CHKiRet(DataRcvdUncompressed(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
+            CHKiRet(DataRcvdUncompressedFromStream(pThis, (char *)zipBuf, outavail, &stTime, ttGenTime));
         }
         if (pThis->bZipStreamEnd && pThis->zstrm.avail_in != 0) {
             ABORT_FINALIZE(logCompressedStreamFailure(pThis, "received trailing data after end of", Z_STREAM_END));
@@ -1759,7 +1772,7 @@ static rsRetVal doZipFinish(ptcpsess_t *pSess) {
         outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
         if (outavail != 0) {
             ATOMIC_ADD_uint64(&pSess->pLstn->rcvdDecompressed, &pSess->pLstn->mut_rcvdDecompressed, outavail);
-            CHKiRet(DataRcvdUncompressed(pSess, (char *)zipBuf, outavail, &stTime, 0));
+            CHKiRet(DataRcvdUncompressedFromStream(pSess, (char *)zipBuf, outavail, &stTime, 0));
             // TODO: query time!
         }
     } while (pSess->zstrm.avail_out == 0);

@@ -92,6 +92,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->compressionTotalBytesOut = 0;
     pThis->zipInitDone = 0;
     pThis->compressedStreamEnded = 0;
+    pThis->streamDecompressed = 0;
     pThis->zstdDctx = NULL;
     memset(&pThis->zstrm, 0, sizeof(pThis->zstrm));
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
@@ -356,6 +357,9 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     if (cnf_params->dfltTZ[0] != '\0') MsgSetDfltTZ(pMsg, (char *)cnf_params->dfltTZ);
     MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
+    if (pThis->streamDecompressed) {
+        pMsg->msgFlags |= NO_LEGACY_Z_DECOMPRESS;
+    }
     MsgSetRcvFrom(pMsg, pThis->fromHost);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
     CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
@@ -768,6 +772,18 @@ finalize_it:
 }
 #undef NUM_MULTISUB
 
+static rsRetVal DataRcvdUncompressedFromStream(tcps_sess_t *const pThis,
+                                               char *const pData,
+                                               const size_t iLen,
+                                               const sbool detectTls) {
+    const sbool previous = pThis->streamDecompressed;
+    pThis->streamDecompressed = RSTRUE;
+
+    const rsRetVal localRet = DataRcvdUncompressed(pThis, pData, iLen, detectTls);
+    pThis->streamDecompressed = previous;
+    return localRet;
+}
+
 static const char *compressionDriverName(const tcps_sess_t *const pThis) {
     switch (pThis->compressionDriver) {
         case TCPSRV_COMPRESS_DRIVER_ZSTD:
@@ -872,7 +888,7 @@ static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis,
         if (have != 0) {
             CHKiRet(checkDecompressedBytesLimit(pThis, guard, have));
             STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed, have);
-            CHKiRet(DataRcvdUncompressed(pThis, (char *)out, have, 0));
+            CHKiRet(DataRcvdUncompressedFromStream(pThis, (char *)out, have, 0));
         }
 
         if (zret == Z_STREAM_END) {
@@ -937,7 +953,7 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
             CHKiRet(checkDecompressedBytesLimit(pThis, guard, output.pos));
             STATSCOUNTER_ADD(pThis->pLstnInfo->ctrBytesDecompressed, pThis->pLstnInfo->mutCtrBytesDecompressed,
                              output.pos);
-            CHKiRet(DataRcvdUncompressed(pThis, (char *)out, output.pos, 0));
+            CHKiRet(DataRcvdUncompressedFromStream(pThis, (char *)out, output.pos, 0));
         }
 
         if (remaining == 0) {

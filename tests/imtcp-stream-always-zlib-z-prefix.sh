@@ -1,0 +1,58 @@
+#!/bin/bash
+# Regression test for the generic imtcp zlib stream decompression path with a
+# decompressed payload that begins with literal "z". Legacy single-message
+# compression also uses a leading "z" in built-in transport frame handling, but
+# stream:always has already selected zlib stream decompression and must not run
+# legacy-z handling on decoded bytes. The oracle is delivery of the raw
+# z-prefixed message and absence of the legacy decompression-error diagnostic.
+#
+# Released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
+require_plugin imtcp
+check_command_available python3
+
+generate_conf
+add_conf '
+global(processInternalMessages="on")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp"
+      port="0"
+      listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+      compression.mode="stream:always"
+      compression.driver="zlib")
+
+template(name="rawline" type="string" string="%rawmsg%\n")
+
+if $syslogtag contains "rsyslogd" then {
+	action(type="omfile" file="'$RSYSLOG2_OUT_LOG'")
+	stop
+}
+
+*.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="rawline")
+'
+startup
+assign_tcpflood_port "$RSYSLOG_DYNNAME.tcpflood_port"
+
+python3 - <<'PY'
+import os
+import socket
+import zlib
+
+port = int(os.environ["TCPFLOOD_PORT"])
+payload = b"zimtcp stream payload starts z after zlib inflate\n"
+compressor = zlib.compressobj()
+wire = compressor.compress(payload) + compressor.flush()
+
+with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+    sock.sendall(wire)
+PY
+
+wait_file_lines "$RSYSLOG_OUT_LOG" 1
+shutdown_when_empty
+wait_shutdown
+
+content_check "zimtcp stream payload starts z after zlib inflate" "$RSYSLOG_OUT_LOG"
+check_not_present "Uncompression of a message failed" "$RSYSLOG2_OUT_LOG"
+check_not_present "received invalid compressed stream" "$RSYSLOG2_OUT_LOG"
+exit_test
