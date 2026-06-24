@@ -1,0 +1,27 @@
+plugins/imuxsock/imuxsock.c
+  s_6224eda96fc0da::t_5a7c0b027a0b56 288-296,1481,1497-1511
+doc/source/reference/parameters/imuxsock-socket.rst
+  s_6224eda96fc0da::t_5a7c0b027a0b56 23,28-31
+doc/source/configuration/modules/imuxsock.rst
+  s_6224eda96fc0da::t_5a7c0b027a0b56 448-451
+tests/imuxsock_missing_socket.sh
+  s_6224eda96fc0da::t_5a7c0b027a0b56 1-25
+tests/Makefile.am
+  s_6224eda96fc0da::t_5a7c0b027a0b56 347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "3a60e4f3065b510aef5560cbd89231faa5304078",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
