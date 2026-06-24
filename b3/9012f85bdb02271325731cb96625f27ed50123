@@ -1,0 +1,35 @@
+tests/unit/ommongodb_date_test.c
+  s_6224eda96fc0da::t_fd68ec61c12c7f 12-17
+  s_6224eda96fc0da::t_9a2d99b691974d 3-6
+  s_6224eda96fc0da::t_122bdc7750c4d7 56-57
+  s_6224eda96fc0da::t_a86fed761a7d34 1-2,7-11,18-55,58-59
+plugins/ommongodb/ommongodb_date.c
+  s_6224eda96fc0da::t_a86fed761a7d34 1-6,8-14,16-19,21-101,103-106,108-148,153-169
+  s_6224eda96fc0da::t_122bdc7750c4d7 15,20,102,107,149-152
+  s_6224eda96fc0da::t_7101ca07a49133 7
+plugins/ommongodb/Makefile.am
+  s_6224eda96fc0da::t_a86fed761a7d34 2
+plugins/ommongodb/ommongodb.c
+  s_6224eda96fc0da::t_a86fed761a7d34 66,411-412,440,445-447
+tests/Makefile.am
+  s_6224eda96fc0da::t_a86fed761a7d34 2289-2292,2306,2308,2342-2344,2350
+  s_6224eda96fc0da::t_fd68ec61c12c7f 2307
+plugins/ommongodb/ommongodb_date.h
+  s_6224eda96fc0da::t_a86fed761a7d34 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "b39012f85bdb02271325731cb96625f27ed50123",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
