@@ -28,6 +28,8 @@
 #ifndef IM_HELPER_H_INCLUDED
 #define IM_HELPER_H_INCLUDED 1
 
+#include "parserif.h"
+#include "ruleset.h"
 
 /* The following function provides a complete implementation to check a
  * ruleset and set the actual ruleset pointer. The macro assumes that
@@ -51,6 +53,12 @@ static inline rsRetVal std_checkRuleset(modConfData_t *modConf, instanceConf_t *
     }
     CHKiRet(localRet);
     inst->pBindRuleset = pRuleset;
+    if (!rulesetHasQueue(pRuleset)) {
+        parser_warnmsg(
+            "input-bound ruleset '%s' has no dedicated non-direct queue; "
+            "input processing will share the main queue or run synchronously",
+            (const char *)inst->pszBindRuleset);
+    }
 
 finalize_it:
     RETiRet;

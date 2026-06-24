@@ -679,6 +679,7 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-hostname-fail.sh \
 	allowed-sender-wildcard-invalid-bits.sh \
 	imtcp-discard-truncated-msg.sh \
+	imtcp-ruleset-no-queue-warning.sh \
 	imtcp-basic.sh \
 	rscript_parsehostnameandtag_off.sh \
 	imtcp_framing_regex.sh \
@@ -747,6 +748,7 @@ TESTS_IMTCP_STREAM_ALWAYS_OSSL = \
 
 TESTS_IMTCP_YAML = \
 	yaml-parser-drop-trailing-cr.sh \
+	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
 	imtcp-persource-ratelimit.sh \
 	ratelimit-legacy-persource-discard.sh \
