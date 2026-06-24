@@ -998,6 +998,7 @@ TESTS_OMPROG = \
 	omprog-single-instance-outfile.sh \
 	omprog-invalid-args.sh \
 	omprog-transactions.sh \
+	omprog-resume-interval.sh \
 	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
@@ -3605,6 +3606,7 @@ EXTRA_DIST += \
 	testsuites/omprog-invalid-args-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-single-instance-bin.sh \
+	testsuites/omprog-resume-interval-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
 	omotel_proxy_server.py \
 	otel_collector_find_port.py \

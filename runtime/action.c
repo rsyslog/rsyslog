@@ -856,13 +856,16 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
  * kind of facility: in the first place, the module should return a proper indication
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
-static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const pWti) {
+static rsRetVal actionDoRetryInternal(action_t *const pThis, wti_t *const pWti, int *const slept) {
     int iRetries;
     int bTreatOKasSusp;
     time_t ttTemp;
     DEFiRet;
 
     assert(pThis != NULL);
+    if (slept != NULL) {
+        *slept = 0;
+    }
 
     iRetries = 0;
     while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
@@ -907,6 +910,9 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                     "Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
                     pThis->pszName, pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp,
                     iRetries);
+                if (slept != NULL) {
+                    *slept = 1;
+                }
                 srSleep(pThis->iResumeInterval, 0);
                 if (*pWti->pbShutdownImmediate) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -925,7 +931,6 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
 finalize_it:
     RETiRet;
 }
-
 
 /* special retry handling if disabled via file: simply wait for the file
  * to indicate whether or not it is ready again
@@ -1065,7 +1070,7 @@ finalize_it:
 /* try to resume an action -- rgerhards, 2007-08-02
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
-static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
+static rsRetVal actionTryResumeInternal(action_t *const pThis, wti_t *const pWti, int *const slept) {
     DEFiRet;
     time_t ttNow = NO_TIME_PROVIDED;
 
@@ -1092,7 +1097,7 @@ static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
 
     if (getActionState(pWti, pThis) == ACT_STATE_RTRY) {
         DBGPRINTF("actionTryResume calls actionDoRetry\n");
-        CHKiRet(actionDoRetry(pThis, pWti));
+        CHKiRet(actionDoRetryInternal(pThis, pWti, slept));
     }
 
     if (Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
@@ -1106,7 +1111,6 @@ finalize_it:
     RETiRet;
 }
 
-
 /**
  * @brief Prepare an action for message processing.
  *
@@ -1115,7 +1119,9 @@ finalize_it:
  * transaction is started via the output module's beginTransaction()
  * hook, transitioning the internal state to @c ACT_STATE_ITX.
  */
-static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
+static rsRetVal actionPrepareInternal(action_t *__restrict__ const pThis,
+                                      wti_t *__restrict__ const pWti,
+                                      int *const slept) {
     DEFiRet;
 
     DBGPRINTF("actionPrepare[%s]: enter\n", pThis->pszName);
@@ -1124,7 +1130,7 @@ static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis,
         ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
     }
     CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
-    CHKiRet(actionTryResume(pThis, pWti));
+    CHKiRet(actionTryResumeInternal(pThis, pWti, slept));
 
     DBGPRINTF("actionPrepare[%s]: after calling actionTryResume\n", pThis->pszName);
 
@@ -1158,6 +1164,10 @@ static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis,
 
 finalize_it:
     RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
+    return actionPrepareInternal(pThis, pWti, NULL);
 }
 
 
@@ -1461,14 +1471,15 @@ finalize_it:
  * invoked to finalize the batch. The return value reflects the
  * resulting action state but no retries are performed here.
  */
-static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThis,
-                                               wti_t *__restrict__ const pWti,
-                                               actWrkrIParams_t *__restrict__ const iparams,
-                                               const int nparams) {
+static rsRetVal actionTryCommitInternal(action_t *__restrict__ const pThis,
+                                        wti_t *__restrict__ const pWti,
+                                        actWrkrIParams_t *__restrict__ const iparams,
+                                        const int nparams,
+                                        int *const slept) {
     DEFiRet;
 
     DBGPRINTF("actionTryCommit[%s] enter\n", pThis->pszName);
-    CHKiRet(actionPrepare(pThis, pWti));
+    CHKiRet(actionPrepareInternal(pThis, pWti, slept));
     if (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP ||
         getActionState(pWti, pThis) == ACT_STATE_DISABLED) {
         DBGPRINTF("actionTryCommit[%s]: skip transaction while state is %s\n", pThis->pszName,
@@ -1513,6 +1524,13 @@ static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThi
 
 finalize_it:
     RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThis,
+                                               wti_t *__restrict__ const pWti,
+                                               actWrkrIParams_t *__restrict__ const iparams,
+                                               const int nparams) {
+    return actionTryCommitInternal(pThis, pWti, iparams, nparams, NULL);
 }
 
 /**
@@ -1610,11 +1628,29 @@ done:
     return;
 }
 
+static rsRetVal ATTR_NONNULL()
+    actionSleepBeforeRetryingTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
+    DEFiRet;
+
+    if (pThis->iResumeInterval > 0) {
+        DBGPRINTF("actionCommit[%s]: sleeping %d seconds before retrying suspended transaction\n", pThis->pszName,
+                  pThis->iResumeInterval);
+        srSleep(pThis->iResumeInterval, 0);
+        if (*pWti->pbShutdownImmediate) {
+            ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis,
                                                    wti_t *__restrict__ const pWti,
                                                    actWrkrIParams_t *const new_iparams,
-                                                   unsigned *new_nMsgs) {
+                                                   unsigned *new_nMsgs,
+                                                   int *const slept) {
     actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
     const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
     actWrkrIParams_t oneParamSet[CONF_OMOD_NUMSTRINGS_MAXSIZE];
@@ -1622,12 +1658,21 @@ static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const 
     DEFiRet;
 
     *new_nMsgs = 0;
+    if (slept != NULL) {
+        *slept = 0;
+    }
     for (unsigned i = 0; i < nMsgs; ++i) {
         setActionResumeInRow(pWti, pThis, 0);  // make sure we do not trigger OK-as-SUSPEND handling
         memcpy(&oneParamSet, &actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0),
                sizeof(actWrkrIParams_t) * pThis->iNumTpls);
-        ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
-        if (ret == RS_RET_SUSPENDED) {
+        int retrySlept = 0;
+        ret = actionTryCommitInternal(pThis, pWti, oneParamSet, 1, &retrySlept);
+        if (retrySlept && slept != NULL) {
+            *slept = 1;
+        }
+        if (ret == RS_RET_FORCE_TERM) {
+            ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        } else if (ret == RS_RET_SUSPENDED) {
             memcpy(new_iparams + (*new_nMsgs * pThis->iNumTpls), &oneParamSet,
                    sizeof(actWrkrIParams_t) * pThis->iNumTpls);
             ++(*new_nMsgs);
@@ -1635,6 +1680,7 @@ static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const 
             actionWriteErrorFile(pThis, ret, oneParamSet, 1);
         }
     }
+finalize_it:
     RETiRet;
 }
 
@@ -1662,6 +1708,7 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     unsigned nMsgs = 0;
     actWrkrIParams_t *iparams = NULL;
     int needfree_iparams = 0;  // work-around for clang static analyzer false positive
+    int sleepBeforeRetry = 0;
     DEFiRet;
 
     DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
@@ -1702,6 +1749,8 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
         nMsgs = wrkrInfo->p.tx.currIParam;
         if (iRet == RS_RET_DATAFAIL) {
             FINALIZE;
+        } else if (iRet == RS_RET_SUSPENDED) {
+            sleepBeforeRetry = 1;
         }
     } else {
         DBGPRINTF(
@@ -1710,7 +1759,11 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
             pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
         CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * pThis->iNumTpls * wrkrInfo->p.tx.currIParam));
         needfree_iparams = 1;
-        actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+        int splitSlept = 0;
+        CHKiRet(actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs, &splitSlept));
+        if (nMsgs > 0) {
+            sleepBeforeRetry = !splitSlept;
+        }
     }
 
     if (nMsgs == 0) {
@@ -1726,18 +1779,25 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
         if (*pWti->pbShutdownImmediate) {
             ABORT_FINALIZE(RS_RET_FORCE_TERM);
         }
+        if (sleepBeforeRetry) {
+            CHKiRet(actionSleepBeforeRetryingTransaction(pThis, pWti));
+            sleepBeforeRetry = 0;
+        }
         iRet = actionTryCommit(pThis, pWti, iparams, nMsgs);
         DBGPRINTF("actionCommit[%s]: in retry loop, iRet %d\n", pThis->pszName, iRet);
         if (iRet == RS_RET_FORCE_TERM) {
             ABORT_FINALIZE(RS_RET_FORCE_TERM);
         } else if (iRet == RS_RET_SUSPENDED) {
-            iRet = actionDoRetry(pThis, pWti);
+            int retrySlept = 0;
+            iRet = actionDoRetryInternal(pThis, pWti, &retrySlept);
             DBGPRINTF("actionCommit[%s]: actionDoRetry returned %d\n", pThis->pszName, iRet);
             if (iRet == RS_RET_FORCE_TERM) {
                 ABORT_FINALIZE(RS_RET_FORCE_TERM);
             } else if (iRet != RS_RET_OK) {
                 actionWriteErrorFile(pThis, iRet, iparams, nMsgs);
                 bDone = 1;
+            } else {
+                sleepBeforeRetry = !retrySlept;
             }
             continue;
         } else if (iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED ||
