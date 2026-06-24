@@ -866,6 +866,7 @@ TESTS_LIBFAKETIME = \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
 	template-property-timegenerated.sh \
+	template-property-timereceived.sh \
 	timegenerated-utc.sh \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \

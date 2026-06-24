@@ -442,7 +442,7 @@ rsRetVal propNameToID(const uchar *const pName, propid_t *const pPropID) {
         *pPropID = PROP_SYSLOGSEVERITY;
     } else if (!strcasecmp((char *)pName, "syslogseverity-text") || !strcasecmp((char *)pName, "syslogpriority-text")) {
         *pPropID = PROP_SYSLOGSEVERITY_TEXT;
-    } else if (!strcasecmp((char *)pName, "timegenerated")) {
+    } else if (!strcasecmp((char *)pName, "timegenerated") || !strcasecmp((char *)pName, "timereceived")) {
         *pPropID = PROP_TIMEGENERATED;
     } else if (!strcasecmp((char *)pName, "programname")) {
         *pPropID = PROP_PROGRAMNAME;

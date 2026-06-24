@@ -115,6 +115,10 @@ The following message properties exist:
      - .. include:: ../reference/properties/message-timegenerated.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`prop-message-timereceived`
+     - .. include:: ../reference/properties/message-timereceived.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`prop-message-timereported`
      - .. include:: ../reference/properties/message-timereported.rst
         :start-after: .. summary-start
@@ -169,15 +173,17 @@ Special care needs to be taken in regard to time-related system variables:
   Depending on how long the message was in the relay chain, this
   can be quite old.
 * ``timegenerated`` contains the timestamp when the message was received
-  by the local system. Here "received" actually means the point in time
+  by the local system. ``timereceived`` is an alias with the same value
+  and clearer naming. Here "received" actually means the point in time
   when the message was handed over from the OS to rsyslog's reception
   buffers, but before any actual processing takes place. This also means
   a message is "received" before it is placed into any queue. Note that
   depending on the input, some minimal processing like extraction of the
   actual message content from the receive buffer can happen. If multiple
   messages are received via the same receive buffer (a common scenario
-  for example with TCP-based syslog), they bear the same ``timegenerated``
-  stamp because they actually were received at the same time.
+  for example with TCP-based syslog), they bear the same
+  ``timegenerated`` / ``timereceived`` stamp because they actually were
+  received at the same time.
 * ``$now`` is **not** from the message. It is the system time when the
   message is being **processed**. There is always a small difference
   between ``timegenerated`` and ``$now`` because processing always
@@ -295,6 +301,7 @@ may have different time stamp. To avoid this, use *timegenerated* instead.
    ../reference/properties/message-syslogpriority
    ../reference/properties/message-syslogpriority-text
    ../reference/properties/message-timegenerated
+   ../reference/properties/message-timereceived
    ../reference/properties/message-timereported
    ../reference/properties/message-timestamp
    ../reference/properties/message-protocol-version
