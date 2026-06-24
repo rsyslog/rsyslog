@@ -979,8 +979,11 @@ EXTRA_DIST = \
     source/reference/parameters/omelasticsearch-template.rst \
     source/reference/parameters/omelasticsearch-timeout.rst \
     source/reference/parameters/omelasticsearch-tls-cacert.rst \
+    source/reference/parameters/omelasticsearch-tls-ciphersuites.rst \
+    source/reference/parameters/omelasticsearch-tls-keyexchangegroups.rst \
     source/reference/parameters/omelasticsearch-tls-mycert.rst \
     source/reference/parameters/omelasticsearch-tls-myprivkey.rst \
+    source/reference/parameters/omelasticsearch-tls-tlsversion.rst \
     source/reference/parameters/omelasticsearch-uid.rst \
     source/reference/parameters/omelasticsearch-usehttps.rst \
     source/reference/parameters/omelasticsearch-writeoperation.rst \

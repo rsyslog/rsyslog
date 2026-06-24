@@ -173,6 +173,18 @@ Action Parameters
      - .. include:: ../../reference/parameters/omelasticsearch-tls-myprivkey.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-tls-tlsversion`
+     - .. include:: ../../reference/parameters/omelasticsearch-tls-tlsversion.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-tls-ciphersuites`
+     - .. include:: ../../reference/parameters/omelasticsearch-tls-ciphersuites.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-tls-keyexchangegroups`
+     - .. include:: ../../reference/parameters/omelasticsearch-tls-keyexchangegroups.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omelasticsearch-allowunsignedcerts`
      - .. include:: ../../reference/parameters/omelasticsearch-allowunsignedcerts.rst
         :start-after: .. summary-start
@@ -251,6 +263,9 @@ Action Parameters
    ../../reference/parameters/omelasticsearch-tls-cacert
    ../../reference/parameters/omelasticsearch-tls-mycert
    ../../reference/parameters/omelasticsearch-tls-myprivkey
+   ../../reference/parameters/omelasticsearch-tls-tlsversion
+   ../../reference/parameters/omelasticsearch-tls-ciphersuites
+   ../../reference/parameters/omelasticsearch-tls-keyexchangegroups
    ../../reference/parameters/omelasticsearch-allowunsignedcerts
    ../../reference/parameters/omelasticsearch-skipverifyhost
    ../../reference/parameters/omelasticsearch-bulkid
