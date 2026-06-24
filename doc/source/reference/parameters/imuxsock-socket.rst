@@ -20,12 +20,15 @@ This parameter applies to :doc:`../../configuration/modules/imuxsock`.
 :Scope: input
 :Type: string
 :Default: input=none
-:Required?: no
+:Required?: yes
 :Introduced: at least 7.0.0, possibly earlier
 
 Description
 -----------
-Adds additional unix socket. Formerly specified with the ``-a`` option.
+Adds an additional unix socket. Formerly specified with the ``-a`` option.
+This parameter is required for every ``input(type="imuxsock" ...)`` object,
+because input objects configure additional sockets only. The system log socket
+is configured on the module object with ``SysSock.*`` parameters.
 
 Input usage
 -----------

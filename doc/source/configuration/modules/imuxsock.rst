@@ -445,6 +445,11 @@ messages from applications running on the local system.
 
 This only needs to be done once.
 
+Do not add a bare ``input(type="imuxsock")`` for the system log socket.
+Additional ``imuxsock`` input objects are only for extra Unix sockets and must
+set the :ref:`param-imuxsock-socket` parameter. Configure the system log socket
+with module-level ``SysSock.*`` parameters instead.
+
 
 Enable flow control
 -------------------
@@ -572,4 +577,3 @@ system log socket.
    ../../reference/parameters/imuxsock-unlink
    ../../reference/parameters/imuxsock-usespecialparser
    ../../reference/parameters/imuxsock-parsehostname
-
