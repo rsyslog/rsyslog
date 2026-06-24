@@ -1,0 +1,33 @@
+plugins/ommongodb/ommongodb.c
+  s_6224eda96fc0da::t_a86fed761a7d34 66,411-412,440,445-447
+plugins/ommongodb/ommongodb_date.c
+  s_6224eda96fc0da::t_a86fed761a7d34 1-6,8-14,16-19,21-101,103-106,108-148,153-169
+  s_6224eda96fc0da::t_7101ca07a49133 7
+  s_6224eda96fc0da::t_122bdc7750c4d7 15,20,102,107,149-152
+plugins/ommongodb/ommongodb_date.h
+  s_6224eda96fc0da::t_a86fed761a7d34 1-8
+tests/unit/ommongodb_date_test.c
+  s_6224eda96fc0da::t_9a2d99b691974d 3-6
+  s_6224eda96fc0da::t_a86fed761a7d34 1-2,7-49,52-53
+  s_6224eda96fc0da::t_122bdc7750c4d7 50-51
+tests/Makefile.am
+  s_6224eda96fc0da::t_a86fed761a7d34 2289-2292,2306-2309,2343-2345,2351
+plugins/ommongodb/Makefile.am
+  s_6224eda96fc0da::t_a86fed761a7d34 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "4a1fc72513919102cd74b4b9c42bdc533bc3c860",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
