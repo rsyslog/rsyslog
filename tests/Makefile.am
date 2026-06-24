@@ -2044,7 +2044,8 @@ TESTS_MMTAGHOSTNAME = \
 
 TESTS_MMKUBERNETES = \
 	mmkubernetes-basic.sh \
-	mmkubernetes-cache-expire.sh
+	mmkubernetes-cache-expire.sh \
+	mmkubernetes-url-failover.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
