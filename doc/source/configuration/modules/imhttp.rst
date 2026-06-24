@@ -403,6 +403,7 @@ Caveats/Known Bugs
 ==================
 
 -  module currently only a single HTTP instance, however multiple ports may be bound.
+-  For security reasons, symbolic links are not followed (opened with ``O_NOFOLLOW``) when reading configured basic authentication or API key files.
 
 
 Examples
