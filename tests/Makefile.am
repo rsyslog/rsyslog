@@ -488,6 +488,7 @@ TESTS_DEFAULT = \
 	lookup_sparse_array_ipv4.sh \
 	parsertest-parse1.sh \
 	parsertest-parse1-udp.sh \
+	imudp-headerless-fromhost-ip.sh \
 	parsertest-parse2.sh \
 	parsertest-parse2-udp.sh \
 	parsertest-parse_8bit_escape.sh \
