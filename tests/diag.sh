@@ -463,6 +463,7 @@ generate_conf() {
 			printf '    serverrun: "0"\n'
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode: "%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
+			# aborttimeout enables imdiag timeoutGuard, mandatory testbench hang protection.
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
 			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
@@ -482,6 +483,7 @@ generate_conf() {
 			printf '    serverrun="0"\n'
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode="%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
+			# aborttimeout enables imdiag timeoutGuard, mandatory testbench hang protection.
 			printf '    aborttimeout="%s"\n' "$TB_TEST_MAX_RUNTIME"
 			printf '    mainmsgqueuetimeoutshutdown="%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue="%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"

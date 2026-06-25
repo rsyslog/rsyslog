@@ -797,6 +797,10 @@ finalize_it:
 }
 
 
+/* timeoutGuard is mandatory testbench hang protection. Do not remove,
+ * disable, or weaken it to make shutdown tests pass; fix lifecycle, fork,
+ * or unload bugs while preserving this inside-rsyslogd timeout oracle.
+ */
 static void *timeoutGuard(ATTR_UNUSED void *arg) {
     assert(abortTimeout != -1);
     sigset_t sigSet;
