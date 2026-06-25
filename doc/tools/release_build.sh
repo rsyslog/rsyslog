@@ -121,12 +121,12 @@ sphinx_build_conf_prod="source/conf.py"
 # the placeholder values provided for non-Git builds (e.g., someone
 # downloads the 'master' branch as a zip file from GitHub).
 
-$SED_EXTENDED $SED_INPLACE "s/^version.*$/version = \'${version}\'/" ./${sphinx_build_conf_prod} || {
+$SED_EXTENDED $SED_INPLACE "s/^(version[[:space:]]*=[[:space:]]*)[^#]*[^#[:space:]]([[:space:]]+#.*)?$/\1'${version}'\2/" ./${sphinx_build_conf_prod} || {
     echo "[!] Failed to replace version placeholder in Sphinx build conf template."
     exit 1
 }
 
-$SED_EXTENDED $SED_INPLACE "s/^release.*$/release = \'${release}\'/" ./${sphinx_build_conf_prod} || {
+$SED_EXTENDED $SED_INPLACE "s/^(release[[:space:]]*=[[:space:]]*)[^#]*[^#[:space:]]([[:space:]]+#.*)?$/\1'${release}'\2/" ./${sphinx_build_conf_prod} || {
     echo "[!] Failed to replace release placeholder in Sphinx build conf template."
     exit 1
 }
