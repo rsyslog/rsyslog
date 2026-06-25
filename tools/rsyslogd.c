@@ -26,6 +26,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -162,6 +163,34 @@ static void aix_close_it(int i) {
 
 /* AIXPORT : end  */
 
+
+static rsRetVal checkConfigOutputDoesNotOverwriteInput(const char *const outputPath, const char *const configPath) {
+    struct stat outputStat;
+    struct stat configStat;
+
+    if (outputPath == NULL || !strcmp(outputPath, "-") || configPath == NULL) {
+        return RS_RET_OK;
+    }
+
+    if (!strcmp(outputPath, configPath)) {
+        fprintf(stderr, "rsyslogd: -o output path must not be the same as the input config file '%s'\n", configPath);
+        return RS_RET_ERR;
+    }
+
+    if (stat(configPath, &configStat) != 0) {
+        return RS_RET_OK;
+    }
+    if (stat(outputPath, &outputStat) != 0) {
+        return RS_RET_OK;
+    }
+    if (configStat.st_dev == outputStat.st_dev && configStat.st_ino == outputStat.st_ino) {
+        fprintf(stderr, "rsyslogd: -o output path '%s' resolves to the same file as input config file '%s'\n",
+                outputPath, configPath);
+        return RS_RET_ERR;
+    }
+
+    return RS_RET_OK;
+}
 
 DEFobjCurrIf(obj) DEFobjCurrIf(prop) DEFobjCurrIf(parser) DEFobjCurrIf(ruleset) DEFobjCurrIf(net) DEFobjCurrIf(rsconf)
     DEFobjCurrIf(module) DEFobjCurrIf(datetime) DEFobjCurrIf(glbl)
@@ -1693,6 +1722,8 @@ static void initAll(int argc, char **argv) {
     }
 
     if (iRet != RS_RET_END_OF_LINKEDLIST) FINALIZE;
+
+    CHKiRet(checkConfigOutputDoesNotOverwriteInput(configOutputPath, (const char *)ConfFile));
 
     if (iTranslateFmt != RSCONF_TRANSLATE_NONE) {
         if (!iConfigVerify) {
