@@ -208,8 +208,9 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2608'
-#release = '8.2608.0'
+# BOTH release AND version are needed for manual release builds.
+version = '8.2608'  # IMPORTANT: keep in sync with scheduled stable; build docs before commit.
+# release = '8.2608.0'
 release = version + ' daily stable'
 
 # Allow override from environment (e.g. Docker/CI builds without .git)

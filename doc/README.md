@@ -9,15 +9,6 @@ by this README and other documentation linked from this file.
 If you're new to rst and Sphinx, see the Sphinx documentation to get started:
 http://www.sphinx-doc.org/en/stable/contents.html
 
-## Contributed Software/Content
-
-In the repo, you'll find a `doc/contrib` directory. This directory contains
-content contributed by community members. All content in the `rsyslog`
-repository, including contributions, is subject to review processes for quality
-and adherence to project standards.
-
----
-
 ## Dev Team resources
 
 In addition to the directions here, there's also a separate

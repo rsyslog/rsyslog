@@ -67,8 +67,6 @@ EXTRA_DIST = \
     ai/templates/template-tutorial.rst \
     ai/terminology.md \
     build_rag_db.py \
-    contrib/README.md \
-    contrib/cron_build_all_branches.sh \
     security/distro-component-package-map.json \
     security/distro-component-package-map.md \
     security/ghsa-coordination-review-template.md \
@@ -1336,5 +1334,4 @@ EXTRA_DIST = \
     tools/inside_docker_doc_html.sh \
     tools/pages-root-index.html \
     tools/pages-robots.txt \
-    tools/release_build.sh \
-    utils/release_build.sh
+    tools/release_build.sh
