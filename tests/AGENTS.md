@@ -57,6 +57,15 @@ minimal containers. Findings are review prompts, not automatic blockers.
   clients, or probes need deterministic readiness and cleanup. Prefer existing
   testbench helpers; if custom plumbing is required, make ownership and cleanup
   explicit.
+- **Daemonized shutdown tests without a final rsyslogd oracle**: shell ``wait``
+  cannot observe the real daemon process exit status after rsyslogd forks. For
+  daemonized tests that care about crashes or clean shutdown, use
+  ``set_proper_termination_file`` before ``generate_conf`` and
+  ``check_proper_termination`` after ``wait_shutdown``. Do not use helper
+  cleanup or observer processes as the clean-shutdown oracle. ``timeoutGuard``
+  remains mandatory hang protection and must not be removed, disabled, or
+  weakened to make such tests pass; if timeoutGuard aborts rsyslogd, it must
+  preserve the termination marker with ``status=error`` and useful diagnostics.
 - **Queue tests assuming immediate drain or shutdown ordering**: use
   queue-specific synchronization where possible. Do not assume that input
   completion, shutdown start, or a fixed delay means all queued messages reached

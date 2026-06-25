@@ -441,6 +441,8 @@ generate_conf() {
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		mkdir -p $RSYSLOG_DYNNAME.spool
 	fi
+	local proper_termination_file_var="RSTB_PROPER_TERMINATION_FILE$1"
+	local proper_termination_file="${!proper_termination_file_var:-}"
 	if [ "$yaml_only" = "1" ]; then
 		export RSYSLOG_YAML_ONLY=1
 		export TESTCONF_EXT="yaml"
@@ -464,6 +466,8 @@ generate_conf() {
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode: "%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
+			[ -n "$proper_termination_file" ] &&
+				printf '    properterminationfile: "%s"\n' "$proper_termination_file"
 			printf '    mainmsgqueuetimeoutshutdown: "%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue: "%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
 			printf '    inputshutdowntimeout: "%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
@@ -483,6 +487,8 @@ generate_conf() {
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode="%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
 			printf '    aborttimeout="%s"\n' "$TB_TEST_MAX_RUNTIME"
+			[ -n "$proper_termination_file" ] &&
+				printf '    properterminationfile="%s"\n' "$proper_termination_file"
 			printf '    mainmsgqueuetimeoutshutdown="%s"\n' "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT"
 			printf '    mainmsgqueuetimeoutenqueue="%s"\n' "$RSTB_MAIN_Q_TO_ENQUEUE"
 			printf '    inputshutdowntimeout="%s"\n' "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT"
@@ -513,6 +519,57 @@ generate_conf() {
 # $1 is config fragment, $2 the instance id, if given
 add_conf() {
 	printf '%s' "$1" >> ${TESTCONF_NM}$2.conf
+}
+
+get_proper_termination_file() {
+	local instance="${1:-}"
+	local proper_termination_file_var="RSTB_PROPER_TERMINATION_FILE${instance}"
+	printf '%s' "${!proper_termination_file_var:-}"
+}
+
+set_proper_termination_file() {
+	local instance="${1:-}"
+	local proper_termination_file_var="RSTB_PROPER_TERMINATION_FILE${instance}"
+	local suffix=""
+	if [ -n "$instance" ]; then
+		suffix=".$instance"
+	fi
+	local proper_termination_file="$PWD/$RSYSLOG_DYNNAME.proper-termination$suffix"
+	export "${proper_termination_file_var}=$proper_termination_file"
+}
+
+proper_termination_file_is_valid() {
+	local file
+	file="$(get_proper_termination_file "$1")"
+	[ -n "$file" ] || return 1
+	[ -f "$file" ] || return 1
+	grep -qx 'status=ok' "$file" || return 1
+	grep -qx 'phase=main-return' "$file" || return 1
+	return 0
+}
+
+print_proper_termination_file() {
+	local file
+	file="$(get_proper_termination_file "$1")"
+	[ -n "$file" ] || return
+	printf '%s\n' "--- proper termination file: $file ---"
+	if [ -f "$file" ]; then
+		cat "$file"
+	else
+		ls -l "$file" 2>/dev/null || true
+	fi
+	printf '%s\n' '--- end proper termination file ---'
+}
+
+check_proper_termination() {
+	local file
+	file="$(get_proper_termination_file "$1")"
+	if proper_termination_file_is_valid "$1"; then
+		return
+	fi
+	printf 'FAIL: proper termination file missing or invalid: %s\n' "${file:-<not configured>}"
+	print_proper_termination_file "$1"
+	error_exit 1
 }
 
 # add YAML content to the yaml config file (yaml-only mode)
@@ -1979,10 +2036,15 @@ quit"
 		core_found=1
 	fi
 	if [ $core_found -eq 1 ]; then
-	   printf 'ABORT! core file exists (maybe from a parallel run!)\n'
-	   pwd
-	   ls -l core.* ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null
-	   error_exit  1
+		if proper_termination_file_is_valid "$1"; then
+			printf 'INFO: core file exists, but proper termination file proves rsyslogd reached main return; ignoring as stale/foreign core\n'
+		else
+			printf 'ABORT! core file exists (maybe from a parallel run!)\n'
+			print_proper_termination_file "$1"
+			pwd
+			ls -l core.* ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null
+			error_exit  1
+		fi
 	fi
 }
 

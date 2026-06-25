@@ -104,6 +104,11 @@ pthread_cond_t statsReporterWatch;
 int statsReported = 0;
 static int abortTimeout = -1; /* for timeoutGuard - if set, abort rsyslogd after that many seconds */
 static pthread_t timeoutGuard_thrd; /* thread ID for timeoutGuard thread (if active) */
+static pthread_mutex_t timeoutGuardMut = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t timeoutGuardCond = PTHREAD_COND_INITIALIZER;
+static int timeoutGuardStop = 0;
+static int timeoutGuardActive = 0;
+static pid_t timeoutGuardPid = 0;
 
 /* config settings */
 struct modConfData_s {
@@ -113,6 +118,7 @@ struct modConfData_s {
     uchar *pszInjectDelayMode;
     uchar *pszStrmDrvrAuthMode;
     uchar *pszInputName;
+    uchar *pszProperTerminationFile;
     permittedPeers_t *pPermPeersRoot;
     int abortTimeout; /* abort timeout in seconds, -1 = disabled */
     int iTCPSessMax;
@@ -126,6 +132,7 @@ static modConfData_t *loadModConf = NULL; /* modConf ptr for current load proces
 static struct cnfparamdescr modpdescr[] = {
     {"listenportfilename", eCmdHdlrString, 0},
     {"aborttimeout", eCmdHdlrInt, 0},
+    {"properterminationfile", eCmdHdlrString, 0},
     {"serverrun", eCmdHdlrString, 0},
     {"injectdelaymode", eCmdHdlrString, 0},
     {"maxsessions", eCmdHdlrInt, 0},
@@ -813,18 +820,17 @@ static void *timeoutGuard(ATTR_UNUSED void *arg) {
     time(&strtTO);
     endTO = strtTO + abortTimeout;
 
-    while (1) {
-        int to = endTO - time(NULL);
-        dbgprintf("timeoutGuard: sleep timeout %d seconds\n", to);
-        if (to > 0) {
-            srSleep(to, 0);
-        }
-        if (time(NULL) < endTO) {
-            dbgprintf("timeoutGuard: spurios wakeup, going back to sleep, time: %lld\n", (long long)time(NULL));
-        } else {
-            break;
-        }
+    pthread_mutex_lock(&timeoutGuardMut);
+    while (!timeoutGuardStop && time(NULL) < endTO) {
+        struct timespec timeout = {.tv_sec = endTO, .tv_nsec = 0};
+        pthread_cond_timedwait(&timeoutGuardCond, &timeoutGuardMut, &timeout);
     }
+    if (timeoutGuardStop) {
+        pthread_mutex_unlock(&timeoutGuardMut);
+        return NULL;
+    }
+    pthread_mutex_unlock(&timeoutGuardMut);
+
     dbgprintf("timeoutGuard: sleep expired, aborting\n");
     /* note: we use fprintf to stderr intentionally! */
 
@@ -834,7 +840,16 @@ static void *timeoutGuard(ATTR_UNUSED void *arg) {
             (long long)strtTO, (long long)endTO, (long long)time(NULL), (long long)(time(NULL) - strtTO),
             (int)glblGetOurPid());
     fflush(stderr);
+    (void)rsyslogdWriteTerminationMarker("error", "timeoutGuard", "timeoutguard-abort");
     abort();
+}
+
+
+static void stopTimeoutGuard(void) {
+    pthread_mutex_lock(&timeoutGuardMut);
+    timeoutGuardStop = 1;
+    pthread_cond_signal(&timeoutGuardCond);
+    pthread_mutex_unlock(&timeoutGuardMut);
 }
 
 
@@ -854,8 +869,23 @@ static rsRetVal setAbortTimeout(void __attribute__((unused)) * pVal, int timeout
         ABORT_FINALIZE(RS_RET_ERR);
     }
     abortTimeout = timeout;
+    pthread_mutex_lock(&timeoutGuardMut);
+    timeoutGuardStop = 0;
+    pthread_mutex_unlock(&timeoutGuardMut);
+
     const int iState = pthread_create(&timeoutGuard_thrd, NULL, timeoutGuard, NULL);
-    if (iState != 0) {
+    if (iState == 0) {
+        pthread_mutex_lock(&timeoutGuardMut);
+        timeoutGuardActive = 1;
+        timeoutGuardPid = getpid();
+        pthread_mutex_unlock(&timeoutGuardMut);
+    } else {
+        pthread_mutex_lock(&timeoutGuardMut);
+        timeoutGuardStop = 0;
+        timeoutGuardActive = 0;
+        timeoutGuardPid = 0;
+        pthread_mutex_unlock(&timeoutGuardMut);
+        abortTimeout = -1;
         LogError(iState, NO_ERRCODE,
                  "imdiag: error enabling timeoutGuard thread -"
                  "not guarding against system hang");
@@ -896,6 +926,7 @@ BEGINbeginCnfLoad
     pModConf->pszInjectDelayMode = NULL;
     pModConf->pszStrmDrvrAuthMode = NULL;
     pModConf->pszInputName = NULL;
+    pModConf->pszProperTerminationFile = NULL;
     pModConf->pPermPeersRoot = NULL;
     pModConf->abortTimeout = -1;
     pModConf->iTCPSessMax = -1;
@@ -924,6 +955,8 @@ BEGINsetModCnf
             CHKmalloc(loadModConf->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "aborttimeout")) {
             loadModConf->abortTimeout = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "properterminationfile")) {
+            CHKmalloc(loadModConf->pszProperTerminationFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "serverrun")) {
             CHKmalloc(loadModConf->pszServerRun = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "injectdelaymode")) {
@@ -989,6 +1022,9 @@ BEGINendCnfLoad
         pszInputName = loadModConf->pszInputName;
         loadModConf->pszInputName = NULL; /* ownership transferred to global */
     }
+    if (loadModConf->pszProperTerminationFile != NULL) {
+        CHKiRet(rsyslogdSetProperTerminationFile(loadModConf->pszProperTerminationFile));
+    }
     if (loadModConf->pPermPeersRoot != NULL && pPermPeersRoot == NULL) {
         pPermPeersRoot = loadModConf->pPermPeersRoot;
         loadModConf->pPermPeersRoot = NULL; /* ownership transferred to global */
@@ -1022,6 +1058,7 @@ BEGINfreeCnf
     free(pModConf->pszInjectDelayMode);
     free(pModConf->pszStrmDrvrAuthMode);
     free(pModConf->pszInputName);
+    free(pModConf->pszProperTerminationFile);
     if (pModConf->pPermPeersRoot != NULL) {
         net.DestructPermittedPeers(&pModConf->pPermPeersRoot);
     }
@@ -1107,6 +1144,21 @@ ENDafterRun
 
 BEGINmodExit
     CODESTARTmodExit;
+    /* Ask the guard thread to stop and join it before imdiag can be unloaded. */
+    stopTimeoutGuard();
+    pthread_mutex_lock(&timeoutGuardMut);
+    const int joinTimeoutGuard = timeoutGuardActive && timeoutGuardPid == getpid();
+    pthread_mutex_unlock(&timeoutGuardMut);
+    if (joinTimeoutGuard) {
+        void *dummy;
+        pthread_join(timeoutGuard_thrd, &dummy);
+    }
+    pthread_mutex_lock(&timeoutGuardMut);
+    timeoutGuardActive = 0;
+    timeoutGuardPid = 0;
+    timeoutGuardStop = 0;
+    abortTimeout = -1;
+    pthread_mutex_unlock(&timeoutGuardMut);
     if (pOurTcpsrv != NULL) iRet = tcpsrv.Destruct(&pOurTcpsrv);
 
     if (pPermPeersRoot != NULL) {
@@ -1133,16 +1185,6 @@ BEGINmodExit
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(statsobj, CORE_COMPONENT);
-
-    /* clean up timeoutGuard if active */
-    if (abortTimeout != -1) {
-        int r = pthread_cancel(timeoutGuard_thrd);
-        if (r == 0) {
-            void *dummy;
-            pthread_join(timeoutGuard_thrd, &dummy);
-        }
-        abortTimeout = -1; /* mark cleaned up so resetConfigVariables won't double-cancel */
-    }
 ENDmodExit
 
 
@@ -1155,7 +1197,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     free(pszInputName);
     free(pszLstnPortFileName);
     pszLstnPortFileName = NULL;
-    abortTimeout = -1;
     if (pszStrmDrvrAuthMode != NULL) {
         free(pszStrmDrvrAuthMode);
         pszStrmDrvrAuthMode = NULL;
