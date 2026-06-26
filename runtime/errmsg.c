@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -60,6 +61,107 @@ static int fdOversizeMsgLog = -1;
 static pthread_mutex_t oversizeMsgLogMut = PTHREAD_MUTEX_INITIALIZER;
 
 /* ------------------------------ methods ------------------------------ */
+
+static rsRetVal oversizeJsonAddStringLen(struct json_object *const json,
+                                         const char *const name,
+                                         const uchar *const value,
+                                         const rs_size_t valueLen) {
+    struct json_object *jval = NULL;
+    const uchar *const safeValue = (value == NULL) ? (const uchar *)"" : value;
+    const size_t safeLen = (valueLen == (rs_size_t)-1) ? strlen((const char *)safeValue) : (size_t)valueLen;
+    const int jsonLen = (safeLen > INT_MAX) ? INT_MAX : (int)safeLen;
+    DEFiRet;
+
+    CHKmalloc(jval = json_object_new_string_len((const char *)safeValue, jsonLen));
+    json_object_object_add(json, name, jval);
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal oversizeJsonAddProp(struct json_object *const json,
+                                    smsg_t *const pMsg,
+                                    const char *const name,
+                                    const propid_t propId,
+                                    struct templateEntry *const pTpe) {
+    msgPropDescr_t propDescr = {.id = propId, .name = NULL, .nameLen = 0};
+    struct syslogTime ttNow;
+    uchar *value = NULL;
+    rs_size_t valueLen = -1;
+    unsigned short mustBeFreed = 0;
+    DEFiRet;
+
+    memset(&ttNow, 0, sizeof(ttNow));
+    value = MsgGetProp(pMsg, pTpe, &propDescr, &valueLen, &mustBeFreed, &ttNow);
+    CHKiRet(oversizeJsonAddStringLen(json, name, value, valueLen));
+
+finalize_it:
+    if (mustBeFreed) {
+        free(value);
+    }
+    RETiRet;
+}
+
+
+static rsRetVal oversizeJsonAddMsg(struct json_object *const json, const smsg_t *const pMsg) {
+    uchar *msg = (uchar *)"";
+    rs_size_t msgLen = 0;
+
+    if (pMsg->pszRawMsg != NULL && pMsg->offMSG >= 0 && pMsg->offMSG <= pMsg->iLenRawMsg && pMsg->iLenMSG > 0 &&
+        pMsg->iLenMSG <= pMsg->iLenRawMsg - pMsg->offMSG) {
+        msg = pMsg->pszRawMsg + pMsg->offMSG;
+        msgLen = pMsg->iLenMSG;
+    }
+
+    return oversizeJsonAddStringLen(json, "msg", msg, msgLen);
+}
+
+
+static rsRetVal oversizeJsonFromMsg(struct json_object **const json, const smsg_t *const pMsg) {
+    struct templateEntry dateTpe;
+    uchar *value = NULL;
+    int valueLen = 0;
+    DEFiRet;
+
+    memset(&dateTpe, 0, sizeof(dateTpe));
+    dateTpe.data.field.eDateFormat = tplFmtRFC3339Date;
+
+    CHKmalloc(*json = json_object_new_object());
+    CHKiRet(oversizeJsonAddMsg(*json, pMsg));
+    getRawMsg(pMsg, &value, &valueLen);
+    CHKiRet(oversizeJsonAddStringLen(*json, "rawmsg", value, valueLen));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "timereported", PROP_TIMESTAMP, &dateTpe));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "hostname", PROP_HOSTNAME, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "syslogtag", PROP_SYSLOGTAG, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "inputname", PROP_INPUTNAME, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "fromhost", PROP_FROMHOST, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "fromhost-ip", PROP_FROMHOST_IP, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "fromhost-port", PROP_FROMHOST_PORT, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "pri", PROP_PRI, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "syslogfacility", PROP_SYSLOGFACILITY, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "syslogseverity", PROP_SYSLOGSEVERITY, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "timegenerated", PROP_TIMEGENERATED, &dateTpe));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "programname", PROP_PROGRAMNAME, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "protocol-version", PROP_PROTOCOL_VERSION, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "structured-data", PROP_STRUCTURED_DATA, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "app-name", PROP_APP_NAME, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "procid", PROP_PROCID, NULL));
+    CHKiRet(oversizeJsonAddProp(*json, (smsg_t *)pMsg, "msgid", PROP_MSGID, NULL));
+#ifdef USE_LIBUUID
+    if (pMsg->pszUUID == NULL) {
+        json_object_object_add(*json, "uuid", NULL);
+    } else {
+        CHKiRet(oversizeJsonAddStringLen(*json, "uuid", pMsg->pszUUID, (rs_size_t)-1));
+    }
+#endif
+    if (pMsg->json != NULL) {
+        json_object_object_add(*json, "$!", json_object_get(pMsg->json));
+    }
+
+finalize_it:
+    RETiRet;
+}
 
 /* Resets the error message flag. Must be done before processing config
  * files.
@@ -215,17 +317,13 @@ rsRetVal ATTR_NONNULL() writeOversizeMessageLog(const smsg_t *const pMsg) {
     }
 
     assert(fdOversizeMsgLog != -1);
-    json = json_object_new_object();
-    if (json == NULL) {
-        FINALIZE;
-    }
+    CHKiRet(oversizeJsonFromMsg(&json, pMsg));
 
-    getRawMsg(pMsg, &buf, &dummy);
-    jval = json_object_new_string((char *)buf);
-    json_object_object_add(json, "rawmsg", jval);
-
+    /* Preserve the historical oversize errorfile field name while also
+     * emitting the regular full-message JSON field "inputname".
+     */
     getInputName(pMsg, &buf, &dummy);
-    jval = json_object_new_string((char *)buf);
+    CHKmalloc(jval = json_object_new_string((char *)buf));
     json_object_object_add(json, "input", jval);
 
     CHKmalloc(rendered = strdup((char *)fjson_object_to_json_string(json)));
