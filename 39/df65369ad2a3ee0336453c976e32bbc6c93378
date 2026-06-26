@@ -1,0 +1,23 @@
+.agent/skills/rsyslog_v8stable_patch_flow/SKILL.md
+  s_2e888d0bafbab5::t_38c4fb63f85424 1-107
+AGENTS.md
+  s_2e888d0bafbab5::t_f4637bb69acca4 22
+.agent/skills/rsyslog_v8stable_patch_flow/agents/openai.yaml
+  s_2e888d0bafbab5::t_40859c81383a0c 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "39df65369ad2a3ee0336453c976e32bbc6c93378",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
