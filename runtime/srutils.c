@@ -816,7 +816,7 @@ rsRetVal ATTR_NONNULL() split_binary_parameters(uchar **const szBinary,
     DBGPRINTF("iParams %d (+1 for NULL terminator)\n", *iParams);
 
     /* create argv[] */
-    CHKmalloc(*aParams = malloc((*iParams + 1) * sizeof(char *)));
+    CHKmalloc(*aParams = calloc(*iParams + 1, sizeof(char *)));
     iPrm = 0;
     bInQuotes = FALSE;
     /* Set first parameter to binary */

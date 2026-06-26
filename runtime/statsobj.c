@@ -308,14 +308,50 @@ static void destructCounter(statsobj_t *pThis, ctr_t *pCtr) {
     destructUnlinkedCounter(pCtr);
 }
 
+static intctr_t getIntCtrValue(const intctr_t *const ctr) {
+#ifdef HAVE_ATOMIC_BUILTINS64
+    return __atomic_load_n(ctr, __ATOMIC_RELAXED);
+#else
+    return *ctr;
+#endif
+}
+
+
+static void resetIntCtrValue(intctr_t *const ctr) {
+#ifdef HAVE_ATOMIC_BUILTINS64
+    __atomic_store_n(ctr, 0, __ATOMIC_RELAXED);
+#else
+    *ctr = 0;
+#endif
+}
+
+
+static int getIntValue(const int *const ctr) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    return __atomic_load_n(ctr, __ATOMIC_RELAXED);
+#else
+    return *ctr;
+#endif
+}
+
+
+static void resetIntValue(int *const ctr) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    __atomic_store_n(ctr, 0, __ATOMIC_RELAXED);
+#else
+    *ctr = 0;
+#endif
+}
+
+
 static void resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs) {
     if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) || (pCtr->flags & CTR_FLAG_MUST_RESET)) {
         switch (pCtr->ctrType) {
             case ctrType_IntCtr:
-                *(pCtr->val.pIntCtr) = 0;
+                resetIntCtrValue(pCtr->val.pIntCtr);
                 break;
             case ctrType_Int:
-                *(pCtr->val.pInt) = 0;
+                resetIntValue(pCtr->val.pInt);
                 break;
             default:
                 // No action needed for other cases
@@ -355,9 +391,9 @@ finalize_it:
 static intctr_t accumulatedValue(ctr_t *pCtr) {
     switch (pCtr->ctrType) {
         case ctrType_IntCtr:
-            return *(pCtr->val.pIntCtr);
+            return getIntCtrValue(pCtr->val.pIntCtr);
         case ctrType_Int:
-            return *(pCtr->val.pInt);
+            return (intctr_t)getIntValue(pCtr->val.pInt);
         default:
             // No action needed for other cases
             break;
@@ -469,10 +505,10 @@ static rsRetVal getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCt
         cstrAppendChar(pcstr, '=');
         switch (pCtr->ctrType) {
             case ctrType_IntCtr:
-                rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr));  // TODO: OK?????
+                rsCStrAppendInt(pcstr, getIntCtrValue(pCtr->val.pIntCtr));
                 break;
             case ctrType_Int:
-                rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
+                rsCStrAppendInt(pcstr, getIntValue(pCtr->val.pInt));
                 break;
             default:
                 // No action needed for other cases
@@ -563,10 +599,10 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         /* 1) Read the current accumulated value.  Might be IntCtr or Int. */
         switch (pCtr->ctrType) {
             case ctrType_IntCtr:
-                value = *(pCtr->val.pIntCtr);
+                value = getIntCtrValue(pCtr->val.pIntCtr);
                 break;
             case ctrType_Int:
-                value = (uint64_t)(*(pCtr->val.pInt));
+                value = (uint64_t)getIntValue(pCtr->val.pInt);
                 break;
             default:
                 value = 0;
@@ -577,10 +613,10 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) || (pCtr->flags & CTR_FLAG_MUST_RESET)) {
             switch (pCtr->ctrType) {
                 case ctrType_IntCtr:
-                    *(pCtr->val.pIntCtr) = 0;
+                    resetIntCtrValue(pCtr->val.pIntCtr);
                     break;
                 case ctrType_Int:
-                    *(pCtr->val.pInt) = 0;
+                    resetIntValue(pCtr->val.pInt);
                     break;
                 default:
                     break;
@@ -732,8 +768,7 @@ static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
             /* Read counter value based on type */
             switch (ctr->ctrType) {
                 case ctrType_IntCtr:
-                    /* Atomic uint64 - safe to read directly */
-                    value = *(ctr->val.pIntCtr);
+                    value = getIntCtrValue(ctr->val.pIntCtr);
                     break;
 
                 case ctrType_Int:
@@ -741,7 +776,7 @@ static rsRetVal getAllCounters(statsobj_counter_cb_t cb, void *ctx) {
                      * behavior. Value may be stale but acceptable for monitoring.
                      * Most ctrType_Int counters are gauges (queue size, open files)
                      * protected by application-level mutexes. */
-                    value = (uint64_t)(*(ctr->val.pInt));
+                    value = (uint64_t)getIntValue(ctr->val.pInt);
                     break;
 
                 default:

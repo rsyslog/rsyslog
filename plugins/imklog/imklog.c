@@ -293,7 +293,7 @@ BEGINrunInput
      * signalled to do so. This, however, is handled by the framework,
      * right into the sleep below.
      */
-    while (!pThrd->bShallStop) {
+    while (!thrdGetShallStop(pThrd)) {
         /* klogLogKMsg() waits for the next kernel message, obtains it
          * and then submits it to the rsyslog main queue.
          * rgerhards, 2008-04-09

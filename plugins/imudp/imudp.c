@@ -614,7 +614,7 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
     multiSub.nElem = 0;
     iNbrTimeUsed = 0;
     while (1) { /* loop is terminated if we have a "bad" receive, done below in the body */
-        if (pWrkr->pThrd->bShallStop == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
         memset(pWrkr->recvmsg_iov, 0, runModConf->batchSize * sizeof(struct iovec));
         memset(pWrkr->recvmsg_mmh, 0, runModConf->batchSize * sizeof(struct mmsghdr));
         memset(pWrkr->frominet, 0, runModConf->batchSize * sizeof(struct sockaddr_storage));
@@ -701,7 +701,7 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
     multiSub.nElem = 0;
     iNbrTimeUsed = 0;
     while (1) { /* loop is terminated if we have a bad receive, done below in the body */
-        if (pWrkr->pThrd->bShallStop == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
+        if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) ABORT_FINALIZE(RS_RET_FORCE_TERM);
         memset(&frominet, 0, sizeof(frominet));
         memset(iov, 0, sizeof(iov));
         iov[0].iov_base = pWrkr->pRcvBuf;
@@ -920,12 +920,12 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
         nfds = epoll_wait(efd, currEvt, NUM_EPOLL_EVENTS, -1);
         DBGPRINTF("imudp: epoll_wait() returned with %d fds\n", nfds);
 
-        if (pWrkr->pThrd->bShallStop == RSTRUE) break; /* terminate input! */
+        if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) break; /* terminate input! */
 
         for (i = 0; i < nfds; ++i) {
             processSocket(pWrkr, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
         }
-        if (pWrkr->pThrd->bShallStop == RSTRUE) break; /* terminate input! */
+        if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) break; /* terminate input! */
     }
 
 finalize_it:

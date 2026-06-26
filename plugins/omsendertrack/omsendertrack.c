@@ -33,6 +33,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include "atomic.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -94,6 +95,7 @@ typedef struct _instanceData {
     pthread_rwlock_t mutSenders; /**< protects the sender hash table */
     struct hashtable *stats_senders; /**< hash table of sender_stats_t */
     int bShutdownBackgroundWriter; /**< tells bgwriter to terminate */
+    DEF_ATOMIC_HELPER_MUT(mutShutdownBackgroundWriter);
     pthread_t bgw_tid; /**< thread ID of background writer */
     int bgw_initialized; /**< indicates thread started */
 } instanceData;
@@ -552,9 +554,9 @@ static void *bgWriter(void *arg) {
     }
 #endif
 
-    while (pData->bShutdownBackgroundWriter == 0) {
+    while (ATOMIC_FETCH_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 0) {
         srSleep(pData->interval, 0);
-        if (pData->bShutdownBackgroundWriter == 1) {
+        if (ATOMIC_FETCH_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 1) {
             break;
         }
         dbgprintf("bgwriter writing report file\n");
@@ -666,7 +668,7 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     /* stop bgWriter */
     if (pData->bgw_initialized) {
-        pData->bShutdownBackgroundWriter = 1;
+        ATOMIC_STORE_1_TO_INT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter);
         pthread_kill(pData->bgw_tid, SIGTTIN);
 
         /* wait until stopped */
@@ -683,6 +685,7 @@ BEGINfreeInstance
     free((void *)pData->statefile);
     if (pData->statefile_tmp) free((void *)pData->statefile_tmp);
     pthread_rwlock_destroy(&pData->mutSenders);
+    DESTROY_ATOMIC_HELPER_MUT(pData->mutShutdownBackgroundWriter);
     hashtable_destroy(pData->stats_senders, 1); /* 1 => free all values automatically */
 ENDfreeInstance
 
@@ -749,6 +752,7 @@ BEGINnewActInst
     }
 
     CHKiRet(createInstance(&pData));
+    INIT_ATOMIC_HELPER_MUT(pData->mutShutdownBackgroundWriter);
     CHKiRet(setInstParamDefaults(pData));
 
     for (i = 0; i < actpblk.nParams; ++i) {
@@ -801,6 +805,7 @@ BEGINparseSelectorAct
     /* ok, if we reach this point, we have something for us */
     p += sizeof(":omsendertrack:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
     CHKiRet(createInstance(&pData));
+    INIT_ATOMIC_HELPER_MUT(pData->mutShutdownBackgroundWriter);
 
     /* check if a non-standard template is to be applied */
     if (*(p - 1) == ';') --p;

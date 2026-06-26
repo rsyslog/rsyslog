@@ -196,7 +196,7 @@ BEGINrunInput
      * signalled to do so. This, however, is handled by the framework,
      * right into the sleep below.
      */
-    while (!pThrd->bShallStop) {
+    while (!thrdGetShallStop(pThrd)) {
         /* now move the listener to running state. Control will only
          * return after SIGUSR1.
          */

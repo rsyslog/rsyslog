@@ -441,6 +441,7 @@ generate_conf() {
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		mkdir -p $RSYSLOG_DYNNAME.spool
 	fi
+	set_proper_termination_file "$1"
 	local proper_termination_file_var="RSTB_PROPER_TERMINATION_FILE$1"
 	local proper_termination_file="${!proper_termination_file_var:-}"
 	if [ "$yaml_only" = "1" ]; then
@@ -538,15 +539,20 @@ set_proper_termination_file() {
 	fi
 	local proper_termination_file="$PWD/$RSYSLOG_DYNNAME.proper-termination$suffix"
 	export "${proper_termination_file_var}=$proper_termination_file"
+	rm -f "$proper_termination_file"
 }
 
 proper_termination_file_is_valid() {
-	local file
+	local file expected_pid
 	file="$(get_proper_termination_file "$1")"
+	expected_pid="${2:-}"
 	[ -n "$file" ] || return 1
 	[ -f "$file" ] || return 1
 	grep -qx 'status=ok' "$file" || return 1
 	grep -qx 'phase=main-return' "$file" || return 1
+	if [ -n "$expected_pid" ]; then
+		grep -qx "pid=$expected_pid" "$file" || return 1
+	fi
 	return 0
 }
 
@@ -566,7 +572,7 @@ print_proper_termination_file() {
 check_proper_termination() {
 	local file
 	file="$(get_proper_termination_file "$1")"
-	if proper_termination_file_is_valid "$1"; then
+	if proper_termination_file_is_valid "$1" "$2"; then
 		return
 	fi
 	printf 'FAIL: proper termination file missing or invalid: %s\n' "${file:-<not configured>}"
@@ -640,6 +646,7 @@ cmp_exact_file() {
 # code common to all startup...() functions
 startup_common() {
 	instance=
+	local proper_termination_file
 	if [ "$RSYSLOG_YAML_ONLY" = "1" ]; then
 		if [ "$1" == "2" ]; then
 		    CONF_FILE="${TESTCONF_NM}2.yaml"
@@ -667,6 +674,10 @@ startup_common() {
 	# starts rsyslog multiple times does not pick up the old port number.
 	rm -f "$RSYSLOG_PIDBASE$instance.pid"
 	rm -f $RSYSLOG_DYNNAME.imdiag$instance.port
+	proper_termination_file="$(get_proper_termination_file "$instance")"
+	if [ -n "$proper_termination_file" ]; then
+		rm -f "$proper_termination_file"
+	fi
 	if [ ! -f $CONF_FILE ]; then
 	    echo "ERROR: config file '$CONF_FILE' not found!"
 	    error_exit 1
@@ -1983,13 +1994,20 @@ shutdown_immediate() {
 # $1 is the instance
 # $2 optional timeout in seconds (defaults to remaining TB_TEST_MAX_RUNTIME window)
 wait_shutdown() {
-	local shutdown_deadline now timeout_override
+	local shutdown_deadline now timeout_override pid_save observed_shutdown expect_no_marker_var
 	timeout_override="${2:-}"
 	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		wait_shutdown_vg "$1"
 		return
 	fi
-	out_pid=$(cat $RSYSLOG_PIDBASE$1.pid.save)
+	pid_save="$RSYSLOG_PIDBASE$1.pid.save"
+	observed_shutdown=0
+	if [ -s "$pid_save" ]; then
+		out_pid=$(cat "$pid_save")
+		observed_shutdown=1
+	else
+		out_pid=""
+	fi
 	if [ -n "$timeout_override" ]; then
 		shutdown_deadline=$(( $(date +%s) + timeout_override ))
 	else
@@ -2025,7 +2043,13 @@ quit"
 		fi
 	done
 	unset terminated
-	unset out_pid
+	expect_no_marker_var="RSTB_EXPECT_NO_PROPER_TERMINATION${1:-}"
+	if [ "$observed_shutdown" -eq 1 ] && [ -n "$(get_proper_termination_file "$1")" ] &&
+		[ "${!expect_no_marker_var:-}" != "YES" ]; then
+		check_proper_termination "$1" "$out_pid"
+	fi
+	unset "$expect_no_marker_var"
+	unset observed_shutdown
 	# Check for test-specific core files first (prevents Issue #6268 race condition)
 	core_found=0
 	if [ -n "$RSYSLOG_DYNNAME" ]; then
@@ -2038,7 +2062,7 @@ quit"
 		core_found=1
 	fi
 	if [ $core_found -eq 1 ]; then
-		if proper_termination_file_is_valid "$1"; then
+		if proper_termination_file_is_valid "$1" "$out_pid"; then
 			printf 'INFO: core file exists, but proper termination file proves rsyslogd reached main return; ignoring as stale/foreign core\n'
 		else
 			printf 'ABORT! core file exists (maybe from a parallel run!)\n'
@@ -2048,6 +2072,7 @@ quit"
 			error_exit  1
 		fi
 	fi
+	unset out_pid
 }
 
 
@@ -2275,7 +2300,9 @@ issue_HUP() {
 
 # actually, we wait for rsyslog.pid to be deleted. $1 is the instance
 wait_shutdown_vg() {
-	wait $(cat $RSYSLOG_PIDBASE$1.pid)
+	local out_pid expect_no_marker_var
+	out_pid="$(cat $RSYSLOG_PIDBASE$1.pid)"
+	wait "$out_pid"
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
 
@@ -2287,6 +2314,11 @@ wait_shutdown_vg() {
 	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		check_exit_vg
 	fi
+	expect_no_marker_var="RSTB_EXPECT_NO_PROPER_TERMINATION${1:-}"
+	if [ -n "$(get_proper_termination_file "$1")" ] && [ "${!expect_no_marker_var:-}" != "YES" ]; then
+		check_proper_termination "$1" "$out_pid"
+	fi
+	unset "$expect_no_marker_var"
 }
 
 check_file_exists() {
@@ -5443,6 +5475,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		fi
 		;;
    'kill-immediate') # kill rsyslog unconditionally
+		export RSTB_EXPECT_NO_PROPER_TERMINATION=YES
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
 		# note: we do not wait for the actual termination!
 		;;

@@ -12,7 +12,6 @@ fi
 # aborts rsyslogd, so disable core files after init to avoid polluting CI hosts.
 ulimit -c 0 || true
 
-set_proper_termination_file
 generate_conf
 export RS_REDIR=">$RSYSLOG_DYNNAME.rsyslog.log 2>&1"
 startup_common "" ""
