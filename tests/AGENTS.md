@@ -78,6 +78,11 @@ minimal containers. Findings are review prompts, not automatic blockers.
   behavior, race window, or invariant it was meant to exercise. If the oracle or
   setup changes, refresh the head comment and verify the original behavior is
   still covered.
+- **`imdiag` timeoutGuard is mandatory**: the timeout guard is testbench
+  safety plumbing that aborts a stuck rsyslogd from inside the process so CI can
+  retain useful failure evidence. Do not remove, disable, or weaken it to make a
+  shutdown, daemonization, or unload test pass. Fix the underlying lifecycle
+  issue or ask for maintainer guidance if preserving the guard is ambiguous.
 
 ## Writing & updating tests
 - Base new shell tests on existing ones; include `. $srcdir/diag.sh` to gain the

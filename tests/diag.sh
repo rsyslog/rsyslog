@@ -465,6 +465,7 @@ generate_conf() {
 			printf '    serverrun: "0"\n'
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode: "%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
+			# aborttimeout enables imdiag timeoutGuard, mandatory testbench hang protection.
 			printf '    aborttimeout: "%s"\n' "$TB_TEST_MAX_RUNTIME"
 			[ -n "$proper_termination_file" ] &&
 				printf '    properterminationfile: "%s"\n' "$proper_termination_file"
@@ -486,6 +487,7 @@ generate_conf() {
 			printf '    serverrun="0"\n'
 			[ -n "$RSTB_IMDIAG_INJECT_DELAY_MODE" ] &&
 				printf '    injectdelaymode="%s"\n' "$RSTB_IMDIAG_INJECT_DELAY_MODE"
+			# aborttimeout enables imdiag timeoutGuard, mandatory testbench hang protection.
 			printf '    aborttimeout="%s"\n' "$TB_TEST_MAX_RUNTIME"
 			[ -n "$proper_termination_file" ] &&
 				printf '    properterminationfile="%s"\n' "$proper_termination_file"
