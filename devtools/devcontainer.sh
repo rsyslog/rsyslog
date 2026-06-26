@@ -2,8 +2,8 @@
 # This scripts uses an rsyslog development container to execute given
 # command inside it.
 # Note: command line parameters are passed as parameters to the container,
-# with the notable exception that -ti, if given as first parameter, is
-# passed to "docker run" itself but NOT the container.
+# with the notable exception that -ti, --rm, and --no-pull, if given before the
+# container command, are handled by this wrapper.
 #
 # use env var DOCKER_RUN_EXTRA_OPTS to provide extra options to docker run
 # command.
@@ -14,21 +14,33 @@
 #                   set to "" to use the container default settings
 #                   (no local mapping)
 set -e
-# Docker run --rm removes the container and its associated anonymous volumes on
-# normal exit. This matters for dev images that declare VOLUME.
-if [ "$1" == "--rm" ]; then
-	optrm="--rm=true"
-	shift 1
-fi
-if [ "$1" == "-ti" ]; then
-	ti="-ti"
-	shift 1
-fi
-# check in case -ti was in front...
-if [ "$1" == "--rm" ]; then
-	optrm="--rm=true"
-	shift 1
-fi
+
+optrm=""
+ti=""
+no_pull=""
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		# Docker run --rm removes the container and its associated anonymous
+		# volumes on normal exit. This matters for dev images that declare
+		# VOLUME.
+		--rm)
+			optrm="--rm=true"
+			shift 1
+			;;
+		-ti)
+			ti="-ti"
+			shift 1
+			;;
+		--no-pull)
+			no_pull="yes"
+			shift 1
+			;;
+		*)
+			break
+			;;
+	esac
+done
 
 if [ "$RSYSLOG_HOME" == "" ]; then
 	RSYSLOG_HOME=$(pwd)
@@ -53,8 +65,12 @@ fi
 
 printf '/rsyslog is mapped to %s \n' "$RSYSLOG_HOME"
 printf 'using container %s\n' "$RSYSLOG_DEV_CONTAINER"
-printf 'pulling container...\n'
-docker pull "$RSYSLOG_DEV_CONTAINER"
+if [ "$no_pull" == "yes" ]; then
+	printf 'not pulling container (--no-pull)\n'
+else
+	printf 'pulling container...\n'
+	docker pull "$RSYSLOG_DEV_CONTAINER"
+fi
 container_uid_args=
 container_uid_spec=
 if [ "${RSYSLOG_CONTAINER_UID+x}" ]; then
