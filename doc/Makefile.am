@@ -1234,6 +1234,7 @@ EXTRA_DIST = \
     source/reference/properties/message-syslogseverity.rst \
     source/reference/properties/message-syslogtag.rst \
     source/reference/properties/message-timegenerated.rst \
+    source/reference/properties/message-timereceived.rst \
     source/reference/properties/message-timereported.rst \
     source/reference/properties/message-timestamp.rst \
     source/reference/properties/message-uuid.rst \
