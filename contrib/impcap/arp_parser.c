@@ -42,6 +42,27 @@ struct arp_header_s {
 
 typedef struct arp_header_s arp_header_t;
 
+static int arp_addr_lengths_available(const arp_header_t *arp_header, int pktSize) {
+    const size_t hdrLen = sizeof(*arp_header);
+    const size_t hwAddrLen = arp_header->hwAddrLen;
+    const size_t pAddrLen = arp_header->pAddrLen;
+    const size_t addrLen = 2 * (hwAddrLen + pAddrLen);
+
+    if (!(pktSize >= 0 && (size_t)pktSize >= hdrLen && addrLen <= (size_t)pktSize - hdrLen)) {
+        return 0;
+    }
+
+    if (ntohs(arp_header->hwType) == 1 && hwAddrLen < 6) {
+        return 0;
+    }
+
+    if (ntohs(arp_header->pType) == ETHERTYPE_IP && pAddrLen < 4) {
+        return 0;
+    }
+
+    return 1;
+}
+
 /*
  *  This function parses the bytes in the received packet to extract ARP metadata.
  *
@@ -78,6 +99,12 @@ data_ret_t *arp_parse(const uchar *packet, int pktSize, struct json_object *jpar
     json_object_object_add(jparent, "ARP_hwType", json_object_new_int(ntohs(arp_header->hwType)));
     json_object_object_add(jparent, "ARP_pType", json_object_new_int(ntohs(arp_header->pType)));
     json_object_object_add(jparent, "ARP_op", json_object_new_int(ntohs(arp_header->opCode)));
+
+    if (!arp_addr_lengths_available(arp_header, pktSize)) {
+        DBGPRINTF("ARP packet address lengths exceed captured packet size: hwAddrLen=%u pAddrLen=%u pktSize=%d\n",
+                  arp_header->hwAddrLen, arp_header->pAddrLen, pktSize);
+        RETURN_DATA_AFTER(28);
+    }
 
     if (ntohs(arp_header->hwType) == 1) { /* ethernet addresses */
         char hwAddrSrc[20], hwAddrDst[20];
@@ -140,10 +167,18 @@ data_ret_t *rarp_parse(const uchar *packet, int pktSize, struct json_object *jpa
     json_object_object_add(jparent, "RARP_pType", json_object_new_int(ntohs(rarp_header->pType)));
     json_object_object_add(jparent, "RARP_op", json_object_new_int(ntohs(rarp_header->opCode)));
 
+    if (!arp_addr_lengths_available(rarp_header, pktSize)) {
+        DBGPRINTF("RARP packet address lengths exceed captured packet size: hwAddrLen=%u pAddrLen=%u pktSize=%d\n",
+                  rarp_header->hwAddrLen, rarp_header->pAddrLen, pktSize);
+        RETURN_DATA_AFTER(28);
+    }
+
     if (ntohs(rarp_header->hwType) == 1) { /* ethernet addresses */
-        char *hwAddrSrc = ether_ntoa((struct ether_addr *)rarp_header->pAddr);
-        char *hwAddrDst =
-            ether_ntoa((struct ether_addr *)(rarp_header->pAddr + rarp_header->hwAddrLen + rarp_header->pAddrLen));
+        char hwAddrSrc[20], hwAddrDst[20];
+
+        ether_ntoa_r((struct ether_addr *)rarp_header->pAddr, hwAddrSrc);
+        ether_ntoa_r((struct ether_addr *)(rarp_header->pAddr + rarp_header->hwAddrLen + rarp_header->pAddrLen),
+                     hwAddrDst);
 
         json_object_object_add(jparent, "RARP_hwSrc", json_object_new_string((char *)hwAddrSrc));
         json_object_object_add(jparent, "RARP_hwDst", json_object_new_string((char *)hwAddrDst));

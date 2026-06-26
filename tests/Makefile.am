@@ -31,6 +31,8 @@ TESTS_GSSAPI_LIBYAML = \
 	imgssapi-yaml-include-listen-port-file.sh
 EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
+EXTRA_DIST += unit/impcap_arp_parser_test.c
+
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
@@ -2316,6 +2318,18 @@ runtime_unit_msg_replace_SOURCES = \
 
 runtime_unit_ommongodb_date_SOURCES = \
 	unit/ommongodb_date_test.c
+
+if ENABLE_IMPCAP
+check_PROGRAMS += runtime_unit_impcap_arp_parser
+TESTS += runtime_unit_impcap_arp_parser
+
+runtime_unit_impcap_arp_parser_SOURCES = \
+	unit/impcap_arp_parser_test.c
+
+runtime_unit_impcap_arp_parser_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_impcap_arp_parser_LDADD = $(LIBFASTJSON_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
 
 if ENABLE_GSSAPI
 check_PROGRAMS += runtime_unit_gss_token_util
