@@ -420,7 +420,7 @@ jobs:
               ;;
           'gcc8-debug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='gcc-8'
               ;;
           *)
