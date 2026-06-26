@@ -399,6 +399,9 @@ finalize_it:
 static void exit_thread(ATTR_UNUSED const struct mg_context *ctx, ATTR_UNUSED int thread_type, void *thread_pointer) {
     if (thread_type == 1) {
         struct conn_wrkr_s *data = (struct conn_wrkr_s *)thread_pointer;
+        if (data == NULL) {
+            return;
+        }
         if (data->propRemoteAddr) {
             prop.Destruct(&data->propRemoteAddr);
         }
@@ -436,8 +439,15 @@ static rsRetVal msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, st
 #define MAX_HTTP_HEADERS 64 /* hard limit */
     int count = min(ri->num_headers, MAX_HTTP_HEADERS);
 
+    if (connWrkr->pScratchBuf == NULL) {
+        return RS_RET_OK;
+    }
+
     CHKmalloc(json = json_object_new_object());
     for (int i = 0; i < count; i++) {
+        if (ri->http_headers[i].name == NULL || ri->http_headers[i].value == NULL) {
+            continue;
+        }
         struct json_object *const jval = json_object_new_string(ri->http_headers[i].value);
         CHKmalloc(jval);
         /* truncate header names bigger than INIT_SCRATCH_BUF_SIZE */
@@ -472,7 +482,7 @@ static rsRetVal msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMs
     DEFiRet;
     const struct mg_request_info *ri = connWrkr->pri;
 
-    if (ri && ri->query_string) {
+    if (ri && ri->query_string && connWrkr->pScratchBuf != NULL) {
         if (connWrkr->scratchBufSize > 0) {
             const size_t query_len = strlen(ri->query_string);
             const size_t copy_len = query_len < connWrkr->scratchBufSize - 1 ? query_len : connWrkr->scratchBufSize - 1;
@@ -632,24 +642,24 @@ static rsRetVal processOctetCounting(const instanceConf_t *const inst,
         char ch = *pbuf;
 
         if (connWrkr->parseState.inputState == eAtStrtFram || connWrkr->parseState.inputState == eInOctetCnt) {
-            processOctetMsgLen(inst, connWrkr, ch);
+            CHKiRet(processOctetMsgLen(inst, connWrkr, ch));
             if (connWrkr->parseState.framingMode == TCP_FRAMING_OCTET_COUNTING) {
                 pbuf++;
             }
         } else if (connWrkr->parseState.inputState == eInMsg) {
             if (connWrkr->parseState.framingMode == TCP_FRAMING_OCTET_STUFFING) {
-                if (connWrkr->iMsg < s_iMaxLine) {
+                if (connWrkr->iMsg >= s_iMaxLine) {
+                    CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
+                    connWrkr->parseState.inputState = eAtStrtFram;
+                } else {
                     if (ch == '\n') {
-                        doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
+                        CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
                         connWrkr->parseState.inputState = eAtStrtFram;
                     } else {
                         connWrkr->pMsg[connWrkr->iMsg++] = ch;
                     }
-                } else {
-                    doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
-                    connWrkr->parseState.inputState = eAtStrtFram;
+                    pbuf++;
                 }
-                pbuf++;
             } else {
                 assert(connWrkr->parseState.framingMode == TCP_FRAMING_OCTET_COUNTING);
                 const size_t remainingBytes = pbufLast - pbuf;
@@ -667,7 +677,7 @@ static rsRetVal processOctetCounting(const instanceConf_t *const inst,
                 connWrkr->parseState.iOctetsRemain -= frameBytes;
 
                 if (connWrkr->parseState.iOctetsRemain == 0) {
-                    doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
+                    CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
                     connWrkr->parseState.inputState = eAtStrtFram;
                 }
             }
@@ -677,6 +687,7 @@ static rsRetVal processOctetCounting(const instanceConf_t *const inst,
             break;
         }
     }
+finalize_it:
     RETiRet;
 }
 
@@ -703,8 +714,9 @@ static rsRetVal processDisableLF(const instanceConf_t *const inst,
             connWrkr->iMsg += count;
             remainingBytes -= count;
         }
-        doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
+        CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
     }
+finalize_it:
     RETiRet;
 }
 
@@ -724,18 +736,18 @@ static rsRetVal processDataUncompressed(const instanceConf_t *const inst,
         const uchar *pbufLast = pbuf + len;
         while (pbuf < pbufLast) {
             char ch = *pbuf;
-            if (connWrkr->iMsg < s_iMaxLine) {
-                if (ch == '\n') {
-                    doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
-                } else {
-                    connWrkr->pMsg[connWrkr->iMsg++] = ch;
-                }
+            if (connWrkr->iMsg >= s_iMaxLine) {
+                CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
+            }
+            if (ch == '\n') {
+                CHKiRet(doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg));
             } else {
-                doSubmitMsg(inst, connWrkr, connWrkr->pMsg, connWrkr->iMsg);
+                connWrkr->pMsg[connWrkr->iMsg++] = ch;
             }
             pbuf++;
         }
     }
+finalize_it:
     RETiRet;
 }
 
@@ -891,10 +903,23 @@ static sbool parse_api_key_header(struct mg_connection *conn, struct auth_s *aut
     const char *auth_header = mg_get_header(conn, "Authorization");
     if (auth_header != NULL && strncasecmp(auth_header, "ApiKey ", 7) == 0) {
         auth->pszApiKey = skipWhitespace(auth_header + 7);
+        if (auth->pszApiKey != NULL) {
+            size_t key_len = strlen(auth->pszApiKey);
+            if (key_len > BASIC_AUTH_MAX_ENCODED) {
+                return 0;
+            }
+        }
         return (auth->pszApiKey != NULL && auth->pszApiKey[0] != '\0');
     }
 
     auth->pszApiKey = skipWhitespace(mg_get_header(conn, "X-API-Key"));
+    if (auth->pszApiKey != NULL) {
+        size_t key_len = strlen(auth->pszApiKey);
+        if (key_len > BASIC_AUTH_MAX_ENCODED) {
+            auth->pszApiKey = NULL;
+            return 0;
+        }
+    }
     return (auth->pszApiKey != NULL && auth->pszApiKey[0] != '\0');
 }
 
@@ -998,15 +1023,23 @@ static sbool read_api_key_file(FILE *filep, const char *presentedApiKey) {
  */
 static FILE *openAuthFile(struct mg_connection *conn, const char *authFile) {
     FILE *fp = NULL;
+    int fd = -1;
 
     if (authFile == NULL) {
         mg_cry(conn, "warning: auth file not configured for this endpoint.\n");
         return NULL;
     }
 
-    fp = fopen(authFile, "r");
-    if (fp == NULL) {
+    fd = open(authFile, O_RDONLY | O_NOFOLLOW);
+    if (fd == -1) {
         LogError(errno, RS_RET_NO_FILE_ACCESS, "imhttp: auth file '%s' could not be accessed", authFile);
+        return NULL;
+    }
+
+    fp = fdopen(fd, "r");
+    if (fp == NULL) {
+        close(fd);
+        LogError(errno, RS_RET_NO_FILE_ACCESS, "imhttp: fdopen failed for '%s'", authFile);
     }
     return fp;
 }
@@ -1120,7 +1153,8 @@ static int routeAuthHandler(struct mg_connection *conn, void *cbdata) {
 
     if (authCtx->pszBasicAuthFile != NULL && authHeader != NULL && strncasecmp(authHeader, "Basic ", 6) == 0) {
         ret = authorize_basic(conn, authCtx->pszBasicAuthFile);
-    } else if (authCtx->pszApiKeyFile != NULL) {
+    }
+    if (!ret && authCtx->pszApiKeyFile != NULL) {
         ret = authorize_api_key(conn, authCtx->pszApiKeyFile);
     }
 
@@ -1167,6 +1201,11 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
     instanceConf_t *inst = (instanceConf_t *)cbdata;
     const struct mg_request_info *ri = mg_get_request_info(conn);
     struct conn_wrkr_s *connWrkr = mg_get_thread_pointer(conn);
+    if (connWrkr == NULL) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "imhttp: thread pointer (connWrkr) is NULL");
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+        return 500;
+    }
     connWrkr->multiSub.nElem = 0;
     memset(&connWrkr->parseState, 0, sizeof(connWrkr->parseState));
     connWrkr->pri = ri;
@@ -1673,6 +1712,11 @@ BEGINcheckCnf
     CODESTARTcheckCnf;
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
         std_checkRuleset(pModConf, inst);
+        if (inst->pszEndpoint == NULL || inst->pszEndpoint[0] != '/') {
+            LogError(0, RS_RET_CONFIG_ERROR, "imhttp: endpoint '%s' is invalid, must start with '/'",
+                     inst->pszEndpoint ? (const char *)inst->pszEndpoint : "(null)");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
     }
     /* verify civetweb options are valid */
     const struct mg_option *valid_opts = mg_get_valid_options();
