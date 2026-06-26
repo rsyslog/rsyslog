@@ -953,6 +953,22 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar *));
 void dfltErrLogger(const int, const int, const uchar *errMsg);
 /** Determine the local host name and store it in the configuration. */
 rsRetVal queryLocalHostname(rsconf_t *const);
+/** Configure the testbench-only termination marker file.
+ *
+ * This hook is used by imdiag so daemonized tests can prove how rsyslogd
+ * terminated even when the shell cannot wait for the daemon child. The core
+ * duplicates @p path because the normal marker is written after loadable
+ * modules have already been unloaded.
+ */
+rsRetVal rsyslogdSetProperTerminationFile(const uchar *path);
+/** Write the configured testbench termination marker.
+ *
+ * @param status Short status string such as "ok" or "error".
+ * @param reason Termination reason such as "normal" or "timeoutGuard".
+ * @param phase Lifecycle phase that writes the marker.
+ * @return 0 on success or if no marker is configured; non-zero on write error.
+ */
+int rsyslogdWriteTerminationMarker(const char *status, const char *reason, const char *phase);
 
 
 /* this define below is intended to be used to implement empty

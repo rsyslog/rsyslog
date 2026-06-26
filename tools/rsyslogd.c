@@ -51,6 +51,7 @@
 #include "rsyslog.h"
 #include "wti.h"
 #include "ratelimit.h"
+#include "queue.h"
 #include "parser.h"
 #include "linkedlist.h"
 #include "ruleset.h"
@@ -239,6 +240,7 @@ int bHaveMainQueue = 0; /* set to 1 if the main queue - in queueing mode - is av
 prop_t *pInternalInputName = NULL; /* there is only one global inputName for all internally-generated messages */
 ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 int send_to_all = 0; /* send message to all IPv4/IPv6 addresses */
+static uchar *properTerminationFile = NULL; /* testbench-only final shutdown marker path */
 
 static struct queuefilenames_s {
     struct queuefilenames_s *next;
@@ -2454,6 +2456,91 @@ static void mainloop(void) {
 
 /* Finalize and destruct all actions.
  */
+rsRetVal rsyslogdSetProperTerminationFile(const uchar *path) {
+    uchar *newPath = NULL;
+
+    if (path != NULL && path[0] != '\0') {
+        const size_t lenPath = strlen((const char *)path) + 1;
+        newPath = malloc(lenPath);
+        if (newPath == NULL) return RS_RET_OUT_OF_MEMORY;
+        memcpy(newPath, path, lenPath);
+    }
+
+    free(properTerminationFile);
+    properTerminationFile = newPath;
+    return RS_RET_OK;
+}
+
+
+int rsyslogdWriteTerminationMarker(const char *status, const char *reason, const char *phase) {
+    if (properTerminationFile == NULL || properTerminationFile[0] == '\0') return 0;
+
+    if (status == NULL) status = "unknown";
+    if (reason == NULL) reason = "unknown";
+    if (phase == NULL) phase = "unknown";
+
+#ifndef O_NOFOLLOW
+    fprintf(stderr,
+            "rsyslogd: proper termination file '%s' cannot be safely opened: "
+            "O_NOFOLLOW is unavailable on this platform\n",
+            (const char *)properTerminationFile);
+    return 1;
+#else
+    int fd = open((const char *)properTerminationFile, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        fprintf(stderr, "rsyslogd: error opening proper termination file '%s': %s\n",
+                (const char *)properTerminationFile, strerror(errno));
+        return 1;
+    }
+
+    #ifdef ENABLE_IMDIAG
+    const unsigned overallQueueSize = PREFER_FETCH_32BIT(iOverallQueueSize);
+    #else
+    const unsigned overallQueueSize = 0;
+    #endif
+    char buf[512];
+    const int len = snprintf(buf, sizeof(buf),
+                             "status=%s\nreason=%s\npid=%d\nsignal=%d\nversion=%s\nphase=%s\n"
+                             "queue.overall.size=%u\n",
+                             status, reason, (int)getpid(), bFinished, VERSION, phase, overallQueueSize);
+    if (len < 0 || (size_t)len >= sizeof(buf)) {
+        fprintf(stderr, "rsyslogd: error formatting proper termination file '%s'\n",
+                (const char *)properTerminationFile);
+        close(fd);
+        return 1;
+    }
+
+    const char *cursor = buf;
+    size_t remaining = (size_t)len;
+    while (remaining > 0) {
+        const ssize_t written = write(fd, cursor, remaining);
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            fprintf(stderr, "rsyslogd: error writing proper termination file '%s': %s\n",
+                    (const char *)properTerminationFile, strerror(errno));
+            close(fd);
+            return 1;
+        }
+        if (written == 0) {
+            fprintf(stderr, "rsyslogd: short write to proper termination file '%s'\n",
+                    (const char *)properTerminationFile);
+            close(fd);
+            return 1;
+        }
+        cursor += written;
+        remaining -= (size_t)written;
+    }
+
+    if (close(fd) != 0) {
+        fprintf(stderr, "rsyslogd: error closing proper termination file '%s': %s\n",
+                (const char *)properTerminationFile, strerror(errno));
+        return 1;
+    }
+    return 0;
+#endif
+}
+
+
 static void rsyslogd_destructAllActions(void) {
     ruleset.DestructAllActions(runConf);
     PREFER_STORE_0_TO_INT(&bHaveMainQueue); /* flag that internal messages need to be temporarily stored */
@@ -2630,5 +2717,5 @@ int main(int argc, char **argv) {
     osf_close();
     pthread_mutex_destroy(&mutChildDied);
     pthread_mutex_destroy(&mutHadHUP);
-    return 0;
+    return rsyslogdWriteTerminationMarker("ok", "normal", "main-return");
 }
