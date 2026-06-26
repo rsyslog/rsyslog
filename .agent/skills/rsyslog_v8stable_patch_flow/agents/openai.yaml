@@ -1,0 +1,4 @@
+interface:
+  display_name: "rsyslog v8-stable Patch Flow"
+  short_description: "Manage post-.0 v8-stable updates"
+  default_prompt: "Use $rsyslog_v8stable_patch_flow to handle a post-.0 v8-stable update and prepare the matching main merge."

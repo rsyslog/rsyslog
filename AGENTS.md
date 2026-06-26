@@ -19,6 +19,7 @@ To ensure consistency and high-quality contributions, AI agents SHOULD use the f
 | [`rsyslog_local_container_testing`](.agent/skills/rsyslog_local_container_testing/SKILL.md) | CI-style local dev-container validation, change-gated Ubuntu 26.04 first, late prompt audits, service-skip checks, and clean-tree rules. |
 | [`rsyslog_pr_babysitting`](.agent/skills/rsyslog_pr_babysitting/SKILL.md) | Post-push PR monitoring, including CI failures, reruns, and unresolved review-thread checks. |
 | [`rsyslog_changelog`](.agent/skills/rsyslog_changelog/SKILL.md) | Selective ChangeLog maintenance that follows release-note style and avoids low-signal churn. |
+| [`rsyslog_v8stable_patch_flow`](.agent/skills/rsyslog_v8stable_patch_flow/SKILL.md) | Post-.0 v8-stable patch updates, patch-release ChangeLog sections, and clean stable-to-main merges. |
 | [`rsyslog_doc`](.agent/skills/rsyslog_doc/SKILL.md) | Structured, RAG-optimized documentation and metadata. |
 | [`rsyslog_doc_dist`](.agent/skills/rsyslog_doc_dist/SKILL.md) | Syncing documentation files in `doc/Makefile.am`. |
 | [`rsyslog_module`](.agent/skills/rsyslog_module/SKILL.md) | Technical patterns for concurrency and module authoring. |

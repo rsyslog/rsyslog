@@ -16,6 +16,13 @@ This repository ships a repo-local Codex hook configuration for trusted projects
 - If formatting updates `.c` or `.h` files, the hook stages those tracked formatter updates automatically and then allows the commit
 - If partially staged `.c` or `.h` files are present, the hook blocks because auto-restaging would not be safe
 
+## Repo-local skills
+
+Agent workflow skills live under `.agent/skills/` and are indexed from `AGENTS.md`.
+Use those skills for rsyslog-specific build, test, PR babysitting, changelog,
+documentation, and v8-stable patch-flow tasks before falling back to generic
+Codex behavior.
+
 ## Requirements
 
 - The repository must be trusted so Codex loads `.codex/config.toml`
