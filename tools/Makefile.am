@@ -1,8 +1,7 @@
 sbin_PROGRAMS =
-bin_PROGRAMS =
 CLEANFILES =
-man1_MANS =
-man_MANS = rsyslogd.8 rsyslog.conf.5
+man5_MANS = rsyslog.conf.5
+man8_MANS = rsyslogd.8
 
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
@@ -78,7 +77,7 @@ endif # if OS_AIX
 endif # if OS_APPLE
 endif # if OS_LINUX
 
-EXTRA_DIST = $(man_MANS) \
+EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 	rscryutil.rst \
 	recover_qi.pl
 
@@ -95,6 +94,7 @@ msggen_SOURCES = msggen.c
 endif
 
 if ENABLE_USERTOOLS
+bin_PROGRAMS =
 if ENABLE_OMMONGODB
 bin_PROGRAMS += logctl
 logctl_SOURCES = logctl.c
@@ -122,6 +122,7 @@ rscryutil_LDFLAGS = \
 -Wl,--whole-archive,--no-whole-archive
 
 if ENABLE_GENERATE_MAN_PAGES
+man1_MANS =
 RSTMANFILE = rscryutil.rst
 rscryutil.1: $(RSTMANFILE)
 	$(AM_V_GEN) $(RST2MAN) $(RSTMANFILE) $@
