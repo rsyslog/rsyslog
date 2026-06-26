@@ -6,6 +6,7 @@
    fun:MMDB_open
    fun:createWrkrInstance
    fun:actionCheckAndCreateWrkrInstance
+   fun:actionPrepareInternal
    fun:actionPrepare
    fun:actionProcessMessage
    fun:processMsgMain
@@ -25,6 +26,7 @@
    fun:MMDB_open
    fun:createWrkrInstance
    fun:actionCheckAndCreateWrkrInstance
+   fun:actionPrepareInternal
    fun:actionPrepare
    fun:actionProcessMessage
    fun:processMsgMain
@@ -45,6 +47,7 @@
    fun:open_mmdb
    fun:createWrkrInstance
    fun:actionCheckAndCreateWrkrInstance
+   fun:actionPrepareInternal
    fun:actionPrepare
    fun:actionProcessMessage
    fun:processMsgMain
