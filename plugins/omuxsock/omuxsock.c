@@ -67,6 +67,8 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net)
     int sock; /**< Socket descriptor */
     struct sockaddr_un addr; /**< Unix socket address */
     socklen_t addrLen; /**< The socket address length */
+    pthread_mutex_t mutDoAct; /**< Serialize socket state for this action instance. */
+    int mutDoActInitialized; /**< True once mutDoAct may be destroyed. */
 } instanceData;
 
 
@@ -114,8 +116,6 @@ struct modConfData_s {
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
-
-static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * @brief A structure to map identifiers to socket information
@@ -316,9 +316,17 @@ BEGINfreeCnf
 ENDfreeCnf
 
 BEGINcreateInstance
+    int mutexErr;
     CODESTARTcreateInstance;
     pData->sock = INVLD_SOCK;
     pData->sockType = SOCK_DGRAM;
+    pData->mutDoActInitialized = 0;
+    if ((mutexErr = pthread_mutex_init(&pData->mutDoAct, NULL)) != 0) {
+        errno = mutexErr;
+        ABORT_FINALIZE(RS_RET_CONC_CTRL_ERR);
+    }
+    pData->mutDoActInitialized = 1;
+finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -336,6 +344,7 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     /* final cleanup */
     closeSocket(pData);
+    if (pData->mutDoActInitialized) pthread_mutex_destroy(&pData->mutDoAct);
     free(pData->tplName);
     free(pData->sockName);
     free(pData->namespace);
@@ -546,7 +555,9 @@ static rsRetVal doTryResume(instanceData *pData) {
 
 BEGINtryResume
     CODESTARTtryResume;
+    pthread_mutex_lock(&pWrkrData->pData->mutDoAct);
     iRet = doTryResume(pWrkrData->pData);
+    pthread_mutex_unlock(&pWrkrData->pData->mutDoAct);
 ENDtryResume
 
 BEGINdoAction
@@ -554,7 +565,7 @@ BEGINdoAction
     register unsigned l;
     int iMaxLine;
     CODESTARTdoAction;
-    pthread_mutex_lock(&mutDoAct);
+    pthread_mutex_lock(&pWrkrData->pData->mutDoAct);
     CHKiRet(doTryResume(pWrkrData->pData));
 
     iMaxLine = glbl.GetMaxLine(runModConf->pConf);
@@ -568,7 +579,7 @@ BEGINdoAction
     CHKiRet(sendMsg(pWrkrData->pData, psz, l));
 
 finalize_it:
-    pthread_mutex_unlock(&mutDoAct);
+    pthread_mutex_unlock(&pWrkrData->pData->mutDoAct);
 ENDdoAction
 
 
