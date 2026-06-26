@@ -1,0 +1,19 @@
+devtools/devcontainer.sh
+  s_e1bc3bab0b4eb3::t_69d472fedf757e 18-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "09e650cb9ca228f7af3078f678042a7266c8794d",
+  "prompts": {},
+  "sessions": {
+    "s_e1bc3bab0b4eb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eff87-c605-7251-88e6-f834c8ca0205",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
