@@ -30,6 +30,10 @@ This parameter is for controlling the case in ``fromhost``. If
 ``Host1.Example.Org`` when the message was received from
 ``Host1.Example.Org``. Default is "off" for backward compatibility.
 
+Leave it at the default when existing rules rely on lowercase ``fromhost``
+values. Enable it when downstream systems must match the DNS spelling returned
+by reverse lookup.
+
 Module usage
 ------------
 .. _param-imudp-module-preservecase:

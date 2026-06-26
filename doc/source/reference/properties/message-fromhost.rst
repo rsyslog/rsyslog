@@ -30,6 +30,14 @@ has been disabled. Reverse lookup results are cached; see
 outbound connections are not cached by rsyslog and are resolved via the system
 resolver whenever a connection is made.
 
+Case handling is input-specific. Some network inputs normalize the resolved
+name to lowercase for backward compatibility, while others preserve the DNS
+result by default. For inputs that support it, use the module or input
+``PreserveCase`` parameter to choose the behavior:
+:ref:`imudp PreserveCase <param-imudp-preservecase>` defaults to lowercase
+output and :ref:`imtcp PreserveCase <param-imtcp-preservecase>` defaults to
+preserving case.
+
 Usage
 -----
 .. _properties.message.fromhost-usage:
