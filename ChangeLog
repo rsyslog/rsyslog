@@ -1,4 +1,13 @@
 --------------------------------------------------------------------------------------
+Scheduled Release 8.2604.1 (aka 2026.04) 2026-06-26
+
+- 2026-06-26: config: keep unmatched include globs silent
+  IncludeConfig wildcards that match no files no longer emit a parser warning.
+  Empty include directories are again treated as a normal deployment state
+  while malformed or inaccessible include paths still report real errors.
+  Closes https://github.com/rsyslog/rsyslog/issues/7286
+
+--------------------------------------------------------------------------------------
 Scheduled Release 8.2606.0 (aka 2026.06) 2026-06-23
 
 IMPORTANT FOR MAINTAINERS
@@ -265,12 +274,10 @@ These will not be mentioned individually, check commit log for details.
   configuration-check failure.
   Closes https://github.com/rsyslog/rsyslog/issues/728
   Closes https://github.com/rsyslog/rsyslog/issues/2752
-- 2026-05-22: config: keep unmatched include globs silent
-  Non-optional IncludeConfig wildcards that match no files remain accepted
-  without an error or warning, preserving the historical non-fatal startup
-  behavior and avoiding noise for optional-by-design include directories.
+- 2026-05-22: config: warn for unmatched include globs
+  Non-optional IncludeConfig wildcards that match no files now emit a parser
+  warning while preserving the historical non-fatal startup behavior.
   Closes https://github.com/rsyslog/rsyslog/issues/4415
-  Closes https://github.com/rsyslog/rsyslog/issues/7286
 - 2026-05-20: imptcp: harden concurrency, boundaries, and memory handling
   imptcp received additional defense-in-depth work around listener statistics
   synchronization, receive buffer boundaries, zero-initialized session and
