@@ -1900,6 +1900,7 @@ TESTS_IMFILE = \
 	imfile-wildcards-dirs-multi5.sh \
 	imfile-wildcards-dirs-multi5-polling.sh \
 	imfile-same-file-monitors.sh \
+	imfile-duplicate-monitor-warning.sh \
 	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
