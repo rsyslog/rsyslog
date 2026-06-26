@@ -6147,9 +6147,6 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
     if (result == GLOB_NOMATCH && containsGlobWildcard((char *)finalName)) {
 #endif /* HAVE_GLOB_NOMAGIC */
-        if (optional == 0) {
-            parser_warnmsg("IncludeConfig pattern '%s' did not match any files", finalName);
-        }
         goto done;
     }
 
