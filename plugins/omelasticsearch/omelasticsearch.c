@@ -1007,6 +1007,67 @@ static int ATTR_NONNULL(1) getTemplateCount(const instanceData *const pData) {
 }
 
 
+/* Bulk metadata values are JSON strings. Dynamic templates may include
+ * untrusted message content, so quote, backslash, and control bytes before
+ * inserting values into the bulk control line.
+ */
+static size_t jsonEscapedLen(const uchar *const str) {
+    size_t len = 0;
+
+    if (str == NULL) return 0;
+
+    for (const uchar *p = str; *p != '\0'; ++p) {
+        if (*p == '"' || *p == '\\') {
+            len += 2;
+        } else if (*p < 0x20) {
+            len += sizeof("\\u00ff") - 1;
+        } else {
+            ++len;
+        }
+    }
+    return len;
+}
+
+
+static int addJsonEscapedBuf(es_str_t **const buf, const uchar *const str) {
+    static const char hex[] = "0123456789abcdef";
+    const uchar *chunk = str;
+    int r = 0;
+
+    if (str == NULL) return 0;
+
+    const uchar *p;
+    for (p = str; *p != '\0'; ++p) {
+        char esc[sizeof("\\u00ff") - 1];
+        size_t escLen;
+
+        if (*p == '"' || *p == '\\') {
+            esc[0] = '\\';
+            esc[1] = (char)*p;
+            escLen = 2;
+        } else if (*p < 0x20) {
+            esc[0] = '\\';
+            esc[1] = 'u';
+            esc[2] = '0';
+            esc[3] = '0';
+            esc[4] = hex[*p >> 4];
+            esc[5] = hex[*p & 0x0f];
+            escLen = sizeof("\\u00ff") - 1;
+        } else {
+            continue;
+        }
+
+        if (p > chunk) r = es_addBuf(buf, (const char *)chunk, (size_t)(p - chunk));
+        if (r == 0) r = es_addBuf(buf, esc, escLen);
+        if (r != 0) return r;
+        chunk = p + 1;
+    }
+
+    if (p > chunk) r = es_addBuf(buf, (const char *)chunk, (size_t)(p - chunk));
+    return r;
+}
+
+
 static rsRetVal ATTR_NONNULL(1) validateActionStrings(const instanceData *const pData, uchar **const tpls) {
     DEFiRet;
 
@@ -1123,23 +1184,23 @@ static size_t computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
     getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
     r += ustrlen((char *)message);
     if (searchIndex != NULL) {
-        r += ustrlen(searchIndex);
+        r += jsonEscapedLen(searchIndex);
     }
     if (searchType != NULL) {
         if (searchType[0] == '\0') {
             r += 4;  // "_doc"
         } else {
-            r += ustrlen(searchType);
+            r += jsonEscapedLen(searchType);
         }
     }
     if (parent != NULL) {
-        r += sizeof(META_PARENT) - 1 + ustrlen(parent);
+        r += sizeof(META_PARENT) - 1 + jsonEscapedLen(parent);
     }
     if (bulkId != NULL) {
-        r += sizeof(META_ID) - 1 + ustrlen(bulkId);
+        r += sizeof(META_ID) - 1 + jsonEscapedLen(bulkId);
     }
     if (pipelineName != NULL && (!pWrkrData->pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
-        r += sizeof(META_PIPELINE) - 1 + ustrlen(pipelineName);
+        r += sizeof(META_PIPELINE) - 1 + jsonEscapedLen(pipelineName);
     }
 
     return r;
@@ -1171,26 +1232,26 @@ static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar 
         endQuote = 1;
         if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
             if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_IX, sizeof(META_IX) - 1);
-        if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)searchIndex, ustrlen(searchIndex));
+        if (r == 0) r = addJsonEscapedBuf(&pWrkrData->batch.data, searchIndex);
         if (searchType != NULL && searchType[0] != '\0') {
             if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_TYPE, sizeof(META_TYPE) - 1);
-            if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)searchType, ustrlen(searchType));
+            if (r == 0) r = addJsonEscapedBuf(&pWrkrData->batch.data, searchType);
         }
     }
     if (parent != NULL) {
         endQuote = 1;
         if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PARENT, sizeof(META_PARENT) - 1);
-        if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)parent, ustrlen(parent));
+        if (r == 0) r = addJsonEscapedBuf(&pWrkrData->batch.data, parent);
     }
     if (pipelineName != NULL && (!pWrkrData->pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
         endQuote = 1;
         if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PIPELINE, sizeof(META_PIPELINE) - 1);
-        if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)pipelineName, ustrlen(pipelineName));
+        if (r == 0) r = addJsonEscapedBuf(&pWrkrData->batch.data, pipelineName);
     }
     if (bulkId != NULL) {
         endQuote = 1;
         if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_ID, sizeof(META_ID) - 1);
-        if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)bulkId, ustrlen(bulkId));
+        if (r == 0) r = addJsonEscapedBuf(&pWrkrData->batch.data, bulkId);
     }
     if (endQuote == 0) {
         if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_END_NOQUOTE, sizeof(META_END_NOQUOTE) - 1);
