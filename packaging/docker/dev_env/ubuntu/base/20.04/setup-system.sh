@@ -5,12 +5,12 @@ set -v
 #echo STEP: essentials
 #apt-get install -y 
 
-# CURRENTLY NOT NEEDED - 18.04 provides very current gcc by default!
+# CURRENTLY NOT NEEDED - 20.04 provides the required gcc versions by default!
 #echo STEP: set gcc-7 repo
 # currently the best repo for gcc-7 we can find...
 #add-apt-repository ppa:ubuntu-toolchain-r/test -y
 
-# ALSO NOT NEEDED, 18.04 has 6.0 by default!
+# ALSO NOT NEEDED, 20.04 has a sufficiently current clang by default!
 # LLVM repository
 #echo STEP: set clang 5 repo
 #echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main" > /etc/apt/sources.list.d/llvm.list
