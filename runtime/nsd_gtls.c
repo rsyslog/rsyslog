@@ -1160,6 +1160,7 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
     uchar lnBuf[256];
     char szAltName[1024]; /* this is sufficient for the DNSNAME and IPADDRESS... */
     int iAltName;
+    char *embeddedNul;
     size_t szAltNameLen;
     int bFoundPositiveMatch;
     int bHaveSAN = 0;
@@ -1182,6 +1183,21 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
             break;
         else if (gnuRet == GNUTLS_SAN_DNSNAME) {
             bHaveSAN = 1;
+            if (szAltNameLen == 0 || szAltNameLen >= sizeof(szAltName)) {
+                embeddedNul = NULL;
+            } else {
+                embeddedNul = memchr(szAltName, '\0', szAltNameLen);
+            }
+            if (szAltNameLen == 0 || szAltNameLen >= sizeof(szAltName) || embeddedNul != NULL) {
+                /* GnuTLS returns DNS SAN as raw bytes.  Do not let C-string
+                 * prefix semantics turn "name\\0.suffix" into authorized
+                 * peer "name".  Treat malformed DNS SAN bytes as non-matching. */
+                dbgprintf("subject alt dnsName is malformed, ignoring for name match\n");
+                CHKiRet(rsCStrAppendStr(pStr, (uchar *)"DNSname: <invalid>; "));
+                ++iAltName;
+                continue;
+            }
+            szAltName[szAltNameLen] = '\0';
             dbgprintf("subject alt dnsName: '%s'\n", szAltName);
             snprintf((char *)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
             CHKiRet(rsCStrAppendStr(pStr, lnBuf));

@@ -1607,6 +1607,7 @@ TESTS_GNUTLS = \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
+	imtcp-tls-gtls-x509name-nul-san.sh \
 	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-gtls-x509name-legacy.sh \
 	omfwd-tls-gtls-no-sni.sh \
