@@ -1583,6 +1583,7 @@ TESTS_MMDBLOOKUP_VALGRIND = \
     mmdb-multilevel-vg.sh
 
 TESTS_GNUTLS = \
+	gtls-absolute-module-path.sh \
 	imtcp-tls-basic.sh \
 	tcpflood-gtls-priority-invalid.sh \
 	imtcp-tls-input-basic.sh \
