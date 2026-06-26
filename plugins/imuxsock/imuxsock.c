@@ -285,23 +285,15 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-    {"socket", eCmdHdlrString, CNFPARAM_REQUIRED}, /* legacy: addunixlistensocket */
-    {"unlink", eCmdHdlrBinary, 0},
-    {"createpath", eCmdHdlrBinary, 0},
-    {"parsetrusted", eCmdHdlrBinary, 0},
-    {"ignoreownmessages", eCmdHdlrBinary, 0},
-    {"hostname", eCmdHdlrString, 0},
-    {"ignoretimestamp", eCmdHdlrBinary, 0},
-    {"flowcontrol", eCmdHdlrBinary, 0},
-    {"usesystimestamp", eCmdHdlrBinary, 0},
-    {"annotate", eCmdHdlrBinary, 0},
-    {"usespecialparser", eCmdHdlrBinary, 0},
-    {"parsehostname", eCmdHdlrBinary, 0},
-    {"usepidfromsystem", eCmdHdlrBinary, 0},
-    {"ruleset", eCmdHdlrString, 0},
-    {"ratelimit.interval", eCmdHdlrInt, 0},
-    {"ratelimit.burst", eCmdHdlrInt, 0},
-    {"ratelimit.severity", eCmdHdlrInt, 0},
+    {"socket", eCmdHdlrString, 0}, /* legacy: addunixlistensocket */
+    {"unlink", eCmdHdlrBinary, 0},        {"createpath", eCmdHdlrBinary, 0},
+    {"parsetrusted", eCmdHdlrBinary, 0},  {"ignoreownmessages", eCmdHdlrBinary, 0},
+    {"hostname", eCmdHdlrString, 0},      {"ignoretimestamp", eCmdHdlrBinary, 0},
+    {"flowcontrol", eCmdHdlrBinary, 0},   {"usesystimestamp", eCmdHdlrBinary, 0},
+    {"annotate", eCmdHdlrBinary, 0},      {"usespecialparser", eCmdHdlrBinary, 0},
+    {"parsehostname", eCmdHdlrBinary, 0}, {"usepidfromsystem", eCmdHdlrBinary, 0},
+    {"ruleset", eCmdHdlrString, 0},       {"ratelimit.interval", eCmdHdlrInt, 0},
+    {"ratelimit.burst", eCmdHdlrInt, 0},  {"ratelimit.severity", eCmdHdlrInt, 0},
     {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
@@ -1486,6 +1478,7 @@ ENDsetModCnf
 BEGINnewInpInst
     struct cnfparamvals *pvals;
     instanceConf_t *inst;
+    int haveSocketParam;
     int i;
     CODESTARTnewInpInst;
     DBGPRINTF("newInpInst (imuxsock)\n");
@@ -1499,6 +1492,21 @@ BEGINnewInpInst
     if (Debug) {
         dbgprintf("input param blk in imuxsock:\n");
         cnfparamsPrint(&inppblk, pvals);
+    }
+
+    haveSocketParam = 0;
+    for (i = 0; i < inppblk.nParams; ++i) {
+        if (!strcmp(inppblk.descr[i].name, "socket") && pvals[i].bUsed) {
+            haveSocketParam = 1;
+            break;
+        }
+    }
+    if (!haveSocketParam) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS,
+                 "imuxsock: input(type=\"imuxsock\") defines an additional UNIX socket; "
+                 "set Socket=\"...\" for that input, or configure the system log socket "
+                 "with module-level SysSock.* parameters");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
 
     CHKiRet(createInstance(&inst));

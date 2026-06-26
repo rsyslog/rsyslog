@@ -347,6 +347,7 @@ TESTS_DEFAULT = \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
 	imuxsock_legacy.sh \
+	imuxsock_missing_socket.sh \
 	imuxsock_logger.sh \
 	imuxsock_unlink_off_stale_socket.sh \
 	imuxsock_logger_ratelimit.sh \
