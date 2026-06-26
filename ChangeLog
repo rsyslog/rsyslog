@@ -267,10 +267,12 @@ These will not be mentioned individually, check commit log for details.
   configuration-check failure.
   Closes https://github.com/rsyslog/rsyslog/issues/728
   Closes https://github.com/rsyslog/rsyslog/issues/2752
-- 2026-05-22: config: warn for unmatched include globs
-  Non-optional IncludeConfig wildcards that match no files now emit a parser
-  warning while preserving the historical non-fatal startup behavior.
+- 2026-05-22: config: keep unmatched include globs silent
+  Non-optional IncludeConfig wildcards that match no files remain accepted
+  without an error or warning, preserving the historical non-fatal startup
+  behavior and avoiding noise for optional-by-design include directories.
   Closes https://github.com/rsyslog/rsyslog/issues/4415
+  Closes https://github.com/rsyslog/rsyslog/issues/7286
 - 2026-05-20: imptcp: harden concurrency, boundaries, and memory handling
   imptcp received additional defense-in-depth work around listener statistics
   synchronization, receive buffer boundaries, zero-initialized session and
