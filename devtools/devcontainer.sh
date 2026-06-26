@@ -15,6 +15,10 @@
 #                   (no local mapping)
 set -e
 
+optrm=""
+ti=""
+no_pull=""
+
 while [ $# -gt 0 ]; do
 	case "$1" in
 		# Docker run --rm removes the container and its associated anonymous
