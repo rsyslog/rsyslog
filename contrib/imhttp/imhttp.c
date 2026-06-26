@@ -101,8 +101,11 @@ struct route_auth_ctx_s {
 
 struct data_parse_s {
     sbool content_compressed;
+    sbool compressedDataComplete;
     sbool bzInitDone; /* did we do an init of zstrm already? */
     z_stream zstrm; /* zip stream to use for tcp compression */
+    uint64_t requestBodyBytes;
+    uint64_t decompressedBodyBytes;
     // Currently only used for octet specific parsing
     enum {
         eAtStrtFram,
@@ -156,6 +159,9 @@ struct conn_wrkr_s {
     uchar *pMsg; /* msg scratch buffer */
     size_t iMsg; /* index of next char to store in msg */
     uchar zipBuf[64 * 1024];
+    uchar *pDecompressedReqBuf;
+    size_t decompressedReqBufSize;
+    size_t decompressedReqBufLen;
     multi_submit_t multiSub;
     smsg_t *pMsgs[CONF_NUM_MULTISUB];
     char *pReadBuf;
@@ -409,6 +415,7 @@ static void exit_thread(ATTR_UNUSED const struct mg_context *ctx, ATTR_UNUSED in
             free(data->pScratchBuf);
         }
         free(data->pReadBuf);
+        free(data->pDecompressedReqBuf);
         free(data->pMsg);
         free(data);
     }
@@ -751,6 +758,65 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * Apply the imhttp request body limit to streaming byte counters.
+ *
+ * @note Content-Length only covers compressed wire bytes when gzip is used.
+ *       Keep both the wire stream and the inflated stream bounded, and parse a
+ *       gzip request only after its full inflated body stayed within the limit.
+ */
+static rsRetVal trackRequestBodyBytes(uint64_t *const counter, const size_t len, const char *const label) {
+    DEFiRet;
+
+    if (*counter > MAX_REQUEST_BODY_SIZE || (uint64_t)len > (uint64_t)MAX_REQUEST_BODY_SIZE - *counter) {
+        LogError(0, RS_RET_OVERSIZE_MSG, "imhttp: rejecting request body after %s size exceeded maximum %d bytes",
+                 label, MAX_REQUEST_BODY_SIZE);
+        ABORT_FINALIZE(RS_RET_OVERSIZE_MSG);
+    }
+    *counter += len;
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal appendDecompressedRequestBody(struct conn_wrkr_s *const connWrkr,
+                                              const uchar *const buf,
+                                              const size_t len) {
+    DEFiRet;
+    uchar *newBuf = NULL;
+
+    CHKiRet(trackRequestBodyBytes(&connWrkr->parseState.decompressedBodyBytes, len, "decompressed"));
+    if (len == 0) {
+        FINALIZE;
+    }
+
+    if (connWrkr->decompressedReqBufLen > MAX_REQUEST_BODY_SIZE ||
+        len > (size_t)MAX_REQUEST_BODY_SIZE - connWrkr->decompressedReqBufLen) {
+        ABORT_FINALIZE(RS_RET_OVERSIZE_MSG);
+    }
+
+    const size_t required = connWrkr->decompressedReqBufLen + len;
+    if (required > connWrkr->decompressedReqBufSize) {
+        size_t newSize =
+            connWrkr->decompressedReqBufSize == 0 ? INIT_SCRATCH_BUF_SIZE : connWrkr->decompressedReqBufSize;
+        while (newSize < required) {
+            if (newSize > (size_t)MAX_REQUEST_BODY_SIZE / 2) {
+                newSize = MAX_REQUEST_BODY_SIZE;
+            } else {
+                newSize *= 2;
+            }
+        }
+        CHKmalloc(newBuf = realloc(connWrkr->pDecompressedReqBuf, newSize));
+        connWrkr->pDecompressedReqBuf = newBuf;
+        connWrkr->decompressedReqBufSize = newSize;
+    }
+
+    memcpy(connWrkr->pDecompressedReqBuf + connWrkr->decompressedReqBufLen, buf, len);
+    connWrkr->decompressedReqBufLen += len;
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal processDataCompressed(const instanceConf_t *const inst,
                                       struct conn_wrkr_s *connWrkr,
                                       const char *buf,
@@ -773,10 +839,10 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
     connWrkr->parseState.zstrm.next_in = (Bytef *)buf;
     connWrkr->parseState.zstrm.avail_in = (uInt)len;
     /* run inflate() on buffer until everything has been uncompressed */
-    int outtotal = 0;
+    size_t outtotal = 0;
     do {
         int zRet = 0;
-        int outavail = 0;
+        size_t outavail = 0;
         dbgprintf("imhttp: in inflate() loop, avail_in %d, total_in %ld\n", connWrkr->parseState.zstrm.avail_in,
                   connWrkr->parseState.zstrm.total_in);
 
@@ -787,9 +853,15 @@ static rsRetVal processDataCompressed(const instanceConf_t *const inst,
         outavail = sizeof(connWrkr->zipBuf) - connWrkr->parseState.zstrm.avail_out;
         if (outavail != 0) {
             outtotal += outavail;
-            CHKiRet(processDataUncompressed(inst, connWrkr, (const char *)connWrkr->zipBuf, outavail));
+            CHKiRet(appendDecompressedRequestBody(connWrkr, connWrkr->zipBuf, outavail));
         }
         if (zRet == Z_STREAM_END) {
+            if (connWrkr->decompressedReqBufLen != 0) {
+                CHKiRet(processDataUncompressed(inst, connWrkr, (const char *)connWrkr->pDecompressedReqBuf,
+                                                connWrkr->decompressedReqBufLen));
+            }
+            connWrkr->decompressedReqBufLen = 0;
+            connWrkr->parseState.compressedDataComplete = 1;
             break;
         }
         if (zRet == Z_BUF_ERROR) {
@@ -1208,6 +1280,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
     }
     connWrkr->multiSub.nElem = 0;
     memset(&connWrkr->parseState, 0, sizeof(connWrkr->parseState));
+    connWrkr->decompressedReqBufLen = 0;
     connWrkr->pri = ri;
 
     if (inst->bAddMetadata && connWrkr->scratchBufSize == 0) {
@@ -1240,6 +1313,16 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
         prop.CreateOrReuseStringProp(&connWrkr->propRemoteAddr, (const uchar *)ri->remote_addr, len);
     }
 
+    if (ri->num_headers > 0) {
+        int i;
+        for (i = 0; i < ri->num_headers; i++) {
+            if (!strcasecmp(ri->http_headers[i].name, "content-encoding") &&
+                !strcasecmp(ri->http_headers[i].value, "gzip")) {
+                connWrkr->parseState.content_compressed = 1;
+            }
+        }
+    }
+
     if (ri->content_length >= 0) {
         /* We know the content length in advance */
         if ((uint64_t)ri->content_length > MAX_REQUEST_BODY_SIZE) {
@@ -1252,7 +1335,7 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
             rc = 413;
             FINALIZE;
         }
-        if ((uint64_t)ri->content_length + 1 > connWrkr->readBufSize) {
+        if (!connWrkr->parseState.content_compressed && (uint64_t)ri->content_length + 1 > connWrkr->readBufSize) {
             char *newReadBuf = realloc(connWrkr->pReadBuf, (size_t)ri->content_length + 1);
             if (newReadBuf == NULL) {
                 mg_cry(conn, "%s() - realloc failed!\n", __FUNCTION__);
@@ -1268,21 +1351,33 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
          * or connection close), indicated my mg_read returning 0 */
     }
 
-    if (ri->num_headers > 0) {
-        int i;
-        for (i = 0; i < ri->num_headers; i++) {
-            if (!strcasecmp(ri->http_headers[i].name, "content-encoding") &&
-                !strcasecmp(ri->http_headers[i].value, "gzip")) {
-                connWrkr->parseState.content_compressed = 1;
-            }
-        }
-    }
-
     while (1) {
         int count = mg_read(conn, connWrkr->pReadBuf, connWrkr->readBufSize);
         if (count > 0) {
+            localRet = trackRequestBodyBytes(&connWrkr->parseState.requestBodyBytes, (size_t)count, "wire");
+            if (localRet == RS_RET_OVERSIZE_MSG) {
+                STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+                STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+                mg_printf(conn, "HTTP/1.1 413 Payload Too Large\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+                rc = 413;
+                FINALIZE;
+            }
+            if (localRet != RS_RET_OK) {
+                LogError(0, localRet, "imhttp: failed tracking request payload size");
+                STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+                mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+                rc = 500;
+                FINALIZE;
+            }
             localRet = processData(inst, connWrkr, (const char *)connWrkr->pReadBuf, count);
             if (localRet != RS_RET_OK) {
+                if (localRet == RS_RET_OVERSIZE_MSG) {
+                    STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+                    STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+                    mg_printf(conn, "HTTP/1.1 413 Payload Too Large\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+                    rc = 413;
+                    FINALIZE;
+                }
                 LogError(0, localRet, "imhttp: failed processing request payload");
                 STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
                 mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
@@ -1292,6 +1387,14 @@ static int postHandler(struct mg_connection *conn, void *cbdata) {
         } else {
             break;
         }
+    }
+
+    if (connWrkr->parseState.content_compressed && !connWrkr->parseState.compressedDataComplete) {
+        LogError(0, RS_RET_ZLIB_ERR, "imhttp: compressed request body ended before gzip stream completed");
+        STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+        rc = 500;
+        FINALIZE;
     }
 
     /* submit remainder */

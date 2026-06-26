@@ -1152,6 +1152,7 @@ TESTS_IMHTTP = \
 	imhttp-post-payload-multi-lf.sh \
 	imhttp-post-payload-compress.sh \
 	imhttp-post-payload-invalid-gzip.sh \
+	imhttp-post-payload-compress-size-limit.sh \
 	imhttp-post-payload-octet-oversize.sh \
 	imhttp-post-payload-basic-auth-challenge.sh \
 	imhttp-getrequest-file.sh \
