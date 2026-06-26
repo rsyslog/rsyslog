@@ -1579,6 +1579,7 @@ TESTS_MMDBLOOKUP_VALGRIND = \
 
 TESTS_GNUTLS = \
 	imtcp-tls-basic.sh \
+	tcpflood-gtls-priority-invalid.sh \
 	imtcp-tls-input-basic.sh \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
