@@ -1,0 +1,24 @@
+AGENTS.md
+  s_2e888d0bafbab5::t_85f989e6c84e03 22
+.agent/skills/rsyslog-v8stable-patch-flow/SKILL.md
+  s_2e888d0bafbab5::t_251c84c539658d 1-101
+.agent/skills/rsyslog-v8stable-patch-flow/agents/openai.yaml
+  s_2e888d0bafbab5::t_e5df51b8fea8de 4
+  s_2e888d0bafbab5::t_77a5fd5e50f3fd 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "07b7182d363398952777eb8c7bf7a9b1c5dc56f7",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
