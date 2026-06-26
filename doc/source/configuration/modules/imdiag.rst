@@ -44,6 +44,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imdiag-aborttimeout.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imdiag-properterminationfile`
+     - .. include:: ../../reference/parameters/imdiag-properterminationfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imdiag-mainmsgqueuetimeoutshutdown`
      - .. include:: ../../reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst
         :start-after: .. summary-start
@@ -131,6 +135,7 @@ that it does not conflict with the test's own ``modules:`` section.
        listenportfilename: "test.imdiag.port"
        serverrun: "0"
        aborttimeout: "580"
+       properterminationfile: "./rstb.example.proper-termination"
        mainmsgqueuetimeoutshutdown: "10000"
        mainmsgqueuetimeoutenqueue: "30000"
        inputshutdowntimeout: "60000"
@@ -148,6 +153,7 @@ that it does not conflict with the test's own ``modules:`` section.
    :hidden:
 
    ../../reference/parameters/imdiag-aborttimeout
+   ../../reference/parameters/imdiag-properterminationfile
    ../../reference/parameters/imdiag-listenportfilename-module
    ../../reference/parameters/imdiag-mainmsgqueuetimeoutshutdown
    ../../reference/parameters/imdiag-mainmsgqueuetimeoutenqueue

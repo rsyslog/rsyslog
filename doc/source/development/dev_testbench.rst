@@ -91,6 +91,26 @@ Both RainerScript and yaml-only modes use the imdiag port file
 ``wait_startup`` polls for this file and fast-fails if rsyslogd exits before
 it appears. No ``.started`` marker file is used.
 
+Proper termination detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Daemonized tests cannot rely on shell ``wait`` to observe the real rsyslogd
+exit status because the original child exits after forking the daemon. For
+shutdown or crash-sensitive daemonized tests, call
+``set_proper_termination_file`` before ``generate_conf`` and
+``check_proper_termination`` after ``wait_shutdown``. The helper configures
+imdiag's ``properTerminationFile`` parameter, which stores the path in rsyslog
+core and writes the marker as the final action before returning from ``main``.
+A timeoutGuard abort writes the same file before aborting with
+``status=error`` and ``reason=timeoutGuard``. The harness prints marker content
+before failing so diagnostics such as ``queue.overall.size`` survive in the test
+log.
+
+Do not add helper cleanup or observer processes to prove daemon shutdown. They
+have historically caused their own races. ``timeoutGuard`` remains mandatory
+hang protection and must preserve this diagnostic marker behavior when it
+terminates rsyslogd.
+
 Queue and Input Timeouts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

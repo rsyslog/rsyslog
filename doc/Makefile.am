@@ -501,6 +501,7 @@ EXTRA_DIST = \
     source/reference/parameters/imdiag-inputshutdowntimeout.rst \
     source/reference/parameters/imdiag-listenportfilename.rst \
     source/reference/parameters/imdiag-listenportfilename-module.rst \
+    source/reference/parameters/imdiag-properterminationfile.rst \
     source/reference/parameters/imdiag-mainmsgqueuetimeoutenqueue.rst \
     source/reference/parameters/imdiag-mainmsgqueuetimeoutshutdown.rst \
     source/reference/parameters/imdiag-maxsessions.rst \
