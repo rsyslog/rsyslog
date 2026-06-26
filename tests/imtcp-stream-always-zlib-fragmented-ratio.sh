@@ -31,10 +31,10 @@ import time
 import zlib
 
 port = int(sys.argv[1])
-payload = b"".join(
-    b"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:%08d AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n" % i
+payload = "".join(
+    "<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:%08d AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n" % i
     for i in range(0, 2000)
-)
+).encode("ascii")
 compressed = zlib.compress(payload, level=1)
 sock = socket.create_connection(("127.0.0.1", port))
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
