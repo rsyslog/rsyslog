@@ -82,9 +82,27 @@ static struct hashtable *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
-static void addToObjList(statsobj_t *pThis) {
-    pthread_mutex_lock(&mutStats);
-    if (pThis->flags && STATSOBJ_FLAG_DO_PREPEND) {
+static rsRetVal statsobjLock(pthread_mutex_t *mutex, const char *lockName) {
+    const int ret = pthread_mutex_lock(mutex);
+    if (ret != 0) {
+        LogError(ret, RS_RET_CONC_CTRL_ERR, "statsobj: error locking %s mutex", lockName);
+        return RS_RET_CONC_CTRL_ERR;
+    }
+    return RS_RET_OK;
+}
+
+static void statsobjUnlock(pthread_mutex_t *mutex, const char *lockName) {
+    const int ret = pthread_mutex_unlock(mutex);
+    if (ret != 0) {
+        LogError(ret, RS_RET_CONC_CTRL_ERR, "statsobj: error unlocking %s mutex", lockName);
+        abort();
+    }
+}
+
+static rsRetVal addToObjList(statsobj_t *pThis) {
+    DEFiRet;
+    CHKiRet(statsobjLock(&mutStats, "stats object list"));
+    if (pThis->flags & STATSOBJ_FLAG_DO_PREPEND) {
         pThis->next = objRoot;
         if (objRoot != NULL) {
             objRoot->prev = pThis;
@@ -97,27 +115,39 @@ static void addToObjList(statsobj_t *pThis) {
         objLast = pThis;
         if (objRoot == NULL) objRoot = pThis;
     }
-    pthread_mutex_unlock(&mutStats);
+    /* Unlock failures happen after shared state was already updated.  Log them,
+     * but do not make callers roll back objects that are now visible.
+     */
+    statsobjUnlock(&mutStats, "stats object list");
+finalize_it:
+    RETiRet;
 }
 
 
-static void removeFromObjList(statsobj_t *pThis) {
-    pthread_mutex_lock(&mutStats);
+static rsRetVal removeFromObjList(statsobj_t *pThis) {
+    DEFiRet;
+    CHKiRet(statsobjLock(&mutStats, "stats object list"));
     if (pThis->prev != NULL) pThis->prev->next = pThis->next;
     if (pThis->next != NULL) pThis->next->prev = pThis->prev;
     if (objLast == pThis) objLast = pThis->prev;
     if (objRoot == pThis) objRoot = pThis->next;
-    pthread_mutex_unlock(&mutStats);
+    statsobjUnlock(&mutStats, "stats object list");
+finalize_it:
+    RETiRet;
 }
 
 
-static void addCtrToList(statsobj_t *pThis, ctr_t *pCtr) {
-    pthread_mutex_lock(&pThis->mutCtr);
+static rsRetVal addCtrToList(statsobj_t *pThis, ctr_t *pCtr) {
+    DEFiRet;
+    CHKiRet(statsobjLock(&pThis->mutCtr, "counter list"));
     pCtr->prev = pThis->ctrLast;
     if (pThis->ctrLast != NULL) pThis->ctrLast->next = pCtr;
     pThis->ctrLast = pCtr;
     if (pThis->ctrRoot == NULL) pThis->ctrRoot = pCtr;
-    pthread_mutex_unlock(&pThis->mutCtr);
+    /* See addToObjList(): rollback after successful list mutation is unsafe. */
+    statsobjUnlock(&pThis->mutCtr, "counter list");
+finalize_it:
+    RETiRet;
 }
 
 /* ------------------------------ methods ------------------------------ */
@@ -126,11 +156,12 @@ static void addCtrToList(statsobj_t *pThis, ctr_t *pCtr) {
 /* Standard-Constructor
  */
 BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END macro! */
-    pthread_mutex_init(&pThis->mutCtr, NULL);
+    CHKiConcCtrl(pthread_mutex_init(&pThis->mutCtr, NULL));
     pThis->ctrLast = NULL;
     pThis->ctrRoot = NULL;
     pThis->read_notifier = NULL;
     pThis->flags = 0;
+finalize_it:
 ENDobjConstruct(statsobj)
 
 
@@ -139,7 +170,8 @@ ENDobjConstruct(statsobj)
 static rsRetVal statsobjConstructFinalize(statsobj_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, statsobj);
-    addToObjList(pThis);
+    CHKiRet(addToObjList(pThis));
+finalize_it:
     RETiRet;
 }
 
@@ -226,7 +258,7 @@ static rsRetVal addManagedCounter(statsobj_t *pThis,
             break;
     }
     if (linked) {
-        addCtrToList(pThis, ctr);
+        CHKiRet(addCtrToList(pThis, ctr));
     }
     *entryRef = ctr;
 
@@ -240,10 +272,10 @@ finalize_it:
     RETiRet;
 }
 
-static void addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr) {
+static rsRetVal addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr) {
     pCtr->next = NULL;
     pCtr->prev = NULL;
-    addCtrToList(pThis, pCtr);
+    return addCtrToList(pThis, pCtr);
 }
 
 static rsRetVal addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr) {
@@ -850,7 +882,12 @@ void checkGoneAwaySenders(const time_t tCurr) {
 /* destructor for the statsobj object */
 BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(statsobj);
-    removeFromObjList(pThis);
+    iRet = removeFromObjList(pThis);
+    /* Do not enter ENDobjDestruct on unlink failure: that macro frees pThis
+     * and would leave objRoot/objLast pointing at released memory. There is no
+     * safe recovery path once we cannot lock the global list for destruction.
+     */
+    if (iRet != RS_RET_OK) abort();
 
     /* destruct counters */
     destructUnlinkedCounters(unlinkAllCounters(pThis));
@@ -915,8 +952,8 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
     OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, statsobjConstructFinalize);
 
     /* init other data items */
-    pthread_mutex_init(&mutStats, NULL);
-    pthread_mutex_init(&mutSenders, NULL);
+    CHKiConcCtrl(pthread_mutex_init(&mutStats, NULL));
+    CHKiConcCtrl(pthread_mutex_init(&mutSenders, NULL));
 
     if ((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
         LogError(0, RS_RET_INTERNAL_ERROR,

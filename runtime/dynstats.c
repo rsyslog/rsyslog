@@ -1024,9 +1024,14 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
                                    const uchar *metric,
                                    uint8_t doInitialIncrement,
                                    uint64_t doInitialOffset) {
-    dynstats_ctr_t *ctr;
+    dynstats_ctr_t *ctr = NULL;
     dynstats_ctr_t *found_ctr, *survivor_ctr, *effective_ctr = NULL;
-    int created;
+    int created = 0;
+    int bucketLockHeld = 0;
+    int bucketMutationCommitted = 0;
+    int destroyCreatedCtrOnFailure = 0;
+    int survivorUnlinked = 0;
+    int tableInserted = 0;
     uchar *copy_of_key = NULL;
     DEFiRet;
 
@@ -1039,7 +1044,8 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
 
     CHKiRet(dynstats_createCtr(b, metric, &ctr));
 
-    pthread_rwlock_wrlock(&b->lock);
+    CHKiConcCtrl(pthread_rwlock_wrlock(&b->lock));
+    bucketLockHeld = 1;
     found_ctr = (dynstats_ctr_t *)hashtable_search(b->table, ctr->metric);
     if (found_ctr != NULL) {
         if (doInitialIncrement) {
@@ -1062,9 +1068,11 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
                 if (survivor_ctr == b->survivor_ctrs) {
                     b->survivor_ctrs = survivor_ctr->next;
                 }
+                survivorUnlinked = 1;
             }
             if ((created = hashtable_insert(b->table, copy_of_key, effective_ctr))) {
-                statsobj.AddPreCreatedCtr(b->stats, effective_ctr->pCtr);
+                tableInserted = 1;
+                CHKiRet(statsobj.AddPreCreatedCtr(b->stats, effective_ctr->pCtr));
             }
         }
         if (created) {
@@ -1083,7 +1091,13 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
             }
         }
     }
-    pthread_rwlock_unlock(&b->lock);
+    bucketMutationCommitted = 1;
+    const int ret = pthread_rwlock_unlock(&b->lock);
+    if (ret != 0) {
+        LogError(ret, RS_RET_CONC_CTRL_ERR, "dynstats: error unlocking bucket mutex");
+        abort();
+    }
+    bucketLockHeld = 0;
 
     if (found_ctr != NULL) {
         // ignore
@@ -1098,7 +1112,33 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
     }
 
 finalize_it:
-    if (((!created) || (effective_ctr != ctr)) && (ctr != NULL)) {
+    if (bucketLockHeld) {
+        if (iRet != RS_RET_OK && !bucketMutationCommitted && tableInserted) {
+            if (effective_ctr == ctr) {
+                destroyCreatedCtrOnFailure = 1;
+            }
+            hashtable_remove(b->table, copy_of_key);
+            copy_of_key = NULL;
+            created = 0;
+        }
+        if (iRet != RS_RET_OK && !bucketMutationCommitted && survivorUnlinked) {
+            if (effective_ctr->prev != NULL) {
+                effective_ctr->prev->next = effective_ctr;
+            }
+            if (effective_ctr->next != NULL) {
+                effective_ctr->next->prev = effective_ctr;
+            }
+            if (b->survivor_ctrs == effective_ctr->next) {
+                b->survivor_ctrs = effective_ctr;
+            }
+        }
+        const int cleanupRet = pthread_rwlock_unlock(&b->lock);
+        if (cleanupRet != 0) {
+            LogError(cleanupRet, RS_RET_CONC_CTRL_ERR, "dynstats: error unlocking bucket mutex during error cleanup");
+            abort();
+        }
+    }
+    if ((destroyCreatedCtrOnFailure || (!created) || (effective_ctr != ctr)) && (ctr != NULL)) {
         dynstats_destroyCtr(ctr);
     }
     RETiRet;
