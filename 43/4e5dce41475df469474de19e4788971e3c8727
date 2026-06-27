@@ -1,0 +1,25 @@
+devtools/release/debian-daily-staging.sh
+  s_6cd9c239d726e4::t_b6f128675f7b26 30-42,50
+.github/workflows/debian_daily_staging.yml
+  s_6cd9c239d726e4::t_1eceeef7764c2a 129-135
+.github/debian-ci-policy.yml
+  s_6cd9c239d726e4::t_cb5d4fd297b7d5 21-27
+.github/scripts/debian_package_build.sh
+  s_6cd9c239d726e4::t_7eab74ce71349c 47-59,107-144,441
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "434e5dce41475df469474de19e4788971e3c8727",
+  "prompts": {},
+  "sessions": {
+    "s_6cd9c239d726e4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eed8d-dc2d-7ff2-b233-55590b3b18b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
