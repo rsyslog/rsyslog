@@ -1173,7 +1173,9 @@ BEGINrunInput
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->bEnableLstn) {
             pthread_kill(inst->tid, SIGTTIN);
-            DTLSCloseSocket(inst);
+            if (inst->sockfd >= 0) {
+                shutdown(inst->sockfd, SHUT_RDWR);
+            }
         }
     }
 
@@ -1181,6 +1183,7 @@ BEGINrunInput
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->bEnableLstn) {
             pthread_join(inst->tid, NULL);
+            DTLSCloseSocket(inst);
         }
     }
 

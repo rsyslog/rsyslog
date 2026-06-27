@@ -312,6 +312,7 @@ TESTS_DEFAULT = \
 	asynwr_deadlock4.sh \
 	asynwr_dynfile_flushtxend-off.sh \
 	imdiag-modern-module-config.sh \
+	imdiag-proper-termination-core-ignore.sh \
 	imdiag-proper-termination-timeoutguard.sh \
 	global-maxopenfiles-rainerscript.sh \
 	compat-configformat-rainerscript.sh \

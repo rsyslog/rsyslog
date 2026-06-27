@@ -248,12 +248,12 @@ static rsRetVal getMsgs(thrdInfo_t *pThrd, int timeout) {
         CHKmalloc(pRcv = (uchar *)malloc(iMaxLine + 1));
     }
 
-    while (pThrd->bShallStop != RSTRUE) {
+    while (thrdGetShallStop(pThrd) != RSTRUE) {
         DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
         if (timeout == 0) {
             nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-            if (pThrd->bShallStop == RSTRUE) {
+            if (thrdGetShallStop(pThrd) == RSTRUE) {
                 break;
             }
 
@@ -344,7 +344,7 @@ BEGINrunInput
     DBGPRINTF("imsolaris: starting regular poll loop\n");
     iRet = getMsgs(pThrd, -1); /* this is the primary poll loop, infinite timeout */
 
-    DBGPRINTF("imsolaris: terminating (bShallStop=%d)\n", pThrd->bShallStop);
+    DBGPRINTF("imsolaris: terminating (bShallStop=%d)\n", thrdGetShallStop(pThrd));
 finalize_it:
     RETiRet;
 ENDrunInput

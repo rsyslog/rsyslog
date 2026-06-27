@@ -22,18 +22,29 @@
 #ifndef THREADS_H_INCLUDED
 #define THREADS_H_INCLUDED
 
+#include "atomic.h"
+
 /* the thread object */
 struct thrdInfo {
     pthread_mutex_t mutThrd; /* mutex for handling long-running operations and shutdown */
     pthread_cond_t condThrdTerm; /* condition: thread terminates (used just for shutdown loop) */
     int bIsActive; /* Is thread running? */
     int bShallStop; /* set to 1 if the thread should be stopped ? */
+    DEF_ATOMIC_HELPER_MUT(mutShallStop);
     rsRetVal (*pUsrThrdMain)(struct thrdInfo *); /* user thread main to be called in new thread */
     rsRetVal (*pAfterRun)(struct thrdInfo *); /* cleanup function */
     pthread_t thrdID;
     sbool bNeedsCancel; /* must input be terminated by pthread_cancel()? */
     uchar *name; /* a thread name, mainly for user interaction */
 };
+
+static inline int thrdGetShallStop(thrdInfo_t *pThis) {
+    return ATOMIC_FETCH_32BIT(&pThis->bShallStop, &pThis->mutShallStop);
+}
+
+static inline void thrdSetShallStop(thrdInfo_t *pThis) {
+    ATOMIC_STORE_1_TO_INT(&pThis->bShallStop, &pThis->mutShallStop);
+}
 
 /* prototypes */
 rsRetVal thrdExit(void);

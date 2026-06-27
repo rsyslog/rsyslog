@@ -95,12 +95,21 @@ Proper termination detection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Daemonized tests cannot rely on shell ``wait`` to observe the real rsyslogd
-exit status because the original child exits after forking the daemon. For
-shutdown or crash-sensitive daemonized tests, call
-``set_proper_termination_file`` before ``generate_conf`` and
-``check_proper_termination`` after ``wait_shutdown``. The helper configures
-imdiag's ``properTerminationFile`` parameter, which stores the path in rsyslog
-core and writes the marker as the final action before returning from ``main``.
+exit status because the original child exits after forking the daemon. Regular
+``generate_conf`` tests configure imdiag's ``properTerminationFile`` parameter
+automatically from the per-test ``RSYSLOG_DYNNAME`` basename and instance
+suffix. The path is stored in rsyslog core and written as the final action
+before returning from ``main``. ``wait_shutdown`` validates the marker when one
+is configured and the shutdown was initiated through harness helpers that saved
+the rsyslogd pid, so regular shutdown or crash-sensitive tests should use the
+standard ``shutdown_when_empty`` or ``shutdown_immediate`` path instead of
+adding test-local shutdown observers. Use ``set_proper_termination_file`` only
+for special manual-startup or non-generated-config cases, and call
+``check_proper_termination`` directly only when that special path cannot use
+``wait_shutdown``.
+Tests that intentionally kill rsyslogd to create dirty on-disk state must use
+the testbench kill helper so the next ``wait_shutdown`` knows that no clean
+main-return marker is expected for that phase.
 A timeoutGuard abort writes the same file before aborting with
 ``status=error`` and ``reason=timeoutGuard``. The harness prints marker content
 before failing so diagnostics such as ``queue.overall.size`` survive in the test

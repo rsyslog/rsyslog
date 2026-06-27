@@ -794,6 +794,24 @@ static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti)
     incActionResumeInRow(pWti, pThis);
 }
 
+static time_t actionGetResumeRetryTime(const action_t *const pThis) {
+#ifdef HAVE_ATOMIC_BUILTINS64
+    return __atomic_load_n(&pThis->ttResumeRtry, __ATOMIC_RELAXED);
+#else
+    return pThis->ttResumeRtry;
+#endif
+}
+
+
+static void actionSetResumeRetryTime(action_t *const pThis, const time_t ttResumeRtry) {
+#ifdef HAVE_ATOMIC_BUILTINS64
+    __atomic_store_n(&pThis->ttResumeRtry, ttResumeRtry, __ATOMIC_RELAXED);
+#else
+    pThis->ttResumeRtry = ttResumeRtry;
+#endif
+}
+
+
 /* Suspend action, this involves changing the action state as well
  * as setting the next retry time.
  * if we have more than 10 retries, we prolong the
@@ -804,6 +822,7 @@ static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti)
  */
 static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWti) {
     time_t ttNow;
+    time_t ttResumeRtry;
     int suspendDuration;
     char timebuf[32];
 
@@ -818,15 +837,16 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     if (pThis->iResumeIntervalMax > 0 && suspendDuration > pThis->iResumeIntervalMax) {
         suspendDuration = pThis->iResumeIntervalMax;
     }
-    pThis->ttResumeRtry = ttNow + suspendDuration;
+    ttResumeRtry = ttNow + suspendDuration;
+    actionSetResumeRetryTime(pThis, ttResumeRtry);
     actionSetState(pThis, __func__, pWti, ACT_STATE_SUSP);
-    pThis->ctrSuspendDuration += suspendDuration;
+    STATSCOUNTER_ADD(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration, suspendDuration);
     if (getActionNbrResRtry(pWti, pThis) == 0) {
         STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
     }
 
     if (pThis->bReportSuspensionCont || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0)) {
-        ctime_r(&pThis->ttResumeRtry, timebuf);
+        ctime_r(&ttResumeRtry, timebuf);
         timebuf[strlen(timebuf) - 1] = '\0'; /* strip LF */
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "action '%s' suspended (module '%s'), next retry is %s, retry nbr %d. "
@@ -836,8 +856,7 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
     DBGPRINTF(
         "action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
         "duration %d\n",
-        pThis->pszName, (long long)pThis->ttResumeRtry, (long long)ttNow, getActionNbrResRtry(pWti, pThis),
-        suspendDuration);
+        pThis->pszName, (long long)ttResumeRtry, (long long)ttNow, getActionNbrResRtry(pWti, pThis), suspendDuration);
 }
 
 
@@ -905,8 +924,8 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                 DBGPRINTF(
                     "actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
                     "Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
-                    pThis->pszName, pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp,
-                    iRetries);
+                    pThis->pszName, pThis->iResumeInterval, (long long)actionGetResumeRetryTime(pThis),
+                    (long long)ttTemp, iRetries);
                 srSleep(pThis->iResumeInterval, 0);
                 if (*pWti->pbShutdownImmediate) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -1085,7 +1104,7 @@ static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
          * here. -- rgerhards, 2009-03-18
          */
         datetime.GetTime(&ttNow); /* cache "now" */
-        if (ttNow >= pThis->ttResumeRtry) {
+        if (ttNow >= actionGetResumeRetryTime(pThis)) {
             actionSetState(pThis, __func__, pWti, ACT_STATE_RTRY); /* back to retries */
         }
     }
@@ -1099,7 +1118,7 @@ static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
         if (ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
             datetime.GetTime(&ttNow);
         dbgprintf("actionTryResume: action[%s] state: %s, next retry (if applicable): %u [now %u]\n", pThis->pszName,
-                  getActStateName(pThis, pWti), (unsigned)pThis->ttResumeRtry, (unsigned)ttNow);
+                  getActStateName(pThis, pWti), (unsigned)actionGetResumeRetryTime(pThis), (unsigned)ttNow);
     }
 
 finalize_it:

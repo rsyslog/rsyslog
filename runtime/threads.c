@@ -61,6 +61,7 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis) {
     CHKmalloc(pThis = calloc(1, sizeof(thrdInfo_t)));
     pthread_mutex_init(&pThis->mutThrd, NULL);
     pthread_cond_init(&pThis->condThrdTerm, NULL);
+    INIT_ATOMIC_HELPER_MUT(pThis->mutShallStop);
     *ppThis = pThis;
 
 finalize_it:
@@ -90,6 +91,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis) {
 
     pthread_mutex_destroy(&pThis->mutThrd);
     pthread_cond_destroy(&pThis->condThrdTerm);
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mutShallStop);
     free(pThis->name);
     free(pThis);
 
@@ -110,7 +112,7 @@ static rsRetVal thrdTerminateNonCancel(thrdInfo_t *pThis) {
 
     DBGPRINTF("request term via SIGTTIN for input thread '%s' %p\n", pThis->name, (void *)pThis->thrdID);
 
-    pThis->bShallStop = RSTRUE;
+    thrdSetShallStop(pThis);
     d_pthread_mutex_lock(&pThis->mutThrd);
     timeoutComp(&tTimeout, runConf->globals.inputTimeoutShutdown);
     was_active = pThis->bIsActive;

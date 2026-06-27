@@ -2,9 +2,6 @@
 # Regression coverage for GitHub issue #4452. An unreachable Kafka broker can
 # trigger delivery callbacks during shutdown. This test runs rsyslogd in daemon
 # mode because the regression path is shutdown of the backgrounded process.
-# The proper termination file is written as rsyslogd's final main-return action;
-# its absence catches daemon crashes whose core dump may be captured outside the
-# test directory, where local core-file checks alone would miss the failure.
 . ${srcdir:=.}/diag.sh init
 require_plugin omkafka
 skip_TSAN "daemonized shutdown with imdiag injection forks while rsyslog threads are active"
@@ -13,7 +10,6 @@ export RSTB_DAEMONIZE="YES"
 export RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT=10000
 export NUMMESSAGES=2
 
-set_proper_termination_file
 generate_conf
 add_conf '
 module(load="../plugins/omkafka/.libs/omkafka")
@@ -50,7 +46,6 @@ wait_shutdown
 if [ -f "$RSYSLOG_OUT_LOG" ]; then
     check_not_present "Segmentation fault" "$RSYSLOG_OUT_LOG"
 fi
-check_proper_termination
 check_file_exists "$RSYSLOG_DYNNAME.failedmsg"
 
 exit_test
