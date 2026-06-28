@@ -294,8 +294,8 @@ options are defined:
 **escape-cc**
   replace control characters (ASCII value 127 and values less then 32)
   with an escape sequence. The sequence is "#<charval>" where charval is
-  the 3-digit decimal value of the control character. For example, a
-  tabulator would be replaced by "#009".
+  the 3-digit octal value of the control character. For example, a
+  tabulator would be replaced by "#011" and carriage return by "#015".
   Note: using this option requires that
   :doc:`$EscapeControlCharactersOnReceive </configuration/input_directives/rsconf1_escapecontrolcharactersonreceive>`
   is set to off.

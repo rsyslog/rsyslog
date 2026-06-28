@@ -1,6 +1,7 @@
 TEST_EXTENSIONS=.sh
 EXTRA_DIST = \
 	tabescape_dflt.sh \
+	template-escape-cc-octal.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
@@ -35,6 +36,7 @@ EXTRA_DIST += unit/impcap_arp_parser_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
+	template-escape-cc-octal.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
