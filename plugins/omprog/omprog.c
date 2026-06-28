@@ -966,7 +966,10 @@ BEGINdoAction
     const uchar *const szMsg = ppString[0];
     const size_t len = strlen((char *)szMsg);
     CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, szMsg));
-    if (szMsg[len - 1] != '\n') {
+    /* Template rendering may produce an empty message. It still needs the same
+     * child-input newline terminator, but szMsg[-1] must not be inspected.
+     */
+    if (len == 0 || szMsg[len - 1] != '\n') {
         const time_t tt = time(NULL);
         if (tt > pWrkrData->pData->block_if_err) {
             LogMsg(0, NO_ERRCODE, LOG_WARNING,
