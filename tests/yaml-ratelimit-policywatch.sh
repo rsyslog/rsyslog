@@ -49,7 +49,7 @@ sed -i \
 startup
 assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
 wait_file_lines "$RSYSLOG_OUT_LOG" 20 100
 
 : > "$RSYSLOG_OUT_LOG"
@@ -61,7 +61,7 @@ severity: 0
 YAML
 ./msleep 1500
 
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
 ./msleep 1000
 wait_queueempty
 

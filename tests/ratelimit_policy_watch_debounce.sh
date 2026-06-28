@@ -52,7 +52,7 @@ YAML
 
 ./msleep 1500
 
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
 ./msleep 1000
 wait_queueempty
 

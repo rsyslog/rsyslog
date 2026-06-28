@@ -25,8 +25,8 @@ ruleset(name="rs2") {
 startup
 assign_file_content RCVR_PORT "$RSYSLOG_DYNNAME.rcvr_port"
 assign_file_content RCVR_PORT2 "$RSYSLOG_DYNNAME.rcvr_port2"
-./tcpflood -p $RCVR_PORT -m10 
-./tcpflood -p $RCVR_PORT2 -m10 -i10
+tcpflood -p "$RCVR_PORT" -m10
+tcpflood -p "$RCVR_PORT2" -m10 -i10
 shutdown_when_empty
 wait_shutdown
 printf 'checking receiver 1\n'

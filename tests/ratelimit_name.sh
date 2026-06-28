@@ -21,10 +21,10 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 startup
 # Send messages to TCP port
 tcp_port=$(cat $RSYSLOG_DYNNAME.tcp.port)
-./tcpflood -p$tcp_port -m 20
+tcpflood -p$tcp_port -m 20
 # Send messages to PTCP port
 ptcp_port=$(cat $RSYSLOG_DYNNAME.ptcp.port)
-./tcpflood -p$ptcp_port -m 20
+tcpflood -p$ptcp_port -m 20
 
 shutdown_when_empty
 wait_shutdown

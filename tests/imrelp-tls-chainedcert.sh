@@ -32,7 +32,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 
 startup
-./tcpflood -u openssl -Trelp-tls -acertvalid -p$TCPFLOOD_PORT -m$NUMMESSAGES -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/certchained.pem" -Ersyslog 2> $RSYSLOG_DYNNAME.tcpflood
+tcpflood -u openssl -Trelp-tls -acertvalid -p"$TCPFLOOD_PORT" -m"$NUMMESSAGES" -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/certchained.pem" -Ersyslog 2> "$RSYSLOG_DYNNAME.tcpflood"
 cat -n $RSYSLOG_DYNNAME.tcpflood
 shutdown_when_empty
 wait_shutdown

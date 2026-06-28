@@ -59,7 +59,7 @@ for i in $(seq 1 5); do
     echo "<13>Jan 1 00:00:00 quiethost app: msgnum:$i" >> "$INPUT_FILE"
 done
 
-./tcpflood -p"$ptcp_port" -I "$INPUT_FILE"
+tcpflood -p"$ptcp_port" -I "$INPUT_FILE"
 
 sleep 2
 shutdown_when_empty

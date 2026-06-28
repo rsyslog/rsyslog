@@ -26,7 +26,7 @@ startup
 assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
 # Send 20 messages via UDP
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES
 
 shutdown_when_empty
 wait_shutdown

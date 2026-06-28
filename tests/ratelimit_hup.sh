@@ -33,7 +33,7 @@ assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 export SENDMESSAGES=20
 echo "Checking ports for $PORT_RCVR:"
 ss -ulpn | grep $PORT_RCVR
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
 
 # Allow time for processing
 ./msleep 3000
@@ -63,7 +63,7 @@ ps aux | grep rsyslogd | grep -v grep
 ./msleep 1000 # wait for HUP to be processed
 
 # Send 20 messages. 0 should pass.
-./tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
+tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
 
 # Allow time for processing
 ./msleep 1000

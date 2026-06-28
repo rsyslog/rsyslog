@@ -18,7 +18,9 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-./tcpflood -Trelp-tls -acertvalid -p$TCPFLOOD_PORT -m$NUMMESSAGES -x "$srcdir/tls-certs/ca.pem" -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/cert.pem" -Ersyslog 2> $RSYSLOG_DYNNAME.tcpflood
+# Use the tcpflood binary directly here because this test intentionally accepts
+# tcpflood rc=1 when older RELP/TLS stacks cannot set certvalid mode.
+./tcpflood -Trelp-tls -acertvalid -p"$TCPFLOOD_PORT" -m"$NUMMESSAGES" -x "$srcdir/tls-certs/ca.pem" -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/cert.pem" -Ersyslog 2> "$RSYSLOG_DYNNAME.tcpflood"
 if [ $? -eq 1 ]; then
 	cat $RSYSLOG_DYNNAME.tcpflood
 	if ! grep "could net set.*certvalid" < "$RSYSLOG_DYNNAME.tcpflood" ; then

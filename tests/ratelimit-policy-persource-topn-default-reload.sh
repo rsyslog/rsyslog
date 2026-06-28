@@ -34,7 +34,7 @@ send_host_messages() {
     for i in $(seq 1 "$count"); do
         echo "<13>Jan 1 00:00:00 $host app: msgnum:$host:$i" >> "$INPUT_FILE"
     done
-    ./tcpflood -p"$PORT_RCVR" -I "$INPUT_FILE"
+    tcpflood -p"$PORT_RCVR" -I "$INPUT_FILE"
 }
 
 wait_stats_contains() {
