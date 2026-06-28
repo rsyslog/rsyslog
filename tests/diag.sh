@@ -95,6 +95,9 @@ RSYSLOG_MODDIR=${RSYSLOG_MODDIR:-"../runtime/.libs:../.libs"}
 # TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
 #                       used in tests that have a common driver where it
 #                       is too hard to set these options otherwise
+# RSTB_NO_TCPFLOOD_MARKER disables the automatic tcpflood proper-termination
+#                       marker used by the tcpflood() helper. Use only when a
+#                       test intentionally bypasses normal tcpflood completion.
 # CONFIG
 export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 
@@ -3300,16 +3303,130 @@ gzip_seq_check() {
 
 
 # do a tcpflood run and check if it worked params are passed to tcpflood
+tcpflood_marker_is_valid() {
+	local file="$1"
+	[ -f "$file" ] || return 1
+	grep -qx 'status=ok' "$file" &&
+		grep -qx 'phase=main-exit' "$file"
+}
+
+print_tcpflood_marker_file() {
+	local file="$1"
+	if [ -z "$file" ]; then
+		printf '%s\n' '--- tcpflood proper termination marker not configured ---'
+	elif [ -f "$file" ]; then
+		printf '%s\n' "--- tcpflood proper termination marker: $file ---"
+		cat "$file"
+		printf '%s\n' '--- end tcpflood proper termination marker ---'
+	else
+		printf '%s\n' "--- tcpflood proper termination marker missing: $file ---"
+	fi
+}
+
+tcpflood_legacy_unquote_arg() {
+	local arg="$1"
+	if [[ "$arg" == \"*\" && "$arg" == *\" ]]; then
+		arg="${arg:1:${#arg}-2}"
+		arg="${arg//\\\"/\"}"
+		arg="${arg//\\\\/\\}"
+	fi
+	printf '%s' "$arg"
+}
+
+tcpflood_legacy_unescape_arg() {
+	local arg="$1"
+	arg="${arg//\\ / }"
+	printf '%s' "$arg"
+}
+
+tcpflood_append_args() {
+	local arg
+	while [ "$#" -gt 0 ]; do
+		arg="$1"
+		shift
+		case "$arg" in
+		-M)
+			TCPFLOOD_CMD+=("$arg")
+			if [ "$#" -gt 0 ]; then
+				TCPFLOOD_CMD+=("$(tcpflood_legacy_unquote_arg "$1")")
+				shift
+			fi
+			;;
+		-M*)
+			TCPFLOOD_CMD+=("-M$(tcpflood_legacy_unquote_arg "${arg#-M}")")
+			;;
+		-j)
+			TCPFLOOD_CMD+=("$arg")
+			if [ "$#" -gt 0 ]; then
+				TCPFLOOD_CMD+=("$(tcpflood_legacy_unescape_arg "$1")")
+				shift
+			fi
+			;;
+		-j*)
+			if [[ "$arg" == "-j "* ]]; then
+				TCPFLOOD_CMD+=("-j" "$(tcpflood_legacy_unquote_arg "$(tcpflood_legacy_unescape_arg "${arg#-j }")")")
+			else
+				TCPFLOOD_CMD+=("-j$(tcpflood_legacy_unescape_arg "${arg#-j}")")
+			fi
+			;;
+		-p)
+			if [ "$#" -gt 0 ] && [ "$1" = '$TCPFLOOD_PORT' ]; then
+				shift
+			else
+				TCPFLOOD_CMD+=("$arg")
+			fi
+			;;
+		-p'$TCPFLOOD_PORT')
+			;;
+		*)
+			TCPFLOOD_CMD+=("$arg")
+			;;
+		esac
+	done
+}
+
 tcpflood() {
+	local check_only marker res use_marker
+	local -a TCPFLOOD_CMD TCPFLOOD_EXTRA_ARGS
 	if [ "$1" == "--check-only" ]; then
 		check_only="yes"
 		shift
 	else
 		check_only="no"
 	fi
-	# shellcheck disable=SC2294 # TCPFLOOD_EXTRA_OPTS is intentionally parsed as shell words.
-	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
+	use_marker="yes"
+	if [ "${RSTB_NO_TCPFLOOD_MARKER:-}" = "YES" ]; then
+		use_marker="no"
+	fi
+	if [ -n "${RSYSLOG_DYNNAME:-}" ] && [ "$use_marker" = "yes" ]; then
+		TCPFLOOD_MARKER_ID=$(( ${TCPFLOOD_MARKER_ID:-0} + 1 ))
+		marker="${RSYSLOG_DYNNAME}.tcpflood.${TCPFLOOD_MARKER_ID}.proper-termination"
+		rm -f "$marker"
+	else
+		marker=""
+	fi
+	TCPFLOOD_CMD=(./tcpflood)
+	if [ -n "$marker" ]; then
+		TCPFLOOD_CMD+=(-q "$marker")
+	fi
+	TCPFLOOD_CMD+=(-p "$TCPFLOOD_PORT")
+	tcpflood_append_args "$@"
+	if [ -n "$TCPFLOOD_EXTRA_OPTS" ]; then
+		eval "TCPFLOOD_EXTRA_ARGS=( $TCPFLOOD_EXTRA_OPTS )"
+		TCPFLOOD_CMD+=("${TCPFLOOD_EXTRA_ARGS[@]}")
+	fi
+	"${TCPFLOOD_CMD[@]}"
 	res=$?
+	if [ "$res" -eq 0 ] && [ -n "$marker" ] && ! tcpflood_marker_is_valid "$marker"; then
+		echo "error during tcpflood on port ${TCPFLOOD_PORT}: proper termination marker missing or invalid"
+		print_tcpflood_marker_file "$marker"
+		error_exit 1
+	fi
+	if [ "$check_only" == "yes" ] && [ "$res" -gt 128 ]; then
+		echo "error during tcpflood on port ${TCPFLOOD_PORT}: process aborted with status $res"
+		print_tcpflood_marker_file "$marker"
+		error_exit 1
+	fi
 	if [ "$check_only" == "yes" ]; then
 		if [ "$res" -ne "0" ]; then
 			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."

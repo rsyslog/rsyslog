@@ -315,6 +315,7 @@ TESTS_DEFAULT = \
 	imdiag-modern-module-config.sh \
 	imdiag-proper-termination-core-ignore.sh \
 	imdiag-proper-termination-timeoutguard.sh \
+	tcpflood-proper-termination.sh \
 	global-maxopenfiles-rainerscript.sh \
 	compat-configformat-rainerscript.sh \
 	compat-defaults-secure-dynafile-rainerscript.sh \

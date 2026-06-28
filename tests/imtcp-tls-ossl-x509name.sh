@@ -26,7 +26,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 					file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-tcpflood -p'$TCPFLOOD_PORT' -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 wait_file_lines
 shutdown_when_empty
 wait_shutdown

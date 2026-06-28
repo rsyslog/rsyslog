@@ -124,3 +124,9 @@ supervised Valgrind run and remain a Valgrind failure signal.
 For local debugging you may still switch a disposable development host to a
 classic core pattern such as `core.%e.%p`, but avoid applying such changes on
 production hosts.
+
+The `tcpflood` shell helper configures and validates a per-invocation
+proper-termination marker. Direct `./tcpflood` invocations can use `-q <file>`
+for the same final-exit marker when the test needs tcpflood abort detection.
+Tests that intentionally trigger a tcpflood send failure should call
+`tcpflood --check-only` and assert the rsyslog-side result.
