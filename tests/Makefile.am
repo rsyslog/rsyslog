@@ -819,6 +819,10 @@ TESTS_MAIL = \
 	ommail-sendmail-exec-fail.sh \
 	ommail-sendmail-default-binary.sh
 
+TESTS_MAIL_MMJSONPARSE = \
+	ommail-subject-template-header-sendmail.sh \
+	ommail-subject-template-header-smtp.sh
+
 TESTS_MMANON = \
 	mmanon_with_debug.sh \
 	mmanon_random_32_ipv4.sh \
@@ -2147,6 +2151,7 @@ EXTRA_DIST += $(TESTS_MMUTF8FIX)
 EXTRA_DIST += $(TESTS_MMUTF8FIX_SD)
 EXTRA_DIST += $(TESTS_MMAITAG)
 EXTRA_DIST += $(TESTS_MAIL)
+EXTRA_DIST += $(TESTS_MAIL_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_MMANON)
 EXTRA_DIST += $(TESTS_CLICKHOUSE)
 EXTRA_DIST += $(TESTS_CLICKHOUSE_VALGRIND)
@@ -2746,6 +2751,9 @@ endif
 
 if ENABLE_MAIL
 TESTS += $(TESTS_MAIL)
+if ENABLE_MMJSONPARSE
+TESTS += $(TESTS_MAIL_MMJSONPARSE)
+endif # if ENABLE_MMJSONPARSE
 endif # if ENABLE_MAIL
 
 
