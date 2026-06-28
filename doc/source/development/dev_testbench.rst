@@ -120,6 +120,31 @@ have historically caused their own races. ``timeoutGuard`` remains mandatory
 hang protection and must preserve this diagnostic marker behavior when it
 terminates rsyslogd.
 
+Core dump diagnostics
+~~~~~~~~~~~~~~~~~~~~~
+
+Core files are best-effort diagnostics, not the shutdown oracle. The testbench
+tries to enable core files with ``ulimit -c unlimited`` and reports the active
+core policy when a test fails. On Linux this includes ``kernel.core_pattern``,
+``kernel.core_uses_pid``, and ``fs.suid_dumpable`` when those files are
+readable.
+
+Generic core names such as ``core`` and ``core.*`` are not reliable ownership
+evidence under parallel tests. The harness analyzes a core only when it can
+attribute it to the expected process by pid/executable metadata, or when the
+filename is clearly test-specific through ``RSYSLOG_DYNNAME``. If
+``kernel.core_pattern`` pipes crashes to an external collector such as
+``systemd-coredump`` or ``apport``, generic local core scanning is skipped
+because local files may be absent, stale, or unrelated.
+
+Absence of a local core does not weaken a missing or invalid proper termination
+marker: the process still failed to reach the expected shutdown point. In that
+case the harness reports that no owned local core was available. Helper
+processes such as ``tcpflood`` need explicit pid or exit-status checks when
+their health matters; rsyslogd core diagnostics do not prove helper health.
+Valgrind ``vgcore.*`` files are separate from generic OS core discovery: they
+belong to the supervised Valgrind run and remain a Valgrind failure signal.
+
 Queue and Input Timeouts
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

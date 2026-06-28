@@ -570,14 +570,213 @@ print_proper_termination_file() {
 }
 
 check_proper_termination() {
-	local file
+	local file expected_pid
 	file="$(get_proper_termination_file "$1")"
-	if proper_termination_file_is_valid "$1" "$2"; then
+	expected_pid="${2:-}"
+	if proper_termination_file_is_valid "$1" "$expected_pid"; then
 		return
 	fi
+	RSTB_ERROR_EXIT_RSYSLOGD_PID="$expected_pid"
 	printf 'FAIL: proper termination file missing or invalid: %s\n' "${file:-<not configured>}"
 	print_proper_termination_file "$1"
 	error_exit 1
+}
+
+get_core_pattern() {
+	if [ -n "${RSTB_CORE_PATTERN_OVERRIDE:-}" ]; then
+		printf '%s' "$RSTB_CORE_PATTERN_OVERRIDE"
+	elif [ -r /proc/sys/kernel/core_pattern ]; then
+		cat /proc/sys/kernel/core_pattern
+	else
+		printf '<unavailable>'
+	fi
+}
+
+core_policy_uses_external_collector() {
+	local core_pattern
+	[ "$(uname)" = "Linux" ] || return 1
+	core_pattern="$(get_core_pattern)"
+	case "$core_pattern" in
+	\|*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+print_core_policy() {
+	printf 'Core dump policy:\n'
+	printf '  ulimit -c: %s\n' "$(ulimit -c)"
+	if [ "$(uname)" = "Linux" ]; then
+		printf '  kernel.core_pattern: %s\n' "$(get_core_pattern)"
+		if [ -r /proc/sys/kernel/core_uses_pid ]; then
+			printf '  kernel.core_uses_pid: %s\n' "$(cat /proc/sys/kernel/core_uses_pid)"
+		else
+			printf '  kernel.core_uses_pid: <unavailable>\n'
+		fi
+		if [ -r /proc/sys/fs/suid_dumpable ]; then
+			printf '  fs.suid_dumpable: %s\n' "$(cat /proc/sys/fs/suid_dumpable)"
+		else
+			printf '  fs.suid_dumpable: <unavailable>\n'
+		fi
+		if core_policy_uses_external_collector; then
+			printf '  local generic core files: unreliable; core_pattern uses an external collector\n'
+		fi
+	fi
+}
+
+core_path_is_test_specific() {
+	local corefile="$1"
+	[ -n "${RSYSLOG_DYNNAME:-}" ] || return 1
+	case "$corefile" in
+	*"$RSYSLOG_DYNNAME"*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+core_path_has_pid_and_exe_hint() {
+	local corefile="$1"
+	local exe="$2"
+	local expected_pid="$3"
+	local exe_base
+	[ -n "$expected_pid" ] || return 1
+	exe_base="$(basename "$exe")"
+	case "$(basename "$corefile")" in
+	*"$exe_base"*"$expected_pid"*|*"$expected_pid"*"$exe_base"*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+core_candidate_owner_matches() {
+	local corefile="$1"
+	local exe="$2"
+	local expected_pid="${3:-}"
+	local core_info
+	[ -f "$corefile" ] || return 1
+
+	if [ -n "$expected_pid" ] && command -v gdb >/dev/null 2>&1; then
+		core_info="$($SUDO gdb "$exe" "$corefile" -batch -ex 'info proc' 2>/dev/null || true)"
+		if printf '%s\n' "$core_info" | grep -Eq "(process|process ID|pid)[^0-9]+$expected_pid([^0-9]|$)"; then
+			return 0
+		fi
+	fi
+
+	if [ -n "$expected_pid" ]; then
+		if command -v eu-readelf >/dev/null 2>&1; then
+			core_info="$($SUDO eu-readelf -n "$corefile" 2>/dev/null || true)"
+			if printf '%s\n' "$core_info" | grep -Eq "(pid|PID)[^0-9]+$expected_pid([^0-9]|$)"; then
+				return 0
+			fi
+		elif command -v readelf >/dev/null 2>&1; then
+			core_info="$($SUDO readelf -n "$corefile" 2>/dev/null || true)"
+			if printf '%s\n' "$core_info" | grep -Eq "(pid|PID)[^0-9]+$expected_pid([^0-9]|$)"; then
+				return 0
+			fi
+		fi
+		if core_path_has_pid_and_exe_hint "$corefile" "$exe" "$expected_pid"; then
+			return 0
+		fi
+	fi
+
+	# Weak fallback: only test-specific core names may be accepted without
+	# metadata. Generic core names remain diagnostic noise unless ownership is
+	# proven above.
+	core_path_is_test_specific "$corefile"
+}
+
+analyze_core_file() {
+	local corefile="$1"
+	local exe="$2"
+	local label="$3"
+	local core_size
+	if [ ! -f "$corefile" ]; then
+		return
+	fi
+	core_dumps_found=$((core_dumps_found + 1))
+	echo "=== Analyzing owned $label core dump #$core_dumps_found: $corefile ==="
+
+	if command -v file >/dev/null 2>&1; then
+		echo "Core file type:"
+		$SUDO file "$corefile"
+	fi
+	core_size="$($SUDO wc -c "$corefile" 2>/dev/null | awk '{print $1}')"
+	echo "Core file size: ${core_size:-<unavailable>} bytes"
+
+	if [ "$(uname)" == "Darwin" ]; then
+		if command -v lldb >/dev/null 2>&1; then
+			echo "Getting stack trace with lldb:"
+			$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" "$exe" ||
+				echo "lldb analysis failed"
+		else
+			echo "lldb not found, trying gdb..."
+			_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+			echo "bt" > "$_gdb_in"
+			echo "q" >> "$_gdb_in"
+			$SUDO gdb "$exe" "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+			rm -f "$_gdb_in"
+		fi
+	else
+		_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+		echo "bt" > "$_gdb_in"
+		echo "info thread" >> "$_gdb_in"
+		echo "thread apply all bt full" >> "$_gdb_in"
+		echo "q" >> "$_gdb_in"
+		$SUDO gdb "$exe" "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+		rm -f "$_gdb_in"
+	fi
+	echo ""
+}
+
+process_owned_core_file() {
+	local corefile="$1"
+	local exe="$2"
+	local expected_pid="${3:-}"
+	local label="${4:-process}"
+	if core_candidate_owner_matches "$corefile" "$exe" "$expected_pid"; then
+		analyze_core_file "$corefile" "$exe" "$label"
+	else
+		printf 'INFO: ignoring foreign or unowned core candidate: %s\n' "$corefile"
+	fi
+}
+
+analyze_owned_core_candidates() {
+	local exe="$1"
+	local expected_pid="${2:-}"
+	local label="${3:-process}"
+	local corefile processed_cores external_collector _had_nullglob
+	processed_cores=""
+	external_collector=0
+	core_policy_uses_external_collector && external_collector=1
+
+	process_candidate_once() {
+		local candidate="$1"
+		[ -f "$candidate" ] || return
+		case "|$processed_cores|" in
+		*"|$candidate|"*) return ;;
+		esac
+		processed_cores="${processed_cores}|${candidate}"
+		process_owned_core_file "$candidate" "$exe" "$expected_pid" "$label"
+	}
+
+	shopt -q nullglob; _had_nullglob=$?
+	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
+
+	if [ -n "${RSYSLOG_DYNNAME:-}" ]; then
+		for corefile in ${RSYSLOG_DYNNAME}.core ${RSYSLOG_DYNNAME}.core.* core.${RSYSLOG_DYNNAME}.* core*${RSYSLOG_DYNNAME}*; do
+			process_candidate_once "$corefile"
+		done
+	fi
+
+	if [ "$external_collector" -eq 0 ]; then
+		for corefile in core* vgcore.* /cores/core-* /cores/core.*; do
+			process_candidate_once "$corefile"
+		done
+		while IFS= read -r corefile; do
+			process_candidate_once "$corefile"
+		done < <(find . \( -name "core.*" -o -name "*.core" -o -name "vgcore.*" \) 2>/dev/null)
+	else
+		printf 'INFO: skipping generic local core scan because core_pattern uses an external collector\n'
+	fi
+
+	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
 }
 
 # add YAML content to the yaml config file (yaml-only mode)
@@ -2050,28 +2249,6 @@ quit"
 	fi
 	unset "$expect_no_marker_var"
 	unset observed_shutdown
-	# Check for test-specific core files first (prevents Issue #6268 race condition)
-	core_found=0
-	if [ -n "$RSYSLOG_DYNNAME" ]; then
-		if [ "$(ls ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null)" != "" ]; then
-			core_found=1
-		fi
-	fi
-	# Also check generic cores (for backward compatibility)
-	if [ $core_found -eq 0 ] && [ "$(ls core.* 2>/dev/null)" != "" ]; then
-		core_found=1
-	fi
-	if [ $core_found -eq 1 ]; then
-		if proper_termination_file_is_valid "$1" "$out_pid"; then
-			printf 'INFO: core file exists, but proper termination file proves rsyslogd reached main return; ignoring as stale/foreign core\n'
-		else
-			printf 'ABORT! core file exists (maybe from a parallel run!)\n'
-			print_proper_termination_file "$1"
-			pwd
-			ls -l core.* ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null
-			error_exit  1
-		fi
-	fi
 	unset out_pid
 }
 
@@ -2307,7 +2484,7 @@ wait_shutdown_vg() {
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
 
 	if [ "$(ls vgcore.* 2>/dev/null)" != "" ]; then
-	   printf 'ABORT! core file exists:\n'
+	   printf 'ABORT! valgrind core file exists:\n'
 	   ls -l vgcore.*
 	   error_exit 1
 	fi
@@ -2374,15 +2551,15 @@ do_cleanup() {
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 #
-# Core Dump Handling (Issue #6268):
-# - Test-specific cores (${RSYSLOG_DYNNAME}.core, core.${RSYSLOG_DYNNAME}.*)
-#   are checked FIRST to prevent race conditions in parallel test runs
-# - Generic cores are checked second for backward compatibility
-# - Duplicate detection prevents processing the same core file twice
+# Core Dump Handling:
+# - Proper termination markers are the shutdown oracle for rsyslogd.
+# - Core files are best-effort diagnostics after a test already failed.
+# - Generic core files are analyzed only when pid/executable ownership can be
+#   attributed to this test. Test-specific names are a weak fallback.
 #
 # Verbosity Reduction:
-# - When no cores found: minimal output (just ulimit status)
-# - When cores found: full analysis with backtraces
+# - When no owned cores found: minimal output plus core dump policy.
+# - When owned cores are found: full analysis with backtraces.
 # - System info (uname, memory): only shown if cores found or VERBOSE mode
 # - Disk space warning: only shown if usage >= 90% and no cores found
 #
@@ -2390,105 +2567,32 @@ do_cleanup() {
 #       call it immediately before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
+	local expected_core_pid
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
 		printf '%s Test %s exceeded max runtime of %d seconds\n' "$(tb_timestamp)" "$0" $TB_TEST_MAX_RUNTIME
 	fi
-	# Core dump analysis - always run when cores are detected
+	# Core dump analysis is diagnostic-only. Do not fail solely because a
+	# generic core file exists; first prove ownership by pid/executable.
 	core_dumps_found=0
-
-	# Search for core dumps in multiple locations and patterns
-	# Priority 1: Test-specific core files (prevents parallel test race condition)
-	# Priority 2: Generic core files (for older systems or non-test-specific cores)
-
-	# Process core files safely using while read to handle filenames with spaces/special chars
-	process_core_file() {
-		local corefile="$1"
-		if [ -f "$corefile" ]; then
-			core_dumps_found=$((core_dumps_found + 1))
-			echo "=== Analyzing core dump #$core_dumps_found: $corefile ==="
-
-			# Identify the core file type and size
-			if command -v file >/dev/null 2>&1; then
-			echo "Core file type:"
-			file "$corefile"
+	print_core_policy
+	expected_core_pid="${RSTB_ERROR_EXIT_RSYSLOGD_PID:-${out_pid:-}}"
+	if [ -z "$expected_core_pid" ] && [ -n "${RSYSLOG_PIDBASE:-}" ]; then
+		if [ -s "$RSYSLOG_PIDBASE.pid.save" ]; then
+			expected_core_pid="$(cat "$RSYSLOG_PIDBASE.pid.save")"
+		elif [ -s "${RSYSLOG_PIDBASE}1.pid.save" ]; then
+			expected_core_pid="$(cat "${RSYSLOG_PIDBASE}1.pid.save")"
+		elif [ -s "$RSYSLOG_PIDBASE.pid" ]; then
+			expected_core_pid="$(cat "$RSYSLOG_PIDBASE.pid")"
+		elif [ -s "${RSYSLOG_PIDBASE}1.pid" ]; then
+			expected_core_pid="$(cat "${RSYSLOG_PIDBASE}1.pid")"
 		fi
-		echo "Core file size: $(wc -c < "$corefile") bytes"
-
-			# Use platform-appropriate debugger for stack trace
-			if [ "$(uname)" == "Darwin" ]; then
-				if command -v lldb >/dev/null 2>&1; then
-					echo "Getting stack trace with lldb:"
-					$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ../tools/rsyslogd || echo "lldb analysis failed"
-					# Also try tcpflood if available
-					if [ -x "./tcpflood" ]; then
-						echo "Getting stack trace with lldb (tcpflood):"
-						$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ./tcpflood || echo "lldb analysis failed for tcpflood"
-					fi
-				else
-					echo "lldb not found, trying gdb..."
-					_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
-					echo "bt" > "$_gdb_in"
-					echo "q" >> "$_gdb_in"
-					$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
-					# Also try tcpflood if available
-					if [ -x "./tcpflood" ]; then
-						$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
-					fi
-					rm -f "$_gdb_in"
-				fi
-			else
-				_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
-				echo "bt" > "$_gdb_in"
-				echo "info thread" >> "$_gdb_in"
-				echo "thread apply all bt full" >> "$_gdb_in"
-				echo "q" >> "$_gdb_in"
-				$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
-				# Also try tcpflood if available
-				if [ -x "./tcpflood" ]; then
-					$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
-				fi
-				rm -f "$_gdb_in"
-			fi
-			echo ""
-		fi
-	}
-
-	# Process glob patterns (handle no-match cleanly via nullglob)
-	# Priority order: test-specific cores first to prevent race conditions in parallel tests
-	shopt -q nullglob; _had_nullglob=$?
-	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
-
-	# First, check for test-specific core files (prevents Issue #6268 race condition)
-	if [ -n "$RSYSLOG_DYNNAME" ]; then
-		for corefile in ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.*; do
-			process_core_file "$corefile"
-		done
 	fi
-
-	# Then check generic patterns (for backward compatibility)
-	for corefile in core* /cores/core-* /cores/core.*; do
-		# Skip if already processed as test-specific
-		if [ -n "$RSYSLOG_DYNNAME" ] && [[ "$corefile" == *"$RSYSLOG_DYNNAME"* ]]; then
-			continue
-		fi
-		process_core_file "$corefile"
-	done
-	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
-
-	# Process find results safely using while read without subshell (process substitution)
-	while IFS= read -r corefile; do
-		# Skip if already processed
-		if [ -n "$RSYSLOG_DYNNAME" ] && [[ "$corefile" == *"$RSYSLOG_DYNNAME"* ]]; then
-			continue
-		fi
-		process_core_file "$corefile"
-	done < <(find . -name "core.*" -o -name "*.core" 2>/dev/null)
+	analyze_owned_core_candidates "../tools/rsyslogd" "$expected_core_pid" "rsyslogd"
 
 	if [ $core_dumps_found -eq 0 ]; then
-		# Reduced verbosity - only show essential information when no core found
-		printf 'No core dumps found (ulimit -c: %s)\n' "$(ulimit -c)"
+		printf 'No owned rsyslogd core dumps found\n'
 	else
-		echo "=== Analyzed $core_dumps_found core dump(s) ==="
+		echo "=== Analyzed $core_dumps_found owned core dump(s) ==="
 	fi
 
 	# Check disk space only if it might be an issue
