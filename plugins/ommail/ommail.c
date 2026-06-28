@@ -560,6 +560,40 @@ finalize_it:
 }
 
 
+/* Header field values must not carry raw CR/LF. A subject.template may render
+ * message-derived structured fields, so normalize line breaks before emitting
+ * the RFC822 Subject header.
+ */
+static rsRetVal write_header_value(mailWriteFunc_t writeFunc, void *ctx, const char *value) {
+    DEFiRet;
+    char szBuf[2048];
+    size_t iSrc;
+    size_t iBuf = 0;
+
+    assert(writeFunc != NULL);
+    assert(value != NULL);
+    if (value == NULL) {
+        /* Subject rendering is expected to always provide a value. Treat an
+         * unexpected NULL as an empty header value in production builds.
+         */
+        FINALIZE;
+    }
+
+    for (iSrc = 0; value[iSrc] != '\0'; ++iSrc) {
+        if (iBuf == sizeof(szBuf)) {
+            CHKiRet(writeBytes(writeFunc, ctx, szBuf, iBuf));
+            iBuf = 0;
+        }
+        szBuf[iBuf++] = (value[iSrc] == '\r' || value[iSrc] == '\n') ? ' ' : value[iSrc];
+    }
+
+    if (iBuf > 0) CHKiRet(writeBytes(writeFunc, ctx, szBuf, iBuf));
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* send body text to a generic sink. SMTP requires escaping a leading dot inside a line. */
 static rsRetVal bodyWrite(mailWriteFunc_t writeFunc, void *ctx, char *msg, size_t len, sbool bEscapeDot) {
     DEFiRet;
@@ -617,7 +651,7 @@ static rsRetVal writeMailMessage(
     CHKiRet(writeTos(writeFunc, ctx, pData));
 
     CHKiRet(writeStr(writeFunc, ctx, "Subject: "));
-    CHKiRet(writeStr(writeFunc, ctx, (char *)subject));
+    CHKiRet(write_header_value(writeFunc, ctx, (char *)subject));
     CHKiRet(writeStr(writeFunc, ctx, "\r\n"));
 
     CHKiRet(writeStr(writeFunc, ctx, "X-Mailer: rsyslog-ommail\r\n"));
