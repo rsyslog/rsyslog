@@ -311,6 +311,7 @@ TESTS_DEFAULT = \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	asynwr_dynfile_flushtxend-off.sh \
+	diag-core-classification.sh \
 	imdiag-modern-module-config.sh \
 	imdiag-proper-termination-core-ignore.sh \
 	imdiag-proper-termination-timeoutguard.sh \

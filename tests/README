@@ -106,13 +106,21 @@ the PID via `ps -ef | grep 54321`).
 
 ## Core dump analysis
 
-The harness can inspect core dumps automatically. Ensure the operating system
-allows them to be written:
+Core files are best-effort diagnostics, not the test oracle. The harness tries
+to enable them with `ulimit -c unlimited`, but crash collectors such as
+`systemd-coredump`, `apport`, container policy, file permissions, or size limits
+may redirect or suppress local files. On failure, `diag.sh` prints the active
+core policy (`kernel.core_pattern`, `kernel.core_uses_pid`, and
+`fs.suid_dumpable` when available).
 
-1. Set `ulimit -c unlimited` (you might need to adjust `/etc/security/limits.conf`
-   to raise `soft core unlimited`).
-2. Confirm `/proc/sys/kernel/core_pattern` is set to `core`. Systemd-based
-   distributions often redirect cores elsewhere; revert to the classic format
-   with `sudo bash -c 'echo core > /proc/sys/kernel/core_pattern'`.
+The harness analyzes a core only when it can attribute the file to the expected
+process by pid/executable metadata, or when the filename is clearly
+test-specific via `RSYSLOG_DYNNAME`. Generic `core.*` files from parallel or
+stale tests are ignored unless ownership is proven. If `core_pattern` pipes
+crashes to an external collector, generic local core scanning is skipped.
+Valgrind `vgcore.*` files are handled separately because they belong to the
+supervised Valgrind run and remain a Valgrind failure signal.
 
-Avoid applying these tweaks on production hosts.
+For local debugging you may still switch a disposable development host to a
+classic core pattern such as `core.%e.%p`, but avoid applying such changes on
+production hosts.

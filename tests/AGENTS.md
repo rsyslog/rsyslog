@@ -74,6 +74,20 @@ minimal containers. Findings are review prompts, not automatic blockers.
   remains mandatory hang protection and must not be removed, disabled, or
   weakened to make such tests pass; if timeoutGuard aborts rsyslogd, it must
   preserve the termination marker with ``status=error`` and useful diagnostics.
+- **Core files are diagnostics, not shutdown or crash oracles**: the
+  testbench tries to enable cores with ``ulimit -c unlimited`` and reports the
+  platform core policy on failure, but systemd-coredump, apport, distro crash
+  handlers, containers, size limits, and permissions may redirect or suppress
+  local core files. Generic ``core.*`` files are unsafe under parallel tests
+  unless pid/executable ownership can be proven. Use proper termination markers
+  and helper exit-status checks for pass/fail decisions; owned cores are only
+  best-effort backtrace artifacts after the test already failed. Valgrind
+  ``vgcore.*`` files are different: they belong to the supervised Valgrind run
+  and remain a Valgrind failure signal.
+- **Helper process failures need their own lifecycle checks**: rsyslogd core
+  handling does not prove ``tcpflood`` or another helper stayed healthy. Tests
+  that rely on helper correctness must track the helper pid or command status
+  directly instead of expecting generic core-file scanning to catch crashes.
 - **Queue tests assuming immediate drain or shutdown ordering**: use
   queue-specific synchronization where possible. Do not assume that input
   completion, shutdown start, or a fixed delay means all queued messages reached
