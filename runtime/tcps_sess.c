@@ -899,6 +899,29 @@ finalize_it:
     RETiRet;
 }
 
+#if defined(ENABLE_LIBZSTD) && defined(ZSTD_VERSION_NUMBER) && ZSTD_VERSION_NUMBER >= 10308
+    #define ZSTD_RSYSLOG_WINDOWLOG_MIN 10U
+    #define ZSTD_RSYSLOG_WINDOWLOG_MAX 31U
+static unsigned zstdWindowLogMaxFromBytes(uint64_t maxBytes) {
+    unsigned windowLogMax = 0;
+    uint64_t windowSize = 1;
+
+    while (windowSize < maxBytes && windowLogMax < 63) {
+        windowSize <<= 1;
+        ++windowLogMax;
+    }
+
+    /* zstd only exposes a power-of-two window-log cap. Round up so frames
+     * within the configured byte limit are not rejected unnecessarily. */
+    if (windowLogMax < ZSTD_RSYSLOG_WINDOWLOG_MIN) {
+        windowLogMax = ZSTD_RSYSLOG_WINDOWLOG_MIN;
+    } else if (windowLogMax > ZSTD_RSYSLOG_WINDOWLOG_MAX) {
+        windowLogMax = ZSTD_RSYSLOG_WINDOWLOG_MAX;
+    }
+    return windowLogMax;
+}
+#endif
+
 static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
                                        char *const pData,
                                        const size_t iLen,
@@ -919,6 +942,17 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
             logCompressedStreamFailure(pThis, "received invalid compressed stream", "zstd context allocation failed");
             ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
+    #if defined(ZSTD_VERSION_NUMBER) && ZSTD_VERSION_NUMBER >= 10308
+        if (pThis->compressionMaxDecompressedBytesPerReceive != 0) {
+            const unsigned windowLogMax = zstdWindowLogMaxFromBytes(pThis->compressionMaxDecompressedBytesPerReceive);
+            const size_t zret =
+                ZSTD_DCtx_setParameter((ZSTD_DCtx *)pThis->zstdDctx, ZSTD_d_windowLogMax, (int)windowLogMax);
+            if (ZSTD_isError(zret)) {
+                logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(zret));
+                ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+            }
+        }
+    #endif
     }
 
     ZSTD_outBuffer output;
