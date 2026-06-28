@@ -136,6 +136,8 @@ typedef struct {
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *kubernetesUrl; /* scheme, host, port, and optional path prefix for Kubernetes API lookups */
+    uchar **kubernetesUrls; /* ordered failover list; kubernetesUrl is the primary */
+    int nKubernetesUrls;
     uchar *srcMetadataPath; /* where to get data for kubernetes queries */
     uchar *dstMetadataPath; /* where to put metadata obtained from kubernetes */
     uchar *caCertFile; /* File holding the CA cert (+optional chain) of CA that issued the Kubernetes server cert */
@@ -162,6 +164,8 @@ struct modConfData_s {
 /* action (instance) configuration data */
 typedef struct _instanceData {
     uchar *kubernetesUrl; /* scheme, host, port, and optional path prefix for Kubernetes API lookups */
+    uchar **kubernetesUrls; /* ordered failover list; kubernetesUrl is the primary */
+    int nKubernetesUrls;
     msgPropDescr_t *srcMetadataDescr; /* where to get data for kubernetes queries */
     uchar *dstMetadataPath; /* where to put metadata obtained from kubernetes */
     uchar *caCertFile; /* File holding the CA cert (+optional chain) of CA that issued the Kubernetes server cert */
@@ -216,7 +220,7 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 /* module parameters (v6 config format) */
-static struct cnfparamdescr modpdescr[] = {{"kubernetesurl", eCmdHdlrString, 0},
+static struct cnfparamdescr modpdescr[] = {{"kubernetesurl", eCmdHdlrArray, 0},
                                            {"srcmetadatapath", eCmdHdlrString, 0},
                                            {"dstmetadatapath", eCmdHdlrString, 0},
                                            {"tls.cacert", eCmdHdlrString, 0},
@@ -244,7 +248,7 @@ static struct cnfparamdescr modpdescr[] = {{"kubernetesurl", eCmdHdlrString, 0},
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* action (instance) parameters (v6 config format) */
-static struct cnfparamdescr actpdescr[] = {{"kubernetesurl", eCmdHdlrString, 0},
+static struct cnfparamdescr actpdescr[] = {{"kubernetesurl", eCmdHdlrArray, 0},
                                            {"srcmetadatapath", eCmdHdlrString, 0},
                                            {"dstmetadatapath", eCmdHdlrString, 0},
                                            {"tls.cacert", eCmdHdlrString, 0},
@@ -286,6 +290,90 @@ static void free_annotationmatch(annotation_match_t *match) {
         match->regexps = NULL;
         match->nmemb = 0;
     }
+}
+
+static void freeKubernetesUrlList(uchar ***urls, int *const nUrls, uchar **const primaryUrl) {
+    int i;
+
+    if (urls == NULL || nUrls == NULL || primaryUrl == NULL) return;
+    free(*primaryUrl);
+    *primaryUrl = NULL;
+    if (*urls != NULL) {
+        for (i = 0; i < *nUrls; ++i) free((*urls)[i]);
+        free(*urls);
+        *urls = NULL;
+    }
+    *nUrls = 0;
+}
+
+static void freeInstanceKubernetesUrls(instanceData *pData) {
+    if (pData == NULL) return;
+    freeKubernetesUrlList(&pData->kubernetesUrls, &pData->nKubernetesUrls, &pData->kubernetesUrl);
+}
+
+static rsRetVal setKubernetesUrls(uchar ***dstUrls,
+                                  int *const dstNUrls,
+                                  uchar **const dstPrimaryUrl,
+                                  uchar *const *const srcUrls,
+                                  const int srcNUrls) {
+    DEFiRet;
+    uchar **newUrls = NULL;
+    uchar *newPrimary = NULL;
+    int i;
+
+    if (dstUrls == NULL || dstNUrls == NULL || dstPrimaryUrl == NULL || srcUrls == NULL || srcNUrls <= 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "mmkubernetes: kubernetesurl must not be empty");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    CHKmalloc(newUrls = calloc((size_t)srcNUrls, sizeof(uchar *)));
+    for (i = 0; i < srcNUrls; ++i) {
+        if (srcUrls[i] == NULL || srcUrls[i][0] == '\0') {
+            LogError(0, RS_RET_CONFIG_ERROR, "mmkubernetes: empty kubernetesurl entry");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        CHKmalloc(newUrls[i] = (uchar *)strdup((const char *)srcUrls[i]));
+    }
+    CHKmalloc(newPrimary = (uchar *)strdup((const char *)newUrls[0]));
+
+    freeKubernetesUrlList(dstUrls, dstNUrls, dstPrimaryUrl);
+    *dstPrimaryUrl = newPrimary;
+    *dstUrls = newUrls;
+    *dstNUrls = srcNUrls;
+    newPrimary = NULL;
+    newUrls = NULL;
+
+finalize_it:
+    free(newPrimary);
+    if (newUrls != NULL) {
+        for (i = 0; i < srcNUrls; ++i) free(newUrls[i]);
+        free(newUrls);
+    }
+    RETiRet;
+}
+
+static rsRetVal setKubernetesUrlsFromArray(uchar ***dstUrls,
+                                           int *const dstNUrls,
+                                           uchar **const dstPrimaryUrl,
+                                           struct cnfarray *const ar) {
+    DEFiRet;
+    uchar **urls = NULL;
+    int i;
+
+    if (ar == NULL || ar->nmemb <= 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "mmkubernetes: kubernetesurl must not be empty");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    CHKmalloc(urls = calloc((size_t)ar->nmemb, sizeof(uchar *)));
+    for (i = 0; i < ar->nmemb; ++i) CHKmalloc(urls[i] = (uchar *)es_str2cstr(ar->arr[i], NULL));
+    CHKiRet(setKubernetesUrls(dstUrls, dstNUrls, dstPrimaryUrl, urls, ar->nmemb));
+
+finalize_it:
+    if (urls != NULL) {
+        for (i = 0; i < (ar == NULL ? 0 : ar->nmemb); ++i) free(urls[i]);
+        free(urls);
+    }
+    RETiRet;
 }
 
 static int init_annotationmatch(annotation_match_t *match, struct cnfarray *ar) {
@@ -561,8 +649,8 @@ BEGINsetModCnf
         if (!pvals[i].bUsed) {
             continue;
         } else if (!strcmp(modpblk.descr[i].name, "kubernetesurl")) {
-            free(loadModConf->kubernetesUrl);
-            CHKmalloc(loadModConf->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKiRet(setKubernetesUrlsFromArray(&loadModConf->kubernetesUrls, &loadModConf->nKubernetesUrls,
+                                               &loadModConf->kubernetesUrl, pvals[i].val.d.ar));
         } else if (!strcmp(modpblk.descr[i].name, "srcmetadatapath")) {
             free(loadModConf->srcMetadataPath);
             CHKmalloc(loadModConf->srcMetadataPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -748,7 +836,7 @@ ENDcreateInstance
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
-    free(pData->kubernetesUrl);
+    freeInstanceKubernetesUrls(pData);
     msgPropDescrDestruct(pData->srcMetadataDescr);
     free(pData->srcMetadataDescr);
     free(pData->dstMetadataPath);
@@ -1204,8 +1292,8 @@ BEGINnewActInst
         if (!pvals[i].bUsed) {
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "kubernetesurl")) {
-            free(pData->kubernetesUrl);
-            CHKmalloc(pData->kubernetesUrl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            CHKiRet(setKubernetesUrlsFromArray(&pData->kubernetesUrls, &pData->nKubernetesUrls, &pData->kubernetesUrl,
+                                               pvals[i].val.d.ar));
         } else if (!strcmp(actpblk.descr[i].name, "srcmetadatapath")) {
             msgPropDescrDestruct(pData->srcMetadataDescr);
             free(pData->srcMetadataDescr);
@@ -1366,11 +1454,14 @@ BEGINnewActInst
         }
     }
 
-    if (pData->kubernetesUrl == NULL) {
-        if (loadModConf->kubernetesUrl == NULL) {
-            CHKmalloc(pData->kubernetesUrl = (uchar *)strdup(DFLT_KUBERNETES_URL));
+    if (pData->nKubernetesUrls == 0) {
+        if (loadModConf->nKubernetesUrls == 0) {
+            uchar *const defaultUrl = UCHAR_CONSTANT(DFLT_KUBERNETES_URL);
+            CHKiRet(setKubernetesUrls(&pData->kubernetesUrls, &pData->nKubernetesUrls, &pData->kubernetesUrl,
+                                      &defaultUrl, 1));
         } else {
-            CHKmalloc(pData->kubernetesUrl = (uchar *)strdup((char *)loadModConf->kubernetesUrl));
+            CHKiRet(setKubernetesUrls(&pData->kubernetesUrls, &pData->nKubernetesUrls, &pData->kubernetesUrl,
+                                      loadModConf->kubernetesUrls, loadModConf->nKubernetesUrls));
         }
     }
     if (pData->srcMetadataDescr == NULL) {
@@ -1455,7 +1546,7 @@ BEGINfreeCnf
     CODESTARTfreeCnf;
     int i;
 
-    free(pModConf->kubernetesUrl);
+    freeKubernetesUrlList(&pModConf->kubernetesUrls, &pModConf->nKubernetesUrls, &pModConf->kubernetesUrl);
     free(pModConf->srcMetadataPath);
     free(pModConf->dstMetadataPath);
     free(pModConf->caCertFile);
@@ -1689,6 +1780,33 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal queryKBWithFailover(wrkrInstanceData_t *pWrkrData,
+                                    const char *apiPath,
+                                    time_t now,
+                                    struct json_object **rply) {
+    DEFiRet;
+    char *url = NULL;
+    int i;
+
+    for (i = 0; i < pWrkrData->pData->nKubernetesUrls; ++i) {
+        if ((-1 == asprintf(&url, "%s%s", (char *)pWrkrData->pData->kubernetesUrls[i], apiPath)) || (!url)) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        iRet = queryKB(pWrkrData, url, now, rply);
+        if (iRet != RS_RET_SUSPENDED || i == pWrkrData->pData->nKubernetesUrls - 1) {
+            FINALIZE;
+        }
+        LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+               "mmkubernetes: failed to connect to [%s], trying next configured kubernetesurl", url);
+        free(url);
+        url = NULL;
+    }
+
+finalize_it:
+    free(url);
+    RETiRet;
+}
+
 
 /* versions < 8.16.0 don't support BEGINdoAction_NoStrings */
 #if defined(BEGINdoAction_NoStrings)
@@ -1701,6 +1819,7 @@ BEGINdoAction
 #endif
     const char *podName = NULL, *ns = NULL, *containerName = NULL, *containerID = NULL;
     char *mdKey = NULL;
+    char *apiPath = NULL;
     struct json_object *jMetadata = NULL, *jMetadataCopy = NULL, *jMsgMeta = NULL, *jo = NULL;
     int add_pod_metadata = 1;
     time_t now;
@@ -1735,7 +1854,6 @@ BEGINdoAction
     jMetadata = cache_entry_get_md(pWrkrData, mdKey, now);
 
     if (jMetadata == NULL) {
-        char *url = NULL;
         struct json_object *jReply = NULL, *jo2 = NULL, *jNsMeta = NULL, *jPodData = NULL;
 
         /* check cache for namespace metadata */
@@ -1743,14 +1861,13 @@ BEGINdoAction
 
         if (jNsMeta == NULL) {
             /* query kubernetes for namespace info */
-            /* todo: move url definitions elsewhere */
-            if ((-1 == asprintf(&url, "%s/api/v1/namespaces/%s", (char *)pWrkrData->pData->kubernetesUrl, ns)) ||
-                (!url)) {
+            if ((-1 == asprintf(&apiPath, "/api/v1/namespaces/%s", ns)) || (!apiPath)) {
                 pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
-            iRet = queryKB(pWrkrData, url, now, &jReply);
-            free(url);
+            iRet = queryKBWithFailover(pWrkrData, apiPath, now, &jReply);
+            free(apiPath);
+            apiPath = NULL;
             if (iRet == RS_RET_NOT_FOUND) {
                 /* negative cache namespace - make a dummy empty namespace metadata object */
                 jNsMeta = json_object_new_object();
@@ -1797,14 +1914,13 @@ BEGINdoAction
             jReply = NULL;
         }
 
-        if ((-1 ==
-             asprintf(&url, "%s/api/v1/namespaces/%s/pods/%s", (char *)pWrkrData->pData->kubernetesUrl, ns, podName)) ||
-            (!url)) {
+        if ((-1 == asprintf(&apiPath, "/api/v1/namespaces/%s/pods/%s", ns, podName)) || (!apiPath)) {
             pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
-        iRet = queryKB(pWrkrData, url, now, &jReply);
-        free(url);
+        iRet = queryKBWithFailover(pWrkrData, apiPath, now, &jReply);
+        free(apiPath);
+        apiPath = NULL;
         if (iRet == RS_RET_NOT_FOUND) {
             /* negative cache pod - make a dummy empty pod metadata object */
             iRet = RS_RET_OK;
@@ -1898,6 +2014,7 @@ BEGINdoAction
 finalize_it:
     json_object_put(jMsgMeta);
     free(mdKey);
+    free(apiPath);
 ENDdoAction
 
 
