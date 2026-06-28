@@ -44,6 +44,19 @@ for key, (name_key, reason_key) in sections.items():
                 continue
             names_fh.write(f"{name}\n")
             reasons_fh.write(f"{name}\t{reason}\n")
+
+replacements_path = os.path.join(out_dir, "control_replacements.tsv")
+replacements_reasons_path = os.path.join(out_dir, "control_replacements.reasons.txt")
+with open(replacements_path, "w", encoding="utf-8") as replacements_fh, \
+        open(replacements_reasons_path, "w", encoding="utf-8") as reasons_fh:
+    for entry in policy.get("control_replacements", []):
+        pattern = entry.get("pattern", "").strip()
+        replacement = entry.get("replacement", "").strip()
+        reason = entry.get("reason", "").strip()
+        if not pattern:
+            continue
+        replacements_fh.write(f"{pattern}\t{replacement}\n")
+        reasons_fh.write(f"{pattern}\t{reason}\n")
 PY
 }
 
@@ -89,6 +102,44 @@ fetch_debian_packaging() {
   fi
 
   cp -r "$clone_dir/debian" "$target_dir"
+}
+
+apply_control_replacements() {
+  local control_file="$1"
+  local replacements_file="$2"
+  local reasons_file="$3"
+  local findings_dir="${4:-}"
+
+  [ -s "$replacements_file" ] || return 0
+  [ -f "$control_file" ] || {
+    echo "ERROR: missing Debian control file: $control_file" >&2
+    return 1
+  }
+
+  python3 - "$control_file" "$replacements_file" <<'PY'
+import re
+import sys
+
+control_path, replacements_path = sys.argv[1:3]
+with open(control_path, "r", encoding="utf-8") as fh:
+    control = fh.read()
+
+with open(replacements_path, "r", encoding="utf-8") as fh:
+    for line in fh:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        pattern, replacement = line.split("\t", 1)
+        control = re.sub(pattern, replacement, control)
+
+with open(control_path, "w", encoding="utf-8") as fh:
+    fh.write(control)
+PY
+
+  if [ -n "$findings_dir" ]; then
+    record_policy_items "$reasons_file" "$findings_dir" \
+      "allowed_packaging_drift" "Update Debian control replacement for"
+  fi
 }
 
 run_dist_build() {
@@ -387,6 +438,7 @@ case "${1:-}" in
   load_policy) shift; load_policy "$@" ;;
   install_prereqs) shift; install_prereqs "$@" ;;
   fetch_debian_packaging) shift; fetch_debian_packaging "$@" ;;
+  apply_control_replacements) shift; apply_control_replacements "$@" ;;
   run_dist_build) shift; run_dist_build "$@" ;;
   find_dist_tarball) shift; find_dist_tarball "$@" ;;
   unpack_source_tree) shift; unpack_source_tree "$@" ;;
