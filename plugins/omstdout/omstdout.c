@@ -203,10 +203,13 @@ BEGINdoAction
      * needs to be more solid. -- rgerhards, 2012-11-28
      */
     dbgprintf("omstdout: len: %d, toWrite: %s\n", (int)len, toWrite);
-    if ((r = write(1, toWrite, len)) != (int)len) { /* 1 is stdout! */
+    if (len > 0 && (r = write(1, toWrite, len)) != (int)len) { /* 1 is stdout! */
         DBGPRINTF("omstdout: error %d writing to stdout[%zd]: %s\n", r, len, toWrite);
     }
-    if (pWrkrData->pData->bEnsureLFEnding && toWrite[len - 1] != '\n') {
+    /* A rendered template may legitimately be empty. Treat that like any other
+     * non-LF-terminated message; do not inspect toWrite[-1].
+     */
+    if (pWrkrData->pData->bEnsureLFEnding && (len == 0 || toWrite[len - 1] != '\n')) {
         if ((r = write(1, "\n", 1)) != 1) { /* write missing LF */
             DBGPRINTF("omstdout: error %d writing \\n to stdout\n", r);
         }

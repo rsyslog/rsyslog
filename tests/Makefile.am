@@ -1009,6 +1009,7 @@ TESTS_OMPROG = \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
 	omprog-invalid-args.sh \
+	omprog-empty-template.sh \
 	omprog-transactions.sh \
 	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
@@ -1459,7 +1460,8 @@ TESTS_PMNULL = \
 	pmnull-withparams.sh
 
 TESTS_OMSTDOUT = \
-	omstdout-basic.sh
+	omstdout-basic.sh \
+	omstdout-empty-template.sh
 
 TESTS_LIBYAML_IMTCP = \
 	config-translate-rs-roundtrip.sh \
