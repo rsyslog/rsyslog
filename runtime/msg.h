@@ -160,6 +160,8 @@ struct msg {
     /* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
     #define PRESERVE_CASE 0x200
     /* preserve case in fromhost */
+    #define NO_LEGACY_Z_DECOMPRESS 0x400
+    /* skip built-in legacy 'z' transport-frame decompression */
 
     /* (syslog) protocol types */
     #define MSG_LEGACY_PROTOCOL 0

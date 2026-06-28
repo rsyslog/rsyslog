@@ -731,7 +731,8 @@ TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
 	imtcp-stream-always-zlib-corrupt.sh \
 	imtcp-stream-always-zlib-truncated.sh \
 	imtcp-stream-always-zlib-fragmented-ratio.sh \
-	imtcp-stream-always-zlib-expansion-guard.sh
+	imtcp-stream-always-zlib-expansion-guard.sh \
+	imtcp-stream-always-zlib-z-prefix.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS = \
 	imtcp-stream-always-zlib-impstats.sh
@@ -1357,8 +1358,12 @@ TESTS_IMPTCP = \
 	imptcp-basic-hup.sh \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
+	imptcp-compression-none-pmnull.sh \
+	imptcp-compression-none-legacy-single.sh \
 	imptcp-stream-compression-auto.sh \
 	imptcp-stream-compression-auto-zlib-prefix-plain.sh \
+	imptcp-stream-auto-z-prefix.sh \
+	imptcp-stream-auto-legacy-single.sh \
 	rscript_random.sh \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
@@ -1370,7 +1375,8 @@ TESTS_IMPTCP_STREAM_ALWAYS = \
 	imptcp-stream-always-basic.sh \
 	imptcp-stream-always-flushoff.sh \
 	imptcp-stream-always-corrupt.sh \
-	imptcp-stream-always-truncated.sh
+	imptcp-stream-always-truncated.sh \
+	imptcp-stream-always-z-prefix.sh
 
 TESTS_IMPTCP_STREAM_ALWAYS_IMPSTATS = \
 	imptcp-stream-always-impstats.sh

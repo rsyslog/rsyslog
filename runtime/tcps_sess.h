@@ -82,6 +82,7 @@ struct tcps_sess_s {
         sbool zipInitDone;
         sbool compressedStreamEnded;
         sbool compressedStreamFailed;
+        sbool streamDecompressed;
         z_stream zstrm;
         void *zstdDctx;
 };
