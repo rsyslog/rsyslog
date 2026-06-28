@@ -145,6 +145,21 @@ Action Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+Transaction Mode Status
+=======================
+
+The :ref:`param-omprog-usetransactions` option is still implemented by the
+existing ``omprog`` module and remains experimental. It uses the legacy output
+transaction callbacks because the setting is action-specific: deployments can
+enable transaction markers for one external program while leaving another
+``omprog`` action in per-message mode.
+
+The newer output transaction interface does not currently model this kind of
+per-action switch. Treating ``useTransactions`` as a simple implementation
+conversion would either change existing behavior or require a broader core or
+module design. New configurations should enable it only when the external
+program explicitly implements the ``omprog`` transaction marker protocol.
+
 Examples
 ========
 
@@ -202,5 +217,3 @@ rsyslog will kill and restart it.
 
 Note that the ``useTransactions`` flag is not used in this example. The
 program stores and confirms each log individually.
-
-
