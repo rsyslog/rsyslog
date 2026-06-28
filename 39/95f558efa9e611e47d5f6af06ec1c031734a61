@@ -1,0 +1,27 @@
+plugins/omstdout/omstdout.c
+  s_6224eda96fc0da::t_b64309729fc777 209-212
+tests/Makefile.am
+  s_6224eda96fc0da::t_cb0aadff95c12a 1012,1463-1464
+tests/omprog-empty-template.sh
+  s_6224eda96fc0da::t_fb13509002c44a 1-26
+plugins/omprog/omprog.c
+  s_6224eda96fc0da::t_35e4285443cca2 969-972
+tests/omstdout-empty-template.sh
+  s_6224eda96fc0da::t_aacd7780f6de85 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "3995f558efa9e611e47d5f6af06ec1c031734a61",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
