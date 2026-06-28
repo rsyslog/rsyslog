@@ -47,7 +47,7 @@ if $msg contains "msgnum:" then
 startup
 assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
-./tcpflood -Tudp -p"$PORT_RCVR" -m "$SENDMESSAGES"
+tcpflood -Tudp -p"$PORT_RCVR" -m "$SENDMESSAGES"
 
 sleep 2
 shutdown_when_empty

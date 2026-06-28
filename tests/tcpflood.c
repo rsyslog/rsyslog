@@ -116,6 +116,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -345,13 +346,13 @@ static int sendDTLS(char *buf, size_t lenBuf);
 static void closeDTLSSess(void);
 
 #ifdef ENABLE_RELP
-    /* RELP subsystem */
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wformat-security"
 static void relp_dbgprintf(char __attribute__((unused)) * fmt, ...) {
-    printf(fmt);
+    va_list ap;
+
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
 }
-    #pragma GCC diagnostic pop
 
 static relpEngine_t *pRelpEngine;
     #define CHKRELP(f)                   \

@@ -29,7 +29,7 @@ if $msg contains "rate-limit identity" then {
 startup
 assign_file_content PORT_RCVR "$PORT_RCVR_FILE"
 
-./tcpflood -Tudp -p"$PORT_RCVR" -m2 -M "<29>1 2026-02-19T13:00:00.000Z router1 rpd 1234 TEST_MSG - rate-limit identity"
+tcpflood -Tudp -p"$PORT_RCVR" -m2 -M "<29>1 2026-02-19T13:00:00.000Z router1 rpd 1234 TEST_MSG - rate-limit identity"
 
 shutdown_when_empty
 wait_shutdown

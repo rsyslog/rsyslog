@@ -50,7 +50,7 @@ for _ in $(seq 1 4); do
 done
 echo "<13>Jan 1 00:00:00 noisyhost app: distinct over limit" >> "$INPUT_FILE"
 
-./tcpflood -p"$tcp_port" -I "$INPUT_FILE"
+tcpflood -p"$tcp_port" -I "$INPUT_FILE"
 
 shutdown_when_empty
 wait_shutdown
