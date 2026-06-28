@@ -115,6 +115,15 @@ A timeoutGuard abort writes the same file before aborting with
 before failing so diagnostics such as ``queue.overall.size`` survive in the test
 log.
 
+The shell ``tcpflood`` helper configures a per-invocation proper termination
+marker as well. ``tcpflood`` writes that marker as its final normal action, and
+the wrapper validates it after a zero exit status. Direct ``./tcpflood``
+invocations can opt in with ``-q <file>`` when tcpflood completion is part of
+the test oracle; the option stays single-character for portability to platforms
+without GNU-style long options.
+Tests that intentionally provoke a tcpflood send failure should use the
+``tcpflood --check-only`` wrapper form and assert the rsyslog-side oracle.
+
 Do not add helper cleanup or observer processes to prove daemon shutdown. They
 have historically caused their own races. ``timeoutGuard`` remains mandatory
 hang protection and must preserve this diagnostic marker behavior when it
@@ -142,6 +151,8 @@ marker: the process still failed to reach the expected shutdown point. In that
 case the harness reports that no owned local core was available. Helper
 processes such as ``tcpflood`` need explicit pid or exit-status checks when
 their health matters; rsyslogd core diagnostics do not prove helper health.
+Use the standard ``tcpflood`` shell helper, or pass ``-q <file>`` to direct
+``./tcpflood`` invocations, when tcpflood completion itself matters.
 Valgrind ``vgcore.*`` files are separate from generic OS core discovery: they
 belong to the supervised Valgrind run and remain a Valgrind failure signal.
 

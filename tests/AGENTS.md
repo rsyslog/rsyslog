@@ -88,6 +88,9 @@ minimal containers. Findings are review prompts, not automatic blockers.
   handling does not prove ``tcpflood`` or another helper stayed healthy. Tests
   that rely on helper correctness must track the helper pid or command status
   directly instead of expecting generic core-file scanning to catch crashes.
+  Prefer the ``tcpflood`` shell helper, which configures and validates a
+  per-invocation proper-termination marker. Direct ``./tcpflood`` calls can opt
+  in with ``-q <file>`` when tcpflood completion is part of the oracle.
 - **Queue tests assuming immediate drain or shutdown ordering**: use
   queue-specific synchronization where possible. Do not assume that input
   completion, shutdown start, or a fixed delay means all queued messages reached

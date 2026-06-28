@@ -18,7 +18,7 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
 assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
-tcpflood -m$NUMMESSAGES
+tcpflood --check-only -m$NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
 content_check --regex "connection request from disallowed sender .* discarded"

@@ -40,7 +40,7 @@ ruleset(name="print") {
 }
 '
 startup
-tcpflood -p'$TCPFLOOD_PORT' -m$NUMMESSAGES -d $TEST_BYTES_SENDSIZE -O
+tcpflood -m$NUMMESSAGES -d $TEST_BYTES_SENDSIZE -O
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

@@ -86,6 +86,9 @@
  *      contains the port number followed by a line feed and is only valid
  *      when a single connection is created. Works with TCP and UDP transports;
  *      using it with RELP results in an error.
+ * -q   write a proper-termination marker to the specified file as the final
+ *      normal action before exiting. Used by the testbench to distinguish a
+ *      clean tcpflood run from a crash or abort.
  *
  * Part of the testbench for rsyslog.
  *
@@ -215,6 +218,14 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define MAX_EXTRADATA_LEN 512 * 1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 #define MAX_RCVBUF 16 * 1024 + 1 /* TLS RFC 8449: max size of buffer for message reception */
+#ifndef O_CLOEXEC
+    #define O_CLOEXEC 0
+#endif
+#ifdef O_NOFOLLOW
+    #define TCPFLOOD_MARKER_OPEN_FLAGS O_NOFOLLOW
+#else
+    #define TCPFLOOD_MARKER_OPEN_FLAGS 0
+#endif
 
 static int nThreadsConnOpen = 25; /* Number for threads for openeing the connections */
 static char *targetIP = "127.0.0.1";
@@ -244,6 +255,7 @@ static char *hostname = "172.20.245.8"; /* this is the "tratditional" default, a
 static int bBinaryFile = 0; /* is -I file binary */
 static char *dataFile = NULL; /* name of data file, if NULL, generate own data */
 static char *portFile = NULL; /* file to store local port number */
+static char *properTerminationFile = NULL; /* file to prove tcpflood reached normal main exit */
 static int numFileIterations = 1; /* how often is file data to be sent? */
 static char frameDelim = '\n'; /* default frame delimiter */
 FILE *dataFP = NULL; /* file pointer for data file, if used */
@@ -306,6 +318,7 @@ struct instdata {
     unsigned long long numMsgs; /* number of messages to send */
     unsigned long long numSent; /* number of messages already sent */
     unsigned idx; /**< index of fd to be used for sending */
+    int failed; /**< set when this generator saw a send error */
     pthread_t thread; /**< thread processing this instance */
 } *instarray = NULL;
 
@@ -509,9 +522,6 @@ int openConn(const int connIdx) {
         sockArray[connIdx] = 1; /* mimic "all ok" state TODO: this looks invalid! */
 #endif
     } else { /* TCP, with or without TLS */
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-            return (1);
-        }
         memset((char *)&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
@@ -520,10 +530,14 @@ int openConn(const int connIdx) {
             return (1);
         }
         while (1) { /* loop broken inside */
+            if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+                return (1);
+            }
             if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
                 break;
             } else {
                 fprintf(stderr, "warning: connect failed, retrying... %s\n", strerror(errno));
+                close(sock);
                 if (retries++ == 50) {
                     perror("connect()");
                     fprintf(stderr, "connect(%d) failed\n", port);
@@ -1075,6 +1089,7 @@ static void *thrdStarter(void *arg) {
     }
     pthread_mutex_unlock(&thrdMgmt);
     if (sendMessages(inst) != 0) {
+        inst->failed = 1;
         printf("error sending messages\n");
     }
     return NULL;
@@ -1140,15 +1155,20 @@ static void runGenerators(void) {
 
 /* Wait for all traffic generators to stop.
  */
-static void waitGenerators(void) {
+static int waitGenerators(void) {
     int i;
+    int failed = 0;
     for (i = 0; i < numThrds; ++i) {
         pthread_join(instarray[i].thread, NULL);
+        if (instarray[i].failed) {
+            failed = 1;
+        }
         /*printf("thread %x stopped\n", (unsigned) instarray[i].thread);*/
     }
     pthread_mutex_destroy(&thrdMgmt);
     pthread_cond_destroy(&condStarted);
     pthread_cond_destroy(&condDoRun);
+    return failed;
 }
 
 /* functions related to computing statistics on the runtime of a test. This is
@@ -1226,7 +1246,10 @@ static int runTests(void) {
         prepareGenerators();
         gettimeofday(&tvStart, NULL);
         runGenerators();
-        waitGenerators();
+        if (waitGenerators() != 0) {
+            endTiming(&tvStart, &stats);
+            return 1;
+        }
         endTiming(&tvStart, &stats);
         if (run == numRuns) break;
         if (!bSilent) printf("sleeping %d seconds before next run\n", sleepBetweenRuns);
@@ -2092,17 +2115,103 @@ static void setTargetPorts(const char *const port_arg) {
 
     char *saveptr;
     char *ports = strdup(port_arg);
-    char *port = strtok_r(ports, ":", &saveptr);
+    char *port;
+    if (ports == NULL) {
+        perror("strdup");
+        exit(1);
+    }
+    port = strtok_r(ports, ":", &saveptr);
     while (port != NULL) {
+        char *endptr;
+        long parsed_port;
         if (i == sizeof(targetPort) / sizeof(int)) {
             fprintf(stderr, "too many ports specified, max %d\n", (int)(sizeof(targetPort) / sizeof(int)));
             exit(1);
         }
-        targetPort[i] = atoi(port);
+        errno = 0;
+        parsed_port = strtol(port, &endptr, 10);
+        if (errno != 0 || *port == '\0' || *endptr != '\0' || parsed_port < 1 || parsed_port > 65535) {
+            fprintf(stderr, "invalid target port '%s'\n", port);
+            exit(1);
+        }
+        targetPort[i] = (int)parsed_port;
         i++;
         port = strtok_r(NULL, ":", &saveptr);
     }
+    if (i == 0) {
+        fprintf(stderr, "empty target port list\n");
+        exit(1);
+    }
     free(ports);
+}
+
+static int writeAll(const int fd, const char *buf, const size_t len) {
+    size_t done = 0;
+
+    while (done < len) {
+        ssize_t written = write(fd, buf + done, len - done);
+        if (written < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return -1;
+        }
+        if (written == 0) {
+            errno = EIO;
+            return -1;
+        }
+        done += (size_t)written;
+    }
+    return 0;
+}
+
+static int writeProperTerminationFile(void) {
+    char content[256];
+    int fd;
+    int len;
+    int saved_errno;
+
+    if (properTerminationFile == NULL) {
+        return 0;
+    }
+
+#ifndef O_NOFOLLOW
+    fprintf(stderr, "tcpflood: proper termination marker is not supported without O_NOFOLLOW\n");
+    return 1;
+#endif
+
+    len = snprintf(content, sizeof(content),
+                   "status=ok\n"
+                   "pid=%ld\n"
+                   "version=%s\n"
+                   "phase=main-exit\n",
+                   (long)getpid(), VERSION);
+    if (len < 0 || (size_t)len >= sizeof(content)) {
+        fprintf(stderr, "tcpflood: proper termination marker content too large\n");
+        return 1;
+    }
+
+    fd = open(properTerminationFile, O_WRONLY | O_CREAT | O_TRUNC | TCPFLOOD_MARKER_OPEN_FLAGS | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        saved_errno = errno;
+        fprintf(stderr, "tcpflood: cannot open proper termination marker '%s': %s\n", properTerminationFile,
+                strerror(saved_errno));
+        return 1;
+    }
+    if (writeAll(fd, content, (size_t)len) != 0) {
+        saved_errno = errno;
+        fprintf(stderr, "tcpflood: cannot write proper termination marker '%s': %s\n", properTerminationFile,
+                strerror(saved_errno));
+        close(fd);
+        return 1;
+    }
+    if (close(fd) != 0) {
+        saved_errno = errno;
+        fprintf(stderr, "tcpflood: cannot close proper termination marker '%s': %s\n", properTerminationFile,
+                strerror(saved_errno));
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -2110,7 +2219,6 @@ static void setTargetPorts(const char *const port_arg) {
  * rgerhards, 2009-04-03
  */
 int main(int argc, char *argv[]) {
-    int ret = 0;
     int opt;
     struct sigaction sigAct;
     struct rlimit maxFiles;
@@ -2138,7 +2246,7 @@ int main(int argc, char *argv[]) {
 
     while ((opt = getopt(argc, argv,
                          "a:ABb:c:C:d:DeE:f:F:g:h:i:I:j:K:k:l:L:m:M:n:o:OP:p:rR:"
-                         "sS:t:T:u:vW:w:x:XyYz:Z:H")) != -1) {
+                         "q:sS:t:T:u:vW:w:x:XyYz:Z:H")) != -1) {
         switch (opt) {
             case 'b':
                 batchsize = atoll(optarg);
@@ -2345,6 +2453,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'w':
                 portFile = optarg;
+                break;
+            case 'q':
+                properTerminationFile = optarg;
                 break;
             case 'H':
                 handshakeOnly = true;
@@ -2569,5 +2680,8 @@ int main(int argc, char *argv[]) {
         exitTLS();
     }
 
-    exit(ret);
+    if (writeProperTerminationFile() != 0) {
+        exit(1);
+    }
+    exit(0);
 }
