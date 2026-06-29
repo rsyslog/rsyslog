@@ -27,11 +27,12 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 startup
 assign_tcpflood_port2 "$RSYSLOG_DYNNAME.tcpflood_port2"
 # Note: the two tcpflood instances are run in parallel with intent!
-# It stresses the rsyslog engine a bit more. If this fails, see if 
-# the non-parallel test also fails. If so, debug that one, because it
-# is easier to do!
-tcpflood -p$TCPFLOOD_PORT -m$((NUMMESSAGES / 2)) -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem &
-tcpflood -p$TCPFLOOD_PORT2 -m$((NUMMESSAGES / 2)) -i$((NUMMESSAGES / 2))
+# It stresses the rsyslog engine a bit more. The async helper pid plus marker
+# prove the TLS sender completed cleanly; if this fails, see if the non-parallel
+# test also fails, because it is easier to debug.
+start_tcpflood_async TCPFLOOD_PID TCPFLOOD_MARKER -m$((NUMMESSAGES / 2)) -Ttls -x"$srcdir/tls-certs/ca.pem" -Z"$srcdir/tls-certs/cert.pem" -z"$srcdir/tls-certs/key.pem"
+tcpflood -p"$TCPFLOOD_PORT2" -m$((NUMMESSAGES / 2)) -i$((NUMMESSAGES / 2))
+wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
 shutdown_when_empty
 wait_shutdown
 seq_check

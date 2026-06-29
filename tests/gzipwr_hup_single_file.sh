@@ -1,6 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Written 2019-06-12 by Rainer Gerhards
+# Exercise async gzip writing while repeated HUPs happen during input. The
+# tcpflood pid and marker prove the background sender completed cleanly before
+# shutdown and the gzip sequence oracle.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50000
 generate_conf
@@ -28,12 +31,13 @@ if $msg contains "msgnum" then {
 }
 '
 startup
-./tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES & # TCPFlood needs to run async!
+start_tcpflood_async TCPFLOOD_PID TCPFLOOD_MARKER -m"$NUMMESSAGES"
 for i in $(seq 0 20); do
 	./msleep 10
 	printf '\nsending HUP %d\n' $i
 	issue_HUP
 done
+wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
 shutdown_when_empty
 wait_shutdown
 gzip_seq_check
