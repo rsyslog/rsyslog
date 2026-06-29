@@ -972,6 +972,7 @@ TESTS_OMHTTP_FLAKY_VALGRIND = \
 
 TESTS_IMJOURNAL = \
 	imjournal-basic.sh \
+	imjournal-namespace-remote-conflict.sh \
 	imjournal-statefile.sh \
 	imjournal-statefile-symlink.sh \
 	imjournal_ratelimit_name.sh

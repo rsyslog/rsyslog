@@ -774,6 +774,12 @@ if test "x$enable_imjournal" = "xyes" -o "x$enable_imjournal" = "xoptional"; the
                  ])
 	    ])
 	])
+	if test "x$imjournal_use_dummy" != "xyes"; then
+		save_libs=$LIBS
+		LIBS="$LIBS $LIBSYSTEMD_JOURNAL_LIBS"
+		AC_CHECK_FUNCS(sd_journal_open_namespace,,)
+		LIBS=$save_libs
+	fi
 fi
 AM_CONDITIONAL(IMJOURNAL_USE_DUMMY, test x$imjournal_use_dummy = xyes)
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes -o x$enable_imjournal = xoptional)

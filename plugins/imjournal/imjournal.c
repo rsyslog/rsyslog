@@ -91,6 +91,7 @@ static int n_journal = 0;
 struct modConfData_s {
     rsconf_t *pConf;
     instanceConf_t *root, *tail;
+    char *pszNamespace;
 };
 
 static struct configSettings_s {
@@ -130,6 +131,7 @@ static struct cnfparamdescr modpdescr[] = {{"statefile", eCmdHdlrGetWord, 0},
                                            {"workaroundjournalbug", eCmdHdlrBinary, 0},
                                            {"fsync", eCmdHdlrBinary, 0},
                                            {"remote", eCmdHdlrBinary, 0},
+                                           {"namespace", eCmdHdlrString, 0},
                                            {"defaulttag", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -295,6 +297,20 @@ finalize_it:
     RETiRet;
 }
 
+static int openJournalHandle(sd_journal **j) {
+    const int flags = cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY;
+    const char *const pszNamespace = runModConf == NULL ? NULL : runModConf->pszNamespace;
+
+    if (pszNamespace != NULL) {
+#ifdef HAVE_SD_JOURNAL_OPEN_NAMESPACE
+        return sd_journal_open_namespace(j, pszNamespace, flags);
+#else
+        return -ENOSYS;
+#endif
+    }
+    return sd_journal_open(j, flags);
+}
+
 static rsRetVal openJournal(struct journalContext_s *journalContext) {
     int r;
     DEFiRet;
@@ -302,8 +318,14 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
     if (journalContext->j) {
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: opening journal when already opened.\n");
     }
-    if ((r = sd_journal_open(&journalContext->j, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY)) < 0) {
-        LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
+    if ((r = openJournalHandle(&journalContext->j)) < 0) {
+        const char *const pszNamespace = runModConf == NULL ? NULL : runModConf->pszNamespace;
+        if (pszNamespace != NULL) {
+            LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open_namespace() failed for namespace '%s'",
+                     pszNamespace);
+        } else {
+            LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
+        }
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     if ((r = sd_journal_set_data_threshold(journalContext->j, glbl.GetMaxLine(runModConf->pConf))) < 0) {
@@ -926,9 +948,9 @@ static void warnIfNewestJournalEntryIsInFuture(struct journalContext_s *journalC
     }
     journalContext->nextFutureJournalProbeUsec = now_usec + FUTURE_JOURNAL_WARN_SKEW_USEC;
 
-    r = sd_journal_open(&probe, cs.bRemote ? 0 : SD_JOURNAL_LOCAL_ONLY);
+    r = openJournalHandle(&probe);
     if (r < 0) {
-        DBGPRINTF("imjournal: future-time probe sd_journal_open() failed: %d\n", r);
+        DBGPRINTF("imjournal: future-time probe journal open failed: %d\n", r);
         goto done;
     }
 
@@ -1356,6 +1378,7 @@ BEGINbeginCnfLoad
     cs.bWorkAroundJournalBug = 1;
     cs.bFsync = 0;
     cs.bRemote = 0;
+    pModConf->pszNamespace = NULL;
     cs.dfltTag = NULL;
 ENDbeginCnfLoad
 
@@ -1382,6 +1405,22 @@ BEGINcheckCnf
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
         std_checkRuleset(pModConf, inst);
     }
+    if (pModConf->pszNamespace != NULL) {
+        if (pModConf->pszNamespace[0] == '\0') {
+            LogError(0, RS_RET_INVALID_PARAMS, "imjournal: Namespace must not be empty");
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+        if (cs.bRemote) {
+            LogError(0, RS_RET_INVALID_PARAMS, "imjournal: Namespace and Remote cannot be enabled together");
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+#ifndef HAVE_SD_JOURNAL_OPEN_NAMESPACE
+        LogError(0, RS_RET_NOT_IMPLEMENTED,
+                 "imjournal: Namespace requires libsystemd support for sd_journal_open_namespace()");
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+#endif
+    }
+finalize_it:
 ENDcheckCnf
 
 
@@ -1501,6 +1540,7 @@ BEGINfreeCnf
     free(cs.stateFile);
     free(cs.usePid);
     free(cs.dfltTag);
+    free(pModConf->pszNamespace);
     free(cs.pszRatelimitName);
     cs.pszRatelimitName = NULL;
     statsobj.Destruct(&(statsCounter.stats));
@@ -1619,6 +1659,9 @@ BEGINsetModCnf
             cs.bFsync = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "remote")) {
             cs.bRemote = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "namespace")) {
+            free(loadModConf->pszNamespace);
+            CHKmalloc(loadModConf->pszNamespace = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(modpblk.descr[i].name, "defaulttag")) {
             CHKmalloc(cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
