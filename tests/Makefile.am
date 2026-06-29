@@ -2326,7 +2326,7 @@ CLEANFILES+= \
 # there exists no such hook. Se we at least delete it on make clean.
 
 
-pkglib_LTLIBRARIES =
+check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
@@ -2411,44 +2411,37 @@ runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
-# Shipped even when testbench is disabled: dist tarballs are often built with
-# --disable-testbench, but downstream builds may enable testbench + imptcp.
-EXTRA_DIST += override_epoll_ctl.c override_libnet_write_fail.c
+TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
-pkglib_LTLIBRARIES += liboverride_gethostname.la
+check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
-liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
+liboverride_gethostname_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 
-pkglib_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
+check_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
 liboverride_gethostname_nonfqdn_la_SOURCES = override_gethostname_nonfqdn.c
 liboverride_gethostname_nonfqdn_la_CFLAGS =
-liboverride_gethostname_nonfqdn_la_LDFLAGS = -avoid-version -shared
+liboverride_gethostname_nonfqdn_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 
-pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
+check_LTLIBRARIES += liboverride_getaddrinfo.la
 liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
-liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
+liboverride_getaddrinfo_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 
 if ENABLE_IMPTCP
-pkglib_LTLIBRARIES += liboverride_epoll_ctl.la
+check_LTLIBRARIES += liboverride_epoll_ctl.la
 liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
 liboverride_epoll_ctl_la_CFLAGS =
-liboverride_epoll_ctl_la_LDFLAGS = -avoid-version -shared
+liboverride_epoll_ctl_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liboverride_epoll_ctl_la_LIBADD = $(DL_LIBS)
 endif
 
 if ENABLE_OMUDPSPOOF
-check_DATA += liboverride_libnet_write_fail.so
-CLEANFILES += liboverride_libnet_write_fail.so
-
-liboverride_libnet_write_fail.so: override_libnet_write_fail.c
-	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-		$(AM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) -fPIC -shared \
-		-o $@ $<
-
-omudpspoof-fragment-send-failure.log: liboverride_libnet_write_fail.so
+check_LTLIBRARIES += liboverride_libnet_write_fail.la
+liboverride_libnet_write_fail_la_SOURCES = override_libnet_write_fail.c
+liboverride_libnet_write_fail_la_CFLAGS =
+liboverride_libnet_write_fail_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 endif
 
 check_PROGRAMS += $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
