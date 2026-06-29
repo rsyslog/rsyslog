@@ -4263,7 +4263,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
                 for (pSrc = pRes; *pSrc; pSrc++) {
                     if (iscntrl((int)*pSrc)) {
-                        snprintf((char *)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
+                        if (snprintf((char *)szCCEsc, sizeof(szCCEsc), "#%3.3o",
+                                (unsigned int)*pSrc) != 4) {
+                            szCCEsc[0] = '#';
+                            szCCEsc[1] = '0';
+                            szCCEsc[2] = '0';
+                            szCCEsc[3] = '0';
+                        }
+                        szCCEsc[4] = '\0';
                         for (i = 0; i < 4; ++i) *pB++ = szCCEsc[i];
                     } else {
                         *pB++ = *pSrc;
