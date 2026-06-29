@@ -111,6 +111,7 @@ DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof(fd_mask); /* size of select() bitmask in bytes */
 #endif
 static uchar *SourceIPofLocalClient = NULL; /* [ar] Source IP for local client to be used on multihomed host */
+static uchar *GetDfltNetstrmDrvr(rsconf_t *cnf);
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -823,6 +824,21 @@ void glblWarnIfInsecureDefault(rsconf_t *cnf, const char *detail) {
     }
 }
 
+const uchar *glblGetEffectiveNetstrmDrvr(rsconf_t *cnf, const uchar *localDrvr) {
+    if (localDrvr != NULL) {
+        return localDrvr;
+    }
+    if (cnf == NULL) {
+        return DFLT_NETSTRM_DRVR;
+    }
+    return GetDfltNetstrmDrvr(cnf);
+}
+
+int glblIsTlsCapableNetstrmDrvr(const uchar *drvr) {
+    return drvr != NULL && (!strcasecmp((const char *)drvr, "ossl") || !strcasecmp((const char *)drvr, "gtls") ||
+                            !strcasecmp((const char *)drvr, "mbedtls"));
+}
+
 static int getDefPFFamily(rsconf_t *cnf) {
     return cnf->globals.iDefPFFamily;
 }
@@ -1249,6 +1265,14 @@ void glblProcessCnf(struct cnfobj *o) {
         } else if (!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
             loadConf->globals.abortOnIDResolutionFail = (int)cnfparamvals[i].val.d.n;
             cnfparamvals[i].bUsed = TRUE;
+        } else if (!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
+            uchar *const cstr = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+            if (cstr == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "out of memory processing defaultnetstreamdriver");
+            } else {
+                setDfltNetstrmDrvr(NULL, cstr);
+            }
+            cnfparamvals[i].bUsed = TRUE;
         } else if (!strncmp(paramblk.descr[i].name, "compatibility.", 14)) {
             if (processCompatGlobalParam(paramblk.descr[i].name, &cnfparamvals[i]) == RS_RET_OK) {
                 cnfparamvals[i].bUsed = 1;
@@ -1389,9 +1413,6 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercrlfile")) {
             cstr = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
             setDfltNetstrmDrvrCRLF(NULL, cstr);
-        } else if (!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
-            cstr = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-            setDfltNetstrmDrvr(NULL, cstr);
         } else if (!strcmp(paramblk.descr[i].name, "defaultopensslengine")) {
             cstr = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
             setDfltOpensslEngine(NULL, cstr);

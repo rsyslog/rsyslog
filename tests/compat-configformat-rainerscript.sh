@@ -88,6 +88,57 @@ CONF_EOF
 run_expect_success "${RSYSLOG_DYNNAME}.property-warn.conf" "${RSYSLOG_DYNNAME}.property-warn.log"
 content_check 'obsolete classic property-based filter syntax encountered' "${RSYSLOG_DYNNAME}.property-warn.log"
 
+cat >"${RSYSLOG_DYNNAME}.omfwd-tls-driver-warn.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.name="gtls")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-tls-driver-warn.conf" "${RSYSLOG_DYNNAME}.omfwd-tls-driver-warn.log"
+content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
+    "${RSYSLOG_DYNNAME}.omfwd-tls-driver-warn.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" defaultNetstreamDriver="gtls")
+action(type="omfwd" target="127.0.0.1" protocol="tcp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.conf" "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
+content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
+    "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-strict-promote.conf" <<CONF_EOF
+global(compatibility.defaults.secure="strict")
+action(type="omfwd" targetSrv="_syslog._tcp.example.invalid" protocol="tcp" streamdriver.name="gtls")
+CONF_EOF
+run_expect_failure "${RSYSLOG_DYNNAME}.omfwd-strict-promote.conf" "${RSYSLOG_DYNNAME}.omfwd-strict-promote.log"
+content_check 'targetSrv with TLS requires streamdriverpermittedpeers' "${RSYSLOG_DYNNAME}.omfwd-strict-promote.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="strict")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.name="gtls" streamdriver.mode="0")
+CONF_EOF
+run_expect_failure "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.log"
+content_check 'omfwd: compatibility.defaults.secure="strict" rejects explicit streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-strict-explicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-legacy-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="strict" compatibility.configformat.legacy="enable")
+\$ActionSendStreamDriver gtls
+\$ActionSendStreamDriverMode 0
+*.* @@127.0.0.1:6514
+CONF_EOF
+run_expect_failure "${RSYSLOG_DYNNAME}.omfwd-legacy-explicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-legacy-explicit-mode0.log"
+content_check 'omfwd: compatibility.defaults.secure="strict" rejects explicit streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-legacy-explicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-backcompat-global-driver.conf" <<CONF_EOF
+global(compatibility.defaults.secure="backward-compatible" defaultNetstreamDriver="gtls")
+action(type="omfwd" target="127.0.0.1" protocol="tcp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-backcompat-global-driver.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-backcompat-global-driver.log"
+check_not_present 'TLS is not active' "${RSYSLOG_DYNNAME}.omfwd-backcompat-global-driver.log"
+
 if [ ${have_imtcp_module} -eq 1 ]; then
     cat >"${RSYSLOG_DYNNAME}.tls-warn.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
@@ -99,6 +150,29 @@ CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.tls-warn.conf" "${RSYSLOG_DYNNAME}.tls-warn.log"
     content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' "${RSYSLOG_DYNNAME}.tls-warn.log"
     content_check 'omfwd action uses protocol="udp" (without TLS)' "${RSYSLOG_DYNNAME}.tls-warn.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" defaultNetstreamDriver="gtls")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.port")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
+    content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
+        "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="strict" defaultNetstreamDriver="gtls")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.port"
+      streamdriver.mode="0")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_failure "${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.log"
+    content_check 'imtcp input: compatibility.defaults.secure="strict" rejects explicit streamdriver.mode="0"' \
+        "${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.log"
 
     cat >"${RSYSLOG_DYNNAME}.tls-anon-warn.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
