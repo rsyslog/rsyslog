@@ -1,5 +1,7 @@
 runtime/glbl.c
   s_a9719629ed5597::t_a500663dbb7562 831-841,1268-1274
+plugins/imtcp/imtcp.c
+  s_6224eda96fc0da::t_0af6413930354a 64,107,157,190,431,434,455-505,596,680,698-700,866,982-984,1002,1100,1156-1157,1179,1204-1211,1442,1528-1529
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -7,6 +9,14 @@ runtime/glbl.c
   "base_commit_sha": "5e320c646da22bf502bf907855defacca9013966",
   "prompts": {},
   "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
     "s_a9719629ed5597": {
       "agent_id": {
         "tool": "codex",
