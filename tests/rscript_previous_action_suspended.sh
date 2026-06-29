@@ -8,8 +8,8 @@ module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-ruleset(name="output_writer") {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	ruleset(name="output_writer") {
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 
 :msg, contains, "msgnum:" {
