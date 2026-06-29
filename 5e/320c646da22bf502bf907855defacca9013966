@@ -1,0 +1,19 @@
+runtime/glbl.c
+  s_a9719629ed5597::t_a500663dbb7562 831-841,1268-1274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5e320c646da22bf502bf907855defacca9013966",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
