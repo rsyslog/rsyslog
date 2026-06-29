@@ -5791,7 +5791,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		if [ ! $sum -gt $5 ]; then
 		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
 		    echo "file contents:"
-		    cat $4
+		    cat "$4"
 		    error_exit 1
 		fi
 		;;
@@ -5799,7 +5799,7 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		if ! grep -q "$2" < ${RSYSLOG_OUT_LOG}; then
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
-		    cat -n $4
+		    cat -n "$4"
 		    error_exit 1
 		fi
 		;;
