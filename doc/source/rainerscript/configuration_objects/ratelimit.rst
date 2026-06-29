@@ -5,8 +5,10 @@ ratelimit Object
 
 .. versionadded:: 8.2602.0
 
-The ``ratelimit`` object allows defining named rate limit policies that can be reused across multiple inputs.
-This is particularly useful for applying a consistent policy to a group of listeners or for managing rate limits centrally.
+The ``ratelimit`` object allows defining named rate limit policies that can be
+reused across multiple inputs and, when explicitly scoped in a YAML policy
+file, output actions. This is useful for applying a consistent policy to a
+group of listeners or for managing action output limits centrally.
 
 Parameters
 ----------
@@ -132,7 +134,8 @@ policy
    "string", "no", "none"
 
 Path to a YAML file that defines rate limit settings. The file can contain
-global settings and, for new configurations, a nested ``perSource`` section:
+global settings and, for new input configurations, a nested ``perSource``
+section:
 
 .. code-block:: yaml
 
@@ -162,6 +165,51 @@ Do not mix a ``policy`` YAML file that contains ``perSource`` with legacy
 per-source parameters on the same ``ratelimit()`` object, such as
 ``perSource``, ``perSourcePolicy``, ``perSourceKeyTpl``,
 ``perSourceMaxStates``, or ``perSourceTopN``.
+
+Output policies
+---------------
+
+Output rate limiting uses the same named ``ratelimit()`` handle, but all
+tunable settings must be defined in the external YAML policy file. The action
+references only the policy name via ``action.ratelimit.name``. This keeps
+output limits reloadable through HUP or ``policyWatch`` and avoids duplicating
+interval, burst, or mode settings on every action.
+
+An output policy must set ``scope: output`` and ``mode`` in the YAML file:
+
+.. code-block:: yaml
+
+   scope: output
+   mode: drop
+   interval: 1
+   burst: 500
+
+Supported output modes are:
+
+``drop``
+   Excess messages are discarded before the output module is invoked. The
+   action reports them through its ratelimit counters.
+
+``pace``
+   Messages are preserved by waiting in the action queue worker until the next
+   rate-limit window permits delivery. ``pace`` requires a non-direct action
+   queue so the wait does not block the main processing path.
+
+Example:
+
+.. code-block:: none
+
+   ratelimit(name="siem_eps" policy="/etc/rsyslog.d/siem-eps.yaml"
+             policyWatch="on")
+
+   action(type="omfwd" target="siem.example.net" port="514" protocol="tcp"
+          queue.type="linkedlist"
+          action.ratelimit.name="siem_eps")
+
+Output policies do not support ``severity`` or ``perSource`` in this version.
+Future output-policy work is expected to add fair per-source scheduling,
+byte-rate limits, and source-key overrides without changing the action
+reference shape.
 
 .. _ratelimit_persourcepolicy:
 

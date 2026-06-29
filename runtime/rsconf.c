@@ -524,6 +524,8 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     uchar *per_source_key_tpl = NULL;
     int per_source_max_states = 0;
     int per_source_topn = 0;
+    sbool has_inline_policy_params = 0;
+    sbool has_legacy_per_source_params = 0;
     DEFiRet;
 
     pvals = nvlstGetParams(o->nvlst, &ratelimitpblk, NULL);
@@ -537,10 +539,13 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
             CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "interval")) {
             interval = (int)pvals[i].val.d.n;
+            has_inline_policy_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "burst")) {
             burst = (int)pvals[i].val.d.n;
+            has_inline_policy_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "severity")) {
             severity = (int)pvals[i].val.d.n;
+            has_inline_policy_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
             CHKmalloc(policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policyWatch")) {
@@ -549,14 +554,19 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
             CHKmalloc(policy_watch_debounce = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
             per_source_enabled = (int)pvals[i].val.d.n;
+            has_legacy_per_source_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
             CHKmalloc(per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            has_legacy_per_source_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceKeyTpl")) {
             CHKmalloc(per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+            has_legacy_per_source_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
             per_source_max_states = (int)pvals[i].val.d.n;
+            has_legacy_per_source_params = 1;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {
             per_source_topn = (int)pvals[i].val.d.n;
+            has_legacy_per_source_params = 1;
         }
     }
 
@@ -580,7 +590,7 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, severity, (char *)policy,
                                policy_watch, (char *)policy_watch_debounce, per_source_enabled,
                                (char *)per_source_policy, (char *)per_source_key_tpl, (unsigned)per_source_max_states,
-                               (unsigned)per_source_topn));
+                               (unsigned)per_source_topn, has_inline_policy_params, has_legacy_per_source_params));
 
 finalize_it:
     free(name);
