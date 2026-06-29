@@ -11,7 +11,7 @@ fi
 . ${srcdir:=.}/diag.sh init
 skip_ASAN "LD_PRELOAD conflicts with ASan runtime load order"
 
-export RSYSLOG_PRELOAD=./liboverride_libnet_write_fail.so
+export RSYSLOG_PRELOAD=.libs/liboverride_libnet_write_fail.so
 export TCPFLOOD_EXTRA_OPTS="-b1 -W1"
 export NUMMESSAGES=1
 export MESSAGESIZE=65000
