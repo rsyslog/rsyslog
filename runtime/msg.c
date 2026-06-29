@@ -4233,7 +4233,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 pRes = pDstStart;
                 *pbMustBeFreed = 1;
             }
-        } else if (pTpe->data.field.options.bEscapeCC) {
+        } else if (pTpe->data.field.options.bEscapeCC || pTpe->data.field.options.bEscapeCCOctal) {
             /* we must first count how many control charactes are
              * present, because we need this to compute the new string
              * buffer length. While doing so, we also compute the string
@@ -4263,7 +4263,17 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
                 for (pSrc = pRes; *pSrc; pSrc++) {
                     if (iscntrl((int)*pSrc)) {
-                        snprintf((char *)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
+                        const unsigned cc = (unsigned char)*pSrc;
+                        szCCEsc[0] = '#';
+                        if (pTpe->data.field.options.bEscapeCCOctal) {
+                            szCCEsc[1] = (uchar)('0' + ((cc >> 6) & 7));
+                            szCCEsc[2] = (uchar)('0' + ((cc >> 3) & 7));
+                            szCCEsc[3] = (uchar)('0' + (cc & 7));
+                        } else {
+                            szCCEsc[1] = (uchar)('0' + (cc / 100));
+                            szCCEsc[2] = (uchar)('0' + ((cc / 10) % 10));
+                            szCCEsc[3] = (uchar)('0' + (cc % 10));
+                        }
                         for (i = 0; i < 4; ++i) *pB++ = szCCEsc[i];
                     } else {
                         *pB++ = *pSrc;

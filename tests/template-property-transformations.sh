@@ -59,6 +59,8 @@ template(name="outfmt" type="list") {
 	property(name="$!control" controlcharacters="space")
 	constant(value="\ncc_escape=")
 	property(name="$!control" controlcharacters="escape")
+	constant(value="\ncc_escape_octal=")
+	property(name="$!control" controlcharacters="escape-octal")
 	constant(value="\nsec_drop=")
 	property(name="$!path" securepath="drop")
 	constant(value="\nsec_replace=")
@@ -222,7 +224,7 @@ injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 host app proc msgid -
 injectmsg_literal '<167>Aug 24 05:14:15 legacyhost legacyprog[42]: shape3164'
 injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 nilhost - - - - shape5424nil'
 injectmsg_literal '<167>Aug 24 05:14:15 oddhost shape3164notag'
-wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 90
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 91
 shutdown_when_empty
 wait_shutdown
 
@@ -248,6 +250,7 @@ spif_space=<>
 cc_drop=abc
 cc_space=a b c
 cc_escape=a#010b#009c
+cc_escape_octal=a#012b#011c
 sec_drop=abc
 sec_replace=a_b_c
 sec_empty=_

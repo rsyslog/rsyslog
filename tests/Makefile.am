@@ -665,6 +665,7 @@ TESTS_LIBYAML = \
 	yaml-statements-stop.sh \
 	yaml-statements-call.sh \
 	yaml-statements-unset.sh \
+	yaml-template-controlcharacters.sh \
 	yaml-template-list.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
