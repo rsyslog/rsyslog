@@ -108,6 +108,12 @@ class MyHandler(BaseHTTPRequestHandler):
         else:
             post_data = raw_data
 
+        if metadata['fail_msgnum_400'] and metadata['fail_msgnum_400'].encode('utf-8') in post_data:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b'BAD REQUEST')
+            return
+
         if self.path not in data:
             data[self.path] = []
         data[self.path].append(post_data.decode('utf-8'))
@@ -151,6 +157,8 @@ if __name__ == '__main__':
                         default=-1, help='fail with 400 after n posts')
     parser.add_argument('--fail-with-401-or-403-after', action='store', type=int,
                         default=-1, help='fail with 401 or 403 after n posts')
+    parser.add_argument('--fail-msgnum-400', action='store', default='',
+                        help='fail with 400 when the raw post body contains this message number')
     parser.add_argument('--fail-with-delay-secs', action='store', type=int, default=0, help='fail with n secs of delay')
     parser.add_argument('--fail-interval-start', action='store', type=int,
                         default=-1, help='start failing after n seconds from the first POST')
@@ -164,6 +172,7 @@ if __name__ == '__main__':
     metadata['fail_with'] = args.fail_with
     metadata['fail_with_400_after'] = args.fail_with_400_after
     metadata['fail_with_401_or_403_after'] = args.fail_with_401_or_403_after
+    metadata['fail_msgnum_400'] = args.fail_msgnum_400
     metadata['fail_with_delay_secs'] = args.fail_with_delay_secs
     metadata['fail_interval_start'] = args.fail_interval_start
     metadata['fail_interval_stop'] = args.fail_interval_stop

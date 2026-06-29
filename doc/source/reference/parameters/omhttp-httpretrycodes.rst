@@ -19,13 +19,18 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 :Name: httpretrycodes
 :Scope: input
 :Type: array
-:Default: input=2xx status codes
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
 Description
 -----------
-An array of strings that defines a list of one or more HTTP status codes that are retriable by the omhttp plugin. By default non-2xx HTTP status codes are considered retriable.
+An array of strings that defines one or more HTTP status codes that are
+retriable by the omhttp plugin in addition to its built-in retry behavior.
+By default, transport failures, HTTP 429, and HTTP 5xx responses are retried;
+ordinary HTTP 3xx and 4xx responses are treated as permanent data failures.
+Use this parameter when a deployment wants a specific response, such as a
+temporary HTTP 403 from an authorization workflow, to follow the retry path.
 
 Input usage
 -----------

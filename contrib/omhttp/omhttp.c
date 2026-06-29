@@ -1925,6 +1925,20 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal submitBatchDatafailOk(wrkrInstanceData_t *pWrkrData, uchar **tpls) {
+    DEFiRet;
+    const size_t nmemb = pWrkrData->batch.nmemb;
+    const rsRetVal submitRet = submitBatch(pWrkrData, tpls);
+    if (submitRet == RS_RET_DATAFAIL) {
+        DBGPRINTF("omhttp: permanent data failure for batch of %zu message(s), continuing transaction\n", nmemb);
+        FINALIZE;
+    }
+    CHKiRet(submitRet);
+
+finalize_it:
+    RETiRet;
+}
+
 BEGINbeginTransaction
     CODESTARTbeginTransaction;
     if (!pWrkrData->pData->batchMode) {
@@ -1963,7 +1977,7 @@ BEGINcommitTransaction
                 } else if (strcmp((char *)serverData->restPATH, (char *)restPath) != 0) {
                     /* restPath changed -> flush current batch if it contains data */
                     if (pWrkrData->batch.nmemb > 0) {
-                        CHKiRet(submitBatch(pWrkrData, NULL));
+                        CHKiRet(submitBatchDatafailOk(pWrkrData, NULL));
                         serverData = pWrkrData->listServerDataWkr[pWrkrData->serverIndex];
                     }
                     initializeBatch(pWrkrData);
@@ -1976,7 +1990,8 @@ BEGINcommitTransaction
             if (pData->maxBatchSize == 1) {
                 initializeBatch(pWrkrData);
                 CHKiRet(buildBatch(pWrkrData, payload));
-                CHKiRet(submitBatch(pWrkrData, tpls));
+                CHKiRet(submitBatchDatafailOk(pWrkrData, tpls));
+                initializeBatch(pWrkrData);
                 continue;
             }
 
@@ -1998,7 +2013,7 @@ BEGINcommitTransaction
 
             if (submit) {
                 /* flush current batch, then start a new one. keep dyn restPath consistent */
-                CHKiRet(submitBatch(pWrkrData, NULL));
+                CHKiRet(submitBatchDatafailOk(pWrkrData, NULL));
                 initializeBatch(pWrkrData);
                 if (pData->dynRestPath) {
                     uchar *restPath = actParam(pParams, iNumTpls, i, 1).param;
@@ -2012,14 +2027,19 @@ BEGINcommitTransaction
             CHKiRet(buildBatch(pWrkrData, payload));
         } else {
             /* non-batch mode: send immediately */
-            CHKiRet(curlPost(pWrkrData, payload, strlen((char *)payload), tpls, 1));
+            const rsRetVal postRet = curlPost(pWrkrData, payload, strlen((char *)payload), tpls, 1);
+            if (postRet == RS_RET_DATAFAIL) {
+                DBGPRINTF("omhttp: permanent data failure for single message, continuing transaction\n");
+                continue;
+            }
+            CHKiRet(postRet);
         }
     }
 
     /* finalize any remaining batch data */
     if (pData->batchMode) {
         if (pWrkrData->batch.nmemb > 0) {
-            CHKiRet(submitBatch(pWrkrData, NULL));
+            CHKiRet(submitBatchDatafailOk(pWrkrData, NULL));
         } else {
             dbgprintf("omhttp: commitTransaction, pWrkrData->batch.nmemb = 0, nothing to send. \n");
         }

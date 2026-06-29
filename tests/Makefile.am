@@ -1036,6 +1036,9 @@ TESTS_OMHTTP = \
 	omhttp-auth.sh \
 	omhttp-basic.sh \
 	omhttp-basic-ignorecodes.sh \
+	omhttp-datafail-continues.sh \
+	omhttp-datafail-continues-batch.sh \
+	omhttp-datafail-continues-batch-single.sh \
 	omhttp-batch-fail-with-400.sh \
 	omhttp-batch-jsonarray-compress.sh \
 	omhttp-batch-jsonarray-retry.sh \

@@ -320,6 +320,30 @@ The token is necessary when you use the profile "hec:splunk:event" or "hec:splun
 This value is ignored if you use other profile.
 
 
+HTTP Status Handling
+====================
+
+omhttp separates transport failures from HTTP response statuses. Connection
+failures, HTTP 429, and HTTP 5xx responses are retried through the normal
+action suspend/resume path unless a more specific retry ruleset is configured.
+Ordinary HTTP 3xx and 4xx responses are treated as permanent data failures:
+omhttp records the failed request and response in :ref:`param-omhttp-errorfile`
+when configured, does not retry the same payload indefinitely, and continues
+with later HTTP request payloads. In batch mode the failed HTTP request payload
+is the batch, so all events in that batch are treated as failed together.
+
+Some HTTP targets use 4xx responses for temporary authorization states or for
+data that the target will never accept. Use :ref:`param-omhttp-httpretrycodes`
+when a specific 4xx response should be retried, for example a temporary
+authorization failure. Use :ref:`param-omhttp-httpignorablecodes` only when it
+is acceptable to mark that response as handled without writing the failed
+payload to :ref:`param-omhttp-errorfile`. For Splunk HEC, HTTP 400 commonly
+means the event body was rejected; operators should usually inspect the
+configured :ref:`param-omhttp-errorfile` entry first, fix the template or source
+payload when needed, and only then decide whether a status-specific retry or
+ignore policy is appropriate.
+
+
 Statistic Counter
 =================
 

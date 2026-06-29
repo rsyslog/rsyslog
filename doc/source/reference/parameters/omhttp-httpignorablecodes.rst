@@ -25,7 +25,14 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 Description
 -----------
-An array of strings that defines a list of one or more HTTP status codes that are not retriable by the omhttp plugin.
+An array of strings that defines one or more HTTP status codes that omhttp
+treats as successfully handled after the HTTP response is received. Use this
+only when dropping the affected message is acceptable for the target system.
+For example, a Splunk HEC deployment may choose to ignore a known permanent
+HTTP 400 response after capturing the failed request in :ref:`param-omhttp-errorfile`.
+
+Codes listed here override the normal failure result. They do not make the
+remote service accept the data, and they do not replay the message later.
 
 Input usage
 -----------
