@@ -170,9 +170,6 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 
-template(name="legacyfmt" type="string"
-	 string="legacy_cc_decimal=%$!control:::escape-cc%\nlegacy_cc_octal=%$!control:::escape-cc-octal%\nlegacy_cc_octal_then_space=%$!control:::escape-cc-octal,space-cc%\nlegacy_cc_space_then_octal=%$!control:::space-cc,escape-cc-octal%\n")
-
 template(name="shapefmt" type="list") {
 	constant(value="shape_msg=")
 	property(name="msg")
@@ -218,7 +215,6 @@ local4.* {
 		set $!jsonsrc = "a \\ \"b\"";
 		set $!jsonrsrc = "a \\n b";
 		action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
-		action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="legacyfmt")
 	}
 }
 '
@@ -228,7 +224,7 @@ injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 host app proc msgid -
 injectmsg_literal '<167>Aug 24 05:14:15 legacyhost legacyprog[42]: shape3164'
 injectmsg_literal '<167>1 2003-08-24T05:14:15.000003-07:00 nilhost - - - - shape5424nil'
 injectmsg_literal '<167>Aug 24 05:14:15 oddhost shape3164notag'
-wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 95
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 91
 shutdown_when_empty
 wait_shutdown
 
@@ -293,10 +289,6 @@ reported_local_subseconds=000003
 reported_local_misc=Sun/0/07:00/-/236/35
 reported_utc_formats=20030824121415/2003-08-24 12:14:15/Aug 24 12:14:15/1061727255/000003
 reported_parts=2003-08-24T12:14:15
-legacy_cc_decimal=a#010b#009c
-legacy_cc_octal=a#012b#011c
-legacy_cc_octal_then_space=a b c
-legacy_cc_space_then_octal=a#012b#011c
 shape_msg= shape3164
 shape_hostname=legacyhost
 shape_syslogtag=legacyprog[42]:

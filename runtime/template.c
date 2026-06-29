@@ -1468,11 +1468,6 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe) {
             pTpe->data.field.options.bEscapeCCOctal = 0;
             pTpe->data.field.options.bDropCC = 0;
             pTpe->data.field.options.bSpaceCC = 0;
-        } else if (!strcmp((char *)Buf, "escape-cc-octal")) {
-            pTpe->data.field.options.bEscapeCCOctal = 1;
-            pTpe->data.field.options.bEscapeCC = 0;
-            pTpe->data.field.options.bDropCC = 0;
-            pTpe->data.field.options.bSpaceCC = 0;
         } else if (!strcmp((char *)Buf, "drop-cc")) {
             pTpe->data.field.options.bDropCC = 1;
             pTpe->data.field.options.bEscapeCC = 0;

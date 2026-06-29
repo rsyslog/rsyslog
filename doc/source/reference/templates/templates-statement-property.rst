@@ -40,6 +40,29 @@ Parameters
   ``escape-octal``, ``space``, or ``drop``. ``escape`` keeps the legacy
   decimal ``#010`` style, while ``escape-octal`` uses the octal ``#012`` style
   used by receive-time control-character escaping.
+
+  RainerScript example:
+
+  .. code-block:: none
+
+     template(name="octal-control" type="list") {
+         property(name="msg" controlCharacters="escape-octal")
+         constant(value="\n")
+     }
+
+  YAML example:
+
+  .. code-block:: yaml
+
+     templates:
+       - name: octal-control
+         type: list
+         elements:
+           - property:
+               name: msg
+               controlCharacters: escape-octal
+           - constant:
+               value: "\n"
 - ``securePath`` – create safe paths for dynafile templates; ``drop`` or
   ``replace``
 - ``format`` – field format. Supported values:
