@@ -1,0 +1,25 @@
+tests/template-property-transformations.sh
+  s_6224eda96fc0da::t_4ce23a292fa11a 227
+doc/source/reference/templates/templates-statement-property.rst
+  s_6224eda96fc0da::t_9f646e307f16d8 43-65
+tests/yaml-template-controlcharacters.sh
+  s_6224eda96fc0da::t_9f646e307f16d8 1-52
+tests/Makefile.am
+  s_6224eda96fc0da::t_9f646e307f16d8 644
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "b7d76a3e04e99a21d61a6693ed4650fdfb63fc16",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
