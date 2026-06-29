@@ -2632,9 +2632,9 @@ BEGINnewActInst
     if (pData->retryFailures) {
         if (pData->pszRatelimitName != NULL) {
             CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
-                                           "omelasticsearch", NULL));
+                                           "omelasticsearch", NULL, 0));
         } else {
-            CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
+            CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL, 0));
             ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval,
                                   (unsigned)pData->ratelimitBurst);
         }

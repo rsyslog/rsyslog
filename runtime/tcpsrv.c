@@ -422,9 +422,9 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     /* support statistics gathering */
     if (pEntry->cnf_params->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&(pEntry->ratelimiter), runConf, (char *)pEntry->cnf_params->pszRatelimitName,
-                                       "tcpsrv", NULL));
+                                       "tcpsrv", NULL, 0));
     } else {
-        CHKiRet(ratelimitNew(&(pEntry->ratelimiter), "tcpsrv", NULL));
+        CHKiRet(ratelimitNew(&(pEntry->ratelimiter), "tcpsrv", NULL, 0));
         ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
     }
     ratelimitSetThreadSafe(pEntry->ratelimiter);

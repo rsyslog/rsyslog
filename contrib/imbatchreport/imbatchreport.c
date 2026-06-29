@@ -772,7 +772,7 @@ BEGINnewInpInst
 
     inst->filename_oversize = (inst->len_rename > inst->len_reject) ? inst->len_rename : inst->len_reject;
 
-    CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport", (char *)inst->pszFollow_glob));
+    CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport", (char *)inst->pszFollow_glob, 1));
 
     inst->goon = 1;
 

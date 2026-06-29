@@ -560,7 +560,7 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() lstnAdd(instanceConf_t *pInst) {
     DEFiRet;
-    CHKiRet(ratelimitNew(&pInst->ratelimiter, "imtuxedoulog", (char *)pInst->pszUlogBaseName));
+    CHKiRet(ratelimitNew(&pInst->ratelimiter, "imtuxedoulog", (char *)pInst->pszUlogBaseName, 1));
     CHKmalloc(pInst->multiSub.ppMsgs = malloc(pInst->nMultiSub * sizeof(smsg_t *)));
     pInst->multiSub.maxElem = pInst->nMultiSub;
     pInst->multiSub.nElem = 0;

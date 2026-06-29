@@ -1302,9 +1302,9 @@ static void stopSrvWrkr(journal_etry_t *const etry) {
 BEGINrunInput
     CODESTARTrunInput;
     if (cs.pszRatelimitName != NULL) {
-        CHKiRet(ratelimitNewFromConfig(&ratelimiter, runModConf->pConf, cs.pszRatelimitName, "imjournal", NULL));
+        CHKiRet(ratelimitNewFromConfig(&ratelimiter, runModConf->pConf, cs.pszRatelimitName, "imjournal", NULL, 1));
     } else {
-        CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
+        CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL, 1));
         dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", (unsigned)cs.ratelimitBurst,
                   (unsigned)cs.ratelimitInterval);
         ratelimitSetLinuxLike(ratelimiter, (unsigned)cs.ratelimitInterval, (unsigned)cs.ratelimitBurst);
