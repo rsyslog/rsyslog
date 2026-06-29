@@ -18,7 +18,7 @@ connections. A value of ``0`` leaves the operating system default unchanged.
 This option is independent of TCP keepalive and may not be available on all
 platforms.
 
-.. versionadded:: 8.2606.0
+.. versionadded:: 8.2608.0
 
 .. summary-end
 
