@@ -1,5 +1,8 @@
 #!/bin/bash
 # addd 2018-08-02 by RGerhards, released under ASL 2.0
+# Exercise outchannel rotation while tcpflood runs in the background and another
+# input path injects messages. The tcpflood pid and marker prove the background
+# sender finished cleanly before rotated output is validated.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=500000
 echo "ls -l $RSYSLOG_DYNNAME.channel.*
@@ -42,10 +45,11 @@ ruleset(name="tcp") {
 }
 '
 startup
-./tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES & # TCPFlood needs to run async!
+start_tcpflood_async TCPFLOOD_PID TCPFLOOD_MARKER -m"$NUMMESSAGES"
 #./msleep 2500
 injectmsg
 sleep 1
+wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
 shutdown_when_empty
 wait_shutdown
 ls -l $RSYSLOG_DYNNAME.channel.*

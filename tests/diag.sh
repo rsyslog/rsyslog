@@ -3310,6 +3310,16 @@ tcpflood_marker_is_valid() {
 		grep -qx 'phase=main-exit' "$file"
 }
 
+tcpflood_next_marker() {
+	local marker=""
+	if [ -n "${RSYSLOG_DYNNAME:-}" ] && [ "${RSTB_NO_TCPFLOOD_MARKER:-}" != "YES" ]; then
+		TCPFLOOD_MARKER_ID=$(( ${TCPFLOOD_MARKER_ID:-0} + 1 ))
+		marker="${RSYSLOG_DYNNAME}.tcpflood.${TCPFLOOD_MARKER_ID}.proper-termination"
+		rm -f "$marker"
+	fi
+	printf '%s' "$marker"
+}
+
 print_tcpflood_marker_file() {
 	local file="$1"
 	if [ -z "$file" ]; then
@@ -3385,26 +3395,10 @@ tcpflood_append_args() {
 	done
 }
 
-tcpflood() {
-	local check_only marker res use_marker
-	local -a TCPFLOOD_CMD TCPFLOOD_EXTRA_ARGS
-	if [ "$1" == "--check-only" ]; then
-		check_only="yes"
-		shift
-	else
-		check_only="no"
-	fi
-	use_marker="yes"
-	if [ "${RSTB_NO_TCPFLOOD_MARKER:-}" = "YES" ]; then
-		use_marker="no"
-	fi
-	if [ -n "${RSYSLOG_DYNNAME:-}" ] && [ "$use_marker" = "yes" ]; then
-		TCPFLOOD_MARKER_ID=$(( ${TCPFLOOD_MARKER_ID:-0} + 1 ))
-		marker="${RSYSLOG_DYNNAME}.tcpflood.${TCPFLOOD_MARKER_ID}.proper-termination"
-		rm -f "$marker"
-	else
-		marker=""
-	fi
+tcpflood_build_command() {
+	local marker="$1"
+	shift
+	local -a TCPFLOOD_EXTRA_ARGS
 	TCPFLOOD_CMD=(./tcpflood)
 	if [ -n "$marker" ]; then
 		TCPFLOOD_CMD+=(-q "$marker")
@@ -3415,6 +3409,19 @@ tcpflood() {
 		eval "TCPFLOOD_EXTRA_ARGS=( $TCPFLOOD_EXTRA_OPTS )"
 		TCPFLOOD_CMD+=("${TCPFLOOD_EXTRA_ARGS[@]}")
 	fi
+}
+
+tcpflood() {
+	local check_only marker res
+	local -a TCPFLOOD_CMD
+	if [ "$1" == "--check-only" ]; then
+		check_only="yes"
+		shift
+	else
+		check_only="no"
+	fi
+	marker="$(tcpflood_next_marker)"
+	tcpflood_build_command "$marker" "$@"
 	"${TCPFLOOD_CMD[@]}"
 	res=$?
 	if [ "$res" -eq 0 ] && [ -n "$marker" ] && ! tcpflood_marker_is_valid "$marker"; then
@@ -3438,6 +3445,42 @@ tcpflood() {
 			cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
 			error_exit 1 stacktrace
 		fi
+	fi
+}
+
+start_tcpflood_async() {
+	local pid_var="$1"
+	local marker_var="$2"
+	local marker
+	local -a TCPFLOOD_CMD
+	shift 2
+	marker="$(tcpflood_next_marker)"
+	tcpflood_build_command "$marker" "$@"
+	"${TCPFLOOD_CMD[@]}" &
+	printf -v "$pid_var" '%s' "$!"
+	printf -v "$marker_var" '%s' "$marker"
+}
+
+wait_tcpflood_async() {
+	local pid="$1"
+	local marker="${2:-}"
+	local res
+	wait "$pid"
+	res=$?
+	if [ "$res" -eq 0 ] && [ -n "$marker" ] && ! tcpflood_marker_is_valid "$marker"; then
+		echo "error during async tcpflood: proper termination marker missing or invalid"
+		print_tcpflood_marker_file "$marker"
+		error_exit 1
+	fi
+	if [ "$res" -gt 128 ]; then
+		echo "error during async tcpflood: process aborted with status $res"
+		print_tcpflood_marker_file "$marker"
+		error_exit 1
+	fi
+	if [ "$res" -ne 0 ]; then
+		echo "error during async tcpflood: process exited with status $res"
+		print_tcpflood_marker_file "$marker"
+		error_exit 1
 	fi
 }
 

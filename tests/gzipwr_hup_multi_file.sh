@@ -2,6 +2,9 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Written 2019-06-12 by Rainer Gerhards
 export TEST_MAX_RUNTIME=7200
+# Exercise multi-file async gzip writing across repeated HUPs. The tcpflood pid
+# and marker prove the background sender completed normally before shutdown and
+# cross-file sequence validation.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100000
 generate_conf
@@ -29,12 +32,13 @@ if $msg contains "msgnum" then {
 }
 '
 startup
-./tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES & # TCPFlood needs to run async!
+start_tcpflood_async TCPFLOOD_PID TCPFLOOD_MARKER -m"$NUMMESSAGES"
 for i in $(seq 0 20); do
 	printf '\nsending HUP %d\n' $i
 	issue_HUP
 	./msleep 10
 done
+wait_tcpflood_async "$TCPFLOOD_PID" "$TCPFLOOD_MARKER"
 shutdown_when_empty
 wait_shutdown
 ls -l ${RSYSLOG_OUT_LOG}.*

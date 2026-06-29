@@ -123,6 +123,10 @@ the test oracle; the option stays single-character for portability to platforms
 without GNU-style long options.
 Tests that intentionally provoke a tcpflood send failure should use the
 ``tcpflood --check-only`` wrapper form and assert the rsyslog-side oracle.
+Background tcpflood clients that are expected to finish normally should use
+``start_tcpflood_async`` and ``wait_tcpflood_async``. These helpers preserve the
+intended concurrency while still checking the helper pid status and
+proper-termination marker.
 
 Do not add helper cleanup or observer processes to prove daemon shutdown. They
 have historically caused their own races. ``timeoutGuard`` remains mandatory

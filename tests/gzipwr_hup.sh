@@ -1,6 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Written 2019-06-12 by Rainer Gerhards
+# Exercise gzip writer shutdown across repeated HUPs while tcpflood is still
+# sending. The async tcpflood helper pid plus marker prove the sender completed
+# normally before the gzip sequence oracle checks all generated messages.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=${NUMMESSAGES:-2000000}
 export COUNT_FILE_IS_ZIPPED=yes
@@ -22,13 +25,12 @@ template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 			         dynafile="dynfile")
 '
 startup
-./tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES & # TCPFlood needs to run async!
-BGPROCESS=$!
+start_tcpflood_async BGPROCESS TCPFLOOD_MARKER -m"$NUMMESSAGES"
 for i in $(seq 1 20); do
 	printf '\nsending HUP %d\n' $i
 	issue_HUP --sleep 100
 done
-wait $BGPROCESS
+wait_tcpflood_async "$BGPROCESS" "$TCPFLOOD_MARKER"
 shutdown_when_empty
 wait_shutdown
 gzip_seq_check
