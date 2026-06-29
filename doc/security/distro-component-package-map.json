@@ -5,7 +5,7 @@
     "A not_shipped result applies only to searched public repositories, not custom builds or third-party packages.",
     "Confirm downstream-specific claims with the relevant distribution security team before publication."
   ],
-  "component_count": 97,
+  "component_count": 98,
   "components": {
     "ffaup": {
       "kind": "contrib",
@@ -66,6 +66,11 @@
       "kind": "plugin",
       "module_file": "imdtls.so",
       "upstream_path": "plugins/imdtls/"
+    },
+    "imfifo": {
+      "kind": "plugin",
+      "module_file": "imfifo.so",
+      "upstream_path": "plugins/imfifo/"
     },
     "imfile": {
       "kind": "plugin",
@@ -498,7 +503,7 @@
   "sources": {
     "adiscon-daily-stable-focal": {
       "channel": "daily-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -575,6 +580,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -1261,7 +1270,7 @@
     },
     "adiscon-daily-stable-jammy": {
       "channel": "daily-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -1338,6 +1347,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -2036,7 +2049,7 @@
     },
     "adiscon-daily-stable-noble": {
       "channel": "daily-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -2107,6 +2120,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -2804,7 +2821,7 @@
     },
     "adiscon-v8-stable-focal": {
       "channel": "v8-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -2847,8 +2864,14 @@
           "status": "not_shipped"
         },
         "imbeats": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-imbeats",
+              "path": "/usr/lib/rsyslog/imbeats.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/focal/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "imczmq": {
           "packages": [
@@ -2875,6 +2898,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -3347,8 +3374,14 @@
           "status": "shipped"
         },
         "omotel": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-omotel",
+              "path": "/usr/lib/rsyslog/omotel.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/focal/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "ompgsql": {
           "packages": [
@@ -3547,7 +3580,7 @@
       "errors": [],
       "metadata_kind": "deb_packages",
       "release": "focal",
-      "shipped_component_count": 57,
+      "shipped_component_count": 59,
       "source_urls": [
         "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/focal/main/binary-amd64/Packages.gz"
       ],
@@ -3555,7 +3588,7 @@
     },
     "adiscon-v8-stable-jammy": {
       "channel": "v8-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -3598,8 +3631,14 @@
           "status": "not_shipped"
         },
         "imbeats": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-imbeats",
+              "path": "/usr/lib/rsyslog/imbeats.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/jammy/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "imczmq": {
           "packages": [
@@ -3626,6 +3665,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -4110,8 +4153,14 @@
           "status": "shipped"
         },
         "omotel": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-omotel",
+              "path": "/usr/lib/rsyslog/omotel.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/jammy/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "ompgsql": {
           "packages": [
@@ -4310,7 +4359,7 @@
       "errors": [],
       "metadata_kind": "deb_packages",
       "release": "jammy",
-      "shipped_component_count": 59,
+      "shipped_component_count": 61,
       "source_urls": [
         "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/jammy/main/binary-amd64/Packages.gz"
       ],
@@ -4318,7 +4367,7 @@
     },
     "adiscon-v8-stable-noble": {
       "channel": "v8-stable",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -4366,8 +4415,14 @@
           "status": "not_shipped"
         },
         "imbeats": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-imbeats",
+              "path": "/usr/lib/x86_64-linux-gnu/rsyslog/imbeats.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/noble/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "imczmq": {
           "packages": [
@@ -4394,6 +4449,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -4924,8 +4983,14 @@
           "status": "shipped"
         },
         "omotel": {
-          "packages": [],
-          "status": "not_shipped"
+          "packages": [
+            {
+              "package": "rsyslog-omotel",
+              "path": "/usr/lib/x86_64-linux-gnu/rsyslog/omotel.so",
+              "source_url": "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/noble/main/binary-amd64/Packages.gz"
+            }
+          ],
+          "status": "shipped"
         },
         "ompgsql": {
           "packages": [
@@ -5119,7 +5184,7 @@
       "errors": [],
       "metadata_kind": "deb_packages",
       "release": "noble",
-      "shipped_component_count": 60,
+      "shipped_component_count": 62,
       "source_urls": [
         "https://ppa.launchpadcontent.net/adiscon/v8-stable/ubuntu/dists/noble/main/binary-amd64/Packages.gz"
       ],
@@ -5127,7 +5192,7 @@
     },
     "alpine-edge": {
       "channel": "main+community",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -5206,6 +5271,10 @@
             }
           ],
           "status": "shipped"
+        },
+        "imfifo": {
+          "packages": [],
+          "status": "not_shipped"
         },
         "imfile": {
           "packages": [
@@ -5910,7 +5979,7 @@
     },
     "alpine-v3.21": {
       "channel": "main+community",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -5981,6 +6050,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -6609,7 +6682,7 @@
     },
     "alpine-v3.22": {
       "channel": "main+community",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -6680,6 +6753,10 @@
           "status": "shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -7308,7 +7385,7 @@
     },
     "debian-bookworm": {
       "channel": "main",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -7367,6 +7444,10 @@
           "status": "not_shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -7982,7 +8063,7 @@
     },
     "debian-sid": {
       "channel": "main",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -8055,6 +8136,10 @@
             }
           ],
           "status": "shipped"
+        },
+        "imfifo": {
+          "packages": [],
+          "status": "not_shipped"
         },
         "imfile": {
           "packages": [
@@ -8698,7 +8783,7 @@
     },
     "debian-trixie": {
       "channel": "main",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -8771,6 +8856,10 @@
             }
           ],
           "status": "shipped"
+        },
+        "imfifo": {
+          "packages": [],
+          "status": "not_shipped"
         },
         "imfile": {
           "packages": [
@@ -9402,7 +9491,7 @@
     },
     "fedora-rawhide": {
       "channel": "everything",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -9413,7 +9502,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/fmhash.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9423,7 +9512,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/fmhttp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9461,7 +9550,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imdocker.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9470,12 +9559,16 @@
           "packages": [],
           "status": "not_shipped"
         },
+        "imfifo": {
+          "packages": [],
+          "status": "not_shipped"
+        },
         "imfile": {
           "packages": [
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imfile.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9485,7 +9578,7 @@
             {
               "package": "rsyslog-gssapi",
               "path": "/usr/lib64/rsyslog/imgssapi.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9503,7 +9596,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imjournal.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9513,7 +9606,7 @@
             {
               "package": "rsyslog-kafka",
               "path": "/usr/lib64/rsyslog/imkafka.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9523,7 +9616,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imklog.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9537,7 +9630,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/immark.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9551,7 +9644,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/improg.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9561,7 +9654,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/impstats.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9571,7 +9664,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imptcp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9581,7 +9674,7 @@
             {
               "package": "rsyslog-relp",
               "path": "/usr/lib64/rsyslog/imrelp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9595,7 +9688,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imtcp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9609,7 +9702,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imudp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9619,7 +9712,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/imuxsock.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9633,7 +9726,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/mmanon.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9643,7 +9736,7 @@
             {
               "package": "rsyslog-mmaudit",
               "path": "/usr/lib64/rsyslog/mmaudit.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9653,7 +9746,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/mmcount.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9671,7 +9764,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/mmexternal.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9681,7 +9774,7 @@
             {
               "package": "rsyslog-mmfields",
               "path": "/usr/lib64/rsyslog/mmfields.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9695,7 +9788,7 @@
             {
               "package": "rsyslog-mmjsonparse",
               "path": "/usr/lib64/rsyslog/mmjsonparse.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9709,7 +9802,7 @@
             {
               "package": "rsyslog-mmkubernetes",
               "path": "/usr/lib64/rsyslog/mmkubernetes.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9719,7 +9812,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/mmleefparse.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9729,7 +9822,7 @@
             {
               "package": "rsyslog-mmnormalize",
               "path": "/usr/lib64/rsyslog/mmnormalize.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9759,7 +9852,7 @@
             {
               "package": "rsyslog-mmsnmptrapd",
               "path": "/usr/lib64/rsyslog/mmsnmptrapd.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9769,7 +9862,7 @@
             {
               "package": "rsyslog-mmtaghostname",
               "path": "/usr/lib64/rsyslog/mmtaghostname.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9779,7 +9872,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/mmutf8fix.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9789,7 +9882,7 @@
             {
               "package": "rsyslog-omamqp1",
               "path": "/usr/lib64/rsyslog/omamqp1.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9807,7 +9900,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omclickhouse.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9825,7 +9918,7 @@
             {
               "package": "rsyslog-elasticsearch",
               "path": "/usr/lib64/rsyslog/omelasticsearch.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9839,7 +9932,7 @@
             {
               "package": "rsyslog-gssapi",
               "path": "/usr/lib64/rsyslog/omgssapi.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9853,7 +9946,7 @@
             {
               "package": "rsyslog-hiredis",
               "path": "/usr/lib64/rsyslog/omhiredis.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9863,7 +9956,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omhttp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9877,7 +9970,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omjournal.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9887,7 +9980,7 @@
             {
               "package": "rsyslog-kafka",
               "path": "/usr/lib64/rsyslog/omkafka.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9897,7 +9990,7 @@
             {
               "package": "rsyslog-libdbi",
               "path": "/usr/lib64/rsyslog/omlibdbi.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9907,7 +10000,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/ommail.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9917,7 +10010,7 @@
             {
               "package": "rsyslog-mongodb",
               "path": "/usr/lib64/rsyslog/ommongodb.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9927,7 +10020,7 @@
             {
               "package": "rsyslog-mysql",
               "path": "/usr/lib64/rsyslog/ommysql.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9941,7 +10034,7 @@
             {
               "package": "rsyslog-pgsql",
               "path": "/usr/lib64/rsyslog/ompgsql.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9955,7 +10048,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omprog.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9965,7 +10058,7 @@
             {
               "package": "rsyslog-rabbitmq",
               "path": "/usr/lib64/rsyslog/omrabbitmq.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9975,7 +10068,7 @@
             {
               "package": "rsyslog-relp",
               "path": "/usr/lib64/rsyslog/omrelp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -9993,7 +10086,7 @@
             {
               "package": "rsyslog-snmp",
               "path": "/usr/lib64/rsyslog/omsnmp.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10003,7 +10096,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omstdout.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10017,7 +10110,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omtesting.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10027,7 +10120,7 @@
             {
               "package": "rsyslog-udpspoof",
               "path": "/usr/lib64/rsyslog/omudpspoof.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10037,7 +10130,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/omuxsock.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10047,7 +10140,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/pmaixforwardedfrom.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10061,7 +10154,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/pmcisconames.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10075,7 +10168,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/pmlastmsg.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10105,7 +10198,7 @@
             {
               "package": "rsyslog",
               "path": "/usr/lib64/rsyslog/pmsnare.so",
-              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/e742f2530124f66244147371c354233d0eb9659a7be5237b1a160da3e7ef98fa-filelists.xml.zst"
+              "source_url": "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Everything/x86_64/os/repodata/2a5950c126ef3a061246030aaef22171c92e1ddb8929ff5c7242c0a68e171ff9-filelists.xml.zst"
             }
           ],
           "status": "shipped"
@@ -10124,7 +10217,7 @@
     },
     "ubuntu-focal": {
       "channel": "main+universe",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -10183,6 +10276,10 @@
           "status": "not_shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -10768,7 +10865,7 @@
     },
     "ubuntu-jammy": {
       "channel": "main+universe",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -10827,6 +10924,10 @@
           "status": "not_shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
@@ -11430,7 +11531,7 @@
     },
     "ubuntu-noble": {
       "channel": "main+universe",
-      "component_count": 97,
+      "component_count": 98,
       "components": {
         "ffaup": {
           "packages": [],
@@ -11489,6 +11590,10 @@
           "status": "not_shipped"
         },
         "imdtls": {
+          "packages": [],
+          "status": "not_shipped"
+        },
+        "imfifo": {
           "packages": [],
           "status": "not_shipped"
         },
