@@ -255,7 +255,7 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
  * - ratelimit_shared_t->mut guards shared policy updates for global limits.
  * - per-source limits use ratelimit_shared_t->per_source_mut to guard the
  *   override table, per-source state table, and LRU list.
- * - ratelimit_t->mut guards per-instance counters when thread-safe mode is enabled.
+ * - ratelimit_t->mut ALWAYS guards per-instance counters (thread-safety is mandatory).
  */
 
 #define RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES 10000U
@@ -1758,13 +1758,9 @@ done:
 }
 
 static rsRetVal doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg) {
-    int bNeedUnlockMutex = 0;
     DEFiRet;
 
-    if (ratelimit->bThreadSafe) {
-        pthread_mutex_lock(&ratelimit->mut);
-        bNeedUnlockMutex = 1;
-    }
+    pthread_mutex_lock(&ratelimit->mut);
 
     if (ratelimit->pMsg != NULL && getMSGLen(pMsg) == getMSGLen(ratelimit->pMsg) &&
         !ustrcmp(getMSG(pMsg), getMSG(ratelimit->pMsg)) && !strcmp(getHOSTNAME(pMsg), getHOSTNAME(ratelimit->pMsg)) &&
@@ -1789,7 +1785,7 @@ static rsRetVal doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg
     }
 
 finalize_it:
-    if (bNeedUnlockMutex) pthread_mutex_unlock(&ratelimit->mut);
+    pthread_mutex_unlock(&ratelimit->mut);
     RETiRet;
 }
 
@@ -1819,9 +1815,7 @@ static int ATTR_NONNULL()
     int ret;
     uchar msgbuf[1024];
 
-    if (ratelimit->bThreadSafe) {
-        pthread_mutex_lock(&ratelimit->mut);
-    }
+    pthread_mutex_lock(&ratelimit->mut);
 
     unsigned int interval = ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut);
     unsigned int burst = ratelimitSharedLoadUInt(&ratelimit->pShared->burst, &ratelimit->pShared->mut);
@@ -1847,7 +1841,7 @@ static int ATTR_NONNULL()
 
     /* resume if we go out of time window or if time has gone backwards */
     if ((tt > (time_t)(ratelimit->begin + interval)) || (tt < ratelimit->begin)) {
-        ratelimit->begin = 0;
+        ratelimit->begin = tt;
         ratelimit->done = 0;
         tellLostCnt(ratelimit);
     }
@@ -1867,9 +1861,7 @@ static int ATTR_NONNULL()
     }
 
 finalize_it:
-    if (ratelimit->bThreadSafe) {
-        pthread_mutex_unlock(&ratelimit->mut);
-    }
+    pthread_mutex_unlock(&ratelimit->mut);
 
     return ret;
 }
@@ -2192,6 +2184,7 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
     CHKmalloc(pThis->pShared = calloc(1, sizeof(ratelimit_shared_t)));
     pThis->bOwnsShared = 1;
     pthread_mutex_init(&pThis->pShared->mut, NULL);
+    pthread_mutex_init(&pThis->mut, NULL);
 
     DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);
     *ppThis = pThis;
@@ -2216,26 +2209,16 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
 }
 
 
-static void ratelimitEnsureMutexInitialized(ratelimit_t *ratelimit) {
-    if (!ratelimit->bMutInitialized) {
-        pthread_mutex_init(&ratelimit->mut, NULL);
-        ratelimit->bMutInitialized = 1;
-    }
-}
-
-/* enable thread-safe operations mode. This make sure that
- * a single ratelimiter can be called from multiple threads. As
- * this causes some overhead and is not always required, it needs
- * to be explicitely enabled. This operation cannot be undone
- * (think: why should one do that???)
+/* enable thread-safe operations mode.
+ * Note: Thread-safe operation is now ALWAYS enabled. This function is
+ * kept for API compatibility but does nothing. All ratelimiter instances
+ * are thread-safe by default.
  */
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit) {
-    ratelimit->bThreadSafe = 1;
-    ratelimitEnsureMutexInitialized(ratelimit);
+    (void)ratelimit; /* unused - kept for API compatibility */
 }
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
     ratelimit->bNoTimeCache = 1;
-    ratelimitEnsureMutexInitialized(ratelimit);
 }
 
 /* Severity level determines which messages are subject to
@@ -2255,7 +2238,7 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
         msgDestruct(&ratelimit->pMsg);
     }
     tellLostCnt(ratelimit);
-    if (ratelimit->bMutInitialized) pthread_mutex_destroy(&ratelimit->mut);
+    pthread_mutex_destroy(&ratelimit->mut);
 
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);
