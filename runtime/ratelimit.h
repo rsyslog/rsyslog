@@ -114,10 +114,9 @@ struct ratelimit_s {
     /* support for "last message repeated n times */
     unsigned nsupp; /**< nbr of msgs suppressed */
     smsg_t *pMsg;
-    sbool bThreadSafe; /**< do we need to operate in Thread-Safe mode? */
+    sbool bSingleThreaded; /**< if set, caller guarantees single-threaded access - no mutex needed */
     sbool bNoTimeCache; /**< if we shall not used cached reception time */
-    sbool bMutInitialized; /**< if mut has been initialized */
-    pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
+    pthread_mutex_t mut; /**< mutex for thread-safe operation (used when bSingleThreaded is 0) */
 };
 
 #define RATELIMIT_CFG_SHARDS 32
@@ -135,8 +134,18 @@ typedef struct ratelimit_cfgs_s {
 /* prototypes */
 typedef struct rsconf_s rsconf_t;
 rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname);
+rsRetVal ratelimitNewWithThreadMode(ratelimit_t **ppThis,
+                                    const char *modname,
+                                    const char *dynname,
+                                    sbool bSingleThreaded);
 rsRetVal ratelimitNewFromConfig(
     ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname);
+rsRetVal ratelimitNewFromConfigWithThreadMode(ratelimit_t **ppThis,
+                                              rsconf_t *conf,
+                                              const char *configname,
+                                              const char *modname,
+                                              const char *dynname,
+                                              sbool bSingleThreaded);
 rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
                                         rsconf_t *conf,
                                         const char *configname,

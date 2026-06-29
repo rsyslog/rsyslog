@@ -731,7 +731,6 @@ static rsRetVal rsyslogd_InitStdRatelimiters(void) {
     DEFiRet;
     CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
     CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
-    ratelimitSetThreadSafe(internalMsg_ratelimiter);
     ratelimitSetLinuxLike(internalMsg_ratelimiter, loadConf->globals.intMsgRateLimitItv,
                           loadConf->globals.intMsgRateLimitBurst);
     /* TODO: make internalMsg ratelimit settings configurable */
