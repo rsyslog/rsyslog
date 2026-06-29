@@ -137,6 +137,7 @@ ENV     RSYSLOG_CONFIGURE_OPTIONS=" \
         --enable-mmdblookup \
         --enable-mmfields \
         --enable-mmjsonparse \
+        --enable-imkubernetes \
         --enable-mmkubernetes \
         --enable-mmnormalize \
         --enable-mmpstrucdata \

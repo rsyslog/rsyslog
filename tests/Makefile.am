@@ -2095,6 +2095,11 @@ TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
 	mmkubernetes-cache-expire-vg.sh
 
+TESTS_IMKUBERNETES = \
+	imkubernetes-cri-basic.sh \
+	imkubernetes-dockerjson-basic.sh \
+	yaml-imkubernetes-dockerjson-basic.sh
+
 TESTS_IMTUXEDOULOG = \
 	imtuxedoulog_errmsg_no_params.sh \
 	imtuxedoulog_data.sh
@@ -2300,6 +2305,7 @@ EXTRA_DIST += $(TESTS_OMTCL)
 EXTRA_DIST += $(TESTS_MMTAGHOSTNAME)
 EXTRA_DIST += $(TESTS_MMKUBERNETES)
 EXTRA_DIST += $(TESTS_MMKUBERNETES_VALGRIND)
+EXTRA_DIST += $(TESTS_IMKUBERNETES)
 EXTRA_DIST += $(TESTS_IMTUXEDOULOG)
 EXTRA_DIST += $(TESTS_IMTUXEDOULOG_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAMQP1)
@@ -3441,6 +3447,10 @@ endif
 endif
 endif
 endif
+endif
+
+if ENABLE_IMKUBERNETES
+TESTS += $(TESTS_IMKUBERNETES)
 endif
 
 
