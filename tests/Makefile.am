@@ -159,6 +159,8 @@ TESTS_DEFAULT = \
 	omfwd-suspended-no-early-commit.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
+	omfwd-tcp-user-timeout.sh \
+	yaml-omfwd-tcp-user-timeout.sh \
 	omfwd-subtree-tpl.sh \
 	omfwd-errfile-maxsize.sh \
 	omfwd-errfile-maxsize-filled.sh \

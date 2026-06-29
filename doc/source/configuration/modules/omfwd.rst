@@ -590,6 +590,13 @@ The default, 0, means that the operating system defaults are used.
 This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
+tcp_user_timeout
+^^^^^^^^^^^^^^^^
+
+.. include:: ../../reference/parameters/omfwd-tcp-user-timeout.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
 ConErrSkip
 ^^^^^^^^^^
 

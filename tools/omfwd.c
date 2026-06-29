@@ -131,6 +131,7 @@ typedef struct _instanceData {
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
     int iKeepAliveTime;
+    int tcp_user_timeout_ms;
     int iConErrSkip; /* skipping excessive connection errors */
     uchar *gnutlsPriorityString;
     int ipfreebind;
@@ -246,6 +247,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"keepalive.probes", eCmdHdlrNonNegInt, 0},
     {"keepalive.time", eCmdHdlrNonNegInt, 0},
     {"keepalive.interval", eCmdHdlrNonNegInt, 0},
+    {"tcp_user_timeout", eCmdHdlrNonNegInt, 0},
     {"conerrskip", eCmdHdlrNonNegInt, 0},
     {"gnutlsprioritystring", eCmdHdlrString, 0},
     {"streamdriver", eCmdHdlrGetWord, 0},
@@ -1467,6 +1469,7 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
         if (pData->gnutlsPriorityString != NULL) {
             CHKiRet(netstrm.SetGnutlsPriorityString(pTarget->pNetstrm, pData->gnutlsPriorityString));
         }
+        CHKiRet(netstrm.SetTcpUserTimeout(pTarget->pNetstrm, pData->tcp_user_timeout_ms));
         CHKiRet(netstrm.Connect(pTarget->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf), (uchar *)pTarget->port,
                                 (uchar *)pTarget->target_name, pData->device));
 
@@ -2036,6 +2039,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->iKeepAliveProbes = 0;
     pData->iKeepAliveIntvl = 0;
     pData->iKeepAliveTime = 0;
+    pData->tcp_user_timeout_ms = 0;
     pData->iConErrSkip = 0;
     pData->gnutlsPriorityString = NULL;
     pData->bResendLastOnRecon = 0;
@@ -2254,6 +2258,8 @@ BEGINnewActInst
             pData->iKeepAliveIntvl = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "keepalive.time")) {
             pData->iKeepAliveTime = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "tcp_user_timeout")) {
+            pData->tcp_user_timeout_ms = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "conerrskip")) {
             pData->iConErrSkip = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {

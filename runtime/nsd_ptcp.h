@@ -39,6 +39,7 @@ struct nsd_ptcp_s {
         int iKeepAliveIntvl; /**< socket layer KEEPALIVE interval */
         int iKeepAliveProbes; /**< socket layer KEEPALIVE probes */
         int iKeepAliveTime; /**< socket layer KEEPALIVE timeout */
+        int tcp_user_timeout_ms; /**< socket layer TCP_USER_TIMEOUT in milliseconds */
 };
 
 /* interface is defined in nsd.h, we just implement it! */
