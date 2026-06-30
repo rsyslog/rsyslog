@@ -16,8 +16,6 @@ Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog
 Version: 8.2602.0
 Release: 2%{?dist}
-# Build-time generated file list for optional liboverride_*.so modules.
-%global liboverride_filelist %{_builddir}/%{name}-%{version}/liboverride.files
 License: (GPLv3+ and ASL 2.0)
 Group: System Environment/Daemons
 URL: https://www.rsyslog.com/
@@ -715,21 +713,6 @@ install -p -m 644 plugins/ompgsql/createDB.sql %{buildroot}%{rsyslog_docdir}/pgs
 # extract documentation (Sphinx output is in doc/build/ when built in-tree)
 cp -r doc/build/* %{buildroot}%{rsyslog_docdir}/html
 
-# Generate file list for optional liboverride modules.
-# Older sources may not build these files; newer ones do.
-# Keep file non-empty for older sources where no liboverride modules exist.
-# rpmbuild errors out on an empty %files -f input file.
-echo "%%exclude %{_libdir}/rsyslog/__liboverride_filelist_placeholder__.so" > %{liboverride_filelist}
-for so in \
-  liboverride_getaddrinfo.so \
-  liboverride_gethostname.so \
-  liboverride_gethostname_nonfqdn.so
-do
-  if [ -f %{buildroot}%{_libdir}/rsyslog/$so ]; then
-    echo %{_libdir}/rsyslog/$so >> %{liboverride_filelist}
-  fi
-done
-
 # get rid of libtool libraries
 rm -f %{buildroot}%{_libdir}/rsyslog/*.la
 
@@ -750,7 +733,7 @@ done
 %postun
 %systemd_postun_with_restart rsyslog.service
 
-%files -f %{liboverride_filelist}
+%files
 %defattr(-,root,root,-)
 %doc AUTHORS COPYING* ChangeLog
 %exclude %{rsyslog_docdir}/html
