@@ -1,0 +1,29 @@
+tests/Makefile.am
+  s_a92b7e9f815247::t_5c54afdce82d20 1720-1721
+tests/yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
+  s_f67b54b127aca7::t_ef13af19598290 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "1c52c8ec083801777a6728f94f6f1a902b27154c",
+  "prompts": {},
+  "sessions": {
+    "s_a92b7e9f815247": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f180c-aa86-7951-8a7f-c99bdfa6a3ee",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
