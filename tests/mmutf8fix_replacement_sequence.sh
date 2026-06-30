@@ -7,7 +7,6 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 
-replacement_sequence=$(printf '\357\277\275')
 generate_conf
 add_conf '
 module(load="../plugins/mmutf8fix/.libs/mmutf8fix")
@@ -23,12 +22,12 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_tag_
       ruleset="tagtest")
 
 ruleset(name="sdtest") {
-	action(type="mmutf8fix" replacementSequence="'$replacement_sequence'")
+	action(type="mmutf8fix" replacementSequence="\357\277\275")
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="sdoutfmt")
 }
 
 ruleset(name="tagtest" parser="custom.rfc3164") {
-	action(type="mmutf8fix" replacementSequence="'$replacement_sequence'")
+	action(type="mmutf8fix" replacementSequence="\357\277\275")
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="tagoutfmt")
 }'
 

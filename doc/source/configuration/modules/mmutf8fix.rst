@@ -120,7 +120,7 @@ This sample replaces each invalid byte with the UTF-8 byte sequence for
 .. code-block:: rsyslog
 
   module(load="mmutf8fix")
-  action(type="mmutf8fix" replacementSequence="\xEF\xBF\xBD")
+  action(type="mmutf8fix" replacementSequence="\357\277\275")
 
 The same setting can be expressed through YAML configuration.
 
@@ -132,7 +132,7 @@ The same setting can be expressed through YAML configuration.
   rulesets:
     - name: main
       script: |
-        action(type="mmutf8fix" replacementSequence="\xEF\xBF\xBD")
+        action(type="mmutf8fix" replacementSequence="\357\277\275")
 
 .. toctree::
    :hidden:

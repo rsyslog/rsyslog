@@ -30,7 +30,7 @@ templates:
 rulesets:
   - name: main
     script: |
-      action(type="mmutf8fix" replacementSequence="[bad]")
+      action(type="mmutf8fix" replacementSequence="\357\277\275")
       action(type="omfile" file="${RSYSLOG_OUT_LOG}" template="outfmt")
 YAMLEOF
 
@@ -42,6 +42,6 @@ wait_file_lines "$RSYSLOG_OUT_LOG" 1 60
 shutdown_when_empty
 wait_shutdown
 
-export EXPECTED=' has[bad]invalid'
-cmp_exact
+printf ' has\357\277\275invalid\n' > "$RSYSLOG_OUT_LOG.expect"
+cmp_exact_file "$RSYSLOG_OUT_LOG.expect" "$RSYSLOG_OUT_LOG"
 exit_test
