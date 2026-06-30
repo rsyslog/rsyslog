@@ -336,6 +336,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     size_t iDst;
     size_t iMaxLine;
     size_t maxDest;
+    size_t iFirstSanitize;
     uchar pc;
     sbool bUpdatedLen = RSFALSE;
     uchar szSanBuf[32 * 1024]; /* buffer used for sanitizing a string */
@@ -386,19 +387,24 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
      * need below (but it then still will work perfectly well!). -- rgerhards, 2009-11-27
      */
     int bNeedSanitize = 0;
+    iFirstSanitize = lenMsg;
     for (iSrc = 0; iSrc < lenMsg; iSrc++) {
         if (pszMsg[iSrc] < 32) {
             if (glbl.GetParserSpaceLFOnReceive(runConf) && pszMsg[iSrc] == '\n') {
                 pszMsg[iSrc] = ' ';
             } else if (pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive(runConf)) {
                 bNeedSanitize = 1;
+                if (iFirstSanitize == lenMsg) iFirstSanitize = iSrc;
                 if (!glbl.GetParserSpaceLFOnReceive(runConf)) {
                     break;
                 }
             }
         } else if (pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive(runConf)) {
             bNeedSanitize = 1;
-            break;
+            if (iFirstSanitize == lenMsg) iFirstSanitize = iSrc;
+            if (!glbl.GetParserSpaceLFOnReceive(runConf)) {
+                break;
+            }
         }
     }
 
@@ -406,6 +412,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
         if (bUpdatedLen == RSTRUE) MsgSetRawMsgSize(pMsg, lenMsg);
         FINALIZE;
     }
+    iSrc = iFirstSanitize;
 
     /* now copy over the message and sanitize it. Note that up to iSrc-1 there was
      * obviously no need to sanitize, so we can go over that quickly...
@@ -432,6 +439,11 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
     iDst = iSrc;
     while (iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
         if ((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab(runConf))) {
+            if (glbl.GetParserSpaceLFOnReceive(runConf) && pszMsg[iSrc] == '\n') {
+                pDst[iDst++] = ' ';
+                iSrc++;
+                continue;
+            }
             /* note: \0 must always be escaped, the rest of the code currently
              * can not handle it! -- rgerhards, 2009-08-26
              */

@@ -700,6 +700,7 @@ TESTS_IMTCP = \
 	imtcp_framing_regex.sh \
 	imtcp_framing_regex_maxmsg_overflow.sh \
 	imtcp-multiline.sh \
+	imtcp-spacelf-escape.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
@@ -767,6 +768,7 @@ TESTS_IMTCP_YAML = \
 	yaml-parser-drop-trailing-cr.sh \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
+	yaml-imtcp-spacelf-escape.sh \
 	imtcp-persource-ratelimit.sh \
 	ratelimit-legacy-persource-discard.sh \
 	ratelimit-persource-repeat-summary.sh \
