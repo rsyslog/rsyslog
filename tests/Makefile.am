@@ -257,6 +257,7 @@ TESTS_DEFAULT = \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
+	allowed-sender-tcp-zero-mask.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
 	allowed-sender-wildcard-invalid-bits.sh \
@@ -690,6 +691,7 @@ TESTS_IMTCP = \
 	fromhost-port-async-ruleset.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
+	allowed-sender-tcp-zero-mask.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
 	allowed-sender-wildcard-invalid-bits.sh \
@@ -1996,7 +1998,8 @@ fromhost-port-tuple.log: fromhost-port.log
 fromhost-port-async-ruleset.log: fromhost-port-tuple.log
 allowed-sender-tcp-ok.log: fromhost-port-async-ruleset.log
 allowed-sender-tcp-fail.log: allowed-sender-tcp-ok.log
-allowed-sender-tcp-hostname-ok.log: allowed-sender-tcp-fail.log
+allowed-sender-tcp-zero-mask.log: allowed-sender-tcp-fail.log
+allowed-sender-tcp-hostname-ok.log: allowed-sender-tcp-zero-mask.log
 allowed-sender-tcp-hostname-fail.log: allowed-sender-tcp-hostname-ok.log
 imtcp-discard-truncated-msg.log: allowed-sender-tcp-hostname-fail.log
 imtcp-basic.log: imtcp-discard-truncated-msg.log
