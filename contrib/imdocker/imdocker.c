@@ -53,7 +53,7 @@
 #include "ratelimit.h"
 #include "stringbuf.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 
 #if !defined(_AIX)
     #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -151,6 +151,8 @@ typedef struct docker_cont_log_instances_s {
     uchar *last_container_id;
     time_t time_started;
 } docker_cont_log_instances_t;
+
+static char seen_container_id_present;
 
 /* FORWARD DEFINITIONS */
 
@@ -789,22 +791,21 @@ static rsRetVal dockerContLogReqsGet(docker_cont_log_instances_t *pThis,
  * NOTE: not thread safe
  *
  */
+static int dockerContLogReqsPrintScan(void *key __attribute__((unused)),
+                                      void *value,
+                                      void *usr __attribute__((unused))) {
+    dockerContLogsInstPrint((docker_cont_logs_inst_t *)value);
+    return 1;
+}
+
 static rsRetVal dockerContLogReqsPrint(docker_cont_log_instances_t *pThis) {
     DEFiRet;
     int count = 0;
 
     count = hashtable_count(pThis->ht_container_log_insts);
     if (count) {
-        int ret = 0;
-        struct hashtable_itr *itr = hashtable_iterator(pThis->ht_container_log_insts);
-
         DBGPRINTF("%s() - All container instances, count=%d...\n", __FUNCTION__, count);
-        do {
-            docker_cont_logs_inst_t *pObj = hashtable_iterator_value(itr);
-            dockerContLogsInstPrint(pObj);
-            ret = hashtable_iterator_advance(itr);
-        } while (ret);
-        free(itr);
+        rshash_scan(pThis->ht_container_log_insts, dockerContLogReqsPrintScan, NULL);
         DBGPRINTF("End of container instances.\n");
     }
 
@@ -856,7 +857,7 @@ static rsRetVal dockerContLogReqsRememberId(struct hashtable *table, const char 
 
     if (table && id && hashtable_search(table, (void *)id) == NULL) {
         CHKmalloc(keyName = (uchar *)strdup(id));
-        if (!hashtable_insert(table, keyName, keyName)) {
+        if (!hashtable_insert(table, keyName, &seen_container_id_present)) {
             ABORT_FINALIZE(RS_RET_ERR);
         }
         keyName = NULL;
@@ -870,29 +871,33 @@ static rsRetVal dockerContLogReqsRememberSeen(docker_cont_log_instances_t *pThis
     return dockerContLogReqsRememberId(pThis ? pThis->ht_seen_container_ids : NULL, id);
 }
 
+struct docker_prune_seen_ctx {
+    struct hashtable *ht_current_ids;
+};
+
+static int dockerPruneSeenPred(void *key, void *value __attribute__((unused)), void *usr) {
+    struct docker_prune_seen_ctx *ctx = usr;
+    char *id = key;
+
+    if (hashtable_search(ctx->ht_current_ids, id) == NULL) {
+        DBGPRINTF("prune stale seen container %s\n", id);
+        return 1;
+    }
+    return 0;
+}
+
 static rsRetVal dockerContLogReqsPruneSeen(docker_cont_log_instances_t *pThis, struct hashtable *ht_current_ids) {
     DEFiRet;
-    int ret = 0;
-    struct hashtable_itr *itr = NULL;
+    struct docker_prune_seen_ctx scan_ctx = {ht_current_ids};
 
     if (!pThis || !pThis->ht_seen_container_ids || !ht_current_ids ||
         hashtable_count(pThis->ht_seen_container_ids) == 0) {
         FINALIZE;
     }
 
-    CHKmalloc(itr = hashtable_iterator(pThis->ht_seen_container_ids));
-    do {
-        char *id = hashtable_iterator_key(itr);
-        if (hashtable_search(ht_current_ids, id) == NULL) {
-            DBGPRINTF("prune stale seen container %s\n", id);
-            ret = hashtable_iterator_remove(itr);
-        } else {
-            ret = hashtable_iterator_advance(itr);
-        }
-    } while (ret);
+    rshash_scan_remove_if(pThis->ht_seen_container_ids, dockerPruneSeenPred, NULL, &scan_ctx);
 
 finalize_it:
-    free(itr);
     RETiRet;
 }
 

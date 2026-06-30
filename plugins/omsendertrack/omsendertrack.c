@@ -51,7 +51,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 // #include "cfsysline.h"
 
 MODULE_TYPE_OUTPUT;
@@ -417,10 +417,27 @@ finalize_it:
  * @param fp    open FILE pointer to write JSON to
  * @retval RS_RET_OK on success
  */
+struct write_sender_stats_ctx {
+    FILE *fp;
+    int bNeedEOL;
+};
+
+static int writeSenderStatsScan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct write_sender_stats_ctx *ctx = usr;
+    sender_stats_t *stat = value;
+
+    fprintf(ctx->fp,
+            "%s{"
+            "\"sender\":\"%s\""
+            ",\"messages\":%" PRIu64 ",\"firstseen\":%" PRIdMAX ",\"lastseen\":%" PRIdMAX "}",
+            (ctx->bNeedEOL ? ",\n" : ""), stat->sender, stat->nMsgs, (intmax_t)stat->firstSeen,
+            (intmax_t)stat->lastSeen);
+    ctx->bNeedEOL = 1;
+    return 1;
+}
+
 static rsRetVal writeSenderStats(instanceData *const pData, FILE *const fp) {
-    struct hashtable_itr *itr = NULL;
-    sender_stats_t *stat;
-    int bNeedEOL = 0;
+    struct write_sender_stats_ctx scan_ctx = {fp, 0};
     DEFiRet;
 
     dbgprintf("writeSenderStats() called, hashtable_count %d\n", hashtable_count(pData->stats_senders));
@@ -428,27 +445,13 @@ static rsRetVal writeSenderStats(instanceData *const pData, FILE *const fp) {
 
     pthread_rwlock_rdlock(&pData->mutSenders);
 
-    /* Iterator constructor only returns a valid iterator if
-     * the hashtable is not empty
-     */
     if (hashtable_count(pData->stats_senders) > 0) {
-        itr = hashtable_iterator(pData->stats_senders);
-        do {
-            stat = (sender_stats_t *)hashtable_iterator_value(itr);
-            fprintf(fp,
-                    "%s{"
-                    "\"sender\":\"%s\""
-                    ",\"messages\":%" PRIu64 ",\"firstseen\":%" PRIdMAX ",\"lastseen\":%" PRIdMAX "}",
-                    (bNeedEOL ? ",\n" : ""), stat->sender, stat->nMsgs, (intmax_t)stat->firstSeen,
-                    (intmax_t)stat->lastSeen);
-            bNeedEOL = 1;
-        } while (hashtable_iterator_advance(itr));
+        rshash_scan(pData->stats_senders, writeSenderStatsScan, &scan_ctx);
     }
 
-    free(itr);
     pthread_rwlock_unlock(&pData->mutSenders);
 
-    fprintf(fp, "%s]\n", bNeedEOL ? "\n" : ""); /* end JSON array */
+    fprintf(fp, "%s]\n", scan_ctx.bNeedEOL ? "\n" : ""); /* end JSON array */
     RETiRet;
 }
 

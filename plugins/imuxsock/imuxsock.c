@@ -66,7 +66,7 @@
 #include "statsobj.h"
 #include "datetime.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "ratelimit.h"
 
 
@@ -693,56 +693,54 @@ static void removePidRatelimiter(lstn_t *pLstn, pid_t pid) {
     }
 }
 
-static void prunePidRatelimiters(lstn_t *pLstn) {
-    struct hashtable_itr *itr;
+static int deadPidRatelimiterPred(void *key, void *value __attribute__((unused)), void *usr __attribute__((unused))) {
+    const pid_t pid = *((pid_t *)key);
+    return !(kill(pid, 0) == 0 || errno == EPERM);
+}
 
+static void deadPidRatelimiterRemoved(void *key __attribute__((unused)),
+                                      void *value,
+                                      void *usr __attribute__((unused))) {
+    ratelimitDestruct((ratelimit_t *)value);
+    STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
+}
+
+static void prunePidRatelimiters(lstn_t *pLstn) {
     assert(pLstn != NULL);
     if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) == 0) {
         return;
     }
 
-    itr = hashtable_iterator(pLstn->ht);
-    if (itr == NULL) {
-        return;
-    }
+    rshash_scan_remove_if(pLstn->ht, deadPidRatelimiterPred, deadPidRatelimiterRemoved, NULL);
+}
 
-    while (itr->e != NULL) {
-        const pid_t pid = *((pid_t *)hashtable_iterator_key(itr));
-        ratelimit_t *rl = hashtable_iterator_value(itr);
-        const int is_alive = (kill(pid, 0) == 0 || errno == EPERM);
+struct first_pid_scan_ctx {
+    pid_t pid;
+    int found;
+};
 
-        if (!is_alive) {
-            hashtable_iterator_remove(itr);
-            ratelimitDestruct(rl);
-            STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
-        } else if (!hashtable_iterator_advance(itr)) {
-            break;
-        }
-    }
-
-    free(itr);
+static int firstPidScan(void *key, void *value __attribute__((unused)), void *usr) {
+    struct first_pid_scan_ctx *ctx = usr;
+    ctx->pid = *((pid_t *)key);
+    ctx->found = 1;
+    return 0;
 }
 
 static void enforcePidRatelimiterCap(lstn_t *pLstn) {
-    struct hashtable_itr *itr;
-    pid_t pid;
+    struct first_pid_scan_ctx scan_ctx = {0, 0};
 
     assert(pLstn != NULL);
     if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) < MAX_DYNAMIC_RATELIMITERS) {
         return;
     }
 
-    itr = hashtable_iterator(pLstn->ht);
-    if (itr == NULL || itr->e == NULL) {
-        free(itr);
+    rshash_scan(pLstn->ht, firstPidScan, &scan_ctx);
+    if (!scan_ctx.found) {
         return;
     }
 
-    pid = *((pid_t *)hashtable_iterator_key(itr));
-    free(itr);
-
-    DBGPRINTF("imuxsock: evicting pid %lu ratelimiter to keep cache bounded\n", (unsigned long)pid);
-    removePidRatelimiter(pLstn, pid);
+    DBGPRINTF("imuxsock: evicting pid %lu ratelimiter to keep cache bounded\n", (unsigned long)scan_ctx.pid);
+    removePidRatelimiter(pLstn, scan_ctx.pid);
 }
 
 static void releasePidRatelimiterCache(lstn_t *pLstn) {

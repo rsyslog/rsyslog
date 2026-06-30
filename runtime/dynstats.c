@@ -32,7 +32,7 @@
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "compat_queue.h"
 
 /* definitions for objects we access */
@@ -941,6 +941,24 @@ static uchar *ATTR_NONNULL(1, 2)
     return buf;
 }
 
+struct persist_bucket_scan_ctx {
+    struct json_object *json_bucket_values;
+    rsRetVal ret;
+};
+
+static int persistBucketCounterScan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct persist_bucket_scan_ctx *ctx = usr;
+    dynstats_ctr_t *pctr = value;
+    struct json_object *jval = json_object_new_int64(pctr->ctr);
+
+    if (jval == NULL) {
+        ctx->ret = RS_RET_OUT_OF_MEMORY;
+        return 0;
+    }
+    json_object_object_add(ctx->json_bucket_values, (const char *)pctr->metric, jval);
+    return 1;
+}
+
 /* This function persists dynstats_bucket_t data, which for the time being:
  * metric bucket counters
  */
@@ -951,6 +969,7 @@ static rsRetVal ATTR_NONNULL(1) persistBucketState(dynstats_bucket_t *b, sbool u
     struct json_object *jval = NULL;
     struct json_object *json = NULL;
     struct json_object *json_bucket_values = NULL;
+    struct persist_bucket_scan_ctx scan_ctx = {.json_bucket_values = NULL, .ret = RS_RET_OK};
 
     assert(b->name);
     uchar *const statefn = getStateFileName(b, statefile, sizeof(statefile));
@@ -972,22 +991,9 @@ static rsRetVal ATTR_NONNULL(1) persistBucketState(dynstats_bucket_t *b, sbool u
     json_object_object_add(json, DYNSTATS_BUCKET_PERSIST_VALUES_NAME, json_bucket_values);
 
     if (b->table != NULL && hashtable_count(b->table) > 0) {
-        struct hashtable_itr *itr = hashtable_iterator(b->table);
-        if (itr == NULL) {
-            LogError(0, RS_RET_OUT_OF_MEMORY, "dynstats: failed to allocate hashtable iterator");
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-        dynstats_ctr_t *pctr = NULL;
-        do {
-            pctr = (dynstats_ctr_t *)hashtable_iterator_value(itr);
-            jval = json_object_new_int64(pctr->ctr);
-            if (jval == NULL) {
-                free(itr);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
-            json_object_object_add(json_bucket_values, (const char *)pctr->metric, jval);
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+        scan_ctx.json_bucket_values = json_bucket_values;
+        rshash_scan(b->table, persistBucketCounterScan, &scan_ctx);
+        CHKiRet(scan_ctx.ret);
     }
 
     const char *jstr = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);

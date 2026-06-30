@@ -35,7 +35,7 @@
 #include "regexp.h"
 #include "errmsg.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP;
@@ -177,10 +177,25 @@ static void remove_uncomp_regexp(regex_t *preg) {
     pthread_mutex_unlock(&mut_regexp);
 }
 
-static void _regfree(regex_t *preg) {
-    int ret = 0;
-    struct hashtable_itr *itr = NULL;
+static int perthread_regex_matches_original(void *key __attribute__((unused)), void *value, void *usr) {
+    perthread_regex_t *entry = value;
+    return entry->original_preg == (regex_t *)usr;
+}
 
+static void cleanup_perthread_regex(void *key __attribute__((unused)), void *value, void *usr __attribute__((unused))) {
+    perthread_regex_t *entry = value;
+    pthread_mutex_lock(&entry->lock);
+    pthread_mutex_unlock(&entry->lock);
+    pthread_mutex_destroy(&entry->lock);
+    regfree(&entry->preg);
+}
+
+static int cleanup_perthread_regex_scan(void *key, void *value, void *usr) {
+    cleanup_perthread_regex(key, value, usr);
+    return 1;
+}
+
+static void _regfree(regex_t *preg) {
     if (!preg) return;
 
     regfree(preg);
@@ -194,63 +209,17 @@ static void _regfree(regex_t *preg) {
 
     // This can be long to iterate other all regexps, but regfree doesn't get called
     // a lot during processing.
-    itr = hashtable_iterator(perthread_regexs);
-    do {
-        perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
-
-        // Do it before freeing the entry.
-        ret = hashtable_iterator_advance(itr);
-
-        if (entry->original_preg == preg) {
-            // This allows us to avoid freeing this while somebody is still using it.
-            pthread_mutex_lock(&entry->lock);
-            // We can unlock immediately after because mut_regexp is locked.
-            pthread_mutex_unlock(&entry->lock);
-            pthread_mutex_destroy(&entry->lock);
-            regfree(&entry->preg);
-
-            // Do it last because it will free entry.
-            hashtable_remove(perthread_regexs, (void *)entry);
-        }
-    } while (ret);
-    free(itr);
+    rshash_scan_remove_if(perthread_regexs, perthread_regex_matches_original, cleanup_perthread_regex, preg);
 
     pthread_mutex_unlock(&mut_regexp);
 }
 
 static void destroy_perthread_regexs(void) {
-    struct hashtable_itr *itr = NULL;
-    int ret = 0;
-
     if (perthread_regexs == NULL) return;
 
     pthread_mutex_lock(&mut_regexp);
     if (hashtable_count(perthread_regexs)) {
-        itr = hashtable_iterator(perthread_regexs);
-        if (itr == NULL) {
-            hashtable_destroy(perthread_regexs, 0);
-            perthread_regexs = NULL;
-            pthread_mutex_unlock(&mut_regexp);
-            LogError(0, RS_RET_OUT_OF_MEMORY, "error creating per-thread regexp iterator during regexp class unload");
-            return;
-        }
-        do {
-            perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
-
-            ret = hashtable_iterator_advance(itr);
-            pthread_mutex_lock(&entry->lock);
-            pthread_mutex_unlock(&entry->lock);
-            pthread_mutex_destroy(&entry->lock);
-            regfree(&entry->preg);
-
-            /*
-             * perthread_regexs uses the perthread_regex_t object as both
-             * key and value. hashtable_destroy() always frees keys, so leave
-             * the entry allocation owned by the hash table after cleaning the
-             * resources embedded in it.
-             */
-        } while (ret);
-        free(itr);
+        rshash_scan(perthread_regexs, cleanup_perthread_regex_scan, NULL);
     }
     hashtable_destroy(perthread_regexs, 0);
     perthread_regexs = NULL;

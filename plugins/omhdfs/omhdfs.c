@@ -52,7 +52,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -461,21 +461,18 @@ BEGINparseSelectorAct
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
+static int omhdfsCloseFileScan(void *key __attribute__((unused)), void *value, void *usr __attribute__((unused))) {
+    file_t *pFile = value;
+    fileClose(pFile);
+    DBGPRINTF("omhdfs: HUP, closing file %s\n", pFile->name);
+    return 1;
+}
 
 BEGINdoHUP
-    file_t *pFile;
-    struct hashtable_itr *itr;
     CODESTARTdoHUP;
     DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
-    /* Iterator constructor only returns a valid iterator if
-     * the hashtable is not empty */
-    itr = hashtable_iterator(files);
     if (hashtable_count(files) > 0) {
-        do {
-            pFile = (file_t *)hashtable_iterator_value(itr);
-            fileClose(pFile);
-            DBGPRINTF("omhdfs: HUP, closing file %s\n", pFile->name);
-        } while (hashtable_iterator_advance(itr));
+        rshash_scan(files, omhdfsCloseFileScan, NULL);
     }
 ENDdoHUP
 

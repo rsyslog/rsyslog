@@ -55,7 +55,7 @@
 #include "statsobj.h"
 #include "regexp.h"
 #include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include "datetime.h"
@@ -1108,10 +1108,32 @@ finalize_it:
     return cache_entry;
 }
 
+struct cache_expire_scan_ctx {
+    wrkrInstanceData_t *pWrkrData;
+    int isnsmd;
+    time_t now;
+};
+
+static int cache_entry_expired_pred(void *key __attribute__((unused)), void *value, void *usr) {
+    struct cache_expire_scan_ctx *ctx = usr;
+    struct cache_entry_s *cache_entry = value;
+    return ctx->now >= cache_entry->ttl;
+}
+
+static void cache_entry_expired_removed(void *key __attribute__((unused)), void *value, void *usr) {
+    struct cache_expire_scan_ctx *ctx = usr;
+
+    cache_entry_free((struct cache_entry_s *)value);
+    if (ctx->isnsmd) {
+        STATSCOUNTER_DEC(ctx->pWrkrData->namespaceCacheNumEntries, ctx->pWrkrData->mutNamespaceCacheNumEntries);
+    } else {
+        STATSCOUNTER_DEC(ctx->pWrkrData->podCacheNumEntries, ctx->pWrkrData->mutPodCacheNumEntries);
+    }
+}
+
 static int cache_delete_expired_entries(wrkrInstanceData_t *pWrkrData, int isnsmd, time_t now) {
     struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
-    struct hashtable_itr *itr = NULL;
-    int more;
+    struct cache_expire_scan_ctx scan_ctx = {pWrkrData, isnsmd, now};
 
     if ((pWrkrData->pData->cacheExpireInterval < 0) || (now < pWrkrData->pData->cache->expirationTime)) {
         return 0; /* not enabled or not time yet */
@@ -1122,25 +1144,7 @@ static int cache_delete_expired_entries(wrkrInstanceData_t *pWrkrData, int isnsm
 
     if (hashtable_count(ht) < 1) return 1; /* expire interval hit but nothing to do */
 
-    itr = hashtable_iterator(ht);
-    if (NULL == itr) return 1; /* expire interval hit but nothing to do - err? */
-
-    do {
-        struct cache_entry_s *cache_entry = (struct cache_entry_s *)hashtable_iterator_value(itr);
-
-        if (now >= cache_entry->ttl) {
-            cache_entry_free(cache_entry);
-            if (isnsmd) {
-                STATSCOUNTER_DEC(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
-            } else {
-                STATSCOUNTER_DEC(pWrkrData->podCacheNumEntries, pWrkrData->mutPodCacheNumEntries);
-            }
-            more = hashtable_iterator_remove(itr);
-        } else {
-            more = hashtable_iterator_advance(itr);
-        }
-    } while (more);
-    free(itr);
+    rshash_scan_remove_if(ht, cache_entry_expired_pred, cache_entry_expired_removed, &scan_ctx);
     dbgprintf("mmkubernetes: cache_delete_expired_entries: cleaned [%s] cache - size is now [%llu]\n",
               isnsmd ? "namespace" : "pod",
               isnsmd ? pWrkrData->namespaceCacheNumEntries : pWrkrData->podCacheNumEntries);

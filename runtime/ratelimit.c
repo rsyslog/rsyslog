@@ -48,7 +48,7 @@
 #include "hashtable.h"
 #include "statsobj.h"
 #include "template.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "srUtils.h"
 #ifdef HAVE_LIBYAML
     #include <yaml.h>
@@ -227,21 +227,21 @@ static void ratelimitFreeShared(void *ptr) {
     free(shared);
 }
 
+static int ratelimitUnregisterSharedScan(void *key __attribute__((unused)),
+                                         void *value,
+                                         void *usr __attribute__((unused))) {
+    ratelimitUnregisterSharedWatchers((ratelimit_shared_t *)value);
+    return 1;
+}
+
 void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
     pthread_rwlock_init(&cfgs->lock, NULL);
     cfgs->ht = create_hashtable(16, hash_from_string, key_equals_string, ratelimitFreeShared);
 }
 
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
-    struct hashtable_itr *itr;
-
     if (cfgs->ht != NULL && hashtable_count(cfgs->ht) > 0) {
-        itr = hashtable_iterator(cfgs->ht);
-        do {
-            ratelimit_shared_t *shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
-            ratelimitUnregisterSharedWatchers(shared);
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+        rshash_scan(cfgs->ht, ratelimitUnregisterSharedScan, NULL);
     }
     if (cfgs->ht != NULL) {
         hashtable_destroy(cfgs->ht, 1); /* 1 = free values */
@@ -1049,6 +1049,31 @@ static char *ratelimitSanitizeMetricName(const char *key) {
     return out;
 }
 
+struct ratelimit_topn_scan_ctx {
+    unsigned int topn;
+    uint64_t *values;
+    char **keys;
+};
+
+static int ratelimitTopNScan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct ratelimit_topn_scan_ctx *ctx = usr;
+    ratelimit_ps_state_t *state = value;
+
+    if (state == NULL || state->dropped == 0) return 1;
+    for (unsigned int i = 0; i < ctx->topn; ++i) {
+        if (state->dropped > ctx->values[i]) {
+            for (unsigned int j = ctx->topn - 1; j > i; --j) {
+                ctx->values[j] = ctx->values[j - 1];
+                ctx->keys[j] = ctx->keys[j - 1];
+            }
+            ctx->values[i] = state->dropped;
+            ctx->keys[i] = state->key;
+            break;
+        }
+    }
+    return 1;
+}
+
 static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
     if (shared == NULL || shared->per_source_stats == NULL) return;
 
@@ -1061,6 +1086,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
     unsigned int topn = shared->per_source_topn;
     uint64_t *values = calloc(topn, sizeof(uint64_t));
     char **keys = calloc(topn, sizeof(char *));
+    struct ratelimit_topn_scan_ctx scan_ctx = {.topn = topn, .values = values, .keys = keys};
     if (values == NULL || keys == NULL) {
         free(values);
         free(keys);
@@ -1069,25 +1095,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
     }
 
     if (shared->per_source_states != NULL && hashtable_count(shared->per_source_states) > 0) {
-        struct hashtable_itr *itr = hashtable_iterator(shared->per_source_states);
-        if (itr != NULL) {
-            do {
-                ratelimit_ps_state_t *state = (ratelimit_ps_state_t *)hashtable_iterator_value(itr);
-                if (state == NULL || state->dropped == 0) continue;
-                for (unsigned int i = 0; i < topn; ++i) {
-                    if (state->dropped > values[i]) {
-                        for (unsigned int j = topn - 1; j > i; --j) {
-                            values[j] = values[j - 1];
-                            keys[j] = keys[j - 1];
-                        }
-                        values[i] = state->dropped;
-                        keys[i] = state->key;
-                        break;
-                    }
-                }
-            } while (hashtable_iterator_advance(itr));
-            free(itr);
-        }
+        rshash_scan(shared->per_source_states, ratelimitTopNScan, &scan_ctx);
     }
     for (unsigned int i = 0; i < topn; ++i) {
         if (keys[i] != NULL) {
@@ -2284,10 +2292,19 @@ finalize_it:
     RETiRet;
 }
 
-void ratelimitDoHUP(void) {
-    struct hashtable_itr *itr;
-    ratelimit_shared_t *shared;
+static int ratelimitHUPScan(void *key __attribute__((unused)), void *value, void *usr __attribute__((unused))) {
+    ratelimit_shared_t *shared = value;
 
+    if (shared && shared->policy_file) {
+        ratelimitReloadPolicyFile(shared, "HUP");
+    }
+    if (shared && shared->per_source_policy_file && !shared->per_source_policy_from_policy_file) {
+        ratelimitReloadPerSourcePolicyFile(shared, "HUP");
+    }
+    return 1;
+}
+
+void ratelimitDoHUP(void) {
     if (runConf == NULL || runConf->ratelimit_cfgs.ht == NULL) {
         return;
     }
@@ -2298,17 +2315,7 @@ void ratelimitDoHUP(void) {
      */
     pthread_rwlock_rdlock(&runConf->ratelimit_cfgs.lock);
     if (hashtable_count(runConf->ratelimit_cfgs.ht) > 0) {
-        itr = hashtable_iterator(runConf->ratelimit_cfgs.ht);
-        do {
-            shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
-            if (shared && shared->policy_file) {
-                ratelimitReloadPolicyFile(shared, "HUP");
-            }
-            if (shared && shared->per_source_policy_file && !shared->per_source_policy_from_policy_file) {
-                ratelimitReloadPerSourcePolicyFile(shared, "HUP");
-            }
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+        rshash_scan(runConf->ratelimit_cfgs.ht, ratelimitHUPScan, NULL);
     }
     pthread_rwlock_unlock(&runConf->ratelimit_cfgs.lock);
 }
