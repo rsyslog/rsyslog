@@ -8,6 +8,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ * Concurrency & Locking
+ *
+ * Point operations use atomic bucket-chain updates when atomic builtins are
+ * available. On older platforms the rsyslog atomic helper macros provide the
+ * mutex-backed fallback, so callers use the same API with weaker performance
+ * but the same ownership rules.
+ *
+ * Removed nodes are first marked and unlinked, then placed on a retired list.
+ * rshash_enter()/rshash_leave() are a table-wide quiescence guard: reclamation
+ * runs only when no point operation or scan is active. This is intentionally
+ * simpler than per-thread hazard pointers because rsyslog needs old-platform
+ * support and most tables are small operational registries.
+ */
 static const unsigned int primes[] = {53,        97,        193,       389,       769,       1543,     3079,
                                       6151,      12289,     24593,     49157,     98317,     196613,   393241,
                                       786433,    1572869,   3145739,   6291469,   12582917,  25165843, 50331653,
@@ -80,6 +94,11 @@ static void rshash_try_reclaim(rshash_t *h) {
     if (ATOMIC_FETCH_32BIT_unsigned(&h->active_ops, &h->mutActive) == 0) {
         free_retired_list(h, list);
     } else {
+        /*
+         * A new operation may start after we detach the retired list. Put the
+         * list back instead of freeing memory that the new operation can still
+         * observe through an old bucket pointer.
+         */
         struct entry *tail = list;
         while (tail->retired_next != NULL) tail = tail->retired_next;
         for (;;) {
@@ -271,6 +290,12 @@ static void rshash_maybe_grow(rshash_t *h) {
     next_size = next_table_size(current->tablelength);
     if (next_size == 0) return;
 
+    /*
+     * Growth is append-only: a new, larger generation becomes the preferred
+     * insertion table while old generations remain searchable. Rehashing old
+     * nodes would require a table-wide stop-the-world phase or per-node move
+     * protocol, both of which would weaken the Stage 1 point-operation goal.
+     */
     newtbl = alloc_table_generation(next_size);
     if (newtbl == NULL) return;
     newtbl->next = current;
@@ -330,6 +355,11 @@ static int insert_at_position(rshash_t *h, void *key, void *value, const int uni
         if (atomic_cas_entry(slot, head, e, h)) {
             ATOMIC_INC(&h->entrycount, &h->mutCount);
             if (unique && has_preferred_duplicate(h, hashvalue, key, e)) {
+                /*
+                 * Two unique insertions can publish equal keys concurrently.
+                 * Keep the stable lower-address entry and retire this one so
+                 * exactly one insertion reports success without global locking.
+                 */
                 void *discard_value;
                 for (;;) {
                     if (entry_try_remove(h, e, &discard_value)) {
@@ -520,6 +550,10 @@ void rshash_scan(rshash_t *h, rshash_scan_fn cb, void *usr) {
     unsigned int i;
 
     if (cb == NULL) return;
+    /*
+     * The active-operation guard pins entry storage, not logical membership.
+     * Callbacks therefore see only borrowed pointers and weak scan semantics.
+     */
     rshash_enter(h);
     for (tbl = atomic_fetch_table(&h->tables, h); tbl != NULL; tbl = tbl->next) {
         for (i = 0; i < tbl->tablelength; ++i) {
