@@ -538,7 +538,7 @@ static rsRetVal ATTR_NONNULL(2, 3) scriptExec(struct cnfstmt *const root, smsg_t
     DEFiRet;
 
     for (stmt = root; stmt != NULL; stmt = stmt->next) {
-        if (*pWti->pbShutdownImmediate) {
+        if (wtiIsShutdownImmediate(pWti)) {
             DBGPRINTF(
                 "scriptExec: ShutdownImmediate set, "
                 "force terminating\n");
@@ -608,7 +608,7 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
     wtiResetExecState(pWti, pBatch);
 
     /* execution phase */
-    for (i = 0; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate); ++i) {
+    for (i = 0; i < batchNumMsgs(pBatch) && !wtiIsShutdownImmediate(pWti); ++i) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
         pRuleset = (pMsg->pRuleset == NULL) ? runConf->rulesets.pDflt : pMsg->pRuleset;

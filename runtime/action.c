@@ -884,7 +884,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
     assert(pThis != NULL);
 
     iRetries = 0;
-    while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+    while (!wtiIsShutdownImmediate(pWti) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
         if (actionIsDisabled(pThis)) {
             break;
         }
@@ -927,7 +927,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                     pThis->pszName, pThis->iResumeInterval, (long long)actionGetResumeRetryTime(pThis),
                     (long long)ttTemp, iRetries);
                 srSleep(pThis->iResumeInterval, 0);
-                if (*pWti->pbShutdownImmediate) {
+                if (wtiIsShutdownImmediate(pWti)) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
             }
@@ -957,7 +957,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
 
     DBGPRINTF("actionDoRetry_extFile: enter, actionState: %d\n", getActionState(pWti, pThis));
     iRetries = 0;
-    while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+    while (!wtiIsShutdownImmediate(pWti) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
         if (actionIsDisabled(pThis)) {
             break;
         }
@@ -988,7 +988,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
             } else {
                 ++iRetries;
                 srSleep(pThis->iResumeInterval, 0);
-                if (*pWti->pbShutdownImmediate) {
+                if (wtiIsShutdownImmediate(pWti)) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
             }
@@ -1742,7 +1742,7 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     DBGPRINTF("actionCommit[%s]: unhappy, we still have %d uncommitted messages.\n", pThis->pszName, nMsgs);
     int bDone = 0;
     do {
-        if (*pWti->pbShutdownImmediate) {
+        if (wtiIsShutdownImmediate(pWti)) {
             ABORT_FINALIZE(RS_RET_FORCE_TERM);
         }
         iRet = actionTryCommit(pThis, pWti, iparams, nMsgs);
@@ -1872,7 +1872,7 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
         FINALIZE;
     }
 
-    for (i = 0; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate; ++i) {
+    for (i = 0; i < batchNumMsgs(pBatch) && !wtiIsShutdownImmediate(pWti); ++i) {
         if (batchIsValidElem(pBatch, i)) {
             /* we do not check error state below, because aborting would be
              * more harmful than continuing.

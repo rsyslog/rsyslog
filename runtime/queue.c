@@ -502,6 +502,24 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
 }
 
 
+static int qqueueIsShutdownImmediate(qqueue_t *const pThis) {
+    return ATOMIC_FETCH_32BIT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate);
+}
+
+
+static void qqueueSetShutdownImmediate(qqueue_t *const pThis, const int value) {
+    ATOMIC_STORE_INT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate, value);
+}
+
+
+static void qqueueSetWtiShutdownImmediate(qqueue_t *const pThis, wti_t *const pWti) {
+    pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
+#ifndef HAVE_ATOMIC_BUILTINS
+    pWti->pmutShutdownImmediate = &pThis->mutShutdownImmediate;
+#endif
+}
+
+
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
  * During a shutdown, this is typically not needed, as the OS frees up resources and does
@@ -1933,7 +1951,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
 
     pWti = wtiGetDummy();
-    pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
+    qqueueSetWtiShutdownImmediate(pThis, pWti);
     iRet = qAddDirectWithWti(pThis, pMsg, pWti);
     RETiRet;
 }
@@ -2078,11 +2096,11 @@ static rsRetVal tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis) {
     DBGOPRINT((obj_t *)pThis, "trying to shutdown workers within Action Timeout");
     DBGOPRINT((obj_t *)pThis, "setting EnqOnly mode\n");
     pThis->bEnqOnly = 1;
-    pThis->bShutdownImmediate = 1;
+    qqueueSetShutdownImmediate(pThis, 1);
     /* now DA queue */
     if (pThis->bIsDA) {
         pThis->pqDA->bEnqOnly = 1;
-        pThis->pqDA->bShutdownImmediate = 1;
+        qqueueSetShutdownImmediate(pThis->pqDA, 1);
     }
 
     /* now give the queue workers a last chance to gracefully shut down (based on action timeout setting) */
@@ -2294,6 +2312,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
 
     INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
     INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+    INIT_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
     CHKiRet(qqueueSetiNumWorkerThreads(pThis, iWorkerThreads));
 
 finalize_it:
@@ -2900,7 +2919,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
         pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
         ++nDequeued;
         if (nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
-            while (!pThis->bShutdownImmediate && keep_running && nDequeued < iMinDeqBatchSize &&
+            while (!qqueueIsShutdownImmediate(pThis) && keep_running && nDequeued < iMinDeqBatchSize &&
                    getLogicalQueueSize(pThis) == 0) {
                 dbgprintf(
                     "%s minDeqBatchSize doing wait, batch is %d messages, "
@@ -3191,7 +3210,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-    pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
+    qqueueSetWtiShutdownImmediate(pThis, pWti);
     CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
 
     /* we now need to check if we should deliberately delay processing a bit
@@ -3245,7 +3264,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
     /* iterate over returned results and enqueue them in DA queue */
-    for (i = 0; i < pWti->batch.nElem && !pThis->bShutdownImmediate; i++) {
+    for (i = 0; i < pWti->batch.nElem && !qqueueIsShutdownImmediate(pThis); i++) {
         iRet = qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
         if (iRet != RS_RET_OK) {
             if (iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
@@ -3705,7 +3724,7 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
      * it is reached.
      */
     DBGOPRINT((obj_t *)pThis, "bSaveOnShutdown set, restarting DA worker...\n");
-    pThis->bShutdownImmediate = 0; /* would termiante the DA worker! */
+    qqueueSetShutdownImmediate(pThis, 0); /* would termiante the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
@@ -3809,6 +3828,7 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
 
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
 
         /* type-specific destructor */
         iRet = pThis->qDestruct(pThis);
@@ -4090,7 +4110,7 @@ static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiS
     DEFiRet;
 
     pWti = wtiGetDummy();
-    pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
+    qqueueSetWtiShutdownImmediate(pThis, pWti);
 
     for (i = 0; i < pMultiSub->nElem; ++i) {
         CHKiRet(qAddDirectWithWti(pThis, (void *)pMultiSub->ppMsgs[i], pWti));
