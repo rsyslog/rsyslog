@@ -427,7 +427,8 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
                 iSrc, maxDest);
             iSrc = maxDest;
         }
-        memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
+        assert(iSrc <= maxDest);
+        memcpy(pDst, pszMsg, iSrc); /* fast copy known good - iSrc bounded by maxDest */
     }
     iDst = iSrc;
     while (iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
