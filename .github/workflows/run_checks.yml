@@ -895,7 +895,7 @@ jobs:
             arch: arm64
             sanitizer: tsan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     name: macOS CI (${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.sanitizer }})
     env:
       USE_AUTO_DEBUG: true
@@ -1049,11 +1049,46 @@ jobs:
             echo "Running without sanitizers"
           fi
 
+          export MAKE_CHECK_TIMEOUT_SECONDS=1200
+
           set +e
-          make -j10 check VERBOSE=1
+          python3 - <<'PY'
+          import os
+          import signal
+          import subprocess
+          import sys
+
+          timeout = int(os.environ["MAKE_CHECK_TIMEOUT_SECONDS"])
+          proc = subprocess.Popen(
+              ["make", "-j10", "check", "VERBOSE=1"],
+              start_new_session=True,
+          )
+          try:
+              sys.exit(proc.wait(timeout=timeout))
+          except subprocess.TimeoutExpired:
+              print(f"make check exceeded {timeout}s", flush=True)
+              try:
+                  os.killpg(proc.pid, signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
+              try:
+                  proc.wait(timeout=10)
+              except subprocess.TimeoutExpired:
+                  try:
+                      os.killpg(proc.pid, signal.SIGKILL)
+                  except ProcessLookupError:
+                      pass
+                  proc.wait()
+              sys.exit(124)
+          PY
           EXIT_CODE=$?
+
           STATUS=success
-          if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
+          if [ "$EXIT_CODE" -eq 124 ]; then
+            STATUS=timed_out
+          elif [ "$EXIT_CODE" -ne 0 ]; then
+            STATUS=failure
+          fi
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -1091,8 +1126,49 @@ jobs:
           CORE_COUNT=$(find_core_files | wc -l || echo 0)
           echo "Total core files found: $CORE_COUNT"
 
+      - name: Prepare CI failure evidence
+        if: >-
+          ${{
+            steps.code_changes.outputs.any_changed == 'true' &&
+            steps.run_tests.outputs.status != '' &&
+            steps.run_tests.outputs.status != 'success'
+          }}
+        run: |
+          devtools/gather-check-logs.sh || true
+          for path in failed-tests.log tests config.log; do
+            if [ -e "$path" ]; then
+              sudo chmod -R a+rX "$path" || true
+            fi
+          done
+
+      - name: Upload CI failure evidence
+        if: >-
+          ${{
+            steps.code_changes.outputs.any_changed == 'true' &&
+            steps.run_tests.outputs.status != '' &&
+            steps.run_tests.outputs.status != 'success'
+          }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: >-
+            ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{
+            matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
+          path: |
+            failed-tests.log
+            tests/failed-tests.log
+            tests/test-suite.log
+            tests/*.log
+            tests/*.trs
+            config.log
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: show error logs and fail if tests failed
-        if: steps.run_tests.outputs.status == 'failure'
+        if: >-
+          ${{
+            steps.run_tests.outputs.status != '' &&
+            steps.run_tests.outputs.status != 'success'
+          }}
         run: |
           echo "=== Post-failure diagnostics ==="
           echo "Note: Comprehensive error analysis including core dumps,"
