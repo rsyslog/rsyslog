@@ -479,12 +479,12 @@ static void cnfPrintToken(const char *token);
 <INOBJ>"[" |
 <INOBJ>"]" |
 <INOBJ>"="			{ cnfPrintToken(yytext); return(yytext[0]); }
-<INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
+<INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7]{1,3})*\" {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\[0-7]{1,3})*` {
+<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7]{1,3})*` {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = expand_backticks(yytext+1);

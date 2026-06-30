@@ -1,8 +1,16 @@
+.. meta::
+   :description: RainerScript string constants and escape sequences.
+   :keywords: rsyslog, rainerscript, string constants, escapes, hex, octal
+
 Rsyslog Parameter String Constants
 ==================================
 
+.. summary-start
+
 String constants provide values that are evaluated at startup and remain unchanged
 for the lifetime of the rsyslog process.
+
+.. summary-end
 
 Uses
 ----
@@ -13,8 +21,30 @@ function arguments, among other places.
 Escaping
 --------
 
-In string constants, special characters are escaped by prepending a backslash,
-similar to C or PHP.
+In string constants, special characters are escaped by prepending a backslash.
+The defined escape sequences are:
+
+- ``\\`` - single backslash
+- ``\'`` - single quote inside single-quoted strings
+- ``\"`` - double quote inside double-quoted strings
+- ``\?`` - question mark
+- ``\a`` - alert
+- ``\b`` - backspace
+- ``\f`` - form feed
+- ``\n`` - LF
+- ``\r`` - CR
+- ``\t`` - horizontal tab
+- ``\v`` - vertical tab
+- ``\ooo`` - byte value written as exactly three octal digits
+- ``\xhh`` - byte value written as exactly two hexadecimal digits
+
+Use the full-width forms for byte escapes. For example, ``\101`` and
+``\x41`` both produce ``A``. Shorter octal spellings are not a documented
+interface and should not be used in new configurations. To emit literal text
+that otherwise looks like a byte escape, escape the backslash itself; for
+example, write ``\\x41`` for literal ``\x41`` in a regular parameter. Some
+parameters, such as template ``constant(value=...)``, interpret escapes again
+after configuration parsing and therefore need escaping for that second pass.
 
 If in doubt how to escape properly, use the
 `RainerScript String Escape Online Tool

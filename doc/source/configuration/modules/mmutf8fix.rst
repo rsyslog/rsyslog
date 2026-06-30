@@ -120,7 +120,10 @@ This sample replaces each invalid byte with the UTF-8 byte sequence for
 .. code-block:: rsyslog
 
   module(load="mmutf8fix")
-  action(type="mmutf8fix" replacementSequence="\357\277\275")
+  action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
+
+The equivalent octal spelling is ``\357\277\275``. Hexadecimal escapes use
+exactly two digits, and octal escapes use exactly three digits.
 
 The same setting can be expressed through YAML configuration.
 
@@ -132,7 +135,7 @@ The same setting can be expressed through YAML configuration.
   rulesets:
     - name: main
       script: |
-        action(type="mmutf8fix" replacementSequence="\357\277\275")
+        action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
 
 .. toctree::
    :hidden:
