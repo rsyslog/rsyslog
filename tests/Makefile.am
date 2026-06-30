@@ -807,7 +807,12 @@ TESTS_SNMP_FULL = \
 
 TESTS_MMUTF8FIX = \
         mmutf8fix_no_error.sh \
+        mmutf8fix_replacement_sequence.sh \
+        mmutf8fix_replacement_sequence_conflict.sh \
         mmutf8fix_tag.sh
+
+TESTS_MMUTF8FIX_YAML = \
+        yaml-mmutf8fix-replacement-sequence.sh
 
 TESTS_MMUTF8FIX_SD = \
         mmutf8fix_sd.sh
@@ -2169,6 +2174,7 @@ EXTRA_DIST += $(TESTS_RATELIMIT_IMPTCP_YAML)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
+EXTRA_DIST += $(TESTS_MMUTF8FIX_YAML)
 EXTRA_DIST += $(TESTS_MMUTF8FIX_SD)
 EXTRA_DIST += $(TESTS_MMAITAG)
 EXTRA_DIST += $(TESTS_MAIL)
@@ -2745,6 +2751,12 @@ endif # if ENABLE_SNMP
 
 if ENABLE_MMUTF8FIX
 TESTS += $(TESTS_MMUTF8FIX)
+endif # if ENABLE_MMUTF8FIX
+
+if ENABLE_MMUTF8FIX
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMUTF8FIX_YAML)
+endif # HAVE_LIBYAML
 endif # if ENABLE_MMUTF8FIX
 
 if ENABLE_MMUTF8FIX

@@ -924,6 +924,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmtaghostname-tag.rst \
     source/reference/parameters/mmutf8fix-mode.rst \
     source/reference/parameters/mmutf8fix-replacementchar.rst \
+    source/reference/parameters/mmutf8fix-replacementsequence.rst \
     source/reference/parameters/omazureeventhubs-amqp_address.rst \
     source/reference/parameters/omazureeventhubs-azure_key.rst \
     source/reference/parameters/omazureeventhubs-azure_key_name.rst \

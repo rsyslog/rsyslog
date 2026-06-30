@@ -19,12 +19,14 @@ While they are typically uncritical with plain text files, they can
 cause big headache with database sources as well as systems like
 ElasticSearch.
 
-The module supports different "fixing" modes and fixes. The current
-implementation will always replace invalid bytes with a single US ASCII
-character. Additional replacement modes will probably be added in the
-future, depending on user demand. In the longer term it could also be
-evolved into an any-charset-to-UTF8 converter. But first let's see if it
-really gets into widespread enough use.
+The module supports different "fixing" modes and replacement markers. By
+default it replaces invalid bytes with a single printable US-ASCII
+character. For configurations that need a multi-byte marker, the
+``replacementSequence`` action parameter can instead replace each invalid
+input byte with a configured byte sequence such as the UTF-8 encoding of
+``U+FFFD``. In the longer term it could also be evolved into an
+any-charset-to-UTF8 converter. But first let's see if it really gets into
+widespread enough use.
 
 Proper Usage
 ============
@@ -78,6 +80,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmutf8fix-replacementchar.rst
           :start-after: .. summary-start
           :end-before: .. summary-end
+   * - :ref:`param-mmutf8fix-replacementsequence`
+     - .. include:: ../../reference/parameters/mmutf8fix-replacementsequence.rst
+          :start-after: .. summary-start
+          :end-before: .. summary-end
 
 Examples
 ========
@@ -108,8 +114,29 @@ This is mostly the same as the previous sample, but uses
   module(load="mmutf8fix")
   if $fromhost-ip == "10.0.0.1" then action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
 
+This sample replaces each invalid byte with the UTF-8 byte sequence for
+``U+FFFD`` instead of a single ASCII character.
+
+.. code-block:: rsyslog
+
+  module(load="mmutf8fix")
+  action(type="mmutf8fix" replacementSequence="\357\277\275")
+
+The same setting can be expressed through YAML configuration.
+
+.. code-block:: yaml
+
+  modules:
+    - load: "mmutf8fix"
+
+  rulesets:
+    - name: main
+      script: |
+        action(type="mmutf8fix" replacementSequence="\357\277\275")
+
 .. toctree::
    :hidden:
 
    ../../reference/parameters/mmutf8fix-mode
    ../../reference/parameters/mmutf8fix-replacementchar
+   ../../reference/parameters/mmutf8fix-replacementsequence
