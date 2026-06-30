@@ -45,6 +45,12 @@ struct reattach_ctx {
     int key;
 };
 
+struct after_mark_replace_ctx {
+    struct counted lookup;
+    struct counted *replacement;
+    int replace_result;
+};
+
 static struct pause_ctx *blocking_eq_pause;
 
 static unsigned int hash_counted(void *ptr) {
@@ -153,6 +159,13 @@ static void start_blocking_find_hook(rshash_t *h __attribute__((unused)), void *
     pause_wait_entered(&ctx->pause);
 }
 
+static void replace_after_mark_hook(rshash_t *h, void *usr) {
+    struct after_mark_replace_ctx *ctx = usr;
+
+    rshash_test_set_after_mark_hook(NULL, NULL);
+    ctx->replace_result = rshash_replace(h, &ctx->lookup, ctx->replacement, NULL);
+}
+
 /* Forced unlink CAS failure must fall into helper unlink and retire the key exactly once. */
 static int test_forced_helper_unlink(void) {
     int keys_freed = 0;
@@ -192,6 +205,41 @@ static int test_marked_node_cleanup_in_replace(void) {
     CHECK(keys_freed == 1);
     CHECK(values_freed == 2);
     CHECK(rshash_count(table) == 0);
+    rshash_destroy(table, 1);
+    CHECK(keys_freed == 1);
+    CHECK(values_freed == 2);
+    return 0;
+}
+
+/*
+ * If remove marks a node and another point operation observes it before the
+ * remover unlinks it, cleanup must remain single-owner and the replacement
+ * attempt must not resurrect the removed entry.
+ */
+static int test_replace_observes_marked_after_remove(void) {
+    int keys_freed = 0;
+    int values_freed = 0;
+    struct counted lookup = {.value = 1};
+    struct counted *removed;
+    struct after_mark_replace_ctx ctx;
+    rshash_t *table = rshash_create(3, hash_counted, eq_counted, counted_free, counted_free);
+
+    CHECK(table != NULL);
+    CHECK(rshash_put_unique(table, new_counted(1, &keys_freed), new_counted(10, &values_freed)) != 0);
+    ctx.lookup.value = 1;
+    ctx.lookup.freed = &keys_freed;
+    ctx.replacement = new_counted(20, &values_freed);
+    ctx.replace_result = -1;
+    rshash_test_set_after_mark_hook(replace_after_mark_hook, &ctx);
+    removed = rshash_remove(table, &lookup);
+    CHECK(removed != NULL);
+    CHECK(removed->value == 10);
+    CHECK(ctx.replace_result == 0);
+    counted_free(removed);
+    counted_free(ctx.replacement);
+    CHECK(rshash_count(table) == 0);
+    CHECK(keys_freed == 1);
+    CHECK(values_freed == 2);
     rshash_destroy(table, 1);
     CHECK(keys_freed == 1);
     CHECK(values_freed == 2);
@@ -319,6 +367,8 @@ int main(void) {
     if (test_forced_helper_unlink()) return 1;
     rshash_test_reset_hooks();
     if (test_marked_node_cleanup_in_replace()) return 1;
+    rshash_test_reset_hooks();
+    if (test_replace_observes_marked_after_remove()) return 1;
     rshash_test_reset_hooks();
     if (test_scan_remove_cleans_marked_node()) return 1;
     rshash_test_reset_hooks();
