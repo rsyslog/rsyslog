@@ -816,7 +816,7 @@ finalize_it:
  * it helps us keep up the overall concurrency level.
  * rgerhards, 2010-06-09
  */
-static rsRetVal preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
+static rsRetVal preprocessBatch(batch_t *pBatch, wti_t *pWti) {
     prop_t *ip;
     prop_t *fqdn;
     prop_t *localName;
@@ -826,7 +826,7 @@ static rsRetVal preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
     rsRetVal localRet;
     DEFiRet;
 
-    for (i = 0; i < pBatch->nElem && !*pbShutdownImmediate; i++) {
+    for (i = 0; i < pBatch->nElem && !wtiIsShutdownImmediate(pWti); i++) {
         pMsg = pBatch->pElem[i].pMsg;
         if ((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
             DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
@@ -872,12 +872,12 @@ finalize_it:
 static rsRetVal msgConsumer(void __attribute__((unused)) * notNeeded, batch_t *pBatch, wti_t *pWti) {
     DEFiRet;
     assert(pBatch != NULL);
-    preprocessBatch(pBatch, pWti->pbShutdownImmediate);
+    preprocessBatch(pBatch, pWti);
     ruleset.ProcessBatch(pBatch, pWti);
     // TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we
     // do not have this yet and so we emulate -- 2010-06-10
     int i;
-    for (i = 0; i < pBatch->nElem && !*pWti->pbShutdownImmediate; i++) {
+    for (i = 0; i < pBatch->nElem && !wtiIsShutdownImmediate(pWti); i++) {
         pBatch->eltState[i] = BATCH_STATE_COMM;
     }
     RETiRet;

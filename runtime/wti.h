@@ -75,6 +75,7 @@ struct wti_s {
         int bIsRunning; /* is this thread currently running? (must be int for atomic op!) */
         sbool bAlwaysRunning; /* should this thread always run? */
         int *pbShutdownImmediate; /* end processing of this batch immediately if set to 1 */
+        DEF_ATOMIC_HELPER_MUT(*pmutShutdownImmediate); /* fallback mutex for atomic access */
         wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
         batch_t batch; /* pointer to an object array meaningful for current user
                   pointer (e.g. queue pUsr data elemt) */
@@ -93,6 +94,15 @@ struct wti_s {
             uint16_t rulesetCallDepth; /* synchronous ruleset call nesting depth */
         } execState; /* state for the execution engine */
 };
+
+
+static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
+#ifdef HAVE_ATOMIC_BUILTINS
+    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, NULL);
+#else
+    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
+#endif
+}
 
 
 /* prototypes */
