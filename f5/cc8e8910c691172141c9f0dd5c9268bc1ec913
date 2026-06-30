@@ -1,0 +1,34 @@
+runtime/wti.h
+  s_a92b7e9f815247::t_c5894fc15f1c44 78
+  s_a92b7e9f815247::t_46f15b81f70537 100-102,104
+  s_a92b7e9f815247::t_95f6421ec3c094 99,103,105
+  s_a92b7e9f815247::t_8f9867668dd852 106-107
+runtime/queue.c
+  s_a92b7e9f815247::t_a940e83d6c833c 517,519,2315,3831
+  s_a92b7e9f815247::t_44aca53d1ac49d 1954,2099,2103,2922,3213,3267,3727,4113
+  s_a92b7e9f815247::t_ee30cb066d72cd 505-516,518,520-522
+runtime/action.c
+  s_a92b7e9f815247::t_4564e3418fab01 887,930,960,991,1745,1875
+runtime/queue.h
+  s_a92b7e9f815247::t_a940e83d6c833c 97
+runtime/ruleset.c
+  s_a92b7e9f815247::t_4564e3418fab01 541,611
+tools/rsyslogd.c
+  s_a92b7e9f815247::t_97126d8bf03aa9 819,829,875,880
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "f5cc8e8910c691172141c9f0dd5c9268bc1ec913",
+  "prompts": {},
+  "sessions": {
+    "s_a92b7e9f815247": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f180c-aa86-7951-8a7f-c99bdfa6a3ee",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
