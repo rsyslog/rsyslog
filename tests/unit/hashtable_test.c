@@ -43,6 +43,10 @@ struct scan_count_ctx {
     int sum;
 };
 
+struct scan_stop_ctx {
+    int seen;
+};
+
 struct remove_even_ctx {
     int values_freed;
 };
@@ -145,11 +149,118 @@ static int test_modern_unique_replace_and_destructors(void) {
     return 0;
 }
 
+/*
+ * Create contract: a table needs explicit hash and equality callbacks. Invalid callback arguments must fail cleanly
+ * without constructing a partial table.
+ */
+static int test_create_rejects_invalid_callbacks(void) {
+    CHECK(rshash_create(3, NULL, eq_int, free, free) == NULL);
+    CHECK(rshash_create(3, hash_int, NULL, free, free) == NULL);
+    return 0;
+}
+
+/*
+ * Replace miss contract: replacing a missing key returns false and leaves ownership of the supplied replacement value
+ * with the caller.
+ */
+static int test_replace_miss_keeps_value_ownership(void) {
+    int values_freed = 0;
+    int key = 17;
+    rshash_t *table = rshash_create(3, hash_int, eq_int, free, counted_free);
+    struct counted *replacement = calloc(1, sizeof(*replacement));
+
+    CHECK(table != NULL);
+    CHECK(replacement != NULL);
+    replacement->count = &values_freed;
+    replacement->value = 1234;
+
+    CHECK(rshash_replace(table, &key, replacement, NULL) == 0);
+    CHECK(values_freed == 0);
+    counted_free(replacement);
+    CHECK(values_freed == 1);
+    rshash_destroy(table, 1);
+    CHECK(values_freed == 1);
+    return 0;
+}
+
+/*
+ * Destroy contract: keys are always table-owned and freed at destroy time; values are destroyed only when free_values
+ * is non-zero.
+ */
+static int test_destroy_free_values_contract(void) {
+    int keys_freed = 0;
+    int values_freed = 0;
+    rshash_t *table = rshash_create(3, hash_int, eq_int, counted_free, counted_free);
+    struct counted *k1 = calloc(1, sizeof(*k1));
+    struct counted *v1 = calloc(1, sizeof(*v1));
+    struct counted *k2 = calloc(1, sizeof(*k2));
+    struct counted *v2 = calloc(1, sizeof(*v2));
+
+    CHECK(table != NULL);
+    CHECK(k1 != NULL && v1 != NULL && k2 != NULL && v2 != NULL);
+    k1->count = &keys_freed;
+    k2->count = &keys_freed;
+    v1->count = &values_freed;
+    v2->count = &values_freed;
+    k1->value = 1;
+    k2->value = 2;
+    CHECK(rshash_put_unique(table, k1, v1) != 0);
+    CHECK(rshash_put_unique(table, k2, v2) != 0);
+    rshash_destroy(table, 0);
+    CHECK(keys_freed == 2);
+    CHECK(values_freed == 0);
+    counted_free(v1);
+    counted_free(v2);
+    CHECK(values_freed == 2);
+
+    keys_freed = 0;
+    values_freed = 0;
+    table = rshash_create(3, hash_int, eq_int, counted_free, counted_free);
+    CHECK(table != NULL);
+    k1 = calloc(1, sizeof(*k1));
+    v1 = calloc(1, sizeof(*v1));
+    k2 = calloc(1, sizeof(*k2));
+    v2 = calloc(1, sizeof(*v2));
+    CHECK(k1 != NULL && v1 != NULL && k2 != NULL && v2 != NULL);
+    k1->count = &keys_freed;
+    k2->count = &keys_freed;
+    v1->count = &values_freed;
+    v2->count = &values_freed;
+    k1->value = 1;
+    k2->value = 2;
+    CHECK(rshash_put_unique(table, k1, v1) != 0);
+    CHECK(rshash_put_unique(table, k2, v2) != 0);
+    rshash_destroy(table, 1);
+    CHECK(keys_freed == 2);
+    CHECK(values_freed == 2);
+    return 0;
+}
+
+/*
+ * Default ownership contract: NULL destructors mean rshash falls back to free() for table-owned keys and, when
+ * requested, values. The oracle is clean completion under normal and memory-checking test lanes.
+ */
+static int test_default_destructors_use_free(void) {
+    rshash_t *table = rshash_create(3, hash_int, eq_int, NULL, NULL);
+
+    CHECK(table != NULL);
+    CHECK(rshash_put_unique(table, new_int(1), new_int(11)) != 0);
+    CHECK(rshash_put_unique(table, new_int(2), new_int(22)) != 0);
+    rshash_destroy(table, 1);
+    return 0;
+}
+
 static int scan_count_cb(void *key __attribute__((unused)), void *value, void *usr) {
     struct scan_count_ctx *ctx = usr;
     ctx->seen++;
     ctx->sum += *(int *)value;
     return 1;
+}
+
+static int scan_stop_after_one_cb(void *key __attribute__((unused)), void *value __attribute__((unused)), void *usr) {
+    struct scan_stop_ctx *ctx = usr;
+    ++ctx->seen;
+    return 0;
 }
 
 static int remove_even_pred(void *key, void *value __attribute__((unused)), void *usr __attribute__((unused))) {
@@ -162,10 +273,26 @@ static void remove_even_removed(void *key __attribute__((unused)), void *value, 
     free(value);
 }
 
+/* Null scan callbacks are no-op API calls; they must not enter traversal or disturb table contents. */
+static int test_scan_null_callbacks_are_noops(void) {
+    rshash_t *table = rshash_create(3, hash_int, eq_int, free, free);
+    int key = 1;
+
+    CHECK(table != NULL);
+    CHECK(rshash_put_unique(table, new_int(1), new_int(11)) != 0);
+    rshash_scan(table, NULL, NULL);
+    CHECK(rshash_scan_remove_if(table, NULL, NULL, NULL) == 0);
+    CHECK(rshash_find(table, &key) != NULL);
+    CHECK(rshash_count(table) == 1);
+    rshash_destroy(table, 1);
+    return 0;
+}
+
 /* Modern weak scans visit live entries safely, and scan-remove removes matching nodes without cursor state. */
 static int test_scan_and_scan_remove(void) {
     rshash_t *table = rshash_create(7, hash_int, eq_int, free, free);
     struct scan_count_ctx scan_ctx = {0, 0};
+    struct scan_stop_ctx stop_ctx = {0};
     struct remove_even_ctx remove_ctx = {0};
     int key_one = 1;
     int key_two = 2;
@@ -178,6 +305,8 @@ static int test_scan_and_scan_remove(void) {
     rshash_scan(table, scan_count_cb, &scan_ctx);
     CHECK(scan_ctx.seen == 3);
     CHECK(scan_ctx.sum == 66);
+    rshash_scan(table, scan_stop_after_one_cb, &stop_ctx);
+    CHECK(stop_ctx.seen == 1);
     CHECK(rshash_scan_remove_if(table, remove_even_pred, remove_even_removed, &remove_ctx) == 1);
     CHECK(remove_ctx.values_freed == 1);
     CHECK(rshash_find(table, &key_two) == NULL);
@@ -325,6 +454,11 @@ static int test_concurrent_unique_insert_same_key(void) {
 int main(void) {
     if (test_rshash_basic_and_duplicate()) return 1;
     if (test_modern_unique_replace_and_destructors()) return 1;
+    if (test_create_rejects_invalid_callbacks()) return 1;
+    if (test_replace_miss_keeps_value_ownership()) return 1;
+    if (test_destroy_free_values_contract()) return 1;
+    if (test_default_destructors_use_free()) return 1;
+    if (test_scan_null_callbacks_are_noops()) return 1;
     if (test_scan_and_scan_remove()) return 1;
     if (test_growth_preserves_entries()) return 1;
     if (test_concurrent_point_operations()) return 1;
