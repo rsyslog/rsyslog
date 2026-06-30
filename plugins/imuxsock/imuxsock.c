@@ -65,7 +65,6 @@
 #include "unlimited_select.h"
 #include "statsobj.h"
 #include "datetime.h"
-#include "hashtable.h"
 #include "rshash.h"
 #include "ratelimit.h"
 
@@ -147,7 +146,7 @@ typedef struct lstn_s {
     unsigned int ratelimitBurst;
     ratelimit_t *dflt_ratelimiter; /*ratelimiter to apply if none else is to be used */
     intTiny ratelimitSev; /* severity level (and below) for which rate-limiting shall apply */
-    struct hashtable *ht; /* our hashtable for rate-limiting */
+    rshash_t *ht; /* our hashtable for rate-limiting */
     sbool bParseHost; /* should parser parse host name?  read-only after startup */
     sbool bCreatePath; /* auto-creation of socket directory? */
     sbool bUseCreds; /* pull original creator credentials from socket */
@@ -408,8 +407,8 @@ static rsRetVal addListner(instanceConf_t *inst) {
         CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
     }
     if (inst->ratelimitInterval > 0) {
-        if ((listeners[nfd].ht =
-                 create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))ratelimitDestruct)) == NULL) {
+        if ((listeners[nfd].ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free,
+                                               (void (*)(void *))ratelimitDestruct)) == NULL) {
             /* in this case, we simply turn off rate-limiting */
             DBGPRINTF(
                 "imuxsock: turning off rate limiting because we could not "
@@ -638,7 +637,7 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
         FINALIZE;
     }
 
-    rl = hashtable_search(pLstn->ht, &cred->pid);
+    rl = rshash_find(pLstn->ht, &cred->pid);
     if (rl == NULL) {
         prunePidRatelimiters(pLstn);
         enforcePidRatelimiterCap(pLstn);
@@ -665,7 +664,7 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
         ratelimitSetSeverity(rl, pLstn->ratelimitSev);
         CHKmalloc(keybuf = malloc(sizeof(pid_t)));
         *keybuf = cred->pid;
-        r = hashtable_insert(pLstn->ht, keybuf, rl);
+        r = rshash_put(pLstn->ht, keybuf, rl);
         if (r == 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
@@ -686,7 +685,7 @@ static void removePidRatelimiter(lstn_t *pLstn, pid_t pid) {
         return;
     }
 
-    rl = hashtable_remove(pLstn->ht, &pid);
+    rl = rshash_remove(pLstn->ht, &pid);
     if (rl != NULL) {
         ratelimitDestruct(rl);
         STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
@@ -707,7 +706,7 @@ static void deadPidRatelimiterRemoved(void *key __attribute__((unused)),
 
 static void prunePidRatelimiters(lstn_t *pLstn) {
     assert(pLstn != NULL);
-    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) == 0) {
+    if (pLstn == NULL || pLstn->ht == NULL || rshash_count(pLstn->ht) == 0) {
         return;
     }
 
@@ -730,7 +729,7 @@ static void enforcePidRatelimiterCap(lstn_t *pLstn) {
     struct first_pid_scan_ctx scan_ctx = {0, 0};
 
     assert(pLstn != NULL);
-    if (pLstn == NULL || pLstn->ht == NULL || hashtable_count(pLstn->ht) < MAX_DYNAMIC_RATELIMITERS) {
+    if (pLstn == NULL || pLstn->ht == NULL || rshash_count(pLstn->ht) < MAX_DYNAMIC_RATELIMITERS) {
         return;
     }
 
@@ -752,8 +751,8 @@ static void releasePidRatelimiterCache(lstn_t *pLstn) {
         return;
     }
 
-    count = hashtable_count(pLstn->ht);
-    hashtable_destroy(pLstn->ht, 1);
+    count = rshash_count(pLstn->ht);
+    rshash_destroy(pLstn->ht, 1);
     pLstn->ht = NULL;
     for (i = 0; i < count; ++i) {
         STATSCOUNTER_DEC(ctrNumRatelimiters, mutCtrNumRatelimiters);
@@ -1291,7 +1290,7 @@ static rsRetVal activateListeners(void) {
         }
 #endif
         if (runModConf->ratelimitIntervalSysSock > 0) {
-            if ((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+            if ((listeners[0].ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free, NULL)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
                          "imuxsock: turning off rate limiting because "

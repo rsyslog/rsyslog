@@ -50,7 +50,6 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "hashtable.h"
 #include "rshash.h"
 // #include "cfsysline.h"
 
@@ -93,7 +92,7 @@ typedef struct _instanceData {
     uchar *cmdfile; /**< path to command file (unused) */
     uchar *senderidTemplate; /**< template that defines sender ID */
     pthread_rwlock_t mutSenders; /**< protects the sender hash table */
-    struct hashtable *stats_senders; /**< hash table of sender_stats_t */
+    rshash_t *stats_senders; /**< hash table of sender_stats_t */
     int bShutdownBackgroundWriter; /**< tells bgwriter to terminate */
     DEF_ATOMIC_HELPER_MUT(mutShutdownBackgroundWriter);
     pthread_t bgw_tid; /**< thread ID of background writer */
@@ -198,7 +197,7 @@ static rsRetVal addSender(instanceData *const pData,
     stat->firstSeen = firstSeen;
     stat->lastSeen = lastSeen;
     pthread_mutex_init(&stat->mut, NULL);
-    if (hashtable_insert(pData->stats_senders, (void *)stat->sender, (void *)stat) == 0) {
+    if (rshash_put(pData->stats_senders, (void *)stat->sender, (void *)stat) == 0) {
         LogError(errno, RS_RET_INTERNAL_ERROR,
                  "omsendertrack error inserting sender '%s' into sender "
                  "hash table - entry lost",
@@ -329,7 +328,7 @@ initHashtable(instanceData *const pData)
     DEFiRet;
     rsRetVal localRet;
 
-    if ((pData->stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+    if ((pData->stats_senders = rshash_create(100, hash_from_string, key_equals_string, free, NULL)) == NULL) {
         LogError(0, RS_RET_INTERNAL_ERROR,
                  "error trying to initialize hash-table "
                  "for sender table. Sender statistics and warnings are disabled.");
@@ -440,12 +439,12 @@ static rsRetVal writeSenderStats(instanceData *const pData, FILE *const fp) {
     struct write_sender_stats_ctx scan_ctx = {fp, 0};
     DEFiRet;
 
-    dbgprintf("writeSenderStats() called, hashtable_count %d\n", hashtable_count(pData->stats_senders));
+    dbgprintf("writeSenderStats() called, rshash_count %d\n", rshash_count(pData->stats_senders));
     fprintf(fp, "[\n"); /* begin JSON array */
 
     pthread_rwlock_rdlock(&pData->mutSenders);
 
-    if (hashtable_count(pData->stats_senders) > 0) {
+    if (rshash_count(pData->stats_senders) > 0) {
         rshash_scan(pData->stats_senders, writeSenderStatsScan, &scan_ctx);
     }
 
@@ -589,14 +588,14 @@ static rsRetVal recordSender(instanceData *const pData, const uchar *const sende
     assert(pData->stats_senders != NULL);
 
     pthread_rwlock_rdlock(&pData->mutSenders);
-    stat = hashtable_search(pData->stats_senders, (void *)sender);
+    stat = rshash_find(pData->stats_senders, (void *)sender);
     if (stat == NULL) {
         /* we now need to write to the hash table */
         pthread_rwlock_unlock(&pData->mutSenders);
         pthread_rwlock_wrlock(&pData->mutSenders);
 
         // Re-check in case another writer added it
-        stat = hashtable_search(pData->stats_senders, (void *)sender);
+        stat = rshash_find(pData->stats_senders, (void *)sender);
         if (stat == NULL) {
             DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
             CHKiRet(addSender(pData, (const char *)sender, 1, lastSeen, lastSeen));
@@ -689,7 +688,7 @@ BEGINfreeInstance
     if (pData->statefile_tmp) free((void *)pData->statefile_tmp);
     pthread_rwlock_destroy(&pData->mutSenders);
     DESTROY_ATOMIC_HELPER_MUT(pData->mutShutdownBackgroundWriter);
-    hashtable_destroy(pData->stats_senders, 1); /* 1 => free all values automatically */
+    rshash_destroy(pData->stats_senders, 1); /* 1 => free all values automatically */
 ENDfreeInstance
 
 

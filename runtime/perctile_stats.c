@@ -135,13 +135,13 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
         }
         pthread_rwlock_wrlock(&bkt->lock);
         // Delete all items in hashtable
-        size_t count = hashtable_count(bkt->htable);
+        size_t count = rshash_count(bkt->htable);
         if (count) {
             dbgprintf("%s() - All container instances, count=%zu...\n", __FUNCTION__, count);
             rshash_scan(bkt->htable, perctile_bucket_destruct_scan, bkt);
             dbgprintf("End of container instances.\n");
         }
-        hashtable_destroy(bkt->htable, 0);
+        rshash_destroy(bkt->htable, 0);
         pthread_rwlock_unlock(&bkt->lock);
         pthread_rwlock_destroy(&bkt->lock);
         perctileDestroyCounter(bkt->bkts != NULL ? bkt->bkts->global_stats : NULL, &bkt->pOpsOverflowCtr);
@@ -204,7 +204,7 @@ static int print_perctile_scan(void *key, void *value, void *usr __attribute__((
 }
 
 static void print_perctiles(perctile_bucket_t *bkt) {
-    if (hashtable_count(bkt->htable)) {
+    if (rshash_count(bkt->htable)) {
         rshash_scan(bkt->htable, print_perctile_scan, NULL);
         PERCTILE_STATS_LOG("\n");
     }
@@ -295,7 +295,7 @@ static rsRetVal perctile_observe(perctile_bucket_t *bkt, uchar *key, int64_t val
 
     pthread_rwlock_wrlock(&bkt->lock);
     lock_initialized = 1;
-    perctile_stat_t *pstat = (perctile_stat_t *)hashtable_search(bkt->htable, key);
+    perctile_stat_t *pstat = (perctile_stat_t *)rshash_find(bkt->htable, key);
     if (!pstat) {
         PERCTILE_STATS_LOG("perctile_observe(): key '%s' not found - creating new pstat", key);
         // create the pstat if not found
@@ -328,7 +328,7 @@ static rsRetVal perctile_observe(perctile_bucket_t *bkt, uchar *key, int64_t val
         }
 
         CHKmalloc(hash_key = ustrdup(key));
-        if (!hashtable_insert(bkt->htable, hash_key, pstat)) {
+        if (!rshash_put(bkt->htable, hash_key, pstat)) {
             perctileStatDestruct(bkt, pstat);
             free(hash_key);
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -438,7 +438,7 @@ static rsRetVal report_perctile_stats(perctile_bucket_t *pbkt) {
     DEFiRet;
 
     pthread_rwlock_rdlock(&pbkt->lock);
-    if (hashtable_count(pbkt->htable)) {
+    if (rshash_count(pbkt->htable)) {
         CHKmalloc(ctx.buf = malloc(pbkt->window_size * sizeof(ITEM)));
         rshash_scan(pbkt->htable, report_perctile_scan, &ctx);
     }
@@ -526,7 +526,7 @@ static rsRetVal perctile_newBucket(
         b->bkts = bkts;
         pthread_rwlockattr_init(&bucket_lock_attr);
         pthread_rwlock_init(&b->lock, &bucket_lock_attr);
-        CHKmalloc(b->htable = create_hashtable(7, hash_from_string, key_equals_string, NULL));
+        CHKmalloc(b->htable = rshash_create(7, hash_from_string, key_equals_string, free, NULL));
         CHKmalloc(b->name = ustrdup(name));
         if (delim) {
             CHKmalloc(b->delim = ustrdup(delim));

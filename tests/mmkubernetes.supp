@@ -1,8 +1,8 @@
 {
-   mmkubernetes: says hashtables are leaked at shutdown but they are freed - not sure what is the problem here
+   mmkubernetes: says rshash tables are leaked at shutdown but they are freed - not sure what is the problem here
    Memcheck:Leak
    fun:malloc
-   fun:create_hashtable
+   fun:rshash_create
    obj:*
    obj:*
    fun:doModInit

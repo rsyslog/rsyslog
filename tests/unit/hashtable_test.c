@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hashtable.h"
 #include "rshash.h"
 
 #define CHECK(cond)                                                                  \
@@ -78,24 +77,25 @@ static int *new_int(int value) {
     return ptr;
 }
 
-/* Legacy API compatibility: duplicate keys are accepted, remove returns only the value, and table-owned keys are freed.
+/* Duplicate-tolerant put semantics: duplicate keys are accepted, remove returns only the value, and table-owned keys
+ * are freed.
  */
-static int test_legacy_basic_and_duplicate(void) {
-    struct hashtable *table = create_hashtable(7, hash_int, eq_int, NULL);
+static int test_rshash_basic_and_duplicate(void) {
+    rshash_t *table = rshash_create(7, hash_int, eq_int, free, NULL);
     int key = 10;
 
     CHECK(table != NULL);
-    CHECK(hashtable_insert(table, new_int(10), new_int(100)) != 0);
-    CHECK(hashtable_insert(table, new_int(10), new_int(200)) != 0);
-    CHECK(hashtable_count(table) == 2);
-    CHECK(hashtable_search(table, &key) != NULL);
-    CHECK(*(int *)hashtable_search(table, &key) == 100 || *(int *)hashtable_search(table, &key) == 200);
-    free(hashtable_remove(table, &key));
-    CHECK(hashtable_count(table) == 1);
-    free(hashtable_remove(table, &key));
-    CHECK(hashtable_count(table) == 0);
-    CHECK(hashtable_remove(table, &key) == NULL);
-    hashtable_destroy(table, 1);
+    CHECK(rshash_put(table, new_int(10), new_int(100)) != 0);
+    CHECK(rshash_put(table, new_int(10), new_int(200)) != 0);
+    CHECK(rshash_count(table) == 2);
+    CHECK(rshash_find(table, &key) != NULL);
+    CHECK(*(int *)rshash_find(table, &key) == 100 || *(int *)rshash_find(table, &key) == 200);
+    free(rshash_remove(table, &key));
+    CHECK(rshash_count(table) == 1);
+    free(rshash_remove(table, &key));
+    CHECK(rshash_count(table) == 0);
+    CHECK(rshash_remove(table, &key) == NULL);
+    rshash_destroy(table, 1);
     return 0;
 }
 
@@ -323,7 +323,7 @@ static int test_concurrent_unique_insert_same_key(void) {
 }
 
 int main(void) {
-    if (test_legacy_basic_and_duplicate()) return 1;
+    if (test_rshash_basic_and_duplicate()) return 1;
     if (test_modern_unique_replace_and_destructors()) return 1;
     if (test_scan_and_scan_remove()) return 1;
     if (test_growth_preserves_entries()) return 1;

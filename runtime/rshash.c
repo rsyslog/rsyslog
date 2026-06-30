@@ -18,20 +18,17 @@ static inline unsigned int wrapping_add_unsigned(unsigned int lhs, unsigned int 
     return (unsigned int)((uint64_t)lhs + rhs);
 }
 
-static inline struct entry *atomic_fetch_entry(struct entry **slot, struct hashtable *h) {
+static inline struct entry *atomic_fetch_entry(struct entry **slot, rshash_t *h) {
     (void)h;
     return (struct entry *)ATOMIC_FETCH_PTR((void **)slot, &h->mutTable);
 }
 
-static inline int atomic_cas_entry(struct entry **slot,
-                                   struct entry *oldval,
-                                   struct entry *newval,
-                                   struct hashtable *h) {
+static inline int atomic_cas_entry(struct entry **slot, struct entry *oldval, struct entry *newval, rshash_t *h) {
     (void)h;
     return ATOMIC_CAS_PTR((void **)slot, oldval, newval, &h->mutTable);
 }
 
-static inline struct rshash_table *atomic_fetch_table(struct rshash_table **slot, struct hashtable *h) {
+static inline struct rshash_table *atomic_fetch_table(struct rshash_table **slot, rshash_t *h) {
     (void)h;
     return (struct rshash_table *)ATOMIC_FETCH_PTR((void **)slot, &h->mutTables);
 }
@@ -39,16 +36,16 @@ static inline struct rshash_table *atomic_fetch_table(struct rshash_table **slot
 static inline int atomic_cas_table(struct rshash_table **slot,
                                    struct rshash_table *oldval,
                                    struct rshash_table *newval,
-                                   struct hashtable *h) {
+                                   rshash_t *h) {
     (void)h;
     return ATOMIC_CAS_PTR((void **)slot, oldval, newval, &h->mutTables);
 }
 
-static void rshash_enter(struct hashtable *h) {
+static void rshash_enter(rshash_t *h) {
     ATOMIC_INC(&h->active_ops, &h->mutActive);
 }
 
-static void free_entry(struct hashtable *h, struct entry *e, const int free_value) {
+static void free_entry(rshash_t *h, struct entry *e, const int free_value) {
     if (h->key_dest == NULL)
         free(e->k);
     else
@@ -62,7 +59,7 @@ static void free_entry(struct hashtable *h, struct entry *e, const int free_valu
     free(e);
 }
 
-static void free_retired_list(struct hashtable *h, struct entry *list) {
+static void free_retired_list(rshash_t *h, struct entry *list) {
     while (list != NULL) {
         struct entry *next = list->retired_next;
         free_entry(h, list, list->retired_free_value);
@@ -70,7 +67,7 @@ static void free_retired_list(struct hashtable *h, struct entry *list) {
     }
 }
 
-static void rshash_try_reclaim(struct hashtable *h) {
+static void rshash_try_reclaim(rshash_t *h) {
     struct entry *list;
 
     if (ATOMIC_FETCH_32BIT_unsigned(&h->active_ops, &h->mutActive) != 0) return;
@@ -93,12 +90,12 @@ static void rshash_try_reclaim(struct hashtable *h) {
     }
 }
 
-static void rshash_leave(struct hashtable *h) {
+static void rshash_leave(rshash_t *h) {
     ATOMIC_DEC(&h->active_ops, &h->mutActive);
     rshash_try_reclaim(h);
 }
 
-static void retire_entry(struct hashtable *h, struct entry *e, const int free_value) {
+static void retire_entry(rshash_t *h, struct entry *e, const int free_value) {
     if (free_value) e->retired_free_value = 1;
     if (!ATOMIC_CAS(&e->retired, 0, 1, &h->mutRetired)) return;
     for (;;) {
@@ -109,7 +106,7 @@ static void retire_entry(struct hashtable *h, struct entry *e, const int free_va
     rshash_try_reclaim(h);
 }
 
-static void bucket_find(struct hashtable *h,
+static void bucket_find(rshash_t *h,
                         struct rshash_table *tbl,
                         const unsigned int idx,
                         const unsigned int hashvalue,
@@ -150,7 +147,7 @@ retry: {
 }
 
 static void bucket_help_unlink(
-    struct hashtable *h, struct rshash_table *tbl, const unsigned int idx, struct entry *target, const int free_value) {
+    rshash_t *h, struct rshash_table *tbl, const unsigned int idx, struct entry *target, const int free_value) {
 retry: {
     struct entry **slot = &tbl->table[idx];
     struct entry *cur = entry_unmark(atomic_fetch_entry(slot, h));
@@ -180,13 +177,13 @@ retry: {
 }
 }
 
-static int entry_is_present(struct hashtable *h, struct entry *entry, struct entry *next) {
+static int entry_is_present(rshash_t *h, struct entry *entry, struct entry *next) {
     (void)h;
     return !entry_is_marked(next) && ATOMIC_FETCH_32BIT(&entry->state, &h->mutTable) != ENTRY_REMOVED;
 }
 
 static int bucket_snapshot_has_duplicate(
-    struct hashtable *h, struct entry *head, const unsigned int hashvalue, void *key, struct entry *self) {
+    rshash_t *h, struct entry *head, const unsigned int hashvalue, void *key, struct entry *self) {
     struct entry *cur;
 
     for (cur = entry_unmark(head); cur != NULL;) {
@@ -197,7 +194,7 @@ static int bucket_snapshot_has_duplicate(
     return 0;
 }
 
-static int has_preferred_duplicate(struct hashtable *h, const unsigned int hashvalue, void *key, struct entry *self) {
+static int has_preferred_duplicate(rshash_t *h, const unsigned int hashvalue, void *key, struct entry *self) {
     struct rshash_table *tbl;
 
     for (tbl = atomic_fetch_table(&h->tables, h); tbl != NULL; tbl = tbl->next) {
@@ -236,7 +233,7 @@ static unsigned int next_table_size(const unsigned int current_size) {
     return 0;
 }
 
-static struct entry *find_in_tables(struct hashtable *h,
+static struct entry *find_in_tables(rshash_t *h,
                                     const unsigned int hashvalue,
                                     void *key,
                                     struct rshash_table **tbl_out,
@@ -264,7 +261,7 @@ static struct entry *find_in_tables(struct hashtable *h,
     return NULL;
 }
 
-static void rshash_maybe_grow(struct hashtable *h) {
+static void rshash_maybe_grow(rshash_t *h) {
     struct rshash_table *current = atomic_fetch_table(&h->tables, h);
     struct rshash_table *newtbl;
     unsigned int next_size;
@@ -283,10 +280,10 @@ static void rshash_maybe_grow(struct hashtable *h) {
     }
 }
 
-static int entry_try_remove(struct hashtable *h, struct entry *entry, void **value);
-static void entry_mark_removed(struct hashtable *h, struct entry *entry);
+static int entry_try_remove(rshash_t *h, struct entry *entry, void **value);
+static void entry_mark_removed(rshash_t *h, struct entry *entry);
 
-static int insert_at_position(struct hashtable *h, void *key, void *value, const int unique) {
+static int insert_at_position(rshash_t *h, void *key, void *value, const int unique) {
     const unsigned int hashvalue = hash(h, key);
     struct entry *e = malloc(sizeof(*e));
     if (e == NULL) return 0;
@@ -357,7 +354,7 @@ static int insert_at_position(struct hashtable *h, void *key, void *value, const
     }
 }
 
-unsigned int hash(struct hashtable *h, void *k) {
+unsigned int hash(rshash_t *h, void *k) {
     unsigned int i = h->hashfn(k);
     i = wrapping_add_unsigned(i, ~(i << 9));
     i ^= ((i >> 14) | (i << 18));
@@ -371,7 +368,7 @@ rshash_t *rshash_create(unsigned int minsize,
                         rshash_key_eq_fn eqfn,
                         rshash_destruct_fn key_destructor,
                         rshash_destruct_fn value_destructor) {
-    struct hashtable *h;
+    rshash_t *h;
     unsigned int pindex;
     unsigned int size = primes[0];
     struct rshash_table *tbl;
@@ -444,7 +441,7 @@ int rshash_replace(rshash_t *h, void *key, void *value, void **old_value) {
     return found;
 }
 
-static int entry_try_remove(struct hashtable *h, struct entry *entry, void **value) {
+static int entry_try_remove(rshash_t *h, struct entry *entry, void **value) {
     (void)h;
     if (!ATOMIC_CAS(&entry->state, ENTRY_LIVE, ENTRY_REMOVED, &h->mutTable)) {
         *value = NULL;
@@ -454,7 +451,7 @@ static int entry_try_remove(struct hashtable *h, struct entry *entry, void **val
     return 1;
 }
 
-static void entry_mark_removed(struct hashtable *h, struct entry *entry) {
+static void entry_mark_removed(rshash_t *h, struct entry *entry) {
     for (;;) {
         struct entry *next = atomic_fetch_entry(&entry->next, h);
         if (entry_is_marked(next)) break;

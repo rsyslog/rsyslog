@@ -34,7 +34,6 @@
 #include "obj.h"
 #include "regexp.h"
 #include "errmsg.h"
-#include "hashtable.h"
 #include "rshash.h"
 
 MODULE_TYPE_LIB
@@ -60,10 +59,10 @@ DEFobjStaticHelpers;
 static pthread_mutex_t mut_regexp;
 
 // Map a regex_t to its associated uncompiled parameters.
-static struct hashtable *regex_to_uncomp = NULL;
+static rshash_t *regex_to_uncomp = NULL;
 
 // Map a (regexp_t, pthead_t) to a perthread_regex.
-static struct hashtable *perthread_regexs = NULL;
+static rshash_t *perthread_regexs = NULL;
 
 
 /*
@@ -140,13 +139,13 @@ static perthread_regex_t *get_perthread_regex(const regex_t *preg) {
     perthread_regex_t key = {.original_preg = preg, .thread = pthread_self()};
 
     pthread_mutex_lock(&mut_regexp);
-    entry = hashtable_search(perthread_regexs, (void *)&key);
+    entry = rshash_find(perthread_regexs, (void *)&key);
     if (!entry) {
-        uncomp_regex_t *uncomp = hashtable_search(regex_to_uncomp, (void *)&preg);
+        uncomp_regex_t *uncomp = rshash_find(regex_to_uncomp, (void *)&preg);
 
         if (uncomp) {
             entry = create_perthread_regex(preg, uncomp);
-            if (!hashtable_insert(perthread_regexs, (void *)entry, entry)) {
+            if (!rshash_put(perthread_regexs, (void *)entry, entry)) {
                 LogError(0, RS_RET_INTERNAL_ERROR,
                          "error trying to insert thread-regexp into hash-table - things "
                          "will not work 100%% correctly (mostly probably out of memory issue)");
@@ -164,7 +163,7 @@ static void remove_uncomp_regexp(regex_t *preg) {
     uncomp_regex_t *uncomp = NULL;
 
     pthread_mutex_lock(&mut_regexp);
-    uncomp = hashtable_remove(regex_to_uncomp, (void *)&preg);
+    uncomp = rshash_remove(regex_to_uncomp, (void *)&preg);
 
     if (uncomp) {
         if (Debug) {
@@ -202,7 +201,7 @@ static void _regfree(regex_t *preg) {
     remove_uncomp_regexp(preg);
 
     pthread_mutex_lock(&mut_regexp);
-    if (!hashtable_count(perthread_regexs)) {
+    if (!rshash_count(perthread_regexs)) {
         pthread_mutex_unlock(&mut_regexp);
         return;
     }
@@ -218,10 +217,10 @@ static void destroy_perthread_regexs(void) {
     if (perthread_regexs == NULL) return;
 
     pthread_mutex_lock(&mut_regexp);
-    if (hashtable_count(perthread_regexs)) {
+    if (rshash_count(perthread_regexs)) {
         rshash_scan(perthread_regexs, cleanup_perthread_regex_scan, NULL);
     }
-    hashtable_destroy(perthread_regexs, 0);
+    rshash_destroy(perthread_regexs, 0);
     perthread_regexs = NULL;
     pthread_mutex_unlock(&mut_regexp);
 }
@@ -249,7 +248,7 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
     // We need to allocate the key because hashtable will free it on remove.
     ppreg = malloc(sizeof(regex_t *));
     *ppreg = preg;
-    ret = hashtable_insert(regex_to_uncomp, (void *)ppreg, uncomp);
+    ret = rshash_put(regex_to_uncomp, (void *)ppreg, uncomp);
     pthread_mutex_unlock(&mut_regexp);
     if (ret == 0) {
         free(uncomp->regex);
@@ -329,14 +328,14 @@ BEGINAbstractObjClassInit(regexp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version *
     if (USE_PERTHREAD_REGEX) {
         pthread_mutex_init(&mut_regexp, NULL);
 
-        regex_to_uncomp = create_hashtable(100, hash_from_regex, key_equals_regex, NULL);
-        perthread_regexs = create_hashtable(100, hash_from_tregex, key_equals_tregex, NULL);
+        regex_to_uncomp = rshash_create(100, hash_from_regex, key_equals_regex, free, NULL);
+        perthread_regexs = rshash_create(100, hash_from_tregex, key_equals_tregex, free, NULL);
         if (regex_to_uncomp == NULL || perthread_regexs == NULL) {
             LogError(0, RS_RET_INTERNAL_ERROR,
                      "error trying to initialize hash-table "
                      "for regexp table. regexp will be disabled.");
-            if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
-            if (perthread_regexs) hashtable_destroy(perthread_regexs, 1);
+            if (regex_to_uncomp) rshash_destroy(regex_to_uncomp, 1);
+            if (perthread_regexs) rshash_destroy(perthread_regexs, 1);
             regex_to_uncomp = NULL;
             perthread_regexs = NULL;
             ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
@@ -352,7 +351,7 @@ BEGINObjClassExit(regexp, OBJ_IS_LOADABLE_MODULE) /* class, version */
     if (USE_PERTHREAD_REGEX) {
         /* release objects we no longer need */
         destroy_perthread_regexs();
-        if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
+        if (regex_to_uncomp) rshash_destroy(regex_to_uncomp, 1);
         regex_to_uncomp = NULL;
         pthread_mutex_destroy(&mut_regexp);
     }

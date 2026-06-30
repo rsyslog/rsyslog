@@ -58,7 +58,6 @@
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "errmsg.h"
-#include "hashtable.h"
 #include "rshash.h"
 #include "rsconf.h"
 
@@ -78,7 +77,7 @@ static statsobj_t *objLast = NULL;
 static pthread_mutex_t mutStats;
 static pthread_mutex_t mutSenders;
 
-static struct hashtable *stats_senders = NULL;
+static rshash_t *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
@@ -566,7 +565,7 @@ static void getSenderStats(rsRetVal (*cb)(void *, const char *),
 
     pthread_mutex_lock(&mutSenders);
 
-    if (hashtable_count(stats_senders) > 0) {
+    if (rshash_count(stats_senders) > 0) {
         rshash_scan(stats_senders, senderStatsScan, &scan_ctx);
     }
 
@@ -834,7 +833,7 @@ rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 
     pthread_mutex_lock(&mutSenders);
     mustUnlock = 1;
-    stat = hashtable_search(stats_senders, (void *)sender);
+    stat = rshash_find(stats_senders, (void *)sender);
     if (stat == NULL) {
         DBGPRINTF("statsRecordSender: sender '%s' not found, adding\n", sender);
         CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
@@ -843,7 +842,7 @@ rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
         if (runConf->globals.reportNewSenders) {
             LogMsg(0, RS_RET_SENDER_APPEARED, LOG_INFO, "new sender '%s'", stat->sender);
         }
-        if (hashtable_insert(stats_senders, (void *)stat->sender, (void *)stat) == 0) {
+        if (rshash_put(stats_senders, (void *)stat->sender, (void *)stat) == 0) {
             LogError(errno, RS_RET_INTERNAL_ERROR,
                      "error inserting sender '%s' into sender "
                      "hash table",
@@ -915,7 +914,7 @@ void checkGoneAwaySenders(const time_t tCurr) {
 
     pthread_mutex_lock(&mutSenders);
 
-    if (hashtable_count(stats_senders) > 0) {
+    if (rshash_count(stats_senders) > 0) {
         rshash_scan_remove_if(stats_senders, goneAwaySenderPred, goneAwaySenderRemoved, &scan_ctx);
     }
 
@@ -998,7 +997,7 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
     CHKiConcCtrl(pthread_mutex_init(&mutStats, NULL));
     CHKiConcCtrl(pthread_mutex_init(&mutSenders, NULL));
 
-    if ((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+    if ((stats_senders = rshash_create(100, hash_from_string, key_equals_string, free, NULL)) == NULL) {
         LogError(0, RS_RET_INTERNAL_ERROR,
                  "error trying to initialize hash-table "
                  "for sender table. Sender statistics and warnings are disabled.");
@@ -1012,5 +1011,5 @@ BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
     /* release objects we no longer need */
     pthread_mutex_destroy(&mutStats);
     pthread_mutex_destroy(&mutSenders);
-    hashtable_destroy(stats_senders, 1);
+    rshash_destroy(stats_senders, 1);
 ENDObjClassExit(statsobj)

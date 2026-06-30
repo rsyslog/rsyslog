@@ -40,7 +40,7 @@
 #include "errmsg.h"
 #include "parserif.h"
 #include "unicode-helper.h"
-#include "hashtable.h"
+#include "rshash.h"
 #include <pthread.h>
 
 
@@ -103,7 +103,7 @@ typedef struct _instanceData {
         sbool limitMaxRetries;
         unsigned int maxRetryCount;
         enum maxRetryOption maxRetryFallback;
-        struct hashtable *randConsisUniqueGeneratedIPs;
+        rshash_t *randConsisUniqueGeneratedIPs;
         enum mode mode;
         uchar replaceChar;
     } ipv4;
@@ -117,8 +117,8 @@ typedef struct _instanceData {
         sbool limitMaxRetries;
         unsigned int maxRetryCount;
         enum maxRetryOption maxRetryFallback;
-        struct hashtable *randConsisUniqueGeneratedIPs;
-        struct hashtable *randConsisIPs;
+        rshash_t *randConsisUniqueGeneratedIPs;
+        rshash_t *randConsisIPs;
     } ipv6;
 
     struct {
@@ -130,8 +130,8 @@ typedef struct _instanceData {
         sbool limitMaxRetries;
         unsigned int maxRetryCount;
         enum maxRetryOption maxRetryFallback;
-        struct hashtable *randConsisUniqueGeneratedIPs;
-        struct hashtable *randConsisIPs;
+        rshash_t *randConsisUniqueGeneratedIPs;
+        rshash_t *randConsisIPs;
     } embeddedIPv4;
 } instanceData;
 
@@ -243,19 +243,19 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     delTree(pData->ipv4.Root, 0);
     if (pData->ipv4.randConsisUniqueGeneratedIPs != NULL) {
-        hashtable_destroy(pData->ipv4.randConsisUniqueGeneratedIPs, 0);
+        rshash_destroy(pData->ipv4.randConsisUniqueGeneratedIPs, 0);
     }
     if (pData->ipv6.randConsisIPs != NULL) {
-        hashtable_destroy(pData->ipv6.randConsisIPs, 1);
+        rshash_destroy(pData->ipv6.randConsisIPs, 1);
     }
     if (pData->ipv6.randConsisUniqueGeneratedIPs != NULL) {
-        hashtable_destroy(pData->ipv6.randConsisUniqueGeneratedIPs, 0);
+        rshash_destroy(pData->ipv6.randConsisUniqueGeneratedIPs, 0);
     }
     if (pData->embeddedIPv4.randConsisIPs != NULL) {
-        hashtable_destroy(pData->embeddedIPv4.randConsisIPs, 1);
+        rshash_destroy(pData->embeddedIPv4.randConsisIPs, 1);
     }
     if (pData->embeddedIPv4.randConsisUniqueGeneratedIPs != NULL) {
-        hashtable_destroy(pData->embeddedIPv4.randConsisUniqueGeneratedIPs, 0);
+        rshash_destroy(pData->embeddedIPv4.randConsisUniqueGeneratedIPs, 0);
     }
     pthread_mutex_destroy(&pData->ipv4Mutex);
     pthread_mutex_destroy(&pData->ipv6Mutex);
@@ -1035,7 +1035,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     } else {
         if (pWrkrData->pData->ipv4.randConsisUnique && pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs == NULL) {
             CHKmalloc(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs =
-                          create_hashtable(512, hash_from_u32, key_equals_u32, NULL));
+                          rshash_create(512, hash_from_u32, key_equals_u32, free, NULL));
         }
         unsigned int attempts = 0;
         const sbool limitRetries = pWrkrData->pData->ipv4.limitMaxRetries;
@@ -1047,7 +1047,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         if (pWrkrData->pData->ipv4.randConsisUnique) {
             do {
                 num = code_ipv4_int(origNum, pWrkrData, bits, anonmode);
-                duplicateFound = (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
+                duplicateFound = (rshash_find(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
                 if (duplicateFound) {
                     if (limitRetries && attempts >= maxRetries) {
                         maxRetryReached = 1;
@@ -1065,7 +1065,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
             if (handling == MAX_RETRY_ZERO) {
                 num = code_ipv4_int(origNum, pWrkrData, bits, ZERO);
                 // duplicateFound determines whether the zeroed IP should be added to the table of unique generated IPs.
-                duplicateFound = (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
+                duplicateFound = (rshash_find(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
             } else {
                 // Accept-duplicates keeps the last randomized IP; no extra work needed.
             }
@@ -1076,7 +1076,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         if (pWrkrData->pData->ipv4.randConsisUnique && !duplicateFound) {
             CHKmalloc(uniqueKey = (uint32_t *)malloc(sizeof(uint32_t)));
             *uniqueKey = num;
-            if (!hashtable_insert(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
+            if (!rshash_put(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
                 DBGPRINTF("hashtable error: insert to ipv4 unique table failed");
                 ABORT_FINALIZE(RS_RET_ERR);
             }
@@ -1515,10 +1515,9 @@ static void generate_ipv6_candidate(struct ipv6_int *num,
 static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t *const pWrkrData, int useEmbedded) {
     struct ipv6_int *hashKey = NULL;
     DEFiRet;
-    struct hashtable *randConsisIPs =
+    rshash_t *randConsisIPs =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisIPs : pWrkrData->pData->ipv6.randConsisIPs;
-    struct hashtable *randConsisUniqueGeneratedIPs = useEmbedded
-                                                         ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
+    rshash_t *randConsisUniqueGeneratedIPs = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
                                                          : pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs;
     const int uniqueMode =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUnique : pWrkrData->pData->ipv6.randConsisUnique;
@@ -1550,7 +1549,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     locked = 1;
 
     if (randConsisIPs == NULL) {
-        CHKmalloc(randConsisIPs = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
+        CHKmalloc(randConsisIPs = rshash_create(512, hash_from_key_fn, keys_equal_fn, free, NULL));
         if (useEmbedded) {
             pWrkrData->pData->embeddedIPv4.randConsisIPs = randConsisIPs;
         } else {
@@ -1559,7 +1558,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     }
 
     if (uniqueMode && randConsisUniqueGeneratedIPs == NULL) {
-        CHKmalloc(randConsisUniqueGeneratedIPs = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
+        CHKmalloc(randConsisUniqueGeneratedIPs = rshash_create(512, hash_from_key_fn, keys_equal_fn, free, NULL));
         if (useEmbedded) {
             pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs = randConsisUniqueGeneratedIPs;
         } else {
@@ -1567,7 +1566,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         }
     }
 
-    char *val = (char *)(hashtable_search(randConsisIPs, num));
+    char *val = (char *)(rshash_find(randConsisIPs, num));
 
     if (val != NULL) {
         rs_cstr_copy(address, val, INET6_ADDRSTRLEN);
@@ -1578,7 +1577,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         if (uniqueMode) {
             do {
                 generate_ipv6_candidate(num, original, address, pWrkrData, useEmbedded, bits, anonmode);
-                duplicateFound = (hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
+                duplicateFound = (rshash_find(randConsisUniqueGeneratedIPs, num) != NULL);
                 if (duplicateFound) {
                     if (limitRetries && attempts >= maxRetries) {
                         maxRetryReached = 1;
@@ -1596,7 +1595,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
             if (handling == MAX_RETRY_ZERO) {
                 generate_ipv6_candidate(num, original, address, pWrkrData, useEmbedded, bits, ZERO);
                 // duplicateFound determines whether the zeroed IP should be added to the table of unique generated IPs.
-                duplicateFound = (hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
+                duplicateFound = (rshash_find(randConsisUniqueGeneratedIPs, num) != NULL);
             } else {
                 // Accept-duplicates keeps the last randomized IP; no extra work needed.
             }
@@ -1604,7 +1603,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         char *hashString;
         CHKmalloc(hashString = strdup(address));
 
-        if (!hashtable_insert(randConsisIPs, hashKey, hashString)) {
+        if (!rshash_put(randConsisIPs, hashKey, hashString)) {
             DBGPRINTF("hashtable error: insert to %s-table failed", useEmbedded ? "embedded ipv4" : "ipv6");
             free(hashString);
             ABORT_FINALIZE(RS_RET_ERR);
@@ -1614,7 +1613,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         if (uniqueMode && !duplicateFound) {
             CHKmalloc(uniqueKey = (struct ipv6_int *)malloc(sizeof(struct ipv6_int)));
             *uniqueKey = *num;
-            if (!hashtable_insert(randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
+            if (!rshash_put(randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
                 DBGPRINTF("hashtable error: insert to %s unique table failed", useEmbedded ? "embedded ipv4" : "ipv6");
                 ABORT_FINALIZE(RS_RET_ERR);
             }

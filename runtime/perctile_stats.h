@@ -19,7 +19,7 @@
 #ifndef INCLUDED_PERCTILE_STATS_H
 #define INCLUDED_PERCTILE_STATS_H
 
-#include "hashtable.h"
+#include "rshash.h"
 #include "statsobj.h"
 
 struct perctile_ctr_s {
@@ -55,7 +55,7 @@ struct perctile_bucket_s {
     uchar *delim;
     // lock for entire bucket
     pthread_rwlock_t lock;
-    struct hashtable *htable;
+    rshash_t *htable;
     struct perctile_bucket_s *next;
     statsobj_t *statsobj;
     STATSCOUNTER_DEF(ctrNewKeyAdd, mutCtrNewKeyAdd);

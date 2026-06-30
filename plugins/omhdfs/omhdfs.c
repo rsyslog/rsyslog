@@ -51,7 +51,6 @@
 #include "module-template.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
-#include "hashtable.h"
 #include "rshash.h"
 
 MODULE_TYPE_OUTPUT;
@@ -63,7 +62,7 @@ MODULE_TYPE_NOKEEP;
 DEF_OMOD_STATIC_DATA;
 
 /* global data */
-static struct hashtable *files; /* holds all file objects that we know */
+static rshash_t *files; /* holds all file objects that we know */
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct configSettings_s {
@@ -434,7 +433,7 @@ BEGINparseSelectorAct
         ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
     }
 
-    pFile = hashtable_search(files, cs.fileName);
+    pFile = rshash_find(files, cs.fileName);
     if (pFile == NULL) {
         /* we need a new file object, this one not seen before */
         CHKiRet(fileObjConstruct(&pFile));
@@ -451,7 +450,7 @@ BEGINparseSelectorAct
                      pFile->name);
             iRet = RS_RET_SUSPENDED;
         }
-        r = hashtable_insert(files, keybuf, pFile);
+        r = rshash_put(files, keybuf, pFile);
         if (r == 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
     fileObjAddUser(pFile);
@@ -470,8 +469,8 @@ static int omhdfsCloseFileScan(void *key __attribute__((unused)), void *value, v
 
 BEGINdoHUP
     CODESTARTdoHUP;
-    DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
-    if (hashtable_count(files) > 0) {
+    DBGPRINTF("omhdfs: HUP received (file count %d)\n", rshash_count(files));
+    if (rshash_count(files) > 0) {
         rshash_scan(files, omhdfsCloseFileScan, NULL);
     }
 ENDdoHUP
@@ -493,7 +492,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 
 BEGINmodExit
     CODESTARTmodExit;
-    if (files != NULL) hashtable_destroy(files, 1); /* 1 => free all values automatically */
+    if (files != NULL) rshash_destroy(files, 1); /* 1 => free all values automatically */
 ENDmodExit
 
 
@@ -510,7 +509,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION;
     CODEmodInit_QueryRegCFSLineHdlr CHKmalloc(
-        files = create_hashtable(20, hash_from_string, key_equals_string, fileObjDestruct4Hashtable));
+        files = rshash_create(20, hash_from_string, key_equals_string, free, fileObjDestruct4Hashtable));
 
     CHKiRet(regCfSysLineHdlr((uchar *)"omhdfsfilename", 0, eCmdHdlrGetWord, NULL, &cs.fileName, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"omhdfshost", 0, eCmdHdlrGetWord, NULL, &cs.hdfsHost, NULL));

@@ -52,7 +52,6 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "stringbuf.h"
-#include "hashtable.h"
 #include "rshash.h"
 
 #if !defined(_AIX)
@@ -142,8 +141,8 @@ typedef struct docker_cont_logs_inst_s {
 } docker_cont_logs_inst_t;
 
 typedef struct docker_cont_log_instances_s {
-    struct hashtable *ht_container_log_insts;
-    struct hashtable *ht_seen_container_ids;
+    rshash_t *ht_container_log_insts;
+    rshash_t *ht_seen_container_ids;
     pthread_mutex_t mut;
     CURLM *curlm;
     /* track the latest created container */
@@ -723,8 +722,8 @@ static rsRetVal dockerContLogReqsNew(docker_cont_log_instances_t **ppThis) {
     docker_cont_log_instances_t *pThis = calloc(1, sizeof(docker_cont_log_instances_t));
     CHKmalloc(pThis);
     CHKmalloc(pThis->ht_container_log_insts =
-                  create_hashtable(7, hash_from_string, key_equals_string, dockerContLogReqsDestructForHashtable));
-    CHKmalloc(pThis->ht_seen_container_ids = create_hashtable(7, hash_from_string, key_equals_string, NULL));
+                  rshash_create(7, hash_from_string, key_equals_string, free, dockerContLogReqsDestructForHashtable));
+    CHKmalloc(pThis->ht_seen_container_ids = rshash_create(7, hash_from_string, key_equals_string, free, NULL));
 
     CHKiConcCtrl(pthread_mutex_init(&pThis->mut, NULL));
 
@@ -750,12 +749,12 @@ static rsRetVal dockerContLogReqsDestruct(docker_cont_log_instances_t *pThis) {
     if (pThis) {
         if (pThis->ht_container_log_insts) {
             pthread_mutex_lock(&pThis->mut);
-            hashtable_destroy(pThis->ht_container_log_insts, 1);
+            rshash_destroy(pThis->ht_container_log_insts, 1);
             pthread_mutex_unlock(&pThis->mut);
         }
         if (pThis->ht_seen_container_ids) {
             pthread_mutex_lock(&pThis->mut);
-            hashtable_destroy(pThis->ht_seen_container_ids, 0);
+            rshash_destroy(pThis->ht_seen_container_ids, 0);
             pthread_mutex_unlock(&pThis->mut);
         }
         if (pThis->last_container_id) {
@@ -776,7 +775,7 @@ static rsRetVal dockerContLogReqsGet(docker_cont_log_instances_t *pThis,
     DEFiRet;
 
     if (ppContLogsInst && id) {
-        docker_cont_logs_inst_t *pSearchObj = hashtable_search(pThis->ht_container_log_insts, (void *)id);
+        docker_cont_logs_inst_t *pSearchObj = rshash_find(pThis->ht_container_log_insts, (void *)id);
         if (!pSearchObj) {
             return RS_RET_NOT_FOUND;
         }
@@ -802,7 +801,7 @@ static rsRetVal dockerContLogReqsPrint(docker_cont_log_instances_t *pThis) {
     DEFiRet;
     int count = 0;
 
-    count = hashtable_count(pThis->ht_container_log_insts);
+    count = rshash_count(pThis->ht_container_log_insts);
     if (count) {
         DBGPRINTF("%s() - All container instances, count=%d...\n", __FUNCTION__, count);
         rshash_scan(pThis->ht_container_log_insts, dockerContLogReqsPrintScan, NULL);
@@ -824,7 +823,7 @@ static rsRetVal dockerContLogReqsAdd(docker_cont_log_instances_t *pThis, docker_
     CHKmalloc(keyName = (uchar *)strdup((char *)pContLogsReqInst->id));
     docker_cont_logs_inst_t *pFind;
     if (RS_RET_NOT_FOUND == dockerContLogReqsGet(pThis, &pFind, (void *)keyName)) {
-        if (!hashtable_insert(pThis->ht_container_log_insts, keyName, pContLogsReqInst)) {
+        if (!rshash_put(pThis->ht_container_log_insts, keyName, pContLogsReqInst)) {
             ABORT_FINALIZE(RS_RET_ERR);
         }
         keyName = NULL;
@@ -839,7 +838,7 @@ static rsRetVal dockerContLogReqsRemove(docker_cont_log_instances_t *pThis, cons
 
     if (pThis && id) {
         CHKiConcCtrl(pthread_mutex_lock(&pThis->mut));
-        docker_cont_logs_inst_t *pRemoved = hashtable_remove(pThis->ht_container_log_insts, (void *)id);
+        docker_cont_logs_inst_t *pRemoved = rshash_remove(pThis->ht_container_log_insts, (void *)id);
         pthread_mutex_unlock(&pThis->mut);
         if (pRemoved) {
             dockerContLogsInstDestruct(pRemoved);
@@ -851,13 +850,13 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal dockerContLogReqsRememberId(struct hashtable *table, const char *id) {
+static rsRetVal dockerContLogReqsRememberId(rshash_t *table, const char *id) {
     DEFiRet;
     uchar *keyName = NULL;
 
-    if (table && id && hashtable_search(table, (void *)id) == NULL) {
+    if (table && id && rshash_find(table, (void *)id) == NULL) {
         CHKmalloc(keyName = (uchar *)strdup(id));
-        if (!hashtable_insert(table, keyName, &seen_container_id_present)) {
+        if (!rshash_put(table, keyName, &seen_container_id_present)) {
             ABORT_FINALIZE(RS_RET_ERR);
         }
         keyName = NULL;
@@ -872,26 +871,25 @@ static rsRetVal dockerContLogReqsRememberSeen(docker_cont_log_instances_t *pThis
 }
 
 struct docker_prune_seen_ctx {
-    struct hashtable *ht_current_ids;
+    rshash_t *ht_current_ids;
 };
 
 static int dockerPruneSeenPred(void *key, void *value __attribute__((unused)), void *usr) {
     struct docker_prune_seen_ctx *ctx = usr;
     char *id = key;
 
-    if (hashtable_search(ctx->ht_current_ids, id) == NULL) {
+    if (rshash_find(ctx->ht_current_ids, id) == NULL) {
         DBGPRINTF("prune stale seen container %s\n", id);
         return 1;
     }
     return 0;
 }
 
-static rsRetVal dockerContLogReqsPruneSeen(docker_cont_log_instances_t *pThis, struct hashtable *ht_current_ids) {
+static rsRetVal dockerContLogReqsPruneSeen(docker_cont_log_instances_t *pThis, rshash_t *ht_current_ids) {
     DEFiRet;
     struct docker_prune_seen_ctx scan_ctx = {ht_current_ids};
 
-    if (!pThis || !pThis->ht_seen_container_ids || !ht_current_ids ||
-        hashtable_count(pThis->ht_seen_container_ids) == 0) {
+    if (!pThis || !pThis->ht_seen_container_ids || !ht_current_ids || rshash_count(pThis->ht_seen_container_ids) == 0) {
         FINALIZE;
     }
 
@@ -1592,7 +1590,7 @@ static char *dupDockerContainerName(const char *pname) {
 static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_instances_t *pInstances) {
     DEFiRet;
     struct fjson_object *json_obj = NULL;
-    struct hashtable *ht_current_container_ids = NULL;
+    rshash_t *ht_current_container_ids = NULL;
     int mut_locked = 0;
     DBGPRINTF("%s() - parsing json=%s\n", __FUNCTION__, json);
 
@@ -1606,7 +1604,7 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
     }
 
     int length = fjson_object_array_length(json_obj);
-    CHKmalloc(ht_current_container_ids = create_hashtable(7, hash_from_string, key_equals_string, NULL));
+    CHKmalloc(ht_current_container_ids = rshash_create(7, hash_from_string, key_equals_string, free, NULL));
     /* LOCK the update process. */
     CHKiConcCtrl(pthread_mutex_lock(&pInstances->mut));
     mut_locked = 1;
@@ -1652,7 +1650,7 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
             if (containerId) {
                 CHKiRet(dockerContLogReqsRememberId(ht_current_container_ids, containerId));
                 CHKiRet(dockerContLogReqsUpdateLastContainer(pInstances, containerId, containerInfo.created));
-                if (hashtable_search(pInstances->ht_seen_container_ids, (void *)containerId) != NULL) {
+                if (rshash_find(pInstances->ht_seen_container_ids, (void *)containerId) != NULL) {
                     DBGPRINTF("skip already seen container %s\n", containerId);
                     continue;
                 }
@@ -1692,7 +1690,7 @@ finalize_it:
         pthread_mutex_unlock(&pInstances->mut);
     }
     if (ht_current_container_ids) {
-        hashtable_destroy(ht_current_container_ids, 0);
+        rshash_destroy(ht_current_container_ids, 0);
     }
     if (json_obj) {
         json_object_put(json_obj);
@@ -1856,7 +1854,7 @@ static rsRetVal processAndPollContainerLogs(docker_cont_log_instances_t *pInstan
     DEFiRet;
     int count = 0;
 
-    count = hashtable_count(pInstances->ht_container_log_insts);
+    count = rshash_count(pInstances->ht_container_log_insts);
     DBGPRINTF("%s() - container instances: %d\n", __FUNCTION__, count);
 
     int still_running = 0;

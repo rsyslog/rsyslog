@@ -45,10 +45,9 @@
 #include "msg.h"
 #include "rsconf.h"
 #include "dirty.h"
-#include "hashtable.h"
+#include "rshash.h"
 #include "statsobj.h"
 #include "template.h"
-#include "rshash.h"
 #include "srUtils.h"
 #ifdef HAVE_LIBYAML
     #include <yaml.h>
@@ -202,10 +201,10 @@ static void ratelimitFreeShared(void *ptr) {
     pthread_mutex_destroy(&shared->mut);
     free(shared->policy_file);
     if (shared->per_source_overrides != NULL) {
-        hashtable_destroy(shared->per_source_overrides, 1);
+        rshash_destroy(shared->per_source_overrides, 1);
     }
     if (shared->per_source_states != NULL) {
-        hashtable_destroy(shared->per_source_states, 1);
+        rshash_destroy(shared->per_source_states, 1);
     }
     if (shared->per_source_stats != NULL) {
         statsobj.Destruct(&shared->per_source_stats);
@@ -223,7 +222,7 @@ static void ratelimitFreeShared(void *ptr) {
         pthread_mutex_destroy(&shared->per_source_mut);
     }
     free(shared->per_source_policy_file);
-    /* shared->name is the key, freed by hashtable_destroy via freekey(); do not free here */
+    /* shared->name is the key, freed by rshash_destroy via freekey(); do not free here */
     free(shared);
 }
 
@@ -236,15 +235,15 @@ static int ratelimitUnregisterSharedScan(void *key __attribute__((unused)),
 
 void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
     pthread_rwlock_init(&cfgs->lock, NULL);
-    cfgs->ht = create_hashtable(16, hash_from_string, key_equals_string, ratelimitFreeShared);
+    cfgs->ht = rshash_create(16, hash_from_string, key_equals_string, free, ratelimitFreeShared);
 }
 
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
-    if (cfgs->ht != NULL && hashtable_count(cfgs->ht) > 0) {
+    if (cfgs->ht != NULL && rshash_count(cfgs->ht) > 0) {
         rshash_scan(cfgs->ht, ratelimitUnregisterSharedScan, NULL);
     }
     if (cfgs->ht != NULL) {
-        hashtable_destroy(cfgs->ht, 1); /* 1 = free values */
+        rshash_destroy(cfgs->ht, 1); /* 1 = free values */
     }
     pthread_rwlock_destroy(&cfgs->lock);
 }
@@ -288,7 +287,7 @@ typedef struct ratelimit_ps_state_s ratelimit_ps_state_t;
 struct ratelimit_ps_policy_s {
     unsigned int default_max;
     unsigned int default_window;
-    struct hashtable *overrides;
+    rshash_t *overrides;
 };
 
 typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
@@ -461,7 +460,7 @@ static void ratelimitPolicyFileDestruct(ratelimit_policy_file_t *policy) {
     if (policy == NULL) return;
     free(policy->per_source_key_tpl_name);
     if (policy->per_source_policy != NULL) {
-        if (policy->per_source_policy->overrides != NULL) hashtable_destroy(policy->per_source_policy->overrides, 1);
+        if (policy->per_source_policy->overrides != NULL) rshash_destroy(policy->per_source_policy->overrides, 1);
         free(policy->per_source_policy);
     }
     memset(policy, 0, sizeof(*policy));
@@ -581,8 +580,8 @@ static rsRetVal parsePolicyFile(const char *policy_file, ratelimit_policy_file_t
                     policy->has_per_source = 1;
                     policy->per_source_enabled = 1;
                     CHKmalloc(policy->per_source_policy = calloc(1, sizeof(*policy->per_source_policy)));
-                    policy->per_source_policy->overrides =
-                        create_hashtable(32, hash_from_string, key_equals_string, ratelimitFreePerSourceOverrideValue);
+                    policy->per_source_policy->overrides = rshash_create(32, hash_from_string, key_equals_string, free,
+                                                                         ratelimitFreePerSourceOverrideValue);
                     if (policy->per_source_policy->overrides == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                 } else if (depth > 0 && ctxStack[depth - 1] == CTX_PERSOURCE && last_key != NULL &&
                            !strcmp(last_key, "default")) {
@@ -607,8 +606,8 @@ static rsRetVal parsePolicyFile(const char *policy_file, ratelimit_policy_file_t
                                      policy_file);
                             ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
                         }
-                        if (hashtable_insert(policy->per_source_policy->overrides, current_override->key,
-                                             current_override) == 0) {
+                        if (rshash_put(policy->per_source_policy->overrides, current_override->key, current_override) ==
+                            0) {
                             LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting per-source override '%s'",
                                      current_override->key);
                             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -848,7 +847,7 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
 
     CHKmalloc(policy = calloc(1, sizeof(*policy)));
     CHKmalloc(policy->overrides =
-                  create_hashtable(32, hash_from_string, key_equals_string, ratelimitFreePerSourceOverrideValue));
+                  rshash_create(32, hash_from_string, key_equals_string, free, ratelimitFreePerSourceOverrideValue));
 
     fh = fopen(policy_file, "r");
     if (fh == NULL) {
@@ -915,7 +914,7 @@ static rsRetVal parsePerSourcePolicyFile(const char *policy_file, ratelimit_ps_p
                                      policy_file);
                             ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
                         }
-                        if (hashtable_insert(policy->overrides, current_override->key, current_override) == 0) {
+                        if (rshash_put(policy->overrides, current_override->key, current_override) == 0) {
                             LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting per-source override '%s'",
                                      current_override->key);
                             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1012,7 +1011,7 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         if (current_override != NULL) ratelimitFreePerSourceOverrideDirect(current_override);
         if (policy != NULL) {
-            if (policy->overrides != NULL) hashtable_destroy(policy->overrides, 1);
+            if (policy->overrides != NULL) rshash_destroy(policy->overrides, 1);
             free(policy);
         }
         return iRet;
@@ -1021,7 +1020,7 @@ finalize_it:
         LogError(0, RS_RET_CONF_PARAM_INVLD,
                  "ratelimit: per-source policy file %s missing default.max or default.window", policy_file);
         if (policy != NULL) {
-            if (policy->overrides != NULL) hashtable_destroy(policy->overrides, 1);
+            if (policy->overrides != NULL) rshash_destroy(policy->overrides, 1);
             free(policy);
         }
         return RS_RET_CONF_PARAM_INVLD;
@@ -1094,7 +1093,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
         return;
     }
 
-    if (shared->per_source_states != NULL && hashtable_count(shared->per_source_states) > 0) {
+    if (shared->per_source_states != NULL && rshash_count(shared->per_source_states) > 0) {
         rshash_scan(shared->per_source_states, ratelimitTopNScan, &scan_ctx);
     }
     for (unsigned int i = 0; i < topn; ++i) {
@@ -1196,7 +1195,8 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
     shared->per_source_key_tpl = NULL;
     shared->per_source_key_needs_parsing = 1;
     shared->per_source_key_mode = RL_PS_KEY_TPL;
-    shared->per_source_states = create_hashtable(128, hash_from_string, key_equals_string, ratelimitFreePerSourceState);
+    shared->per_source_states =
+        rshash_create(128, hash_from_string, key_equals_string, free, ratelimitFreePerSourceState);
     if (shared->per_source_states == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     shared->per_source_max_states = (max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : max_states;
     shared->per_source_topn = (topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : topn;
@@ -1226,8 +1226,8 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (shared->per_source_stats != NULL) statsobj.Destruct(&shared->per_source_stats);
-        if (shared->per_source_states != NULL) hashtable_destroy(shared->per_source_states, 1);
-        if (shared->per_source_overrides != NULL) hashtable_destroy(shared->per_source_overrides, 1);
+        if (shared->per_source_states != NULL) rshash_destroy(shared->per_source_states, 1);
+        if (shared->per_source_overrides != NULL) rshash_destroy(shared->per_source_overrides, 1);
         free(shared->per_source_policy_file);
         shared->per_source_policy_file = NULL;
         pthread_mutex_destroy(&shared->per_source_mut);
@@ -1240,7 +1240,7 @@ static void ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_p
     if (shared == NULL || policy == NULL) return;
     pthread_mutex_lock(&shared->per_source_mut);
     if (shared->per_source_overrides != NULL) {
-        hashtable_destroy(shared->per_source_overrides, 1);
+        rshash_destroy(shared->per_source_overrides, 1);
     }
     shared->per_source_overrides = policy->overrides;
     shared->per_source_default_max = policy->default_max;
@@ -1408,7 +1408,7 @@ static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, c
 finalize_it:
     if (policy != NULL) {
         if (policy->overrides != NULL) {
-            hashtable_destroy(policy->overrides, 1);
+            rshash_destroy(policy->overrides, 1);
         }
         free(policy);
     }
@@ -1437,17 +1437,17 @@ static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key,
     if (tt == 0) tt = time(NULL);
 
     pthread_mutex_lock(&shared->per_source_mut);
-    state = (ratelimit_ps_state_t *)hashtable_search(shared->per_source_states, (void *)key);
+    state = (ratelimit_ps_state_t *)rshash_find(shared->per_source_states, (void *)key);
     if (state == NULL) {
         if (shared->per_source_max_states > 0 &&
-            hashtable_count(shared->per_source_states) >= shared->per_source_max_states) {
+            rshash_count(shared->per_source_states) >= shared->per_source_max_states) {
             ratelimit_ps_state_t *evict = shared->per_source_lru_head;
             if (evict != NULL) {
                 shared->per_source_lru_head = evict->lru_next;
                 if (shared->per_source_lru_head != NULL) shared->per_source_lru_head->lru_prev = NULL;
                 if (shared->per_source_lru_tail == evict) shared->per_source_lru_tail = NULL;
                 ratelimit_ps_state_t *evicted =
-                    (ratelimit_ps_state_t *)hashtable_remove(shared->per_source_states, (void *)evict->key);
+                    (ratelimit_ps_state_t *)rshash_remove(shared->per_source_states, (void *)evict->key);
                 ratelimitFreePerSourceState(evicted);
             }
         }
@@ -1456,7 +1456,7 @@ static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key,
             state->key = strdup(key);
             state->window_start = tt;
             state->last_seen = tt;
-            if (state->key != NULL && hashtable_insert(shared->per_source_states, state->key, state) == 0) {
+            if (state->key != NULL && rshash_put(shared->per_source_states, state->key, state) == 0) {
                 free(state->key);
                 free(state);
                 state = NULL;
@@ -1487,7 +1487,7 @@ static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key,
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
-    override = (ratelimit_ps_override_t *)hashtable_search(shared->per_source_overrides, (void *)key);
+    override = (ratelimit_ps_override_t *)rshash_find(shared->per_source_overrides, (void *)key);
     max = (override != NULL && override->has_max) ? override->max : shared->per_source_default_max;
     window = (override != NULL && override->has_window) ? override->window : shared->per_source_default_window;
 
@@ -1603,7 +1603,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
 
     pthread_rwlock_wrlock(&conf->ratelimit_cfgs.lock);
     bLocked = 1;
-    existing_shared = (ratelimit_shared_t *)hashtable_search(conf->ratelimit_cfgs.ht, (void *)name);
+    existing_shared = (ratelimit_shared_t *)rshash_find(conf->ratelimit_cfgs.ht, (void *)name);
 
     if (existing_shared != NULL) {
         LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: duplicate name '%s' in current config set", name);
@@ -1651,7 +1651,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
     }
 
-    if (hashtable_insert(conf->ratelimit_cfgs.ht, key, shared) == 0) {
+    if (rshash_put(conf->ratelimit_cfgs.ht, key, shared) == 0) {
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
         bLocked = 0;
         LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting config into hashtable");
@@ -1674,10 +1674,10 @@ finalize_it:
         free(shared->name); /* key was assigned to name */
         free(shared->policy_file);
         if (shared->per_source_overrides != NULL) {
-            hashtable_destroy(shared->per_source_overrides, 1);
+            rshash_destroy(shared->per_source_overrides, 1);
         }
         if (shared->per_source_states != NULL) {
-            hashtable_destroy(shared->per_source_states, 1);
+            rshash_destroy(shared->per_source_states, 1);
         }
         if (shared->per_source_stats != NULL) {
             statsobj.Destruct(&shared->per_source_stats);
@@ -1699,7 +1699,7 @@ finalize_it:
         free(shared);
     }
     if (per_source_policy != NULL) {
-        if (per_source_policy->overrides != NULL) hashtable_destroy(per_source_policy->overrides, 1);
+        if (per_source_policy->overrides != NULL) rshash_destroy(per_source_policy->overrides, 1);
         free(per_source_policy);
     }
     ratelimitPolicyFileDestruct(&file_policy);
@@ -1717,7 +1717,7 @@ rsRetVal ratelimitNewFromConfig(
     }
 
     pthread_rwlock_rdlock(&conf->ratelimit_cfgs.lock);
-    shared = (ratelimit_shared_t *)hashtable_search(conf->ratelimit_cfgs.ht, (void *)configname);
+    shared = (ratelimit_shared_t *)rshash_find(conf->ratelimit_cfgs.ht, (void *)configname);
     if (shared == NULL) {
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
         LogError(0, RS_RET_NOT_FOUND, "ratelimit config '%s' not found", configname);
@@ -2314,7 +2314,7 @@ void ratelimitDoHUP(void) {
      * We only need to lock the individual shared objects when updating them.
      */
     pthread_rwlock_rdlock(&runConf->ratelimit_cfgs.lock);
-    if (hashtable_count(runConf->ratelimit_cfgs.ht) > 0) {
+    if (rshash_count(runConf->ratelimit_cfgs.ht) > 0) {
         rshash_scan(runConf->ratelimit_cfgs.ht, ratelimitHUPScan, NULL);
     }
     pthread_rwlock_unlock(&runConf->ratelimit_cfgs.lock);

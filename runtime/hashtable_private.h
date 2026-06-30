@@ -6,7 +6,7 @@
 #ifndef INCLUDED_HASHTABLE_PRIVATE_H
 #define INCLUDED_HASHTABLE_PRIVATE_H
 
-#include "hashtable.h"
+#include "rshash.h"
 #include "atomic.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -53,7 +53,7 @@ struct hashtable {
 };
 
 /*****************************************************************************/
-unsigned int hash(struct hashtable *h, void *k);
+unsigned int hash(rshash_t *h, void *k);
 
 /*****************************************************************************/
 /* indexFor */

@@ -38,7 +38,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "hashtable.h"
+#include "rshash.h"
 
 
 #define JSON_COUNT_NAME "!mmcount"
@@ -59,7 +59,7 @@ typedef struct _instanceData {
     char *pszKey;
     char *pszValue;
     int valueCounter;
-    struct hashtable *ht;
+    rshash_t *ht;
     pthread_mutex_t mut;
 } instanceData;
 
@@ -190,7 +190,7 @@ BEGINnewActInst
     }
 
     if (pData->pszKey != NULL && pData->pszValue == NULL) {
-        if (NULL == (pData->ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL))) {
+        if (NULL == (pData->ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free, NULL))) {
             DBGPRINTF("mmcount: error creating hash table!\n");
             ABORT_FINALIZE(RS_RET_ERR);
         }
@@ -209,7 +209,7 @@ BEGINtryResume
     CODESTARTtryResume;
 ENDtryResume
 
-static int *getCounter(struct hashtable *ht, const char *str) {
+static int *getCounter(rshash_t *ht, const char *str) {
     unsigned int key;
     int *pCounter;
     unsigned int *pKey;
@@ -217,7 +217,7 @@ static int *getCounter(struct hashtable *ht, const char *str) {
     /* we dont store str as key, instead we store hash of the str
        as key to reduce memory usage */
     key = hash_from_string((char *)str);
-    pCounter = hashtable_search(ht, &key);
+    pCounter = rshash_find(ht, &key);
     if (pCounter) {
         return pCounter;
     }
@@ -237,7 +237,7 @@ static int *getCounter(struct hashtable *ht, const char *str) {
     }
     *pCounter = 0;
 
-    if (!hashtable_insert(ht, pKey, pCounter)) {
+    if (!rshash_put(ht, pKey, pCounter)) {
         DBGPRINTF("mmcount: inserting element into hashtable failed\n");
         free(pKey);
         free(pCounter);

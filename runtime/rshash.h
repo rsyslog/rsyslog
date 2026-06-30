@@ -38,4 +38,7 @@ unsigned int rshash_scan_remove_if(rshash_t *h,
                                    void *usr);
 void rshash_destroy(rshash_t *h, int free_values);
 
+unsigned int hash_from_string(void *key);
+int key_equals_string(void *key1, void *key2);
+
 #endif
