@@ -28,6 +28,102 @@ static const unsigned int primes[] = {53,        97,        193,       389,     
                                       100663319, 201326611, 402653189, 805306457, 1610612741};
 static const unsigned int prime_table_length = sizeof(primes) / sizeof(primes[0]);
 
+#ifdef RSHASH_TEST_HOOKS
+/*
+ * White-box tests include this file directly with RSHASH_TEST_HOOKS enabled.
+ * The production librsyslog build never defines it, so these deterministic
+ * race/failure hooks do not add state or branches to exported runtime objects.
+ */
+static struct {
+    rshash_test_hook_fn after_mark;
+    void *after_mark_usr;
+    rshash_test_hook_fn after_retired_detach;
+    void *after_retired_detach_usr;
+    int fail_next_entry_alloc;
+    int fail_next_table_alloc;
+    int fail_next_unlink_cas;
+} rshash_test_hooks;
+
+void rshash_test_reset_hooks(void) {
+    memset(&rshash_test_hooks, 0, sizeof(rshash_test_hooks));
+}
+
+void rshash_test_set_after_mark_hook(rshash_test_hook_fn hook, void *usr) {
+    rshash_test_hooks.after_mark = hook;
+    rshash_test_hooks.after_mark_usr = usr;
+}
+
+void rshash_test_set_after_retired_detach_hook(rshash_test_hook_fn hook, void *usr) {
+    rshash_test_hooks.after_retired_detach = hook;
+    rshash_test_hooks.after_retired_detach_usr = usr;
+}
+
+void rshash_test_fail_next_entry_alloc(void) {
+    rshash_test_hooks.fail_next_entry_alloc = 1;
+}
+
+void rshash_test_fail_next_table_alloc(void) {
+    rshash_test_hooks.fail_next_table_alloc = 1;
+}
+
+void rshash_test_fail_next_unlink_cas(void) {
+    rshash_test_hooks.fail_next_unlink_cas = 1;
+}
+
+static void *rshash_alloc_entry(size_t size) {
+    if (rshash_test_hooks.fail_next_entry_alloc) {
+        rshash_test_hooks.fail_next_entry_alloc = 0;
+        return NULL;
+    }
+    return malloc(size);
+}
+
+static void *rshash_alloc_table_struct(size_t size) {
+    if (rshash_test_hooks.fail_next_table_alloc) {
+        rshash_test_hooks.fail_next_table_alloc = 0;
+        return NULL;
+    }
+    return malloc(size);
+}
+
+static void *rshash_alloc_table_buckets(size_t nmemb, size_t size) {
+    if (rshash_test_hooks.fail_next_table_alloc) {
+        rshash_test_hooks.fail_next_table_alloc = 0;
+        return NULL;
+    }
+    return calloc(nmemb, size);
+}
+
+static int rshash_test_should_fail_unlink_cas(void) {
+    if (rshash_test_hooks.fail_next_unlink_cas) {
+        rshash_test_hooks.fail_next_unlink_cas = 0;
+        return 1;
+    }
+    return 0;
+}
+
+static void rshash_test_after_mark(rshash_t *h) {
+    if (rshash_test_hooks.after_mark != NULL) rshash_test_hooks.after_mark(h, rshash_test_hooks.after_mark_usr);
+}
+
+static void rshash_test_after_retired_detach(rshash_t *h) {
+    if (rshash_test_hooks.after_retired_detach != NULL)
+        rshash_test_hooks.after_retired_detach(h, rshash_test_hooks.after_retired_detach_usr);
+}
+#else
+static void *rshash_alloc_entry(size_t size) {
+    return malloc(size);
+}
+
+static void *rshash_alloc_table_struct(size_t size) {
+    return malloc(size);
+}
+
+static void *rshash_alloc_table_buckets(size_t nmemb, size_t size) {
+    return calloc(nmemb, size);
+}
+#endif
+
 static inline unsigned int wrapping_add_unsigned(unsigned int lhs, unsigned int rhs) {
     return (unsigned int)((uint64_t)lhs + rhs);
 }
@@ -91,6 +187,9 @@ static void rshash_try_reclaim(rshash_t *h) {
         if (list == NULL) return;
         if (ATOMIC_CAS_PTR((void **)&h->retired, list, NULL, &h->mutRetired)) break;
     }
+#ifdef RSHASH_TEST_HOOKS
+    rshash_test_after_retired_detach(h);
+#endif
     if (ATOMIC_FETCH_32BIT_unsigned(&h->active_ops, &h->mutActive) == 0) {
         free_retired_list(h, list);
     } else {
@@ -232,9 +331,9 @@ static int has_preferred_duplicate(rshash_t *h, const unsigned int hashvalue, vo
 }
 
 static struct rshash_table *alloc_table_generation(const unsigned int size) {
-    struct rshash_table *tbl = malloc(sizeof(*tbl));
+    struct rshash_table *tbl = rshash_alloc_table_struct(sizeof(*tbl));
     if (tbl == NULL) return NULL;
-    tbl->table = calloc(size, sizeof(struct entry *));
+    tbl->table = rshash_alloc_table_buckets(size, sizeof(struct entry *));
     if (tbl->table == NULL) {
         free(tbl);
         return NULL;
@@ -310,7 +409,7 @@ static void entry_mark_removed(rshash_t *h, struct entry *entry);
 
 static int insert_at_position(rshash_t *h, void *key, void *value, const int unique) {
     const unsigned int hashvalue = hash(h, key);
-    struct entry *e = malloc(sizeof(*e));
+    struct entry *e = rshash_alloc_entry(sizeof(*e));
     if (e == NULL) return 0;
     e->k = key;
     e->v = value;
@@ -487,6 +586,9 @@ static void entry_mark_removed(rshash_t *h, struct entry *entry) {
         if (entry_is_marked(next)) break;
         if (atomic_cas_entry(&entry->next, next, entry_mark(next), h)) break;
     }
+#ifdef RSHASH_TEST_HOOKS
+    rshash_test_after_mark(h);
+#endif
 }
 
 void *rshash_find(rshash_t *h, void *key) {
@@ -531,7 +633,11 @@ void *rshash_remove(rshash_t *h, void *key) {
         entry_mark_removed(h, entry);
         next = atomic_fetch_entry(&entry->next, h);
         ATOMIC_DEC(&h->entrycount, &h->mutCount);
-        if (atomic_cas_entry(slot, entry, entry_unmark(next), h))
+        if (
+#ifdef RSHASH_TEST_HOOKS
+            !rshash_test_should_fail_unlink_cas() &&
+#endif
+            atomic_cas_entry(slot, entry, entry_unmark(next), h))
             retire_entry(h, entry, 0);
         else
             bucket_help_unlink(h, tbl, idx, entry, 0);
@@ -540,6 +646,27 @@ void *rshash_remove(rshash_t *h, void *key) {
     rshash_leave(h);
     return value;
 }
+
+#ifdef RSHASH_TEST_HOOKS
+int rshash_test_mark_removed_for_key(rshash_t *h, void *key) {
+    const unsigned int hashvalue = hash(h, key);
+    struct entry *entry;
+    void *value;
+
+    rshash_enter(h);
+    entry = find_in_tables(h, hashvalue, key, NULL, NULL, NULL);
+    if (entry == NULL || !entry_try_remove(h, entry, &value)) {
+        rshash_leave(h);
+        return 0;
+    }
+    (void)value;
+    entry->retired_free_value = 1;
+    entry_mark_removed(h, entry);
+    ATOMIC_DEC(&h->entrycount, &h->mutCount);
+    rshash_leave(h);
+    return 1;
+}
+#endif
 
 unsigned int rshash_count(rshash_t *h) {
     return ATOMIC_FETCH_32BIT_unsigned(&h->entrycount, &h->mutCount);
