@@ -27,7 +27,7 @@
 #include "rsconf.h"
 #include "errmsg.h"
 #include "perctile_stats.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "perctile_ringbuf.h"
 #include "datetime.h"
 
@@ -118,6 +118,11 @@ static void perctileStatDestruct(perctile_bucket_t *b, perctile_stat_t *pstat) {
     }
 }
 
+static int perctile_bucket_destruct_scan(void *key __attribute__((unused)), void *value, void *usr) {
+    perctileStatDestruct((perctile_bucket_t *)usr, (perctile_stat_t *)value);
+    return 1;
+}
+
 static void perctileBucketDestruct(perctile_bucket_t *bkt) {
     PERCTILE_STATS_LOG("destructing perctile bucket\n");
     if (bkt) {
@@ -130,20 +135,13 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
         }
         pthread_rwlock_wrlock(&bkt->lock);
         // Delete all items in hashtable
-        size_t count = hashtable_count(bkt->htable);
+        size_t count = bkt->htable == NULL ? 0 : rshash_count(bkt->htable);
         if (count) {
-            int ret = 0;
-            struct hashtable_itr *itr = hashtable_iterator(bkt->htable);
             dbgprintf("%s() - All container instances, count=%zu...\n", __FUNCTION__, count);
-            do {
-                perctile_stat_t *pstat = hashtable_iterator_value(itr);
-                perctileStatDestruct(bkt, pstat);
-                ret = hashtable_iterator_advance(itr);
-            } while (ret);
-            free(itr);
+            rshash_scan(bkt->htable, perctile_bucket_destruct_scan, bkt);
             dbgprintf("End of container instances.\n");
         }
-        hashtable_destroy(bkt->htable, 0);
+        rshash_destroy(bkt->htable, 0);
         pthread_rwlock_unlock(&bkt->lock);
         pthread_rwlock_destroy(&bkt->lock);
         perctileDestroyCounter(bkt->bkts != NULL ? bkt->bkts->global_stats : NULL, &bkt->pOpsOverflowCtr);
@@ -198,14 +196,16 @@ static perctile_bucket_t *findBucket(perctile_bucket_t *head, const uchar *name)
 }
 
 #ifdef PERCTILE_STATS_DEBUG
+static int print_perctile_scan(void *key, void *value, void *usr __attribute__((unused))) {
+    uchar *name = key;
+    perctile_stat_t *perc_stat = value;
+    PERCTILE_STATS_LOG("print_perctile() - key: %s, perctile stat name: %s ", name, perc_stat->name);
+    return 1;
+}
+
 static void print_perctiles(perctile_bucket_t *bkt) {
-    if (hashtable_count(bkt->htable)) {
-        struct hashtable_itr *itr = hashtable_iterator(bkt->htable);
-        do {
-            uchar *key = hashtable_iterator_key(itr);
-            perctile_stat_t *perc_stat = hashtable_iterator_value(itr);
-            PERCTILE_STATS_LOG("print_perctile() - key: %s, perctile stat name: %s ", key, perc_stat->name);
-        } while (hashtable_iterator_advance(itr));
+    if (rshash_count(bkt->htable)) {
+        rshash_scan(bkt->htable, print_perctile_scan, NULL);
         PERCTILE_STATS_LOG("\n");
     }
 }
@@ -295,7 +295,7 @@ static rsRetVal perctile_observe(perctile_bucket_t *bkt, uchar *key, int64_t val
 
     pthread_rwlock_wrlock(&bkt->lock);
     lock_initialized = 1;
-    perctile_stat_t *pstat = (perctile_stat_t *)hashtable_search(bkt->htable, key);
+    perctile_stat_t *pstat = (perctile_stat_t *)rshash_find(bkt->htable, key);
     if (!pstat) {
         PERCTILE_STATS_LOG("perctile_observe(): key '%s' not found - creating new pstat", key);
         // create the pstat if not found
@@ -328,7 +328,7 @@ static rsRetVal perctile_observe(perctile_bucket_t *bkt, uchar *key, int64_t val
         }
 
         CHKmalloc(hash_key = ustrdup(key));
-        if (!hashtable_insert(bkt->htable, hash_key, pstat)) {
+        if (!rshash_put(bkt->htable, hash_key, pstat)) {
             perctileStatDestruct(bkt, pstat);
             free(hash_key);
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -386,65 +386,66 @@ static int cmp(const void *p1, const void *p2) {
     return (*(ITEM *)p1) - (*(ITEM *)p2);
 }
 
+struct report_perctile_scan_ctx {
+    perctile_bucket_t *pbkt;
+    ITEM *buf;
+};
+
+static int report_perctile_scan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct report_perctile_scan_ctx *ctx = usr;
+    perctile_stat_t *perc_stat = value;
+    size_t count;
+
+    memset(ctx->buf, 0, ctx->pbkt->window_size * sizeof(ITEM));
+    count = ringbuf_read_to_end(perc_stat->rb_observed_stats, ctx->buf, ctx->pbkt->window_size);
+    if (!count) return 1;
+    PERCTILE_STATS_LOG("read %zu values\n", count);
+#ifdef PERCTILE_STATS_DEBUG
+    PERCTILE_STATS_LOG("ringbuffer contents... \n");
+    for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
+        PERCTILE_STATS_LOG("%lld ", perc_stat->rb_observed_stats->cb.buf[i]);
+    }
+    PERCTILE_STATS_LOG("\n");
+
+    PERCTILE_STATS_LOG("buffer contents... \n");
+    for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
+        PERCTILE_STATS_LOG("%lld ", ctx->buf[i]);
+    }
+    PERCTILE_STATS_LOG("\n");
+#endif
+    qsort(ctx->buf, count, sizeof(ITEM), cmp);
+#ifdef PERCTILE_STATS_DEBUG
+    PERCTILE_STATS_LOG("buffer contents after sort... \n");
+    for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
+        PERCTILE_STATS_LOG("%lld ", ctx->buf[i]);
+    }
+    PERCTILE_STATS_LOG("\n");
+#endif
+    PERCTILE_STATS_LOG("report_perctile_stats() - perctile stat has %zu counters.", perc_stat->perctile_ctrs_count);
+    for (size_t i = 0; i < perc_stat->perctile_ctrs_count; ++i) {
+        perctile_ctr_t *pctr = &perc_stat->ctrs[i];
+        int index = max(0, ((pctr->percentile / 100.0) * count) - 1);
+        pctr->ctr_perctile_stat = ctx->buf[index];
+        PERCTILE_STATS_LOG("report_perctile_stats() - index: %d, perctile stat [%s, %d, %llu]", index, perc_stat->name,
+                           pctr->percentile, pctr->ctr_perctile_stat);
+    }
+    perc_stat->bReported = 1;
+    return 1;
+}
+
 static rsRetVal report_perctile_stats(perctile_bucket_t *pbkt) {
-    ITEM *buf = NULL;
-    struct hashtable_itr *itr = NULL;
+    struct report_perctile_scan_ctx ctx = {.pbkt = pbkt, .buf = NULL};
     DEFiRet;
 
     pthread_rwlock_rdlock(&pbkt->lock);
-    if (hashtable_count(pbkt->htable)) {
-        itr = hashtable_iterator(pbkt->htable);
-        CHKmalloc(buf = malloc(pbkt->window_size * sizeof(ITEM)));
-        do {
-            memset(buf, 0, pbkt->window_size * sizeof(ITEM));
-            perctile_stat_t *perc_stat = hashtable_iterator_value(itr);
-            // ringbuffer read
-            size_t count = ringbuf_read_to_end(perc_stat->rb_observed_stats, buf, pbkt->window_size);
-            if (!count) {
-                continue;
-            }
-            PERCTILE_STATS_LOG("read %zu values\n", count);
-            // calculate the p95 based on the
-#ifdef PERCTILE_STATS_DEBUG
-            PERCTILE_STATS_LOG("ringbuffer contents... \n");
-            for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
-                PERCTILE_STATS_LOG("%lld ", perc_stat->rb_observed_stats->cb.buf[i]);
-            }
-            PERCTILE_STATS_LOG("\n");
-
-            PERCTILE_STATS_LOG("buffer contents... \n");
-            for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
-                PERCTILE_STATS_LOG("%lld ", buf[i]);
-            }
-            PERCTILE_STATS_LOG("\n");
-#endif
-            qsort(buf, count, sizeof(ITEM), cmp);
-#ifdef PERCTILE_STATS_DEBUG
-            PERCTILE_STATS_LOG("buffer contents after sort... \n");
-            for (size_t i = 0; i < perc_stat->rb_observed_stats->size; ++i) {
-                PERCTILE_STATS_LOG("%lld ", buf[i]);
-            }
-            PERCTILE_STATS_LOG("\n");
-#endif
-            PERCTILE_STATS_LOG("report_perctile_stats() - perctile stat has %zu counters.",
-                               perc_stat->perctile_ctrs_count);
-            for (size_t i = 0; i < perc_stat->perctile_ctrs_count; ++i) {
-                perctile_ctr_t *pctr = &perc_stat->ctrs[i];
-                // get percentile - this can be cached.
-                int index = max(0, ((pctr->percentile / 100.0) * count) - 1);
-                // look into if we need to lock this.
-                pctr->ctr_perctile_stat = buf[index];
-                PERCTILE_STATS_LOG("report_perctile_stats() - index: %d, perctile stat [%s, %d, %llu]", index,
-                                   perc_stat->name, pctr->percentile, pctr->ctr_perctile_stat);
-            }
-            perc_stat->bReported = 1;
-        } while (hashtable_iterator_advance(itr));
+    if (rshash_count(pbkt->htable)) {
+        CHKmalloc(ctx.buf = malloc(pbkt->window_size * sizeof(ITEM)));
+        rshash_scan(pbkt->htable, report_perctile_scan, &ctx);
     }
 
 finalize_it:
     pthread_rwlock_unlock(&pbkt->lock);
-    free(itr);
-    free(buf);
+    free(ctx.buf);
     RETiRet;
 }
 
@@ -525,7 +526,7 @@ static rsRetVal perctile_newBucket(
         b->bkts = bkts;
         pthread_rwlockattr_init(&bucket_lock_attr);
         pthread_rwlock_init(&b->lock, &bucket_lock_attr);
-        CHKmalloc(b->htable = create_hashtable(7, hash_from_string, key_equals_string, NULL));
+        CHKmalloc(b->htable = rshash_create(7, hash_from_string, key_equals_string, free, NULL));
         CHKmalloc(b->name = ustrdup(name));
         if (delim) {
             CHKmalloc(b->delim = ustrdup(delim));

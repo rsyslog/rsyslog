@@ -43,7 +43,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "hashtable.h"
+#include "rshash.h"
 
 #define JSON_VAR_NAME "$!mmsequence"
 
@@ -89,7 +89,7 @@ static struct cnfparamdescr actpdescr[] = {
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 /* table for key-counter pairs */
-static struct hashtable *ght;
+static rshash_t *ght;
 static pthread_mutex_t ght_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t inst_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -234,7 +234,7 @@ BEGINnewActInst
                 ABORT_FINALIZE(RS_RET_ERR);
             }
             if (ght == NULL) {
-                if (NULL == (ght = create_hashtable(100, hash_from_string, key_equals_string, NULL))) {
+                if (NULL == (ght = rshash_create(100, hash_from_string, key_equals_string, free, NULL))) {
                     pthread_mutex_unlock(&ght_mutex);
                     DBGPRINTF("mmsequence: error creating hash table!\n");
                     ABORT_FINALIZE(RS_RET_ERR);
@@ -260,11 +260,11 @@ BEGINtryResume
     CODESTARTtryResume;
 ENDtryResume
 
-static int *getCounter(struct hashtable *ht, char *str, int initial) {
+static int *getCounter(rshash_t *ht, char *str, int initial) {
     int *pCounter;
     char *pStr;
 
-    pCounter = hashtable_search(ht, str);
+    pCounter = rshash_find(ht, str);
     if (pCounter) {
         return pCounter;
     }
@@ -283,7 +283,7 @@ static int *getCounter(struct hashtable *ht, char *str, int initial) {
     }
     *pCounter = initial;
 
-    if (!hashtable_insert(ht, pStr, pCounter)) {
+    if (!rshash_put(ht, pStr, pCounter)) {
         DBGPRINTF("mmsequence: inserting element into hashtable failed\n");
         free(pStr);
         free(pCounter);

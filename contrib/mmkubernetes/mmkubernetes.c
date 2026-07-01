@@ -54,8 +54,7 @@
 #include "errmsg.h"
 #include "statsobj.h"
 #include "regexp.h"
-#include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include "datetime.h"
@@ -119,8 +118,8 @@ DEFobjCurrIf(regexp) DEFobjCurrIf(statsobj) DEFobjCurrIf(datetime)
 
 static struct cache_s {
     const uchar *kbUrl;
-    struct hashtable *mdHt;
-    struct hashtable *nsHt;
+    rshash_t *mdHt;
+    rshash_t *nsHt;
     pthread_mutex_t *cacheMtx;
     time_t lastBusyTime; /* when we got the last busy response from kubernetes */
     time_t expirationTime; /* if cache expiration checking is enable, time to check for expiration */
@@ -1027,14 +1026,14 @@ ENDfreeWrkrInstance
  * like not really needed in practice, but gcc 8 complains and doing
  * it 100% correct for sure does not hurt ;-) -- rgerhards, 2018-07-19
  */
-static void hashtable_json_object_put(void *jso) {
+static void cache_json_object_put(void *jso) {
     json_object_put((struct fjson_object *)jso);
 }
 
 static void cache_entry_free(struct cache_entry_s *cache_entry) {
     if (NULL != cache_entry) {
         if (cache_entry->data) {
-            hashtable_json_object_put(cache_entry->data);
+            cache_json_object_put(cache_entry->data);
             cache_entry->data = NULL;
         }
         free(cache_entry);
@@ -1053,8 +1052,8 @@ static struct cache_s *cacheNew(instanceData *pData) {
 
     CHKmalloc(cache = (struct cache_s *)calloc(1, sizeof(struct cache_s)));
     CHKmalloc(cache->cacheMtx = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t)));
-    CHKmalloc(cache->mdHt = create_hashtable(100, hash_from_string, key_equals_string, cache_entry_free_raw));
-    CHKmalloc(cache->nsHt = create_hashtable(100, hash_from_string, key_equals_string, cache_entry_free_raw));
+    CHKmalloc(cache->mdHt = rshash_create(100, hash_from_string, key_equals_string, free, cache_entry_free_raw));
+    CHKmalloc(cache->nsHt = rshash_create(100, hash_from_string, key_equals_string, free, cache_entry_free_raw));
     CHKiConcCtrl(pthread_mutex_init(cache->cacheMtx, NULL));
     need_mutex_destroy = 1;
     datetime.GetTime(&now);
@@ -1069,8 +1068,8 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(errno, iRet, "mmkubernetes: cacheNew: unable to create metadata cache for %s", pData->kubernetesUrl);
         if (cache) {
-            if (cache->mdHt) hashtable_destroy(cache->mdHt, 1);
-            if (cache->nsHt) hashtable_destroy(cache->nsHt, 1);
+            if (cache->mdHt) rshash_destroy(cache->mdHt, 1);
+            if (cache->nsHt) rshash_destroy(cache->nsHt, 1);
             if (cache->cacheMtx) {
                 if (need_mutex_destroy) pthread_mutex_destroy(cache->cacheMtx);
                 free(cache->cacheMtx);
@@ -1084,8 +1083,8 @@ finalize_it:
 
 
 static void cacheFree(struct cache_s *cache) {
-    hashtable_destroy(cache->mdHt, 1);
-    hashtable_destroy(cache->nsHt, 1);
+    rshash_destroy(cache->mdHt, 1);
+    rshash_destroy(cache->nsHt, 1);
     pthread_mutex_destroy(cache->cacheMtx);
     free(cache->cacheMtx);
     free(cache);
@@ -1108,10 +1107,32 @@ finalize_it:
     return cache_entry;
 }
 
+struct cache_expire_scan_ctx {
+    wrkrInstanceData_t *pWrkrData;
+    int isnsmd;
+    time_t now;
+};
+
+static int cache_entry_expired_pred(void *key __attribute__((unused)), void *value, void *usr) {
+    struct cache_expire_scan_ctx *ctx = usr;
+    struct cache_entry_s *cache_entry = value;
+    return ctx->now >= cache_entry->ttl;
+}
+
+static void cache_entry_expired_removed(void *key __attribute__((unused)), void *value, void *usr) {
+    struct cache_expire_scan_ctx *ctx = usr;
+
+    cache_entry_free((struct cache_entry_s *)value);
+    if (ctx->isnsmd) {
+        STATSCOUNTER_DEC(ctx->pWrkrData->namespaceCacheNumEntries, ctx->pWrkrData->mutNamespaceCacheNumEntries);
+    } else {
+        STATSCOUNTER_DEC(ctx->pWrkrData->podCacheNumEntries, ctx->pWrkrData->mutPodCacheNumEntries);
+    }
+}
+
 static int cache_delete_expired_entries(wrkrInstanceData_t *pWrkrData, int isnsmd, time_t now) {
-    struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
-    struct hashtable_itr *itr = NULL;
-    int more;
+    rshash_t *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+    struct cache_expire_scan_ctx scan_ctx = {pWrkrData, isnsmd, now};
 
     if ((pWrkrData->pData->cacheExpireInterval < 0) || (now < pWrkrData->pData->cache->expirationTime)) {
         return 0; /* not enabled or not time yet */
@@ -1120,27 +1141,9 @@ static int cache_delete_expired_entries(wrkrInstanceData_t *pWrkrData, int isnsm
     /* set next expiration time */
     pWrkrData->pData->cache->expirationTime = now + pWrkrData->pData->cacheExpireInterval;
 
-    if (hashtable_count(ht) < 1) return 1; /* expire interval hit but nothing to do */
+    if (rshash_count(ht) < 1) return 1; /* expire interval hit but nothing to do */
 
-    itr = hashtable_iterator(ht);
-    if (NULL == itr) return 1; /* expire interval hit but nothing to do - err? */
-
-    do {
-        struct cache_entry_s *cache_entry = (struct cache_entry_s *)hashtable_iterator_value(itr);
-
-        if (now >= cache_entry->ttl) {
-            cache_entry_free(cache_entry);
-            if (isnsmd) {
-                STATSCOUNTER_DEC(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
-            } else {
-                STATSCOUNTER_DEC(pWrkrData->podCacheNumEntries, pWrkrData->mutPodCacheNumEntries);
-            }
-            more = hashtable_iterator_remove(itr);
-        } else {
-            more = hashtable_iterator_advance(itr);
-        }
-    } while (more);
-    free(itr);
+    rshash_scan_remove_if(ht, cache_entry_expired_pred, cache_entry_expired_removed, &scan_ctx);
     dbgprintf("mmkubernetes: cache_delete_expired_entries: cleaned [%s] cache - size is now [%llu]\n",
               isnsmd ? "namespace" : "pod",
               isnsmd ? pWrkrData->namespaceCacheNumEntries : pWrkrData->podCacheNumEntries);
@@ -1152,13 +1155,13 @@ static struct fjson_object *cache_entry_get(wrkrInstanceData_t *pWrkrData, int i
     struct fjson_object *jso = NULL;
     struct cache_entry_s *cache_entry = NULL;
     int checkttl = 1;
-    struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+    rshash_t *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
 
     /* see if it is time for a general cache expiration */
     if (cache_delete_expired_entries(pWrkrData, isnsmd, now)) checkttl = 0; /* no need to check ttl now */
-    cache_entry = (struct cache_entry_s *)hashtable_search(ht, (void *)key);
+    cache_entry = (struct cache_entry_s *)rshash_find(ht, (void *)key);
     if (cache_entry && checkttl && (now >= cache_entry->ttl)) {
-        cache_entry = (struct cache_entry_s *)hashtable_remove(ht, (void *)key);
+        cache_entry = (struct cache_entry_s *)rshash_remove(ht, (void *)key);
         if (isnsmd) {
             STATSCOUNTER_DEC(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
         } else {
@@ -1202,7 +1205,7 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
                                 const int bDupKey) {
     DEFiRet;
     struct cache_entry_s *cache_entry = NULL;
-    struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+    rshash_t *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
     char *dup_key = NULL;
 
     if (key == NULL) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
@@ -1211,7 +1214,7 @@ static rsRetVal cache_entry_add(wrkrInstanceData_t *pWrkrData,
     CHKmalloc(cache_entry = cache_entry_new(now + pWrkrData->pData->cacheEntryTTL, jso));
     if (cache_entry) {
         if (bDupKey) CHKmalloc(dup_key = strdup(key));
-        if (!hashtable_insert(ht, (void *)(bDupKey ? dup_key : key), cache_entry)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (!rshash_put(ht, (void *)(bDupKey ? dup_key : key), cache_entry)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         dup_key = NULL;
 
         if (isnsmd) {

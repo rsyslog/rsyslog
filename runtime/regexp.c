@@ -34,8 +34,7 @@
 #include "obj.h"
 #include "regexp.h"
 #include "errmsg.h"
-#include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP;
@@ -60,10 +59,10 @@ DEFobjStaticHelpers;
 static pthread_mutex_t mut_regexp;
 
 // Map a regex_t to its associated uncompiled parameters.
-static struct hashtable *regex_to_uncomp = NULL;
+static rshash_t *regex_to_uncomp = NULL;
 
 // Map a (regexp_t, pthead_t) to a perthread_regex.
-static struct hashtable *perthread_regexs = NULL;
+static rshash_t *perthread_regexs = NULL;
 
 
 /*
@@ -134,22 +133,29 @@ static perthread_regex_t *create_perthread_regex(const regex_t *preg, uncomp_reg
     return entry;
 }
 
+static void cleanup_perthread_regex(void *key, void *value, void *usr);
+
 // Get (or create) a regex_t to be used by the current thread.
 static perthread_regex_t *get_perthread_regex(const regex_t *preg) {
     perthread_regex_t *entry = NULL;
     perthread_regex_t key = {.original_preg = preg, .thread = pthread_self()};
 
     pthread_mutex_lock(&mut_regexp);
-    entry = hashtable_search(perthread_regexs, (void *)&key);
+    entry = rshash_find(perthread_regexs, (void *)&key);
     if (!entry) {
-        uncomp_regex_t *uncomp = hashtable_search(regex_to_uncomp, (void *)&preg);
+        uncomp_regex_t *uncomp = rshash_find(regex_to_uncomp, (void *)&preg);
 
         if (uncomp) {
             entry = create_perthread_regex(preg, uncomp);
-            if (!hashtable_insert(perthread_regexs, (void *)entry, entry)) {
+            if (entry == NULL || !rshash_put(perthread_regexs, (void *)entry, entry)) {
                 LogError(0, RS_RET_INTERNAL_ERROR,
                          "error trying to insert thread-regexp into hash-table - things "
                          "will not work 100%% correctly (mostly probably out of memory issue)");
+                if (entry != NULL) {
+                    cleanup_perthread_regex(entry, entry, NULL);
+                    free(entry);
+                }
+                entry = NULL;
             }
         }
     }
@@ -164,7 +170,7 @@ static void remove_uncomp_regexp(regex_t *preg) {
     uncomp_regex_t *uncomp = NULL;
 
     pthread_mutex_lock(&mut_regexp);
-    uncomp = hashtable_remove(regex_to_uncomp, (void *)&preg);
+    uncomp = rshash_remove(regex_to_uncomp, (void *)&preg);
 
     if (uncomp) {
         if (Debug) {
@@ -177,82 +183,51 @@ static void remove_uncomp_regexp(regex_t *preg) {
     pthread_mutex_unlock(&mut_regexp);
 }
 
-static void _regfree(regex_t *preg) {
-    int ret = 0;
-    struct hashtable_itr *itr = NULL;
+static int perthread_regex_matches_original(void *key __attribute__((unused)), void *value, void *usr) {
+    perthread_regex_t *entry = value;
+    return entry->original_preg == (regex_t *)usr;
+}
 
+static void cleanup_perthread_regex(void *key __attribute__((unused)), void *value, void *usr __attribute__((unused))) {
+    perthread_regex_t *entry = value;
+    pthread_mutex_lock(&entry->lock);
+    pthread_mutex_unlock(&entry->lock);
+    pthread_mutex_destroy(&entry->lock);
+    regfree(&entry->preg);
+}
+
+static int cleanup_perthread_regex_scan(void *key, void *value, void *usr) {
+    cleanup_perthread_regex(key, value, usr);
+    return 1;
+}
+
+static void _regfree(regex_t *preg) {
     if (!preg) return;
 
     regfree(preg);
     remove_uncomp_regexp(preg);
 
     pthread_mutex_lock(&mut_regexp);
-    if (!hashtable_count(perthread_regexs)) {
+    if (!rshash_count(perthread_regexs)) {
         pthread_mutex_unlock(&mut_regexp);
         return;
     }
 
     // This can be long to iterate other all regexps, but regfree doesn't get called
     // a lot during processing.
-    itr = hashtable_iterator(perthread_regexs);
-    do {
-        perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
-
-        // Do it before freeing the entry.
-        ret = hashtable_iterator_advance(itr);
-
-        if (entry->original_preg == preg) {
-            // This allows us to avoid freeing this while somebody is still using it.
-            pthread_mutex_lock(&entry->lock);
-            // We can unlock immediately after because mut_regexp is locked.
-            pthread_mutex_unlock(&entry->lock);
-            pthread_mutex_destroy(&entry->lock);
-            regfree(&entry->preg);
-
-            // Do it last because it will free entry.
-            hashtable_remove(perthread_regexs, (void *)entry);
-        }
-    } while (ret);
-    free(itr);
+    rshash_scan_remove_if(perthread_regexs, perthread_regex_matches_original, cleanup_perthread_regex, preg);
 
     pthread_mutex_unlock(&mut_regexp);
 }
 
 static void destroy_perthread_regexs(void) {
-    struct hashtable_itr *itr = NULL;
-    int ret = 0;
-
     if (perthread_regexs == NULL) return;
 
     pthread_mutex_lock(&mut_regexp);
-    if (hashtable_count(perthread_regexs)) {
-        itr = hashtable_iterator(perthread_regexs);
-        if (itr == NULL) {
-            hashtable_destroy(perthread_regexs, 0);
-            perthread_regexs = NULL;
-            pthread_mutex_unlock(&mut_regexp);
-            LogError(0, RS_RET_OUT_OF_MEMORY, "error creating per-thread regexp iterator during regexp class unload");
-            return;
-        }
-        do {
-            perthread_regex_t *entry = (perthread_regex_t *)hashtable_iterator_value(itr);
-
-            ret = hashtable_iterator_advance(itr);
-            pthread_mutex_lock(&entry->lock);
-            pthread_mutex_unlock(&entry->lock);
-            pthread_mutex_destroy(&entry->lock);
-            regfree(&entry->preg);
-
-            /*
-             * perthread_regexs uses the perthread_regex_t object as both
-             * key and value. hashtable_destroy() always frees keys, so leave
-             * the entry allocation owned by the hash table after cleaning the
-             * resources embedded in it.
-             */
-        } while (ret);
-        free(itr);
+    if (rshash_count(perthread_regexs)) {
+        rshash_scan(perthread_regexs, cleanup_perthread_regex_scan, NULL);
     }
-    hashtable_destroy(perthread_regexs, 0);
+    rshash_destroy(perthread_regexs, 0);
     perthread_regexs = NULL;
     pthread_mutex_unlock(&mut_regexp);
 }
@@ -270,21 +245,38 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
     if (ret != 0) return ret;
 
     uncomp = calloc(1, sizeof(*uncomp));
-    if (!uncomp) return REG_ESPACE;
+    if (!uncomp) {
+        regfree(preg);
+        return REG_ESPACE;
+    }
 
     uncomp->preg = preg;
     uncomp->regex = strdup(regex);
+    if (uncomp->regex == NULL) {
+        free(uncomp);
+        regfree(preg);
+        return REG_ESPACE;
+    }
     uncomp->cflags = cflags;
     pthread_mutex_lock(&mut_regexp);
 
     // We need to allocate the key because hashtable will free it on remove.
     ppreg = malloc(sizeof(regex_t *));
-    *ppreg = preg;
-    ret = hashtable_insert(regex_to_uncomp, (void *)ppreg, uncomp);
-    pthread_mutex_unlock(&mut_regexp);
-    if (ret == 0) {
+    if (ppreg == NULL) {
+        pthread_mutex_unlock(&mut_regexp);
         free(uncomp->regex);
         free(uncomp);
+        regfree(preg);
+        return REG_ESPACE;
+    }
+    *ppreg = preg;
+    ret = rshash_put(regex_to_uncomp, (void *)ppreg, uncomp);
+    pthread_mutex_unlock(&mut_regexp);
+    if (ret == 0) {
+        free(ppreg);
+        free(uncomp->regex);
+        free(uncomp);
+        regfree(preg);
         return REG_ESPACE;
     }
 
@@ -360,14 +352,14 @@ BEGINAbstractObjClassInit(regexp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version *
     if (USE_PERTHREAD_REGEX) {
         pthread_mutex_init(&mut_regexp, NULL);
 
-        regex_to_uncomp = create_hashtable(100, hash_from_regex, key_equals_regex, NULL);
-        perthread_regexs = create_hashtable(100, hash_from_tregex, key_equals_tregex, NULL);
+        regex_to_uncomp = rshash_create(100, hash_from_regex, key_equals_regex, free, NULL);
+        perthread_regexs = rshash_create(100, hash_from_tregex, key_equals_tregex, free, NULL);
         if (regex_to_uncomp == NULL || perthread_regexs == NULL) {
             LogError(0, RS_RET_INTERNAL_ERROR,
                      "error trying to initialize hash-table "
                      "for regexp table. regexp will be disabled.");
-            if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
-            if (perthread_regexs) hashtable_destroy(perthread_regexs, 1);
+            if (regex_to_uncomp) rshash_destroy(regex_to_uncomp, 1);
+            if (perthread_regexs) rshash_destroy(perthread_regexs, 1);
             regex_to_uncomp = NULL;
             perthread_regexs = NULL;
             ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
@@ -383,7 +375,7 @@ BEGINObjClassExit(regexp, OBJ_IS_LOADABLE_MODULE) /* class, version */
     if (USE_PERTHREAD_REGEX) {
         /* release objects we no longer need */
         destroy_perthread_regexs();
-        if (regex_to_uncomp) hashtable_destroy(regex_to_uncomp, 1);
+        if (regex_to_uncomp) rshash_destroy(regex_to_uncomp, 1);
         regex_to_uncomp = NULL;
         pthread_mutex_destroy(&mut_regexp);
     }

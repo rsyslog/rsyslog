@@ -32,7 +32,7 @@
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "compat_queue.h"
 
 /* definitions for objects we access */
@@ -115,7 +115,7 @@ static void /* assumes exclusive access to bucket */
 dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *ctrs) {
     dynstats_ctr_t *ctr;
     int ctrs_purged = 0;
-    hashtable_destroy(table, 0);
+    rshash_destroy(table, 0);
     while (ctrs != NULL) {
         ctr = ctrs;
         ctrs = ctrs->next;
@@ -301,9 +301,9 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 
     htab_sz = (size_t)(DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
     if (b->table == NULL) {
-        CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
+        CHKmalloc(survivor_table = rshash_create(htab_sz, hash_from_string, key_equals_string, free, no_op_free));
     }
-    CHKmalloc(new_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
+    CHKmalloc(new_table = rshash_create(htab_sz, hash_from_string, key_equals_string, free, no_op_free));
     statsobj.UnlinkAllCounters(b->stats);
     if (b->survivor_table != NULL) {
         dynstats_destroyCountersIn(b, b->survivor_table, b->survivor_ctrs);
@@ -325,7 +325,7 @@ finalize_it:
                      b->name);
         } else {
             assert(0); /* "can" not happen -- triggers Coverity CID 184307:
-            hashtable_destroy(new_table, 0);
+            rshash_destroy(new_table, 0);
             We keep this as guard should code above change in the future */
         }
         if (b->table == NULL) {
@@ -335,7 +335,7 @@ finalize_it:
                          "ttl-survivor hash-table for dyn-stats bucket named: %s",
                          b->name);
             } else {
-                hashtable_destroy(survivor_table, 0);
+                rshash_destroy(survivor_table, 0);
             }
         }
     }
@@ -941,6 +941,24 @@ static uchar *ATTR_NONNULL(1, 2)
     return buf;
 }
 
+struct persist_bucket_scan_ctx {
+    struct json_object *json_bucket_values;
+    rsRetVal ret;
+};
+
+static int persistBucketCounterScan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct persist_bucket_scan_ctx *ctx = usr;
+    dynstats_ctr_t *pctr = value;
+    struct json_object *jval = json_object_new_int64(pctr->ctr);
+
+    if (jval == NULL) {
+        ctx->ret = RS_RET_OUT_OF_MEMORY;
+        return 0;
+    }
+    json_object_object_add(ctx->json_bucket_values, (const char *)pctr->metric, jval);
+    return 1;
+}
+
 /* This function persists dynstats_bucket_t data, which for the time being:
  * metric bucket counters
  */
@@ -951,6 +969,7 @@ static rsRetVal ATTR_NONNULL(1) persistBucketState(dynstats_bucket_t *b, sbool u
     struct json_object *jval = NULL;
     struct json_object *json = NULL;
     struct json_object *json_bucket_values = NULL;
+    struct persist_bucket_scan_ctx scan_ctx = {.json_bucket_values = NULL, .ret = RS_RET_OK};
 
     assert(b->name);
     uchar *const statefn = getStateFileName(b, statefile, sizeof(statefile));
@@ -971,23 +990,10 @@ static rsRetVal ATTR_NONNULL(1) persistBucketState(dynstats_bucket_t *b, sbool u
     CHKmalloc(json_bucket_values = json_object_new_object());
     json_object_object_add(json, DYNSTATS_BUCKET_PERSIST_VALUES_NAME, json_bucket_values);
 
-    if (b->table != NULL && hashtable_count(b->table) > 0) {
-        struct hashtable_itr *itr = hashtable_iterator(b->table);
-        if (itr == NULL) {
-            LogError(0, RS_RET_OUT_OF_MEMORY, "dynstats: failed to allocate hashtable iterator");
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-        dynstats_ctr_t *pctr = NULL;
-        do {
-            pctr = (dynstats_ctr_t *)hashtable_iterator_value(itr);
-            jval = json_object_new_int64(pctr->ctr);
-            if (jval == NULL) {
-                free(itr);
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-            }
-            json_object_object_add(json_bucket_values, (const char *)pctr->metric, jval);
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+    if (b->table != NULL && rshash_count(b->table) > 0) {
+        scan_ctx.json_bucket_values = json_bucket_values;
+        rshash_scan(b->table, persistBucketCounterScan, &scan_ctx);
+        CHKiRet(scan_ctx.ret);
     }
 
     const char *jstr = json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN);
@@ -1046,7 +1052,7 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
 
     CHKiConcCtrl(pthread_rwlock_wrlock(&b->lock));
     bucketLockHeld = 1;
-    found_ctr = (dynstats_ctr_t *)hashtable_search(b->table, ctr->metric);
+    found_ctr = (dynstats_ctr_t *)rshash_find(b->table, ctr->metric);
     if (found_ctr != NULL) {
         if (doInitialIncrement) {
             STATSCOUNTER_INC(found_ctr->ctr, found_ctr->mutCtr);
@@ -1054,7 +1060,7 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
     } else {
         copy_of_key = ustrdup(ctr->metric);
         if (copy_of_key != NULL) {
-            survivor_ctr = (dynstats_ctr_t *)hashtable_search(b->survivor_table, ctr->metric);
+            survivor_ctr = (dynstats_ctr_t *)rshash_find(b->survivor_table, ctr->metric);
             if (survivor_ctr == NULL) {
                 effective_ctr = ctr;
             } else {
@@ -1070,7 +1076,7 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
                 }
                 survivorUnlinked = 1;
             }
-            if ((created = hashtable_insert(b->table, copy_of_key, effective_ctr))) {
+            if ((created = rshash_put(b->table, copy_of_key, effective_ctr))) {
                 tableInserted = 1;
                 CHKiRet(statsobj.AddPreCreatedCtr(b->stats, effective_ctr->pCtr));
             }
@@ -1117,7 +1123,7 @@ finalize_it:
             if (effective_ctr == ctr) {
                 destroyCreatedCtrOnFailure = 1;
             }
-            hashtable_remove(b->table, copy_of_key);
+            rshash_remove(b->table, copy_of_key);
             copy_of_key = NULL;
             created = 0;
         }
@@ -1196,7 +1202,7 @@ rsRetVal dynstats_inc(dynstats_bucket_t *b, uchar *metric) {
     }
 
     if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
-        ctr = (dynstats_ctr_t *)hashtable_search(b->table, metric);
+        ctr = (dynstats_ctr_t *)rshash_find(b->table, metric);
         if (ctr != NULL) {
             STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
         }

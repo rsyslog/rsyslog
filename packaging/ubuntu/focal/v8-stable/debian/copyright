@@ -10,10 +10,6 @@ Files: runtime/*
 Copyright: 2003-2012  Rainer Gerhards and Adiscon GmbH
 License: LGPL-3.0+ and Apache-2.0
 
-Files: runtime/hashtable*
-Copyright: 2002, 2004  Christopher Clark
-License: BSD-3-clause
-
 Files: debian/*
 Copyright: 2007-2012  Michael Biebl <biebl@debian.org>
 License: GPL-3.0+

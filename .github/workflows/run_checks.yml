@@ -1715,6 +1715,8 @@ jobs:
                 --disable-elasticsearch-tests \
                 --disable-kafka-tests --disable-snmp-tests
               time_phase build make -j8
+              time_phase hashtable-stress-preflight \
+                make -j10 check VERBOSE=1 TESTS="runtime_unit_hashtable runtime_hashtable_stress"
               time_phase check make -j10 check VERBOSE=1
             '
 

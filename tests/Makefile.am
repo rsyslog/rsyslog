@@ -2348,8 +2348,10 @@ check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
+	runtime_unit_hashtable runtime_unit_hashtable_hooks runtime_hashtable_stress \
 	runtime_unit_ommongodb_date
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
+	runtime_unit_hashtable runtime_unit_hashtable_hooks runtime_hashtable_stress \
 	runtime_unit_ommongodb_date
 
 runtime_unit_linkedlist_SOURCES = \
@@ -2363,6 +2365,15 @@ runtime_unit_parser_pri_SOURCES = \
 
 runtime_unit_msg_replace_SOURCES = \
 	unit/msg_replace_test.c
+
+runtime_unit_hashtable_SOURCES = \
+	unit/hashtable_test.c
+
+runtime_unit_hashtable_hooks_SOURCES = \
+	unit/hashtable_hooks_test.c
+
+runtime_hashtable_stress_SOURCES = \
+	hashtable_stress_test.c
 
 runtime_unit_ommongodb_date_SOURCES = \
 	unit/ommongodb_date_test.c
@@ -2412,6 +2423,12 @@ runtime_unit_parser_pri_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_msg_replace_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_hashtable_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_hashtable_hooks_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_hashtable_stress_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_ommongodb_date_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-I$(top_srcdir)/plugins/ommongodb
@@ -2420,6 +2437,9 @@ runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
+runtime_unit_hashtable_LDADD = $(runtime_unit_linkedlist_LDADD)
+runtime_unit_hashtable_hooks_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_hashtable_stress_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 
 if ENABLE_LIBLOGGING_STDLOG
@@ -2427,6 +2447,9 @@ runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_stringbuf_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_parser_pri_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 runtime_unit_msg_replace_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_hashtable_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_unit_hashtable_hooks_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+runtime_hashtable_stress_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 endif
 
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)

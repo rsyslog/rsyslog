@@ -58,8 +58,7 @@
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "errmsg.h"
-#include "hashtable.h"
-#include "hashtable_itr.h"
+#include "rshash.h"
 #include "rsconf.h"
 
 
@@ -78,7 +77,7 @@ static statsobj_t *objLast = NULL;
 static pthread_mutex_t mutStats;
 static pthread_mutex_t mutSenders;
 
-static struct hashtable *stats_senders = NULL;
+static rshash_t *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
@@ -527,6 +526,33 @@ finalize_it:
 }
 
 
+struct sender_stats_scan_ctx {
+    rsRetVal (*cb)(void *, const char *);
+    void *usrptr;
+    statsFmtType_t fmt;
+    int8_t bResetCtrs;
+};
+
+static int senderStatsScan(void *key __attribute__((unused)), void *value, void *usr) {
+    struct sender_stats_scan_ctx *ctx = usr;
+    struct sender_stats *stat = value;
+    char fmtbuf[2048];
+
+    if (ctx->fmt == statsFmt_Legacy) {
+        snprintf(fmtbuf, sizeof(fmtbuf), "_sender_stat: sender=%s messages=%" PRIu64, stat->sender, stat->nMsgs);
+    } else {
+        snprintf(fmtbuf, sizeof(fmtbuf),
+                 "{ \"name\":\"_sender_stat\", "
+                 "\"origin\":\"impstats\", "
+                 "\"sender\":\"%s\", \"messages\":%" PRIu64 "}",
+                 stat->sender, stat->nMsgs);
+    }
+    fmtbuf[sizeof(fmtbuf) - 1] = '\0';
+    ctx->cb(ctx->usrptr, fmtbuf);
+    if (ctx->bResetCtrs) stat->nMsgs = 0;
+    return 1;
+}
+
 /* this function obtains all sender stats. hlper to getAllStatsLines()
  * We need to keep this looked to avoid resizing of the hash table
  * (what could otherwise cause a segfault).
@@ -535,36 +561,14 @@ static void getSenderStats(rsRetVal (*cb)(void *, const char *),
                            void *usrptr,
                            statsFmtType_t fmt,
                            const int8_t bResetCtrs) {
-    struct hashtable_itr *itr = NULL;
-    struct sender_stats *stat;
-    char fmtbuf[2048];
+    struct sender_stats_scan_ctx scan_ctx = {cb, usrptr, fmt, bResetCtrs};
 
     pthread_mutex_lock(&mutSenders);
 
-    /* Iterator constructor only returns a valid iterator if
-     * the hashtable is not empty
-     */
-    if (hashtable_count(stats_senders) > 0) {
-        itr = hashtable_iterator(stats_senders);
-        do {
-            stat = (struct sender_stats *)hashtable_iterator_value(itr);
-            if (fmt == statsFmt_Legacy) {
-                snprintf(fmtbuf, sizeof(fmtbuf), "_sender_stat: sender=%s messages=%" PRIu64, stat->sender,
-                         stat->nMsgs);
-            } else {
-                snprintf(fmtbuf, sizeof(fmtbuf),
-                         "{ \"name\":\"_sender_stat\", "
-                         "\"origin\":\"impstats\", "
-                         "\"sender\":\"%s\", \"messages\":%" PRIu64 "}",
-                         stat->sender, stat->nMsgs);
-            }
-            fmtbuf[sizeof(fmtbuf) - 1] = '\0';
-            cb(usrptr, fmtbuf);
-            if (bResetCtrs) stat->nMsgs = 0;
-        } while (hashtable_iterator_advance(itr));
+    if (rshash_count(stats_senders) > 0) {
+        rshash_scan(stats_senders, senderStatsScan, &scan_ctx);
     }
 
-    free(itr);
     pthread_mutex_unlock(&mutSenders);
 }
 
@@ -829,7 +833,7 @@ rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 
     pthread_mutex_lock(&mutSenders);
     mustUnlock = 1;
-    stat = hashtable_search(stats_senders, (void *)sender);
+    stat = rshash_find(stats_senders, (void *)sender);
     if (stat == NULL) {
         DBGPRINTF("statsRecordSender: sender '%s' not found, adding\n", sender);
         CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
@@ -838,7 +842,7 @@ rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
         if (runConf->globals.reportNewSenders) {
             LogMsg(0, RS_RET_SENDER_APPEARED, LOG_INFO, "new sender '%s'", stat->sender);
         }
-        if (hashtable_insert(stats_senders, (void *)stat->sender, (void *)stat) == 0) {
+        if (rshash_put(stats_senders, (void *)stat->sender, (void *)stat) == 0) {
             LogError(errno, RS_RET_INTERNAL_ERROR,
                      "error inserting sender '%s' into sender "
                      "hash table",
@@ -880,38 +884,41 @@ static void destructUnlinkedCounters(ctr_t *ctr) {
 /* check if a sender has not sent info to us for an extended period
  * of time.
  */
-void checkGoneAwaySenders(const time_t tCurr) {
-    struct hashtable_itr *itr = NULL;
-    struct sender_stats *stat;
-    const time_t rqdLast = tCurr - runConf->globals.senderStatsTimeout;
+struct gone_away_sender_ctx {
+    time_t rqdLast;
+};
+
+static int goneAwaySenderPred(void *key __attribute__((unused)), void *value, void *usr) {
+    struct gone_away_sender_ctx *ctx = usr;
+    struct sender_stats *stat = value;
     struct tm tm;
+
+    if (stat->lastSeen >= ctx->rqdLast) return 0;
+    if (runConf->globals.reportGoneAwaySenders) {
+        localtime_r(&stat->lastSeen, &tm);
+        LogMsg(0, RS_RET_SENDER_GONE_AWAY, LOG_WARNING,
+               "removing sender '%s' from connection "
+               "table, last seen at "
+               "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
+               stat->sender, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    }
+    return 1;
+}
+
+static void goneAwaySenderRemoved(void *key __attribute__((unused)), void *value, void *usr __attribute__((unused))) {
+    free(value);
+}
+
+void checkGoneAwaySenders(const time_t tCurr) {
+    struct gone_away_sender_ctx scan_ctx = {tCurr - runConf->globals.senderStatsTimeout};
 
     pthread_mutex_lock(&mutSenders);
 
-    /* Iterator constructor only returns a valid iterator if
-     * the hashtable is not empty
-     */
-    if (hashtable_count(stats_senders) > 0) {
-        itr = hashtable_iterator(stats_senders);
-        do {
-            stat = (struct sender_stats *)hashtable_iterator_value(itr);
-            if (stat->lastSeen < rqdLast) {
-                if (runConf->globals.reportGoneAwaySenders) {
-                    localtime_r(&stat->lastSeen, &tm);
-                    LogMsg(0, RS_RET_SENDER_GONE_AWAY, LOG_WARNING,
-                           "removing sender '%s' from connection "
-                           "table, last seen at "
-                           "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
-                           stat->sender, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                           tm.tm_sec);
-                }
-                hashtable_remove(stats_senders, (void *)stat->sender);
-            }
-        } while (hashtable_iterator_advance(itr));
+    if (rshash_count(stats_senders) > 0) {
+        rshash_scan_remove_if(stats_senders, goneAwaySenderPred, goneAwaySenderRemoved, &scan_ctx);
     }
 
     pthread_mutex_unlock(&mutSenders);
-    free(itr);
 }
 
 /* destructor for the statsobj object */
@@ -990,7 +997,7 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
     CHKiConcCtrl(pthread_mutex_init(&mutStats, NULL));
     CHKiConcCtrl(pthread_mutex_init(&mutSenders, NULL));
 
-    if ((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+    if ((stats_senders = rshash_create(100, hash_from_string, key_equals_string, free, NULL)) == NULL) {
         LogError(0, RS_RET_INTERNAL_ERROR,
                  "error trying to initialize hash-table "
                  "for sender table. Sender statistics and warnings are disabled.");
@@ -1004,5 +1011,5 @@ BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
     /* release objects we no longer need */
     pthread_mutex_destroy(&mutStats);
     pthread_mutex_destroy(&mutSenders);
-    hashtable_destroy(stats_senders, 1);
+    rshash_destroy(stats_senders, 1);
 ENDObjClassExit(statsobj)

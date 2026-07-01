@@ -366,6 +366,7 @@ AC_ARG_ENABLE(atomic-operations,
 )
 if test "$enable_atomic_operations" = "yes"; then
 	RS_ATOMIC_OPERATIONS
+	RS_ATOMIC_LOAD_STORE_OPERATIONS
 	RS_ATOMIC_OPERATIONS_64BIT
 fi
 

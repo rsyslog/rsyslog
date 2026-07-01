@@ -105,9 +105,9 @@ librsyslog_la_SOURCES = \
 	\
 	hashtable.c \
 	hashtable.h \
-	hashtable_itr.c \
-	hashtable_itr.h \
 	hashtable_private.h \
+	rshash.c \
+	rshash.h \
 	\
 	outchannel.c \
 	outchannel.h \

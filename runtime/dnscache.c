@@ -41,7 +41,7 @@
 #include "obj.h"
 #include "unicode-helper.h"
 #include "net.h"
-#include "hashtable.h"
+#include "rshash.h"
 #include "prop.h"
 #include "dnscache.h"
 #include "rsconf.h"
@@ -60,7 +60,7 @@ struct dnscache_entry_s {
 typedef struct dnscache_entry_s dnscache_entry_t;
 struct dnscache_s {
     pthread_rwlock_t rwlock;
-    struct hashtable *ht;
+    rshash_t *ht;
     unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
@@ -150,7 +150,7 @@ static void ATTR_NONNULL() entryDestruct(dnscache_entry_t *const etry) {
 /* init function (must be called once) */
 rsRetVal dnscacheInit(void) {
     DEFiRet;
-    if ((dnsCache.ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, (void (*)(void *))entryDestruct)) ==
+    if ((dnsCache.ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free, (void (*)(void *))entryDestruct)) ==
         NULL) {
         DBGPRINTF("dnscache: error creating hash table!\n");
         ABORT_FINALIZE(RS_RET_ERR);  // TODO: make this degrade, but run!
@@ -172,7 +172,7 @@ finalize_it:
 rsRetVal dnscacheDeinit(void) {
     DEFiRet;
     prop.Destruct(&staticErrValue);
-    hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
+    rshash_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
     pthread_rwlock_destroy(&dnsCache.rwlock);
     objRelease(glbl, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
@@ -359,7 +359,7 @@ static rsRetVal ATTR_NONNULL() addEntry(struct sockaddr_storage *const addr, dns
 
     memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
 
-    r = hashtable_insert(dnsCache.ht, keybuf, etry);
+    r = rshash_put(dnsCache.ht, keybuf, etry);
     if (r == 0) {
         DBGPRINTF("dnscache: inserting element failed\n");
     }
@@ -381,13 +381,13 @@ static rsRetVal ATTR_NONNULL(1, 5) findEntry(struct sockaddr_storage *const addr
     DEFiRet;
 
     pthread_rwlock_rdlock(&dnsCache.rwlock);
-    dnscache_entry_t *etry = hashtable_search(dnsCache.ht, addr);
+    dnscache_entry_t *etry = rshash_find(dnsCache.ht, addr);
     DBGPRINTF("findEntry: 1st lookup found %p\n", etry);
 
     if (etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
         pthread_rwlock_unlock(&dnsCache.rwlock);
         pthread_rwlock_wrlock(&dnsCache.rwlock);
-        etry = hashtable_search(dnsCache.ht, addr); /* re-query, might have changed */
+        etry = rshash_find(dnsCache.ht, addr); /* re-query, might have changed */
         DBGPRINTF("findEntry: 2nd lookup found %p\n", etry);
         if (etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
             if (etry != NULL) {
@@ -395,7 +395,7 @@ static rsRetVal ATTR_NONNULL(1, 5) findEntry(struct sockaddr_storage *const addr
                     "hashtable: entry timed out, discarding it; "
                     "valid until %lld, now %lld\n",
                     (long long)etry->validUntil, (long long)time(NULL));
-                dnscache_entry_t *const deleted = hashtable_remove(dnsCache.ht, addr);
+                dnscache_entry_t *const deleted = rshash_remove(dnsCache.ht, addr);
                 if (deleted != etry) {
                     LogError(0, RS_RET_INTERNAL_ERROR,
                              "dnscache %d: removed different "

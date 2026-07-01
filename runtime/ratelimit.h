@@ -24,9 +24,9 @@
 #include <stddef.h>
 #include "rsyslog.h"
 #include "rswatch.h"
+#include "rshash.h"
 #include "statsobj.h"
 
-struct hashtable;
 struct ratelimit_ps_state_s;
 struct template;
 typedef struct statsobj_s statsobj_t;
@@ -60,8 +60,8 @@ typedef struct ratelimit_shared_s {
         RL_PS_KEY_FROMHOST_IP_PORT,
         RL_PS_KEY_FROMHOST_PORT
     } per_source_key_mode;
-    struct hashtable *per_source_overrides;
-    struct hashtable *per_source_states;
+    rshash_t *per_source_overrides;
+    rshash_t *per_source_states;
     struct ratelimit_ps_state_s *per_source_lru_head;
     struct ratelimit_ps_state_s *per_source_lru_tail;
     pthread_mutex_t per_source_mut;
@@ -93,7 +93,7 @@ struct ratelimit_s {
 };
 
 typedef struct ratelimit_cfgs_s {
-    struct hashtable *ht;
+    rshash_t *ht;
     pthread_rwlock_t lock;
 } ratelimit_cfgs_t;
 

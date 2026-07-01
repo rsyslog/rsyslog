@@ -19,9 +19,9 @@
 #define INCLUDED_DYNSTATS_H
 
 #include "compat_queue.h"
-#include "hashtable.h"
+#include "rshash.h"
 
-typedef struct hashtable htable;
+typedef rshash_t htable;
 typedef struct rsconf_s rsconf_t;
 
 struct dynstats_buckets_s;
