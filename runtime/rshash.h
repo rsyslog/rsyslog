@@ -132,7 +132,10 @@ unsigned int rshash_count(rshash_t *h);
  * callbacks may observe entries that were live at some point during the scan,
  * may miss entries inserted concurrently, and may skip entries removed
  * concurrently. Callback key/value pointers are borrowed and must not be
- * retained without independent lifetime ownership.
+ * retained without independent lifetime ownership. If concurrent removers or
+ * replacers may destroy returned values immediately, callers must use external
+ * synchronization or defer that value destruction until scans that may have
+ * borrowed the values have quiesced.
  */
 void rshash_scan(rshash_t *h, rshash_scan_fn cb, void *usr);
 /**

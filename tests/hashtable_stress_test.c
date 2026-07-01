@@ -60,6 +60,8 @@ struct scan_mutation_arg {
     int id;
     int *stop;
     int *bad_scan;
+    struct stress_value **retired_values;
+    unsigned int retired_count;
 };
 
 struct growth_arg {
@@ -279,7 +281,7 @@ static void *scan_mutator_worker(void *argptr) {
 
         if ((round & 1) == 0) {
             removed = rshash_remove(arg->table, &lookup);
-            if (removed != NULL) free(removed);
+            if (removed != NULL) arg->retired_values[arg->retired_count++] = removed;
         } else {
             (void)rshash_put_unique(arg->table, new_key(k), new_value(k, round));
         }
@@ -290,6 +292,8 @@ static void *scan_mutator_worker(void *argptr) {
 /*
  * Weak scans must be memory-safe while mutations run. The oracle deliberately
  * avoids snapshot expectations and checks only pointer validity invariants.
+ * Removed values are freed only after scanners stop, matching the rshash value
+ * lifetime contract for callers that scan concurrently with removal.
  */
 static int test_scan_during_mutation(void) {
     pthread_t scanners[2];
@@ -305,6 +309,11 @@ static int test_scan_during_mutation(void) {
     CHECK(table != NULL);
     for (i = 0; i < STRESS_KEYS; ++i) CHECK(rshash_put_unique(table, new_key(i), new_value(i, 0)) != 0);
     gate_init(&gate);
+    for (i = 0; i < STRESS_THREADS; ++i) {
+        mutator_args[i].retired_values = calloc(MUTATION_ROUNDS, sizeof(*mutator_args[i].retired_values));
+        mutator_args[i].retired_count = 0;
+        CHECK(mutator_args[i].retired_values != NULL);
+    }
     for (i = 0; i < 2; ++i) {
         scanner_args[i].table = table;
         scanner_args[i].gate = &gate;
@@ -327,6 +336,11 @@ static int test_scan_during_mutation(void) {
     for (i = 0; i < 2; ++i) CHECK(pthread_join(scanners[i], NULL) == 0);
     gate_destroy(&gate);
     CHECK(__sync_fetch_and_add(&bad_scan, 0) == 0);
+    for (i = 0; i < STRESS_THREADS; ++i) {
+        unsigned int j;
+        for (j = 0; j < mutator_args[i].retired_count; ++j) free(mutator_args[i].retired_values[j]);
+        free(mutator_args[i].retired_values);
+    }
     rshash_destroy(table, 1);
     return 0;
 }
