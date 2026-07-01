@@ -135,7 +135,7 @@ static inline unsigned int wrapping_add_unsigned(unsigned int lhs, unsigned int 
 
 static inline struct entry *atomic_fetch_entry(struct entry **slot, rshash_t *h) {
     (void)h;
-    return (struct entry *)ATOMIC_FETCH_PTR((void **)slot, &h->mutTable);
+    return (struct entry *)ATOMIC_LOAD_PTR((void **)slot, &h->mutTable);
 }
 
 static inline int atomic_cas_entry(struct entry **slot, struct entry *oldval, struct entry *newval, rshash_t *h) {
@@ -145,7 +145,7 @@ static inline int atomic_cas_entry(struct entry **slot, struct entry *oldval, st
 
 static inline struct rshash_table *atomic_fetch_table(struct rshash_table **slot, rshash_t *h) {
     (void)h;
-    return (struct rshash_table *)ATOMIC_FETCH_PTR((void **)slot, &h->mutTables);
+    return (struct rshash_table *)ATOMIC_LOAD_PTR((void **)slot, &h->mutTables);
 }
 
 static inline int atomic_cas_table(struct rshash_table **slot,
@@ -185,17 +185,17 @@ static void free_retired_list(rshash_t *h, struct entry *list) {
 static void rshash_try_reclaim(rshash_t *h) {
     struct entry *list;
 
-    if (ATOMIC_FETCH_32BIT_unsigned(&h->active_ops, &h->mutActive) != 0) return;
+    if (ATOMIC_LOAD_32BIT_unsigned(&h->active_ops, &h->mutActive) != 0) return;
 
     for (;;) {
-        list = (struct entry *)ATOMIC_FETCH_PTR((void **)&h->retired, &h->mutRetired);
+        list = (struct entry *)ATOMIC_LOAD_PTR((void **)&h->retired, &h->mutRetired);
         if (list == NULL) return;
         if (ATOMIC_CAS_PTR((void **)&h->retired, list, NULL, &h->mutRetired)) break;
     }
 #ifdef RSHASH_TEST_HOOKS
     rshash_test_after_retired_detach(h);
 #endif
-    if (ATOMIC_FETCH_32BIT_unsigned(&h->active_ops, &h->mutActive) == 0) {
+    if (ATOMIC_LOAD_32BIT_unsigned(&h->active_ops, &h->mutActive) == 0) {
         free_retired_list(h, list);
     } else {
         /*
@@ -206,7 +206,7 @@ static void rshash_try_reclaim(rshash_t *h) {
         struct entry *tail = list;
         while (tail->retired_next != NULL) tail = tail->retired_next;
         for (;;) {
-            struct entry *old_head = (struct entry *)ATOMIC_FETCH_PTR((void **)&h->retired, &h->mutRetired);
+            struct entry *old_head = (struct entry *)ATOMIC_LOAD_PTR((void **)&h->retired, &h->mutRetired);
             tail->retired_next = old_head;
             if (ATOMIC_CAS_PTR((void **)&h->retired, old_head, list, &h->mutRetired)) break;
         }
@@ -222,7 +222,7 @@ static void retire_entry(rshash_t *h, struct entry *e, const int free_value) {
     if (free_value) e->retired_free_value = 1;
     if (!ATOMIC_CAS(&e->retired, 0, 1, &h->mutRetired)) return;
     for (;;) {
-        struct entry *old_head = (struct entry *)ATOMIC_FETCH_PTR((void **)&h->retired, &h->mutRetired);
+        struct entry *old_head = (struct entry *)ATOMIC_LOAD_PTR((void **)&h->retired, &h->mutRetired);
         e->retired_next = old_head;
         if (ATOMIC_CAS_PTR((void **)&h->retired, old_head, e, &h->mutRetired)) break;
     }
@@ -248,7 +248,7 @@ retry: {
             cur = unmarked_next;
             continue;
         }
-        if (ATOMIC_FETCH_32BIT(&cur->state, &h->mutTable) == ENTRY_REMOVED) {
+        if (ATOMIC_LOAD_32BIT(&cur->state, &h->mutTable) == ENTRY_REMOVED) {
             struct entry *unmarked_next = entry_unmark(next);
             if (!atomic_cas_entry(&cur->next, next, entry_mark(next), h)) goto retry;
             if (!atomic_cas_entry(slot, cur, unmarked_next, h)) goto retry;
@@ -302,7 +302,7 @@ retry: {
 
 static int entry_is_present(rshash_t *h, struct entry *entry, struct entry *next) {
     (void)h;
-    return !entry_is_marked(next) && ATOMIC_FETCH_32BIT(&entry->state, &h->mutTable) != ENTRY_REMOVED;
+    return !entry_is_marked(next) && ATOMIC_LOAD_32BIT(&entry->state, &h->mutTable) != ENTRY_REMOVED;
 }
 
 static int bucket_snapshot_has_duplicate(
@@ -388,7 +388,7 @@ static void rshash_maybe_grow(rshash_t *h) {
     struct rshash_table *current = atomic_fetch_table(&h->tables, h);
     struct rshash_table *newtbl;
     unsigned int next_size;
-    const unsigned int count = ATOMIC_FETCH_32BIT_unsigned(&h->entrycount, &h->mutCount);
+    const unsigned int count = ATOMIC_LOAD_32BIT_unsigned(&h->entrycount, &h->mutCount);
 
     if (current == NULL || count <= (current->tablelength * 65u) / 100u) return;
     next_size = next_table_size(current->tablelength);
@@ -478,7 +478,7 @@ static int insert_at_position(rshash_t *h, void *key, void *value, const int uni
                         rshash_leave(h);
                         return 0;
                     }
-                    if (ATOMIC_FETCH_32BIT(&e->state, &h->mutTable) == ENTRY_REMOVED) break;
+                    if (ATOMIC_LOAD_32BIT(&e->state, &h->mutTable) == ENTRY_REMOVED) break;
                 }
             }
             rshash_leave(h);
@@ -561,14 +561,14 @@ int rshash_replace(rshash_t *h, void *key, void *value, void **old_value) {
         if (entry == NULL) break;
         if (entry_is_marked(atomic_fetch_entry(&entry->next, h))) break;
         if (!ATOMIC_CAS(&entry->state, ENTRY_LIVE, ENTRY_UPDATING, &h->mutTable)) {
-            if (ATOMIC_FETCH_32BIT(&entry->state, &h->mutTable) == ENTRY_REMOVED) break;
+            if (ATOMIC_LOAD_32BIT(&entry->state, &h->mutTable) == ENTRY_REMOVED) break;
             continue;
         }
         if (entry_is_marked(atomic_fetch_entry(&entry->next, h))) {
             ATOMIC_STORE_INT(&entry->state, &h->mutTable, ENTRY_LIVE);
             continue;
         }
-        oldv = ATOMIC_FETCH_PTR((void **)&entry->v, &h->mutTable);
+        oldv = ATOMIC_LOAD_PTR((void **)&entry->v, &h->mutTable);
         ATOMIC_STORE_PTR((void **)&entry->v, &h->mutTable, value);
         ATOMIC_STORE_INT(&entry->state, &h->mutTable, ENTRY_LIVE);
         if (old_value != NULL) *old_value = oldv;
@@ -585,7 +585,7 @@ static int entry_try_remove(rshash_t *h, struct entry *entry, void **value) {
         *value = NULL;
         return 0;
     }
-    *value = ATOMIC_FETCH_PTR((void **)&entry->v, &h->mutTable);
+    *value = ATOMIC_LOAD_PTR((void **)&entry->v, &h->mutTable);
     return 1;
 }
 
@@ -613,9 +613,9 @@ void *rshash_find(rshash_t *h, void *key) {
         struct entry *e = entry_unmark(atomic_fetch_entry(&tbl->table[idx], h));
         while (e != NULL) {
             struct entry *next = atomic_fetch_entry(&e->next, h);
-            if (!entry_is_marked(next) && ATOMIC_FETCH_32BIT(&e->state, &h->mutTable) != ENTRY_REMOVED) {
+            if (!entry_is_marked(next) && ATOMIC_LOAD_32BIT(&e->state, &h->mutTable) != ENTRY_REMOVED) {
                 if (e->h == hashvalue && h->eqfn(key, e->k)) {
-                    value = ATOMIC_FETCH_PTR((void **)&e->v, &h->mutTable);
+                    value = ATOMIC_LOAD_PTR((void **)&e->v, &h->mutTable);
                     break;
                 }
             }
@@ -682,7 +682,7 @@ int rshash_test_mark_removed_for_key(rshash_t *h, void *key) {
 #endif
 
 unsigned int rshash_count(rshash_t *h) {
-    return ATOMIC_FETCH_32BIT_unsigned(&h->entrycount, &h->mutCount);
+    return ATOMIC_LOAD_32BIT_unsigned(&h->entrycount, &h->mutCount);
 }
 
 void rshash_scan(rshash_t *h, rshash_scan_fn cb, void *usr) {
@@ -700,8 +700,8 @@ void rshash_scan(rshash_t *h, rshash_scan_fn cb, void *usr) {
             struct entry *e = entry_unmark(atomic_fetch_entry(&tbl->table[i], h));
             while (e != NULL) {
                 struct entry *next = atomic_fetch_entry(&e->next, h);
-                if (!entry_is_marked(next) && ATOMIC_FETCH_32BIT(&e->state, &h->mutTable) != ENTRY_REMOVED &&
-                    cb(e->k, ATOMIC_FETCH_PTR((void **)&e->v, &h->mutTable), usr) == 0) {
+                if (!entry_is_marked(next) && ATOMIC_LOAD_32BIT(&e->state, &h->mutTable) != ENTRY_REMOVED &&
+                    cb(e->k, ATOMIC_LOAD_PTR((void **)&e->v, &h->mutTable), usr) == 0) {
                     rshash_leave(h);
                     return;
                 }
@@ -733,7 +733,7 @@ unsigned int rshash_scan_remove_if(rshash_t *h,
                 struct entry *unmarked_next = entry_unmark(next);
                 void *value;
 
-                if (entry_is_marked(next) || ATOMIC_FETCH_32BIT(&e->state, &h->mutTable) == ENTRY_REMOVED) {
+                if (entry_is_marked(next) || ATOMIC_LOAD_32BIT(&e->state, &h->mutTable) == ENTRY_REMOVED) {
                     if (!entry_is_marked(next)) {
                         if (!atomic_cas_entry(&e->next, next, entry_mark(next), h)) goto retry_bucket;
                     }
@@ -743,7 +743,7 @@ unsigned int rshash_scan_remove_if(rshash_t *h,
                     continue;
                 }
 
-                value = ATOMIC_FETCH_PTR((void **)&e->v, &h->mutTable);
+                value = ATOMIC_LOAD_PTR((void **)&e->v, &h->mutTable);
                 if (pred(e->k, value, usr)) {
                     if (!entry_try_remove(h, e, &value)) goto retry_bucket;
                     entry_mark_removed(h, e);
