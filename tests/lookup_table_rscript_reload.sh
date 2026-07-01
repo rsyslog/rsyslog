@@ -1,6 +1,9 @@
 #!/bin/bash
-# test for lookup-table reload by rscript-fn
-# added 2015-12-18 by singh.janmejay
+# Test lookup-table reload by the RainerScript reload_lookup_table statement.
+# The second reload uses uppercase hex escapes in procedure-call strings; the
+# output oracle proves those strings parsed to the intended table and stub
+# values before the reload failure fallback is applied.
+# Added 2015-12-18 by singh.janmejay.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test currently does not work on FreeBSD"
@@ -13,7 +16,7 @@ template(name="outfmt" type="string" string="- %msg% %$.lkp%\n")
 set $.lkp = lookup("xlate", $msg);
 
 if ($msg == " msgnum:00000002:") then {
-  reload_lookup_table("xlate", "reload_failed");
+  reload_lookup_table("\x78\x6C\x61\x74\x65", "\x72\x65\x6C\x6F\x61\x64\x5F\x66\x61\x69\x6C\x65\x64");
 }
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")

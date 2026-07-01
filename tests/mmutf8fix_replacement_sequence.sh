@@ -22,7 +22,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_tag_
       ruleset="tagtest")
 
 ruleset(name="sdtest") {
-	action(type="mmutf8fix" replacementSequence="\357\277\275")
+	action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="sdoutfmt")
 }
 

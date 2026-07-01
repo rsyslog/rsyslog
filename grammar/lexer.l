@@ -320,12 +320,12 @@ static void cnfPrintToken(const char *token);
 "foreach"			{ cnfPrintToken(yytext); BEGIN EXPR; return FOREACH; }
 "reload_lookup_table"		{ cnfPrintToken(yytext); BEGIN IN_PROCEDURE_CALL; return RELOAD_LOOKUP_TABLE_PROCEDURE; }
 <IN_PROCEDURE_CALL>"("		{ cnfPrintToken(yytext); return yytext[0]; }
-<IN_PROCEDURE_CALL>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
+<IN_PROCEDURE_CALL>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*\'	 {
 				  cnfPrintToken(yytext);  yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<IN_PROCEDURE_CALL>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
+<IN_PROCEDURE_CALL>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*\" {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
@@ -371,22 +371,22 @@ static void cnfPrintToken(const char *token);
 <EXPR>0x[0-9a-f]+ |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ cnfPrintToken(yytext); yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
 <EXPR>\$[$!./]{0,1}[@a-z_]*[!@a-z0-9\-_\.\[\]]*	{ cnfPrintToken(yytext); yylval.s = strdup(yytext+1); return VAR; }
-<EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
+<EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*\'	 {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<EXPR>`([^`\\]|\\['`"\\bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*`	 {
+<EXPR>`([^`\\]|\\['`"\\bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*`	 {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
-<EXPR>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
+<EXPR>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*\" {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<EXPR>\"([^"\\]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
+<EXPR>\"([^"\\]|\\["'\\$bntr]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7][0-7][0-7])*\" {
 				   cnfPrintToken(yytext); parser_errmsg("$-sign in double quotes must be "
 					        "escaped, problem string is: %s",
 						yytext); }
@@ -479,12 +479,12 @@ static void cnfPrintToken(const char *token);
 <INOBJ>"[" |
 <INOBJ>"]" |
 <INOBJ>"="			{ cnfPrintToken(yytext); return(yytext[0]); }
-<INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
+<INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7]{1,3})*\" {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\[0-7]{1,3})*` {
+<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\x[0-9a-fA-F][0-9a-fA-F]|\\[0-7]{1,3})*` {
 				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = expand_backticks(yytext+1);
