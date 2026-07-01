@@ -245,12 +245,16 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
     if (ret != 0) return ret;
 
     uncomp = calloc(1, sizeof(*uncomp));
-    if (!uncomp) return REG_ESPACE;
+    if (!uncomp) {
+        regfree(preg);
+        return REG_ESPACE;
+    }
 
     uncomp->preg = preg;
     uncomp->regex = strdup(regex);
     if (uncomp->regex == NULL) {
         free(uncomp);
+        regfree(preg);
         return REG_ESPACE;
     }
     uncomp->cflags = cflags;
@@ -262,6 +266,7 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
         pthread_mutex_unlock(&mut_regexp);
         free(uncomp->regex);
         free(uncomp);
+        regfree(preg);
         return REG_ESPACE;
     }
     *ppreg = preg;
@@ -271,6 +276,7 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
         free(ppreg);
         free(uncomp->regex);
         free(uncomp);
+        regfree(preg);
         return REG_ESPACE;
     }
 
