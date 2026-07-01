@@ -59,52 +59,24 @@ DEFobjStaticHelpers;
 DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(parser) DEFobjCurrIf(statsobj)
 
 
-    static inline unsigned int ratelimitSharedLoadUInt(const unsigned int *value, pthread_mutex_t *mut) {
-#ifdef HAVE_ATOMIC_BUILTINS
+    static inline unsigned int ratelimitSharedLoadUInt(unsigned int *value, pthread_mutex_t *mut) {
     (void)mut;
-    return __atomic_load_n(value, __ATOMIC_RELAXED);
-#else
-    unsigned int snapshot;
-    pthread_mutex_lock(mut);
-    snapshot = *value;
-    pthread_mutex_unlock(mut);
-    return snapshot;
-#endif
+    return ATOMIC_LOAD_32BIT_unsigned(value, mut);
 }
 
 static inline void ratelimitSharedStoreUInt(unsigned int *value, pthread_mutex_t *mut, unsigned int newval) {
-#ifdef HAVE_ATOMIC_BUILTINS
     (void)mut;
-    __atomic_store_n(value, newval, __ATOMIC_RELAXED);
-#else
-    pthread_mutex_lock(mut);
-    *value = newval;
-    pthread_mutex_unlock(mut);
-#endif
+    ATOMIC_STORE_32BIT_unsigned(value, mut, newval);
 }
 
-static inline int ratelimitSharedLoadSeverity(const int *value, pthread_mutex_t *mut) {
-#ifdef HAVE_ATOMIC_BUILTINS
+static inline int ratelimitSharedLoadSeverity(int *value, pthread_mutex_t *mut) {
     (void)mut;
-    return __atomic_load_n(value, __ATOMIC_RELAXED);
-#else
-    int snapshot;
-    pthread_mutex_lock(mut);
-    snapshot = *value;
-    pthread_mutex_unlock(mut);
-    return snapshot;
-#endif
+    return ATOMIC_LOAD_32BIT(value, mut);
 }
 
 static inline void ratelimitSharedStoreSeverity(int *value, pthread_mutex_t *mut, int newval) {
-#ifdef HAVE_ATOMIC_BUILTINS
     (void)mut;
-    __atomic_store_n(value, newval, __ATOMIC_RELAXED);
-#else
-    pthread_mutex_lock(mut);
-    *value = newval;
-    pthread_mutex_unlock(mut);
-#endif
+    ATOMIC_STORE_32BIT(value, mut, newval);
 }
 
 static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared);

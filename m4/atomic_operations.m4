@@ -64,3 +64,30 @@ if test "$ap_cv_atomic_builtins" = "yes"; then
 fi
 
 ])
+
+AC_DEFUN([RS_ATOMIC_LOAD_STORE_OPERATIONS],
+[AC_CACHE_CHECK([whether the compiler provides __atomic load/store builtins], [rs_cv_atomic_load_store_builtins],
+[AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <stdint.h>
+]], [[
+    int val = 1;
+    unsigned uval = 2;
+    void *ptr = &val;
+    int loaded;
+    unsigned uloaded;
+    void *loaded_ptr;
+
+    loaded = __atomic_load_n(&val, __ATOMIC_ACQUIRE);
+    __atomic_store_n(&val, loaded + 1, __ATOMIC_RELEASE);
+    uloaded = __atomic_load_n(&uval, __ATOMIC_ACQUIRE);
+    __atomic_store_n(&uval, uloaded + 1, __ATOMIC_RELEASE);
+    loaded_ptr = __atomic_load_n(&ptr, __ATOMIC_ACQUIRE);
+    __atomic_store_n(&ptr, loaded_ptr, __ATOMIC_RELEASE);
+    return 0;
+]])], [rs_cv_atomic_load_store_builtins=yes], [rs_cv_atomic_load_store_builtins=no])])
+
+if test "$rs_cv_atomic_load_store_builtins" = "yes"; then
+    AC_DEFINE(HAVE_ATOMIC_LOAD_STORE_BUILTINS, 1, [Define if compiler provides __atomic load/store builtins])
+fi
+
+])
