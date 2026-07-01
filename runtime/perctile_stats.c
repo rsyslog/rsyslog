@@ -135,7 +135,7 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
         }
         pthread_rwlock_wrlock(&bkt->lock);
         // Delete all items in hashtable
-        size_t count = rshash_count(bkt->htable);
+        size_t count = bkt->htable == NULL ? 0 : rshash_count(bkt->htable);
         if (count) {
             dbgprintf("%s() - All container instances, count=%zu...\n", __FUNCTION__, count);
             rshash_scan(bkt->htable, perctile_bucket_destruct_scan, bkt);

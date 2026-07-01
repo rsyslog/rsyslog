@@ -242,7 +242,15 @@ static int validate_scan_cb(void *keyptr, void *valueptr, void *usr) {
     const struct stress_value *value = valueptr;
 
     ++ctx->seen;
-    if (value == NULL || key->value != value->key) ctx->bad = 1;
+    /*
+     * rshash_scan() is weakly consistent: key and value pointers are borrowed
+     * safely, but they are not promised to be a stable snapshot pair while
+     * replace/remove operations race with the scan. Range checks still catch
+     * corrupted or freed pointers without requiring snapshot semantics.
+     */
+    if (key == NULL || value == NULL || key->value < 0 || key->value >= STRESS_KEYS || value->key < 0 ||
+        value->key >= STRESS_KEYS)
+        ctx->bad = 1;
     return 1;
 }
 

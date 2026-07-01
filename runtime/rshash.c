@@ -41,6 +41,7 @@ static struct {
     void *after_retired_detach_usr;
     int fail_next_entry_alloc;
     int fail_next_table_alloc;
+    int fail_next_table_bucket_alloc;
     int fail_next_unlink_cas;
 } rshash_test_hooks;
 
@@ -66,6 +67,10 @@ void rshash_test_fail_next_table_alloc(void) {
     rshash_test_hooks.fail_next_table_alloc = 1;
 }
 
+void rshash_test_fail_next_table_bucket_alloc(void) {
+    rshash_test_hooks.fail_next_table_bucket_alloc = 1;
+}
+
 void rshash_test_fail_next_unlink_cas(void) {
     rshash_test_hooks.fail_next_unlink_cas = 1;
 }
@@ -87,8 +92,8 @@ static void *rshash_alloc_table_struct(size_t size) {
 }
 
 static void *rshash_alloc_table_buckets(size_t nmemb, size_t size) {
-    if (rshash_test_hooks.fail_next_table_alloc) {
-        rshash_test_hooks.fail_next_table_alloc = 0;
+    if (rshash_test_hooks.fail_next_table_bucket_alloc) {
+        rshash_test_hooks.fail_next_table_bucket_alloc = 0;
         return NULL;
     }
     return calloc(nmemb, size);
@@ -532,17 +537,21 @@ rshash_t *rshash_create(unsigned int minsize,
 }
 
 int rshash_put(rshash_t *h, void *key, void *value) {
+    if (h == NULL || key == NULL || value == NULL) return 0;
     return insert_at_position(h, key, value, 0);
 }
 
 int rshash_put_unique(rshash_t *h, void *key, void *value) {
+    if (h == NULL || key == NULL || value == NULL) return 0;
     return insert_at_position(h, key, value, 1);
 }
 
 int rshash_replace(rshash_t *h, void *key, void *value, void **old_value) {
-    const unsigned int hashvalue = hash(h, key);
+    unsigned int hashvalue;
     int found = 0;
 
+    if (h == NULL || key == NULL || value == NULL) return 0;
+    hashvalue = hash(h, key);
     rshash_enter(h);
     for (;;) {
         struct entry *entry;
@@ -592,10 +601,12 @@ static void entry_mark_removed(rshash_t *h, struct entry *entry) {
 }
 
 void *rshash_find(rshash_t *h, void *key) {
-    const unsigned int hashvalue = hash(h, key);
+    unsigned int hashvalue;
     struct rshash_table *tbl;
     void *value = NULL;
 
+    if (h == NULL || key == NULL) return NULL;
+    hashvalue = hash(h, key);
     rshash_enter(h);
     for (tbl = atomic_fetch_table(&h->tables, h); tbl != NULL && value == NULL; tbl = tbl->next) {
         const unsigned int idx = indexFor(tbl->tablelength, hashvalue);
@@ -616,9 +627,11 @@ void *rshash_find(rshash_t *h, void *key) {
 }
 
 void *rshash_remove(rshash_t *h, void *key) {
-    const unsigned int hashvalue = hash(h, key);
+    unsigned int hashvalue;
     void *value = NULL;
 
+    if (h == NULL || key == NULL) return NULL;
+    hashvalue = hash(h, key);
     rshash_enter(h);
     for (;;) {
         struct rshash_table *tbl;

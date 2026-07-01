@@ -665,7 +665,10 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
         CHKmalloc(keybuf = malloc(sizeof(pid_t)));
         *keybuf = cred->pid;
         r = rshash_put(pLstn->ht, keybuf, rl);
-        if (r == 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (r == 0) {
+            free(keybuf);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
     }
 
     *prl = rl;
@@ -1290,7 +1293,8 @@ static rsRetVal activateListeners(void) {
         }
 #endif
         if (runModConf->ratelimitIntervalSysSock > 0) {
-            if ((listeners[0].ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free, NULL)) == NULL) {
+            if ((listeners[0].ht = rshash_create(100, hash_from_key_fn, key_equals_fn, free,
+                                                 (void (*)(void *))ratelimitDestruct)) == NULL) {
                 /* in this case, we simply turn of rate-limiting */
                 LogError(0, NO_ERRCODE,
                          "imuxsock: turning off rate limiting because "

@@ -62,9 +62,11 @@ rshash_t *rshash_create(unsigned int minsize,
  *
  * @return Non-zero on success, zero on allocation failure.
  *
- * On success, the table owns @p key. On failure, ownership remains with the
- * caller. Duplicate-key entries are allowed for compatibility with historical
- * rsyslog hashtable users; lookup/removal returns one matching live entry.
+ * @p h, @p key, and @p value must not be NULL. NULL values are not supported
+ * because lookup and removal use NULL as the not-found sentinel. On success,
+ * the table owns @p key. On failure, ownership remains with the caller.
+ * Duplicate-key entries are allowed for compatibility with historical rsyslog
+ * hashtable users; lookup/removal returns one matching live entry.
  */
 int rshash_put(rshash_t *h, void *key, void *value);
 /**
@@ -73,9 +75,11 @@ int rshash_put(rshash_t *h, void *key, void *value);
  * @return Non-zero on success, zero on duplicate rejection or allocation
  *         failure.
  *
- * On duplicate rejection, the supplied key and value are destroyed using the
- * table's configured destructors. On allocation failure before publication,
- * ownership remains with the caller.
+ * @p h, @p key, and @p value must not be NULL. NULL values are not supported
+ * because lookup and removal use NULL as the not-found sentinel. On duplicate
+ * rejection, the supplied key and value are destroyed using the table's
+ * configured destructors. On invalid arguments or allocation failure before
+ * publication, ownership remains with the caller.
  */
 int rshash_put_unique(rshash_t *h, void *key, void *value);
 /**
@@ -85,6 +89,9 @@ int rshash_put_unique(rshash_t *h, void *key, void *value);
  * @param value New value. The table consumes it only when replacement succeeds.
  * @param old_value Optional output for the displaced value.
  * @return Non-zero if an entry was replaced, zero if no live entry matched.
+ *
+ * @p h, @p key, and @p value must not be NULL. NULL values are not supported
+ * because lookup and removal use NULL as the not-found sentinel.
  *
  * The table-owned key is unchanged. When @p old_value is non-NULL, the caller
  * receives ownership of the displaced value. When @p old_value is NULL, the

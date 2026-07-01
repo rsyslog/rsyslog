@@ -1515,10 +1515,8 @@ static void generate_ipv6_candidate(struct ipv6_int *num,
 static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t *const pWrkrData, int useEmbedded) {
     struct ipv6_int *hashKey = NULL;
     DEFiRet;
-    rshash_t *randConsisIPs =
-        useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisIPs : pWrkrData->pData->ipv6.randConsisIPs;
-    rshash_t *randConsisUniqueGeneratedIPs = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
-                                                         : pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs;
+    rshash_t *randConsisIPs;
+    rshash_t *randConsisUniqueGeneratedIPs;
     const int uniqueMode =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUnique : pWrkrData->pData->ipv6.randConsisUnique;
     struct ipv6_int original = *num;
@@ -1547,6 +1545,9 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         ABORT_FINALIZE(RS_RET_ERR);
     }
     locked = 1;
+    randConsisIPs = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisIPs : pWrkrData->pData->ipv6.randConsisIPs;
+    randConsisUniqueGeneratedIPs = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
+                                               : pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs;
 
     if (randConsisIPs == NULL) {
         CHKmalloc(randConsisIPs = rshash_create(512, hash_from_key_fn, keys_equal_fn, free, NULL));

@@ -1,6 +1,7 @@
 /* Copyright 2026 Adiscon GmbH.
+ * Copyright (C) 2004 Christopher Clark <firstname.lastname@cl.cam.ac.uk>
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 AND BSD-3-Clause
  */
 #include "config.h"
 #include "rshash.h"

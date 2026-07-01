@@ -27,6 +27,7 @@ struct counted {
 struct worker_arg {
     rshash_t *table;
     int id;
+    int failed;
 };
 
 struct unique_worker_arg {
@@ -153,9 +154,23 @@ static int test_modern_unique_replace_and_destructors(void) {
  * Create contract: a table needs explicit hash and equality callbacks. Invalid callback arguments must fail cleanly
  * without constructing a partial table.
  */
-static int test_create_rejects_invalid_callbacks(void) {
+static int test_rejects_invalid_arguments(void) {
+    int key = 1;
+    int value = 2;
+    rshash_t *table = rshash_create(3, hash_int, eq_int, free, free);
+
+    CHECK(table != NULL);
     CHECK(rshash_create(3, NULL, eq_int, free, free) == NULL);
     CHECK(rshash_create(3, hash_int, NULL, free, free) == NULL);
+    CHECK(rshash_put(NULL, &key, &value) == 0);
+    CHECK(rshash_put_unique(NULL, &key, &value) == 0);
+    CHECK(rshash_replace(NULL, &key, &value, NULL) == 0);
+    CHECK(rshash_put(table, &key, NULL) == 0);
+    CHECK(rshash_put_unique(table, &key, NULL) == 0);
+    CHECK(rshash_replace(table, &key, NULL, NULL) == 0);
+    CHECK(rshash_find(NULL, &key) == NULL);
+    CHECK(rshash_remove(NULL, &key) == NULL);
+    rshash_destroy(table, 1);
     return 0;
 }
 
@@ -357,17 +372,27 @@ static void *worker(void *argptr) {
 
     for (i = 0; i < ITEMS_PER_THREAD; ++i) {
         const int value = arg->id * ITEMS_PER_THREAD + i;
-        if (!rshash_put_unique(arg->table, new_int(value), new_int(value * 2))) abort();
+        if (!rshash_put_unique(arg->table, new_int(value), new_int(value * 2))) {
+            arg->failed = 1;
+            return NULL;
+        }
     }
     for (i = 0; i < ITEMS_PER_THREAD; ++i) {
         const int value = arg->id * ITEMS_PER_THREAD + i;
         int *found = rshash_find(arg->table, (void *)&value);
-        if (found == NULL || *found != value * 2) abort();
+        if (found == NULL || *found != value * 2) {
+            arg->failed = 1;
+            return NULL;
+        }
     }
     for (i = 0; i < ITEMS_PER_THREAD; i += 2) {
         const int value = arg->id * ITEMS_PER_THREAD + i;
         int *removed = rshash_remove(arg->table, (void *)&value);
-        if (removed == NULL || *removed != value * 2) abort();
+        if (removed == NULL || *removed != value * 2) {
+            free(removed);
+            arg->failed = 1;
+            return NULL;
+        }
         free(removed);
     }
     return NULL;
@@ -383,9 +408,11 @@ static int test_concurrent_point_operations(void) {
     for (i = 0; i < THREADS; ++i) {
         args[i].table = table;
         args[i].id = i;
+        args[i].failed = 0;
         CHECK(pthread_create(&tids[i], NULL, worker, &args[i]) == 0);
     }
     for (i = 0; i < THREADS; ++i) CHECK(pthread_join(tids[i], NULL) == 0);
+    for (i = 0; i < THREADS; ++i) CHECK(args[i].failed == 0);
     CHECK(rshash_count(table) == THREADS * ITEMS_PER_THREAD / 2);
     rshash_destroy(table, 1);
     return 0;
@@ -454,7 +481,7 @@ static int test_concurrent_unique_insert_same_key(void) {
 int main(void) {
     if (test_rshash_basic_and_duplicate()) return 1;
     if (test_modern_unique_replace_and_destructors()) return 1;
-    if (test_create_rejects_invalid_callbacks()) return 1;
+    if (test_rejects_invalid_arguments()) return 1;
     if (test_replace_miss_keeps_value_ownership()) return 1;
     if (test_destroy_free_values_contract()) return 1;
     if (test_default_destructors_use_free()) return 1;

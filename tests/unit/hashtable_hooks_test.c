@@ -341,6 +341,8 @@ static int test_allocation_failures(void) {
 
     rshash_test_fail_next_table_alloc();
     CHECK(rshash_create(3, hash_counted, eq_counted, counted_free, counted_free) == NULL);
+    rshash_test_fail_next_table_bucket_alloc();
+    CHECK(rshash_create(3, hash_counted, eq_counted, counted_free, counted_free) == NULL);
     table = rshash_create(3, hash_counted, eq_counted, counted_free, counted_free);
     CHECK(table != NULL);
     rshash_test_fail_next_entry_alloc();

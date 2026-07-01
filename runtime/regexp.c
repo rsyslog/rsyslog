@@ -133,6 +133,8 @@ static perthread_regex_t *create_perthread_regex(const regex_t *preg, uncomp_reg
     return entry;
 }
 
+static void cleanup_perthread_regex(void *key, void *value, void *usr);
+
 // Get (or create) a regex_t to be used by the current thread.
 static perthread_regex_t *get_perthread_regex(const regex_t *preg) {
     perthread_regex_t *entry = NULL;
@@ -145,10 +147,15 @@ static perthread_regex_t *get_perthread_regex(const regex_t *preg) {
 
         if (uncomp) {
             entry = create_perthread_regex(preg, uncomp);
-            if (!rshash_put(perthread_regexs, (void *)entry, entry)) {
+            if (entry == NULL || !rshash_put(perthread_regexs, (void *)entry, entry)) {
                 LogError(0, RS_RET_INTERNAL_ERROR,
                          "error trying to insert thread-regexp into hash-table - things "
                          "will not work 100%% correctly (mostly probably out of memory issue)");
+                if (entry != NULL) {
+                    cleanup_perthread_regex(entry, entry, NULL);
+                    free(entry);
+                }
+                entry = NULL;
             }
         }
     }
@@ -242,15 +249,26 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
 
     uncomp->preg = preg;
     uncomp->regex = strdup(regex);
+    if (uncomp->regex == NULL) {
+        free(uncomp);
+        return REG_ESPACE;
+    }
     uncomp->cflags = cflags;
     pthread_mutex_lock(&mut_regexp);
 
     // We need to allocate the key because hashtable will free it on remove.
     ppreg = malloc(sizeof(regex_t *));
+    if (ppreg == NULL) {
+        pthread_mutex_unlock(&mut_regexp);
+        free(uncomp->regex);
+        free(uncomp);
+        return REG_ESPACE;
+    }
     *ppreg = preg;
     ret = rshash_put(regex_to_uncomp, (void *)ppreg, uncomp);
     pthread_mutex_unlock(&mut_regexp);
     if (ret == 0) {
+        free(ppreg);
         free(uncomp->regex);
         free(uncomp);
         return REG_ESPACE;

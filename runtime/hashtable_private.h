@@ -63,6 +63,7 @@ void rshash_test_set_after_mark_hook(rshash_test_hook_fn hook, void *usr);
 void rshash_test_set_after_retired_detach_hook(rshash_test_hook_fn hook, void *usr);
 void rshash_test_fail_next_entry_alloc(void);
 void rshash_test_fail_next_table_alloc(void);
+void rshash_test_fail_next_table_bucket_alloc(void);
 void rshash_test_fail_next_unlink_cas(void);
 int rshash_test_mark_removed_for_key(rshash_t *h, void *key);
 #endif
