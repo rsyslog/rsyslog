@@ -1496,6 +1496,9 @@ TESTS_LIBYAML_IMTCP = \
 	config-translate-yaml-roundtrip.sh \
 	yaml-include-recursion.sh
 
+TESTS_LIBYAML_IMTCP_OSSL = \
+	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
+
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \
 	yaml-imhttp-metrics-apikeyfile.sh
@@ -1714,6 +1717,8 @@ TESTS_OSSL = \
 	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
+	imtcp-tls-ossl-prioritize-san-cn-fallback.sh \
+	imtcp-tls-ossl-prioritize-san-reject-cn.sh \
 	imtcp-tls-ossl-manycon.sh \
 	imtcp-tls-ossl-x509name-wildcard.sh \
 	imtcp-tls-ossl-x509name-wildcard-invld.sh \
@@ -2155,6 +2160,7 @@ EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
+EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -2636,6 +2642,9 @@ endif # ENABLE_MMJSONPARSE
 endif # ENABLE_IMPTCP
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_LIBYAML_IMTCP)
+if ENABLE_OSSL
+TESTS += $(TESTS_LIBYAML_IMTCP_OSSL)
+endif # ENABLE_OSSL
 endif # ENABLE_IMTCP_TESTS
 if ENABLE_IMHTTP
 TESTS += $(TESTS_LIBYAML_IMHTTP)
