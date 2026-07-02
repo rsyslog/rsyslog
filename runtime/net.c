@@ -918,7 +918,12 @@ static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
         LogError(0, RS_RET_INVALID_PARAMS, "Invalid extra data after allowedSender entry '%s'", pszAllowedSender);
         ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     }
-    CHKiRet(AddAllowedSender(ppRoot, ppLast, uIP, iBits));
+    iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits);
+    if (iRet == RS_RET_NOENTRY) {
+        LogError(0, iRet, "Error %d adding allowedSender entry '%s' - ignoring.", iRet, pszAllowedSender);
+        iRet = RS_RET_OK;
+    }
+    CHKiRet(iRet);
 
 finalize_it:
     if (uIP != NULL) {

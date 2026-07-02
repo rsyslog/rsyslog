@@ -769,8 +769,8 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-streamdriver-tlsrevocationcheck.rst \
     source/reference/parameters/imtcp-supportoctetcountedframing.rst \
     source/reference/parameters/imtcp-workerthreads.rst \
-    source/reference/parameters/imudp-allowedsender.rst \
     source/reference/parameters/imudp-address.rst \
+    source/reference/parameters/imudp-allowedsender.rst \
     source/reference/parameters/imudp-batchsize.rst \
     source/reference/parameters/imudp-defaulttz.rst \
     source/reference/parameters/imudp-device.rst \
