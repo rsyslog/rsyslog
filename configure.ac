@@ -2900,6 +2900,17 @@ AC_ARG_ENABLE(omazuredce_tests,
 )
 AM_CONDITIONAL(ENABLE_OMAZUREDCE_TESTS, test x$enable_omazuredce_tests = xyes)
 
+AC_ARG_ENABLE(omawslogshlc_tests,
+        [AS_HELP_STRING([--enable-omawslogshlc-tests],[Enable omawslogshlc tests @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omawslogshlc_tests="yes" ;;
+          no) enable_omawslogshlc_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omawslogshlc-tests) ;;
+         esac],
+        [enable_omawslogshlc_tests=no]
+)
+AM_CONDITIONAL(ENABLE_OMAWSLOGSHLC_TESTS, test x$enable_omawslogshlc_tests = xyes)
+
 AC_ARG_ENABLE(kafka_tests,
         [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -3034,6 +3045,27 @@ if test "x$enable_omazuredce" = "xyes" -o "x$enable_omazuredce" = "xoptional"; t
 	])
 fi
 AM_CONDITIONAL(ENABLE_OMAZUREDCE, test x$enable_omazuredce = xyes -o x$enable_omazuredce = xoptional)
+
+# omawslogshlc support for output module (CloudWatch Logs via HLC endpoint)
+AC_ARG_ENABLE(omawslogshlc,
+        [AS_HELP_STRING([--enable-omawslogshlc],[Compiles omawslogshlc output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omawslogshlc="yes" ;;
+          no) enable_omawslogshlc="no" ;;
+         optional) enable_omawslogshlc="optional" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omawslogshlc) ;;
+         esac],
+        [enable_omawslogshlc=no]
+)
+if test "x$enable_omawslogshlc" = "xyes" -o "x$enable_omawslogshlc" = "xoptional"; then
+	PKG_CHECK_MODULES([CURL], [libcurl], , [
+		AS_IF([test x$enable_omawslogshlc = xyes],
+			AC_MSG_FAILURE([omawslogshlc requires libcurl])
+		)
+		enable_omawslogshlc="no"
+	])
+fi
+AM_CONDITIONAL(ENABLE_OMAWSLOGSHLC, test x$enable_omawslogshlc = xyes -o x$enable_omawslogshlc = xoptional)
 
 # omazureeventhubs support for output module
 AC_ARG_ENABLE(omazureeventhubs,
@@ -3622,6 +3654,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmdblookup/Makefile \
 		plugins/omazureeventhubs/Makefile \
 		plugins/omazuredce/Makefile \
+		plugins/omawslogshlc/Makefile \
 		plugins/imdtls/Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
@@ -3742,6 +3775,7 @@ echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omhiredis module will be compiled:        $enable_omhiredis"
 echo "    omazureeventhubs module will be compiled: $enable_omazureeventhubs"
 echo "    omazuredce module will be compiled:       $enable_omazuredce"
+echo "    omawslogshlc module will be compiled:     $enable_omawslogshlc"
 echo "    omdtls module will be compiled:           $enable_omdtls"
 echo
 echo "---{ parser modules }---"
@@ -3822,6 +3856,7 @@ echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Redis Tests enabled:                      $enable_redis_tests"
 echo "    Omazureeventhubs Tests enabled:           $enable_omazureeventhubs_tests"
 echo "    Omazuredce Tests enabled:                 $enable_omazuredce_tests"
+echo "    Omawslogshlc Tests enabled:               $enable_omawslogshlc_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
 echo "    imtcp tests enabled:                      $enable_imtcp_tests"
 echo "    gnutls tests enabled:                     $enable_gnutls_tests"

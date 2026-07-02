@@ -1153,6 +1153,11 @@ TESTS_OMAZUREDCE_VALGRIND = \
 TESTS_OMAZUREDCE_YAML = \
 	yaml-omazuredce-compression.sh
 
+TESTS_OMAWSLOGSHLC = \
+	omawslogshlc-missing-region.sh \
+	omawslogshlc-basic.sh \
+	omawslogshlc-batch.sh
+
 TESTS_IMDOCKER = \
 	imdocker-basic.sh \
 	imdocker-image-name.sh \
@@ -2222,6 +2227,8 @@ EXTRA_DIST += $(TESTS_OMAZUREDCE_VALGRIND)
 EXTRA_DIST += $(TESTS_OMAZUREDCE_YAML)
 EXTRA_DIST += omazuredce-env.sh
 EXTRA_DIST += testsuites/yaml-omazuredce-compression.yaml
+EXTRA_DIST += $(TESTS_OMAWSLOGSHLC)
+EXTRA_DIST += omawslogshlc-env.sh
 EXTRA_DIST += $(TESTS_IMDOCKER)
 EXTRA_DIST += $(TESTS_IMDOCKER_VALGRIND)
 EXTRA_DIST += $(TESTS_IMCZMQ)
@@ -3030,6 +3037,12 @@ endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMAZUREDCE_VALGRIND)
 endif
+endif
+endif
+
+if ENABLE_OMAWSLOGSHLC
+if ENABLE_OMAWSLOGSHLC_TESTS
+TESTS += $(TESTS_OMAWSLOGSHLC)
 endif
 endif
 
