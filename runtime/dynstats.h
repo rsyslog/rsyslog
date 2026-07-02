@@ -82,6 +82,7 @@ struct dynstats_bucket_s {
     uint32_t persist_state_write_count_interval; /* count of bucket updates before persisting */
     uint32_t persist_state_interval_secs; /* interval in secs bucket before persisting bucket state */
     time_t persist_expiration_time;
+    DEF_ATOMIC_HELPER_MUT64(mutPersistExpirationTime);
     uint32_t n_updates; /* number of bucket updates before persisting the stream */
 };
 

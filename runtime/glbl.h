@@ -30,6 +30,7 @@
 #ifndef GLBL_H_INCLUDED
 #define GLBL_H_INCLUDED
 
+#include <signal.h>
 #include <sys/types.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
     #include <liblogging/stdlog.h>
@@ -127,6 +128,7 @@ extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
 extern int glblAbortOnProgramError;
 extern int bTerminateInputs;
+extern volatile sig_atomic_t bTerminateInputsSigSafe;
 #ifndef HAVE_ATOMIC_BUILTINS
 extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif

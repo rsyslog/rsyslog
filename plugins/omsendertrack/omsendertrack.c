@@ -554,9 +554,9 @@ static void *bgWriter(void *arg) {
     }
 #endif
 
-    while (ATOMIC_FETCH_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 0) {
+    while (ATOMIC_LOAD_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 0) {
         srSleep(pData->interval, 0);
-        if (ATOMIC_FETCH_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 1) {
+        if (ATOMIC_LOAD_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter) == 1) {
             break;
         }
         dbgprintf("bgwriter writing report file\n");
@@ -668,7 +668,7 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     /* stop bgWriter */
     if (pData->bgw_initialized) {
-        ATOMIC_STORE_1_TO_INT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter);
+        ATOMIC_STORE_32BIT(&pData->bShutdownBackgroundWriter, &pData->mutShutdownBackgroundWriter, 1);
         pthread_kill(pData->bgw_tid, SIGTTIN);
 
         /* wait until stopped */

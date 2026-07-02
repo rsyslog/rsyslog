@@ -443,6 +443,10 @@ static rsRetVal doUTF8Seq(instanceData *pData, const uchar *msg, int lenMsg, uch
 
         if (j < seqLen) {
             CHKiRet(beginSeqChange(pData, msg, lenMsg, out, &pos, i));
+            /* Match doUTF8(): replace bytes accepted as part of the
+             * malformed sequence and reprocess the non-continuation byte as
+             * the start of the next sequence.
+             */
             CHKiRet(appendReplacements(pData, *out, &pos, j));
             i += j;
         } else if (invalidCodepoint(codepoint, seqLen)) {

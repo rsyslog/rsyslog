@@ -503,12 +503,12 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
 
 
 static int qqueueIsShutdownImmediate(qqueue_t *const pThis) {
-    return ATOMIC_FETCH_32BIT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate);
+    return ATOMIC_LOAD_32BIT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate);
 }
 
 
 static void qqueueSetShutdownImmediate(qqueue_t *const pThis, const int value) {
-    ATOMIC_STORE_INT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate, value);
+    ATOMIC_STORE_32BIT(&pThis->bShutdownImmediate, &pThis->mutShutdownImmediate, value);
 }
 
 

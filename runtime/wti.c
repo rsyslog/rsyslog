@@ -76,7 +76,7 @@ uchar *ATTR_NONNULL() wtiGetDbgHdr(const wti_t *const pThis) {
  * simplicity, we do not use the iRet interface. -- rgerhards, 2009-07-17
  */
 int ATTR_NONNULL() wtiGetState(wti_t *pThis) {
-    return ATOMIC_FETCH_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
+    return ATOMIC_LOAD_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
 }
 
 /* join terminated worker thread
@@ -116,7 +116,7 @@ rsRetVal ATTR_NONNULL() wtiSetAlwaysRunning(wti_t *pThis) {
 rsRetVal ATTR_NONNULL() wtiSetState(wti_t *pThis, const int newVal) {
     ISOBJ_TYPE_assert(pThis, wti);
     if (newVal == WRKTHRD_STOPPED) {
-        ATOMIC_STORE_0_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
+        ATOMIC_STORE_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning, 0);
     } else {
         ATOMIC_OR_INT_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning, newVal);
     }

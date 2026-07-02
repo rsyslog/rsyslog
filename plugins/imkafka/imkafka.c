@@ -1174,7 +1174,7 @@ static void shutdownKafkaWorkers(void) {
     instanceConf_t *inst;
 
     assert(kafkaWrkrInfo != NULL);
-    ATOMIC_STORE_1_TO_INT(&stopKafkaWorkers, &mutStopImkafkaWorkers);
+    ATOMIC_STORE_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers, 1);
     DBGPRINTF("imkafka: waiting on imkafka workerthread termination\n");
     for (i = 0; i < activeKafkaworkers; ++i) {
         pthread_join(kafkaWrkrInfo[i].tid, NULL);
@@ -1222,7 +1222,7 @@ BEGINrunInput
     CODESTARTrunInput;
     DBGPRINTF("imkafka: runInput loop started ...\n");
     activeKafkaworkers = 0;
-    ATOMIC_STORE_0_TO_INT(&stopKafkaWorkers, &mutStopImkafkaWorkers);
+    ATOMIC_STORE_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers, 0);
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->rk != NULL) {
             ++workerSlots;
@@ -1395,7 +1395,7 @@ static void *imkafkawrkr(void *myself) {
     DBGPRINTF("imkafka: started kafka consumer workerthread on group %s/%s with %d topics\n", me->inst->consumergroup,
               me->inst->brokers, me->inst->nTopics);
     do {
-        if (ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) || glbl.GetGlobalInputTermState() == 1) {
+        if (ATOMIC_LOAD_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) || glbl.GetGlobalInputTermState() == 1) {
             break; /* terminate input! */
         }
         if (me->inst->rk == NULL) {
@@ -1413,10 +1413,10 @@ static void *imkafkawrkr(void *myself) {
          * of 0 seconds. It doesn't hurt any other valid scenario. So do not remove.
          * rgerhards, 2008-02-14
          */
-        if (glbl.GetGlobalInputTermState() == 0 && !ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers)) {
+        if (glbl.GetGlobalInputTermState() == 0 && !ATOMIC_LOAD_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers)) {
             srSleep(0, 100000);
         }
-    } while (!ATOMIC_FETCH_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) && glbl.GetGlobalInputTermState() == 0);
+    } while (!ATOMIC_LOAD_32BIT(&stopKafkaWorkers, &mutStopImkafkaWorkers) && glbl.GetGlobalInputTermState() == 0);
     DBGPRINTF("imkafka: stopped kafka consumer workerthread on group %s/%s with %d topics\n", me->inst->consumergroup,
               me->inst->brokers, me->inst->nTopics);
     return NULL;

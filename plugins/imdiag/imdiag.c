@@ -539,7 +539,7 @@ static rsRetVal blockStatsReporting(tcps_sess_t *pSess) {
     CHKiConcCtrl(pthread_mutex_lock(&mutStatsReporterWatch));
     statsReported = 0;
     CHKiConcCtrl(pthread_mutex_unlock(&mutStatsReporterWatch));
-    ATOMIC_STORE_0_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
+    ATOMIC_STORE_32BIT(&allowOnlyOnce, &mutAllowOnlyOnce, 0);
     statsReportingBlockStartTimeMs = currentTimeMills();
     LogError(0, RS_RET_OK, "imdiag: blocked stats reporting");
     CHKiRet(sendResponse(pSess, "next stats reporting call will be blocked\n"));
@@ -563,7 +563,7 @@ static rsRetVal awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
     if (statsReportingBlockStartTimeMs > 0) {
         long delta = currentTimeMills() - statsReportingBlockStartTimeMs;
         if (blockAgain) {
-            ATOMIC_STORE_1_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
+            ATOMIC_STORE_32BIT(&allowOnlyOnce, &mutAllowOnlyOnce, 1);
             LogError(0, RS_RET_OK, "imdiag: un-blocking ONLY the next cycle of stats reporting");
         } else {
             statsReportingBlockStartTimeMs = 0;

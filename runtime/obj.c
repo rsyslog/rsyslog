@@ -1166,7 +1166,7 @@ finalize_it:
  */
 /* Note on atomic operations:
  * ifIsLoaded uses PREFER_FETCH_32BIT for reads to prevent data races on platforms with atomics.
- * Writes always occur under mutObjGlobalOp and use plain assignment.
+ * Writes always occur under mutObjGlobalOp and use matching PREFER stores.
  * On platforms without atomics, PREFER_* degrades to plain operations (acceptable for 20+ years).
  * The mutex provides full synchronization; atomics only improve diagnostic cleanliness (TSAN).
  */
@@ -1202,7 +1202,7 @@ static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
      * and set it to "fully initialized" when the load succeeded. It's a bit hackish, but
      * looks like a good solution. -- rgerhards, 2008-03-07
      */
-    pIf->ifIsLoaded = 2; /* plain write: protected by mutObjGlobalOp */
+    PREFER_STORE_INT(&pIf->ifIsLoaded, 2);
 
     iRet = FindObjInfo((const char *)pObjName, &pObjInfo);
     if (iRet == RS_RET_NOT_FOUND) {
@@ -1227,7 +1227,7 @@ static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
     //       The supression is just an interim solution until the pointer issue
     //       has been fully analyzed and aligned (or considered OK w/ reasoning).
     CHKiRet(pObjInfo->QueryIF(pIf));
-    pIf->ifIsLoaded = 1; /* plain write: protected by mutObjGlobalOp */
+    PREFER_STORE_1_TO_INT(&pIf->ifIsLoaded);
 
 finalize_it:
     pthread_mutex_unlock(&mutObjGlobalOp);
@@ -1254,7 +1254,7 @@ static rsRetVal ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile
         FINALIZE; /* we are not loaded - this is perfectly OK... */
     } else if (PREFER_FETCH_32BIT(pIf->ifIsLoaded) == 2) {
         /* Clean up failed load attempt */
-        pIf->ifIsLoaded = 0; /* plain write: protected by mutObjGlobalOp */
+        PREFER_STORE_0_TO_INT(&pIf->ifIsLoaded);
         FINALIZE; /* we had a load error and can not/must not continue */
     }
 
@@ -1263,7 +1263,7 @@ static rsRetVal ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile
     /* if we reach this point, we have a valid pObjInfo */
     module.Release(srcFile, &pObjInfo->pModInfo); /* decrease refcount */
 
-    pIf->ifIsLoaded = 0; /* plain write: protected by mutObjGlobalOp */
+    PREFER_STORE_0_TO_INT(&pIf->ifIsLoaded);
 
 finalize_it:
     pthread_mutex_unlock(&mutObjGlobalOp);

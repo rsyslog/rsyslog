@@ -89,6 +89,7 @@ static uchar *LocalFQDNName = NULL; /* our hostname as FQDN - read-only after st
 static uchar *LocalDomain = NULL; /* our local domain name  - read-only after startup, except HUP */
 static int iMaxLine = 8096;
 int bTerminateInputs = 0; /* global switch that inputs shall terminate ASAP (1=> terminate) */
+volatile sig_atomic_t bTerminateInputsSigSafe = 0;
 int glblUnloadModules = 1;
 int glblAbortOnProgramError = 0;
 char **glblDbgFiles = NULL;
@@ -301,7 +302,7 @@ SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
  * rgerhards, 2009-07-20
  */
 static int GetGlobalInputTermState(void) {
-    return ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
+    return ATOMIC_LOAD_32BIT(&bTerminateInputs, &mutTerminateInputs);
 }
 
 
@@ -309,7 +310,12 @@ static int GetGlobalInputTermState(void) {
  * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
  */
 static void SetGlobalInputTermination(void) {
-    ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
+    /* Signal handlers must not take mutTerminateInputs in no-atomic builds.
+     * Publish this one-way mirror first so a shutdown signal delivered during
+     * termination setup may already break input-side blocking calls.
+     */
+    PREFER_STORE_INT(&bTerminateInputsSigSafe, 1);
+    ATOMIC_STORE_32BIT(&bTerminateInputs, &mutTerminateInputs, 1);
 }
 
 
