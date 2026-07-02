@@ -148,6 +148,9 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*cvthname)(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip);
     /* things to go away after proper modularization */
     rsRetVal (*addAllowedSenderLine)(char *pName, uchar **ppRestOfConfLine);
+    rsRetVal (*addAllowedSenderEntry)(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+                                      uchar *pszAllowedSender);
+    void (*DestructAllowedSenders)(struct AllowedSenders **ppRoot);
     void (*PrintAllowedSenders)(int iListToPrint);
     void (*clearAllowedSenders)(uchar *);
     void (*debugListenInfo)(int fd, char *type);
@@ -165,6 +168,8 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     int (*CmpHost)(struct sockaddr_storage *, struct sockaddr_storage *, size_t);
     /* v6 interface additions - 2009-11-16 */
     rsRetVal (*HasRestrictions)(uchar *, int *bHasRestrictions);
+    int (*isAllowedSenderList)(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost,
+                               int bChkDNS);
     int (*isAllowedSender2)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS);
     /* v7 interface additions - 2012-03-06 */
     rsRetVal (*GetIFIPAddr)(uchar *szif, int family, uchar *pszbuf, int lenBuf);
@@ -229,7 +234,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
      */
     rsRetVal (*netns_restore)(int *fd);
 ENDinterface(net)
-#define netCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

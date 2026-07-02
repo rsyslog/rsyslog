@@ -258,6 +258,8 @@ TESTS_DEFAULT = \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-zero-mask.sh \
+	allowed-sender-modern.sh \
+	allowed-sender-empty-array.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
 	allowed-sender-wildcard-invalid-bits.sh \
@@ -670,6 +672,7 @@ TESTS_LIBYAML = \
 	yaml-template-list.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML) \
 	yaml-template-subtree.sh \
+	yaml-allowed-sender-modern.sh \
 	yaml-statements-reload-lookup.sh \
 	yaml-lookup-table-duplicate.sh \
 	yaml-action-duplicate-name.sh
@@ -692,6 +695,8 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-zero-mask.sh \
+	allowed-sender-modern.sh \
+	allowed-sender-empty-array.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
 	allowed-sender-wildcard-invalid-bits.sh \
@@ -771,6 +776,7 @@ TESTS_IMTCP_YAML = \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
 	yaml-imtcp-spacelf-escape.sh \
+	yaml-allowed-sender-modern.sh \
 	imtcp-persource-ratelimit.sh \
 	ratelimit-legacy-persource-discard.sh \
 	ratelimit-persource-repeat-summary.sh \
@@ -1999,7 +2005,9 @@ fromhost-port-async-ruleset.log: fromhost-port-tuple.log
 allowed-sender-tcp-ok.log: fromhost-port-async-ruleset.log
 allowed-sender-tcp-fail.log: allowed-sender-tcp-ok.log
 allowed-sender-tcp-zero-mask.log: allowed-sender-tcp-fail.log
-allowed-sender-tcp-hostname-ok.log: allowed-sender-tcp-zero-mask.log
+allowed-sender-modern.log: allowed-sender-tcp-zero-mask.log
+allowed-sender-empty-array.log: allowed-sender-modern.log
+allowed-sender-tcp-hostname-ok.log: allowed-sender-empty-array.log
 allowed-sender-tcp-hostname-fail.log: allowed-sender-tcp-hostname-ok.log
 imtcp-discard-truncated-msg.log: allowed-sender-tcp-hostname-fail.log
 imtcp-basic.log: imtcp-discard-truncated-msg.log

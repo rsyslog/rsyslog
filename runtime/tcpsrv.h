@@ -64,6 +64,8 @@ struct tcpLstnParams_s {
     sbool bMultiLine; /**< support multi-line messages */
     uchar *pszStartRegex; /**< regex that indicates start of frame */
     uchar *pszRatelimitName; /**< name of rate limit configuration */
+    struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
+    sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
 };
 
 /* list of tcp listen ports */

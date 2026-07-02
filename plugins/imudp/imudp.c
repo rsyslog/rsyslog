@@ -83,6 +83,8 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(prop) D
     prop_t *pInputName;
     statsobj_t *stats; /* listener stats */
     ratelimit_t *ratelimiter;
+    struct AllowedSenders *pAllowedSenderRoot;
+    sbool bUseLegacyAllowedSender;
     uchar *dfltTZ;
     STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
     STATSCOUNTER_DEF(ctrDisallowed, mutCtrDisallowed)
@@ -125,6 +127,9 @@ struct instanceConf_s {
     1 means:  IP_FREEBIND enabled + warning disabled
     1+ means: IP+FREEBIND enabled + warning enabled */
     int ipfreebind;
+    struct AllowedSenders *pAllowedSendersRoot;
+    struct AllowedSenders *pAllowedSendersLast;
+    sbool bAllowedSendersSet;
     struct instanceConf_s *next;
     sbool bAppendPortToInpname;
 };
@@ -160,6 +165,9 @@ struct modConfData_s {
     int8_t wrkrMax; /* max nbr of worker threads */
     sbool configSetViaV2Method;
     sbool bPreserveCase; /* preserves the case of fromhost; "off" by default */
+    struct AllowedSenders *pAllowedSendersRoot;
+    struct AllowedSenders *pAllowedSendersLast;
+    sbool bAllowedSendersSet;
 };
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current load process */
@@ -170,7 +178,8 @@ static struct cnfparamdescr modpdescr[] = {{"schedulingpolicy", eCmdHdlrGetWord,
                                            {"batchsize", eCmdHdlrInt, 0},
                                            {"threads", eCmdHdlrPositiveInt, 0},
                                            {"timerequery", eCmdHdlrInt, 0},
-                                           {"preservecase", eCmdHdlrBinary, 0}};
+                                           {"preservecase", eCmdHdlrBinary, 0},
+                                           {"allowedsender", eCmdHdlrArray, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* input instance parameters */
@@ -188,7 +197,8 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrArray, CNFPARAM_REQU
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
                                            {"rcvbufsize", eCmdHdlrSize, 0},
                                            {"ipfreebind", eCmdHdlrInt, 0},
-                                           {"ruleset", eCmdHdlrString, 0}};
+                                           {"ruleset", eCmdHdlrString, 0},
+                                           {"allowedsender", eCmdHdlrArray, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -217,6 +227,9 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
     inst->dfltTZ = NULL;
     inst->pszRatelimitName = NULL;
+    inst->pAllowedSendersRoot = NULL;
+    inst->pAllowedSendersLast = NULL;
+    inst->bAllowedSendersSet = 0;
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -399,6 +412,16 @@ static rsRetVal addListner(instanceConf_t *inst) {
             newlcnfinfo->pRuleset = inst->pBindRuleset;
             newlcnfinfo->dfltTZ = inst->dfltTZ;
             newlcnfinfo->ratelimiter = NULL;
+            if (inst->bAllowedSendersSet) {
+                newlcnfinfo->pAllowedSenderRoot = inst->pAllowedSendersRoot;
+                newlcnfinfo->bUseLegacyAllowedSender = 0;
+            } else if (runModConf->bAllowedSendersSet) {
+                newlcnfinfo->pAllowedSenderRoot = runModConf->pAllowedSendersRoot;
+                newlcnfinfo->bUseLegacyAllowedSender = 0;
+            } else {
+                newlcnfinfo->pAllowedSenderRoot = NULL;
+                newlcnfinfo->bUseLegacyAllowedSender = 1;
+            }
             /* query socket IPv4 vs IPv6 */
             sa.storage.ss_family = 0; /* just to keep CLANG static analyzer happy! */
             if (getsockname(newlcnfinfo->sock, (struct sockaddr *)&sa.storage, &salen) != 0) {
@@ -515,6 +538,7 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
  */
 static rsRetVal processPacket(struct lstn_s *lstn,
                               struct sockaddr_storage *frominetPrev,
+                              struct lstn_s **ppLstnPrev,
                               int *pbIsPermitted,
                               uchar *rcvBuf,
                               ssize_t lenRcvBuf,
@@ -532,8 +556,9 @@ static rsRetVal processPacket(struct lstn_s *lstn,
     /* check if we have a different sender than before, if so, we need to query some new values */
     if (bDoACLCheck) {
         const socklen_t cmpSocklen = sizeof(struct sockaddr_storage);
-        if (net.CmpHost(frominet, frominetPrev, cmpSocklen) != 0) {
+        if (*ppLstnPrev != lstn || net.CmpHost(frominet, frominetPrev, cmpSocklen) != 0) {
             memcpy(frominetPrev, frominet, cmpSocklen); /* update cache indicator */
+            *ppLstnPrev = lstn;
             /* Here we check if a host is permitted to send us syslog messages. If it isn't,
              * we do not further process the message but log a warning (if we are
              * configured to do this). However, if the check would require name resolution,
@@ -541,7 +566,11 @@ static rsRetVal processPacket(struct lstn_s *lstn,
              * http://blog.gerhards.net/2009/11/acls-imudp-and-accepting-messages.html
              * rgerhards, 2009-11-16
              */
-            *pbIsPermitted = net.isAllowedSender2((uchar *)"UDP", (struct sockaddr *)frominet, "", 0);
+            if (lstn->bUseLegacyAllowedSender) {
+                *pbIsPermitted = net.isAllowedSender2((uchar *)"UDP", (struct sockaddr *)frominet, "", 0);
+            } else {
+                *pbIsPermitted = net.isAllowedSenderList(lstn->pAllowedSenderRoot, (struct sockaddr *)frominet, "", 0);
+            }
 
             if (*pbIsPermitted == 0) {
                 DBGPRINTF("msg is not from an allowed sender\n");
@@ -596,6 +625,7 @@ finalize_it:
 static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
                               struct lstn_s *lstn,
                               struct sockaddr_storage *frominetPrev,
+                              struct lstn_s **ppLstnPrev,
                               int *pbIsPermitted) {
     DEFiRet;
     int iNbrTimeUsed;
@@ -655,9 +685,9 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
 
         pWrkr->ctrMsgsRcvd += nelem;
         for (i = 0; i < nelem; ++i) {
-            processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
-                          pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &(pWrkr->frominet[i]),
-                          pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
+            processPacket(lstn, frominetPrev, ppLstnPrev, pbIsPermitted,
+                          pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base, pWrkr->recvmsg_mmh[i].msg_len, &stTime,
+                          ttGenTime, &(pWrkr->frominet[i]), pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
         }
     }
 
@@ -683,6 +713,7 @@ finalize_it:
 static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
                               struct lstn_s *lstn,
                               struct sockaddr_storage *frominetPrev,
+                              struct lstn_s **ppLstnPrev,
                               int *pbIsPermitted) {
     int iNbrTimeUsed;
     time_t ttGenTime;
@@ -728,8 +759,8 @@ static rsRetVal processSocket(struct wrkrInfo_s *pWrkr,
             datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
         }
 
-        CHKiRet(processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime, ttGenTime,
-                              &frominet, mh.msg_namelen, &multiSub));
+        CHKiRet(processPacket(lstn, frominetPrev, ppLstnPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime,
+                              ttGenTime, &frominet, mh.msg_namelen, &multiSub));
     }
 
 
@@ -859,6 +890,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     int efd;
     int i;
     struct sockaddr_storage frominetPrev;
+    struct lstn_s *lstnPrev;
     int bIsPermitted;
     struct epoll_event *udpEPollEvt = NULL;
     struct epoll_event currEvt[NUM_EPOLL_EVENTS];
@@ -870,6 +902,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
      * is invalidated.
      */
     bIsPermitted = 0;
+    lstnPrev = NULL;
     memset(&frominetPrev, 0, sizeof(frominetPrev));
 
     /* count num listeners -- do it here in order to avoid inconsistency */
@@ -923,7 +956,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
         if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) break; /* terminate input! */
 
         for (i = 0; i < nfds; ++i) {
-            processSocket(pWrkr, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
+            processSocket(pWrkr, currEvt[i].data.ptr, &frominetPrev, &lstnPrev, &bIsPermitted);
         }
         if (thrdGetShallStop(pWrkr->pThrd) == RSTRUE) break; /* terminate input! */
     }
@@ -939,6 +972,7 @@ static rsRetVal ATTR_NONNULL() rcvMainLoop(struct wrkrInfo_s *const __restrict__
     DEFiRet;
     int nfds;
     struct sockaddr_storage frominetPrev;
+    struct lstn_s *lstnPrev;
     int bIsPermitted;
     int i = 0;
     struct lstn_s *lstn;
@@ -947,6 +981,7 @@ static rsRetVal ATTR_NONNULL() rcvMainLoop(struct wrkrInfo_s *const __restrict__
     /* start "name caching" algo by making sure the previous system indicator
      * is invalidated. */
     bIsPermitted = 0;
+    lstnPrev = NULL;
     memset(&frominetPrev, 0, sizeof(frominetPrev));
 
     /* setup poll() subsystem */
@@ -993,7 +1028,7 @@ static rsRetVal ATTR_NONNULL() rcvMainLoop(struct wrkrInfo_s *const __restrict__
             if (lstn->sock != -1) {
                 if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
                 if (pollfds[i].revents & POLLIN) {
-                    processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
+                    processSocket(pWrkr, lstn, &frominetPrev, &lstnPrev, &bIsPermitted);
                     --nfds;
                 }
                 ++i;
@@ -1087,6 +1122,20 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
             }
         } else if (!strcmp(inppblk.descr[i].name, "ipfreebind")) {
             inst->ipfreebind = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imudp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            inst->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet =
+                    net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
+            }
         } else {
             dbgprintf(
                 "imudp: program error, non-handled "
@@ -1163,6 +1212,9 @@ BEGINbeginCnfLoad
     loadModConf->iSchedPrio = SCHED_PRIO_UNSET;
     loadModConf->pszSchedPolicy = NULL;
     loadModConf->bPreserveCase = 0; /* off */
+    loadModConf->pAllowedSendersRoot = NULL;
+    loadModConf->pAllowedSendersLast = NULL;
+    loadModConf->bAllowedSendersSet = 0;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config vars */
     cs.pszBindRuleset = NULL;
@@ -1215,6 +1267,20 @@ BEGINsetModCnf
             }
         } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
             loadModConf->bPreserveCase = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imudp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            loadModConf->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet = net.addAllowedSenderEntry(&loadModConf->pAllowedSendersRoot,
+                                                                    &loadModConf->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
+            }
         } else {
             dbgprintf(
                 "imudp: program error, non-handled "
@@ -1325,9 +1391,15 @@ BEGINfreeCnf
         free(inst->inputname);
         free(inst->dfltTZ);
         free(inst->pszRatelimitName);
+        if (inst->pAllowedSendersRoot != NULL) {
+            net.DestructAllowedSenders(&inst->pAllowedSendersRoot);
+        }
         del = inst;
         inst = inst->next;
         free(del);
+    }
+    if (pModConf->pAllowedSendersRoot != NULL) {
+        net.DestructAllowedSenders(&pModConf->pAllowedSendersRoot);
     }
 ENDfreeCnf
 
@@ -1420,9 +1492,16 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
+    instanceConf_t *inst;
     CODESTARTwillRun;
     net.PrintAllowedSenders(1); /* UDP */
     net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
+    if (!bDoACLCheck) {
+        bDoACLCheck = runModConf->bAllowedSendersSet;
+        for (inst = runModConf->root; !bDoACLCheck && inst != NULL; inst = inst->next) {
+            bDoACLCheck = inst->bAllowedSendersSet;
+        }
+    }
 ENDwillRun
 
 

@@ -4179,6 +4179,9 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 
 void cnfarrayContentDestruct(struct cnfarray *ar) {
     unsigned short i;
+    if (ar == NULL) {
+        return;
+    }
     for (i = 0; i < ar->nmemb; ++i) {
         es_deleteStr(ar->arr[i]);
     }
@@ -4664,6 +4667,11 @@ static void cnfarrayPrint(struct cnfarray *ar, int indent) {
     int i;
     doIndent(indent);
     dbgprintf("ARRAY:\n");
+    if (ar == NULL) {
+        doIndent(indent + 1);
+        dbgprintf("(empty)\n");
+        return;
+    }
     for (i = 0; i < ar->nmemb; ++i) {
         doIndent(indent + 1);
         cstrPrint("string '", ar->arr[i]);
@@ -4966,6 +4974,11 @@ struct cnfarray *cnfarrayNew(es_str_t *val) {
     struct cnfarray *ar;
     if ((ar = malloc(sizeof(struct cnfarray))) != NULL) {
         ar->nodetype = 'A';
+        ar->nmemb = 0;
+        ar->arr = NULL;
+        if (val == NULL) {
+            goto done;
+        }
         ar->nmemb = 1;
         if ((ar->arr = malloc(sizeof(es_str_t *))) == NULL) {
             free(ar);
@@ -4996,6 +5009,9 @@ done:
 struct cnfarray *cnfarrayDup(struct cnfarray *old) {
     int i;
     struct cnfarray *ar;
+    if (old == NULL || old->nmemb == 0) {
+        return cnfarrayNew(NULL);
+    }
     ar = cnfarrayNew(es_strdup(old->arr[0]));
     for (i = 1; i < old->nmemb; ++i) {
         cnfarrayAdd(ar, es_strdup(old->arr[i]));

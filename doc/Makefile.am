@@ -725,6 +725,7 @@ EXTRA_DIST = \
     source/reference/parameters/imsolaris-imsolarislogsocketname.rst \
     source/reference/parameters/imtcp-address.rst \
     source/reference/parameters/imtcp-addtlframedelimiter.rst \
+    source/reference/parameters/imtcp-allowedsender.rst \
     source/reference/parameters/imtcp-compression-driver.rst \
     source/reference/parameters/imtcp-compression-maxdecompressedbytesperreceive.rst \
     source/reference/parameters/imtcp-compression-maxexpansionratio.rst \
@@ -768,6 +769,7 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-streamdriver-tlsrevocationcheck.rst \
     source/reference/parameters/imtcp-supportoctetcountedframing.rst \
     source/reference/parameters/imtcp-workerthreads.rst \
+    source/reference/parameters/imudp-allowedsender.rst \
     source/reference/parameters/imudp-address.rst \
     source/reference/parameters/imudp-batchsize.rst \
     source/reference/parameters/imudp-defaulttz.rst \

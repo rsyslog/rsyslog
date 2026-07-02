@@ -36,9 +36,9 @@ forward the router logs:
    that port number is permitted).
 -  you may want to limit who can send syslog messages via UDP. A great
    place to do this is inside the firewall, but you can also do it in
-   rsyslog.conf via an $AllowedSender directive. We have used one in the
-   sample config below. Please be aware that this is a kind of weak
-   authentication, but definitely better than nothing...
+   rsyslog.conf via the imudp ``allowedSender`` parameter. We have used
+   one in the sample config below. Please be aware that this is weak
+   source-address filtering, not authentication.
 -  add the UDP input plugin to rsyslog's config and start a UDP listener
 -  make sure that your forwarding-filter permits to forward messages
    received from the remote router to the server. In our sample
@@ -59,8 +59,7 @@ we do not show any rules to write local files. Feel free to add them.
 ::
 
     # start a UDP listener for the remote router
-    module(load="imudp")   # load UDP server plugin
-    $AllowedSender UDP, 192.0.2.1 # permit only the router
+    module(load="imudp" allowedSender=["192.0.2.1"]) # permit only the router
     input(type="imudp"
     port="514" # listen on default syslog UDP port 514
     )
