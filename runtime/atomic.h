@@ -375,7 +375,7 @@ static inline void ATOMIC_STORE_time_t_RELAXED(time_t *data, pthread_mutex_t *ph
     pthread_mutex_unlock(phlpmut);
 }
 
-static inline unsigned ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
+static inline uint64 ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
     uint64 val;
     pthread_mutex_lock(phlpmut);
     val = ++(*data);
