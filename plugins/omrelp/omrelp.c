@@ -235,7 +235,7 @@ static void onAuthErr(void *pUsr, char *authinfo, char *errmesg, __attribute__((
              "omrelp[%s:%s]: authentication error '%s', peer "
              "is '%s' - %s",
              pData->target, getRelpPt(pData), errmesg, authinfo, authFailActionText(pData));
-    ATOMIC_STORE_1_TO_INT(&pData->bHadAuthFail, &pData->mutHadAuthFail);
+    ATOMIC_STORE_32BIT(&pData->bHadAuthFail, &pData->mutHadAuthFail, 1);
 }
 
 static int relpRetIsAuthErr(const relpRetVal relpRet) {
@@ -635,7 +635,7 @@ static rsRetVal ATTR_NONNULL() doConnect(wrkrInstanceData_t *const pWrkrData) {
     if (iRet == RELP_RET_OK) {
         pWrkrData->bIsConnected = 1;
         pWrkrData->bIsSuspended = 0;
-        ATOMIC_STORE_0_TO_INT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail);
+        ATOMIC_STORE_32BIT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail, 0);
     } else if (iRet == RELP_RET_ERR_NO_TLS) {
         LogError(0, iRet,
                  "omrelp: Could not connect, librelp does NOT "
@@ -678,7 +678,7 @@ finalize_it:
 
 BEGINtryResume
     CODESTARTtryResume;
-    if (ATOMIC_FETCH_32BIT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail) &&
+    if (ATOMIC_LOAD_32BIT(&pWrkrData->pData->bHadAuthFail, &pWrkrData->pData->mutHadAuthFail) &&
         pWrkrData->pData->bTlsPermFailDisablesAction) {
         ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
     }
@@ -743,7 +743,7 @@ BEGINdoAction
         doRebind(pWrkrData);
     }
 finalize_it:
-    if (ATOMIC_FETCH_32BIT(&pData->bHadAuthFail, &pData->mutHadAuthFail)) iRet = authFailActionRet(pData);
+    if (ATOMIC_LOAD_32BIT(&pData->bHadAuthFail, &pData->mutHadAuthFail)) iRet = authFailActionRet(pData);
     if (iRet == RS_RET_OK) {
         /* we mimic non-commit, as otherwise our endTransaction handler
          * will not get called. While this is not 100% correct, the worst

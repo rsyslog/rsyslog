@@ -120,14 +120,14 @@ struct action_s {
 };
 
 static inline int actionLoadDisabled(action_t *const pAction) {
-    return ATOMIC_FETCH_32BIT(&pAction->bDisabled, &pAction->mutCAS);
+    return ATOMIC_LOAD_32BIT(&pAction->bDisabled, &pAction->mutCAS);
 }
 
 static inline void actionStoreDisabled(action_t *const pAction, const int value) {
     if (value == 0) {
-        ATOMIC_STORE_0_TO_INT(&pAction->bDisabled, &pAction->mutCAS);
+        ATOMIC_STORE_32BIT(&pAction->bDisabled, &pAction->mutCAS, 0);
     } else {
-        ATOMIC_STORE_1_TO_INT(&pAction->bDisabled, &pAction->mutCAS);
+        ATOMIC_STORE_32BIT(&pAction->bDisabled, &pAction->mutCAS, 1);
     }
 }
 

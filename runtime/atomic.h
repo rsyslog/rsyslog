@@ -55,50 +55,49 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-    #define ATOMIC_SUB(data, val, phlpmut) __sync_fetch_and_sub(data, val)
-    #define ATOMIC_SUB_unsigned(data, val, phlpmut) __sync_fetch_and_sub(data, val)
-    #define ATOMIC_ADD(data, val) __sync_fetch_and_add(&(data), val)
-    #define ATOMIC_INC(data, phlpmut) ((void)__sync_fetch_and_add(data, 1))
-    #define ATOMIC_INC_AND_FETCH_int(data, phlpmut) __sync_fetch_and_add(data, 1)
-    #define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __sync_fetch_and_add(data, 1)
-    #define ATOMIC_DEC(data, phlpmut) ((void)__sync_sub_and_fetch(data, 1))
-    #define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
-    #define ATOMIC_FETCH_32BIT(data, phlpmut) ((int)__sync_fetch_and_and(data, 0xffffffff))
-    #define ATOMIC_FETCH_32BIT_unsigned(data, phlpmut) ((unsigned)__sync_fetch_and_and(data, 0xffffffff))
-    #ifdef HAVE_ATOMIC_LOAD_STORE_BUILTINS
-        #define ATOMIC_LOAD_32BIT(data, phlpmut) ((int)__atomic_load_n((data), __ATOMIC_ACQUIRE))
-        #define ATOMIC_LOAD_32BIT_unsigned(data, phlpmut) ((unsigned)__atomic_load_n((data), __ATOMIC_ACQUIRE))
-        #define ATOMIC_STORE_32BIT(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
-        #define ATOMIC_STORE_32BIT_unsigned(data, phlpmut, val) \
-            ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
-    #else
-        #define ATOMIC_LOAD_32BIT(data, phlpmut) ATOMIC_FETCH_32BIT(data, phlpmut)
-        #define ATOMIC_LOAD_32BIT_unsigned(data, phlpmut) ATOMIC_FETCH_32BIT_unsigned(data, phlpmut)
-        /*
-         * Keep load/store users on the same synchronization family when only
-         * the older __sync builtins are available; mixing __sync loads with
-         * mutex stores would reintroduce data races.
-         */
-        #define ATOMIC_STORE_32BIT(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
-        #define ATOMIC_STORE_32BIT_unsigned(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
-    #endif
-    #define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
-    #define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
-    #define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
-    #define ATOMIC_STORE_INT(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
-    #define ATOMIC_OR_INT_TO_INT(data, phlpmut, val) __sync_fetch_and_or((data), (val))
-    #define ATOMIC_CAS(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap((data), (oldVal), (newVal))
-    #define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap((data), (oldVal), (newVal))
-    #define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap((data), (oldVal), (newVal))
+    /*
+     * Return-value helpers mirror their names and the mutex fallback below:
+     * *_AND_FETCH returns the value after the operation.
+     */
+    #define ATOMIC_SUB(data, val, phlpmut) __atomic_fetch_sub((data), (val), __ATOMIC_SEQ_CST)
+    #define ATOMIC_SUB_unsigned(data, val, phlpmut) __atomic_fetch_sub((data), (val), __ATOMIC_SEQ_CST)
+    #define ATOMIC_ADD(data, val) __atomic_fetch_add(&(data), (val), __ATOMIC_SEQ_CST)
+    #define ATOMIC_INC(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_SEQ_CST))
+    #define ATOMIC_INC_AND_FETCH_int(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
+    #define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
+    #define ATOMIC_DEC(data, phlpmut) ((void)__atomic_sub_fetch((data), 1, __ATOMIC_SEQ_CST))
+    #define ATOMIC_DEC_AND_FETCH(data, phlpmut) __atomic_sub_fetch((data), 1, __ATOMIC_SEQ_CST)
+    #define ATOMIC_LOAD_32BIT(data, phlpmut) ((int)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_LOAD_32BIT_unsigned(data, phlpmut) ((unsigned)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_STORE_32BIT(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
+    #define ATOMIC_STORE_32BIT_unsigned(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
+    #define ATOMIC_STORE_1_TO_32BIT(data) ((void)__atomic_store_n(&(data), 1, __ATOMIC_RELEASE))
+    #define ATOMIC_OR_INT_TO_INT(data, phlpmut, val) __atomic_fetch_or((data), (val), __ATOMIC_SEQ_CST)
+    #define ATOMIC_CAS(data, oldVal, newVal, phlpmut)                                                                  \
+        ({                                                                                                             \
+            __typeof__(*(data)) rs_atomic_expected = (oldVal);                                                         \
+            __atomic_compare_exchange_n((data), &rs_atomic_expected, (newVal), 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+        })
+    #define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut)                                                           \
+        ({                                                                                                             \
+            __typeof__(*(data)) rs_atomic_expected = (oldVal);                                                         \
+            __atomic_compare_exchange_n((data), &rs_atomic_expected, (newVal), 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+        })
+    #define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut)                                                 \
+        ({                                                                                                \
+            __typeof__(*(data)) rs_atomic_expected = (oldVal);                                            \
+            (void)__atomic_compare_exchange_n((data), &rs_atomic_expected, (newVal), 0, __ATOMIC_SEQ_CST, \
+                                              __ATOMIC_SEQ_CST);                                          \
+            rs_atomic_expected;                                                                           \
+        })
     /* Atomic operations for pointers (word-sized on all supported platforms) */
-    #define ATOMIC_FETCH_PTR(data, phlpmut) ((void *)__sync_fetch_and_add(data, 0))
-    #ifdef HAVE_ATOMIC_LOAD_STORE_BUILTINS
-        #define ATOMIC_LOAD_PTR(data, phlpmut) ((void *)__atomic_load_n((data), __ATOMIC_ACQUIRE))
-    #else
-        #define ATOMIC_LOAD_PTR(data, phlpmut) ATOMIC_FETCH_PTR(data, phlpmut)
-    #endif
-    #define ATOMIC_STORE_PTR(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
-    #define ATOMIC_CAS_PTR(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
+    #define ATOMIC_LOAD_PTR(data, phlpmut) ((void *)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_STORE_PTR(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
+    #define ATOMIC_CAS_PTR(data, oldVal, newVal, phlpmut)                                                              \
+        ({                                                                                                             \
+            __typeof__(*(data)) rs_atomic_expected = (oldVal);                                                         \
+            __atomic_compare_exchange_n((data), &rs_atomic_expected, (newVal), 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+        })
 
     /* functions below are not needed if we have atomics */
     #define DEF_ATOMIC_HELPER_MUT(x)
@@ -109,10 +108,17 @@
      * not fatal if not -- that means we can live with some missed updates. So be
      * sure to use these macros only if that really does not matter!
      */
-    #define PREFER_ATOMIC_INC(data) ((void)__sync_fetch_and_add(&(data), 1))
-    #define PREFER_FETCH_32BIT(data) ((unsigned)__sync_fetch_and_and(&(data), 0xffffffff))
-    #define PREFER_STORE_0_TO_INT(data) __sync_fetch_and_and(data, 0)
-    #define PREFER_STORE_1_TO_INT(data) __sync_fetch_and_or(data, 1)
+    /*
+     * PREFER_* keeps its weak contract: the no-atomics build below still uses
+     * plain accesses. PREFER_FETCH_32BIT callers pass a scalar lvalue, not a
+     * pointer; the atomic branch takes its address locally.
+     */
+    #define PREFER_ATOMIC_INC(data) ((void)__atomic_fetch_add(&(data), 1, __ATOMIC_RELAXED))
+    #define PREFER_LOAD_INT(data) ((int)__atomic_load_n((data), __ATOMIC_RELAXED))
+    #define PREFER_FETCH_32BIT(data) ((unsigned)__atomic_load_n(&(data), __ATOMIC_RELAXED))
+    #define PREFER_STORE_INT(data, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELAXED))
+    #define PREFER_STORE_0_TO_INT(data) ((void)__atomic_store_n((data), 0, __ATOMIC_RELAXED))
+    #define PREFER_STORE_1_TO_INT(data) ((void)__atomic_store_n((data), 1, __ATOMIC_RELAXED))
 #else
     /* note that we gained practical proof that theoretical problems DO occur
      * if we do not properly address them. See this blog post for details:
@@ -128,27 +134,6 @@
             ++(*(data));                   \
             pthread_mutex_unlock(phlpmut); \
         }
-
-    #define ATOMIC_STORE_0_TO_INT(data, hlpmut) \
-        {                                       \
-            pthread_mutex_lock(hlpmut);         \
-            *(data) = 0;                        \
-            pthread_mutex_unlock(hlpmut);       \
-        }
-
-    #define ATOMIC_STORE_1_TO_INT(data, hlpmut) \
-        {                                       \
-            pthread_mutex_lock(hlpmut);         \
-            *(data) = 1;                        \
-            pthread_mutex_unlock(hlpmut);       \
-        }
-
-    #define ATOMIC_STORE_INT(data, hlpmut, val) \
-        do {                                    \
-            pthread_mutex_lock(hlpmut);         \
-            *(data) = (val);                    \
-            pthread_mutex_unlock(hlpmut);       \
-        } while (0)
 
     #define ATOMIC_OR_INT_TO_INT(data, hlpmut, val) \
         {                                           \
@@ -226,16 +211,12 @@ static inline int ATOMIC_DEC_AND_FETCH(int *data, pthread_mutex_t *phlpmut) {
     return (val);
 }
 
-static inline int ATOMIC_FETCH_32BIT(int *data, pthread_mutex_t *phlpmut) {
+static inline int ATOMIC_LOAD_32BIT(int *data, pthread_mutex_t *phlpmut) {
     int val;
     pthread_mutex_lock(phlpmut);
     val = (*data);
     pthread_mutex_unlock(phlpmut);
-    return (val);
-}
-
-static inline int ATOMIC_LOAD_32BIT(int *data, pthread_mutex_t *phlpmut) {
-    return ATOMIC_FETCH_32BIT(data, phlpmut);
+    return val;
 }
 
 static inline void ATOMIC_STORE_32BIT(int *data, pthread_mutex_t *phlpmut, int val) {
@@ -244,16 +225,12 @@ static inline void ATOMIC_STORE_32BIT(int *data, pthread_mutex_t *phlpmut, int v
     pthread_mutex_unlock(phlpmut);
 }
 
-static inline int ATOMIC_FETCH_32BIT_unsigned(unsigned *data, pthread_mutex_t *phlpmut) {
-    int val;
+static inline unsigned ATOMIC_LOAD_32BIT_unsigned(unsigned *data, pthread_mutex_t *phlpmut) {
+    unsigned val;
     pthread_mutex_lock(phlpmut);
     val = (*data);
     pthread_mutex_unlock(phlpmut);
-    return (val);
-}
-
-static inline unsigned ATOMIC_LOAD_32BIT_unsigned(unsigned *data, pthread_mutex_t *phlpmut) {
-    return ATOMIC_FETCH_32BIT_unsigned(data, phlpmut);
+    return val;
 }
 
 static inline void ATOMIC_STORE_32BIT_unsigned(unsigned *data, pthread_mutex_t *phlpmut, unsigned val) {
@@ -275,16 +252,12 @@ static inline void ATOMIC_SUB_unsigned(unsigned *data, int val, pthread_mutex_t 
 }
 
 /* Atomic operations for pointers - fallback to mutex-protected operations */
-static inline void *ATOMIC_FETCH_PTR(void **data, pthread_mutex_t *phlpmut) {
+static inline void *ATOMIC_LOAD_PTR(void **data, pthread_mutex_t *phlpmut) {
     void *val;
     pthread_mutex_lock(phlpmut);
     val = *data;
     pthread_mutex_unlock(phlpmut);
     return val;
-}
-
-static inline void *ATOMIC_LOAD_PTR(void **data, pthread_mutex_t *phlpmut) {
-    return ATOMIC_FETCH_PTR(data, phlpmut);
 }
 
 static inline void ATOMIC_STORE_PTR(void **data, pthread_mutex_t *phlpmut, void *val) {
@@ -311,7 +284,12 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
     #define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))
 
     #define PREFER_ATOMIC_INC(data) ((void)++data)
+    #define PREFER_LOAD_INT(data) (*(data))
+    /* Caller passes the scalar object, not its address. No-atomic builds deliberately
+     * use a plain read for these weak flags/counters where a racy value is acceptable.
+     */
     #define PREFER_FETCH_32BIT(data) ((unsigned)(data))
+    #define PREFER_STORE_INT(data, val) (*(data) = (val))
     #define PREFER_STORE_0_TO_INT(data) (*(data) = 0)
     #define PREFER_STORE_1_TO_INT(data) (*(data) = 1)
 
@@ -321,11 +299,23 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
  * 32 bit atomics, but not 64 bit ones... -- rgerhards, 2010-12-01
  */
 #ifdef HAVE_ATOMIC_BUILTINS64
-    #define ATOMIC_INC_uint64(data, phlpmut) ((void)__sync_fetch_and_add(data, 1))
-    #define ATOMIC_ADD_uint64(data, phlpmut, value) ((void)__sync_fetch_and_add(data, value))
-    #define ATOMIC_DEC_uint64(data, phlpmut) ((void)__sync_sub_and_fetch(data, 1))
-    #define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
-    #define ATOMIC_STORE_uint64(data, phlpmut, value) ((void)__sync_lock_test_and_set((data), (value)))
+    #define ATOMIC_INC_uint64(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_SEQ_CST))
+    #define ATOMIC_ADD_uint64(data, phlpmut, value) ((void)__atomic_fetch_add((data), (value), __ATOMIC_SEQ_CST))
+    #define ATOMIC_DEC_uint64(data, phlpmut) ((void)__atomic_sub_fetch((data), 1, __ATOMIC_SEQ_CST))
+    #define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
+    #define ATOMIC_STORE_uint64(data, phlpmut, value) ((void)__atomic_store_n((data), (value), __ATOMIC_RELEASE))
+    #define ATOMIC_INC_uint64_RELAXED(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_RELAXED))
+    #define ATOMIC_ADD_uint64_RELAXED(data, phlpmut, value) \
+        ((void)__atomic_fetch_add((data), (value), __ATOMIC_RELAXED))
+    #define ATOMIC_DEC_uint64_RELAXED(data, phlpmut) ((void)__atomic_sub_fetch((data), 1, __ATOMIC_RELAXED))
+    #define ATOMIC_LOAD_time_t_ACQUIRE(data, phlpmut) ((time_t)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_LOAD_time_t_RELAXED(data, phlpmut) ((time_t)__atomic_load_n((data), __ATOMIC_RELAXED))
+    #define ATOMIC_STORE_time_t_RELAXED(data, phlpmut, value) \
+        ((void)__atomic_store_n((data), (value), __ATOMIC_RELAXED))
+    #define PREFER_LOAD_time_t(data) ((time_t)__atomic_load_n((data), __ATOMIC_RELAXED))
+    #define PREFER_STORE_time_t(data, value) ((void)__atomic_store_n((data), (value), __ATOMIC_RELAXED))
+    #define PREFER_LOAD_uint64(data) ((uint64)__atomic_load_n((data), __ATOMIC_RELAXED))
+    #define PREFER_STORE_uint64(data, value) ((void)__atomic_store_n((data), (value), __ATOMIC_RELAXED))
 
     #define DEF_ATOMIC_HELPER_MUT64(x)
     #define INIT_ATOMIC_HELPER_MUT64(x)
@@ -349,12 +339,41 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
             --(*(data));                     \
             pthread_mutex_unlock(phlpmut);   \
         }
+    #define ATOMIC_INC_uint64_RELAXED(data, phlpmut) ATOMIC_INC_uint64(data, phlpmut)
+    #define ATOMIC_ADD_uint64_RELAXED(data, phlpmut, value) ATOMIC_ADD_uint64(data, phlpmut, value)
+    #define ATOMIC_DEC_uint64_RELAXED(data, phlpmut) ATOMIC_DEC_uint64(data, phlpmut)
+    #define PREFER_LOAD_time_t(data) (*(data))
+    #define PREFER_STORE_time_t(data, value) (*(data) = (value))
+    #define PREFER_LOAD_uint64(data) (*(data))
+    #define PREFER_STORE_uint64(data, value) (*(data) = (value))
     #define ATOMIC_STORE_uint64(data, phlpmut, value) \
         {                                             \
             pthread_mutex_lock(phlpmut);              \
             *(data) = (value);                        \
             pthread_mutex_unlock(phlpmut);            \
         }
+
+static inline time_t ATOMIC_LOAD_time_t_ACQUIRE(time_t *data, pthread_mutex_t *phlpmut) {
+    time_t val;
+    pthread_mutex_lock(phlpmut);
+    val = *data;
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
+static inline time_t ATOMIC_LOAD_time_t_RELAXED(time_t *data, pthread_mutex_t *phlpmut) {
+    time_t val;
+    pthread_mutex_lock(phlpmut);
+    val = *data;
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
+static inline void ATOMIC_STORE_time_t_RELAXED(time_t *data, pthread_mutex_t *phlpmut, time_t value) {
+    pthread_mutex_lock(phlpmut);
+    *data = value;
+    pthread_mutex_unlock(phlpmut);
+}
 
 static inline unsigned ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
     uint64 val;

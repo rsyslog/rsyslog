@@ -309,7 +309,7 @@ typedef struct wrkrInstanceData {
 static void *pollCallbackThread(void *arg) {
     instanceData *const pData = (instanceData *)arg;
 
-    while (!ATOMIC_FETCH_32BIT(&pData->stopPollThread, &pData->mutStopPollThread)) {
+    while (!ATOMIC_LOAD_32BIT(&pData->stopPollThread, &pData->mutStopPollThread)) {
         if (pthread_mutex_trylock(&pData->mut_doAction) == 0) {
             pthread_rwlock_rdlock(&pData->rkLock);
             if (pData->bIsOpen && pData->rk != NULL) {
@@ -333,7 +333,7 @@ static rsRetVal startPollCallbackThread(instanceData *const pData) {
         FINALIZE;
     }
 
-    ATOMIC_STORE_0_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
+    ATOMIC_STORE_32BIT(&pData->stopPollThread, &pData->mutStopPollThread, 0);
     const int r = pthread_create(&pData->pollThread, NULL, pollCallbackThread, pData);
     if (r != 0) {
         LogError(r, RS_RET_ERR, "omkafka: unable to create librdkafka callback poller thread");
@@ -350,7 +350,7 @@ static void stopPollCallbackThread(instanceData *const pData) {
         return;
     }
 
-    ATOMIC_STORE_1_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
+    ATOMIC_STORE_32BIT(&pData->stopPollThread, &pData->mutStopPollThread, 1);
     const int r = pthread_join(pData->pollThread, NULL);
     if (r != 0) {
         LogError(r, RS_RET_ERR, "omkafka: unable to join librdkafka callback poller thread");
@@ -1833,7 +1833,7 @@ BEGINcreateInstance
     INIT_ATOMIC_HELPER_MUT(pData->mutCurrPartition);
     INIT_ATOMIC_HELPER_MUT(pData->mutStopPollThread);
     pData->pollThreadRunning = 0;
-    ATOMIC_STORE_0_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
+    ATOMIC_STORE_32BIT(&pData->stopPollThread, &pData->mutStopPollThread, 0);
 finalize_it:
 ENDcreateInstance
 

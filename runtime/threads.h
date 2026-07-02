@@ -39,11 +39,11 @@ struct thrdInfo {
 };
 
 static inline int thrdGetShallStop(thrdInfo_t *pThis) {
-    return ATOMIC_FETCH_32BIT(&pThis->bShallStop, &pThis->mutShallStop);
+    return ATOMIC_LOAD_32BIT(&pThis->bShallStop, &pThis->mutShallStop);
 }
 
 static inline void thrdSetShallStop(thrdInfo_t *pThis) {
-    ATOMIC_STORE_1_TO_INT(&pThis->bShallStop, &pThis->mutShallStop);
+    ATOMIC_STORE_32BIT(&pThis->bShallStop, &pThis->mutShallStop, 1);
 }
 
 /* prototypes */

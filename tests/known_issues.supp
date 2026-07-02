@@ -82,6 +82,21 @@
    fun:(below main)
 }
 {
+   <Helgrind does not recognize __atomic global input termination store>
+   Helgrind:Race
+   fun:SetGlobalInputTermination
+   fun:deinitAll
+   fun:main
+}
+{
+   <Helgrind does not recognize __atomic global input termination load>
+   Helgrind:Race
+   fun:GetGlobalInputTermState
+   fun:RunEpoll
+   fun:Run
+   ...
+}
+{
    <glibc 2.4[01] failures for fc4[12].aarch64>
    Memcheck:Leak
    match-leak-kinds: definite

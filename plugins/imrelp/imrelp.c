@@ -873,7 +873,7 @@ ENDfreeCnf
  * only *after this function is done*. So we do not have a race!
  */
 static void doSIGTTIN(int __attribute__((unused)) sig) {
-    const int bTerminate = ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
+    const int bTerminate = PREFER_LOAD_INT(&bTerminateInputsSigSafe);
     if (bTerminate && (pRelpEngine != NULL)) {
         relpEngineSetStop(pRelpEngine);
     }

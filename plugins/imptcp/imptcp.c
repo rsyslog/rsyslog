@@ -2193,7 +2193,7 @@ static sbool claimSessWork(epolld_t *const epd) {
 static void releaseSessWork(epolld_t *const epd) {
     ptcpsess_t *const pSess = (ptcpsess_t *)epd->ptr;
 
-    ATOMIC_STORE_0_TO_INT(&pSess->bWorkQueued, &pSess->mutWorkQueued);
+    ATOMIC_STORE_32BIT(&pSess->bWorkQueued, &pSess->mutWorkQueued, 0);
 }
 
 /* This function is called to process a single request. Listener work can run

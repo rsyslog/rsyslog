@@ -795,20 +795,12 @@ static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti)
 }
 
 static time_t actionGetResumeRetryTime(const action_t *const pThis) {
-#ifdef HAVE_ATOMIC_BUILTINS64
-    return __atomic_load_n(&pThis->ttResumeRtry, __ATOMIC_RELAXED);
-#else
-    return pThis->ttResumeRtry;
-#endif
+    return PREFER_LOAD_time_t(&pThis->ttResumeRtry);
 }
 
 
 static void actionSetResumeRetryTime(action_t *const pThis, const time_t ttResumeRtry) {
-#ifdef HAVE_ATOMIC_BUILTINS64
-    __atomic_store_n(&pThis->ttResumeRtry, ttResumeRtry, __ATOMIC_RELAXED);
-#else
-    pThis->ttResumeRtry = ttResumeRtry;
-#endif
+    PREFER_STORE_time_t(&pThis->ttResumeRtry, ttResumeRtry);
 }
 
 
@@ -1020,7 +1012,7 @@ static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wt
      * to ensure proper memory ordering and visibility across threads.
      */
 #ifdef HAVE_ATOMIC_BUILTINS
-    existingInstance = ATOMIC_FETCH_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
+    existingInstance = ATOMIC_LOAD_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
     if (existingInstance != NULL) {
         FINALIZE; /* Common case: instance exists, return immediately */
     }
@@ -1038,7 +1030,7 @@ static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wt
 
 #ifdef HAVE_ATOMIC_BUILTINS
     /* Recheck under lock (double-checked locking pattern with atomics) */
-    existingInstance = ATOMIC_FETCH_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
+    existingInstance = ATOMIC_LOAD_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
 #else
     existingInstance = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
 #endif

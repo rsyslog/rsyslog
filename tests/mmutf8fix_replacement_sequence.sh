@@ -37,6 +37,9 @@ wait_file_exists "$RSYSLOG_DYNNAME.tcpflood_tag_port"
 printf '<134>1 2026-06-01T00:00:00Z host app proc msgid [test@32473 dirty="Brain\xa0Twist"] bad\xc0\x80 utf8\n' \
   > "$RSYSLOG_DYNNAME.input"
 tcpflood -p"$(cat "$RSYSLOG_DYNNAME.tcpflood_sd_port")" -m1 -I "$RSYSLOG_DYNNAME.input"
+printf '<134>1 2026-06-01T00:00:00Z host app proc msgid [test@32473 clean="ok"] split\xe0\xa0Xtail\n' \
+  > "$RSYSLOG_DYNNAME.input"
+tcpflood -p"$(cat "$RSYSLOG_DYNNAME.tcpflood_sd_port")" -m1 -I "$RSYSLOG_DYNNAME.input"
 printf '<129>Mar 10 01:00:00 host bad\xc0tag: tag payload\n' > "$RSYSLOG_DYNNAME.input"
 tcpflood -p"$(cat "$RSYSLOG_DYNNAME.tcpflood_tag_port")" -m1 -I "$RSYSLOG_DYNNAME.input"
 rm -f "$RSYSLOG_DYNNAME.input"
@@ -45,6 +48,7 @@ wait_shutdown
 
 {
   printf '[test@32473 dirty="Brain\357\277\275Twist"]|bad\357\277\275\357\277\275 utf8\n'
+  printf '[test@32473 clean="ok"]|split\357\277\275\357\277\275Xtail\n'
   printf 'bad\357\277\275tag:| tag payload\n'
 } > "$RSYSLOG_OUT_LOG.expect"
 

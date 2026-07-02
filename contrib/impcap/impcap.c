@@ -586,8 +586,8 @@ void packet_parse(uchar *arg, const struct pcap_pkthdr *pkthdr, const uchar *pac
  */
 static void doSIGTTIN(int __attribute__((unused)) sig) {
     pthread_t tid = pthread_self();
-    const int bTerminate = ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
-    DBGPRINTF("impcap: awoken via SIGTTIN; bTerminateInputs: %d\n", bTerminate);
+    const int bTerminate = PREFER_LOAD_INT(&bTerminateInputsSigSafe);
+    DBGPRINTF("impcap: awoken via SIGTTIN; bTerminateInputsSigSafe: %d\n", bTerminate);
     if (bTerminate) {
         for (instanceConf_t *inst = runModConf->root; inst != NULL; inst = inst->next) {
             if (pthread_equal(tid, inst->tid)) {

@@ -98,9 +98,9 @@ struct wti_s {
 
 static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
 #ifdef HAVE_ATOMIC_BUILTINS
-    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, NULL);
+    return ATOMIC_LOAD_32BIT(pWti->pbShutdownImmediate, NULL);
 #else
-    return ATOMIC_FETCH_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
+    return ATOMIC_LOAD_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
 #endif
 }
 

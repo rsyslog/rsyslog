@@ -217,15 +217,11 @@ void rsyslogdDoDie(int sig);
 #endif
 
 /* global data items */
-static pthread_mutex_t mutChildDied;
-static int bChildDied = 0;
-static pthread_mutex_t mutHadHUP;
-static int bHadHUP;
+static volatile sig_atomic_t bChildDied = 0;
+static volatile sig_atomic_t bHadHUP = 0;
+static volatile sig_atomic_t bHUPInProgress = 0;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
-int bFinished = 0; /* used by termination signal handler, read-only except there
-                    * is either 0 or the number of the signal that requested the
-                    * termination.
-                    */
+static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0; /* is this just a config verify run? */
@@ -266,17 +262,14 @@ static int setsid(void) {
 }
 #endif
 
-/* helper for imdiag. Returns if HUP processing has been requested or
- * is not yet finished. We know this is racy, but imdiag handles this
- * part by repeating operations. The mutex look is primarily to force
- * a memory barrier, so that we have a change to see changes already
- * written, but not present in the core's cache.
+/* helper for imdiag. Returns if HUP processing has been requested or is not
+ * yet finished. We know this is racy, but imdiag handles this part by
+ * repeating operations. sig_atomic_t keeps access signal-handler safe; callers
+ * must treat the answer as a transient observation.
  * 2023-07-26 Rainer Gerhards
  */
 int get_bHadHUP(void) {
-    pthread_mutex_lock(&mutHadHUP);
-    const int ret = bHadHUP;
-    pthread_mutex_unlock(&mutHadHUP);
+    const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
 }
@@ -1425,9 +1418,7 @@ static void hdlr_enable(int sig, void (*hdlr)()) {
 }
 
 static void hdlr_sighup(void) {
-    pthread_mutex_lock(&mutHadHUP);
-    bHadHUP = 1;
-    pthread_mutex_unlock(&mutHadHUP);
+    PREFER_STORE_INT(&bHadHUP, 1);
     /* at least on FreeBSD we seem not to necessarily awake the main thread.
      * So let's do it explicitely.
      */
@@ -1436,9 +1427,7 @@ static void hdlr_sighup(void) {
 }
 
 static void hdlr_sigchld(void) {
-    pthread_mutex_lock(&mutChildDied);
-    bChildDied = 1;
-    pthread_mutex_unlock(&mutChildDied);
+    PREFER_STORE_INT(&bChildDied, 1);
 }
 
 static void rsyslogdDebugSwitch(void) {
@@ -2143,7 +2132,7 @@ static void doHUP(void) {
 void rsyslogdDoDie(int sig) {
 #define MSG1 "DoDie called.\n"
 #define MSG2 "DoDie called 5 times - unconditional exit\n"
-    static int iRetries = 0; /* debug aid */
+    static volatile sig_atomic_t iRetries = 0; /* debug aid */
     dbgprintf(MSG1);
     if (Debug == DEBUG_FULL) {
         if (write(1, MSG1, sizeof(MSG1) - 1) == -1) {
@@ -2245,13 +2234,9 @@ static rsRetVal wait_timeout(const sigset_t *sigmask, int timeout_ms) {
             stepTimeout.tv_sec = step_ms / 1000;
             stepTimeout.tv_nsec = (step_ms % 1000) * 1000000L;
 
-            pthread_mutex_lock(&mutHadHUP);
-            if (bFinished || bHadHUP) {
-                pthread_mutex_unlock(&mutHadHUP);
+            if (bFinished || PREFER_LOAD_INT(&bHadHUP)) {
                 break;
             }
-            pthread_mutex_unlock(&mutHadHUP);
-
             FD_ZERO(&rfds);
             if (rswatch_fd != -1) {
                 FD_SET(rswatch_fd, &rfds);
@@ -2381,7 +2366,6 @@ static void mainloop(void) {
     time_t tTime;
     sigset_t origmask;
     sigset_t sigblockset;
-    int need_free_mutex;
     uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
@@ -2395,30 +2379,16 @@ static void mainloop(void) {
 
         sigemptyset(&origmask);
         pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
-        pthread_mutex_lock(&mutChildDied);
-        need_free_mutex = 1;
-        if (bChildDied) {
-            bChildDied = 0;
-            pthread_mutex_unlock(&mutChildDied);
-            need_free_mutex = 0;
+        if (PREFER_LOAD_INT(&bChildDied)) {
+            PREFER_STORE_INT(&bChildDied, 0);
             reapChild();
         }
-        if (need_free_mutex) {
-            pthread_mutex_unlock(&mutChildDied);
-        }
 
-        pthread_mutex_lock(&mutHadHUP);
-        need_free_mutex = 1;
-        if (bHadHUP) {
-            need_free_mutex = 0;
-            pthread_mutex_unlock(&mutHadHUP);
+        if (PREFER_LOAD_INT(&bHadHUP)) {
+            PREFER_STORE_INT(&bHadHUP, 0);
+            PREFER_STORE_INT(&bHUPInProgress, 1);
             doHUP();
-            pthread_mutex_lock(&mutHadHUP);
-            bHadHUP = 0;
-            pthread_mutex_unlock(&mutHadHUP);
-        }
-        if (need_free_mutex) {
-            pthread_mutex_unlock(&mutHadHUP);
+            PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 
         processImInternal();
@@ -2502,7 +2472,7 @@ int rsyslogdWriteTerminationMarker(const char *status, const char *reason, const
     const int len = snprintf(buf, sizeof(buf),
                              "status=%s\nreason=%s\npid=%d\nsignal=%d\nversion=%s\nphase=%s\n"
                              "queue.overall.size=%u\n",
-                             status, reason, (int)getpid(), bFinished, VERSION, phase, overallQueueSize);
+                             status, reason, (int)getpid(), (int)bFinished, VERSION, phase, overallQueueSize);
     if (len < 0 || (size_t)len >= sizeof(buf)) {
         fprintf(stderr, "rsyslogd: error formatting proper termination file '%s'\n",
                 (const char *)properTerminationFile);
@@ -2551,7 +2521,7 @@ static void rsyslogd_destructAllActions(void) {
 static void deinitAll(void) {
     char buf[256];
 
-    DBGPRINTF("exiting on signal %d\n", bFinished);
+    DBGPRINTF("exiting on signal %d\n", (int)bFinished);
 
     /* IMPORTANT: we should close the inputs first, and THEN send our termination
      * message. If we do it the other way around, logmsgInternal() may block on
@@ -2578,7 +2548,7 @@ static void deinitAll(void) {
                        "swVersion=\"" VERSION
                        "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]"
                        " exiting on signal %d.",
-                       (int)glblGetOurPid(), bFinished);
+                       (int)glblGetOurPid(), (int)bFinished);
         errno = 0;
         logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
     }
@@ -2653,8 +2623,6 @@ int main(int argc, char **argv) {
      * internally by rsyslogd.
      */
 
-    pthread_mutex_init(&mutHadHUP, NULL);
-    pthread_mutex_init(&mutChildDied, NULL);
     rs_cstr_copy(progname, argv[0], sizeof(progname));
     addrsz = sizeof(srcaddr);
     if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
@@ -2715,7 +2683,5 @@ int main(int argc, char **argv) {
     LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
     deinitAll();
     osf_close();
-    pthread_mutex_destroy(&mutChildDied);
-    pthread_mutex_destroy(&mutHadHUP);
     return rsyslogdWriteTerminationMarker("ok", "normal", "main-return");
 }

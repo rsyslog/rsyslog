@@ -1234,6 +1234,11 @@ static void *listenerThread(void *arg) {
             }
         }
     }
+    /* Workers may still process session events queued before shutdown and call
+     * epoll_ctl() from rearmSession()/closeSession(). Join them before closing
+     * the shared epoll fd so shutdown does not race with those operations.
+     */
+    stopWorkerPool(inst);
     close(inst->epoll_fd);
     inst->epoll_fd = -1;
 #else
@@ -1256,7 +1261,9 @@ static void *listenerThread(void *arg) {
         free(pfds);
     }
 #endif
+#if !defined(IMBEATS_HAVE_EPOLL)
     stopWorkerPool(inst);
+#endif
     return NULL;
 }
 
