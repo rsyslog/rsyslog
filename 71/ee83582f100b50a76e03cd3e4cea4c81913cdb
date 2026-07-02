@@ -1,0 +1,19 @@
+tools/rsyslogd.c
+  s_cf144905ab59ed::t_d319bef2b67f90 2388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "71ee83582f100b50a76e03cd3e4cea4c81913cdb",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
