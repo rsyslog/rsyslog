@@ -200,7 +200,7 @@ ENDobjDestruct(wtp)
  */
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState) {
     ISOBJ_TYPE_assert(pThis, wtp);
-    ATOMIC_STORE_INT((int *)&pThis->wtpState, &pThis->mutWtpState, iNewState);
+    ATOMIC_STORE_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState, iNewState);
     return RS_RET_OK;
 }
 
@@ -224,9 +224,9 @@ rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex) {
 
     ISOBJ_TYPE_assert(pThis, wtp);
     /* we need a consistent value, but it doesn't really matter if it is changed
-     * right after the fetch - then we simply do one more iteration in the worker
+     * right after the load - then we simply do one more iteration in the worker
      */
-    wtpState = (wtpState_t)ATOMIC_FETCH_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
+    wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
 
     if (wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
         ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
@@ -279,10 +279,10 @@ PRAGMA_IGNORE_Wempty_body
      * worker threads. Even though we hold mutWtp, workers update this counter
      * atomically, so we must read it atomically to ensure we see the latest value.
      */
-    while (ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0 && !bTimedOut) {
+    while (ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0 && !bTimedOut) {
         wtpJoinTerminatedWrkr(pThis);
         DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n", wtpGetDbgHdr(pThis),
-                  timeoutVal(ptTimeout), ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+                  timeoutVal(ptTimeout), ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
         if (d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
             DBGPRINTF("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
@@ -348,7 +348,7 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
     /* note: numWorkersNow is only for message generation, so we do not try
      * hard to get it 100% accurate (as curently done, it is not).
      */
-    const int numWorkersNow = ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
+    const int numWorkersNow = ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
     DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
               numWorkersNow);
     if (numWorkersNow > 0) {
@@ -463,7 +463,7 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
     // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
     if (dbgTimeoutToStderr) {
         fprintf(stderr, "%s: worker start requested, num workers currently %d\n", wtpGetDbgHdr(pThis),
-                ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+                ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     }
 
     d_pthread_mutex_lock(&pThis->mutWtp);
@@ -476,7 +476,7 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
      * lock (mutWtpState). This lock on mutWtp ensures the check and
      * subsequent worker creation are an atomic unit, fixing the TOCTOU race.
      */
-    const wtpState_t wtpState = (wtpState_t)ATOMIC_FETCH_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
+    const wtpState_t wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
     if (wtpState != wtpState_RUNNING && !permit_during_shutdown) {
         d_pthread_mutex_unlock(&pThis->mutWtp);
         DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
@@ -513,10 +513,10 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
     // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
     if (dbgTimeoutToStderr) {
         fprintf(stderr, "%s: wrkr start initiated with state %d, num workers now %d\n", wtpGetDbgHdr(pThis), iState,
-                ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+                ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     }
     DBGPRINTF("%s: started with state %d, num workers now %d\n", wtpGetDbgHdr(pThis), iState,
-              ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+              ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
     /* wait for the new thread to initialize its signal mask and
      * cancellation cleanup handler before proceeding
@@ -525,11 +525,11 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
         d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
     } while ((iState = wtiGetState(pWti)) == WRKTHRD_INITIALIZING);
     DBGPRINTF("%s: new worker finished initialization with state %d, num workers now %d\n", wtpGetDbgHdr(pThis), iState,
-              ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+              ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
     if (dbgTimeoutToStderr) {
         fprintf(stderr, "rsyslog debug: %s: started with state %d, num workers now %d\n", wtpGetDbgHdr(pThis), iState,
-                ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+                ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     }
 
 finalize_it:
@@ -560,14 +560,14 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
     if (nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
         nMaxWrkr = pThis->iNumWorkerThreads;
 
-    nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
+    nMissing = nMaxWrkr - ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
     if (nMissing > 0) {
-        if (ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
+        if (ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
             LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
                    "%s: high activity - starting %d additional worker thread(s), "
                    "currently %d active worker threads.",
-                   wtpGetDbgHdr(pThis), nMissing, ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+                   wtpGetDbgHdr(pThis), nMissing, ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
         }
         /* start the rqtd nbr of workers */
         for (i = 0; i < nMissing; ++i) {

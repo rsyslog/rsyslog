@@ -282,20 +282,22 @@ void checkGoneAwaySenders(time_t);
     INIT_ATOMIC_HELPER_MUT64(mut);  \
     ctr = 0;
 
+#define STATSCOUNTER_ENABLED() (PREFER_FETCH_32BIT(GatherStats) != 0)
+
 #define STATSCOUNTER_INC(ctr, mut) \
-    if (GatherStats) ATOMIC_INC_uint64(&ctr, &mut);
+    if (STATSCOUNTER_ENABLED()) ATOMIC_INC_uint64_RELAXED(&ctr, &mut);
 
 #define STATSCOUNTER_ADD(ctr, mut, delta) \
-    if (GatherStats) ATOMIC_ADD_uint64(&ctr, &mut, delta);
+    if (STATSCOUNTER_ENABLED()) ATOMIC_ADD_uint64_RELAXED(&ctr, &mut, delta);
 
 #define STATSCOUNTER_DEC(ctr, mut) \
-    if (GatherStats) ATOMIC_DEC_uint64(&ctr, &mut);
+    if (STATSCOUNTER_ENABLED()) ATOMIC_DEC_uint64_RELAXED(&ctr, &mut);
 
 /* the next macro works only if the variable is already guarded
  * by mutex (or the users risks a wrong result). It is assumed
  * that there are not concurrent operations that modify the counter.
  */
 #define STATSCOUNTER_SETMAX_NOMUT(ctr, newmax) \
-    if (GatherStats && ((newmax) > (ctr))) ctr = newmax;
+    if (STATSCOUNTER_ENABLED() && ((newmax) > (ctr))) ctr = newmax;
 
 #endif /* #ifndef INCLUDED_STATSOBJ_H */

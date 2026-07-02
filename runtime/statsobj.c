@@ -309,38 +309,22 @@ static void destructCounter(statsobj_t *pThis, ctr_t *pCtr) {
 }
 
 static intctr_t getIntCtrValue(const intctr_t *const ctr) {
-#ifdef HAVE_ATOMIC_BUILTINS64
-    return __atomic_load_n(ctr, __ATOMIC_RELAXED);
-#else
-    return *ctr;
-#endif
+    return PREFER_LOAD_uint64(ctr);
 }
 
 
 static void resetIntCtrValue(intctr_t *const ctr) {
-#ifdef HAVE_ATOMIC_BUILTINS64
-    __atomic_store_n(ctr, 0, __ATOMIC_RELAXED);
-#else
-    *ctr = 0;
-#endif
+    PREFER_STORE_uint64(ctr, 0);
 }
 
 
 static int getIntValue(const int *const ctr) {
-#ifdef HAVE_ATOMIC_BUILTINS
-    return __atomic_load_n(ctr, __ATOMIC_RELAXED);
-#else
-    return *ctr;
-#endif
+    return PREFER_LOAD_INT(ctr);
 }
 
 
 static void resetIntValue(int *const ctr) {
-#ifdef HAVE_ATOMIC_BUILTINS
-    __atomic_store_n(ctr, 0, __ATOMIC_RELAXED);
-#else
-    *ctr = 0;
-#endif
+    PREFER_STORE_INT(ctr, 0);
 }
 
 
@@ -815,7 +799,7 @@ finalize_it:
  * again, as this is right now not needed.
  */
 static rsRetVal enableStats(void) {
-    GatherStats = 1;
+    PREFER_STORE_1_TO_INT(&GatherStats);
     return RS_RET_OK;
 }
 

@@ -11,46 +11,59 @@ AC_DEFUN([RS_ATOMIC_OPERATIONS],
 [AC_CACHE_CHECK([whether the compiler provides atomic builtins], [ap_cv_atomic_builtins],
 [AC_TRY_RUN([
 #include <sys/types.h>
+#include <time.h>
 int main()
 {
     unsigned long val = 1010, tmp, *mem = &val;
     time_t tval = 1010, ttmp, *tmem = &tval;
+    void *ptr = &val, *expected_ptr, *new_ptr;
 
-    if (__sync_fetch_and_add(&val, 1010) != 1010 || val != 2020)
+    if (__atomic_fetch_add(&val, 1010, __ATOMIC_SEQ_CST) != 1010 || val != 2020)
         return 1;
     tmp = val;
-    if (__sync_fetch_and_sub(mem, 1010) != tmp || val != 1010)
+    if (__atomic_fetch_sub(mem, 1010, __ATOMIC_SEQ_CST) != tmp || val != 1010)
         return 1;
-    if (__sync_sub_and_fetch(&val, 1010) != 0 || val != 0)
+    if (__atomic_sub_fetch(&val, 1010, __ATOMIC_SEQ_CST) != 0 || val != 0)
         return 1;
     tmp = 3030;
-    if (__sync_val_compare_and_swap(mem, 0, tmp) != 0 || val != tmp)
+    {
+        unsigned long expected = 0;
+        if (!__atomic_compare_exchange_n(mem, &expected, tmp, 0,
+                __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) ||
+            val != tmp)
+            return 1;
+    }
+    __atomic_store_n(&val, 4040, __ATOMIC_RELEASE);
+    if (__atomic_load_n(&val, __ATOMIC_ACQUIRE) != 4040)
         return 1;
-    if (__sync_lock_test_and_set(&val, 4040) != 3030)
-        return 1;
-    mem = &tmp;
-    if (__sync_val_compare_and_swap(&mem, &tmp, &val) != &tmp)
+    expected_ptr = &val;
+    new_ptr = &tmp;
+    if (!__atomic_compare_exchange_n(&ptr, &expected_ptr, new_ptr, 0,
+            __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
         return 1;
 
-    if (__sync_fetch_and_add(&tval, 1010) != 1010 || tval != 2020)
+    if (__atomic_fetch_add(&tval, 1010, __ATOMIC_SEQ_CST) != 1010 || tval != 2020)
         return 1;
     ttmp = tval;
-    if (__sync_fetch_and_sub(tmem, 1010) != ttmp || tval != 1010)
+    if (__atomic_fetch_sub(tmem, 1010, __ATOMIC_SEQ_CST) != ttmp || tval != 1010)
         return 1;
-    if (__sync_sub_and_fetch(&tval, 1010) != 0 || tval != 0)
+    if (__atomic_sub_fetch(&tval, 1010, __ATOMIC_SEQ_CST) != 0 || tval != 0)
         return 1;
     ttmp = 3030;
-    if (__sync_val_compare_and_swap(tmem, 0, ttmp) != 0 || tval != ttmp)
-        return 1;
-    if (__sync_lock_test_and_set(&tval, 4040) != 3030)
-        return 1;
-    tmem = &ttmp;
-    if (__sync_val_compare_and_swap(&tmem, &ttmp, &tval) != &ttmp)
+    {
+        time_t expected = 0;
+        if (!__atomic_compare_exchange_n(tmem, &expected, ttmp, 0,
+                __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) ||
+            tval != ttmp)
+            return 1;
+    }
+    __atomic_store_n(&tval, 4040, __ATOMIC_RELEASE);
+    if (__atomic_load_n(&tval, __ATOMIC_ACQUIRE) != 4040)
         return 1;
 
-    __sync_synchronize();
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
 
-    if (mem != &val)
+    if (ptr != &tmp)
         return 1;
 
     if (tmem != &tval)
@@ -61,33 +74,6 @@ int main()
 
 if test "$ap_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(HAVE_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
-fi
-
-])
-
-AC_DEFUN([RS_ATOMIC_LOAD_STORE_OPERATIONS],
-[AC_CACHE_CHECK([whether the compiler provides __atomic load/store builtins], [rs_cv_atomic_load_store_builtins],
-[AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-#include <stdint.h>
-]], [[
-    int val = 1;
-    unsigned uval = 2;
-    void *ptr = &val;
-    int loaded;
-    unsigned uloaded;
-    void *loaded_ptr;
-
-    loaded = __atomic_load_n(&val, __ATOMIC_ACQUIRE);
-    __atomic_store_n(&val, loaded + 1, __ATOMIC_RELEASE);
-    uloaded = __atomic_load_n(&uval, __ATOMIC_ACQUIRE);
-    __atomic_store_n(&uval, uloaded + 1, __ATOMIC_RELEASE);
-    loaded_ptr = __atomic_load_n(&ptr, __ATOMIC_ACQUIRE);
-    __atomic_store_n(&ptr, loaded_ptr, __ATOMIC_RELEASE);
-    return 0;
-]])], [rs_cv_atomic_load_store_builtins=yes], [rs_cv_atomic_load_store_builtins=no])])
-
-if test "$rs_cv_atomic_load_store_builtins" = "yes"; then
-    AC_DEFINE(HAVE_ATOMIC_LOAD_STORE_BUILTINS, 1, [Define if compiler provides __atomic load/store builtins])
 fi
 
 ])

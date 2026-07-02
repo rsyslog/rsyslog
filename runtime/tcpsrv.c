@@ -216,7 +216,7 @@ static rsRetVal ATTR_NONNULL()
         pWorkset[i] = event[i].data.ptr;
         /* default is no error, on error we terminate, so we need only to set in error case! */
         if (event[i].events & EPOLLERR) {
-            ATOMIC_STORE_1_TO_INT(&pWorkset[i]->isInError, &pWorkset[i]->mut_isInError);
+            ATOMIC_STORE_32BIT(&pWorkset[i]->isInError, &pWorkset[i]->mut_isInError, 1);
         }
     }
     *numEntries = nfds;
@@ -1006,8 +1006,8 @@ static rsRetVal ATTR_NONNULL(1)
 
 #if defined(ENABLE_IMTCP_EPOLL)
     /* If we had EPOLLERR, log additional info; processing continues. */
-    if (ATOMIC_FETCH_32BIT(&pioDescr->isInError, &pioDescr->mut_isInError)) {
-        ATOMIC_STORE_0_TO_INT(&pioDescr->isInError, &pioDescr->mut_isInError);
+    if (ATOMIC_LOAD_32BIT(&pioDescr->isInError, &pioDescr->mut_isInError)) {
+        ATOMIC_STORE_32BIT(&pioDescr->isInError, &pioDescr->mut_isInError, 0);
         int error = 0;
         socklen_t len = sizeof(error);
         const int sock = pioDescr->sock;
@@ -1721,6 +1721,12 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
 
         processWorkset(numEntries, workset);
     }
+
+    /* Workers can still process listener events queued just before shutdown.
+     * Join them before freeing listener descriptors so rearmIoEvent() cannot
+     * observe descriptor storage that RunEpoll() is tearing down.
+     */
+    stopWrkrPool(pThis);
 
     /* remove the tcp listen sockets from the epoll set */
     for (i = 0; i < pThis->iLstnCurr; ++i) {

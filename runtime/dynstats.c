@@ -142,8 +142,8 @@ static void dynstats_destroyBucket(dynstats_bucket_t *b) {
     }
 
     pthread_rwlock_rdlock(&b->lock);
-    need_persist =
-        (b->persist_state_write_count_interval || b->persist_state_interval_secs || b->persist_expiration_time);
+    need_persist = (b->persist_state_write_count_interval || b->persist_state_interval_secs ||
+                    ATOMIC_LOAD_time_t_RELAXED(&b->persist_expiration_time, &b->mutPersistExpirationTime));
     pthread_rwlock_unlock(&b->lock);
 
     /* Persist state BEFORE taking lock for destruction to avoid holding lock during I/O.
@@ -175,6 +175,7 @@ static void dynstats_destroyBucket(dynstats_bucket_t *b) {
     pthread_rwlock_unlock(&b->lock);
     pthread_rwlock_destroy(&b->lock);
     pthread_mutex_destroy(&b->mutMetricCount);
+    DESTROY_ATOMIC_HELPER_MUT64(b->mutPersistExpirationTime);
     dynstats_destroyStatsCounter(bkts->global_stats, &b->pOpsOverflowCtr);
     dynstats_destroyStatsCounter(bkts->global_stats, &b->pNewMetricAddCtr);
     dynstats_destroyStatsCounter(bkts->global_stats, &b->pNoMetricCtr);
@@ -529,11 +530,11 @@ static rsRetVal dynstats_newBucket(const uchar *name,
                                    const uchar *stateFileDirectory) {
     dynstats_bucket_t *b;
     dynstats_buckets_t *bkts;
-    uint8_t lock_initialized, metric_count_mutex_initialized;
+    uint8_t lock_initialized, metric_count_mutex_initialized, persist_expiration_mutex_initialized;
     pthread_rwlockattr_t bucket_lock_attr;
     DEFiRet;
 
-    lock_initialized = metric_count_mutex_initialized = 0;
+    lock_initialized = metric_count_mutex_initialized = persist_expiration_mutex_initialized = 0;
     b = NULL;
 
     bkts = &loadConf->dynstats_buckets;
@@ -566,6 +567,8 @@ static rsRetVal dynstats_newBucket(const uchar *name,
         lock_initialized = 1;
         pthread_mutex_init(&b->mutMetricCount, NULL);
         metric_count_mutex_initialized = 1;
+        INIT_ATOMIC_HELPER_MUT64(b->mutPersistExpirationTime);
+        persist_expiration_mutex_initialized = 1;
 
         CHKiRet(dynstats_initNewBucketStats(b));
 
@@ -586,7 +589,8 @@ static rsRetVal dynstats_newBucket(const uchar *name,
             }
             pthread_rwlock_wrlock(&b->lock);
             if (persistStateTimeInterval > 0) {
-                b->persist_expiration_time = now + persistStateTimeInterval;
+                ATOMIC_STORE_time_t_RELAXED(&b->persist_expiration_time, &b->mutPersistExpirationTime,
+                                            now + persistStateTimeInterval);
             }
             pthread_rwlock_unlock(&b->lock);
 
@@ -614,6 +618,9 @@ finalize_it:
             if (lock_initialized) {
                 if (!metric_count_mutex_initialized) {
                     pthread_mutex_init(&b->mutMetricCount, NULL);
+                }
+                if (!persist_expiration_mutex_initialized) {
+                    INIT_ATOMIC_HELPER_MUT64(b->mutPersistExpirationTime);
                 }
                 dynstats_destroyBucket(b);
             } else {
@@ -1038,7 +1045,7 @@ static rsRetVal dynstats_addNewCtr(dynstats_bucket_t *b,
     created = 0;
     ctr = NULL;
 
-    if ((unsigned)ATOMIC_FETCH_32BIT_unsigned(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
+    if ((unsigned)ATOMIC_LOAD_32BIT_unsigned(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
@@ -1156,13 +1163,7 @@ static sbool dynstats_shouldPersist(dynstats_bucket_t *b, time_t now) {
         }
     }
 
-#ifdef HAVE_ATOMIC_BUILTINS64
-    expire = (time_t)__sync_fetch_and_add((uint64_t *)&b->persist_expiration_time, 0);
-#else
-    pthread_rwlock_rdlock(&b->lock);
-    expire = b->persist_expiration_time;
-    pthread_rwlock_unlock(&b->lock);
-#endif
+    expire = ATOMIC_LOAD_time_t_ACQUIRE(&b->persist_expiration_time, &b->mutPersistExpirationTime);
 
     if (!shouldPersist && expire && now >= expire) {
         shouldPersist = TRUE;
@@ -1171,12 +1172,13 @@ static sbool dynstats_shouldPersist(dynstats_bucket_t *b, time_t now) {
 }
 
 static sbool dynstats_shouldPersistLocked(dynstats_bucket_t *b, time_t now) {
+    const time_t expire = ATOMIC_LOAD_time_t_RELAXED(&b->persist_expiration_time, &b->mutPersistExpirationTime);
     if (b->persist_state_write_count_interval > 0 &&
-        (uint32_t)ATOMIC_FETCH_32BIT_unsigned(&b->n_updates, &b->mutMetricCount) >=
+        (uint32_t)ATOMIC_LOAD_32BIT_unsigned(&b->n_updates, &b->mutMetricCount) >=
             b->persist_state_write_count_interval) {
         return TRUE;
     }
-    if (b->persist_expiration_time && now >= b->persist_expiration_time) {
+    if (expire && now >= expire) {
         return TRUE;
     }
     return FALSE;
@@ -1224,7 +1226,8 @@ rsRetVal dynstats_inc(dynstats_bucket_t *b, uchar *metric) {
                         ATOMIC_SUB_unsigned(&b->n_updates, b->persist_state_write_count_interval, &b->mutMetricCount);
                     }
                     if (b->persist_state_interval_secs) {
-                        b->persist_expiration_time = now + b->persist_state_interval_secs;
+                        ATOMIC_STORE_time_t_RELAXED(&b->persist_expiration_time, &b->mutPersistExpirationTime,
+                                                    now + b->persist_state_interval_secs);
                     }
                 }
             }
