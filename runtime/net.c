@@ -570,6 +570,27 @@ static void clearAllowedSenders(uchar *pszType) {
 }
 
 
+static void DestructAllowedSenders(struct AllowedSenders **ppRoot) {
+    struct AllowedSenders *pPrev;
+    struct AllowedSenders *pCurr;
+
+    assert(ppRoot != NULL);
+
+    pCurr = *ppRoot;
+    while (pCurr != NULL) {
+        pPrev = pCurr;
+        pCurr = pCurr->pNext;
+        if (F_ISSET(pPrev->allowedSender.flags, ADDR_NAME))
+            free(pPrev->allowedSender.addr.HostWildcard);
+        else
+            free(pPrev->allowedSender.addr.NetAddr);
+        free(pPrev);
+    }
+
+    *ppRoot = NULL;
+}
+
+
 /* function to add an allowed sender to the allowed sender list. The
  * root of the list is caller-provided, so it can be used for all
  * supported lists. The caller must provide a pointer to the root,
@@ -879,6 +900,42 @@ static rsRetVal addAllowedSenderLine(char *pName, uchar **ppRestOfConfLine) {
 }
 
 
+static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
+                                      struct AllowedSenders **ppLast,
+                                      uchar *pszAllowedSender) {
+    rsParsObj *pPars = NULL;
+    struct NetAddr *uIP = NULL;
+    int iBits;
+    DEFiRet;
+
+    assert(ppRoot != NULL);
+    assert(ppLast != NULL);
+    assert(pszAllowedSender != NULL);
+
+    CHKiRet(rsParsConstructFromSz(&pPars, pszAllowedSender));
+    CHKiRet(parsAddrWithBits(pPars, &uIP, &iBits));
+    if (!parsIsAtEndOfParseString(pPars)) {
+        LogError(0, RS_RET_INVALID_PARAMS, "Invalid extra data after allowedSender entry '%s'", pszAllowedSender);
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+    iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits);
+    if (iRet == RS_RET_NOENTRY) {
+        LogError(0, iRet, "Error %d adding allowedSender entry '%s' - ignoring.", iRet, pszAllowedSender);
+        iRet = RS_RET_OK;
+    }
+    CHKiRet(iRet);
+
+finalize_it:
+    if (uIP != NULL) {
+        free(uIP); /* copy stored in AllowedSenders list */
+    }
+    if (pPars != NULL) {
+        rsParsDestruct(pPars);
+    }
+    RETiRet;
+}
+
+
 /* compares a host to an allowed sender list entry. Handles all subleties
  * including IPv4/v6 as well as domain name wildcards.
  * This is a helper to isAllowedSender.
@@ -962,16 +1019,15 @@ static int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom,
  * (2 was added rgerhards, 2009-11-16).
  * rgerhards, 2005-09-26
  */
-static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS) {
+static int isAllowedSenderList(struct AllowedSenders *pAllowRoot,
+                               struct sockaddr *pFrom,
+                               const char *pszFromHost,
+                               int bChkDNS) {
     struct AllowedSenders *pAllow;
-    struct AllowedSenders *pAllowRoot = NULL;
     int bNeededDNS = 0; /* partial check because we could not resolve DNS? */
     int ret;
 
     assert(pFrom != NULL);
-
-    if (setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
-        return 0; /* if something went wrong, we deny access - that's the better choice... */
 
     if (pAllowRoot == NULL) return 1; /* checking disabled, everything is valid! */
 
@@ -989,6 +1045,18 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
             bNeededDNS = 2;
     }
     return bNeededDNS;
+}
+
+
+static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS) {
+    struct AllowedSenders *pAllowRoot = NULL;
+
+    assert(pFrom != NULL);
+
+    if (setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
+        return 0; /* if something went wrong, we deny access - that's the better choice... */
+
+    return isAllowedSenderList(pAllowRoot, pFrom, pszFromHost, bChkDNS);
 }
 
 
@@ -1610,6 +1678,8 @@ BEGINobjQueryInterface(net)
     pIf->cvthname = cvthname;
     /* things to go away after proper modularization */
     pIf->addAllowedSenderLine = addAllowedSenderLine;
+    pIf->addAllowedSenderEntry = addAllowedSenderEntry;
+    pIf->DestructAllowedSenders = DestructAllowedSenders;
     pIf->PrintAllowedSenders = PrintAllowedSenders;
     pIf->clearAllowedSenders = clearAllowedSenders;
     pIf->debugListenInfo = debugListenInfo;
@@ -1624,6 +1694,7 @@ BEGINobjQueryInterface(net)
     pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
     pIf->CmpHost = CmpHost;
     pIf->HasRestrictions = HasRestrictions;
+    pIf->isAllowedSenderList = isAllowedSenderList;
     pIf->GetIFIPAddr = getIFIPAddr;
 
     pIf->netns_save = netns_save;

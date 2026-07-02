@@ -162,6 +162,9 @@ struct instanceConf_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    struct AllowedSenders *pAllowedSendersRoot;
+    struct AllowedSenders *pAllowedSendersLast;
+    sbool bAllowedSendersSet;
     uchar *gnutlsPriorityString;
     int iStrmDrvrExtendedCertCheck;
     int iStrmDrvrSANPreference;
@@ -214,6 +217,9 @@ struct modConfData_s {
     uchar *pszStrmDrvrKeyFile;
     uchar *pszStrmDrvrCertFile;
     permittedPeers_t *pPermPeersRoot;
+    struct AllowedSenders *pAllowedSendersRoot;
+    struct AllowedSenders *pAllowedSendersLast;
+    sbool bAllowedSendersSet;
     sbool configSetViaV2Method;
     sbool bPreserveCase; /* preserve case of fromhost; true by default */
     unsigned starvationMaxReads;
@@ -252,6 +258,7 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"streamdriver.crlfile", eCmdHdlrString, 0},
                                            {"streamdriver.keyfile", eCmdHdlrString, 0},
                                            {"streamdriver.certfile", eCmdHdlrString, 0},
+                                           {"allowedsender", eCmdHdlrArray, 0},
                                            {"permittedpeer", eCmdHdlrArray, 0},
                                            {"keepalive", eCmdHdlrBinary, 0},
                                            {"keepalive.probes", eCmdHdlrNonNegInt, 0},
@@ -297,6 +304,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"streamdriver.crlfile", eCmdHdlrString, 0},
                                            {"streamdriver.keyfile", eCmdHdlrString, 0},
                                            {"streamdriver.certfile", eCmdHdlrString, 0},
+                                           {"allowedsender", eCmdHdlrArray, 0},
                                            {"permittedpeer", eCmdHdlrArray, 0},
                                            {"gnutlsprioritystring", eCmdHdlrString, 0},
                                            {"keepalive", eCmdHdlrBinary, 0},
@@ -507,8 +515,13 @@ static rsRetVal setLegacyStrmDrvrMode(void __attribute__((unused)) * pVal, int m
 /* this shall go into a specific ACL module! */
 static int isPermittedHost(struct sockaddr *addr,
                            char *fromHostFQDN,
-                           void __attribute__((unused)) * pUsrSrv,
+                           void *pUsrSrv,
                            void __attribute__((unused)) * pUsrSess) {
+    const tcpLstnParams_t *const cnf_params = pUsrSrv;
+
+    if (cnf_params != NULL && !cnf_params->bUseLegacyAllowedSender) {
+        return net.isAllowedSenderList(cnf_params->pAllowedSenderRoot, addr, fromHostFQDN, 1);
+    }
     return net.isAllowedSender2(UCHAR_CONSTANT("TCP"), addr, fromHostFQDN, 1);
 }
 
@@ -619,6 +632,9 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->compressionDriver = loadModConf->compressionDriver;
     inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
     inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
+    inst->pAllowedSendersRoot = NULL;
+    inst->pAllowedSendersLast = NULL;
+    inst->bAllowedSendersSet = 0;
 
     inst->cnf_params->pszLstnPortFileName = NULL;
     inst->cnf_params->bMultiLine = 0;
@@ -804,8 +820,20 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
         free((void *)inst->cnf_params->pszPort);
         inst->cnf_params->pszPort = newPort;
     }
-    tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
-    inst->cnf_params = NULL; /* ownership transferred to tcpsrv */
+    if (inst->bAllowedSendersSet) {
+        inst->cnf_params->pAllowedSenderRoot = inst->pAllowedSendersRoot;
+        inst->cnf_params->bUseLegacyAllowedSender = 0;
+    } else if (modConf->bAllowedSendersSet) {
+        inst->cnf_params->pAllowedSenderRoot = modConf->pAllowedSendersRoot;
+        inst->cnf_params->bUseLegacyAllowedSender = 0;
+    } else {
+        inst->cnf_params->pAllowedSenderRoot = NULL;
+        inst->cnf_params->bUseLegacyAllowedSender = 1;
+    }
+    CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, inst->cnf_params));
+    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
+    inst->cnf_params = NULL; /* ownership transferred to tcpsrv, including setup failure cleanup */
+    CHKiRet(iRet);
 
     tcpsrv_etry_t *etry;
     CHKmalloc(etry = (tcpsrv_etry_t *)calloc(1, sizeof(tcpsrv_etry_t)));
@@ -818,6 +846,7 @@ finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(0, NO_ERRCODE, "imtcp: error %d trying to add listener", iRet);
         if (pOurTcpsrv != NULL) {
+            tcpsrv.SetUsrP(pOurTcpsrv, NULL);
             tcpsrv.Destruct(&pOurTcpsrv);
         }
     }
@@ -899,6 +928,20 @@ BEGINnewInpInst
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
                 CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
                 free(peer);
+            }
+        } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            inst->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet =
+                    net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
             }
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             inst->bUseFlowControl = (int)pvals[i].val.d.n;
@@ -1025,6 +1068,9 @@ BEGINbeginCnfLoad
     loadModConf->pszStrmDrvrKeyFile = NULL;
     loadModConf->pszStrmDrvrCertFile = NULL;
     loadModConf->pPermPeersRoot = NULL;
+    loadModConf->pAllowedSendersRoot = NULL;
+    loadModConf->pAllowedSendersLast = NULL;
+    loadModConf->bAllowedSendersSet = 0;
     loadModConf->configSetViaV2Method = 0;
     loadModConf->bPreserveCase = 1; /* default to true */
     loadModConf->compressionMode = TCPSRV_COMPRESS_NEVER;
@@ -1129,6 +1175,20 @@ BEGINsetModCnf
                 uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
                 CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
                 free(peer);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            loadModConf->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet = net.addAllowedSenderEntry(&loadModConf->pAllowedSendersRoot,
+                                                                    &loadModConf->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
             }
         } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
             loadModConf->bPreserveCase = (int)pvals[i].val.d.n;
@@ -1281,6 +1341,9 @@ BEGINfreeCnf
     if (pModConf->pPermPeersRoot != NULL) {
         net.DestructPermittedPeers(&pModConf->pPermPeersRoot);
     }
+    if (pModConf->pAllowedSendersRoot != NULL) {
+        net.DestructAllowedSenders(&pModConf->pAllowedSendersRoot);
+    }
 
     for (inst = pModConf->root; inst != NULL;) {
         free((void *)inst->pszBindRuleset);
@@ -1310,6 +1373,9 @@ BEGINfreeCnf
         free((void *)inst->dfltTZ);
         if (inst->pPermPeersRoot != NULL) {
             net.DestructPermittedPeers(&inst->pPermPeersRoot);
+        }
+        if (inst->pAllowedSendersRoot != NULL) {
+            net.DestructAllowedSenders(&inst->pAllowedSendersRoot);
         }
         del = inst;
         inst = inst->next;

@@ -1,15 +1,18 @@
 $AllowedSender
 --------------
 
-**Type:** input configuration parameter
+**Type:** legacy global input configuration directive
 
 **Default:** all allowed
 
 **Description:**
 
-*Note:* this feature is supported for backward-compatibility, only.
-The rsyslog team recommends to use proper firewalling instead of
-this feature.
+*Note:* this legacy directive is supported for backward compatibility.
+New configurations should use the modern
+:ref:`imtcp AllowedSender <param-imtcp-allowedsender>` and
+:ref:`imudp AllowedSender <param-imudp-allowedsender>` module or input
+parameters. The rsyslog team recommends proper firewalling as the first
+line of defense.
 
 Allowed sender lists can be used to specify which remote systems are
 allowed to send syslog messages to rsyslogd. With them, further hurdles
@@ -46,6 +49,11 @@ it is good to specify those allowed senders with high traffic volume
 before those with lower volume. As soon as a match is found, no further
 evaluation is necessary and so you can save CPU cycles.
 
+Modern ``AllowedSender`` parameters support the same address syntax as this
+legacy directive. A module-level list is used as the default for inputs of the
+same module, and an input-level list overrides that module default. Do not mix
+legacy ``$AllowedSender`` and modern ``AllowedSender`` in new configurations.
+
 Rsyslogd handles allowed sender detection very early in the code, nearly
 as the first action after receiving a message. This keeps the access to
 potential vulnerable code in rsyslog at a minimum. However, it is still
@@ -69,4 +77,3 @@ names. We recommend to stick with hard-coded IP addresses wherever possible.
 ::
 
   $AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, *.example.net, somehost.example.com
-

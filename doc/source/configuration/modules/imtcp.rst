@@ -278,6 +278,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imtcp-permittedpeer.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-allowedsender`
+     - .. include:: ../../reference/parameters/imtcp-allowedsender.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imtcp-discardtruncatedmsg`
      - .. include:: ../../reference/parameters/imtcp-discardtruncatedmsg.rst
         :start-after: .. summary-start
@@ -321,6 +325,7 @@ Module Parameters
    ../../reference/parameters/imtcp-streamdriver-tlsverifydepth
    ../../reference/parameters/imtcp-streamdriver-tlsrevocationcheck
    ../../reference/parameters/imtcp-permittedpeer
+   ../../reference/parameters/imtcp-allowedsender
    ../../reference/parameters/imtcp-discardtruncatedmsg
    ../../reference/parameters/imtcp-gnutlsprioritystring
    ../../reference/parameters/imtcp-preservecase
@@ -459,6 +464,10 @@ Input Parameters
         :end-before: .. summary-end
    * - :ref:`param-imtcp-permittedpeer`
      - .. include:: ../../reference/parameters/imtcp-permittedpeer.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-allowedsender`
+     - .. include:: ../../reference/parameters/imtcp-allowedsender.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imtcp-gnutlsprioritystring`
