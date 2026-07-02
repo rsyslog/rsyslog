@@ -403,6 +403,7 @@ TESTS_DEFAULT = \
 	rscript_ruleset_call_indirect-basic.sh \
 	rscript_ruleset_call_indirect-var.sh \
 	rscript_ruleset_call_indirect-invld.sh \
+	rscript_array_literal.sh \
 	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
