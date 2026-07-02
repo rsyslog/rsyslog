@@ -1795,6 +1795,7 @@ TESTS_RELP_YAML = \
 	imrelp-persource-ratelimit-policy.sh
 
 TESTS_RELP_OPENSSL = \
+	 relp-openssl-prioritystring-warning.sh \
 	 omrelp-tls-ossl-authfail-no-cacert.sh \
 	 omrelp-tls-ossl-authfail-suspend.sh
 

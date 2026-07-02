@@ -25,14 +25,24 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-This parameter allows passing the so-called "priority string" to GnuTLS. This
-string gives complete control over all crypto parameters, including compression
-settings. For this reason, when ``tls.priorityString`` is specified, the
+This parameter is passed through librelp to the selected TLS backend. With the
+default GnuTLS backend, it is a GnuTLS priority string and gives complete
+control over crypto parameters, including compression settings. For this reason,
+when ``tls.priorityString`` is specified with GnuTLS, the
 :ref:`param-imrelp-tls-compression` parameter has no effect and is ignored.
 
-Full information about how to construct a priority string can be found in the
-GnuTLS manual. At the time of writing, this information was contained in `section
-6.10 of the GnuTLS manual <http://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+When :ref:`param-imrelp-tls-tlslib` is set to ``openssl``, the same rsyslog
+parameter is interpreted by librelp as an OpenSSL cipher-list string, not as a
+GnuTLS priority string. Use OpenSSL cipher-list syntax such as ``HIGH:!aNULL``,
+or use :ref:`param-imrelp-tls-tlscfgcmd` for broader OpenSSL TLS policy such as
+protocol minimums. When switching between ``gnutls`` and ``openssl``, review the
+``tls.priorityString`` value as well as the driver name; the parameter name is
+shared, but the accepted value syntax is backend-specific.
+
+Full information about how to construct a GnuTLS priority string can be found in
+the GnuTLS manual. At the time of writing, this information was contained in
+`section 6.10 of the GnuTLS manual <http://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+OpenSSL cipher-list syntax is documented in the OpenSSL ``ciphers`` manual page.
 
 **Note: this is an expert parameter.** Do not use if you do not exactly know
 what you are doing.
@@ -45,6 +55,11 @@ Input usage
 .. code-block:: rsyslog
 
    input(type="imrelp" port="2514" tls="on" tls.priorityString="NONE:+COMP-DEFLATE")
+
+.. code-block:: rsyslog
+
+   module(load="imrelp" tls.tlsLib="openssl")
+   input(type="imrelp" port="2514" tls="on" tls.priorityString="HIGH:!aNULL")
 
 See also
 --------
