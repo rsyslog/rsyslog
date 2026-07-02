@@ -14,6 +14,7 @@ runtime/action.c
   s_6224eda96fc0da::t_7f8735ac6c2c3e 1796
   s_6224eda96fc0da::t_237eb7f8146dc5 1084,1111,1133-1135,1144,1180-1183,1485-1489,1493,1540-1544
   s_6224eda96fc0da::t_0c8907d759e4b6 1663-1664,1672-1674,1773-1774,1776
+  s_6224eda96fc0da::t_a6f5a274879861 1546,1650
 tests/Makefile.am
   s_6224eda96fc0da::t_d0a905417af9e4 1046,3732
 tests/testsuites/omprog-resume-interval-bin.sh
