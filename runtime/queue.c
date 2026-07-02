@@ -3322,8 +3322,9 @@ static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis) {
 
 /* must only be called when the queue mutex is locked, else results
  * are not stable!
- * If we are a child, we have done our duty when the queue is empty. In that case,
- * we can terminate. Version for the regular worker thread.
+ * Version for the regular worker thread. DA child queues intentionally keep
+ * their regular worker alive while idle so worker-instance state, such as
+ * output connections, survives short refill gaps.
  */
 static rsRetVal ChkStopWrkrReg(qqueue_t *pThis) {
     DEFiRet;
@@ -3331,8 +3332,6 @@ static rsRetVal ChkStopWrkrReg(qqueue_t *pThis) {
     pThis->iLowWtrMrk, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), pThis->bEnqOnly);*/
     if (pThis->bEnqOnly) {
         iRet = RS_RET_TERMINATE_NOW;
-    } else if (pThis->pqParent != NULL) {
-        iRet = RS_RET_TERMINATE_WHEN_IDLE;
     }
 
     RETiRet;
