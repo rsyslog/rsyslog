@@ -69,8 +69,13 @@
     #define ATOMIC_DEC_AND_FETCH(data, phlpmut) __atomic_sub_fetch((data), 1, __ATOMIC_SEQ_CST)
     #define ATOMIC_LOAD_32BIT(data, phlpmut) ((int)__atomic_load_n((data), __ATOMIC_ACQUIRE))
     #define ATOMIC_LOAD_32BIT_unsigned(data, phlpmut) ((unsigned)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_LOAD_32BIT_RELAXED(data, phlpmut) ((int)__atomic_load_n((data), __ATOMIC_RELAXED))
+    #define ATOMIC_LOAD_32BIT_RELAXED_unsigned(data, phlpmut) ((unsigned)__atomic_load_n((data), __ATOMIC_RELAXED))
     #define ATOMIC_STORE_32BIT(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
     #define ATOMIC_STORE_32BIT_unsigned(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELEASE))
+    #define ATOMIC_STORE_32BIT_RELAXED(data, phlpmut, val) ((void)__atomic_store_n((data), (val), __ATOMIC_RELAXED))
+    #define ATOMIC_STORE_32BIT_RELAXED_unsigned(data, phlpmut, val) \
+        ((void)__atomic_store_n((data), (val), __ATOMIC_RELAXED))
     #define ATOMIC_STORE_1_TO_32BIT(data) ((void)__atomic_store_n(&(data), 1, __ATOMIC_RELEASE))
     #define ATOMIC_OR_INT_TO_INT(data, phlpmut, val) __atomic_fetch_or((data), (val), __ATOMIC_SEQ_CST)
     #define ATOMIC_CAS(data, oldVal, newVal, phlpmut)                                                                  \
@@ -219,7 +224,21 @@ static inline int ATOMIC_LOAD_32BIT(int *data, pthread_mutex_t *phlpmut) {
     return val;
 }
 
+static inline int ATOMIC_LOAD_32BIT_RELAXED(int *data, pthread_mutex_t *phlpmut) {
+    int val;
+    pthread_mutex_lock(phlpmut);
+    val = (*data);
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
 static inline void ATOMIC_STORE_32BIT(int *data, pthread_mutex_t *phlpmut, int val) {
+    pthread_mutex_lock(phlpmut);
+    *data = val;
+    pthread_mutex_unlock(phlpmut);
+}
+
+static inline void ATOMIC_STORE_32BIT_RELAXED(int *data, pthread_mutex_t *phlpmut, int val) {
     pthread_mutex_lock(phlpmut);
     *data = val;
     pthread_mutex_unlock(phlpmut);
@@ -233,7 +252,21 @@ static inline unsigned ATOMIC_LOAD_32BIT_unsigned(unsigned *data, pthread_mutex_
     return val;
 }
 
+static inline unsigned ATOMIC_LOAD_32BIT_RELAXED_unsigned(unsigned *data, pthread_mutex_t *phlpmut) {
+    unsigned val;
+    pthread_mutex_lock(phlpmut);
+    val = (*data);
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
 static inline void ATOMIC_STORE_32BIT_unsigned(unsigned *data, pthread_mutex_t *phlpmut, unsigned val) {
+    pthread_mutex_lock(phlpmut);
+    *data = val;
+    pthread_mutex_unlock(phlpmut);
+}
+
+static inline void ATOMIC_STORE_32BIT_RELAXED_unsigned(unsigned *data, pthread_mutex_t *phlpmut, unsigned val) {
     pthread_mutex_lock(phlpmut);
     *data = val;
     pthread_mutex_unlock(phlpmut);
