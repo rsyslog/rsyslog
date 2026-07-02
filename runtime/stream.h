@@ -174,6 +174,7 @@ struct strm_s {
         int64 strtOffs; /* start offset in file for current line/msg */
         int fileNotFoundError; /* boolean; if set, report file not found errors, else silently ignore */
         int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
+        sbool bNoFollowFinal; /* if set, do not follow final path component on open */
         int ignoringMsg;
         strm_compressionDriver_t compressionDriver;
 };
@@ -209,6 +210,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     INTERFACEpropSetMeth(strm, iFileNumDigits, int);
     INTERFACEpropSetMeth(strm, tOperationsMode, int);
     INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
+    INTERFACEpropSetMeth(strm, bNoFollowFinal, int);
     INTERFACEpropSetMeth(strm, compressionDriver, strm_compressionDriver_t);
     INTERFACEpropSetMeth(strm, sType, strmType_t);
     INTERFACEpropSetMeth(strm, iZipLevel, int);
@@ -230,7 +232,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t *);
     INTERFACEpropSetMeth(strm, cryprovData, void *);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 17 /* increment whenever you change the interface structure! */
     /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
     /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
     /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
@@ -238,6 +240,7 @@ ENDinterface(strm)
     /* V14, 2019-11-13: added new parameter bEscapeLFString (rgerhards) */
     /* V15, ?? - description missing */
     /* V16, 2026-01-28: added new parameter bSizeLimitCmdPassFileName (rgerhards) */
+    /* V17, 2026-06-23: added bNoFollowFinal stream property setter */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
@@ -250,6 +253,7 @@ PROTOTYPEpropSetMeth(strm, iMaxFileSize, int64);
 PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
 PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
 PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
+PROTOTYPEpropSetMeth(strm, bNoFollowFinal, int);
 PROTOTYPEpropSetMeth(strm, compressionDriver, strm_compressionDriver_t);
 PROTOTYPEpropSetMeth(strm, sType, strmType_t);
 PROTOTYPEpropSetMeth(strm, iZipLevel, int);
