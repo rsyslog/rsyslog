@@ -20,7 +20,7 @@ included. Example from the testbench:
         constant(value="\n")
     }
 
-The following escape sequences are recognized inside the constant text:
+The following common escape sequences are recognized inside the constant text:
 
 - ``\\`` – single backslash
 - ``\n`` – LF
@@ -28,6 +28,14 @@ The following escape sequences are recognized inside the constant text:
   ``"A"``). Exactly three digits must be given.
 - ``\xhh`` – two hexadecimal digits representing a character
   (``\x41`` is ``"A"``). Exactly two digits must be given.
+
+For the complete list, see
+:doc:`/rainerscript/constant_strings`.
+
+The ``value`` parameter is parsed by the generic configuration parser and then
+interpreted again as template constant text. To output literal text that looks
+like a byte escape, escape the backslash for both layers. For example,
+``constant(value="\\\\x41")`` emits literal ``\x41``.
 
 If an unsupported character follows a backslash, behavior is
 unpredictable.

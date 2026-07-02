@@ -30,7 +30,7 @@ templates:
 rulesets:
   - name: main
     script: |
-      action(type="mmutf8fix" replacementSequence="\357\277\275")
+      action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
       action(type="omfile" file="${RSYSLOG_OUT_LOG}" template="outfmt")
 YAMLEOF
 

@@ -41,8 +41,10 @@ invalid two-byte sequence is detected and ``replacementSequence`` is set
 to the UTF-8 bytes for ``U+FFFD``, the output contains two replacement
 markers.
 
-Use octal byte escapes in object-parameter strings. For example, write the
-UTF-8 bytes for ``U+FFFD`` as ``\357\277\275``.
+Use byte escapes in object-parameter strings. For example, write the UTF-8
+bytes for ``U+FFFD`` as ``\xef\xbf\xbd``. The equivalent octal spelling is
+``\357\277\275``. Hexadecimal escapes use exactly two digits, and octal
+escapes use exactly three digits.
 
 Input usage
 -----------
@@ -53,7 +55,7 @@ Input usage
    module(load="mmutf8fix")
 
    # U+FFFD encoded as UTF-8 bytes.
-   action(type="mmutf8fix" replacementSequence="\357\277\275")
+   action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
 
 YAML usage
 ----------
@@ -66,7 +68,7 @@ YAML usage
    rulesets:
      - name: main
        script: |
-         action(type="mmutf8fix" replacementSequence="\357\277\275")
+         action(type="mmutf8fix" replacementSequence="\xef\xbf\xbd")
 
 See also
 --------

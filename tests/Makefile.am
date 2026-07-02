@@ -21,6 +21,9 @@ TESTS_TEMPLATE_REGEX_BOUNDS = template-regex-index-bounds.sh
 TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML = yaml-template-regex-index-bounds.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYAML)
 
+TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -195,6 +198,7 @@ TESTS_DEFAULT = \
 	json-nonstring.sh \
 	json-onempty-at-end.sh \
 	template-json.sh \
+	$(TESTS_RSCRIPT_OBJECT_STRINGS) \
 	template-property-transformations.sh \
         template-pure-json.sh \
 	template-jsonf-nested.sh \
