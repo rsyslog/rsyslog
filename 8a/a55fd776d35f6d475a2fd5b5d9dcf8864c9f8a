@@ -1,0 +1,47 @@
+runtime/net.c
+  s_cf144905ab59ed::t_26bdba5c69b293 573-593,903-933,1017-1020,1046-1057,1676-1677,1692
+runtime/tcpsrv.h
+  s_cf144905ab59ed::t_9ba8b65c7d1a8f 67-68
+doc/Makefile.am
+  s_cf144905ab59ed::t_8d0e489c49fe67 728,772
+doc/source/configuration/input_directives/rsconf1_allowedsender.rst
+  s_cf144905ab59ed::t_7118984277d955 4,10-15,52-56
+doc/source/configuration/modules/imtcp.rst
+  s_cf144905ab59ed::t_b3ee47eee8c7ef 281-284,328,468-471
+doc/source/configuration/modules/imudp.rst
+  s_cf144905ab59ed::t_a9312420a85fd5 79-82,146-149,367
+doc/source/reference/parameters/imtcp-allowedsender.rst
+  s_a9719629ed5597::t_c5475acac04cd3 1-83
+doc/source/reference/parameters/imudp-allowedsender.rst
+  s_a9719629ed5597::t_859baa0acb8fc2 1-82
+plugins/imtcp/imtcp.c
+  s_a9719629ed5597::t_33d5861cf3b115 165-167,220-222,261,307,518,520-524,635-637,823-836,849,932-945,1071-1073,1179-1192,1344-1346,1377-1379
+plugins/imudp/imudp.c
+  s_a9719629ed5597::t_8555ab386738a9 86-87,130-132,168-170,181-182,200-201,230-232,415-424,541,559,561,569-573,628,688-690,716,762-763,893,905,959,975,984,1031,1125-1138,1215-1217,1270-1283,1394-1396,1401-1403,1495,1499-1504
+tests/allowed-sender-modern.sh
+  s_cf144905ab59ed::t_4355b217151cc9 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "8aa55fd776d35f6d475a2fd5b5d9dcf8864c9f8a",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
