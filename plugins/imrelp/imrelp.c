@@ -418,9 +418,9 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     inst->data.ratelimiter = NULL;
     if (inst->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&inst->data.ratelimiter, runModConf->pConf, (char *)inst->pszRatelimitName,
-                                       "imrelp", (char *)inst->pszBindPort));
+                                       "imrelp", (char *)inst->pszBindPort, 0));
     } else if (inst->ratelimitInterval > 0) {
-        CHKiRet(ratelimitNew(&inst->data.ratelimiter, "imrelp", (char *)inst->pszBindPort));
+        CHKiRet(ratelimitNew(&inst->data.ratelimiter, "imrelp", (char *)inst->pszBindPort, 0));
         ratelimitSetLinuxLike(inst->data.ratelimiter, (unsigned)inst->ratelimitInterval,
                               (unsigned)inst->ratelimitBurst);
     }

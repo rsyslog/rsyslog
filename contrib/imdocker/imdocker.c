@@ -1909,7 +1909,7 @@ BEGINrunInput
     CODESTARTrunInput;
     datetime.GetTime(&now);
 
-    CHKiRet(ratelimitNew(&ratelimiter, "imdocker", NULL));
+    CHKiRet(ratelimitNew(&ratelimiter, "imdocker", NULL, 1));
     curlRet = curl_global_init(CURL_GLOBAL_ALL);
     if (curlRet != CURLE_OK) {
         LogError(0, RS_RET_OBJ_CREATION_FAILED, "imdocker: curl_global_init failed: %s", curl_easy_strerror(curlRet));

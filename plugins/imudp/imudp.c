@@ -423,12 +423,12 @@ static rsRetVal addListner(instanceConf_t *inst) {
             dispname[sizeof(dispname) - 1] = '\0'; /* just to be on the save side... */
             if (inst->pszRatelimitName != NULL) {
                 CHKiRet(ratelimitNewFromConfig(&newlcnfinfo->ratelimiter, runModConf->pConf,
-                                               (char *)inst->pszRatelimitName, (char *)dispname, NULL));
+                                               (char *)inst->pszRatelimitName, (char *)dispname, NULL, 0));
                 /* named ratelimiters use the shared registry configuration exclusively.
                  * Per-instance interval/burst parameters are ignored/prohibited when ratelimit.name is set.
                  */
             } else {
-                CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
+                CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL, 0));
                 ratelimitSetLinuxLike(newlcnfinfo->ratelimiter,
                                       (inst->ratelimitInterval == -1) ? 0 : (unsigned)inst->ratelimitInterval,
                                       (inst->ratelimitBurst == -1) ? 0 : (unsigned)inst->ratelimitBurst);

@@ -346,7 +346,7 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
     literalMsg = NULL;
 
     memset(wordBuf, 0, sizeof(wordBuf));
-    CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
+    CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg", 1));
     /* we do not check errors here! */
     getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
     if (ustrcmp(UCHAR_CONSTANT("literal"), wordBuf) == 0) {

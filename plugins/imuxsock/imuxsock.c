@@ -442,9 +442,9 @@ static rsRetVal addListner(instanceConf_t *inst) {
     listeners[nfd].pRuleset = inst->pBindRuleset;
     if (inst->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&listeners[nfd].dflt_ratelimiter, runModConf->pConf,
-                                       (char *)inst->pszRatelimitName, "imuxsock", NULL));
+                                       (char *)inst->pszRatelimitName, "imuxsock", NULL, 0));
     } else {
-        CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
+        CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL, 0));
         ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter, listeners[nfd].ratelimitInterval,
                               listeners[nfd].ratelimitBurst);
     }
@@ -660,7 +660,7 @@ static rsRetVal findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t *
             fclose(f);
         }
         pinfobuf[sizeof(pinfobuf) - 1] = '\0'; /* to be on safe side */
-        CHKiRet(ratelimitNew(&rl, "imuxsock", pinfobuf));
+        CHKiRet(ratelimitNew(&rl, "imuxsock", pinfobuf, 0));
         ratelimitSetLinuxLike(rl, pLstn->ratelimitInterval, pLstn->ratelimitBurst);
         ratelimitSetSeverity(rl, pLstn->ratelimitSev);
         CHKmalloc(keybuf = malloc(sizeof(pid_t)));
@@ -1328,9 +1328,9 @@ static rsRetVal activateListeners(void) {
         listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
         if (runModConf->pszRatelimitNameSysSock != NULL) {
             CHKiRet(ratelimitNewFromConfig(&listeners[0].dflt_ratelimiter, runModConf->pConf,
-                                           (char *)runModConf->pszRatelimitNameSysSock, "imuxsock", NULL));
+                                           (char *)runModConf->pszRatelimitNameSysSock, "imuxsock", NULL, 0));
         } else {
-            CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
+            CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL, 0));
             ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter, listeners[0].ratelimitInterval,
                                   listeners[0].ratelimitBurst);
         }

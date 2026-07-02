@@ -432,9 +432,9 @@ BEGINactivateCnf
     CODESTARTactivateCnf;
     if (runModConf->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&runModConf->ratelimiter, runModConf->pConf,
-                                       (char *)runModConf->pszRatelimitName, "imklog", NULL));
+                                       (char *)runModConf->pszRatelimitName, "imklog", NULL, 1));
     } else {
-        CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
+        CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL, 1));
         ratelimitSetLinuxLike(runModConf->ratelimiter, (unsigned)runModConf->ratelimitInterval,
                               (unsigned)runModConf->ratelimitBurst);
     }

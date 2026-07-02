@@ -868,7 +868,7 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
     fen_setupWatch(act);
     if (is_file && !is_symlink) {
         const instanceConf_t *const inst = edge->instarr[0];  // TODO: same file, multiple instances?
-        CHKiRet(ratelimitNew(&act->ratelimiter, "imfile", name));
+        CHKiRet(ratelimitNew(&act->ratelimiter, "imfile", name, 1));
         CHKmalloc(act->multiSub.ppMsgs = malloc(inst->nMultiSub * sizeof(smsg_t *)));
         act->multiSub.maxElem = inst->nMultiSub;
         act->multiSub.nElem = 0;
