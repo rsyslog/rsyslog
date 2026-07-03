@@ -85,6 +85,7 @@ typedef struct partial_msg_s {
     struct syslogTime st;
     time_t ttGenTime;
     sbool hasTime;
+    sbool discarding;
 } partial_msg_t;
 
 typedef struct path_meta_s {
@@ -290,6 +291,44 @@ static rsRetVal partialAppend(partial_msg_t *partial, const uchar *msg, size_t l
 
 finalize_it:
     RETiRet;
+}
+
+static void partialInitFromRecord(partial_msg_t *partial, const parsed_record_t *record) {
+    assert(partial != NULL);
+    assert(record != NULL);
+
+    partial->stream_type = record->stream_type;
+    partial->hasTime = record->hasTime;
+    partial->ttGenTime = record->ttGenTime;
+    if (record->hasTime) {
+        memcpy(&partial->st, &record->st, sizeof(record->st));
+    }
+}
+
+static size_t getPartialMessageLimit(void) {
+    const int maxLine = glbl.GetMaxLine(runModConf != NULL ? runModConf->pConf : NULL);
+    return maxLine > 0 ? (size_t)maxLine : 0;
+}
+
+static sbool partialWouldExceedLimit(const partial_msg_t *partial, size_t len) {
+    const size_t limit = getPartialMessageLimit();
+
+    assert(partial != NULL);
+    if (limit == 0) {
+        return 0;
+    }
+    return partial->len > limit || len > limit - partial->len;
+}
+
+static void discardOversizedPartial(partial_msg_t *partial, const parsed_record_t *record) {
+    const size_t limit = getPartialMessageLimit();
+
+    freePartialMsg(partial);
+    partialInitFromRecord(partial, record);
+    partial->discarding = 1;
+    LogError(0, NO_ERRCODE,
+             "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), discarding unfinished partial record",
+             limit);
 }
 
 static void trimTrailingNewline(const char *line, size_t *len) {
@@ -1011,32 +1050,38 @@ static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t
     parsed_record_t finalRecord = {0};
     DEFiRet;
 
-    if (!record->is_partial && state->partial.len == 0) {
+    if (!record->is_partial && state->partial.len == 0 && !state->partial.discarding) {
         CHKiRet(enqMsg(state, record));
         FINALIZE;
     }
 
-    if (record->is_partial && state->partial.len == 0) {
-        state->partial.stream_type = record->stream_type;
-        state->partial.hasTime = record->hasTime;
-        state->partial.ttGenTime = record->ttGenTime;
-        if (record->hasTime) {
-            memcpy(&state->partial.st, &record->st, sizeof(record->st));
-        }
+    if (record->is_partial && state->partial.len == 0 && !state->partial.discarding) {
+        partialInitFromRecord(&state->partial, record);
     }
 
-    if (state->partial.len > 0 && state->partial.stream_type != record->stream_type) {
+    if ((state->partial.len > 0 || state->partial.discarding) &&
+        state->partial.stream_type != record->stream_type) {
         freePartialMsg(&state->partial);
-        state->partial.stream_type = record->stream_type;
-        state->partial.hasTime = record->hasTime;
-        state->partial.ttGenTime = record->ttGenTime;
-        if (record->hasTime) {
-            memcpy(&state->partial.st, &record->st, sizeof(record->st));
+        if (record->is_partial) {
+            partialInitFromRecord(&state->partial, record);
         }
     }
 
     if (record->is_partial) {
+        if (state->partial.discarding) {
+            FINALIZE;
+        }
+        if (partialWouldExceedLimit(&state->partial, record->len)) {
+            discardOversizedPartial(&state->partial, record);
+            FINALIZE;
+        }
         CHKiRet(partialAppend(&state->partial, record->msg, record->len));
+        FINALIZE;
+    }
+
+    if (state->partial.discarding) {
+        freePartialMsg(&state->partial);
+        CHKiRet(enqMsg(state, record));
         FINALIZE;
     }
 

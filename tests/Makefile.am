@@ -2235,6 +2235,7 @@ TESTS_MMKUBERNETES_VALGRIND = \
 
 TESTS_IMKUBERNETES = \
 	imkubernetes-cri-basic.sh \
+	imkubernetes-cri-partial-bound.sh \
 	imkubernetes-dockerjson-basic.sh \
 	yaml-imkubernetes-dockerjson-basic.sh
 
