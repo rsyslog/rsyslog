@@ -86,6 +86,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 
     /* v16 - Tls CRL */
     rsRetVal (*SetTlsCRLFile)(nsd_t *pThis, const uchar *);
+    rsRetVal (*SetTlsCAExtraFiles)(nsd_t *pThis, const uchar *);
 
     /* v17 - Remote Port */
     rsRetVal (*GetRemotePort)(nsd_t *pThis, int *);
@@ -98,7 +99,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetTlsRevocationCheck)(nsd_t *pThis, int enabled);
 
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 21 /* increment whenever you change the interface structure! */
     /* interface version 4 added GetRemAddr()
      * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
      * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -109,6 +110,7 @@ ENDinterface(nsd)
      * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
      * interface version 18 added SetRemoteSNI -- jfcantu, 2020-01-15
      * interface version 20 added SetTcpUserTimeout
+     * interface version 21 added SetTlsCAExtraFiles
      */
 
 #endif /* #ifndef INCLUDED_NSD_H */

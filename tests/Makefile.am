@@ -44,7 +44,6 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-multiworker-frontier.sh \
 	segmented-diskqueue-fsync.sh \
 	segmented-diskqueue-maxdiskspace.sh \
-	segmented-diskqueue-omprog-restart-save.sh \
 	segmented-diskqueue-rfc5424.sh \
 	segmented-diskqueue-cee.sh \
 	segmented-diskqueue-fromhost-port.sh \
@@ -1130,6 +1129,7 @@ TESTS_OMPROG = \
 	omprog-restart-terminated.sh \
 	omprog-restart-terminated-outfile.sh \
 	omprog-diskq-restart-save.sh \
+	segmented-diskqueue-omprog-restart-save.sh \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
 	omprog-invalid-args.sh \
@@ -1613,6 +1613,9 @@ TESTS_LIBYAML_IMTCP = \
 TESTS_LIBYAML_IMTCP_OSSL = \
 	yaml-imtcp-tls-ossl-prioritize-san-reject-cn.sh
 
+TESTS_LIBYAML_OSSL = \
+	yaml-omfwd-tls-ossl-pkcs11-module-defaults.sh
+
 TESTS_LIBYAML_IMHTTP = \
 	yaml-imhttp-apikeyfile.sh \
 	yaml-imhttp-metrics-apikeyfile.sh
@@ -1787,6 +1790,8 @@ TESTS_GNUTLS_VALGRIND = \
 	manytcp-too-few-tls-vg.sh
 
 TESTS_GNUTLS_OPENSSL = \
+	omfwd-tls-gtls-module-files-mtls.sh \
+	omfwd-tls-gtls-module-pkcs11-defaults-isolation.sh \
 	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh
 
 TESTS_MBEDTLS = \
@@ -1854,6 +1859,9 @@ TESTS_OSSL_OPENSSL = \
 	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-error-key2.sh \
+	omfwd-tls-ossl-pkcs11-error-ca.sh \
+	omfwd-tls-ossl-pkcs11-error-cert.sh \
+	omfwd-tls-ossl-pkcs11-error-key.sh \
 	sndrcv_tls_ossl_native_pq_group.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
@@ -1865,10 +1873,49 @@ TESTS_OSSL_OPENSSL = \
 	sndrcv_tls_ossl_certvalid_revoked.sh
 
 TESTS_OSSL_OPENSSL_VALGRIND = \
+	omfwd-tls-ossl-files-mtls-vg.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-ecdsa-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-sigalgs-negative-vg.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-ecdsa-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-sigalgs-negative-vg.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-error-ca-vg.sh \
+	omfwd-tls-ossl-pkcs11-error-cert-vg.sh \
+	omfwd-tls-ossl-pkcs11-error-key-vg.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-ecdsa-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-vg.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-sigalgs-negative-vg.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-mtls-ecdsa-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-mtls-sigalgs-negative-vg.sh \
+	omfwd-tls-ossl-pkcs11-mtls-sigalgs-vg.sh \
+	omfwd-tls-ossl-pkcs11-module-mtls-vg.sh \
+	omfwd-tls-ossl-pkcs11-module-precedence-vg.sh \
+	omfwd-tls-ossl-pkcs11-mtls-vg.sh \
+	omfwd-tls-ossl-pkcs11-recover-mtls-vg.sh \
 	imtcp-tls-ossl-basic-vg.sh \
 	imtcp-tls-ossl-basic-brokenhandshake-vg.sh
 
 TESTS_OSSL_OPENSSL_SNI = \
+	omfwd-tls-ossl-files-mtls.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-ecdsa-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-sigalgs-negative.sh \
+	omfwd-tls-ossl-pkcs11-ca-mtls-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-ecdsa-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-sigalgs-negative.sh \
+	omfwd-tls-ossl-pkcs11-cert-mtls-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-ecdsa-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-sigalgs-negative.sh \
+	omfwd-tls-ossl-pkcs11-key-mtls-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-module-mtls.sh \
+	omfwd-tls-ossl-pkcs11-module-precedence.sh \
+	omfwd-tls-ossl-pkcs11-mtls-ecdsa-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-mtls.sh \
+	omfwd-tls-ossl-pkcs11-mtls-sigalgs-negative.sh \
+	omfwd-tls-ossl-pkcs11-mtls-sigalgs.sh \
+	omfwd-tls-ossl-pkcs11-recover-mtls.sh \
 	omfwd-tls-ossl-no-sni.sh \
 	omfwd-tls-ossl-auto-sni.sh \
 	omfwd-tls-ossl-configured-sni.sh
@@ -2284,6 +2331,7 @@ EXTRA_DIST += $(TESTS_RATELIMIT_WATCH)
 EXTRA_DIST += $(TESTS_LIBYAML_IMPTCP_MMJSONPARSE)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP)
 EXTRA_DIST += $(TESTS_LIBYAML_IMTCP_OSSL)
+EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
@@ -2808,6 +2856,9 @@ if ENABLE_OSSL
 TESTS += $(TESTS_LIBYAML_IMTCP_OSSL)
 endif # ENABLE_OSSL
 endif # ENABLE_IMTCP_TESTS
+if ENABLE_OSSL
+TESTS += $(TESTS_LIBYAML_OSSL)
+endif # ENABLE_OSSL
 if ENABLE_IMHTTP
 TESTS += $(TESTS_LIBYAML_IMHTTP)
 endif # ENABLE_IMHTTP
@@ -3677,11 +3728,15 @@ gnutls_sni_server_CPPFLAGS = $(GNUTLS_CFLAGS)
 gnutls_sni_server_LDADD = $(GNUTLS_LIBS) $(SOL_LIBS)
 endif
 if ENABLE_OPENSSL
-check_PROGRAMS += openssl_sni_server
+check_PROGRAMS += openssl_sni_server openssl_mtls_server
 openssl_sni_server_SOURCES = openssl_sni_server.c
 openssl_sni_server_CFLAGS = $(OPENSSL_CFLAGS)
 openssl_sni_server_CPPFLAGS = $(OPENSSL_CFLAGS)
 openssl_sni_server_LDADD = $(OPENSSL_LIBS) $(SOL_LIBS)
+openssl_mtls_server_SOURCES = openssl_mtls_server.c
+openssl_mtls_server_CFLAGS = $(OPENSSL_CFLAGS)
+openssl_mtls_server_CPPFLAGS = $(OPENSSL_CFLAGS)
+openssl_mtls_server_LDADD = $(OPENSSL_LIBS) $(SOL_LIBS)
 endif
 
 endif # if ENABLE_TESTBENCH
@@ -3699,6 +3754,10 @@ EXTRA_DIST += \
 	faketime_common.sh \
 	privdrop_common.sh \
 	rscript_compare-common.sh \
+	omfwd-tls-ossl-pkcs11-error.sh \
+	omfwd-tls-ossl-pkcs11-ecdsa-sigalgs-common.sh \
+	omfwd-tls-ossl-pkcs11-sigalgs-negative-common.sh \
+	omfwd-tls-ossl-pkcs11-sigalgs-common.sh \
 	rscript_parse_time_get-ts.py \
 	queue-persist-drvr.sh \
 	daqueue-persist-drvr.sh \

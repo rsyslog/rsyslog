@@ -81,7 +81,7 @@ RUN	wget -O /etc/yum.repos.d/network:messaging:zeromq:git-stable.repo https://do
 	yum -y install czmq-devel
 	# end of this RUN
 	#wget -O /etc/yum.repos.de/network:messaging:zeromq:git-stable.repo  https://download.opensuse.org/repositories/network:messaging:zeromq:git-stable/CentOS_6/network:messaging:zeromq:git-stable.repo && \
-RUN 	find / -name "pgm*"
+RUN 	find / -name "pgm*" || true
 RUN	mkdir /usr/lib64/pgm-5.2
 RUN	mkdir /usr/lib64/pgm-5.2/include
 # unfortunately, tcl-devel does not properly setup required bits in the environment

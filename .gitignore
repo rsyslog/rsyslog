@@ -102,8 +102,10 @@ utils/*
 *.sw*
 clang_output_*
 tools/logctl
+tools/msggen
 tools/rscryutil
 tools/rscryutil.1
+tools/rsyslog_diag_hostname
 /bin/
 # RPM CI build output
 /build-result/
