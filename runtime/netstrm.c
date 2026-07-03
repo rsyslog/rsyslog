@@ -298,6 +298,23 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Set additional CA certificate sources on the active netstream
+ * driver.
+ * @param pThis Netstream instance whose driver should receive the setting.
+ * @param file Comma-separated file list or strict ``pkcs11:`` URI list to
+ * forward to the driver.
+ * @return RS_RET_OK on success or a driver-specific error code.
+ */
+static rsRetVal SetDrvrTlsCAExtraFiles(netstrm_t *const pThis, const uchar *const file) {
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsCAExtraFiles(pThis->pDrvrData, file);
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal SetDrvrTlsKeyFile(netstrm_t *const pThis, const uchar *const file) {
     DEFiRet;
     NULL_CHECK(pThis);
@@ -528,6 +545,7 @@ BEGINobjQueryInterface(netstrm)
     pIf->SetDrvrTlsRevocationCheck = SetDrvrTlsRevocationCheck;
     pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
     pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
+    pIf->SetDrvrTlsCAExtraFiles = SetDrvrTlsCAExtraFiles;
     pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
     pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
     pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;

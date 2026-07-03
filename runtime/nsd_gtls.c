@@ -1844,6 +1844,19 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsCAExtraFiles(nsd_t __attribute__((unused)) * pNsd, const uchar *const pszFile) {
+    DEFiRet;
+    if (pszFile != NULL) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: extra CA Files setting not supported by "
+                 "gtls netstream driver");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
     nsd_gtls_t *const pThis = nsd_gtls_from_nsd(pNsd);
@@ -2617,6 +2630,7 @@ BEGINobjQueryInterface(nsd_gtls)
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->SetTlsCAExtraFiles = SetTlsCAExtraFiles;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->GetRemotePort = GetRemotePort;
