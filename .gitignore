@@ -128,7 +128,10 @@ plugins/impstats/remote.pb-c.c
 plugins/impstats/remote.pb-c.h
 plugins/impstats/remote.pb-c.stamp
 tests/runtime_unit_gss_token_util
+tests/runtime_unit_impcap_arp_parser
 tests/runtime_unit_linkedlist
+tests/runtime_unit_msg_replace
+tests/runtime_unit_ommongodb_date
 tests/runtime_unit_parser_pri
 tests/runtime_unit_stringbuf
 
