@@ -2,6 +2,7 @@ tests/action-ratelimit-pace.sh
   s_6224eda96fc0da::t_2b4f6f0602e408 33
 runtime/action.c
   s_6224eda96fc0da::t_2b4f6f0602e408 611-621,745-774
+  s_803c46ee5c71ef::t_0c53cd980a561d 93,179,322,329,378-379,509-521,604-610,775-783,1985-1991,2007-2008,2423,2461-2462,2470-2472
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -13,6 +14,14 @@ runtime/action.c
       "agent_id": {
         "tool": "codex",
         "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_803c46ee5c71ef": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f324b-f577-70e2-8f89-8f2cd080d20e",
         "model": "gpt-5.5"
       },
       "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
