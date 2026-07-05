@@ -164,6 +164,9 @@ typedef struct instanceConf_s {
     uchar *caCertFile;
     uchar *myCertFile;
     uchar *myPrivKeyFile;
+    uchar *tlsVersion; /* tls.tlsversion       → CURLOPT_SSLVERSION    */
+    uchar *tlsCipherSuites; /* tls.ciphersuites      → CURLOPT_TLS13_CIPHERS */
+    uchar *tlsKeyExchangeGroups; /* tls.keyexchangegroups → CURLOPT_SSL_EC_CURVES */
     es_write_ops_t writeOperation;
     sbool retryFailures;
     int ratelimitInterval;
@@ -238,6 +241,9 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"tls.cacert", eCmdHdlrString, 0},
                                            {"tls.mycert", eCmdHdlrString, 0},
                                            {"tls.myprivkey", eCmdHdlrString, 0},
+                                           {"tls.tlsversion", eCmdHdlrString, 0},
+                                           {"tls.ciphersuites", eCmdHdlrString, 0},
+                                           {"tls.keyexchangegroups", eCmdHdlrString, 0},
                                            {"writeoperation", eCmdHdlrGetWord, 0},
                                            {"retryfailures", eCmdHdlrBinary, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
@@ -249,6 +255,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *pWrkrData);
+static void ATTR_NONNULL() curlSetupTlsOptions(instanceData *const pData, CURL *const handle);
 static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData);
 static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData);
 
@@ -351,6 +358,9 @@ BEGINfreeInstance
     free(pData->caCertFile);
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
+    free(pData->tlsVersion);
+    free(pData->tlsCipherSuites);
+    free(pData->tlsKeyExchangeGroups);
     free(pData->retryRulesetName);
     free(pData->detectedVersionString);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
@@ -812,8 +822,7 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlVersionResult);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-        if (pData->allowUnsignedCerts) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        if (pData->skipVerifyHost) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        curlSetupTlsOptions(pData, curl);
         if (pData->authBuf != NULL) {
             curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
             curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -826,10 +835,6 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
             }
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         }
-        if (pData->caCertFile) curl_easy_setopt(curl, CURLOPT_CAINFO, pData->caCertFile);
-        if (pData->myCertFile) curl_easy_setopt(curl, CURLOPT_SSLCERT, pData->myCertFile);
-        if (pData->myPrivKeyFile) curl_easy_setopt(curl, CURLOPT_SSLKEY, pData->myPrivKeyFile);
-
         CURLcode code = curl_easy_perform(curl);
         long status = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
@@ -2265,21 +2270,54 @@ finalize_it:
     RETiRet;
 }
 
+static const struct {
+    const char *name;
+    long curlver;
+} tlsVersionMap[] = {
+#if LIBCURL_VERSION_NUM >= 0x072200
+    {"TLSv1.2", CURL_SSLVERSION_TLSv1_2},
+#endif
+#if LIBCURL_VERSION_NUM >= 0x073400
+    {"TLSv1.3", CURL_SSLVERSION_TLSv1_3},
+#endif
+    {NULL, 0}};
+
+static void ATTR_NONNULL() curlSetupTlsOptions(instanceData *const pData, CURL *const handle) {
+    if (pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    if (pData->caCertFile) curl_easy_setopt(handle, CURLOPT_CAINFO, pData->caCertFile);
+    if (pData->myCertFile) curl_easy_setopt(handle, CURLOPT_SSLCERT, pData->myCertFile);
+    if (pData->myPrivKeyFile) curl_easy_setopt(handle, CURLOPT_SSLKEY, pData->myPrivKeyFile);
+    if (pData->tlsVersion) {
+        long ver = CURL_SSLVERSION_DEFAULT;
+        for (size_t i = 0; tlsVersionMap[i].name != NULL; i++) {
+            if (!strcmp((char *)pData->tlsVersion, tlsVersionMap[i].name)) {
+                ver = tlsVersionMap[i].curlver;
+                break;
+            }
+        }
+        curl_easy_setopt(handle, CURLOPT_SSLVERSION, ver);
+    }
+#if LIBCURL_VERSION_NUM >= 0x073D00
+    if (pData->tlsCipherSuites) curl_easy_setopt(handle, CURLOPT_TLS13_CIPHERS, (char *)pData->tlsCipherSuites);
+#endif
+#if LIBCURL_VERSION_NUM >= 0x074900
+    if (pData->tlsKeyExchangeGroups)
+        curl_easy_setopt(handle, CURLOPT_SSL_EC_CURVES, (char *)pData->tlsKeyExchangeGroups);
+#endif
+}
+
 static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
     curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    curlSetupTlsOptions(pWrkrData->pData, handle);
     if (pWrkrData->pData->authBuf != NULL) {
         curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
         curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
     }
-    if (pWrkrData->pData->caCertFile) curl_easy_setopt(handle, CURLOPT_CAINFO, pWrkrData->pData->caCertFile);
-    if (pWrkrData->pData->myCertFile) curl_easy_setopt(handle, CURLOPT_SSLCERT, pWrkrData->pData->myCertFile);
-    if (pWrkrData->pData->myPrivKeyFile) curl_easy_setopt(handle, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
     /* uncomment for in-dept debuggung:
     curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
@@ -2364,6 +2402,9 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->caCertFile = NULL;
     pData->myCertFile = NULL;
     pData->myPrivKeyFile = NULL;
+    pData->tlsVersion = NULL;
+    pData->tlsCipherSuites = NULL;
+    pData->tlsKeyExchangeGroups = NULL;
     pData->writeOperation = ES_WRITE_INDEX;
     pData->retryFailures = 0;
     pData->ratelimitBurst = -1;
@@ -2485,6 +2526,38 @@ BEGINnewActInst
             } else {
                 fclose(fp);
             }
+        } else if (!strcmp(actpblk.descr[i].name, "tls.tlsversion")) {
+            char *ver;
+            int known;
+            CHKmalloc(ver = es_str2cstr(pvals[i].val.d.estr, NULL));
+            known = 0;
+            for (size_t j = 0; tlsVersionMap[j].name != NULL; j++) {
+                if (!strcmp(ver, tlsVersionMap[j].name)) {
+                    known = 1;
+                    break;
+                }
+            }
+            if (!known) {
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "omelasticsearch: unknown tls.tlsversion '%s'; accepted: TLSv1.2, TLSv1.3", ver);
+                free(ver);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->tlsVersion = (uchar *)ver;
+        } else if (!strcmp(actpblk.descr[i].name, "tls.ciphersuites")) {
+            CHKmalloc(pData->tlsCipherSuites = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+#if LIBCURL_VERSION_NUM < 0x073D00
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "omelasticsearch: tls.ciphersuites set but libcurl < 7.61 was used at build time; "
+                   "option will be ignored");
+#endif
+        } else if (!strcmp(actpblk.descr[i].name, "tls.keyexchangegroups")) {
+            CHKmalloc(pData->tlsKeyExchangeGroups = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+#if LIBCURL_VERSION_NUM < 0x074900
+            LogMsg(0, RS_RET_OK, LOG_WARNING,
+                   "omelasticsearch: tls.keyexchangegroups set but libcurl < 7.73 was used at build time; "
+                   "option will be ignored");
+#endif
         } else if (!strcmp(actpblk.descr[i].name, "writeoperation")) {
             char *writeop;
             CHKmalloc(writeop = es_str2cstr(pvals[i].val.d.estr, NULL));
