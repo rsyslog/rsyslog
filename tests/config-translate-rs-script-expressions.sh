@@ -24,6 +24,8 @@ ruleset(name="main") {
   set $.n = -7;
   set $.s = "line\nquote\"tab\tbackslash\\";
   set $.arr = ["one", "two"];
+  set $.ids = [1, 2, 3];
+  set $.mixed = ["level", 42];
   reset $.scratch = $.arr;
   unset $.arr;
   if not exists($!missing) and (($msg contains_i "ERR") or ($msg startswith " start")) then {
@@ -50,6 +52,8 @@ ruleset(name="main") {
   set $.n = -7;
   set $.s = "line\nquote\"tab\tbackslash\\";
   set $.arr = ["one", "two"];
+  set $.ids = [1, 2, 3];
+  set $.mixed = ["level", 42];
   reset $.scratch = $.arr;
   unset $.arr;
   if (not exists($!missing) and (($msg contains_i "ERR") or ($msg startswith " start"))) then {

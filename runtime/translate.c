@@ -279,6 +279,14 @@ static struct cnfarray *cloneArray(const struct cnfarray *ar) {
                 return NULL;
             }
         }
+        if (ar->eltypes != NULL) {
+            out->eltypes = malloc(ar->nmemb);
+            if (out->eltypes == NULL) {
+                cnfarrayCloneDestruct(out);
+                return NULL;
+            }
+            memcpy(out->eltypes, ar->eltypes, ar->nmemb);
+        }
     }
     return out;
 }
@@ -876,6 +884,26 @@ static int estrAppendQuoted(es_str_t **s, const char *buf) {
     return estrAppendChar(s, '"');
 }
 
+/* serialize a cnfarray as a RainerScript array literal; elements typed 'N'
+ * are emitted unquoted so numeric literals survive translation round-trips */
+static int estrAppendArray(es_str_t **s, const struct cnfarray *ar) {
+    int i;
+    if (estrAppendChar(s, '[') != 0) return -1;
+    for (i = 0; i < ar->nmemb; ++i) {
+        char *cstr = es_str2cstr(ar->arr[i], NULL);
+        if (cstr == NULL) return -1;
+        if (i > 0 && estrAppendCstr(s, ", ") != 0) {
+            free(cstr);
+            return -1;
+        }
+        const int r =
+            (ar->eltypes != NULL && ar->eltypes[i] == 'N') ? estrAppendCstr(s, cstr) : estrAppendQuoted(s, cstr);
+        free(cstr);
+        if (r != 0) return -1;
+    }
+    return estrAppendChar(s, ']');
+}
+
 static const char *exprOpToStr(unsigned nodetype) {
     switch (nodetype) {
         case CMP_EQ:
@@ -929,7 +957,6 @@ static int exprToString(es_str_t **out, const struct cnfexpr *expr, struct rscon
     int i;
     char *cstr;
     const struct cnffunc *func;
-    const struct cnfarray *ar;
 
     if (expr == NULL) return -1;
     op = exprOpToStr(expr->nodetype);
@@ -959,21 +986,7 @@ static int exprToString(es_str_t **out, const struct cnfexpr *expr, struct rscon
         case 'V':
             return estrAppendVarName(out, ((const struct cnfvar *)expr)->name);
         case 'A':
-            ar = (const struct cnfarray *)expr;
-            if (estrAppendChar(out, '[') != 0) return -1;
-            for (i = 0; i < ar->nmemb; ++i) {
-                char *aval = es_str2cstr(ar->arr[i], NULL);
-                if (i > 0 && estrAppendCstr(out, ", ") != 0) {
-                    free(aval);
-                    return -1;
-                }
-                if (aval == NULL || estrAppendQuoted(out, aval) != 0) {
-                    free(aval);
-                    return -1;
-                }
-                free(aval);
-            }
-            return estrAppendChar(out, ']');
+            return estrAppendArray(out, (const struct cnfarray *)expr);
         case 'F':
             func = (const struct cnffunc *)expr;
             cstr = es_str2cstr(func->fname, NULL);
@@ -1018,7 +1031,6 @@ static int exprToString(es_str_t **out, const struct cnfexpr *expr, struct rscon
 static int nvlstValueToRs(es_str_t **out, const struct nvlst *node) {
     char *cstr;
     int i;
-    struct cnfarray *ar;
     char nbuf[64];
 
     switch (node->val.datatype) {
@@ -1029,18 +1041,7 @@ static int nvlstValueToRs(es_str_t **out, const struct nvlst *node) {
             free(cstr);
             return i;
         case 'A':
-            ar = node->val.d.ar;
-            if (estrAppendChar(out, '[') != 0) return -1;
-            for (i = 0; i < ar->nmemb; ++i) {
-                cstr = es_str2cstr(ar->arr[i], NULL);
-                if (cstr == NULL) return -1;
-                if ((i > 0 && estrAppendCstr(out, ", ") != 0) || estrAppendQuoted(out, cstr) != 0) {
-                    free(cstr);
-                    return -1;
-                }
-                free(cstr);
-            }
-            return estrAppendChar(out, ']');
+            return estrAppendArray(out, node->val.d.ar);
         case 'N': {
             int len = snprintf(nbuf, sizeof(nbuf), "%lld", node->val.d.n);
             if (len < 0 || len >= (int)sizeof(nbuf)) return -1;
@@ -1557,22 +1558,31 @@ static void writeYamlQuoted(FILE *fp, const char *s) {
     fputc('"', fp);
 }
 
-static void writeYamlValue(FILE *fp, const struct nvlst *n) {
+/* write a cnfarray as a flow-style array; elements typed 'N' are emitted
+ * unquoted so numeric literals survive translation round-trips */
+static void writeArrayValue(FILE *fp, const struct cnfarray *ar) {
     int i;
+    fputc('[', fp);
+    for (i = 0; i < ar->nmemb; ++i) {
+        char *s = es_str2cstr(ar->arr[i], NULL);
+        if (i > 0) fputs(", ", fp);
+        if (s != NULL && ar->eltypes != NULL && ar->eltypes[i] == 'N')
+            fputs(s, fp);
+        else
+            writeYamlQuoted(fp, s == NULL ? "" : s);
+        free(s);
+    }
+    fputc(']', fp);
+}
+
+static void writeYamlValue(FILE *fp, const struct nvlst *n) {
     char *s;
     switch (n->val.datatype) {
         case 'N':
             fprintf(fp, "%lld", n->val.d.n);
             break;
         case 'A':
-            fputc('[', fp);
-            for (i = 0; i < n->val.d.ar->nmemb; ++i) {
-                s = es_str2cstr(n->val.d.ar->arr[i], NULL);
-                if (i > 0) fputs(", ", fp);
-                writeYamlQuoted(fp, s == NULL ? "" : s);
-                free(s);
-            }
-            fputc(']', fp);
+            writeArrayValue(fp, n->val.d.ar);
             break;
         case 'S':
         default:
@@ -1823,7 +1833,7 @@ static void writeYamlListSection(FILE *fp, const char *name, const struct rsconf
 static void writeRsParams(FILE *fp, const struct nvlst *lst) {
     const struct nvlst *n;
     char *name;
-    int first = 1, i, rank;
+    int first = 1, rank;
     for (rank = 0; rank < 4; ++rank) {
         for (n = lst; n != NULL; n = n->next) {
             if (preferredKeyRank(n) != rank) continue;
@@ -1837,14 +1847,7 @@ static void writeRsParams(FILE *fp, const struct nvlst *lst) {
                     fprintf(fp, "%lld", n->val.d.n);
                     break;
                 case 'A':
-                    fputc('[', fp);
-                    for (i = 0; i < n->val.d.ar->nmemb; ++i) {
-                        char *aval = es_str2cstr(n->val.d.ar->arr[i], NULL);
-                        if (i > 0) fputs(", ", fp);
-                        writeYamlQuoted(fp, aval == NULL ? "" : aval);
-                        free(aval);
-                    }
-                    fputc(']', fp);
+                    writeArrayValue(fp, n->val.d.ar);
                     break;
                 case 'S':
                 default: {

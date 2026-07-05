@@ -233,7 +233,11 @@ fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 array:	 '[' arrayelt ']'		{ $$ = $2; }
 iterator_decl:  '(' VAR ITERATOR_ASSIGNMENT expr ')'	{ $$ = cnfNewIterator($2, $4); }
 arrayelt: STRING			{ $$ = cnfarrayNew($1); }
+	| NUMBER			{ $$ = cnfarrayNewNum($1); }
+	| '-' NUMBER			{ $$ = cnfarrayNewNum(-$2); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
+	| arrayelt ',' NUMBER		{ $$ = cnfarrayAddNum($1, $3); }
+	| arrayelt ',' '-' NUMBER	{ $$ = cnfarrayAddNum($1, -$4); }
 
 %%
 /*

@@ -410,6 +410,7 @@ TESTS_DEFAULT = \
 	rscript_ruleset_call_indirect-basic.sh \
 	rscript_ruleset_call_indirect-var.sh \
 	rscript_ruleset_call_indirect-invld.sh \
+	rscript_array_literal.sh \
 	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
@@ -646,6 +647,7 @@ TESTS_LIBYAML = \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \
 	config-translate-rs-script-expressions.sh \
+	config-translate-rs-array-types.sh \
 	config-translate-rs-statements-to-yaml.sh \
 	config-translate-legacy-debian-default.sh \
 	config-translate-legacy-file-action.sh \
