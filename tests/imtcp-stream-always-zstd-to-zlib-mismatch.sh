@@ -1,14 +1,12 @@
 #!/bin/bash
 # added 2026-05-17 by Codex, released under ASL 2.0
 # Sends a zstd stream to a zlib-configured imtcp listener; the receiver must
-# reject the compression-driver mismatch as an invalid compressed stream.
+# reject the compression-driver mismatch as an invalid compressed stream. The
+# sender may keep retrying after the receiver closes the TCP session, so the
+# oracle is the receiver diagnostic rather than sender queue drain.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin lmzstdw ../runtime
-wait_invalid_stream_log() {
-	content_check --check-only "imtcp: received invalid compressed stream" "$RSYSLOG_OUT_LOG"
-}
-export QUEUE_EMPTY_CHECK_FUNC=wait_invalid_stream_log
 
 generate_conf
 add_conf '
@@ -43,7 +41,8 @@ module(load="builtin:omfwd")
 startup 2
 
 injectmsg2 0 1
-shutdown_when_empty 2
+wait_content "imtcp: received invalid compressed stream" "$RSYSLOG_OUT_LOG"
+shutdown_immediate 2
 wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
