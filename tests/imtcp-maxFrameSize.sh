@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 global(processInternalMessages="on")
 module(load="../plugins/imtcp/.libs/imtcp" maxFrameSize="100")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '

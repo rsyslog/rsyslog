@@ -5,9 +5,9 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1" name="l1")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" ruleset="ruleset1" name="l2")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port3" ruleset="ruleset1" name="l3")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1" name="l1")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" ruleset="ruleset1" name="l2")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port3" ruleset="ruleset1" name="l3")
 
 template(name="outfmt" type="string" string="%inputname%\n")
 

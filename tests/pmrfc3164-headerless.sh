@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="input")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="input")
 parser(name="p3164" type="pmrfc3164" detect.headerless="on" headerless.hostname="n/a" headerless.tag="hdr" headerless.ruleset="hdrules")
 
 ruleset(name="input" parser="p3164") {

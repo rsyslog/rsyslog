@@ -8,7 +8,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 template(name="dynfile" type="string" string="'$RSYSLOG_DYNNAME'.out.log")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 :msg, contains, "msg:" action(type="omfile" dynafile="dynfile" template="outfmt" dynaFileCacheSize="0")
 '
 

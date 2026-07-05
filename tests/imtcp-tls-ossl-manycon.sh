@@ -18,7 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="x509/name"
 	PermittedPeer=["/CN=rsyslog-client/OU=Adiscon GmbH/O=Adiscon GmbH/L=Grossrinderfeld/ST=BW/C=DE/DC=rsyslog.com","rsyslog.com"]
      )
-input(type="imtcp" socketBacklog="1000" maxsessions="1000" port="0"
+input(type="imtcp" address="127.0.0.1" socketBacklog="1000" maxsessions="1000" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

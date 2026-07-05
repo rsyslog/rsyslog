@@ -26,7 +26,7 @@ module(load="../plugins/impstats/.libs/impstats"
 	log.syslog="off" log.file="'$RSYSLOG_DYNNAME'.pstats" interval="1")
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 :msg, contains, "msgnum:" {
 			action(type="omelasticsearch" name="act-es"
 				template="tpl" server="127.0.0.1"

@@ -8,7 +8,7 @@ $MaxMessageSize 128
 global(processInternalMessages="on"
 	oversizemsg.input.mode="accept")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '

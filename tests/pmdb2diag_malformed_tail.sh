@@ -8,7 +8,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../contrib/pmdb2diag/.libs/pmdb2diag")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 parser(type="pmdb2diag" timeformat="%Y-%m-%d-%H.%M.%S." timepos="0" levelpos="59" pidstarttoprogstartshift="49" name="db2.diag.hardened")
 template(name="outfmt" type="string" string="valid-after\n")

@@ -16,9 +16,9 @@ parser(name="custom.rfc3164" type="pmrfc3164" force.tagEndingByColon="on")
 template(name="sdoutfmt" type="string" string="%structured-data%|%msg%\n")
 template(name="tagoutfmt" type="string" string="%syslogtag%|%msg%\n")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_sd_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_sd_port"
       ruleset="sdtest")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_tag_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_tag_port"
       ruleset="tagtest")
 
 ruleset(name="sdtest") {

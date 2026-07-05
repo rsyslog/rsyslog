@@ -10,7 +10,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 # tocef: basic output
 set $!cef1 = tocef("0", "MyVendor", "rsyslog", "1.0", "100", "test event", "5", "src=10.0.0.1");

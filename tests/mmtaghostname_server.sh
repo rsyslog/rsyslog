@@ -6,7 +6,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../contrib/mmtaghostname/.libs/mmtaghostname")
 global(localhostname="frontAPP")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset")
 template(name="test" type="string" string="tag: %syslogtag%, server: %hostname%, msg: %msg%\n")
 ruleset(name="ruleset") {
 	action(type="mmtaghostname" forcelocalhostname="on")

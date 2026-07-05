@@ -52,7 +52,7 @@ generate_conf
 add_conf '
 # then SENDER sends to this port (not tcpflood!)
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" ./'$RSYSLOG_OUT_LOG';outfmt

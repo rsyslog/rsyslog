@@ -33,6 +33,7 @@ add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
 add_yaml_conf 'inputs:'
 add_yaml_conf '  - type: imtcp'
+add_yaml_conf '    address: "127.0.0.1"'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcp_port\""
 add_yaml_conf '    allowedSender: []'

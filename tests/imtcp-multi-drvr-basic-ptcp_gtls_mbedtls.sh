@@ -14,15 +14,15 @@ global( defaultNetstreamDriverCAFile="'$srcdir'/tls-certs/ca.pem"
 
 module(load="../plugins/imtcp/.libs/imtcp")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
 	name="i1"
 	StreamDriver.Name="gtls"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 
-input(type="imtcp" name="i2" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2")
+input(type="imtcp" address="127.0.0.1" name="i2" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port3"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port3"
 	name="i3"
 	StreamDriver.Name="mbedtls"
 	StreamDriver.Mode="1"

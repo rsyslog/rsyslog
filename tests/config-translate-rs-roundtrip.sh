@@ -21,7 +21,7 @@ module(load="../plugins/imtcp/.libs/imtcp"
        StreamDriver.Mode="1"
        StreamDriver.AuthMode="x509/name"
        PermittedPeer=["rsyslog-client"])
-input(type="imtcp" listenPortFileName="${portfile}" port="0")
+input(type="imtcp" address="127.0.0.1" listenPortFileName="${portfile}" port="0")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
@@ -49,6 +49,7 @@ modules:
     StreamDriver.Name: "gtls"
 inputs:
   - type: "imtcp"
+    address: "127.0.0.1"
     listenPortFileName: "${portfile}"
     port: "0"
 templates:
@@ -69,7 +70,7 @@ global(defaultNetstreamDriverCAFile="${srcdir}/tls-certs/ca.pem" defaultNetstrea
 
 module(load="../plugins/imtcp/.libs/imtcp" PermittedPeer=["rsyslog-client"] StreamDriver.AuthMode="x509/name" StreamDriver.Mode="1" StreamDriver.Name="gtls")
 
-input(type="imtcp" listenPortFileName="${portfile}" port="0")
+input(type="imtcp" address="127.0.0.1" listenPortFileName="${portfile}" port="0")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 

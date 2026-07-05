@@ -11,7 +11,7 @@ global(maxMessageSize="100k")
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="%$!structured-data!custom-sd!large@32473!tail%\n")
 

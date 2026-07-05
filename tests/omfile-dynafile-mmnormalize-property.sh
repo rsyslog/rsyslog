@@ -12,7 +12,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="writeData")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="writeData")
 template(name="LogFormat" type="string" string="%msg%\n")
 template(name="WriteFile" type="string" string="'$RSYSLOG_DYNNAME'.%$!clientIP%.log")
 

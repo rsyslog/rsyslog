@@ -33,7 +33,7 @@ generate_conf
 add_conf '
 global(MaxMessageSize="10k")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
 $template dynfile,"'$RSYSLOG_DYNNAME'.out.%msg:F,58:2%.log" # use multiple dynafiles

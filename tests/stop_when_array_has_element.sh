@@ -10,7 +10,7 @@ template(name="foo" type="string" string="%$!foo%\n")
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="mmjsonparse")
 

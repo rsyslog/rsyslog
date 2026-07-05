@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/fmhttp/.libs/fmhttp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 # for debugging the test itself:
 #template(name="outfmt" type="string" string="%$!%:  :%$.%:  %rawmsg%\n")

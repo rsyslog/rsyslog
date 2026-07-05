@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="customparser")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="customparser")
 parser(name="custom.rfc3164" type="pmrfc3164" remove.msgFirstSpace="on")
 template(name="outfmt" type="string" string="-%msg%-\n")
 

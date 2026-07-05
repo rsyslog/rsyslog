@@ -10,7 +10,7 @@ add_conf '
 ratelimit(name="test_limit" interval="2" burst="5")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcp.port" ratelimit.name="test_limit")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcp.port" ratelimit.name="test_limit")
 
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.ptcp.port" ratelimit.name="test_limit")

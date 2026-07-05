@@ -31,7 +31,7 @@ generate_conf 2
 add_conf '
 module(load="../plugins/imdiag/.libs/imdiag")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.imtcp_port2")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.imtcp_port2")
 
 *.* action(type="omfwd"
            target="127.0.0.1" port="'$RCVR_PORT'" protocol="tcp"

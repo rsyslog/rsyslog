@@ -15,7 +15,7 @@ ruleset(name="shared") {
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 }
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="shared")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="shared")
 '
 
 ../tools/rsyslogd -N1 -f"${TESTCONF_NM}.conf" -M"$RSYSLOG_MODDIR" >"${RSYSLOG_DYNNAME}.warn.log" 2>&1
@@ -36,7 +36,7 @@ ruleset(name="queued" queue.type="LinkedList") {
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 }
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="queued")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="queued")
 '
 
 ../tools/rsyslogd -N1 -f"${TESTCONF_NM}.conf" -M"$RSYSLOG_MODDIR" >"${RSYSLOG_DYNNAME}.quiet.log" 2>&1

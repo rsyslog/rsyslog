@@ -23,6 +23,7 @@ modules:
 
 inputs:
   - type: imtcp
+    address: "127.0.0.1"
     port: "0"
     listenPortFileName: "${RSYSLOG_DYNNAME}.tcpflood_port"
     supportOctetCountedFraming: "on"
