@@ -255,6 +255,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *pWrkrData);
+static void ATTR_NONNULL() curlSetupTlsOptions(instanceData *const pData, CURL *const handle);
 static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData);
 static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData);
 
@@ -821,8 +822,7 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlVersionResult);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-        if (pData->allowUnsignedCerts) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        if (pData->skipVerifyHost) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        curlSetupTlsOptions(pData, curl);
         if (pData->authBuf != NULL) {
             curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
             curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -835,10 +835,6 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
             }
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         }
-        if (pData->caCertFile) curl_easy_setopt(curl, CURLOPT_CAINFO, pData->caCertFile);
-        if (pData->myCertFile) curl_easy_setopt(curl, CURLOPT_SSLCERT, pData->myCertFile);
-        if (pData->myPrivKeyFile) curl_easy_setopt(curl, CURLOPT_SSLKEY, pData->myPrivKeyFile);
-
         CURLcode code = curl_easy_perform(curl);
         long status = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
@@ -2168,31 +2164,25 @@ finalize_it:
 static const struct {
     const char *name;
     long curlver;
-} tlsVersionMap[] = {{"TLSv1.2", CURL_SSLVERSION_TLSv1_2},
-#if LIBCURL_VERSION_NUM >= 0x073400
-                     {"TLSv1.3", CURL_SSLVERSION_TLSv1_3},
+} tlsVersionMap[] = {
+#if LIBCURL_VERSION_NUM >= 0x072200
+    {"TLSv1.2", CURL_SSLVERSION_TLSv1_2},
 #endif
-                     {NULL, 0}};
+#if LIBCURL_VERSION_NUM >= 0x073400
+    {"TLSv1.3", CURL_SSLVERSION_TLSv1_3},
+#endif
+    {NULL, 0}};
 
-static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
-    PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
-    curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-    curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-    if (pWrkrData->pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
-    if (pWrkrData->pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
-    if (pWrkrData->pData->authBuf != NULL) {
-        curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
-        curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-    }
-    if (pWrkrData->pData->caCertFile) curl_easy_setopt(handle, CURLOPT_CAINFO, pWrkrData->pData->caCertFile);
-    if (pWrkrData->pData->myCertFile) curl_easy_setopt(handle, CURLOPT_SSLCERT, pWrkrData->pData->myCertFile);
-    if (pWrkrData->pData->myPrivKeyFile) curl_easy_setopt(handle, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
-    if (pWrkrData->pData->tlsVersion) {
+static void ATTR_NONNULL() curlSetupTlsOptions(instanceData *const pData, CURL *const handle) {
+    if (pData->allowUnsignedCerts) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    if (pData->skipVerifyHost) curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, 0L);
+    if (pData->caCertFile) curl_easy_setopt(handle, CURLOPT_CAINFO, pData->caCertFile);
+    if (pData->myCertFile) curl_easy_setopt(handle, CURLOPT_SSLCERT, pData->myCertFile);
+    if (pData->myPrivKeyFile) curl_easy_setopt(handle, CURLOPT_SSLKEY, pData->myPrivKeyFile);
+    if (pData->tlsVersion) {
         long ver = CURL_SSLVERSION_DEFAULT;
         for (size_t i = 0; tlsVersionMap[i].name != NULL; i++) {
-            if (!strcmp((char *)pWrkrData->pData->tlsVersion, tlsVersionMap[i].name)) {
+            if (!strcmp((char *)pData->tlsVersion, tlsVersionMap[i].name)) {
                 ver = tlsVersionMap[i].curlver;
                 break;
             }
@@ -2200,13 +2190,25 @@ static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, 
         curl_easy_setopt(handle, CURLOPT_SSLVERSION, ver);
     }
 #if LIBCURL_VERSION_NUM >= 0x073D00
-    if (pWrkrData->pData->tlsCipherSuites)
-        curl_easy_setopt(handle, CURLOPT_TLS13_CIPHERS, (char *)pWrkrData->pData->tlsCipherSuites);
+    if (pData->tlsCipherSuites) curl_easy_setopt(handle, CURLOPT_TLS13_CIPHERS, (char *)pData->tlsCipherSuites);
 #endif
 #if LIBCURL_VERSION_NUM >= 0x074900
-    if (pWrkrData->pData->tlsKeyExchangeGroups)
-        curl_easy_setopt(handle, CURLOPT_SSL_EC_CURVES, (char *)pWrkrData->pData->tlsKeyExchangeGroups);
+    if (pData->tlsKeyExchangeGroups)
+        curl_easy_setopt(handle, CURLOPT_SSL_EC_CURVES, (char *)pData->tlsKeyExchangeGroups);
 #endif
+}
+
+static void ATTR_NONNULL() curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle) {
+    PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
+    curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
+    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
+    curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
+    curlSetupTlsOptions(pWrkrData->pData, handle);
+    if (pWrkrData->pData->authBuf != NULL) {
+        curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
+        curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    }
     /* uncomment for in-dept debuggung:
     curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }

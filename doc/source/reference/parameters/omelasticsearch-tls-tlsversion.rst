@@ -48,6 +48,14 @@ Action usage
 
    action(type="omelasticsearch" tls.tlsversion="TLSv1.3")
 
+YAML usage
+----------
+.. code-block:: yaml
+
+   actions:
+     - type: omelasticsearch
+       tls.tlsversion: "TLSv1.3"
+
 See also
 --------
 See also :doc:`../../configuration/modules/omelasticsearch`,

@@ -42,7 +42,7 @@ PQC key exchange requires:
 * OpenSSL 3.x with the `OQS provider <https://github.com/open-quantum-safe/oqs-provider>`_ installed
 
 If rsyslog was built against libcurl older than 7.73, configuring this
-parameter has no effect and a warning is logged at startup.
+parameter has no effect and a warning is logged at configuration load.
 
 Action usage
 ------------
@@ -55,6 +55,17 @@ Action usage
           tls.cacert="/etc/pki/tls/certs/ca-bundle.crt"
           tls.tlsversion="TLSv1.3"
           tls.keyexchangegroups="X25519MLKEM768:X25519")
+
+YAML usage
+----------
+.. code-block:: yaml
+
+   actions:
+     - type: omelasticsearch
+       usehttps: "on"
+       tls.cacert: "/etc/pki/tls/certs/ca-bundle.crt"
+       tls.tlsversion: "TLSv1.3"
+       tls.keyexchangegroups: "X25519MLKEM768:X25519"
 
 See also
 --------

@@ -32,7 +32,7 @@ time; an invalid name causes the handshake to fail.
 
 Requires libcurl 7.61.0 or later. If rsyslog was built against an older
 libcurl, configuring this parameter has no effect and a warning is logged at
-startup.
+configuration load.
 
 Action usage
 ------------
@@ -41,6 +41,14 @@ Action usage
 .. code-block:: rsyslog
 
    action(type="omelasticsearch" tls.ciphersuites="TLS_AES_256_GCM_SHA384")
+
+YAML usage
+----------
+.. code-block:: yaml
+
+   actions:
+     - type: omelasticsearch
+       tls.ciphersuites: "TLS_AES_256_GCM_SHA384"
 
 See also
 --------
