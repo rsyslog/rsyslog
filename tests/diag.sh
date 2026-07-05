@@ -629,7 +629,7 @@ print_core_policy() {
 core_path_is_test_specific() {
 	local corefile="$1"
 	[ -n "${RSYSLOG_DYNNAME:-}" ] || return 1
-	case "$corefile" in
+	case "$(basename "$corefile")" in
 	*"$RSYSLOG_DYNNAME"*) return 0 ;;
 	*) return 1 ;;
 	esac
