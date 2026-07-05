@@ -94,7 +94,6 @@ jobs:
           export CODECOV_repo_slug=''
           export CODECOV_commit_sha=''
           export RSYSLOG_CONTAINER_UID=''
-          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
           export CC='gcc'
           export CI_CONFIGURE_CACHE=1

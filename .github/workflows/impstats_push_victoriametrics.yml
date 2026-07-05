@@ -81,8 +81,6 @@ jobs:
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           CI_VALGRIND_SUPPRESSIONS: ubuntu22.04.supp
-          RSYSLOG_STATSURL: >-
-            http://build.rsyslog.com/testbench-failedtest.php
           USE_AUTO_DEBUG: 'off'
           VERBOSE: '1'
         run: |

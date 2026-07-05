@@ -501,7 +501,6 @@ jobs:
           CODECOV_commit_sha="$(git rev-parse HEAD)"
           export CODECOV_commit_sha
           export RSYSLOG_CONTAINER_UID="" # use default
-          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
           export CC='gcc'
           export CI_CONFIGURE_CACHE=1
@@ -1249,7 +1248,6 @@ jobs:
           CI_CHECK_CMD: check
           ABORT_ALL_ON_TEST_FAIL: 'NO'
           CI_VALGRIND_SUPPRESSIONS: ubuntu22.04.supp
-          RSYSLOG_STATSURL: http://build.rsyslog.com/testbench-failedtest.php
           CI_CONFIGURE_CACHE: '1'
           USE_AUTO_DEBUG: 'off'
           VERBOSE: '1'
@@ -1464,7 +1462,6 @@ jobs:
                  --disable-default-tests \
                  --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
           export RSYSLOG_CONTAINER_UID="" # use default
-          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CC='gcc'
           export CFLAGS='-g'
           export CI_CONFIGURE_CACHE=1
