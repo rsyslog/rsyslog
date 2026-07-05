@@ -27,6 +27,19 @@ base_version() {
   sed -n 's/AC_INIT(\[rsyslog\],\[\([^]]*\)\].*/\1/p' "$script_dir/../../configure.ac" | sed 's/\.daily$//'
 }
 
+short_commit_sha() {
+  if [ -n "${GITHUB_SHA:-}" ]; then
+    if printf '%s\n' "$GITHUB_SHA" | grep -Eq '^[0-9a-fA-F]{12,64}$'; then
+      printf '%.12s\n' "$GITHUB_SHA" | tr '[:upper:]' '[:lower:]'
+      return
+    fi
+  fi
+
+  git rev-parse --verify HEAD >/dev/null 2>&1 ||
+    die "could not determine git commit from GITHUB_SHA or local HEAD"
+  git rev-parse --short=12 HEAD
+}
+
 cmd_version() {
   local base date short_sha run version
 
@@ -34,8 +47,7 @@ cmd_version() {
   [ -n "$base" ] || die "could not determine base version from configure.ac"
 
   date="$(date -u +%Y%m%d)"
-  git rev-parse --verify HEAD >/dev/null 2>&1 || die "invalid git HEAD commit"
-  short_sha="$(git rev-parse --short=12 HEAD)"
+  short_sha="$(short_commit_sha)"
   run="${GITHUB_RUN_NUMBER:-0}"
   version="${base}~daily${date}.${run}+git${short_sha}-1adiscon1"
 
@@ -261,7 +273,7 @@ cmd_verify_repo() {
 
   repo_url="${repo_url%/}"
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap 'rm -rf "${tmp_dir:-}"' EXIT
 
   curl -fsSL "$repo_url/dists/$suite/InRelease" -o "$tmp_dir/InRelease"
   curl -fsSL "$repo_url/rsyslog-debian-staging.asc" -o "$tmp_dir/repo-key.asc"

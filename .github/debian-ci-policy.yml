@@ -18,5 +18,12 @@
     }
   ],
   "supplemental_build_deps": [],
+  "control_replacements": [
+    {
+      "pattern": "debhelper-compat\\s*\\(=\\s*14\\)",
+      "replacement": "debhelper-compat (= 13)",
+      "reason": "Debian latest currently targets debhelper compat 14, which is not available in the trixie staging build environment."
+    }
+  ],
   "not_installed_paths": []
 }

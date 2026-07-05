@@ -126,6 +126,13 @@ jobs:
             "$DEBIAN_PACKAGING_BRANCH" \
             "$DEBIAN_STAGING_BUILD_ROOT/debian-packaging"
 
+      - name: Apply packaging baseline policy
+        run: |
+          "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" apply_control_replacements \
+            "$DEBIAN_STAGING_BUILD_ROOT/debian-packaging/control" \
+            "$DEBIAN_STAGING_BUILD_ROOT/debian-ci-policy/control_replacements.tsv" \
+            "$DEBIAN_STAGING_BUILD_ROOT/debian-ci-policy/control_replacements.reasons.txt"
+
       - name: Install Debian build dependencies
         run: |
           "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" install_build_deps \
@@ -214,9 +221,10 @@ jobs:
             echo "- Architecture: \`$DEBIAN_STAGING_ARCH\`"
             echo
             echo "Artifacts:"
+            find debian-staging-artifacts -maxdepth 1 -type f -printf '%f\n' | sort |
             while IFS= read -r artifact; do
               printf -- "- \`%s\`\n" "$artifact"
-            done < <(find debian-staging-artifacts -maxdepth 1 -type f -printf '%f\n' | sort)
+            done
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
@@ -316,6 +324,7 @@ jobs:
     if: needs.preflight.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: debian-daily-staging
     permissions:
       contents: read
     env:
@@ -367,6 +376,7 @@ jobs:
       needs.preflight.outputs.should_run == 'true' &&
       (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
     runs-on: ubuntu-latest
+    environment: debian-daily-staging
     permissions:
       issues: write
       contents: read
