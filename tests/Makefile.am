@@ -175,6 +175,7 @@ TESTS_DEFAULT = \
 	omfile-dynafilecachesize-invalid.sh \
 	omfile-dynafile-mmnormalize-property.sh \
 	omfile-read-only-errmsg.sh \
+	omfile-followsymlinks.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
@@ -653,6 +654,7 @@ TESTS_LIBYAML = \
 	compat-configformat-yaml.sh \
 	compat-defaults-secure-dynafile-yaml.sh \
 	global-maxopenfiles-yaml.sh \
+	yaml-omfile-followsymlinks.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \

@@ -1035,6 +1035,7 @@ EXTRA_DIST = \
     source/reference/parameters/omfile-fileownernum.rst \
     source/reference/parameters/omfile-flushinterval.rst \
     source/reference/parameters/omfile-flushontxend.rst \
+    source/reference/parameters/omfile-followsymlinks.rst \
     source/reference/parameters/omfile-iobuffersize.rst \
     source/reference/parameters/omfile-rotation-sizelimit.rst \
     source/reference/parameters/omfile-rotation-sizelimitcommand.rst \
