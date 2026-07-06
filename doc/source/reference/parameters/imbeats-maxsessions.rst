@@ -36,6 +36,8 @@ are rejected while existing sessions continue to run.
 Use this limit to bound file descriptors, per-session memory, and sender fan-in
 for a listener. Size it for the number of Beats or Elastic Agent senders that
 may be connected at the same time, including reconnect overlap during restarts.
+Values larger than ``UINT_MAX`` are accepted with a warning and capped at
+``UINT_MAX``.
 
 Input usage
 -----------
