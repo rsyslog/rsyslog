@@ -39,6 +39,8 @@ jobs:
             doc/source/conf.py
             doc/tools/check-html-links.py
             doc/tools/fix-mermaid-offline.py
+            doc/tools/test_validate_doc_samples.py
+            doc/tools/validate-doc-samples.py
 
       # we build from tarball to ensure no missing files!
       - name: setup make dist build env
@@ -62,6 +64,7 @@ jobs:
             libtool-bin \
             libyaml-dev \
             libzstd-dev \
+            lcov \
             lsof \
             make \
             net-tools \
@@ -128,6 +131,8 @@ jobs:
           steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
           cd doc-builder
+          CFLAGS='-g -O0 --coverage -fprofile-update=atomic' \
+          LDFLAGS='--coverage' \
           ./configure --enable-silent-rules --disable-testbench \
              --disable-imdiag --disable-imdocker --disable-imfile \
              --disable-default-tests --disable-impstats --disable-impstats-push --disable-imptcp \
@@ -146,7 +151,60 @@ jobs:
              --disable-omkafka --disable-imkafka --disable-ommongodb \
              --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
              --disable-helgrind --disable-uuid --disable-fmhttp
+          make -j10
           make -C doc html SPHINXOPTS="-j8 -W -q --keep-going"
+
+      - name: Validate documentation config samples
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          cd doc-builder
+          python3 doc/tools/validate-doc-samples.py \
+            --source-dir doc/source \
+            --build-dir . \
+            --work-dir doc/build/doc-sample-validation
+
+      - name: Generate documentation sample coverage
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          cd doc-builder
+          lcov --capture --directory . \
+               --rc geninfo_unexecuted_blocks=1 \
+               --ignore-errors mismatch \
+               --output-file coverage.raw.info
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' '*/doc/tools/*' \
+               --ignore-errors unused,unused \
+               -o coverage.info
+          rm -f coverage.raw.info
+          lcov --list coverage.info | sed -n '1,60p' || true
+          [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+
+      - name: Upload documentation sample coverage to Codecov
+        if: >-
+          ${{ (github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true') &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: doc-builder/coverage.info
+          flags: docs-samples
+          fail_ci_if_error: true
+
+      - name: Upload fork documentation sample coverage to Codecov
+        if: >-
+          ${{ github.event_name == 'pull_request' &&
+          steps.doc_changes.outputs.any_changed == 'true' &&
+          github.event.pull_request.head.repo.full_name != github.repository }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          files: doc-builder/coverage.info
+          flags: docs-samples
+          fail_ci_if_error: true
 
       - name: Validate generated HTML links
         if: >-
