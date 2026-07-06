@@ -254,7 +254,7 @@ static rsRetVal actionResetQueueParams(void) {
 
     cs.ActionQueType = QUEUETYPE_DIRECT; /* type of the main message queue above */
     cs.iActionQueueSize = 1000; /* size of the main message queue above */
-    cs.iActionQueueDeqBatchSize = 16; /* default batch size */
+    cs.iActionQueueDeqBatchSize = 128; /* default batch size */
     cs.iActionQHighWtrMark = -1; /* high water mark for disk-assisted queues */
     cs.iActionQLowWtrMark = -1; /* low water mark for disk-assisted queues */
     cs.iActionQDiscardMark = -1; /* begin to discard messages */
