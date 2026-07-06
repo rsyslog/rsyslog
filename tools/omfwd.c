@@ -2563,10 +2563,10 @@ BEGINnewActInst
 
     if (pData->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
-                                       "omfwd", NULL));
+                                       "omfwd", NULL, 0));
         ratelimitSetNoTimeCache(pData->ratelimiter);
     } else if (pData->ratelimitInterval > 0) {
-        CHKiRet(ratelimitNew(&pData->ratelimiter, "omfwd", NULL));
+        CHKiRet(ratelimitNew(&pData->ratelimiter, "omfwd", NULL, 0));
         ratelimitSetLinuxLike(pData->ratelimiter, (unsigned)pData->ratelimitInterval, (unsigned)pData->ratelimitBurst);
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }

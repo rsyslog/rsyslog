@@ -729,8 +729,8 @@ static void printVersion(void) {
 
 static rsRetVal rsyslogd_InitStdRatelimiters(void) {
     DEFiRet;
-    CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
-    CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
+    CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt", 0));
+    CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages", 0));
     ratelimitSetThreadSafe(internalMsg_ratelimiter);
     ratelimitSetLinuxLike(internalMsg_ratelimiter, loadConf->globals.intMsgRateLimitItv,
                           loadConf->globals.intMsgRateLimitBurst);

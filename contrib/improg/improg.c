@@ -446,7 +446,7 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() lstnAdd(instanceConf_t *pInst) {
     DEFiRet;
-    CHKiRet(ratelimitNew(&pInst->ratelimiter, "improg", (char *)pInst->pszBinary));
+    CHKiRet(ratelimitNew(&pInst->ratelimiter, "improg", (char *)pInst->pszBinary, 1));
 
     /* insert it at the begin of the list */
     pInst->prev = NULL;

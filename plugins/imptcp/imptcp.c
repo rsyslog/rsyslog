@@ -1997,9 +1997,9 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
 
     if (inst->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pSrv->ratelimiter, runConf, (char *)inst->pszRatelimitName, "imptcp",
-                                       (char *)pSrv->port));
+                                       (char *)pSrv->port, 0));
     } else {
-        CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port));
+        CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port, 0));
         ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
     }
     ratelimitSetThreadSafe(pSrv->ratelimiter);

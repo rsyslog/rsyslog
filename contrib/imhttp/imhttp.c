@@ -1630,9 +1630,9 @@ BEGINnewInpInst
     }
     if (inst->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&inst->ratelimiter, loadModConf->pConf, (char *)inst->pszRatelimitName, "imhttp",
-                                       NULL));
+                                       NULL, 0));
     } else {
-        CHKiRet(ratelimitNew(&inst->ratelimiter, "imhttp", NULL));
+        CHKiRet(ratelimitNew(&inst->ratelimiter, "imhttp", NULL, 0));
         ratelimitSetLinuxLike(inst->ratelimiter, (unsigned)inst->ratelimitInterval, (unsigned)inst->ratelimitBurst);
     }
 
