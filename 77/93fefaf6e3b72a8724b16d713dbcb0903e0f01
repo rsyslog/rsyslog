@@ -1,0 +1,20 @@
+runtime/wtp.c
+  s_cf144905ab59ed::t_2c1697c595a81f 351,466,516,519,528,532
+  s_cf144905ab59ed::t_3c8f26c9148227 285,563-564,567,571
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7793fefaf6e3b72a8724b16d713dbcb0903e0f01",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}
