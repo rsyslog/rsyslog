@@ -85,7 +85,7 @@ typedef struct partial_msg_s {
     struct syslogTime st;
     time_t ttGenTime;
     sbool hasTime;
-    sbool discarding;
+    sbool truncated;
 } partial_msg_t;
 
 typedef struct path_meta_s {
@@ -293,6 +293,11 @@ finalize_it:
     RETiRet;
 }
 
+static sbool partialIsActive(const partial_msg_t *partial) {
+    assert(partial != NULL);
+    return partial->len > 0 || partial->truncated;
+}
+
 static void partialInitFromRecord(partial_msg_t *partial, const parsed_record_t *record) {
     assert(partial != NULL);
     assert(record != NULL);
@@ -310,25 +315,39 @@ static size_t getPartialMessageLimit(void) {
     return maxLine > 0 ? (size_t)maxLine : 0;
 }
 
-static sbool partialWouldExceedLimit(const partial_msg_t *partial, size_t len) {
-    const size_t limit = getPartialMessageLimit();
-
+static void markPartialTruncated(partial_msg_t *partial, size_t limit) {
     assert(partial != NULL);
-    if (limit == 0) {
-        return 0;
+    if (!partial->truncated) {
+        partial->truncated = 1;
+        LogError(0, NO_ERRCODE,
+                 "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), truncating logical record",
+                 limit);
     }
-    return partial->len > limit || len > limit - partial->len;
 }
 
-static void discardOversizedPartial(partial_msg_t *partial, const parsed_record_t *record) {
+static rsRetVal partialAppendBounded(partial_msg_t *partial, const uchar *msg, size_t len) {
     const size_t limit = getPartialMessageLimit();
+    size_t appendLen = len;
+    DEFiRet;
 
-    freePartialMsg(partial);
-    partialInitFromRecord(partial, record);
-    partial->discarding = 1;
-    LogError(0, NO_ERRCODE,
-             "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), discarding unfinished partial record",
-             limit);
+    assert(partial != NULL);
+    if (limit > 0) {
+        if (partial->len >= limit) {
+            appendLen = 0;
+        } else if (appendLen > limit - partial->len) {
+            appendLen = limit - partial->len;
+        }
+        if (appendLen < len) {
+            markPartialTruncated(partial, limit);
+        }
+    }
+
+    if (appendLen > 0) {
+        CHKiRet(partialAppend(partial, msg, appendLen));
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 static void trimTrailingNewline(const char *line, size_t *len) {
@@ -1046,21 +1065,27 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * CRI partial records marked with P are buffered until the same logical
+ * message closes with an F record. The buffer is capped at global(maxMessageSize):
+ * once that limit is reached, excess P fragments and excess bytes from the
+ * closing F are consumed but not emitted as standalone records. The closing F
+ * finalizes and emits the stored prefix, then clears state for the next record.
+ */
 static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t *record) {
     parsed_record_t finalRecord = {0};
     DEFiRet;
 
-    if (!record->is_partial && state->partial.len == 0 && !state->partial.discarding) {
+    if (!record->is_partial && !partialIsActive(&state->partial)) {
         CHKiRet(enqMsg(state, record));
         FINALIZE;
     }
 
-    if (record->is_partial && state->partial.len == 0 && !state->partial.discarding) {
+    if (record->is_partial && !partialIsActive(&state->partial)) {
         partialInitFromRecord(&state->partial, record);
     }
 
-    if ((state->partial.len > 0 || state->partial.discarding) &&
-        state->partial.stream_type != record->stream_type) {
+    if (partialIsActive(&state->partial) && state->partial.stream_type != record->stream_type) {
         freePartialMsg(&state->partial);
         if (record->is_partial) {
             partialInitFromRecord(&state->partial, record);
@@ -1068,25 +1093,12 @@ static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t
     }
 
     if (record->is_partial) {
-        if (state->partial.discarding) {
-            FINALIZE;
-        }
-        if (partialWouldExceedLimit(&state->partial, record->len)) {
-            discardOversizedPartial(&state->partial, record);
-            FINALIZE;
-        }
-        CHKiRet(partialAppend(&state->partial, record->msg, record->len));
+        CHKiRet(partialAppendBounded(&state->partial, record->msg, record->len));
         FINALIZE;
     }
 
-    if (state->partial.discarding) {
-        freePartialMsg(&state->partial);
-        CHKiRet(enqMsg(state, record));
-        FINALIZE;
-    }
-
-    if (state->partial.len > 0) {
-        CHKiRet(partialAppend(&state->partial, record->msg, record->len));
+    if (partialIsActive(&state->partial)) {
+        CHKiRet(partialAppendBounded(&state->partial, record->msg, record->len));
         finalRecord.msg = state->partial.data;
         finalRecord.len = state->partial.len;
         finalRecord.stream_type = state->partial.stream_type;

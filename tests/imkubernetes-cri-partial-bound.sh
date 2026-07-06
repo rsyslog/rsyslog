@@ -1,13 +1,12 @@
 #!/bin/bash
 # Verify that unfinished CRI partial records are bounded before enqueue.
-# A final record after an oversized partial run must be handled as a fresh
-# complete record, while normal imkubernetes parsing still uses the mocked
-# Kubernetes API path.
+# The closing F record after an oversized partial run still belongs to that
+# logical message and must not be emitted as a standalone tail record.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 check_command_available timeout
 
-export NUMMESSAGES=1
+export NUMMESSAGES=2
 pwd=$( pwd )
 testsrv=imk8s-partial-bound-server
 k8s_srv_port=0
@@ -54,10 +53,11 @@ startup
 		printf '2026-04-20T10:00:%02d.000000000Z stdout P %s\n' "$i" \
 			'partial-fragment-0123456789'
 	done
-	printf '%s\n' '2026-04-20T10:00:30.000000000Z stdout F after partial cap'
+	printf '%s\n' '2026-04-20T10:00:30.000000000Z stdout F closing-tail-must-not-standalone'
+	printf '%s\n' '2026-04-20T10:00:31.000000000Z stdout F after partial cap'
 } > "$logfile"
 
-wait_file_lines "$RSYSLOG_OUT_LOG" 1
+wait_file_lines "$RSYSLOG_OUT_LOG" 2
 wait_queueempty
 shutdown_when_empty
 wait_shutdown
@@ -72,14 +72,22 @@ import sys
 path = sys.argv[1]
 records = [json.loads(line) for line in open(path)]
 records = [item for item in records if item.get("format") == "cri"]
-assert len(records) == 1, records
-record = records[0]
-assert record["msg"] == "after partial cap", record
-assert record["stream"] == "stdout", record
-assert record["pod_id"] == "pod-name1-id", record
+assert len(records) == 2, records
+
+expected_prefix = ("partial-fragment-0123456789" * 8)[:128]
+partial = records[0]
+assert partial["msg"] == expected_prefix, partial
+assert "closing-tail-must-not-standalone" not in partial["msg"], partial
+assert partial["stream"] == "stdout", partial
+assert partial["pod_id"] == "pod-name1-id", partial
+
+independent = records[1]
+assert independent["msg"] == "after partial cap", independent
+assert independent["stream"] == "stdout", independent
+assert independent["pod_id"] == "pod-name1-id", independent
 PY
 then
-	error_exit 1 "imkubernetes did not reset oversized CRI partial state"
+	error_exit 1 "imkubernetes did not preserve oversized CRI partial truncation semantics"
 fi
 
 exit_test
