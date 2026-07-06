@@ -1569,10 +1569,10 @@ static void countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
         }
     }
 
-    /* Use atomic CAS to update the value safely */
+    /* nActiveTargets is a scheduling snapshot; ordering comes from the CAS update, not from readers. */
     int oldVal, newVal;
     do {
-        oldVal = ATOMIC_LOAD_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
+        oldVal = ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
         if (oldVal == activeTargets) {
             break; /* no change, so no log message either */
         }
@@ -1630,7 +1630,8 @@ static rsRetVal doTryResume(targetData_t *pTarget) {
     const char *address;
     DEFiRet;
 
-    const int nActiveTargets = ATOMIC_LOAD_32BIT(&pTarget->pData->nActiveTargets, &pTarget->pData->mut_nActiveTargets);
+    const int nActiveTargets =
+        ATOMIC_LOAD_32BIT_RELAXED(&pTarget->pData->nActiveTargets, &pTarget->pData->mut_nActiveTargets);
 
     DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n", pTarget->bIsConnected,
               (long long)pTarget->ttResume, nActiveTargets);
@@ -1725,7 +1726,7 @@ BEGINtryResume
     iRet = poolTryResume(pWrkrData);
     countActiveTargets(pWrkrData);
     const int nActiveTargets =
-        ATOMIC_LOAD_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
+        ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
     LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
            "omfwd: [wrkr %u/%" PRIuPTR
@@ -1958,7 +1959,7 @@ finalize_it:
 
     countActiveTargets(pWrkrData);
     const int nActiveTargets =
-        ATOMIC_LOAD_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
+        ATOMIC_LOAD_32BIT_RELAXED(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
     if (bFlushRetry || nActiveTargets == 0) {
         /*
