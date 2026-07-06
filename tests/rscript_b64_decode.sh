@@ -10,7 +10,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 set $!str!var1 = b64_decode("");          # Empty string
 set $!str!var2 = b64_decode("AAAAA");     # Invalid base64
 set $!str!var3 = b64_decode("dGVzdA==");  # "test" base64

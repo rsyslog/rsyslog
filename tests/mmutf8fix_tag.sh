@@ -8,7 +8,7 @@ add_conf '
 module(load="../plugins/mmutf8fix/.libs/mmutf8fix")
 module(load="../plugins/imtcp/.libs/imtcp")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="customparser")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="customparser")
 
 parser(name="custom.rfc3164" type="pmrfc3164" force.tagEndingByColon="on")
 template(name="outfmt" type="string" string="-%syslogtag%-%msg%-\n")

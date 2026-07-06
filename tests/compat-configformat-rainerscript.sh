@@ -143,7 +143,7 @@ if [ ${have_imtcp_module} -eq 1 ]; then
     cat >"${RSYSLOG_DYNNAME}.tls-warn.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlswarn.port" streamdriver.mode="0"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlswarn.port" streamdriver.mode="0"
       streamdriver.name="gtls" streamdriver.authmode="x509/name")
 action(type="omfwd" target="127.0.0.1" protocol="udp")
 CONF_EOF
@@ -154,7 +154,7 @@ CONF_EOF
     cat >"${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn" defaultNetstreamDriver="gtls")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.port")
 action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
 CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.conf" \
@@ -165,7 +165,7 @@ CONF_EOF
     cat >"${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict" defaultNetstreamDriver="gtls")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.port"
       streamdriver.mode="0")
 action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
 CONF_EOF
@@ -177,7 +177,7 @@ CONF_EOF
     cat >"${RSYSLOG_DYNNAME}.tls-anon-warn.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlsanon.port" streamdriver.mode="1"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlsanon.port" streamdriver.mode="1"
       streamdriver.name="gtls" streamdriver.authmode="anon")
 action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.mode="1" streamdriver.authmode="anon")
 CONF_EOF

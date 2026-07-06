@@ -28,7 +28,7 @@ generate_conf 2
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 if $msg contains "msgnum:" then action(type="omrelp" target="127.0.0.1" port="'$PORT_RCVR'" keepalive="on" keepalive.probes="5" keepalive.time="60" keepalive.interval="15")
 ' 2
 startup 2

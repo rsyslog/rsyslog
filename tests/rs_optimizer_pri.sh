@@ -13,7 +13,7 @@ add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 if $syslogfacility-text == "local4" then
 	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)

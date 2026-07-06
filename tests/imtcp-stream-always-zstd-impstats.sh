@@ -15,7 +15,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" interval="1")
 
-input(type="imtcp" name="streamstats" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+input(type="imtcp" address="127.0.0.1" name="streamstats" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
 	compression.mode="stream:always"
 	compression.driver="zstd")
 

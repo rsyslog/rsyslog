@@ -10,7 +10,7 @@ module(load="../plugins/mmutf8fix/.libs/mmutf8fix")
 module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")
 module(load="../plugins/imtcp/.libs/imtcp")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 template(name="outfmt" type="string"
   string="%$!rfc5424-sd!test@32473!clean% | %$!rfc5424-sd!test@32473!dirty% | %msg%\n")

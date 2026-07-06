@@ -9,7 +9,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../contrib/ffaup/.libs/ffaup")
-input(type="imtcp" port="0" listenPortFileName="'"$RSYSLOG_DYNNAME"'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'"$RSYSLOG_DYNNAME"'.tcpflood_port")
 template(name="outfmt" type="string" string="%msg% %$.ret1% %$.faup% %$.ret2% %$.scheme% %$.ret3% %$.domain_without_tld% %$.ret4% %$.fragment% %$.ret5% %$.resource_path%\n")
 
 if (not($msg contains "msgnum:")) then

@@ -11,8 +11,8 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 $MainMsgQueueTimeoutShutdown 10000
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="real")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" ruleset="empty")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="real")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2" ruleset="empty")
 
 $template outfmt,"%msg:F,58:2%\n"
 

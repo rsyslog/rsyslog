@@ -58,7 +58,7 @@ sed -i "s|\${RSYSLOG_OUT_LOG}|${RSYSLOG_OUT_LOG}|g" "${RSYSLOG_DYNNAME}.yaml"
 sed -i "s|\${RSYSLOG_DYNNAME}|${RSYSLOG_DYNNAME}|g" "${RSYSLOG_DYNNAME}.yaml"
 
 add_conf '
-input(type="imtcp" port="0" listenPortFileName="'${RSYSLOG_DYNNAME}'.tcpflood_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'${RSYSLOG_DYNNAME}'.tcpflood_port"
       ruleset="rs1")
 '
 startup

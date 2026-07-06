@@ -16,7 +16,7 @@ module(load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
         streamDriver.CAFile="'$srcdir'/tls-certs/ca.pem"
 	streamDriver.CertFile="'$srcdir'/tls-certs/cert.pem"
 	streamDriver.KeyFile="'$srcdir'/tls-certs/key.pem")

@@ -15,7 +15,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="mbedtls"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile"

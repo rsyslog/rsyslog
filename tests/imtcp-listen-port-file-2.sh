@@ -9,9 +9,9 @@ generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port"
 	ruleset="rs1")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port2"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port2"
 	ruleset="rs2")
 
 ruleset(name="rs1") {

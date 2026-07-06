@@ -36,7 +36,7 @@ generate_conf 2
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 # this listener is for message generation by the test framework!
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 *.*	@127.0.0.1:'$PORT_RCVR'
 ' 2

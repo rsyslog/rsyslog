@@ -11,7 +11,7 @@ $DebugLevel 2
 
 template(name="outfmt" type="string" string="%$.rand%\n")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'${RSYSLOG_DYNNAME}'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'${RSYSLOG_DYNNAME}'.tcpflood_port")
 set $.rand = random(4294967296);
 action(type="omfile" file="'${RSYSLOG_OUT_LOG}'" template="outfmt")
 '

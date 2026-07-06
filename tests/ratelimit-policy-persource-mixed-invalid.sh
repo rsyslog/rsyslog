@@ -30,7 +30,7 @@ ratelimit(name="bad"
           perSourcePolicy="'$POLICY_FILE'")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" ratelimit.name="bad")
+input(type="imtcp" address="127.0.0.1" port="0" ratelimit.name="bad")
 '
 export CONF_FILE="${TESTCONF_NM}.conf"
 "$RSYSLOGD" -N1 -M"$RSYSLOG_MODDIR" -f "$CONF_FILE" > /dev/null 2> "$STDERR_FILE"

@@ -95,6 +95,7 @@ modules:
   - load: "../plugins/imtcp/.libs/imtcp"
 inputs:
   - type: imtcp
+    address: "127.0.0.1"
     port: "0"
     listenPortFileName: "${RSYSLOG_DYNNAME}.tlswarn.port"
     streamdriver.mode: 0
@@ -152,6 +153,7 @@ modules:
   - load: "../plugins/imtcp/.libs/imtcp"
 inputs:
   - type: imtcp
+    address: "127.0.0.1"
     port: "0"
     listenPortFileName: "${RSYSLOG_DYNNAME}.tlsanon.port"
     streamdriver.mode: 1

@@ -26,7 +26,7 @@ ruleset(name="winsec") {
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="winsec")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="winsec")
 '
 
 startup

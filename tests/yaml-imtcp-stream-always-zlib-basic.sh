@@ -21,6 +21,7 @@ add_yaml_conf "    string: \"%msg:F,58:2%\\n\""
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
 add_yaml_conf '  - type: imtcp'
+add_yaml_conf '    address: "127.0.0.1"'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""
 add_yaml_conf '    compression.mode: "stream:always"'

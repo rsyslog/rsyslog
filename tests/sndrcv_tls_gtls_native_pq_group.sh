@@ -28,7 +28,7 @@ module(load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="anon"
 	gnutlsPriorityString="'$GNUTLS_PQ_PRIO'")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'"
@@ -48,7 +48,7 @@ global(
 )
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(
 	type="omfwd"

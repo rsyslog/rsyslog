@@ -10,7 +10,7 @@ generate_conf
 add_conf '
 global(parser.parseHostnameAndTag="off")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="r")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="r")
 
 template(name="outfmt" type="string"
          string="tag=[%syslogtag%] prog=[%programname%] msg=[%msg%]\n")

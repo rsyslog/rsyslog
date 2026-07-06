@@ -22,7 +22,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.PermitExpiredCerts="off"
 	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-GCM-SHA384\nCiphersuites=TLS_AES_256_GCM_SHA384"
 	)
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '

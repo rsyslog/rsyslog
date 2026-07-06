@@ -28,6 +28,7 @@ add_yaml_conf '    PermittedPeer: ["rsyslog-client"]'
 add_yaml_conf ''
 add_yaml_conf 'inputs:'
 add_yaml_conf '  - type: imtcp'
+add_yaml_conf '    address: "127.0.0.1"'
 add_yaml_conf '    port: "0"'
 add_yaml_conf "    listenPortFileName: \"${RSYSLOG_DYNNAME}.tcpflood_port\""
 startup

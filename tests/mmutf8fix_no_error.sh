@@ -8,7 +8,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 
 module(load="../plugins/mmutf8fix/.libs/mmutf8fix")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmutf8fix" replacementChar="?")

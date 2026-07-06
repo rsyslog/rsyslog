@@ -59,7 +59,7 @@ ratelimit(name="topn_reload" policy="'$POLICY_FILE'")
 
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" interval="1")
-input(type="imtcp" port="0" listenPortFileName="'$PORT_RCVR_FILE'"
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_FILE'"
       ratelimit.name="topn_reload")
 
 template(name="outfmt" type="string" string="%msg%\n")

@@ -15,7 +15,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.TlsVerifyDepth="5" 
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/certvalid" )
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")

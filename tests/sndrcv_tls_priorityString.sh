@@ -20,7 +20,7 @@ global(
 )
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="gtls" StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" gnutlspriorityString="NORMAL:-MD5")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.rcvr_port")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
@@ -43,7 +43,7 @@ global(
 )
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfwd" Target="127.0.0.1" port="'$PORT_RCVR'" Protocol="tcp" streamdriver="gtls"
 	StreamDriverAuthMode="anon" StreamDriverMode="1"
