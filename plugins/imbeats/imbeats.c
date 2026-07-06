@@ -10,6 +10,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -43,6 +44,7 @@
 #include "tcpsrv.h"
 
 #include "lj_parser.h"
+#include "seqnum.h"
 
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
@@ -309,6 +311,16 @@ static rsRetVal validateSizeLimit(const char *const name, const int64_t value, c
     }
     *target = (size_t)value;
     return RS_RET_OK;
+}
+
+static unsigned normalizeMaxSessions(const int64_t value) {
+    assert(value > 0);
+    if (value > (int64_t)UINT_MAX) {
+        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+               "imbeats: maxSessions value %" PRId64 " exceeds UINT_MAX (%u) - capped at UINT_MAX", value, UINT_MAX);
+        return UINT_MAX;
+    }
+    return (unsigned)value;
 }
 
 static rsRetVal setCnfString(uchar **const target, es_str_t *const value) {
@@ -581,8 +593,7 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
     size_t idx;
     assert(sess != NULL);
     for (idx = 0; idx < sess->batch.count; ++idx) {
-        const uint32_t expected = sess->lastAckedSeq + (uint32_t)idx + 1;
-        if (sess->batch.events[idx].seq != expected) {
+        if (!imbeats_seq_is_expected(sess->lastAckedSeq, idx, sess->batch.events[idx].seq)) {
             return RS_RET_INVALID_VALUE;
         }
     }
@@ -1408,7 +1419,7 @@ BEGINnewInpInst
             CHKiRet(validateSizeLimit("maxBatchBytes", pvals[i].val.d.n, IMBEATS_MAX_BYTE_SIZE_LIMIT,
                                       &inst->maxBatchBytes));
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
-            inst->maxSessions = (unsigned)pvals[i].val.d.n;
+            inst->maxSessions = normalizeMaxSessions(pvals[i].val.d.n);
         } else if (!strcmp(inppblk.descr[i].name, "workerthreads")) {
             if (pvals[i].val.d.n > IMBEATS_MAX_WORKER_THREADS) {
                 LogError(0, RS_RET_PARAM_ERROR,

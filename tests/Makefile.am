@@ -35,6 +35,7 @@ TESTS_GSSAPI_LIBYAML = \
 EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
 EXTRA_DIST += unit/impcap_arp_parser_test.c
+EXTRA_DIST += unit/imbeats_seq_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -1236,6 +1237,7 @@ TESTS_IMBEATS = \
 	imbeats-limits-impstats.sh \
 	imbeats-shutdown-open-session.sh \
 	imbeats-maxsessions.sh \
+	imbeats-maxsessions-cap-warning.sh \
 	imbeats-multiplex-idle-sessions.sh \
 	imbeats-filebeat-docker.sh
 
@@ -2415,6 +2417,18 @@ runtime_unit_gss_token_util_SOURCES = \
 runtime_unit_gss_token_util_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_gss_token_util_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
+
+if ENABLE_IMBEATS
+check_PROGRAMS += runtime_unit_imbeats_seq
+TESTS += runtime_unit_imbeats_seq
+
+runtime_unit_imbeats_seq_SOURCES = \
+	unit/imbeats_seq_test.c
+
+runtime_unit_imbeats_seq_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_imbeats_seq_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \

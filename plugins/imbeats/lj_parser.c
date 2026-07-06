@@ -132,9 +132,9 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 off += v2;
                 break;
             case LJ_FRAME_COMPRESSED:
-                if (off + 4 > len) {
-                    return RS_RET_INVALID_VALUE;
-                }
+                /* Compressed frames are only valid as top-level session frames.
+                 * After inflation this helper accepts JSON frames only; accepting
+                 * another compressed frame would enable unsupported nesting. */
                 return RS_RET_INVALID_VALUE;
             default:
                 return RS_RET_INVALID_VALUE;
