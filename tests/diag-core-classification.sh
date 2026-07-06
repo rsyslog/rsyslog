@@ -6,24 +6,32 @@
 # policies that make local generic core scanning unreliable.
 . ${srcdir:=.}/diag.sh init
 
+# Keep synthetic core files out of the shared tests directory: parallel tests
+# run broad core* cleanup during diag.sh init.
+core_classification_dir="${PWD}/${RSYSLOG_DYNNAME}.core-classification.$$"
+core_scan_log="${PWD}/${RSYSLOG_DYNNAME}.core-scan.log"
+
 test_error_exit_handler() {
-	rm -f core.foreign core.rsyslogd.424242 core.${RSYSLOG_DYNNAME}.weak
+	rm -rf "$core_classification_dir"
 }
 
-touch core.foreign
-if core_candidate_owner_matches core.foreign ../tools/rsyslogd 424242; then
+rm -rf "$core_classification_dir"
+mkdir "$core_classification_dir" || error_exit 1
+
+touch "$core_classification_dir/core.foreign"
+if core_candidate_owner_matches "$core_classification_dir/core.foreign" ../tools/rsyslogd 424242; then
 	echo "FAIL: generic core without pid/executable ownership was accepted"
 	error_exit 1
 fi
 
-touch core.rsyslogd.424242
-if ! core_candidate_owner_matches core.rsyslogd.424242 ../tools/rsyslogd 424242; then
+touch "$core_classification_dir/core.rsyslogd.424242"
+if ! core_candidate_owner_matches "$core_classification_dir/core.rsyslogd.424242" ../tools/rsyslogd 424242; then
 	echo "FAIL: pid/executable filename hint was not accepted"
 	error_exit 1
 fi
 
-touch core.${RSYSLOG_DYNNAME}.weak
-if ! core_candidate_owner_matches core.${RSYSLOG_DYNNAME}.weak ../tools/rsyslogd ""; then
+touch "$core_classification_dir/core.${RSYSLOG_DYNNAME}.weak"
+if ! core_candidate_owner_matches "$core_classification_dir/core.${RSYSLOG_DYNNAME}.weak" ../tools/rsyslogd ""; then
 	echo "FAIL: test-specific core name fallback was not accepted"
 	error_exit 1
 fi
@@ -35,14 +43,17 @@ if ! core_policy_uses_external_collector; then
 fi
 
 core_dumps_found=0
-analyze_owned_core_candidates ../tools/rsyslogd "" rsyslogd > "${RSYSLOG_DYNNAME}.core-scan.log" 2>&1
+oldpwd="$PWD"
+cd "$core_classification_dir" || error_exit 1
+analyze_owned_core_candidates ../../tools/rsyslogd "" rsyslogd > "$core_scan_log" 2>&1
+cd "$oldpwd" || error_exit 1
 if [ "$core_dumps_found" -ne 1 ]; then
 	echo "FAIL: external-collector scan should analyze only the test-specific fallback core"
-	cat "${RSYSLOG_DYNNAME}.core-scan.log"
+	cat "$core_scan_log"
 	error_exit 1
 fi
 content_check "skipping generic local core scan because core_pattern uses an external collector" \
-	"${RSYSLOG_DYNNAME}.core-scan.log"
+	"$core_scan_log"
 
-rm -f core.foreign core.rsyslogd.424242 core.${RSYSLOG_DYNNAME}.weak
+rm -rf "$core_classification_dir"
 exit_test
