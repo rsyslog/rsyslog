@@ -320,8 +320,7 @@ static void markPartialTruncated(partial_msg_t *partial, size_t limit) {
     if (!partial->truncated) {
         partial->truncated = 1;
         LogError(0, NO_ERRCODE,
-                 "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), truncating logical record",
-                 limit);
+                 "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), truncating logical record", limit);
     }
 }
 
@@ -1065,12 +1064,10 @@ finalize_it:
     RETiRet;
 }
 
-/**
- * CRI partial records marked with P are buffered until the same logical
- * message closes with an F record. The buffer is capped at global(maxMessageSize):
- * once that limit is reached, excess P fragments and excess bytes from the
- * closing F are consumed but not emitted as standalone records. The closing F
- * finalizes and emits the stored prefix, then clears state for the next record.
+/*
+ * Cap CRI P fragments at global(maxMessageSize).
+ * Once capped, consume later fragments until the closing F flushes
+ * state.
  */
 static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t *record) {
     parsed_record_t finalRecord = {0};
