@@ -77,7 +77,11 @@ rsRetVal lj_append_json_event(struct lj_batch_s *batch,
     if (batch == NULL || payload == NULL || payload_len == 0) {
         return RS_RET_PARAM_ERROR;
     }
-    if (payload_len > batch->max_payload_len || batch->total_payload_len > batch->max_payload_len - payload_len) {
+    /* Check payload_len first to prevent underflow in the second condition */
+    if (payload_len > batch->max_payload_len) {
+        return RS_RET_INVALID_VALUE;
+    }
+    if (batch->total_payload_len > batch->max_payload_len - payload_len) {
         return RS_RET_INVALID_VALUE;
     }
     if (payload_len > SIZE_MAX - 1) {
@@ -114,7 +118,8 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
 
         switch (type) {
             case LJ_FRAME_JSON:
-                if (off + 8 > len) {
+                /* Check for potential overflow in buffer bounds */
+                if (len < off || len - off < 8) {
                     return RS_RET_INVALID_VALUE;
                 }
                 memcpy(&v1, buf + off, 4);
@@ -122,6 +127,7 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 off += 8;
                 v1 = ntohl(v1);
                 v2 = ntohl(v2);
+                /* Check that v2 doesn't cause overflow when added to off */
                 if (v2 == 0 || (size_t)v2 > max_frame_size || (size_t)v2 > len - off) {
                     return RS_RET_INVALID_VALUE;
                 }
@@ -176,7 +182,15 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
 
     do {
         if (out_len == out_cap) {
-            size_t new_cap = (out_cap == 0) ? 4096 : out_cap * 2;
+            size_t new_cap;
+            /* Prevent overflow in capacity calculation */
+            if (out_cap == 0) {
+                new_cap = 4096;
+            } else if (out_cap > max_decompressed_size / 2) {
+                new_cap = max_decompressed_size;
+            } else {
+                new_cap = out_cap * 2;
+            }
             if (out_cap >= max_decompressed_size) {
                 iRet = RS_RET_INVALID_VALUE;
                 goto finalize_it;

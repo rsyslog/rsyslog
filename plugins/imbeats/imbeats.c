@@ -555,6 +555,10 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
         sess->io_off = 0;
     }
     while (sess->io_off < sess->io_need) {
+        /* Check for potential underflow before casting to ssize_t */
+        if (sess->io_off > sess->io_need) {
+            return RS_RET_INVALID_VALUE;
+        }
         ssize_t need = (ssize_t)(sess->io_need - sess->io_off);
         unsigned nextIODirection = NSDSEL_RD;
         iRet = netstrm.Rcv(sess->pStrm, sess->io_buf + sess->io_off, &need, &oserr, &nextIODirection);
@@ -581,6 +585,10 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
     size_t idx;
     assert(sess != NULL);
     for (idx = 0; idx < sess->batch.count; ++idx) {
+        /* Check for integer overflow in sequence number calculation */
+        if (sess->lastAckedSeq > UINT32_MAX - (uint32_t)idx - 1) {
+            return RS_RET_INVALID_VALUE;
+        }
         const uint32_t expected = sess->lastAckedSeq + (uint32_t)idx + 1;
         if (sess->batch.events[idx].seq != expected) {
             return RS_RET_INVALID_VALUE;
@@ -666,6 +674,11 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 ++reads;
                 memcpy(&net32, sess->fixed, sizeof(net32));
                 net32 = ntohl(net32);
+                /* Explicitly check for zero window size before parsing */
+                if (net32 == 0) {
+                    STATSCOUNTER_INC(statsCounter.ctrWindowsRejected, statsCounter.mutCtrWindowsRejected);
+                    ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+                }
                 CHKiRet(lj_parse_window_header((const unsigned char[]){LJ_VERSION_V2, LJ_FRAME_WINDOW}, net32));
                 if (net32 > sess->inst->maxWindowSize) {
                     STATSCOUNTER_INC(statsCounter.ctrWindowsRejected, statsCounter.mutCtrWindowsRejected);
@@ -1130,6 +1143,7 @@ static rsRetVal acceptReadyListener(instanceConf_t *const inst, const size_t idx
                 netstrm.Destruct(&pNewStrm);
             }
             if (iRet == RS_RET_MAX_SESS_REACHED) {
+                LogError(0, RS_RET_MAX_SESS_REACHED, "imbeats: maximum sessions reached, dropping connection");
                 iRet = RS_RET_OK;
             }
             CHKiRet(iRet);
@@ -1408,9 +1422,15 @@ BEGINnewInpInst
             CHKiRet(validateSizeLimit("maxBatchBytes", pvals[i].val.d.n, IMBEATS_MAX_BYTE_SIZE_LIMIT,
                                       &inst->maxBatchBytes));
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
+            if (pvals[i].val.d.n < 1 || pvals[i].val.d.n > 65535) {
+                LogError(0, RS_RET_PARAM_ERROR,
+                         "imbeats: invalid value for 'maxSessions' parameter given is %lld, valid range is 1..65535",
+                         (long long)pvals[i].val.d.n);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
             inst->maxSessions = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "workerthreads")) {
-            if (pvals[i].val.d.n > IMBEATS_MAX_WORKER_THREADS) {
+            if (pvals[i].val.d.n < 1 || pvals[i].val.d.n > IMBEATS_MAX_WORKER_THREADS) {
                 LogError(0, RS_RET_PARAM_ERROR,
                          "imbeats: invalid value for 'workerThreads' parameter given is %lld, valid range is 1..%u",
                          (long long)pvals[i].val.d.n, IMBEATS_MAX_WORKER_THREADS);
