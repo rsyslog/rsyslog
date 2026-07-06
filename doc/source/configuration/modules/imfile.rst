@@ -173,6 +173,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imfile-deletestateonfilemove.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imfile-delay-message`
+     - .. include:: ../../reference/parameters/imfile-delay-message.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imfile-ruleset`
      - .. include:: ../../reference/parameters/imfile-ruleset.rst
         :start-after: .. summary-start
@@ -363,6 +367,7 @@ defaults instead.
 
    ../../reference/parameters/imfile-addceetag
    ../../reference/parameters/imfile-addmetadata
+   ../../reference/parameters/imfile-delay-message
    ../../reference/parameters/imfile-deletestateonfiledelete
    ../../reference/parameters/imfile-deletestateonfilemove
    ../../reference/parameters/imfile-discardtruncatedmsg

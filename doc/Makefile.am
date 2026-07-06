@@ -549,6 +549,7 @@ EXTRA_DIST = \
     source/reference/parameters/imfile-addmetadata.rst \
     source/reference/parameters/imfile-deletestateonfiledelete.rst \
     source/reference/parameters/imfile-deletestateonfilemove.rst \
+    source/reference/parameters/imfile-delay-message.rst \
     source/reference/parameters/imfile-discardtruncatedmsg.rst \
     source/reference/parameters/imfile-endmsg-regex.rst \
     source/reference/parameters/imfile-escapelf-replacement.rst \
