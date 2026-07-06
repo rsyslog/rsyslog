@@ -581,8 +581,13 @@ static rsRetVal sessionValidateBatch(session_t *const sess) {
     size_t idx;
     assert(sess != NULL);
     for (idx = 0; idx < sess->batch.count; ++idx) {
-        const uint32_t expected = sess->lastAckedSeq + (uint32_t)idx + 1;
-        if (sess->batch.events[idx].seq != expected) {
+        /* Validate sequence numbers with wraparound-safe arithmetic.
+         * We check: batch.events[idx].seq == lastAckedSeq + idx + 1
+         * To avoid uint32_t overflow issues, we use subtraction:
+         * events[idx].seq - lastAckedSeq == idx + 1 */
+        const uint32_t actual = sess->batch.events[idx].seq;
+        const uint32_t delta = actual - sess->lastAckedSeq;
+        if (delta != (uint32_t)idx + 1) {
             return RS_RET_INVALID_VALUE;
         }
     }

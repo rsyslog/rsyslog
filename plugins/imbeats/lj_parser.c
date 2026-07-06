@@ -37,11 +37,11 @@ rsRetVal lj_batch_alloc(struct lj_batch_s *batch,
     if (batch == NULL || window_size == 0 || window_size > max_window_size || max_payload_len == 0) {
         return RS_RET_PARAM_ERROR;
     }
-#if SIZE_MAX <= UINT32_MAX
+    /* Integer overflow check for calloc: window_size * sizeof(lj_event_s) must not wrap.
+     * This check is unconditional to protect both 32-bit and 64-bit systems. */
     if ((size_t)window_size > SIZE_MAX / sizeof(struct lj_event_s)) {
         return RS_RET_OUT_OF_MEMORY;
     }
-#endif
     memset(batch, 0, sizeof(*batch));
     batch->window_size = window_size;
     batch->max_payload_len = max_payload_len;
@@ -132,9 +132,10 @@ static rsRetVal parse_frames_from_memory(struct lj_batch_s *batch,
                 off += v2;
                 break;
             case LJ_FRAME_COMPRESSED:
-                if (off + 4 > len) {
-                    return RS_RET_INVALID_VALUE;
-                }
+                /* Nested compressed frames are not supported in the Lumberjack v2
+                 * protocol. The imbeats module handles compression at the batch level
+                 * via lj_parse_compressed_frames(), not at the individual frame level.
+                 * Reject any attempt to nest compressed frames. */
                 return RS_RET_INVALID_VALUE;
             default:
                 return RS_RET_INVALID_VALUE;
@@ -181,6 +182,7 @@ rsRetVal lj_parse_compressed_frames(struct lj_batch_s *batch,
                 iRet = RS_RET_INVALID_VALUE;
                 goto finalize_it;
             }
+            /* Check for overflow in capacity doubling and respect max_decompressed_size */
             if (new_cap < out_cap || new_cap > max_decompressed_size) {
                 new_cap = max_decompressed_size;
             }
