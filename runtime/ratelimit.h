@@ -52,7 +52,7 @@ typedef struct ratelimit_shared_s {
     rswatch_handle_t *policy_watch_handle;
     rswatch_handle_t *per_source_policy_watch_handle;
     pthread_mutex_t mut;
-    sbool per_source_enabled;
+    unsigned int per_source_enabled;
     sbool per_source_policy_from_policy_file;
     char *per_source_policy_file;
     unsigned int per_source_default_max;
