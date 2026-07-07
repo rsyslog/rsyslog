@@ -207,17 +207,16 @@ hashtable_search(struct hashtable *h, void *k) {
 
 /*****************************************************************************/
 void * /* returns value associated with key */
-hashtable_remove(struct hashtable *h, void *k) {
+hashtable_remove_prehashed(struct hashtable *h, unsigned int hashvalue, void *k) {
     /* TODO: consider compacting the table when the load factor drops enough,
      *       or provide a 'compact' method. */
 
     struct entry *e;
     struct entry **pE;
     void *v;
-    unsigned int hashvalue, idx;
+    unsigned int idx;
 
-    hashvalue = hash(h, k);
-    idx = indexFor(h->tablelength, hash(h, k));
+    idx = indexFor(h->tablelength, hashvalue);
     pE = &(h->table[idx]);
     e = *pE;
     while (NULL != e) {
@@ -234,6 +233,12 @@ hashtable_remove(struct hashtable *h, void *k) {
         e = e->next;
     }
     return NULL;
+}
+
+/*****************************************************************************/
+void * /* returns value associated with key */
+hashtable_remove(struct hashtable *h, void *k) {
+    return hashtable_remove_prehashed(h, hashtable_hash(h, k), k);
 }
 
 /*****************************************************************************/

@@ -138,6 +138,8 @@ void *hashtable_search_prehashed(struct hashtable *h, unsigned int hashvalue, vo
 
 void * /* returns value */
 hashtable_remove(struct hashtable *h, void *k);
+void * /* returns value */
+hashtable_remove_prehashed(struct hashtable *h, unsigned int hashvalue, void *k);
 
 #define DEFINE_HASHTABLE_REMOVE(fnname, keytype, valuetype) \
     valuetype *fnname(struct hashtable *h, keytype *k) {    \

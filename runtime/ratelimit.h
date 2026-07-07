@@ -27,9 +27,21 @@
 #include "statsobj.h"
 
 struct hashtable;
-struct ratelimit_ps_state_s;
+struct ratelimit_ps_entry_s;
 struct template;
 typedef struct statsobj_s statsobj_t;
+
+#define RATELIMIT_PERSOURCE_SHARDS 32
+
+typedef struct ratelimit_ps_bucket_s {
+    struct hashtable *ht;
+    struct ratelimit_ps_entry_s *lru_head;
+    struct ratelimit_ps_entry_s *lru_tail;
+    unsigned int active_states;
+    unsigned int max_states;
+    sbool lock_initialized;
+    pthread_mutex_t mut;
+} ratelimit_ps_bucket_t;
 
 typedef enum ratelimit_scope_e { RATELIMIT_SCOPE_INPUT = 0, RATELIMIT_SCOPE_OUTPUT } ratelimit_scope_t;
 
@@ -74,14 +86,13 @@ typedef struct ratelimit_shared_s {
         RL_PS_KEY_FROMHOST_IP_PORT,
         RL_PS_KEY_FROMHOST_PORT
     } per_source_key_mode;
-    struct hashtable *per_source_overrides;
-    struct hashtable *per_source_states;
-    struct ratelimit_ps_state_s *per_source_lru_head;
-    struct ratelimit_ps_state_s *per_source_lru_tail;
-    pthread_mutex_t per_source_mut;
+    pthread_mutex_t per_source_policy_mut;
+    ratelimit_ps_bucket_t per_source_shards[RATELIMIT_PERSOURCE_SHARDS];
+    sbool per_source_shards_initialized;
     statsobj_t *per_source_stats;
     STATSCOUNTER_DEF(ctrPerSourceAllowed, mutCtrPerSourceAllowed);
     STATSCOUNTER_DEF(ctrPerSourceDropped, mutCtrPerSourceDropped);
+    STATSCOUNTER_DEF(ctrPerSourceEvicted, mutCtrPerSourceEvicted);
     STATSCOUNTER_DEF(ctrPerSourceKeyTplEvals, mutCtrPerSourceKeyTplEvals);
     STATSCOUNTER_DEF(ctrPerSourceKeyParseEvals, mutCtrPerSourceKeyParseEvals);
     ctr_t **per_source_top_ctrs;
