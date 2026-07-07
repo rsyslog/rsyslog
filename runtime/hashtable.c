@@ -149,7 +149,12 @@ unsigned int hashtable_count(struct hashtable *h) {
 }
 
 /*****************************************************************************/
-int hashtable_insert(struct hashtable *h, void *k, void *v) {
+unsigned int hashtable_hash(struct hashtable *h, void *k) {
+    return hash(h, k);
+}
+
+/*****************************************************************************/
+int hashtable_insert_prehashed(struct hashtable *h, unsigned int hashvalue, void *k, void *v) {
     /* This method allows duplicate keys - but they shouldn't be used */
     unsigned int idx;
     struct entry *e;
@@ -165,7 +170,7 @@ int hashtable_insert(struct hashtable *h, void *k, void *v) {
         --(h->entrycount);
         return 0;
     } /*oom*/
-    e->h = hash(h, k);
+    e->h = hashvalue;
     idx = indexFor(h->tablelength, e->h);
     e->k = k;
     e->v = v;
@@ -175,11 +180,15 @@ int hashtable_insert(struct hashtable *h, void *k, void *v) {
 }
 
 /*****************************************************************************/
+int hashtable_insert(struct hashtable *h, void *k, void *v) {
+    return hashtable_insert_prehashed(h, hashtable_hash(h, k), k, v);
+}
+
+/*****************************************************************************/
 void * /* returns value associated with key */
-hashtable_search(struct hashtable *h, void *k) {
+hashtable_search_prehashed(struct hashtable *h, unsigned int hashvalue, void *k) {
     struct entry *e;
-    unsigned int hashvalue, idx;
-    hashvalue = hash(h, k);
+    unsigned int idx;
     idx = indexFor(h->tablelength, hashvalue);
     e = h->table[idx];
     while (NULL != e) {
@@ -188,6 +197,12 @@ hashtable_search(struct hashtable *h, void *k) {
         e = e->next;
     }
     return NULL;
+}
+
+/*****************************************************************************/
+void * /* returns value associated with key */
+hashtable_search(struct hashtable *h, void *k) {
+    return hashtable_search_prehashed(h, hashtable_hash(h, k), k);
 }
 
 /*****************************************************************************/

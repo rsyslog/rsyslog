@@ -658,6 +658,7 @@ TESTS_LIBYAML = \
 	action-ratelimit-pace.sh \
 	action-ratelimit-reload.sh \
 	action-ratelimit-validation.sh \
+	ratelimit-many-named-configs.sh \
 	ratelimit_hup.sh \
 	yaml-basic.sh \
 	yaml-basic-yamlonly.sh \
@@ -3617,6 +3618,7 @@ EXTRA_DIST += \
 	ratelimit_name.sh \
 	test_policy_hup.yaml \
 	ratelimit_duplicate.sh \
+	ratelimit-many-named-configs.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \

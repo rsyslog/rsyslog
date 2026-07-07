@@ -311,7 +311,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
     lookupInitCnf(&pThis->lu_tabs);
     CHKiRet(dynstats_initCnf(&pThis->dynstats_buckets));
     CHKiRet(perctile_initCnf(&pThis->perctile_buckets));
-    ratelimit_cfgsInit(&pThis->ratelimit_cfgs);
+    CHKiRet(ratelimit_cfgsInit(&pThis->ratelimit_cfgs));
     CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList, rulesetKeyDestruct,
                    (int (*)(void *, void *))strcasecmp));
 finalize_it:

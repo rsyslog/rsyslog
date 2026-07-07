@@ -51,6 +51,10 @@ typedef struct ratelimit_shared_s {
     unsigned int policy_watch_debounce_ms;
     rswatch_handle_t *policy_watch_handle;
     rswatch_handle_t *per_source_policy_watch_handle;
+    pthread_mutex_t ref_mut;
+    pthread_cond_t ref_cond;
+    unsigned int refcnt;
+    sbool ref_initialized;
     pthread_mutex_t mut;
     unsigned int per_source_enabled;
     sbool per_source_policy_from_policy_file;
@@ -102,9 +106,16 @@ struct ratelimit_s {
     pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
-typedef struct ratelimit_cfgs_s {
+#define RATELIMIT_CFG_SHARDS 32
+
+typedef struct ratelimit_cfg_bucket_s {
     struct hashtable *ht;
+    sbool lock_initialized;
     pthread_rwlock_t lock;
+} ratelimit_cfg_bucket_t;
+
+typedef struct ratelimit_cfgs_s {
+    ratelimit_cfg_bucket_t shards[RATELIMIT_CFG_SHARDS];
 } ratelimit_cfgs_t;
 
 /* prototypes */
@@ -133,7 +144,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             unsigned int per_source_topn,
                             sbool has_inline_policy_params,
                             sbool has_legacy_per_source_params);
-void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);
+rsRetVal ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst);

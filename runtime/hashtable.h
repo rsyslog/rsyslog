@@ -98,6 +98,13 @@ struct hashtable *create_hashtable(unsigned int minsize,
 
 int hashtable_insert(struct hashtable *h, void *k, void *v);
 
+/* Return the internal, mixed hash value used by this hashtable. The
+ * prehashed APIs below require a value returned by this function for a table
+ * with the same hash function; callers must not pass raw hashfn output.
+ */
+unsigned int hashtable_hash(struct hashtable *h, void *k);
+int hashtable_insert_prehashed(struct hashtable *h, unsigned int hashvalue, void *k, void *v);
+
 #define DEFINE_HASHTABLE_INSERT(fnname, keytype, valuetype)     \
     int fnname(struct hashtable *h, keytype *k, valuetype *v) { \
         return hashtable_insert(h, k, v);                       \
@@ -113,6 +120,7 @@ int hashtable_insert(struct hashtable *h, void *k, void *v);
  */
 
 void *hashtable_search(struct hashtable *h, void *k);
+void *hashtable_search_prehashed(struct hashtable *h, unsigned int hashvalue, void *k);
 
 #define DEFINE_HASHTABLE_SEARCH(fnname, keytype, valuetype) \
     valuetype *fnname(struct hashtable *h, keytype *k) {    \

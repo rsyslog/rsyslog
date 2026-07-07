@@ -91,6 +91,66 @@ static inline void ratelimitPerSourceStoreEnabled(unsigned int *value, pthread_m
 
 static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared);
 
+static void ratelimitSharedRefsInit(ratelimit_shared_t *const shared, const unsigned int refcnt) {
+    pthread_mutex_init(&shared->ref_mut, NULL);
+    pthread_cond_init(&shared->ref_cond, NULL);
+    shared->refcnt = refcnt;
+    shared->ref_initialized = 1;
+}
+
+static void ratelimitSharedAddRef(ratelimit_shared_t *const shared) {
+    pthread_mutex_lock(&shared->ref_mut);
+    assert(shared->refcnt > 0);
+    assert(shared->refcnt < UINT_MAX);
+    shared->refcnt++;
+    pthread_mutex_unlock(&shared->ref_mut);
+}
+
+static void ratelimitSharedReleaseRef(ratelimit_shared_t *const shared) {
+    pthread_mutex_lock(&shared->ref_mut);
+    assert(shared->refcnt > 0);
+    shared->refcnt--;
+    if (shared->refcnt == 0) {
+        pthread_cond_broadcast(&shared->ref_cond);
+    }
+    pthread_mutex_unlock(&shared->ref_mut);
+}
+
+static void ratelimitSharedDropRegistryRefAndWait(ratelimit_shared_t *const shared) {
+    pthread_mutex_lock(&shared->ref_mut);
+    assert(shared->refcnt > 0);
+    shared->refcnt--;
+    while (shared->refcnt != 0) {
+        pthread_cond_wait(&shared->ref_cond, &shared->ref_mut);
+    }
+    pthread_mutex_unlock(&shared->ref_mut);
+}
+
+static void ratelimitSharedRefsDestroy(ratelimit_shared_t *const shared) {
+    if (shared->ref_initialized) {
+        pthread_cond_destroy(&shared->ref_cond);
+        pthread_mutex_destroy(&shared->ref_mut);
+        shared->ref_initialized = 0;
+    }
+}
+
+static ratelimit_cfg_bucket_t *ratelimitCfgBucket(ratelimit_cfgs_t *const cfgs,
+                                                  const char *const name,
+                                                  unsigned int *const hashvalue) {
+    unsigned int local_hash;
+    assert(cfgs != NULL);
+    assert(name != NULL);
+    assert(cfgs->shards[0].ht != NULL);
+    /* Every shard uses the same hashtable hash function; compute the mixed
+     * hash once and reuse it for both shard selection and in-shard lookup.
+     */
+    local_hash = hashtable_hash(cfgs->shards[0].ht, (void *)name);
+    if (hashvalue != NULL) {
+        *hashvalue = local_hash;
+    }
+    return &cfgs->shards[local_hash % RATELIMIT_CFG_SHARDS];
+}
+
 /**
  * Classify the per-source key template for parsing requirements.
  *
@@ -180,6 +240,7 @@ finalize_it:
 static void ratelimitFreeShared(void *ptr) {
     ratelimit_shared_t *shared = (ratelimit_shared_t *)ptr;
     if (shared == NULL) return;
+    ratelimitSharedDropRegistryRefAndWait(shared);
     ratelimitUnregisterSharedWatchers(shared);
     pthread_mutex_destroy(&shared->mut);
     free(shared->policy_file);
@@ -203,30 +264,51 @@ static void ratelimitFreeShared(void *ptr) {
     free(shared->per_source_key_tpl_name);
     pthread_mutex_destroy(&shared->per_source_mut);
     free(shared->per_source_policy_file);
+    ratelimitSharedRefsDestroy(shared);
     /* shared->name is the key, freed by hashtable_destroy via freekey(); do not free here */
     free(shared);
 }
 
-void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
-    pthread_rwlock_init(&cfgs->lock, NULL);
-    cfgs->ht = create_hashtable(16, hash_from_string, key_equals_string, ratelimitFreeShared);
+rsRetVal ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs) {
+    DEFiRet;
+
+    memset(cfgs, 0, sizeof(*cfgs));
+    for (unsigned int i = 0; i < RATELIMIT_CFG_SHARDS; ++i) {
+        if (pthread_rwlock_init(&cfgs->shards[i].lock, NULL) != 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        cfgs->shards[i].lock_initialized = 1;
+        CHKmalloc(cfgs->shards[i].ht = create_hashtable(16, hash_from_string, key_equals_string, ratelimitFreeShared));
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        ratelimit_cfgsDestruct(cfgs);
+    }
+    RETiRet;
 }
 
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
-    struct hashtable_itr *itr;
-
-    if (cfgs->ht != NULL && hashtable_count(cfgs->ht) > 0) {
-        itr = hashtable_iterator(cfgs->ht);
-        do {
-            ratelimit_shared_t *shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
-            ratelimitUnregisterSharedWatchers(shared);
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+    for (unsigned int i = 0; i < RATELIMIT_CFG_SHARDS; ++i) {
+        if (cfgs->shards[i].ht != NULL && hashtable_count(cfgs->shards[i].ht) > 0) {
+            struct hashtable_itr *itr = hashtable_iterator(cfgs->shards[i].ht);
+            if (itr != NULL) {
+                do {
+                    ratelimit_shared_t *shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
+                    ratelimitUnregisterSharedWatchers(shared);
+                } while (hashtable_iterator_advance(itr));
+            }
+            free(itr);
+        }
+        if (cfgs->shards[i].ht != NULL) {
+            hashtable_destroy(cfgs->shards[i].ht, 1); /* 1 = free values */
+            cfgs->shards[i].ht = NULL;
+        }
+        if (cfgs->shards[i].lock_initialized) {
+            pthread_rwlock_destroy(&cfgs->shards[i].lock);
+            cfgs->shards[i].lock_initialized = 0;
+        }
     }
-    if (cfgs->ht != NULL) {
-        hashtable_destroy(cfgs->ht, 1); /* 1 = free values */
-    }
-    pthread_rwlock_destroy(&cfgs->lock);
 }
 
 
@@ -236,6 +318,8 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
  * - per-source limits use ratelimit_shared_t->per_source_mut to guard the
  *   enable flag, keying policy, override table, per-source state table, and
  *   LRU list.
+ * - ratelimit_cfgs_t shards guard the named configuration registry. Config
+ *   lookup and insertion lock only the shard selected by the config name.
  * - ratelimit_t->mut guards per-instance counters when thread-safe mode is enabled.
  */
 
@@ -1670,6 +1754,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     unsigned int debounce_ms = RATELIMIT_POLICY_WATCH_DEBOUNCE_DFLT_MS;
     sbool per_source_from_policy_file = 0;
     sbool bLocked = 0;
+    ratelimit_cfg_bucket_t *bucket = NULL;
+    unsigned int hashvalue = 0;
     ratelimit_scope_t scope = RATELIMIT_SCOPE_INPUT;
     ratelimit_output_mode_t output_mode = RATELIMIT_OUTPUT_MODE_DROP;
 
@@ -1766,19 +1852,21 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
      *    a. Create new, fill values, insert into hashtable
      */
 
-    pthread_rwlock_wrlock(&conf->ratelimit_cfgs.lock);
+    bucket = ratelimitCfgBucket(&conf->ratelimit_cfgs, name, &hashvalue);
+    pthread_rwlock_wrlock(&bucket->lock);
     bLocked = 1;
-    existing_shared = (ratelimit_shared_t *)hashtable_search(conf->ratelimit_cfgs.ht, (void *)name);
+    existing_shared = (ratelimit_shared_t *)hashtable_search_prehashed(bucket->ht, hashvalue, (void *)name);
 
     if (existing_shared != NULL) {
         LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: duplicate name '%s' in current config set", name);
-        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+        pthread_rwlock_unlock(&bucket->lock);
         bLocked = 0;
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
     /* Not found - Create New */
     CHKmalloc(shared = calloc(1, sizeof(ratelimit_shared_t)));
+    ratelimitSharedRefsInit(shared, 1);
     pthread_mutex_init(&shared->mut, NULL);
     pthread_mutex_init(&shared->per_source_mut, NULL);
     CHKmalloc(key = strdup(name));
@@ -1808,7 +1896,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                 LogError(0, RS_RET_CONFIG_ERROR,
                          "ratelimit: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found for '%s'", name);
             }
-            pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+            pthread_rwlock_unlock(&bucket->lock);
             bLocked = 0;
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
@@ -1823,8 +1911,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 1);
     }
 
-    if (hashtable_insert(conf->ratelimit_cfgs.ht, key, shared) == 0) {
-        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+    if (hashtable_insert_prehashed(bucket->ht, hashvalue, key, shared) == 0) {
+        pthread_rwlock_unlock(&bucket->lock);
         bLocked = 0;
         LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting config into hashtable");
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1833,13 +1921,13 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     /* shared ownership now in hashtable */
     existing_shared = shared;
     shared = NULL;
-    pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+    pthread_rwlock_unlock(&bucket->lock);
     bLocked = 0;
     CHKiRet(ratelimitRegisterWatchTargets(existing_shared));
 
 finalize_it:
     if (bLocked) {
-        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+        pthread_rwlock_unlock(&bucket->lock);
     }
     if (shared != NULL) {
         /* If we are here, shared was allocated but NOT inserted (error case before insert) */
@@ -1866,6 +1954,7 @@ finalize_it:
         pthread_mutex_destroy(&shared->per_source_mut);
         free(shared->per_source_policy_file);
         pthread_mutex_destroy(&shared->mut);
+        ratelimitSharedRefsDestroy(shared);
         free(shared);
     }
     if (per_source_policy != NULL) {
@@ -1885,24 +1974,30 @@ rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
                                         ratelimit_scope_t scope) {
     DEFiRet;
     ratelimit_shared_t *shared;
+    ratelimit_cfg_bucket_t *bucket;
+    unsigned int hashvalue;
+    sbool shared_ref = 0;
 
     if (configname == NULL || conf == NULL) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
-    pthread_rwlock_rdlock(&conf->ratelimit_cfgs.lock);
-    shared = (ratelimit_shared_t *)hashtable_search(conf->ratelimit_cfgs.ht, (void *)configname);
+    bucket = ratelimitCfgBucket(&conf->ratelimit_cfgs, configname, &hashvalue);
+    pthread_rwlock_rdlock(&bucket->lock);
+    shared = (ratelimit_shared_t *)hashtable_search_prehashed(bucket->ht, hashvalue, (void *)configname);
     if (shared == NULL) {
-        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+        pthread_rwlock_unlock(&bucket->lock);
         LogError(0, RS_RET_NOT_FOUND, "ratelimit config '%s' not found", configname);
         ABORT_FINALIZE(RS_RET_NOT_FOUND);
     }
     if (shared->scope != scope) {
-        pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+        pthread_rwlock_unlock(&bucket->lock);
         LogError(0, RS_RET_CONFIG_ERROR, "ratelimit config '%s' has incompatible scope for %s", configname, modname);
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
-    pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
+    ratelimitSharedAddRef(shared);
+    shared_ref = 1;
+    pthread_rwlock_unlock(&bucket->lock);
 
     /* We use ratelimitNew to allocate the instance, but we override the shared ptr */
     CHKiRet(ratelimitNew(ppThis, modname, dynname));
@@ -1917,8 +2012,12 @@ rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
 
     (*ppThis)->pShared = shared;
     (*ppThis)->bOwnsShared = 0;
+    shared_ref = 0;
 
 finalize_it:
+    if (shared_ref) {
+        ratelimitSharedReleaseRef(shared);
+    }
     RETiRet;
 }
 
@@ -2549,6 +2648,8 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);
         pthread_mutex_destroy(&ratelimit->pShared->per_source_mut);
         free(ratelimit->pShared);
+    } else if (ratelimit->pShared != NULL) {
+        ratelimitSharedReleaseRef(ratelimit->pShared);
     }
 
     free(ratelimit->name);
@@ -2573,38 +2674,114 @@ finalize_it:
     RETiRet;
 }
 
-void ratelimitDoHUP(void) {
-    struct hashtable_itr *itr;
-    ratelimit_shared_t *shared;
+static void ratelimitDoHUPShared(ratelimit_shared_t *const shared) {
+    sbool reload_per_source;
 
-    if (runConf == NULL || runConf->ratelimit_cfgs.ht == NULL) {
+    if (shared->policy_file) {
+        ratelimitReloadPolicyFile(shared, "HUP");
+    }
+    pthread_mutex_lock(&shared->per_source_mut);
+    reload_per_source = (shared->per_source_policy_file != NULL && !shared->per_source_policy_from_policy_file);
+    pthread_mutex_unlock(&shared->per_source_mut);
+    if (reload_per_source) {
+        ratelimitReloadPerSourcePolicyFile(shared, "HUP");
+    }
+}
+
+static rsRetVal ratelimitCfgsAppendSnapshot(ratelimit_shared_t ***const snapshot,
+                                            size_t *const count,
+                                            size_t *const capacity,
+                                            ratelimit_shared_t *const shared) {
+    ratelimit_shared_t **new_snapshot;
+    size_t new_capacity;
+    DEFiRet;
+
+    if (*count == *capacity) {
+        new_capacity = (*capacity == 0) ? 16 : (*capacity * 2);
+        if (new_capacity < *capacity || new_capacity > ((size_t)-1 / sizeof(ratelimit_shared_t *))) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        CHKmalloc(new_snapshot = realloc(*snapshot, new_capacity * sizeof(ratelimit_shared_t *)));
+        *snapshot = new_snapshot;
+        *capacity = new_capacity;
+    }
+    (*snapshot)[(*count)++] = shared;
+
+finalize_it:
+    RETiRet;
+}
+
+static void ratelimitCfgsReleaseSnapshot(ratelimit_shared_t **const snapshot, const size_t count) {
+    if (snapshot != NULL) {
+        for (size_t i = 0; i < count; ++i) {
+            if (snapshot[i] != NULL) {
+                ratelimitSharedReleaseRef(snapshot[i]);
+            }
+        }
+        free(snapshot);
+    }
+}
+
+static rsRetVal ratelimitCfgsSnapshot(ratelimit_cfgs_t *const cfgs,
+                                      ratelimit_shared_t ***const snapshot,
+                                      size_t *const count) {
+    struct hashtable_itr *itr = NULL;
+    size_t capacity = 0;
+    unsigned int locked_shard = RATELIMIT_CFG_SHARDS;
+    DEFiRet;
+
+    *snapshot = NULL;
+    *count = 0;
+
+    for (unsigned int i = 0; i < RATELIMIT_CFG_SHARDS; ++i) {
+        pthread_rwlock_rdlock(&cfgs->shards[i].lock);
+        locked_shard = i;
+        if (cfgs->shards[i].ht != NULL && hashtable_count(cfgs->shards[i].ht) > 0) {
+            CHKmalloc(itr = hashtable_iterator(cfgs->shards[i].ht));
+            do {
+                ratelimit_shared_t *const shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
+                if (shared != NULL) {
+                    CHKiRet(ratelimitCfgsAppendSnapshot(snapshot, count, &capacity, shared));
+                    ratelimitSharedAddRef(shared);
+                }
+            } while (hashtable_iterator_advance(itr));
+            free(itr);
+            itr = NULL;
+        }
+        pthread_rwlock_unlock(&cfgs->shards[i].lock);
+        locked_shard = RATELIMIT_CFG_SHARDS;
+    }
+
+finalize_it:
+    free(itr);
+    if (locked_shard < RATELIMIT_CFG_SHARDS) {
+        pthread_rwlock_unlock(&cfgs->shards[locked_shard].lock);
+    }
+    if (iRet != RS_RET_OK) {
+        ratelimitCfgsReleaseSnapshot(*snapshot, *count);
+        *snapshot = NULL;
+        *count = 0;
+    }
+    RETiRet;
+}
+
+void ratelimitDoHUP(void) {
+    ratelimit_shared_t **snapshot = NULL;
+    size_t count = 0;
+
+    if (runConf == NULL) {
         return;
     }
 
-    /* We iterate the hashtable. Since we are doing HUP, we assume no other thread is modifying
-     * the hashtable structure (insert/delete) at this point, which is true for rsyslogd's main loop HUP.
-     * We only need to lock the individual shared objects when updating them.
-     */
-    pthread_rwlock_rdlock(&runConf->ratelimit_cfgs.lock);
-    if (hashtable_count(runConf->ratelimit_cfgs.ht) > 0) {
-        itr = hashtable_iterator(runConf->ratelimit_cfgs.ht);
-        do {
-            shared = (ratelimit_shared_t *)hashtable_iterator_value(itr);
-            if (shared && shared->policy_file) {
-                ratelimitReloadPolicyFile(shared, "HUP");
-            }
-            if (shared) {
-                sbool reload_per_source;
-                pthread_mutex_lock(&shared->per_source_mut);
-                reload_per_source =
-                    (shared->per_source_policy_file != NULL && !shared->per_source_policy_from_policy_file);
-                pthread_mutex_unlock(&shared->per_source_mut);
-                if (reload_per_source) {
-                    ratelimitReloadPerSourcePolicyFile(shared, "HUP");
-                }
-            }
-        } while (hashtable_iterator_advance(itr));
-        free(itr);
+    if (ratelimitCfgsSnapshot(&runConf->ratelimit_cfgs, &snapshot, &count) != RS_RET_OK) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: cannot snapshot configs for HUP reload");
+        return;
     }
-    pthread_rwlock_unlock(&runConf->ratelimit_cfgs.lock);
+
+    for (size_t i = 0; i < count; ++i) {
+        if (snapshot[i] != NULL) {
+            ratelimitDoHUPShared(snapshot[i]);
+        }
+    }
+    ratelimitCfgsReleaseSnapshot(snapshot, count);
 }
