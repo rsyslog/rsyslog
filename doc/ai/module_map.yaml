@@ -8,6 +8,22 @@ runtime_queue:
   notes:
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
 
+runtime_ratelimit:
+  paths: ["runtime/ratelimit.c", "runtime/ratelimit.h"]
+  requires_serialization: true
+  locks:
+    - type: rwlock
+      field: ratelimit_cfg_bucket_t.lock
+    - type: mutex
+      field: ratelimit_shared_t.mut
+    - type: mutex
+      field: ratelimit_shared_t.per_source_mut
+    - type: mutex
+      field: ratelimit_t.mut
+  notes:
+    - Named ratelimit configs are stored in sharded hashtables; lookup and insertion lock only the shard selected by the config name.
+    - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
+
 omfile:
   paths: ["plugins/omfile/"]
   requires_serialization: true
