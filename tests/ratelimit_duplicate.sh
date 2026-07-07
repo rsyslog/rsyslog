@@ -1,11 +1,15 @@
 #!/bin/bash
-# Test for duplicate named rate limits
-# This should FAIL with a configuration error
+# Test for duplicate named rate limits.
+#
+# The oracle is config-validation failure with the duplicate-name diagnostic on
+# stderr. Use a test-instance-specific stderr capture file because this
+# negative config test runs in parallel with other validation tests.
 . ${srcdir:=.}/diag.sh init
 if [ -z "$RSYSLOGD" ]; then
     export RSYSLOGD=../tools/rsyslogd
 fi
 
+STDERR_LOG="${RSYSLOG_DYNNAME}.stderr.log"
 
 generate_conf
 add_conf '
@@ -18,13 +22,13 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 
 # Check config only, redirect stderr
 export CONF_FILE="${TESTCONF_NM}.conf"
-$RSYSLOGD -N1 -M"$RSYSLOG_MODDIR" -f $CONF_FILE > /dev/null 2> stderr.log
+$RSYSLOGD -N1 -M"$RSYSLOG_MODDIR" -f "$CONF_FILE" > /dev/null 2> "$STDERR_LOG"
 
-if grep -q "ratelimit: duplicate name 'test_limit' in current config set" stderr.log; then
+if grep -q "ratelimit: duplicate name 'test_limit' in current config set" "$STDERR_LOG"; then
     echo "SUCCESS: detected duplicate name error."
     exit_test
 else
     echo "FAIL: duplicate name error not found in:"
-    cat stderr.log
+    cat "$STDERR_LOG"
     error_exit 1
 fi
