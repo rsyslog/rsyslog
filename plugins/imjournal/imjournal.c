@@ -598,7 +598,11 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
     int facility = cs.iDfltFacility;
 
     /* Get message text */
-    if (journalGetData(journalContext, "MESSAGE", &get, &length) < 0) {
+    r = journalGetData(journalContext, "MESSAGE", &get, &length);
+    if (r < 0) {
+        LogMsg(-r, RS_RET_OK_WARN, LOG_WARNING,
+               "imjournal: failed to retrieve 'MESSAGE' field from journal entry "
+               ", submitting empty message");
         CHKmalloc(message = strdup(""));
     } else {
         CHKiRet(sanitizeValue(((const char *)get) + 8, length - 8, &message));
