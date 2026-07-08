@@ -271,6 +271,8 @@ print_plan() {
 		;;
 	rendered-docs)
 		echo "  - ./doc/tools/build-doc-linux.sh --clean --format html --jobs \"$doc_jobs\""
+		echo "  - python3 ./doc/tools/validate-doc-samples.py --source-dir doc/source --build-dir . --work-dir doc/build/doc-sample-validation"
+		echo "    after building ./tools/rsyslogd when marked samples are present."
 		echo "  - Add --strict for larger or structural documentation edits."
 		;;
 	test-shell-only)
@@ -426,6 +428,51 @@ run_docs_build() {
 		return 0
 	fi
 	./doc/tools/build-doc-linux.sh --clean --format html --jobs "$doc_jobs"
+}
+
+run_doc_sample_validation_if_available() {
+	if [ ! -f ./doc/tools/validate-doc-samples.py ]; then
+		echo "warning: doc/tools/validate-doc-samples.py missing; skipping doc sample validation" >&2
+		return 0
+	fi
+	if ! find doc/source -type f -name '*.rst' -exec grep -q \
+		'^[[:space:]]*\.\. rsyslog-doc-sample:[[:space:]]*validate-config[[:space:]]*$' {} +; then
+		echo "no marked doc samples found; skipping doc sample validation"
+		return 0
+	fi
+	for tool in autoreconf make python3; do
+		if ! command -v "$tool" >/dev/null 2>&1; then
+			echo "warning: $tool not installed; skipping doc sample validation" >&2
+			return 0
+		fi
+	done
+	echo "building ./tools/rsyslogd for local doc sample validation"
+	autoreconf -fvi
+	CFLAGS='-g -O0 --coverage -fprofile-update=atomic' \
+	LDFLAGS='--coverage' \
+	./configure --enable-silent-rules --disable-testbench \
+		--disable-imdiag --disable-imdocker --disable-imfile \
+		--disable-default-tests --disable-impstats --disable-impstats-push --disable-imptcp \
+		--disable-mmanon --disable-mmaudit --disable-mmfields \
+		--disable-mmjsonparse --disable-mmpstrucdata \
+		--disable-mmsequence --disable-mmutf8fix --disable-mail \
+		--disable-omprog --disable-improg --disable-omruleset \
+		--disable-omstdout --disable-omuxsock \
+		--disable-pmaixforwardedfrom --disable-pmciscoios \
+		--disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+		--disable-libgcrypt --disable-mmnormalize \
+		--disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+		--disable-gnutls --disable-usertools --disable-mysql \
+		--disable-valgrind --disable-omjournal --enable-libsystemd \
+		--disable-mmkubernetes --disable-imjournal \
+		--disable-omkafka --disable-imkafka --disable-ommongodb \
+		--disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+		--disable-helgrind --disable-uuid --disable-fmhttp
+	make -j"$build_jobs"
+	python3 ./doc/tools/validate-doc-samples.py \
+		--source-dir doc/source \
+		--build-dir . \
+		--work-dir doc/build/doc-sample-validation
 }
 
 have_container_tooling() {
@@ -595,6 +642,7 @@ local-validation-tooling)
 	;;
 rendered-docs)
 	run_docs_build
+	run_doc_sample_validation_if_available
 	;;
 test-shell-only)
 	run_mock_distcheck_if_needed

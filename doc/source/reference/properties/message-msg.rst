@@ -28,11 +28,15 @@ Usage
 -----
 .. _properties.message.msg-usage:
 
+.. rsyslog-doc-sample: validate-config
+
 .. code-block:: rsyslog
 
    template(name="example" type="list") {
        property(name="msg")
    }
+
+   action(type="omfile" file="/dev/null" template="example")
 
 See also
 --------
