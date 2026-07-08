@@ -328,6 +328,7 @@ TESTS_DEFAULT = \
 	imdiag-proper-termination-timeoutguard.sh \
 	tcpflood-proper-termination.sh \
 	global-maxopenfiles-rainerscript.sh \
+	global-systemd-notifyreadydelay-rainerscript.sh \
 	compat-configformat-rainerscript.sh \
 	compat-defaults-secure-dynafile-rainerscript.sh \
 	abort-uncleancfg-goodcfg.sh \
@@ -654,6 +655,7 @@ TESTS_LIBYAML = \
 	compat-configformat-yaml.sh \
 	compat-defaults-secure-dynafile-yaml.sh \
 	global-maxopenfiles-yaml.sh \
+	global-systemd-notifyreadydelay-yaml.sh \
 	action-ratelimit-drop.sh \
 	action-ratelimit-pace.sh \
 	action-ratelimit-reload.sh \

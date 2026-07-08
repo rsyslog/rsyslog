@@ -2666,12 +2666,17 @@ int main(int argc, char **argv) {
 
     initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
-    rsconfWaitForModulesReady();
+    if (rsconfShouldDelayReadyNotify(runConf)) {
+        rsconfWaitForModulesReady();
+    }
     if (sd_watchdog_enabled(0, &systemdWatchdogUsec) > 0) {
         systemdWatchdogEnabled = 1;
         dbgprintf("systemd watchdog enabled with interval %llu usec\n", (unsigned long long)systemdWatchdogUsec);
     }
     sd_notify(0, "READY=1");
+    if (rsconfShouldDelayReadyNotify(runConf)) {
+        rsconfReadyNotifySent();
+    }
     dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
     DBGPRINTF("max message size: %d\n", glblGetMaxLine(runConf));

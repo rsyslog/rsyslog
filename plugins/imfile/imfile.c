@@ -2909,7 +2909,10 @@ static rsRetVal do_inotify(void) {
 
 finalize_it:
     if (!bSignaledReady) rsconfSignalReady();
-    close(ino_fd);
+    if (ino_fd >= 0) {
+        close(ino_fd);
+        ino_fd = -1;
+    }
     RETiRet;
 }
 

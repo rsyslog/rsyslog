@@ -113,6 +113,7 @@ struct globals_s {
     int compatConfigFormatSyslogd; /* policy for classic syslogd PRI selectors */
     int compatConfigFormatProperty; /* policy for classic property-based selector filters */
     int compatDefaultsSecure; /* policy for defaults that affect secure-by-default behavior */
+    int systemdNotifyReadyDelay; /* delay sd_notify READY=1 until opt-in modules report ready */
     int uidDropPriv; /* user-id to which priveleges should be dropped to */
     int gidDropPriv; /* group-id to which priveleges should be dropped to */
     int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */
@@ -320,6 +321,8 @@ int rsconfNeedDropPriv(rsconf_t *const cnf);
 void rsconfRegisterReadiness(void);
 void rsconfSignalReady(void);
 void rsconfWaitForModulesReady(void);
+void rsconfReadyNotifySent(void);
+int rsconfShouldDelayReadyNotify(rsconf_t *cnf);
 #else
 static inline void rsconfRegisterReadiness(void) {}
 static inline void rsconfSignalReady(void) {}

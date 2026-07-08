@@ -173,6 +173,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"compatibility.configformat.syslogd", eCmdHdlrGetWord, 0},
     {"compatibility.configformat.property", eCmdHdlrGetWord, 0},
     {"compatibility.defaults.secure", eCmdHdlrGetWord, 0},
+    {"systemd.notifyreadydelay", eCmdHdlrBinary, 0},
     {"abortonuncleanconfig", eCmdHdlrBinary, 0},
     {"abortonfailedqueuestartup", eCmdHdlrBinary, 0},
     {"variables.casesensitive", eCmdHdlrBinary, 0},
@@ -1175,6 +1176,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     free((void *)loadConf->globals.operatingStateFile);
     loadConf->globals.operatingStateFile = NULL;
     loadConf->globals.bDropMalPTRMsgs = 0;
+    loadConf->globals.systemdNotifyReadyDelay = 0;
     bPreserveFQDN = 0;
     loadConf->globals.iMaxLine = 8192;
     loadConf->globals.reportOversizeMsg = 1;
@@ -1553,6 +1555,8 @@ rsRetVal glblDoneLoadCnf(void) {
             SetOptionDisallowWarning(!((int)cnfparamvals[i].val.d.n));
         } else if (!strncmp(paramblk.descr[i].name, "compatibility.", 14)) {
             /* processed immediately by glblProcessCnf(), as later syntax depends on it */
+        } else if (!strcmp(paramblk.descr[i].name, "systemd.notifyreadydelay")) {
+            loadConf->globals.systemdNotifyReadyDelay = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
             loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "abortonfailedqueuestartup")) {

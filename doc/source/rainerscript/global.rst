@@ -127,7 +127,18 @@ The following parameters can be set:
   Note that earlier versions of rsyslog worked the opposite way. More
   information about the change can be found in `rsyslog-error-reporting-improved <http://www.rsyslog.com/rsyslog-error-reporting-improved>`_.
 
+- **systemd.notifyReadyDelay** binary (on/off), default "off"
 
+  When set to "on", rsyslog delays the systemd ``READY=1`` notification until
+  input modules that explicitly participate in startup readiness have completed
+  their initialisation, or until the readiness wait times out. This can help
+  deployments where services ordered after rsyslog must not begin until inputs
+  such as imfile have loaded their startup state.
+
+  The default is "off" to preserve the historical startup behavior: rsyslog
+  sends ``READY=1`` as soon as the daemon reaches the normal post-startup
+  notification point. Modules that do not participate in the readiness scheme
+  are unaffected.
 
 - **stdlog.channelspec**
 
