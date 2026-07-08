@@ -3,7 +3,9 @@
 # transformations without network timing: field extraction, substring bounds,
 # regex match/no-match handling, control-character modes, string modifiers,
 # timestamp formatting, secure-path sanitizing, and CSV/JSON formatting. The
-# exact omfile output is the oracle.
+# sorted omfile output is the oracle: imdiag-injected messages may reach the
+# action queue in a different order under parallel CI, but every rendered
+# property line and duplicate count must match exactly.
 # Note that spifno1stsp emits only a conditional separator space, not the
 # original property value, so its expected output is intentionally just markers
 # around an inserted or suppressed space.
@@ -319,5 +321,9 @@ shape_app_name=shape3164notag
 shape_procid=-
 shape_msgid=-
 shape_rawmsg_after_pri=Aug 24 05:14:15 oddhost shape3164notag'
-cmp_exact
+expected_sorted="${RSYSLOG_DYNNAME}.expected.sorted"
+actual_sorted="${RSYSLOG_DYNNAME}.actual.sorted"
+printf '%s\n' "$EXPECTED" | LC_ALL=C $RS_SORTCMD > "$expected_sorted"
+LC_ALL=C $RS_SORTCMD "$RSYSLOG_OUT_LOG" > "$actual_sorted"
+cmp_exact_file "$expected_sorted" "$actual_sorted"
 exit_test
