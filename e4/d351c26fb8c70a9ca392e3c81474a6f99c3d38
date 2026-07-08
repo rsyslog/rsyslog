@@ -1,0 +1,23 @@
+tests/fieldtest-udp.sh
+  s_d70154fe4aae5f::t_dbf0b8a11bbd4f 11
+  s_d70154fe4aae5f::t_f14b7918ff4281 3-5,8,22
+tests/proprepltest-nolimittag-udp.sh
+  s_d70154fe4aae5f::t_f14b7918ff4281 3-6,9,22
+  s_d70154fe4aae5f::t_dbf0b8a11bbd4f 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e4d351c26fb8c70a9ca392e3c81474a6f99c3d38",
+  "prompts": {},
+  "sessions": {
+    "s_d70154fe4aae5f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f406c-2da6-7042-aa51-383f72346562",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
