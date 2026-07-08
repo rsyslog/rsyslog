@@ -267,6 +267,18 @@ perSourceMaxStates
 Upper bound on the number of tracked sender keys for per-source limits. When the cap is reached,
 least-recently-used sender state is evicted.
 
+Per-source state is partitioned across internal shards for concurrency. The
+configured cap is therefore enforced approximately as shard-local caps rather
+than as one exact global LRU list. Under high source-cardinality churn, a busy
+shard can evict a sender while another shard still has spare capacity. Evicted
+sender state loses its current rate-limit window and counters. The
+``per_source_evicted`` impstats counter reports these evictions so operators can
+tune ``perSourceMaxStates`` or reduce key cardinality.
+
+Values below the internal shard count are treated as a very small cache rather
+than a literal global cap; each shard can still keep one active sender state.
+Use values at or above the shard count when an approximate total cap matters.
+
 .. _ratelimit_persourcetopn:
 
 perSourceTopN

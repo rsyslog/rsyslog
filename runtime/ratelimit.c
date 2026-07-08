@@ -90,6 +90,10 @@ static inline void ratelimitPerSourceStoreEnabled(unsigned int *value, pthread_m
 }
 
 static void ratelimitUnregisterSharedWatchers(ratelimit_shared_t *shared);
+static void ratelimitDestroyPerSourceShards(ratelimit_shared_t *shared);
+static rsRetVal ratelimitInitPerSourceShards(ratelimit_shared_t *shared, unsigned int max_states);
+static void ratelimitSetPerSourceShardCaps(ratelimit_shared_t *shared, unsigned int max_states);
+static void ratelimitFreePerSourceEntry(void *ptr);
 
 static void ratelimitSharedRefsInit(ratelimit_shared_t *const shared, const unsigned int refcnt) {
     pthread_mutex_init(&shared->ref_mut, NULL);
@@ -244,12 +248,7 @@ static void ratelimitFreeShared(void *ptr) {
     ratelimitUnregisterSharedWatchers(shared);
     pthread_mutex_destroy(&shared->mut);
     free(shared->policy_file);
-    if (shared->per_source_overrides != NULL) {
-        hashtable_destroy(shared->per_source_overrides, 1);
-    }
-    if (shared->per_source_states != NULL) {
-        hashtable_destroy(shared->per_source_states, 1);
-    }
+    ratelimitDestroyPerSourceShards(shared);
     if (shared->per_source_stats != NULL) {
         statsobj.Destruct(&shared->per_source_stats);
     }
@@ -262,7 +261,7 @@ static void ratelimitFreeShared(void *ptr) {
     }
     free(shared->per_source_top_keys);
     free(shared->per_source_key_tpl_name);
-    pthread_mutex_destroy(&shared->per_source_mut);
+    pthread_mutex_destroy(&shared->per_source_policy_mut);
     free(shared->per_source_policy_file);
     ratelimitSharedRefsDestroy(shared);
     /* shared->name is the key, freed by hashtable_destroy via freekey(); do not free here */
@@ -315,9 +314,10 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
 /*
  * Concurrency & Locking
  * - ratelimit_shared_t->mut guards shared policy updates for global limits.
- * - per-source limits use ratelimit_shared_t->per_source_mut to guard the
- *   enable flag, keying policy, override table, per-source state table, and
- *   LRU list.
+ * - per-source limits use ratelimit_shared_t->per_source_policy_mut to guard
+ *   low-frequency policy metadata and fallback atomics. Message-time source
+ *   accounting is partitioned across ratelimit_shared_t->per_source_shards;
+ *   each shard mutex guards that shard's hashtable, LRU list, and counters.
  * - ratelimit_cfgs_t shards guard the named configuration registry. Config
  *   lookup and insertion lock only the shard selected by the config name.
  * - ratelimit_t->mut guards per-instance counters when thread-safe mode is enabled.
@@ -337,18 +337,24 @@ struct ratelimit_ps_override_s {
 
 typedef struct ratelimit_ps_override_s ratelimit_ps_override_t;
 
-struct ratelimit_ps_state_s {
+struct ratelimit_ps_entry_s {
     char *key;
     unsigned int count;
     time_t window_start;
     uint64_t allowed;
     uint64_t dropped;
     time_t last_seen;
-    struct ratelimit_ps_state_s *lru_prev;
-    struct ratelimit_ps_state_s *lru_next;
+    sbool state_active;
+    sbool has_override;
+    unsigned int max;
+    unsigned int window;
+    sbool has_max;
+    sbool has_window;
+    struct ratelimit_ps_entry_s *lru_prev;
+    struct ratelimit_ps_entry_s *lru_next;
 };
 
-typedef struct ratelimit_ps_state_s ratelimit_ps_state_t;
+typedef struct ratelimit_ps_entry_s ratelimit_ps_entry_t;
 
 struct ratelimit_ps_policy_s {
     unsigned int default_max;
@@ -485,10 +491,10 @@ static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared) {
         FINALIZE;
     }
 
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     per_source_policy_file = shared->per_source_policy_file;
     per_source_policy_from_policy_file = shared->per_source_policy_from_policy_file;
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
 
     if (shared->policy_file == NULL && per_source_policy_file == NULL) {
         LogMsg(0, RS_RET_OK, LOG_WARNING,
@@ -897,10 +903,132 @@ finalize_it:
     RETiRet;
 }
 
-static void ratelimitFreePerSourceState(void *ptr) {
-    ratelimit_ps_state_t *state = (ratelimit_ps_state_t *)ptr;
-    if (state == NULL) return;
-    free(state);
+static void ratelimitFreePerSourceEntry(void *ptr) {
+    ratelimit_ps_entry_t *entry = (ratelimit_ps_entry_t *)ptr;
+    if (entry == NULL) return;
+    free(entry);
+}
+
+static unsigned int ratelimitPerSourceShardCap(const unsigned int max_states, const unsigned int shard) {
+    if (max_states == 0) return 0;
+    if (max_states <= RATELIMIT_PERSOURCE_SHARDS) return 1;
+    return (max_states / RATELIMIT_PERSOURCE_SHARDS) + (shard < (max_states % RATELIMIT_PERSOURCE_SHARDS));
+}
+
+static void ratelimitSetPerSourceShardCaps(ratelimit_shared_t *shared, unsigned int max_states) {
+    if (shared == NULL) return;
+    max_states = (max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : max_states;
+    shared->per_source_max_states = max_states;
+    for (unsigned int i = 0; i < RATELIMIT_PERSOURCE_SHARDS; ++i) {
+        if (shared->per_source_shards[i].lock_initialized) {
+            pthread_mutex_lock(&shared->per_source_shards[i].mut);
+        }
+        shared->per_source_shards[i].max_states = ratelimitPerSourceShardCap(max_states, i);
+        if (shared->per_source_shards[i].lock_initialized) {
+            pthread_mutex_unlock(&shared->per_source_shards[i].mut);
+        }
+    }
+}
+
+static rsRetVal ratelimitInitPerSourceShards(ratelimit_shared_t *shared, unsigned int max_states) {
+    DEFiRet;
+
+    if (shared == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (shared->per_source_shards_initialized) {
+        ratelimitSetPerSourceShardCaps(shared, max_states);
+        FINALIZE;
+    }
+
+    for (unsigned int i = 0; i < RATELIMIT_PERSOURCE_SHARDS; ++i) {
+        if (pthread_mutex_init(&shared->per_source_shards[i].mut, NULL) != 0) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        shared->per_source_shards[i].lock_initialized = 1;
+        shared->per_source_shards[i].ht =
+            create_hashtable(16, hash_from_string, key_equals_string, ratelimitFreePerSourceEntry);
+        if (shared->per_source_shards[i].ht == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+    shared->per_source_shards_initialized = 1;
+    ratelimitSetPerSourceShardCaps(shared, max_states);
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        ratelimitDestroyPerSourceShards(shared);
+    }
+    RETiRet;
+}
+
+static void ratelimitDestroyPerSourceShards(ratelimit_shared_t *shared) {
+    if (shared == NULL) return;
+    for (unsigned int i = 0; i < RATELIMIT_PERSOURCE_SHARDS; ++i) {
+        if (shared->per_source_shards[i].ht != NULL) {
+            hashtable_destroy(shared->per_source_shards[i].ht, 1);
+            shared->per_source_shards[i].ht = NULL;
+        }
+        if (shared->per_source_shards[i].lock_initialized) {
+            pthread_mutex_destroy(&shared->per_source_shards[i].mut);
+            shared->per_source_shards[i].lock_initialized = 0;
+        }
+        shared->per_source_shards[i].lru_head = NULL;
+        shared->per_source_shards[i].lru_tail = NULL;
+        shared->per_source_shards[i].active_states = 0;
+        shared->per_source_shards[i].max_states = 0;
+    }
+    shared->per_source_shards_initialized = 0;
+}
+
+static ratelimit_ps_bucket_t *ratelimitPerSourceBucket(ratelimit_shared_t *shared,
+                                                       const char *key,
+                                                       unsigned int *hashvalue) {
+    unsigned int local_hash;
+
+    assert(shared != NULL);
+    assert(key != NULL);
+    assert(shared->per_source_shards[0].ht != NULL);
+    local_hash = hashtable_hash(shared->per_source_shards[0].ht, (void *)key);
+    if (hashvalue != NULL) {
+        *hashvalue = local_hash;
+    }
+    return &shared->per_source_shards[local_hash % RATELIMIT_PERSOURCE_SHARDS];
+}
+
+static void ratelimitPerSourceLruRemove(ratelimit_ps_bucket_t *bucket, ratelimit_ps_entry_t *entry) {
+    if (entry->lru_prev != NULL) entry->lru_prev->lru_next = entry->lru_next;
+    if (entry->lru_next != NULL) entry->lru_next->lru_prev = entry->lru_prev;
+    if (bucket->lru_head == entry) bucket->lru_head = entry->lru_next;
+    if (bucket->lru_tail == entry) bucket->lru_tail = entry->lru_prev;
+    entry->lru_prev = NULL;
+    entry->lru_next = NULL;
+}
+
+static void ratelimitPerSourceLruTouch(ratelimit_ps_bucket_t *bucket, ratelimit_ps_entry_t *entry) {
+    if (bucket->lru_tail == entry) return;
+    if (entry->lru_prev != NULL || entry->lru_next != NULL || bucket->lru_head == entry) {
+        ratelimitPerSourceLruRemove(bucket, entry);
+    }
+    entry->lru_prev = bucket->lru_tail;
+    if (bucket->lru_tail != NULL) bucket->lru_tail->lru_next = entry;
+    bucket->lru_tail = entry;
+    if (bucket->lru_head == NULL) bucket->lru_head = entry;
+}
+
+static void ratelimitPerSourceEvictOne(ratelimit_shared_t *shared, ratelimit_ps_bucket_t *bucket) {
+    ratelimit_ps_entry_t *evict = bucket->lru_head;
+    ratelimit_ps_entry_t *removed;
+    unsigned int hashvalue;
+
+    if (evict == NULL) return;
+    ratelimitPerSourceLruRemove(bucket, evict);
+    if (bucket->active_states > 0) bucket->active_states--;
+    evict->state_active = 0;
+    STATSCOUNTER_INC(shared->ctrPerSourceEvicted, shared->mutCtrPerSourceEvicted);
+    if (evict->has_override) return;
+
+    hashvalue = hashtable_hash(bucket->ht, evict->key);
+    removed = (ratelimit_ps_entry_t *)hashtable_remove_prehashed(bucket->ht, hashvalue, evict->key);
+    ratelimitFreePerSourceEntry(removed);
 }
 
 #ifdef HAVE_LIBYAML
@@ -1171,52 +1299,73 @@ static char *ratelimitSanitizeMetricName(const char *key) {
     return out;
 }
 
+static void ratelimitPerSourceTopNAdd(
+    uint64_t *values, char **keys, unsigned int topn, const char *key, uint64_t dropped) {
+    if (dropped == 0) return;
+    for (unsigned int i = 0; i < topn; ++i) {
+        if (dropped > values[i]) {
+            char *copy = strdup(key);
+            if (copy == NULL) return;
+            free(keys[topn - 1]);
+            for (unsigned int j = topn - 1; j > i; --j) {
+                values[j] = values[j - 1];
+                keys[j] = keys[j - 1];
+            }
+            values[i] = dropped;
+            keys[i] = copy;
+            break;
+        }
+    }
+}
+
 static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
     if (shared == NULL || shared->per_source_stats == NULL) return;
 
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     if (shared->per_source_topn == 0) {
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         return;
     }
 
     unsigned int topn = shared->per_source_topn;
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
+
     uint64_t *values = calloc(topn, sizeof(uint64_t));
     char **keys = calloc(topn, sizeof(char *));
     if (values == NULL || keys == NULL) {
         free(values);
         free(keys);
-        pthread_mutex_unlock(&shared->per_source_mut);
         return;
     }
 
-    if (shared->per_source_states != NULL && hashtable_count(shared->per_source_states) > 0) {
-        struct hashtable_itr *itr = hashtable_iterator(shared->per_source_states);
+    for (unsigned int shard = 0; shard < RATELIMIT_PERSOURCE_SHARDS; ++shard) {
+        ratelimit_ps_bucket_t *const bucket = &shared->per_source_shards[shard];
+        struct hashtable_itr *itr = NULL;
+        if (bucket->ht == NULL) continue;
+        pthread_mutex_lock(&bucket->mut);
+        if (hashtable_count(bucket->ht) > 0) {
+            itr = hashtable_iterator(bucket->ht);
+        }
         if (itr != NULL) {
             do {
-                ratelimit_ps_state_t *state = (ratelimit_ps_state_t *)hashtable_iterator_value(itr);
-                if (state == NULL || state->dropped == 0) continue;
-                for (unsigned int i = 0; i < topn; ++i) {
-                    if (state->dropped > values[i]) {
-                        for (unsigned int j = topn - 1; j > i; --j) {
-                            values[j] = values[j - 1];
-                            keys[j] = keys[j - 1];
-                        }
-                        values[i] = state->dropped;
-                        keys[i] = state->key;
-                        break;
-                    }
+                ratelimit_ps_entry_t *entry = (ratelimit_ps_entry_t *)hashtable_iterator_value(itr);
+                if (entry != NULL && entry->state_active) {
+                    ratelimitPerSourceTopNAdd(values, keys, topn, entry->key, entry->dropped);
                 }
             } while (hashtable_iterator_advance(itr));
             free(itr);
         }
-    }
-    for (unsigned int i = 0; i < topn; ++i) {
-        if (keys[i] != NULL) {
-            keys[i] = strdup(keys[i]);
-        }
+        pthread_mutex_unlock(&bucket->mut);
     }
 
+    pthread_mutex_lock(&shared->per_source_policy_mut);
+    if (shared->per_source_topn != topn) {
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
+        for (unsigned int i = 0; i < topn; ++i) free(keys[i]);
+        free(values);
+        free(keys);
+        return;
+    }
     if (shared->per_source_top_ctrs == NULL) {
         shared->per_source_top_ctrs = calloc(topn, sizeof(ctr_t *));
         shared->per_source_top_values = calloc(topn, sizeof(intctr_t));
@@ -1232,7 +1381,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
             free(values);
             for (unsigned int i = 0; i < topn; ++i) free(keys[i]);
             free(keys);
-            pthread_mutex_unlock(&shared->per_source_mut);
+            pthread_mutex_unlock(&shared->per_source_policy_mut);
             return;
         }
     }
@@ -1277,7 +1426,7 @@ static void ratelimitPerSourceUpdateTopN(ratelimit_shared_t *shared) {
         }
     }
 
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
     free(values);
     for (unsigned int i = 0; i < topn; ++i) free(keys[i]);
     free(keys);
@@ -1287,6 +1436,131 @@ static void ratelimitPerSourceStatsRead(statsobj_t *stats, void *ctx) {
     ratelimit_shared_t *shared = (ratelimit_shared_t *)ctx;
     (void)stats;
     ratelimitPerSourceUpdateTopN(shared);
+}
+
+static rsRetVal ratelimitPerSourceCreateEntry(ratelimit_ps_bucket_t *bucket,
+                                              const unsigned int hashvalue,
+                                              const char *key,
+                                              ratelimit_ps_entry_t **entry_out) {
+    char *owned_key = NULL;
+    ratelimit_ps_entry_t *entry = NULL;
+    DEFiRet;
+
+    if (bucket == NULL || key == NULL || entry_out == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    CHKmalloc(entry = calloc(1, sizeof(*entry)));
+    CHKmalloc(owned_key = strdup(key));
+    entry->key = owned_key;
+    if (hashtable_insert_prehashed(bucket->ht, hashvalue, owned_key, entry) == 0) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    owned_key = NULL;
+    *entry_out = entry;
+    entry = NULL;
+
+finalize_it:
+    free(owned_key);
+    free(entry);
+    RETiRet;
+}
+
+static rsRetVal ratelimitPerSourceApplyOverrides(ratelimit_shared_t *shared, struct hashtable *overrides) {
+    DEFiRet;
+
+    if (shared == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (!shared->per_source_shards_initialized) FINALIZE;
+
+    if (overrides != NULL && hashtable_count(overrides) > 0) {
+        struct hashtable_itr *itr = hashtable_iterator(overrides);
+        if (itr != NULL) {
+            do {
+                ratelimit_ps_override_t *override = (ratelimit_ps_override_t *)hashtable_iterator_value(itr);
+                unsigned int hashvalue;
+                ratelimit_ps_bucket_t *bucket;
+                ratelimit_ps_entry_t *entry;
+
+                if (override == NULL || override->key == NULL) continue;
+                bucket = ratelimitPerSourceBucket(shared, override->key, &hashvalue);
+                pthread_mutex_lock(&bucket->mut);
+                entry = (ratelimit_ps_entry_t *)hashtable_search_prehashed(bucket->ht, hashvalue, override->key);
+                if (entry == NULL) {
+                    iRet = ratelimitPerSourceCreateEntry(bucket, hashvalue, override->key, &entry);
+                }
+                pthread_mutex_unlock(&bucket->mut);
+                if (iRet != RS_RET_OK) {
+                    free(itr);
+                    FINALIZE;
+                }
+            } while (hashtable_iterator_advance(itr));
+            free(itr);
+        }
+    }
+
+    for (unsigned int shard = 0; shard < RATELIMIT_PERSOURCE_SHARDS; ++shard) {
+        ratelimit_ps_bucket_t *const bucket = &shared->per_source_shards[shard];
+        struct hashtable_itr *itr;
+        int more;
+
+        pthread_mutex_lock(&bucket->mut);
+        itr = hashtable_iterator(bucket->ht);
+        if (itr != NULL) {
+            more = (hashtable_count(bucket->ht) > 0);
+            while (more) {
+                ratelimit_ps_entry_t *entry = (ratelimit_ps_entry_t *)hashtable_iterator_value(itr);
+                if (entry != NULL) {
+                    entry->has_override = 0;
+                    entry->has_max = 0;
+                    entry->has_window = 0;
+                    entry->max = 0;
+                    entry->window = 0;
+                }
+                more = hashtable_iterator_advance(itr);
+            }
+            free(itr);
+        }
+
+        if (overrides != NULL && hashtable_count(overrides) > 0) {
+            itr = hashtable_iterator(overrides);
+            if (itr != NULL) {
+                do {
+                    ratelimit_ps_override_t *override = (ratelimit_ps_override_t *)hashtable_iterator_value(itr);
+                    unsigned int hashvalue;
+                    ratelimit_ps_bucket_t *override_bucket;
+                    ratelimit_ps_entry_t *entry;
+
+                    if (override == NULL || override->key == NULL) continue;
+                    override_bucket = ratelimitPerSourceBucket(shared, override->key, &hashvalue);
+                    if (override_bucket != bucket) continue;
+                    entry = (ratelimit_ps_entry_t *)hashtable_search_prehashed(bucket->ht, hashvalue, override->key);
+                    if (entry == NULL) continue;
+                    entry->has_override = 1;
+                    entry->has_max = override->has_max;
+                    entry->max = override->max;
+                    entry->has_window = override->has_window;
+                    entry->window = override->window;
+                } while (hashtable_iterator_advance(itr));
+                free(itr);
+            }
+        }
+
+        itr = hashtable_iterator(bucket->ht);
+        if (itr != NULL) {
+            more = (hashtable_count(bucket->ht) > 0);
+            while (more) {
+                ratelimit_ps_entry_t *entry = (ratelimit_ps_entry_t *)hashtable_iterator_value(itr);
+                if (entry != NULL && !entry->state_active && !entry->has_override) {
+                    more = hashtable_iterator_remove(itr);
+                    ratelimitFreePerSourceEntry(entry);
+                } else {
+                    more = hashtable_iterator_advance(itr);
+                }
+            }
+            free(itr);
+        }
+        pthread_mutex_unlock(&bucket->mut);
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
@@ -1300,29 +1574,31 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
 
     if (shared == NULL || policy == NULL || policy_file == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
-    ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 0);
-    pthread_mutex_lock(&shared->per_source_mut);
+    ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 0);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     bLocked = 1;
     shared->per_source_policy_file = strdup(policy_file);
     if (shared->per_source_policy_file == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    shared->per_source_default_max = policy->default_max;
-    shared->per_source_default_window = policy->default_window;
-    shared->per_source_overrides = policy->overrides;
-    policy->overrides = NULL;
+    ratelimitSharedStoreUInt(&shared->per_source_default_max, &shared->mut, policy->default_max);
+    ratelimitSharedStoreUInt(&shared->per_source_default_window, &shared->mut, policy->default_window);
     shared->per_source_key_tpl_default = 0;
     shared->per_source_key_tpl_name = NULL;
     shared->per_source_key_tpl = NULL;
     shared->per_source_key_needs_parsing = 1;
     shared->per_source_key_mode = RL_PS_KEY_TPL;
-    shared->per_source_states = create_hashtable(128, hash_from_string, key_equals_string, ratelimitFreePerSourceState);
-    if (shared->per_source_states == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    shared->per_source_max_states = (max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : max_states;
     shared->per_source_topn = (topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : topn;
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
     bLocked = 0;
+    CHKiRet(ratelimitInitPerSourceShards(shared, max_states));
+    CHKiRet(ratelimitPerSourceApplyOverrides(shared, policy->overrides));
+    if (policy->overrides != NULL) {
+        hashtable_destroy(policy->overrides, 1);
+        policy->overrides = NULL;
+    }
 
     STATSCOUNTER_INIT(shared->ctrPerSourceAllowed, shared->mutCtrPerSourceAllowed);
     STATSCOUNTER_INIT(shared->ctrPerSourceDropped, shared->mutCtrPerSourceDropped);
+    STATSCOUNTER_INIT(shared->ctrPerSourceEvicted, shared->mutCtrPerSourceEvicted);
     STATSCOUNTER_INIT(shared->ctrPerSourceKeyTplEvals, shared->mutCtrPerSourceKeyTplEvals);
     STATSCOUNTER_INIT(shared->ctrPerSourceKeyParseEvals, shared->mutCtrPerSourceKeyParseEvals);
 
@@ -1335,6 +1611,8 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
                                 CTR_FLAG_RESETTABLE, &shared->ctrPerSourceAllowed));
     CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_dropped"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &shared->ctrPerSourceDropped));
+    CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_evicted"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &shared->ctrPerSourceEvicted));
     CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_key_tpl_evals"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &shared->ctrPerSourceKeyTplEvals));
     CHKiRet(statsobj.AddCounter(shared->per_source_stats, UCHAR_CONSTANT("per_source_key_parse_evals"), ctrType_IntCtr,
@@ -1345,28 +1623,31 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (bLocked) {
-            pthread_mutex_unlock(&shared->per_source_mut);
+            pthread_mutex_unlock(&shared->per_source_policy_mut);
         }
         if (shared->per_source_stats != NULL) statsobj.Destruct(&shared->per_source_stats);
-        if (shared->per_source_states != NULL) hashtable_destroy(shared->per_source_states, 1);
-        if (shared->per_source_overrides != NULL) hashtable_destroy(shared->per_source_overrides, 1);
+        ratelimitDestroyPerSourceShards(shared);
         free(shared->per_source_policy_file);
         shared->per_source_policy_file = NULL;
-        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 0);
+        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 0);
     }
     return iRet;
 }
 
-static void ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_ps_policy_t *policy) {
-    if (shared == NULL || policy == NULL) return;
-    pthread_mutex_lock(&shared->per_source_mut);
-    if (shared->per_source_overrides != NULL) {
-        hashtable_destroy(shared->per_source_overrides, 1);
+static rsRetVal ratelimitSwapPerSourcePolicy(ratelimit_shared_t *shared, ratelimit_ps_policy_t *policy) {
+    DEFiRet;
+
+    if (shared == NULL || policy == NULL) FINALIZE;
+    CHKiRet(ratelimitPerSourceApplyOverrides(shared, policy->overrides));
+    ratelimitSharedStoreUInt(&shared->per_source_default_max, &shared->mut, policy->default_max);
+    ratelimitSharedStoreUInt(&shared->per_source_default_window, &shared->mut, policy->default_window);
+    if (policy->overrides != NULL) {
+        hashtable_destroy(policy->overrides, 1);
+        policy->overrides = NULL;
     }
-    shared->per_source_overrides = policy->overrides;
-    shared->per_source_default_max = policy->default_max;
-    shared->per_source_default_window = policy->default_window;
-    pthread_mutex_unlock(&shared->per_source_mut);
+
+finalize_it:
+    RETiRet;
 }
 
 static void ratelimitResetPerSourceTopN(ratelimit_shared_t *shared) {
@@ -1377,9 +1658,9 @@ static void ratelimitResetPerSourceTopN(ratelimit_shared_t *shared) {
 
     if (shared == NULL) return;
 
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     if (shared->per_source_top_ctrs == NULL) {
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         return;
     }
     topn = shared->per_source_topn;
@@ -1389,7 +1670,7 @@ static void ratelimitResetPerSourceTopN(ratelimit_shared_t *shared) {
     shared->per_source_top_ctrs = NULL;
     shared->per_source_top_values = NULL;
     shared->per_source_top_keys = NULL;
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
 
     for (unsigned int i = 0; i < topn; ++i) {
         if (top_ctrs[i] != NULL && shared->per_source_stats != NULL) {
@@ -1413,16 +1694,16 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
     unsigned int effective_topn;
     enum ratelimit_ps_key_mode key_mode;
     sbool have_per_source_policy_file;
-    sbool have_per_source_states;
+    sbool have_per_source_shards;
     DEFiRet;
 
     if (shared == NULL || policy == NULL || !policy->has_per_source) FINALIZE;
 
     if (!policy->per_source_enabled) {
-        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 0);
-        pthread_mutex_lock(&shared->per_source_mut);
+        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 0);
+        pthread_mutex_lock(&shared->per_source_policy_mut);
         shared->per_source_policy_from_policy_file = 1;
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         FINALIZE;
     }
 
@@ -1431,29 +1712,27 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
         CHKmalloc(key_tpl_name = strdup(policy->per_source_key_tpl_name));
     }
 
-    pthread_mutex_lock(&shared->per_source_mut);
-    have_per_source_states = (shared->per_source_states != NULL);
-    pthread_mutex_unlock(&shared->per_source_mut);
-    if (!have_per_source_states) {
+    pthread_mutex_lock(&shared->per_source_policy_mut);
+    have_per_source_shards = shared->per_source_shards_initialized;
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
+    if (!have_per_source_shards) {
         CHKiRet(ratelimitInitPerSourceShared(shared, policy->per_source_policy, policy_file,
                                              policy->per_source_max_states, policy->per_source_topn));
-        policy->per_source_policy->overrides = NULL;
     } else {
-        ratelimitSwapPerSourcePolicy(shared, policy->per_source_policy);
-        policy->per_source_policy->overrides = NULL;
+        CHKiRet(ratelimitSwapPerSourcePolicy(shared, policy->per_source_policy));
     }
 
     if (policy_file != NULL) {
-        pthread_mutex_lock(&shared->per_source_mut);
+        pthread_mutex_lock(&shared->per_source_policy_mut);
         have_per_source_policy_file = (shared->per_source_policy_file != NULL);
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         if (!have_per_source_policy_file) {
             CHKmalloc(new_policy_file = strdup(policy_file));
         }
     }
     key_mode = perSourceKeyModeFromTemplate(key_tpl);
 
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     if (shared->per_source_policy_file == NULL && new_policy_file != NULL) {
         shared->per_source_policy_file = new_policy_file;
         new_policy_file = NULL;
@@ -1466,17 +1745,16 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
     shared->per_source_key_mode = key_mode;
     shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
     shared->per_source_policy_from_policy_file = 1;
-    shared->per_source_max_states =
-        (policy->per_source_max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : policy->per_source_max_states;
+    ratelimitSetPerSourceShardCaps(shared, policy->per_source_max_states);
     effective_topn = (policy->per_source_topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : policy->per_source_topn;
     if (shared->per_source_topn != effective_topn) {
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         ratelimitResetPerSourceTopN(shared);
-        pthread_mutex_lock(&shared->per_source_mut);
+        pthread_mutex_lock(&shared->per_source_policy_mut);
         shared->per_source_topn = effective_topn;
     }
-    pthread_mutex_unlock(&shared->per_source_mut);
-    ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 1);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
+    ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 1);
 
 finalize_it:
     free(new_policy_file);
@@ -1565,11 +1843,11 @@ static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char
     if (policy.has_per_source) {
         CHKiRet(ratelimitApplyPolicyPerSource(shared, &policy, runConf, shared->policy_file));
     } else {
-        pthread_mutex_lock(&shared->per_source_mut);
+        pthread_mutex_lock(&shared->per_source_policy_mut);
         const sbool disable_per_source = shared->per_source_policy_from_policy_file;
-        pthread_mutex_unlock(&shared->per_source_mut);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
         if (disable_per_source) {
-            ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 0);
+            ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 0);
         }
     }
 
@@ -1602,7 +1880,7 @@ static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, c
 
     CHKiRet(parsePerSourcePolicyFile(shared->per_source_policy_file, &policy));
     if (policy != NULL) {
-        ratelimitSwapPerSourcePolicy(shared, policy);
+        CHKiRet(ratelimitSwapPerSourcePolicy(shared, policy));
         if (policy->overrides != NULL) {
             policy->overrides = NULL;
         }
@@ -1629,8 +1907,9 @@ finalize_it:
 
 static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key, size_t key_len, time_t tt) {
     ratelimit_shared_t *shared;
-    ratelimit_ps_state_t *state;
-    ratelimit_ps_override_t *override;
+    ratelimit_ps_bucket_t *bucket;
+    ratelimit_ps_entry_t *entry;
+    unsigned int hashvalue;
     unsigned int max;
     unsigned int window;
     sbool must_drop = 0;
@@ -1643,84 +1922,58 @@ static rsRetVal ratelimitPerSourceCheck(ratelimit_t *ratelimit, const char *key,
 
     if (tt == 0) tt = time(NULL);
 
-    if (!ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_mut)) FINALIZE;
-    pthread_mutex_lock(&shared->per_source_mut);
-    state = (ratelimit_ps_state_t *)hashtable_search(shared->per_source_states, (void *)key);
-    if (state == NULL) {
-        if (shared->per_source_max_states > 0 &&
-            hashtable_count(shared->per_source_states) >= shared->per_source_max_states) {
-            ratelimit_ps_state_t *evict = shared->per_source_lru_head;
-            if (evict != NULL) {
-                shared->per_source_lru_head = evict->lru_next;
-                if (shared->per_source_lru_head != NULL) shared->per_source_lru_head->lru_prev = NULL;
-                if (shared->per_source_lru_tail == evict) shared->per_source_lru_tail = NULL;
-                ratelimit_ps_state_t *evicted =
-                    (ratelimit_ps_state_t *)hashtable_remove(shared->per_source_states, (void *)evict->key);
-                ratelimitFreePerSourceState(evicted);
-            }
-        }
-        state = calloc(1, sizeof(*state));
-        if (state != NULL) {
-            state->key = strdup(key);
-            state->window_start = tt;
-            state->last_seen = tt;
-            if (state->key != NULL && hashtable_insert(shared->per_source_states, state->key, state) == 0) {
-                free(state->key);
-                free(state);
-                state = NULL;
-            } else {
-                state->lru_prev = shared->per_source_lru_tail;
-                if (shared->per_source_lru_tail != NULL) shared->per_source_lru_tail->lru_next = state;
-                shared->per_source_lru_tail = state;
-                if (shared->per_source_lru_head == NULL) shared->per_source_lru_head = state;
-            }
-        }
-    } else {
-        if (shared->per_source_lru_tail != state) {
-            if (state->lru_prev != NULL) state->lru_prev->lru_next = state->lru_next;
-            if (state->lru_next != NULL) state->lru_next->lru_prev = state->lru_prev;
-            if (shared->per_source_lru_head == state) shared->per_source_lru_head = state->lru_next;
-            /* if (shared->per_source_lru_tail == state) - handled by outer if */
-
-            state->lru_prev = shared->per_source_lru_tail;
-            state->lru_next = NULL;
-            if (shared->per_source_lru_tail != NULL) shared->per_source_lru_tail->lru_next = state;
-            shared->per_source_lru_tail = state;
-            if (shared->per_source_lru_head == NULL) shared->per_source_lru_head = state;
+    if (!ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut)) FINALIZE;
+    bucket = ratelimitPerSourceBucket(shared, key, &hashvalue);
+    pthread_mutex_lock(&bucket->mut);
+    entry = (ratelimit_ps_entry_t *)hashtable_search_prehashed(bucket->ht, hashvalue, (void *)key);
+    if (entry == NULL) {
+        iRet = ratelimitPerSourceCreateEntry(bucket, hashvalue, key, &entry);
+        if (iRet != RS_RET_OK) {
+            pthread_mutex_unlock(&bucket->mut);
+            FINALIZE;
         }
     }
-
-    if (state == NULL) {
-        pthread_mutex_unlock(&shared->per_source_mut);
-        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (!entry->state_active) {
+        while (bucket->max_states > 0 && bucket->active_states >= bucket->max_states) {
+            if (bucket->lru_head == NULL) break;
+            ratelimitPerSourceEvictOne(shared, bucket);
+        }
+        entry->state_active = 1;
+        entry->window_start = tt;
+        entry->last_seen = tt;
+        bucket->active_states++;
     }
+    ratelimitPerSourceLruTouch(bucket, entry);
 
-    override = (ratelimit_ps_override_t *)hashtable_search(shared->per_source_overrides, (void *)key);
-    max = (override != NULL && override->has_max) ? override->max : shared->per_source_default_max;
-    window = (override != NULL && override->has_window) ? override->window : shared->per_source_default_window;
+    max = (entry->has_override && entry->has_max)
+              ? entry->max
+              : ratelimitSharedLoadUInt(&shared->per_source_default_max, &shared->mut);
+    window = (entry->has_override && entry->has_window)
+                 ? entry->window
+                 : ratelimitSharedLoadUInt(&shared->per_source_default_window, &shared->mut);
 
     if (max == 0 || window == 0) {
-        state->allowed++;
+        entry->allowed++;
     } else {
-        if (state->window_start == 0 || (tt - state->window_start) >= (time_t)window || tt < state->window_start) {
-            state->window_start = tt;
-            state->count = 0;
+        if (entry->window_start == 0 || (tt - entry->window_start) >= (time_t)window || tt < entry->window_start) {
+            entry->window_start = tt;
+            entry->count = 0;
         }
-        if (state->count < max) {
-            state->count++;
-            state->allowed++;
+        if (entry->count < max) {
+            entry->count++;
+            entry->allowed++;
         } else {
-            state->dropped++;
+            entry->dropped++;
             must_drop = 1;
         }
     }
-    state->last_seen = tt;
+    entry->last_seen = tt;
     if (must_drop) {
         STATSCOUNTER_INC(shared->ctrPerSourceDropped, shared->mutCtrPerSourceDropped);
     } else {
         STATSCOUNTER_INC(shared->ctrPerSourceAllowed, shared->mutCtrPerSourceAllowed);
     }
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&bucket->mut);
 
     if (must_drop) {
         ABORT_FINALIZE(RS_RET_DISCARDMSG);
@@ -1868,7 +2121,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     CHKmalloc(shared = calloc(1, sizeof(ratelimit_shared_t)));
     ratelimitSharedRefsInit(shared, 1);
     pthread_mutex_init(&shared->mut, NULL);
-    pthread_mutex_init(&shared->per_source_mut, NULL);
+    pthread_mutex_init(&shared->per_source_policy_mut, NULL);
     CHKmalloc(key = strdup(name));
     shared->name = key;
     shared->scope = scope;
@@ -1903,12 +2156,12 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         if (per_source_key_tpl_name != NULL) {
             CHKmalloc(shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name));
         }
-        pthread_mutex_lock(&shared->per_source_mut);
+        pthread_mutex_lock(&shared->per_source_policy_mut);
         shared->per_source_policy_from_policy_file = per_source_from_policy_file;
         shared->per_source_key_mode = perSourceKeyModeFromTemplate(shared->per_source_key_tpl);
         shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
-        pthread_mutex_unlock(&shared->per_source_mut);
-        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_mut, 1);
+        pthread_mutex_unlock(&shared->per_source_policy_mut);
+        ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 1);
     }
 
     if (hashtable_insert_prehashed(bucket->ht, hashvalue, key, shared) == 0) {
@@ -1933,12 +2186,7 @@ finalize_it:
         /* If we are here, shared was allocated but NOT inserted (error case before insert) */
         free(shared->name); /* key was assigned to name */
         free(shared->policy_file);
-        if (shared->per_source_overrides != NULL) {
-            hashtable_destroy(shared->per_source_overrides, 1);
-        }
-        if (shared->per_source_states != NULL) {
-            hashtable_destroy(shared->per_source_states, 1);
-        }
+        ratelimitDestroyPerSourceShards(shared);
         if (shared->per_source_stats != NULL) {
             statsobj.Destruct(&shared->per_source_stats);
         }
@@ -1951,7 +2199,7 @@ finalize_it:
         }
         free(shared->per_source_top_keys);
         free(shared->per_source_key_tpl_name);
-        pthread_mutex_destroy(&shared->per_source_mut);
+        pthread_mutex_destroy(&shared->per_source_policy_mut);
         free(shared->per_source_policy_file);
         pthread_mutex_destroy(&shared->mut);
         ratelimitSharedRefsDestroy(shared);
@@ -2006,7 +2254,8 @@ rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
     /* First, free the default one created by ratelimitNew */
     if ((*ppThis)->bOwnsShared) {
         pthread_mutex_destroy(&(*ppThis)->pShared->mut);
-        pthread_mutex_destroy(&(*ppThis)->pShared->per_source_mut);
+        ratelimitDestroyPerSourceShards((*ppThis)->pShared);
+        pthread_mutex_destroy(&(*ppThis)->pShared->per_source_policy_mut);
         free((*ppThis)->pShared);
     }
 
@@ -2322,8 +2571,8 @@ finalize_it:
 
 /* returns 1, if the ratelimiter performs any checks and 0 otherwise */
 int ratelimitChecked(ratelimit_t *ratelimit) {
-    const unsigned int per_source_enabled =
-        ratelimitPerSourceLoadEnabled(&ratelimit->pShared->per_source_enabled, &ratelimit->pShared->per_source_mut);
+    const unsigned int per_source_enabled = ratelimitPerSourceLoadEnabled(&ratelimit->pShared->per_source_enabled,
+                                                                          &ratelimit->pShared->per_source_policy_mut);
 
     return ratelimitSharedLoadUInt(&ratelimit->pShared->interval, &ratelimit->pShared->mut) || per_source_enabled ||
            runConf->globals.bReduceRepeatMsgs;
@@ -2419,15 +2668,15 @@ static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMs
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     memset(ctx, 0, sizeof(*ctx));
     shared = ratelimit->pShared;
-    policy.enabled = ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_mut);
+    policy.enabled = ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut);
     if (!policy.enabled) FINALIZE;
 
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     policy.key_tpl_default = shared->per_source_key_tpl_default;
     policy.key_needs_parsing = shared->per_source_key_needs_parsing;
     policy.key_mode = shared->per_source_key_mode;
     policy.key_tpl = shared->per_source_key_tpl;
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
 
     switch (policy.key_mode) {
         case RL_PS_KEY_FROMHOST_IP:
@@ -2578,7 +2827,7 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
     pThis->pShared->scope = RATELIMIT_SCOPE_INPUT;
     pThis->pShared->output_mode = RATELIMIT_OUTPUT_MODE_DROP;
     pthread_mutex_init(&pThis->pShared->mut, NULL);
-    pthread_mutex_init(&pThis->pShared->per_source_mut, NULL);
+    pthread_mutex_init(&pThis->pShared->per_source_policy_mut, NULL);
 
     DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);
     *ppThis = pThis;
@@ -2646,7 +2895,8 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
 
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);
-        pthread_mutex_destroy(&ratelimit->pShared->per_source_mut);
+        ratelimitDestroyPerSourceShards(ratelimit->pShared);
+        pthread_mutex_destroy(&ratelimit->pShared->per_source_policy_mut);
         free(ratelimit->pShared);
     } else if (ratelimit->pShared != NULL) {
         ratelimitSharedReleaseRef(ratelimit->pShared);
@@ -2680,9 +2930,9 @@ static void ratelimitDoHUPShared(ratelimit_shared_t *const shared) {
     if (shared->policy_file) {
         ratelimitReloadPolicyFile(shared, "HUP");
     }
-    pthread_mutex_lock(&shared->per_source_mut);
+    pthread_mutex_lock(&shared->per_source_policy_mut);
     reload_per_source = (shared->per_source_policy_file != NULL && !shared->per_source_policy_from_policy_file);
-    pthread_mutex_unlock(&shared->per_source_mut);
+    pthread_mutex_unlock(&shared->per_source_policy_mut);
     if (reload_per_source) {
         ratelimitReloadPerSourcePolicyFile(shared, "HUP");
     }

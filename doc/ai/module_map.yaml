@@ -17,11 +17,15 @@ runtime_ratelimit:
     - type: mutex
       field: ratelimit_shared_t.mut
     - type: mutex
-      field: ratelimit_shared_t.per_source_mut
+      field: ratelimit_shared_t.per_source_policy_mut
+    - type: mutex
+      field: ratelimit_ps_bucket_t.mut
     - type: mutex
       field: ratelimit_t.mut
   notes:
     - Named ratelimit configs are stored in sharded hashtables; lookup and insertion lock only the shard selected by the config name.
+    - Input per-source ratelimit state is stored in shard-local hashtables with embedded override data; message-time accounting locks only the source-key shard.
+    - perSourceMaxStates is enforced approximately through shard-local caps; values below the shard count keep one active state per shard, and per_source_evicted reports source-state evictions.
     - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
 
 omfile:
