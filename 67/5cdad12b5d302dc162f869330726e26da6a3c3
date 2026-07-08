@@ -1,0 +1,19 @@
+doc/source/configuration/modules/omawslogshlc.rst
+  s_0ed7a98cdca2e7::t_29f97632550a87 255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "675cdad12b5d302dc162f869330726e26da6a3c3",
+  "prompts": {},
+  "sessions": {
+    "s_0ed7a98cdca2e7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f2c80-b6dc-7e91-9682-31b99079a0a7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
