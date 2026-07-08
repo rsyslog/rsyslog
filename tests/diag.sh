@@ -3311,13 +3311,18 @@ tcpflood_marker_is_valid() {
 }
 
 tcpflood_next_marker() {
-	local marker=""
+	local marker_var="${1:-}"
+	local marker_value=""
 	if [ -n "${RSYSLOG_DYNNAME:-}" ] && [ "${RSTB_NO_TCPFLOOD_MARKER:-}" != "YES" ]; then
 		TCPFLOOD_MARKER_ID=$(( ${TCPFLOOD_MARKER_ID:-0} + 1 ))
-		marker="${RSYSLOG_DYNNAME}.tcpflood.${TCPFLOOD_MARKER_ID}.proper-termination"
-		rm -f "$marker"
+		marker_value="${RSYSLOG_DYNNAME}.tcpflood.${TCPFLOOD_MARKER_ID}.proper-termination"
+		rm -f "$marker_value"
 	fi
-	printf '%s' "$marker"
+	if [ -n "$marker_var" ]; then
+		printf -v "$marker_var" '%s' "$marker_value"
+	else
+		printf '%s' "$marker_value"
+	fi
 }
 
 print_tcpflood_marker_file() {
@@ -3420,7 +3425,7 @@ tcpflood() {
 	else
 		check_only="no"
 	fi
-	marker="$(tcpflood_next_marker)"
+	tcpflood_next_marker marker
 	tcpflood_build_command "$marker" "$@"
 	"${TCPFLOOD_CMD[@]}"
 	res=$?
@@ -3454,7 +3459,7 @@ start_tcpflood_async() {
 	local marker
 	local -a TCPFLOOD_CMD
 	shift 2
-	marker="$(tcpflood_next_marker)"
+	tcpflood_next_marker marker
 	tcpflood_build_command "$marker" "$@"
 	"${TCPFLOOD_CMD[@]}" &
 	printf -v "$pid_var" '%s' "$!"
