@@ -97,7 +97,17 @@ that loads or uses ``omkafka``.
 .. _containers-user-collector-tls_auth_mode:
 .. envvar:: TLS_AUTH_MODE
 
-   Netstream authentication mode for the TLS listener. Default ``x509/certvalid``.
+   Netstream authentication mode for the TLS listener. Default ``anon`` for
+   compatibility with existing deployments.
+
+   When ``ENABLE_TLS=on`` and ``TLS_AUTH_MODE=anon``, the container prints a
+   startup warning because the connection is encrypted but the sender is not
+   authenticated. For production deployments that need sender authentication,
+   set ``TLS_AUTH_MODE=x509/certvalid`` and configure ``TLS_CA_FILE`` so clients
+   must present certificates signed by the trusted CA. Stronger peer-name or
+   fingerprint checks require a custom rsyslog configuration snippet because
+   the packaged collector environment variables do not expose permitted-peer
+   settings.
 
 .. _containers-user-collector-write_all_file:
 .. envvar:: WRITE_ALL_FILE

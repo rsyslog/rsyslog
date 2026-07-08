@@ -6,7 +6,8 @@ if [ -n "$RSYSLOG_HOSTNAME" ]; then
     echo "Using pre-set container hostname"
 else
     echo "Obtaining RSYSLOG_HOSTNAME from /etc/hostname"
-    export RSYSLOG_HOSTNAME="$(cat /etc/hostname)"
+    RSYSLOG_HOSTNAME="$(cat /etc/hostname)"
+    export RSYSLOG_HOSTNAME
 fi
 echo "rsyslog uses hostname '$RSYSLOG_HOSTNAME'"
 
@@ -26,6 +27,10 @@ case "$RSYSLOG_ROLE" in
     echo "Remote log target: ${REMOTE_SERVER_NAME}:${REMOTE_SERVER_PORT}"
     ;;
   collector)
+    if [ "${ENABLE_TLS:-off}" = "on" ] && [ "${TLS_AUTH_MODE:-anon}" = "anon" ]; then
+        echo "WARNING: collector TLS is enabled with TLS_AUTH_MODE=anon; clients are not authenticated." >&2
+        echo "WARNING: set TLS_AUTH_MODE=x509/certvalid with TLS_CA_FILE and client certificates for sender authentication." >&2
+    fi
     ;;
   minimal|*)
     ;;
