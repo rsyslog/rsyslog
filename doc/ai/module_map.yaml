@@ -37,6 +37,12 @@ runtime_ratelimit:
     - perSourceMaxStates is enforced approximately through shard-local caps; values below the shard count keep one active state per shard, and per_source_evicted reports source-state evictions.
     - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
 
+runtime_msg:
+  paths: ["runtime/msg.c", "runtime/msg.h"]
+  requires_serialization: true
+  notes:
+    - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
+
 omfile:
   paths: ["plugins/omfile/"]
   requires_serialization: true

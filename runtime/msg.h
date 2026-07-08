@@ -280,6 +280,7 @@ uchar *getProgramName(smsg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(smsg_t *pM);
 uchar *getRcvFromIP(smsg_t *pM);
 uchar *getRcvFromPort(smsg_t *pM);
+void MsgGetRcvFromProp(smsg_t *pM, propid_t propid, uchar **ppsz, int *plen);
 rsRetVal propNameToID(const uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal ATTR_NONNULL() msgCheckVarExists(smsg_t *const pMsg, msgPropDescr_t *pProp);

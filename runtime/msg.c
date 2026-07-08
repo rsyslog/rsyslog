@@ -2431,6 +2431,40 @@ uchar *getRcvFrom(smsg_t *const pM) {
 }
 
 
+void MsgGetRcvFromProp(smsg_t *const pM, const propid_t propid, uchar **const ppsz, int *const plen) {
+    prop_t *pProp = NULL;
+
+    assert(ppsz != NULL);
+    assert(plen != NULL);
+
+    if (pM != NULL && (pM->msgFlags & NEEDS_DNSRESOL)) {
+        (void)resolveDNS(pM);
+    }
+    if (pM != NULL) {
+        switch (propid) {
+            case PROP_FROMHOST:
+                pProp = pM->rcvFrom.pRcvFrom;
+                break;
+            case PROP_FROMHOST_IP:
+                pProp = pM->pRcvFromIP;
+                break;
+            case PROP_FROMHOST_PORT:
+                pProp = pM->pRcvFromPort;
+                break;
+            default:
+                assert(0);
+                break;
+        }
+    }
+    if (pProp == NULL) {
+        *ppsz = UCHAR_CONSTANT("");
+        *plen = 0;
+    } else {
+        prop.GetString(pProp, ppsz, plen);
+    }
+}
+
+
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
 rsRetVal MsgSetStructuredData(smsg_t *const pMsg, const char *pszStrucData) {
@@ -3722,13 +3756,13 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             getInputName(pMsg, &pRes, &bufLen);
             break;
         case PROP_FROMHOST:
-            pRes = getRcvFrom(pMsg);
+            MsgGetRcvFromProp(pMsg, PROP_FROMHOST, &pRes, &bufLen);
             break;
         case PROP_FROMHOST_IP:
-            pRes = getRcvFromIP(pMsg);
+            MsgGetRcvFromProp(pMsg, PROP_FROMHOST_IP, &pRes, &bufLen);
             break;
         case PROP_FROMHOST_PORT:
-            pRes = getRcvFromPort(pMsg);
+            MsgGetRcvFromProp(pMsg, PROP_FROMHOST_PORT, &pRes, &bufLen);
             break;
         case PROP_PRI:
             pRes = (uchar *)getPRI(pMsg);

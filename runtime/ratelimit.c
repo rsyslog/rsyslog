@@ -2610,29 +2610,17 @@ static void ratelimitPerSourceKeyCtxFree(per_source_key_ctx_t *ctx) {
     memset(ctx, 0, sizeof(*ctx));
 }
 
-static rsRetVal ratelimitGetMsgPropString(
+static rsRetVal ratelimitGetRcvFromString(
     smsg_t *pMsg, propid_t propid, const char **value, size_t *len, uchar **to_free) {
-    msgPropDescr_t prop;
-    rs_size_t prop_len = -1;
-    unsigned short must_be_freed = 0;
     uchar *prop_value;
+    int prop_len;
     DEFiRet;
 
     if (pMsg == NULL || value == NULL || len == NULL || to_free == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-    prop.id = propid;
-    prop.name = NULL;
-    prop.nameLen = 0;
-    prop_value = MsgGetProp(pMsg, NULL, &prop, &prop_len, &must_be_freed, NULL);
-    if (prop_value == NULL) {
-        *value = "";
-        *len = 0;
-        FINALIZE;
-    }
+    *to_free = NULL;
+    MsgGetRcvFromProp(pMsg, propid, &prop_value, &prop_len);
     *value = (const char *)prop_value;
-    *len = (prop_len < 0) ? strlen((const char *)prop_value) : (size_t)prop_len;
-    if (must_be_freed) {
-        *to_free = prop_value;
-    }
+    *len = (size_t)prop_len;
 
 finalize_it:
     RETiRet;
@@ -2680,19 +2668,19 @@ static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMs
 
     switch (policy.key_mode) {
         case RL_PS_KEY_FROMHOST_IP:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &ctx->key, &ctx->key_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_IP, &ctx->key, &ctx->key_len, &ctx->free_host));
             break;
         case RL_PS_KEY_FROMHOST:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
             break;
         case RL_PS_KEY_FROMHOST_IP_PORT:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
             break;
         case RL_PS_KEY_FROMHOST_PORT:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
             break;
         case RL_PS_KEY_TPL:
