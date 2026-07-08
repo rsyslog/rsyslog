@@ -1,0 +1,21 @@
+support_status: contributor-supported
+maturity_level: experimental
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-06-30
+build_dependencies:
+  - libcurl development headers
+runtime_dependencies:
+  - Amazon CloudWatch Logs HLC endpoint reachable over HTTPS
+  - A bearer token with access to the configured log group
+ci_targets:
+  - omawslogshlc-missing-region.sh
+  - omawslogshlc-basic.sh
+  - omawslogshlc-batch.sh
+documentation:
+  - doc/source/configuration/modules/omawslogshlc.rst
+notes:
+  - User-contributed module; the rsyslog core team reviews changes but does not lead maintenance.
+  - Experimental maturity; use extra caution in production and expect feedback-driven changes.
+  - The module posts to the CloudWatch Logs HLC endpoint using bearer token authentication.
+  - Integration tests require AWS credentials supplied through `tests/omawslogshlc-env.sh`.
+  - Events are batched per transaction and flushed at max_batch_size or endTransaction.

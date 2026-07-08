@@ -61,6 +61,12 @@ omazuredce:
   notes:
     - Each worker owns its batch buffer and timer thread; access is serialized by batchLock.
 
+omawslogshlc:
+  paths: ["plugins/omawslogshlc/"]
+  requires_serialization: false
+  notes:
+    - Each worker owns its CURL handle and HLC batch buffer; action configuration is immutable after startup.
+
 contrib_omhttp:
   paths: ["contrib/omhttp/"]
   requires_serialization: false

@@ -243,6 +243,10 @@ if ENABLE_OMAZUREDCE
 SUBDIRS += plugins/omazuredce
 endif
 
+if ENABLE_OMAWSLOGSHLC
+SUBDIRS += plugins/omawslogshlc
+endif
+
 if ENABLE_IMDTLS
 SUBDIRS += plugins/imdtls
 endif
@@ -600,6 +604,10 @@ endif
 
 if ENABLE_OMAZUREDCE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omazuredce
+endif
+
+if ENABLE_OMAWSLOGSHLC
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omawslogshlc
 endif
 
 if ENABLE_IMDTLS
