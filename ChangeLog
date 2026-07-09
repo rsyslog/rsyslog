@@ -1,5 +1,207 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
+
+- 2026-07-08: omawslogshlc: add CloudWatch Logs HLC output module
+  The new omawslogshlc output module sends events to Amazon CloudWatch Logs
+  through the HTTP Log Collector endpoint using bearer-token authentication.
+  It batches events per transaction, wraps syslog messages in the HLC JSON
+  event format, and uses the normal rsyslog action suspension path for
+  retryable HTTP failures.
+  Thanks to Chen Lu for the contribution.
+- 2026-07-08: core/imfile: add opt-in systemd READY delay
+  The new global(systemd.notifyReadyDelay="on") setting lets systemd-managed
+  deployments delay READY=1 until opt-in modules have completed their startup
+  work. imfile uses the barrier so persisted state-file positions can be
+  loaded before systemd treats rsyslog as ready. The option defaults to off
+  for compatibility.
+  Fixes https://github.com/rsyslog/rsyslog/issues/6810
+- 2026-07-08: ratelimit: improve concurrent named and per-source handling
+  Named ratelimit configurations and per-source state now use sharded
+  registries, reducing contention in parallel input and output setup paths.
+  Per-source policy reloads also publish updated metadata more safely while
+  traffic is active.
+- 2026-07-07: queue: align legacy action batch default
+  Legacy $ActionQueue... configurations without an explicit dequeue batch size
+  now default to 128 messages, matching the documented modern action queue
+  default. Explicit legacy batch-size settings continue to override it.
+- 2026-07-06: action: add generic output rate limiting
+  Actions can now use output-scoped rate limiting in drop or pace mode, with
+  action-level counters and configuration validation. Pacing checks shutdown
+  before sleeping so forced shutdown does not wait for the configured cap.
+- 2026-07-05: omelasticsearch: add and consistently apply TLS knobs
+  omelasticsearch now supports tls.tlsversion, tls.ciphersuites, and
+  tls.keyexchangegroups, including hybrid PQC key-exchange lists when the
+  underlying libcurl/OpenSSL stack supports them. Startup platform detection
+  now uses the same TLS options as worker cURL handles, so validation matches
+  the runtime connection policy.
+  Thanks to Attila Lakatos for the TLS-parameter contribution.
+- 2026-07-05: omprog: pace transaction retry resumes
+  Suspended transaction batches now honor action.resumeInterval instead of
+  retrying failed COMMIT paths in a tight loop. The retry splitter also avoids
+  over-classifying later messages when an action needs a retry delay before
+  attempting the current one.
+  Closes https://github.com/rsyslog/rsyslog/issues/5016
+- 2026-07-02: net: add modern allowedSender ACLs
+  imtcp and imudp now accept allowedSender arrays at module and input scope.
+  Module-level lists act as defaults, input-level lists replace them, and
+  legacy $AllowedSender behavior remains available for existing
+  configurations. Empty YAML arrays are rejected during validation.
+- 2026-07-02: queue: keep disk-assisted child workers alive while idle
+  Disk-assisted child queues now retain an idle child worker across short
+  refill gaps instead of tearing down output worker state immediately. This
+  avoids repeated reconnect churn for connection-oriented outputs such as
+  omfwd while preserving explicit shutdown behavior.
+- 2026-07-02: rainerscript: align hexadecimal string escapes
+  RainerScript object/action parameter strings now accept documented \xhh
+  hexadecimal byte escapes, and uppercase hex digits are accepted consistently
+  across object, expression, and procedure-call string contexts. This removes
+  syntax differences between string contexts while keeping existing octal
+  escapes.
+- 2026-06-30: parser: preserve SpaceLFOnReceive with other sanitization
+  SpaceLFOnReceive now rewrites embedded LF bytes even when earlier bytes also
+  require the general sanitizer. Mixed LF, control-character, tab, and 8-bit
+  input is sanitized consistently.
+  Closes https://github.com/rsyslog/rsyslog/issues/3236
+- 2026-06-30: mmutf8fix: support replacement sequences
+  mmutf8fix can now replace invalid UTF-8 bytes with a configured byte
+  sequence, such as the UTF-8 replacement character. The existing
+  replacementChar behavior is unchanged, and configurations that set both
+  options are rejected.
+  Closes https://github.com/rsyslog/rsyslog/issues/6682
+- 2026-06-29: imkubernetes: add Kubernetes-native log input
+  The new imkubernetes input module tails Kubernetes pod and container log
+  files directly from the host filesystem, parses CRI and Docker json-file
+  records, merges CRI partial records, and can enrich messages with
+  Kubernetes API metadata.
+- 2026-06-29: netstream: improve secure-default TLS mode handling
+  Secure-default warn mode now reports TLS-capable stream drivers that still
+  run with streamdriver.mode=0, including inherited default drivers. Strict
+  mode promotes omitted mode to TLS mode 1 but rejects an explicit mode 0 so
+  user intent is not silently overridden.
+- 2026-06-29: imjournal: add journal namespace support
+  imjournal can now read a specific systemd journal namespace through the new
+  Namespace module parameter when the linked libsystemd supports it. Empty
+  Namespace values and Namespace together with Remote are rejected during
+  configuration validation.
+  Closes https://github.com/rsyslog/rsyslog/issues/4771
+- 2026-06-29: omfwd: add TCP user timeout support
+  omfwd can now configure TCP_USER_TIMEOUT for TCP and TLS forwarding
+  connections with the tcp_user_timeout action parameter. This lets operators
+  bound how long the kernel may keep retransmitting unacknowledged data before
+  the connection is considered failed.
+  Closes https://github.com/rsyslog/rsyslog/issues/6696
+- 2026-06-29: omelasticsearch: improve bulk failure handling
+  Read-only Elasticsearch bulk item failures are now classified as retryable
+  when the whole failed batch can be retried safely, and dynamic bulk metadata
+  values are JSON-escaped before submission. This avoids dropping temporarily
+  blocked writes and keeps message-derived metadata values inside the bulk
+  control-line strings.
+  Closes https://github.com/rsyslog/rsyslog/issues/3691
+- 2026-06-29: omhttp: continue after permanent data failures
+  Permanent HTTP 3xx and 4xx responses now complete the failed request payload
+  after recording error details, allowing later events to continue. Transport
+  failures, HTTP 429/5xx responses, and configured retry codes still use the
+  retry path.
+  Closes https://github.com/rsyslog/rsyslog/issues/4348
+- 2026-06-29: template: add octal control-character escaping
+  Modern list-template properties can now use
+  controlCharacters="escape-octal" to emit octal #ooo control-character
+  escapes matching receive-side escaping. The legacy escape-cc property
+  replacer option keeps its historical decimal-compatible behavior.
+  Thanks to Andy Lau for the original PR and analysis.
+  Closes https://github.com/rsyslog/rsyslog/issues/496
+  See https://github.com/rsyslog/rsyslog/pull/7179
+- 2026-06-28: ommail: harden subject.template header output
+  ommail now normalizes CR and LF bytes rendered into Subject headers through
+  subject.template. Message-derived fields can remain in the Subject value
+  without creating additional mail headers or body lines.
+- 2026-06-28: imtcp/imptcp: tighten stream-compression handling
+  imtcp zstd stream decompression now rejects frames whose advertised window
+  exceeds the configured per-receive decompression limit. Stream-decompressed
+  bytes are also marked so legacy single-message "z" decompression is not run
+  a second time on the decoded payload.
+  Closes https://github.com/rsyslog/rsyslog/issues/2702
+- 2026-06-28: mmkubernetes: add kubernetesurl failover
+  mmkubernetes now accepts multiple Kubernetes API URLs using standard array
+  syntax. Transport failures on one endpoint can retry later configured
+  endpoints, while API responses such as 404 or 429 keep their existing
+  handling.
+  Closes https://github.com/rsyslog/rsyslog/issues/2581
+- 2026-06-26: imhttp: improve robustness and compressed-body limits
+  imhttp now validates additional boundary conditions, fixes API-key fallback
+  after Basic authentication failure, rejects invalid endpoint paths, avoids
+  following symlinked auth files, and enforces the request body limit for gzip
+  payloads after decompression.
+- 2026-06-26: imdocker: recover from stale since anchors
+  imdocker now clears and rebuilds its container-list anchor when Docker
+  rejects a since=<id> value for a removed container. Discovery retries
+  without replaying already attached containers, and the remembered-container
+  set is pruned as Docker's visible container list changes.
+  Closes https://github.com/rsyslog/rsyslog/issues/4526
+- 2026-06-26: omuxsock: isolate action socket locks
+  Each omuxsock action now owns its socket mutex, so a blocked destination no
+  longer serializes unrelated omuxsock actions that target independent Unix
+  sockets. Mutex setup failures are also handled during instance creation.
+  Closes https://github.com/rsyslog/rsyslog/issues/5444
+- 2026-06-26: errmsg: enrich oversize errorfile records
+  oversizemsg.errorfile JSON records now include additional triage fields
+  such as sender, timestamp, facility, severity, program name, and structured
+  data when available, while preserving the legacy input alias.
+  Fixes https://github.com/rsyslog/rsyslog/issues/4378
+- 2026-06-26: impcap: validate ARP address lengths
+  Malformed ARP/RARP packets with inconsistent address lengths are now ignored
+  for address metadata instead of letting packet-controlled fields drive reads
+  beyond the captured packet. Normal Ethernet/IPv4 ARP parsing is preserved.
+- 2026-06-26: config: add warnings for surprising input setups
+  imfile now warns about fully duplicated monitors for the same file, while
+  inputs bound to rulesets without dedicated queues warn during configuration
+  validation. Legitimate same-file fan-out and rulesets with queues remain
+  quiet.
+  Closes https://github.com/rsyslog/rsyslog/issues/1324
+- 2026-06-26: ommongodb: preserve ISODate fractional seconds
+  ommongodb now keeps millisecond precision when converting ISO-like date or
+  time strings into BSON ISODate values, including extended JSON $date input.
+  Numeric timezone offsets are converted deterministically.
+  Closes https://github.com/rsyslog/rsyslog/issues/3923
+- 2026-06-26: template: add timereceived property alias
+  The new timereceived property name aliases timegenerated, making the local
+  receive-time meaning explicit while preserving the existing internal
+  property ID and formatting behavior.
+  Closes https://github.com/rsyslog/rsyslog/issues/3920
+- 2026-06-26: gtls: guard early debug-level lookup
+  Loading lmnsd_gtls by absolute path during configuration checking no longer
+  dereferences a missing runtime configuration before parsing has completed.
+  Early GnuTLS initialization now uses the default debug level until the
+  active configuration is available.
+  Closes https://github.com/rsyslog/rsyslog/issues/5239
+- 2026-06-26: build: avoid empty usertools install directories
+  Disabling user tools no longer installs empty bin or man1 directories.
+  Daemon manual pages are now split into their section-specific install
+  variables, while user-tool programs and generated man pages stay under the
+  matching build conditionals.
+  Closes https://github.com/rsyslog/rsyslog/issues/4802
+- 2026-06-26: statsobj: handle lock control failures
+  stats object mutex and dynstats rwlock failures now propagate instead of
+  being ignored. Unlock failures after shared-state mutation log and fail stop
+  because rollback would risk dangling stats lists or wedged dynstats buckets.
+  Closes https://github.com/rsyslog/rsyslog/issues/4752
+- 2026-06-25: rsyslogd: reject -o output over input config
+  rsyslogd now rejects full-config or translation output paths that refer to
+  the same file as the input configuration. This turns an accidental
+  destructive invocation into a clear startup failure while preserving safe
+  -o uses such as stdout and distinct output files.
+  Closes https://github.com/rsyslog/rsyslog/issues/4266
+- 2026-06-25: omudpspoof: stop retrying failed fragments
+  Fragmented spoofed UDP sends now stop the current address attempt when a
+  later fragment write fails, instead of retrying the same fragment offset
+  indefinitely and pinning the worker.
+  Closes https://github.com/rsyslog/rsyslog/issues/4268
+- 2026-06-25: imudp: preserve received sockaddr length
+  imudp now stores the address length reported by recvmsg/recvmmsg with the
+  copied source address, improving fromhost-ip handling for UDP messages whose
+  address data is resolved lazily.
+  Closes https://github.com/rsyslog/rsyslog/issues/5461
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2604.1 (aka 2026.04) 2026-06-26
 
