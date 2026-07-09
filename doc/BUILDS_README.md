@@ -38,10 +38,14 @@ packages. This is required because:
 -   EPEL 8 provides `python3-sphinx` 1.7.x; EPEL 9 provides 3.4.x. Neither
     satisfies the minimum version and the build fails.
 
-Using `pip3 install -U sphinx` and `pip3 install -r requirements.txt` ensures
-the correct Sphinx version and extensions (e.g. `sphinxcontrib.mermaid`) are
-available for the RPM build. A future improvement would be to pre-build docs
-and include them in the tarball so the spec does not need pip at build time.
+When pre-built HTML documentation is present in `doc/build`, the spec reuses
+that output and does not install Python documentation dependencies during the
+RPM build. Current release artifacts that do not already contain `doc/build`
+still use `pip3 install -U sphinx` and `pip3 install -r requirements.txt` so
+the RPM build receives the required Sphinx version and extensions (e.g.
+`sphinxcontrib.mermaid`). Fully removing pip from the default RPM build path
+requires changing the release artifact to include pre-built docs, or providing
+the required Sphinx and extension packages through the RPM build environment.
 
 
 ## Generating release version of the docs

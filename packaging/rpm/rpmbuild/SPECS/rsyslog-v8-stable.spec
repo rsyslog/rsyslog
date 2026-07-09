@@ -562,15 +562,19 @@ ls -al ./ 2>&1 | tee /dev/stderr
 if ! grep -q '^version = ' doc/source/conf.py 2>/dev/null; then
   sed -i "/^release = /i version = '%{version}'" doc/source/conf.py
 fi
-cd doc
-echo "Step 1: Installing sphinx and requirements via pip..."
-pip3 install -U sphinx
-pip3 install -r requirements.txt
+cd doc || exit 1
+if [ -f build/index.html ]; then
+  echo "Step 1: Using pre-built Sphinx documentation from doc/build"
+else
+  echo "Step 1: Installing sphinx and requirements via pip..."
+  pip3 install -U sphinx
+  pip3 install -r requirements.txt
 
-echo "Step 2: Building Sphinx documentation (output in doc/build)..."
-num_cpus=$(nproc)
-sphinx-build -j$num_cpus -b html source build 2>&1
-echo "✓ Sphinx documentation built"
+  echo "Step 2: Building Sphinx documentation (output in doc/build)..."
+  num_cpus=$(nproc)
+  sphinx-build -j$num_cpus -b html source build 2>&1
+  echo "✓ Sphinx documentation built"
+fi
 
 echo "Step 3: Listing doc directory contents..."
 ls -al 2>&1
