@@ -55,6 +55,9 @@ created in a specific directory, specify ``queue.spoolDirectory``
 for this. The filename is used to build to complete path for queue
 files.
 
+For the experimental ``segmentedDisk`` queue type, ``queue.filename`` is
+required. Configuration fails if it is omitted.
+
 
 queue.spoolDirectory
 --------------------
@@ -70,6 +73,10 @@ This is the directory into which queue files will be stored. Note
 that the directory must exist, it is NOT automatically created by
 rsyslog. If no spoolDirectory is specified, the work directory is
 used.
+
+The experimental ``segmentedDisk`` queue type requires either this parameter
+or a configured global work directory. The selected directory must already
+exist.
 
 
 queue.size
@@ -300,6 +307,10 @@ However, disk queues can be set to write bookkeeping information on checkpoints
 checkpoint interval is set to one, no data can be lost, but the queue is
 exceptionally slow.
 
+For ``queue.type="segmentedDisk"``, the default is ``1`` and the interval is
+counted in completed dequeue batches. A checkpoint is also forced before a
+fully committed segment is deleted.
+
 
 queue.syncqueuefiles
 --------------------
@@ -331,7 +342,12 @@ queue.onCorruption
 Controls how rsyslog handles disk queue corruption detected during startup.
 This applies to queue files and checkpoint state (``.qi``).
 
-Supported values are:
+``segmentedDisk`` currently accepts only ``safe``. For that backend, safe mode
+performs record-level salvage: corrupt framed records are skipped, scanning
+continues at the next valid record, and a damaged active tail is truncated.
+The classic disk queue has separate corruption policies and behavior.
+
+For the classic disk queue, supported values are:
 
 * ``safe``: detect corruption, move queue files to a timestamped
   ``.bad`` directory, and start with a fresh disk queue.
@@ -377,9 +393,15 @@ queue.type
 
    "word", "Direct", "no", "``$ActionQueueType``"
 
-Specifies the type of queue that will be used. Possible options are "FixedArray",
-"LinkedList", "Direct" or "Disk". For more information read the documentation
-for :doc:`queues <../concepts/queues>`.
+Specifies the type of queue that will be used. Possible options are
+``FixedArray``, ``LinkedList``, ``Direct``, ``Disk``, or the experimental
+``segmentedDisk`` pure-disk backend. For more information read the
+documentation for :doc:`queues <../concepts/queues>`.
+
+``segmentedDisk`` must be configured through modern object parameters; the
+legacy ``$ActionQueueType`` directive does not accept it. It requires
+``queue.filename`` plus either ``queue.spoolDirectory`` or a global work
+directory.
 
 
 queue.workerThreads
@@ -527,7 +549,9 @@ queue.maxFileSize
 
    "integer", "1m/16m", "no", "``$ActionQueueMaxFileSize``"
 
-Specifies the maximum size for the disk-assisted queue file.
+Specifies the maximum size for a disk queue file. For ``segmentedDisk`` it is
+the target size of each segment; a single oversized record is stored in a
+dedicated segment and may exceed this target.
 Parameter can be specified in Mebibyte or Gibibyte, default for action
 queues is 1m and for ruleset queues 16m (1m = 1024*1024).
 

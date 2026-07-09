@@ -289,7 +289,7 @@ static void MsgSetRcvFromWithoutAddRef(smsg_t *pThis, prop_t *new) {
  * pRuleset pointer inside msg is updated. If ruleset cannot be found,
  * no update is done and an error message emitted.
  */
-static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const rulesetName) {
+rsRetVal ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const rulesetName) {
     uchar *const rs_name = rsCStrGetSzStrNoNULL(rulesetName);
     const rsRetVal localRet = rulesetGetRuleset(runConf, &(pMsg->pRuleset), rs_name);
 
@@ -301,6 +301,7 @@ static void ATTR_NONNULL() MsgSetRulesetByName(smsg_t *const pMsg, cstr_t *const
                  "wanted to let you know.",
                  rs_name);
     }
+    return localRet;
 }
 
 /* do a DNS reverse resolution, if not already done, reflect status
@@ -371,7 +372,7 @@ void getInputName(const smsg_t *const pM, uchar **ppsz, int *const plen) {
 }
 
 
-static uchar *getRcvFromIP(smsg_t *const pM) {
+uchar *getRcvFromIP(smsg_t *const pM) {
     uchar *psz;
     int len;
     if (pM == NULL) {
@@ -386,7 +387,7 @@ static uchar *getRcvFromIP(smsg_t *const pM) {
     return psz;
 }
 
-static uchar *getRcvFromPort(smsg_t *const pM) {
+uchar *getRcvFromPort(smsg_t *const pM) {
     uchar *psz;
     int len;
     if (pM == NULL) {
@@ -2503,6 +2504,48 @@ void MsgSetInputName(smsg_t *pThis, prop_t *inputName) {
     prop.AddRef(inputName);
     if (pThis->pInputName != NULL) prop.Destruct(&pThis->pInputName);
     pThis->pInputName = inputName;
+}
+
+rsRetVal MsgSetInputNameStr(smsg_t *const pMsg, const uchar *const text, const int len) {
+    prop_t *pProp = NULL;
+    DEFiRet;
+
+    CHKiRet(prop.Construct(&pProp));
+    CHKiRet(prop.SetString(pProp, text, len));
+    CHKiRet(prop.ConstructFinalize(pProp));
+    MsgSetInputName(pMsg, pProp);
+
+finalize_it:
+    if (pProp != NULL) prop.Destruct(&pProp);
+    RETiRet;
+}
+
+rsRetVal MsgSetRcvFromText(smsg_t *const pMsg, const uchar *const text, const int len) {
+    prop_t *pProp = NULL;
+    DEFiRet;
+
+    CHKiRet(prop.Construct(&pProp));
+    CHKiRet(prop.SetString(pProp, text, len));
+    CHKiRet(prop.ConstructFinalize(pProp));
+    MsgSetRcvFrom(pMsg, pProp);
+
+finalize_it:
+    if (pProp != NULL) prop.Destruct(&pProp);
+    RETiRet;
+}
+
+rsRetVal MsgSetRcvFromIPText(smsg_t *const pMsg, const uchar *const text, const int len) {
+    prop_t *pProp = NULL;
+    const rsRetVal r = MsgSetRcvFromIPStr(pMsg, text, len, &pProp);
+    if (pProp != NULL) prop.Destruct(&pProp);
+    return r;
+}
+
+rsRetVal MsgSetRcvFromPortText(smsg_t *const pMsg, const uchar *const text, const int len) {
+    prop_t *pProp = NULL;
+    const rsRetVal r = MsgSetRcvFromPortStr(pMsg, text, len, &pProp);
+    if (pProp != NULL) prop.Destruct(&pProp);
+    return r;
 }
 
 /* Set default TZ. Note that at most 7 chars are set, as we would

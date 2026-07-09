@@ -916,10 +916,16 @@ static int doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param, st
         val->val.d.n = QUEUETYPE_DISK;
     } else if (!es_strcasebufcmp(valnode->val.d.estr, (uchar *)"direct", 6)) {
         val->val.d.n = QUEUETYPE_DIRECT;
+    } else if (!es_strcasebufcmp(valnode->val.d.estr, (uchar *)"segmenteddisk", 13)) {
+        val->val.d.n = QUEUETYPE_SEGMENTED_DISK;
     } else {
         cstr = es_str2cstr(valnode->val.d.estr, NULL);
-        parser_errmsg("param '%s': unknown queue type: '%s'", param->name, cstr);
-        free(cstr);
+        if (cstr == NULL) {
+            parser_errmsg("param '%s': unknown queue type", param->name);
+        } else {
+            parser_errmsg("param '%s': unknown queue type: '%s'", param->name, cstr);
+            free(cstr);
+        }
         r = 0;
     }
     val->val.datatype = 'N';

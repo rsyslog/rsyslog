@@ -24,6 +24,16 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_SEGMENTED_DISK_QUEUE = \
+	segmented-diskqueue-config.sh \
+	segmented-diskqueue.sh \
+	segmented-diskqueue-restart.sh \
+	segmented-diskqueue-event-properties.sh \
+	segmented-diskqueue-corruption.sh \
+	segmented-diskqueue-missing-checkpoint.sh
+TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh
+EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) segdisk-inspect.py
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -2382,9 +2392,12 @@ CLEANFILES=\
 	tmp.qi nocert
 
 CLEANFILES+= \
-	IN_AUTO_DEBUG
+	IN_AUTO_DEBUG \
+	runtime_unit_imbeats_seq
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
+# runtime_unit_imbeats_seq is conditional, but an outer build with imbeats
+# enabled can leave it for an inner distcheck configured without imbeats.
 
 
 check_LTLIBRARIES =
@@ -2641,6 +2654,10 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
 TESTS += $(TESTS_JSON_OMITIFZERO)
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
+if HAVE_LIBYAML
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML)
+endif
 
 if ENABLE_MMSNAREPARSE
 TESTS += $(TESTS_MMSNAREPARSE_MINIMAL)

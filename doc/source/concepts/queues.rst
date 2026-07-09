@@ -189,6 +189,53 @@ can require replay or recovery work after an ungraceful stop. Enabling
 ``queue.syncqueuefiles`` and a very small checkpoint interval improves
 crash and power-loss resilience at a significant performance cost.
 
+Experimental segmented disk queues
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``queue.type="segmentedDisk"`` enables an experimental pure-disk queue
+backend based on a queue-private log-structured store. It writes one active
+segment at a time, seals segments at ``queue.maxFileSize``, and commits
+completed dequeue batches through an atomic checkpoint file. A batch that
+must be retried is appended before the original batch is committed. A crash
+can therefore replay an uncommitted batch, but a committed record is never
+discarded merely because a later batch completed first.
+
+The store uses a versioned binary TLV message codec with checksums on metadata,
+record headers, payloads, and sealed-segment footers. Its files live in the
+dedicated ``<workDirectory>/<queue.filename>.segq/`` directory. The format is
+experimental and may change incompatibly while this queue type remains
+experimental. It is intentionally separate from the classic disk queue and
+does not use ``.qi`` or ``recover_qi.pl``.
+
+This mode is opt-in and currently only available as a pure-disk queue
+type. Disk-assisted queues continue to use the classic disk child queue.
+Do not point ``segmentedDisk`` at an existing classic disk queue prefix. The
+queue refuses to start when the matching legacy ``.qi`` file exists. Queue
+encryption providers are not supported by this first implementation.
+
+Storage operations are serialized under the queue lock. Multiple generic
+queue workers may consume batches concurrently, and their completions may be
+out of order; the durable commit frontier still advances in dequeue order.
+As with other multi-worker queues, output ordering is not guaranteed when
+``queue.workerThreads`` is greater than one.
+
+The default checkpoint interval for ``segmentedDisk`` is one completed batch,
+while ``queue.syncQueueFiles`` remains off by default. Before deleting a
+committed segment, rsyslog forces the corresponding checkpoint and directory
+updates to durable storage. Setting ``queue.syncQueueFiles="on"`` additionally
+synchronizes ordinary segment and checkpoint writes, at a throughput cost.
+
+Recovery validates every framed record. In the supported ``safe`` corruption
+mode, rsyslog skips a payload-corrupt record and continues at the next valid
+record in the segment. A damaged tail of an active segment is truncated to the
+last valid boundary. If the checkpoint is absent or invalid, all valid records
+are replayed; duplicates are expected in that explicit recovery case.
+
+Queue statistics add ``disk.usage``, ``segments``, ``checkpoints``,
+``replayed``, ``corruption.events``, ``corruption.bytes``,
+``corruption.records``, ``retry.overage.bytes``, and
+``retry.overage.maxbytes`` for this backend.
+
 If you happen to lose or otherwise need the housekeeping structures and
 have all your queue chunks you can use the ``recover_qi.pl`` script
 included in rsyslog to regenerate them::
