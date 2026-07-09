@@ -74,6 +74,7 @@ MODULE_CNFNAME("imkubernetes")
 #define DFLT_enrichKubernetes 1
 #define DFLT_SEVERITY pri2sev(LOG_INFO)
 #define DFLT_FACILITY pri2fac(LOG_USER)
+#define CRI_PARTIAL_HARD_LIMIT_FACTOR 10
 
 enum { dst_invalid = -1, dst_stdout, dst_stderr };
 
@@ -310,22 +311,50 @@ static void partialInitFromRecord(partial_msg_t *partial, const parsed_record_t 
     }
 }
 
-static size_t getPartialMessageLimit(void) {
-    const int maxLine = glbl.GetMaxLine(runModConf != NULL ? runModConf->pConf : NULL);
-    return maxLine > 0 ? (size_t)maxLine : 0;
+static rsconf_t *getActiveConf(void) {
+    return runModConf != NULL ? runModConf->pConf : NULL;
 }
 
-static void markPartialTruncated(partial_msg_t *partial, size_t limit) {
+static size_t multiplyPartialLimit(size_t limit, size_t factor) {
+    if (factor != 0 && limit > (size_t)-1 / factor) {
+        return (size_t)-1;
+    }
+    return limit * factor;
+}
+
+static size_t getPartialMessageLimit(sbool *hardLimit) {
+    rsconf_t *const cnf = getActiveConf();
+    const int maxLine = glbl.GetMaxLine(cnf);
+    const int oversizeMode = cnf != NULL ? glblGetOversizeMsgInputMode(cnf) : glblOversizeMsgInputMode_Truncate;
+
+    if (hardLimit != NULL) {
+        *hardLimit = 0;
+    }
+    if (maxLine <= 0) {
+        return 0;
+    }
+    if (oversizeMode == glblOversizeMsgInputMode_Truncate) {
+        return (size_t)maxLine;
+    }
+    if (hardLimit != NULL) {
+        *hardLimit = 1;
+    }
+    return multiplyPartialLimit((size_t)maxLine, CRI_PARTIAL_HARD_LIMIT_FACTOR);
+}
+
+static void markPartialTruncated(partial_msg_t *partial, size_t limit, sbool hardLimit) {
     assert(partial != NULL);
     if (!partial->truncated) {
         partial->truncated = 1;
         LogError(0, NO_ERRCODE,
-                 "imkubernetes: CRI partial message exceeded maxMessageSize (%zu), truncating logical record", limit);
+                 "imkubernetes: CRI partial message exceeded %s (%zu), truncating logical record",
+                 hardLimit ? "partial hard limit" : "maxMessageSize", limit);
     }
 }
 
 static rsRetVal partialAppendBounded(partial_msg_t *partial, const uchar *msg, size_t len) {
-    const size_t limit = getPartialMessageLimit();
+    sbool hardLimit = 0;
+    const size_t limit = getPartialMessageLimit(&hardLimit);
     size_t appendLen = len;
     DEFiRet;
 
@@ -337,7 +366,7 @@ static rsRetVal partialAppendBounded(partial_msg_t *partial, const uchar *msg, s
             appendLen = limit - partial->len;
         }
         if (appendLen < len) {
-            markPartialTruncated(partial, limit);
+            markPartialTruncated(partial, limit, hardLimit);
         }
     }
 
@@ -1065,9 +1094,12 @@ finalize_it:
 }
 
 /*
- * Cap CRI P fragments at global(maxMessageSize).
- * Once capped, consume later fragments until the closing F flushes
- * state.
+ * CRI P fragments are accumulated until their closing F record, so they need
+ * their own memory guard. In truncate mode the guard is maxMessageSize. Other
+ * oversize input modes are honored by letting the completed logical record
+ * reach the core submit path, but still capping the accumulator at a
+ * maxMessageSize-derived hard limit so an unfinished run cannot grow forever.
+ * Once capped, consume later fragments until the closing F flushes state.
  */
 static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t *record) {
     parsed_record_t finalRecord = {0};

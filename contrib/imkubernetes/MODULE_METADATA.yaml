@@ -8,7 +8,11 @@ runtime_dependencies:
   - Kubernetes node log files mounted from the host, typically under /var/log/pods or /var/log/containers
   - Kubernetes API reachability and credentials when EnrichKubernetes is enabled
 ci_targets:
+  - imkubernetes-cri-partial-accept.sh
   - imkubernetes-cri-basic.sh
+  - imkubernetes-cri-partial-bound.sh
+  - imkubernetes-cri-partial-hard-cap.sh
+  - imkubernetes-cri-partial-split.sh
   - imkubernetes-dockerjson-basic.sh
   - yaml-imkubernetes-dockerjson-basic.sh
 documentation:
