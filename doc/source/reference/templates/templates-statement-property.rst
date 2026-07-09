@@ -111,5 +111,13 @@ Parameters
   - ``auto`` – use number if integer, otherwise string
   - ``bool`` – emit ``true`` unless value is empty or ``0``
 
+  ``dataType`` does not create JSON arrays or objects from strings. If the
+  incoming message text contains JSON such as ``["a","b"]``, parse it first
+  with :ref:`mmjsonparse <ref-mmjsonparse>`. If an already extracted property
+  contains JSON text, parse that string with :doc:`parse_json()
+  <../../rainerscript/functions/rs-parse_json>`. Then render the parsed
+  property with ``format="jsonf"``. Rsyslog intentionally does not provide
+  ``dataType="array"`` for templates.
+
 - ``onEmpty`` – for ``jsonf`` format only; handling of empty values:
   ``keep``, ``skip``, or ``null``

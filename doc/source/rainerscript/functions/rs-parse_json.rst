@@ -26,5 +26,17 @@ The output is placed in variable $.ret
 
    set $.ret = parse_json("{ \"c1\":\"data\" }", "\$!parsed");
 
+Parsed arrays can be rendered directly with JSON-aware templates:
+
+.. code-block:: none
+
+   set $.ret = parse_json("[\"Content Server\", \"Internet Services\"]",
+                          "\$!url_categories");
+
+   template(name="out" type="list" option.jsonf="on") {
+       property(outname="UrlCategories" name="$!url_categories" format="jsonf")
+   }
+
+This emits ``UrlCategories`` as a JSON array, not as a quoted string.
 
 

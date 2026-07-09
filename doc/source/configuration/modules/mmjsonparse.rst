@@ -128,6 +128,9 @@ Check Parsing Result
 ====================
 
 Use the ``$parsesuccess`` variable to check whether JSON parsing succeeded.
+Parsed JSON arrays and objects are stored as JSON values in the message tree.
+When rendered later with ``format="jsonf"`` or a subtree template, arrays remain
+arrays and objects remain objects.
 
 .. code-block:: rsyslog
 
@@ -295,6 +298,31 @@ Permit parsing messages without cookie (do not require @cee:)
 
    action(type="mmjsonparse" cookie="")
 
+Render parsed arrays with JSONF
+-------------------------------
+
+Parsed arrays can be mapped into JSON output without converting them to
+strings:
+
+.. code-block:: rsyslog
+
+   module(load="mmjsonparse")
+
+   template(name="clickhouse" type="list" option.jsonf="on") {
+       property(outname="UrlCategories" name="$!mwgLog!urlc" format="jsonf")
+   }
+
+   ruleset(name="process-json") {
+       action(type="mmjsonparse" container="$!mwgLog" cookie="")
+       if $parsesuccess == "OK" then {
+           action(type="omfile" file="/var/log/rsyslog/clickhouse.json"
+                  template="clickhouse")
+       }
+   }
+
+If ``urlc`` is a JSON array in the parsed input, ``UrlCategories`` is emitted
+as a JSON array. There is no ``dataType="array"`` template conversion; parse
+JSON text first, then render the JSON value.
 
 Find-JSON mode for embedded JSON content
 ----------------------------------------
@@ -341,4 +369,3 @@ See also
    ../../reference/parameters/mmjsonparse-allow_trailing
    ../../reference/parameters/mmjsonparse-userawmsg
    ../../reference/parameters/mmjsonparse-container
-

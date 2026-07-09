@@ -88,6 +88,19 @@ Modern pipelines should prefer structured JSON. The recommended method is:
 
 This ensures correct escaping and avoids handcrafted JSON concatenation.
 
+JSON arrays and objects with JSONF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a property already contains a JSON value, for example one created by
+:ref:`mmjsonparse <ref-mmjsonparse>` or :doc:`parse_json()
+<../rainerscript/functions/rs-parse_json>`, ``format="jsonf"`` emits that
+value as JSON. Arrays remain arrays and objects remain objects.
+
+``dataType`` is only for converting scalar string properties to JSON strings,
+numbers, or booleans. It does not parse strings that look like JSON, and there
+is intentionally no ``dataType="array"``. Parse JSON text first, then render
+the resulting JSON value.
+
 Detailed examples are provided in the template type pages.
 
 
