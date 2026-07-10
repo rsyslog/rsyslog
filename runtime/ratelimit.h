@@ -43,6 +43,14 @@ typedef struct ratelimit_ps_bucket_s {
     pthread_mutex_t mut;
 } ratelimit_ps_bucket_t;
 
+enum ratelimit_ps_key_mode {
+    RL_PS_KEY_TPL = 0,
+    RL_PS_KEY_FROMHOST_IP,
+    RL_PS_KEY_FROMHOST,
+    RL_PS_KEY_FROMHOST_IP_PORT,
+    RL_PS_KEY_FROMHOST_PORT
+};
+
 typedef enum ratelimit_scope_e { RATELIMIT_SCOPE_INPUT = 0, RATELIMIT_SCOPE_OUTPUT } ratelimit_scope_t;
 
 typedef enum ratelimit_output_mode_e {
@@ -75,17 +83,11 @@ typedef struct ratelimit_shared_s {
     unsigned int per_source_default_window;
     unsigned int per_source_max_states;
     unsigned int per_source_topn;
-    sbool per_source_key_tpl_default;
     char *per_source_key_tpl_name;
+    unsigned int per_source_key_policy_seq;
+    unsigned int per_source_key_policy_bits;
     struct template *per_source_key_tpl;
-    sbool per_source_key_needs_parsing;
-    enum ratelimit_ps_key_mode {
-        RL_PS_KEY_TPL = 0,
-        RL_PS_KEY_FROMHOST_IP,
-        RL_PS_KEY_FROMHOST,
-        RL_PS_KEY_FROMHOST_IP_PORT,
-        RL_PS_KEY_FROMHOST_PORT
-    } per_source_key_mode;
+    pthread_mutex_t per_source_key_policy_mut;
     pthread_mutex_t per_source_policy_mut;
     ratelimit_ps_bucket_t per_source_shards[RATELIMIT_PERSOURCE_SHARDS];
     sbool per_source_shards_initialized;

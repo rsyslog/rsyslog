@@ -876,6 +876,7 @@ TESTS_IMTCP_YAML = \
 	ratelimit-legacy-persource-discard.sh \
 	ratelimit-persource-shard-eviction.sh \
 	ratelimit-persource-repeat-summary.sh \
+	ratelimit-policy-persource-key-reload.sh \
 	ratelimit-policy-persource-topn-default-reload.sh \
 	ratelimit-policy-persource-mixed-invalid.sh
 
