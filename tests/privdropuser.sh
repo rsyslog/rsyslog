@@ -3,7 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test currently does not work on Solaris."
 . $srcdir/privdrop_common.sh
-rsyslog_testbench_setup_testuser
+rsyslog_testbench_setup_testuser require-user-access
 
 generate_conf
 add_conf '

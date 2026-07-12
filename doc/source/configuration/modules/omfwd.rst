@@ -474,12 +474,43 @@ Address
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "no", "none"
+   "array of strings", "none", "no", "none"
 
 .. versionadded:: 8.35.0
 
-Bind socket to a specific local IP address. This option is supported for 
-UDP only, not TCP.
+Select and bind a local source address for UDP, TCP, and TLS connections.
+The value may be one numeric IPv4 or IPv6 address, or an ordered array of
+addresses. An empty array has the same effect as omitting the parameter.
+
+Each address may include a CIDR prefix. The full configured address remains
+the bind address; the prefix is used only to rank it against each resolved
+destination. Matching entries are tried from longest to shortest prefix, with
+configuration order breaking ties. Remaining addresses of the same family are
+then tried in configuration order. A non-empty policy never falls back to an
+unconfigured operating-system-selected source address, and destinations with
+no source address of the same family are skipped. In particular, an IPv6 peer
+address is not used when the policy contains only IPv4 source addresses, and
+an IPv4 peer address is not used when the policy contains only IPv6 source
+addresses.
+
+RainerScript:
+
+.. code-block:: rsyslog
+
+      action(type="omfwd"
+          target="central.example.net"
+          protocol="tcp"
+          Address=["192.0.2.10/24", "198.51.100.10", "2001:db8::10/32"])
+
+YAML:
+
+.. code-block:: yaml
+
+   actions:
+     - type: omfwd
+       target: central.example.net
+       protocol: tcp
+       Address: ["192.0.2.10/24", "198.51.100.10", "2001:db8::10/32"]
 
 
 IpFreeBind
@@ -494,20 +525,22 @@ IpFreeBind
 
 .. versionadded:: 8.35.0
 
-Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
-an IP address that is not yet associated to any network interface. This option
-is only relevant if the address option is set.
+Manages the ``IP_FREEBIND`` socket option, which allows binding to an IP
+address that is not yet associated with any network interface. For IPv6,
+rsyslog uses ``IPV6_FREEBIND`` where that option is available. This parameter
+is only relevant if the Address option is set and applies to UDP, TCP, and TLS
+sockets.
 
 The parameter accepts the following values:
 
--  0 - does not enable the IP_FREEBIND option on the
-   UDP socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
+-  0 - does not enable ``IP_FREEBIND`` (or ``IPV6_FREEBIND``) on the
+   socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
    socket initialization fails.
 
--  1 - silently enables the IP_FREEBIND socket
+-  1 - silently enables ``IP_FREEBIND`` (or ``IPV6_FREEBIND``)
    option if it is required to successfully bind the socket to a nonlocal address.
 
--  2 - enables the IP_FREEBIND socket option and
+-  2 - enables ``IP_FREEBIND`` (or ``IPV6_FREEBIND``) and
    warns when it is used to successfully bind the socket to a nonlocal address.
 
 Device

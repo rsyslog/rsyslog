@@ -49,7 +49,6 @@
 #include <string.h>
 
 #include "rsyslog.h"
-#include "net.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
@@ -58,7 +57,7 @@
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(net) DEFobjCurrIf(netstrms)
+DEFobjCurrIf(netstrms)
 
 
     /* Standard-Constructor */
@@ -150,27 +149,9 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
     assert(fAddLstn != NULL);
     assert(cnf_params->pszPort != NULL);
 
-#ifdef HAVE_SETNS
-    const char *ns = cnf_params->pszNetworkNamespace;
-    int netns_fd = -1;
-
-    if (ns) {
-        CHKiRet(net.netns_save(&netns_fd));
-        CHKiRet(net.netns_switch(ns));
-    }
-#endif  // ndef HAVE_SETNS
-
     CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
 
 finalize_it:
-#ifdef HAVE_SETNS
-    if (ns) {
-        // netns_restore will log a message on failure
-        // but there's really nothing we can do about it
-        (void)net.netns_restore(&netns_fd);
-    }
-#endif  // ndef HAVE_SETNS
-
     RETiRet;
 }
 
@@ -485,6 +466,26 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Forward a versioned outbound connection request to the active driver.
+ * @param pThis Network-stream instance containing the selected driver.
+ * @param params Borrowed connection parameters valid for this call.
+ * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters, or
+ *         the active driver's connection error.
+ */
+static rsRetVal Connect2(netstrm_t *pThis, const nsd_connect_params_t *params) {
+    DEFiRet;
+    NULL_CHECK(pThis);
+    NULL_CHECK(params);
+    if (params->version != NSD_CONNECT_PARAMS_VERSION || params->port == NULL || params->host == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    iRet = pThis->Drvr.Connect2(pThis->pDrvrData, params);
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* Provide access to the underlying OS socket. This is dirty
  * and scheduled to be removed. Does not work with all nsd drivers.
@@ -549,6 +550,7 @@ BEGINobjQueryInterface(netstrm)
     pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
     pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
     pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;
+    pIf->Connect2 = Connect2;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -559,7 +561,6 @@ BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END M
     CODESTARTObjClassExit(netstrm);
     /* release objects we no longer need */
     objRelease(netstrms, DONT_LOAD_LIB);
-    objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(netstrm)
 
 
@@ -568,8 +569,5 @@ ENDObjClassExit(netstrm)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
-    /* request objects we use */
-    CHKiRet(objUse(net, LM_NET_FILENAME));
-
     /* set our own handlers */
 ENDObjClassInit(netstrm)

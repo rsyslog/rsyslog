@@ -556,7 +556,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
     hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
     hints.ai_socktype = SOCK_STREAM;
 
-    error = getaddrinfo((char *)pSrv->lstnIP, (char *)pSrv->port, &hints, &res);
+    error = net.netns_getaddrinfo((char *)pSrv->lstnIP, (char *)pSrv->port, &hints, &res, NULL);
     if (error) {
         DBGPRINTF("error %d querying server '%s', port '%s'\n", error, pSrv->lstnIP, pSrv->port);
         ABORT_FINALIZE(RS_RET_INVALID_PORT);
@@ -718,7 +718,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
 
 finalize_it:
     if (res != NULL) {
-        freeaddrinfo(res);
+        net.netns_freeaddrinfo(res);
     }
 
     if (iRet != RS_RET_OK) {
@@ -768,17 +768,17 @@ static rsRetVal getPeerNames(
         szHname[hname_len] = '\0';
         szIP[ip_len] = '\0';
     } else {
-        error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), (char *)szPort, sizeof(szPort),
-                            NI_NUMERICHOST | NI_NUMERICSERV);
+        error = net.netns_getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), (char *)szPort, sizeof(szPort),
+                                      NI_NUMERICHOST | NI_NUMERICSERV, NULL);
         if (error) {
-            DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
+            DBGPRINTF("Malformed from address %s\n", net.netns_gai_strerror(error));
             RS_COPY_LITERAL(szHname, "???");
             RS_COPY_LITERAL(szIP, "???");
             ABORT_FINALIZE(RS_RET_INVALID_HNAME);
         }
 
         if (!glbl.GetDisableDNS(runConf)) {
-            error = getnameinfo(pAddr, SALEN(pAddr), (char *)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+            error = net.netns_getnameinfo(pAddr, SALEN(pAddr), (char *)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD, NULL);
             if (error == 0) {
                 memset(&hints, 0, sizeof(struct addrinfo));
                 hints.ai_flags = AI_NUMERICHOST;
@@ -787,8 +787,8 @@ static rsRetVal getPeerNames(
                  * because we should not have obtained a non-numeric address. If
                  * we got a numeric one, someone messed with DNS!
                  */
-                if (getaddrinfo((char *)szHname, NULL, &hints, &res) == 0) {
-                    freeaddrinfo(res);
+                if (net.netns_getaddrinfo((char *)szHname, NULL, &hints, &res, NULL) == 0) {
+                    net.netns_freeaddrinfo(res);
                     /* OK, we know we have evil, so let's indicate this to our caller */
                     snprintf((char *)szHname, sizeof(szHname), "[MALICIOUS:IP=%s]", szIP);
                     DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);

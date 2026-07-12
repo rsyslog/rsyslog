@@ -377,7 +377,7 @@ static int imdtls_verify_callback(int status, SSL *ssl) {
     instanceConf_t *inst = NULL;
 
     dbgprintf("imdtls_verify_callback: get SSL [%p]\n", (void *)ssl);
-    inst = (instanceConf_t *)SSL_get_ex_data(ssl, 2);
+    inst = (instanceConf_t *)net_ossl.get_exdata(ssl, NET_OSSL_EXDATA_IMDTLS_INST);
 
     /* Continue check if certificate verify was valid */
     if (status == 1) {
@@ -746,9 +746,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
         }
 
         // Store reference in SSL obj
-        SSL_set_ex_data(ssl, 0, NULL); /* Reserved for pTcp */
-        SSL_set_ex_data(ssl, 1, NULL); /* Reserved for permitExpiredCerts */
-        SSL_set_ex_data(ssl, 2, inst); /* Used in imdtls */
+        net_ossl.set_exdata(ssl, NET_OSSL_EXDATA_PTCP, NULL);
+        net_ossl.set_exdata(ssl, NET_OSSL_EXDATA_PERMITEXPIREDCERTS, NULL);
+        net_ossl.set_exdata(ssl, NET_OSSL_EXDATA_IMDTLS_INST, inst);
 
         // Debug Callback for conn sbio!
         net_ossl.osslSetBioCallback(sbio);
