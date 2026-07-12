@@ -61,6 +61,7 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "glbl.h"
+#include "net.h"
 #include "parserif.h"
 
 MODULE_TYPE_OUTPUT;
@@ -70,7 +71,7 @@ MODULE_CNFNAME("ommail")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
-DEFobjCurrIf(glbl) DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(net)
 
 #define DEFAULT_SENDMAIL_BINARY "/usr/sbin/sendmail"
 
@@ -364,7 +365,7 @@ static rsRetVal serverConnect(wrkrInstanceData_t *pWrkrData) {
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(smtpSrv, smtpPort, &hints, &res) != 0) {
+    if (net.netns_getaddrinfo(smtpSrv, smtpPort, &hints, &res, NULL) != 0) {
         DBGPRINTF("error %d in getaddrinfo\n", errno);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
@@ -380,7 +381,7 @@ static rsRetVal serverConnect(wrkrInstanceData_t *pWrkrData) {
     }
 
 finalize_it:
-    if (res != NULL) freeaddrinfo(res);
+    if (res != NULL) net.netns_freeaddrinfo(res);
 
     if (iRet != RS_RET_OK) {
         if (pWrkrData->md.smtp.sock != -1) {
@@ -1301,6 +1302,7 @@ BEGINmodExit
 
     /* release what we no longer need */
     objRelease(datetime, CORE_COMPONENT);
+    objRelease(net, LM_NET_FILENAME);
     objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
@@ -1332,6 +1334,7 @@ BEGINmodInit()
         /* tell which objects we need */
         CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
 
     DBGPRINTF("ommail version %s initializing\n", VERSION);
 
