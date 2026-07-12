@@ -201,7 +201,7 @@ static rsRetVal closeUDPSockets(wrkrInstanceData_t *pWrkrData) {
     if (pWrkrData->pSockArray != NULL) {
         net.closeUDPListenSockets(pWrkrData->pSockArray);
         pWrkrData->pSockArray = NULL;
-        freeaddrinfo(pWrkrData->f_addr);
+        net.netns_freeaddrinfo(pWrkrData->f_addr);
         pWrkrData->f_addr = NULL;
     }
     RETiRet;
@@ -554,19 +554,19 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData) {
     hints.ai_flags = AI_NUMERICSERV;
     hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
     hints.ai_socktype = SOCK_DGRAM;
-    if ((iErr = (getaddrinfo((char *)pData->host, (char *)getFwdPt(pData), &hints, &res))) != 0) {
+    if ((iErr = (net.netns_getaddrinfo((char *)pData->host, (char *)getFwdPt(pData), &hints, &res, NULL))) != 0) {
         DBGPRINTF("could not get addrinfo for hostname '%s':'%s': %d%s\n", pData->host, getFwdPt(pData), iErr,
-                  gai_strerror(iErr));
+                  net.netns_gai_strerror(iErr));
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
     DBGPRINTF("%s found, resuming.\n", pData->host);
     pWrkrData->f_addr = res;
-    pWrkrData->pSockArray = net.create_udp_socket((uchar *)pData->host, NULL, 0, 0, 0, 0, NULL);
+    pWrkrData->pSockArray = net.netns_create_udp_socket((uchar *)pData->host, NULL, 0, 0, 0, 0, NULL, NULL);
 
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pWrkrData->f_addr != NULL) {
-            freeaddrinfo(pWrkrData->f_addr);
+            net.netns_freeaddrinfo(pWrkrData->f_addr);
             pWrkrData->f_addr = NULL;
         }
         iRet = RS_RET_SUSPENDED;

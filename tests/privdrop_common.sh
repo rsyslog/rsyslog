@@ -9,6 +9,7 @@
 declare -A TESTBENCH_TESTUSER
 
 rsyslog_testbench_setup_testuser() {
+	local require_user_access="${1:-}"
 	local has_testuser=
 	local testusername=
 	local testgroupname=
@@ -55,6 +56,29 @@ rsyslog_testbench_setup_testuser() {
 		echo "         open and process files after privilege drop. This is NOT automatically"
 		echo "         undone."
 		chmod a+w .
+
+		# The daemon loads some transport modules lazily after dropping privileges.
+		# Skip when the selected user cannot traverse the build path rather than
+		# timing out while waiting for imdiag to create its listener port file.
+		if [ "${require_user_access}" = "require-user-access" ] && command -v runuser >/dev/null 2>&1; then
+			local can_access_module_dir=0
+			local module_dir
+			local resolved_module_dir
+			local module_dirs=()
+			IFS=: read -r -a module_dirs <<< "${RSYSLOG_MODDIR}"
+			for module_dir in "${module_dirs[@]}"; do
+				resolved_module_dir=$(cd "${module_dir}" 2>/dev/null && pwd -P) || continue
+				if runuser -u "${testusername}" -- test -x "${resolved_module_dir}" &&
+				   runuser -u "${testusername}" -- test -r "${resolved_module_dir}"; then
+					can_access_module_dir=1
+					break
+				fi
+			done
+			if [ "${can_access_module_dir}" -ne 1 ]; then
+				echo "Skipping: test user '${testusername}' cannot access the build or test directory after privilege drop"
+				exit 77
+			fi
+		fi
 	fi
 
 	if [ -z "${has_testuser}" ]; then

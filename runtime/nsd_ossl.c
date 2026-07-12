@@ -1114,12 +1114,11 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->pNetOssl->ctx_is_copy = 1;  // do not free on pNew Destruction
     CHKiRet(osslInitSession(pNew, osslServer));
 
-    /* Store nsd_ossl_t* reference in SSL obj
-     * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
-     */
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 0, pNew->pTcp);
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 1, &pNew->permitExpiredCerts);
-    SSL_set_ex_data(pNew->pNetOssl->ssl, 3, &pNew->DrvrTlsRevocationCheck);
+    /* Store connection references through shared allocated ex-data indices. */
+    net_ossl.set_exdata(pNew->pNetOssl->ssl, NET_OSSL_EXDATA_PTCP, pNew->pTcp);
+    net_ossl.set_exdata(pNew->pNetOssl->ssl, NET_OSSL_EXDATA_PERMITEXPIREDCERTS, &pNew->permitExpiredCerts);
+    net_ossl.set_exdata(pNew->pNetOssl->ssl, NET_OSSL_EXDATA_TLSREVOCATIONCHECK, &pNew->DrvrTlsRevocationCheck);
+    net_ossl.set_exdata(pNew->pNetOssl->ssl, NET_OSSL_EXDATA_NET_OSSL, pNew->pNetOssl);
 
     /* We now do the handshake */
     CHKiRet(osslHandshakeCheck(pNew));
@@ -1383,18 +1382,36 @@ static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
 }
 
 
-/* open a connection to a remote host (server). With OpenSSL, we always
- * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
+/**
+ * @brief Open an OpenSSL network stream using versioned parameters.
+ * @param pNsd OpenSSL driver instance that will own the TCP and TLS state.
+ * @param params Borrowed destination, namespace, device, and source-policy
+ *        settings valid for this call and its synchronous handshake.
+ * @return RS_RET_OK on success or an rsRetVal parameter, TCP, or TLS error.
+ * @details The aggregated plain-TCP driver creates and binds the socket. In TLS
+ *        mode this function then performs the client handshake. Connection
+ *        routing values are also exposed to synchronous OCSP requests.
  */
-static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+static rsRetVal Connect2(nsd_t *pNsd, const nsd_connect_params_t *params) {
     DEFiRet;
-    DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", family, device);
     nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
     uchar *fromHostIP = NULL;
 
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
-    assert(port != NULL);
-    assert(host != NULL);
+    if (params == NULL || params->version != NSD_CONNECT_PARAMS_VERSION || params->port == NULL ||
+        params->host == NULL) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", params->family, params->device);
+    assert(params != NULL);
+    assert(params->version == NSD_CONNECT_PARAMS_VERSION);
+    assert(params->port != NULL);
+    assert(params->host != NULL);
+
+    pThis->pNetOssl->device = params->device;
+    pThis->pNetOssl->network_namespace = params->network_namespace;
+    pThis->pNetOssl->source_policy = params->source_policy;
+    pThis->pNetOssl->ipfreebind = params->ipfreebind;
 
     /* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for all newer versions! */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -1406,7 +1423,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     applyGnutlsPriorityString(pThis);
 
     // Perform TCP Connect
-    CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+    CHKiRet(nsd_ptcp.Connect2(pThis->pTcp, params));
 
     if (pThis->iMode == 0) {
         /*we are in non-TLS mode, so we are done */
@@ -1427,14 +1444,13 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     /* Do SSL Session init */
     CHKiRet(osslInitSession(pThis, osslClient));
 
-    CHKiRet(SetServerNameIfPresent(pThis, host));
+    CHKiRet(SetServerNameIfPresent(pThis, params->host));
 
-    /* Store nsd_ossl_t* reference in SSL obj
-     * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
-     */
-    SSL_set_ex_data(pThis->pNetOssl->ssl, 0, pThis->pTcp);
-    SSL_set_ex_data(pThis->pNetOssl->ssl, 1, &pThis->permitExpiredCerts);
-    SSL_set_ex_data(pThis->pNetOssl->ssl, 3, &pThis->DrvrTlsRevocationCheck);
+    /* Store the plain TCP reference through a shared allocated ex-data index. */
+    net_ossl.set_exdata(pThis->pNetOssl->ssl, NET_OSSL_EXDATA_PTCP, pThis->pTcp);
+    net_ossl.set_exdata(pThis->pNetOssl->ssl, NET_OSSL_EXDATA_PERMITEXPIREDCERTS, &pThis->permitExpiredCerts);
+    net_ossl.set_exdata(pThis->pNetOssl->ssl, NET_OSSL_EXDATA_TLSREVOCATIONCHECK, &pThis->DrvrTlsRevocationCheck);
+    net_ossl.set_exdata(pThis->pNetOssl->ssl, NET_OSSL_EXDATA_NET_OSSL, pThis->pNetOssl);
 
     /* We now do the handshake */
     iRet = osslHandshakeCheck(pThis);
@@ -1452,6 +1468,21 @@ finalize_it:
         }
     }
     RETiRet;
+}
+
+/**
+ * @brief Adapt the legacy OpenSSL Connect interface to Connect2().
+ * @param pNsd OpenSSL driver instance.
+ * @param family Resolver address family.
+ * @param port Borrowed destination service or numeric port.
+ * @param host Borrowed destination host name or address.
+ * @param device Borrowed optional SO_BINDTODEVICE name.
+ * @return Result from Connect2().
+ * @details Uses the current namespace, OS source selection, and disabled free-bind.
+ */
+static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+    const nsd_connect_params_t params = {NSD_CONNECT_PARAMS_VERSION, family, port, host, device, NULL, NULL, 0};
+    return Connect2(pNsd, &params);
 }
 
 static rsRetVal SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPriorityString) {
@@ -1742,6 +1773,7 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->GetRemotePort = GetRemotePort;
     pIf->FmtRemotePortStr = FmtRemotePortStr;
     pIf->SetRemoteSNI = SetRemoteSNI;
+    pIf->Connect2 = Connect2;
 
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)

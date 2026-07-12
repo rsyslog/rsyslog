@@ -445,7 +445,7 @@ jobs:
       matrix:
         config: [centos_7, debian_13,
                  ubuntu_26_imtcp_no_epoll,
-                 fedora_44,
+                 fedora_44, fedora_44_netns_root,
                  ubuntu_20, ubuntu_24,
                  ubuntu_26_san, ubuntu_26_tsan, ubuntu_22_distcheck,
                  openeuler, wolfssl, elasticsearch]
@@ -496,6 +496,7 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
           RSYSLOG_FLAKE_PHASE_NAME: check-${{ matrix.config }}
+          CI_MATRIX_CONFIG: ${{ matrix.config }}
         run: |
           chmod -R go+rw .
           CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
@@ -548,6 +549,18 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:44'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
+              ;;
+          'fedora_44_netns_root')
+              # Root-only netns tests (incl. libnsgai per-namespace DNS via CoreDNS);
+              # `ip netns add` needs NET_ADMIN plus mount rights blocked by AppArmor/seccomp.
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:44'
+              export RSYSLOG_CONTAINER_UID='0:0'
+              export DOCKER_RUN_EXTRA_OPTS='--cap-add NET_ADMIN --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                     --disable-kafka-tests --enable-root-tests --enable-nsgai"
+              export CI_MAKE_CHECK_TESTS='tcp_forwarding_ns_tpl.sh udp_forwarding_ns.sh imtcp-netns.sh \
+                     uxsock_multiple_netns.sh uxsock_multiple_netns-vg.sh \
+                     omfwd-nsgai-netns-dns.sh omfwd-nsgai-netns-hosts.sh'
               ;;
           'ubuntu_20')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
@@ -647,7 +660,7 @@ jobs:
               ;;
           esac
           case "${{ matrix.config }}" in
-          'elasticsearch'|'wolfssl'|'ubuntu_26_imtcp_no_epoll')
+          'elasticsearch'|'wolfssl'|'ubuntu_26_imtcp_no_epoll'|'fedora_44_netns_root')
               ;;
           *)
               . devtools/apply-service-relevance.sh
@@ -655,6 +668,20 @@ jobs:
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+          if [ "$CI_MATRIX_CONFIG" = 'fedora_44_netns_root' ]; then
+              # This lane exists to exercise these tests; a skip means the environment regressed.
+              skipped=""
+              for t in $CI_MAKE_CHECK_TESTS; do
+                  if grep -q '^:test-result: SKIP' "tests/${t%.sh}.trs"; then
+                      skipped="$skipped $t"
+                  fi
+              done
+              if [ -n "$skipped" ]; then
+                  echo "netns root tests were skipped:"
+                  echo "$skipped"
+                  exit 1
+              fi
+          fi
 
       - name: Upload test failure evidence
         if: >-

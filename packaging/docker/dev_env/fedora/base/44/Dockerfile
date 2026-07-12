@@ -11,6 +11,7 @@ RUN	dnf -y install \
 	autoconf-archive \
 	automake \
 	bison \
+	c-ares-devel \
 	civetweb-devel \
 	clang \
 	clang-analyzer \
@@ -31,6 +32,7 @@ RUN	dnf -y install \
 	java-25-openjdk \
 	java-25-openjdk-devel \
 	apr-util-devel \
+	libcmocka-devel \
 	libcurl-devel \
 	libdbi-dbd-mysql \
 	libdbi-devel \
@@ -58,6 +60,8 @@ RUN	dnf -y install \
 	openssl \
 	openssl-devel \
 	openssl-devel-engine \
+	opensc \
+	pkcs11-provider \
 	postgresql-devel \
 	which \
 	procps-ng \
@@ -72,8 +76,10 @@ RUN	dnf -y install \
 	qpid-proton-c-devel \
 	redhat-rpm-config \
 	snappy-devel \
+	softhsm \
 	systemd-devel \
 	tcl-devel \
+	util-linux-core \
 	valgrind \
 	wget \
 	zlib-devel \
@@ -218,6 +224,39 @@ RUN	cd helper-projects \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
 
+# libnsgai: namespace-aware resolver used by --enable-nsgai - not yet packaged
+ARG	NSGAI_REPO=https://github.com/cisco-open/nsgai.git
+ARG	NSGAI_REF=v0.2.1
+RUN	cd helper-projects && \
+	git clone --depth 1 --branch "$NSGAI_REF" "$NSGAI_REPO" nsgai && \
+	cmake -S nsgai -B nsgai/build \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_INSTALL_LIBDIR=lib64 \
+		-DNSGAI_ENABLE_NETNS_TESTS=OFF && \
+	cmake --build nsgai/build -j4 && \
+	(cd nsgai/build && ctest --output-on-failure) && \
+	cmake --install nsgai/build && \
+	ldconfig && \
+	rm -r nsgai && \
+	cd ..
+
+# CoreDNS for the omfwd-nsgai-netns-dns.sh per-namespace DNS test - not packaged
+ARG	COREDNS_VERSION=1.14.5
+RUN	case "$(uname -m)" in \
+		x86_64) arch=amd64 ;; \
+		aarch64) arch=arm64 ;; \
+		*) echo "unsupported arch for coredns: $(uname -m)" >&2; exit 1 ;; \
+	esac && \
+	tgz="coredns_${COREDNS_VERSION}_linux_${arch}.tgz" && \
+	url="https://github.com/coredns/coredns/releases/download/v${COREDNS_VERSION}/${tgz}" && \
+	cd /tmp && \
+	curl -fsSLO "$url" && \
+	curl -fsSLO "${url}.sha256" && \
+	sha256sum -c "${tgz}.sha256" && \
+	tar -xzf "$tgz" -C /usr/local/bin coredns && \
+	rm -f "$tgz" "${tgz}.sha256" && \
+	/usr/local/bin/coredns --version
+
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 ENV SCAN_BUILD=scan-build \
@@ -266,6 +305,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmsnmptrapd \
 	--enable-mmutf8fix \
 	--enable-mysql \
+	--enable-nsgai \
 	--enable-omamqp1 \
 	--disable-omczmq \
 	--enable-omhiredis \
