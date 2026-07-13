@@ -300,8 +300,16 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
             goto fail;                      \
         }                                   \
     } while (0)
+#define NEED_TYPE(t)                  \
+    do {                              \
+        if (type != (t)) {            \
+            r = RS_RET_INVALID_VALUE; \
+            goto fail;                \
+        }                             \
+    } while (0)
 #define TEXT_CALL(call)                                       \
     do {                                                      \
+        NEED_TYPE(TLV_BYTES);                                 \
         if ((r = dup_text(p, n, &s)) != RS_RET_OK) goto fail; \
         r = (call);                                           \
         free(s);                                              \
@@ -359,23 +367,28 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 MsgSetHOSTNAME(msg, p, n);
                 break;
             case F_INPUTNAME:
-                if (type != TLV_BYTES || (r = MsgSetInputNameStr(msg, p, n)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = MsgSetInputNameStr(msg, p, n)) != RS_RET_OK) goto fail;
                 break;
             case F_RCVFROM:
-                if (type != TLV_BYTES || (r = MsgSetRcvFromText(msg, p, n)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = MsgSetRcvFromText(msg, p, n)) != RS_RET_OK) goto fail;
                 break;
             case F_RCVFROMIP:
-                if (type != TLV_BYTES || (r = MsgSetRcvFromIPText(msg, p, n)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = MsgSetRcvFromIPText(msg, p, n)) != RS_RET_OK) goto fail;
                 break;
             case F_RCVFROMPORT:
-                if (type != TLV_BYTES || (r = MsgSetRcvFromPortText(msg, p, n)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = MsgSetRcvFromPortText(msg, p, n)) != RS_RET_OK) goto fail;
                 break;
             case F_STRUCTURED_DATA:
                 TEXT_CALL(MsgSetStructuredData(msg, s));
                 break;
             case F_JSON:
             case F_LOCALVARS: {
-                if (type != TLV_BYTES || (r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
                 struct json_object *j = json_tokener_parse(s);
                 free(s);
                 s = NULL;
@@ -399,12 +412,14 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 TEXT_CALL(MsgSetMSGID(msg, s));
                 break;
             case F_UUID:
-                if (type != TLV_BYTES || (r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
                 msg->pszUUID = (uchar *)s;
                 s = NULL;
                 break;
             case F_RULESET:
-                if (type != TLV_BYTES || (r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
+                NEED_TYPE(TLV_BYTES);
+                if ((r = dup_text(p, n, &s)) != RS_RET_OK) goto fail;
                 {
                     cstr_t *cs = NULL;
                     if (rsCStrConstructFromszStr(&cs, (uchar *)s) != RS_RET_OK) {
@@ -440,6 +455,7 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                 break;
         }
 #undef NEED
+#undef NEED_TYPE
 #undef TEXT_CALL
         pos += n;
     }

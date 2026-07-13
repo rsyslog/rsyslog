@@ -193,10 +193,19 @@ def corrupt_record_codec(directory, message_number):
     path, record = find_record(directory, message_number)
     with path.open("r+b") as stream:
         payload_offset = record["offset"] + RECORD_HEADER_LEN
-        stream.seek(payload_offset + 2)
-        stream.write(b"\xff")
         stream.seek(payload_offset)
-        payload = stream.read(record["payload_length"])
+        payload = bytearray(stream.read(record["payload_length"]))
+        tlv_offset = 0
+        while tlv_offset + 8 <= len(payload):
+            field, _field_type, _flags, field_len = struct.unpack_from(">HBBI", payload, tlv_offset)
+            if field == 11:  # F_INPUTNAME: exercise a byte-field decoder path.
+                payload[tlv_offset + 2] = 0xff
+                break
+            tlv_offset += 8 + field_len
+        else:
+            raise ValueError("selected record has no input-name TLV")
+        stream.seek(payload_offset)
+        stream.write(payload)
         stream.seek(record["offset"] + 28)
         stream.write(struct.pack(">I", crc32c(payload)))
 
