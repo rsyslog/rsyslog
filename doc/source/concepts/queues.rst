@@ -232,22 +232,30 @@ out of order; the durable commit frontier still advances in dequeue order.
 As with other multi-worker queues, output ordering is not guaranteed when
 ``queue.workerThreads`` is greater than one.
 
-The default checkpoint interval for ``segmentedDisk`` is one completed batch,
-while ``queue.syncQueueFiles`` remains off by default. Before deleting a
-committed segment, rsyslog forces the corresponding checkpoint and directory
-updates to durable storage. Setting ``queue.syncQueueFiles="on"`` additionally
+``segmentedDisk`` uses the classic ``queue.checkpointInterval`` default of
+``0``, which disables periodic completion checkpoints. Positive intervals count
+records by contiguous commit-frontier advancement, not worker batches. Topology
+transitions, segment-ID reservations, pre-delete publication, and clean shutdown
+still force state updates. Setting ``queue.syncQueueFiles="on"`` additionally
 synchronizes ordinary segment and checkpoint writes, at a throughput cost.
+
+Before committed segments are unlinked, their range and conservative byte/count
+accounting are recorded durably. Interrupted or transiently failed deletion is
+retried idempotently by queue workers after restart; startup itself does not scan
+that range. The pending range remains visible as queue work, so empty waits and
+shutdown cannot silently strand those files.
 
 Recovery validates every framed record. In the supported ``safe`` corruption
 mode, rsyslog skips a payload-corrupt record and continues at the next valid
-record in the segment. A damaged tail of an active segment is truncated to the
-last valid boundary. If the checkpoint is absent or invalid, all valid records
-are replayed; duplicates are expected in that explicit recovery case.
+record in the segment. A damaged tail of an active segment is recovered lazily.
+Missing or invalid state is not reconstructed automatically; the queue fails
+fast with an offline-recovery diagnostic.
 
 Queue statistics add ``disk.usage``, ``segments``, ``checkpoints``,
 ``replayed``, ``corruption.events``, ``corruption.bytes``,
-``corruption.records``, ``retry.overage.bytes``, and
-``retry.overage.maxbytes`` for this backend.
+``corruption.records``, ``corruption.segments``, ``retry.overage.bytes``,
+``retry.overage.maxbytes``, state-write/recovery counters, and the startup
+payload-byte and segment-probe counters for this backend.
 
 If you happen to lose or otherwise need the housekeeping structures and
 have all your queue chunks you can use the ``recover_qi.pl`` script

@@ -63,6 +63,10 @@ void segdiskStateEncode(const segdisk_state_image_t *s,
     put64(b + 144, (uint64_t)s->writer_end);
     put64(b + 152, s->writer_sequence);
     put64(b + 160, s->writer_count);
+    put64(b + 168, s->delete_first);
+    put64(b + 176, s->delete_last);
+    put64(b + 184, (uint64_t)s->delete_bytes);
+    put64(b + 192, s->delete_segments);
     put32(b + SEGDISK_STATE_SLOT_LEN - 4, segdiskCrc32c(b, SEGDISK_STATE_SLOT_LEN - 4));
 }
 
@@ -93,6 +97,10 @@ void segdiskStateDecode(const unsigned char b[SEGDISK_STATE_SLOT_LEN], segdisk_s
     s->writer_end = (int64_t)get64(b + 144);
     s->writer_sequence = get64(b + 152);
     s->writer_count = get64(b + 160);
+    s->delete_first = get64(b + 168);
+    s->delete_last = get64(b + 176);
+    s->delete_bytes = (int64_t)get64(b + 184);
+    s->delete_segments = get64(b + 192);
 }
 
 sbool segdiskStateGenerationNewer(const uint64_t candidate, const uint64_t reference) {

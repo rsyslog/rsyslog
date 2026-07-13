@@ -118,6 +118,10 @@ def inspect_store(directory):
                     "known_count": struct.unpack_from(">Q", slot, 112)[0],
                     "physical_bytes": struct.unpack_from(">Q", slot, 120)[0],
                     "segment_count": struct.unpack_from(">Q", slot, 128)[0],
+                    "delete_first": struct.unpack_from(">Q", slot, 168)[0],
+                    "delete_last": struct.unpack_from(">Q", slot, 176)[0],
+                    "delete_bytes": struct.unpack_from(">Q", slot, 184)[0],
+                    "delete_segments": struct.unpack_from(">Q", slot, 192)[0],
                 })
             slots.append(item)
     return {

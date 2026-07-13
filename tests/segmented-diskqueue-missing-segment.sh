@@ -2,6 +2,7 @@
 # Remove a middle sealed segment from valid segmentedDisk state. Lazy dequeue
 # must diagnose one missing segment, increment its counter, skip the unknowable
 # lost range, and continue through the final later record without startup scan.
+# This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
 require_plugin impstats

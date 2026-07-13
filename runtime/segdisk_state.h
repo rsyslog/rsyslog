@@ -29,6 +29,10 @@ typedef struct segdisk_state_image_s {
     int64_t writer_end;
     uint64_t writer_sequence;
     uint64_t writer_count;
+    uint64_t delete_first;
+    uint64_t delete_last;
+    int64_t delete_bytes;
+    uint64_t delete_segments;
 } segdisk_state_image_t;
 
 void segdiskStateEncode(const segdisk_state_image_t *state,

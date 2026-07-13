@@ -614,9 +614,9 @@ static int parsePosLong(const uchar *const s, long *const val) {
     return (*endptr == '\0' && *val >= 0) ? 1 : 0;
 }
 
-static rsRetVal setSegDiskFault(uchar *pszCmd, tcps_sess_t *pSess) {
+static rsRetVal set_seg_disk_fault(uchar *pszCmd, tcps_sess_t *pSess) {
     uchar point[128] = {0};
-    long hitCount = 1;
+    long hit_count = 1;
     DEFiRet;
 
     getFirstWord(&pszCmd, point, sizeof(point), TO_LOWERCASE);
@@ -625,11 +625,11 @@ static rsRetVal setSegDiskFault(uchar *pszCmd, tcps_sess_t *pSess) {
         FINALIZE;
     }
     while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
-    if (*pszCmd != '\0' && !parsePosLong(pszCmd, &hitCount)) {
+    if (*pszCmd != '\0' && !parsePosLong(pszCmd, &hit_count)) {
         CHKiRet(sendResponse(pSess, "ERROR: invalid segmentedDisk fault hit count\n"));
         FINALIZE;
     }
-    if (hitCount <= 0 || hitCount > UINT_MAX) {
+    if (hit_count <= 0 || (uintmax_t)hit_count > UINT_MAX) {
         CHKiRet(sendResponse(pSess, "ERROR: segmentedDisk fault hit count is out of range\n"));
         FINALIZE;
     }
@@ -637,7 +637,7 @@ static rsRetVal setSegDiskFault(uchar *pszCmd, tcps_sess_t *pSess) {
         CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
         FINALIZE;
     }
-    iRet = qqueueSetSegDiskTestFault(runConf->pMsgQueue, (const char *)point, (unsigned int)hitCount);
+    iRet = qqueueSetSegDiskTestFault(runConf->pMsgQueue, (const char *)point, (unsigned int)hit_count);
     if (iRet == RS_RET_INVALID_VALUE) {
         CHKiRet(sendResponse(pSess, "ERROR: unknown fault point or main queue is not segmentedDisk\n"));
         iRet = RS_RET_OK;
@@ -649,7 +649,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal clearSegDiskFault(tcps_sess_t *pSess) {
+static rsRetVal clear_seg_disk_fault(tcps_sess_t *pSess) {
     DEFiRet;
     if (runConf->pMsgQueue == NULL) {
         CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
@@ -710,9 +710,9 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {
-        CHKiRet(setSegDiskFault(pszMsg, pSess));
+        CHKiRet(set_seg_disk_fault(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("clearsegdiskfault"))) {
-        CHKiRet(clearSegDiskFault(pSess));
+        CHKiRet(clear_seg_disk_fault(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;
         if (!parsePosLong(pszMsg, &val)) {

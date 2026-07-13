@@ -5,6 +5,7 @@
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1
 QUEUE_TYPE=${QUEUE_TYPE:-disk}
+QUEUE_EXTRA=${QUEUE_EXTRA:-}
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
@@ -19,8 +20,7 @@ template(name="outfmt" type="list") {
 call async
 
 # Note: a disk-type queue is selected to test even more rsyslog core features
-ruleset(name="async" queue.type="'$QUEUE_TYPE'" queue.filename="asyncq"
-	queue.spoolDirectory="'${RSYSLOG_DYNNAME}'.spool") {
+ruleset(name="async" queue.type="'$QUEUE_TYPE'" '"$QUEUE_EXTRA"') {
   :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="'$RSYSLOG_OUT_LOG'")
 }

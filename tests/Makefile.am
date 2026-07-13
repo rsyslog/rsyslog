@@ -69,7 +69,9 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-crash-predelete.sh \
 	segmented-diskqueue-crash-unlink.sh
 TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh
-EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) segdisk-inspect.py \
+TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh
+EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) \
+	$(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS) segdisk-inspect.py \
 	testsuites/segmented-diskqueue-checkpoint-driver.sh \
 	testsuites/segmented-diskqueue-crash-driver.sh \
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
@@ -2705,6 +2707,9 @@ if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS)
+endif
 if HAVE_LIBYAML
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML)
 endif

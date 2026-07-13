@@ -32,6 +32,10 @@ static void init_state(segdisk_state_image_t *state, unsigned char uuid_byte) {
     memset(state->uuid, uuid_byte, sizeof(state->uuid));
     state->committed_offset = 52;
     state->next_segment = 1;
+    state->delete_first = 2;
+    state->delete_last = 4;
+    state->delete_bytes = 12345;
+    state->delete_segments = 3;
 }
 
 static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
@@ -41,6 +45,10 @@ static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
     int selected_slot = -1;
     CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &selected, &selected_slot) == RS_RET_OK);
     CHECK(selected_slot == expected);
+    CHECK(selected.delete_first == 2);
+    CHECK(selected.delete_last == 4);
+    CHECK(selected.delete_bytes == 12345);
+    CHECK(selected.delete_segments == 3);
 }
 
 int main(void) {

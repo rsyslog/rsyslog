@@ -72,6 +72,22 @@ wait_seq_check_dupes() {
 	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
 }
 startup
+if [ "$SEGDISK_FAULT_POINT" = segment-unlinked ]; then
+	# The crash occurs after unlink but before pending-delete state can be
+	# cleared. Reaching the full output sequence proves workers resumed; the
+	# state/file oracle below proves cleanup was retried rather than merely
+	# hidden by clean-shutdown spool removal.
+	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
+	python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" >"${RSYSLOG_DYNNAME}.post-unlink.json"
+	python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+slots = [s for s in d["state_slots"] if s["valid"]]
+newest = max(slots, key=lambda s: s["generation"])
+assert newest["delete_first"] == 0 and newest["delete_last"] == 0, newest
+assert not [s for s in d["segments"] if s["id"] < newest["first_live_segment"]], d["segments"]
+' "${RSYSLOG_DYNNAME}.post-unlink.json" || error_exit 1
+fi
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1)) -d

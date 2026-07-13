@@ -92,6 +92,10 @@ struct segdisk_store_s {
     int64_t persisted_writer_end;
     uint64_t persisted_writer_sequence;
     uint64_t persisted_writer_count;
+    uint64_t delete_first;
+    uint64_t delete_last;
+    int64_t delete_bytes;
+    uint64_t delete_segments;
     uint64_t discovery_through_segment;
     uint64_t read_segment_id;
     int64_t read_offset;
@@ -307,6 +311,10 @@ static void capture_state_image(const segdisk_store_t *s, segdisk_state_image_t 
     state->writer_end = s->persisted_writer_end;
     state->writer_sequence = s->persisted_writer_sequence;
     state->writer_count = s->persisted_writer_count;
+    state->delete_first = s->delete_first;
+    state->delete_last = s->delete_last;
+    state->delete_bytes = s->delete_bytes;
+    state->delete_segments = s->delete_segments;
 }
 
 static void apply_state_image(segdisk_store_t *s, const segdisk_state_image_t *state) {
@@ -328,6 +336,10 @@ static void apply_state_image(segdisk_store_t *s, const segdisk_state_image_t *s
     s->persisted_writer_end = state->writer_end;
     s->persisted_writer_sequence = state->writer_sequence;
     s->persisted_writer_count = state->writer_count;
+    s->delete_first = state->delete_first;
+    s->delete_last = state->delete_last;
+    s->delete_bytes = state->delete_bytes;
+    s->delete_segments = state->delete_segments;
 }
 
 static rsRetVal write_state(segdisk_store_t *s, sbool force_sync, sbool topology) {
@@ -355,6 +367,10 @@ static rsRetVal read_state(segdisk_store_t *s) {
     const rsRetVal r1 = read_full_at(s->state_fd, slots[1], STATE_SLOT_LEN, STATE_SLOT_LEN);
     segdisk_state_image_t state;
     const rsRetVal r = segdiskStateSelect(slots[0], r0 == RS_RET_OK, slots[1], r1 == RS_RET_OK, &state, NULL);
+    if (r == RS_RET_OK &&
+        ((state.delete_first == 0) != (state.delete_last == 0) ||
+         (state.delete_first != 0 && state.delete_first > state.delete_last) || state.delete_bytes < 0))
+        return RS_RET_INVALID_VALUE;
     if (r == RS_RET_OK) apply_state_image(s, &state);
     return r;
 }
@@ -809,64 +825,98 @@ static rsRetVal unlink_segment_id(segdisk_store_t *s, uint64_t id, sbool account
     return r;
 }
 
-static rsRetVal delete_committed(segdisk_store_t *s) {
-    uint64_t target = s->committed_segment;
-    if (target == 0 || s->first_live_segment >= target) return RS_RET_OK;
-    const uint64_t old_first = s->first_live_segment;
-    const uint64_t old_recovery_first = s->recovery_first;
-    const uint64_t old_recovery_last = s->recovery_last;
-    int64_t bytes = 0;
-    int segments = 0;
-    for (uint64_t id = old_first; id < target; ++id) {
-        const char *const suffixes[] = {"seg", "recover", "open"};
-        for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); ++i) {
-            char *path = segment_path(s, id, suffixes[i]);
-            if (path == NULL) return RS_RET_OUT_OF_MEMORY;
-            struct stat st;
-            if (lstat(path, &st) == 0) {
-                bytes += st.st_size;
-                ++segments;
-            }
-            free(path);
-        }
+static rsRetVal cleanup_one_pending_delete(segdisk_store_t *s) {
+    if (s->delete_first == 0) return RS_RET_OK;
+    if (unlink_segment_id(s, s->delete_first, 0) != RS_RET_OK || sync_dir(s) != RS_RET_OK) return RS_RET_IO_ERROR;
+
+    const uint64_t old_delete_first = s->delete_first;
+    const uint64_t old_delete_last = s->delete_last;
+    const int64_t old_delete_bytes = s->delete_bytes;
+    const uint64_t old_delete_segments = s->delete_segments;
+    const int64_t old_bytes = s->stats.bytes;
+    const int old_segments = s->stats.segments;
+    if (s->delete_first == s->delete_last) {
+        s->delete_first = s->delete_last = 0;
+        s->delete_bytes = 0;
+        s->delete_segments = 0;
+        s->stats.bytes = old_delete_bytes > s->stats.bytes ? 0 : s->stats.bytes - old_delete_bytes;
+        s->stats.segments =
+            old_delete_segments > (uint64_t)s->stats.segments ? 0 : s->stats.segments - (int)old_delete_segments;
+    } else {
+        ++s->delete_first;
     }
-    s->first_live_segment = target;
-    if (s->recovery_first != 0 && target > s->recovery_first) {
-        if (target > s->recovery_last)
-            s->recovery_first = s->recovery_last = 0;
-        else
-            s->recovery_first = target;
-    }
-    rsRetVal r = write_state(s, 1, 1);
+    const rsRetVal r = write_state(s, 1, 1);
     if (r != RS_RET_OK) {
-        s->first_live_segment = old_first;
-        s->recovery_first = old_recovery_first;
-        s->recovery_last = old_recovery_last;
-        return r;
+        s->delete_first = old_delete_first;
+        s->delete_last = old_delete_last;
+        s->delete_bytes = old_delete_bytes;
+        s->delete_segments = old_delete_segments;
+        s->stats.bytes = old_bytes;
+        s->stats.segments = old_segments;
     }
-    test_fault(s, SEGDISK_TEST_FAULT_PREDELETE_PUBLISHED);
-    sbool delete_failed = 0;
-    for (uint64_t id = old_first; id < target; ++id) {
-        r = unlink_segment_id(s, id, 0);
-        if (r != RS_RET_OK) delete_failed = 1;
+    return r;
+}
+
+static rsRetVal delete_committed(segdisk_store_t *s) {
+    const uint64_t target = s->committed_segment;
+    if (target != 0 && s->first_live_segment < target) {
+        const uint64_t old_first = s->first_live_segment;
+        const uint64_t old_recovery_first = s->recovery_first;
+        const uint64_t old_recovery_last = s->recovery_last;
+        const uint64_t old_delete_first = s->delete_first;
+        const uint64_t old_delete_last = s->delete_last;
+        const int64_t old_delete_bytes = s->delete_bytes;
+        const uint64_t old_delete_segments = s->delete_segments;
+        int64_t bytes = 0;
+        uint64_t segments = 0;
+        for (uint64_t id = old_first; id < target; ++id) {
+            const char *const suffixes[] = {"seg", "recover", "open"};
+            for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); ++i) {
+                char *path = segment_path(s, id, suffixes[i]);
+                if (path == NULL) return RS_RET_OUT_OF_MEMORY;
+                struct stat st;
+                if (lstat(path, &st) == 0) {
+                    bytes += st.st_size;
+                    ++segments;
+                }
+                free(path);
+            }
+        }
+        if (bytes > INT64_MAX - s->delete_bytes || segments > UINT64_MAX - s->delete_segments)
+            return RS_RET_FILE_TOO_LARGE;
+        if (s->delete_first == 0) s->delete_first = old_first;
+        s->delete_last = target - 1;
+        s->delete_bytes += bytes;
+        s->delete_segments += segments;
+        s->first_live_segment = target;
+        if (s->recovery_first != 0 && target > s->recovery_first) {
+            if (target > s->recovery_last)
+                s->recovery_first = s->recovery_last = 0;
+            else
+                s->recovery_first = target;
+        }
+        const rsRetVal r = write_state(s, 1, 1);
+        if (r != RS_RET_OK) {
+            s->first_live_segment = old_first;
+            s->recovery_first = old_recovery_first;
+            s->recovery_last = old_recovery_last;
+            s->delete_first = old_delete_first;
+            s->delete_last = old_delete_last;
+            s->delete_bytes = old_delete_bytes;
+            s->delete_segments = old_delete_segments;
+            return r;
+        }
+        test_fault(s, SEGDISK_TEST_FAULT_PREDELETE_PUBLISHED);
     }
-    if (delete_failed) {
+
+    while (s->delete_first != 0 && cleanup_one_pending_delete(s) == RS_RET_OK) {
+    }
+    if (s->delete_first != 0)
         LogError(0, RS_RET_IO_ERROR,
                  "%s: segmentedDisk could not remove all committed segment files; "
-                 "disk usage remains conservatively accounted",
+                 "the durable pending-delete range will be retried",
                  s->queue_name);
-    } else {
-        s->stats.bytes -= bytes;
-        s->stats.segments -= segments;
-        if (write_state(s, 1, 1) != RS_RET_OK)
-            LogError(0, RS_RET_IO_ERROR,
-                     "%s: segmentedDisk could not publish reduced disk usage after segment deletion; "
-                     "the durable state remains conservative",
-                     s->queue_name);
-    }
     update_retry_overage(s);
-    if (sync_dir(s) != RS_RET_OK)
-        LogError(0, RS_RET_IO_ERROR, "%s: segmentedDisk could not synchronize its queue directory", s->queue_name);
     return RS_RET_OK;
 }
 
@@ -1144,6 +1194,7 @@ rsRetVal segdiskStoreAppend(segdisk_store_t *s, smsg_t *msg, sbool internal, int
 
 sbool segdiskStoreMayHaveData(const segdisk_store_t *s) {
     if (s == NULL) return 0;
+    if (s->delete_first != 0) return 1;
     if (s->read_segment != NULL && s->read_offset < s->read_segment->data_end) return 1;
     if (s->read_segment == NULL && s->read_segment_id != 0 && s->read_segment_id <= s->last_data_segment) return 1;
     return s->active != NULL && s->active->record_count != 0 &&
@@ -1152,6 +1203,12 @@ sbool segdiskStoreMayHaveData(const segdisk_store_t *s) {
 
 rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, int *skipped, int *discovered) {
     if (batch->storeData != NULL) return RS_RET_INTERNAL_ERROR;
+    if (s->delete_first != 0) {
+        if (cleanup_one_pending_delete(s) != RS_RET_OK)
+            LogError(0, RS_RET_IO_ERROR, "%s: segmentedDisk pending segment deletion failed and will be retried",
+                     s->queue_name);
+        if (s->delete_first != 0) return RS_RET_RETRY;
+    }
     segdisk_batch_ctx_t *ctx = calloc(1, sizeof(*ctx));
     if (ctx == NULL) return RS_RET_OUT_OF_MEMORY;
     ctx->sequence = s->next_batch_sequence++;
