@@ -6,13 +6,16 @@
 # uncommitted records.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+require_plugin impstats
 export NUMMESSAGES=3000
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
+STATS_FILE="$PWD/${RSYSLOG_DYNNAME}.stats.log"
 
 write_conf() {
 	generate_conf
 	add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
+module(load="../plugins/impstats/.libs/impstats" log.file="'"$STATS_FILE"'" interval="1")
 global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(
 	queue.type="segmentedDisk"
@@ -44,22 +47,25 @@ if [ "$pre_restart_lines" -ge "$NUMMESSAGES" ]; then
 	echo "FAIL: restart test did not leave a backlog; $pre_restart_lines messages were written before restart"
 	error_exit 1
 fi
-if [ ! -f "$SPOOL_DIR/mainq.segq/meta" ]; then
-	echo "FAIL: segmentedDisk metadata was not persisted before restart"
+if [ "$(wc -c < "$SPOOL_DIR/mainq.segq/state")" -ne 512 ]; then
+	echo "FAIL: segmentedDisk two-slot state was not persisted before restart"
 	error_exit 1
 fi
-if ! find "$SPOOL_DIR/mainq.segq" -maxdepth 1 -type f \( -name 'segment-*.seg' -o -name 'segment-*.open' \) \
+if ! find "$SPOOL_DIR/mainq.segq" -maxdepth 1 -type f \
+	\( -name 'segment-*.seg' -o -name 'segment-*.open' -o -name 'segment-*.recover' \) \
 	| grep -q .; then
 	echo "FAIL: segmentedDisk segment files were not persisted before restart"
 	error_exit 1
 fi
 
 write_conf '# no delay on restart'
+: > "$STATS_FILE"
 export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check_dupes
 wait_seq_check_dupes() {
 	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
 }
 startup
+wait_content 'startup.payloadBytesRead=0' "$STATS_FILE"
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1)) -d

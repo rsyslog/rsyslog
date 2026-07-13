@@ -72,7 +72,7 @@ wait_file_lines "$REFERENCE_FILE" "$NUMMESSAGES"
 shutdown_immediate
 . "$srcdir/diag.sh" kill-immediate
 wait_shutdown
-if [ ! -f "$SPOOL_DIR/eventq.segq/meta" ]; then
+if [ "$(wc -c < "$SPOOL_DIR/eventq.segq/state")" -ne 512 ]; then
 	echo "FAIL: segmented action queue was not persisted"
 	error_exit 1
 fi

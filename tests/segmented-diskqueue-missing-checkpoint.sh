@@ -1,7 +1,7 @@
 #!/bin/bash
-# Verify a missing checkpoint causes replay of every valid record. A short
-# phase-one delay allows a durable frontier to form while leaving a backlog;
-# duplicate output is allowed because removing the checkpoint forgets it.
+# Verify corrupting both fixed-size state slots fails the queue immediately.
+# A backlog is created first; the oracle is prompt startup failure with the
+# offline-recovery diagnostic, never a synchronous segment scan.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
@@ -33,23 +33,31 @@ injectmsg 0 "$NUMMESSAGES"
 shutdown_immediate
 . "$srcdir/diag.sh" kill-immediate
 wait_shutdown
-if [ ! -f "$SPOOL_DIR/mainq.segq/checkpoint" ]; then
-	echo "FAIL: phase one did not create a checkpoint"
+if [ "$(wc -c < "$SPOOL_DIR/mainq.segq/state")" -ne 512 ]; then
+	echo "FAIL: phase one did not create the two-slot state file"
 	error_exit 1
 fi
-rm "$SPOOL_DIR/mainq.segq/checkpoint"
+dd if=/dev/zero of="$SPOOL_DIR/mainq.segq/state" bs=512 count=1 conv=notrunc status=none
 
-write_conf '# no delay during replay'
-export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check_dupes
-wait_seq_check_dupes() {
-	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
-}
-startup
-shutdown_when_empty
-wait_shutdown
-seq_check 0 $((NUMMESSAGES - 1)) -d
-if ! grep -q "checkpoint missing or invalid; replaying all valid records" "${RSYSLOG_DYNNAME}.started"; then
-	echo "FAIL: missing-checkpoint replay was not reported"
+write_conf '# startup must fail before processing the backlog'
+fail_log="${RSYSLOG_DYNNAME}.invalid-state.log"
+../tools/rsyslogd -C -n -i"${RSYSLOG_DYNNAME}.invalid.pid" \
+	-M../runtime/.libs:../.libs -f"${TESTCONF_NM}.conf" >"$fail_log" 2>&1 &
+invalid_pid=$!
+state_error_seen=0
+for _ in {1..50}; do
+	if grep -q "no valid state slot; offline recovery is required" "$fail_log"; then
+		state_error_seen=1
+		break
+	fi
+	sleep .1
+done
+kill -KILL "$invalid_pid" 2>/dev/null || true
+wait "$invalid_pid" 2>/dev/null || true
+rm -f "${RSYSLOG_DYNNAME}.invalid.pid"
+if [ "$state_error_seen" -ne 1 ]; then
+	echo "FAIL: invalid-state offline recovery diagnostic was not reported"
+	cat "$fail_log"
 	error_exit 1
 fi
 rm -rf "${RSYSLOG_DYNNAME}.spool"

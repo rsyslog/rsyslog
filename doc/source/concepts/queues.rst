@@ -195,7 +195,7 @@ Experimental segmented disk queues
 ``queue.type="segmentedDisk"`` enables an experimental pure-disk queue
 backend based on a queue-private log-structured store. It writes one active
 segment at a time, seals segments at ``queue.maxFileSize``, and commits
-completed dequeue batches through an atomic checkpoint file. A batch that
+completed dequeue batches through a fixed-size, two-slot state file. A batch that
 must be retried is appended before the original batch is committed. A crash
 can therefore replay an uncommitted batch, but a committed record is never
 discarded merely because a later batch completed first.
@@ -206,6 +206,19 @@ dedicated ``<workDirectory>/<queue.filename>.segq/`` directory. The format is
 experimental and may change incompatibly while this queue type remains
 experimental. It is intentionally separate from the classic disk queue and
 does not use ``.qi`` or ``recover_qi.pl``.
+
+Startup reads only the 512-byte state file and probes the named active/recovery
+transition files. It does not enumerate segments or scan record payloads, so a
+valid queue's startup time is independent of backlog size. Segment metadata and
+record framing, payload checksums, and codec data are validated lazily when
+dequeue reaches them. Recovery scanning yields periodically so it does not hold
+the queue lock for an unbounded time.
+
+The state file is indispensable control data. If both slots are invalid, or the
+file is missing while segment files remain, rsyslog fails that queue immediately
+and requests offline recovery instead of delaying daemon startup with a full
+scan. Version 1 of this unmerged experimental format is intentionally rejected;
+there is no migration guarantee for experimental queue data.
 
 This mode is opt-in and currently only available as a pure-disk queue
 type. Disk-assisted queues continue to use the classic disk child queue.

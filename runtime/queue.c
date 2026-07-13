@@ -507,7 +507,11 @@ void qqueueDbgPrint(qqueue_t *pThis) {
  * rgerhards, 2008-01-29
  */
 static int getPhysicalQueueSize(qqueue_t *pThis) {
-    return (int)PREFER_FETCH_32BIT(pThis->iQueueSize);
+    const int size = (int)PREFER_FETCH_32BIT(pThis->iQueueSize);
+    if (size == 0 && pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->tVars.segdisk != NULL &&
+        segdiskStoreMayHaveData(pThis->tVars.segdisk))
+        return 1;
+    return size;
 }
 
 
@@ -516,7 +520,11 @@ static int getPhysicalQueueSize(qqueue_t *pThis) {
  * rgerhards, 2009-05-19
  */
 static int getLogicalQueueSize(qqueue_t *pThis) {
-    return pThis->iQueueSize - pThis->nLogDeq;
+    const int size = pThis->iQueueSize - pThis->nLogDeq;
+    if (size == 0 && pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->tVars.segdisk != NULL &&
+        segdiskStoreMayHaveData(pThis->tVars.segdisk))
+        return 1;
+    return size;
 }
 
 static int64 getQueueDiskBytes(qqueue_t *pThis) {
@@ -546,6 +554,12 @@ static void qqueueUpdateSegDiskStats(qqueue_t *pThis) {
     pThis->segdiskRetryOverageBytes = stats.retry_overage_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_bytes;
     pThis->segdiskRetryOverageMaxBytes =
         stats.retry_overage_max_bytes > INT_MAX ? INT_MAX : (int)stats.retry_overage_max_bytes;
+    pThis->segdiskStateWrites = segdiskStatsInt(stats.state_writes);
+    pThis->segdiskForcedStateWrites = segdiskStatsInt(stats.forced_state_writes);
+    pThis->segdiskRecoveryBytes = segdiskStatsInt(stats.recovery_bytes);
+    pThis->segdiskRecoveryRecords = segdiskStatsInt(stats.recovery_records);
+    pThis->segdiskStartupPayloadBytes = segdiskStatsInt(stats.startup_payload_bytes_read);
+    pThis->segdiskRecoveryPending = segdiskStatsInt(stats.recovery_pending);
 }
 
 
@@ -1084,9 +1098,14 @@ finalize_it:
 }
 
 static rsRetVal qDeqBatchSegDisk(qqueue_t *pThis, batch_t *batch, int max, int *skipped) {
-    const rsRetVal r = segdiskStoreDequeueBatch(pThis->tVars.segdisk, batch, max, skipped);
+    int discovered = 0;
+    const rsRetVal store_ret = segdiskStoreDequeueBatch(pThis->tVars.segdisk, batch, max, skipped, &discovered);
+    if (discovered > 0) {
+        qqueueAddPhysicalQueueSize(pThis, discovered);
+        qqueueAddOverallQueueSize(discovered);
+    }
     qqueueUpdateSegDiskStats(pThis);
-    return r;
+    return store_ret == RS_RET_RETRY ? RS_RET_NO_DATA : store_ret;
 }
 
 static rsRetVal qCompleteBatchSegDisk(qqueue_t *pThis, batch_t *batch, int *committed, int *retried) {
@@ -3793,6 +3812,18 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
                                     &pThis->segdiskRetryOverageBytes));
         CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("retry.overage.maxbytes"), ctrType_Int,
                                     CTR_FLAG_NONE, &pThis->segdiskRetryOverageMaxBytes));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("state.writes"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskStateWrites));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("state.forcedWrites"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskForcedStateWrites));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("recovery.pending"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskRecoveryPending));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("recovery.bytes"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskRecoveryBytes));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("recovery.records"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskRecoveryRecords));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("startup.payloadBytesRead"), ctrType_Int,
+                                    CTR_FLAG_NONE, &pThis->segdiskStartupPayloadBytes));
     }
 
     CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
@@ -4628,7 +4659,6 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
     int i;
     struct cnfparamvals *pvals;
     int n_params_set = 0;
-    sbool checkpoint_set = 0;
     DEFiRet;
 
     pvals = nvlstGetParams(lst, &pblk, NULL);
@@ -4697,7 +4727,6 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             pThis->iDiscardSeverity = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.checkpointinterval")) {
             pThis->iPersistUpdCnt = pvals[i].val.d.n;
-            checkpoint_set = 1;
         } else if (!strcmp(pblk.descr[i].name, "queue.syncqueuefiles")) {
             pThis->bSyncQueueFiles = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.type")) {
@@ -4784,7 +4813,6 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
                      obj.GetName((obj_t *)pThis));
             ABORT_FINALIZE(RS_RET_QUEUE_DISK_NO_FN);
         }
-        if (!checkpoint_set) pThis->iPersistUpdCnt = 1;
         if (pThis->onCorruption != QUEUE_ON_CORRUPTION_SAFE_MODE) {
             LogError(0, RS_RET_CONF_PARAM_INVLD,
                      "error on queue '%s': segmentedDisk currently supports only queue.onCorruption=\"safe\"",

@@ -2,9 +2,12 @@
  * Log-structured serial queue store.
  *
  * Concurrency & locking: callers hold the owning queue mutex for every public
- * operation. The store therefore owns no mutex in v1. Batch contexts may be
- * completed out of order, but the durable frontier advances only in dequeue
- * order.
+ * operation. The store therefore owns no mutex. Batch contexts may complete
+ * out of order, but the durable frontier advances only in dequeue order.
+ *
+ * Startup reads only the fixed-size state file. Existing segments are opened
+ * and validated lazily as dequeue reaches them, so startup cost is independent
+ * of backlog bytes and segment count.
  */
 #include "config.h"
 #include "rsyslog.h"
@@ -24,40 +27,37 @@
 #include "segdisk_codec.h"
 #include "segdisk_store.h"
 
-#define META_MAGIC "RSSEGQ01"
-#define SEG_MAGIC "RSSEGH01"
-#define REC_MAGIC "RSRECD01"
-#define FOOT_MAGIC "RSSEAL01"
-#define CKPT_MAGIC "RSCKPT01"
-#define STORE_VERSION 1u
-#define META_LEN 32u
+#define STATE_MAGIC "RSSEGST2"
+#define SEG_MAGIC "RSSEGH02"
+#define REC_MAGIC "RSRECD02"
+#define FOOT_MAGIC "RSSEAL02"
+#define STORE_VERSION 2u
+#define STATE_SLOT_LEN 256u
+#define STATE_FILE_LEN (2u * STATE_SLOT_LEN)
 #define SEG_HDR_LEN 52u
 #define REC_HDR_LEN 32u
 #define FOOT_LEN 48u
-#define CKPT_LEN 64u
 #define MAX_RECORD_SIZE (128u * 1024u * 1024u)
+#define RECOVERY_SCAN_BUDGET (1024u * 1024u)
 
 typedef struct segdisk_segment_s {
     uint64_t id;
-    uint64_t first_ordinal;
-    uint64_t last_ordinal;
+    uint64_t first_sequence;
+    uint64_t last_sequence;
     uint64_t record_count;
     int64_t data_end;
     int64_t file_size;
     uint32_t rolling_crc;
     sbool sealed;
+    sbool recovery;
     char *path;
-    struct segdisk_segment_s *next;
 } segdisk_segment_t;
 
 typedef struct segdisk_batch_ctx_s {
     uint64_t sequence;
     uint64_t end_segment;
-    uint64_t end_ordinal;
+    uint64_t end_record_sequence;
     int64_t end_offset;
-    /* Physical records consumed, including corrupt records salvaged past.
-     * Recovery counts every framed record in iQueueSize, so completion must
-     * retire skipped records too even though no message reaches a worker. */
     int records;
     int retry_index;
     int retry_count;
@@ -71,23 +71,34 @@ struct segdisk_store_s {
     char *dir;
     char *queue_name;
     int dir_fd;
+    int state_fd;
     int active_fd;
     segdisk_store_config_t cfg;
     unsigned char uuid[16];
     uint64_t generation;
     uint64_t committed_segment;
-    uint64_t committed_ordinal;
+    uint64_t committed_record_sequence;
     int64_t committed_offset;
+    uint64_t first_live_segment;
+    uint64_t last_data_segment;
+    uint64_t active_segment;
+    uint64_t recovery_first;
+    uint64_t recovery_last;
     uint64_t next_segment;
-    uint64_t next_ordinal;
-    uint64_t read_ordinal;
-    segdisk_segment_t *read_segment;
+    uint64_t persisted_queue_size;
+    uint64_t persisted_writer_segment;
+    int64_t persisted_writer_end;
+    uint64_t persisted_writer_sequence;
+    uint64_t persisted_writer_count;
+    uint64_t discovery_through_segment;
+    uint64_t read_segment_id;
     int64_t read_offset;
-    segdisk_segment_t *segments;
+    segdisk_segment_t *read_segment;
     segdisk_segment_t *active;
     segdisk_batch_ctx_t *pending_head;
     segdisk_batch_ctx_t *pending_tail;
     uint64_t next_batch_sequence;
+    uint64_t known_queue_size;
     unsigned int updates_since_checkpoint;
     segdisk_store_stats_t stats;
 };
@@ -175,15 +186,30 @@ static rsRetVal write_full(int fd, const void *buf, size_t len) {
     return RS_RET_OK;
 }
 
+static rsRetVal pwrite_full(int fd, const void *buf, size_t len, int64_t off) {
+    const unsigned char *p = buf;
+    while (len != 0) {
+        const ssize_t n = pwrite(fd, p, len, off);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return RS_RET_IO_ERROR;
+        }
+        p += n;
+        len -= (size_t)n;
+        off += n;
+    }
+    return RS_RET_OK;
+}
+
 static char *path_join(const char *a, const char *b) {
     char *p = NULL;
     if (asprintf(&p, "%s/%s", a, b) < 0) return NULL;
     return p;
 }
 
-static char *segment_path(const segdisk_store_t *s, uint64_t id, sbool sealed) {
+static char *segment_path(const segdisk_store_t *s, uint64_t id, const char *suffix) {
     char name[64];
-    snprintf(name, sizeof(name), "segment-%020" PRIu64 ".%s", id, sealed ? "seg" : "open");
+    snprintf(name, sizeof(name), "segment-%020" PRIu64 ".%s", id, suffix);
     return path_join(s->dir, name);
 }
 
@@ -203,85 +229,156 @@ static rsRetVal random_uuid(unsigned char uuid[16]) {
     return r;
 }
 
-static rsRetVal write_meta(segdisk_store_t *s) {
-    unsigned char b[META_LEN] = {0};
-    memcpy(b, META_MAGIC, 8);
+static sbool generation_newer(uint64_t a, uint64_t b) {
+    if (a == b) return 0;
+    const uint64_t distance = a > b ? a - b : UINT64_MAX - b + a + 1;
+    return distance < (UINT64_C(1) << 63);
+}
+
+static void encode_state_slot(segdisk_store_t *s, unsigned char b[STATE_SLOT_LEN], uint64_t generation) {
+    memset(b, 0, STATE_SLOT_LEN);
+    memcpy(b, STATE_MAGIC, 8);
     put16(b + 8, STORE_VERSION);
     put16(b + 10, SEGDISK_CODEC_VERSION);
     memcpy(b + 12, s->uuid, 16);
-    put32(b + 28, segdiskCrc32c(b, 28));
-    const int fd = openat(s->dir_fd, "meta.tmp", O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, 0600);
-    if (fd < 0) return RS_RET_IO_ERROR;
-    rsRetVal r = write_full(fd, b, sizeof(b));
-    if (r == RS_RET_OK && fsync(fd) != 0) r = RS_RET_IO_ERROR;
-    if (close(fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
-    if (r == RS_RET_OK && renameat(s->dir_fd, "meta.tmp", s->dir_fd, "meta") != 0) r = RS_RET_IO_ERROR;
-    if (r == RS_RET_OK) r = sync_dir(s);
-    return r;
+    put64(b + 28, generation);
+    put32(b + 36, s->recovery_first != 0 ? 1u : 0u);
+    put64(b + 40, s->committed_segment);
+    put64(b + 48, (uint64_t)s->committed_offset);
+    put64(b + 56, s->committed_record_sequence);
+    put64(b + 64, s->first_live_segment);
+    put64(b + 72, s->last_data_segment);
+    put64(b + 80, s->active_segment);
+    put64(b + 88, s->recovery_first);
+    put64(b + 96, s->recovery_last);
+    put64(b + 104, s->next_segment);
+    put64(b + 112, s->known_queue_size);
+    put64(b + 120, (uint64_t)s->stats.bytes);
+    put64(b + 128, (uint64_t)s->stats.segments);
+    put64(b + 136, s->persisted_writer_segment);
+    put64(b + 144, (uint64_t)s->persisted_writer_end);
+    put64(b + 152, s->persisted_writer_sequence);
+    put64(b + 160, s->persisted_writer_count);
+    put32(b + STATE_SLOT_LEN - 4, segdiskCrc32c(b, STATE_SLOT_LEN - 4));
 }
 
-static rsRetVal read_meta(segdisk_store_t *s) {
-    unsigned char b[META_LEN];
-    const int fd = openat(s->dir_fd, "meta", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
-    if (fd < 0) return errno == ENOENT ? RS_RET_FILE_NOT_FOUND : RS_RET_IO_ERROR;
-    rsRetVal r = read_full_at(fd, b, sizeof(b), 0);
-    close(fd);
-    if (r != RS_RET_OK || memcmp(b, META_MAGIC, 8) || get16(b + 8) != STORE_VERSION ||
-        get16(b + 10) != SEGDISK_CODEC_VERSION || get32(b + 28) != segdiskCrc32c(b, 28))
-        return RS_RET_INVALID_VALUE;
+static sbool validate_state_slot(const unsigned char b[STATE_SLOT_LEN]) {
+    return !memcmp(b, STATE_MAGIC, 8) && get16(b + 8) == STORE_VERSION && get16(b + 10) == SEGDISK_CODEC_VERSION &&
+           get32(b + STATE_SLOT_LEN - 4) == segdiskCrc32c(b, STATE_SLOT_LEN - 4);
+}
+
+static void apply_state_slot(segdisk_store_t *s, const unsigned char b[STATE_SLOT_LEN]) {
     memcpy(s->uuid, b + 12, 16);
-    return RS_RET_OK;
+    s->generation = get64(b + 28);
+    s->committed_segment = get64(b + 40);
+    s->committed_offset = (int64_t)get64(b + 48);
+    s->committed_record_sequence = get64(b + 56);
+    s->first_live_segment = get64(b + 64);
+    s->last_data_segment = get64(b + 72);
+    s->active_segment = get64(b + 80);
+    s->recovery_first = get64(b + 88);
+    s->recovery_last = get64(b + 96);
+    s->next_segment = get64(b + 104);
+    s->persisted_queue_size = get64(b + 112);
+    s->stats.bytes = (int64_t)get64(b + 120);
+    s->stats.segments = (int)get64(b + 128);
+    s->persisted_writer_segment = get64(b + 136);
+    s->persisted_writer_end = (int64_t)get64(b + 144);
+    s->persisted_writer_sequence = get64(b + 152);
+    s->persisted_writer_count = get64(b + 160);
 }
 
-static rsRetVal write_checkpoint(segdisk_store_t *s, sbool force_sync) {
-    unsigned char b[CKPT_LEN] = {0};
-    memcpy(b, CKPT_MAGIC, 8);
-    put16(b + 8, STORE_VERSION);
-    put16(b + 10, SEGDISK_CODEC_VERSION);
-    memcpy(b + 12, s->uuid, 16);
-    put64(b + 28, ++s->generation);
-    put64(b + 36, s->committed_segment);
-    put64(b + 44, (uint64_t)s->committed_offset);
-    put64(b + 52, s->committed_ordinal);
-    put32(b + 60, segdiskCrc32c(b, 60));
-    const int fd = openat(s->dir_fd, "checkpoint.tmp", O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW, 0600);
-    if (fd < 0) return RS_RET_IO_ERROR;
-    rsRetVal r = write_full(fd, b, sizeof(b));
-    if (r == RS_RET_OK && (s->cfg.sync_files || force_sync) && fsync(fd) != 0) r = RS_RET_IO_ERROR;
-    if (close(fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
-    if (r == RS_RET_OK && renameat(s->dir_fd, "checkpoint.tmp", s->dir_fd, "checkpoint") != 0) r = RS_RET_IO_ERROR;
-    if (r == RS_RET_OK && (s->cfg.sync_files || force_sync)) r = sync_dir(s);
+static rsRetVal write_state(segdisk_store_t *s, sbool force_sync, sbool topology) {
+    unsigned char b[STATE_SLOT_LEN];
+    const uint64_t next_generation = s->generation + 1;
+    encode_state_slot(s, b, next_generation);
+    const int slot = (int)(next_generation & 1u);
+    rsRetVal r = pwrite_full(s->state_fd, b, sizeof(b), slot * STATE_SLOT_LEN);
+    if (r == RS_RET_OK && (force_sync || s->cfg.sync_files) && sync_file_data(s->state_fd) != 0) r = RS_RET_IO_ERROR;
     if (r == RS_RET_OK) {
+        s->generation = next_generation;
         ++s->stats.checkpoints;
+        ++s->stats.state_writes;
+        if (force_sync || topology) ++s->stats.forced_state_writes;
         s->updates_since_checkpoint = 0;
     }
     return r;
 }
 
-static rsRetVal read_checkpoint(segdisk_store_t *s) {
-    unsigned char b[CKPT_LEN];
-    const int fd = openat(s->dir_fd, "checkpoint", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
-    if (fd < 0) return errno == ENOENT ? RS_RET_FILE_NOT_FOUND : RS_RET_IO_ERROR;
-    rsRetVal r = read_full_at(fd, b, sizeof(b), 0);
-    close(fd);
-    if (r != RS_RET_OK || memcmp(b, CKPT_MAGIC, 8) || get16(b + 8) != STORE_VERSION || memcmp(b + 12, s->uuid, 16) ||
-        get32(b + 60) != segdiskCrc32c(b, 60))
-        return RS_RET_INVALID_VALUE;
-    s->generation = get64(b + 28);
-    s->committed_segment = get64(b + 36);
-    s->committed_offset = (int64_t)get64(b + 44);
-    s->committed_ordinal = get64(b + 52);
+static rsRetVal read_state(segdisk_store_t *s) {
+    unsigned char slots[2][STATE_SLOT_LEN];
+    const rsRetVal r0 = read_full_at(s->state_fd, slots[0], STATE_SLOT_LEN, 0);
+    const rsRetVal r1 = read_full_at(s->state_fd, slots[1], STATE_SLOT_LEN, STATE_SLOT_LEN);
+    const sbool valid0 = r0 == RS_RET_OK && validate_state_slot(slots[0]);
+    const sbool valid1 = r1 == RS_RET_OK && validate_state_slot(slots[1]);
+    if (!valid0 && !valid1) return RS_RET_INVALID_VALUE;
+    if (valid0 && valid1 && memcmp(slots[0] + 12, slots[1] + 12, 16) != 0) return RS_RET_INVALID_VALUE;
+    const unsigned char *chosen =
+        valid1 && (!valid0 || generation_newer(get64(slots[1] + 28), get64(slots[0] + 28))) ? slots[1] : slots[0];
+    apply_state_slot(s, chosen);
     return RS_RET_OK;
 }
 
-static rsRetVal write_segment_header(segdisk_store_t *s, int fd, uint64_t id, uint64_t first) {
+static int segment_name(const char *name) {
+    unsigned long long id;
+    char suffix[16];
+    if (sscanf(name, "segment-%20llu.%15s", &id, suffix) != 2) return 0;
+    return !strcmp(suffix, "seg") || !strcmp(suffix, "open") || !strcmp(suffix, "recover");
+}
+
+static rsRetVal directory_has_segments(segdisk_store_t *s, sbool *has_segment) {
+    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (scan_fd < 0) return RS_RET_IO_ERROR;
+    DIR *dir = fdopendir(scan_fd);
+    if (dir == NULL) {
+        close(scan_fd);
+        return RS_RET_IO_ERROR;
+    }
+    *has_segment = 0;
+    struct dirent *de;
+    while ((de = readdir(dir)) != NULL) {
+        if (segment_name(de->d_name)) {
+            *has_segment = 1;
+            break;
+        }
+    }
+    closedir(dir);
+    return RS_RET_OK;
+}
+
+static rsRetVal remove_remaining_segments(segdisk_store_t *s) {
+    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (scan_fd < 0) return RS_RET_IO_ERROR;
+    DIR *dir = fdopendir(scan_fd);
+    if (dir == NULL) {
+        close(scan_fd);
+        return RS_RET_IO_ERROR;
+    }
+    rsRetVal r = RS_RET_OK;
+    struct dirent *de;
+    while ((de = readdir(dir)) != NULL) {
+        if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..") || !strcmp(de->d_name, "state")) continue;
+        if (!segment_name(de->d_name)) {
+            r = RS_RET_IO_ERROR;
+            break;
+        }
+        if (unlinkat(s->dir_fd, de->d_name, 0) != 0 && errno != ENOENT) {
+            r = RS_RET_IO_ERROR;
+            break;
+        }
+    }
+    closedir(dir);
+    return r;
+}
+
+static rsRetVal write_segment_header(segdisk_store_t *s, int fd, uint64_t id) {
     unsigned char b[SEG_HDR_LEN] = {0};
     memcpy(b, SEG_MAGIC, 8);
     put16(b + 8, STORE_VERSION);
     put16(b + 10, SEGDISK_CODEC_VERSION);
     memcpy(b + 12, s->uuid, 16);
     put64(b + 28, id);
-    put64(b + 36, first);
+    put64(b + 36, 1);
     put32(b + 44, SEG_HDR_LEN);
     put32(b + 48, segdiskCrc32c(b, 48));
     return write_full(fd, b, sizeof(b));
@@ -291,65 +388,175 @@ static rsRetVal validate_segment_header(segdisk_store_t *s, int fd, segdisk_segm
     unsigned char b[SEG_HDR_LEN];
     rsRetVal r = read_full_at(fd, b, sizeof(b), 0);
     if (r != RS_RET_OK || memcmp(b, SEG_MAGIC, 8) || get16(b + 8) != STORE_VERSION ||
-        get16(b + 10) != SEGDISK_CODEC_VERSION || memcmp(b + 12, s->uuid, 16) || get32(b + 44) != SEG_HDR_LEN ||
-        get32(b + 48) != segdiskCrc32c(b, 48))
+        get16(b + 10) != SEGDISK_CODEC_VERSION || memcmp(b + 12, s->uuid, 16) || get64(b + 28) != seg->id ||
+        get32(b + 44) != SEG_HDR_LEN || get32(b + 48) != segdiskCrc32c(b, 48))
         return RS_RET_INVALID_VALUE;
-    seg->id = get64(b + 28);
-    seg->first_ordinal = get64(b + 36);
+    seg->first_sequence = get64(b + 36);
     return RS_RET_OK;
+}
+
+static void free_segment(segdisk_segment_t **seg) {
+    if (*seg == NULL) return;
+    free((*seg)->path);
+    free(*seg);
+    *seg = NULL;
+}
+
+static rsRetVal probe_segment_path(segdisk_store_t *s, uint64_t id, const char *suffix, char **path) {
+    *path = segment_path(s, id, suffix);
+    if (*path == NULL) return RS_RET_OUT_OF_MEMORY;
+    struct stat st;
+    if (lstat(*path, &st) == 0) return S_ISREG(st.st_mode) ? RS_RET_OK : RS_RET_INVALID_VALUE;
+    const int saved_errno = errno;
+    free(*path);
+    *path = NULL;
+    errno = saved_errno;
+    return saved_errno == ENOENT ? RS_RET_FILE_NOT_FOUND : RS_RET_IO_ERROR;
+}
+
+static rsRetVal load_segment(segdisk_store_t *s, uint64_t id, segdisk_segment_t **out) {
+    segdisk_segment_t *seg = calloc(1, sizeof(*seg));
+    if (seg == NULL) return RS_RET_OUT_OF_MEMORY;
+    seg->id = id;
+    rsRetVal r = probe_segment_path(s, id, "seg", &seg->path);
+    if (r == RS_RET_OK) {
+        seg->sealed = 1;
+    } else if (r == RS_RET_FILE_NOT_FOUND) {
+        r = probe_segment_path(s, id, "recover", &seg->path);
+        if (r == RS_RET_OK) seg->recovery = 1;
+    }
+    if (r == RS_RET_FILE_NOT_FOUND) r = probe_segment_path(s, id, "open", &seg->path);
+    if (r != RS_RET_OK) {
+        free_segment(&seg);
+        return r;
+    }
+    const int fd = open(seg->path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) {
+        free_segment(&seg);
+        return RS_RET_IO_ERROR;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+        close(fd);
+        free_segment(&seg);
+        return RS_RET_IO_ERROR;
+    }
+    r = validate_segment_header(s, fd, seg);
+    if (r == RS_RET_OK && seg->sealed) {
+        if (st.st_size < (int64_t)(SEG_HDR_LEN + FOOT_LEN)) {
+            r = RS_RET_INVALID_VALUE;
+        } else {
+            unsigned char foot[FOOT_LEN];
+            r = read_full_at(fd, foot, sizeof(foot), st.st_size - FOOT_LEN);
+            if (r != RS_RET_OK || memcmp(foot, FOOT_MAGIC, 8) || get64(foot + 8) != id ||
+                get32(foot + 44) != segdiskCrc32c(foot, 44)) {
+                r = RS_RET_INVALID_VALUE;
+            } else {
+                seg->first_sequence = get64(foot + 16);
+                seg->last_sequence = get64(foot + 24);
+                seg->record_count = get64(foot + 32);
+                seg->rolling_crc = get32(foot + 40);
+                seg->data_end = st.st_size - FOOT_LEN;
+            }
+        }
+    } else if (r == RS_RET_OK) {
+        seg->data_end = st.st_size;
+    }
+    close(fd);
+    if (r != RS_RET_OK) {
+        ++s->stats.corruption_events;
+        LogError(0, r, "%s: segmentedDisk could not validate segment metadata '%s'", s->queue_name, seg->path);
+        free_segment(&seg);
+        return r;
+    }
+    seg->file_size = st.st_size;
+    *out = seg;
+    return RS_RET_OK;
+}
+
+static void capture_writer(segdisk_store_t *s) {
+    if (s->active == NULL) return;
+    s->persisted_writer_segment = s->active->id;
+    s->persisted_writer_end = s->active->data_end;
+    s->persisted_writer_sequence = s->active->last_sequence;
+    s->persisted_writer_count = s->active->record_count;
 }
 
 static rsRetVal create_active(segdisk_store_t *s) {
     segdisk_segment_t *seg = calloc(1, sizeof(*seg));
     if (seg == NULL) return RS_RET_OUT_OF_MEMORY;
     seg->id = s->next_segment++;
-    seg->first_ordinal = s->next_ordinal;
+    seg->first_sequence = 1;
     seg->data_end = SEG_HDR_LEN;
     seg->file_size = SEG_HDR_LEN;
-    seg->sealed = 0;
-    seg->path = segment_path(s, seg->id, 0);
+    seg->path = segment_path(s, seg->id, "open");
     if (seg->path == NULL) {
         free(seg);
         return RS_RET_OUT_OF_MEMORY;
     }
-    const int fd = open(seg->path, O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+    s->active_segment = seg->id;
+    if (s->first_live_segment == 0) s->first_live_segment = seg->id;
+    ++s->stats.segments;
+    s->stats.bytes += SEG_HDR_LEN;
+    rsRetVal r = write_state(s, 1, 1);
+    if (r != RS_RET_OK) {
+        s->active_segment = 0;
+        --s->stats.segments;
+        s->stats.bytes -= SEG_HDR_LEN;
+        free_segment(&seg);
+        return r;
+    }
+    const int fd = open(seg->path, O_RDWR | O_CREAT | O_EXCL | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0600);
     if (fd < 0) {
-        free(seg->path);
-        free(seg);
+        s->active_segment = 0;
+        --s->stats.segments;
+        s->stats.bytes -= SEG_HDR_LEN;
+        free_segment(&seg);
         return RS_RET_IO_ERROR;
     }
-    rsRetVal r = write_segment_header(s, fd, seg->id, seg->first_ordinal);
+    r = write_segment_header(s, fd, seg->id);
+    if (r == RS_RET_OK && s->cfg.sync_files && sync_file_data(fd) != 0) r = RS_RET_IO_ERROR;
     if (r != RS_RET_OK) {
         close(fd);
         unlink(seg->path);
-        free(seg->path);
-        free(seg);
+        s->active_segment = 0;
+        --s->stats.segments;
+        s->stats.bytes -= SEG_HDR_LEN;
+        free_segment(&seg);
         return r;
     }
-    if (lseek(fd, 0, SEEK_END) < 0) {
-        close(fd);
-        unlink(seg->path);
-        free(seg->path);
-        free(seg);
-        return RS_RET_IO_ERROR;
-    }
-    segdisk_segment_t **tail = &s->segments;
-    while (*tail != NULL) tail = &(*tail)->next;
-    *tail = seg;
     s->active = seg;
     s->active_fd = fd;
-    ++s->stats.segments;
-    s->stats.bytes += SEG_HDR_LEN;
     return RS_RET_OK;
 }
 
+static void restore_active_after_seal_failure(segdisk_store_t *s) {
+    const int fd = open(s->active->path, O_RDWR | O_APPEND | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) return;
+    if (ftruncate(fd, s->active->data_end) != 0) {
+        close(fd);
+        return;
+    }
+    s->active_fd = fd;
+}
+
 static rsRetVal seal_active(segdisk_store_t *s) {
-    if (s->active == NULL || s->active->sealed) return RS_RET_OK;
+    if (s->active == NULL || s->active->sealed || s->active->record_count == 0) return RS_RET_OK;
+    char *sealed = segment_path(s, s->active->id, "seg");
+    if (sealed == NULL) return RS_RET_OUT_OF_MEMORY;
+    char *read_path = NULL;
+    if (s->read_segment != NULL && s->read_segment->id == s->active->id) {
+        read_path = strdup(sealed);
+        if (read_path == NULL) {
+            free(sealed);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+    }
     unsigned char b[FOOT_LEN] = {0};
     memcpy(b, FOOT_MAGIC, 8);
     put64(b + 8, s->active->id);
-    put64(b + 16, s->active->first_ordinal);
-    put64(b + 24, s->active->last_ordinal);
+    put64(b + 16, s->active->first_sequence);
+    put64(b + 24, s->active->last_sequence);
     put64(b + 32, s->active->record_count);
     put32(b + 40, s->active->rolling_crc);
     put32(b + 44, segdiskCrc32c(b, 44));
@@ -357,10 +564,15 @@ static rsRetVal seal_active(segdisk_store_t *s) {
     if (r == RS_RET_OK && s->cfg.sync_files && sync_file_data(s->active_fd) != 0) r = RS_RET_IO_ERROR;
     if (close(s->active_fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
     s->active_fd = -1;
-    if (r != RS_RET_OK) return r;
-    char *sealed = segment_path(s, s->active->id, 1);
-    if (sealed == NULL) return RS_RET_OUT_OF_MEMORY;
+    if (r != RS_RET_OK) {
+        restore_active_after_seal_failure(s);
+        free(read_path);
+        free(sealed);
+        return r;
+    }
     if (rename(s->active->path, sealed) != 0) {
+        restore_active_after_seal_failure(s);
+        free(read_path);
         free(sealed);
         return RS_RET_IO_ERROR;
     }
@@ -368,12 +580,23 @@ static rsRetVal seal_active(segdisk_store_t *s) {
     s->active->path = sealed;
     s->active->sealed = 1;
     s->active->file_size += FOOT_LEN;
+    s->active->data_end = s->active->file_size - FOOT_LEN;
     s->stats.bytes += FOOT_LEN;
-    s->active = NULL;
+    s->last_data_segment = s->active->id;
+    if (s->read_segment != NULL && s->read_segment->id == s->active->id) {
+        free(s->read_segment->path);
+        s->read_segment->path = read_path;
+        s->read_segment->sealed = 1;
+        s->read_segment->data_end = s->active->data_end;
+        s->read_segment->file_size = s->active->file_size;
+    }
+    capture_writer(s);
+    s->active_segment = 0;
+    free_segment(&s->active);
     return s->cfg.sync_files ? sync_dir(s) : RS_RET_OK;
 }
 
-static rsRetVal make_record(smsg_t *msg, uint64_t ordinal, unsigned char **out, size_t *outlen) {
+static rsRetVal make_record(smsg_t *msg, uint64_t sequence, unsigned char **out, size_t *outlen) {
     unsigned char *payload = NULL;
     size_t payload_len = 0;
     rsRetVal r = segdiskCodecEncode(msg, &payload, &payload_len);
@@ -391,105 +614,14 @@ static rsRetVal make_record(smsg_t *msg, uint64_t ordinal, unsigned char **out, 
     memset(record, 0, REC_HDR_LEN);
     memcpy(record, REC_MAGIC, 8);
     put16(record + 8, STORE_VERSION);
-    put16(record + 10, 0);
     put32(record + 12, (uint32_t)payload_len);
-    put64(record + 16, ordinal);
+    put64(record + 16, sequence);
     put32(record + 24, segdiskCrc32c(record, 24));
     put32(record + 28, segdiskCrc32c(payload, payload_len));
     memcpy(record + REC_HDR_LEN, payload, payload_len);
     free(payload);
     *out = record;
     *outlen = len;
-    return RS_RET_OK;
-}
-
-static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, int64_t *written) {
-    unsigned char *record = NULL;
-    size_t len = 0;
-    rsRetVal r = make_record(msg, s->next_ordinal, &record, &len);
-    if (r != RS_RET_OK) return r;
-    int64_t needed = (int64_t)len;
-    if (s->active == NULL) needed += SEG_HDR_LEN;
-    const sbool rotate = s->active != NULL && s->active->record_count != 0 && s->cfg.max_file_size > 0 &&
-                         s->active->file_size + (int64_t)len + FOOT_LEN > s->cfg.max_file_size;
-    if (rotate) needed += FOOT_LEN + SEG_HDR_LEN;
-    const int64_t target_size =
-        rotate ? SEG_HDR_LEN + (int64_t)len
-               : (s->active == NULL ? SEG_HDR_LEN + (int64_t)len : s->active->file_size + (int64_t)len);
-    if (s->cfg.max_file_size > 0 && target_size + FOOT_LEN > s->cfg.max_file_size) needed += FOOT_LEN;
-    if (!internal && s->cfg.max_disk_space > 0 && s->stats.bytes + needed > s->cfg.max_disk_space) {
-        free(record);
-        return RS_RET_QUEUE_FULL;
-    }
-    if (s->active == NULL) {
-        r = create_active(s);
-        if (r != RS_RET_OK) {
-            free(record);
-            return r;
-        }
-    }
-    if (s->active->record_count != 0 && s->cfg.max_file_size > 0 &&
-        s->active->file_size + (int64_t)len + FOOT_LEN > s->cfg.max_file_size) {
-        r = seal_active(s);
-        if (r == RS_RET_OK) r = create_active(s);
-        if (r != RS_RET_OK) {
-            free(record);
-            return r;
-        }
-    }
-    r = write_full(s->active_fd, record, len);
-    if (r == RS_RET_OK && s->cfg.sync_files && sync_file_data(s->active_fd) != 0) r = RS_RET_IO_ERROR;
-    if (r == RS_RET_OK) {
-        s->active->data_end += len;
-        s->active->file_size += len;
-        s->active->last_ordinal = s->next_ordinal++;
-        ++s->active->record_count;
-        s->active->rolling_crc ^= segdiskCrc32c(record, REC_HDR_LEN);
-        s->active->rolling_crc ^= segdiskCrc32c(record + REC_HDR_LEN, len - REC_HDR_LEN);
-        s->stats.bytes += len;
-        if (written != NULL) *written = len;
-    }
-    free(record);
-    if (r == RS_RET_OK && s->active->record_count == 1 && s->cfg.max_file_size > 0 &&
-        s->active->file_size + FOOT_LEN > s->cfg.max_file_size)
-        r = seal_active(s);
-    if (r == RS_RET_OK && internal) update_retry_overage(s);
-    return r;
-}
-
-static int segment_name(const char *name, uint64_t *id, sbool *sealed) {
-    char suffix[8];
-    unsigned long long value;
-    if (sscanf(name, "segment-%20llu.%7s", &value, suffix) != 2) return 0;
-    if (!strcmp(suffix, "seg"))
-        *sealed = 1;
-    else if (!strcmp(suffix, "open"))
-        *sealed = 0;
-    else
-        return 0;
-    *id = value;
-    return 1;
-}
-
-static rsRetVal directory_has_segments(segdisk_store_t *s, sbool *has_segment) {
-    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-    if (scan_fd < 0) return RS_RET_IO_ERROR;
-    DIR *dir = fdopendir(scan_fd);
-    if (dir == NULL) {
-        close(scan_fd);
-        return RS_RET_IO_ERROR;
-    }
-    *has_segment = 0;
-    struct dirent *de;
-    while ((de = readdir(dir)) != NULL) {
-        uint64_t id;
-        sbool sealed;
-        if (segment_name(de->d_name, &id, &sealed)) {
-            *has_segment = 1;
-            break;
-        }
-    }
-    closedir(dir);
     return RS_RET_OK;
 }
 
@@ -501,179 +633,68 @@ static void update_retry_overage(segdisk_store_t *s) {
         s->stats.retry_overage_max_bytes = s->stats.retry_overage_bytes;
 }
 
-static void insert_segment(segdisk_store_t *s, segdisk_segment_t *seg) {
-    segdisk_segment_t **p = &s->segments;
-    while (*p != NULL && (*p)->id < seg->id) p = &(*p)->next;
-    seg->next = *p;
-    *p = seg;
-}
-
-static rsRetVal scan_segment(segdisk_store_t *s, segdisk_segment_t *seg, int *queue_size) {
-    const int fd = open(seg->path, O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-    if (fd < 0) return RS_RET_IO_ERROR;
-    struct stat st;
-    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
-        close(fd);
-        return RS_RET_IO_ERROR;
+static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, int64_t *written) {
+    if (s->active == NULL) {
+        rsRetVal r = create_active(s);
+        if (r != RS_RET_OK) return r;
     }
-    rsRetVal r = validate_segment_header(s, fd, seg);
-    if (r != RS_RET_OK) {
-        close(fd);
-        return r;
+    unsigned char *record = NULL;
+    size_t len = 0;
+    rsRetVal r = make_record(msg, s->active->record_count + 1, &record, &len);
+    if (r != RS_RET_OK) return r;
+    const sbool rotate = s->active->record_count != 0 && s->cfg.max_file_size > 0 &&
+                         s->active->file_size + (int64_t)len + FOOT_LEN > s->cfg.max_file_size;
+    int64_t needed = (int64_t)len + (rotate ? FOOT_LEN + SEG_HDR_LEN : 0);
+    if (!internal && s->cfg.max_disk_space > 0 && s->stats.bytes + needed > s->cfg.max_disk_space) {
+        free(record);
+        return RS_RET_QUEUE_FULL;
     }
-    int64_t end = st.st_size;
-    sbool footer_valid = 0;
-    uint64_t footer_first = 0, footer_last = 0, footer_count = 0;
-    uint32_t footer_rolling = 0;
-    if (seg->sealed) {
-        if (end < (int64_t)(SEG_HDR_LEN + FOOT_LEN)) {
-            close(fd);
-            return RS_RET_INVALID_VALUE;
-        }
-        unsigned char foot[FOOT_LEN];
-        r = read_full_at(fd, foot, sizeof(foot), end - FOOT_LEN);
-        if (r == RS_RET_OK && !memcmp(foot, FOOT_MAGIC, 8) && get64(foot + 8) == seg->id &&
-            get32(foot + 44) == segdiskCrc32c(foot, 44)) {
-            footer_valid = 1;
-            footer_first = get64(foot + 16);
-            footer_last = get64(foot + 24);
-            footer_count = get64(foot + 32);
-            footer_rolling = get32(foot + 40);
-            end -= FOOT_LEN;
-        } else {
-            ++s->stats.corruption_events;
-            /* load_segments() treats this as a recovered active segment and
-             * immediately reseals it, replacing the invalid footer in-place. */
-            seg->sealed = 0;
-        }
-    }
-    int64_t off = SEG_HDR_LEN, last_valid = off;
-    uint64_t count = 0, last_ord = 0;
-    int live_count = 0;
-    uint32_t rolling = 0;
-    while (off + (int64_t)REC_HDR_LEN <= end) {
-        unsigned char h[REC_HDR_LEN];
-        r = read_full_at(fd, h, sizeof(h), off);
-        if (r != RS_RET_OK) break;
-        if (memcmp(h, REC_MAGIC, 8) || get16(h + 8) != STORE_VERSION || get32(h + 24) != segdiskCrc32c(h, 24) ||
-            get32(h + 12) > MAX_RECORD_SIZE || off + REC_HDR_LEN + get32(h + 12) > end) {
-            ++s->stats.corruption_events;
-            ++s->stats.corruption_bytes;
-            ++off;
-            continue;
-        }
-        const uint32_t n = get32(h + 12);
-        unsigned char *payload = malloc(n == 0 ? 1 : n);
-        if (payload == NULL) {
-            close(fd);
-            return RS_RET_OUT_OF_MEMORY;
-        }
-        r = read_full_at(fd, payload, n, off + REC_HDR_LEN);
+    if (rotate) {
+        r = seal_active(s);
+        if (r == RS_RET_OK) r = create_active(s);
         if (r != RS_RET_OK) {
-            free(payload);
-            break;
+            free(record);
+            return r;
         }
-        const uint32_t crc = segdiskCrc32c(payload, n);
-        const uint64_t ord = get64(h + 16);
-        rolling ^= segdiskCrc32c(h, sizeof(h));
-        rolling ^= crc;
-        free(payload);
-        if (count == 0) seg->first_ordinal = ord;
-        last_ord = ord;
-        ++count;
-        if (ord > s->committed_ordinal) ++live_count;
-        off += REC_HDR_LEN + n;
-        last_valid = off;
-        if (crc != get32(h + 28)) {
-            ++s->stats.corruption_events;
-            ++s->stats.corruption_records;
-        }
+        free(record);
+        record = NULL;
+        r = make_record(msg, 1, &record, &len);
+        if (r != RS_RET_OK) return r;
     }
-    if (footer_valid && (footer_first != seg->first_ordinal || footer_last != last_ord || footer_count != count ||
-                         footer_rolling != rolling)) {
-        ++s->stats.corruption_events;
-        seg->sealed = 0;
-        if (ftruncate(fd, end) != 0) r = RS_RET_IO_ERROR;
+    r = write_full(s->active_fd, record, len);
+    if (r == RS_RET_OK && s->cfg.sync_files && sync_file_data(s->active_fd) != 0) r = RS_RET_IO_ERROR;
+    if (r == RS_RET_OK) {
+        s->active->data_end += len;
+        s->active->file_size += len;
+        s->active->last_sequence = ++s->active->record_count;
+        s->active->rolling_crc ^= segdiskCrc32c(record, REC_HDR_LEN);
+        s->active->rolling_crc ^= segdiskCrc32c(record + REC_HDR_LEN, len - REC_HDR_LEN);
+        s->last_data_segment = s->active->id;
+        ++s->known_queue_size;
+        s->stats.bytes += len;
+        if (written != NULL) *written = len;
     }
-    if (!seg->sealed && last_valid < end) {
-        if (ftruncate(fd, last_valid) != 0) r = RS_RET_IO_ERROR;
-        end = last_valid;
-    }
-    seg->last_ordinal = last_ord;
-    seg->record_count = count;
-    seg->rolling_crc = rolling;
-    seg->data_end = end;
-    seg->file_size = end + (seg->sealed ? FOOT_LEN : 0);
-    if (seg->id >= s->next_segment) s->next_segment = seg->id + 1;
-    if (last_ord >= s->next_ordinal) s->next_ordinal = last_ord + 1;
-    close(fd);
-    if (r == RS_RET_EOF) r = RS_RET_OK;
-    if (r == RS_RET_OK) *queue_size += live_count;
+    free(record);
+    if (r == RS_RET_OK && s->active->record_count == 1 && s->cfg.max_file_size > 0 &&
+        s->active->file_size + FOOT_LEN > s->cfg.max_file_size)
+        r = seal_active(s);
+    if (r == RS_RET_OK && internal) update_retry_overage(s);
     return r;
 }
 
-static rsRetVal load_segments(segdisk_store_t *s, int *queue_size) {
-    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-    if (scan_fd < 0) return RS_RET_IO_ERROR;
-    DIR *dir = fdopendir(scan_fd);
-    if (dir == NULL) {
-        close(scan_fd);
-        return RS_RET_IO_ERROR;
-    }
-    struct dirent *de;
-    rsRetVal r = RS_RET_OK;
-    while ((de = readdir(dir)) != NULL) {
-        uint64_t id;
-        sbool sealed;
-        if (!segment_name(de->d_name, &id, &sealed)) continue;
-        segdisk_segment_t *seg = calloc(1, sizeof(*seg));
-        if (seg == NULL) {
-            r = RS_RET_OUT_OF_MEMORY;
-            break;
-        }
-        seg->id = id;
-        seg->sealed = sealed;
-        if (id >= s->next_segment) s->next_segment = id + 1;
-        seg->path = path_join(s->dir, de->d_name);
-        if (seg->path == NULL) {
-            free(seg);
-            r = RS_RET_OUT_OF_MEMORY;
-            break;
-        }
-        insert_segment(s, seg);
-    }
-    closedir(dir);
-    if (r != RS_RET_OK) return r;
-    segdisk_segment_t **next = &s->segments;
-    while (*next != NULL) {
-        segdisk_segment_t *const seg = *next;
-        r = scan_segment(s, seg, queue_size);
-        if (r != RS_RET_OK) {
-            DBGPRINTF("%s: segmentedDisk scan of '%s' failed with return code %d, errno %d\n", s->queue_name, seg->path,
-                      r, errno);
-            LogError(0, r, "%s: segmentedDisk could not validate segment '%s'; skipping it", s->queue_name, seg->path);
-            ++s->stats.corruption_events;
-            *next = seg->next;
-            free(seg->path);
-            free(seg);
-            continue;
-        }
-        ++s->stats.segments;
-        s->stats.bytes += seg->file_size;
-        if (!seg->sealed) {
-            s->active = seg;
-            s->active_fd = open(seg->path, O_RDWR | O_APPEND | O_CLOEXEC | O_NOFOLLOW);
-            if (s->active_fd < 0) return RS_RET_IO_ERROR;
-            r = seal_active(s);
-            if (r != RS_RET_OK) return r;
-        }
-        next = &seg->next;
-    }
-    return RS_RET_OK;
+static sbool segment_is_undiscovered(const segdisk_store_t *s, uint64_t id) {
+    return id != 0 && id <= s->discovery_through_segment;
 }
 
-static rsRetVal record_at(
-    segdisk_store_t *s, segdisk_segment_t *seg, int64_t *off, smsg_t **msg, uint64_t *ordinal, int *skipped) {
+static rsRetVal record_at(segdisk_store_t *s,
+                          segdisk_segment_t *seg,
+                          int64_t *off,
+                          smsg_t **msg,
+                          uint64_t *sequence,
+                          int *skipped,
+                          int *discovered,
+                          size_t *scan_budget) {
+    if (seg->id == s->active_segment && s->active != NULL) seg->data_end = s->active->data_end;
     const int fd = open(seg->path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) return RS_RET_IO_ERROR;
     while (*off + (int64_t)REC_HDR_LEN <= seg->data_end) {
@@ -687,7 +708,13 @@ static rsRetVal record_at(
             get32(h + 12) > MAX_RECORD_SIZE || *off + REC_HDR_LEN + get32(h + 12) > seg->data_end) {
             ++s->stats.corruption_events;
             ++s->stats.corruption_bytes;
+            ++s->stats.recovery_bytes;
             ++*off;
+            if (*scan_budget == 0) {
+                close(fd);
+                return RS_RET_RETRY;
+            }
+            --*scan_budget;
             continue;
         }
         const uint32_t n = get32(h + 12);
@@ -697,70 +724,35 @@ static rsRetVal record_at(
             return RS_RET_OUT_OF_MEMORY;
         }
         r = read_full_at(fd, payload, n, *off + REC_HDR_LEN);
-        const uint64_t ord = get64(h + 16);
-        *ordinal = ord;
+        *sequence = get64(h + 16);
+        const sbool newly_discovered = segment_is_undiscovered(s, seg->id);
+        if (newly_discovered) {
+            ++*discovered;
+            ++s->known_queue_size;
+            ++s->stats.recovery_records;
+            s->stats.recovery_bytes += REC_HDR_LEN + n;
+        }
+        *off += REC_HDR_LEN + n;
         if (r != RS_RET_OK || segdiskCrc32c(payload, n) != get32(h + 28) ||
             segdiskCodecDecode(payload, n, msg) != RS_RET_OK) {
             free(payload);
             ++s->stats.corruption_events;
             ++s->stats.corruption_records;
             ++*skipped;
-            *off += REC_HDR_LEN + n;
             continue;
         }
         free(payload);
-        *off += REC_HDR_LEN + n;
-        *ordinal = ord;
         close(fd);
         return RS_RET_OK;
     }
+    if (*off < seg->data_end && seg->id != s->active_segment) {
+        const size_t tail = (size_t)(seg->data_end - *off);
+        s->stats.corruption_bytes += tail;
+        s->stats.recovery_bytes += tail;
+        *off = seg->data_end;
+    }
     close(fd);
     return RS_RET_NO_DATA;
-}
-
-static segdisk_segment_t *first_readable(segdisk_store_t *s, uint64_t after) {
-    for (segdisk_segment_t *seg = s->segments; seg != NULL; seg = seg->next)
-        if (seg->last_ordinal > after) return seg;
-    return NULL;
-}
-
-static rsRetVal delete_committed(segdisk_store_t *s, sbool *frontier_durable) {
-    *frontier_durable = 0;
-    if (s->active != NULL && s->active->record_count != 0 && s->active->last_ordinal <= s->committed_ordinal &&
-        s->pending_head == NULL) {
-        rsRetVal r = seal_active(s);
-        if (r != RS_RET_OK) return r;
-        r = create_active(s);
-        if (r != RS_RET_OK) return r;
-    }
-    sbool needs_delete = 0;
-    for (segdisk_segment_t *seg = s->segments; seg != NULL; seg = seg->next)
-        if (seg->sealed && seg->last_ordinal != 0 && seg->last_ordinal <= s->committed_ordinal) needs_delete = 1;
-    if (!needs_delete) return RS_RET_OK;
-    if (s->active_fd >= 0 && sync_file_data(s->active_fd) != 0) return RS_RET_IO_ERROR;
-    rsRetVal r = write_checkpoint(s, 1);
-    if (r != RS_RET_OK) return r;
-    *frontier_durable = 1;
-    segdisk_segment_t **p = &s->segments;
-    while (*p != NULL) {
-        segdisk_segment_t *seg = *p;
-        if (!seg->sealed || seg->last_ordinal == 0 || seg->last_ordinal > s->committed_ordinal) {
-            p = &seg->next;
-            continue;
-        }
-        if (unlink(seg->path) != 0 && errno != ENOENT) return RS_RET_IO_ERROR;
-        s->stats.bytes -= seg->file_size;
-        --s->stats.segments;
-        *p = seg->next;
-        if (s->read_segment == seg) {
-            s->read_segment = NULL;
-            s->read_offset = SEG_HDR_LEN;
-        }
-        free(seg->path);
-        free(seg);
-    }
-    update_retry_overage(s);
-    return sync_dir(s);
 }
 
 static void append_pending(segdisk_store_t *s, segdisk_batch_ctx_t *ctx) {
@@ -770,6 +762,89 @@ static void append_pending(segdisk_store_t *s, segdisk_batch_ctx_t *ctx) {
         s->pending_tail->next = ctx;
         s->pending_tail = ctx;
     }
+}
+
+static rsRetVal unlink_segment_id(segdisk_store_t *s, uint64_t id, sbool account) {
+    const char *const suffixes[] = {"seg", "recover", "open"};
+    rsRetVal r = RS_RET_OK;
+    for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); ++i) {
+        char *path = segment_path(s, id, suffixes[i]);
+        if (path == NULL) return RS_RET_OUT_OF_MEMORY;
+        struct stat st;
+        if (lstat(path, &st) == 0) {
+            if (unlink(path) != 0 && errno != ENOENT)
+                r = RS_RET_IO_ERROR;
+            else if (account) {
+                s->stats.bytes -= st.st_size;
+                if (s->stats.segments > 0) --s->stats.segments;
+            }
+        } else if (errno != ENOENT) {
+            r = RS_RET_IO_ERROR;
+        }
+        free(path);
+        if (r != RS_RET_OK) break;
+    }
+    return r;
+}
+
+static rsRetVal delete_committed(segdisk_store_t *s) {
+    uint64_t target = s->committed_segment;
+    if (target == 0 || s->first_live_segment >= target) return RS_RET_OK;
+    const uint64_t old_first = s->first_live_segment;
+    const uint64_t old_recovery_first = s->recovery_first;
+    const uint64_t old_recovery_last = s->recovery_last;
+    int64_t bytes = 0;
+    int segments = 0;
+    for (uint64_t id = old_first; id < target; ++id) {
+        const char *const suffixes[] = {"seg", "recover", "open"};
+        for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); ++i) {
+            char *path = segment_path(s, id, suffixes[i]);
+            if (path == NULL) return RS_RET_OUT_OF_MEMORY;
+            struct stat st;
+            if (lstat(path, &st) == 0) {
+                bytes += st.st_size;
+                ++segments;
+            }
+            free(path);
+        }
+    }
+    s->first_live_segment = target;
+    if (s->recovery_first != 0 && target > s->recovery_first) {
+        if (target > s->recovery_last)
+            s->recovery_first = s->recovery_last = 0;
+        else
+            s->recovery_first = target;
+    }
+    rsRetVal r = write_state(s, 1, 1);
+    if (r != RS_RET_OK) {
+        s->first_live_segment = old_first;
+        s->recovery_first = old_recovery_first;
+        s->recovery_last = old_recovery_last;
+        return r;
+    }
+    sbool delete_failed = 0;
+    for (uint64_t id = old_first; id < target; ++id) {
+        r = unlink_segment_id(s, id, 0);
+        if (r != RS_RET_OK) delete_failed = 1;
+    }
+    if (delete_failed) {
+        LogError(0, RS_RET_IO_ERROR,
+                 "%s: segmentedDisk could not remove all committed segment files; "
+                 "disk usage remains conservatively accounted",
+                 s->queue_name);
+    } else {
+        s->stats.bytes -= bytes;
+        s->stats.segments -= segments;
+        if (write_state(s, 1, 1) != RS_RET_OK)
+            LogError(0, RS_RET_IO_ERROR,
+                     "%s: segmentedDisk could not publish reduced disk usage after segment deletion; "
+                     "the durable state remains conservative",
+                     s->queue_name);
+    }
+    update_retry_overage(s);
+    if (sync_dir(s) != RS_RET_OK)
+        LogError(0, RS_RET_IO_ERROR, "%s: segmentedDisk could not synchronize its queue directory", s->queue_name);
+    return RS_RET_OK;
 }
 
 static rsRetVal advance_completed(segdisk_store_t *s) {
@@ -782,32 +857,27 @@ static rsRetVal advance_completed(segdisk_store_t *s) {
     if (last == NULL) return RS_RET_OK;
     const uint64_t old_segment = s->committed_segment;
     const int64_t old_offset = s->committed_offset;
-    const uint64_t old_ordinal = s->committed_ordinal;
+    const uint64_t old_sequence = s->committed_record_sequence;
+    const uint64_t old_size = s->known_queue_size;
     const unsigned int old_updates = s->updates_since_checkpoint;
     s->committed_segment = last->end_segment;
     s->committed_offset = last->end_offset;
-    s->committed_ordinal = last->end_ordinal;
+    s->committed_record_sequence = last->end_record_sequence;
+    s->known_queue_size = advanced > s->known_queue_size ? 0 : s->known_queue_size - advanced;
     s->updates_since_checkpoint += advanced;
     rsRetVal r = RS_RET_OK;
-    sbool frontier_durable = 0;
-    if (s->cfg.checkpoint_interval == 0 || s->updates_since_checkpoint >= s->cfg.checkpoint_interval) {
-        r = write_checkpoint(s, 0);
-        if (r == RS_RET_OK) frontier_durable = 1;
+    if (s->cfg.checkpoint_interval != 0 && s->updates_since_checkpoint >= s->cfg.checkpoint_interval) {
+        capture_writer(s);
+        r = write_state(s, 0, 0);
     }
-    sbool delete_durable = 0;
-    if (r == RS_RET_OK) r = delete_committed(s, &delete_durable);
-    frontier_durable |= delete_durable;
-    if (r != RS_RET_OK && !frontier_durable) {
+    if (r == RS_RET_OK) r = delete_committed(s);
+    if (r != RS_RET_OK) {
         s->committed_segment = old_segment;
         s->committed_offset = old_offset;
-        s->committed_ordinal = old_ordinal;
+        s->committed_record_sequence = old_sequence;
+        s->known_queue_size = old_size;
         s->updates_since_checkpoint = old_updates;
         return r;
-    }
-    if (r != RS_RET_OK) {
-        LogError(0, r, "%s: segmentedDisk cleanup failed after the completion frontier was durable; deferring cleanup",
-                 s->queue_name);
-        r = RS_RET_OK;
     }
     segdisk_batch_ctx_t *const after = last->next;
     while (s->pending_head != after) {
@@ -817,7 +887,124 @@ static rsRetVal advance_completed(segdisk_store_t *s) {
         release_batch_ctx(ctx);
     }
     if (s->pending_head == NULL) s->pending_tail = NULL;
+    return RS_RET_OK;
+}
+
+static rsRetVal prepare_existing_active(segdisk_store_t *s) {
+    if (s->active_segment == 0) return RS_RET_OK;
+    const int64_t accounted_bytes =
+        s->persisted_writer_segment == s->active_segment && s->persisted_writer_end >= SEG_HDR_LEN
+            ? s->persisted_writer_end
+            : SEG_HDR_LEN;
+    int64_t actual_bytes = -1;
+    char *open_path = NULL;
+    rsRetVal r = probe_segment_path(s, s->active_segment, "open", &open_path);
+    if (r == RS_RET_OK) {
+        struct stat st;
+        if (lstat(open_path, &st) != 0 || !S_ISREG(st.st_mode)) {
+            free(open_path);
+            return RS_RET_IO_ERROR;
+        }
+        actual_bytes = st.st_size;
+        char *recover_path = segment_path(s, s->active_segment, "recover");
+        if (recover_path == NULL) {
+            free(open_path);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        if (rename(open_path, recover_path) != 0) r = RS_RET_IO_ERROR;
+        free(recover_path);
+        if (r == RS_RET_OK) {
+            if (s->recovery_first == 0) s->recovery_first = s->active_segment;
+            s->recovery_last = s->active_segment;
+            if (s->last_data_segment < s->active_segment) s->last_data_segment = s->active_segment;
+        }
+        free(open_path);
+    } else if (r == RS_RET_FILE_NOT_FOUND) {
+        char *recover = NULL;
+        r = probe_segment_path(s, s->active_segment, "recover", &recover);
+        if (r == RS_RET_OK) {
+            struct stat st;
+            if (lstat(recover, &st) != 0 || !S_ISREG(st.st_mode)) {
+                free(recover);
+                return RS_RET_IO_ERROR;
+            }
+            actual_bytes = st.st_size;
+        }
+        free(recover);
+        if (r == RS_RET_OK) {
+            if (s->recovery_first == 0) s->recovery_first = s->active_segment;
+            s->recovery_last = s->active_segment;
+            if (s->last_data_segment < s->active_segment) s->last_data_segment = s->active_segment;
+        }
+    }
+    if (r == RS_RET_FILE_NOT_FOUND) {
+        char *sealed = NULL;
+        r = probe_segment_path(s, s->active_segment, "seg", &sealed);
+        if (r == RS_RET_OK) {
+            struct stat st;
+            if (lstat(sealed, &st) != 0 || !S_ISREG(st.st_mode)) {
+                free(sealed);
+                return RS_RET_IO_ERROR;
+            }
+            actual_bytes = st.st_size;
+        }
+        free(sealed);
+        if (r == RS_RET_OK && s->last_data_segment < s->active_segment) s->last_data_segment = s->active_segment;
+    }
+    if (r == RS_RET_FILE_NOT_FOUND) {
+        if (s->stats.segments > 0) --s->stats.segments;
+        if (s->stats.bytes >= accounted_bytes) s->stats.bytes -= accounted_bytes;
+        r = RS_RET_OK;
+    } else if (r == RS_RET_OK && actual_bytes >= 0) {
+        s->stats.bytes += actual_bytes - accounted_bytes;
+    }
+    s->active_segment = 0;
     return r;
+}
+
+/* A valid older state slot may be selected after the newer reservation slot
+ * was torn. In that case only the older slot's next ID can already exist. It
+ * is adopted as recovery data without enumerating the spool directory. */
+static rsRetVal adopt_reserved_segment(segdisk_store_t *s) {
+    const uint64_t id = s->next_segment;
+    const char *found_suffix = NULL;
+    char *path = NULL;
+    const char *const suffixes[] = {"open", "recover", "seg"};
+    for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); ++i) {
+        rsRetVal r = probe_segment_path(s, id, suffixes[i], &path);
+        if (r == RS_RET_OK) {
+            found_suffix = suffixes[i];
+            break;
+        }
+        if (r != RS_RET_FILE_NOT_FOUND) return r;
+    }
+    if (found_suffix == NULL) return RS_RET_OK;
+    struct stat st;
+    if (lstat(path, &st) != 0 || !S_ISREG(st.st_mode)) {
+        free(path);
+        return RS_RET_IO_ERROR;
+    }
+    if (!strcmp(found_suffix, "open")) {
+        char *recover = segment_path(s, id, "recover");
+        if (recover == NULL) {
+            free(path);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        if (rename(path, recover) != 0) {
+            free(recover);
+            free(path);
+            return RS_RET_IO_ERROR;
+        }
+        free(recover);
+    }
+    free(path);
+    if (s->recovery_first == 0) s->recovery_first = id;
+    s->recovery_last = id;
+    if (s->last_data_segment < id) s->last_data_segment = id;
+    ++s->stats.segments;
+    s->stats.bytes += st.st_size;
+    ++s->next_segment;
+    return RS_RET_OK;
 }
 
 rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *cfg, int *queue_size) {
@@ -826,12 +1013,14 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
     if (cfg->file_prefix[0] == '\0' || strchr(cfg->file_prefix, '/') != NULL ||
         strchr(cfg->file_prefix, '\\') != NULL || !strcmp(cfg->file_prefix, ".") || !strcmp(cfg->file_prefix, ".."))
         return RS_RET_INVALID_VALUE;
-    const char *stage = "allocate store";
     segdisk_store_t *s = calloc(1, sizeof(*s));
     if (s == NULL) return RS_RET_OUT_OF_MEMORY;
-    s->dir_fd = s->active_fd = -1;
+    rsRetVal fail_ret = RS_RET_IO_ERROR;
+    s->dir_fd = s->state_fd = s->active_fd = -1;
     s->cfg = *cfg;
-    s->next_segment = s->next_ordinal = 1;
+    s->committed_offset = SEG_HDR_LEN;
+    s->persisted_writer_end = SEG_HDR_LEN;
+    s->next_segment = 1;
     s->queue_name = strdup(cfg->queue_name == NULL ? cfg->file_prefix : cfg->queue_name);
     if (s->queue_name == NULL || asprintf(&s->dir, "%s/%s.segq", cfg->work_dir, cfg->file_prefix) < 0) goto oom;
     char *legacy_qi = NULL;
@@ -843,98 +1032,90 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
         free(legacy_qi);
         goto invalid;
     }
-    if (errno != ENOENT) {
-        free(legacy_qi);
-        goto ioerr;
-    }
     free(legacy_qi);
-    stage = "create queue directory";
-    if (mkdir(s->dir, 0700) != 0) {
-        const int mkdir_errno = errno;
-        if (mkdir_errno != EEXIST) {
-            DBGPRINTF("%s: segmentedDisk mkdir '%s' failed with errno %d\n", s->queue_name, s->dir, mkdir_errno);
-            errno = mkdir_errno;
-            goto ioerr;
-        }
-    }
-    stage = "open queue directory";
+    if (mkdir(s->dir, 0700) != 0 && errno != EEXIST) goto ioerr;
     s->dir_fd = open(s->dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
     if (s->dir_fd < 0) goto ioerr;
-    struct stat st;
-    if (fstat(s->dir_fd, &st) != 0 || !S_ISDIR(st.st_mode)) goto ioerr;
-    sbool has_segment = 0;
-    rsRetVal r = directory_has_segments(s, &has_segment);
-    if (r != RS_RET_OK) goto fail;
-    stage = "read metadata";
-    r = read_meta(s);
-    if (r == RS_RET_FILE_NOT_FOUND) {
-        if (has_segment) {
+    s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+    if (s->state_fd < 0 && errno != ENOENT) goto ioerr;
+    if (s->state_fd < 0) {
+        sbool has_segments = 0;
+        if (directory_has_segments(s, &has_segments) != RS_RET_OK) goto ioerr;
+        const sbool has_v1_state =
+            faccessat(s->dir_fd, "meta", F_OK, 0) == 0 || faccessat(s->dir_fd, "checkpoint", F_OK, 0) == 0;
+        if (has_v1_state) {
             LogError(0, RS_RET_INVALID_VALUE,
-                     "%s: segmentedDisk metadata is missing; replay requires a valid segment UUID", s->queue_name);
+                     "%s: experimental segmentedDisk v1 state is incompatible with store format v2; "
+                     "offline recovery is required",
+                     s->queue_name);
             goto invalid;
         }
-        if ((r = random_uuid(s->uuid)) != RS_RET_OK || (r = write_meta(s)) != RS_RET_OK) goto fail;
-    } else if (r != RS_RET_OK)
-        goto invalid;
-    r = read_checkpoint(s);
-    if (r != RS_RET_OK) {
-        s->generation = s->committed_segment = s->committed_ordinal = 0;
-        s->committed_offset = SEG_HDR_LEN;
-        if (r != RS_RET_FILE_NOT_FOUND || has_segment)
-            LogMsg(0, RS_RET_OK, LOG_WARNING,
-                   "%s: segmentedDisk checkpoint missing or invalid; replaying all valid records", s->queue_name);
+        if (has_segments) {
+            LogError(0, RS_RET_INVALID_VALUE,
+                     "%s: segmentedDisk state is missing while queue files exist; offline recovery is required",
+                     s->queue_name);
+            goto invalid;
+        }
+        s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+        if (s->state_fd < 0 || ftruncate(s->state_fd, STATE_FILE_LEN) != 0 || random_uuid(s->uuid) != RS_RET_OK)
+            goto ioerr;
+        if (create_active(s) != RS_RET_OK) goto ioerr;
+        if (sync_dir(s) != RS_RET_OK) goto ioerr;
+    } else {
+        struct stat state_st;
+        if (fstat(s->state_fd, &state_st) != 0 || state_st.st_size != STATE_FILE_LEN) goto invalid;
+        if (read_state(s) != RS_RET_OK) {
+            LogError(0, RS_RET_INVALID_VALUE, "%s: segmentedDisk has no valid state slot; offline recovery is required",
+                     s->queue_name);
+            goto invalid;
+        }
+        if (prepare_existing_active(s) != RS_RET_OK) goto ioerr;
+        if (adopt_reserved_segment(s) != RS_RET_OK) goto ioerr;
+        s->discovery_through_segment = s->last_data_segment;
+        if (create_active(s) != RS_RET_OK) goto ioerr;
     }
-    stage = "load segments";
+    s->known_queue_size = 0;
     *queue_size = 0;
-    if ((r = load_segments(s, queue_size)) != RS_RET_OK) goto fail;
-    stage = "create active segment";
-    if (s->active == NULL && (r = create_active(s)) != RS_RET_OK) goto fail;
-    s->read_ordinal = s->committed_ordinal;
-    s->read_segment = first_readable(s, s->read_ordinal);
-    s->read_offset = SEG_HDR_LEN;
-    if (s->read_segment != NULL && s->read_segment->id == s->committed_segment && s->committed_offset >= SEG_HDR_LEN &&
-        s->committed_offset <= s->read_segment->data_end)
-        s->read_offset = s->committed_offset;
-    s->stats.replayed = *queue_size;
+    s->stats.replayed = s->persisted_queue_size;
+    s->read_segment_id = s->committed_segment != 0 ? s->committed_segment : s->first_live_segment;
+    if (s->read_segment_id == 0) s->read_segment_id = s->first_live_segment;
+    s->read_offset = s->committed_segment == s->read_segment_id && s->committed_offset >= SEG_HDR_LEN
+                         ? s->committed_offset
+                         : SEG_HDR_LEN;
     *out = s;
     return RS_RET_OK;
 oom:
-    r = RS_RET_OUT_OF_MEMORY;
+    fail_ret = RS_RET_OUT_OF_MEMORY;
     goto fail;
 ioerr:
-    r = RS_RET_IO_ERROR;
     goto fail;
 invalid:
-    r = RS_RET_INVALID_VALUE;
+    fail_ret = RS_RET_INVALID_VALUE;
 fail:
-    if (r != RS_RET_OK)
-        DBGPRINTF("%s: segmentedDisk failed to %s: return code %d, errno %d\n",
-                  s->queue_name == NULL ? "queue" : s->queue_name, stage, r, errno);
     if (s->active_fd >= 0) close(s->active_fd);
-    while (s->segments != NULL) {
-        segdisk_segment_t *next = s->segments->next;
-        free(s->segments->path);
-        free(s->segments);
-        s->segments = next;
-    }
-    while (s->pending_head != NULL) {
-        segdisk_batch_ctx_t *next = s->pending_head->next;
-        s->pending_head->pending = 0;
-        release_batch_ctx(s->pending_head);
-        s->pending_head = next;
-    }
+    if (s->state_fd >= 0) close(s->state_fd);
     if (s->dir_fd >= 0) close(s->dir_fd);
+    free_segment(&s->active);
+    free_segment(&s->read_segment);
     free(s->dir);
     free(s->queue_name);
     free(s);
-    return r;
+    return fail_ret;
 }
 
 rsRetVal segdiskStoreAppend(segdisk_store_t *s, smsg_t *msg, sbool internal, int64_t *written) {
     return append_record(s, msg, internal, written);
 }
 
-rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, int *skipped) {
+sbool segdiskStoreMayHaveData(const segdisk_store_t *s) {
+    if (s == NULL) return 0;
+    if (s->read_segment != NULL && s->read_offset < s->read_segment->data_end) return 1;
+    if (s->read_segment == NULL && s->read_segment_id != 0 && s->read_segment_id <= s->last_data_segment) return 1;
+    return s->active != NULL && s->active->record_count != 0 &&
+           (s->read_segment_id < s->active->id || s->read_offset < s->active->data_end);
+}
+
+rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, int *skipped, int *discovered) {
     if (batch->storeData != NULL) return RS_RET_INTERNAL_ERROR;
     segdisk_batch_ctx_t *ctx = calloc(1, sizeof(*ctx));
     if (ctx == NULL) return RS_RET_OUT_OF_MEMORY;
@@ -943,43 +1124,65 @@ rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, i
     ctx->pending = 1;
     int n = 0;
     int consumed = 0;
+    sbool recovery_pending = 0;
     *skipped = 0;
-    if (s->read_segment == NULL) s->read_segment = first_readable(s, s->read_ordinal);
+    *discovered = 0;
+    size_t scan_budget = RECOVERY_SCAN_BUDGET;
     while (n < max) {
-        if (s->read_segment == NULL) break;
+        if (s->read_segment == NULL) {
+            if (s->read_segment_id == 0) s->read_segment_id = s->first_live_segment;
+            while (s->read_segment_id != 0 && s->read_segment_id <= s->last_data_segment) {
+                rsRetVal r = load_segment(s, s->read_segment_id, &s->read_segment);
+                if (r == RS_RET_FILE_NOT_FOUND) {
+                    ++s->read_segment_id;
+                    s->read_offset = SEG_HDR_LEN;
+                    continue;
+                }
+                if (r != RS_RET_OK) {
+                    free(ctx);
+                    return r;
+                }
+                if (s->committed_segment == s->read_segment_id && s->committed_offset >= SEG_HDR_LEN &&
+                    s->committed_offset <= s->read_segment->data_end)
+                    s->read_offset = s->committed_offset;
+                else if (s->read_offset < SEG_HDR_LEN)
+                    s->read_offset = SEG_HDR_LEN;
+                break;
+            }
+            if (s->read_segment == NULL) break;
+        }
         smsg_t *msg = NULL;
-        uint64_t ord = 0;
-        const uint64_t read_before = s->read_ordinal;
+        uint64_t sequence = 0;
         const int skipped_before = *skipped;
-        rsRetVal r = record_at(s, s->read_segment, &s->read_offset, &msg, &ord, skipped);
+        rsRetVal r = record_at(s, s->read_segment, &s->read_offset, &msg, &sequence, skipped, discovered, &scan_budget);
         consumed += *skipped - skipped_before;
-        if (ord > s->read_ordinal) {
-            s->read_ordinal = ord;
-            ctx->end_segment = s->read_segment->id;
-            ctx->end_offset = s->read_offset;
-            ctx->end_ordinal = ord;
+        if (r == RS_RET_RETRY) {
+            ++s->stats.recovery_pending;
+            recovery_pending = 1;
+            break;
         }
         if (r == RS_RET_NO_DATA) {
-            s->read_segment = s->read_segment->next;
+            if (s->read_segment->id == s->active_segment) break;
+            ++s->read_segment_id;
             s->read_offset = SEG_HDR_LEN;
+            free_segment(&s->read_segment);
             continue;
         }
         if (r != RS_RET_OK) {
             free(ctx);
             return r;
         }
-        if (ord <= read_before) {
-            msgDestruct(&msg);
-            continue;
-        }
         ++consumed;
+        ctx->end_segment = s->read_segment->id;
+        ctx->end_offset = s->read_offset;
+        ctx->end_record_sequence = sequence;
         batch->pElem[n].pMsg = msg;
         batch->eltState[n] = BATCH_STATE_RDY;
         ++n;
     }
     if (consumed == 0) {
         free(ctx);
-        return RS_RET_NO_DATA;
+        return recovery_pending ? RS_RET_RETRY : RS_RET_NO_DATA;
     }
     ctx->records = consumed;
     append_pending(s, ctx);
@@ -1028,7 +1231,8 @@ rsRetVal segdiskStoreCompleteBatch(segdisk_store_t *s, batch_t *batch, int *comm
 }
 
 rsRetVal segdiskStoreCheckpoint(segdisk_store_t *s, sbool force_sync) {
-    return write_checkpoint(s, force_sync);
+    capture_writer(s);
+    return write_state(s, force_sync, force_sync);
 }
 
 rsRetVal segdiskStoreClose(segdisk_store_t **ps, sbool empty) {
@@ -1038,35 +1242,34 @@ rsRetVal segdiskStoreClose(segdisk_store_t **ps, sbool empty) {
     if (s->active_fd >= 0) {
         if (!empty && s->active != NULL && s->active->record_count != 0)
             r = seal_active(s);
-        else
+        else {
             close(s->active_fd);
-        s->active_fd = -1;
+            s->active_fd = -1;
+        }
     }
     if (empty && s->dir_fd >= 0) {
-        for (segdisk_segment_t *seg = s->segments; seg != NULL; seg = seg->next) {
-            if (unlink(seg->path) != 0 && errno != ENOENT && r == RS_RET_OK) r = RS_RET_IO_ERROR;
+        const uint64_t end = s->active_segment > s->last_data_segment ? s->active_segment : s->last_data_segment;
+        for (uint64_t id = s->first_live_segment; id != 0 && id <= end; ++id) {
+            rsRetVal local = unlink_segment_id(s, id, 0);
+            if (local != RS_RET_OK && r == RS_RET_OK) r = local;
         }
-        const char *const control_files[] = {"checkpoint", "checkpoint.tmp", "meta", "meta.tmp"};
-        for (size_t i = 0; i < sizeof(control_files) / sizeof(control_files[0]); ++i) {
-            if (unlinkat(s->dir_fd, control_files[i], 0) != 0 && errno != ENOENT && r == RS_RET_OK) r = RS_RET_IO_ERROR;
-        }
+        if (r == RS_RET_OK) r = remove_remaining_segments(s);
+        if (r == RS_RET_OK && unlinkat(s->dir_fd, "state", 0) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
     } else if (s->dir_fd >= 0 && r == RS_RET_OK) {
-        r = write_checkpoint(s, 1);
+        capture_writer(s);
+        r = write_state(s, 1, 1);
     }
-    while (s->segments != NULL) {
-        segdisk_segment_t *n = s->segments->next;
-        free(s->segments->path);
-        free(s->segments);
-        s->segments = n;
-    }
+    free_segment(&s->active);
+    free_segment(&s->read_segment);
     while (s->pending_head != NULL) {
         segdisk_batch_ctx_t *n = s->pending_head->next;
         s->pending_head->pending = 0;
         release_batch_ctx(s->pending_head);
         s->pending_head = n;
     }
+    if (s->state_fd >= 0) close(s->state_fd);
     if (s->dir_fd >= 0) close(s->dir_fd);
-    if (empty && rmdir(s->dir) != 0 && errno != ENOENT && r == RS_RET_OK) r = RS_RET_IO_ERROR;
+    if (empty && r == RS_RET_OK && rmdir(s->dir) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
     free(s->dir);
     free(s->queue_name);
     free(s);

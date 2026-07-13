@@ -238,6 +238,12 @@ struct queue_s {
         int segdiskCorruptionRecords;
         int segdiskRetryOverageBytes;
         int segdiskRetryOverageMaxBytes;
+        int segdiskStateWrites;
+        int segdiskForcedStateWrites;
+        int segdiskRecoveryPending;
+        int segdiskRecoveryBytes;
+        int segdiskRecoveryRecords;
+        int segdiskStartupPayloadBytes;
         int iSmpInterval; /* line interval of sampling logs */
         int isRunning;
 };

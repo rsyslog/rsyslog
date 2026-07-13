@@ -29,14 +29,21 @@ typedef struct segdisk_store_stats_s {
     uint64_t corruption_records;
     int64_t retry_overage_bytes;
     int64_t retry_overage_max_bytes;
+    uint64_t state_writes;
+    uint64_t forced_state_writes;
+    uint64_t recovery_bytes;
+    uint64_t recovery_records;
+    uint64_t startup_payload_bytes_read;
+    uint64_t recovery_pending;
 } segdisk_store_stats_t;
 
 rsRetVal segdiskStoreOpen(segdisk_store_t **store, const segdisk_store_config_t *config, int *queue_size);
 rsRetVal segdiskStoreAppend(segdisk_store_t *store, smsg_t *msg, sbool internal_retry, int64_t *written);
-rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *store, batch_t *batch, int max, int *skipped);
+rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *store, batch_t *batch, int max, int *skipped, int *discovered);
 rsRetVal segdiskStoreCompleteBatch(segdisk_store_t *store, batch_t *batch, int *committed, int *retried);
 rsRetVal segdiskStoreCheckpoint(segdisk_store_t *store, sbool force_sync);
 rsRetVal segdiskStoreClose(segdisk_store_t **store, sbool empty);
 void segdiskStoreGetStats(const segdisk_store_t *store, segdisk_store_stats_t *stats);
+sbool segdiskStoreMayHaveData(const segdisk_store_t *store);
 
 #endif

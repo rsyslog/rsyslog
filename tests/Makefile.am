@@ -30,6 +30,7 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-restart.sh \
 	segmented-diskqueue-event-properties.sh \
 	segmented-diskqueue-corruption.sh \
+	segmented-diskqueue-state-slots.sh \
 	segmented-diskqueue-missing-checkpoint.sh
 TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh
 EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) segdisk-inspect.py
