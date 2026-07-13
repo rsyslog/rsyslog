@@ -79,6 +79,11 @@ librsyslog_la_SOURCES = \
 	queue.h \
 	segdisk_codec.c \
 	segdisk_codec.h \
+	segdisk_crc.c \
+	segdisk_crc.h \
+	segdisk_format.h \
+	segdisk_state.c \
+	segdisk_state.h \
 	segdisk_store.c \
 	segdisk_store.h \
 	ruleset.c \

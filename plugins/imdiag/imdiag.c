@@ -614,6 +614,59 @@ static int parsePosLong(const uchar *const s, long *const val) {
     return (*endptr == '\0' && *val >= 0) ? 1 : 0;
 }
 
+static rsRetVal setSegDiskFault(uchar *pszCmd, tcps_sess_t *pSess) {
+    uchar point[128] = {0};
+    long hitCount = 1;
+    DEFiRet;
+
+    getFirstWord(&pszCmd, point, sizeof(point), TO_LOWERCASE);
+    if (point[0] == '\0') {
+        CHKiRet(sendResponse(pSess, "ERROR: missing segmentedDisk fault point\n"));
+        FINALIZE;
+    }
+    while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
+    if (*pszCmd != '\0' && !parsePosLong(pszCmd, &hitCount)) {
+        CHKiRet(sendResponse(pSess, "ERROR: invalid segmentedDisk fault hit count\n"));
+        FINALIZE;
+    }
+    if (hitCount <= 0 || hitCount > UINT_MAX) {
+        CHKiRet(sendResponse(pSess, "ERROR: segmentedDisk fault hit count is out of range\n"));
+        FINALIZE;
+    }
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueueSetSegDiskTestFault(runConf->pMsgQueue, (const char *)point, (unsigned int)hitCount);
+    if (iRet == RS_RET_INVALID_VALUE) {
+        CHKiRet(sendResponse(pSess, "ERROR: unknown fault point or main queue is not segmentedDisk\n"));
+        iRet = RS_RET_OK;
+    } else if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal clearSegDiskFault(tcps_sess_t *pSess) {
+    DEFiRet;
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueueClearSegDiskTestFault(runConf->pMsgQueue);
+    if (iRet == RS_RET_INVALID_VALUE) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue is not segmentedDisk\n"));
+        iRet = RS_RET_OK;
+    } else if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -656,6 +709,10 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitHUPComplete(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {
+        CHKiRet(setSegDiskFault(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("clearsegdiskfault"))) {
+        CHKiRet(clearSegDiskFault(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;
         if (!parsePosLong(pszMsg, &val)) {

@@ -1856,6 +1856,29 @@ injectmsg2() {
 	# TODO: some return state checking? (does it really make sense here?)
 }
 
+# Arm a one-shot segmentedDisk crash point through imdiag. The optional second
+# argument selects which matching hit triggers the crash; it defaults to one.
+set_segmented_disk_fault() {
+	local response
+	response=$(printf 'setsegdiskfault %s %s\n' "$1" "${2:-1}" |
+		$TESTTOOL_DIR/diagtalker -p"$IMDIAG_PORT") || error_exit $?
+	if [[ "$response" != *"OK" ]]; then
+		printf 'FAIL: imdiag rejected segmentedDisk fault point %s: %s\n' "$1" "$response"
+		error_exit 1
+	fi
+}
+
+# Clear an armed segmentedDisk crash point without restarting rsyslogd.
+clear_segmented_disk_fault() {
+	local response
+	response=$(printf 'clearsegdiskfault\n' |
+		$TESTTOOL_DIR/diagtalker -p"$IMDIAG_PORT") || error_exit $?
+	if [[ "$response" != *"OK" ]]; then
+		printf 'FAIL: imdiag could not clear segmentedDisk fault point: %s\n' "$response"
+		error_exit 1
+	fi
+}
+
 # inject literal payload  via our inject interface (imdiag)
 injectmsg_literal() {
 	printf 'injecting msg payload: %s\n' "$1"

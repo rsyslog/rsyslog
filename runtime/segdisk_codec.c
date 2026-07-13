@@ -11,6 +11,7 @@
 #include <string.h>
 #include <json.h>
 #include "segdisk_codec.h"
+#include "segdisk_crc.h"
 #include "ruleset.h"
 
 #define TLV_HDR_LEN 8u
@@ -79,16 +80,6 @@ static uint32_t get32(const unsigned char *p) {
 
 static uint64_t get64(const unsigned char *p) {
     return ((uint64_t)get32(p) << 32) | get32(p + 4);
-}
-
-uint32_t segdiskCrc32c(const void *vbuf, size_t len) {
-    const unsigned char *buf = vbuf;
-    uint32_t crc = ~0u;
-    for (size_t i = 0; i < len; ++i) {
-        crc ^= buf[i];
-        for (unsigned int bit = 0; bit < 8; ++bit) crc = (crc & 1u) ? (crc >> 1) ^ 0x82f63b78u : crc >> 1;
-    }
-    return ~crc;
 }
 
 static rsRetVal reserve(encbuf_t *b, size_t add) {

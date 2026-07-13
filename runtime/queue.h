@@ -244,6 +244,8 @@ struct queue_s {
         int segdiskRecoveryBytes;
         int segdiskRecoveryRecords;
         int segdiskStartupPayloadBytes;
+        int segdiskStartupSegmentFilesProbed;
+        int segdiskCorruptionSegments;
         int iSmpInterval; /* line interval of sampling logs */
         int isRunning;
 };
@@ -304,6 +306,8 @@ PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 
 #ifdef ENABLE_IMDIAG
 extern unsigned int iOverallQueueSize;
+rsRetVal qqueueSetSegDiskTestFault(qqueue_t *pThis, const char *point, unsigned int hit_count);
+rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis);
 #endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

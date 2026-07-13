@@ -559,8 +559,32 @@ static void qqueueUpdateSegDiskStats(qqueue_t *pThis) {
     pThis->segdiskRecoveryBytes = segdiskStatsInt(stats.recovery_bytes);
     pThis->segdiskRecoveryRecords = segdiskStatsInt(stats.recovery_records);
     pThis->segdiskStartupPayloadBytes = segdiskStatsInt(stats.startup_payload_bytes_read);
+    pThis->segdiskStartupSegmentFilesProbed = segdiskStatsInt(stats.startup_segment_files_probed);
     pThis->segdiskRecoveryPending = segdiskStatsInt(stats.recovery_pending);
+    pThis->segdiskCorruptionSegments = segdiskStatsInt(stats.corruption_segments);
 }
+
+#ifdef ENABLE_IMDIAG
+rsRetVal qqueueSetSegDiskTestFault(qqueue_t *pThis, const char *point, unsigned int hit_count) {
+    if (pThis == NULL || point == NULL || hit_count == 0) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(pThis->mut);
+    const rsRetVal r = pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->tVars.segdisk != NULL
+                           ? segdiskStoreSetTestFault(pThis->tVars.segdisk, point, hit_count)
+                           : RS_RET_INVALID_VALUE;
+    d_pthread_mutex_unlock(pThis->mut);
+    return r;
+}
+
+rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis) {
+    if (pThis == NULL) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(pThis->mut);
+    const rsRetVal r =
+        pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->tVars.segdisk != NULL ? RS_RET_OK : RS_RET_INVALID_VALUE;
+    if (r == RS_RET_OK) segdiskStoreClearTestFault(pThis->tVars.segdisk);
+    d_pthread_mutex_unlock(pThis->mut);
+    return r;
+}
+#endif
 
 
 static int qqueueIsShutdownImmediate(qqueue_t *const pThis) {
@@ -3808,6 +3832,8 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
                                     &pThis->segdiskCorruptionBytes));
         CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("corruption.records"), ctrType_Int, CTR_FLAG_NONE,
                                     &pThis->segdiskCorruptionRecords));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("corruption.segments"), ctrType_Int, CTR_FLAG_NONE,
+                                    &pThis->segdiskCorruptionSegments));
         CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("retry.overage.bytes"), ctrType_Int, CTR_FLAG_NONE,
                                     &pThis->segdiskRetryOverageBytes));
         CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("retry.overage.maxbytes"), ctrType_Int,
@@ -3824,6 +3850,8 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
                                     &pThis->segdiskRecoveryRecords));
         CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("startup.payloadBytesRead"), ctrType_Int,
                                     CTR_FLAG_NONE, &pThis->segdiskStartupPayloadBytes));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("startup.segmentFilesProbed"), ctrType_Int,
+                                    CTR_FLAG_NONE, &pThis->segdiskStartupSegmentFilesProbed));
     }
 
     CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));

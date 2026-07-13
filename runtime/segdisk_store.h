@@ -34,8 +34,24 @@ typedef struct segdisk_store_stats_s {
     uint64_t recovery_bytes;
     uint64_t recovery_records;
     uint64_t startup_payload_bytes_read;
+    uint64_t startup_segment_files_probed;
     uint64_t recovery_pending;
+    uint64_t corruption_segments;
 } segdisk_store_stats_t;
+
+#ifdef ENABLE_IMDIAG
+typedef enum segdisk_test_fault_point_e {
+    SEGDISK_TEST_FAULT_NONE = 0,
+    SEGDISK_TEST_FAULT_RESERVATION_PUBLISHED,
+    SEGDISK_TEST_FAULT_SEGMENT_CREATED,
+    SEGDISK_TEST_FAULT_SEAL_WRITTEN,
+    SEGDISK_TEST_FAULT_SEAL_RENAMED,
+    SEGDISK_TEST_FAULT_CHECKPOINT_PUBLISHED,
+    SEGDISK_TEST_FAULT_COMMIT_PUBLISHED,
+    SEGDISK_TEST_FAULT_PREDELETE_PUBLISHED,
+    SEGDISK_TEST_FAULT_SEGMENT_UNLINKED,
+} segdisk_test_fault_point_t;
+#endif
 
 rsRetVal segdiskStoreOpen(segdisk_store_t **store, const segdisk_store_config_t *config, int *queue_size);
 rsRetVal segdiskStoreAppend(segdisk_store_t *store, smsg_t *msg, sbool internal_retry, int64_t *written);
@@ -45,5 +61,9 @@ rsRetVal segdiskStoreCheckpoint(segdisk_store_t *store, sbool force_sync);
 rsRetVal segdiskStoreClose(segdisk_store_t **store, sbool empty);
 void segdiskStoreGetStats(const segdisk_store_t *store, segdisk_store_stats_t *stats);
 sbool segdiskStoreMayHaveData(const segdisk_store_t *store);
+#ifdef ENABLE_IMDIAG
+rsRetVal segdiskStoreSetTestFault(segdisk_store_t *store, const char *point, unsigned int hit_count);
+void segdiskStoreClearTestFault(segdisk_store_t *store);
+#endif
 
 #endif
