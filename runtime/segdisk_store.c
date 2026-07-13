@@ -876,6 +876,10 @@ static rsRetVal delete_committed(segdisk_store_t *s) {
                 if (path == NULL) return RS_RET_OUT_OF_MEMORY;
                 struct stat st;
                 if (lstat(path, &st) == 0) {
+                    if (st.st_size < 0 || st.st_size > INT64_MAX - bytes || segments == UINT64_MAX) {
+                        free(path);
+                        return RS_RET_FILE_TOO_LARGE;
+                    }
                     bytes += st.st_size;
                     ++segments;
                 }

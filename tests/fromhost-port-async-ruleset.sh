@@ -6,6 +6,9 @@
 export NUMMESSAGES=1
 QUEUE_TYPE=${QUEUE_TYPE:-disk}
 QUEUE_EXTRA=${QUEUE_EXTRA:-}
+if [ "${QUEUE_NEEDS_FILENAME:-off}" = "on" ]; then
+	QUEUE_EXTRA='queue.filename="asyncq" queue.spoolDirectory="'${RSYSLOG_DYNNAME}'.spool"'
+fi
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
