@@ -27,7 +27,7 @@ wait_shutdown
 rm -f "$SPOOL_DIR/mainq.segq/state"
 case "$STATE_MUTATION" in
 missing)
-	expected='state is missing from an existing queue directory; offline recovery is required'
+	expected='state is missing while queue files exist; offline recovery is required'
 	;;
 v1)
 	: >"$SPOOL_DIR/mainq.segq/meta"

@@ -35,6 +35,7 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-state-slots.sh \
 	segmented-diskqueue-missing-checkpoint.sh \
 	segmented-diskqueue-missing-state.sh \
+	segmented-diskqueue-empty-dir.sh \
 	segmented-diskqueue-v1-state.sh \
 	segmented-diskqueue-missing-segment.sh \
 	segmented-diskqueue-multiple-recovery.sh \

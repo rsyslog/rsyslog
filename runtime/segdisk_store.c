@@ -138,6 +138,30 @@ static void test_fault(segdisk_store_t *s, const segdisk_test_fault_point_t poin
 
 static void update_retry_overage(segdisk_store_t *s);
 
+/* Directory enumeration is restricted to the exceptional missing-state path.
+ * A valid state file keeps normal startup independent of segment count. */
+static rsRetVal directory_has_entries(const int dir_fd, sbool *has_entries) {
+    const int fd = dup(dir_fd);
+    if (fd < 0) return RS_RET_IO_ERROR;
+    DIR *const dir = fdopendir(fd);
+    if (dir == NULL) {
+        close(fd);
+        return RS_RET_IO_ERROR;
+    }
+    *has_entries = 0;
+    errno = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
+            *has_entries = 1;
+            break;
+        }
+    }
+    const int saved_errno = errno;
+    if (closedir(dir) != 0 || (entry == NULL && saved_errno != 0)) return RS_RET_IO_ERROR;
+    return RS_RET_OK;
+}
+
 static int sync_file_data(const int fd) {
 #if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
     return fdatasync(fd);
@@ -1059,11 +1083,12 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
                      s->queue_name);
             goto invalid;
         }
-        if (!directory_created) {
-            LogError(
-                0, RS_RET_INVALID_VALUE,
-                "%s: segmentedDisk state is missing from an existing queue directory; offline recovery is required",
-                s->queue_name);
+        sbool has_entries = 0;
+        if (!directory_created && directory_has_entries(s->dir_fd, &has_entries) != RS_RET_OK) goto ioerr;
+        if (has_entries) {
+            LogError(0, RS_RET_INVALID_VALUE,
+                     "%s: segmentedDisk state is missing while queue files exist; offline recovery is required",
+                     s->queue_name);
             goto invalid;
         }
         s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
