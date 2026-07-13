@@ -11,6 +11,11 @@
 #include "segdisk_crc.h"
 #include "segdisk_state.h"
 
+/* Keep the unit binary's dependency files in the test-owning subtree. This
+ * also avoids recursive distclean ordering dependencies on runtime/.deps. */
+#include "../../runtime/segdisk_crc.c"
+#include "../../runtime/segdisk_state.c"
+
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
         if (!(condition)) {                                                                 \

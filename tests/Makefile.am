@@ -2468,9 +2468,7 @@ runtime_unit_ommongodb_date_SOURCES = \
 	unit/ommongodb_date_test.c
 
 runtime_unit_segdisk_state_SOURCES = \
-	unit/segdisk_state_test.c \
-	../runtime/segdisk_state.c \
-	../runtime/segdisk_crc.c
+	unit/segdisk_state_test.c
 
 if ENABLE_IMPCAP
 check_PROGRAMS += runtime_unit_impcap_arp_parser
