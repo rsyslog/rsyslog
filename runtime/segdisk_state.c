@@ -111,6 +111,7 @@ rsRetVal segdiskStateSelect(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
     const sbool valid1 = present1 && segdiskStateValidate(slot1);
     if (!valid0 && !valid1) return RS_RET_INVALID_VALUE;
     if (valid0 && valid1 && memcmp(slot0 + 12, slot1 + 12, 16) != 0) return RS_RET_INVALID_VALUE;
+    if (valid0 && valid1 && (get64(slot1 + 28) - get64(slot0 + 28)) == (UINT64_C(1) << 63)) return RS_RET_INVALID_VALUE;
     const int selected =
         valid1 && (!valid0 || segdiskStateGenerationNewer(get64(slot1 + 28), get64(slot0 + 28))) ? 1 : 0;
     segdiskStateDecode(selected == 0 ? slot0 : slot1, state);

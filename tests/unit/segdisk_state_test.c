@@ -4,11 +4,28 @@
  * generation cases; no filesystem or daemon timing is involved.
  */
 #include "config.h"
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "segdisk_crc.h"
 #include "segdisk_state.h"
+
+#define CHECK(condition)                                                                    \
+    do {                                                                                    \
+        if (!(condition)) {                                                                 \
+            fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+            exit(1);                                                                        \
+        }                                                                                   \
+    } while (0)
+
+static void repair_crc(unsigned char slot[SEGDISK_STATE_SLOT_LEN]) {
+    const uint32_t crc = segdiskCrc32c(slot, SEGDISK_STATE_SLOT_LEN - 4);
+    slot[SEGDISK_STATE_SLOT_LEN - 4] = (unsigned char)(crc >> 24);
+    slot[SEGDISK_STATE_SLOT_LEN - 3] = (unsigned char)(crc >> 16);
+    slot[SEGDISK_STATE_SLOT_LEN - 2] = (unsigned char)(crc >> 8);
+    slot[SEGDISK_STATE_SLOT_LEN - 1] = (unsigned char)crc;
+}
 
 static void init_state(segdisk_state_image_t *state, unsigned char uuid_byte) {
     memset(state, 0, sizeof(*state));
@@ -22,8 +39,8 @@ static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
                             int expected) {
     segdisk_state_image_t selected;
     int selected_slot = -1;
-    assert(segdiskStateSelect(slot0, 1, slot1, 1, &selected, &selected_slot) == RS_RET_OK);
-    assert(selected_slot == expected);
+    CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &selected, &selected_slot) == RS_RET_OK);
+    CHECK(selected_slot == expected);
 }
 
 int main(void) {
@@ -39,21 +56,27 @@ int main(void) {
     slot1[200] ^= 1;
     expect_selected(slot0, slot1, 0);
     slot0[201] ^= 1;
-    assert(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
+    CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
 
     segdiskStateEncode(&state, UINT64_MAX, slot0);
     segdiskStateEncode(&state, 0, slot1);
     expect_selected(slot0, slot1, 1);
 
+    segdiskStateEncode(&state, 0, slot0);
+    segdiskStateEncode(&state, UINT64_C(1) << 63, slot1);
+    CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
+
     segdiskStateEncode(&state, 20, slot0);
     segdiskStateEncode(&state, 21, slot1);
     slot1[8] = 0;
     slot1[9] = 1;
+    repair_crc(slot1);
     expect_selected(slot0, slot1, 0);
 
     segdiskStateEncode(&state, 21, slot1);
     slot1[10] = 0;
     slot1[11] ^= 1;
+    repair_crc(slot1);
     expect_selected(slot0, slot1, 0);
 
     segdiskStateEncode(&state, 21, slot1);
@@ -62,7 +85,7 @@ int main(void) {
     segdisk_state_image_t other = state;
     memset(other.uuid, 0x22, sizeof(other.uuid));
     segdiskStateEncode(&other, 21, slot1);
-    assert(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
+    CHECK(segdiskStateSelect(slot0, 1, slot1, 1, &state, NULL) == RS_RET_INVALID_VALUE);
 
     puts("segmentedDisk state-slot tests passed");
     return 0;
