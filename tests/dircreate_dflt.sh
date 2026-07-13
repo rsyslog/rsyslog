@@ -6,7 +6,15 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
-add_conf '
+if [ "${QUEUE_TYPE:-disk}" = "segmentedDisk" ]; then
+	add_conf '
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
+main_queue(queue.type="segmentedDisk" queue.filename="mainq")
+template(name="dynfile" type="string" string="'${RSYSLOG_DYNNAME}'.logdir/'$RSYSLOG_OUT_LOG'")
+action(type="omfile" dynaFile="dynfile")
+'
+else
+	add_conf '
 # set spool locations and switch queue to disk-only mode
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueFilename mainq
@@ -15,6 +23,7 @@ $MainMsgQueueType disk
 $template dynfile,"'$RSYSLOG_DYNNAME'.logdir/'$RSYSLOG_OUT_LOG'"
 *.* ?dynfile
 '
+fi
 startup
 injectmsg  0 1 # a single message is sufficient
 shutdown_when_empty # shut down rsyslogd when done processing messages

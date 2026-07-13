@@ -33,8 +33,8 @@ if ($msg contains "msgnum:") then
 
 write_conf ':omtesting:sleep 10 0'
 startup
+wait_rsyslog_instance_pid
 injectmsg 0 "$NUMMESSAGES"
-shutdown_immediate
 . "$srcdir/diag.sh" kill-immediate
 wait_shutdown
 

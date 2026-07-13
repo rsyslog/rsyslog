@@ -66,6 +66,15 @@ wait_seq_check_dupes() {
 }
 startup
 wait_content 'startup.payloadBytesRead=0' "$STATS_FILE"
+wait_content 'startup.segmentFilesProbed=' "$STATS_FILE"
+startup_probes=$(grep 'startup.segmentFilesProbed=' "$STATS_FILE" | tail -n 1 |
+	sed -E 's/.*startup\.segmentFilesProbed=([0-9]+).*/\1/')
+if [ "$startup_probes" -gt 6 ]; then
+	printf 'FAIL: startup probed %s segment paths; expected at most the bounded current/reserved set\n' \
+		"$startup_probes"
+	cat "$STATS_FILE"
+	error_exit 1
+fi
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1)) -d

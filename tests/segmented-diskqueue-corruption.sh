@@ -1,11 +1,12 @@
 #!/bin/bash
-# Verify safe-mode recovery skips one payload-corrupt record and continues with
-# later records in the same segment. The test inspector targets msgnum 200 and
-# the oracle requires every other injected message, including the final one.
+# Shared record-corruption driver for payload CRC, framing, and codec failures.
+# The inspector targets msgnum 200; every mode must skip that record and reach
+# the final record without treating the queue as empty early.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
 export NUMMESSAGES=400
+CORRUPTION_KIND=${CORRUPTION_KIND:-payload}
 SPOOL_DIR="$PWD/${RSYSLOG_DYNNAME}.spool"
 
 write_conf() {
@@ -35,7 +36,13 @@ shutdown_immediate
 . "$srcdir/diag.sh" kill-immediate
 wait_shutdown
 
-python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" --corrupt-message-number 200 \
+case "$CORRUPTION_KIND" in
+payload) mutation=--corrupt-message-number ;;
+framing) mutation=--corrupt-record-framing ;;
+codec) mutation=--corrupt-record-codec ;;
+*) echo "FAIL: unknown corruption kind $CORRUPTION_KIND"; error_exit 1 ;;
+esac
+python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" "$mutation" 200 \
 	> "${RSYSLOG_DYNNAME}.segdisk-inspect.json"
 
 write_conf '# no delay during salvage'
