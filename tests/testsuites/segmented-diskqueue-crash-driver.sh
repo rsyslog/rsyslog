@@ -4,6 +4,7 @@
 # point, and requires SIGKILL-style termination. Restart must recover the full
 # acknowledged sequence; duplicates are allowed by checkpoint replay.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 require_plugin omtesting
 : "${SEGDISK_FAULT_POINT:?SEGDISK_FAULT_POINT is required}"
 : "${SEGDISK_FAULT_REPEATS:=1}"

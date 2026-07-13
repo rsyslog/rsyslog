@@ -4,6 +4,7 @@
 # durable slot generation directly before shutdown, so stats traffic cannot
 # itself perturb the completion-checkpoint count.
 . ${srcdir:=.}/diag.sh init
+check_command_available python3
 : "${CHECKPOINT_INTERVAL:?CHECKPOINT_INTERVAL is required}"
 : "${EXPECTED_PERIODIC_WRITES:?EXPECTED_PERIODIC_WRITES is required}"
 export NUMMESSAGES=12
