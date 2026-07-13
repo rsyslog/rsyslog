@@ -4297,6 +4297,10 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
             ABORT_FINALIZE(RS_RET_QUEUE_FULL);
         } else {
             DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
+            /* Multi-submit and single-message enqueue normally advise workers
+             * only after doEnqSingleObj() returns. If this call blocks first,
+             * an already-idle worker would never be awakened to make room. */
+            qqueueAdviseMaxWorkers(pThis);
             if (glbl.GetGlobalInputTermState()) {
                 DBGOPRINT((obj_t *)pThis,
                           "doEnqSingleObject: queue FULL, discard due to "

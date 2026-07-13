@@ -1,8 +1,9 @@
 #!/bin/bash
 # Fill a bounded segmentedDisk queue while the consumer is slowed, then drain
-# and enqueue a second wave. Complete delivery proves producer backpressure and
-# post-delete reuse. Like the classic disk queue, the current record may cross
-# the byte limit; the oracle permits one bounded record/topology overshoot.
+# and enqueue a second wave. Complete delivery proves producer backpressure,
+# worker wakeup when a multi-submit blocks at the disk limit, and post-delete
+# reuse. Like the classic disk queue, the current record may cross the byte
+# limit; the oracle permits one bounded record/topology overshoot.
 . ${srcdir:=.}/diag.sh init
 require_plugin impstats
 export NUMMESSAGES=2000
