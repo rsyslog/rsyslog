@@ -41,7 +41,11 @@ crash_once() {
 			$TESTTOOL_DIR/diagtalker -p"$IMDIAG_PORT" >/dev/null 2>&1 || true
 		;;
 	esac
-	for _ in {1..300}; do
+	# A pre-delete fault is reached only after the oldest segment drains. Allow
+	# two minutes so sanitizer builds running several crash tests concurrently
+	# can reach the hook; successful runs exit this loop as soon as SIGKILL is
+	# observed, so the larger ceiling does not delay the normal oracle.
+	for _ in {1..1200}; do
 		if ! kill -0 "$crashed_pid" 2>/dev/null; then
 			break
 		fi
