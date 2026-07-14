@@ -145,6 +145,12 @@ rsRetVal qdaEngineResolve(const qda_engine_config_t *config, qda_engine_result_t
         goto done;
     }
 
+    /* An explicit selector may replace an opposite marker only after the
+     * probes above proved that the old engine has no state or segments.  The
+     * marker is intentionally not data: it is retained after a clean drain so
+     * auto mode stays sticky, while an operator can explicitly choose the
+     * engine for the next materialization.  Opposite-engine data remains a
+     * hard conflict in both branches. */
     if (config->requested == QDA_ENGINE_DISK) {
         if (result->segmented_data) {
             r = RS_RET_INVALID_VALUE;

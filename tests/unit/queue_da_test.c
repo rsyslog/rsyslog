@@ -76,11 +76,18 @@ int main(void) {
     CHECK(qdaEngineWriteMarker(root, "queue", QDA_ENGINE_DISK) == RS_RET_OK);
     result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_DISK && result.reason == QDA_REASON_MARKER);
+    /* A marker without state or segments records an empty former engine, not
+     * a backlog. An explicit selector may therefore replace it for the next
+     * materialization; the data-conflict cases above and below must reject. */
+    result = resolve(root, QDA_ENGINE_SEGMENTED_DISK, 0, 0, RS_RET_OK);
+    CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.reason == QDA_REASON_CONFIGURED);
     result = resolve(root, QDA_ENGINE_AUTO, 1, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.reason == QDA_REASON_AUTO_UPGRADE);
     CHECK(qdaEngineWriteMarker(root, "queue", QDA_ENGINE_SEGMENTED_DISK) == RS_RET_OK);
     result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.marker_present);
+    result = resolve(root, QDA_ENGINE_DISK, 0, 0, RS_RET_OK);
+    CHECK(result.effective == QDA_ENGINE_DISK && result.reason == QDA_REASON_CONFIGURED);
 
     CHECK(snprintf(path, sizeof(path), "%s/queue.segq", root) < (int)sizeof(path));
     CHECK(mkdir(path, 0700) == 0);
