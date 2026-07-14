@@ -36,6 +36,12 @@ shutdown_immediate
 . "$srcdir/diag.sh" kill-immediate
 wait_shutdown
 
+# The crash helper can interrupt the artificial sleep after the action has
+# already appended the in-flight record. Discard phase-one output so the
+# salvage oracle counts only the restarted queue; the uncommitted record must
+# replay, while the deliberately damaged record must be the sole omission.
+rm -f "$RSYSLOG_OUT_LOG"
+
 case "$CORRUPTION_KIND" in
 payload) mutation=--corrupt-message-number ;;
 framing) mutation=--corrupt-record-framing ;;

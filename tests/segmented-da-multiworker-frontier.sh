@@ -3,9 +3,10 @@
 # reopen that store as an automatic segmented DA child with three one-record
 # workers. Workers 1 and 2 hold events 0 and 1 for five and two seconds, so
 # worker 3 must emit event 2. State inspection proves the durable frontier stays
-# behind the held batch and then crosses the already completed suffix. Sorted
-# exact output is the loss/duplicate oracle because worker output order is not
-# otherwise constrained.
+# behind the held batch and then crosses the already completed suffix. A 750 ms
+# wait beyond the 500 ms idle timeout proves an in-flight batch prevents store
+# cleanup. Sorted exact output is the loss/duplicate oracle because worker
+# output order is not otherwise constrained.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
 export NUMMESSAGES=12
@@ -32,7 +33,7 @@ main_queue(queue.type="LinkedList" queue.filename="mainq"
 	queue.size="50" queue.highWatermark="10" queue.lowWatermark="5"
 	queue.dequeueBatchSize="1" queue.workerThreads="3"
 	queue.workerThreadMinimumMessages="1" queue.checkpointInterval="1"
-	queue.diskQueueType="auto" queue.diskQueueIdleTimeout="-1")
+	queue.diskQueueType="auto" queue.diskQueueIdleTimeout="500")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:00000000:" :omtesting:sleep 5 0
 :msg, contains, "msgnum:00000001:" :omtesting:sleep 2 0
@@ -63,6 +64,9 @@ write_da_conf
 startup
 wait_content '00000002' "$RSYSLOG_OUT_LOG"
 check_not_present '00000000' "$RSYSLOG_OUT_LOG"
+./msleep 750
+[ -d "$SPOOL_DIR/mainq.segq" ] ||
+	error_exit 1 "idle cleanup removed the store while the first batch was in flight"
 python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" >"${RSYSLOG_DYNNAME}.frontier-blocked.json"
 blocked_sequence=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(max(s["committed_sequence"] for s in d["state_slots"] if s["valid"]))' \
 	"${RSYSLOG_DYNNAME}.frontier-blocked.json")
@@ -82,6 +86,12 @@ if [ "$complete_sequence" -lt $((held_sequence + NUMMESSAGES - 1)) ]; then
 	error_exit 1
 fi
 
+cleanup_deadline=$((SECONDS + 30))
+while [ -e "$SPOOL_DIR/mainq.segq" ]; do
+	[ "$SECONDS" -lt "$cleanup_deadline" ] ||
+		error_exit 1 "idle cleanup did not dematerialize the drained DA store"
+	./msleep 25
+done
 shutdown_when_empty
 wait_shutdown
 $RS_SORTCMD "$RSYSLOG_OUT_LOG" >"${RSYSLOG_DYNNAME}.sorted"

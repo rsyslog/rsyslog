@@ -69,30 +69,39 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-crash-commit.sh \
 	segmented-diskqueue-crash-predelete.sh \
 	segmented-diskqueue-crash-unlink.sh \
-	segmented-da-idle-dematerialize.sh \
-	segmented-da-idle-timeout-values.sh \
 	segmented-da-config-errors.sh \
 	segmented-da-engine-transition.sh \
 	segmented-da-event-properties.sh \
+	segmented-da-event-properties-fixedarray.sh \
 	segmented-da-behavior.sh \
 	classic-da-behavior.sh \
+	segmented-da-persist.sh \
+	classic-da-persist.sh \
+	segmented-da-retry-restart.sh \
+	classic-da-retry-restart.sh \
 	segmented-da-multiworker-frontier.sh \
-	segmented-da-maxdiskspace.sh \
 	segmented-da-recovery-budget.sh \
 	segmented-da-idle-retry.sh \
 	segmented-da-idle-crash-state.sh \
 	segmented-da-idle-crash-segments.sh \
 	segmented-da-idle-crash-state-unlink.sh \
-	segmented-da-idle-crash-directory.sh \
-	segmented-da-idle-cleanup-failure.sh
-TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh yaml-segmented-da-config.sh
-TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh
+	segmented-da-idle-crash-directory.sh
+TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh yaml-segmented-da-config.sh \
+	yaml-segmented-da-config-errors.sh
+TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh \
+	segmented-da-idle-dematerialize.sh \
+	segmented-da-idle-timeout-values.sh \
+	segmented-da-idle-cleanup-failure.sh \
+	segmented-da-maxdiskspace.sh \
+	segmented-da-maxdiskspace-fixedarray.sh
 EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) \
 	$(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS) segdisk-inspect.py \
 	testsuites/segmented-diskqueue-checkpoint-driver.sh \
 	testsuites/segmented-diskqueue-crash-driver.sh \
 	testsuites/segmented-da-idle-crash-driver.sh \
 	testsuites/da-engine-behavior-driver.sh \
+	testsuites/da-engine-persist-driver.sh \
+	testsuites/da-engine-retry-restart-driver.sh \
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 

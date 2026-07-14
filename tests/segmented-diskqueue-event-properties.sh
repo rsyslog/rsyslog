@@ -15,7 +15,8 @@ RECOVERED_FILE="$PWD/${RSYSLOG_DYNNAME}.recovered.log"
 BLOCKED_FILE="$PWD/${RSYSLOG_DYNNAME}.missing/output.log"
 
 if [ "${SEGDISK_EVENT_DA:-0}" = 1 ]; then
-	QUEUE_CONFIG='queue.type="LinkedList"
+	SEGDISK_DA_QUEUE_TYPE=${SEGDISK_DA_QUEUE_TYPE:-LinkedList}
+	QUEUE_CONFIG='queue.type="'"$SEGDISK_DA_QUEUE_TYPE"'"
 	queue.filename="eventq"
 	queue.diskQueueType="segmentedDisk"
 	queue.size="20"

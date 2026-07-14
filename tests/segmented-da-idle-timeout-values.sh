@@ -52,7 +52,15 @@ wait_file_lines "$DISABLED_OUT" "$NUMMESSAGES" 300
 wait_path_state absent "$SPOOL_DIR/idle-zero.segq"
 ./msleep 1000
 [ -d "$SPOOL_DIR/idle-disabled.segq" ] || error_exit 1 "idle timeout -1 removed the store"
-wait_content 'store.idleDematerializations=1' "$STATS_FILE"
+# With a zero grace period, a producer scheduling gap may permit more than one
+# drain/rematerialize cycle during the burst. At least one completed cleanup,
+# an absent store, and zero child workers are the deterministic immediacy
+# oracle; requiring exactly one cleanup would make scheduler timing observable.
+wait_content 'store.idleDematerializations=' "$STATS_FILE"
+zero_dematerializations=$(grep 'idle-zero queue\[DA\]' "$STATS_FILE" |
+	sed -E 's/.*store\.idleDematerializations=([0-9]+).*/\1/' | sort -n | tail -n 1)
+[ "${zero_dematerializations:-0}" -ge 1 ] || error_exit 1 "idle timeout 0 did not dematerialize its store"
+content_check --regex 'idle-zero queue\[DA\].*workers.current=0' "$STATS_FILE"
 # The 100ms generic worker timeout has elapsed several times by now.  A live
 # worker proves that -1 protects slot zero while still leaving the generic
 # timeout available for any additional workers.

@@ -7,6 +7,7 @@
 . ${srcdir:=.}/diag.sh init
 require_plugin impstats
 export NUMMESSAGES=2000
+DA_QUEUE_TYPE=${DA_QUEUE_TYPE:-LinkedList}
 STATS_FILE="$PWD/${RSYSLOG_DYNNAME}.stats.log"
 
 generate_conf
@@ -17,7 +18,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
 	listenPortFileName="'"$RSYSLOG_DYNNAME"'.tcpflood_port")
 global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
-main_queue(queue.type="LinkedList" queue.filename="mainq"
+main_queue(queue.type="'"$DA_QUEUE_TYPE"'" queue.filename="mainq"
 	queue.size="50" queue.highWatermark="10" queue.lowWatermark="5"
 	queue.maxDiskSpace="64k" queue.maxFileSize="8k"
 	queue.timeoutEnqueue="300000" queue.dequeueBatchSize="16"

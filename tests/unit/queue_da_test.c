@@ -32,6 +32,19 @@ static void touch_file(const char *dir, const char *name, const char *contents) 
     CHECK(close(fd) == 0);
 }
 
+static void check_file_contents(const char *dir, const char *name, const char *expected) {
+    char path[512];
+    char contents[128];
+    CHECK(snprintf(path, sizeof(path), "%s/%s", dir, name) < (int)sizeof(path));
+    const int fd = open(path, O_RDONLY);
+    CHECK(fd >= 0);
+    const ssize_t len = read(fd, contents, sizeof(contents) - 1);
+    CHECK(len >= 0);
+    contents[len] = '\0';
+    CHECK(close(fd) == 0);
+    CHECK(strcmp(contents, expected) == 0);
+}
+
 static qda_engine_result_t resolve(
     const char *dir, qda_engine_mode_t requested, sbool auto_upgrade, sbool classic_features, rsRetVal expected) {
     const qda_engine_config_t config = {
@@ -49,6 +62,23 @@ static qda_engine_result_t resolve(
 int main(void) {
     char root[] = "/tmp/rsyslog-qda-unit-XXXXXX";
     CHECK(mkdtemp(root) != NULL);
+
+    const qda_lifecycle_config_t lifecycle = {
+        .engine = QDA_ENGINE_AUTO,
+        .auto_upgrade = 0,
+        .idle_timeout = 60000,
+    };
+    qda_lifecycle_config_t changed = lifecycle;
+    CHECK(qdaLifecycleConfigEqual(&lifecycle, &changed));
+    changed.engine = QDA_ENGINE_DISK;
+    CHECK(!qdaLifecycleConfigEqual(&lifecycle, &changed));
+    changed = lifecycle;
+    changed.auto_upgrade = 1;
+    CHECK(!qdaLifecycleConfigEqual(&lifecycle, &changed));
+    changed = lifecycle;
+    changed.idle_timeout = -1;
+    CHECK(!qdaLifecycleConfigEqual(&lifecycle, &changed));
+    CHECK(!qdaLifecycleConfigEqual(NULL, &changed));
 
     qda_engine_result_t result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK);
@@ -74,6 +104,8 @@ int main(void) {
     CHECK(unlink(path) == 0);
 
     CHECK(qdaEngineWriteMarker(root, "queue", QDA_ENGINE_DISK) == RS_RET_OK);
+    CHECK(qdaEngineWriteMarker(root, "queue", QDA_ENGINE_AUTO) == RS_RET_PARAM_ERROR);
+    CHECK(qdaEngineWriteMarker(root, "queue", (qda_engine_mode_t)99) == RS_RET_PARAM_ERROR);
     result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_DISK && result.reason == QDA_REASON_MARKER);
     /* A marker without state or segments records an empty former engine, not
@@ -83,7 +115,17 @@ int main(void) {
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.reason == QDA_REASON_CONFIGURED);
     result = resolve(root, QDA_ENGINE_AUTO, 1, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.reason == QDA_REASON_AUTO_UPGRADE);
+
+    /* Model a crash-left temporary marker from this process. The atomic
+     * replacement helper must remove it, durably replace the live marker, and
+     * leave no temporary name that could confuse a later restart. */
+    char tmp_name[128];
+    CHECK(snprintf(tmp_name, sizeof(tmp_name), "queue.da-engine.tmp.%ld", (long)getpid()) < (int)sizeof(tmp_name));
+    touch_file(root, tmp_name, "incomplete marker");
     CHECK(qdaEngineWriteMarker(root, "queue", QDA_ENGINE_SEGMENTED_DISK) == RS_RET_OK);
+    check_file_contents(root, "queue.da-engine", "RSYSLOG-DA-ENGINE-V1 segmentedDisk\n");
+    CHECK(snprintf(path, sizeof(path), "%s/%s", root, tmp_name) < (int)sizeof(path));
+    CHECK(access(path, F_OK) != 0);
     result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.marker_present);
     result = resolve(root, QDA_ENGINE_DISK, 0, 0, RS_RET_OK);

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Shared pure disk-assisted queue behavior driver. The wrapper selects one
-# engine and this driver runs one queue placement (main, ruleset, or action).
+# engine, memory queue type, and placement (main, ruleset, or action).
 # A tiny queue with single-record, slowed dequeue must spill a 2000-message
 # burst. The engine-specific filesystem object proves the child was used; the
 # exact 0..1999 output sequence proves lossless ordered spill and drain.
@@ -9,6 +9,7 @@
 export NUMMESSAGES=2000
 DA_SCOPE=${DA_SCOPE:?DA_SCOPE must be main, ruleset, or action}
 DA_ENGINE=${DA_ENGINE:?DA_ENGINE must be auto or disk}
+DA_QUEUE_TYPE=${DA_QUEUE_TYPE:?DA_QUEUE_TYPE must be LinkedList or FixedArray}
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
 
 wait_for_path() {
@@ -43,7 +44,7 @@ else
 	EXPECTED_ENGINE=disk
 fi
 
-QUEUE_CONFIG='queue.type="LinkedList"
+QUEUE_CONFIG='queue.type="'"$DA_QUEUE_TYPE"'"
 	queue.filename="scopeq"
 	queue.size="50"
 	queue.highWatermark="10"

@@ -59,18 +59,16 @@ startup
 shutdown_when_empty
 wait_shutdown
 unset RS_REDIR
-grep -Fq 'automatically selected the classic disk engine' "${RSYSLOG_DYNNAME}.started" || {
-	cat "${RSYSLOG_DYNNAME}.started"
-	error_exit 1 "automatic classic selection warning missing"
-}
+content_check 'automatically selected the classic disk engine' "${RSYSLOG_DYNNAME}.started"
 seq_check 0 $((NUMMESSAGES - 1)) -d
-[ "$(cat "$MARKER")" = "RSYSLOG-DA-ENGINE-V1 disk" ] || error_exit 1 "classic marker was not sticky"
+printf '%s\n' 'RSYSLOG-DA-ENGINE-V1 disk' | cmp - "$MARKER" \
+	|| error_exit 1 "classic marker was not sticky"
 [ ! -f "$SPOOL_DIR/transition.qi" ] || error_exit 1 "classic state remained after a clean drain"
 
 write_conf auto on
 startup
-[ "$(cat "$MARKER")" = "RSYSLOG-DA-ENGINE-V1 segmentedDisk" ] ||
-	error_exit 1 "auto-upgrade did not select segmentedDisk after classic drain"
+printf '%s\n' 'RSYSLOG-DA-ENGINE-V1 segmentedDisk' | cmp - "$MARKER" \
+	|| error_exit 1 "auto-upgrade did not select segmentedDisk after classic drain"
 [ ! -e "$SPOOL_DIR/transition.segq" ] || error_exit 1 "auto-upgraded child materialized without a spill"
 shutdown_when_empty
 wait_shutdown
