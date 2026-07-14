@@ -432,7 +432,10 @@ rsRetVal segdiskCodecDecode(const unsigned char *buf, size_t len, smsg_t **out) 
                     rsCStrDestruct(&cs);
                     free(s);
                     s = NULL;
-                    if (r != RS_RET_OK) goto fail;
+                    /* A queued event may outlive the ruleset named by its
+                     * original input. Preserve the event and let a NULL
+                     * pRuleset select the current default ruleset. */
+                    if (r != RS_RET_OK && r != RS_RET_NOT_FOUND) goto fail;
                 }
                 break;
             case F_MSG_OFFSET:

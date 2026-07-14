@@ -2513,6 +2513,8 @@ rsRetVal MsgSetInputNameStr(smsg_t *const pMsg, const uchar *const text, const i
     CHKiRet(prop.Construct(&pProp));
     CHKiRet(prop.SetString(pProp, text, len));
     CHKiRet(prop.ConstructFinalize(pProp));
+    /* MsgSetInputName() retains an AddRef; release our constructor-owned
+     * reference in finalize_it on both success and failure. */
     MsgSetInputName(pMsg, pProp);
 
 finalize_it:
@@ -2527,6 +2529,8 @@ rsRetVal MsgSetRcvFromText(smsg_t *const pMsg, const uchar *const text, const in
     CHKiRet(prop.Construct(&pProp));
     CHKiRet(prop.SetString(pProp, text, len));
     CHKiRet(prop.ConstructFinalize(pProp));
+    /* MsgSetRcvFrom() retains an AddRef; release our constructor-owned
+     * reference in finalize_it on both success and failure. */
     MsgSetRcvFrom(pMsg, pProp);
 
 finalize_it:

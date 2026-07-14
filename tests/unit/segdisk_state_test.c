@@ -57,6 +57,10 @@ static void expect_selected(const unsigned char slot0[SEGDISK_STATE_SLOT_LEN],
 }
 
 int main(void) {
+    /* RFC 3720's canonical CRC32C vector detects polynomial, reflection, and
+     * lookup-table regressions independently of the state-slot test data. */
+    CHECK(segdiskCrc32c("123456789", 9) == UINT32_C(0xe3069283));
+
     segdisk_state_image_t state;
     unsigned char slot0[SEGDISK_STATE_SLOT_LEN];
     unsigned char slot1[SEGDISK_STATE_SLOT_LEN];

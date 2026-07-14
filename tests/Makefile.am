@@ -28,6 +28,7 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-config.sh \
 	segmented-diskqueue.sh \
 	segmented-diskqueue-restart.sh \
+	segmented-diskqueue-ruleset-fallback.sh \
 	segmented-diskqueue-event-properties.sh \
 	segmented-diskqueue-corruption.sh \
 	segmented-diskqueue-corruption-framing.sh \

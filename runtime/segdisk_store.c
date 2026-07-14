@@ -519,6 +519,8 @@ static void capture_writer(segdisk_store_t *s) {
 }
 
 static rsRetVal create_active(segdisk_store_t *s) {
+    const uint64_t old_first_live = s->first_live_segment;
+    const uint64_t old_next_segment = s->next_segment;
     segdisk_segment_t *seg = calloc(1, sizeof(*seg));
     if (seg == NULL) return RS_RET_OUT_OF_MEMORY;
     seg->id = s->next_segment++;
@@ -527,6 +529,7 @@ static rsRetVal create_active(segdisk_store_t *s) {
     seg->file_size = SEG_HDR_LEN;
     seg->path = segment_path(s, seg->id, "open");
     if (seg->path == NULL) {
+        s->next_segment = old_next_segment;
         free(seg);
         return RS_RET_OUT_OF_MEMORY;
     }
@@ -537,6 +540,8 @@ static rsRetVal create_active(segdisk_store_t *s) {
     rsRetVal r = write_state(s, 1, 1);
     if (r != RS_RET_OK) {
         s->active_segment = 0;
+        s->first_live_segment = old_first_live;
+        s->next_segment = old_next_segment;
         --s->stats.segments;
         s->stats.bytes -= SEG_HDR_LEN;
         free_segment(&seg);
@@ -546,6 +551,9 @@ static rsRetVal create_active(segdisk_store_t *s) {
     const int fd = open(seg->path, O_RDWR | O_CREAT | O_EXCL | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0600);
     if (fd < 0) {
         s->active_segment = 0;
+        /* The published reservation keeps next_segment monotonic, but an
+         * absent file cannot be the live frontier for an in-process retry. */
+        s->first_live_segment = old_first_live;
         --s->stats.segments;
         s->stats.bytes -= SEG_HDR_LEN;
         free_segment(&seg);
@@ -557,6 +565,7 @@ static rsRetVal create_active(segdisk_store_t *s) {
         close(fd);
         unlink(seg->path);
         s->active_segment = 0;
+        s->first_live_segment = old_first_live;
         --s->stats.segments;
         s->stats.bytes -= SEG_HDR_LEN;
         free_segment(&seg);
@@ -1038,6 +1047,9 @@ static rsRetVal prepare_existing_active(segdisk_store_t *s) {
     if (r == RS_RET_FILE_NOT_FOUND) {
         if (s->stats.segments > 0) --s->stats.segments;
         if (s->stats.bytes >= accounted_bytes) s->stats.bytes -= accounted_bytes;
+        /* Reservation publication can survive a crash before file creation.
+         * The ID remains consumed, but the nonexistent segment is not live. */
+        if (s->first_live_segment == s->active_segment) s->first_live_segment = 0;
         r = RS_RET_OK;
     } else if (r == RS_RET_OK && actual_bytes >= 0) {
         s->stats.bytes += actual_bytes - accounted_bytes;
