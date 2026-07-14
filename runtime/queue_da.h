@@ -33,8 +33,17 @@ typedef struct qda_engine_result_s {
     qda_engine_mode_t marker_engine;
 } qda_engine_result_t;
 
+/* Fields which determine whether a disk-assisted queue can retain its
+ * existing child across a configuration reload. */
+typedef struct qda_lifecycle_config_s {
+    qda_engine_mode_t engine;
+    sbool auto_upgrade;
+    int idle_timeout;
+} qda_lifecycle_config_t;
+
 rsRetVal qdaEngineResolve(const qda_engine_config_t *config, qda_engine_result_t *result);
 rsRetVal qdaEngineWriteMarker(const char *spool_dir, const char *file_prefix, qda_engine_mode_t engine);
 const char *qdaEngineName(qda_engine_mode_t engine);
+sbool qdaLifecycleConfigEqual(const qda_lifecycle_config_t *left, const qda_lifecycle_config_t *right);
 
 #endif

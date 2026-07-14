@@ -78,6 +78,11 @@ const char *qdaEngineName(qda_engine_mode_t engine) {
     }
 }
 
+sbool qdaLifecycleConfigEqual(const qda_lifecycle_config_t *left, const qda_lifecycle_config_t *right) {
+    return left != NULL && right != NULL && left->engine == right->engine &&
+           left->auto_upgrade == right->auto_upgrade && left->idle_timeout == right->idle_timeout;
+}
+
 static rsRetVal read_marker(const char *path, sbool *present, qda_engine_mode_t *engine) {
     char buf[64];
     *present = 0;
@@ -215,13 +220,15 @@ static rsRetVal write_all(int fd, const char *buf, size_t len) {
             if (errno == EINTR) continue;
             return RS_RET_IO_ERROR;
         }
+        if (n == 0) return RS_RET_IO_ERROR;
         off += (size_t)n;
     }
     return RS_RET_OK;
 }
 
 rsRetVal qdaEngineWriteMarker(const char *spool_dir, const char *file_prefix, qda_engine_mode_t engine) {
-    if (spool_dir == NULL || file_prefix == NULL || engine == QDA_ENGINE_AUTO) return RS_RET_PARAM_ERROR;
+    if (spool_dir == NULL || file_prefix == NULL || (engine != QDA_ENGINE_DISK && engine != QDA_ENGINE_SEGMENTED_DISK))
+        return RS_RET_PARAM_ERROR;
     char *path = NULL;
     char *tmp = NULL;
     rsRetVal r = make_path(&path, spool_dir, file_prefix, ".da-engine");

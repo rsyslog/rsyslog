@@ -2453,6 +2453,7 @@ static rsRetVal tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis) {
  */
 static rsRetVal cancelWorkers(qqueue_t *pThis) {
     rsRetVal iRetLocal;
+    struct timespec tTimeout;
     DEFiRet;
 
     assert(pThis->qType != QUEUETYPE_DIRECT);
@@ -2470,6 +2471,11 @@ static rsRetVal cancelWorkers(qqueue_t *pThis) {
                   "threads, continuing, but results are unpredictable\n",
                   iRetLocal);
     }
+    timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
+    iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+    if (iRetLocal != RS_RET_OK) {
+        DBGOPRINT((obj_t *)pThis, "unexpected state %d joining cancelled primary workers\n", iRetLocal);
+    }
 
     /* ... and now the DA queue, if it exists (should always be after the primary one) */
     if (pThis->pqDA != NULL) {
@@ -2484,6 +2490,11 @@ static rsRetVal cancelWorkers(qqueue_t *pThis) {
                       "threads, continuing, but results are unpredictable\n",
                       iRetLocal);
         }
+        timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
+        iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+        if (iRetLocal != RS_RET_OK) {
+            DBGOPRINT((obj_t *)pThis, "unexpected state %d joining cancelled DA child workers\n", iRetLocal);
+        }
 
         /* finally, we cancel the main queue's DA worker pool, if it still is running. It may be
          * restarted later to persist the queue. But we stop it, because otherwise we get into
@@ -2493,6 +2504,11 @@ static rsRetVal cancelWorkers(qqueue_t *pThis) {
         DBGOPRINT((obj_t *)pThis, "checking to see if main queue DA worker pool needs to be cancelled\n");
         wtpCancelAll(pThis->pWtpDA, objGetName((obj_t *)pThis));
         /* returns immediately if all threads already have terminated */
+        timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
+        iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+        if (iRetLocal != RS_RET_OK) {
+            DBGOPRINT((obj_t *)pThis, "unexpected state %d joining cancelled DA transfer workers\n", iRetLocal);
+        }
     }
 
     RETiRet;
@@ -2540,10 +2556,8 @@ rsRetVal ATTR_NONNULL(1) qqueueShutdownWorkers(qqueue_t *const pThis) {
 
     CHKiRet(cancelWorkers(pThis));
 
-    /* ... finally ... all worker threads have terminated :-)
-     * Well, more precisely, they *are in termination*. Some cancel cleanup handlers
-     * may still be running. Note that the main queue's DA worker may still be running.
-     */
+    /* All worker threads have terminated and been joined. This stable point is
+     * required before save-on-shutdown may restart the DA transfer pool. */
     DBGOPRINT((obj_t *)pThis, "worker threads terminated, remaining queue size log %d, phys %d.\n",
               getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 
@@ -4202,6 +4216,13 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         if (pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL && pThis->pWtpReg != NULL)
             qqueueShutdownWorkers(pThis);
 
+        /* Destroy the now-joined regular pool before inspecting the remaining
+         * size or starting save-on-shutdown. It is no longer needed, and this
+         * keeps the persistence phase's worker ownership explicit. */
+        if (pThis->qType != QUEUETYPE_DIRECT && pThis->pWtpReg != NULL) {
+            wtpDestruct(&pThis->pWtpReg);
+        }
+
         if (pThis->bIsDA && getPhysicalQueueSize(pThis) > 0) {
             if (pThis->bSaveOnShutdown) {
                 LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
@@ -4224,15 +4245,10 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
          * about this condition here ;)
          * rgerhards, 2008-01-25
          */
-        if (pThis->qType != QUEUETYPE_DIRECT && pThis->pWtpReg != NULL) {
-            wtpDestruct(&pThis->pWtpReg);
-        }
-
         /* Now check if we actually have a DA queue and, if so, destruct it.
-         * Note that the wtp must be destructed first, it may be in cancel cleanup handler
-         * *right now* and actually *need* to access the queue object to persist some final
-         * data (re-queueing case). So we need to destruct the wtp first, which will make
-         * sure all workers have terminated. Please note that this also generates a situation
+         * The wtp must be destructed before the child queue. Shutdown has already
+         * joined its workers, so destruction now releases only pool resources.
+         * Please note that this also generates a situation
          * where it is possible that the DA queue has a parent pointer but the parent has
          * no WtpDA associated with it - which is perfectly legal thanks to this code here.
          */
@@ -5086,6 +5102,16 @@ finalize_it:
 
 /* return 1 if the content of two qqueue_t structs equal */
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
+    const qda_lifecycle_config_t old_da = {
+        .engine = pOld->diskQueueType,
+        .auto_upgrade = pOld->diskQueueAutoUpgrade,
+        .idle_timeout = pOld->diskQueueIdleTimeout,
+    };
+    const qda_lifecycle_config_t new_da = {
+        .engine = pNew->diskQueueType,
+        .auto_upgrade = pNew->diskQueueAutoUpgrade,
+        .idle_timeout = pNew->diskQueueIdleTimeout,
+    };
     return (NUM_EQUALS(qType) && NUM_EQUALS(iMaxQueueSize) && NUM_EQUALS(iDeqBatchSize) &&
             NUM_EQUALS(iMinDeqBatchSize) && NUM_EQUALS(toMinDeqBatchSize) && NUM_EQUALS(sizeOnDiskMax) &&
             NUM_EQUALS(iHighWtrMrk) && NUM_EQUALS(iLowWtrMrk) && NUM_EQUALS(iFullDlyMrk) && NUM_EQUALS(iLightDlyMrk) &&
@@ -5094,9 +5120,8 @@ int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
             NUM_EQUALS(toActShutdown) && NUM_EQUALS(toEnq) && NUM_EQUALS(toWrkShutdown) &&
             NUM_EQUALS(iMinMsgsPerWrkr) && NUM_EQUALS(iMaxFileSize) && NUM_EQUALS(bSaveOnShutdown) &&
             NUM_EQUALS(iDeqSlowdown) && NUM_EQUALS(iDeqtWinFromHr) && NUM_EQUALS(iDeqtWinToHr) &&
-            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(takeFlowCtlFromMsg) && NUM_EQUALS(diskQueueType) &&
-            NUM_EQUALS(diskQueueAutoUpgrade) && NUM_EQUALS(diskQueueIdleTimeout) && USTR_EQUALS(pszFilePrefix) &&
-            USTR_EQUALS(cryprovName));
+            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(takeFlowCtlFromMsg) && qdaLifecycleConfigEqual(&old_da, &new_da) &&
+            USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
 }
 
 
