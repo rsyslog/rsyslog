@@ -1,25 +1,30 @@
 #!/bin/bash
-# Test for queue data persisting at shutdown. The
-# plan is to start an instance, emit some data, do a relatively
-# fast shutdown and then re-start the engine to process the 
-# remaining data.
+# Test for queue data persisting at shutdown. LinkedList and FixedArray cases
+# inspect the classic .qi format, so their modern queue configuration pins the
+# classic DA engine. A fast shutdown must persist the remainder and restart
+# must recover the complete sequence, with in-flight duplicates permitted.
 # added 2009-05-27 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 # uncomment for debugging support:
 echo testing memory queue persisting to disk, mode $1
+disk_selector=
+if [ "$1" != Disk ]; then
+	# shellcheck disable=SC2089 # This is RainerScript text, expanded into add_conf below.
+	disk_selector='queue.diskQueueType="disk"'
+fi
 generate_conf
+# shellcheck disable=SC2090 # RainerScript quotes are intentionally retained.
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 1
-$MainMsgQueueSaveOnShutdown on
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ModLoad ../plugins/omtesting/.libs/omtesting
 
-# set spool locations and switch queue to disk-only mode
-$WorkDirectory '$RSYSLOG_DYNNAME'.spool
-$MainMsgQueueFilename mainq
-$IncludeConfig '${RSYSLOG_DYNNAME}'work-queuemode.conf
+# Configure either a classic DA memory queue or the pure classic disk queue.
+global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
+main_queue(queue.type="'$1'" queue.filename="mainq"
+	queue.timeoutShutdown="1" queue.saveOnShutdown="on"
+	'$disk_selector')
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
@@ -28,7 +33,6 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 $IncludeConfig '${RSYSLOG_DYNNAME}'work-delay.conf
 '
 # prepare config
-echo \$MainMsgQueueType $1 > ${RSYSLOG_DYNNAME}work-queuemode.conf
 echo "*.*     :omtesting:sleep 0 1000" > ${RSYSLOG_DYNNAME}work-delay.conf
 
 # inject 5000 msgs, so that we do not hit the high watermark
