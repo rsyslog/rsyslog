@@ -1190,6 +1190,10 @@ static rsRetVal qDestructSegDisk(qqueue_t *pThis) {
 static rsRetVal qAddSegDisk(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
     if (pThis->daEngineMarkerPending) {
+        /* The marker lives in workDirectory beside <prefix>.segq, not inside
+         * that lazy store directory.  StartDA has already validated the
+         * parent spool directory, so publishing the engine choice here can
+         * and must precede segdiskStoreAppend() materializing .segq. */
         CHKiRet(qdaEngineWriteMarker((const char *)pThis->pszSpoolDir, (const char *)pThis->pszFilePrefix,
                                      QDA_ENGINE_SEGMENTED_DISK));
         pThis->daEngineMarkerPending = 0;

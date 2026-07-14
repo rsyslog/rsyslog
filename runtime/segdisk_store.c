@@ -1215,6 +1215,12 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
     if (asprintf(&legacy_qi, "%s/%s.qi", cfg->work_dir, cfg->file_prefix) < 0) goto oom;
     struct stat legacy_st;
     if (lstat(legacy_qi, &legacy_st) == 0) {
+        /* DA engine resolution happens before this constructor.  Auto mode
+         * sends any existing .qi to the classic child, and an explicit
+         * segmented selector is rejected as a data conflict.  Keep this
+         * store-level guard for pure segmentedDisk queues and races: a .qi is
+         * persistent classic state even if it describes zero records, so it
+         * must be drained/removed before auto-upgrade can select segmented. */
         LogError(0, RS_RET_INVALID_VALUE, "%s: segmentedDisk refuses legacy queue state '%s'", s->queue_name,
                  legacy_qi);
         free(legacy_qi);
