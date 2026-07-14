@@ -189,6 +189,74 @@ can require replay or recovery work after an ungraceful stop. Enabling
 ``queue.syncqueuefiles`` and a very small checkpoint interval improves
 crash and power-loss resilience at a significant performance cost.
 
+Experimental segmented disk queues
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``queue.type="segmentedDisk"`` enables an experimental pure-disk queue
+backend based on a queue-private log-structured store. It writes one active
+segment at a time, seals segments at ``queue.maxFileSize``, and commits
+completed dequeue batches through a fixed-size, two-slot state file. A batch that
+must be retried is appended before the original batch is committed. A crash
+can therefore replay an uncommitted batch, but a committed record is never
+discarded merely because a later batch completed first.
+
+The store uses a versioned binary TLV message codec with checksums on metadata,
+record headers, payloads, and sealed-segment footers. Its files live in the
+dedicated ``<workDirectory>/<queue.filename>.segq/`` directory. The format is
+experimental and may change incompatibly while this queue type remains
+experimental. It is intentionally separate from the classic disk queue and
+does not use ``.qi`` or ``recover_qi.pl``.
+
+Startup reads only the 512-byte state file and probes the named active/recovery
+transition files. It does not enumerate segments or scan record payloads, so a
+valid queue's startup time is independent of backlog size. Segment metadata and
+record framing, payload checksums, and codec data are validated lazily when
+dequeue reaches them. Recovery scanning yields periodically so it does not hold
+the queue lock for an unbounded time.
+
+The state file is indispensable control data. If both slots are invalid, or the
+file is missing while segment files remain, rsyslog fails that queue immediately
+and requests offline recovery instead of delaying daemon startup with a full
+scan. Version 1 of this unmerged experimental format is intentionally rejected;
+there is no migration guarantee for experimental queue data.
+
+This mode is opt-in and currently only available as a pure-disk queue
+type. Disk-assisted queues continue to use the classic disk child queue.
+Do not point ``segmentedDisk`` at an existing classic disk queue prefix. The
+queue refuses to start when the matching legacy ``.qi`` file exists. Queue
+encryption providers are not supported by this first implementation.
+
+Storage operations are serialized under the queue lock. Multiple generic
+queue workers may consume batches concurrently, and their completions may be
+out of order; the durable commit frontier still advances in dequeue order.
+As with other multi-worker queues, output ordering is not guaranteed when
+``queue.workerThreads`` is greater than one.
+
+``segmentedDisk`` uses the classic ``queue.checkpointInterval`` default of
+``0``, which disables periodic completion checkpoints. Positive intervals count
+records by contiguous commit-frontier advancement, not worker batches. Topology
+transitions, segment-ID reservations, pre-delete publication, and clean shutdown
+still force state updates. Setting ``queue.syncQueueFiles="on"`` additionally
+synchronizes ordinary segment and checkpoint writes, at a throughput cost.
+
+Before committed segments are unlinked, their range and conservative byte/count
+accounting are recorded durably. Interrupted or transiently failed deletion is
+retried idempotently by queue workers after restart; startup itself does not scan
+that range. The pending range remains visible as queue work, so empty waits and
+shutdown cannot silently strand those files.
+
+Recovery validates every framed record. In the supported ``safe`` corruption
+mode, rsyslog skips a payload-corrupt record and continues at the next valid
+record in the segment. A damaged tail of an active segment is recovered lazily.
+Missing or invalid state is not reconstructed automatically; the queue fails
+fast with an offline-recovery diagnostic.
+
+Queue statistics add ``disk.usage``, ``segments``, ``checkpoints``,
+``replayed``, ``corruption.events``, ``corruption.bytes``,
+``corruption.records``, ``corruption.segments``, ``retry.overage.bytes``,
+``retry.overage.maxbytes``, state-write/recovery counters, and the startup
+payload-byte and segment-probe counters for this backend.
+
 If you happen to lose or otherwise need the housekeeping structures and
 have all your queue chunks you can use the ``recover_qi.pl`` script
 included in rsyslog to regenerate them::

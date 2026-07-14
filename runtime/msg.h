@@ -180,7 +180,16 @@ rsRetVal msgDestruct(smsg_t **ppM);
 smsg_t *MsgDup(smsg_t *pOld);
 smsg_t *MsgAddRef(smsg_t *pM);
 void setProtocolVersion(smsg_t *pM, int iNewVersion);
-void MsgSetInputName(smsg_t *pMsg, prop_t *);
+/** Set a message's input-name property.
+ * @param pMsg message to update
+ * @param inputName property retained by the message; the caller remains
+ * responsible for releasing its own reference
+ */
+void MsgSetInputName(smsg_t *pMsg, prop_t *inputName);
+rsRetVal MsgSetInputNameStr(smsg_t *pMsg, const uchar *text, int len);
+rsRetVal MsgSetRcvFromText(smsg_t *pMsg, const uchar *text, int len);
+rsRetVal MsgSetRcvFromIPText(smsg_t *pMsg, const uchar *text, int len);
+rsRetVal MsgSetRcvFromPortText(smsg_t *pMsg, const uchar *text, int len);
 void MsgSetDfltTZ(smsg_t *pThis, char *tz);
 rsRetVal MsgSetAPPNAME(smsg_t *pMsg, const char *pszAPPNAME);
 rsRetVal MsgSetPROCID(smsg_t *pMsg, const char *pszPROCID);
@@ -188,13 +197,19 @@ rsRetVal MsgSetMSGID(smsg_t *pMsg, const char *pszMSGID);
 void MsgSetParseSuccess(smsg_t *pMsg, int bSuccess);
 void MsgSetTAG(smsg_t *pMsg, const uchar *pszBuf, const size_t lenBuf);
 void MsgSetRuleset(smsg_t *pMsg, ruleset_t *);
+rsRetVal MsgSetRulesetByName(smsg_t *pMsg, cstr_t *rulesetName);
 rsRetVal MsgSetFlowControlType(smsg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(smsg_t *const pMsg, const char *pszStrucData);
 rsRetVal MsgAddToStructuredData(smsg_t *pMsg, uchar *toadd, rs_size_t len);
 void MsgGetStructuredData(smsg_t *pM, uchar **pBuf, rs_size_t *len);
 rsRetVal msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa);
 rsRetVal msgSetFromSockinfoLen(smsg_t *pThis, const struct sockaddr_storage *sa, size_t salen);
-void MsgSetRcvFrom(smsg_t *pMsg, prop_t *);
+/** Set a message's received-from property.
+ * @param pMsg message to update
+ * @param rcvFrom property retained by the message; the caller remains
+ * responsible for releasing its own reference
+ */
+void MsgSetRcvFrom(smsg_t *pMsg, prop_t *rcvFrom);
 void MsgSetRcvFromStr(smsg_t *const pMsg, const uchar *pszRcvFrom, const int, prop_t **);
 rsRetVal MsgSetRcvFromIP(smsg_t *pMsg, prop_t *);
 rsRetVal MsgSetRcvFromIPStr(smsg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp);
@@ -253,6 +268,8 @@ void getInputName(const smsg_t *const pM, uchar **ppsz, int *const plen);
 int getHOSTNAMELen(smsg_t *pM);
 uchar *getProgramName(smsg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(smsg_t *pM);
+uchar *getRcvFromIP(smsg_t *pM);
+uchar *getRcvFromPort(smsg_t *pM);
 rsRetVal propNameToID(const uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal ATTR_NONNULL() msgCheckVarExists(smsg_t *const pMsg, msgPropDescr_t *pProp);

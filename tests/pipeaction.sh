@@ -13,7 +13,15 @@
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=20000
 generate_conf
-add_conf '
+if [ "${QUEUE_TYPE:-disk}" = "segmentedDisk" ]; then
+	add_conf '
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
+main_queue(queue.type="segmentedDisk" queue.filename="mainq")
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+if ($msg contains "msgnum:") then action(type="ompipe" pipe="rsyslog-testbench-fifo" template="outfmt")
+'
+else
+	add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 
 # set spool locations and switch queue to disk-only mode
@@ -27,6 +35,7 @@ $template outfmt,"%msg:F,58:2%\n"
 # path name
 :msg, contains, "msgnum:" |rsyslog-testbench-fifo;outfmt
 '
+fi
 rm -f rsyslog-testbench-fifo
 mkfifo rsyslog-testbench-fifo
 cp rsyslog-testbench-fifo  $RSYSLOG_OUT_LOG &

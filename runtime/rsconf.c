@@ -1349,6 +1349,9 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
     } else if (!strcasecmp((char *)pszType, "disk")) {
         loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_DISK;
         DBGPRINTF("main message queue type set to DISK\n");
+    } else if (!strcasecmp((char *)pszType, "segmenteddisk")) {
+        loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_SEGMENTED_DISK;
+        DBGPRINTF("main message queue type set to SEGMENTED_DISK\n");
     } else if (!strcasecmp((char *)pszType, "direct")) {
         loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_DIRECT;
         DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
@@ -1617,18 +1620,31 @@ static rsRetVal validateConf(rsconf_t *cnf) {
         cnf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
     }
 
-    if (cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
+    if (cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_SEGMENTED_DISK) {
+        if (glbl.GetWorkDir(cnf) == NULL) {
+            LogError(0, RS_RET_CONF_PARAM_INVLD,
+                     "No $WorkDirectory specified - can not run main "
+                     "message queue in segmentedDisk mode.\n");
+            return RS_RET_CONF_PARAM_INVLD;
+        }
+        if (cnf->globals.mainQ.pszMainMsgQFName == NULL) {
+            LogError(0, RS_RET_CONF_PARAM_INVLD,
+                     "No $MainMsgQueueFileName specified - can not run main "
+                     "message queue in segmentedDisk mode.\n");
+            return RS_RET_CONF_PARAM_INVLD;
+        }
+    } else if (cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
         errno = 0; /* for logerror! */
         if (glbl.GetWorkDir(cnf) == NULL) {
             LogError(0, NO_ERRCODE,
                      "No $WorkDirectory specified - can not run main "
-                     "message queue in 'disk' mode. Using 'FixedArray' instead.\n");
+                     "message queue in disk-backed mode. Using 'FixedArray' instead.\n");
             cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
         }
         if (cnf->globals.mainQ.pszMainMsgQFName == NULL) {
             LogError(0, NO_ERRCODE,
                      "No $MainMsgQueueFileName specified - can not run main "
-                     "message queue in 'disk' mode. Using 'FixedArray' instead.\n");
+                     "message queue in disk-backed mode. Using 'FixedArray' instead.\n");
             cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
         }
     }

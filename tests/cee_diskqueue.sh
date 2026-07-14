@@ -5,6 +5,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test probably does not work on all flavors of Solaris"
 export NUMMESSAGES=5000
+QUEUE_TYPE=${QUEUE_TYPE:-disk}
 generate_conf
 add_conf '
 global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
@@ -13,7 +14,7 @@ template(name="outfmt" type="string" string="%$!usr!msg:F,58:2%\n")
 set $!usr!msg = $msg;
 if $msg contains "msgnum" then
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt"
-	       queue.type="disk" queue.filename="rsyslog-act1")
+	       queue.type="'$QUEUE_TYPE'" queue.filename="rsyslog-act1")
 '
 startup
 injectmsg

@@ -48,6 +48,7 @@
 #include "stream.h"
 #include "statsobj.h"
 #include "cryprov.h"
+#include "segdisk_store.h"
 
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
@@ -63,7 +64,8 @@ typedef enum {
     QUEUETYPE_FIXED_ARRAY = 0, /* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
     QUEUETYPE_LINKEDLIST = 1, /* linked list used as buffer, lower fixed memory overhead but slower */
     QUEUETYPE_DISK = 2, /* disk files used as buffer */
-    QUEUETYPE_DIRECT = 3 /* no queuing happens, consumer is directly called */
+    QUEUETYPE_DIRECT = 3, /* no queuing happens, consumer is directly called */
+    QUEUETYPE_SEGMENTED_DISK = 4 /* log-structured segmented disk queue */
 } queueType_t;
 
 /* queue recovery modes */
@@ -152,6 +154,8 @@ struct queue_s {
         rsRetVal (*qAdd)(struct queue_s *pThis, smsg_t *pMsg);
         rsRetVal (*qDeq)(struct queue_s *pThis, smsg_t **ppMsg);
         rsRetVal (*qDel)(struct queue_s *pThis);
+        rsRetVal (*qDeqBatch)(struct queue_s *pThis, batch_t *batch, int max, int *skipped);
+        rsRetVal (*qCompleteBatch)(struct queue_s *pThis, batch_t *batch, int *committed, int *retried);
         /* end type-specific handler */
         /* public entry points (set during construction, permit to set best algorithm for params selected) */
         rsRetVal (*MultiEnq)(qqueue_t *pThis, multi_submit_t *pMultiSub);
@@ -208,6 +212,7 @@ struct queue_s {
                 int pendingCorruptRet; /* deferred dequeue-time corruption result to recover on next batch */
                 sbool runtimeCorruptionSkip; /* skipped messages in current batch due to runtime corruption */
             } disk;
+            segdisk_store_t *segdisk;
         } tVars;
         sbool useCryprov; /* quicker than checkig ptr (1 vs 8 bytes!) */
         uchar *cryprovName; /* crypto provider to use */
@@ -224,6 +229,23 @@ struct queue_s {
         STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd)
         STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
         int ctrMaxqsize; /* NOT guarded by a mutex */
+        int segdiskBytes;
+        int segdiskSegments;
+        int segdiskCheckpoints;
+        int segdiskReplayed;
+        int segdiskCorruptionEvents;
+        int segdiskCorruptionBytes;
+        int segdiskCorruptionRecords;
+        int segdiskRetryOverageBytes;
+        int segdiskRetryOverageMaxBytes;
+        int segdiskStateWrites;
+        int segdiskForcedStateWrites;
+        int segdiskRecoveryPending;
+        int segdiskRecoveryBytes;
+        int segdiskRecoveryRecords;
+        int segdiskStartupPayloadBytes;
+        int segdiskStartupSegmentFilesProbed;
+        int segdiskCorruptionSegments;
         int iSmpInterval; /* line interval of sampling logs */
         int isRunning;
 };
@@ -284,6 +306,8 @@ PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 
 #ifdef ENABLE_IMDIAG
 extern unsigned int iOverallQueueSize;
+rsRetVal qqueueSetSegDiskTestFault(qqueue_t *pThis, const char *point, unsigned int hit_count);
+rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis);
 #endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

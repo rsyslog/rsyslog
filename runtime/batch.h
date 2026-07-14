@@ -76,6 +76,7 @@ struct batch_s {
                       a HUGE saving, even if it doesn't look so (both profiler
                       data as well as practical tests indicate that!).
                  */
+    void *storeData; /* optional queue-store-owned batch completion context */
 };
 
 
@@ -117,6 +118,7 @@ static inline void __attribute__((unused)) batchFree(batch_t *const pBatch) {
 static inline rsRetVal __attribute__((unused)) batchInit(batch_t *const pBatch, const int maxElem) {
     DEFiRet;
     pBatch->maxElem = maxElem;
+    pBatch->storeData = NULL;
     CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
     CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
 finalize_it:

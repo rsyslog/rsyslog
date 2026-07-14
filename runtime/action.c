@@ -2165,6 +2165,11 @@ static rsRetVal setActionQueType(void __attribute__((unused)) * pVal, uchar *psz
     } else if (!strcasecmp((char *)pszType, "disk")) {
         cs.ActionQueType = QUEUETYPE_DISK;
         DBGPRINTF("action queue type set to DISK\n");
+    } else if (!strcasecmp((char *)pszType, "segmenteddisk")) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "$ActionQueueType does not support the experimental segmentedDisk backend; use action() object "
+                 "parameters instead");
+        iRet = RS_RET_INVALID_PARAMS;
     } else if (!strcasecmp((char *)pszType, "direct")) {
         cs.ActionQueType = QUEUETYPE_DIRECT;
         DBGPRINTF("action queue type set to DIRECT (no queueing at all)\n");

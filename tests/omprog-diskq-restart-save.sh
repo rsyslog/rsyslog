@@ -3,10 +3,12 @@
 # action queue receives a negative acknowledgement, then rsyslog is restarted
 # before the action can drain. The oracle is that the message is still retried
 # after restart and is acknowledged once the helper switches to success mode.
+# QUEUE_TYPE lets the segmentedDisk wrapper run the identical retry oracle.
 
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=1
+QUEUE_TYPE=${QUEUE_TYPE:-Disk}
 export RSYSLOG_OMPROG_RESTART_OK="$PWD/$RSYSLOG_DYNNAME.allow-ok"
 export RSYSLOG_OMPROG_RESTART_OUT="$PWD/$RSYSLOG_OUT_LOG"
 
@@ -32,7 +34,7 @@ if $msg contains "msgnum:" then {
 		reportFailures="on"
 		action.resumeRetryCount="-1"
 		action.resumeInterval="1"
-		queue.type="Disk"
+		queue.type="'$QUEUE_TYPE'"
 		queue.filename="'$RSYSLOG_DYNNAME'.actq"
 		queue.syncqueuefiles="on"
 		queue.checkpointInterval="1"

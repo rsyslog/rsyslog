@@ -24,6 +24,60 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_SEGMENTED_DISK_QUEUE = \
+	segmented-diskqueue-config.sh \
+	segmented-diskqueue.sh \
+	segmented-diskqueue-restart.sh \
+	segmented-diskqueue-ruleset-fallback.sh \
+	segmented-diskqueue-event-properties.sh \
+	segmented-diskqueue-corruption.sh \
+	segmented-diskqueue-corruption-framing.sh \
+	segmented-diskqueue-corruption-codec.sh \
+	segmented-diskqueue-state-slots.sh \
+	segmented-diskqueue-missing-checkpoint.sh \
+	segmented-diskqueue-missing-state.sh \
+	segmented-diskqueue-empty-dir.sh \
+	segmented-diskqueue-v1-state.sh \
+	segmented-diskqueue-missing-segment.sh \
+	segmented-diskqueue-multiple-recovery.sh \
+	segmented-diskqueue-recovery-budget.sh \
+	segmented-diskqueue-multiworker-frontier.sh \
+	segmented-diskqueue-fsync.sh \
+	segmented-diskqueue-maxdiskspace.sh \
+	segmented-diskqueue-omprog-restart-save.sh \
+	segmented-diskqueue-rfc5424.sh \
+	segmented-diskqueue-cee.sh \
+	segmented-diskqueue-fromhost-port.sh \
+	diskqueue-scope-main.sh \
+	diskqueue-scope-ruleset.sh \
+	diskqueue-scope-action.sh \
+	segmented-diskqueue-scope-main.sh \
+	segmented-diskqueue-scope-ruleset.sh \
+	segmented-diskqueue-scope-action.sh \
+	segmented-diskqueue-pipeaction.sh \
+	segmented-diskqueue-dircreate.sh \
+	segmented-diskqueue-checkpoint-0.sh \
+	segmented-diskqueue-checkpoint-1.sh \
+	segmented-diskqueue-checkpoint-5.sh \
+	segmented-diskqueue-crash-reservation.sh \
+	segmented-diskqueue-crash-reservation-repeat.sh \
+	segmented-diskqueue-crash-create.sh \
+	segmented-diskqueue-crash-seal-write.sh \
+	segmented-diskqueue-crash-seal-rename.sh \
+	segmented-diskqueue-crash-checkpoint.sh \
+	segmented-diskqueue-crash-checkpoint-repeat.sh \
+	segmented-diskqueue-crash-commit.sh \
+	segmented-diskqueue-crash-predelete.sh \
+	segmented-diskqueue-crash-unlink.sh
+TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh
+TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh
+EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) \
+	$(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS) segdisk-inspect.py \
+	testsuites/segmented-diskqueue-checkpoint-driver.sh \
+	testsuites/segmented-diskqueue-crash-driver.sh \
+	testsuites/segmented-diskqueue-invalid-state-driver.sh \
+	testsuites/pure-disk-queue-scope-driver.sh
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -36,6 +90,7 @@ EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 
 EXTRA_DIST += unit/impcap_arp_parser_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
+EXTRA_DIST += unit/segdisk_state_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -2382,18 +2437,21 @@ CLEANFILES=\
 	tmp.qi nocert
 
 CLEANFILES+= \
-	IN_AUTO_DEBUG
+	IN_AUTO_DEBUG \
+	runtime_unit_imbeats_seq
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
+# runtime_unit_imbeats_seq is conditional, but an outer build with imbeats
+# enabled can leave it for an inner distcheck configured without imbeats.
 
 
 check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
@@ -2409,6 +2467,9 @@ runtime_unit_msg_replace_SOURCES = \
 
 runtime_unit_ommongodb_date_SOURCES = \
 	unit/ommongodb_date_test.c
+
+runtime_unit_segdisk_state_SOURCES = \
+	unit/segdisk_state_test.c
 
 if ENABLE_IMPCAP
 check_PROGRAMS += runtime_unit_impcap_arp_parser
@@ -2470,12 +2531,15 @@ runtime_unit_msg_replace_CPPFLAGS = \
 runtime_unit_ommongodb_date_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-I$(top_srcdir)/plugins/ommongodb
+runtime_unit_segdisk_state_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
+runtime_unit_segdisk_state_LDADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -2641,6 +2705,13 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
 TESTS += $(TESTS_JSON_OMITIFZERO)
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS)
+endif
+if HAVE_LIBYAML
+TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML)
+endif
 
 if ENABLE_MMSNAREPARSE
 TESTS += $(TESTS_MMSNAREPARSE_MINIMAL)
