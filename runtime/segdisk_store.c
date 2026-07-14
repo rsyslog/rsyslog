@@ -406,15 +406,40 @@ static rsRetVal remove_remaining_segments(segdisk_store_t *s) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..") || !strcmp(de->d_name, "state")) continue;
         if (!segment_name(de->d_name)) {
             r = RS_RET_IO_ERROR;
-            break;
+            /* A foreign entry prevents rmdir(), but it must not prevent us
+             * from removing the queue's own segments.  Continuing here is
+             * important for cleanup-error recovery: the replacement empty
+             * state may only exclude the old segment IDs after every old
+             * segment has actually gone. */
+            continue;
         }
         if (unlinkat(s->dir_fd, de->d_name, 0) != 0 && errno != ENOENT) {
             r = RS_RET_IO_ERROR;
-            break;
+            continue;
         }
     }
     closedir(dir);
     return r;
+}
+
+static rsRetVal directory_has_segments(segdisk_store_t *s, sbool *has_segments) {
+    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (scan_fd < 0) return RS_RET_IO_ERROR;
+    DIR *dir = fdopendir(scan_fd);
+    if (dir == NULL) {
+        close(scan_fd);
+        return RS_RET_IO_ERROR;
+    }
+    *has_segments = 0;
+    struct dirent *de;
+    while ((de = readdir(dir)) != NULL) {
+        if (segment_name(de->d_name)) {
+            *has_segments = 1;
+            break;
+        }
+    }
+    closedir(dir);
+    return RS_RET_OK;
 }
 
 static rsRetVal write_segment_header(segdisk_store_t *s, int fd, uint64_t id) {
@@ -1501,6 +1526,18 @@ static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_seg
         s->dir_fd = open(s->dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
         if (s->dir_fd < 0) return RS_RET_IO_ERROR;
     }
+    /* The failed cleanup can have stopped after unlinking only part of the
+     * old topology.  Make a best effort to finish removing queue-owned files,
+     * then prove none remain before publishing a fresh empty topology.  A
+     * foreign file may still make remove_remaining_segments() report failure;
+     * that is harmless here because it is deliberately excluded from the
+     * segment-only verification and will make the next rmdir retry fail.
+     * Conversely, an undeletable segment leaves the cleanup-in-progress state
+     * authoritative and prevents stale records from being hidden by a new
+     * normal state. */
+    (void)remove_remaining_segments(s);
+    sbool has_segments;
+    if (directory_has_segments(s, &has_segments) != RS_RET_OK || has_segments) return RS_RET_IO_ERROR;
     const sbool state_present = faccessat(s->dir_fd, "state", F_OK, 0) == 0;
     if (!state_present) {
         if (s->state_fd >= 0) close(s->state_fd);
@@ -1515,14 +1552,12 @@ static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_seg
     } else if (random_uuid(s->uuid) != RS_RET_OK) {
         return RS_RET_IO_ERROR;
     }
+    /* Keep every state publication in cleanup-in-progress form until the new
+     * active segment is durable.  Thus a crash during reconstruction finishes
+     * deletion on restart instead of accepting a partially rebuilt store. */
+    s->dematerializing = 1;
     if (!state_present) {
-        /* Publish a valid cleanup-in-progress slot before rebuilding the
-         * active segment.  If reconstruction fails or the process crashes,
-         * startup can finish the empty cleanup instead of finding a newly
-         * created state file with two invalid slots. */
-        s->dematerializing = 1;
         const rsRetVal state_ret = write_state(s, 1, 1);
-        s->dematerializing = 0;
         if (state_ret != RS_RET_OK) {
             close(s->state_fd);
             s->state_fd = -1;
@@ -1531,6 +1566,11 @@ static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_seg
         }
     }
     rsRetVal r = create_active(s);
+    if (r == RS_RET_OK) {
+        s->dematerializing = 0;
+        r = write_state(s, 1, 1);
+        if (r != RS_RET_OK) s->dematerializing = 1;
+    }
     if (r == RS_RET_OK) r = sync_dir(s);
     return r;
 }

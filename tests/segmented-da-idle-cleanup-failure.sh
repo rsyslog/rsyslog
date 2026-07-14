@@ -1,8 +1,10 @@
 #!/bin/bash
 # Force idle cleanup to encounter an unexpected file in the private store
 # directory. The first cleanup must fail visibly while restoring a valid empty
-# materialized store and keeping its worker alive. Removing the blocker must
-# allow the next complete idle interval to dematerialize normally.
+# materialized store and keeping its worker alive. The restored state must
+# reference one newly created active segment, proving partially removed old
+# topology cannot be stranded beside the replacement state. Removing the
+# blocker must allow the next complete idle interval to dematerialize normally.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
@@ -42,6 +44,9 @@ wait_content 'store.idleCleanupFailures=1' "$STATS_FILE"
 [ -f "$SEG_DIR/state" ] || error_exit 1 "cleanup failure did not restore durable state"
 find "$SEG_DIR" -maxdepth 1 -name '*.open' -print -quit | grep -q . ||
 	error_exit 1 "cleanup failure did not restore an active segment"
+segment_count=$(find "$SEG_DIR" -maxdepth 1 -type f -name 'segment-*' -print | wc -l)
+[ "$segment_count" -eq 1 ] ||
+	error_exit 1 "cleanup failure retained $segment_count segments instead of one replacement active segment"
 rm -f "$SEG_DIR/blocker"
 wait_path absent "$SEG_DIR"
 wait_content 'store.idleDematerializations=1' "$STATS_FILE"
