@@ -4989,6 +4989,10 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
 
     const sbool is_da_memory_queue =
         (pThis->qType == QUEUETYPE_FIXED_ARRAY || pThis->qType == QUEUETYPE_LINKEDLIST) && pThis->pszFilePrefix != NULL;
+    /* These are deliberately parser_errmsg(), not advisory warnings:
+     * parser_errmsg marks the configuration dirty.  Permissive startup keeps
+     * running after the unusable value is ignored, while
+     * abortOnUncleanConfig="on" rejects the same configuration. */
     if ((pThis->diskQueueTypeSet || pThis->diskQueueAutoUpgradeSet || pThis->diskQueueIdleTimeoutSet) &&
         !is_da_memory_queue) {
         parser_errmsg(
