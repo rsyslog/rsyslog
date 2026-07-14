@@ -720,7 +720,6 @@ static rsRetVal qqueueChkIsDA(qqueue_t *pThis) {
 static rsRetVal StartDA(qqueue_t *pThis) {
     DEFiRet;
     uchar pszDAQName[128];
-    sbool permit_classic_startup_fallback = 0;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
@@ -820,12 +819,6 @@ static rsRetVal StartDA(qqueue_t *pThis) {
         pThis->cryprovNameFull = NULL;
     }
 
-    /* Preserve the classic queue's long-standing invalid-.qi behavior only
-     * for errors returned while opening that fully configured child.  Engine
-     * resolution, marker publication, construction, and property setup must
-     * still fail the parent queue: treating those failures as an in-memory
-     * fallback could silently discard persistence guarantees. */
-    permit_classic_startup_fallback = child_type == QUEUETYPE_DISK;
     iRet = qqueueStart(runConf, pThis->pqDA);
     /* file not found is expected, that means it is no previous QIF available */
     if (iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND) {
@@ -844,13 +837,7 @@ finalize_it:
             qqueueDestruct(&pThis->pqDA);
         }
         pThis->bIsDA = 0;
-        if (permit_classic_startup_fallback) {
-            LogError(0, startup_error, "%s: error creating classic disk queue; continuing in pure in-memory mode",
-                     obj.GetName((obj_t *)pThis));
-            iRet = RS_RET_OK;
-        } else {
-            LogError(0, startup_error, "%s: error creating disk queue - giving up.", obj.GetName((obj_t *)pThis));
-        }
+        LogError(0, startup_error, "%s: error creating disk queue - giving up.", obj.GetName((obj_t *)pThis));
     }
 
     RETiRet;
@@ -1460,6 +1447,17 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
             corruptionDetected = 1;
             LogError(0, RS_RET_ERR, "queue corruption: .qi file missing or inaccessible but %d segment files exist",
                      nFiles);
+        } else if (loadRet != RS_RET_FILE_NOT_FOUND) {
+            /* A readable path that failed deserialization is corrupt even
+             * without segment files.  Route it through normal safe-mode
+             * quarantine so a fresh classic child can start.  If stat fails
+             * (permissions or another I/O error), retain loadRet and fail
+             * startup instead of silently dropping persistence. */
+            struct stat qi_st;
+            if (stat((char *)pThis->pszQIFNam, &qi_st) == 0) {
+                corruptionDetected = 1;
+                LogError(0, RS_RET_ERR, "queue corruption: .qi file is invalid and contains no usable queue state");
+            }
         }
     }
 
