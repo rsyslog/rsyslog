@@ -3873,6 +3873,13 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
         CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 1));
         CHKiRet(wtpSetpfIdleTimeout(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))qqueueSegDiskIdleTimeout));
         CHKiRet(wtpSettoWrkShutdown(pThis->pWtpReg, pThis->diskQueueIdleTimeout));
+    } else if (pThis->segdiskDAChild) {
+        /* An idle timeout of -1 disables dematerialization without disabling
+         * the normal shutdown timeout for additional workers.  Explicitly
+         * keep slot zero non-timeout-capable: wtpStartWrkr() consequently
+         * marks that slot always-running, so the generic worker timeout can
+         * never terminate the segmented DA child's final worker. */
+        CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 0));
     }
     CHKiRet(wtpSetpUsr(pThis->pWtpReg, pThis));
     CHKiRet(wtpConstructFinalize(pThis->pWtpReg));

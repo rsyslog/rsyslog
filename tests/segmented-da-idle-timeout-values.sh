@@ -38,6 +38,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 		queue.type="LinkedList" queue.filename="idle-disabled" queue.size="50"
 		queue.highWatermark="10" queue.lowWatermark="5"
 		queue.dequeueBatchSize="1" queue.dequeueSlowdown="10"
+		queue.timeoutWorkerThreadShutdown="100"
 		queue.diskQueueType="segmentedDisk" queue.diskQueueIdleTimeout="-1")
 }
 '
@@ -51,6 +52,10 @@ wait_path_state absent "$SPOOL_DIR/idle-zero.segq"
 ./msleep 1000
 [ -d "$SPOOL_DIR/idle-disabled.segq" ] || error_exit 1 "idle timeout -1 removed the store"
 wait_content 'store.idleDematerializations=1' "$STATS_FILE"
+# The 100ms generic worker timeout has elapsed several times by now.  A live
+# worker proves that -1 protects slot zero while still leaving the generic
+# timeout available for any additional workers.
+content_check --regex 'idle-disabled queue\[DA\].*workers.current=1' "$STATS_FILE"
 
 shutdown_when_empty
 wait_shutdown
