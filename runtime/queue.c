@@ -1267,6 +1267,22 @@ static sbool fileEntryExistsByNumber(const fileEntry_t *files, int nFiles, int n
     return bsearch(&key, files, (size_t)nFiles, sizeof(fileEntry_t), fileEntryCmpByNumber) != NULL;
 }
 
+static sbool qqueueLoadRetIsStructuralCorruption(rsRetVal loadRet) {
+    static const rsRetVal structural_errors[] = {
+        RS_RET_FILE_TRUNCATED,      RS_RET_EOF,
+        RS_RET_INVALID_OID,         RS_RET_INVALID_HEADER,
+        RS_RET_INVALID_HEADER_VERS, RS_RET_INVALID_DELIMITER,
+        RS_RET_INVALID_PROPFRAME,   RS_RET_NO_PROPLINE,
+        RS_RET_INVALID_TRAILER,     RS_RET_INVALID_HEADER_RECTYPE,
+        RS_RET_QTYPE_MISMATCH,      RS_RET_SYNTAX_ERROR,
+        RS_RET_DS_PROP_SEQ_ERR,     RS_RET_INVLD_PROP,
+    };
+    for (size_t i = 0; i < sizeof(structural_errors) / sizeof(structural_errors[0]); ++i) {
+        if (loadRet == structural_errors[i]) return 1;
+    }
+    return 0;
+}
+
 static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
     DEFiRet;
     DIR *d = NULL;
@@ -1447,17 +1463,13 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
             corruptionDetected = 1;
             LogError(0, RS_RET_ERR, "queue corruption: .qi file missing or inaccessible but %d segment files exist",
                      nFiles);
-        } else if (loadRet != RS_RET_FILE_NOT_FOUND) {
-            /* A readable path that failed deserialization is corrupt even
-             * without segment files.  Route it through normal safe-mode
-             * quarantine so a fresh classic child can start.  If stat fails
-             * (permissions or another I/O error), retain loadRet and fail
-             * startup instead of silently dropping persistence. */
-            struct stat qi_st;
-            if (stat((char *)pThis->pszQIFNam, &qi_st) == 0) {
-                corruptionDetected = 1;
-                LogError(0, RS_RET_ERR, "queue corruption: .qi file is invalid and contains no usable queue state");
-            }
+        } else if (qqueueLoadRetIsStructuralCorruption(loadRet)) {
+            /* Only deterministic parser/framing failures prove that the .qi
+             * contents are corrupt.  I/O, access, allocation, and other
+             * operational failures retain loadRet and fail startup so a
+             * transient storage problem can never quarantine healthy state. */
+            corruptionDetected = 1;
+            LogError(0, RS_RET_ERR, "queue corruption: .qi file is invalid and contains no usable queue state");
         }
     }
 
