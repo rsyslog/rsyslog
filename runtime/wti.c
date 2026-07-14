@@ -456,6 +456,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
             break; /* end of loop */
         } else if (localRet == RS_RET_IDLE) {
             if (terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccurred) {
+                if (bInactivityTOOccurred && pWtp->pfIdleTimeout != NULL && pWtp->pWrkr[0] == pThis &&
+                    pWtp->pfIdleTimeout(pWtp->pUsr) == RS_RET_RETRY) {
+                    bInactivityTOOccurred = 0;
+                    continue;
+                }
                 DBGOPRINT((obj_t *)pThis,
                           "terminating worker terminateRet=%d, "
                           "bInactivityTOOccurred=%d\n",

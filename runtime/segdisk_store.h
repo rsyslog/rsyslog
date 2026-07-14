@@ -17,6 +17,7 @@ typedef struct segdisk_store_config_s {
     int64_t max_disk_space;
     unsigned int checkpoint_interval;
     sbool sync_files;
+    sbool lazy_create;
 } segdisk_store_config_t;
 
 typedef struct segdisk_store_stats_s {
@@ -37,6 +38,9 @@ typedef struct segdisk_store_stats_s {
     uint64_t startup_segment_files_probed;
     uint64_t recovery_pending;
     uint64_t corruption_segments;
+    uint64_t materializations;
+    uint64_t dematerializations;
+    uint64_t idle_cleanup_failures;
 } segdisk_store_stats_t;
 
 #ifdef ENABLE_IMDIAG
@@ -50,6 +54,10 @@ typedef enum segdisk_test_fault_point_e {
     SEGDISK_TEST_FAULT_COMMIT_PUBLISHED,
     SEGDISK_TEST_FAULT_PREDELETE_PUBLISHED,
     SEGDISK_TEST_FAULT_SEGMENT_UNLINKED,
+    SEGDISK_TEST_FAULT_IDLE_EMPTY_PUBLISHED,
+    SEGDISK_TEST_FAULT_IDLE_SEGMENTS_UNLINKED,
+    SEGDISK_TEST_FAULT_IDLE_STATE_UNLINKED,
+    SEGDISK_TEST_FAULT_IDLE_DIRECTORY_REMOVED,
 } segdisk_test_fault_point_t;
 #endif
 
@@ -58,9 +66,12 @@ rsRetVal segdiskStoreAppend(segdisk_store_t *store, smsg_t *msg, sbool internal_
 rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *store, batch_t *batch, int max, int *skipped, int *discovered);
 rsRetVal segdiskStoreCompleteBatch(segdisk_store_t *store, batch_t *batch, int *committed, int *retried);
 rsRetVal segdiskStoreCheckpoint(segdisk_store_t *store, sbool force_sync);
+rsRetVal segdiskStoreDematerialize(segdisk_store_t *store);
 rsRetVal segdiskStoreClose(segdisk_store_t **store, sbool empty);
 void segdiskStoreGetStats(const segdisk_store_t *store, segdisk_store_stats_t *stats);
 sbool segdiskStoreMayHaveData(const segdisk_store_t *store);
+sbool segdiskStoreIsMaterialized(const segdisk_store_t *store);
+sbool segdiskStoreCanDematerialize(const segdisk_store_t *store);
 #ifdef ENABLE_IMDIAG
 rsRetVal segdiskStoreSetTestFault(segdisk_store_t *store, const char *point, unsigned int hit_count);
 void segdiskStoreClearTestFault(segdisk_store_t *store);

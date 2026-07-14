@@ -68,6 +68,8 @@ struct wtp_s {
         rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
         rsRetVal (*pfRateLimiter)(void *pUsr);
         rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
+        rsRetVal (*pfIdleTimeout)(void *pUsr);
+        sbool bAllowFirstWorkerToTimeout;
         /* end user objects */
         uchar *pszDbgHdr; /* header string for debug messages */
         DEF_ATOMIC_HELPER_MUT(mutCurNumWrkThrd);
@@ -99,6 +101,8 @@ PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *));
 PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));
+PROTOTYPEpropSetMethFP(wtp, pfIdleTimeout, rsRetVal (*pVal)(void *));
+PROTOTYPEpropSetMeth(wtp, bAllowFirstWorkerToTimeout, sbool);
 PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
 PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);
