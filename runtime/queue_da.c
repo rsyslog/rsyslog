@@ -179,6 +179,11 @@ rsRetVal qdaEngineResolve(const qda_engine_config_t *config, qda_engine_result_t
         result->effective = QDA_ENGINE_DISK;
         result->reason = QDA_REASON_MARKER;
     } else if (result->marker_present && result->marker_engine == QDA_ENGINE_DISK && config->auto_upgrade) {
+        /* This is the requested upgrade boundary: the durable marker proves
+         * that the previous engine was classic, while the absence of .qi and
+         * numeric segments proves that it drained.  Selection changes only
+         * during this restart; StartDA atomically replaces the marker before
+         * constructing the new child, and no records are converted. */
         result->effective = QDA_ENGINE_SEGMENTED_DISK;
         result->reason = QDA_REASON_AUTO_UPGRADE;
     } else if (result->marker_present) {

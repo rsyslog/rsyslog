@@ -755,6 +755,9 @@ static rsRetVal StartDA(qqueue_t *pThis) {
                    "to use segmentedDisk after the classic backlog drains",
                    obj.GetName((obj_t *)pThis), pThis->pszFilePrefix);
     }
+    /* A marker mismatch is the intentional auto-upgrade case.  The resolver
+     * permits it only after proving that the old classic store is empty, so
+     * publish the new selection durably at this restart boundary. */
     if (engine_result.classic_data || engine_result.segmented_data ||
         (engine_result.marker_present && engine_result.marker_engine != engine_result.effective)) {
         CHKiRet(qdaEngineWriteMarker((const char *)pThis->pszSpoolDir, (const char *)pThis->pszFilePrefix,
