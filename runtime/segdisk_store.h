@@ -70,7 +70,6 @@ rsRetVal segdiskStoreDematerialize(segdisk_store_t *store);
 rsRetVal segdiskStoreClose(segdisk_store_t **store, sbool empty);
 void segdiskStoreGetStats(const segdisk_store_t *store, segdisk_store_stats_t *stats);
 sbool segdiskStoreMayHaveData(const segdisk_store_t *store);
-sbool segdiskStoreIsMaterialized(const segdisk_store_t *store);
 sbool segdiskStoreCanDematerialize(const segdisk_store_t *store);
 #ifdef ENABLE_IMDIAG
 rsRetVal segdiskStoreSetTestFault(segdisk_store_t *store, const char *point, unsigned int hit_count);

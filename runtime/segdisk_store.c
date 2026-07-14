@@ -402,7 +402,13 @@ static rsRetVal remove_remaining_segments(segdisk_store_t *s) {
     }
     rsRetVal r = RS_RET_OK;
     struct dirent *de;
-    while ((de = readdir(dir)) != NULL) {
+    while (1) {
+        errno = 0;
+        de = readdir(dir);
+        if (de == NULL) {
+            if (errno != 0) r = RS_RET_IO_ERROR;
+            break;
+        }
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..") || !strcmp(de->d_name, "state")) continue;
         if (!segment_name(de->d_name)) {
             r = RS_RET_IO_ERROR;
@@ -418,7 +424,7 @@ static rsRetVal remove_remaining_segments(segdisk_store_t *s) {
             continue;
         }
     }
-    closedir(dir);
+    if (closedir(dir) != 0) r = RS_RET_IO_ERROR;
     return r;
 }
 
@@ -432,14 +438,16 @@ static rsRetVal directory_has_segments(segdisk_store_t *s, sbool *has_segments) 
     }
     *has_segments = 0;
     struct dirent *de;
+    errno = 0;
     while ((de = readdir(dir)) != NULL) {
         if (segment_name(de->d_name)) {
             *has_segments = 1;
             break;
         }
     }
-    closedir(dir);
-    return RS_RET_OK;
+    const int scan_errno = errno;
+    if (closedir(dir) != 0) return RS_RET_IO_ERROR;
+    return !*has_segments && scan_errno != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
 }
 
 static rsRetVal write_segment_header(segdisk_store_t *s, int fd, uint64_t id) {
@@ -1347,11 +1355,11 @@ sbool segdiskStoreMayHaveData(const segdisk_store_t *s) {
            (s->read_segment_id < s->active->id || s->read_offset < s->active->data_end);
 }
 
-sbool segdiskStoreIsMaterialized(const segdisk_store_t *s) {
-    return s != NULL && s->dir_fd >= 0;
-}
-
 sbool segdiskStoreCanDematerialize(const segdisk_store_t *s) {
+    /* recovery_first is durable topology, not an undiscovered-work flag: it
+     * may still name the final, fully inspected recovery segment until the
+     * commit frontier enters a later segment.  segdiskStoreMayHaveData() uses
+     * the live read cursor and is the authoritative recovery-work check. */
     return s != NULL && s->dir_fd >= 0 && s->known_queue_size == 0 && s->pending_head == NULL && s->delete_first == 0 &&
            !segdiskStoreMayHaveData(s);
 }

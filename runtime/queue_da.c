@@ -1,3 +1,25 @@
+/*
+ * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of the rsyslog runtime library.
+ *
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
+
 /* Disk-assisted queue engine selection and durable marker handling. */
 #include "config.h"
 
@@ -107,8 +129,9 @@ static rsRetVal read_marker(const char *path, sbool *present, qda_engine_mode_t 
     close(fd);
     if (off != (size_t)st.st_size) return RS_RET_IO_ERROR;
     buf[off] = '\0';
-    const char *value = buf + sizeof(QDA_MARKER_MAGIC) - 1;
-    if (strncmp(buf, QDA_MARKER_MAGIC, sizeof(QDA_MARKER_MAGIC) - 1) != 0) return RS_RET_INVALID_VALUE;
+    const size_t magic_len = sizeof(QDA_MARKER_MAGIC) - 1;
+    if (off <= magic_len || memcmp(buf, QDA_MARKER_MAGIC, magic_len) != 0) return RS_RET_INVALID_VALUE;
+    const char *value = buf + magic_len;
     if (!strcmp(value, "disk\n"))
         *engine = QDA_ENGINE_DISK;
     else if (!strcmp(value, "segmentedDisk\n"))

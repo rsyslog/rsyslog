@@ -499,7 +499,10 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
 
     if (i == pThis->iNumWorkerThreads) ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 
-    if ((i == 0 && !pThis->bAllowFirstWorkerToTimeout) || pThis->toWrkShutdown == -1) {
+    const sbool first_worker_runs_forever =
+        i == 0 && (!pThis->bAllowFirstWorkerToTimeout || pThis->toFirstWrkShutdown == -1 ||
+                   (pThis->toFirstWrkShutdown == -2 && pThis->toWrkShutdown == -1));
+    if (first_worker_runs_forever || (i != 0 && pThis->toWrkShutdown == -1)) {
         wtiSetAlwaysRunning(pThis->pWrkr[i]);
     }
 

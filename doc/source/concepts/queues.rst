@@ -226,8 +226,10 @@ the segmented child stays unmaterialized until the first spill. The
 ``queue.diskQueueType`` selector can pin the classic or segmented engine. Its
 default ``auto`` preserves existing classic backlogs, with a warning, and uses
 a durable ``.da-engine`` marker to keep the choice stable. It never converts
-records or mixes the two formats. Queue encryption providers and classic-only
-corruption modes make ``auto`` select the classic engine.
+records or mixes the two formats. For a fresh selection, queue encryption
+providers and classic-only corruption modes make ``auto`` select the classic
+engine. If segmented state already exists, those unsupported options make
+initialization fail instead of converting or falling back to another engine.
 
 For a fresh segmented disk-assisted child, neither the marker nor the
 ``.segq`` store exists before the first spill. The marker is made durable

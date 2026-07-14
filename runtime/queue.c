@@ -1272,6 +1272,11 @@ static sbool fileEntryExistsByNumber(const fileEntry_t *files, int nFiles, int n
 }
 
 static sbool qqueueLoadRetIsStructuralCorruption(rsRetVal loadRet) {
+    /* This classifier is used only by qConstructDisk() after parsing classic
+     * .qi state. Segmented state and DA engine markers have separate fail-fast
+     * validation paths and never reach it. Do not classify the generic
+     * RS_RET_INVALID_VALUE here: it is not a classic deserializer framing
+     * result and may represent a non-corruption startup/configuration error. */
     static const rsRetVal structural_errors[] = {
         RS_RET_FILE_TRUNCATED,      RS_RET_EOF,
         RS_RET_INVALID_OID,         RS_RET_INVALID_HEADER,
