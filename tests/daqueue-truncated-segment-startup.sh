@@ -310,7 +310,7 @@ wait_for_recovery_outcome() {
 	deadline=$(( start_ts + RECOVERY_WAIT_TIMEOUT ))
 	next_progress=$start_ts
 
-	while [ $(date +%s) -le "$deadline" ]; do
+	while [ "$(date +%s)" -le "$deadline" ]; do
 		now=$(date +%s)
 		bad_after=$(count_bad_dirs)
 		if [ "$bad_after" -gt "$bad_before" ]; then
