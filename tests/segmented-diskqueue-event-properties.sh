@@ -14,6 +14,18 @@ REFERENCE_FILE="$PWD/${RSYSLOG_DYNNAME}.reference.log"
 RECOVERED_FILE="$PWD/${RSYSLOG_DYNNAME}.recovered.log"
 BLOCKED_FILE="$PWD/${RSYSLOG_DYNNAME}.missing/output.log"
 
+if [ "${SEGDISK_EVENT_DA:-0}" = 1 ]; then
+	QUEUE_CONFIG='queue.type="LinkedList"
+	queue.filename="eventq"
+	queue.diskQueueType="segmentedDisk"
+	queue.size="20"
+	queue.highWatermark="5"
+	queue.lowWatermark="2"'
+else
+	QUEUE_CONFIG='queue.type="segmentedDisk"
+	queue.filename="eventq"'
+fi
+
 write_conf() {
 	generate_conf
 	add_conf '
@@ -21,6 +33,7 @@ global(workDirectory="'"$SPOOL_DIR"'")
 
 template(name="eventSnapshot" type="list") {
 	constant(value="{")
+	property(format="jsonf" name="msg" field.number="2" field.delimiter="58" outname="sequence") constant(value=",")
 	property(format="jsonf" name="protocol-version" outname="protocol_version") constant(value=",")
 	property(format="jsonf" name="syslogseverity" outname="severity") constant(value=",")
 	property(format="jsonf" name="syslogfacility" outname="facility") constant(value=",")
@@ -53,15 +66,16 @@ set $.parse_result = parse_json(
 	"{\"text\":\"local-value\",\"integer\":7,\"boolean\":false}", "\$.local");
 unset $.parse_result;
 
-action(type="omfile" file="'"$REFERENCE_FILE"'" template="eventSnapshot")
-action(type="omfile" file="'"$1"'" template="eventSnapshot"
-	createDirs="off"
-	action.resumeRetryCount="-1"
-	queue.type="segmentedDisk"
-	queue.filename="eventq"
-	queue.maxFileSize="4k"
-	queue.dequeueBatchSize="8"
-	queue.saveOnShutdown="on")
+if $msg contains "msgnum:" then {
+	action(type="omfile" file="'"$REFERENCE_FILE"'" template="eventSnapshot")
+	action(type="omfile" file="'"$1"'" template="eventSnapshot"
+		createDirs="off"
+		action.resumeRetryCount="-1"
+'"$QUEUE_CONFIG"'
+		queue.maxFileSize="4k"
+		queue.dequeueBatchSize="8"
+		queue.saveOnShutdown="on")
+}
 '
 }
 
@@ -70,7 +84,9 @@ startup
 injectmsg 0 "$NUMMESSAGES"
 wait_file_lines "$REFERENCE_FILE" "$NUMMESSAGES"
 shutdown_immediate
-. "$srcdir/diag.sh" kill-immediate
+if [ "${SEGDISK_EVENT_DA:-0}" != 1 ]; then
+	. "$srcdir/diag.sh" kill-immediate
+fi
 wait_shutdown
 if [ "$(wc -c < "$SPOOL_DIR/eventq.segq/state")" -ne 512 ]; then
 	echo "FAIL: segmented action queue was not persisted"
@@ -82,6 +98,16 @@ startup
 wait_file_lines "$RECOVERED_FILE" "$NUMMESSAGES"
 shutdown_when_empty
 wait_shutdown
-cmp_exact_file "$REFERENCE_FILE" "$RECOVERED_FILE"
+if [ "${SEGDISK_EVENT_DA:-0}" = 1 ]; then
+	# The DA shutdown path may append the final in-memory records after records
+	# already spilled to disk. Sorting by the fixed-width leading sequence key
+	# keeps this test focused on lossless full-event persistence, not on shutdown
+	# transfer ordering, which is covered separately by the DA ordering tests.
+	sort "$REFERENCE_FILE" > "${REFERENCE_FILE}.sorted"
+	sort "$RECOVERED_FILE" > "${RECOVERED_FILE}.sorted"
+	cmp_exact_file "${REFERENCE_FILE}.sorted" "${RECOVERED_FILE}.sorted"
+else
+	cmp_exact_file "$REFERENCE_FILE" "$RECOVERED_FILE"
+fi
 rm -rf "${RSYSLOG_DYNNAME}.spool"
 exit_test

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Exercise classic DA recovery from a deliberately mangled .qi file. This test
+# inspects classic state directly, so the modern queue configuration pins the
+# classic engine; restart must recover the full sequence, allowing duplicates.
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test currently does not work on all flavors of Solaris."
@@ -6,16 +9,16 @@ skip_platform "SunOS"  "This test currently does not work on all flavors of Sola
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 1
-$MainMsgQueueSaveOnShutdown on
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $ModLoad ../plugins/omtesting/.libs/omtesting
 
-# Configure a disk-assisted main queue.
-$WorkDirectory '$RSYSLOG_DYNNAME'.spool
-$MainMsgQueueType LinkedList
-$MainMsgQueueFilename mainq
+# Configure a classic disk-assisted main queue. Keep this fully in the modern
+# frontend because diskQueueType intentionally has no legacy directive alias.
+global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
+main_queue(queue.type="LinkedList" queue.filename="mainq"
+	queue.timeoutShutdown="1" queue.saveOnShutdown="on"
+	queue.diskQueueType="disk")
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

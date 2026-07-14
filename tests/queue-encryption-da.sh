@@ -7,6 +7,7 @@ module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 main_queue(queue.filename="mainq"
 	queue.type="linkedList"
+	queue.diskQueueType="disk"
 	queue.maxDiskSpace="4m"
 	queue.maxfilesize="1m"
 	queue.timeoutenqueue="300000"
