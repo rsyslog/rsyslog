@@ -1,13 +1,15 @@
 #!/bin/bash
-# Test for a startup with a bad qi file. This tests simply tests
-# if the rsyslog engine survives (we had segfaults in this situation
-# in the past).
+# Test startup fallback with a bad classic .qi file. The daemon must survive,
+# process messages in memory, and shut down cleanly. The static fixture now
+# receives a durable classic-engine marker during selection, so the test
+# removes that generated marker after the daemon has stopped.
 # added 2009-10-21 by RGerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[badqi.sh\]: test startup with invalid .qi file
 . ${srcdir:=.}/diag.sh init
+rm -f bad_qi/dbq.da-engine
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -27,5 +29,6 @@ startup
 tcpflood -m20
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown  # wait for process to terminate
+rm -f bad_qi/dbq.da-engine
 seq_check 0 19
 exit_test

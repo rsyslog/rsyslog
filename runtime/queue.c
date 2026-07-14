@@ -720,6 +720,7 @@ static rsRetVal qqueueChkIsDA(qqueue_t *pThis) {
 static rsRetVal StartDA(qqueue_t *pThis) {
     DEFiRet;
     uchar pszDAQName[128];
+    sbool permit_classic_inmemory_fallback = 0;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
@@ -762,6 +763,7 @@ static rsRetVal StartDA(qqueue_t *pThis) {
 
     const queueType_t child_type =
         engine_result.effective == QDA_ENGINE_SEGMENTED_DISK ? QUEUETYPE_SEGMENTED_DISK : QUEUETYPE_DISK;
+    permit_classic_inmemory_fallback = child_type == QUEUETYPE_DISK;
     /* create message queue */
     CHKiRet(qqueueConstruct(&pThis->pqDA, child_type, pThis->iNumWorkerThreads, 0, pThis->pConsumer));
 
@@ -828,11 +830,18 @@ static rsRetVal StartDA(qqueue_t *pThis) {
 
 finalize_it:
     if (iRet != RS_RET_OK) {
+        const rsRetVal startup_error = iRet;
         if (pThis->pqDA != NULL) {
             qqueueDestruct(&pThis->pqDA);
         }
-        LogError(0, iRet, "%s: error creating disk queue - giving up.", obj.GetName((obj_t *)pThis));
         pThis->bIsDA = 0;
+        if (permit_classic_inmemory_fallback) {
+            LogError(0, startup_error, "%s: error creating classic disk queue; continuing in pure in-memory mode",
+                     obj.GetName((obj_t *)pThis));
+            iRet = RS_RET_OK;
+        } else {
+            LogError(0, startup_error, "%s: error creating disk queue - giving up.", obj.GetName((obj_t *)pThis));
+        }
     }
 
     RETiRet;
