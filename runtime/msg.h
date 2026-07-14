@@ -180,9 +180,12 @@ rsRetVal msgDestruct(smsg_t **ppM);
 smsg_t *MsgDup(smsg_t *pOld);
 smsg_t *MsgAddRef(smsg_t *pM);
 void setProtocolVersion(smsg_t *pM, int iNewVersion);
-/* Retains its own property reference; the caller remains responsible for
- * releasing the reference it passes in. */
-void MsgSetInputName(smsg_t *pMsg, prop_t *);
+/** Set a message's input-name property.
+ * @param pMsg message to update
+ * @param inputName property retained by the message; the caller remains
+ * responsible for releasing its own reference
+ */
+void MsgSetInputName(smsg_t *pMsg, prop_t *inputName);
 rsRetVal MsgSetInputNameStr(smsg_t *pMsg, const uchar *text, int len);
 rsRetVal MsgSetRcvFromText(smsg_t *pMsg, const uchar *text, int len);
 rsRetVal MsgSetRcvFromIPText(smsg_t *pMsg, const uchar *text, int len);
@@ -201,9 +204,12 @@ rsRetVal MsgAddToStructuredData(smsg_t *pMsg, uchar *toadd, rs_size_t len);
 void MsgGetStructuredData(smsg_t *pM, uchar **pBuf, rs_size_t *len);
 rsRetVal msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa);
 rsRetVal msgSetFromSockinfoLen(smsg_t *pThis, const struct sockaddr_storage *sa, size_t salen);
-/* Retains its own property reference; the caller remains responsible for
- * releasing the reference it passes in. */
-void MsgSetRcvFrom(smsg_t *pMsg, prop_t *);
+/** Set a message's received-from property.
+ * @param pMsg message to update
+ * @param rcvFrom property retained by the message; the caller remains
+ * responsible for releasing its own reference
+ */
+void MsgSetRcvFrom(smsg_t *pMsg, prop_t *rcvFrom);
 void MsgSetRcvFromStr(smsg_t *const pMsg, const uchar *pszRcvFrom, const int, prop_t **);
 rsRetVal MsgSetRcvFromIP(smsg_t *pMsg, prop_t *);
 rsRetVal MsgSetRcvFromIPStr(smsg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp);

@@ -1095,6 +1095,9 @@ static rsRetVal adopt_reserved_segment(segdisk_store_t *s) {
         free(recover);
     }
     free(path);
+    /* If the missing published active ID was the old frontier, this adopted
+     * next-ID segment is now the earliest live recovery data. */
+    if (s->first_live_segment == 0) s->first_live_segment = id;
     if (s->recovery_first == 0) s->recovery_first = id;
     s->recovery_last = id;
     if (s->last_data_segment < id) s->last_data_segment = id;
