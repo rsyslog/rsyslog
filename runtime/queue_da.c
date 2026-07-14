@@ -82,7 +82,11 @@ static rsRetVal find_classic_segments(const char *dir, const char *prefix, sbool
         }
     }
     const int saved_errno = errno;
-    closedir(d);
+    /* A close failure means the directory probe did not complete reliably,
+     * even if a matching name was observed.  Engine selection must fail
+     * closed here: treating a partial/invalid probe as authoritative could
+     * select an engine that conflicts with persistent data. */
+    if (closedir(d) != 0) return RS_RET_IO_ERROR;
     if (!*found && saved_errno != 0) return RS_RET_IO_ERROR;
     return RS_RET_OK;
 }
@@ -207,6 +211,10 @@ rsRetVal qdaEngineResolve(const qda_engine_config_t *config, qda_engine_result_t
         result->effective = QDA_ENGINE_SEGMENTED_DISK;
         result->reason = QDA_REASON_SEGMENTED_DATA;
     } else if (config->requires_classic_features) {
+        /* Unsupported segmented features take precedence over an empty
+         * segmented marker in auto mode.  The data probes above proved that
+         * changing the marker cannot strand records, and auto is required to
+         * select the classic engine for these features. */
         result->effective = QDA_ENGINE_DISK;
         result->reason = QDA_REASON_CLASSIC_FEATURE;
     } else if (result->marker_present && result->marker_engine == QDA_ENGINE_DISK && !config->auto_upgrade) {

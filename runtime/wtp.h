@@ -91,6 +91,12 @@ rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
+/** Wake every existing worker without creating a stopped worker.
+ *
+ * The caller must hold the pool's pmutUsr mutex so the queue predicate and
+ * pthread condition signal cannot race. The helper serializes only the worker
+ * table walk with mutWtp; it does not acquire pmutUsr itself.
+ */
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);

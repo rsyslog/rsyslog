@@ -1359,9 +1359,11 @@ sbool segdiskStoreCanDematerialize(const segdisk_store_t *s) {
     /* recovery_first is durable topology, not an undiscovered-work flag: it
      * may still name the final, fully inspected recovery segment until the
      * commit frontier enters a later segment.  segdiskStoreMayHaveData() uses
-     * the live read cursor and is the authoritative recovery-work check. */
+     * the live read cursor and is the authoritative recovery-work check. A
+     * durable cleanup already in progress is also eligible: failed repair may
+     * retain stale cursors, but cleanup intent proves the store was empty. */
     return s != NULL && s->dir_fd >= 0 && s->known_queue_size == 0 && s->pending_head == NULL && s->delete_first == 0 &&
-           !segdiskStoreMayHaveData(s);
+           (s->dematerializing || !segdiskStoreMayHaveData(s));
 }
 
 rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, int *skipped, int *discovered) {
@@ -1530,6 +1532,7 @@ static void reset_after_dematerialize(segdisk_store_t *s) {
     s->dematerializing = 0;
     s->stats.bytes = 0;
     s->stats.segments = 0;
+    s->stats.retry_overage_bytes = 0;
 }
 
 static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_segment) {

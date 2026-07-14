@@ -55,6 +55,8 @@ static qda_engine_result_t resolve(
         .requires_classic_features = classic_features,
     };
     qda_engine_result_t result;
+    /* Callers may ignore the returned result for rejection cases because this
+     * helper itself makes the return-code expectation a fatal test oracle. */
     CHECK(qdaEngineResolve(&config, &result) == expected);
     return result;
 }
@@ -128,6 +130,8 @@ int main(void) {
     CHECK(access(path, F_OK) != 0);
     result = resolve(root, QDA_ENGINE_AUTO, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_SEGMENTED_DISK && result.marker_present);
+    result = resolve(root, QDA_ENGINE_AUTO, 0, 1, RS_RET_OK);
+    CHECK(result.effective == QDA_ENGINE_DISK && result.reason == QDA_REASON_CLASSIC_FEATURE);
     result = resolve(root, QDA_ENGINE_DISK, 0, 0, RS_RET_OK);
     CHECK(result.effective == QDA_ENGINE_DISK && result.reason == QDA_REASON_CONFIGURED);
 

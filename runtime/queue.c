@@ -3917,6 +3917,10 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(wtpSetpmutUsr(pThis->pWtpReg, pThis->mut));
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpReg, pThis->iNumWorkerThreads));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpReg, pThis->toWrkShutdown));
+    /* This callback implements runtime idle dematerialization only.  Process
+     * shutdown deliberately stops and joins the workers without waiting for
+     * this timer; qDestructSegDisk() then closes the store and, when empty,
+     * removes its segments, state file, and directory synchronously. */
     if (pThis->segdiskDAChild && pThis->diskQueueIdleTimeout != -1) {
         CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 1));
         CHKiRet(wtpSetpfIdleTimeout(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))qqueueSegDiskIdleTimeout));
