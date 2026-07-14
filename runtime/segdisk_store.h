@@ -7,8 +7,14 @@
 #include "rsyslog.h"
 #include "batch.h"
 
+/** Opaque segmented queue store. All access is serialized by its queue lock. */
 typedef struct segdisk_store_s segdisk_store_t;
 
+/** Configuration captured when a segmented store object is constructed.
+ *
+ * lazy_create keeps a DA child unmaterialized until its first append. It does
+ * not change the eager lifecycle of a pure segmentedDisk queue.
+ */
 typedef struct segdisk_store_config_s {
     const char *work_dir;
     const char *file_prefix;
@@ -20,6 +26,12 @@ typedef struct segdisk_store_config_s {
     sbool lazy_create;
 } segdisk_store_config_t;
 
+/** Monotonic operation counters and current physical store gauges.
+ *
+ * bytes and segments describe the current topology. The remaining fields are
+ * cumulative counters, including lazy materialization and idle-cleanup
+ * outcomes; startup_payload_bytes_read is expected to remain zero.
+ */
 typedef struct segdisk_store_stats_s {
     int64_t bytes;
     int segments;
@@ -61,6 +73,22 @@ typedef enum segdisk_test_fault_point_e {
 } segdisk_test_fault_point_t;
 #endif
 
+/**
+ * Concurrency & Locking
+ * ---------------------
+ * Every function below is called with the owning queue mutex held. The same
+ * mutex is shared by a DA parent and its child, so no store function acquires
+ * an independent lifecycle lock. Append serializes synchronously and retains
+ * no message reference. A dequeued batch retains internal completion state
+ * until CompleteBatch commits or retry-appends every element.
+ *
+ * Dematerialize is destructive and succeeds only when CanDematerialize proves
+ * there is no known data, undiscovered recovery work, pending batch, retry,
+ * completion, or deletion. Failure leaves a materialized recoverable store.
+ * Close destroys the object; Dematerialize resets the same object for a later
+ * lazy append. GetStats and test-fault operations are safe before lazy
+ * materialization.
+ */
 rsRetVal segdiskStoreOpen(segdisk_store_t **store, const segdisk_store_config_t *config, int *queue_size);
 rsRetVal segdiskStoreAppend(segdisk_store_t *store, smsg_t *msg, sbool internal_retry, int64_t *written);
 rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *store, batch_t *batch, int max, int *skipped, int *discovered);

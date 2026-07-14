@@ -39,7 +39,8 @@ for ((cycle = 0; cycle < SEGDISK_IDLE_FAULT_REPEATS; ++cycle)); do
 		./msleep 100
 	done
 	if kill -0 "$crashed_pid" 2>/dev/null; then
-		error_exit 1 "idle fault point did not terminate rsyslogd: $SEGDISK_IDLE_FAULT_POINT"
+		printf 'FAIL: idle fault point did not terminate rsyslogd: %s\n' "$SEGDISK_IDLE_FAULT_POINT"
+		error_exit 1
 	fi
 	wait "$crashed_pid" 2>/dev/null || true
 	rm -f "$RSYSLOG_PIDBASE.pid"
@@ -51,5 +52,8 @@ startup
 shutdown_when_empty
 wait_shutdown
 seq_check 0 $((NUMMESSAGES - 1))
-[ -f "$SPOOL_DIR/mainq.da-engine" ] || error_exit 1 "engine marker missing after cleanup crash"
+if [ ! -f "$SPOOL_DIR/mainq.da-engine" ]; then
+	printf 'FAIL: engine marker missing after cleanup crash\n'
+	error_exit 1
+fi
 exit_test

@@ -249,6 +249,18 @@ static rsRetVal write_all(int fd, const char *buf, size_t len) {
     return RS_RET_OK;
 }
 
+static int sync_file_data(const int fd) {
+#if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
+    return fdatasync(fd);
+#else
+    return fsync(fd);
+#endif
+}
+
+static rsRetVal sync_directory(const int fd) {
+    return fsync(fd) == 0 || errno == EINVAL || errno == ENOTSUP ? RS_RET_OK : RS_RET_IO_ERROR;
+}
+
 rsRetVal qdaEngineWriteMarker(const char *spool_dir, const char *file_prefix, qda_engine_mode_t engine) {
     if (spool_dir == NULL || file_prefix == NULL || (engine != QDA_ENGINE_DISK && engine != QDA_ENGINE_SEGMENTED_DISK))
         return RS_RET_PARAM_ERROR;
@@ -277,12 +289,12 @@ rsRetVal qdaEngineWriteMarker(const char *spool_dir, const char *file_prefix, qd
         goto done;
     }
     r = write_all(fd, content, (size_t)content_len);
-    if (r == RS_RET_OK && fdatasync(fd) != 0) r = RS_RET_IO_ERROR;
+    if (r == RS_RET_OK && sync_file_data(fd) != 0) r = RS_RET_IO_ERROR;
     if (close(fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
     if (r == RS_RET_OK && rename(tmp, path) != 0) r = RS_RET_IO_ERROR;
     if (r == RS_RET_OK) {
         const int dirfd = open(spool_dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-        if (dirfd < 0 || fsync(dirfd) != 0) r = RS_RET_IO_ERROR;
+        if (dirfd < 0 || sync_directory(dirfd) != RS_RET_OK) r = RS_RET_IO_ERROR;
         if (dirfd >= 0) close(dirfd);
     }
     if (r != RS_RET_OK) unlink(tmp);

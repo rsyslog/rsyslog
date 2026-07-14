@@ -887,6 +887,7 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK) pThis->bIsDA = 0;
     if (bLockMutex == LOCK_MUTEX) {
         d_pthread_mutex_unlock(pThis->mut);
     }
