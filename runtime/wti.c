@@ -380,7 +380,9 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
         /* never shut down any started worker */
         d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
     } else {
-        timeoutComp(&t, pWtp->toWrkShutdown); /* get absolute timeout */
+        const int timeout =
+            pThis->workerIndex == 0 && pWtp->toFirstWrkShutdown != -2 ? pWtp->toFirstWrkShutdown : pWtp->toWrkShutdown;
+        timeoutComp(&t, timeout); /* get absolute timeout */
         if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &t) != 0) {
             DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
             *pbInactivityTOOccurred = 1; /* indicate we had a timeout */

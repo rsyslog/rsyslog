@@ -3886,7 +3886,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     if (pThis->segdiskDAChild && pThis->diskQueueIdleTimeout != -1) {
         CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 1));
         CHKiRet(wtpSetpfIdleTimeout(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))qqueueSegDiskIdleTimeout));
-        CHKiRet(wtpSettoWrkShutdown(pThis->pWtpReg, pThis->diskQueueIdleTimeout));
+        CHKiRet(wtpSettoFirstWrkShutdown(pThis->pWtpReg, pThis->diskQueueIdleTimeout));
     } else if (pThis->segdiskDAChild) {
         /* An idle timeout of -1 disables dematerialization without disabling
          * the normal shutdown timeout for additional workers.  Explicitly

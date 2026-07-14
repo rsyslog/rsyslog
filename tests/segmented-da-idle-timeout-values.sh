@@ -38,6 +38,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 		queue.type="LinkedList" queue.filename="idle-disabled" queue.size="50"
 		queue.highWatermark="10" queue.lowWatermark="5"
 		queue.dequeueBatchSize="1" queue.dequeueSlowdown="10"
+		queue.workerThreads="3" queue.workerThreadMinimumMessages="1"
 		queue.timeoutWorkerThreadShutdown="100"
 		queue.diskQueueType="segmentedDisk" queue.diskQueueIdleTimeout="-1")
 }

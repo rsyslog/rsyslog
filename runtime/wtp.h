@@ -53,6 +53,7 @@ struct wtp_s {
         int iCurNumWrkThrd; /* current number of active worker threads */
         struct wti_s **pWrkr; /* array with control structure for the worker thread(s) associated with this wtp */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
+        int toFirstWrkShutdown; /* slot-zero override, -2 means use toWrkShutdown */
         rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
         /* synchronization variables */
         pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
@@ -104,6 +105,7 @@ PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));
 PROTOTYPEpropSetMethFP(wtp, pfIdleTimeout, rsRetVal (*pVal)(void *));
 PROTOTYPEpropSetMeth(wtp, bAllowFirstWorkerToTimeout, sbool);
 PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
+PROTOTYPEpropSetMeth(wtp, toFirstWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
 PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);
 PROTOTYPEpropSetMeth(wtp, pUsr, void *);

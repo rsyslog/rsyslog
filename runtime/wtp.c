@@ -91,6 +91,7 @@ static rsRetVal NotImplementedDummy_voidp_wti_tp(__attribute__((unused)) void *p
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
+    pThis->toFirstWrkShutdown = -2;
     pthread_mutex_init(&pThis->mutWtp, NULL);
     pthread_cond_init(&pThis->condThrdInitDone, NULL);
     pthread_cond_init(&pThis->condThrdTrm, NULL);
@@ -146,6 +147,7 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
         }
         CHKiRet(wtiSetDbgHdr(pWti, pszBuf, lenBuf));
         CHKiRet(wtiSetpWtp(pWti, pThis));
+        pWti->workerIndex = i;
         CHKiRet(wtiConstructFinalize(pWti));
     }
 
@@ -609,6 +611,7 @@ rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
  * reformatted by clang-format;
  */
 DEFpropSetMeth(wtp, toWrkShutdown, long);
+DEFpropSetMeth(wtp, toFirstWrkShutdown, long);
 DEFpropSetMeth(wtp, wtpState, wtpState_t);
 DEFpropSetMeth(wtp, iNumWorkerThreads, int);
 DEFpropSetMeth(wtp, pUsr, void *);

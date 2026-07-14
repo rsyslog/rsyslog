@@ -1515,6 +1515,21 @@ static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_seg
     } else if (random_uuid(s->uuid) != RS_RET_OK) {
         return RS_RET_IO_ERROR;
     }
+    if (!state_present) {
+        /* Publish a valid cleanup-in-progress slot before rebuilding the
+         * active segment.  If reconstruction fails or the process crashes,
+         * startup can finish the empty cleanup instead of finding a newly
+         * created state file with two invalid slots. */
+        s->dematerializing = 1;
+        const rsRetVal state_ret = write_state(s, 1, 1);
+        s->dematerializing = 0;
+        if (state_ret != RS_RET_OK) {
+            close(s->state_fd);
+            s->state_fd = -1;
+            unlinkat(s->dir_fd, "state", 0);
+            return state_ret;
+        }
+    }
     rsRetVal r = create_active(s);
     if (r == RS_RET_OK) r = sync_dir(s);
     return r;
