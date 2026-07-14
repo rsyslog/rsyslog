@@ -195,7 +195,7 @@ struct queue_s {
         sbool diskQueueIdleTimeoutSet;
         sbool segdiskLazyCreate; /* create a fresh segmented store on first append */
         sbool segdiskDAChild; /* segmented child of an in-memory DA parent */
-        sbool segdiskMarkerPending; /* publish the DA engine marker before first append */
+        sbool daEngineMarkerPending; /* publish the selected DA engine before first append */
         uint64_t daActivityGeneration; /* parent enqueue generation for the idle grace period */
         uint64_t segdiskIdleObservedActivity;
         struct queue_s *pqDA; /* queue for disk-assisted modes */

@@ -755,7 +755,7 @@ static rsRetVal StartDA(qqueue_t *pThis) {
                    "to use segmentedDisk after the classic backlog drains",
                    obj.GetName((obj_t *)pThis), pThis->pszFilePrefix);
     }
-    if (engine_result.effective == QDA_ENGINE_DISK || engine_result.segmented_data ||
+    if (engine_result.classic_data || engine_result.segmented_data ||
         (engine_result.marker_present && engine_result.marker_engine != engine_result.effective)) {
         CHKiRet(qdaEngineWriteMarker((const char *)pThis->pszSpoolDir, (const char *)pThis->pszFilePrefix,
                                      engine_result.effective));
@@ -776,7 +776,8 @@ static rsRetVal StartDA(qqueue_t *pThis) {
     pThis->pqDA->pqParent = pThis;
     pThis->pqDA->segdiskDAChild = child_type == QUEUETYPE_SEGMENTED_DISK;
     pThis->pqDA->segdiskLazyCreate = pThis->pqDA->segdiskDAChild && !engine_result.segmented_data;
-    pThis->pqDA->segdiskMarkerPending = pThis->pqDA->segdiskLazyCreate && !engine_result.marker_present;
+    pThis->pqDA->daEngineMarkerPending =
+        !engine_result.marker_present && !engine_result.classic_data && !engine_result.segmented_data;
     pThis->pqDA->diskQueueIdleTimeout = pThis->diskQueueIdleTimeout;
 
     CHKiRet(qqueueSetpAction(pThis->pqDA, pThis->pAction));
@@ -1198,10 +1199,10 @@ static rsRetVal qDestructSegDisk(qqueue_t *pThis) {
 
 static rsRetVal qAddSegDisk(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
-    if (pThis->segdiskMarkerPending) {
+    if (pThis->daEngineMarkerPending) {
         CHKiRet(qdaEngineWriteMarker((const char *)pThis->pszSpoolDir, (const char *)pThis->pszFilePrefix,
                                      QDA_ENGINE_SEGMENTED_DISK));
-        pThis->segdiskMarkerPending = 0;
+        pThis->daEngineMarkerPending = 0;
     }
     CHKiRet(segdiskStoreAppend(pThis->tVars.segdisk, pMsg, 0, NULL));
     if (pThis->segdiskDAChild) ++pThis->pqParent->daActivityGeneration;
@@ -2025,6 +2026,11 @@ static rsRetVal ATTR_NONNULL(1, 2) qAddDisk(qqueue_t *const pThis, smsg_t *pMsg)
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pMsg, msg);
+    if (pThis->daEngineMarkerPending) {
+        CHKiRet(qdaEngineWriteMarker((const char *)pThis->pszSpoolDir, (const char *)pThis->pszFilePrefix,
+                                     QDA_ENGINE_DISK));
+        pThis->daEngineMarkerPending = 0;
+    }
     number_t nWriteCount;
     const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 
