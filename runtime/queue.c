@@ -720,7 +720,7 @@ static rsRetVal qqueueChkIsDA(qqueue_t *pThis) {
 static rsRetVal StartDA(qqueue_t *pThis) {
     DEFiRet;
     uchar pszDAQName[128];
-    sbool permit_classic_inmemory_fallback = 0;
+    sbool permit_classic_startup_fallback = 0;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
@@ -763,7 +763,6 @@ static rsRetVal StartDA(qqueue_t *pThis) {
 
     const queueType_t child_type =
         engine_result.effective == QDA_ENGINE_SEGMENTED_DISK ? QUEUETYPE_SEGMENTED_DISK : QUEUETYPE_DISK;
-    permit_classic_inmemory_fallback = child_type == QUEUETYPE_DISK;
     /* create message queue */
     CHKiRet(qqueueConstruct(&pThis->pqDA, child_type, pThis->iNumWorkerThreads, 0, pThis->pConsumer));
 
@@ -817,6 +816,12 @@ static rsRetVal StartDA(qqueue_t *pThis) {
         pThis->cryprovNameFull = NULL;
     }
 
+    /* Preserve the classic queue's long-standing invalid-.qi behavior only
+     * for errors returned while opening that fully configured child.  Engine
+     * resolution, marker publication, construction, and property setup must
+     * still fail the parent queue: treating those failures as an in-memory
+     * fallback could silently discard persistence guarantees. */
+    permit_classic_startup_fallback = child_type == QUEUETYPE_DISK;
     iRet = qqueueStart(runConf, pThis->pqDA);
     /* file not found is expected, that means it is no previous QIF available */
     if (iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND) {
@@ -835,7 +840,7 @@ finalize_it:
             qqueueDestruct(&pThis->pqDA);
         }
         pThis->bIsDA = 0;
-        if (permit_classic_inmemory_fallback) {
+        if (permit_classic_startup_fallback) {
             LogError(0, startup_error, "%s: error creating classic disk queue; continuing in pure in-memory mode",
                      obj.GetName((obj_t *)pThis));
             iRet = RS_RET_OK;
