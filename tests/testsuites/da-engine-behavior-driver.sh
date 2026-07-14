@@ -7,7 +7,6 @@
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=2000
-export RSTB_IMDIAG_INJECT_DELAY_MODE=full
 DA_SCOPE=${DA_SCOPE:?DA_SCOPE must be main, ruleset, or action}
 DA_ENGINE=${DA_ENGINE:?DA_ENGINE must be auto or disk}
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
