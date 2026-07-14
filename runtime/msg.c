@@ -2434,27 +2434,26 @@ uchar *getRcvFrom(smsg_t *const pM) {
 void MsgGetRcvFromProp(smsg_t *const pM, const propid_t propid, uchar **const ppsz, int *const plen) {
     prop_t *pProp = NULL;
 
+    assert(pM != NULL);
     assert(ppsz != NULL);
     assert(plen != NULL);
 
-    if (pM != NULL && (pM->msgFlags & NEEDS_DNSRESOL)) {
+    if (pM->msgFlags & NEEDS_DNSRESOL) {
         (void)resolveDNS(pM);
     }
-    if (pM != NULL) {
-        switch (propid) {
-            case PROP_FROMHOST:
-                pProp = pM->rcvFrom.pRcvFrom;
-                break;
-            case PROP_FROMHOST_IP:
-                pProp = pM->pRcvFromIP;
-                break;
-            case PROP_FROMHOST_PORT:
-                pProp = pM->pRcvFromPort;
-                break;
-            default:
-                assert(0);
-                break;
-        }
+    switch (propid) {
+        case PROP_FROMHOST:
+            pProp = pM->rcvFrom.pRcvFrom;
+            break;
+        case PROP_FROMHOST_IP:
+            pProp = pM->pRcvFromIP;
+            break;
+        case PROP_FROMHOST_PORT:
+            pProp = pM->pRcvFromPort;
+            break;
+        default:
+            assert(0);
+            break;
     }
     if (pProp == NULL) {
         *ppsz = UCHAR_CONSTANT("");
