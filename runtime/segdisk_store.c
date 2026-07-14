@@ -1582,7 +1582,16 @@ rsRetVal segdiskStoreDematerialize(segdisk_store_t *s) {
     const uint64_t restore_next_segment = s->next_segment;
     s->dematerializing = 1;
     rsRetVal r = write_state(s, 1, 1);
-    if (r == RS_RET_OK) test_fault(s, SEGDISK_TEST_FAULT_IDLE_EMPTY_PUBLISHED);
+    if (r != RS_RET_OK) {
+        /* No destructive step is permitted until the cleanup intent is
+         * durable.  The previous normal state and the still-open active
+         * segment therefore remain a complete recoverable store when state
+         * publication itself fails. */
+        s->dematerializing = 0;
+        ++s->stats.idle_cleanup_failures;
+        return r;
+    }
+    test_fault(s, SEGDISK_TEST_FAULT_IDLE_EMPTY_PUBLISHED);
     if (s->active_fd >= 0) {
         if (close(s->active_fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
         s->active_fd = -1;
@@ -1606,9 +1615,15 @@ rsRetVal segdiskStoreDematerialize(segdisk_store_t *s) {
     } else {
         ++s->stats.idle_cleanup_failures;
         const rsRetVal restore_ret = restore_empty_materialized(s, restore_next_segment);
-        if (restore_ret != RS_RET_OK)
+        if (restore_ret != RS_RET_OK) {
+            /* r is already a hard failure returned to the queue callback.  A
+             * failed repair does not soften it: the durable
+             * cleanup-in-progress state (or a state-free empty directory
+             * after segment removal) makes restart complete deletion, while
+             * the live worker retries cleanup in this process. */
             LogError(0, restore_ret, "%s: failed to restore an empty segmentedDisk store after idle cleanup error",
                      s->queue_name);
+        }
     }
     return r;
 }
