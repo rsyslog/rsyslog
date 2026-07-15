@@ -875,9 +875,23 @@ finalize_it:
 
 static rsRetVal reopenJournal(struct journalContext_s *journalContext) {
     DEFiRet;
+    int waitRet;
 
     closeJournal(journalContext);
     CHKiRet(openJournal(journalContext));
+
+    /* The first sd_journal_wait() on a newly opened handle intentionally
+     * returns immediately after installing its watches. Consume that initial
+     * state here; otherwise an INVALIDATE-triggered reopen causes every fresh
+     * handle to report another INVALIDATE and imjournal busy-loops forever.
+     * Cursor restoration follows this call, so sequential delivery still
+     * resumes from the last processed entry. */
+    waitRet = sd_journal_wait(journalContext->j, 0);
+    if (waitRet < 0) {
+        LogError(-waitRet, RS_RET_ERR, "imjournal: sd_journal_wait() failed while initializing reopened journal");
+        closeJournal(journalContext);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
 finalize_it:
     RETiRet;
