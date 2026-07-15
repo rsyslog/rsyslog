@@ -108,7 +108,7 @@ struct queue_s {
         int iCurNumWrkThrd; /* current number of active worker threads */
         int iMinMsgsPerWrkr;
         /* minimum nbr of msgs per worker thread, if more, a new worker is started until max wrkrs */
-        wtp_t *pWtpDA;
+        wtp_t *pWtpDA; /* single-worker DA transfer pool, not the DA disk queue child consumer pool */
         wtp_t *pWtpReg;
         action_t *pAction; /* for action queues, ptr to action object; for main queues unused */
         int iUpdsSincePersist; /* nbr of queue updates since the last persist call */

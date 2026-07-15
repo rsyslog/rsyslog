@@ -77,6 +77,12 @@ patient if the information is a bit too in-depth ;)
 DA Run Mode Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+A disk-assisted setup has three separate worker roles: regular workers process
+the in-memory parent queue, one DA transfer worker moves messages to the disk
+child, and the disk child has its own regular consumer pool. The child pool is
+sized by ``queue.workerThreads`` and executes the configured action; the DA
+transfer worker does not execute that action.
+
 Three cases:
 
 #. any time during queueEnqObj() when the high water mark is hit
