@@ -788,6 +788,7 @@ static void holdOpenConnections(void) {
  */
 static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst) {
     int edLen; /* actual extra data length to use */
+    const unsigned long long messageNumber = inst->lower + inst->numSent;
     char extraData[MAX_EXTRADATA_LEN + 1];
     char dynFileIDBuf[128] = "";
     int done;
@@ -814,11 +815,11 @@ static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *i
             *pLenBuf = snprintf(buf, maxBuf,
                                 "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com "
                                 "tcpflood - tag [tcpflood@32473 MSGNUM"
-                                "=\"%8.8d\"] %s{\"msgnum\":%d}%c",
-                                msgPRI, msgNum, jsonCookie, msgNum, frameDelim);
+                                "=\"%8.8llu\"] %s{\"msgnum\":%llu}%c",
+                                msgPRI, messageNumber, jsonCookie, messageNumber, frameDelim);
         } else {
-            *pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 %s tag %s{\"msgnum\":%d}%c", msgPRI, hostname,
-                                jsonCookie, msgNum, frameDelim);
+            *pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 %s tag %s{\"msgnum\":%llu}%c", msgPRI, hostname,
+                                jsonCookie, messageNumber, frameDelim);
         }
     } else if (MsgToSend == NULL) {
         if (dynFileIDs > 0) {
@@ -829,13 +830,13 @@ static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *i
                 *pLenBuf = snprintf(buf, maxBuf,
                                     "<%s>1 2003-03-01T01:00:00.000Z "
                                     "mymachine.example.com tcpflood - tag [tcpflood@32473 "
-                                    "MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
-                                    msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+                                    "MSGNUM=\"%8.8llu\"] msgnum:%s%8.8llu:%c",
+                                    msgPRI, messageNumber, dynFileIDBuf, messageNumber, frameDelim);
             } else {
                 *pLenBuf = snprintf(buf, maxBuf,
                                     "<%s>Mar  1 01:00:00 %s tag "
-                                    "msgnum:%s%8.8d:%c",
-                                    msgPRI, hostname, dynFileIDBuf, msgNum, frameDelim);
+                                    "msgnum:%s%8.8llu:%c",
+                                    msgPRI, hostname, dynFileIDBuf, messageNumber, frameDelim);
             }
         } else {
             if (bRandomizeExtraData)
@@ -848,13 +849,13 @@ static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *i
                 *pLenBuf = snprintf(buf, maxBuf,
                                     "<%s>1 2003-03-01T01:00:00.000Z "
                                     "mymachine.example.com tcpflood - tag [tcpflood@32473 "
-                                    "MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
-                                    msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+                                    "MSGNUM=\"%8.8llu\"] msgnum:%s%8.8llu:%c",
+                                    msgPRI, messageNumber, dynFileIDBuf, messageNumber, frameDelim);
             } else {
                 *pLenBuf = snprintf(buf, maxBuf,
                                     "<%s>Mar  1 01:00:00 %s tag msgnum"
-                                    ":%s%8.8d:%d:%s%c",
-                                    msgPRI, hostname, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
+                                    ":%s%8.8llu:%d:%s%c",
+                                    msgPRI, hostname, dynFileIDBuf, messageNumber, edLen, extraData, frameDelim);
             }
         }
     } else {
@@ -1065,7 +1066,6 @@ int sendMessages(struct instdata *inst) {
         if (inst->numSent % batchsize == 0) {
             usleep(waittime);
         }
-        ++msgNum;
         ++i;
     }
     if (transport == TP_TLS && offsSendBuf != 0) {
@@ -1104,7 +1104,7 @@ static void *thrdStarter(void *arg) {
 static void prepareGenerators(void) {
     int i;
     long long msgsThrd;
-    long long starting = 0;
+    unsigned long long starting = (unsigned long long)msgNum;
     pthread_attr_t thrd_attr;
 
     if (runMultithreaded) {
@@ -1251,6 +1251,10 @@ static int runTests(void) {
             endTiming(&tvStart, &stats);
             return 1;
         }
+        /* Generators use disjoint, immutable ranges so -Y has no shared
+         * counter race. Advance the base once, after all threads complete,
+         * to preserve the existing consecutive numbering across -R runs. */
+        msgNum += numMsgsToSend;
         endTiming(&tvStart, &stats);
         if (run == numRuns) break;
         if (!bSilent) printf("sleeping %d seconds before next run\n", sleepBetweenRuns);

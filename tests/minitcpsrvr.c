@@ -36,7 +36,11 @@
 #endif
 
 #define MAX_CONNECTIONS 10
-#define BUFFER_SIZE 1024
+/* Keep complete testbench records buffered per connection. The segmented DA
+ * TCP spill regression deliberately uses multi-kilobyte messages so TCP
+ * backpressure cannot be hidden by buffers. The historic 1 KiB buffer treated
+ * a fragmented larger record as a closed connection. */
+#define BUFFER_SIZE (64 * 1024)
 
 /* OK, we use a lot of global. But after all, this is "just" a small
  * testing ... that has evolved a bit ;-)
@@ -56,6 +60,8 @@ char *targetIP = NULL;
 int targetPort = -1;
 char *portFileName = NULL;
 char *waitListenFileName = NULL;
+char *waitReadFileName = NULL;
+char *keepRunningFileName = NULL;
 char *listenReadyFileName = NULL;
 char *acceptReadyFileName = NULL;
 char *fixedResponse = NULL;
@@ -63,8 +69,8 @@ size_t totalWritten = 0;
 int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
 struct sockaddr_in server_addr;
 struct pollfd fds[MAX_CONNECTIONS + 1];  // +1 for the listen socket
-char buffer[MAX_CONNECTIONS][BUFFER_SIZE];
-int buffer_offs[MAX_CONNECTIONS];
+char buffer[MAX_CONNECTIONS + 1][BUFFER_SIZE];
+int buffer_offs[MAX_CONNECTIONS + 1];
 
 static void errout(char *reason) {
     perror(reason);
@@ -75,7 +81,7 @@ static void errout(char *reason) {
 static void usage(void) {
     fprintf(stderr,
             "usage: minitcpsrv [-R] [-r response] [-w listenFile] [-L listenReadyFile] [-A acceptReadyFile] "
-            "-t ip-addr -p port -P portFile -f outfile\n");
+            "[-Q readReleaseFile] [-K keepRunningFile] -t ip-addr -p port -P portFile -f outfile\n");
     exit(1);
 }
 
@@ -148,6 +154,20 @@ static void waitForListenRelease(void) {
         sleep(1);
     }
     fprintf(stderr, "minitcpsrv listen release file %s found\n", waitListenFileName);
+}
+
+/* Keep the TCP listener available while deliberately withholding reads. This
+ * lets testbench clients establish connections and eventually apply normal TCP
+ * backpressure without provoking connection failures or retry duplicates.
+ */
+static void waitForReadRelease(void) {
+    if (waitReadFileName == NULL) return;
+
+    fprintf(stderr, "minitcpsrv waits for read release file %s\n", waitReadFileName);
+    while (access(waitReadFileName, F_OK) != 0) {
+        usleep(10000);
+    }
+    fprintf(stderr, "minitcpsrv read release file %s found\n", waitReadFileName);
 }
 
 static void createListenSocket(void) {
@@ -239,7 +259,7 @@ int main(int argc, char *argv[]) {
     memset(fds, 0, sizeof(fds));
     memset(buffer_offs, 0, sizeof(buffer_offs));
 
-    while ((opt = getopt(argc, argv, "aA:B:D:L:Rr:t:p:P:f:s:S:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "aA:B:D:K:L:Q:Rr:t:p:P:f:s:S:w:")) != -1) {
         switch (opt) {
             case 'a':  // abort listener: act like the server has died (shutdown and re-open listen socket)
                 abortListener = 1;
@@ -267,6 +287,12 @@ int main(int argc, char *argv[]) {
                 break;
             case 'L':
                 listenReadyFileName = optarg;
+                break;
+            case 'K':
+                keepRunningFileName = optarg;
+                break;
+            case 'Q':
+                waitReadFileName = optarg;
                 break;
             case 't':
                 targetIP = optarg;
@@ -320,23 +346,37 @@ int main(int argc, char *argv[]) {
 
 
     createListenSocket();
+    waitForReadRelease();
     nfds = 1;
 
     int bKeepRunning;
     while (1) {
-        int poll_count = poll(fds, nfds, -1);  // -1 means no timeout
+        /* A keep-running file turns the receiver into a durable listener for
+         * tests whose clients may briefly disconnect between action batches.
+         * Poll with a short timeout only in that opt-in mode so removal of the
+         * file is noticed even when no sockets are active. */
+        int poll_count = poll(fds, nfds, keepRunningFileName == NULL ? -1 : 100);
         if (poll_count < 0) {
             errout("poll");
         }
 
-        bKeepRunning = 0; /* terminate on last connection close */
+        bKeepRunning = keepRunningFileName != NULL && access(keepRunningFileName, F_OK) == 0;
+        /* Without -K, terminate on the last connection close as before. */
 
         for (int i = 0; i < nfds; i++) {
             if (fds[i].revents == 0) continue;
 
-            if (fds[i].revents != POLLIN) {
-                fprintf(stderr, "Error! revents = %d\n", fds[i].revents);
-                exit(EXIT_FAILURE);
+            if (!(fds[i].revents & POLLIN)) {
+                if (fds[i].fd == listen_fd) {
+                    fprintf(stderr, "Error! listener revents = %d\n", fds[i].revents);
+                    exit(EXIT_FAILURE);
+                }
+                /* POLLHUP/POLLERR is a normal end-of-stream indication for
+                 * an omfwd action connection. It may accompany POLLIN, in
+                 * which case the readable data below is still consumed. */
+                close(fds[i].fd);
+                fds[i].fd = -1;
+                continue;
             }
 
             if (fds[i].fd == listen_fd) {
@@ -347,10 +387,16 @@ int main(int argc, char *argv[]) {
                     perror("Accept failed");
                     continue;
                 }
+                if (nfds >= MAX_CONNECTIONS + 1) {
+                    fprintf(stderr, "minitcpsrv connection limit reached\n");
+                    close(conn_fd);
+                    continue;
+                }
                 writeAcceptReadyMarker();
 
                 fds[nfds].fd = conn_fd;
                 fds[nfds].events = POLLIN;
+                buffer_offs[nfds] = 0;
                 nfds++;
             } else {
                 // Handle data from a client
@@ -374,7 +420,7 @@ int main(int argc, char *argv[]) {
                         --last_lf;
                     }
                     if (last_lf == -1) { /* no LF found at all */
-                        buffer_offs[i] = last_byte;
+                        buffer_offs[i] = last_byte + 1;
                     } else {
                         const int bytes_to_write = last_lf + 1;
 
@@ -428,6 +474,8 @@ int main(int argc, char *argv[]) {
             if (fds[i].fd == -1) {
                 for (int j = i; j < nfds - 1; j++) {
                     fds[j] = fds[j + 1];
+                    memcpy(buffer[j], buffer[j + 1], buffer_offs[j + 1]);
+                    buffer_offs[j] = buffer_offs[j + 1];
                 }
                 i--;
                 nfds--;
