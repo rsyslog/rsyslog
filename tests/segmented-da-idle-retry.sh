@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Keep a segmented DA action in retry state for longer than its 100 ms idle
 # timeout. The store must remain materialized while retry-before-commit owns
 # records; after the output directory appears, exact drain plus store removal

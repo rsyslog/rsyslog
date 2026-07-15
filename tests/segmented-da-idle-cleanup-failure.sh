@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Force idle cleanup to encounter an unexpected file in the private store
 # directory. The first cleanup must fail visibly while restoring a valid empty
 # materialized store and keeping its worker alive. The restored state must

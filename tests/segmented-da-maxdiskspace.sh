@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Fill a 64 KiB segmented DA child while a slow consumer keeps the 50-record
 # memory tier above its high watermark, drain it, and repeat. Exact delivery
 # proves producer backpressure without loss and reuse after segment reclamation;

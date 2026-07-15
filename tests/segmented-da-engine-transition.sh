@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Build a real classic disk-assisted action backlog, then restart with the auto
 # selector. The marker, warning, and complete drain prove sticky classic
 # compatibility. A final clean restart with auto-upgrade enabled must replace

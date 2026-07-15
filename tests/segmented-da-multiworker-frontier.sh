@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Seed a pure segmented queue, crash it with twelve uncommitted events, then
 # reopen that store as an automatic segmented DA child with three one-record
 # workers. Workers 1 and 2 hold events 0 and 1 for five and two seconds, so

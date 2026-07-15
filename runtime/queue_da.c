@@ -1,26 +1,24 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
- * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2026 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of the rsyslog runtime library.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library. If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/* Disk-assisted queue engine selection and durable marker handling. */
+/**
+ * @file queue_da.c
+ * @brief Resolves disk-assisted child engines and maintains their durable markers.
+ *
+ * This internal implementation selects the classic or segmented disk child for
+ * a disk-assisted queue from its configuration, marker, and existing spool
+ * contents. It also provides the crash-safe marker operations that preserve
+ * the selected engine across restarts.
+ */
 #include "config.h"
 
 #include <dirent.h>
@@ -35,8 +33,18 @@
 
 #include "queue_da.h"
 
+/* The marker format is intentionally independent of either queue payload
+ * format. Its version identifies only the selection record, allowing future
+ * engine-policy changes to reject rather than misinterpret an old marker. */
 #define QDA_MARKER_MAGIC "RSYSLOG-DA-ENGINE-V1 "
 
+/**
+ * @brief Allocate a path in a queue's persistent namespace.
+ *
+ * The caller owns *path on success and must free it. Keeping path assembly in
+ * one helper makes all engine probes use the exact same prefix and suffix
+ * convention.
+ */
 static rsRetVal make_path(char **path, const char *dir, const char *prefix, const char *suffix) {
     if (asprintf(path, "%s/%s%s", dir, prefix, suffix) < 0) {
         *path = NULL;
@@ -45,6 +53,7 @@ static rsRetVal make_path(char **path, const char *dir, const char *prefix, cons
     return RS_RET_OK;
 }
 
+/** @brief Test whether a named path exists without following a queue policy. */
 static rsRetVal path_exists(const char *path, sbool *exists) {
     struct stat st;
     if (lstat(path, &st) == 0) {
@@ -58,6 +67,12 @@ static rsRetVal path_exists(const char *path, sbool *exists) {
     return RS_RET_IO_ERROR;
 }
 
+/**
+ * @brief Recognize only legacy numeric segment names for the supplied prefix.
+ *
+ * A numeric segment is classic-engine evidence even when the .qi index is
+ * gone. Non-numeric lookalikes must not make AUTO select classic.
+ */
 static sbool is_classic_segment_name(const char *name, const char *prefix) {
     const size_t prefix_len = strlen(prefix);
     if (strncmp(name, prefix, prefix_len) != 0 || name[prefix_len] != '.') return 0;
@@ -69,6 +84,13 @@ static sbool is_classic_segment_name(const char *name, const char *prefix) {
     return 1;
 }
 
+/**
+ * @brief Probe for classic numeric segments and fail closed on an incomplete scan.
+ *
+ * This is the one namespace enumeration in engine selection. A close or
+ * readdir error is treated as an I/O failure rather than as an empty store:
+ * choosing the wrong engine could otherwise strand persistent records.
+ */
 static rsRetVal find_classic_segments(const char *dir, const char *prefix, sbool *found) {
     DIR *d = opendir(dir);
     if (d == NULL) return errno == ENOENT ? RS_RET_FILE_NOT_FOUND : RS_RET_IO_ERROR;
@@ -109,6 +131,14 @@ sbool qdaLifecycleConfigEqual(const qda_lifecycle_config_t *left, const qda_life
            left->auto_upgrade == right->auto_upgrade && left->idle_timeout == right->idle_timeout;
 }
 
+/**
+ * @brief Read and validate a durable engine marker without following symlinks.
+ *
+ * Markers are deliberately tiny regular files with an exact versioned payload.
+ * A malformed, truncated, oversized, or unsafe marker is rejected instead of
+ * silently reverting to automatic detection, because it represents an
+ * ambiguous persistent-engine decision.
+ */
 static rsRetVal read_marker(const char *path, sbool *present, qda_engine_mode_t *engine) {
     char buf[64];
     *present = 0;
@@ -243,6 +273,7 @@ done:
     return r;
 }
 
+/** @brief Write a complete marker payload, retrying only interrupted writes. */
 static rsRetVal write_all(int fd, const char *buf, size_t len) {
     size_t off = 0;
     while (off < len) {
@@ -257,6 +288,13 @@ static rsRetVal write_all(int fd, const char *buf, size_t len) {
     return RS_RET_OK;
 }
 
+/**
+ * @brief Synchronize marker content before its atomic rename.
+ *
+ * fdatasync is sufficient where it is available because the marker's inode
+ * metadata is established by the following rename and directory sync. macOS
+ * falls back to fsync for portability.
+ */
 static int sync_file_data(const int fd) {
 #if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
     return fdatasync(fd);
@@ -265,6 +303,13 @@ static int sync_file_data(const int fd) {
 #endif
 }
 
+/**
+ * @brief Synchronize a marker rename while tolerating unsupported directory fsync.
+ *
+ * Some supported filesystems report EINVAL or ENOTSUP for directory fsync.
+ * Treating only those responses as success preserves the strongest available
+ * durability guarantee without making otherwise usable spool filesystems fail.
+ */
 static rsRetVal sync_directory(const int fd) {
     return fsync(fd) == 0 || errno == EINVAL || errno == ENOTSUP ? RS_RET_OK : RS_RET_IO_ERROR;
 }

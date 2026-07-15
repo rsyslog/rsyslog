@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Exercise the complete segmented DA idle lifecycle on an action queue. A
 # deliberately slow, tiny memory tier makes each 2000-message burst spill. The
 # filesystem oracle proves lazy creation, grace-period dematerialization, and

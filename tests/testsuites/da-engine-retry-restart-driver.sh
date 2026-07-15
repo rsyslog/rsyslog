@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Shared DA retry/restart driver. The wrapper selects the memory queue and disk
 # engine. A deliberately suspended omfile action must spill, survive an
 # immediate restart, and preserve retry-before-commit semantics. Exact sequence
