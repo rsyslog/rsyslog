@@ -35,7 +35,8 @@ payload = "".join(
     "<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:%08d AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n" % i
     for i in range(0, 2000)
 ).encode("ascii")
-compressed = zlib.compress(payload, level=1)
+# Solaris' older Python accepts the compression level only positionally.
+compressed = zlib.compress(payload, 1)
 sock = socket.create_connection(("127.0.0.1", port))
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 for octet in compressed:
