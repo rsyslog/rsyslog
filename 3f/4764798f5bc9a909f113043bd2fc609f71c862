@@ -1,0 +1,25 @@
+tests/minitcpsrvr.c
+  s_18723db397e337::t_39cf9acff494b4 39-43,63-64,72-73,84,159-172,262,291-296,349,354-358,363-364,369-379,390-394,399,423,477-478
+tests/tcpflood.c
+  s_18723db397e337::t_24d7b5c8d56de9 791,818-819,821-822,833-834,838-839,852-853,857-858,1107
+tests/Makefile.am
+  s_18723db397e337::t_48565e76e55b7e 77
+tests/segmented-da-tcp-spill-exact.sh
+  s_18723db397e337::t_292001ad9ac84f 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "3f4764798f5bc9a909f113043bd2fc609f71c862",
+  "prompts": {},
+  "sessions": {
+    "s_18723db397e337": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f65f9-b5e7-7e43-b45a-810ea8baeeae",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
