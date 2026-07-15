@@ -380,7 +380,9 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
         /* never shut down any started worker */
         d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
     } else {
-        timeoutComp(&t, pWtp->toWrkShutdown); /* get absolute timeout */
+        const int timeout =
+            pThis->workerIndex == 0 && pWtp->toFirstWrkShutdown != -2 ? pWtp->toFirstWrkShutdown : pWtp->toWrkShutdown;
+        timeoutComp(&t, timeout); /* get absolute timeout */
         if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &t) != 0) {
             DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
             *pbInactivityTOOccurred = 1; /* indicate we had a timeout */
@@ -456,6 +458,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
             break; /* end of loop */
         } else if (localRet == RS_RET_IDLE) {
             if (terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccurred) {
+                if (bInactivityTOOccurred && pWtp->pfIdleTimeout != NULL && pWtp->pWrkr[0] == pThis &&
+                    pWtp->pfIdleTimeout(pWtp->pUsr) == RS_RET_RETRY) {
+                    bInactivityTOOccurred = 0;
+                    continue;
+                }
                 DBGOPRINT((obj_t *)pThis,
                           "terminating worker terminateRet=%d, "
                           "bInactivityTOOccurred=%d\n",

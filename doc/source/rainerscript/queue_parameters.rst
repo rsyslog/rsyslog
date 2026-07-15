@@ -1,3 +1,7 @@
+.. meta::
+   :description: Reference for rsyslog queue parameters, including memory, disk, and disk-assisted queue behavior.
+   :keywords: rsyslog, queue parameters, disk queue, segmented disk, disk assisted, RainerScript, YAML
+
 ************************
 General Queue Parameters
 ************************
@@ -23,6 +27,13 @@ set up by default.
 
 To fully understand queue parameters and how they interact, be sure to
 read the :doc:`queues <../concepts/queues>` documentation.
+
+.. summary-start
+
+Queue parameters configure main, ruleset, and action queue capacity,
+concurrency, persistence, disk-assisted behavior, and shutdown policy.
+
+.. summary-end
 
 
 Configuration Parameters
@@ -57,6 +68,84 @@ files.
 
 For the experimental ``segmentedDisk`` queue type, ``queue.filename`` is
 required. Configuration fails if it is omitted.
+
+
+queue.diskQueueType
+-------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "auto", "no", "none"
+
+Selects the disk engine used by a disk-assisted ``FixedArray`` or
+``LinkedList`` queue. It does not change the memory-first behavior: no disk
+store is created until the queue spills past its high watermark.
+
+Accepted values are:
+
+* ``auto``: use ``segmentedDisk`` for a fresh queue. Existing classic ``.qi``
+  or numeric queue files select ``Disk`` and emit a warning. Existing
+  segmented state selects ``segmentedDisk``.
+* ``disk``: require the classic disk queue engine.
+* ``segmentedDisk``: require the segmented engine.
+
+The selection is recorded in a small versioned
+``<queue.filename>.da-engine`` file. Malformed markers, mixed classic and
+segmented stores, and an explicit engine that conflicts with existing data
+fail queue initialization. ``auto`` selects classic ``Disk`` when encryption
+or a classic-only corruption mode is configured. Explicit ``segmentedDisk``
+rejects those unsupported options.
+
+For a fresh segmented selection, neither the marker nor the ``.segq`` store is
+created until the first spill. The marker is made durable before the store is
+materialized. Idle cleanup removes the store but retains that marker.
+
+This parameter has no legacy directive alias. Outside a disk-assisted memory
+queue it is reported as dirty configuration and ignored.
+
+
+queue.diskQueueAutoUpgrade
+--------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Applies only when ``queue.diskQueueType="auto"``. With the default ``off``, an
+automatically selected classic engine remains sticky after its backlog drains.
+With ``on``, the next clean restart after that drain selects an unmaterialized
+segmented child. Records are never converted and engines never switch while a
+process is running.
+
+
+queue.diskQueueIdleTimeout
+--------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "60000", "no", "none"
+
+Controls how long, in milliseconds, an empty segmented disk-assisted child
+remains materialized. After the complete interval passes without new producer
+or disk-transfer activity, rsyslog durably removes the empty segmented store
+and lets its final disk-consumer worker terminate. The engine marker remains.
+A later spill recreates both the store and workers transparently.
+
+``0`` requests cleanup immediately after a safe drain. ``-1`` disables runtime
+dematerialization. Recovery work, in-flight batches, retries, or uncertain
+cleanup state postpone cleanup. This timeout is independent of
+``queue.timeoutWorkerThreadShutdown`` and applies only to an effective
+segmented disk-assisted child. A nondefault value with explicit classic
+``disk`` is dirty configuration and is ignored.
 
 
 queue.spoolDirectory

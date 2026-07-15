@@ -1,4 +1,7 @@
 #!/bin/bash
+# Verify classic DA reactivation across receiver outages. The filesystem oracle
+# compares the classic numeric segment before and after drain, so the sender
+# pins diskQueueType="disk" through the modern main-queue frontend.
 # Copyright (C) 2011 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -23,6 +26,8 @@ wait_sender_queues_outage_data() {
 	initial_segment_size="$1"
 	echo "waiting for sender queue and DA segment growth from $initial_segment_size bytes"
 	i=0
+	# Use the standard startup bound so a loaded CI host has time to append;
+	# queue-size plus segment growth is the deterministic readiness oracle.
 	while [ $i -le $TB_TIMEOUT_STARTSTOP ]; do
 		qsize="$(sender_mainqueuesize)"
 		segment_size="$(mainq_segment_size)"
@@ -65,14 +70,11 @@ export PORT_RCVR="$TCPFLOOD_PORT"
 echo starting sender
 generate_conf 2
 add_conf '
-$WorkDirectory '$RSYSLOG_DYNNAME'.spool
-$MainMsgQueueSize 2000
-$MainMsgQueueLowWaterMark 800
-$MainMsgQueueHighWaterMark 1000
-$MainMsgQueueDequeueBatchSize 1
-$MainMsgQueueMaxFileSize 1g
-$MainMsgQueueWorkerThreads 1
-$MainMsgQueueFileName mainq
+global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
+main_queue(queue.type="LinkedList" queue.filename="mainq"
+	queue.size="2000" queue.lowWatermark="800" queue.highWatermark="1000"
+	queue.dequeueBatchSize="1" queue.maxFileSize="1g"
+	queue.workerThreads="1" queue.diskQueueType="disk")
 
 # we use the shortest resume interval a) to let the test not run too long 
 # and b) make sure some retries happen before the reconnect
@@ -145,7 +147,7 @@ ls -l ${RSYSLOG_DYNNAME}.spool
 NEWFILESIZE=$(stat -c%s ${RSYSLOG_DYNNAME}.spool/mainq.00000001)
 if [ $NEWFILESIZE != $OLDFILESIZE ]
 then
-   echo file sizes do not match, expected $OLDFILESIZE, actual $NEWFILESIZE
+   echo "file sizes do not match, expected $OLDFILESIZE, actual $NEWFILESIZE"
    echo this means that data has been written to the queue file where it
    echo no longer should be written.
    # abort will happen below, because we must ensure proper system shutdown

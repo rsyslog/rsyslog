@@ -11,13 +11,20 @@ SPOOL_DIR="$PWD/${RSYSLOG_DYNNAME}.spool"
 STATS_FILE="$PWD/${RSYSLOG_DYNNAME}.stats.log"
 
 write_conf() {
+	local queue_config='main_queue(queue.type="segmentedDisk" queue.filename="mainq"
+	queue.maxFileSize="1200k" queue.dequeueBatchSize="32" queue.saveOnShutdown="on")'
+	if [ "${SEGDISK_RECOVERY_DA:-0}" = 1 ] && [ "$2" = recovery ]; then
+		queue_config='main_queue(queue.type="LinkedList" queue.filename="mainq"
+		queue.size="50" queue.highWatermark="10" queue.lowWatermark="5"
+		queue.maxFileSize="1200k" queue.dequeueBatchSize="32" queue.saveOnShutdown="on"
+		queue.diskQueueType="auto" queue.diskQueueIdleTimeout="-1")'
+	fi
 	generate_conf
 	add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1")
 global(workDirectory="'$SPOOL_DIR'")
-main_queue(queue.type="segmentedDisk" queue.filename="mainq"
-	queue.maxFileSize="1200k" queue.dequeueBatchSize="32" queue.saveOnShutdown="on")
+'"$queue_config"'
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '"$1"'
 if ($msg contains "msgnum:") then
@@ -25,7 +32,7 @@ if ($msg contains "msgnum:") then
 '
 }
 
-write_conf ':omtesting:sleep 10 0'
+write_conf ':omtesting:sleep 10 0' seed
 startup
 wait_rsyslog_instance_pid
 injectmsg
@@ -40,7 +47,7 @@ python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" --corrupt-segment-f
 	>"${RSYSLOG_DYNNAME}.budget-corrupt.json"
 
 : >"$STATS_FILE"
-write_conf '# no delay during bounded recovery'
+write_conf '# no delay during bounded recovery' recovery
 startup
 injectmsg 10000 1
 export NUMMESSAGES=$((10001 - target_records))

@@ -3,10 +3,19 @@
 # directory as `MODULE_METADATA.yaml`; update both the metadata file and this map
 # when concurrency guidance changes.
 runtime_queue:
-  paths: ["runtime/queue.c", "runtime/queue.h"]
+  paths:
+    - "runtime/queue.c"
+    - "runtime/queue.h"
+    - "runtime/queue_da.c"
+    - "runtime/queue_da.h"
+    - "runtime/segdisk_store.c"
+    - "runtime/segdisk_store.h"
   requires_serialization: true
   notes:
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
+    - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
+    - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
+    - The segmented store is lazy only for a disk-assisted child, and dematerialization requires an empty store with no recovery, batch, retry, or completion work pending.
 
 runtime_ratelimit:
   paths: ["runtime/ratelimit.c", "runtime/ratelimit.h"]

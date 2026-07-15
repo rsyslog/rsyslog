@@ -1,6 +1,13 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
 
+- 2026-07-14: queue: add segmented disk-assisted storage
+  FixedArray and LinkedList disk-assisted queues now use the segmented disk
+  engine by default for new stores while automatically retaining existing
+  classic disk backlogs. New selectors can pin either engine or permit a
+  clean classic store to upgrade on restart. Empty segmented children can
+  remove their store and final worker after a configurable idle interval,
+  then recreate both transparently on the next spill.
 - 2026-07-08: omawslogshlc: add CloudWatch Logs HLC output module
   The new omawslogshlc output module sends events to Amazon CloudWatch Logs
   through the HTTP Log Collector endpoint using bearer-token authentication.

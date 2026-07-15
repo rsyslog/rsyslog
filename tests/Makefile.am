@@ -68,13 +68,40 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-crash-checkpoint-repeat.sh \
 	segmented-diskqueue-crash-commit.sh \
 	segmented-diskqueue-crash-predelete.sh \
-	segmented-diskqueue-crash-unlink.sh
-TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh
-TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh
+	segmented-diskqueue-crash-unlink.sh \
+	segmented-da-config-errors.sh \
+	segmented-da-engine-transition.sh \
+	segmented-da-event-properties.sh \
+	segmented-da-event-properties-fixedarray.sh \
+	segmented-da-behavior.sh \
+	classic-da-behavior.sh \
+	segmented-da-persist.sh \
+	classic-da-persist.sh \
+	segmented-da-retry-restart.sh \
+	classic-da-retry-restart.sh \
+	segmented-da-multiworker-frontier.sh \
+	segmented-da-recovery-budget.sh \
+	segmented-da-idle-retry.sh \
+	segmented-da-idle-crash-state.sh \
+	segmented-da-idle-crash-segments.sh \
+	segmented-da-idle-crash-state-unlink.sh \
+	segmented-da-idle-crash-directory.sh
+TESTS_SEGMENTED_DISK_QUEUE_LIBYAML = yaml-segmented-diskqueue.sh yaml-segmented-da-config.sh \
+	yaml-segmented-da-config-errors.sh
+TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS = segmented-diskqueue-startup-bounded.sh \
+	segmented-da-idle-dematerialize.sh \
+	segmented-da-idle-timeout-values.sh \
+	segmented-da-idle-cleanup-failure.sh \
+	segmented-da-maxdiskspace.sh \
+	segmented-da-maxdiskspace-fixedarray.sh
 EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML) \
 	$(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS) segdisk-inspect.py \
 	testsuites/segmented-diskqueue-checkpoint-driver.sh \
 	testsuites/segmented-diskqueue-crash-driver.sh \
+	testsuites/segmented-da-idle-crash-driver.sh \
+	testsuites/da-engine-behavior-driver.sh \
+	testsuites/da-engine-persist-driver.sh \
+	testsuites/da-engine-retry-restart-driver.sh \
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 
@@ -2449,9 +2476,9 @@ check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
@@ -2470,6 +2497,9 @@ runtime_unit_ommongodb_date_SOURCES = \
 
 runtime_unit_segdisk_state_SOURCES = \
 	unit/segdisk_state_test.c
+
+runtime_unit_queue_da_SOURCES = \
+	unit/queue_da_test.c
 
 if ENABLE_IMPCAP
 check_PROGRAMS += runtime_unit_impcap_arp_parser
@@ -2533,6 +2563,8 @@ runtime_unit_ommongodb_date_CPPFLAGS = \
 	-I$(top_srcdir)/plugins/ommongodb
 runtime_unit_segdisk_state_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_queue_da_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -2540,6 +2572,7 @@ runtime_unit_parser_pri_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD
 runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
+runtime_unit_queue_da_LDADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)

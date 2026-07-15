@@ -74,6 +74,7 @@ struct wti_s {
         pthread_t thrdID; /* thread ID */
         int bIsRunning; /* is this thread currently running? (must be int for atomic op!) */
         sbool bAlwaysRunning; /* should this thread always run? */
+        int workerIndex; /* stable slot in the owning worker pool */
         int *pbShutdownImmediate; /* end processing of this batch immediately if set to 1 */
         DEF_ATOMIC_HELPER_MUT(*pmutShutdownImmediate); /* fallback mutex for atomic access */
         wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */

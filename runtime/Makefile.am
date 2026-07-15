@@ -77,6 +77,8 @@ librsyslog_la_SOURCES = \
 	wti.h \
 	queue.c \
 	queue.h \
+	queue_da.c \
+	queue_da.h \
 	segdisk_codec.c \
 	segdisk_codec.h \
 	segdisk_crc.c \

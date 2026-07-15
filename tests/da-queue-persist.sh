@@ -1,8 +1,8 @@
 #!/bin/bash
-# Test for DA queue data persisting at shutdown. The
-# plan is to start an instance, emit some data, do a relatively
-# fast shutdown and then re-start the engine to process the 
-# remaining data.
+# Test for classic DA queue data persisting at shutdown. This test deliberately
+# inspects the classic .qi file, so it pins diskQueueType="disk". A fast
+# shutdown must save the remaining messages and restart must drain them, with
+# duplicates allowed because the shutdown can interrupt an in-flight batch.
 # added 2019-05-08 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
@@ -11,7 +11,8 @@ generate_conf
 add_conf '
 global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 main_queue(queue.type="linkedList" queue.filename="mainq"
-	queue.timeoutShutdown="1" queue.saveonshutdown="on")
+	queue.timeoutShutdown="1" queue.saveonshutdown="on"
+	queue.diskQueueType="disk")
 
 module(load="../plugins/omtesting/.libs/omtesting")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

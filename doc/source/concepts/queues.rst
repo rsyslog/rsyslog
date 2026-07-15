@@ -220,11 +220,28 @@ and requests offline recovery instead of delaying daemon startup with a full
 scan. Version 1 of this unmerged experimental format is intentionally rejected;
 there is no migration guarantee for experimental queue data.
 
-This mode is opt-in and currently only available as a pure-disk queue
-type. Disk-assisted queues continue to use the classic disk child queue.
-Do not point ``segmentedDisk`` at an existing classic disk queue prefix. The
-queue refuses to start when the matching legacy ``.qi`` file exists. Queue
-encryption providers are not supported by this first implementation.
+The segmented store is also the default disk child for new disk-assisted
+``FixedArray`` and ``LinkedList`` queues. Their memory tier remains primary and
+the segmented child stays unmaterialized until the first spill. The
+``queue.diskQueueType`` selector can pin the classic or segmented engine. Its
+default ``auto`` preserves existing classic backlogs, with a warning, and uses
+a durable ``.da-engine`` marker to keep the choice stable. It never converts
+records or mixes the two formats. For a fresh selection, queue encryption
+providers and classic-only corruption modes make ``auto`` select the classic
+engine. If segmented state already exists, those unsupported options make
+initialization fail instead of converting or falling back to another engine.
+
+For a fresh segmented disk-assisted child, neither the marker nor the
+``.segq`` store exists before the first spill. The marker is made durable
+before the store is materialized. Idle cleanup removes the store but retains
+the marker so the same engine is selected when a later spill recreates it.
+
+After a segmented disk-assisted child drains, ``queue.diskQueueIdleTimeout``
+can remove its empty ``.segq`` directory and terminate the last child worker.
+The default grace period is 60 seconds; ``0`` requests immediate cleanup and
+``-1`` keeps the materialized child. New producer activity restarts the full
+grace period, and recovery, retries, or in-flight batches prevent cleanup. The
+small engine marker remains so a later spill can recreate the store safely.
 
 Storage operations are serialized under the queue lock. Multiple generic
 queue workers may consume batches concurrently, and their completions may be
@@ -255,7 +272,10 @@ Queue statistics add ``disk.usage``, ``segments``, ``checkpoints``,
 ``replayed``, ``corruption.events``, ``corruption.bytes``,
 ``corruption.records``, ``corruption.segments``, ``retry.overage.bytes``,
 ``retry.overage.maxbytes``, state-write/recovery counters, and the startup
-payload-byte and segment-probe counters for this backend.
+payload-byte and segment-probe counters for this backend. Segmented
+disk-assisted children additionally expose ``store.materializations``,
+``store.idleDematerializations``, ``store.idleCleanupFailures``, and
+``workers.current`` for lifecycle observability.
 
 If you happen to lose or otherwise need the housekeeping structures and
 have all your queue chunks you can use the ``recover_qi.pl`` script

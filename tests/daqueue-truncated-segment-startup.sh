@@ -5,7 +5,8 @@
 # restart phase, where rsyslog must process the valid prefix, quarantine the
 # unread tail into mainq.bad.*, and leave no stale live queue files behind. A
 # fresh mainq.00000001/mainq.qi pair is acceptable because resetting the DA disk
-# child constructs a new live head.
+# child constructs a new live head. The classic DA engine marker is also
+# intentionally retained and contains no queue records.
 # added 2026-04-25 by Codex, released under ASL 2.0
 
 export TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-420}
@@ -37,6 +38,7 @@ global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(
 	queue.type="LinkedList"
 	queue.filename="mainq"
+	queue.diskQueueType="disk"
 	queue.maxFileSize="16k"
 	queue.saveOnShutdown="on"
 	queue.timeoutShutdown="1"
@@ -61,6 +63,7 @@ global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(
 	queue.type="LinkedList"
 	queue.filename="mainq"
+	queue.diskQueueType="disk"
 	queue.maxFileSize="16k"
 	queue.saveOnShutdown="off"
 	queue.onCorruption="safe"
@@ -187,7 +190,7 @@ check_clean_live_mainq_state() {
 		return 0
 	fi
 
-	if ! grep -Evqx 'mainq\.00000001|mainq\.qi' "$live_list"; then
+	if ! grep -Evqx 'mainq\.00000001|mainq\.qi|mainq\.da-engine' "$live_list"; then
 		rm -f "$live_list"
 		return 0
 	fi
@@ -307,7 +310,7 @@ wait_for_recovery_outcome() {
 	deadline=$(( start_ts + RECOVERY_WAIT_TIMEOUT ))
 	next_progress=$start_ts
 
-	while [ $(date +%s) -le "$deadline" ]; do
+	while [ "$(date +%s)" -le "$deadline" ]; do
 		now=$(date +%s)
 		bad_after=$(count_bad_dirs)
 		if [ "$bad_after" -gt "$bad_before" ]; then

@@ -48,6 +48,7 @@
 #include "stream.h"
 #include "statsobj.h"
 #include "cryprov.h"
+#include "queue_da.h"
 #include "segdisk_store.h"
 
 /* support for the toDelete list */
@@ -185,6 +186,18 @@ struct queue_s {
         qDeqID deqIDAdd; /* next dequeue ID to use during add to queue store */
         qDeqID deqIDDel; /* queue store delete position */
         int bIsDA; /* is this queue disk assisted? */
+        qda_engine_mode_t diskQueueType; /* configured DA disk child selection */
+        qda_engine_mode_t effectiveDiskQueueType; /* selected DA disk child engine */
+        sbool diskQueueAutoUpgrade; /* move a drained auto-selected classic child to segmented */
+        int diskQueueIdleTimeout; /* segmented DA child idle dematerialization timeout */
+        sbool diskQueueTypeSet;
+        sbool diskQueueAutoUpgradeSet;
+        sbool diskQueueIdleTimeoutSet;
+        sbool segdiskLazyCreate; /* create a fresh segmented store on first append */
+        sbool segdiskDAChild; /* segmented child of an in-memory DA parent */
+        sbool daEngineMarkerPending; /* publish the selected DA engine before first append */
+        uint64_t daActivityGeneration; /* parent enqueue generation for the idle grace period */
+        uint64_t segdiskIdleObservedActivity;
         struct queue_s *pqDA; /* queue for disk-assisted modes */
         struct queue_s *pqParent; /* pointer to the parent (if this is a child queue) */
         int bDAEnqOnly; /* EnqOnly setting for DA queue */
@@ -246,6 +259,9 @@ struct queue_s {
         int segdiskStartupPayloadBytes;
         int segdiskStartupSegmentFilesProbed;
         int segdiskCorruptionSegments;
+        int segdiskMaterializations;
+        int segdiskDematerializations;
+        int segdiskIdleCleanupFailures;
         int iSmpInterval; /* line interval of sampling logs */
         int isRunning;
 };

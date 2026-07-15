@@ -41,6 +41,8 @@
 #define FOOT_LEN 48u
 #define MAX_RECORD_SIZE (128u * 1024u * 1024u)
 #define RECOVERY_SCAN_BUDGET (1024u * 1024u)
+#define STATE_FLAG_RECOVERY 1u
+#define STATE_FLAG_DEMATERIALIZING 2u
 
 typedef struct segdisk_segment_s {
     uint64_t id;
@@ -106,6 +108,7 @@ struct segdisk_store_s {
     uint64_t next_batch_sequence;
     uint64_t known_queue_size;
     unsigned int updates_since_checkpoint;
+    sbool dematerializing;
     segdisk_store_stats_t stats;
 #ifdef ENABLE_IMDIAG
     segdisk_test_fault_point_t test_fault_point;
@@ -128,6 +131,10 @@ static const segdisk_test_fault_name_t test_fault_names[] = {
     {"commit-published", SEGDISK_TEST_FAULT_COMMIT_PUBLISHED},
     {"predelete-published", SEGDISK_TEST_FAULT_PREDELETE_PUBLISHED},
     {"segment-unlinked", SEGDISK_TEST_FAULT_SEGMENT_UNLINKED},
+    {"idle-empty-published", SEGDISK_TEST_FAULT_IDLE_EMPTY_PUBLISHED},
+    {"idle-segments-unlinked", SEGDISK_TEST_FAULT_IDLE_SEGMENTS_UNLINKED},
+    {"idle-state-unlinked", SEGDISK_TEST_FAULT_IDLE_STATE_UNLINKED},
+    {"idle-directory-removed", SEGDISK_TEST_FAULT_IDLE_DIRECTORY_REMOVED},
 };
 
 static void test_fault(segdisk_store_t *s, const segdisk_test_fault_point_t point) {
@@ -294,7 +301,8 @@ static void capture_state_image(const segdisk_store_t *s, segdisk_state_image_t 
     memset(state, 0, sizeof(*state));
     memcpy(state->uuid, s->uuid, sizeof(state->uuid));
     state->generation = s->generation;
-    state->flags = s->recovery_first != 0 ? 1u : 0u;
+    state->flags =
+        (s->recovery_first != 0 ? STATE_FLAG_RECOVERY : 0u) | (s->dematerializing ? STATE_FLAG_DEMATERIALIZING : 0u);
     state->committed_segment = s->committed_segment;
     state->committed_offset = s->committed_offset;
     state->committed_record_sequence = s->committed_record_sequence;
@@ -320,6 +328,7 @@ static void capture_state_image(const segdisk_store_t *s, segdisk_state_image_t 
 static void apply_state_image(segdisk_store_t *s, const segdisk_state_image_t *state) {
     memcpy(s->uuid, state->uuid, sizeof(s->uuid));
     s->generation = state->generation;
+    s->dematerializing = (state->flags & STATE_FLAG_DEMATERIALIZING) != 0;
     s->committed_segment = state->committed_segment;
     s->committed_offset = state->committed_offset;
     s->committed_record_sequence = state->committed_record_sequence;
@@ -368,7 +377,8 @@ static rsRetVal read_state(segdisk_store_t *s) {
     segdisk_state_image_t state;
     const rsRetVal r = segdiskStateSelect(slots[0], r0 == RS_RET_OK, slots[1], r1 == RS_RET_OK, &state, NULL);
     if (r == RS_RET_OK &&
-        ((state.delete_first == 0) != (state.delete_last == 0) ||
+        ((state.flags & ~(STATE_FLAG_RECOVERY | STATE_FLAG_DEMATERIALIZING)) != 0 ||
+         (state.delete_first == 0) != (state.delete_last == 0) ||
          (state.delete_first != 0 && state.delete_first > state.delete_last) || state.delete_bytes < 0))
         return RS_RET_INVALID_VALUE;
     if (r == RS_RET_OK) apply_state_image(s, &state);
@@ -392,19 +402,52 @@ static rsRetVal remove_remaining_segments(segdisk_store_t *s) {
     }
     rsRetVal r = RS_RET_OK;
     struct dirent *de;
-    while ((de = readdir(dir)) != NULL) {
+    while (1) {
+        errno = 0;
+        de = readdir(dir);
+        if (de == NULL) {
+            if (errno != 0) r = RS_RET_IO_ERROR;
+            break;
+        }
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..") || !strcmp(de->d_name, "state")) continue;
         if (!segment_name(de->d_name)) {
             r = RS_RET_IO_ERROR;
-            break;
+            /* A foreign entry prevents rmdir(), but it must not prevent us
+             * from removing the queue's own segments.  Continuing here is
+             * important for cleanup-error recovery: the replacement empty
+             * state may only exclude the old segment IDs after every old
+             * segment has actually gone. */
+            continue;
         }
         if (unlinkat(s->dir_fd, de->d_name, 0) != 0 && errno != ENOENT) {
             r = RS_RET_IO_ERROR;
+            continue;
+        }
+    }
+    if (closedir(dir) != 0) r = RS_RET_IO_ERROR;
+    return r;
+}
+
+static rsRetVal directory_has_segments(segdisk_store_t *s, sbool *has_segments) {
+    const int scan_fd = openat(s->dir_fd, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (scan_fd < 0) return RS_RET_IO_ERROR;
+    DIR *dir = fdopendir(scan_fd);
+    if (dir == NULL) {
+        close(scan_fd);
+        return RS_RET_IO_ERROR;
+    }
+    *has_segments = 0;
+    struct dirent *de;
+    errno = 0;
+    while ((de = readdir(dir)) != NULL) {
+        if (segment_name(de->d_name)) {
+            *has_segments = 1;
             break;
         }
     }
-    closedir(dir);
-    return r;
+    const int scan_errno = errno;
+    if (closedir(dir) != 0) return RS_RET_IO_ERROR;
+    return !*has_segments && scan_errno != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
 }
 
 static rsRetVal write_segment_header(segdisk_store_t *s, int fd, uint64_t id) {
@@ -577,6 +620,38 @@ static rsRetVal create_active(segdisk_store_t *s) {
     return RS_RET_OK;
 }
 
+static rsRetVal materialize_empty(segdisk_store_t *s) {
+    if (s->dir_fd >= 0) return RS_RET_OK;
+    rsRetVal r = RS_RET_OK;
+    if (mkdir(s->dir, 0700) != 0 && errno != EEXIST) return RS_RET_IO_ERROR;
+    s->dir_fd = open(s->dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+    if (s->dir_fd < 0) return RS_RET_IO_ERROR;
+    s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+    if (s->state_fd < 0 || ftruncate(s->state_fd, STATE_FILE_LEN) != 0 || random_uuid(s->uuid) != RS_RET_OK)
+        r = RS_RET_IO_ERROR;
+    s->committed_offset = SEG_HDR_LEN;
+    s->persisted_writer_end = SEG_HDR_LEN;
+    s->next_segment = 1;
+    if (r == RS_RET_OK) r = create_active(s);
+    if (r == RS_RET_OK) r = sync_dir(s);
+    if (r == RS_RET_OK) {
+        ++s->stats.materializations;
+        return RS_RET_OK;
+    }
+    if (s->active_fd >= 0) close(s->active_fd);
+    s->active_fd = -1;
+    free_segment(&s->active);
+    if (s->dir_fd >= 0) {
+        remove_remaining_segments(s);
+        unlinkat(s->dir_fd, "state", 0);
+    }
+    if (s->state_fd >= 0) close(s->state_fd);
+    if (s->dir_fd >= 0) close(s->dir_fd);
+    s->state_fd = s->dir_fd = -1;
+    rmdir(s->dir);
+    return r;
+}
+
 static void restore_active_after_seal_failure(segdisk_store_t *s) {
     const int fd = open(s->active->path, O_RDWR | O_APPEND | O_CLOEXEC | O_NOFOLLOW);
     if (fd < 0) return;
@@ -683,6 +758,10 @@ static void update_retry_overage(segdisk_store_t *s) {
 }
 
 static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, int64_t *written) {
+    if (s->dir_fd < 0) {
+        const rsRetVal materialize_ret = materialize_empty(s);
+        if (materialize_ret != RS_RET_OK) return materialize_ret;
+    }
     if (s->active == NULL) {
         rsRetVal r = create_active(s);
         if (r != RS_RET_OK) return r;
@@ -1107,6 +1186,23 @@ static rsRetVal adopt_reserved_segment(segdisk_store_t *s) {
     return RS_RET_OK;
 }
 
+static void reset_after_dematerialize(segdisk_store_t *s);
+
+static rsRetVal finish_interrupted_dematerialization(segdisk_store_t *s) {
+    rsRetVal r = remove_remaining_segments(s);
+    if (r == RS_RET_OK) r = sync_dir(s);
+    if (r == RS_RET_OK && unlinkat(s->dir_fd, "state", 0) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
+    if (r == RS_RET_OK) r = sync_dir(s);
+    if (r == RS_RET_OK && rmdir(s->dir) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
+    if (r != RS_RET_OK) return r;
+    if (s->state_fd >= 0) close(s->state_fd);
+    if (s->dir_fd >= 0) close(s->dir_fd);
+    s->state_fd = s->dir_fd = -1;
+    reset_after_dematerialize(s);
+    ++s->stats.dematerializations;
+    return RS_RET_OK;
+}
+
 rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *cfg, int *queue_size) {
     if (out == NULL || cfg == NULL || cfg->work_dir == NULL || cfg->file_prefix == NULL || queue_size == NULL)
         return RS_RET_PARAM_ERROR;
@@ -1127,12 +1223,26 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
     if (asprintf(&legacy_qi, "%s/%s.qi", cfg->work_dir, cfg->file_prefix) < 0) goto oom;
     struct stat legacy_st;
     if (lstat(legacy_qi, &legacy_st) == 0) {
+        /* DA engine resolution happens before this constructor.  Auto mode
+         * sends any existing .qi to the classic child, and an explicit
+         * segmented selector is rejected as a data conflict.  Keep this
+         * store-level guard for pure segmentedDisk queues and races: a .qi is
+         * persistent classic state even if it describes zero records, so it
+         * must be drained/removed before auto-upgrade can select segmented. */
         LogError(0, RS_RET_INVALID_VALUE, "%s: segmentedDisk refuses legacy queue state '%s'", s->queue_name,
                  legacy_qi);
         free(legacy_qi);
         goto invalid;
     }
     free(legacy_qi);
+    if (cfg->lazy_create) {
+        struct stat dir_st;
+        if (lstat(s->dir, &dir_st) != 0 && errno == ENOENT) {
+            *queue_size = 0;
+            *out = s;
+            return RS_RET_OK;
+        }
+    }
     sbool directory_created = 0;
     if (mkdir(s->dir, 0700) == 0)
         directory_created = 1;
@@ -1160,6 +1270,18 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
                      s->queue_name);
             goto invalid;
         }
+        if (cfg->lazy_create && !directory_created) {
+            /* A crash after durable state removal but before rmdir leaves an
+             * empty directory. For a DA child this is the final, unambiguous
+             * cleanup residue, so finish dematerialization instead of
+             * creating a fresh empty store during startup. */
+            close(s->dir_fd);
+            s->dir_fd = -1;
+            if (rmdir(s->dir) != 0 && errno != ENOENT) goto ioerr;
+            *queue_size = 0;
+            *out = s;
+            return RS_RET_OK;
+        }
         s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
         if (s->state_fd < 0 || ftruncate(s->state_fd, STATE_FILE_LEN) != 0 || random_uuid(s->uuid) != RS_RET_OK)
             goto ioerr;
@@ -1173,11 +1295,24 @@ rsRetVal segdiskStoreOpen(segdisk_store_t **out, const segdisk_store_config_t *c
                      s->queue_name);
             goto invalid;
         }
+        if (s->dematerializing) {
+            if (finish_interrupted_dematerialization(s) != RS_RET_OK) goto ioerr;
+            if (cfg->lazy_create) {
+                *queue_size = 0;
+                *out = s;
+                return RS_RET_OK;
+            }
+            if (materialize_empty(s) != RS_RET_OK) goto ioerr;
+            *queue_size = 0;
+            *out = s;
+            return RS_RET_OK;
+        }
         if (prepare_existing_active(s) != RS_RET_OK) goto ioerr;
         if (adopt_reserved_segment(s) != RS_RET_OK) goto ioerr;
         s->discovery_through_segment = s->last_data_segment;
         if (create_active(s) != RS_RET_OK) goto ioerr;
     }
+    ++s->stats.materializations;
     s->known_queue_size = 0;
     *queue_size = 0;
     s->stats.replayed = s->persisted_queue_size;
@@ -1220,7 +1355,19 @@ sbool segdiskStoreMayHaveData(const segdisk_store_t *s) {
            (s->read_segment_id < s->active->id || s->read_offset < s->active->data_end);
 }
 
+sbool segdiskStoreCanDematerialize(const segdisk_store_t *s) {
+    /* recovery_first is durable topology, not an undiscovered-work flag: it
+     * may still name the final, fully inspected recovery segment until the
+     * commit frontier enters a later segment.  segdiskStoreMayHaveData() uses
+     * the live read cursor and is the authoritative recovery-work check. A
+     * durable cleanup already in progress is also eligible: failed repair may
+     * retain stale cursors, but cleanup intent proves the store was empty. */
+    return s != NULL && s->dir_fd >= 0 && s->known_queue_size == 0 && s->pending_head == NULL && s->delete_first == 0 &&
+           (s->dematerializing || !segdiskStoreMayHaveData(s));
+}
+
 rsRetVal segdiskStoreDequeueBatch(segdisk_store_t *s, batch_t *batch, int max, int *skipped, int *discovered) {
+    if (s->dir_fd < 0) return RS_RET_NO_DATA;
     if (batch->storeData != NULL) return RS_RET_INTERNAL_ERROR;
     if (s->delete_first != 0) {
         if (cleanup_one_pending_delete(s) != RS_RET_OK)
@@ -1348,9 +1495,153 @@ rsRetVal segdiskStoreCompleteBatch(segdisk_store_t *s, batch_t *batch, int *comm
 }
 
 rsRetVal segdiskStoreCheckpoint(segdisk_store_t *s, sbool force_sync) {
+    if (s->dir_fd < 0) return RS_RET_OK;
     capture_writer(s);
     const rsRetVal r = write_state(s, force_sync, force_sync);
     if (r == RS_RET_OK) test_fault(s, SEGDISK_TEST_FAULT_CHECKPOINT_PUBLISHED);
+    return r;
+}
+
+static void reset_after_dematerialize(segdisk_store_t *s) {
+    memset(s->uuid, 0, sizeof(s->uuid));
+    s->generation = 0;
+    s->committed_segment = 0;
+    s->committed_record_sequence = 0;
+    s->committed_offset = SEG_HDR_LEN;
+    s->first_live_segment = 0;
+    s->last_data_segment = 0;
+    s->active_segment = 0;
+    s->recovery_first = 0;
+    s->recovery_last = 0;
+    s->next_segment = 1;
+    s->persisted_queue_size = 0;
+    s->persisted_writer_segment = 0;
+    s->persisted_writer_end = SEG_HDR_LEN;
+    s->persisted_writer_sequence = 0;
+    s->persisted_writer_count = 0;
+    s->delete_first = 0;
+    s->delete_last = 0;
+    s->delete_bytes = 0;
+    s->delete_segments = 0;
+    s->discovery_through_segment = 0;
+    s->read_segment_id = 0;
+    s->read_offset = SEG_HDR_LEN;
+    s->next_batch_sequence = 0;
+    s->known_queue_size = 0;
+    s->updates_since_checkpoint = 0;
+    s->dematerializing = 0;
+    s->stats.bytes = 0;
+    s->stats.segments = 0;
+    s->stats.retry_overage_bytes = 0;
+}
+
+static rsRetVal restore_empty_materialized(segdisk_store_t *s, uint64_t next_segment) {
+    unsigned char old_uuid[sizeof(s->uuid)];
+    memcpy(old_uuid, s->uuid, sizeof(old_uuid));
+    const uint64_t old_generation = s->generation;
+    if (s->dir_fd < 0) {
+        s->dir_fd = open(s->dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+        if (s->dir_fd < 0) return RS_RET_IO_ERROR;
+    }
+    /* The failed cleanup can have stopped after unlinking only part of the
+     * old topology.  Make a best effort to finish removing queue-owned files,
+     * then prove none remain before publishing a fresh empty topology.  A
+     * foreign file may still make remove_remaining_segments() report failure;
+     * that is harmless here because it is deliberately excluded from the
+     * segment-only verification and will make the next rmdir retry fail.
+     * Conversely, an undeletable segment leaves the cleanup-in-progress state
+     * authoritative and prevents stale records from being hidden by a new
+     * normal state. */
+    (void)remove_remaining_segments(s);
+    sbool has_segments;
+    if (directory_has_segments(s, &has_segments) != RS_RET_OK || has_segments) return RS_RET_IO_ERROR;
+    const sbool state_present = faccessat(s->dir_fd, "state", F_OK, 0) == 0;
+    if (!state_present) {
+        if (s->state_fd >= 0) close(s->state_fd);
+        s->state_fd = openat(s->dir_fd, "state", O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+        if (s->state_fd < 0 || ftruncate(s->state_fd, STATE_FILE_LEN) != 0) return RS_RET_IO_ERROR;
+    }
+    reset_after_dematerialize(s);
+    s->next_segment = next_segment == 0 ? 1 : next_segment;
+    if (state_present) {
+        memcpy(s->uuid, old_uuid, sizeof(s->uuid));
+        s->generation = old_generation;
+    } else if (random_uuid(s->uuid) != RS_RET_OK) {
+        return RS_RET_IO_ERROR;
+    }
+    /* Keep every state publication in cleanup-in-progress form until the new
+     * active segment is durable.  Thus a crash during reconstruction finishes
+     * deletion on restart instead of accepting a partially rebuilt store. */
+    s->dematerializing = 1;
+    if (!state_present) {
+        const rsRetVal state_ret = write_state(s, 1, 1);
+        if (state_ret != RS_RET_OK) {
+            close(s->state_fd);
+            s->state_fd = -1;
+            unlinkat(s->dir_fd, "state", 0);
+            return state_ret;
+        }
+    }
+    rsRetVal r = create_active(s);
+    if (r == RS_RET_OK) {
+        s->dematerializing = 0;
+        r = write_state(s, 1, 1);
+        if (r != RS_RET_OK) s->dematerializing = 1;
+    }
+    if (r == RS_RET_OK) r = sync_dir(s);
+    return r;
+}
+
+rsRetVal segdiskStoreDematerialize(segdisk_store_t *s) {
+    if (s == NULL) return RS_RET_PARAM_ERROR;
+    if (s->dir_fd < 0) return RS_RET_OK;
+    if (!segdiskStoreCanDematerialize(s)) return RS_RET_RETRY;
+    const uint64_t restore_next_segment = s->next_segment;
+    s->dematerializing = 1;
+    rsRetVal r = write_state(s, 1, 1);
+    if (r != RS_RET_OK) {
+        /* No destructive step is permitted until the cleanup intent is
+         * durable.  The previous normal state and the still-open active
+         * segment therefore remain a complete recoverable store when state
+         * publication itself fails. */
+        s->dematerializing = 0;
+        ++s->stats.idle_cleanup_failures;
+        return r;
+    }
+    test_fault(s, SEGDISK_TEST_FAULT_IDLE_EMPTY_PUBLISHED);
+    if (s->active_fd >= 0) {
+        if (close(s->active_fd) != 0 && r == RS_RET_OK) r = RS_RET_IO_ERROR;
+        s->active_fd = -1;
+    }
+    if (r == RS_RET_OK) r = remove_remaining_segments(s);
+    if (r == RS_RET_OK) r = sync_dir(s);
+    if (r == RS_RET_OK) test_fault(s, SEGDISK_TEST_FAULT_IDLE_SEGMENTS_UNLINKED);
+    if (r == RS_RET_OK && unlinkat(s->dir_fd, "state", 0) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
+    if (r == RS_RET_OK) test_fault(s, SEGDISK_TEST_FAULT_IDLE_STATE_UNLINKED);
+    if (r == RS_RET_OK) r = sync_dir(s);
+    free_segment(&s->active);
+    free_segment(&s->read_segment);
+    if (r == RS_RET_OK && rmdir(s->dir) != 0 && errno != ENOENT) r = RS_RET_IO_ERROR;
+    if (r == RS_RET_OK) test_fault(s, SEGDISK_TEST_FAULT_IDLE_DIRECTORY_REMOVED);
+    if (r == RS_RET_OK) {
+        if (s->state_fd >= 0) close(s->state_fd);
+        if (s->dir_fd >= 0) close(s->dir_fd);
+        s->state_fd = s->dir_fd = -1;
+        reset_after_dematerialize(s);
+        ++s->stats.dematerializations;
+    } else {
+        ++s->stats.idle_cleanup_failures;
+        const rsRetVal restore_ret = restore_empty_materialized(s, restore_next_segment);
+        if (restore_ret != RS_RET_OK) {
+            /* r is already a hard failure returned to the queue callback.  A
+             * failed repair does not soften it: the durable
+             * cleanup-in-progress state (or a state-free empty directory
+             * after segment removal) makes restart complete deletion, while
+             * the live worker retries cleanup in this process. */
+            LogError(0, restore_ret, "%s: failed to restore an empty segmentedDisk store after idle cleanup error",
+                     s->queue_name);
+        }
+    }
     return r;
 }
 
@@ -1378,6 +1669,13 @@ rsRetVal segdiskStoreClose(segdisk_store_t **ps, sbool empty) {
     if (ps == NULL || *ps == NULL) return RS_RET_OK;
     segdisk_store_t *s = *ps;
     rsRetVal r = RS_RET_OK;
+    if (s->dir_fd < 0) {
+        free(s->dir);
+        free(s->queue_name);
+        free(s);
+        *ps = NULL;
+        return RS_RET_OK;
+    }
     if (s->active_fd >= 0) {
         if (!empty && s->active != NULL && s->active->record_count != 0)
             r = seal_active(s);

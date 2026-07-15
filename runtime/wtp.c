@@ -91,6 +91,7 @@ static rsRetVal NotImplementedDummy_voidp_wti_tp(__attribute__((unused)) void *p
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
+    pThis->toFirstWrkShutdown = -2;
     pthread_mutex_init(&pThis->mutWtp, NULL);
     pthread_cond_init(&pThis->condThrdInitDone, NULL);
     pthread_cond_init(&pThis->condThrdTrm, NULL);
@@ -146,6 +147,7 @@ rsRetVal wtpConstructFinalize(wtp_t *pThis) {
         }
         CHKiRet(wtiSetDbgHdr(pWti, pszBuf, lenBuf));
         CHKiRet(wtiSetpWtp(pWti, pThis));
+        pWti->workerIndex = i;
         CHKiRet(wtiConstructFinalize(pWti));
     }
 
@@ -497,7 +499,10 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
 
     if (i == pThis->iNumWorkerThreads) ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 
-    if (i == 0 || pThis->toWrkShutdown == -1) {
+    const sbool first_worker_runs_forever =
+        i == 0 && (!pThis->bAllowFirstWorkerToTimeout || pThis->toFirstWrkShutdown == -1 ||
+                   (pThis->toFirstWrkShutdown == -2 && pThis->toWrkShutdown == -1));
+    if (first_worker_runs_forever || (i != 0 && pThis->toWrkShutdown == -1)) {
         wtiSetAlwaysRunning(pThis->pWrkr[i]);
     }
 
@@ -590,6 +595,17 @@ finalize_it:
 }
 
 
+rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
+    if (pThis == NULL) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
+        if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
+    }
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return RS_RET_OK;
+}
+
+
 /* some simple object access methods
  * Note: the semicolons behind the macros are actually empty declarations. This is
  * a work-around for clang-format's missing understanding of generative macros.
@@ -598,6 +614,7 @@ finalize_it:
  * reformatted by clang-format;
  */
 DEFpropSetMeth(wtp, toWrkShutdown, long);
+DEFpropSetMeth(wtp, toFirstWrkShutdown, long);
 DEFpropSetMeth(wtp, wtpState, wtpState_t);
 DEFpropSetMeth(wtp, iNumWorkerThreads, int);
 DEFpropSetMeth(wtp, pUsr, void *);
@@ -607,6 +624,8 @@ DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *));
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *));
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *));
 DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));
+DEFpropSetMethFP(wtp, pfIdleTimeout, rsRetVal (*pVal)(void *));
+DEFpropSetMeth(wtp, bAllowFirstWorkerToTimeout, sbool);
 
 
 /* set the debug header message

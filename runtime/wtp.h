@@ -53,6 +53,7 @@ struct wtp_s {
         int iCurNumWrkThrd; /* current number of active worker threads */
         struct wti_s **pWrkr; /* array with control structure for the worker thread(s) associated with this wtp */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
+        int toFirstWrkShutdown; /* slot-zero override, -2 means use toWrkShutdown */
         rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
         /* synchronization variables */
         pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
@@ -68,6 +69,8 @@ struct wtp_s {
         rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
         rsRetVal (*pfRateLimiter)(void *pUsr);
         rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
+        rsRetVal (*pfIdleTimeout)(void *pUsr);
+        sbool bAllowFirstWorkerToTimeout;
         /* end user objects */
         uchar *pszDbgHdr; /* header string for debug messages */
         DEF_ATOMIC_HELPER_MUT(mutCurNumWrkThrd);
@@ -88,6 +91,12 @@ rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
+/** Wake every existing worker without creating a stopped worker.
+ *
+ * The caller must hold the pool's pmutUsr mutex so the queue predicate and
+ * pthread condition signal cannot race. The helper serializes only the worker
+ * table walk with mutWtp; it does not acquire pmutUsr itself.
+ */
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
@@ -99,7 +108,10 @@ PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *));
 PROTOTYPEpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *));
+PROTOTYPEpropSetMethFP(wtp, pfIdleTimeout, rsRetVal (*pVal)(void *));
+PROTOTYPEpropSetMeth(wtp, bAllowFirstWorkerToTimeout, sbool);
 PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
+PROTOTYPEpropSetMeth(wtp, toFirstWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
 PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);
 PROTOTYPEpropSetMeth(wtp, pUsr, void *);

@@ -6,7 +6,8 @@
 # spool directory. Modern queue handling can also quarantine damaged queue
 # state into mainq.bad.* when queue.onCorruption="safe" detects an
 # inconsistent on-disk state. Both outcomes are valid as long as restart
-# succeeds and no live mainq.* state is left behind.
+# succeeds and no live queue payload or state remains. The durable DA engine
+# marker is intentionally retained and is not live queue data.
 # added 2016-12-01 by Rainer Gerhards
 # rewritten 2026-03-30 to match current queue corruption semantics
 # released under ASL 2.0
@@ -25,6 +26,7 @@ module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(
 	queue.filename="mainq"
+	queue.diskQueueType="disk"
 	queue.saveOnShutdown="on"
 	queue.timeoutShutdown="1"
 	queue.maxFileSize="1m"
@@ -44,6 +46,7 @@ module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(
 	queue.filename="mainq"
+	queue.diskQueueType="disk"
 	queue.saveOnShutdown="on"
 	queue.maxFileSize="1m"
 	queue.timeoutWorkerThreadShutdown="500"
@@ -68,7 +71,7 @@ check_no_live_mainq_files() {
 	local live_files
 
 	live_files="$(find "$SPOOL_DIR" -maxdepth 1 -mindepth 1 \
-		\( -type f -o -type l \) -name 'mainq*' -printf '%f\n')"
+		\( -type f -o -type l \) -name 'mainq*' ! -name 'mainq.da-engine' -printf '%f\n')"
 	if [ -n "$live_files" ]; then
 		echo "FAIL: live mainq files remain after restart recovery"
 		printf '%s\n' "$live_files"
