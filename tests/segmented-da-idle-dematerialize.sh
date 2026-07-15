@@ -4,6 +4,9 @@
 # filesystem oracle proves lazy creation, grace-period dematerialization, and
 # transparent rematerialization; exact sequence output proves no loss or
 # reordering. The impstats oracle proves the final child worker terminated.
+# The reset probe uses a 3-second timeout, injects after 1 second, and checks
+# 2.25 seconds later: the check is past the original deadline but still 750 ms
+# before the reset deadline, leaving a substantial scheduler margin under SAN.
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=4000
@@ -52,7 +55,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 	queue.dequeueBatchSize="1"
 	queue.dequeueSlowdown="2"
 	queue.diskQueueType="segmentedDisk"
-	queue.diskQueueIdleTimeout="500"
+	queue.diskQueueIdleTimeout="3000"
 )
 '
 
@@ -67,10 +70,10 @@ wait_file_lines "$RSYSLOG_OUT_LOG" 2000 300
 
 # A memory-tier-only enqueue during the grace period must wake the child and
 # restart the full timeout even though it does not itself spill to disk.
-./msleep 250
+./msleep 1000
 injectmsg 2000 1
 wait_file_lines "$RSYSLOG_OUT_LOG" 2001 300
-./msleep 300
+./msleep 2250
 [ -d "$SEG_DIR" ] || error_exit 1 "new traffic did not reset the segmented DA idle grace period"
 wait_path_state absent "$SEG_DIR"
 
