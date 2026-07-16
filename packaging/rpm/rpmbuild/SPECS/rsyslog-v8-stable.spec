@@ -14,8 +14,8 @@
 
 Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog
-Version: 8.2602.0
-Release: 2%{?dist}
+Version: 8.2604.0
+Release: 1%{?dist}
 # Build-time generated file list for optional liboverride_*.so modules.
 %global liboverride_filelist %{_builddir}/%{name}-%{version}/liboverride.files
 License: (GPLv3+ and ASL 2.0)
@@ -312,6 +312,17 @@ Group: System Environment/Daemons
 Requires: %name = %version-%release
 BuildRequires: libcurl-devel
 
+%package omazuredce
+Summary: Azure Monitor Logs Ingestion output module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+BuildRequires: libcurl-devel
+
+%package omsendertrack
+Summary: Sender tracking output module for rsyslog
+Group: System Environment/Daemons
+Requires: %name = %version-%release
+
 %package mmdblookup
 Summary: mmdblookup MaxMind/GeoIP DB lookup for rsyslog
 Group: System Environment/Daemons
@@ -513,6 +524,17 @@ HTTP output module for sending syslog messages to HTTP endpoints.
 %description omotel
 OTEL output module for sending syslog messages to OpenTelemetry endpoints.
 
+%description omazuredce
+Azure Monitor Logs Ingestion output module for rsyslog. Batches JSON records
+and sends them to the Azure Monitor Logs Ingestion API via a Data Collection
+Endpoint (DCE), Data Collection Rule (DCR), and Microsoft Entra
+client-credentials authentication.
+
+%description omsendertrack
+Rsyslog output module for tracking message senders across all input sources.
+It records per-sender statistics such as hostname, message count, and last
+event time, and stores the data in a JSON-formatted state file.
+
 %description mmdblookup
 This module provides support for storing information about IP addresses in a highly optimized and flexible database format.
 
@@ -675,6 +697,8 @@ export HIREDIS_LIBS=-L%{_libdir}
 	--enable-mmkubernetes \
 	--enable-omhttp \
 	--enable-omotel \
+	--enable-omazuredce \
+	--enable-omsendertrack \
 	--enable-pmnull \
 	--enable-mmdblookup \
 	--enable-pmnormalize \
@@ -970,6 +994,14 @@ done
 %defattr(-,root,root)
 %{_libdir}/rsyslog/omotel.so
 
+%files omazuredce
+%defattr(-,root,root)
+%{_libdir}/rsyslog/omazuredce.so
+
+%files omsendertrack
+%defattr(-,root,root)
+%{_libdir}/rsyslog/omsendertrack.so
+
 %files mmdblookup
 %defattr(-,root,root)
 %{_libdir}/rsyslog/mmdblookup.so
@@ -980,6 +1012,10 @@ done
 
 
 %changelog
+* Tue Jul 14 2026 Andre Lorbach - 8.2604.0-1
+- Rebase the stable RPM source to 8.2604.0.
+- Add omazuredce and omsendertrack output module subpackages.
+
 * Mon May 11 2026 Andre Lorbach - 8.2602.0-2
 - Add rsyslog-imbeats subpackage (imbeats input module, Lumberjack v2).
 
