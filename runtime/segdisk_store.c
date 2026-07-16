@@ -720,7 +720,8 @@ static rsRetVal seal_active(segdisk_store_t *s) {
     return s->cfg.sync_files ? sync_dir(s) : RS_RET_OK;
 }
 
-static rsRetVal make_record(smsg_t *msg, uint64_t sequence, unsigned char **out, size_t *outlen) {
+static rsRetVal make_record(
+    smsg_t *msg, uint64_t sequence, unsigned char **out, size_t *outlen, uint32_t *rolling_crc) {
     unsigned char *payload = NULL;
     size_t payload_len = 0;
     rsRetVal r = segdiskCodecEncode(msg, &payload, &payload_len);
@@ -741,11 +742,13 @@ static rsRetVal make_record(smsg_t *msg, uint64_t sequence, unsigned char **out,
     put32(record + 12, (uint32_t)payload_len);
     put64(record + 16, sequence);
     put32(record + 24, segdiskCrc32c(record, 24));
-    put32(record + 28, segdiskCrc32c(payload, payload_len));
+    const uint32_t payload_crc = segdiskCrc32c(payload, payload_len);
+    put32(record + 28, payload_crc);
     memcpy(record + REC_HDR_LEN, payload, payload_len);
     free(payload);
     *out = record;
     *outlen = len;
+    *rolling_crc = segdiskCrc32c(record, REC_HDR_LEN) ^ payload_crc;
     return RS_RET_OK;
 }
 
@@ -768,7 +771,8 @@ static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, i
     }
     unsigned char *record = NULL;
     size_t len = 0;
-    rsRetVal r = make_record(msg, s->active->record_count + 1, &record, &len);
+    uint32_t rolling_crc;
+    rsRetVal r = make_record(msg, s->active->record_count + 1, &record, &len, &rolling_crc);
     if (r != RS_RET_OK) return r;
     const sbool rotate = s->active->record_count != 0 && s->cfg.max_file_size > 0 &&
                          s->active->file_size + (int64_t)len + FOOT_LEN > s->cfg.max_file_size;
@@ -781,7 +785,7 @@ static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, i
         }
         free(record);
         record = NULL;
-        r = make_record(msg, 1, &record, &len);
+        r = make_record(msg, 1, &record, &len, &rolling_crc);
         if (r != RS_RET_OK) return r;
     }
     r = write_full(s->active_fd, record, len);
@@ -790,8 +794,7 @@ static rsRetVal append_record(segdisk_store_t *s, smsg_t *msg, sbool internal, i
         s->active->data_end += len;
         s->active->file_size += len;
         s->active->last_sequence = ++s->active->record_count;
-        s->active->rolling_crc ^= segdiskCrc32c(record, REC_HDR_LEN);
-        s->active->rolling_crc ^= segdiskCrc32c(record + REC_HDR_LEN, len - REC_HDR_LEN);
+        s->active->rolling_crc ^= rolling_crc;
         s->last_data_segment = s->active->id;
         ++s->known_queue_size;
         s->stats.bytes += len;

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "rsyslog normalized performance comparison",
+  "type": "object",
+  "required": ["schema_version", "baseline_revision", "candidate_revision", "session", "comparisons"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "baseline_revision": {"type": "string"},
+    "candidate_revision": {"type": "string"},
+    "session": {"type": "string"},
+    "host_exclusive": {"type": "boolean"},
+    "cache_state": {"type": "string"},
+    "comparisons": {"type": "array"}
+  },
+  "additionalProperties": true
+}
