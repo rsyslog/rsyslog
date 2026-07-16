@@ -576,6 +576,15 @@ static rsRetVal qqueueSegDiskIdleTimeout(qqueue_t *pThis) {
     if (getLogicalQueueSize(pThis) != 0 || getPhysicalQueueSize(pThis) != 0 ||
         !segdiskStoreCanDematerialize(pThis->tVars.segdisk))
         return RS_RET_RETRY;
+    /* A DA child shares its parent queue mutex.  The child can become empty
+     * while ConsumerDA still owns a parent batch that has not reached the
+     * child store.  The parent physical count includes those logically
+     * dequeued batches until ConsumerDA commits them, so it is the required
+     * transfer-in-flight barrier.  Without it, an immediate idle timeout can
+     * remove the child store and a crash can lose the parent-only batch. */
+    if (pThis->pqParent == NULL || getPhysicalQueueSize(pThis->pqParent) != 0) {
+        return RS_RET_RETRY;
+    }
     if (pThis->segdiskIdleObservedActivity != pThis->pqParent->daActivityGeneration) {
         pThis->segdiskIdleObservedActivity = pThis->pqParent->daActivityGeneration;
         return RS_RET_RETRY;

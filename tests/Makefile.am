@@ -74,6 +74,7 @@ TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-da-event-properties.sh \
 	segmented-da-event-properties-fixedarray.sh \
 	segmented-da-behavior.sh \
+	segmented-da-tcp-spill-exact.sh \
 	classic-da-behavior.sh \
 	segmented-da-persist.sh \
 	classic-da-persist.sh \
