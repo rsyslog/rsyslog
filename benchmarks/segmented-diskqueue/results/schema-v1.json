@@ -13,7 +13,7 @@
     "comparisons": {
       "type": "array",
       "items": {
-        "anyOf": [
+        "oneOf": [
           {
             "type": "object",
             "required": ["scenario", "mode", "payload_bytes", "batch_size", "segment_bytes", "metrics"]
