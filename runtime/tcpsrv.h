@@ -82,6 +82,12 @@ struct tcpLstnPortList_s {
     uint8_t compressionDriver;
     uint64_t compressionMaxExpansionRatio;
     uint64_t compressionMaxDecompressedBytesPerReceive;
+    /* Concurrency & Locking: all sessions for this listener share the zstd
+     * window budget. Access to compressionZstdWindowBytesInUse is serialized
+     * by mutCompressionZstdWindow. */
+    pthread_mutex_t mutCompressionZstdWindow;
+    sbool compressionZstdWindowMutexInitialized;
+    uint64_t compressionZstdWindowBytesInUse;
 #ifdef FEATURE_REGEXP
     regex_t start_preg;
     sbool bHasStartRegex;

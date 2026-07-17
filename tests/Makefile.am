@@ -851,6 +851,7 @@ TESTS_IMTCP_STREAM_ALWAYS_ZSTD = \
 	imtcp-stream-always-zstd-truncated.sh \
 	imtcp-stream-always-zstd-empty-close.sh \
 	imtcp-stream-always-zstd-window-guard.sh \
+	imtcp-stream-always-zstd-window-budget.sh \
 	imtcp-stream-always-zstd-expansion-guard.sh \
 	imtcp-stream-always-zstd-to-zlib-mismatch.sh
 
@@ -2170,7 +2171,8 @@ imtcp-stream-always-zstd-corrupt.log: imtcp-stream-always-zstd-flushoff.log
 imtcp-stream-always-zstd-truncated.log: imtcp-stream-always-zstd-corrupt.log
 imtcp-stream-always-zstd-empty-close.log: imtcp-stream-always-zstd-truncated.log
 imtcp-stream-always-zstd-window-guard.log: imtcp-stream-always-zstd-empty-close.log
-imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-window-guard.log
+imtcp-stream-always-zstd-window-budget.log: imtcp-stream-always-zstd-window-guard.log
+imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-window-budget.log
 imtcp-stream-always-zstd-to-zlib-mismatch.log: imtcp-stream-always-zstd-expansion-guard.log
 imtcp-impstats.log: imtcp-stream-always-zlib-truncated.log
 imtcp-stream-always-zlib-impstats.log: imtcp-impstats.log

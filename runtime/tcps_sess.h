@@ -38,6 +38,7 @@ struct tcpsrv_s;
 
 #define TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT 1024
 #define TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT (64ULL * 1024ULL * 1024ULL)
+#define TCPSRV_ZSTD_FRAME_HEADER_MAX 18
 
 /* the tcps_sess object */
 struct tcps_sess_s {
@@ -85,6 +86,10 @@ struct tcps_sess_s {
         sbool streamDecompressed;
         z_stream zstrm;
         void *zstdDctx;
+        uchar zstdFrameHeader[TCPSRV_ZSTD_FRAME_HEADER_MAX];
+        size_t zstdFrameHeaderLen;
+        sbool zstdFrameHeaderProcessed;
+        uint64_t zstdWindowReservation;
 };
 
 
