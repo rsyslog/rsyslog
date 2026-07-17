@@ -592,9 +592,14 @@ BEGINdoAction_NoStrings
                     goto turbo_done;
                 }
             }
-            /* Non-$! path: build json from turbo result directly */
-            json = fast_result_to_json(result);
-            if (json != NULL) goto add_json;
+            /* Non-$! paths cannot retain a snapshot, so build JSON directly.
+             * A failed $! snapshot/materialization above deliberately falls
+             * through to standard normalization rather than retrying Turbo. */
+            if (!(pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
+                  pWrkrData->pData->pszPath[2] == '\0')) {
+                json = fast_result_to_json(result);
+                if (json != NULL) goto add_json;
+            }
         } else {
             DBGPRINTF(
                 "mmnormalize: turbo normalize failed (r=%d), "
