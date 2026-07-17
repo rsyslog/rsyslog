@@ -5,6 +5,8 @@
 # reference one newly created active segment, proving partially removed old
 # topology cannot be stranded beside the replacement state. Removing the
 # blocker must allow the next complete idle interval to dematerialize normally.
+# The 30-second path waits are event-driven; the generous bound only prevents
+# a hung cleanup worker from stalling overloaded parallel CI indefinitely.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
@@ -41,7 +43,7 @@ wait_path present "$SEG_DIR"
 touch "$SEG_DIR/blocker"
 wait_file_lines "$RSYSLOG_OUT_LOG" "$NUMMESSAGES" 300
 wait_content 'store.idleCleanupFailures=1' "$STATS_FILE"
-[ -f "$SEG_DIR/state" ] || error_exit 1 "cleanup failure did not restore durable state"
+wait_path present "$SEG_DIR/state"
 find "$SEG_DIR" -maxdepth 1 -name '*.open' -print -quit | grep -q . ||
 	error_exit 1 "cleanup failure did not restore an active segment"
 segment_count=$(find "$SEG_DIR" -maxdepth 1 -type f -name 'segment-*' -print | wc -l)

@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "baseline_revision": "3cb742fd1dc79e464df2c4209f8a9780fc86defa",
+  "candidate_revision": "3cb742fd1dc79e464df2c4209f8a9780fc86defa+working-tree-fingerprint",
+  "session": "segmented-diskqueue-2026-07",
+  "host_exclusive": false,
+  "cache_state": "uncontrolled",
+  "environment": {
+    "architecture": "x86_64",
+    "cpu_class": "Intel(R) Core(TM) i7-14700K",
+    "kernel": "5.15.167.4-microsoft-standard-WSL2",
+    "filesystem": "ext2/ext3",
+    "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "cflags": "-g -O2",
+    "configure_args": "--cache-file=config.cache --enable-debug --enable-testbench --enable-imdiag --enable-imtcp --disable-default-tests",
+    "caveat": "Non-exclusive host; scheduling and cache state were not controlled. Results use paired, alternating-order trials."
+  },
+  "workloads": {
+    "payload_bytes": [512, 4096, 32768],
+    "batch_size": 1024,
+    "measured_trials_per_workload": 11,
+    "calibration_pairs": 1,
+    "primary_modes": ["segmented", "da"],
+    "primary_scenario": "throughput",
+    "rotation_segment_bytes": 262144
+  },
+  "comparisons": [
+    {
+      "candidate": "reuse payload CRC for rolling segment accounting",
+      "status": "retained",
+      "target_metric": "spill_ns",
+      "baseline_fingerprint": "sha256:d815c0089a059f4c0e5ad3fe25a7ba9978fa290950c77c605a29b528bc677b3a",
+      "candidate_fingerprint": "sha256:f24c628fd64079e0eb1638dfc68dc48c71fe52718e1a6e306494bec8b56b48ff",
+      "sessions": [
+        {
+          "id": "20260716T105013Z",
+          "da_32768_change_percent": 39.70,
+          "da_32768_mad": 0.0113,
+          "segmented_32768_change_percent": 25.22,
+          "segmented_32768_mad": 0.0422,
+          "worst_primary_timing_change_percent": -3.78
+        },
+        {
+          "id": "20260716T110918Z",
+          "da_32768_change_percent": 39.56,
+          "da_32768_mad": 0.0174,
+          "segmented_32768_change_percent": 28.87,
+          "segmented_32768_mad": 0.0094,
+          "worst_primary_timing_change_percent": -3.67
+        }
+      ]
+    },
+    {
+      "candidate": "portable byte-table CRC32C",
+      "status": "retained",
+      "target_metric": "child_cpu_seconds",
+      "baseline_fingerprint": "sha256:9aa7d04ad1b4581e3518ea3dc8243aff9b0f4a678ee1a8a5c621c676b12c3ef5",
+      "candidate_fingerprint": "sha256:05b63d9ae8a69b3de50aa9d1ad5d69f3f4d48382d91020cf6ac6c1a7eaa9393a",
+      "sessions": [
+        {
+          "id": "byte-crc-matched-session1-20260716",
+          "da_32768_change_percent": 19.81,
+          "da_32768_mad": 0.0135,
+          "segmented_32768_change_percent": 25.54,
+          "segmented_32768_mad": 0.0182,
+          "worst_primary_timing_change_percent": -1.35
+        },
+        {
+          "id": "byte-crc-matched-session2-20260716",
+          "da_32768_change_percent": 20.55,
+          "da_32768_mad": 0.0226,
+          "segmented_32768_change_percent": 27.32,
+          "segmented_32768_mad": 0.0174,
+          "worst_primary_timing_change_percent": -2.23
+        }
+      ]
+    },
+    {
+      "candidate": "persistent validated read descriptor",
+      "status": "rejected",
+      "reason": "Open/close syscalls decreased, but batch-1024 end-to-end and drain improvements remained below 10%."
+    },
+    {
+      "candidate": "reserved record-header allocation",
+      "status": "rejected",
+      "reason": "Two sessions were noisy and did not produce a repeatable improvement above the acceptance threshold."
+    },
+    {
+      "candidate": "reuse encoded payload across rotation",
+      "status": "rejected",
+      "reason": "Pilot and rerun results changed direction with high dispersion."
+    }
+  ],
+  "guardrails": {
+    "sync_enabled": "Pure segmented smoke completed at all three payload sizes; paired sync timing was not used because one 32-KiB trial took about 144 seconds. Sync durability remains covered by focused functional tests.",
+    "restart_replay": "Timed clean restart was rejected because safe queue ownership could not be isolated without suppressing DA transfer or confounding the tested queue. Existing pure segmented and DA retry/restart functional tests are the guardrail.",
+    "da_batching": "A 32-KiB batch-1024 DA strace trial recorded 50,107 aggregate futex calls, but the blocking time spans input, retry, queue, and shutdown threads and does not isolate parent-to-child transfer. No batching, locking, cancellation, wakeup, retry, or ownership change was implemented or proposed."
+  }
+}

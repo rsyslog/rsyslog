@@ -1,0 +1,4 @@
+interface:
+  display_name: "rsyslog Performance Optimization"
+  short_description: "Measure and validate safe rsyslog speedups"
+  default_prompt: "Use $rsyslog-performance to plan and validate a safe rsyslog performance optimization."

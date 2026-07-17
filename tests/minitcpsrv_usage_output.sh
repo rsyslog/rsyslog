@@ -1,5 +1,8 @@
 #!/bin/bash
-# add 2018-11-15 by Jan Gerhards, released under ASL 2.0
+# Verify that minitcpsrv's failure usage includes required addressing and the
+# bounded receive-buffer option used by deterministic backpressure tests. The
+# oracle is the exact option text in the diagnostic output; no timing is used.
+# added 2018-11-15 by Jan Gerhards, released under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
 
@@ -10,5 +13,14 @@ if [ ! $? -eq 0 ]; then
   echo "invalid response generated"
   error_exit  1
 fi;
+
+grep -q -- "-b receiveBufferBytes" $RSYSLOG_DYNNAME.output || error_exit 1
+
+# The receive-buffer value must reject trailing junk instead of accepting the
+# numeric prefix. A nonzero exit plus the usage diagnostic is the oracle.
+if ./minitcpsrv -b 4096junk &> $RSYSLOG_DYNNAME.invalid-buffer; then
+  error_exit 1 "minitcpsrv accepted a malformed receive buffer size"
+fi
+grep -q -- "-b receiveBufferBytes" $RSYSLOG_DYNNAME.invalid-buffer || error_exit 1
 
 exit_test
