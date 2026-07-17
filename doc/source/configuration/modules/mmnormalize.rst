@@ -85,12 +85,7 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmnormalize-variable.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-
-.. list-table::
-   :widths: 30 70
-   :header-rows: 0
-
-   * - **turbo**
+   * - :ref:`param-mmnormalize-turbo`
      - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
         :start-after: .. summary-start
         :end-before: .. summary-end

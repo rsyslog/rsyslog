@@ -1,6 +1,10 @@
 .. _param-mmnormalize-turbo:
 .. _mmnormalize.parameter.action.turbo:
 
+.. meta::
+   :description: Enable TurboVM acceleration for mmnormalize actions.
+   :keywords: rsyslog, mmnormalize, turbo, liblognorm, normalization
+
 turbo
 =====
 
@@ -19,7 +23,7 @@ This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 :Name: turbo
 :Scope: action
-:Type: binary
+:Type: boolean
 :Default: off
 :Required?: no
 :Introduced: 8.2602.0
@@ -57,6 +61,16 @@ Action usage
    action(type="mmnormalize"
           rulebase="/etc/rsyslog.d/rules.rb"
           turbo="on")
+
+YAML usage
+----------
+
+.. code-block:: yaml
+
+   actions:
+     - type: mmnormalize
+       rulebase: /etc/rsyslog.d/rules.rb
+       turbo: on
 
 See also
 --------

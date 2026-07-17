@@ -79,6 +79,10 @@
 static pthread_mutex_t glblVars_lock;
 struct json_object *global_var_root = NULL;
 
+#ifdef HAVE_LOGNORM_TURBO
+static void msgMaterializeTurboJSON(smsg_t *pMsg);
+#endif
+
 /* static data */
 DEFobjStaticHelpers;
 DEFobjCurrIf(datetime) DEFobjCurrIf(glbl) DEFobjCurrIf(regexp) DEFobjCurrIf(prop) DEFobjCurrIf(net) DEFobjCurrIf(var)
@@ -1016,6 +1020,14 @@ ENDobjDestruct
     tmpCOPYCSTR(PROCID);
     tmpCOPYCSTR(MSGID);
 
+#ifdef HAVE_LOGNORM_TURBO
+    /* Turbo snapshots are opaque and cannot be duplicated generically.  Turn
+     * one into the normal owned JSON representation before copying so callers
+     * of MsgDup() retain CEE properties just like the standard path does. */
+    MsgLock(pOld);
+    msgMaterializeTurboJSON(pOld);
+    MsgUnlock(pOld);
+#endif
     if (pOld->json != NULL) pNew->json = jsonDeepCopy(pOld->json);
     if (pOld->localvars != NULL) pNew->localvars = jsonDeepCopy(pOld->localvars);
 
@@ -1073,6 +1085,13 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm) {
 
     assert(pThis != NULL);
     assert(pStrm != NULL);
+
+#ifdef HAVE_LOGNORM_TURBO
+    /* Disk queues persist JSON, not the opaque module-owned snapshot. */
+    MsgLock(pThis);
+    msgMaterializeTurboJSON(pThis);
+    MsgUnlock(pThis);
+#endif
 
     /* then serialize elements */
     CHKiRet(obj.BeginSerialize(pStrm, (obj_t *)pThis));
@@ -2888,10 +2907,11 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
  * NULLed after firing so we never double-materialize, while turbo_result
  * stays valid for the get_str fast-path.
  * When pMsg->json is already non-NULL (imfile metadata, enrichment, ...),
- * snapshot fields are merged in — existing keys win on conflict.
+ * snapshot fields are merged in using msgAddJSON() semantics: later
+ * normalization fields replace colliding top-level keys.
  * Must be called with pMsg->mut held.
  */
-static inline void msgMaterializeTurboJSON(smsg_t *pMsg) {
+static void msgMaterializeTurboJSON(smsg_t *pMsg) {
     struct json_object *snap_json = NULL;
 
     if (pMsg->turbo_result == NULL || pMsg->turbo_result_to_json == NULL) return;
@@ -2904,14 +2924,13 @@ static inline void msgMaterializeTurboJSON(smsg_t *pMsg) {
     if (pMsg->json == NULL) {
         pMsg->json = snap_json;
     } else {
-        /* Merge snapshot fields into existing json — existing keys win */
+        /* Keep msgAddJSON() full-tree merge semantics: the normalization
+         * result is the later write and therefore replaces matching keys. */
         struct json_object_iterator it = json_object_iter_begin(snap_json);
         struct json_object_iterator itEnd = json_object_iter_end(snap_json);
         while (!json_object_iter_equal(&it, &itEnd)) {
             const char *key = json_object_iter_peek_name(&it);
-            if (!json_object_object_get_ex(pMsg->json, key, NULL)) {
-                json_object_object_add(pMsg->json, key, json_object_get(json_object_iter_peek_value(&it)));
-            }
+            json_object_object_add(pMsg->json, key, json_object_get(json_object_iter_peek_value(&it)));
             json_object_iter_next(&it);
         }
         json_object_put(snap_json);
@@ -3016,7 +3035,7 @@ rsRetVal getJSONPropVal(
      * json-c tree (imfile metadata, msgMaterializeTurboJSON, `set`
      * statements, downstream enrichment), the turbo snapshot is no
      * longer authoritative — the slow path below honours the
-     * existing-keys-win merge semantics of msgMaterializeTurboJSON.
+     * later-writer-wins merge semantics of msgMaterializeTurboJSON.
      * Returning snapshot values in that state would bypass a more
      * recent write.  The fast path is therefore only valid while the
      * message has no json tree yet, which is the common case for
