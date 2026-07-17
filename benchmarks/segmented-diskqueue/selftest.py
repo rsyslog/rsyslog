@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic self-tests for benchmark workload and comparison plumbing."""
 
+import tempfile
+from pathlib import Path
+import subprocess
+
 import compare
 import runner
 
@@ -41,6 +45,61 @@ def main():
           "paired comparison key omitted a workload dimension")
     check(abs(compare.median_absolute_deviation([1.0, 1.1, 1.2]) - 0.1) < 1e-12,
           "median absolute deviation calculation changed")
+
+    # A zero-valued preceding pair is excluded without shifting the trial ID
+    # associated with a later ratio or outlier.
+    metric_pairs = [
+        ({"trial": 4, "spill_ns": 0}, {"trial": 4, "spill_ns": 1}),
+        ({"trial": 7, "spill_ns": 20}, {"trial": 7, "spill_ns": 10}),
+    ]
+    check(compare.paired_metric_ratios(metric_pairs, "spill_ns") == [(7, 2.0)],
+          "filtered metric ratio lost its original trial ID")
+
+    matching = (
+        {"metadata": {"session": "session-a", "revision": "base", "source_fingerprint": "base-fp",
+                      "pair_revision": "candidate", "pair_source_fingerprint": "candidate-fp"}},
+        {"metadata": {"session": "session-a", "revision": "candidate",
+                      "source_fingerprint": "candidate-fp", "pair_revision": "base",
+                      "pair_source_fingerprint": "base-fp"}},
+    )
+    compare.validate_paired_metadata(*matching)
+    try:
+        compare.validate_paired_metadata(matching[0], {"metadata": {"session": "session-b"}})
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("comparison accepted records from different sessions")
+    mismatched_pair = {"metadata": dict(matching[1]["metadata"], pair_revision="unrelated")}
+    try:
+        compare.validate_paired_metadata(matching[0], mismatched_pair)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("comparison accepted unrelated revisions with a reused session")
+
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "same.json"
+        try:
+            runner.validate_pair_outputs(output, output)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("paired run accepted identical output paths")
+
+        repository = Path(directory) / "repository"
+        repository.mkdir()
+        subprocess.run(["git", "init", "-q", str(repository)], check=True)
+        tracked = repository / "tracked"
+        tracked.write_text("original\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repository), "add", "tracked"], check=True)
+        subprocess.run(["git", "-C", str(repository), "-c", "user.name=benchmark-selftest",
+                        "-c", "user.email=benchmark-selftest@example.invalid", "-c", "commit.gpgsign=false",
+                        "commit", "-qm", "fixture"],
+                       check=True)
+        clean_fingerprint = runner.source_fingerprint(repository)
+        tracked.unlink()
+        check(runner.source_fingerprint(repository) != clean_fingerprint,
+              "source fingerprint ignored a deleted tracked file")
     print("segmented disk queue benchmark self-tests passed")
 
 

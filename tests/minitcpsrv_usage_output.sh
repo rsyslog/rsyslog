@@ -16,4 +16,11 @@ fi;
 
 grep -q -- "-b receiveBufferBytes" $RSYSLOG_DYNNAME.output || error_exit 1
 
+# The receive-buffer value must reject trailing junk instead of accepting the
+# numeric prefix. A nonzero exit plus the usage diagnostic is the oracle.
+if ./minitcpsrv -b 4096junk &> $RSYSLOG_DYNNAME.invalid-buffer; then
+  error_exit 1 "minitcpsrv accepted a malformed receive buffer size"
+fi
+grep -q -- "-b receiveBufferBytes" $RSYSLOG_DYNNAME.invalid-buffer || error_exit 1
+
 exit_test

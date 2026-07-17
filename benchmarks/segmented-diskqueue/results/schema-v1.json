@@ -10,7 +10,21 @@
     "session": {"type": "string"},
     "host_exclusive": {"type": "boolean"},
     "cache_state": {"type": "string"},
-    "comparisons": {"type": "array"}
+    "comparisons": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["scenario", "mode", "payload_bytes", "batch_size", "segment_bytes", "metrics"]
+          },
+          {
+            "type": "object",
+            "required": ["candidate", "status"]
+          }
+        ]
+      }
+    }
   },
   "additionalProperties": true
 }

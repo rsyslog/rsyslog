@@ -19,6 +19,7 @@
  * limitations under the License.
  */
 #include "config.h"
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -172,6 +173,13 @@ static void waitForReadRelease(void) {
     fprintf(stderr, "minitcpsrv read release file %s found\n", waitReadFileName);
 }
 
+static void setReceiveBuffer(int socket_fd) {
+    if (receiveBufferSize > 0 &&
+        setsockopt(socket_fd, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) != 0) {
+        errout("setsockopt SO_RCVBUF");
+    }
+}
+
 static void createListenSocket(void) {
     struct sockaddr_in srvAddr;
     unsigned int srvAddrLen;
@@ -181,10 +189,9 @@ static void createListenSocket(void) {
     if (listen_fd < 0) {
         errout("Failed to create listen socket");
     }
-    if (receiveBufferSize > 0 &&
-        setsockopt(listen_fd, SOL_SOCKET, SO_RCVBUF, &receiveBufferSize, sizeof(receiveBufferSize)) != 0) {
-        errout("setsockopt SO_RCVBUF");
-    }
+    /* Set before listen() for TCP window negotiation, then repeat on accepted
+     * sockets so the helper does not rely on platform-specific inheritance. */
+    setReceiveBuffer(listen_fd);
     /* SO_REUSEADDR is enough for the test helper's restart use cases. */
     int opt = 1;
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -273,10 +280,14 @@ int main(int argc, char *argv[]) {
             case 'A':
                 acceptReadyFileName = optarg;
                 break;
-            case 'b':
-                receiveBufferSize = atoi(optarg);
-                if (receiveBufferSize <= 0) usage();
+            case 'b': {
+                char *endptr;
+                errno = 0;
+                const long value = strtol(optarg, &endptr, 10);
+                if (errno != 0 || *endptr != '\0' || value <= 0 || value > INT_MAX) usage();
+                receiveBufferSize = (int)value;
                 break;
+            }
             case 'R':
                 useReusePort = 1;
                 break;
@@ -402,6 +413,7 @@ int main(int argc, char *argv[]) {
                     close(conn_fd);
                     continue;
                 }
+                setReceiveBuffer(conn_fd);
                 writeAcceptReadyMarker();
 
                 fds[nfds].fd = conn_fd;

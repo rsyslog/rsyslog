@@ -98,7 +98,8 @@ def cpu_class():
 
 def source_fingerprint(build_dir):
     """Identify dirty source trees without recording machine-specific paths."""
-    changed = git_value(build_dir, "ls-files", "--modified", "--others", "--exclude-standard").splitlines()
+    changed = git_value(build_dir, "ls-files", "--modified", "--deleted", "--others",
+                        "--exclude-standard").splitlines()
     if not changed:
         return git_value(build_dir, "rev-parse", "HEAD")
     digest = hashlib.sha256()
@@ -195,7 +196,7 @@ def run_trial(script, build_dir, workload, trial_index, measured, strace_summary
     started = time.monotonic_ns()
     try:
         with trial_log.open("w", encoding="utf-8") as log:
-            subprocess.run([str(script)], env=env, check=True, stdout=log, stderr=subprocess.STDOUT)
+            subprocess.run(["bash", str(script)], env=env, check=True, stdout=log, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as error:
         output = trial_log.read_text(encoding="utf-8", errors="replace")
         raise SystemExit("benchmark trial failed:\n" + output[-8000:]) from error
@@ -233,10 +234,16 @@ def load_resume(path, meta, enabled):
         return []
     with path.open(encoding="utf-8") as stream:
         previous = json.load(stream)
-    for field in ("revision", "source_fingerprint", "label", "session"):
+    for field in ("revision", "source_fingerprint", "pair_revision", "pair_source_fingerprint",
+                  "label", "session"):
         if previous["metadata"].get(field) != meta.get(field):
             raise SystemExit("cannot resume: %s metadata changed for %s" % (field, path))
     return previous["records"]
+
+
+def validate_pair_outputs(primary_output, pair_output):
+    if pair_output is not None and primary_output == pair_output:
+        raise SystemExit("--output and --pair-output must resolve to different paths")
 
 
 def main():
@@ -251,12 +258,22 @@ def main():
     verify_build(primary_dir)
     pair_dir = Path(args.pair_build_dir).resolve() if args.pair_build_dir else None
     pair_output = Path(args.pair_output).resolve() if args.pair_output else None
+    validate_pair_outputs(primary_output, pair_output)
     if pair_dir:
         verify_build(pair_dir)
     artifact_root = primary_output.parent / "artifacts" / args.session
     artifact_root.mkdir(parents=True, exist_ok=True)
     primary_meta = metadata(primary_dir, args.label, args.session)
     pair_meta = metadata(pair_dir, args.pair_label, args.session) if pair_dir else None
+    if pair_meta:
+        primary_meta.update({
+            "pair_revision": pair_meta["revision"],
+            "pair_source_fingerprint": pair_meta["source_fingerprint"],
+        })
+        pair_meta.update({
+            "pair_revision": primary_meta["revision"],
+            "pair_source_fingerprint": primary_meta["source_fingerprint"],
+        })
     primary_records = load_resume(primary_output, primary_meta, args.resume)
     pair_records = load_resume(pair_output, pair_meta, args.resume) if pair_dir else []
     primary_completed = {record_key(record) for record in primary_records}

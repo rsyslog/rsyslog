@@ -43,10 +43,36 @@ def metric_value(record, metric):
     return record[metric]
 
 
+def paired_metric_ratios(pairs, metric):
+    return [
+        (base["trial"], metric_value(base, metric) / metric_value(candidate, metric))
+        for base, candidate in pairs
+        if metric_value(base, metric) > 0 and metric_value(candidate, metric) > 0
+    ]
+
+
+def validate_paired_metadata(baseline, candidate):
+    baseline_meta = baseline.get("metadata", {})
+    candidate_meta = candidate.get("metadata", {})
+    baseline_session = baseline_meta.get("session")
+    candidate_session = candidate_meta.get("session")
+    if not baseline_session or baseline_session != candidate_session:
+        raise SystemExit("baseline and candidate must belong to the same benchmark session")
+    reciprocal = (
+        baseline_meta.get("pair_revision") == candidate_meta.get("revision") and
+        candidate_meta.get("pair_revision") == baseline_meta.get("revision") and
+        baseline_meta.get("pair_source_fingerprint") == candidate_meta.get("source_fingerprint") and
+        candidate_meta.get("pair_source_fingerprint") == baseline_meta.get("source_fingerprint")
+    )
+    if not reciprocal:
+        raise SystemExit("baseline and candidate metadata do not identify each other as the paired build")
+
+
 def main():
     args = parse_args()
     baseline = load(args.baseline)
     candidate = load(args.candidate)
+    validate_paired_metadata(baseline, candidate)
     base_records = {key(record): record for record in baseline["records"] if record["measured"]}
     candidate_records = {key(record): record for record in candidate["records"] if record["measured"]}
     if base_records.keys() != candidate_records.keys():
@@ -58,14 +84,14 @@ def main():
     for workload, pairs in sorted(grouped.items()):
         metrics = {}
         for metric in METRICS:
-            ratios = [metric_value(base, metric) / metric_value(candidate, metric) for base, candidate in pairs
-                      if metric_value(base, metric) > 0 and metric_value(candidate, metric) > 0]
-            if not ratios:
+            ratio_pairs = paired_metric_ratios(pairs, metric)
+            if not ratio_pairs:
                 continue
+            ratios = [ratio for trial, ratio in ratio_pairs]
             median = statistics.median(ratios)
             mad = median_absolute_deviation(ratios)
             outliers = [] if mad == 0 else [
-                pairs[index][0]["trial"] for index, ratio in enumerate(ratios)
+                trial for trial, ratio in ratio_pairs
                 if abs(ratio - median) / mad > 3.5
             ]
             metrics[metric] = {
@@ -121,7 +147,9 @@ def main():
                  result["median_change_percent"], result["mad"],
                  ", ".join(str(item) for item in result["outlier_trials"]) or "-", status)
             )
-    Path(args.markdown).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    markdown_path = Path(args.markdown)
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
