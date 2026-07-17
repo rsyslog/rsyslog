@@ -554,6 +554,8 @@ BEGINdoAction_NoStrings
     }
 #ifdef HAVE_LOGNORM_TURBO
     if (pWrkrData->ctxlnTurbo != NULL) {
+        const sbool isCeeRoot = pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
+                                pWrkrData->pData->pszPath[2] == '\0';
         const ln_fast_result_t *result = NULL;
         r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo, (char *)buf, len, &result);
         if (r == 0 && result != NULL) {
@@ -563,8 +565,7 @@ BEGINdoAction_NoStrings
              * all string data -- safe for async output actions and
              * non-DIRECT queues. The lazy materializer builds json
              * on-demand only when templates access $! or $!field. */
-            if (pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
-                pWrkrData->pData->pszPath[2] == '\0') {
+            if (isCeeRoot) {
                 ln_fast_result_snapshot_t *snap = ln_turbo_snapshot_result(pWrkrData->ctxlnTurbo);
                 if (snap == NULL) {
                     DBGPRINTF(
@@ -595,8 +596,7 @@ BEGINdoAction_NoStrings
             /* Non-$! paths cannot retain a snapshot, so build JSON directly.
              * A failed $! snapshot/materialization above deliberately falls
              * through to standard normalization rather than retrying Turbo. */
-            if (!(pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
-                  pWrkrData->pData->pszPath[2] == '\0')) {
+            if (!isCeeRoot) {
                 json = fast_result_to_json(result);
                 if (json != NULL) goto add_json;
             }
