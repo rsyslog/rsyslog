@@ -85,6 +85,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmnormalize-variable.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-turbo`
+     - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -95,6 +99,7 @@ Action Parameters
    ../../reference/parameters/mmnormalize-userawmsg
    ../../reference/parameters/mmnormalize-path
    ../../reference/parameters/mmnormalize-variable
+   ../../reference/parameters/mmnormalize-turbo
 
 See Also
 ========
