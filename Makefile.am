@@ -5,15 +5,6 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 EXTRA_DIST = \
 	README.md \
-	benchmarks/segmented-diskqueue/.gitignore \
-	benchmarks/segmented-diskqueue/README.md \
-	benchmarks/segmented-diskqueue/compare.py \
-	benchmarks/segmented-diskqueue/results/campaign-2026-07.json \
-	benchmarks/segmented-diskqueue/results/schema-v1.json \
-	benchmarks/segmented-diskqueue/run.sh \
-	benchmarks/segmented-diskqueue/runner.py \
-	benchmarks/segmented-diskqueue/selftest.py \
-	benchmarks/segmented-diskqueue/trial.sh \
 	platform/README \
 	platform/freebsd/rsyslogd \
 	platform/slackware/rc.rsyslogd \
