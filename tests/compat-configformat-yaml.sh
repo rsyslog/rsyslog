@@ -106,7 +106,6 @@ rulesets:
     actions:
       - type: omfwd
         target: "127.0.0.1"
-        protocol: "udp"
 YAML_EOF
 }
 
@@ -317,5 +316,53 @@ rulesets:
 YAML_EOF
 run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.yaml" "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
 check_not_present 'imtcp input uses streamdriver.mode="0"' "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+
+# YAML parity for the explicit protocol="udp" cases: the YAML frontend must set
+# bProtocolSet the same way. Explicit UDP is acknowledged (silent), a global
+# defaultNetstreamDriver stays irrelevant to UDP (silent), but action-level TLS
+# settings still warn.
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+check_not_present 'omfwd action uses protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+        streamdriver.name: "gtls"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+  defaultNetstreamDriver: "gtls"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+check_not_present 'protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
 
 exit_test

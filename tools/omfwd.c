@@ -126,6 +126,7 @@ typedef struct _instanceData {
 #define COMPRESS_DRIVER_ZSTD 1
     uint8_t compressionDriver;
     int protocol;
+    sbool bProtocolSet; /* protocol was explicitly configured */
     char *networkNamespace;
     int originalNamespace;
     int iRebindInterval; /* rebind interval */
@@ -2024,6 +2025,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->pAction = NULL;
     pData->targetSrv = NULL;
     pData->protocol = FORW_UDP;
+    pData->bProtocolSet = 0;
     pData->networkNamespace = NULL;
     pData->originalNamespace = -1;
     pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -2123,9 +2125,34 @@ finalize_it:
 /** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
 static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
     if (pData->protocol == FORW_UDP) {
-        glblWarnIfInsecureDefault(loadModConf->pConf,
-                                  "omfwd action uses protocol=\"udp\" (without TLS); "
-                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        /* Only action-level TLS settings count here. UDP never uses a stream
+         * driver, so the global defaultNetstreamDriver is irrelevant to a UDP
+         * action and must NOT trigger a warning for an explicit protocol="udp"
+         * (unlike the TCP mode-0 branch below, where the effective driver does
+         * matter). streamdriver.name / streamdriver.authmode set on the action
+         * itself, however, are a real contradiction.
+         */
+        const int tlsHintsConfigured =
+            (pData->pszStrmDrvrAuthMode != NULL) || glblIsTlsCapableNetstrmDrvr(pData->pszStrmDrvr);
+        if (tlsHintsConfigured) {
+            /* TLS-related settings on a UDP action are silently ineffective: UDP
+             * never uses a stream driver, so traffic stays plaintext. Warn about
+             * the contradiction even when protocol="udp" is explicit.
+             */
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd has TLS-related settings but protocol=\"udp\"; UDP is always plaintext "
+                                      "so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else if (!pData->bProtocolSet) {
+            /* An omitted protocol parameter falls back to UDP and deserves the
+             * warning, as does the legacy "@target" selector (which never sets
+             * bProtocolSet). Only an explicit action() protocol="udp" is a
+             * deliberate admin choice and is silenced.
+             */
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd action uses protocol=\"udp\" (without TLS); "
+                                      "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
     } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
         const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(loadModConf->pConf, pData->pszStrmDrvr);
         const int tlsHintsConfigured =
@@ -2274,6 +2301,7 @@ BEGINnewActInst
                 free(str);
                 ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
             }
+            pData->bProtocolSet = 1;
         } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
             CHKmalloc(pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "tcp_framing")) {
@@ -2610,6 +2638,12 @@ BEGINparseSelectorAct
     } else {
         pData->protocol = FORW_UDP;
     }
+    /* Note: we deliberately do NOT set pData->bProtocolSet here. The legacy
+     * "@"/"@@" selector is an insecure default carried over for backward
+     * compatibility, not an explicit modern opt-in, so it must still trigger the
+     * secure-defaults warning (plain UDP for "@", plain-TCP mode 0 for "@@").
+     * Only the action() "protocol" parameter counts as an explicit choice.
+     */
     /* we are now after the protocol indicator. Now check if we should
      * use compression. We begin to use a new option format for this:
      * @(option,option)host:port

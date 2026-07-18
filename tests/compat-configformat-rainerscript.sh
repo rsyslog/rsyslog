@@ -104,6 +104,58 @@ run_expect_success "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.conf" "${RSYSLOG
 content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
     "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
 
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.log"
+content_check 'omfwd action uses protocol="udp" (without TLS)' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-implicit.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+check_not_present 'omfwd action uses protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit.log"
+
+# explicit protocol="udp" combined with TLS settings is contradictory (UDP is
+# always plaintext) and must still warn, even though the protocol is explicit
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp" streamdriver.name="gtls")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
+
+# a global defaultNetstreamDriver is irrelevant to a UDP action (UDP never uses a
+# stream driver), so explicit protocol="udp" must stay silent despite it - only
+# action-level TLS settings count
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" defaultNetstreamDriver="gtls")
+action(type="omfwd" target="127.0.0.1" protocol="udp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+check_not_present 'protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
+
+# the legacy "@target" sigil is an insecure default (plain UDP) carried over for
+# backward compatibility, not an explicit modern opt-in, so it still warns
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-legacy.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn" compatibility.configformat.legacy="enable")
+*.* @127.0.0.1:514
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.log"
+content_check 'omfwd action uses protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-legacy.log"
+
 cat >"${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
 action(type="omfwd" target="127.0.0.1" protocol="tcp")
@@ -163,7 +215,7 @@ global(compatibility.defaults.secure="warn")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.tlswarn.port" streamdriver.mode="0"
       streamdriver.name="gtls" streamdriver.authmode="x509/name")
-action(type="omfwd" target="127.0.0.1" protocol="udp")
+action(type="omfwd" target="127.0.0.1")
 CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.tls-warn.conf" "${RSYSLOG_DYNNAME}.tls-warn.log"
     content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' "${RSYSLOG_DYNNAME}.tls-warn.log"
