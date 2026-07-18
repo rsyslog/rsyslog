@@ -1270,8 +1270,10 @@ BEGINsetModCnf
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
     CHKiRet(applySecureDefaultsToModuleConfig(loadModConf));
-    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, loadModConf->bStrmDrvrModeSet,
-                                     getEffectiveModuleStreamDriver(loadModConf), loadModConf->pszStrmDrvrAuthMode);
+    /* no module-level insecure-listener warning here: module parameters alone
+     * open no port, and every actual listener is checked with its effective
+     * (possibly inherited) values in addInstance()/newInpInst().
+     */
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
@@ -1326,8 +1328,9 @@ BEGINendCnfLoad
             loadModConf = NULL;
             return iRet;
         }
-        warnIfInsecureListenerConfigured(pModConf->iStrmDrvrMode, pModConf->bStrmDrvrModeSet,
-                                         getEffectiveModuleStreamDriver(pModConf), pModConf->pszStrmDrvrAuthMode);
+        /* no module-level insecure-listener warning here either: legacy
+         * listeners are checked individually in addInstance().
+         */
     }
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;

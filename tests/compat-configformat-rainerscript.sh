@@ -256,6 +256,20 @@ CONF_EOF
     check_not_present 'imtcp input uses streamdriver.mode="0"' \
         "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
 
+    # an instance-level explicit mode 0 is sufficient on its own: listeners are
+    # only checked with their effective values, there is no module-level warning
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.port"
+      streamdriver.mode="0")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.log"
+    check_not_present 'imtcp input uses streamdriver.mode="0"' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-instance-mode0.log"
+
     cat >"${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict" defaultNetstreamDriver="gtls")
 module(load="../plugins/imtcp/.libs/imtcp")
