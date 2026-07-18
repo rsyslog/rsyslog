@@ -225,6 +225,7 @@ AC_MSG_CHECKING([for STAILQ macros in sys/queue.h])
 AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
         [[
+#include <stddef.h> /* for NULL, used by STAILQ_INIT */
 #include <sys/queue.h>
 struct stailq_test_entry {
     STAILQ_ENTRY(stailq_test_entry) link;
