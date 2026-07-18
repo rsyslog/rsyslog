@@ -2135,7 +2135,11 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
                                       "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
                                       "TCP so TLS is not active "
                                       "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
-        } else {
+        } else if (!pData->bStrmDrvrModeSet) {
+            /* explicit streamdriver.mode="0" is a deliberate admin choice, not an
+             * insecure default - strict mode treats it the same way (see
+             * applySecureDefaultsToForwarding()).
+             */
             glblWarnIfInsecureDefault(
                 loadModConf->pConf,
                 "omfwd action uses protocol=\"tcp\" with streamdriver.mode=\"0\" "

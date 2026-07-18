@@ -104,6 +104,24 @@ run_expect_success "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.conf" "${RSYSLOG
 content_check 'omfwd has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
     "${RSYSLOG_DYNNAME}.omfwd-global-driver-warn.log"
 
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.log"
+content_check 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-implicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.mode="0")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+check_not_present 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+
 cat >"${RSYSLOG_DYNNAME}.omfwd-strict-promote.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict")
 action(type="omfwd" targetSrv="_syslog._tcp.example.invalid" protocol="tcp" streamdriver.name="gtls")
@@ -161,6 +179,30 @@ CONF_EOF
         "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
     content_check 'imtcp has TLS-related settings but streamdriver.mode="0"; mode 0 uses plain TCP so TLS is not active' \
         "${RSYSLOG_DYNNAME}.imtcp-global-driver-warn.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.port")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.log"
+    content_check 'imtcp input uses streamdriver.mode="0" (plain TCP without TLS)' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-implicit-mode0.log"
+
+    # explicit module-level mode 0 acknowledges plain TCP; instances inherit
+    # both the mode and its explicitness flag, so no warning at either level
+    cat >"${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imtcp/.libs/imtcp" streamdriver.mode="0")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.port")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.conf" \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+    check_not_present 'imtcp input uses streamdriver.mode="0"' \
+        "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
 
     cat >"${RSYSLOG_DYNNAME}.imtcp-strict-explicit-mode0.conf" <<CONF_EOF
 global(compatibility.defaults.secure="strict" defaultNetstreamDriver="gtls")

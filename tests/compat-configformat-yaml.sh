@@ -281,4 +281,41 @@ run_expect_success "${RSYSLOG_DYNNAME}.tls-anon-warn.yaml" "${RSYSLOG_DYNNAME}.t
 content_check 'imtcp uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
 content_check 'omfwd uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
 
+# YAML parity for the explicit streamdriver.mode="0" cases (bStrmDrvrModeSet).
+cat >"${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "tcp"
+        streamdriver.mode: 0
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.yaml" "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+check_not_present 'omfwd action uses protocol="tcp" with streamdriver.mode="0"' "${RSYSLOG_DYNNAME}.omfwd-plain-explicit-mode0.log"
+
+cat >"${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imtcp/.libs/imtcp"
+inputs:
+  - type: imtcp
+    address: "127.0.0.1"
+    port: "0"
+    listenPortFileName: "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.port"
+    streamdriver.mode: 0
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.yaml" "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+check_not_present 'imtcp input uses streamdriver.mode="0"' "${RSYSLOG_DYNNAME}.imtcp-plain-explicit-mode0.log"
+
 exit_test
