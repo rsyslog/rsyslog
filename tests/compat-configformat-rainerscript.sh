@@ -7,6 +7,10 @@ have_imtcp_module=0
 if ls ../plugins/imtcp/.libs/imtcp.* >/dev/null 2>&1; then
     have_imtcp_module=1
 fi
+have_relp_modules=0
+if ls ../plugins/omrelp/.libs/omrelp.* >/dev/null 2>&1 && ls ../plugins/imrelp/.libs/imrelp.* >/dev/null 2>&1; then
+    have_relp_modules=1
+fi
 
 run_expect_success() {
     local cfg="$1"
@@ -292,6 +296,50 @@ CONF_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.tls-anon-warn.conf" "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
     content_check 'imtcp uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
     content_check 'omfwd uses streamdriver.authmode="anon"; server identity is not authenticated, so MITM is possible' "${RSYSLOG_DYNNAME}.tls-anon-warn.log"
+fi
+
+if [ ${have_relp_modules} -eq 1 ]; then
+    cat >"${RSYSLOG_DYNNAME}.omrelp-plain-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.log"
+    content_check 'omrelp action uses tls="off" (plain RELP without TLS)' \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-implicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.omrelp-plain-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.log"
+    check_not_present 'omrelp action uses tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.log"
+    content_check 'imrelp input uses tls="off" (plain RELP without TLS)' \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-implicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-plain-explicit.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
+    check_not_present 'imrelp input uses tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
 fi
 
 cat >"${RSYSLOG_DYNNAME}.invalid.conf" <<CONF_EOF

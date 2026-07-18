@@ -365,4 +365,43 @@ YAML_EOF
 run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
 check_not_present 'protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.log"
 
+# YAML parity for the explicit RELP tls="off" cases (bEnableTLSSet).
+if ls ../plugins/omrelp/.libs/omrelp.* >/dev/null 2>&1 && ls ../plugins/imrelp/.libs/imrelp.* >/dev/null 2>&1; then
+    cat >"${RSYSLOG_DYNNAME}.omrelp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
+    check_not_present 'omrelp action uses tls="off"' "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
+    check_not_present 'imrelp input uses tls="off"' "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
+fi
+
 exit_test

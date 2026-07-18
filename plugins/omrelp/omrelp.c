@@ -83,6 +83,7 @@ typedef struct _instanceData {
     int connTimeout;
     unsigned rebindInterval;
     sbool bEnableTLS;
+    sbool bEnableTLSSet; /* tls was explicitly configured */
     sbool bEnableTLSZip;
     int bHadAuthFail; /**< set on TLS auth failure */
     DEF_ATOMIC_HELPER_MUT(mutHadAuthFail);
@@ -326,6 +327,7 @@ BEGINcreateInstance
     pData->connTimeout = 10;
     pData->rebindInterval = 0;
     pData->bEnableTLS = DFLT_ENABLE_TLS;
+    pData->bEnableTLSSet = 0;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
     pData->bHadAuthFail = 0;
     INIT_ATOMIC_HELPER_MUT(pData->mutHadAuthFail);
@@ -393,6 +395,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->sizeWindow = 0;
     pData->rebindInterval = 0;
     pData->bEnableTLS = DFLT_ENABLE_TLS;
+    pData->bEnableTLSSet = 0;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
     pData->bTlsPermFailDisablesAction = DFLT_TLS_PERMFAIL_DISABLES_ACTION;
     pData->pristring = NULL;
@@ -474,11 +477,14 @@ ENDsetModCnf
 
 /** Warn in secure warn mode when an omrelp action is configured without TLS. */
 static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
-    if (!pData->bEnableTLS) {
+    if (!pData->bEnableTLS && !pData->bEnableTLSSet) {
+        /* explicit tls="off" is a deliberate admin choice, not an insecure
+         * default (same rationale as omfwd protocol="udp"/streamdriver.mode="0").
+         */
         glblWarnIfInsecureDefault(loadModConf->pConf,
                                   "omrelp action uses tls=\"off\" (plain RELP without TLS); "
                                   "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
-    } else if (pData->authmode != NULL && strcasecmp((const char *)pData->authmode, "anon") == 0) {
+    } else if (pData->bEnableTLS && pData->authmode != NULL && strcasecmp((const char *)pData->authmode, "anon") == 0) {
         glblWarnIfInsecureDefault(
             loadModConf->pConf,
             "omrelp uses tls.authmode=\"anon\"; peer identity is not authenticated, so MITM is possible "
@@ -527,6 +533,7 @@ BEGINnewActInst
             pData->sizeWindow = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls")) {
             pData->bEnableTLS = (unsigned)pvals[i].val.d.n;
+            pData->bEnableTLSSet = 1;
         } else if (!strcmp(actpblk.descr[i].name, "tls.compression")) {
             pData->bEnableTLSZip = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.permanentfailuredisablesaction")) {
