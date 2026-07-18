@@ -5317,8 +5317,16 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         goto done;
     }
     if (nvlstChkDisabled(lst)) {
+        /* Do not instantiate a disabled action: skip actionNewInst() entirely so
+         * the module's instance is never created and its checkCnf/newActInst side
+         * effects (e.g. omelasticsearch probing the server) never run - matching
+         * how disabled includes and input objects are skipped. The statement is
+         * turned into a NOP the optimizer later removes.
+         */
         dbgprintf("action disabled by configuration\n");
-        cnfstmt->nodetype = S_NOP;
+        cnfstmtDisable(cnfstmt);
+        nvlstDestruct(lst);
+        goto done;
     }
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
