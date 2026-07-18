@@ -1,6 +1,11 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
 
+- 2026-07-15: imjournal: stop invalidation recovery busy-loop
+  Reopened journal handles now initialize their change notification state
+  before cursor restoration. This prevents journal rotation or invalidation
+  from repeatedly reopening the journal and consuming a full CPU core.
+  Closes https://github.com/rsyslog/rsyslog/issues/7342
 - 2026-07-14: queue: add segmented disk-assisted storage
   FixedArray and LinkedList disk-assisted queues now use the segmented disk
   engine by default for new stores while automatically retaining existing
