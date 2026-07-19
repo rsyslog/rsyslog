@@ -1413,6 +1413,26 @@ void cnfobjPrint(struct cnfobj *o) {
 struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r) {
     struct cnfexpr *expr;
 
+    /* Warn on bare constant AND/OR operands as written in the config, e.g.
+     * `$msg contains "a" or "b"` (issue #1046). This must happen here, at
+     * construction time, rather than in the optimizer: constFoldCmp() later
+     * reduces legitimate constant comparisons (typically backtick-expanded
+     * environment variables, e.g. `echo $FLAG` == "on") to constant operands,
+     * which must not warn. At this point such an operand is still a comparison
+     * node, and cnfcurrfn/yylineno still point at the offending expression, so
+     * the reported file and line are accurate.
+     */
+    if (nodetype == AND || nodetype == OR) {
+        if (l != NULL && (l->nodetype == 'N' || l->nodetype == 'S')) {
+            parser_warnmsg("boolean operator '%s' has constant left operand; did you mean to repeat the comparison?",
+                           tokenToString(nodetype));
+        }
+        if (r != NULL && (r->nodetype == 'N' || r->nodetype == 'S')) {
+            parser_warnmsg("boolean operator '%s' has constant right operand; did you mean to repeat the comparison?",
+                           tokenToString(nodetype));
+        }
+    }
+
     /* optimize some constructs during parsing */
     if (nodetype == 'M' && r->nodetype == 'N') {
         ((struct cnfnumval *)r)->val *= -1;
@@ -5627,15 +5647,9 @@ static struct cnfexpr *cnfexprOptimize_NOT(struct cnfexpr *expr) {
 static struct cnfexpr *cnfexprOptimize_AND_OR(struct cnfexpr *expr) {
     struct cnffunc *funcl, *funcr;
 
-    if (expr->l->nodetype == 'N' || expr->l->nodetype == 'S') {
-        parser_warnmsg("boolean operator '%s' has constant left operand; did you mean to repeat the comparison?",
-                       tokenToString(expr->nodetype));
-    }
-    if (expr->r->nodetype == 'N' || expr->r->nodetype == 'S') {
-        parser_warnmsg("boolean operator '%s' has constant right operand; did you mean to repeat the comparison?",
-                       tokenToString(expr->nodetype));
-    }
-
+    /* the constant-operand warning is emitted at construction time in
+     * cnfexprNew(); see the comment there for why it cannot live here.
+     */
     if (expr->l->nodetype == 'F') {
         if (expr->r->nodetype == 'F') {
             funcl = (struct cnffunc *)expr->l;
