@@ -171,8 +171,13 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*GetAllStatsLines)(rsRetVal (*cb)(void *, const char *), void *usrptr, statsFmtType_t fmt,
                                  int8_t bResetCtr);
     rsRetVal (*GetAllCounters)(statsobj_counter_cb_t cb, void *ctx);
-    /** Encode a complete metric name for legacy Prometheus exposition.
-     * The returned string is heap allocated and must be freed by the caller.
+    /**
+     * Encode a complete metric name for Prometheus text and Remote Write.
+     *
+     * @param raw_name non-NULL NUL-terminated metric name to encode
+     * @param encoded_name non-NULL output location for the heap allocation
+     * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for NULL arguments,
+     *         or RS_RET_OUT_OF_MEMORY on allocation failure
      */
     rsRetVal (*EncodePrometheusMetricName)(const uchar *raw_name, char **encoded_name);
     /**

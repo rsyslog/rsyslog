@@ -261,14 +261,17 @@ static rsRetVal build_metric_name(
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
     if (name != NULL && name[0] != '\0') {
-        if (asprintf(&raw_metric, "%s_%s_%s_total", origin, name, counter) < 0 || raw_metric == NULL) {
+        if (asprintf(&raw_metric, "%s_%s_%s_total", origin, name, counter) < 0) {
+            raw_metric = NULL;
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
     } else {
-        if (asprintf(&raw_metric, "%s_%s_total", origin, counter) < 0 || raw_metric == NULL) {
+        if (asprintf(&raw_metric, "%s_%s_total", origin, counter) < 0) {
+            raw_metric = NULL;
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
     }
+    if (raw_metric == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     CHKiRet(statsobj_if->EncodePrometheusMetricName((const uchar *)raw_metric, ppMetric));
 
 finalize_it:

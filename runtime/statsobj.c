@@ -671,8 +671,10 @@ static rsRetVal escapePrometheusHelp(const char *input, const char **escaped, ch
     if (len > (SIZE_MAX - 1) / 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     CHKmalloc(out = malloc(len * 2 + 1));
     for (i = 0; i < len; ++i) {
-        if (input[i] == '\\' || input[i] == '"') out[out_len++] = '\\';
-        if (input[i] == '\n') {
+        if (input[i] == '\\' || input[i] == '"') {
+            out[out_len++] = '\\';
+            out[out_len++] = input[i];
+        } else if (input[i] == '\n') {
             out[out_len++] = '\\';
             out[out_len++] = 'n';
         } else {
@@ -752,24 +754,33 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         pthread_mutex_unlock(&o->mutCtr);
 
         /* 3) Build the metric name: "<object>_<counter>_total". */
-        if (asprintf(&raw_name, "%s_%s_total", objName, pCtr->name) < 0 || raw_name == NULL ||
-            encodePrometheusMetricName((const uchar *)raw_name, &metric_name) != RS_RET_OK ||
+        if (asprintf(&raw_name, "%s_%s_total", objName, pCtr->name) < 0) {
+            raw_name = NULL;
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        if (raw_name == NULL || encodePrometheusMetricName((const uchar *)raw_name, &metric_name) != RS_RET_OK ||
             escapePrometheusHelp(origin, &escaped_origin, &escaped_origin_alloc) != RS_RET_OK ||
             escapePrometheusHelp(objName, &escaped_object, &escaped_object_alloc) != RS_RET_OK ||
-            escapePrometheusHelp((const char *)pCtr->name, &escaped_counter, &escaped_counter_alloc) != RS_RET_OK ||
-            asprintf(&line,
-                     "# HELP %s rsyslog stats: origin=\"%s\" object=\"%s\", counter=\"%s\"\n"
-                     "# TYPE %s counter\n"
-                     "%s %llu\n",
-                     metric_name, escaped_origin, escaped_object, escaped_counter, metric_name, metric_name,
-                     (unsigned long long)value) < 0 ||
-            line == NULL) {
+            escapePrometheusHelp((const char *)pCtr->name, &escaped_counter, &escaped_counter_alloc) != RS_RET_OK) {
             free(raw_name);
             free(metric_name);
             free(escaped_origin_alloc);
             free(escaped_object_alloc);
             free(escaped_counter_alloc);
-            free(line);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        if (asprintf(&line,
+                     "# HELP %s rsyslog stats: origin=\"%s\" object=\"%s\", counter=\"%s\"\n"
+                     "# TYPE %s counter\n"
+                     "%s %llu\n",
+                     metric_name, escaped_origin, escaped_object, escaped_counter, metric_name, metric_name,
+                     (unsigned long long)value) < 0) {
+            line = NULL;
+            free(raw_name);
+            free(metric_name);
+            free(escaped_origin_alloc);
+            free(escaped_object_alloc);
+            free(escaped_counter_alloc);
             return RS_RET_OUT_OF_MEMORY;
         }
         iRet = cb(usrptr, line);
