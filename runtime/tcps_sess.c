@@ -95,9 +95,9 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->compressedStreamEnded = 0;
     pThis->streamDecompressed = 0;
     pThis->zstdDctx = NULL;
-    pThis->zstdFrameHeaderLen = 0;
-    pThis->zstdFrameHeaderProcessed = 0;
-    pThis->zstdWindowReservation = 0;
+    pThis->zstd_frame_header_len = 0;
+    pThis->zstd_frame_header_processed = 0;
+    pThis->zstd_window_reservation = 0;
     memset(&pThis->zstrm, 0, sizeof(pThis->zstrm));
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     /* now allocate the message reception buffer */
@@ -140,14 +140,14 @@ finalize_it:
 
 
 #ifdef ENABLE_LIBZSTD
-static void releaseZstdWindowReservation(tcps_sess_t *const pThis) {
-    if (pThis->zstdWindowReservation == 0 || pThis->pLstnInfo == NULL) return;
+static void release_zstd_window_reservation(tcps_sess_t *const pThis) {
+    if (pThis->zstd_window_reservation == 0 || pThis->pLstnInfo == NULL) return;
 
-    pthread_mutex_lock(&pThis->pLstnInfo->mutCompressionZstdWindow);
-    assert(pThis->pLstnInfo->compressionZstdWindowBytesInUse >= pThis->zstdWindowReservation);
-    pThis->pLstnInfo->compressionZstdWindowBytesInUse -= pThis->zstdWindowReservation;
-    pthread_mutex_unlock(&pThis->pLstnInfo->mutCompressionZstdWindow);
-    pThis->zstdWindowReservation = 0;
+    pthread_mutex_lock(&pThis->pLstnInfo->mut_compression_zstd_window);
+    assert(pThis->pLstnInfo->compression_zstd_window_bytes_in_use >= pThis->zstd_window_reservation);
+    pThis->pLstnInfo->compression_zstd_window_bytes_in_use -= pThis->zstd_window_reservation;
+    pthread_mutex_unlock(&pThis->pLstnInfo->mut_compression_zstd_window);
+    pThis->zstd_window_reservation = 0;
 }
 #endif
 
@@ -164,7 +164,7 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
         ZSTD_freeDCtx((ZSTD_DCtx *)pThis->zstdDctx);
         pThis->zstdDctx = NULL;
     }
-    releaseZstdWindowReservation(pThis);
+    release_zstd_window_reservation(pThis);
 #endif
     if (pThis->pStrm != NULL) netstrm.Destruct(&pThis->pStrm);
 
@@ -936,23 +936,23 @@ finalize_it:
 #if defined(ENABLE_LIBZSTD) && defined(ZSTD_VERSION_NUMBER) && ZSTD_VERSION_NUMBER >= 10308
     #define ZSTD_RSYSLOG_WINDOWLOG_MIN 10U
     #define ZSTD_RSYSLOG_WINDOWLOG_MAX 31U
-static unsigned zstdWindowLogMaxFromBytes(uint64_t maxBytes) {
-    unsigned windowLogMax = 0;
-    uint64_t windowSize = 1;
+static unsigned zstd_window_log_max_from_bytes(uint64_t max_bytes) {
+    unsigned window_log_max = 0;
+    uint64_t window_size = 1;
 
-    while (windowSize < maxBytes && windowLogMax < 63) {
-        windowSize <<= 1;
-        ++windowLogMax;
+    while (window_size < max_bytes && window_log_max < 63) {
+        window_size <<= 1;
+        ++window_log_max;
     }
 
     /* zstd only exposes a power-of-two window-log cap. Round up so frames
      * within the configured byte limit are not rejected unnecessarily. */
-    if (windowLogMax < ZSTD_RSYSLOG_WINDOWLOG_MIN) {
-        windowLogMax = ZSTD_RSYSLOG_WINDOWLOG_MIN;
-    } else if (windowLogMax > ZSTD_RSYSLOG_WINDOWLOG_MAX) {
-        windowLogMax = ZSTD_RSYSLOG_WINDOWLOG_MAX;
+    if (window_log_max < ZSTD_RSYSLOG_WINDOWLOG_MIN) {
+        window_log_max = ZSTD_RSYSLOG_WINDOWLOG_MIN;
+    } else if (window_log_max > ZSTD_RSYSLOG_WINDOWLOG_MAX) {
+        window_log_max = ZSTD_RSYSLOG_WINDOWLOG_MAX;
     }
-    return windowLogMax;
+    return window_log_max;
 }
 #endif
 
@@ -969,46 +969,47 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
         ABORT_FINALIZE(RS_RET_ZLIB_ERR);
     }
 
-    size_t inputOffset = 0;
-    while (!pThis->zstdFrameHeaderProcessed) {
-        ZSTD_frameHeader frameHeader;
-        const size_t headerRet = ZSTD_getFrameHeader(&frameHeader, pThis->zstdFrameHeader, pThis->zstdFrameHeaderLen);
-        if (ZSTD_isError(headerRet)) {
-            logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(headerRet));
+    size_t input_offset = 0;
+    while (!pThis->zstd_frame_header_processed) {
+        ZSTD_frameHeader frame_header;
+        const size_t header_ret =
+            ZSTD_getFrameHeader(&frame_header, pThis->zstd_frame_header, pThis->zstd_frame_header_len);
+        if (ZSTD_isError(header_ret)) {
+            logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(header_ret));
             ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
-        if (headerRet == 0) {
-            if (frameHeader.frameType == ZSTD_frame && pThis->compressionMaxDecompressedBytesPerReceive != 0) {
+        if (header_ret == 0) {
+            if (frame_header.frameType == ZSTD_frame && pThis->compressionMaxDecompressedBytesPerReceive != 0) {
                 const uint64_t budget = pThis->compressionMaxDecompressedBytesPerReceive;
-                const uint64_t windowSize = frameHeader.windowSize;
+                const uint64_t window_size = frame_header.windowSize;
                 tcpLstnPortList_t *const listener = pThis->pLstnInfo;
 
-                pthread_mutex_lock(&listener->mutCompressionZstdWindow);
-                if (windowSize > budget || listener->compressionZstdWindowBytesInUse > budget - windowSize) {
-                    pthread_mutex_unlock(&listener->mutCompressionZstdWindow);
+                pthread_mutex_lock(&listener->mut_compression_zstd_window);
+                if (window_size > budget || listener->compression_zstd_window_bytes_in_use > budget - window_size) {
+                    pthread_mutex_unlock(&listener->mut_compression_zstd_window);
                     logCompressedStreamFailure(pThis, "received invalid compressed stream",
                                                "zstd decoder window budget exhausted");
                     ABORT_FINALIZE(RS_RET_ZLIB_ERR);
                 }
-                listener->compressionZstdWindowBytesInUse += windowSize;
-                pThis->zstdWindowReservation = windowSize;
-                pthread_mutex_unlock(&listener->mutCompressionZstdWindow);
+                listener->compression_zstd_window_bytes_in_use += window_size;
+                pThis->zstd_window_reservation = window_size;
+                pthread_mutex_unlock(&listener->mut_compression_zstd_window);
             }
-            pThis->zstdFrameHeaderProcessed = RSTRUE;
+            pThis->zstd_frame_header_processed = RSTRUE;
             break;
         }
 
-        if (headerRet > TCPSRV_ZSTD_FRAME_HEADER_MAX || headerRet <= pThis->zstdFrameHeaderLen) {
+        if (header_ret > TCPSRV_ZSTD_FRAME_HEADER_MAX || header_ret <= pThis->zstd_frame_header_len) {
             logCompressedStreamFailure(pThis, "received invalid compressed stream", "invalid zstd frame header size");
             ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
 
-        const size_t need = headerRet - pThis->zstdFrameHeaderLen;
-        const size_t available = iLen - inputOffset;
+        const size_t need = header_ret - pThis->zstd_frame_header_len;
+        const size_t available = iLen - input_offset;
         const size_t take = need < available ? need : available;
-        memcpy(pThis->zstdFrameHeader + pThis->zstdFrameHeaderLen, pData + inputOffset, take);
-        pThis->zstdFrameHeaderLen += take;
-        inputOffset += take;
+        memcpy(pThis->zstd_frame_header + pThis->zstd_frame_header_len, pData + input_offset, take);
+        pThis->zstd_frame_header_len += take;
+        input_offset += take;
         if (take < need) {
             FINALIZE;
         }
@@ -1022,9 +1023,10 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
         }
     #if defined(ZSTD_VERSION_NUMBER) && ZSTD_VERSION_NUMBER >= 10308
         if (pThis->compressionMaxDecompressedBytesPerReceive != 0) {
-            const unsigned windowLogMax = zstdWindowLogMaxFromBytes(pThis->compressionMaxDecompressedBytesPerReceive);
+            const unsigned window_log_max =
+                zstd_window_log_max_from_bytes(pThis->compressionMaxDecompressedBytesPerReceive);
             const size_t zret =
-                ZSTD_DCtx_setParameter((ZSTD_DCtx *)pThis->zstdDctx, ZSTD_d_windowLogMax, (int)windowLogMax);
+                ZSTD_DCtx_setParameter((ZSTD_DCtx *)pThis->zstdDctx, ZSTD_d_windowLogMax, (int)window_log_max);
             if (ZSTD_isError(zret)) {
                 logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(zret));
                 ABORT_FINALIZE(RS_RET_ZLIB_ERR);
@@ -1033,15 +1035,15 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
     #endif
     }
 
-    for (unsigned inputPart = 0; inputPart < 2; ++inputPart) {
+    for (unsigned input_part = 0; input_part < 2; ++input_part) {
         ZSTD_inBuffer input;
-        if (inputPart == 0) {
-            if (pThis->zstdFrameHeaderLen == 0) {
+        if (input_part == 0) {
+            if (pThis->zstd_frame_header_len == 0) {
                 continue;
             }
-            input = (ZSTD_inBuffer){pThis->zstdFrameHeader, pThis->zstdFrameHeaderLen, 0};
+            input = (ZSTD_inBuffer){pThis->zstd_frame_header, pThis->zstd_frame_header_len, 0};
         } else {
-            input = (ZSTD_inBuffer){pData + inputOffset, iLen - inputOffset, 0};
+            input = (ZSTD_inBuffer){pData + input_offset, iLen - input_offset, 0};
         }
         if (input.size == 0) {
             continue;
@@ -1052,7 +1054,7 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
             output.dst = out;
             output.size = sizeof(out);
             output.pos = 0;
-            const size_t oldInputPos = input.pos;
+            const size_t old_input_pos = input.pos;
             const size_t remaining = ZSTD_decompressStream((ZSTD_DCtx *)pThis->zstdDctx, &output, &input);
             if (ZSTD_isError(remaining)) {
                 logCompressedStreamFailure(pThis, "received invalid compressed stream", ZSTD_getErrorName(remaining));
@@ -1068,18 +1070,18 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
 
             if (remaining == 0) {
                 pThis->compressedStreamEnded = 1;
-                if (input.pos != input.size || (inputPart == 0 && iLen != inputOffset)) {
+                if (input.pos != input.size || (input_part == 0 && iLen != input_offset)) {
                     logCompressedStreamFailure(pThis, "received invalid compressed stream",
                                                "data after end of zstd stream");
                     ABORT_FINALIZE(RS_RET_ZLIB_ERR);
                 }
                 ZSTD_freeDCtx((ZSTD_DCtx *)pThis->zstdDctx);
                 pThis->zstdDctx = NULL;
-                releaseZstdWindowReservation(pThis);
+                release_zstd_window_reservation(pThis);
                 break;
             }
 
-            if (input.pos == oldInputPos && output.pos == 0) {
+            if (input.pos == old_input_pos && output.pos == 0) {
                 break;
             }
         } while (input.pos < input.size || output.pos == output.size);
@@ -1088,13 +1090,13 @@ static rsRetVal DataRcvdCompressedZstd(tcps_sess_t *const pThis,
             break;
         }
     }
-    pThis->zstdFrameHeaderLen = 0;
+    pThis->zstd_frame_header_len = 0;
 
 finalize_it:
     if (iRet != RS_RET_OK) {
         ZSTD_freeDCtx((ZSTD_DCtx *)pThis->zstdDctx);
         pThis->zstdDctx = NULL;
-        releaseZstdWindowReservation(pThis);
+        release_zstd_window_reservation(pThis);
     }
     RETiRet;
 #else
@@ -1130,7 +1132,7 @@ static rsRetVal finishCompressedStream(tcps_sess_t *pThis) {
     }
 
     if (pThis->compressionDriver == TCPSRV_COMPRESS_DRIVER_ZSTD && !pThis->compressedStreamEnded) {
-        if (pThis->zstdDctx == NULL && pThis->zstdFrameHeaderLen == 0) {
+        if (pThis->zstdDctx == NULL && pThis->zstd_frame_header_len == 0) {
             FINALIZE;
         }
         logCompressedStreamFailure(pThis, "detected truncated compressed stream", "zstd stream ended before trailer");

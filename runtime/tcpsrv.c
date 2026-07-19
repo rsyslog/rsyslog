@@ -385,12 +385,12 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     /* create entry */
     CHKmalloc(pEntry = (tcpLstnPortList_t *)calloc(1, sizeof(tcpLstnPortList_t)));
     pEntry->cnf_params = cnf_params;
-    const int mutexRet = pthread_mutex_init(&pEntry->mutCompressionZstdWindow, NULL);
-    if (mutexRet != 0) {
-        LogError(mutexRet, RS_RET_ERR, "imtcp: failed to initialize zstd window budget mutex");
+    const int mutex_ret = pthread_mutex_init(&pEntry->mut_compression_zstd_window, NULL);
+    if (mutex_ret != 0) {
+        LogError(mutex_ret, RS_RET_ERR, "imtcp: failed to initialize zstd window budget mutex");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    pEntry->compressionZstdWindowMutexInitialized = RSTRUE;
+    pEntry->compression_zstd_window_mutex_initialized = RSTRUE;
 
     u_cstr_copy(pEntry->cnf_params->dfltTZ, pThis->dfltTZ, sizeof(pEntry->cnf_params->dfltTZ));
     pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
@@ -471,8 +471,8 @@ finalize_it:
                 regexp.regfree(&pEntry->start_preg);
             }
 #endif
-            if (pEntry->compressionZstdWindowMutexInitialized) {
-                pthread_mutex_destroy(&pEntry->mutCompressionZstdWindow);
+            if (pEntry->compression_zstd_window_mutex_initialized) {
+                pthread_mutex_destroy(&pEntry->mut_compression_zstd_window);
             }
             free(pEntry);
         }
@@ -620,8 +620,8 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         if (pEntry->stats != NULL) {
             statsobj.Destruct(&(pEntry->stats));
         }
-        if (pEntry->compressionZstdWindowMutexInitialized) {
-            pthread_mutex_destroy(&pEntry->mutCompressionZstdWindow);
+        if (pEntry->compression_zstd_window_mutex_initialized) {
+            pthread_mutex_destroy(&pEntry->mut_compression_zstd_window);
         }
         pDel = pEntry;
         pEntry = pEntry->pNext;

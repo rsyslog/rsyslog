@@ -86,10 +86,10 @@ struct tcps_sess_s {
         sbool streamDecompressed;
         z_stream zstrm;
         void *zstdDctx;
-        uchar zstdFrameHeader[TCPSRV_ZSTD_FRAME_HEADER_MAX];
-        size_t zstdFrameHeaderLen;
-        sbool zstdFrameHeaderProcessed;
-        uint64_t zstdWindowReservation;
+        uchar zstd_frame_header[TCPSRV_ZSTD_FRAME_HEADER_MAX];
+        size_t zstd_frame_header_len;
+        sbool zstd_frame_header_processed;
+        uint64_t zstd_window_reservation;
 };
 
 
