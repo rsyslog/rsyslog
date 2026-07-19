@@ -1,0 +1,42 @@
+name: imhttp Prometheus scrape
+
+on:
+  pull_request:
+    paths:
+      - 'runtime/statsobj.c'
+      - 'runtime/statsobj.h'
+      - 'contrib/imhttp/**'
+      - 'plugins/impstats/**'
+      - 'tests/imhttp-metrics.sh'
+      - 'tests/stats-prometheus-escaping.sh'
+      - 'devtools/test-imhttp-prometheus-scrape.sh'
+      - '.github/workflows/imhttp_prometheus_scrape.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Build imhttp test target
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
+        run: |
+          chmod -R go+rw .
+          devtools/devcontainer.sh --rm bash -lc '
+            ./autogen.sh --enable-testbench --enable-imdiag --enable-omstdout --enable-impstats --enable-imhttp &&
+            make -j10'
+
+      - name: Scrape the rsyslog container with Prometheus
+        run: devtools/test-imhttp-prometheus-scrape.sh

@@ -171,6 +171,10 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*GetAllStatsLines)(rsRetVal (*cb)(void *, const char *), void *usrptr, statsFmtType_t fmt,
                                  int8_t bResetCtr);
     rsRetVal (*GetAllCounters)(statsobj_counter_cb_t cb, void *ctx);
+    /** Encode a complete metric name for legacy Prometheus exposition.
+     * The returned string is heap allocated and must be freed by the caller.
+     */
+    rsRetVal (*EncodePrometheusMetricName)(const uchar *raw_name, char **encoded_name);
     /**
      * @brief Register a counter value with a stats object.
      *
@@ -218,7 +222,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     ctr_t *(*UnlinkAllCounters)(statsobj_t *pThis);
     rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
@@ -227,6 +231,7 @@ ENDinterface(statsobj)
  * v13, 2016-05-19: GetAllStatsLines cb data type changed (char* instead of cstr)
  * v14, 2026-02-01: Add GetAllCounters() native counter iteration API
  * v15, 2026-06-23: AddPreCreatedCtr returns rsRetVal for lock failure propagation
+ * v16, 2026-07-15: add EncodePrometheusMetricName() for shared exporter name escaping
  */
 
 

@@ -41,6 +41,7 @@ static int push_initialized = 0; /* Track if curl_global_init was called */
 typedef struct impstats_push_ctx_s {
     impstats_push_config_t *config;
     prom_write_request_t *wr;
+    statsobj_if_t *statsobj_if;
 } impstats_push_ctx_t;
 
 /* libcurl write callback (we ignore response body) */
@@ -247,94 +248,31 @@ finalize_it:
     RETiRet;
 }
 
-/* Sanitize a component for Prometheus metric name:
- * - Replace '-' with '_'
- * - Replace '.' with '_'
- * - Replace any non-[a-zA-Z0-9_] with '_'
- * Output parameter: ppOutput receives newly allocated string (caller must free)
- */
-static rsRetVal sanitize_component(const uchar *input, char **ppOutput) {
-    DEFiRet;
-    char *output = NULL;
-
-    if (input == NULL || input[0] == '\0') {
-        *ppOutput = NULL;
-        FINALIZE;
-    }
-
-    size_t len = strlen((const char *)input);
-    CHKmalloc(output = malloc(len + 1));
-
-    for (size_t i = 0; i < len; i++) {
-        char c = input[i];
-        if (c == '-' || c == '.') {
-            output[i] = '_';
-        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-            output[i] = c;
-        } else {
-            output[i] = '_';
-        }
-    }
-    output[len] = '\0';
-    *ppOutput = output;
-    output = NULL; /* ownership transferred */
-
-finalize_it:
-    free(output);
-    RETiRet;
-}
-
 /* Build Prometheus metric name from components:
  * Format: <origin>_<name>_<counter>_total (name omitted if NULL/empty)
  * Output parameter: ppMetric receives newly allocated string (caller must free)
  */
-static rsRetVal build_metric_name(const uchar *origin, const uchar *name, const uchar *counter, char **ppMetric) {
+static rsRetVal build_metric_name(
+    statsobj_if_t *statsobj_if, const uchar *origin, const uchar *name, const uchar *counter, char **ppMetric) {
     DEFiRet;
-    char *san_origin = NULL;
-    char *san_name = NULL;
-    char *san_counter = NULL;
-    char *metric = NULL;
-    size_t total_len;
+    char *raw_metric = NULL;
 
-    if (origin == NULL || counter == NULL) {
+    if (statsobj_if == NULL || origin == NULL || counter == NULL) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
-
-    CHKiRet(sanitize_component(origin, &san_origin));
-    if (san_origin == NULL) {
-        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    }
-
-    CHKiRet(sanitize_component(counter, &san_counter));
-    if (san_counter == NULL) {
-        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    }
-
-    /* Check if name is non-empty */
     if (name != NULL && name[0] != '\0') {
-        CHKiRet(sanitize_component(name, &san_name));
-        if (san_name == NULL) {
+        if (asprintf(&raw_metric, "%s_%s_%s_total", origin, name, counter) < 0 || raw_metric == NULL) {
             ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
-        /* origin + "_" + name + "_" + counter + "_total" + '\0' */
-        total_len = strlen(san_origin) + 1 + strlen(san_name) + 1 + strlen(san_counter) + 7;
-        CHKmalloc(metric = malloc(total_len));
-        snprintf(metric, total_len, "%s_%s_%s_total", san_origin, san_name, san_counter);
     } else {
-        /* origin + "_" + counter + "_total" + '\0' */
-        total_len = strlen(san_origin) + 1 + strlen(san_counter) + 7;
-        CHKmalloc(metric = malloc(total_len));
-        snprintf(metric, total_len, "%s_%s_total", san_origin, san_counter);
+        if (asprintf(&raw_metric, "%s_%s_total", origin, counter) < 0 || raw_metric == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
     }
-
-    *ppMetric = metric;
-    metric = NULL; /* ownership transferred */
+    CHKiRet(statsobj_if->EncodePrometheusMetricName((const uchar *)raw_metric, ppMetric));
 
 finalize_it:
-    free(san_origin);
-    free(san_name);
-    free(san_counter);
-    free(metric);
+    free(raw_metric);
     RETiRet;
 }
 
@@ -371,7 +309,7 @@ static rsRetVal stats_counter_cb(void *ctx,
     config = push_ctx->config;
 
     /* Build Prometheus-compliant metric name */
-    CHKiRet(build_metric_name(obj_origin, obj_name, ctr_name, &metric_name));
+    CHKiRet(build_metric_name(push_ctx->statsobj_if, obj_origin, obj_name, ctr_name, &metric_name));
 
     /* Get current timestamp */
     struct timeval tv;
@@ -462,6 +400,7 @@ rsRetVal impstats_push_send(impstats_push_config_t *config, statsobj_if_t *stats
 
     ctx.config = config;
     ctx.wr = wr;
+    ctx.statsobj_if = statsobj_if;
 
     /* Collect stats using Prometheus format */
     iRet = statsobj_if->GetAllCounters(stats_counter_cb, &ctx);

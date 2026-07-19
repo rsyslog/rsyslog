@@ -24,6 +24,8 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-custom_content_check '# TYPE main Q_enqueued_total counter' "${RSYSLOG_DYNNAME}.out.stats.log"
+# The main queue's legacy name contains a space. Prometheus output must use
+# the reversible U__ form, including the doubled separator underscore.
+custom_content_check '# TYPE U__main_20_Q__enqueued__total counter' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing '@cee' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

@@ -64,7 +64,10 @@ Q: How are metric names generated?
 
 Metric names are constructed as ``<origin>_<name>_<counter>_total``.
 If ``name`` is empty, it is omitted. Non-Prometheus-safe characters are
-sanitized (for example ``-`` and ``.`` become ``_``).
+encoded using a reversible ``U__``-prefixed values escape. This avoids both
+invalid metric identifiers and collisions that a simple underscore replacement
+would create. Existing names in the legacy Prometheus character set remain
+unchanged, except that ``U__`` is reserved by the encoding.
 
 
 Q: Which labels are attached by default?

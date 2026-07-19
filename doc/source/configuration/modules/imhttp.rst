@@ -383,6 +383,14 @@ text exposition format. The endpoint provides counters such as
 ``imhttp_submitted_total``, ``imhttp_failed_total`` and
 ``imhttp_discarded_total``.
 
+Metric names that already use the legacy Prometheus character set remain
+unchanged. When an rsyslog statistics object or counter name contains other
+characters, rsyslog emits a reversible ``U__``-prefixed values escape instead
+of the raw name. This keeps the exposition compatible with Prometheus while
+avoiding collisions such as a dot and a hyphen both becoming an underscore.
+Names beginning with ``U__`` are also escaped because that prefix is reserved
+by this encoding.
+
 The handler sends a ``Content-Length`` header and closes the connection.
 Proxies or load balancers must allow such responses. An ``imhttp_up`` gauge is exported
 alongside the full rsyslog statistics. Name collisions with other
