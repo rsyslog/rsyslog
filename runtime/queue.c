@@ -685,7 +685,7 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
             wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
-            /* disk queues have always one worker */
+            /* The DA transfer pool intentionally has one worker. */
         }
         if (getLogicalQueueSize(pThis) == 0) {
             iMaxWorkers = 0;
