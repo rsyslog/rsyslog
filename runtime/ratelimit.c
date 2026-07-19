@@ -261,6 +261,7 @@ static void ratelimitFreeShared(void *ptr) {
     }
     free(shared->per_source_top_keys);
     free(shared->per_source_key_tpl_name);
+    pthread_mutex_destroy(&shared->per_source_key_policy_mut);
     pthread_mutex_destroy(&shared->per_source_policy_mut);
     free(shared->per_source_policy_file);
     ratelimitSharedRefsDestroy(shared);
@@ -315,9 +316,11 @@ void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs) {
  * Concurrency & Locking
  * - ratelimit_shared_t->mut guards shared policy updates for global limits.
  * - per-source limits use ratelimit_shared_t->per_source_policy_mut to guard
- *   low-frequency policy metadata and fallback atomics. Message-time source
- *   accounting is partitioned across ratelimit_shared_t->per_source_shards;
- *   each shard mutex guards that shard's hashtable, LRU list, and counters.
+ *   low-frequency policy metadata and fallback atomics. Versioned source-key
+ *   policy fields are atomically published; per_source_key_policy_mut is used
+ *   only as the no-atomics fallback. Message-time source accounting is
+ *   partitioned across ratelimit_shared_t->per_source_shards; each shard mutex
+ *   guards that shard's hashtable, LRU list, and counters.
  * - ratelimit_cfgs_t shards guard the named configuration registry. Config
  *   lookup and insertion lock only the shard selected by the config name.
  * - ratelimit_t->mut guards per-instance counters when thread-safe mode is enabled.
@@ -364,6 +367,17 @@ struct ratelimit_ps_policy_s {
 
 typedef struct ratelimit_ps_policy_s ratelimit_ps_policy_t;
 
+typedef struct ratelimit_ps_key_policy_s {
+    sbool key_tpl_default;
+    sbool key_needs_parsing;
+    enum ratelimit_ps_key_mode key_mode;
+    struct template *key_tpl;
+} ratelimit_ps_key_policy_t;
+
+#define RL_PS_KEY_POLICY_MODE_MASK 0xffU
+#define RL_PS_KEY_POLICY_TPL_DEFAULT (1U << 8)
+#define RL_PS_KEY_POLICY_NEEDS_PARSING (1U << 9)
+
 typedef struct ratelimit_policy_file_s {
     sbool has_scope;
     sbool has_output_mode;
@@ -395,6 +409,45 @@ static void ratelimitFreePerSourceOverrideDirect(void *ptr);
 static rsRetVal ratelimitReloadPolicyFile(ratelimit_shared_t *shared, const char *trigger);
 static rsRetVal ratelimitReloadPerSourcePolicyFile(ratelimit_shared_t *shared, const char *trigger);
 static rsRetVal ratelimitRegisterWatchTargets(ratelimit_shared_t *shared);
+
+/* The caller serializes publishers with per_source_policy_mut. The odd/even
+ * sequence lets readers reject fields observed across an update. */
+static void ratelimitPublishPerSourceKeyPolicy(ratelimit_shared_t *shared,
+                                               struct template *key_tpl,
+                                               const sbool key_tpl_default) {
+    const enum ratelimit_ps_key_mode key_mode = perSourceKeyModeFromTemplate(key_tpl);
+    unsigned int bits = (unsigned int)key_mode;
+
+    if (key_tpl_default) bits |= RL_PS_KEY_POLICY_TPL_DEFAULT;
+    if (key_mode == RL_PS_KEY_TPL) bits |= RL_PS_KEY_POLICY_NEEDS_PARSING;
+
+    ATOMIC_INC(&shared->per_source_key_policy_seq, &shared->per_source_key_policy_mut);
+    ATOMIC_STORE_PTR((void **)&shared->per_source_key_tpl, &shared->per_source_key_policy_mut, key_tpl);
+    ATOMIC_STORE_32BIT_unsigned(&shared->per_source_key_policy_bits, &shared->per_source_key_policy_mut, bits);
+    ATOMIC_INC(&shared->per_source_key_policy_seq, &shared->per_source_key_policy_mut);
+}
+
+static void ratelimitLoadPerSourceKeyPolicy(ratelimit_shared_t *shared, ratelimit_ps_key_policy_t *policy) {
+    unsigned int seq_before;
+    unsigned int seq_after;
+    unsigned int bits;
+    struct template *key_tpl;
+
+    for (;;) {
+        seq_before = ATOMIC_LOAD_32BIT_unsigned(&shared->per_source_key_policy_seq, &shared->per_source_key_policy_mut);
+        if (seq_before & 1U) continue;
+        bits = ATOMIC_LOAD_32BIT_unsigned(&shared->per_source_key_policy_bits, &shared->per_source_key_policy_mut);
+        key_tpl = (struct template *)ATOMIC_LOAD_PTR((void **)&shared->per_source_key_tpl,
+                                                     &shared->per_source_key_policy_mut);
+        seq_after = ATOMIC_LOAD_32BIT_unsigned(&shared->per_source_key_policy_seq, &shared->per_source_key_policy_mut);
+        if (seq_before == seq_after && !(seq_after & 1U)) break;
+    }
+
+    policy->key_mode = (enum ratelimit_ps_key_mode)(bits & RL_PS_KEY_POLICY_MODE_MASK);
+    policy->key_tpl_default = (bits & RL_PS_KEY_POLICY_TPL_DEFAULT) != 0;
+    policy->key_needs_parsing = (bits & RL_PS_KEY_POLICY_NEEDS_PARSING) != 0;
+    policy->key_tpl = key_tpl;
+}
 
 static rsRetVal parseDurationMillis(const char *value, unsigned int *out) {
     char *end = NULL;
@@ -1581,11 +1634,7 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
     if (shared->per_source_policy_file == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     ratelimitSharedStoreUInt(&shared->per_source_default_max, &shared->mut, policy->default_max);
     ratelimitSharedStoreUInt(&shared->per_source_default_window, &shared->mut, policy->default_window);
-    shared->per_source_key_tpl_default = 0;
     shared->per_source_key_tpl_name = NULL;
-    shared->per_source_key_tpl = NULL;
-    shared->per_source_key_needs_parsing = 1;
-    shared->per_source_key_mode = RL_PS_KEY_TPL;
     shared->per_source_topn = (topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : topn;
     pthread_mutex_unlock(&shared->per_source_policy_mut);
     bLocked = 0;
@@ -1692,7 +1741,6 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
     char *key_tpl_name = NULL;
     char *new_policy_file = NULL;
     unsigned int effective_topn;
-    enum ratelimit_ps_key_mode key_mode;
     sbool have_per_source_policy_file;
     sbool have_per_source_shards;
     DEFiRet;
@@ -1730,8 +1778,6 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
             CHKmalloc(new_policy_file = strdup(policy_file));
         }
     }
-    key_mode = perSourceKeyModeFromTemplate(key_tpl);
-
     pthread_mutex_lock(&shared->per_source_policy_mut);
     if (shared->per_source_policy_file == NULL && new_policy_file != NULL) {
         shared->per_source_policy_file = new_policy_file;
@@ -1740,10 +1786,6 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
     free(shared->per_source_key_tpl_name);
     shared->per_source_key_tpl_name = key_tpl_name;
     key_tpl_name = NULL;
-    shared->per_source_key_tpl = key_tpl;
-    shared->per_source_key_tpl_default = key_tpl_default;
-    shared->per_source_key_mode = key_mode;
-    shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
     shared->per_source_policy_from_policy_file = 1;
     ratelimitSetPerSourceShardCaps(shared, policy->per_source_max_states);
     effective_topn = (policy->per_source_topn == 0) ? RATELIMIT_PERSOURCE_DEFAULT_TOPN : policy->per_source_topn;
@@ -1753,6 +1795,7 @@ static rsRetVal ratelimitApplyPolicyPerSource(ratelimit_shared_t *shared,
         pthread_mutex_lock(&shared->per_source_policy_mut);
         shared->per_source_topn = effective_topn;
     }
+    ratelimitPublishPerSourceKeyPolicy(shared, key_tpl, key_tpl_default);
     pthread_mutex_unlock(&shared->per_source_policy_mut);
     ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 1);
 
@@ -2001,6 +2044,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     DEFiRet;
     ratelimit_shared_t *shared = NULL;
     ratelimit_shared_t *existing_shared = NULL;
+    struct template *per_source_key_tpl = NULL;
+    sbool per_source_key_tpl_default = 0;
     char *key = NULL;
     ratelimit_ps_policy_t *per_source_policy = NULL;
     ratelimit_policy_file_t file_policy = {0};
@@ -2122,6 +2167,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     ratelimitSharedRefsInit(shared, 1);
     pthread_mutex_init(&shared->mut, NULL);
     pthread_mutex_init(&shared->per_source_policy_mut, NULL);
+    pthread_mutex_init(&shared->per_source_key_policy_mut, NULL);
     CHKmalloc(key = strdup(name));
     shared->name = key;
     shared->scope = scope;
@@ -2140,8 +2186,8 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         free(per_source_policy);
         per_source_policy = NULL;
         CHKiRet(iRet);
-        if (ratelimitLookupPerSourceTemplate(conf, per_source_key_tpl_name, &shared->per_source_key_tpl,
-                                             &shared->per_source_key_tpl_default) != RS_RET_OK) {
+        if (ratelimitLookupPerSourceTemplate(conf, per_source_key_tpl_name, &per_source_key_tpl,
+                                             &per_source_key_tpl_default) != RS_RET_OK) {
             if (per_source_key_tpl_name != NULL) {
                 LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
                          per_source_key_tpl_name, name);
@@ -2158,8 +2204,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         }
         pthread_mutex_lock(&shared->per_source_policy_mut);
         shared->per_source_policy_from_policy_file = per_source_from_policy_file;
-        shared->per_source_key_mode = perSourceKeyModeFromTemplate(shared->per_source_key_tpl);
-        shared->per_source_key_needs_parsing = (shared->per_source_key_mode == RL_PS_KEY_TPL);
+        ratelimitPublishPerSourceKeyPolicy(shared, per_source_key_tpl, per_source_key_tpl_default);
         pthread_mutex_unlock(&shared->per_source_policy_mut);
         ratelimitPerSourceStoreEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut, 1);
     }
@@ -2199,6 +2244,7 @@ finalize_it:
         }
         free(shared->per_source_top_keys);
         free(shared->per_source_key_tpl_name);
+        pthread_mutex_destroy(&shared->per_source_key_policy_mut);
         pthread_mutex_destroy(&shared->per_source_policy_mut);
         free(shared->per_source_policy_file);
         pthread_mutex_destroy(&shared->mut);
@@ -2255,6 +2301,7 @@ rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
     if ((*ppThis)->bOwnsShared) {
         pthread_mutex_destroy(&(*ppThis)->pShared->mut);
         ratelimitDestroyPerSourceShards((*ppThis)->pShared);
+        pthread_mutex_destroy(&(*ppThis)->pShared->per_source_key_policy_mut);
         pthread_mutex_destroy(&(*ppThis)->pShared->per_source_policy_mut);
         free((*ppThis)->pShared);
     }
@@ -2593,14 +2640,6 @@ typedef struct per_source_key_ctx_s {
     uchar *free_port;
 } per_source_key_ctx_t;
 
-typedef struct per_source_key_policy_s {
-    sbool enabled;
-    sbool key_tpl_default;
-    sbool key_needs_parsing;
-    enum ratelimit_ps_key_mode key_mode;
-    struct template *key_tpl;
-} per_source_key_policy_t;
-
 static void ratelimitPerSourceKeyCtxFree(per_source_key_ctx_t *ctx) {
     if (ctx == NULL) return;
     free(ctx->tpl_param.param);
@@ -2610,29 +2649,17 @@ static void ratelimitPerSourceKeyCtxFree(per_source_key_ctx_t *ctx) {
     memset(ctx, 0, sizeof(*ctx));
 }
 
-static rsRetVal ratelimitGetMsgPropString(
+static rsRetVal ratelimitGetRcvFromString(
     smsg_t *pMsg, propid_t propid, const char **value, size_t *len, uchar **to_free) {
-    msgPropDescr_t prop;
-    rs_size_t prop_len = -1;
-    unsigned short must_be_freed = 0;
     uchar *prop_value;
+    int prop_len;
     DEFiRet;
 
     if (pMsg == NULL || value == NULL || len == NULL || to_free == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-    prop.id = propid;
-    prop.name = NULL;
-    prop.nameLen = 0;
-    prop_value = MsgGetProp(pMsg, NULL, &prop, &prop_len, &must_be_freed, NULL);
-    if (prop_value == NULL) {
-        *value = "";
-        *len = 0;
-        FINALIZE;
-    }
+    *to_free = NULL;
+    MsgGetRcvFromProp(pMsg, propid, &prop_value, &prop_len);
     *value = (const char *)prop_value;
-    *len = (prop_len < 0) ? strlen((const char *)prop_value) : (size_t)prop_len;
-    if (must_be_freed) {
-        *to_free = prop_value;
-    }
+    *len = (size_t)prop_len;
 
 finalize_it:
     RETiRet;
@@ -2657,7 +2684,7 @@ finalize_it:
 
 static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMsg, per_source_key_ctx_t *ctx) {
     ratelimit_shared_t *shared;
-    per_source_key_policy_t policy;
+    ratelimit_ps_key_policy_t policy;
     const char *host = "";
     const char *port = "";
     size_t host_len = 0;
@@ -2668,31 +2695,24 @@ static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMs
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     memset(ctx, 0, sizeof(*ctx));
     shared = ratelimit->pShared;
-    policy.enabled = ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut);
-    if (!policy.enabled) FINALIZE;
-
-    pthread_mutex_lock(&shared->per_source_policy_mut);
-    policy.key_tpl_default = shared->per_source_key_tpl_default;
-    policy.key_needs_parsing = shared->per_source_key_needs_parsing;
-    policy.key_mode = shared->per_source_key_mode;
-    policy.key_tpl = shared->per_source_key_tpl;
-    pthread_mutex_unlock(&shared->per_source_policy_mut);
+    if (!ratelimitPerSourceLoadEnabled(&shared->per_source_enabled, &shared->per_source_policy_mut)) FINALIZE;
+    ratelimitLoadPerSourceKeyPolicy(shared, &policy);
 
     switch (policy.key_mode) {
         case RL_PS_KEY_FROMHOST_IP:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &ctx->key, &ctx->key_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_IP, &ctx->key, &ctx->key_len, &ctx->free_host));
             break;
         case RL_PS_KEY_FROMHOST:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
             break;
         case RL_PS_KEY_FROMHOST_IP_PORT:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
             break;
         case RL_PS_KEY_FROMHOST_PORT:
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
-            CHKiRet(ratelimitGetMsgPropString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
             break;
         case RL_PS_KEY_TPL:
@@ -2828,6 +2848,7 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
     pThis->pShared->output_mode = RATELIMIT_OUTPUT_MODE_DROP;
     pthread_mutex_init(&pThis->pShared->mut, NULL);
     pthread_mutex_init(&pThis->pShared->per_source_policy_mut, NULL);
+    pthread_mutex_init(&pThis->pShared->per_source_key_policy_mut, NULL);
 
     DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);
     *ppThis = pThis;
@@ -2896,6 +2917,7 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);
         ratelimitDestroyPerSourceShards(ratelimit->pShared);
+        pthread_mutex_destroy(&ratelimit->pShared->per_source_key_policy_mut);
         pthread_mutex_destroy(&ratelimit->pShared->per_source_policy_mut);
         free(ratelimit->pShared);
     } else if (ratelimit->pShared != NULL) {

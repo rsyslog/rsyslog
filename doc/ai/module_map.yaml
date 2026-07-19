@@ -28,14 +28,23 @@ runtime_ratelimit:
     - type: mutex
       field: ratelimit_shared_t.per_source_policy_mut
     - type: mutex
+      field: ratelimit_shared_t.per_source_key_policy_mut
+    - type: mutex
       field: ratelimit_ps_bucket_t.mut
     - type: mutex
       field: ratelimit_t.mut
   notes:
     - Named ratelimit configs are stored in sharded hashtables; lookup and insertion lock only the shard selected by the config name.
     - Input per-source ratelimit state is stored in shard-local hashtables with embedded override data; message-time accounting locks only the source-key shard.
+    - Per-source key policy uses a versioned atomic snapshot of the template pointer and packed mode flags; readers retry across updates, and the key-policy mutex is only the no-atomics fallback.
     - perSourceMaxStates is enforced approximately through shard-local caps; values below the shard count keep one active state per shard, and per_source_evicted reports source-state evictions.
     - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
+
+runtime_msg:
+  paths: ["runtime/msg.c", "runtime/msg.h"]
+  requires_serialization: true
+  notes:
+    - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
 
 omfile:
   paths: ["plugins/omfile/"]
