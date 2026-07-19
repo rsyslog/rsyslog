@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify YAML uses the same DA parameter validation as RainerScript. A
 # segmented-only queue is an invalid context: permissive validation must retain
 # startup compatibility while reporting the dirty configuration, and strict

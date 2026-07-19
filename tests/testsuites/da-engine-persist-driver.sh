@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Shared DA save-on-shutdown/restart driver. The wrapper selects the memory
 # queue and disk engine. Single-record, deliberately slowed dequeue leaves a
 # durable spill at immediate shutdown; restart must recover every sequence.

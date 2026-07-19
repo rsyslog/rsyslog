@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify the two boundary values of queue.diskQueueIdleTimeout. Identical slow
 # action queues force a spill; timeout 0 must remove its store immediately,
 # while -1 must retain its drained store and final worker until shutdown. Exact

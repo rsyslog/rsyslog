@@ -1,5 +1,19 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
 /*
- * Unit coverage for disk-assisted engine selection and its durable marker.
+ * Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+/**
+ * @file queue_da_test.c
+ * @brief Unit coverage for disk-assisted engine selection and its durable marker.
+ *
  * Each case builds an exact temporary spool layout; the oracle is the chosen
  * engine or an explicit rejection, so no daemon timing is involved.
  */

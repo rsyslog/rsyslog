@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Shared idle-cleanup crash driver for a segmented disk-assisted main queue.
 # A small, slow memory tier guarantees a spill. The configured imdiag hook must
 # SIGKILL rsyslog during empty-store cleanup; restart must accept the surviving

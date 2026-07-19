@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Queue DA engine parameters are intentionally limited to FixedArray and
 # LinkedList queues with a filename. The permissive oracle is a successful -N1
 # validation plus the dirty-configuration diagnostic; the strict oracle is a

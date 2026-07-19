@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify YAML reaches the shared DA queue parameter backend. A fresh LinkedList
 # main queue selects the fresh auto default with idle cleanup disabled. The
 # absence of both marker and .segq proves selection remained fully

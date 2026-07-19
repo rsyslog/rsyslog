@@ -723,8 +723,20 @@ static rsRetVal qqueueChkIsDA(qqueue_t *pThis) {
 }
 
 
-/* Start disk-assisted queue mode.
- * rgerhards, 2008-01-15
+/**
+ * @brief Construct and configure the persistent child of a memory-first DA queue.
+ *
+ * Disk-assisted queues have an in-memory parent and a separate child that
+ * receives overflow. The resolver chooses the child's concrete store before
+ * construction, preserving legacy backlogs and rejecting mixed stores rather
+ * than attempting in-place conversion. For a fresh segmented child, this
+ * routine deliberately leaves the store unmaterialized: the marker, .segq
+ * directory, state file, and disk worker are created only on the first spill.
+ *
+ * The durable marker is published before opening existing data or replacing a
+ * drained classic selection. A fresh child instead carries marker-pending
+ * state until its first append, which keeps normal memory-only operation free
+ * of disk artifacts while still preventing a later engine ambiguity.
  */
 static rsRetVal StartDA(qqueue_t *pThis) {
     DEFiRet;
@@ -1168,6 +1180,15 @@ static void qqueueAddPhysicalQueueSize(qqueue_t *pThis, const int nElem) {
 #endif
 }
 
+/**
+ * @brief Open the segmented store backing a pure or disk-assisted queue.
+ *
+ * The same store implementation backs eager pure segmentedDisk queues and
+ * lazy DA children. For the latter, lazy_create allows open to succeed without
+ * creating files; qAddSegDisk() materializes them when overflow actually
+ * occurs. Recovered logical count is reflected in both child and overall queue
+ * accounting before workers are advised.
+ */
 static rsRetVal qConstructSegDisk(qqueue_t *pThis) {
     segdisk_store_config_t cfg = {
         .work_dir = (const char *)pThis->pszSpoolDir,
@@ -1197,6 +1218,16 @@ static rsRetVal qDestructSegDisk(qqueue_t *pThis) {
     return segdiskStoreClose(&pThis->tVars.segdisk, getPhysicalQueueSize(pThis) == 0);
 }
 
+/**
+ * @brief Serialize one message into a segmented store and account for DA activity.
+ *
+ * A lazy DA child must durably claim segmentedDisk before its first append can
+ * create .segq. The marker write therefore precedes serialization and remains
+ * pending after a failure. A successful DA append increments the parent
+ * activity generation, invalidating any in-progress idle-dematerialization
+ * grace period. The store consumes no message reference, so this function
+ * always destroys the queue-owned reference before returning.
+ */
 static rsRetVal qAddSegDisk(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
     if (pThis->daEngineMarkerPending) {

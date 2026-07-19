@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Run the shared LinkedList/FixedArray and main/ruleset/action spill oracle with
 # the automatic default, which must resolve fresh queues to segmented disk.
 # This matrix wrapper deliberately leaves diag.sh initialization to each driver

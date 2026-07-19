@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Exercise the shared suspended-action restart oracle for both DA memory queue
 # types with the classic disk engine explicitly pinned.
 for DA_QUEUE_TYPE in LinkedList FixedArray; do

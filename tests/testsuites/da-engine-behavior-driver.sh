@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Shared pure disk-assisted queue behavior driver. The wrapper selects one
 # engine, memory queue type, and placement (main, ruleset, or action).
 # A tiny queue with single-record, slowed dequeue must spill a 2000-message
