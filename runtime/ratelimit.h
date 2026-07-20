@@ -47,8 +47,9 @@ enum ratelimit_ps_key_mode {
     RL_PS_KEY_TPL = 0,
     RL_PS_KEY_FROMHOST_IP,
     RL_PS_KEY_FROMHOST,
+    RL_PS_KEY_FROMHOST_PORT,
     RL_PS_KEY_FROMHOST_IP_PORT,
-    RL_PS_KEY_FROMHOST_PORT
+    RL_PS_KEY_FROMHOST_NAME_PORT
 };
 
 typedef enum ratelimit_scope_e { RATELIMIT_SCOPE_INPUT = 0, RATELIMIT_SCOPE_OUTPUT } ratelimit_scope_t;

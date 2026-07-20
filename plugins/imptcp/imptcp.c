@@ -318,6 +318,7 @@ struct ptcpsess_s {
     uchar *pMsg_save; /* message (fragment) save area in regex framing mode */
     prop_t *peerName; /* host name we received messages from */
     prop_t *peerIP;
+    prop_t *peerPort;
     const uchar *startRegex; /* cache for performance reasons */
     int iAddtlFrameDelim; /* cache for performance reasons */
 };
@@ -411,6 +412,7 @@ static void ATTR_NONNULL() destructSess(ptcpsess_t *const pSess) {
     free(pSess->pMsg);
     prop.Destruct(&pSess->peerName);
     prop.Destruct(&pSess->peerIP);
+    prop.Destruct(&pSess->peerPort);
     DESTROY_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
     /* TODO: make these inits compile-time switch depending: */
     pSess->pMsg = NULL;
@@ -738,10 +740,12 @@ PRAGMA_DIAGNOSTIC_POP
  * on how to deal with that.
  * rgerhards, 2008-03-31
  */
-static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer) {
+static rsRetVal getPeerNames(
+    prop_t **peerName, prop_t **peerIP, prop_t **peerPort, struct sockaddr *pAddr, sbool bUXServer) {
     int error;
     uchar szIP[NI_MAXHOST + 1] = "";
     uchar szHname[NI_MAXHOST + 1] = "";
+    uchar szPort[NI_MAXSERV + 1] = "";
     struct addrinfo hints, *res;
     sbool bMaliciousHName = 0;
 
@@ -749,6 +753,7 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
 
     *peerName = NULL;
     *peerIP = NULL;
+    *peerPort = NULL;
 
     if (bUXServer) {
         const uchar *lhName = glbl.GetLocalHostName();
@@ -763,7 +768,8 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
         szHname[hname_len] = '\0';
         szIP[ip_len] = '\0';
     } else {
-        error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+        error = getnameinfo(pAddr, SALEN(pAddr), (char *)szIP, sizeof(szIP), (char *)szPort, sizeof(szPort),
+                            NI_NUMERICHOST | NI_NUMERICSERV);
         if (error) {
             DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
             RS_COPY_LITERAL(szHname, "???");
@@ -803,11 +809,15 @@ static rsRetVal getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr
     CHKiRet(prop.Construct(peerIP));
     CHKiRet(prop.SetString(*peerIP, szIP, ustrlen(szIP)));
     CHKiRet(prop.ConstructFinalize(*peerIP));
+    CHKiRet(prop.Construct(peerPort));
+    CHKiRet(prop.SetString(*peerPort, szPort, ustrlen(szPort)));
+    CHKiRet(prop.ConstructFinalize(*peerPort));
 
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (*peerName != NULL) prop.Destruct(peerName);
         if (*peerIP != NULL) prop.Destruct(peerIP);
+        if (*peerPort != NULL) prop.Destruct(peerPort);
     }
     if (bMaliciousHName) iRet = RS_RET_MALICIOUS_HNAME;
     RETiRet;
@@ -885,7 +895,7 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal ATTR_NONNULL()
-    AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, prop_t **peerIP) {
+    AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, prop_t **peerIP, prop_t **peerPort) {
     int sockflags;
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
@@ -894,6 +904,8 @@ static rsRetVal ATTR_NONNULL()
     DEFiRet;
 
     *peerName = NULL; /* ensure we know if we don't have one! */
+    *peerIP = NULL;
+    *peerPort = NULL;
     iNewSock = accept(pLstn->sock, (struct sockaddr *)&addr, &addrlen);
     if (iNewSock < 0) {
         if (CHK_EAGAIN_EWOULDBLOCK || errno == EMFILE) ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
@@ -912,7 +924,7 @@ static rsRetVal ATTR_NONNULL()
 
     if (pLstn->pSrv->bKeepAlive) EnableKeepAlive(pLstn, iNewSock); /* we ignore errors, best to do! */
 
-    CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr *)&addr, pLstn->pSrv->bUnixSocket));
+    CHKiRet(getPeerNames(peerName, peerIP, peerPort, (struct sockaddr *)&addr, pLstn->pSrv->bUnixSocket));
 
     /* set the new socket to non-blocking IO */
     const char *fcntl_operation = "F_GETFL";
@@ -932,6 +944,7 @@ static rsRetVal ATTR_NONNULL()
                  fcntl_operation, iNewSock);
         prop.Destruct(peerName);
         prop.Destruct(peerIP);
+        prop.Destruct(peerPort);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
     if (pLstn->pSrv->bEmitMsgOnOpen) {
@@ -994,6 +1007,7 @@ static rsRetVal doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t
     }
     MsgSetRcvFrom(pMsg, pThis->peerName);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
+    CHKiRet(MsgSetRcvFromPort(pMsg, pThis->peerPort));
     MsgSetRuleset(pMsg, pSrv->pRuleset);
     if (pThis->bFrameOversize) {
         writeOversizeMessageLog(pMsg);
@@ -1654,7 +1668,8 @@ finalize_it:
 
 /* add a session to the server
  */
-static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const peerName, prop_t *const peerIP) {
+static rsRetVal addSess(
+    ptcplstn_t *const pLstn, const int sock, prop_t *const peerName, prop_t *const peerIP, prop_t *const peerPort) {
     DEFiRet;
     ptcpsess_t *pSess = NULL;
     ptcpsrv_t *pSrv = pLstn->pSrv;
@@ -1664,6 +1679,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
 
     NULL_CHECK(peerName);
     NULL_CHECK(peerIP);
+    NULL_CHECK(peerPort);
 
     CHKmalloc(pSess = calloc(1, sizeof(ptcpsess_t)));
     INIT_ATOMIC_HELPER_MUT(pSess->mutWorkQueued);
@@ -1690,6 +1706,7 @@ static rsRetVal addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const p
     pSess->bAtStrtOfFram = 1;
     pSess->peerName = peerName;
     pSess->peerIP = peerIP;
+    pSess->peerPort = peerPort;
     pSess->compressionMode = pLstn->pSrv->compressionMode;
     /* AUTO mode starts in sniff state; first DataRcvd() locks in the
      * effective compressionMode for the rest of the session. */
@@ -2098,27 +2115,36 @@ static rsRetVal ATTR_NONNULL() lstnActivity(ptcplstn_t *const pLstn) {
     int newSock = -1;
     prop_t *peerName;
     prop_t *peerIP;
+    prop_t *peerPort;
     rsRetVal localRet;
     DEFiRet;
 
     DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
     while (glbl.GetGlobalInputTermState() == 0) {
-        localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
+        newSock = -1;
+        peerName = NULL;
+        peerIP = NULL;
+        peerPort = NULL;
+        localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP, &peerPort);
         DBGPRINTF("imptcp: AcceptConnReq on listen socket %d returned %d\n", pLstn->sock, localRet);
         if (glbl.GetGlobalInputTermState() == 1) {
             if (newSock != -1) {
                 close(newSock);
             }
+            if (peerName != NULL) prop.Destruct(&peerName);
+            if (peerIP != NULL) prop.Destruct(&peerIP);
+            if (peerPort != NULL) prop.Destruct(&peerPort);
             break;
         } else if (localRet == RS_RET_NO_MORE_DATA) {
             break;
         }
         CHKiRet(localRet);
-        localRet = addSess(pLstn, newSock, peerName, peerIP);
+        localRet = addSess(pLstn, newSock, peerName, peerIP, peerPort);
         if (localRet != RS_RET_OK) {
             close(newSock);
             prop.Destruct(&peerName);
             prop.Destruct(&peerIP);
+            prop.Destruct(&peerPort);
             ABORT_FINALIZE(localRet);
         }
     }
