@@ -4724,7 +4724,7 @@ finalize_it:
     RETiRet;
 }
 
-/* check the the queue file name is unique. */
+/* check the queue file name is unique. */
 static rsRetVal ATTR_NONNULL() checkUniqueDiskFile(qqueue_t *const pThis) {
     DEFiRet;
     struct queue_filename *queue_fn_curr = queue_filename_root;
