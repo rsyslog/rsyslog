@@ -2873,7 +2873,7 @@ static void recoverFromInvalidQi(qqueue_t *pThis, const int wr_fd, const int64_t
  */
 static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, const int nElem) {
     int i;
-    off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
+    off64_t bytesDel = 0; /* keep CLANG static analyzer happy */
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
