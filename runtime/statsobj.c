@@ -613,6 +613,8 @@ static rsRetVal encodePrometheusMetricName(const uchar *raw_name, char **encoded
     const size_t raw_len = raw_name == NULL ? 0 : strlen((const char *)raw_name);
     size_t offset = 0;
     size_t out_len = 0;
+    size_t remaining;
+    int written;
     char *out = NULL;
     DEFiRet;
 
@@ -639,9 +641,15 @@ static rsRetVal encodePrometheusMetricName(const uchar *raw_name, char **encoded
             out[out_len++] = '_';
             out[out_len++] = '_';
         } else if (valid) {
-            out_len += (size_t)snprintf(out + out_len, raw_len * 10 + 4 - out_len, "_%X_", codepoint);
+            remaining = raw_len * 10 + 4 - out_len;
+            written = snprintf(out + out_len, remaining, "_%X_", codepoint);
+            if (written < 0 || (size_t)written >= remaining) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            out_len += (size_t)written;
         } else {
-            out_len += (size_t)snprintf(out + out_len, raw_len * 10 + 4 - out_len, "_x%02X_", codepoint);
+            remaining = raw_len * 10 + 4 - out_len;
+            written = snprintf(out + out_len, remaining, "_x%02X_", codepoint);
+            if (written < 0 || (size_t)written >= remaining) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            out_len += (size_t)written;
         }
         offset += consumed;
     }
