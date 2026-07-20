@@ -1,0 +1,58 @@
+doc/source/configuration/modules/imtcp.rst
+  s_5424d888acca0b::t_e1bb56200a4bfa 123-130,209-212,351,402-403
+  s_5424d888acca0b::t_06784b694336b2 404-405
+doc/ai/module_map.yaml
+  s_5424d888acca0b::t_eeb4fc4592246f 43-53
+tests/imtcp-stream-always-zstd-window-guard.sh
+  s_5424d888acca0b::t_fc6ac05fc7049c 4-6,13,26-27,54
+tests/imtcp-stream-always-zstd-window-budget.sh
+  s_5424d888acca0b::t_cde060603faac7 3-9,14,22,25-29,43-44,49-65,92-99,102,105-106,111-127,130-134,137,141,143-144,146-147,152-159,161-193,196,201-206
+  s_5424d888acca0b::t_e9d6c3ffe7acc4 80-89,91,107-108,128-129
+  s_5424d888acca0b::t_dcb024edadb63c 135-136
+tests/Makefile.am
+  s_5424d888acca0b::t_4fb9b43795904a 855,859-861,2179-2181,2302,2897-2899
+runtime/tcps_sess.h
+  s_5424d888acca0b::t_228db751a44fba 41,82
+doc/source/reference/parameters/imtcp-compression-maxtotalzstdwindowbytes.rst
+  s_5424d888acca0b::t_e1bb56200a4bfa 1-96
+plugins/imtcp/imtcp.c
+  s_5424d888acca0b::t_813060cfc7ba28 131-132,184-185,234-235,279,332
+  s_5424d888acca0b::t_ab73d731531bfe 516-541,669-670,750-751,753,799,1038-1040,1069
+  s_5424d888acca0b::t_ed3db3619d9833 1124-1125,1249-1251,1301-1302,1574-1575
+tests/imtcp-stream-always-zstd-secure-defaults.sh
+  s_5424d888acca0b::t_b62d2ca56d0f77 1-45,47-98,100-104
+  s_5424d888acca0b::t_ee1803ddecceec 46,99
+tests/yaml-imtcp-stream-always-zstd-secure-defaults.sh
+  s_5424d888acca0b::t_b62d2ca56d0f77 1-49,51-53,59-116,123-127
+  s_5424d888acca0b::t_299376d4c989af 50,54-58,117-122
+doc/Makefile.am
+  s_5424d888acca0b::t_e1bb56200a4bfa 735
+runtime/tcpsrv.c
+  s_5424d888acca0b::t_9d37e86da5eece 388,398,470,617,1816,2094-2100,2415
+runtime/atomic.h
+  s_5424d888acca0b::t_e0789eec897e2a 337,340-345,376-381,432-452
+runtime/tcps_sess.c
+  s_5424d888acca0b::t_1beb49bef7b168 92,144-152,154-160,162-164,168-169,344
+  s_5424d888acca0b::t_dcb024edadb63c 153,161,170-171,1076-1079
+  s_5424d888acca0b::t_7442a9728abe8f 1055-1056
+  s_5424d888acca0b::t_28216fd7bc924c 973,982-983,1017-1018,1020-1022
+runtime/tcpsrv.h
+  s_5424d888acca0b::t_446ff63697cf7f 262,360
+  s_5424d888acca0b::t_228db751a44fba 85-90,201,263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1a181df4de4fdd49b7aa42f8cd617df0a447a1a9",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
