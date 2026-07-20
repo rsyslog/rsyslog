@@ -2,6 +2,8 @@
 # Verify that unfinished CRI partial records are bounded before enqueue.
 # The closing F record after an oversized partial run still belongs to that
 # logical message and must not be emitted as a standalone tail record.
+# The API helper signals readiness after binding; its 2m timeout is hang
+# protection, while the explicit kill and wait below own normal cleanup.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 check_command_available timeout

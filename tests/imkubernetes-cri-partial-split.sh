@@ -2,6 +2,8 @@
 # Verify that CRI partial assembly honors oversizemsg.input.mode="split".
 # The partial accumulator must not truncate at maxMessageSize; instead the
 # completed logical record reaches the core submit path and is split there.
+# The API helper signals readiness after binding; its 2m timeout is hang
+# protection, while the explicit kill and wait below own normal cleanup.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 check_command_available timeout

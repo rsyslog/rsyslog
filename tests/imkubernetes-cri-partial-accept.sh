@@ -2,6 +2,8 @@
 # Verify that CRI partial assembly honors oversizemsg.input.mode="accept".
 # A properly closed P...F record that is larger than maxMessageSize but below
 # the imkubernetes partial hard cap must reach the core submit path intact.
+# The API helper signals readiness after binding; its 2m timeout is hang
+# protection, while the explicit kill and wait below own normal cleanup.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 check_command_available timeout

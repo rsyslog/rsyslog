@@ -346,8 +346,7 @@ static void markPartialTruncated(partial_msg_t *partial, size_t limit, sbool har
     assert(partial != NULL);
     if (!partial->truncated) {
         partial->truncated = 1;
-        LogError(0, NO_ERRCODE,
-                 "imkubernetes: CRI partial message exceeded %s (%zu), truncating logical record",
+        LogError(0, NO_ERRCODE, "imkubernetes: CRI partial message exceeded %s (%zu), truncating logical record",
                  hardLimit ? "partial hard limit" : "maxMessageSize", limit);
     }
 }
@@ -1099,7 +1098,8 @@ finalize_it:
  * oversize input modes are honored by letting the completed logical record
  * reach the core submit path, but still capping the accumulator at a
  * maxMessageSize-derived hard limit so an unfinished run cannot grow forever.
- * Once capped, consume later fragments until the closing F flushes state.
+ * Once capped, consume later fragments until the closing F flushes state; the
+ * closing fragment must never be emitted as a standalone record.
  */
 static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t *record) {
     parsed_record_t finalRecord = {0};

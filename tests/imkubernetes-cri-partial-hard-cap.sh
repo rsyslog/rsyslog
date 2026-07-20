@@ -1,6 +1,8 @@
 #!/bin/bash
 # Verify that non-truncate oversize modes still have an imkubernetes partial
 # hard cap, so an unfinished CRI P run cannot grow without bound.
+# The API helper signals readiness after binding; its 2m timeout is hang
+# protection, while the explicit kill and wait below own normal cleanup.
 . ${srcdir:=.}/diag.sh init
 require_plugin imkubernetes ../contrib/imkubernetes
 check_command_available timeout

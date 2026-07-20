@@ -48,6 +48,26 @@ For CRI logs, ``imkubernetes`` merges partial records before submission. For
 Docker ``json-file`` logs, it extracts the embedded timestamp, message payload,
 and stream.
 
+CRI partial records and oversized messages
+===========================================
+
+CRI ``P`` records are buffered per log file until an ``F`` record closes the
+logical message. The buffer follows the global oversized-message input mode:
+
+* In ``truncate`` mode, ``imkubernetes`` retains at most
+  ``global(maxMessageSize)`` bytes. It discards later bytes, consumes the
+  closing ``F`` as part of the same logical message, and then resumes with the
+  next independent record.
+* In ``accept`` and ``split`` modes, completed logical messages reach the core
+  input path intact so the selected global policy can handle them. To keep an
+  unfinished sequence of ``P`` records from growing without bound, the module
+  still applies a per-file hard limit of ``10 * global(maxMessageSize)``.
+
+When the hard limit is reached, the retained prefix is submitted after the
+closing ``F`` arrives; excess bytes and the closing fragment's excess content
+are not emitted as a separate record. This limit applies independently to each
+tailed log file.
+
 Message metadata
 ================
 
