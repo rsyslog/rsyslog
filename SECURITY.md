@@ -114,6 +114,18 @@ hardening are still fixed, but normally flow through daily stable and the next
 scheduled stable release, with advisory text documenting the affected
 configuration and mitigations.
 
+For a confirmed issue limited to an optional component or explicitly enabled,
+uncommon configuration, with primarily denial-of-service impact and no known
+active exploitation, maintainers normally use the ordinary reviewed daily
+stable workflow. Once the fix is validated, maintainers normally give
+distribution security contacts a short embargoed notification before making
+the daily stable package and concise advisory public. This coordination period
+typically lasts no more than two days. The validated fix may remain on a
+private maintainer branch during that period and is merged publicly when the
+embargo ends. The next scheduled stable release then includes the same fix.
+Maintainers may choose a different path when the specific exposure or
+downstream impact warrants it.
+
 ## Optional and Contributed Modules
 
 rsyslog includes many optional plugins and contributed modules. Some are widely
