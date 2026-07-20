@@ -1438,6 +1438,7 @@ TESTS_IMPSTATS = \
 	no-dynstats.sh \
 	stats-json.sh \
 	stats-prometheus.sh \
+	stats-prometheus-escaping.sh \
 	dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \

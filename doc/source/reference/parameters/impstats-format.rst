@@ -46,6 +46,11 @@ Options:
 * ``prometheus``
 * ``zabbix``
 
+For ``prometheus``, metric names in the legacy Prometheus character set are
+emitted unchanged. Other rsyslog-assigned names use a reversible
+``U__``-prefixed values escape so punctuation cannot produce invalid or
+colliding metric identifiers.
+
 .. note::
 
    The ``prometheus`` option is available in builds that include the 2025-07-15

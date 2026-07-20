@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
 #include <time.h>
@@ -553,6 +554,150 @@ static void getSenderStats(rsRetVal (*cb)(void *, const char *),
 }
 
 
+/*
+ * Prometheus values escaping reserves the U__ prefix. Ordinary legacy-safe
+ * names remain unchanged; all other names use a reversible U__ encoding.
+ */
+static int prometheusLegacySafeName(const uchar *name) {
+    const uchar *p;
+
+    if (name == NULL || name[0] == '\0') return 0;
+    if (!((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= 'A' && name[0] <= 'Z') || name[0] == '_' ||
+          name[0] == ':')) {
+        return 0;
+    }
+    if (name[0] == 'U' && strncmp((const char *)name, "U__", 3) == 0) return 0;
+    for (p = name + 1; *p != '\0'; ++p) {
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_' ||
+              *p == ':')) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int decodeUtf8Codepoint(const uchar *input, size_t len, size_t *consumed, uint32_t *codepoint) {
+    const uint32_t b0 = input[0];
+
+    if (b0 < 0x80) {
+        *consumed = 1;
+        *codepoint = b0;
+        return 1;
+    }
+    if (b0 >= 0xc2 && b0 <= 0xdf && len >= 2 && (input[1] & 0xc0) == 0x80) {
+        *consumed = 2;
+        *codepoint = ((b0 & 0x1f) << 6) | (input[1] & 0x3f);
+        return 1;
+    }
+    if (b0 >= 0xe0 && b0 <= 0xef && len >= 3 && (input[1] & 0xc0) == 0x80 && (input[2] & 0xc0) == 0x80) {
+        *codepoint = ((b0 & 0x0f) << 12) | ((input[1] & 0x3f) << 6) | (input[2] & 0x3f);
+        if (*codepoint >= 0x800 && !(*codepoint >= 0xd800 && *codepoint <= 0xdfff)) {
+            *consumed = 3;
+            return 1;
+        }
+    }
+    if (b0 >= 0xf0 && b0 <= 0xf4 && len >= 4 && (input[1] & 0xc0) == 0x80 && (input[2] & 0xc0) == 0x80 &&
+        (input[3] & 0xc0) == 0x80) {
+        *codepoint = ((b0 & 0x07) << 18) | ((input[1] & 0x3f) << 12) | ((input[2] & 0x3f) << 6) | (input[3] & 0x3f);
+        if (*codepoint >= 0x10000 && *codepoint <= 0x10ffff) {
+            *consumed = 4;
+            return 1;
+        }
+    }
+    *consumed = 1;
+    *codepoint = b0;
+    return 0;
+}
+
+static rsRetVal encodePrometheusMetricName(const uchar *raw_name, char **encoded_name) {
+    const size_t raw_len = raw_name == NULL ? 0 : strlen((const char *)raw_name);
+    size_t offset = 0;
+    size_t out_len = 0;
+    size_t remaining;
+    int written;
+    char *out = NULL;
+    DEFiRet;
+
+    if (encoded_name == NULL || raw_name == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    *encoded_name = NULL;
+    if (prometheusLegacySafeName(raw_name)) {
+        CHKmalloc(out = strdup((const char *)raw_name));
+        *encoded_name = out;
+        out = NULL;
+        FINALIZE;
+    }
+    if (raw_len > (SIZE_MAX - 4) / 10) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(out = malloc(raw_len * 10 + 4));
+    memcpy(out, "U__", 3);
+    out_len = 3;
+    while (offset < raw_len) {
+        size_t consumed;
+        uint32_t codepoint;
+        const int valid = decodeUtf8Codepoint(raw_name + offset, raw_len - offset, &consumed, &codepoint);
+        if (valid && ((codepoint >= 'a' && codepoint <= 'z') || (codepoint >= 'A' && codepoint <= 'Z') ||
+                      (codepoint >= '0' && codepoint <= '9') || codepoint == ':')) {
+            out[out_len++] = (char)codepoint;
+        } else if (valid && codepoint == '_') {
+            out[out_len++] = '_';
+            out[out_len++] = '_';
+        } else if (valid) {
+            remaining = raw_len * 10 + 4 - out_len;
+            written = snprintf(out + out_len, remaining, "_%X_", codepoint);
+            if (written < 0 || (size_t)written >= remaining) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            out_len += (size_t)written;
+        } else {
+            remaining = raw_len * 10 + 4 - out_len;
+            written = snprintf(out + out_len, remaining, "_x%02X_", codepoint);
+            if (written < 0 || (size_t)written >= remaining) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            out_len += (size_t)written;
+        }
+        offset += consumed;
+    }
+    out[out_len] = '\0';
+    *encoded_name = out;
+    out = NULL;
+finalize_it:
+    free(out);
+    RETiRet;
+}
+
+static rsRetVal escapePrometheusHelp(const char *input, const char **escaped, char **allocated) {
+    size_t i;
+    size_t len;
+    size_t out_len = 0;
+    char *out = NULL;
+    DEFiRet;
+
+    if (input == NULL || escaped == NULL || allocated == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    *escaped = input;
+    *allocated = NULL;
+    len = strlen(input);
+    for (i = 0; i < len; ++i) {
+        if (input[i] == '\\' || input[i] == '"' || input[i] == '\n') break;
+    }
+    if (i == len) FINALIZE;
+    if (len > (SIZE_MAX - 1) / 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(out = malloc(len * 2 + 1));
+    for (i = 0; i < len; ++i) {
+        if (input[i] == '\\' || input[i] == '"') {
+            out[out_len++] = '\\';
+            out[out_len++] = input[i];
+        } else if (input[i] == '\n') {
+            out[out_len++] = '\\';
+            out[out_len++] = 'n';
+        } else {
+            out[out_len++] = input[i];
+        }
+    }
+    out[out_len] = '\0';
+    *escaped = out;
+    *allocated = out;
+    out = NULL;
+finalize_it:
+    free(out);
+    RETiRet;
+}
+
 /**
  * Helper: For a single statsobj_t (named o->name), iterate its counters
  * and emit Prometheus lines via cb.  We generate, for each counter:
@@ -571,8 +716,16 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
                                                                 void *usrptr,
                                                                 int8_t bResetCtrs) {
     ctr_t *pCtr;
-    char linebuf[512];
-    int len;
+    char *raw_name = NULL;
+    char *metric_name = NULL;
+    const char *escaped_origin;
+    const char *escaped_object;
+    const char *escaped_counter;
+    char *escaped_origin_alloc = NULL;
+    char *escaped_object_alloc = NULL;
+    char *escaped_counter_alloc = NULL;
+    char *line = NULL;
+    rsRetVal iRet;
     uint64_t value;
     const char *objName = (const char *)o->name;
     const char *origin = o->origin ? (const char *)o->origin : "";
@@ -608,21 +761,45 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
         }
         pthread_mutex_unlock(&o->mutCtr);
 
-        /* 3) Build the metric name: "<object>_<counter>_total" */
-        /*    It is conventional in Prometheus to append "_total" to counters. */
-        len = snprintf(linebuf, sizeof(linebuf),
-                       "# HELP %s_%s_total rsyslog stats: origin=\"%s\" object=\"%s\", counter=\"%s\"\n"
-                       "# TYPE %s_%s_total counter\n"
-                       "%s_%s_total %llu\n",
-                       /* HELP */ objName, pCtr->name, origin, objName, pCtr->name,
-                       /* TYPE */ objName, pCtr->name,
-                       /* VALUE */ objName, pCtr->name, (unsigned long long)value);
-        if (len < 0 || len >= (int)sizeof(linebuf)) {
-            /* In case our buffer is too small, just skip emitting this counter. */
-        } else {
-            /* Emit this chunk (all three lines) in one callback */
-            cb(usrptr, linebuf);
+        /* 3) Build the metric name: "<object>_<counter>_total". */
+        if (asprintf(&raw_name, "%s_%s_total", objName, pCtr->name) < 0) {
+            raw_name = NULL;
+            return RS_RET_OUT_OF_MEMORY;
         }
+        if (raw_name == NULL || encodePrometheusMetricName((const uchar *)raw_name, &metric_name) != RS_RET_OK ||
+            escapePrometheusHelp(origin, &escaped_origin, &escaped_origin_alloc) != RS_RET_OK ||
+            escapePrometheusHelp(objName, &escaped_object, &escaped_object_alloc) != RS_RET_OK ||
+            escapePrometheusHelp((const char *)pCtr->name, &escaped_counter, &escaped_counter_alloc) != RS_RET_OK) {
+            free(raw_name);
+            free(metric_name);
+            free(escaped_origin_alloc);
+            free(escaped_object_alloc);
+            free(escaped_counter_alloc);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        if (asprintf(&line,
+                     "# HELP %s rsyslog stats: origin=\"%s\" object=\"%s\", counter=\"%s\"\n"
+                     "# TYPE %s counter\n"
+                     "%s %llu\n",
+                     metric_name, escaped_origin, escaped_object, escaped_counter, metric_name, metric_name,
+                     (unsigned long long)value) < 0) {
+            line = NULL;
+            free(raw_name);
+            free(metric_name);
+            free(escaped_origin_alloc);
+            free(escaped_object_alloc);
+            free(escaped_counter_alloc);
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        iRet = cb(usrptr, line);
+        free(raw_name);
+        free(metric_name);
+        free(escaped_origin_alloc);
+        free(escaped_object_alloc);
+        free(escaped_counter_alloc);
+        free(line);
+        raw_name = metric_name = escaped_origin_alloc = escaped_object_alloc = escaped_counter_alloc = line = NULL;
+        if (iRet != RS_RET_OK) return iRet;
 
         /* Acquire the lock again before advancing to the next counter */
         pthread_mutex_lock(&o->mutCtr);
@@ -949,6 +1126,7 @@ BEGINobjQueryInterface(statsobj)
     pIf->SetStatsObjFlags = setStatsObjFlags;
     pIf->GetAllStatsLines = getAllStatsLines;
     pIf->GetAllCounters = getAllCounters;
+    pIf->EncodePrometheusMetricName = encodePrometheusMetricName;
     pIf->AddCounter = addCounter;
     pIf->AddManagedCounter = addManagedCounter;
     pIf->AddPreCreatedCtr = addPreCreatedCounter;

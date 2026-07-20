@@ -172,6 +172,15 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
                                  int8_t bResetCtr);
     rsRetVal (*GetAllCounters)(statsobj_counter_cb_t cb, void *ctx);
     /**
+     * Encode a complete metric name for Prometheus text and Remote Write.
+     *
+     * @param raw_name non-NULL NUL-terminated metric name to encode
+     * @param encoded_name non-NULL output location for the heap allocation
+     * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for NULL arguments,
+     *         or RS_RET_OUT_OF_MEMORY on allocation failure
+     */
+    rsRetVal (*EncodePrometheusMetricName)(const uchar *raw_name, char **encoded_name);
+    /**
      * @brief Register a counter value with a stats object.
      *
      * The counter name is duplicated internally; the caller retains ownership
@@ -218,7 +227,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     ctr_t *(*UnlinkAllCounters)(statsobj_t *pThis);
     rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
@@ -227,6 +236,7 @@ ENDinterface(statsobj)
  * v13, 2016-05-19: GetAllStatsLines cb data type changed (char* instead of cstr)
  * v14, 2026-02-01: Add GetAllCounters() native counter iteration API
  * v15, 2026-06-23: AddPreCreatedCtr returns rsRetVal for lock failure propagation
+ * v16, 2026-07-15: add EncodePrometheusMetricName() for shared exporter name escaping
  */
 
 

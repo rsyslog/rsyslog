@@ -13,6 +13,7 @@ module(load="../contrib/imhttp/.libs/imhttp"
        listenPortFileName="'$IMHTTP_PORT_FILE'"
        metricsPath="/metrics"
 )
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
 assign_file_content IMHTTP_PORT "$IMHTTP_PORT_FILE"
@@ -20,4 +21,6 @@ curl -s http://localhost:$IMHTTP_PORT/metrics > "$RSYSLOG_OUT_LOG"
 shutdown_when_empty
 wait_shutdown
 content_check "imhttp_up 1"
+content_check 'U__action_2D_0_2D_builtin:omfile__processed__total'
+assert_content_missing 'action-0-builtin:omfile_processed_total'
 exit_test
