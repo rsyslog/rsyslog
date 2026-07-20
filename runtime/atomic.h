@@ -334,8 +334,15 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
 #ifdef HAVE_ATOMIC_BUILTINS64
     #define ATOMIC_INC_uint64(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_SEQ_CST))
     #define ATOMIC_ADD_uint64(data, phlpmut, value) ((void)__atomic_fetch_add((data), (value), __ATOMIC_SEQ_CST))
+    #define ATOMIC_SUB_uint64(data, phlpmut, value) ((void)__atomic_fetch_sub((data), (value), __ATOMIC_SEQ_CST))
     #define ATOMIC_DEC_uint64(data, phlpmut) ((void)__atomic_sub_fetch((data), 1, __ATOMIC_SEQ_CST))
     #define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __atomic_add_fetch((data), 1, __ATOMIC_SEQ_CST)
+    #define ATOMIC_LOAD_uint64(data, phlpmut) ((uint64)__atomic_load_n((data), __ATOMIC_ACQUIRE))
+    #define ATOMIC_CAS_uint64(data, oldVal, newVal, phlpmut)                                                           \
+        ({                                                                                                             \
+            __typeof__(*(data)) rs_atomic_expected = (oldVal);                                                         \
+            __atomic_compare_exchange_n((data), &rs_atomic_expected, (newVal), 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+        })
     #define ATOMIC_STORE_uint64(data, phlpmut, value) ((void)__atomic_store_n((data), (value), __ATOMIC_RELEASE))
     #define ATOMIC_INC_uint64_RELAXED(data, phlpmut) ((void)__atomic_fetch_add((data), 1, __ATOMIC_RELAXED))
     #define ATOMIC_ADD_uint64_RELAXED(data, phlpmut, value) \
@@ -364,6 +371,12 @@ static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthrea
         {                                           \
             pthread_mutex_lock(phlpmut);            \
             *data += value;                         \
+            pthread_mutex_unlock(phlpmut);          \
+        }
+    #define ATOMIC_SUB_uint64(data, phlpmut, value) \
+        {                                           \
+            pthread_mutex_lock(phlpmut);            \
+            *data -= value;                         \
             pthread_mutex_unlock(phlpmut);          \
         }
     #define ATOMIC_DEC_uint64(data, phlpmut) \
@@ -414,6 +427,27 @@ static inline uint64 ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t *
     val = ++(*data);
     pthread_mutex_unlock(phlpmut);
     return (val);
+}
+
+static inline uint64 ATOMIC_LOAD_uint64(uint64 *data, pthread_mutex_t *phlpmut) {
+    uint64 val;
+    pthread_mutex_lock(phlpmut);
+    val = *data;
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
+static inline int ATOMIC_CAS_uint64(uint64 *data, uint64 oldVal, uint64 newVal, pthread_mutex_t *phlpmut) {
+    int bSuccess;
+    pthread_mutex_lock(phlpmut);
+    if (*data == oldVal) {
+        *data = newVal;
+        bSuccess = 1;
+    } else {
+        bSuccess = 0;
+    }
+    pthread_mutex_unlock(phlpmut);
+    return bSuccess;
 }
 
     #define DEF_ATOMIC_HELPER_MUT64(x) pthread_mutex_t x

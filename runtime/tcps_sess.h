@@ -38,6 +38,7 @@ struct tcpsrv_s;
 
 #define TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT 1024
 #define TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT (64ULL * 1024ULL * 1024ULL)
+#define TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT 0
 #define TCPSRV_ZSTD_FRAME_HEADER_MAX 18
 
 /* the tcps_sess object */
@@ -78,6 +79,7 @@ struct tcps_sess_s {
         uint8_t compressionDriver;
         uint64_t compressionMaxExpansionRatio;
         uint64_t compressionMaxDecompressedBytesPerReceive;
+        uint64_t compressionMaxTotalZstdWindowBytes;
         uint64_t compressionTotalBytesIn;
         uint64_t compressionTotalBytesOut;
         sbool zipInitDone;

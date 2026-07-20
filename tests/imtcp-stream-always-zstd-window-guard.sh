@@ -1,16 +1,16 @@
 #!/bin/bash
 # added 2026-06-23 by Codex, released under ASL 2.0
 # Sends a minimal zstd frame that advertises a 128 MiB window while the imtcp
-# input allows only a 1 MiB decompressed receive burst. The oracle is that zstd
-# rejects the frame as an invalid compressed stream before any message is
-# submitted, proving the configured receive limit also bounds decoder windows.
+# listener allows only 1 MiB of aggregate retained decoder-window memory. The
+# oracle is that imtcp rejects the reservation before decoder allocation and no
+# message is submitted. The decompressed-output guard is deliberately separate.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin lmzstdw ../runtime
 check_command_available python3
 
 wait_invalid_stream_log() {
-	content_check --check-only "received invalid compressed stream" "$RSYSLOG_OUT_LOG"
+	content_check --check-only "zstd decoder window budget exhausted" "$RSYSLOG_OUT_LOG"
 }
 export QUEUE_EMPTY_CHECK_FUNC=wait_invalid_stream_log
 
@@ -23,7 +23,8 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
 	compression.mode="stream:always"
 	compression.driver="zstd"
-	compression.maxDecompressedBytesPerReceive="1048576")
+	compression.maxDecompressedBytesPerReceive="1048576"
+	compression.maxTotalZstdWindowBytes="1048576")
 
 if $syslogtag contains "rsyslogd" then {
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
@@ -50,7 +51,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
-content_check "received invalid compressed stream" "$RSYSLOG_OUT_LOG"
+content_check "zstd decoder window budget exhausted" "$RSYSLOG_OUT_LOG"
 if [ -s "$RSYSLOG2_OUT_LOG" ]; then
 	echo "FAIL: window-guarded zstd stream unexpectedly produced messages"
 	cat "$RSYSLOG2_OUT_LOG"

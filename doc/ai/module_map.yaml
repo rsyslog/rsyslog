@@ -40,6 +40,17 @@ runtime_ratelimit:
     - perSourceMaxStates is enforced approximately through shard-local caps; values below the shard count keep one active state per shard, and per_source_evicted reports source-state evictions.
     - HUP snapshots named configs under shard read locks, then reloads policy files without holding registry locks.
 
+runtime_tcpsrv:
+  paths:
+    - "runtime/tcpsrv.c"
+    - "runtime/tcpsrv.h"
+    - "runtime/tcps_sess.c"
+    - "runtime/tcps_sess.h"
+  requires_serialization: false
+  notes:
+    - imtcp sessions own independent decompressor state.
+    - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
+
 runtime_msg:
   paths: ["runtime/msg.c", "runtime/msg.h"]
   requires_serialization: true

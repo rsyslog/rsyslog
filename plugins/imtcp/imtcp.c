@@ -128,6 +128,8 @@ static struct configSettings_s {
     int compressionDriver;
     uint64_t compressionMaxExpansionRatio;
     uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    sbool compressionMaxTotalZstdWindowBytesSet;
 } cs;
 
 struct instanceConf_s {
@@ -179,6 +181,8 @@ struct instanceConf_s {
     int compressionDriver;
     uint64_t compressionMaxExpansionRatio;
     uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    sbool compressionMaxTotalZstdWindowBytesSet;
     struct instanceConf_s *next;
 };
 
@@ -227,6 +231,8 @@ struct modConfData_s {
     int compressionDriver;
     uint64_t compressionMaxExpansionRatio;
     uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    sbool compressionMaxTotalZstdWindowBytesSet;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -270,6 +276,7 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"compression.driver", eCmdHdlrString, 0},
                                            {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
                                            {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxtotalzstdwindowbytes", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -322,6 +329,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"compression.driver", eCmdHdlrString, 0},
                                            {"compression.maxexpansionratio", eCmdHdlrNonNegInt, 0},
                                            {"compression.maxdecompressedbytesperreceive", eCmdHdlrNonNegInt, 0},
+                                           {"compression.maxtotalzstdwindowbytes", eCmdHdlrNonNegInt, 0},
                                            {"multiline", eCmdHdlrBinary, 0},
                                            {"framing.delimiter.regex", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
@@ -505,6 +513,32 @@ static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst, 
                                              getEffectiveInstanceStreamDriver(inst, modConf), "imtcp input");
 }
 
+static rsRetVal applySecureDefaultsToZstdWindow(instanceConf_t *const inst, const modConfData_t *const modConf) {
+    const int secure_policy = modConf->pConf->globals.compatDefaultsSecure;
+
+    if (inst->compressionMode != TCPSRV_COMPRESS_STREAM_ALWAYS ||
+        inst->compressionDriver != TCPSRV_COMPRESS_DRIVER_ZSTD) {
+        return RS_RET_OK;
+    }
+
+    if (secure_policy == COMPAT_DEFAULTS_SECURE_STRICT &&
+        (!inst->compressionMaxTotalZstdWindowBytesSet || inst->compressionMaxTotalZstdWindowBytes == 0)) {
+        LogError(0, RS_RET_PARAM_ERROR,
+                 "imtcp input: compatibility.defaults.secure=\"strict\" requires an explicit positive "
+                 "compression.maxTotalZstdWindowBytes value for zstd stream decompression");
+        return RS_RET_PARAM_ERROR;
+    }
+
+    if (!inst->compressionMaxTotalZstdWindowBytesSet) {
+        glblWarnIfInsecureDefault(
+            modConf->pConf,
+            "imtcp zstd stream decompression has unlimited aggregate decoder-window memory because "
+            "compression.maxTotalZstdWindowBytes was not explicitly set; configure a positive byte limit, or "
+            "set it to 0 explicitly to acknowledge unlimited operation");
+    }
+    return RS_RET_OK;
+}
+
 static rsRetVal setLegacyStrmDrvrMode(void __attribute__((unused)) * pVal, int mode) {
     cs.iStrmDrvrMode = mode;
     cs.bStrmDrvrModeSet = 1;
@@ -632,6 +666,8 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->compressionDriver = loadModConf->compressionDriver;
     inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
     inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
+    inst->compressionMaxTotalZstdWindowBytes = loadModConf->compressionMaxTotalZstdWindowBytes;
+    inst->compressionMaxTotalZstdWindowBytesSet = loadModConf->compressionMaxTotalZstdWindowBytesSet;
     inst->pAllowedSendersRoot = NULL;
     inst->pAllowedSendersLast = NULL;
     inst->bAllowedSendersSet = 0;
@@ -711,7 +747,10 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
     inst->compressionDriver = cs.compressionDriver;
     inst->compressionMaxExpansionRatio = cs.compressionMaxExpansionRatio;
     inst->compressionMaxDecompressedBytesPerReceive = cs.compressionMaxDecompressedBytesPerReceive;
+    inst->compressionMaxTotalZstdWindowBytes = cs.compressionMaxTotalZstdWindowBytes;
+    inst->compressionMaxTotalZstdWindowBytesSet = cs.compressionMaxTotalZstdWindowBytesSet;
     CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
+    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
     warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
                                      getEffectiveInstanceAuthMode(inst, loadModConf));
 
@@ -757,6 +796,7 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetCompressionMaxExpansionRatio(pOurTcpsrv, inst->compressionMaxExpansionRatio));
     CHKiRet(tcpsrv.SetCompressionMaxDecompressedBytesPerReceive(pOurTcpsrv,
                                                                 inst->compressionMaxDecompressedBytesPerReceive));
+    CHKiRet(tcpsrv.SetCompressionMaxTotalZstdWindowBytes(pOurTcpsrv, inst->compressionMaxTotalZstdWindowBytes));
     CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, inst->bDisableLFDelim));
     CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, inst->discardTruncatedMsg));
     CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
@@ -995,6 +1035,9 @@ BEGINnewInpInst
             inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
             inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
+            inst->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
+            inst->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
@@ -1023,6 +1066,7 @@ BEGINnewInpInst
         }
     }
     CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
+    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
     warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
                                      getEffectiveInstanceAuthMode(inst, loadModConf));
 
@@ -1077,6 +1121,8 @@ BEGINbeginCnfLoad
     loadModConf->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
     loadModConf->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
     loadModConf->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
+    loadModConf->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+    loadModConf->compressionMaxTotalZstdWindowBytesSet = RSFALSE;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config variables */
     resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
@@ -1200,6 +1246,9 @@ BEGINsetModCnf
             loadModConf->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
             loadModConf->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
+            loadModConf->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
+            loadModConf->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "
@@ -1249,6 +1298,8 @@ BEGINendCnfLoad
         pModConf->iKeepAliveTime = cs.iKeepAliveTime;
         pModConf->compressionMode = cs.compressionMode;
         pModConf->compressionDriver = cs.compressionDriver;
+        pModConf->compressionMaxTotalZstdWindowBytes = cs.compressionMaxTotalZstdWindowBytes;
+        pModConf->compressionMaxTotalZstdWindowBytesSet = cs.compressionMaxTotalZstdWindowBytesSet;
         if (pPermPeersRoot != NULL) {
             assert(pModConf->pPermPeersRoot == NULL);
             pModConf->pPermPeersRoot = pPermPeersRoot;
@@ -1520,6 +1571,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
     cs.compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
     cs.compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
+    cs.compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+    cs.compressionMaxTotalZstdWindowBytesSet = RSFALSE;
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
     free(cs.pszInputName);
