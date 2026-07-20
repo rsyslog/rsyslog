@@ -131,13 +131,13 @@
  * slow action, or for a ruleset queue that needs to survive downstream
  * outages.
  *
- * 5.  **Segmented Disk (Experimental)**
+ * 5.  **Segmented Disk**
  * - **Behavior:** A pure-disk queue backed by a log-structured segmented
  * store. It uses one serial writer, sealed segment files, and durable
- * per-segment commit offsets. It is intentionally opt-in and is not yet used
- * as the disk child for disk-assisted queues.
- * - **Use Case:** Experimental validation of segmented disk queue mechanics
- * and future DA drain improvements.
+ * per-segment commit offsets. It can be selected as the disk store used by
+ * disk-assisted (DA) queues via DA engine/store selection.
+ * - **Use Case:** Durable queueing with segmented-store mechanics, including
+ * DA deployments that use the segmented disk store.
  *
  *
  * @subsection comparison_to_wal Rsyslog's "Bounded Queue" vs. a WAL's "Unbounded Stream"
