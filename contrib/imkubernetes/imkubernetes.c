@@ -74,6 +74,7 @@ MODULE_CNFNAME("imkubernetes")
 #define DFLT_enrichKubernetes 1
 #define DFLT_SEVERITY pri2sev(LOG_INFO)
 #define DFLT_FACILITY pri2fac(LOG_USER)
+#define CRI_PARTIAL_HARD_LIMIT_FACTOR 10
 
 enum { dst_invalid = -1, dst_stdout, dst_stderr };
 
@@ -85,6 +86,7 @@ typedef struct partial_msg_s {
     struct syslogTime st;
     time_t ttGenTime;
     sbool hasTime;
+    sbool truncated;
 } partial_msg_t;
 
 typedef struct path_meta_s {
@@ -287,6 +289,89 @@ static rsRetVal partialAppend(partial_msg_t *partial, const uchar *msg, size_t l
     memcpy(partial->data + partial->len, msg, len);
     partial->len += len;
     partial->data[partial->len] = '\0';
+
+finalize_it:
+    RETiRet;
+}
+
+static sbool partialIsActive(const partial_msg_t *partial) {
+    assert(partial != NULL);
+    return partial->len > 0 || partial->truncated;
+}
+
+static void partialInitFromRecord(partial_msg_t *partial, const parsed_record_t *record) {
+    assert(partial != NULL);
+    assert(record != NULL);
+
+    partial->stream_type = record->stream_type;
+    partial->hasTime = record->hasTime;
+    partial->ttGenTime = record->ttGenTime;
+    if (record->hasTime) {
+        memcpy(&partial->st, &record->st, sizeof(record->st));
+    }
+}
+
+static rsconf_t *getActiveConf(void) {
+    return runModConf != NULL ? runModConf->pConf : NULL;
+}
+
+static size_t multiplyPartialLimit(size_t limit, size_t factor) {
+    if (factor != 0 && limit > (size_t)-1 / factor) {
+        return (size_t)-1;
+    }
+    return limit * factor;
+}
+
+static size_t getPartialMessageLimit(sbool *hardLimit) {
+    rsconf_t *const cnf = getActiveConf();
+    const int maxLine = glbl.GetMaxLine(cnf);
+    const int oversizeMode = cnf != NULL ? glblGetOversizeMsgInputMode(cnf) : glblOversizeMsgInputMode_Truncate;
+
+    if (hardLimit != NULL) {
+        *hardLimit = 0;
+    }
+    if (maxLine <= 0) {
+        return 0;
+    }
+    if (oversizeMode == glblOversizeMsgInputMode_Truncate) {
+        return (size_t)maxLine;
+    }
+    if (hardLimit != NULL) {
+        *hardLimit = 1;
+    }
+    return multiplyPartialLimit((size_t)maxLine, CRI_PARTIAL_HARD_LIMIT_FACTOR);
+}
+
+static void markPartialTruncated(partial_msg_t *partial, size_t limit, sbool hardLimit) {
+    assert(partial != NULL);
+    if (!partial->truncated) {
+        partial->truncated = 1;
+        LogError(0, NO_ERRCODE, "imkubernetes: CRI partial message exceeded %s (%zu), truncating logical record",
+                 hardLimit ? "partial hard limit" : "maxMessageSize", limit);
+    }
+}
+
+static rsRetVal partialAppendBounded(partial_msg_t *partial, const uchar *msg, size_t len) {
+    sbool hardLimit = 0;
+    const size_t limit = getPartialMessageLimit(&hardLimit);
+    size_t appendLen = len;
+    DEFiRet;
+
+    assert(partial != NULL);
+    if (limit > 0) {
+        if (partial->len >= limit) {
+            appendLen = 0;
+        } else if (appendLen > limit - partial->len) {
+            appendLen = limit - partial->len;
+        }
+        if (appendLen < len) {
+            markPartialTruncated(partial, limit, hardLimit);
+        }
+    }
+
+    if (appendLen > 0) {
+        CHKiRet(partialAppend(partial, msg, appendLen));
+    }
 
 finalize_it:
     RETiRet;
@@ -1007,41 +1092,42 @@ finalize_it:
     RETiRet;
 }
 
+/*
+ * CRI P fragments are accumulated until their closing F record, so they need
+ * their own memory guard. In truncate mode the guard is maxMessageSize. Other
+ * oversize input modes are honored by letting the completed logical record
+ * reach the core submit path, but still capping the accumulator at a
+ * maxMessageSize-derived hard limit so an unfinished run cannot grow forever.
+ * Once capped, consume later fragments until the closing F flushes state; the
+ * closing fragment must never be emitted as a standalone record.
+ */
 static rsRetVal emitPartialIfComplete(file_state_t *state, const parsed_record_t *record) {
     parsed_record_t finalRecord = {0};
     DEFiRet;
 
-    if (!record->is_partial && state->partial.len == 0) {
+    if (!record->is_partial && !partialIsActive(&state->partial)) {
         CHKiRet(enqMsg(state, record));
         FINALIZE;
     }
 
-    if (record->is_partial && state->partial.len == 0) {
-        state->partial.stream_type = record->stream_type;
-        state->partial.hasTime = record->hasTime;
-        state->partial.ttGenTime = record->ttGenTime;
-        if (record->hasTime) {
-            memcpy(&state->partial.st, &record->st, sizeof(record->st));
-        }
+    if (record->is_partial && !partialIsActive(&state->partial)) {
+        partialInitFromRecord(&state->partial, record);
     }
 
-    if (state->partial.len > 0 && state->partial.stream_type != record->stream_type) {
+    if (partialIsActive(&state->partial) && state->partial.stream_type != record->stream_type) {
         freePartialMsg(&state->partial);
-        state->partial.stream_type = record->stream_type;
-        state->partial.hasTime = record->hasTime;
-        state->partial.ttGenTime = record->ttGenTime;
-        if (record->hasTime) {
-            memcpy(&state->partial.st, &record->st, sizeof(record->st));
+        if (record->is_partial) {
+            partialInitFromRecord(&state->partial, record);
         }
     }
 
     if (record->is_partial) {
-        CHKiRet(partialAppend(&state->partial, record->msg, record->len));
+        CHKiRet(partialAppendBounded(&state->partial, record->msg, record->len));
         FINALIZE;
     }
 
-    if (state->partial.len > 0) {
-        CHKiRet(partialAppend(&state->partial, record->msg, record->len));
+    if (partialIsActive(&state->partial)) {
+        CHKiRet(partialAppendBounded(&state->partial, record->msg, record->len));
         finalRecord.msg = state->partial.data;
         finalRecord.len = state->partial.len;
         finalRecord.stream_type = state->partial.stream_type;

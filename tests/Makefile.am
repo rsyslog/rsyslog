@@ -2248,7 +2248,11 @@ TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-cache-expire-vg.sh
 
 TESTS_IMKUBERNETES = \
+	imkubernetes-cri-partial-accept.sh \
 	imkubernetes-cri-basic.sh \
+	imkubernetes-cri-partial-bound.sh \
+	imkubernetes-cri-partial-hard-cap.sh \
+	imkubernetes-cri-partial-split.sh \
 	imkubernetes-dockerjson-basic.sh \
 	yaml-imkubernetes-dockerjson-basic.sh
 
