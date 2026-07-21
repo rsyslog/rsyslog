@@ -1510,6 +1510,7 @@ TESTS_IMPTCP = \
 	imptcp-epoll-add-failure.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
+	imptcp-framing-regex-neg-imsg-crash.sh \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
