@@ -910,6 +910,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmkubernetes-tls-myprivkey.rst \
     source/reference/parameters/mmkubernetes-token.rst \
     source/reference/parameters/mmkubernetes-tokenfile.rst \
+    source/reference/parameters/mmkubernetes-tokenreloadinterval.rst \
     source/reference/parameters/mmnormalize-allowregex.rst \
     source/reference/parameters/mmnormalize-path.rst \
     source/reference/parameters/mmnormalize-rule.rst \
