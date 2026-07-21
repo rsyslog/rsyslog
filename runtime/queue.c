@@ -6,7 +6,7 @@
  *
  * There is some in-depth documentation available in doc/dev_queue.html
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
- * if you are getting aquainted to the object.
+ * if you are getting acquainted to the object.
  *
  * NOTE: as of 2009-04-22, I have begin to remove the qqueue* prefix from static
  * function names - this makes it really hard to read and does not provide much
@@ -131,13 +131,13 @@
  * slow action, or for a ruleset queue that needs to survive downstream
  * outages.
  *
- * 5.  **Segmented Disk (Experimental)**
+ * 5.  **Segmented Disk**
  * - **Behavior:** A pure-disk queue backed by a log-structured segmented
  * store. It uses one serial writer, sealed segment files, and durable
- * per-segment commit offsets. It is intentionally opt-in and is not yet used
- * as the disk child for disk-assisted queues.
- * - **Use Case:** Experimental validation of segmented disk queue mechanics
- * and future DA drain improvements.
+ * per-segment commit offsets. It can be selected as the disk store used by
+ * disk-assisted (DA) queues via DA engine/store selection.
+ * - **Use Case:** Durable queueing with segmented-store mechanics, including
+ * DA deployments that use the segmented disk store.
  *
  *
  * @subsection comparison_to_wal Rsyslog's "Bounded Queue" vs. a WAL's "Unbounded Stream"
@@ -2873,7 +2873,7 @@ static void recoverFromInvalidQi(qqueue_t *pThis, const int wr_fd, const int64_t
  */
 static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, const int nElem) {
     int i;
-    off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
+    off64_t bytesDel = 0; /* keep CLANG static analyzer happy */
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
@@ -4227,7 +4227,7 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
      * it is reached.
      */
     DBGOPRINT((obj_t *)pThis, "bSaveOnShutdown set, restarting DA worker...\n");
-    qqueueSetShutdownImmediate(pThis, 0); /* would termiante the DA worker! */
+    qqueueSetShutdownImmediate(pThis, 0); /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
@@ -4724,7 +4724,7 @@ finalize_it:
     RETiRet;
 }
 
-/* check the the queue file name is unique. */
+/* check the queue file name is unique. */
 static rsRetVal ATTR_NONNULL() checkUniqueDiskFile(qqueue_t *const pThis) {
     DEFiRet;
     struct queue_filename *queue_fn_curr = queue_filename_root;
