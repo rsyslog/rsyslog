@@ -2,7 +2,9 @@
 # Shared deterministic crash-point driver. Phase one acknowledges a known
 # multi-segment backlog while the first worker is delayed, arms one imdiag
 # point, and requires SIGKILL-style termination. Restart must recover the full
-# acknowledged sequence; duplicates are allowed by checkpoint replay.
+# acknowledged sequence; duplicates are allowed by checkpoint replay. The
+# post-unlink oracle polls durable state because output becomes visible before
+# the completing worker finishes the pending-delete state transaction.
 . ${srcdir:=.}/diag.sh init
 check_command_available python3
 require_plugin omtesting
@@ -72,22 +74,37 @@ export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check_dupes
 wait_seq_check_dupes() {
 	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
 }
-startup
-if [ "$SEGDISK_FAULT_POINT" = segment-unlinked ]; then
-	# The crash occurs after unlink but before pending-delete state can be
-	# cleared. Reaching the full output sequence proves workers resumed; the
-	# state/file oracle below proves cleanup was retried rather than merely
-	# hidden by clean-shutdown spool removal.
-	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
-	python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" >"${RSYSLOG_DYNNAME}.post-unlink.json"
-	python3 -c '
+
+wait_pending_delete_cleared() {
+	local state_file="${RSYSLOG_DYNNAME}.post-unlink.json"
+	for _ in {1..300}; do
+		if python3 "$srcdir/segdisk-inspect.py" "$SPOOL_DIR/mainq.segq" >"$state_file" 2>/dev/null && python3 -c '
 import json, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
 slots = [s for s in d["state_slots"] if s["valid"]]
 newest = max(slots, key=lambda s: s["generation"])
-assert newest["delete_first"] == 0 and newest["delete_last"] == 0, newest
-assert not [s for s in d["segments"] if s["id"] < newest["first_live_segment"]], d["segments"]
-' "${RSYSLOG_DYNNAME}.post-unlink.json" || error_exit 1
+assert newest["delete_first"] == 0 and newest["delete_last"] == 0
+assert not [s for s in d["segments"] if s["id"] < newest["first_live_segment"]]
+' "$state_file" 2>/dev/null; then
+			return 0
+		fi
+		$TESTTOOL_DIR/msleep 100
+	done
+	echo "FAIL: segmentedDisk pending deletion did not clear after recovery"
+	cat "$state_file"
+	return 1
+}
+
+startup
+if [ "$SEGDISK_FAULT_POINT" = segment-unlinked ]; then
+	# The crash occurs after unlink but before pending-delete state can be
+	# cleared. Output can become visible before the worker completes its batch,
+	# so poll the exact durable state/file invariant rather than sampling the
+	# legitimate in-progress transaction. The 30-second retry window bounds a real
+	# cleanup failure while tolerating loaded CI runners. This runs before clean
+	# shutdown so spool removal cannot hide a missed cleanup retry.
+	wait_seq_check 0 $((NUMMESSAGES - 1)) -d
+	wait_pending_delete_cleared || error_exit 1
 fi
 shutdown_when_empty
 wait_shutdown
