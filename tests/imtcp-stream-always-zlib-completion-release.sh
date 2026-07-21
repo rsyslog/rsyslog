@@ -6,6 +6,10 @@
 # that same socket remained open after cleanup. Polling allows ten seconds for
 # a loaded CI runner, while those state markers—not elapsed time—are the oracle.
 . ${srcdir:=.}/diag.sh init
+if [ "$(uname)" = "Darwin" ] && [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
+	echo "test skipped on macOS TSAN: lifecycle oracle requires debug logging, which exposes a known debug.c race"
+	exit 77
+fi
 require_plugin imtcp
 check_command_available python3
 export NUMMESSAGES=1
