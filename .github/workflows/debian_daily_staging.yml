@@ -97,7 +97,7 @@ jobs:
       base_version: ${{ steps.version.outputs.base_version }}
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -246,7 +246,7 @@ jobs:
       DEBIAN_STAGING_GPG_PASSPHRASE: ${{ secrets.DEBIAN_STAGING_GPG_PASSPHRASE }}
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -332,7 +332,7 @@ jobs:
       DEBIAN_STAGING_GPG_FINGERPRINT: ${{ vars.DEBIAN_STAGING_GPG_FINGERPRINT }}
     steps:
       - name: Checkout rsyslog source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
