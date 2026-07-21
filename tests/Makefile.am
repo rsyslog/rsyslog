@@ -899,10 +899,15 @@ TESTS_RATELIMIT = \
 	imuxsock_ratelimit_name.sh
 
 TESTS_RATELIMIT_YAML = \
-	imudp-persource-ratelimit-policy.sh
+	imudp-persource-ratelimit-policy.sh \
+	imtcp-persource-port-keys.sh
 
 TESTS_RATELIMIT_IMPTCP_YAML = \
-	imptcp-persource-ratelimit-policy.sh
+	imptcp-persource-ratelimit-policy.sh \
+	imptcp-persource-port-keys.sh
+
+TESTS_IMPTCP_FROMHOST_PORT = \
+	imptcp-fromhost-port.sh
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh
@@ -2311,6 +2316,8 @@ EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
 EXTRA_DIST += $(TESTS_RATELIMIT)
 EXTRA_DIST += $(TESTS_RATELIMIT_YAML)
 EXTRA_DIST += $(TESTS_RATELIMIT_IMPTCP_YAML)
+EXTRA_DIST += $(TESTS_IMPTCP_FROMHOST_PORT)
+EXTRA_DIST += ratelimit-persource-port-keys-common.sh
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -3323,6 +3330,7 @@ if ENABLE_IMPTCP
 # need to be disabled if we do not have this module
 TESTS += $(TESTS_IMPTCP)
 TESTS += $(TESTS_IMPTCP_STREAM_ALWAYS)
+TESTS += $(TESTS_IMPTCP_FROMHOST_PORT)
 if HAVE_LIBYAML
 TESTS += $(TESTS_RATELIMIT_IMPTCP_YAML)
 endif # HAVE_LIBYAML

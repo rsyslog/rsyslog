@@ -161,6 +161,7 @@ static ratelimit_cfg_bucket_t *ratelimitCfgBucket(ratelimit_cfgs_t *const cfgs,
  * Allowed exceptions (no parse):
  * - %fromhost-ip%
  * - %fromhost%
+ * - %fromhost-port%
  * - %fromhost-ip%:%fromhost-port%
  * - %fromhost%:%fromhost-port%
  *
@@ -189,8 +190,11 @@ static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct temp
         if (entry->bComplexProcessing) {
             return RL_PS_KEY_TPL;
         }
-        if (entry->data.field.msgProp.id == PROP_FROMHOST_IP || entry->data.field.msgProp.id == PROP_FROMHOST) {
-            return (entry->data.field.msgProp.id == PROP_FROMHOST_IP) ? RL_PS_KEY_FROMHOST_IP : RL_PS_KEY_FROMHOST;
+        if (entry->data.field.msgProp.id == PROP_FROMHOST_IP || entry->data.field.msgProp.id == PROP_FROMHOST ||
+            entry->data.field.msgProp.id == PROP_FROMHOST_PORT) {
+            if (entry->data.field.msgProp.id == PROP_FROMHOST_IP) return RL_PS_KEY_FROMHOST_IP;
+            if (entry->data.field.msgProp.id == PROP_FROMHOST_PORT) return RL_PS_KEY_FROMHOST_PORT;
+            return RL_PS_KEY_FROMHOST;
         }
         return RL_PS_KEY_TPL;
     }
@@ -214,7 +218,7 @@ static enum ratelimit_ps_key_mode perSourceKeyModeFromTemplate(const struct temp
         if ((first->data.field.msgProp.id == PROP_FROMHOST_IP || first->data.field.msgProp.id == PROP_FROMHOST) &&
             third->data.field.msgProp.id == PROP_FROMHOST_PORT) {
             return (first->data.field.msgProp.id == PROP_FROMHOST_IP) ? RL_PS_KEY_FROMHOST_IP_PORT
-                                                                      : RL_PS_KEY_FROMHOST_PORT;
+                                                                      : RL_PS_KEY_FROMHOST_NAME_PORT;
         }
         return RL_PS_KEY_TPL;
     }
@@ -2705,12 +2709,15 @@ static rsRetVal ratelimitComputePerSourceKey(ratelimit_t *ratelimit, smsg_t *pMs
         case RL_PS_KEY_FROMHOST:
             CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &ctx->key, &ctx->key_len, &ctx->free_host));
             break;
+        case RL_PS_KEY_FROMHOST_PORT:
+            CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &ctx->key, &ctx->key_len, &ctx->free_port));
+            break;
         case RL_PS_KEY_FROMHOST_IP_PORT:
             CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_IP, &host, &host_len, &ctx->free_host));
             CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
             break;
-        case RL_PS_KEY_FROMHOST_PORT:
+        case RL_PS_KEY_FROMHOST_NAME_PORT:
             CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST, &host, &host_len, &ctx->free_host));
             CHKiRet(ratelimitGetRcvFromString(pMsg, PROP_FROMHOST_PORT, &port, &port_len, &ctx->free_port));
             CHKiRet(ratelimitComposePerSourceHostPort(ctx, host, host_len, port, port_len));
