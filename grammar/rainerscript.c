@@ -5325,7 +5325,6 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
          */
         dbgprintf("action disabled by configuration\n");
         cnfstmtDisable(cnfstmt);
-        nvlstDestruct(lst);
         goto done;
     }
     localRet = actionNewInst(lst, &cnfstmt->d.act);
@@ -5340,8 +5339,13 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
     namebuf[255] = '\0'; /* be on safe side */
     cnfstmt->printable = (uchar *)strdup(namebuf);
     nvlstChkUnused(lst);
-    nvlstDestruct(lst);
 done:
+    /* Single cleanup point: cnfstmtNewAct owns lst on every path (the module only
+     * reads it, and addAction keeps an independent clone as pSyntaxLst), so one
+     * nvlstDestruct() frees it exactly once. This also covers the early
+     * error / cnfstmtNew()-failure returns that previously leaked lst.
+     */
+    nvlstDestruct(lst);
     return cnfstmt;
 }
 
