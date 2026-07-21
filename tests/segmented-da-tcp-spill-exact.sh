@@ -69,11 +69,12 @@ if [ $? -ne 0 ] || ! tcpflood_marker_is_valid "$SENDER_MARKER"; then
 	error_exit 1 "tcpflood did not complete cleanly"
 fi
 wait_queueempty
-# A full line count followed by sequence validation proves every delayed TCP
-# record was framed, persisted, forwarded, and drained exactly once.
-wait_file_lines --abort-on-oversize "$RECEIVER_FILE" "$NUMMESSAGES" 120
+# Main-queue emptiness may precede completion of batches already owned by DA
+# child workers. Shutdown is the downstream completion barrier and also closes
+# omfwd's TCP stream, allowing the receiver to consume the final records.
 shutdown_when_empty
 wait_shutdown
+wait_file_lines --abort-on-oversize "$RECEIVER_FILE" "$NUMMESSAGES" 120
 rm -f "$RECEIVER_KEEP_FILE"
 wait "$RECEIVER_PID" || error_exit 1 "minitcpsrv did not exit cleanly"
 cut -d: -f2 "$RECEIVER_FILE" >"$RSYSLOG_OUT_LOG"

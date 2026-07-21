@@ -11,7 +11,7 @@
 : "${SEGDISK_IDLE_FAULT_POINT:?SEGDISK_IDLE_FAULT_POINT is required}"
 SEGDISK_IDLE_FAULT_REPEATS=${SEGDISK_IDLE_FAULT_REPEATS:-1}
 export NUMMESSAGES=$((1000 * SEGDISK_IDLE_FAULT_REPEATS))
-export RSTB_IMDIAG_INJECT_DELAY_MODE=none
+export RSTB_IMDIAG_INJECT_DELAY_MODE=no
 SPOOL_DIR="${RSYSLOG_DYNNAME}.spool"
 
 write_conf() {
@@ -19,7 +19,7 @@ write_conf() {
 	add_conf '
 global(workDirectory="'"$SPOOL_DIR"'")
 main_queue(queue.type="LinkedList" queue.filename="mainq"
-	queue.diskQueueType="segmentedDisk" queue.diskQueueIdleTimeout="0"
+	queue.diskQueueType="segmentedDisk" queue.diskQueueIdleTimeout="5000"
 	queue.size="50" queue.highWatermark="10" queue.lowWatermark="5"
 	queue.dequeueBatchSize="1" queue.dequeueSlowdown="2"
 	queue.checkpointInterval="1" queue.saveOnShutdown="on")
@@ -31,13 +31,17 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 for ((cycle = 0; cycle < SEGDISK_IDLE_FAULT_REPEATS; ++cycle)); do
 	write_conf
 	startup
+	# Submit the bulk of the cycle before arming the crash. An immediate idle
+	# cleanup can otherwise terminate a slow TSAN instance while imdiag is still
+	# injecting, and never-accepted messages look like queue loss after restart.
+	injectmsg $((cycle * 1000)) 999
 	set_segmented_disk_fault "$SEGDISK_IDLE_FAULT_POINT"
 	export RSTB_EXPECT_NO_PROPER_TERMINATION=YES
 	crashed_pid=$(getpid)
-	# Every cycle appends a distinct range. This rematerializes the store if an
-	# earlier interrupted cleanup completed during restart and proves the armed
-	# fault state survives the unmaterialized child representation.
-	injectmsg $((cycle * 1000)) 1000 || true
+	# The final record rematerializes the store if an earlier interrupted cleanup
+	# completed during restart and gives the armed fault a fresh idle transition.
+	# Its response may race with the intentional SIGKILL.
+	injectmsg $((cycle * 1000 + 999)) 1 || true
 	for _ in {1..600}; do
 		kill -0 "$crashed_pid" 2>/dev/null || break
 		./msleep 100
