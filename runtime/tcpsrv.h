@@ -82,6 +82,12 @@ struct tcpLstnPortList_s {
     uint8_t compressionDriver;
     uint64_t compressionMaxExpansionRatio;
     uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    /* Concurrency & Locking: sessions have independent decoder state and share
+     * only this listener-wide zstd window counter. Native 64-bit atomics avoid
+     * serialization; the helper mutex exists only on no-64-bit-atomics builds. */
+    uint64 compressionZstdWindowBytesInUse;
+    DEF_ATOMIC_HELPER_MUT64(mutCompressionZstdWindow);
 #ifdef FEATURE_REGEXP
     regex_t start_preg;
     sbool bHasStartRegex;
@@ -192,6 +198,7 @@ struct tcpsrv_s {
         uint8_t compressionDriver;
         uint64_t compressionMaxExpansionRatio;
         uint64_t compressionMaxDecompressedBytesPerReceive;
+        uint64_t compressionMaxTotalZstdWindowBytes;
         int bDisableLFDelim; /**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
         int discardTruncatedMsg; /**< discard msg part that has been truncated*/
         sbool bPreserveCase; /**< preserve case in fromhost */
@@ -252,6 +259,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetCompressionDriver)(tcpsrv_t *, int);
     rsRetVal (*SetCompressionMaxExpansionRatio)(tcpsrv_t *, uint64_t);
     rsRetVal (*SetCompressionMaxDecompressedBytesPerReceive)(tcpsrv_t *, uint64_t);
+    /* added v32 */
+    rsRetVal (*SetCompressionMaxTotalZstdWindowBytes)(tcpsrv_t *, uint64_t);
     /**
      * Set the input name for a listener configuration.
      *
@@ -348,7 +357,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
                                     const char *const networkNamespace);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 31 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 32 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

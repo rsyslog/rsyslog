@@ -385,6 +385,7 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     /* create entry */
     CHKmalloc(pEntry = (tcpLstnPortList_t *)calloc(1, sizeof(tcpLstnPortList_t)));
     pEntry->cnf_params = cnf_params;
+    INIT_ATOMIC_HELPER_MUT64(pEntry->mutCompressionZstdWindow);
 
     u_cstr_copy(pEntry->cnf_params->dfltTZ, pThis->dfltTZ, sizeof(pEntry->cnf_params->dfltTZ));
     pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
@@ -394,6 +395,7 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     pEntry->compressionDriver = pThis->compressionDriver;
     pEntry->compressionMaxExpansionRatio = pThis->compressionMaxExpansionRatio;
     pEntry->compressionMaxDecompressedBytesPerReceive = pThis->compressionMaxDecompressedBytesPerReceive;
+    pEntry->compressionMaxTotalZstdWindowBytes = pThis->compressionMaxTotalZstdWindowBytes;
 
 #ifdef FEATURE_REGEXP
     if (cnf_params->pszStartRegex != NULL) {
@@ -465,6 +467,7 @@ finalize_it:
                 regexp.regfree(&pEntry->start_preg);
             }
 #endif
+            DESTROY_ATOMIC_HELPER_MUT64(pEntry->mutCompressionZstdWindow);
             free(pEntry);
         }
     }
@@ -611,6 +614,7 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         if (pEntry->stats != NULL) {
             statsobj.Destruct(&(pEntry->stats));
         }
+        DESTROY_ATOMIC_HELPER_MUT64(pEntry->mutCompressionZstdWindow);
         pDel = pEntry;
         pEntry = pEntry->pNext;
         free(pDel);
@@ -1809,6 +1813,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
     pThis->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
     pThis->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
+    pThis->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
 ENDobjConstruct(tcpsrv)
 
 
@@ -2083,6 +2088,13 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionMaxDecompressedBytesPerReceive(tcp
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->compressionMaxDecompressedBytesPerReceive = maxBytes;
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(1) SetCompressionMaxTotalZstdWindowBytes(tcpsrv_t *pThis, const uint64_t maxBytes) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->compressionMaxTotalZstdWindowBytes = maxBytes;
     RETiRet;
 }
 
@@ -2400,6 +2412,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetCompressionDriver = SetCompressionDriver;
     pIf->SetCompressionMaxExpansionRatio = SetCompressionMaxExpansionRatio;
     pIf->SetCompressionMaxDecompressedBytesPerReceive = SetCompressionMaxDecompressedBytesPerReceive;
+    pIf->SetCompressionMaxTotalZstdWindowBytes = SetCompressionMaxTotalZstdWindowBytes;
     pIf->SetbDisableLFDelim = SetbDisableLFDelim;
     pIf->SetDiscardTruncatedMsg = SetDiscardTruncatedMsg;
     pIf->SetSessMax = SetSessMax;

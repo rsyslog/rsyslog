@@ -851,8 +851,13 @@ TESTS_IMTCP_STREAM_ALWAYS_ZSTD = \
 	imtcp-stream-always-zstd-truncated.sh \
 	imtcp-stream-always-zstd-empty-close.sh \
 	imtcp-stream-always-zstd-window-guard.sh \
+	imtcp-stream-always-zstd-window-budget.sh \
+	imtcp-stream-always-zstd-secure-defaults.sh \
 	imtcp-stream-always-zstd-expansion-guard.sh \
 	imtcp-stream-always-zstd-to-zlib-mismatch.sh
+
+TESTS_IMTCP_STREAM_ALWAYS_ZSTD_YAML = \
+	yaml-imtcp-stream-always-zstd-secure-defaults.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS = \
 	imtcp-stream-always-zstd-impstats.sh
@@ -2171,7 +2176,10 @@ imtcp-stream-always-zstd-corrupt.log: imtcp-stream-always-zstd-flushoff.log
 imtcp-stream-always-zstd-truncated.log: imtcp-stream-always-zstd-corrupt.log
 imtcp-stream-always-zstd-empty-close.log: imtcp-stream-always-zstd-truncated.log
 imtcp-stream-always-zstd-window-guard.log: imtcp-stream-always-zstd-empty-close.log
-imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-window-guard.log
+imtcp-stream-always-zstd-window-budget.log: imtcp-stream-always-zstd-window-guard.log
+imtcp-stream-always-zstd-secure-defaults.log: imtcp-stream-always-zstd-window-budget.log
+yaml-imtcp-stream-always-zstd-secure-defaults.log: imtcp-stream-always-zstd-secure-defaults.log
+imtcp-stream-always-zstd-expansion-guard.log: imtcp-stream-always-zstd-secure-defaults.log
 imtcp-stream-always-zstd-to-zlib-mismatch.log: imtcp-stream-always-zstd-expansion-guard.log
 imtcp-impstats.log: imtcp-stream-always-zlib-truncated.log
 imtcp-stream-always-zlib-impstats.log: imtcp-impstats.log
@@ -2292,6 +2300,7 @@ EXTRA_DIST += $(TESTS_IMTCP)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD)
+EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD_IMPSTATS)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_GNUTLS)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_MBEDTLS)
@@ -2886,6 +2895,9 @@ TESTS += $(TESTS_IMTCP)
 TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
 if ENABLE_LIBZSTD
 TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD)
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMTCP_STREAM_ALWAYS_ZSTD_YAML)
+endif # HAVE_LIBYAML
 endif # ENABLE_LIBZSTD
 
 if HAVE_LIBYAML

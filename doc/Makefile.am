@@ -732,6 +732,7 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-compression-driver.rst \
     source/reference/parameters/imtcp-compression-maxdecompressedbytesperreceive.rst \
     source/reference/parameters/imtcp-compression-maxexpansionratio.rst \
+    source/reference/parameters/imtcp-compression-maxtotalzstdwindowbytes.rst \
     source/reference/parameters/imtcp-compression-mode.rst \
     source/reference/parameters/imtcp-disablelfdelimiter.rst \
     source/reference/parameters/imtcp-discardtruncatedmsg.rst \
