@@ -399,6 +399,24 @@ YAML_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.omrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
     check_not_present 'omrelp action uses tls="off"' "${RSYSLOG_DYNNAME}.omrelp-explicit.log"
 
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+        tls.authmode: "anon"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+
     cat >"${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" <<YAML_EOF
 version: 2
 global:
@@ -417,6 +435,26 @@ rulesets:
 YAML_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
     check_not_present 'imrelp input uses tls="off"' "${RSYSLOG_DYNNAME}.imrelp-explicit.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-tls.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+    tls.authmode: "anon"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
 fi
 
 exit_test

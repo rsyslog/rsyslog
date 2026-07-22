@@ -502,15 +502,35 @@ finalize_it:
     RETiRet;
 }
 
+/* True when the listener carries TLS-specific settings (auth mode, certificates,
+ * permitted peers, GnuTLS priority or config command). These are applied only on
+ * the TLS-enabled RELP path, so with tls="off" they are silently ineffective. */
+static int imrelpHasTlsOptions(const instanceConf_t *const inst) {
+    return inst->authmode != NULL || inst->caCertFile != NULL || inst->myCertFile != NULL ||
+           inst->myPrivKeyFile != NULL || inst->pristring != NULL ||
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+           inst->tlscfgcmd != NULL ||
+#endif
+           inst->permittedPeers.nmemb > 0;
+}
+
 /** Warn in secure warn mode when an imrelp listener is configured without TLS. */
 static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) {
     if (!inst->bEnableTLS && !inst->bEnableTLSSet) {
-        /* explicit tls="off" is a deliberate admin choice, not an insecure
-         * default (same rationale as omfwd protocol="udp"/streamdriver.mode="0").
-         */
+        /* omitted tls (implicit off) is an insecure default and warns. */
         glblWarnIfInsecureDefault(loadModConf->pConf,
                                   "imrelp input uses tls=\"off\" (plain RELP without TLS); "
                                   "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+    } else if (!inst->bEnableTLS && imrelpHasTlsOptions(inst)) {
+        /* explicit tls="off" is a deliberate admin choice and normally silent
+         * (same rationale as omfwd protocol="udp"/streamdriver.mode="0"), but
+         * combining it with TLS-specific options is a contradiction: those
+         * options are silently ignored and traffic stays plaintext.
+         */
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "imrelp has TLS-related settings but tls=\"off\"; RELP runs plaintext so "
+                                  "those settings are ignored "
+                                  "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
     } else if (inst->bEnableTLS && inst->authmode != NULL && strcasecmp((const char *)inst->authmode, "anon") == 0) {
         glblWarnIfInsecureDefault(
             loadModConf->pConf,

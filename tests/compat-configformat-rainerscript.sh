@@ -342,6 +342,18 @@ CONF_EOF
     check_not_present 'omrelp action uses tls="off"' \
         "${RSYSLOG_DYNNAME}.omrelp-plain-explicit.log"
 
+    # explicit tls="off" combined with TLS-specific options is a contradiction
+    # (the options are ignored and traffic stays plaintext), so it must warn
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off" tls.authmode="anon")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
+
     cat >"${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
 module(load="../plugins/imrelp/.libs/imrelp")
@@ -363,6 +375,19 @@ CONF_EOF
         "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
     check_not_present 'imrelp input uses tls="off"' \
         "${RSYSLOG_DYNNAME}.imrelp-plain-explicit.log"
+
+    # explicit tls="off" combined with TLS-specific options is a contradiction
+    # (the options are ignored and traffic stays plaintext), so it must warn
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-tls.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off" tls.authmode="anon")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
 fi
 
 cat >"${RSYSLOG_DYNNAME}.invalid.conf" <<CONF_EOF
