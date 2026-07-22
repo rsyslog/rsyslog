@@ -96,6 +96,23 @@ class FlakeEvidenceTests(unittest.TestCase):
             self.assertIn("exit_code=0", phase)
             self.assertIn("flake evidence logging failed", completed.stderr)
 
+    def test_phase_run_captures_custom_oracle_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            env = os.environ | {
+                "RSYSLOG_FLAKE_EVIDENCE_ROOT": str(root / "evidence"),
+            }
+            completed = subprocess.run(
+                [
+                    str(PHASE), "run", "oracle-output", "custom", "--",
+                    "sh", "-c", "echo oracle-detail; exit 1",
+                ],
+                env=env, text=True, capture_output=True,
+            )
+            self.assertEqual(1, completed.returncode)
+            log = (root / "evidence/logs/oracle-output.log").read_text()
+            self.assertIn("oracle-detail", log)
+
     def test_prepare_ignores_pre_test_failure(self):
         with tempfile.TemporaryDirectory() as temp:
             completed = subprocess.run(
@@ -169,6 +186,22 @@ class FlakeEvidenceTests(unittest.TestCase):
         checker = load_coverage_checker()
         text = "      # uses: ./.github/actions/upload-flake-evidence\n"
         self.assertEqual([], checker.UPLOAD_RE.findall(text))
+
+    def test_coverage_checker_ignores_shell_text_upload(self):
+        checker = load_coverage_checker()
+        text = "          uses: ./.github/actions/upload-flake-evidence\n"
+        self.assertEqual([], checker.UPLOAD_RE.findall(text))
+
+    def test_coverage_checker_requires_failure_aware_condition(self):
+        checker = load_coverage_checker()
+        disabled = (
+            "      - name: upload\n"
+            "        if: false\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        enabled = disabled.replace("if: false", "if: failure()")
+        self.assertFalse(checker.upload_step_is_failure_aware(disabled))
+        self.assertTrue(checker.upload_step_is_failure_aware(enabled))
 
     def test_coverage_checker_parses_harvester_names(self):
         checker = load_coverage_checker()

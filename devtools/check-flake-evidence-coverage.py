@@ -36,8 +36,13 @@ EXPECTED_UPLOADS = {
 }
 TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
 UPLOAD_RE = re.compile(
-    r"^\s+uses:\s+\./\.github/actions/upload-flake-evidence\s*(?:#.*)?$",
+    r"^(?:      - |        )uses:\s+"
+    r"\./\.github/actions/upload-flake-evidence\s*(?:#.*)?$",
     re.MULTILINE,
+)
+STEP_IF_RE = re.compile(r"^        if:\s*(.*)$", re.MULTILINE)
+FAILURE_AWARE_RE = re.compile(
+    r"failure\(\)|steps\.[A-Za-z0-9_-]+\.outputs\.[A-Za-z0-9_-]+",
 )
 
 
@@ -52,6 +57,19 @@ def job_blocks(text: str):
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(jobs)
         yield match.group(1), jobs[match.start():end]
+
+
+def step_blocks(job: str):
+    steps = job.partition("\n    steps:")[2]
+    matches = list(re.finditer(r"^      - (?:name|uses|run):", steps, re.MULTILINE))
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(steps)
+        yield steps[match.start():end]
+
+
+def upload_step_is_failure_aware(step: str) -> bool:
+    condition = STEP_IF_RE.search(step)
+    return bool(condition and FAILURE_AWARE_RE.search(step[condition.start():]))
 
 
 def workflow_paths():
@@ -95,8 +113,22 @@ def main() -> int:
         if likely_test_workflow and (not name or name not in registered):
             errors.append(f"{path.name}: likely test workflow is missing from the harvester")
         for job_name, job in job_blocks(text):
-            if TEST_COMMAND_RE.search(job) and not UPLOAD_RE.search(job):
+            steps = list(step_blocks(job))
+            test_indexes = [
+                index for index, step in enumerate(steps) if TEST_COMMAND_RE.search(step)
+            ]
+            upload_indexes = [
+                index for index, step in enumerate(steps) if UPLOAD_RE.search(step)
+            ]
+            for index in upload_indexes:
+                if not upload_step_is_failure_aware(steps[index]):
+                    errors.append(
+                        f"{path.name}:{job_name}: evidence upload lacks a failure-aware if condition"
+                    )
+            if test_indexes and not upload_indexes:
                 errors.append(f"{path.name}:{job_name}: likely test commands found without an evidence upload")
+            elif test_indexes and max(upload_indexes) < max(test_indexes):
+                errors.append(f"{path.name}:{job_name}: evidence upload precedes the likely test step")
 
     if errors:
         for error in errors:

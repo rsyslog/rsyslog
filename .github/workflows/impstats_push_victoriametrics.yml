@@ -90,8 +90,8 @@ jobs:
 
       - name: validate data in VictoriaMetrics
         run: |
-          devtools/ci-flake-phase.sh begin impstats-victoriametrics-oracle custom
-          trap 'rc=$?; devtools/ci-flake-phase.sh end impstats-victoriametrics-oracle custom "$rc"' EXIT
+          devtools/ci-flake-phase.sh run impstats-victoriametrics-oracle custom \
+            -- bash -euo pipefail <<'ORACLE'
           echo "=== Checking for metrics in VictoriaMetrics ==="
 
           # Wait for rsyslog to start, generate stats, and push
@@ -161,6 +161,7 @@ jobs:
               exit 1
             fi
           fi
+          ORACLE
 
       - name: show error logs (if we errored)
         if: ${{ failure() || cancelled() }}

@@ -304,7 +304,8 @@ that still need coverage.
   and must never check out or execute source-run/PR content.
 - Run `python3 devtools/check-flake-evidence-coverage.py` for workflow changes.
   The checker discovers both `.yml` and `.yaml` test workflows, verifies their
-  active upload steps and harvester registration, and retains explicit minimum
+  active upload steps, failure-aware conditions, placement after recognized
+  test commands, and harvester registration, and retains explicit minimum
   counts for known jobs.  Update its test-command heuristics and explicit
   inventory when a new custom test-oracle pattern is added.
 
