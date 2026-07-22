@@ -1,0 +1,25 @@
+.github/workflows/impstats_push_victoriametrics.yml
+  s_2f89000869a42c::t_9b5c702a3ed893 93-94,164
+AGENTS.md
+  s_2f89000869a42c::t_5a1a5fc81c62dd 307-308
+devtools/check-flake-evidence-coverage.py
+  s_2f89000869a42c::t_290107ffdd388e 39-40,43-46,62-74,116-128,130-131
+devtools/tests/test_flake_evidence.py
+  s_2f89000869a42c::t_770ee62a8dd414 99-115,190-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "8e844956f7063318f097961f81136cbf4b6d8379",
+  "prompts": {},
+  "sessions": {
+    "s_2f89000869a42c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89d2-7002-7821-8550-0d33e8527d33",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
