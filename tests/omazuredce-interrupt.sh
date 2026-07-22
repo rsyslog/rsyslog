@@ -1,5 +1,10 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+# Exercise a retryable synchronous Azure DCE post failure followed by recovery.
+# The oracle sums successful batch record counts after queue drain: it must equal
+# NUMMESSAGES exactly, proving action-engine replay did not append duplicate records.
+# A trap owns the background fault injector and removes its firewall rules. The
+# 180-second wait is hang protection for credentialed Azure calls on loaded CI.
 echo This test must be run as root [connection interruption requires iptables]
 echo "For variables to be passed use --preserve-env=AZURE_DCE_CLIENT_ID,AZURE_DCE_CLIENT_SECRET,AZURE_DCE_TENANT_ID,AZURE_DCE_URL,AZURE_DCE_DCR_ID,AZURE_DCE_TABLE_NAME"
 if [ "$EUID" -ne 0 ]; then
@@ -183,6 +188,14 @@ content_check "omazuredce: posted batch records="
 post_count=$(grep -c -F "omazuredce: posted batch records=" < "$RSYSLOG_OUT_LOG")
 if [ "${post_count:=0}" -lt 2 ]; then
 	echo "FAIL: expected multiple successful omazuredce batch posts after interruption, got $post_count"
+	cat -n "$RSYSLOG_OUT_LOG"
+	error_exit 1
+fi
+
+posted_records=$(sed -n 's/.*omazuredce: posted batch records=\([0-9][0-9]*\).*/\1/p' "$RSYSLOG_OUT_LOG" |
+	awk '{ total += $1 } END { print total + 0 }')
+if [ "$posted_records" -ne "$NUMMESSAGES" ]; then
+	echo "FAIL: expected exactly $NUMMESSAGES posted records after retry, got $posted_records"
 	cat -n "$RSYSLOG_OUT_LOG"
 	error_exit 1
 fi
