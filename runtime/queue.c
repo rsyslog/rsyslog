@@ -2593,10 +2593,15 @@ rsRetVal ATTR_NONNULL(1) qqueueShutdownWorkers(qqueue_t *const pThis) {
     CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
 
     pthread_mutex_lock(pThis->mut);
-    int physQueueSize;
-    physQueueSize = getPhysicalQueueSize(pThis);
+    const int parent_phys_queue_size = getPhysicalQueueSize(pThis);
+    const int child_phys_queue_size = pThis->pqDA == NULL ? 0 : getPhysicalQueueSize(pThis->pqDA);
     pthread_mutex_unlock(pThis->mut);
-    if (physQueueSize > 0) {
+    /* The DA transfer worker can empty the memory parent while the disk child
+     * still owns queued or in-flight work.  Skipping the action-completion
+     * phase in that state sends the child directly to cancellation, which can
+     * discard an action at the cancellation boundary.  Parent and child share
+     * the queue mutex, so inspect both at one stable point. */
+    if (parent_phys_queue_size > 0 || child_phys_queue_size > 0) {
         CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
     }
 
