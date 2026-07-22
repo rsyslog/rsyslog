@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 usage() {
 	echo "usage: $0 begin|end|run <name> <automake|custom|distcheck> [exit-code|-- command ...]" >&2
@@ -70,9 +70,16 @@ run)
 	begin_phase
 	set +e
 	"$@" 2>&1 | tee "$log_dir/$name.log"
-	rc="${PIPESTATUS[0]}"
+	pipeline_status=("${PIPESTATUS[@]}")
+	rc="${pipeline_status[0]}"
+	tee_rc="${pipeline_status[1]}"
 	set -e
 	end_phase "$rc"
+	if [ "$tee_rc" -ne 0 ]; then
+		printf 'flake evidence logging failed for phase %s (tee exit %s)\n' \
+			"$name" "$tee_rc" >&2
+		[ "$rc" -ne 0 ] || exit "$tee_rc"
+	fi
 	exit "$rc"
 	;;
 *) usage ;;

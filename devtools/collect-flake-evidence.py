@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Harvest eligible failed-job logs from a completed GitHub Actions run."""
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
@@ -11,6 +25,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 
 
@@ -107,6 +122,20 @@ def normalize_log(text: str) -> str:
     )
 
 
+def decode_job_logs(raw: bytes) -> str:
+    """Decode the ZIP returned by the job-log API without extracting files."""
+    if not zipfile.is_zipfile(io.BytesIO(raw)):
+        return raw.decode("utf-8", errors="replace")
+    parts = []
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        for info in sorted(archive.infolist(), key=lambda item: item.filename):
+            if info.is_dir():
+                continue
+            text = archive.read(info).decode("utf-8", errors="replace")
+            parts.append(f"===== {info.filename} =====\n{text}")
+    return "\n".join(parts)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True)
@@ -122,7 +151,7 @@ def main() -> int:
         if job.get("conclusion") not in ("failure", "timed_out"):
             continue
         raw = github.get(f"/actions/jobs/{job['id']}/logs")
-        text = normalize_log(raw.decode("utf-8", errors="replace"))
+        text = normalize_log(decode_job_logs(raw))
         phases = phases_from_log(text, job["name"])
         if not phases:
             continue

@@ -444,7 +444,7 @@ jobs:
               const match = job.name.match(/^daily (.+) tests$/);
               const lane = match ? match[1] : job.name;
               const artifact =
-                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-${lane}`;
+                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-daily-${lane}-check`;
               return `- ${job.name}: ${job.html_url} (artifact: ${artifact})`;
             });
             const failedLaneSection = failedLaneLines.length > 0

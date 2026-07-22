@@ -22,7 +22,7 @@ fi
 if [ "$CI_SANITIZE_BLACKLIST" != "" ]; then
 	CFLAGS="$CFLAGS -fsanitize-blacklist=$(pwd)/$CI_SANITIZE_BLACKLIST"
 	export CFLAGS
-	printf 'CFLAGS changed to: %s\n', "$CFLAGS"
+	printf 'CFLAGS changed to: %s\n' "$CFLAGS"
 fi
 set -e
 
@@ -34,7 +34,7 @@ if [ "$CI_CHECK_CMD" != "distcheck" ]; then
 	make $CI_MAKE_OPT
 fi
 
-printf 'STEP: make %s ==============================================================\n', \
+printf 'STEP: make %s ==============================================================\n' \
 	"$CI_CHECK_CMD"
 set +e
 echo CI_CHECK_CMD: "$CI_CHECK_CMD"

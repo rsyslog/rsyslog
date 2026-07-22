@@ -1108,7 +1108,8 @@ jobs:
           ${{
             steps.code_changes.outputs.any_changed == 'true' &&
             steps.run_tests.outputs.status != '' &&
-            steps.run_tests.outputs.status != 'success'
+            steps.run_tests.outputs.status != 'success' &&
+            env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
           }}
         uses: ./.github/actions/upload-flake-evidence
         with:
@@ -1210,7 +1211,9 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: Upload test failure evidence
-        if: failure()
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: elasticsearch-check
@@ -1292,7 +1295,9 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: Upload test failure evidence
-        if: failure()
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: victorialogs-check
@@ -1444,7 +1449,9 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: Upload test failure evidence
-        if: failure()
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: kafka-distcheck
@@ -1692,7 +1699,9 @@ jobs:
             '
 
       - name: Upload test failure evidence
-        if: failure()
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: arm64-check
@@ -1840,7 +1849,9 @@ jobs:
             '
 
       - name: Upload test failure evidence
-        if: failure()
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: i386-check

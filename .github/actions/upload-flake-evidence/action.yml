@@ -15,7 +15,6 @@ runs:
       env:
         RSYSLOG_FLAKE_JOB_NAME: ${{ inputs.job-name }}
       run: |
-        devtools/gather-check-logs.sh || true
         for path in .ci failed-tests.log tests config.log; do
           if [ -e "$path" ]; then
             sudo chmod -R a+rX "$path" 2>/dev/null || chmod -R a+rX "$path" || true
@@ -24,6 +23,7 @@ runs:
         if [ -d /cores ]; then
           sudo find /cores -maxdepth 1 -type f -name 'core*' -exec chmod a+r {} + || true
         fi
+        devtools/gather-check-logs.sh || true
         python3 devtools/prepare-flake-evidence.py > flake-evidence.outputs
         cat flake-evidence.outputs
         cat flake-evidence.outputs >> "$GITHUB_OUTPUT"

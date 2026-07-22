@@ -1,11 +1,26 @@
 #!/usr/bin/env python3
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import importlib.util
+import io
 import json
 import os
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -13,10 +28,18 @@ ROOT = Path(__file__).resolve().parents[2]
 PHASE = ROOT / "devtools/ci-flake-phase.sh"
 PREPARE = ROOT / "devtools/prepare-flake-evidence.py"
 COLLECT = ROOT / "devtools/collect-flake-evidence.py"
+CHECK_COVERAGE = ROOT / "devtools/check-flake-evidence-coverage.py"
 
 
 def load_collector():
     spec = importlib.util.spec_from_file_location("collect_flake_evidence", COLLECT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_coverage_checker():
+    spec = importlib.util.spec_from_file_location("check_flake_evidence_coverage", CHECK_COVERAGE)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -50,6 +73,28 @@ class FlakeEvidenceTests(unittest.TestCase):
             self.assertEqual(1, failure.returncode)
             self.assertIn("status=success", (Path(temp) / "evidence/phases/success-check.phase").read_text())
             self.assertIn("status=failure", (Path(temp) / "evidence/phases/failed-oracle.phase").read_text())
+
+    def test_logging_failure_does_not_become_test_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            fake_tee = fake_bin / "tee"
+            fake_tee.write_text("#!/bin/sh\ncat >/dev/null\nexit 7\n")
+            fake_tee.chmod(0o755)
+            env = os.environ | {
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                "RSYSLOG_FLAKE_EVIDENCE_ROOT": str(root / "evidence"),
+            }
+            completed = subprocess.run(
+                [str(PHASE), "run", "logging-fails", "automake", "--", "true"],
+                env=env, text=True, capture_output=True,
+            )
+            self.assertEqual(7, completed.returncode)
+            phase = (root / "evidence/phases/logging-fails.phase").read_text()
+            self.assertIn("status=success", phase)
+            self.assertIn("exit_code=0", phase)
+            self.assertIn("flake evidence logging failed", completed.stderr)
 
     def test_prepare_ignores_pre_test_failure(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -106,6 +151,31 @@ class FlakeEvidenceTests(unittest.TestCase):
         self.assertEqual("interrupted", interrupted[0]["status"])
         self.assertEqual([], success_then_late_failure)
         self.assertEqual("legacy-old-job", legacy[0]["name"])
+
+    def test_fallback_decodes_job_log_zip(self):
+        collector = load_collector()
+        raw = io.BytesIO()
+        with zipfile.ZipFile(raw, "w") as archive:
+            archive.writestr(
+                "1_test.txt",
+                "RSYSLOG_FLAKE_PHASE_BEGIN name=check type=automake\n"
+                "RSYSLOG_FLAKE_PHASE_END name=check type=automake "
+                "status=failure exit_code=1\n",
+            )
+        text = collector.decode_job_logs(raw.getvalue())
+        self.assertEqual("failure", collector.phases_from_log(text, "job")[0]["status"])
+
+    def test_coverage_checker_ignores_commented_uploads(self):
+        checker = load_coverage_checker()
+        text = "      # uses: ./.github/actions/upload-flake-evidence\n"
+        self.assertEqual([], checker.UPLOAD_RE.findall(text))
+
+    def test_coverage_checker_parses_harvester_names(self):
+        checker = load_coverage_checker()
+        text = "    workflows:\n      - check\n      - daily focused tests\n    types: [completed]\n"
+        self.assertEqual(
+            {"check", "daily focused tests"}, checker.registered_workflow_names(text),
+        )
 
 
 if __name__ == "__main__":
