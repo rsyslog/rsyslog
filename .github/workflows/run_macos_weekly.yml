@@ -99,6 +99,9 @@ jobs:
       - name: make check (continue on error to collect results)
         id: run_tests
         continue-on-error: true
+        env:
+          RSYSLOG_FLAKE_PHASE_NAME: >-
+            weekly-macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
         run: |
           ulimit -c unlimited
           sudo mkdir -p /cores
@@ -112,8 +115,10 @@ jobs:
               detect_deadlocks=1:history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           fi
           set +e
+          devtools/ci-flake-phase.sh begin "$RSYSLOG_FLAKE_PHASE_NAME" automake
           make -j8 check VERBOSE=1
           EXIT_CODE=$?
+          devtools/ci-flake-phase.sh end "$RSYSLOG_FLAKE_PHASE_NAME" automake "$EXIT_CODE"
           STATUS=success
           if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
@@ -132,36 +137,12 @@ jobs:
           name: res-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
           path: result.txt
 
-      # Use the same short-lived failure artifact contract as regular PR CI so
-      # the flake collector can process scheduled failures through the same
-      # path. The artifact name includes run attempt and lane so reruns do not
-      # overwrite the failed attempt that produced the evidence.
-      - name: Prepare CI failure evidence
+      - name: Upload test failure evidence
         if: steps.run_tests.outputs.status == 'failure'
-        run: |
-          devtools/gather-check-logs.sh || true
-          for path in failed-tests.log tests config.log; do
-            if [ -e "$path" ]; then
-              sudo chmod -R a+rX "$path" || true
-            fi
-          done
-
-      - name: Upload CI failure evidence
-        if: steps.run_tests.outputs.status == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-flake-evidence
         with:
-          name: >-
-            ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{
-            matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
-          path: |
-            failed-tests.log
-            tests/failed-tests.log
-            tests/test-suite.log
-            tests/*.log
-            tests/*.trs
-            config.log
-          retention-days: 7
-          if-no-files-found: ignore
+          job-name: >-
+            weekly-macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
 
       - name: Show failed test logs
         if: steps.run_tests.outputs.status == 'failure'

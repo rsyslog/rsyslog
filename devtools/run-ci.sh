@@ -16,10 +16,12 @@ if [ "$SUDO" != "" ]; then
 	$SUDO echo sudo works!
 fi
 if [ "$CI_VALGRIND_SUPPRESSIONS" != "" ]; then
-	export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=$(pwd)/tests/CI/$CI_VALGRIND_SUPPRESSIONS"
+	RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=$(pwd)/tests/CI/$CI_VALGRIND_SUPPRESSIONS"
+	export RS_TESTBENCH_VALGRIND_EXTRA_OPTS
 fi
 if [ "$CI_SANITIZE_BLACKLIST" != "" ]; then
-	export CFLAGS="$CFLAGS -fsanitize-blacklist=$(pwd)/$CI_SANITIZE_BLACKLIST"
+	CFLAGS="$CFLAGS -fsanitize-blacklist=$(pwd)/$CI_SANITIZE_BLACKLIST"
+	export CFLAGS
 	printf 'CFLAGS changed to: %s\n', "$CFLAGS"
 fi
 set -e
@@ -36,11 +38,18 @@ printf 'STEP: make %s ==========================================================
 	"$CI_CHECK_CMD"
 set +e
 echo CI_CHECK_CMD: "$CI_CHECK_CMD"
+phase_type=automake
+if [ "$CI_CHECK_CMD" = "distcheck" ]; then
+	phase_type=distcheck
+fi
+phase_name="${RSYSLOG_FLAKE_PHASE_NAME:-${CI_CHECK_CMD:-check}}"
 if [ "$CI_MAKE_CHECK_TESTS" != "" ]; then
 	echo CI_MAKE_CHECK_TESTS: "$CI_MAKE_CHECK_TESTS"
-	make $CI_MAKE_CHECK_OPT VERBOSE=1 TESTS="$CI_MAKE_CHECK_TESTS" "${CI_CHECK_CMD:-check}"
+	devtools/ci-flake-phase.sh run "$phase_name" "$phase_type" -- \
+		make $CI_MAKE_CHECK_OPT VERBOSE=1 TESTS="$CI_MAKE_CHECK_TESTS" "${CI_CHECK_CMD:-check}"
 else
-	make $CI_MAKE_CHECK_OPT VERBOSE=1 "${CI_CHECK_CMD:-check}"
+	devtools/ci-flake-phase.sh run "$phase_name" "$phase_type" -- \
+		make $CI_MAKE_CHECK_OPT VERBOSE=1 "${CI_CHECK_CMD:-check}"
 fi
 rc=$?
 
@@ -69,7 +78,7 @@ if [ "$CI_CODECOV_TOKEN" != "" ]; then
                 exit 1
         else
                 chmod +x codecov
-                printf "repo slug %s, commit_sha %s\n" "$CODECOV_repo_slug" "$CODECOV_commit_sha"
+                printf "repo slug %s, commit_sha %s\n" "${CODECOV_repo_slug:-}" "${CODECOV_commit_sha:-}"
                 if [ -n "$coverage_file" ]; then
                       ./codecov -f "$coverage_file" -C "$CODECOV_commit_sha" -r "$CODECOV_repo_slug" -t "$CI_CODECOV_TOKEN" -n 'rsyslog PR' -Z &> codecov_log
                 else

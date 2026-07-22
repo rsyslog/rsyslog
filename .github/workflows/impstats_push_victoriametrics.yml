@@ -67,6 +67,7 @@ jobs:
 
       - name: run impstats push test
         env:
+          RSYSLOG_FLAKE_PHASE_NAME: impstats-push-check
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
           RSYSLOG_TESTBENCH_EXTERNAL_VM_URL: http://host.docker.internal:8428
           DOCKER_RUN_EXTRA_OPTS: --add-host=host.docker.internal:host-gateway
@@ -89,6 +90,8 @@ jobs:
 
       - name: validate data in VictoriaMetrics
         run: |
+          devtools/ci-flake-phase.sh begin impstats-victoriametrics-oracle custom
+          trap 'rc=$?; devtools/ci-flake-phase.sh end impstats-victoriametrics-oracle custom "$rc"' EXIT
           echo "=== Checking for metrics in VictoriaMetrics ==="
 
           # Wait for rsyslog to start, generate stats, and push
@@ -168,3 +171,9 @@ jobs:
           docker logs "$(docker ps -q \
             -f ancestor=victoriametrics/victoria-metrics:v1.134.0)" || \
             echo "Could not get VM logs"
+
+      - name: Upload test failure evidence
+        if: failure()
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: impstats-victoriametrics

@@ -1,0 +1,38 @@
+name: Upload flake evidence
+description: Upload rich evidence only when a test or test-oracle phase failed
+
+inputs:
+  job-name:
+    description: Human-readable CI lane name
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare versioned evidence
+      id: prepare
+      shell: bash
+      env:
+        RSYSLOG_FLAKE_JOB_NAME: ${{ inputs.job-name }}
+      run: |
+        devtools/gather-check-logs.sh || true
+        for path in .ci failed-tests.log tests config.log; do
+          if [ -e "$path" ]; then
+            sudo chmod -R a+rX "$path" 2>/dev/null || chmod -R a+rX "$path" || true
+          fi
+        done
+        if [ -d /cores ]; then
+          sudo find /cores -maxdepth 1 -type f -name 'core*' -exec chmod a+r {} + || true
+        fi
+        python3 devtools/prepare-flake-evidence.py > flake-evidence.outputs
+        cat flake-evidence.outputs
+        cat flake-evidence.outputs >> "$GITHUB_OUTPUT"
+
+    - name: Upload versioned evidence
+      if: steps.prepare.outputs.eligible == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ steps.prepare.outputs.artifact_name }}
+        path: flake-evidence
+        retention-days: 7
+        if-no-files-found: error

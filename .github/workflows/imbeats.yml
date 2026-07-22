@@ -64,6 +64,7 @@ jobs:
 
       - name: run imbeats filebeat docker test
         env:
+          RSYSLOG_FLAKE_PHASE_NAME: imbeats-check
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-imbeats
@@ -111,3 +112,9 @@ jobs:
           done
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: Upload test failure evidence
+        if: failure()
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: imbeats-check
