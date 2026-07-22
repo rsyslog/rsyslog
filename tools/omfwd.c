@@ -2122,6 +2122,18 @@ finalize_it:
     RETiRet;
 }
 
+/* True when the action carries TLS-specific settings other than the stream
+ * driver name and authmode (which the callers check separately): CA/CRL/key/cert
+ * files, permitted peers, remote SNI, expired-cert handling, or a GnuTLS priority
+ * string. These are consumed only when the TCP stream driver runs in TLS mode, so
+ * on a plain transport (UDP, or streamdriver.mode="0") they are silently ignored
+ * and their presence signals a misconfiguration. */
+static int omfwdActionHasTlsOptions(const instanceData *const pData) {
+    return pData->pszStrmDrvrCAFile != NULL || pData->pszStrmDrvrCRLFile != NULL || pData->pszStrmDrvrKeyFile != NULL ||
+           pData->pszStrmDrvrCertFile != NULL || pData->pPermPeers != NULL || pData->pszStrmDrvrRemoteSNI != NULL ||
+           pData->pszStrmDrvrPermitExpiredCerts != NULL || pData->gnutlsPriorityString != NULL;
+}
+
 /** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
 static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
     if (pData->protocol == FORW_UDP) {
@@ -2129,11 +2141,13 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
          * driver, so the global defaultNetstreamDriver is irrelevant to a UDP
          * action and must NOT trigger a warning for an explicit protocol="udp"
          * (unlike the TCP mode-0 branch below, where the effective driver does
-         * matter). streamdriver.name / streamdriver.authmode set on the action
-         * itself, however, are a real contradiction.
+         * matter). Any TLS-specific setting placed on the action itself
+         * (streamdriver.name/authmode, certificates, permitted peers, ...) is,
+         * however, a real contradiction.
          */
-        const int tlsHintsConfigured =
-            (pData->pszStrmDrvrAuthMode != NULL) || glblIsTlsCapableNetstrmDrvr(pData->pszStrmDrvr);
+        const int tlsHintsConfigured = (pData->pszStrmDrvrAuthMode != NULL) ||
+                                       glblIsTlsCapableNetstrmDrvr(pData->pszStrmDrvr) ||
+                                       omfwdActionHasTlsOptions(pData);
         if (tlsHintsConfigured) {
             /* TLS-related settings on a UDP action are silently ineffective: UDP
              * never uses a stream driver, so traffic stays plaintext. Warn about
@@ -2155,8 +2169,8 @@ static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
         }
     } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
         const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(loadModConf->pConf, pData->pszStrmDrvr);
-        const int tlsHintsConfigured =
-            (pData->pszStrmDrvrAuthMode != NULL) || glblIsTlsCapableNetstrmDrvr(effectiveDrvr);
+        const int tlsHintsConfigured = (pData->pszStrmDrvrAuthMode != NULL) ||
+                                       glblIsTlsCapableNetstrmDrvr(effectiveDrvr) || omfwdActionHasTlsOptions(pData);
         if (tlsHintsConfigured) {
             glblWarnIfInsecureDefault(loadModConf->pConf,
                                       "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "

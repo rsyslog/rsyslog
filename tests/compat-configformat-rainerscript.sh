@@ -137,6 +137,29 @@ run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.conf" \
 content_check 'omfwd has TLS-related settings but protocol="udp"' \
     "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
 
+# the contradiction is not limited to streamdriver.name/authmode: CA/cert/key,
+# permitted peers, SNI, priority string etc. are equally ineffective on UDP and
+# must warn even without a TLS-capable driver name
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="udp" streamdriver.cafile="${RSYSLOG_DYNNAME}-ca.pem")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' \
+    "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+
+# same contradiction on explicit plain TCP (streamdriver.mode="0"): a CA file
+# without a TLS-capable driver name is still ineffective and must warn
+cat >"${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+action(type="omfwd" target="127.0.0.1" protocol="tcp" streamdriver.mode="0" streamdriver.cafile="${RSYSLOG_DYNNAME}-ca.pem")
+CONF_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.conf" \
+    "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.log"
+content_check 'omfwd has TLS-related settings but streamdriver.mode="0"' \
+    "${RSYSLOG_DYNNAME}.omfwd-tcp-mode0-cafile.log"
+
 # a global defaultNetstreamDriver is irrelevant to a UDP action (UDP never uses a
 # stream driver), so explicit protocol="udp" must stay silent despite it - only
 # action-level TLS settings count

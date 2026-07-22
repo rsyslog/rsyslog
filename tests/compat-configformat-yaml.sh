@@ -350,6 +350,21 @@ YAML_EOF
 run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
 content_check 'omfwd has TLS-related settings but protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-tls.log"
 
+cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+rulesets:
+  - name: main
+    actions:
+      - type: omfwd
+        target: "127.0.0.1"
+        protocol: "udp"
+        streamdriver.cafile: "${RSYSLOG_DYNNAME}-ca.pem"
+YAML_EOF
+run_expect_success "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.yaml" "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+content_check 'omfwd has TLS-related settings but protocol="udp"' "${RSYSLOG_DYNNAME}.omfwd-udp-explicit-cafile.log"
+
 cat >"${RSYSLOG_DYNNAME}.omfwd-udp-explicit-globaldrvr.yaml" <<YAML_EOF
 version: 2
 global:
