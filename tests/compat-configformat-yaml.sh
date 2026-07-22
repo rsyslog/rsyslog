@@ -417,6 +417,24 @@ YAML_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
     content_check 'omrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
 
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-zip.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/omrelp/.libs/omrelp"
+rulesets:
+  - name: main
+    actions:
+      - type: omrelp
+        target: "127.0.0.1"
+        port: "514"
+        tls: "off"
+        tls.compression: "on"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.yaml" "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+
     cat >"${RSYSLOG_DYNNAME}.imrelp-explicit.yaml" <<YAML_EOF
 version: 2
 global:
@@ -455,6 +473,27 @@ rulesets:
 YAML_EOF
     run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.yaml" "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
     content_check 'imrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.yaml" <<YAML_EOF
+version: 2
+global:
+  compatibility.defaults.secure: "warn"
+modules:
+  - load: "../plugins/imrelp/.libs/imrelp"
+inputs:
+  - type: imrelp
+    port: "0"
+    tls: "off"
+    tls.compression: "on"
+    tls.dhbits: "1024"
+rulesets:
+  - name: main
+    actions:
+      - type: omfile
+        file: "${RSYSLOG_DYNNAME}.out"
+YAML_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.yaml" "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
 fi
 
 exit_test

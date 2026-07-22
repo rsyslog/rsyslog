@@ -476,11 +476,12 @@ finalize_it:
 ENDsetModCnf
 
 /* True when the action carries TLS-specific settings (auth mode, certificates,
- * permitted peers, GnuTLS priority or config command). These are applied only on
- * the TLS-enabled RELP path, so with tls="off" they are silently ineffective. */
+ * permitted peers, GnuTLS priority or config command, TLS compression). These are
+ * applied only on the TLS-enabled RELP path, so with tls="off" they are silently
+ * ineffective. */
 static int omrelpHasTlsOptions(const instanceData *const pData) {
     return pData->authmode != NULL || pData->caCertFile != NULL || pData->myCertFile != NULL ||
-           pData->myPrivKeyFile != NULL || pData->pristring != NULL ||
+           pData->myPrivKeyFile != NULL || pData->pristring != NULL || pData->bEnableTLSZip ||
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
            pData->tlscfgcmd != NULL ||
 #endif

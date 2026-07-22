@@ -503,11 +503,12 @@ finalize_it:
 }
 
 /* True when the listener carries TLS-specific settings (auth mode, certificates,
- * permitted peers, GnuTLS priority or config command). These are applied only on
- * the TLS-enabled RELP path, so with tls="off" they are silently ineffective. */
+ * permitted peers, GnuTLS priority or config command, TLS compression, DH bits).
+ * These are applied only on the TLS-enabled RELP path, so with tls="off" they are
+ * silently ineffective. */
 static int imrelpHasTlsOptions(const instanceConf_t *const inst) {
     return inst->authmode != NULL || inst->caCertFile != NULL || inst->myCertFile != NULL ||
-           inst->myPrivKeyFile != NULL || inst->pristring != NULL ||
+           inst->myPrivKeyFile != NULL || inst->pristring != NULL || inst->bEnableTLSZip || inst->dhBits ||
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
            inst->tlscfgcmd != NULL ||
 #endif

@@ -354,6 +354,18 @@ CONF_EOF
     content_check 'omrelp has TLS-related settings but tls="off"' \
         "${RSYSLOG_DYNNAME}.omrelp-off-with-tls.log"
 
+    # tls.compression is likewise consumed only on the TLS path, so tls="off"
+    # combined with it is also a contradiction
+    cat >"${RSYSLOG_DYNNAME}.omrelp-off-with-zip.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/omrelp/.libs/omrelp")
+action(type="omrelp" target="127.0.0.1" port="514" tls="off" tls.compression="on")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.conf" \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+    content_check 'omrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.omrelp-off-with-zip.log"
+
     cat >"${RSYSLOG_DYNNAME}.imrelp-plain-implicit.conf" <<CONF_EOF
 global(compatibility.defaults.secure="warn")
 module(load="../plugins/imrelp/.libs/imrelp")
@@ -388,6 +400,19 @@ CONF_EOF
         "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
     content_check 'imrelp has TLS-related settings but tls="off"' \
         "${RSYSLOG_DYNNAME}.imrelp-off-with-tls.log"
+
+    # tls.compression and the imrelp-only tls.dhbits are consumed only on the TLS
+    # path, so tls="off" combined with them is also a contradiction
+    cat >"${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.conf" <<CONF_EOF
+global(compatibility.defaults.secure="warn")
+module(load="../plugins/imrelp/.libs/imrelp")
+input(type="imrelp" port="0" tls="off" tls.compression="on" tls.dhbits="1024")
+action(type="omfile" file="${RSYSLOG_DYNNAME}.out")
+CONF_EOF
+    run_expect_success "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.conf" \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
+    content_check 'imrelp has TLS-related settings but tls="off"' \
+        "${RSYSLOG_DYNNAME}.imrelp-off-with-zip-dh.log"
 fi
 
 cat >"${RSYSLOG_DYNNAME}.invalid.conf" <<CONF_EOF
