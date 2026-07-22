@@ -1,7 +1,7 @@
 #!/bin/bash
+# Verify a compressed frame cannot expand into more events than its advertised
+# window and that impstats records the rejection.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
-require_plugin impstats
 
 generate_conf
 add_conf '

@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify idle sessions do not prevent an active peer from being serviced and
+# cumulatively acknowledged by the shared worker pool.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -63,6 +64,7 @@ fi
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"active-after-idle"}'
 cmp_exact
 

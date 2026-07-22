@@ -1,9 +1,11 @@
 support_status: core-supported
 maturity_level: fresh
 primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
-last_reviewed: 2026-04-09
+last_reviewed: 2026-07-10
 build_dependencies:
   - "zlib (--enable-imbeats)"
 notes:
   - "Accepts Elastic Beats via Lumberjack protocol v2 over netstrm-backed TCP or TLS transports."
   - "Initial event mapping is optimized for Elasticsearch-oriented downstream flow; representation configurability is deferred."
+  - "JSON event payloads must contain exactly one object; malformed, non-object, or trailing-content payloads fail closed without acknowledgement."
+  - "Instance-wide maxInFlightBytes accounting, compression expansion limits, and idle/frame/window deadlines bound remotely retained work and memory."

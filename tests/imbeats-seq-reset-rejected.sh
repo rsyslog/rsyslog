@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify a sequence reset on an established connection is rejected without
+# submitting or acknowledging the invalid event.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -52,6 +53,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"first"}|1'
 cmp_exact
 

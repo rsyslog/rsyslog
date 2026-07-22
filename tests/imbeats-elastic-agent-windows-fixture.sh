@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify an Elastic Agent Windows event preserves representative nested fields
+# and receives the expected cumulative ACK.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -95,6 +96,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED="$(cat "$RSYSLOG_DYNNAME.expected")"
 cmp_exact
 

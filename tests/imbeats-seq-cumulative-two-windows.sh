@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify cumulative sequence tracking and ACKs across two Lumberjack windows
+# on one connection.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -47,6 +48,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"first"}|1
 {"message":"second"}|2'
 cmp_exact

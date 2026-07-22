@@ -1,6 +1,5 @@
 #!/bin/bash
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 # This checks that imbeats shutdown closes client sessions that are already
 # accepted and left open in idle or partial-frame protocol states. The client

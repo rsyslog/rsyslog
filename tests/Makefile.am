@@ -123,6 +123,7 @@ EXTRA_DIST += unit/impcap_arp_parser_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
+EXTRA_DIST += unit/imbeats_parser_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -1341,20 +1342,26 @@ TESTS_IMBEATS = \
 	imbeats-seq-cumulative-two-windows.sh \
 	imbeats-seq-cumulative-after-multi-event-window.sh \
 	imbeats-seq-reset-rejected.sh \
-	imbeats-compressed-window-overflow.sh \
-	imbeats-compressed-malformed.sh \
 	imbeats-metadata-collision.sh \
 	imbeats-elastic-agent-windows-fixture.sh \
 	imbeats-limits.sh \
-	imbeats-limits-impstats.sh \
 	imbeats-shutdown-open-session.sh \
 	imbeats-maxsessions.sh \
 	imbeats-maxsessions-cap-warning.sh \
 	imbeats-multiplex-idle-sessions.sh \
+	imbeats-submit-timeout.sh \
+	imbeats-json-trailing-data.sh \
 	imbeats-filebeat-docker.sh
 
+TESTS_IMBEATS_IMPSTATS = \
+	imbeats-compressed-window-overflow.sh \
+	imbeats-compressed-malformed.sh \
+	imbeats-limits-impstats.sh \
+	imbeats-resource-budget.sh
+
 TESTS_IMBEATS_YAML = \
-	yaml-imbeats-basic.sh
+	yaml-imbeats-basic.sh \
+	yaml-imbeats-session-timeouts.sh
 
 TESTS_IMBEATS_ELASTICSEARCH = \
 	imbeats-filebeat-omelasticsearch-docker.sh
@@ -2388,6 +2395,7 @@ EXTRA_DIST += $(TESTS_IMCZMQ)
 EXTRA_DIST += $(TESTS_IMHTTP)
 EXTRA_DIST += $(TESTS_IMHTTP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMBEATS)
+EXTRA_DIST += $(TESTS_IMBEATS_IMPSTATS)
 EXTRA_DIST += $(TESTS_IMBEATS_YAML)
 EXTRA_DIST += $(TESTS_IMBEATS_ELASTICSEARCH)
 EXTRA_DIST += $(TESTS_OMRABBITMQ)
@@ -2570,8 +2578,8 @@ runtime_unit_gss_token_util_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 endif
 
 if ENABLE_IMBEATS
-check_PROGRAMS += runtime_unit_imbeats_seq
-TESTS += runtime_unit_imbeats_seq
+check_PROGRAMS += runtime_unit_imbeats_seq runtime_unit_imbeats_parser
+TESTS += runtime_unit_imbeats_seq runtime_unit_imbeats_parser
 
 runtime_unit_imbeats_seq_SOURCES = \
 	unit/imbeats_seq_test.c
@@ -2579,6 +2587,14 @@ runtime_unit_imbeats_seq_SOURCES = \
 runtime_unit_imbeats_seq_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_imbeats_seq_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+
+runtime_unit_imbeats_parser_SOURCES = \
+	unit/imbeats_parser_test.c
+
+runtime_unit_imbeats_parser_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	$(ZLIB_CFLAGS)
+runtime_unit_imbeats_parser_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \
@@ -3279,6 +3295,9 @@ endif # ENABLE_IMHTTP
 if ENABLE_IMBEATS
 if ENABLE_TESTBENCH
 TESTS += $(TESTS_IMBEATS)
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_IMBEATS_IMPSTATS)
+endif # ENABLE_IMPSTATS
 if HAVE_LIBYAML
 TESTS += $(TESTS_IMBEATS_YAML)
 endif # HAVE_LIBYAML

@@ -10,9 +10,11 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
+#include <time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <poll.h>
@@ -56,6 +58,13 @@ MODULE_CNFNAME("imbeats")
 #define IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE (64 * 1024 * 1024)
 #define IMBEATS_DEFAULT_MAX_BATCH_BYTES IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE
 #define IMBEATS_MAX_BYTE_SIZE_LIMIT 200000000
+#define IMBEATS_DEFAULT_MAX_IN_FLIGHT_BYTES (256 * 1024 * 1024)
+#define IMBEATS_MAX_IN_FLIGHT_BYTES_LIMIT 2000000000
+#define IMBEATS_DEFAULT_MAX_COMPRESSION_RATIO 256
+#define IMBEATS_MAX_COMPRESSION_RATIO_LIMIT 1000000
+#define IMBEATS_DEFAULT_IDLE_TIMEOUT 60
+#define IMBEATS_DEFAULT_FRAME_TIMEOUT 30
+#define IMBEATS_DEFAULT_WINDOW_TIMEOUT 300
 #define IMBEATS_DEFAULT_MAX_SESSIONS 1000
 #define IMBEATS_DEFAULT_WORKER_THREADS 2
 #define IMBEATS_MAX_WORKER_THREADS 1024
@@ -107,6 +116,12 @@ typedef struct instanceConf_s {
     size_t maxFrameSize;
     size_t maxDecompressedSize;
     size_t maxBatchBytes;
+    size_t maxInFlightBytes;
+    size_t inFlightBytes;
+    uint32_t maxCompressionRatio;
+    unsigned idleTimeout;
+    unsigned frameTimeout;
+    unsigned windowTimeout;
 
     netstrms_t *pNS;
     netstrm_t **listeners;
@@ -163,11 +178,18 @@ struct session_s {
     unsigned char fixed[8];
     unsigned char *payload;
     size_t payload_len;
+    size_t payload_alloc_len;
     unsigned char *io_buf;
     size_t io_need;
     size_t io_off;
     unsigned char ack[6];
     size_t ack_off;
+    uint64_t lastProgressMs;
+    uint64_t readStartMs;
+    uint64_t windowStartMs;
+    int awaitingNetwork;
+    int timeoutsSuspended;
+    int timedOut;
     enum {
         IMBEATS_ST_READ_WINDOW_HDR,
         IMBEATS_ST_READ_WINDOW_SIZE,
@@ -227,6 +249,11 @@ static struct cnfparamdescr inppdescr[] = {
     {"maxframesize", eCmdHdlrPositiveInt, 0},
     {"maxdecompressedsize", eCmdHdlrPositiveInt, 0},
     {"maxbatchbytes", eCmdHdlrPositiveInt, 0},
+    {"maxinflightbytes", eCmdHdlrPositiveInt, 0},
+    {"maxcompressionratio", eCmdHdlrPositiveInt, 0},
+    {"idletimeout", eCmdHdlrNonNegInt, 0},
+    {"frametimeout", eCmdHdlrNonNegInt, 0},
+    {"windowtimeout", eCmdHdlrNonNegInt, 0},
     {"maxsessions", eCmdHdlrPositiveInt, 0},
     {"workerthreads", eCmdHdlrPositiveInt, 0},
     {"starvationprotection.maxreads", eCmdHdlrNonNegInt, 0},
@@ -252,6 +279,9 @@ static struct {
     STATSCOUNTER_DEF(ctrConnectionsActive, mutCtrConnectionsActive)
     STATSCOUNTER_DEF(ctrConnectionsRejected, mutCtrConnectionsRejected)
     STATSCOUNTER_DEF(ctrStarvationProtect, mutCtrStarvationProtect)
+    STATSCOUNTER_DEF(ctrResourceBytes, mutCtrResourceBytes)
+    STATSCOUNTER_DEF(ctrResourceRejected, mutCtrResourceRejected)
+    STATSCOUNTER_DEF(ctrSessionsTimedOut, mutCtrSessionsTimedOut)
 } statsCounter;
 
 #include "im-helper.h"
@@ -265,6 +295,7 @@ static rsRetVal createInstance(instanceConf_t **const pinst);
 static rsRetVal buildListeners(instanceConf_t *inst);
 static rsRetVal destroyInstanceRuntime(instanceConf_t *inst);
 static void destroySession(session_t *sess);
+static void shutdownSessionSocket(session_t *sess);
 static void *listenerThread(void *arg);
 static void *workerThread(void *arg);
 
@@ -287,6 +318,59 @@ static void clearInstanceShuttingDown(instanceConf_t *const inst) {
     pthread_mutex_lock(&inst->mutSessions);
     inst->shuttingDown = 0;
     pthread_mutex_unlock(&inst->mutSessions);
+}
+
+static uint64_t monotonicMs(void) {
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
+
+static rsRetVal reserveInstanceBytes(void *const ctx, const size_t amount) {
+    instanceConf_t *const inst = (instanceConf_t *)ctx;
+    rsRetVal iRet = RS_RET_OK;
+
+    if (amount == 0) {
+        return RS_RET_OK;
+    }
+    pthread_mutex_lock(&inst->mutSessions);
+    if (amount > inst->maxInFlightBytes || inst->inFlightBytes > inst->maxInFlightBytes - amount) {
+        iRet = RS_RET_OUT_OF_MEMORY;
+    } else {
+        inst->inFlightBytes += amount;
+        STATSCOUNTER_ADD(statsCounter.ctrResourceBytes, statsCounter.mutCtrResourceBytes, amount);
+    }
+    pthread_mutex_unlock(&inst->mutSessions);
+    if (iRet != RS_RET_OK) {
+        STATSCOUNTER_INC(statsCounter.ctrResourceRejected, statsCounter.mutCtrResourceRejected);
+    }
+    return iRet;
+}
+
+static void releaseInstanceBytes(void *const ctx, const size_t amount) {
+    instanceConf_t *const inst = (instanceConf_t *)ctx;
+
+    if (amount == 0) {
+        return;
+    }
+    pthread_mutex_lock(&inst->mutSessions);
+    assert(inst->inFlightBytes >= amount);
+    inst->inFlightBytes -= amount;
+    STATSCOUNTER_ADD(statsCounter.ctrResourceBytes, statsCounter.mutCtrResourceBytes, (uint64_t)(-(int64_t)amount));
+    pthread_mutex_unlock(&inst->mutSessions);
+}
+
+static rsRetVal validateTimeout(const char *const name, const int64_t value, unsigned *const target) {
+    if (value < 0 || (uint64_t)value > UINT_MAX) {
+        LogError(0, RS_RET_PARAM_ERROR, "imbeats: invalid value for '%s' parameter given is %lld, valid range is 0..%u",
+                 name, (long long)value, UINT_MAX);
+        return RS_RET_PARAM_ERROR;
+    }
+    *target = (unsigned)value;
+    return RS_RET_OK;
 }
 
 static rsRetVal validateUInt32Limit(const char *const name,
@@ -469,9 +553,120 @@ finalize_it:
     RETiRet;
 }
 
+static void sessionRecordReadStart(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    if (sess->readStartMs == 0) {
+        sess->readStartMs = now;
+    }
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static void sessionRecordProgress(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->lastProgressMs = now;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static void sessionRecordFrameComplete(session_t *const sess) {
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->readStartMs = 0;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static void sessionRecordWindowStart(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->windowStartMs = now;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static void sessionRecordWindowComplete(session_t *const sess) {
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->windowStartMs = 0;
+    sess->timeoutsSuspended = 1;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static void sessionResumeTimeouts(session_t *const sess) {
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    sess->lastProgressMs = monotonicMs();
+    sess->timeoutsSuspended = 0;
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+}
+
+static rsRetVal sessionAllocatePayload(session_t *const sess, const size_t payloadLen) {
+    const size_t allocLen = payloadLen + 1;
+    rsRetVal iRet;
+
+    if (payloadLen == SIZE_MAX) {
+        return RS_RET_INVALID_VALUE;
+    }
+    iRet = reserveInstanceBytes(sess->inst, allocLen);
+    if (iRet != RS_RET_OK) {
+        return iRet;
+    }
+    sess->payload = malloc(allocLen);
+    if (sess->payload == NULL) {
+        releaseInstanceBytes(sess->inst, allocLen);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    sess->payload_alloc_len = allocLen;
+    sess->payload[payloadLen] = '\0';
+    return RS_RET_OK;
+}
+
+static void sessionFreePayload(session_t *const sess) {
+    if (sess->payload != NULL) {
+        free(sess->payload);
+        sess->payload = NULL;
+    }
+    if (sess->payload_alloc_len != 0) {
+        releaseInstanceBytes(sess->inst, sess->payload_alloc_len);
+        sess->payload_alloc_len = 0;
+    }
+    sess->payload_len = 0;
+}
+
+static rsRetVal parseJsonEvent(const struct lj_event_s *const event, struct fjson_object **const parsed) {
+    struct json_tokener *tok = NULL;
+    struct fjson_object *json = NULL;
+    rsRetVal iRet = RS_RET_OK;
+    size_t parseEnd;
+
+    assert(event != NULL);
+    assert(parsed != NULL);
+    *parsed = NULL;
+
+    CHKmalloc(tok = json_tokener_new());
+    json = json_tokener_parse_ex(tok, (const char *)event->payload, event->payload_len);
+    parseEnd = (size_t)tok->char_offset;
+    while (parseEnd < event->payload_len && isspace((unsigned char)event->payload[parseEnd])) {
+        ++parseEnd;
+    }
+    if (tok->err != fjson_tokener_success || json == NULL || !fjson_object_is_type(json, fjson_type_object) ||
+        parseEnd != event->payload_len) {
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
+    *parsed = json;
+    json = NULL;
+
+finalize_it:
+    if (tok != NULL) {
+        json_tokener_free(tok);
+    }
+    if (json != NULL) {
+        fjson_object_put(json);
+    }
+    RETiRet;
+}
+
 static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *const event) {
     smsg_t *pMsg = NULL;
-    struct json_tokener *tok = NULL;
     struct fjson_object *json = NULL;
     struct fjson_object *meta = NULL;
     rsRetVal iRet = RS_RET_OK;
@@ -480,12 +675,11 @@ static rsRetVal submitEvent(session_t *const sess, const struct lj_event_s *cons
     assert(sess != NULL);
     assert(event != NULL);
 
-    CHKmalloc(tok = json_tokener_new());
-    json = json_tokener_parse_ex(tok, (const char *)event->payload, event->payload_len);
-    if (tok->err != fjson_tokener_success || json == NULL || !fjson_object_is_type(json, fjson_type_object)) {
+    iRet = parseJsonEvent(event, &json);
+    if (iRet == RS_RET_INVALID_VALUE) {
         STATSCOUNTER_INC(statsCounter.ctrJsonDecodeFailures, statsCounter.mutCtrJsonDecodeFailures);
-        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
     }
+    CHKiRet(iRet);
 
     CHKiRet(msgConstruct(&pMsg));
     MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
@@ -543,9 +737,6 @@ finalize_it:
             msgDestruct(&pMsg);
         }
     }
-    if (tok != NULL) {
-        json_tokener_free(tok);
-    }
     if (json != NULL) {
         fjson_object_put(json);
     }
@@ -565,6 +756,7 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
         sess->io_buf = buf;
         sess->io_need = len;
         sess->io_off = 0;
+        sessionRecordReadStart(sess);
     }
     while (sess->io_off < sess->io_need) {
         ssize_t need = (ssize_t)(sess->io_need - sess->io_off);
@@ -576,6 +768,7 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
                 return RS_RET_RETRY;
             }
             sess->io_off += (size_t)need;
+            sessionRecordProgress(sess);
         } else if (iRet == RS_RET_RETRY) {
             sess->ioDirection = nextIODirection;
             return RS_RET_RETRY;
@@ -591,10 +784,30 @@ static rsRetVal sessionReadStep(session_t *const sess, unsigned char *const buf,
 
 static rsRetVal sessionValidateBatch(session_t *const sess) {
     size_t idx;
+
     assert(sess != NULL);
+    /* Validate the complete batch before submitting its first event. Parsing
+     * again during submission is intentional: retaining every parsed tree
+     * here would bypass the raw-payload memory budget, while submitting during
+     * validation would partially accept a batch whose later event is invalid.
+     */
     for (idx = 0; idx < sess->batch.count; ++idx) {
+        struct fjson_object *json = NULL;
+        rsRetVal iRet;
+
         if (!imbeats_seq_is_expected(sess->lastAckedSeq, idx, sess->batch.events[idx].seq)) {
             return RS_RET_INVALID_VALUE;
+        }
+        iRet = parseJsonEvent(&sess->batch.events[idx], &json);
+        if (json != NULL) {
+            fjson_object_put(json);
+        }
+        if (iRet != RS_RET_OK) {
+            if (iRet == RS_RET_INVALID_VALUE) {
+                STATSCOUNTER_INC(statsCounter.ctrJsonDecodeFailures, statsCounter.mutCtrJsonDecodeFailures);
+            }
+            STATSCOUNTER_INC(statsCounter.ctrEventsFailed, statsCounter.mutCtrEventsFailed);
+            return iRet;
         }
     }
     STATSCOUNTER_ADD(statsCounter.ctrEventsReceived, statsCounter.mutCtrEventsReceived, sess->batch.count);
@@ -611,6 +824,10 @@ static void sessionPrepareAck(session_t *const sess) {
     sess->ack[1] = LJ_FRAME_ACK;
     memcpy(sess->ack + 2, &netseq, sizeof(netseq));
     sess->ack_off = 0;
+    /* Start a fresh idle interval for the peer-controlled ACK write. This
+     * bounds clients that stop reading without charging local submission time
+     * against clients that remain responsive. */
+    sessionResumeTimeouts(sess);
     sess->state = IMBEATS_ST_SEND_ACK;
 }
 
@@ -623,6 +840,70 @@ static void sessionResetForNextBatch(session_t *const sess) {
     sess->payload_len = 0;
     sess->ack_off = 0;
     sess->state = IMBEATS_ST_READ_WINDOW_HDR;
+}
+
+static int sessionExpiredLocked(const session_t *const sess, const uint64_t now) {
+    const instanceConf_t *const inst = sess->inst;
+
+    if (sess->timedOut || now == 0) {
+        return sess->timedOut;
+    }
+    if (sess->timeoutsSuspended) {
+        return 0;
+    }
+    if (inst->idleTimeout != 0 && sess->lastProgressMs != 0 && now >= sess->lastProgressMs &&
+        now - sess->lastProgressMs >= (uint64_t)inst->idleTimeout * 1000u) {
+        return 1;
+    }
+    if (inst->frameTimeout != 0 && sess->readStartMs != 0 && now >= sess->readStartMs &&
+        now - sess->readStartMs >= (uint64_t)inst->frameTimeout * 1000u) {
+        return 1;
+    }
+    if (inst->windowTimeout != 0 && sess->windowStartMs != 0 && now >= sess->windowStartMs &&
+        now - sess->windowStartMs >= (uint64_t)inst->windowTimeout * 1000u) {
+        return 1;
+    }
+    return 0;
+}
+
+/* These deadlines bound peer-controlled network waits. Once a complete frame
+ * has arrived, maxCompressionRatio, maxDecompressedSize, maxInFlightBytes and
+ * starvationProtection.maxReads bound local work. windowTimeout ends when the
+ * complete batch enters submission. Expiring a batch while its events are
+ * being submitted would instead create an ambiguous partial-submit state
+ * without an ACK, so submission is intentionally not a timeout scope. A fresh
+ * idleTimeout interval begins before ACK transmission to bound peers that stop
+ * reading after their batch has been accepted. */
+
+static int sessionCheckTimeout(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+    int expired;
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    expired = sessionExpiredLocked(sess, now);
+    if (expired && !sess->timedOut) {
+        sess->timedOut = 1;
+        STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
+    }
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+    return expired;
+}
+
+static void shutdownExpiredSessions(instanceConf_t *const inst) {
+    const uint64_t now = monotonicMs();
+    session_t *sess;
+
+    pthread_mutex_lock(&inst->mutSessions);
+    for (sess = inst->sessions; sess != NULL; sess = sess->next) {
+        if (!sess->done && sess->awaitingNetwork && sessionExpiredLocked(sess, now)) {
+            if (!sess->timedOut) {
+                sess->timedOut = 1;
+                STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
+            }
+            shutdownSessionSocket(sess);
+        }
+    }
+    pthread_mutex_unlock(&inst->mutSessions);
 }
 
 static rsRetVal sessionSendAckStep(session_t *const sess) {
@@ -653,6 +934,9 @@ static rsRetVal sessionProcess(session_t *const sess) {
     DEFiRet;
 
     assert(sess != NULL);
+    if (sessionCheckTimeout(sess)) {
+        ABORT_FINALIZE(RS_RET_CLOSED);
+    }
     while (glbl.GetGlobalInputTermState() == 0 && !instanceIsShuttingDown(sess->inst)) {
         if (sess->inst->starvationMaxReads != 0 && reads >= sess->inst->starvationMaxReads) {
             STATSCOUNTER_INC(statsCounter.ctrStarvationProtect, statsCounter.mutCtrStarvationProtect);
@@ -682,8 +966,11 @@ static rsRetVal sessionProcess(session_t *const sess) {
                     STATSCOUNTER_INC(statsCounter.ctrWindowsRejected, statsCounter.mutCtrWindowsRejected);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKiRet(lj_batch_alloc(&sess->batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes));
+                CHKiRet(lj_batch_alloc(&sess->batch, net32, sess->inst->maxWindowSize, sess->inst->maxBatchBytes,
+                                       reserveInstanceBytes, releaseInstanceBytes, sess->inst));
                 sess->batchActive = 1;
+                sessionRecordWindowStart(sess);
+                sessionRecordFrameComplete(sess);
                 STATSCOUNTER_INC(statsCounter.ctrBatchesReceived, statsCounter.mutCtrBatchesReceived);
                 sess->state = IMBEATS_ST_READ_FRAME_HDR;
                 break;
@@ -724,7 +1011,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKmalloc(sess->payload = malloc(sess->payload_len));
+                CHKiRet(sessionAllocatePayload(sess, sess->payload_len));
                 sess->state = IMBEATS_ST_READ_JSON_PAYLOAD;
                 break;
             case IMBEATS_ST_READ_JSON_PAYLOAD:
@@ -732,17 +1019,24 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 if (iRet == RS_RET_RETRY) return iRet;
                 CHKiRet(iRet);
                 ++reads;
-                iRet = lj_append_json_event(&sess->batch, sess->pendingSeq, sess->payload, sess->payload_len);
-                free(sess->payload);
-                sess->payload = NULL;
-                sess->payload_len = 0;
+                iRet = lj_append_json_event_owned(&sess->batch, sess->pendingSeq, sess->payload, sess->payload_len,
+                                                  sess->payload_alloc_len);
+                if (iRet == RS_RET_OK) {
+                    sess->payload = NULL;
+                    sess->payload_len = 0;
+                    sess->payload_alloc_len = 0;
+                }
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrFramesRejected, statsCounter.mutCtrFramesRejected);
                 }
                 CHKiRet(iRet);
+                sessionRecordFrameComplete(sess);
                 sess->state = (sess->batch.count == sess->batch.window_size) ? IMBEATS_ST_SUBMIT_EVENTS
                                                                              : IMBEATS_ST_READ_FRAME_HDR;
-                if (sess->state == IMBEATS_ST_SUBMIT_EVENTS) CHKiRet(sessionValidateBatch(sess));
+                if (sess->state == IMBEATS_ST_SUBMIT_EVENTS) {
+                    sessionRecordWindowComplete(sess);
+                    CHKiRet(sessionValidateBatch(sess));
+                }
                 break;
             case IMBEATS_ST_READ_COMP_LEN:
                 iRet = sessionReadStep(sess, sess->fixed, 4);
@@ -756,7 +1050,7 @@ static rsRetVal sessionProcess(session_t *const sess) {
                     STATSCOUNTER_INC(statsCounter.ctrCompressedRejected, statsCounter.mutCtrCompressedRejected);
                     ABORT_FINALIZE(RS_RET_INVALID_VALUE);
                 }
-                CHKmalloc(sess->payload = malloc(sess->payload_len));
+                CHKiRet(sessionAllocatePayload(sess, sess->payload_len));
                 sess->state = IMBEATS_ST_READ_COMP_PAYLOAD;
                 break;
             case IMBEATS_ST_READ_COMP_PAYLOAD:
@@ -764,18 +1058,21 @@ static rsRetVal sessionProcess(session_t *const sess) {
                 if (iRet == RS_RET_RETRY) return iRet;
                 CHKiRet(iRet);
                 ++reads;
-                iRet = lj_parse_compressed_frames(&sess->batch, sess->payload, sess->payload_len,
-                                                  sess->inst->maxFrameSize, sess->inst->maxDecompressedSize);
-                free(sess->payload);
-                sess->payload = NULL;
-                sess->payload_len = 0;
+                iRet =
+                    lj_parse_compressed_frames(&sess->batch, sess->payload, sess->payload_len, sess->inst->maxFrameSize,
+                                               sess->inst->maxDecompressedSize, sess->inst->maxCompressionRatio);
+                sessionFreePayload(sess);
                 if (iRet == RS_RET_INVALID_VALUE) {
                     STATSCOUNTER_INC(statsCounter.ctrCompressedRejected, statsCounter.mutCtrCompressedRejected);
                 }
                 CHKiRet(iRet);
+                sessionRecordFrameComplete(sess);
                 sess->state = (sess->batch.count == sess->batch.window_size) ? IMBEATS_ST_SUBMIT_EVENTS
                                                                              : IMBEATS_ST_READ_FRAME_HDR;
-                if (sess->state == IMBEATS_ST_SUBMIT_EVENTS) CHKiRet(sessionValidateBatch(sess));
+                if (sess->state == IMBEATS_ST_SUBMIT_EVENTS) {
+                    sessionRecordWindowComplete(sess);
+                    CHKiRet(sessionValidateBatch(sess));
+                }
                 break;
             case IMBEATS_ST_SUBMIT_EVENTS:
                 while (sess->submitIdx < sess->batch.count) {
@@ -838,12 +1135,20 @@ static void shutdownAllSessionSockets(instanceConf_t *const inst) {
 
 static void destroyAllSessions(instanceConf_t *const inst) {
     session_t *sess;
+    unsigned activeSessions;
 
     pthread_mutex_lock(&inst->mutSessions);
     sess = inst->sessions;
     inst->sessions = NULL;
+    activeSessions = inst->activeSessions;
     inst->activeSessions = 0;
     pthread_mutex_unlock(&inst->mutSessions);
+
+    while (activeSessions > 0) {
+        --activeSessions;
+        STATSCOUNTER_DEC(statsCounter.ctrConnectionsActive, statsCounter.mutCtrConnectionsActive);
+        STATSCOUNTER_INC(statsCounter.ctrConnectionsClosed, statsCounter.mutCtrConnectionsClosed);
+    }
 
     while (sess != NULL) {
         session_t *const next = sess->next;
@@ -858,7 +1163,7 @@ static void destroySession(session_t *sess) {
     if (sess == NULL) {
         return;
     }
-    free(sess->payload);
+    sessionFreePayload(sess);
     if (sess->batchActive) {
         lj_batch_free(&sess->batch);
     }
@@ -960,15 +1265,59 @@ static rsRetVal rearmSession(session_t *const sess) {
 #endif
 }
 
+static int sessionClaimAwaitingNetwork(session_t *const sess) {
+    int claimed = 0;
+
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    if (!sess->done && sess->awaitingNetwork) {
+        sess->awaitingNetwork = 0;
+        claimed = 1;
+    }
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+    return claimed;
+}
+
+static rsRetVal sessionRearmForNetwork(session_t *const sess) {
+    const uint64_t now = monotonicMs();
+    rsRetVal iRet = RS_RET_OK;
+
+    /* Publish readiness ownership only after epoll has been rearmed. The
+     * listener and timeout scanner use the same mutex to claim that ownership,
+     * so neither can close or enqueue this session while epoll_ctl still uses
+     * its socket. */
+    pthread_mutex_lock(&sess->inst->mutSessions);
+    if (sess->done || sess->inst->shuttingDown) {
+        iRet = RS_RET_CLOSED;
+    } else if (sessionExpiredLocked(sess, now)) {
+        if (!sess->timedOut) {
+            sess->timedOut = 1;
+            STATSCOUNTER_INC(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
+        }
+        iRet = RS_RET_CLOSED;
+    } else {
+        iRet = rearmSession(sess);
+        if (iRet == RS_RET_OK) {
+            sess->awaitingNetwork = 1;
+        }
+    }
+    pthread_mutex_unlock(&sess->inst->mutSessions);
+    return iRet;
+}
+
 static void *workerThread(void *arg) {
     instanceConf_t *const inst = (instanceConf_t *)arg;
     session_t *sess;
 
     assert(inst != NULL);
     while ((sess = dequeueSession(inst)) != NULL) {
+        /* The poll fallback queues sessions without a readiness dispatcher.
+         * Clear its published network-wait ownership before processing so the
+         * timeout scanner cannot close a worker-owned session. On epoll builds
+         * the listener already made the same ownership transfer. */
+        (void)sessionClaimAwaitingNetwork(sess);
         const rsRetVal iRet = sessionProcess(sess);
         if (iRet == RS_RET_RETRY) {
-            if (rearmSession(sess) != RS_RET_OK) {
+            if (sessionRearmForNetwork(sess) != RS_RET_OK) {
                 closeSession(sess);
             }
         } else if (iRet == RS_RET_OK) {
@@ -1019,6 +1368,8 @@ static rsRetVal spawnSession(instanceConf_t *const inst, netstrm_t **const ppNew
     *ppNewStrm = NULL;
     sess->ioDirection = NSDSEL_RD;
     sess->state = IMBEATS_ST_READ_WINDOW_HDR;
+    sess->lastProgressMs = monotonicMs();
+    sess->awaitingNetwork = 1;
     CHKiRet(netstrm.GetSock(sess->pStrm, &sess->sock));
     if (inst->bKeepAlive) {
         CHKiRet(netstrm.SetKeepAliveProbes(sess->pStrm, inst->iKeepAliveProbes));
@@ -1237,13 +1588,16 @@ static void *listenerThread(void *arg) {
                     (void)rearmListener(inst, io->listener_idx);
                 }
             } else if (io->type == IMBEATS_IO_SESSION && io->sess != NULL) {
-                if ((events[n].events & (EPOLLERR | EPOLLHUP)) != 0) {
-                    closeSession(io->sess);
-                } else {
-                    enqueueSession(io->sess);
+                if (sessionClaimAwaitingNetwork(io->sess)) {
+                    if ((events[n].events & (EPOLLERR | EPOLLHUP)) != 0) {
+                        closeSession(io->sess);
+                    } else {
+                        enqueueSession(io->sess);
+                    }
                 }
             }
         }
+        shutdownExpiredSessions(inst);
     }
     /* Workers may still process session events queued before shutdown and call
      * epoll_ctl() from rearmSession()/closeSession(). Join them before closing
@@ -1270,6 +1624,7 @@ static void *listenerThread(void *arg) {
             }
         }
         free(pfds);
+        shutdownExpiredSessions(inst);
     }
 #endif
 #if !defined(IMBEATS_HAVE_EPOLL)
@@ -1321,6 +1676,11 @@ static rsRetVal createInstance(instanceConf_t **const pinst) {
     inst->maxFrameSize = IMBEATS_DEFAULT_MAX_FRAME_SIZE;
     inst->maxDecompressedSize = IMBEATS_DEFAULT_MAX_DECOMPRESSED_SIZE;
     inst->maxBatchBytes = IMBEATS_DEFAULT_MAX_BATCH_BYTES;
+    inst->maxInFlightBytes = IMBEATS_DEFAULT_MAX_IN_FLIGHT_BYTES;
+    inst->maxCompressionRatio = IMBEATS_DEFAULT_MAX_COMPRESSION_RATIO;
+    inst->idleTimeout = IMBEATS_DEFAULT_IDLE_TIMEOUT;
+    inst->frameTimeout = IMBEATS_DEFAULT_FRAME_TIMEOUT;
+    inst->windowTimeout = IMBEATS_DEFAULT_WINDOW_TIMEOUT;
     inst->maxSessions = IMBEATS_DEFAULT_MAX_SESSIONS;
     inst->workerThreads = IMBEATS_DEFAULT_WORKER_THREADS;
     inst->starvationMaxReads = IMBEATS_DEFAULT_STARVATION_MAX_READS;
@@ -1418,6 +1778,18 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "maxbatchbytes")) {
             CHKiRet(validateSizeLimit("maxBatchBytes", pvals[i].val.d.n, IMBEATS_MAX_BYTE_SIZE_LIMIT,
                                       &inst->maxBatchBytes));
+        } else if (!strcmp(inppblk.descr[i].name, "maxinflightbytes")) {
+            CHKiRet(validateSizeLimit("maxInFlightBytes", pvals[i].val.d.n, IMBEATS_MAX_IN_FLIGHT_BYTES_LIMIT,
+                                      &inst->maxInFlightBytes));
+        } else if (!strcmp(inppblk.descr[i].name, "maxcompressionratio")) {
+            CHKiRet(validateUInt32Limit("maxCompressionRatio", pvals[i].val.d.n, IMBEATS_MAX_COMPRESSION_RATIO_LIMIT,
+                                        &inst->maxCompressionRatio));
+        } else if (!strcmp(inppblk.descr[i].name, "idletimeout")) {
+            CHKiRet(validateTimeout("idleTimeout", pvals[i].val.d.n, &inst->idleTimeout));
+        } else if (!strcmp(inppblk.descr[i].name, "frametimeout")) {
+            CHKiRet(validateTimeout("frameTimeout", pvals[i].val.d.n, &inst->frameTimeout));
+        } else if (!strcmp(inppblk.descr[i].name, "windowtimeout")) {
+            CHKiRet(validateTimeout("windowTimeout", pvals[i].val.d.n, &inst->windowTimeout));
         } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
             inst->maxSessions = normalizeMaxSessions(pvals[i].val.d.n);
         } else if (!strcmp(inppblk.descr[i].name, "workerthreads")) {
@@ -1620,6 +1992,9 @@ BEGINmodInit()
     STATSCOUNTER_INIT(statsCounter.ctrConnectionsActive, statsCounter.mutCtrConnectionsActive);
     STATSCOUNTER_INIT(statsCounter.ctrConnectionsRejected, statsCounter.mutCtrConnectionsRejected);
     STATSCOUNTER_INIT(statsCounter.ctrStarvationProtect, statsCounter.mutCtrStarvationProtect);
+    STATSCOUNTER_INIT(statsCounter.ctrResourceBytes, statsCounter.mutCtrResourceBytes);
+    STATSCOUNTER_INIT(statsCounter.ctrResourceRejected, statsCounter.mutCtrResourceRejected);
+    STATSCOUNTER_INIT(statsCounter.ctrSessionsTimedOut, statsCounter.mutCtrSessionsTimedOut);
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("connections.accepted"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &statsCounter.ctrConnectionsAccepted));
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("connections.closed"), ctrType_IntCtr,
@@ -1654,5 +2029,11 @@ BEGINmodInit()
                                 CTR_FLAG_RESETTABLE, &statsCounter.ctrConnectionsRejected));
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("starvation_protect"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &statsCounter.ctrStarvationProtect));
+    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("resource_bytes"), ctrType_IntCtr, CTR_FLAG_NONE,
+                                &statsCounter.ctrResourceBytes));
+    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("resource_rejected"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &statsCounter.ctrResourceRejected));
+    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("sessions.timed_out"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &statsCounter.ctrSessionsTimedOut));
     CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
 ENDmodInit

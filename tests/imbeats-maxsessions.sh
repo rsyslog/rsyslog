@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify maxSessions rejects excess peers and releases admission capacity after
+# an established session closes.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -81,6 +82,7 @@ fi
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"accepted-1"}
 {"message":"accepted-2"}'
 cmp_exact

@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify a valid zlib-compressed Lumberjack window is decoded, submitted, and
+# acknowledged with the final sequence number.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -45,6 +46,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"compressed"}|compressed|1'
 cmp_exact
 

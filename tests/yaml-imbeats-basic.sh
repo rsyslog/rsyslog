@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify YAML configuration accepts a basic imbeats event and preserves JSON
+# fields, reserved metadata, and the cumulative ACK.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 require_yaml_support
 
 generate_conf --yaml-only
@@ -48,6 +49,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"yaml"}|yaml|1'
 cmp_exact
 
