@@ -24,6 +24,9 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
+EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
+
 TESTS_SEGMENTED_DISK_QUEUE = \
 	segmented-diskqueue-config.sh \
 	segmented-diskqueue.sh \
@@ -284,6 +287,7 @@ TESTS_DEFAULT = \
 	template-json.sh \
 	$(TESTS_RSCRIPT_OBJECT_STRINGS) \
 	template-property-transformations.sh \
+	$(TESTS_TEMPLATE_PARAMETER_ERRORS) \
         template-pure-json.sh \
 	template-jsonf-nested.sh \
 	template-jsonf-nested-fallback-flat.sh \
