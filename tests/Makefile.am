@@ -122,6 +122,7 @@ EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 EXTRA_DIST += unit/impcap_arp_parser_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
+EXTRA_DIST += unit/omazuredce_utils_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -2511,9 +2512,9 @@ check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c
@@ -2535,6 +2536,15 @@ runtime_unit_segdisk_state_SOURCES = \
 
 runtime_unit_queue_da_SOURCES = \
 	unit/queue_da_test.c
+
+runtime_unit_omazuredce_utils_SOURCES = \
+	unit/omazuredce_utils_test.c \
+	../plugins/omazuredce/omazuredce_utils.c \
+	../plugins/omazuredce/omazuredce_utils.h
+
+runtime_unit_omazuredce_utils_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_omazuredce_utils_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_IMPCAP
 check_PROGRAMS += runtime_unit_impcap_arp_parser
