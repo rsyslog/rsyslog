@@ -83,7 +83,6 @@ typedef struct _instanceData {
     int connTimeout;
     unsigned rebindInterval;
     sbool bEnableTLS;
-    sbool bEnableTLSSet; /* tls was explicitly configured */
     sbool bEnableTLSZip;
     int bHadAuthFail; /**< set on TLS auth failure */
     DEF_ATOMIC_HELPER_MUT(mutHadAuthFail);
@@ -327,7 +326,6 @@ BEGINcreateInstance
     pData->connTimeout = 10;
     pData->rebindInterval = 0;
     pData->bEnableTLS = DFLT_ENABLE_TLS;
-    pData->bEnableTLSSet = 0;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
     pData->bHadAuthFail = 0;
     INIT_ATOMIC_HELPER_MUT(pData->mutHadAuthFail);
@@ -395,7 +393,6 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->sizeWindow = 0;
     pData->rebindInterval = 0;
     pData->bEnableTLS = DFLT_ENABLE_TLS;
-    pData->bEnableTLSSet = 0;
     pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
     pData->bTlsPermFailDisablesAction = DFLT_TLS_PERMFAIL_DISABLES_ACTION;
     pData->pristring = NULL;
@@ -475,10 +472,8 @@ finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
-/* True when the action carries TLS-specific settings (auth mode, certificates,
- * permitted peers, GnuTLS priority or config command, TLS compression). These are
- * applied only on the TLS-enabled RELP path, so with tls="off" they are silently
- * ineffective. */
+/* True when the action carries effective TLS-specific settings. Neutral values
+ * such as tls.compression="off" do not signal a conflicting TLS intent. */
 static int omrelpHasTlsOptions(const instanceData *const pData) {
     return pData->authmode != NULL || pData->caCertFile != NULL || pData->myCertFile != NULL ||
            pData->myPrivKeyFile != NULL || pData->pristring != NULL || pData->bEnableTLSZip ||
@@ -489,8 +484,8 @@ static int omrelpHasTlsOptions(const instanceData *const pData) {
 }
 
 /** Warn in secure warn mode when an omrelp action is configured without TLS. */
-static void warnIfPlainRelpActionConfigured(const instanceData *const pData) {
-    if (!pData->bEnableTLS && !pData->bEnableTLSSet) {
+static void warnIfPlainRelpActionConfigured(const instanceData *const pData, const int tlsWasSet) {
+    if (!pData->bEnableTLS && !tlsWasSet) {
         /* omitted tls (implicit off) is an insecure default and warns. */
         glblWarnIfInsecureDefault(loadModConf->pConf,
                                   "omrelp action uses tls=\"off\" (plain RELP without TLS); "
@@ -554,7 +549,6 @@ BEGINnewActInst
             pData->sizeWindow = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls")) {
             pData->bEnableTLS = (unsigned)pvals[i].val.d.n;
-            pData->bEnableTLSSet = 1;
         } else if (!strcmp(actpblk.descr[i].name, "tls.compression")) {
             pData->bEnableTLSZip = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "tls.permanentfailuredisablesaction")) {
@@ -619,7 +613,7 @@ BEGINnewActInst
                          (uchar *)strdup((pData->tplName == NULL) ? "RSYSLOG_ForwardFormat" : (char *)pData->tplName),
                          OMSR_NO_RQD_TPL_OPTS));
 
-    warnIfPlainRelpActionConfigured(pData);
+    warnIfPlainRelpActionConfigured(pData, cnfparamvalsIsSetByName(&actpblk, pvals, "tls"));
 
     iRet = doCreateRelpClient(pData, &pRelpClt);
     if (pRelpClt != NULL) relpEngineCltDestruct(pRelpEngine, &pRelpClt);

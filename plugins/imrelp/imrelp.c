@@ -83,7 +83,6 @@ struct instanceConf_s {
     ruleset_t *pBindRuleset; /* ruleset to bind listener to */
     sbool bKeepAlive; /* support keep-alive packets */
     sbool bEnableTLS;
-    sbool bEnableTLSSet; /* tls was explicitly configured */
     sbool bEnableTLSZip;
     sbool bEnableLstn; /* flag to permit disabling of listener in error case */
     int dhBits;
@@ -282,7 +281,6 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ratelimitBurst = -1;
     inst->pszRatelimitName = NULL;
     inst->bEnableTLS = 0;
-    inst->bEnableTLSSet = 0;
     inst->bEnableTLSZip = 0;
     inst->bEnableLstn = 0;
     inst->dhBits = 0;
@@ -502,10 +500,9 @@ finalize_it:
     RETiRet;
 }
 
-/* True when the listener carries TLS-specific settings (auth mode, certificates,
- * permitted peers, GnuTLS priority or config command, TLS compression, DH bits).
- * These are applied only on the TLS-enabled RELP path, so with tls="off" they are
- * silently ineffective. */
+/* True when the listener carries effective TLS-specific settings. Neutral
+ * values such as tls.compression="off" or tls.dhbits="0" do not signal a
+ * conflicting TLS intent. */
 static int imrelpHasTlsOptions(const instanceConf_t *const inst) {
     return inst->authmode != NULL || inst->caCertFile != NULL || inst->myCertFile != NULL ||
            inst->myPrivKeyFile != NULL || inst->pristring != NULL || inst->bEnableTLSZip || inst->dhBits ||
@@ -516,8 +513,8 @@ static int imrelpHasTlsOptions(const instanceConf_t *const inst) {
 }
 
 /** Warn in secure warn mode when an imrelp listener is configured without TLS. */
-static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) {
-    if (!inst->bEnableTLS && !inst->bEnableTLSSet) {
+static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst, const int tlsWasSet) {
+    if (!inst->bEnableTLS && !tlsWasSet) {
         /* omitted tls (implicit off) is an insecure default and warns. */
         glblWarnIfInsecureDefault(loadModConf->pConf,
                                   "imrelp input uses tls=\"off\" (plain RELP without TLS); "
@@ -634,7 +631,6 @@ BEGINnewInpInst
             CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls")) {
             inst->bEnableTLS = (unsigned)pvals[i].val.d.n;
-            inst->bEnableTLSSet = 1;
         } else if (!strcmp(inppblk.descr[i].name, "tls.dhbits")) {
             inst->dhBits = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
@@ -718,7 +714,7 @@ BEGINnewInpInst
         if (inst->ratelimitBurst == -1) inst->ratelimitBurst = 10000;
     }
 
-    warnIfPlainRelpListenerConfigured(inst);
+    warnIfPlainRelpListenerConfigured(inst, cnfparamvalsIsSetByName(&inppblk, pvals, "tls"));
 
     inst->bEnableLstn = -1; /* all ok, ready to start up */
 
