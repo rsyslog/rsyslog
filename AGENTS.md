@@ -291,6 +291,23 @@ that still need coverage.
 - Avoid direct `${{ ... }}` template expansion inside shell `run:` scripts.
   Pass expression values through `env:` variables and expand those variables in
   the shell script instead.
+- Every CI job that runs tests or a custom test oracle must bracket that phase
+  with `devtools/ci-flake-phase.sh` and invoke
+  `./.github/actions/upload-flake-evidence` with an explicit failure-aware
+  `if:` condition after failure.  Configure, build, dependency setup, and
+  service-readiness failures occur before the marker and must not create flake
+  evidence.  A successful marked phase followed by a coverage, packaging, or
+  cleanup failure is likewise not a flake.
+- When adding or renaming a test workflow, add its top-level workflow `name` to
+  `.github/workflows/collect_flake_evidence.yml`.  The default-branch fallback
+  harvester captures failed-job logs after timeouts; it must remain read-only
+  and must never check out or execute source-run/PR content.
+- Run `python3 devtools/check-flake-evidence-coverage.py` for workflow changes.
+  The checker discovers both `.yml` and `.yaml` test workflows, verifies their
+  active upload steps, failure-aware conditions, placement after recognized
+  test commands, and harvester registration, and retains explicit minimum
+  counts for known jobs.  Update its test-command heuristics and explicit
+  inventory when a new custom test-oracle pattern is added.
 
 ## PR Test Relevance Policy
 

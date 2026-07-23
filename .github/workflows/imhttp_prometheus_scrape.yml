@@ -39,4 +39,12 @@ jobs:
             make -j10'
 
       - name: Scrape the rsyslog container with Prometheus
-        run: devtools/test-imhttp-prometheus-scrape.sh
+        run: >-
+          devtools/ci-flake-phase.sh run imhttp-prometheus-scrape custom --
+          devtools/test-imhttp-prometheus-scrape.sh
+
+      - name: Upload test failure evidence
+        if: failure()
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: imhttp-prometheus-scrape

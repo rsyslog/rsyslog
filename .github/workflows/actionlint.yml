@@ -20,3 +20,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           filter_mode: file
           fail_level: any
+      - name: Check flake-evidence coverage
+        run: python3 devtools/check-flake-evidence-coverage.py

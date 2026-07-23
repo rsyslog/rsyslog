@@ -130,7 +130,9 @@ jobs:
               if [ "$ARCH" = "armhf" ]; then
                 make_check_jobs=3
               fi
-              su rsyslogci -c "make -j8 && timeout 100m make -j${make_check_jobs} check VERBOSE=1"
+              su rsyslogci -c "make -j8 && devtools/ci-flake-phase.sh run \
+                cross-${ARCH}-check automake -- timeout 100m \
+                make -j${make_check_jobs} check VERBOSE=1"
             '
           EXIT_CODE=$?
           STATUS=success
@@ -139,34 +141,11 @@ jobs:
           printf "%s,%s\n" "${{ matrix.arch }}" "$STATUS" > result.txt
           exit 0
 
-      # Use the same short-lived failure artifact contract as regular PR CI so
-      # the flake collector can process scheduled failures through the same
-      # path. The artifact name includes run attempt and lane so reruns do not
-      # overwrite the failed attempt that produced the evidence.
-      - name: Prepare CI failure evidence
+      - name: Upload test failure evidence
         if: steps.run_tests.outputs.status == 'failure'
-        run: |
-          devtools/gather-check-logs.sh || true
-          for path in failed-tests.log tests config.log; do
-            if [ -e "$path" ]; then
-              sudo chmod -R a+rX "$path" || true
-            fi
-          done
-
-      - name: Upload CI failure evidence
-        if: steps.run_tests.outputs.status == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-flake-evidence
         with:
-          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arch }}
-          path: |
-            failed-tests.log
-            tests/failed-tests.log
-            tests/test-suite.log
-            tests/*.log
-            tests/*.trs
-            config.log
-          retention-days: 7
-          if-no-files-found: ignore
+          job-name: cross-${{ matrix.arch }}-check
 
       - name: Ensure result artifact exists
         if: always()
