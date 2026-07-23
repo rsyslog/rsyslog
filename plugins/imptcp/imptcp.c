@@ -1067,7 +1067,7 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(ptcpsess_t *const __
         pThis->iCurrLine = pThis->iMsg;
     } else {
         const int isMatch = !regexec(&inst->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
-        if (isMatch) {
+        if (pThis->iCurrLine > 0 && isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
             memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, ustrlen(pThis->pMsg + pThis->iCurrLine) + 1);
             pThis->iMsg = pThis->iCurrLine - 1;

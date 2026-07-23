@@ -1,5 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
+# Regression coverage for regex-framed imptcp oversize recovery. The configured
+# 256-byte limit forces the recovery path; clean shutdown plus the two internal
+# diagnostics prove that recovery completed without corrupting parser state.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -40,6 +43,6 @@ NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag multi
 line3
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4'
 cmp_exact
-content_check-regex "assuming end of frame" ${RSYSLOG2_OUT_LOG}
-content_check-regex "message too long" ${RSYSLOG2_OUT_LOG}
+content_check --regex "assuming end of frame" "${RSYSLOG2_OUT_LOG}"
+content_check --regex "message too long" "${RSYSLOG2_OUT_LOG}"
 exit_test
