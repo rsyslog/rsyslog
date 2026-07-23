@@ -374,7 +374,10 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j10 check VERBOSE=1
+          RSYSLOG_FLAKE_PHASE_NAME: daily-${{ matrix.lane }}-check
+        run: >-
+          devtools/ci-flake-phase.sh run "$RSYSLOG_FLAKE_PHASE_NAME" automake --
+          make -j10 check VERBOSE=1
 
       - name: generate coverage
         if: ${{ always() && steps.prepare_build.outcome == 'success' }}
@@ -397,40 +400,13 @@ jobs:
           flags: daily-${{ matrix.lane }}
           fail_ci_if_error: true
 
-      # Use the same short-lived failure artifact contract as regular PR CI so
-      # the flake collector can process scheduled failures through the same
-      # path. The artifact name includes run attempt and lane so reruns do not
-      # overwrite the failed attempt that produced the evidence.
-      - name: Prepare CI failure evidence
+      - name: Upload test failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        run: |
-          if [ -f "devtools/gather-check-logs.sh" ]; then
-            devtools/gather-check-logs.sh || true
-          fi
-          for path in failed-tests.log tests config.log; do
-            if [ -e "$path" ]; then
-              sudo chmod -R a+rX "$path" || true
-            fi
-          done
-
-      - name: Upload CI failure evidence
-        if: >-
-          ${{ failure()
-              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-flake-evidence
         with:
-          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.lane }}
-          path: |
-            failed-tests.log
-            tests/failed-tests.log
-            tests/test-suite.log
-            tests/*.log
-            tests/*.trs
-            config.log
-          retention-days: 7
-          if-no-files-found: ignore
+          job-name: daily-${{ matrix.lane }}-check
 
   report:
     name: Report daily focused failures
@@ -468,7 +444,7 @@ jobs:
               const match = job.name.match(/^daily (.+) tests$/);
               const lane = match ? match[1] : job.name;
               const artifact =
-                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-${lane}`;
+                `ci-failure-${context.runId}-${process.env.RUN_ATTEMPT}-daily-${lane}-check`;
               return `- ${job.name}: ${job.html_url} (artifact: ${artifact})`;
             });
             const failedLaneSection = failedLaneLines.length > 0

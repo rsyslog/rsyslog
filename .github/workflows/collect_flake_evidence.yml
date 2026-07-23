@@ -1,0 +1,71 @@
+---
+name: collect flake evidence
+
+'on':
+  # Trusted default-branch parser; it never checks out or executes PR content.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows:
+      - check
+      - daily focused tests
+      - daily full distro CI
+      - weekly_cross_arch
+      - weekly_run_macos
+      - imbeats tests
+      - imhttp Prometheus scrape
+      - impstats push to VictoriaMetrics
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed source workflow run ID to harvest
+        required: true
+        type: string
+      source_run_attempt:
+        description: Source workflow attempt number
+        required: false
+        default: '1'
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  harvest:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure' ||
+      github.event.workflow_run.conclusion == 'timed_out'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      SOURCE_RUN_ID: >-
+        ${{ github.event.workflow_run.id || inputs.source_run_id }}
+      SOURCE_RUN_ATTEMPT: >-
+        ${{ github.event.workflow_run.run_attempt || inputs.source_run_attempt }}
+    steps:
+      # workflow_run has a privileged default-branch context.  Check out only
+      # that trusted revision; never fetch or execute source-run/PR content.
+      - name: Checkout trusted collector
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Harvest eligible failed job logs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 devtools/collect-flake-evidence.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$SOURCE_RUN_ID" \
+            --attempt "$SOURCE_RUN_ATTEMPT" \
+            --output flake-evidence
+
+      - name: Upload fallback evidence
+        if: hashFiles('flake-evidence/flake-evidence.json') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-failure-${{ env.SOURCE_RUN_ID }}-${{ env.SOURCE_RUN_ATTEMPT }}-fallback
+          path: flake-evidence
+          retention-days: 7
+          if-no-files-found: error

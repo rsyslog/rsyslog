@@ -494,6 +494,8 @@ jobs:
 
       - name: run container CI pipeline
         if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_FLAKE_PHASE_NAME: check-${{ matrix.config }}
         run: |
           chmod -R go+rw .
           CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
@@ -654,42 +656,13 @@ jobs:
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
-      # Failure artifacts are an opt-in transport for flake evidence.  They are
-      # uploaded only for failed CI matrix attempts and include the run attempt
-      # plus matrix lane in the name so reruns cannot overwrite a previous
-      # failed attempt.  Cancelled attempts are not uploaded because
-      # push-cancelled runs usually do not contain useful flake evidence.  The
-      # long-term record belongs in the external flake-campaign evidence store;
-      # these artifacts are intentionally short lived and may be deleted by the
-      # collector after successful processing.  Some logs are created by the
-      # container user, so normalize read permissions before upload.
-      - name: Prepare CI failure evidence
+      - name: Upload test failure evidence
         if: >-
           ${{ failure()
               && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        run: |
-          for path in failed-tests.log tests config.log; do
-            if [ -e "$path" ]; then
-              sudo chmod -R a+rX "$path" || true
-            fi
-          done
-
-      - name: Upload CI failure evidence
-        if: >-
-          ${{ failure()
-              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-flake-evidence
         with:
-          name: ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.config }}
-          path: |
-            failed-tests.log
-            tests/failed-tests.log
-            tests/test-suite.log
-            tests/*.log
-            tests/*.trs
-            config.log
-          retention-days: 7
-          if-no-files-found: ignore
+          job-name: check-${{ matrix.config }}
 
       - name: Skip CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
@@ -1029,6 +1002,9 @@ jobs:
       - name: make check (continue on error to collect results)
         id: run_tests
         if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_FLAKE_PHASE_NAME: >-
+            macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
         run: |
           # Enable core dumps for debugging segfaults
           ulimit -c unlimited
@@ -1049,6 +1025,7 @@ jobs:
           fi
 
           export MAKE_CHECK_TIMEOUT_SECONDS=1200
+          devtools/ci-flake-phase.sh begin "$RSYSLOG_FLAKE_PHASE_NAME" automake
 
           set +e
           python3 - <<'PY'
@@ -1081,6 +1058,7 @@ jobs:
               sys.exit(124)
           PY
           EXIT_CODE=$?
+          devtools/ci-flake-phase.sh end "$RSYSLOG_FLAKE_PHASE_NAME" automake "$EXIT_CODE"
 
           STATUS=success
           if [ "$EXIT_CODE" -eq 124 ]; then
@@ -1125,42 +1103,18 @@ jobs:
           CORE_COUNT=$(find_core_files | wc -l || echo 0)
           echo "Total core files found: $CORE_COUNT"
 
-      - name: Prepare CI failure evidence
+      - name: Upload test failure evidence
         if: >-
           ${{
             steps.code_changes.outputs.any_changed == 'true' &&
             steps.run_tests.outputs.status != '' &&
-            steps.run_tests.outputs.status != 'success'
+            steps.run_tests.outputs.status != 'success' &&
+            env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
           }}
-        run: |
-          devtools/gather-check-logs.sh || true
-          for path in failed-tests.log tests config.log; do
-            if [ -e "$path" ]; then
-              sudo chmod -R a+rX "$path" || true
-            fi
-          done
-
-      - name: Upload CI failure evidence
-        if: >-
-          ${{
-            steps.code_changes.outputs.any_changed == 'true' &&
-            steps.run_tests.outputs.status != '' &&
-            steps.run_tests.outputs.status != 'success'
-          }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-flake-evidence
         with:
-          name: >-
-            ci-failure-${{ github.run_id }}-${{ github.run_attempt }}-${{
-            matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
-          path: |
-            failed-tests.log
-            tests/failed-tests.log
-            tests/test-suite.log
-            tests/*.log
-            tests/*.trs
-            config.log
-          retention-days: 7
-          if-no-files-found: ignore
+          job-name: >-
+            macos-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
 
       - name: show error logs and fail if tests failed
         if: >-
@@ -1237,6 +1191,7 @@ jobs:
 
       - name: run elasticsearch test matrix
         env:
+          RSYSLOG_FLAKE_PHASE_NAME: elasticsearch-check
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-impstats
@@ -1254,6 +1209,14 @@ jobs:
         run: |
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: Upload test failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: elasticsearch-check
 
   victorialogs_CI:
     needs: [compile, changes]
@@ -1303,6 +1266,7 @@ jobs:
       - name: run victoria logs omhttp jsonl test
         if: steps.code_changes.outputs.any_changed == 'true'
         env:
+          RSYSLOG_FLAKE_PHASE_NAME: victorialogs-check
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-omhttp
@@ -1329,6 +1293,14 @@ jobs:
           done
           chmod -R go+rw .
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: Upload test failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: victorialogs-check
 
       - name: Skip VictoriaLogs CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
@@ -1453,6 +1425,8 @@ jobs:
             -cfg-${{ hashFiles('configure.ac','m4/*.m4','Makefile.am','.github/workflows/run_checks.yml','devtools/run-configure.sh','devtools/run-ci.sh') }}
 
       - name: run container CI pipeline
+        env:
+          RSYSLOG_FLAKE_PHASE_NAME: kafka-distcheck
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
@@ -1473,6 +1447,14 @@ jobs:
           export ABORT_ALL_ON_TEST_FAIL='YES'
           export VERBOSE=1
           devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: Upload test failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: kafka-distcheck
 
   dev_container_definition_CI:
     needs: [changes]
@@ -1712,8 +1694,17 @@ jobs:
                 --disable-elasticsearch-tests \
                 --disable-kafka-tests --disable-snmp-tests
               time_phase build make -j8
-              time_phase check make -j10 check VERBOSE=1
+              time_phase check devtools/ci-flake-phase.sh run arm64-check automake -- \
+                make -j10 check VERBOSE=1
             '
+
+      - name: Upload test failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: arm64-check
 
       - name: Skip arm64 CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
@@ -1853,8 +1844,17 @@ jobs:
                 --disable-journal-tests"
               time_su_phase "config sanity" "grep -q \"^#define HAVE_LIBYAML 1\" config.h"
               time_su_phase build "make -j8"
-              time_su_phase check "timeout 45m make -j10 check VERBOSE=1"
+              time_su_phase check "devtools/ci-flake-phase.sh run i386-check automake -- \
+                timeout 45m make -j10 check VERBOSE=1"
             '
+
+      - name: Upload test failure evidence
+        if: >-
+          ${{ failure()
+              && env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: i386-check
 
       - name: Skip i386 CI, no relevant changes
         if: steps.code_changes.outputs.any_changed != 'true'
