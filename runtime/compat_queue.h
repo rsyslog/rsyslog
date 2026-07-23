@@ -62,6 +62,15 @@
                 }                                                                         \
             } while (0)
     #endif
+
+    #ifndef STAILQ_NEXT
+        #define STAILQ_NEXT(elm, field) ((elm)->field.stqe_next)
+    #endif
+
+    #ifndef STAILQ_FOREACH
+        #define STAILQ_FOREACH(var, head, field) \
+            for ((var) = STAILQ_FIRST(head); (var); (var) = STAILQ_NEXT((var), field))
+    #endif
 #endif
 
 #endif /* #ifndef INCLUDED_COMPAT_QUEUE_H */
