@@ -54,11 +54,21 @@ trailing_data_marker = b"data after end of zlib stream"
 
 
 def wait_for(path, marker, deadline):
+    offset = 0
+    tail = b""
     while time.monotonic() < deadline:
         try:
             with open(path, "rb") as stream:
-                if marker in stream.read():
+                stream.seek(0, 2)
+                if stream.tell() < offset:
+                    offset = 0
+                    tail = b""
+                stream.seek(offset)
+                chunk = stream.read()
+                offset = stream.tell()
+                if marker in tail + chunk:
                     return
+                tail = (tail + chunk)[1 - len(marker):]
         except FileNotFoundError:
             pass
         time.sleep(0.05)

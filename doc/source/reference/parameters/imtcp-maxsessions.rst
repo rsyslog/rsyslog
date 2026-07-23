@@ -33,10 +33,10 @@ The same-named input parameter can override this module setting.
 
 Each session owns its framing, transport, TLS, and optional decompressor state.
 Consequently, unusually large values multiply the memory retained by idle or
-incomplete connections.  A zlib ``stream:always`` session has a bounded history
+incomplete connections. A zlib ``stream:always`` session has a bounded history
 window of at most 32 KiB plus decoder bookkeeping; completed zlib streams release
 that decoder state immediately, but incomplete streams retain it until the
-connection closes.  Size ``MaxSessions`` for the listener's expected concurrency
+connection closes. Size ``MaxSessions`` for the listener's expected concurrency
 and available memory.
 
 
