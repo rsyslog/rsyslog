@@ -1,0 +1,24 @@
+runtime/stringbuf.c
+  s_3174538268dd29::t_4a98b6d5463bd0 410-414
+  s_3174538268dd29::t_13f2aeac5fc1a1 415-416
+tests/unit/stringbuf_test.c
+  s_3174538268dd29::t_13f2aeac5fc1a1 178-180,182,184,186
+  s_3174538268dd29::t_4a98b6d5463bd0 183,185,192-197
+  s_3174538268dd29::t_b5fe4b68fc511a 198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "f7a293d246aabc64360399a6a8e5b53f5c1f6693",
+  "prompts": {},
+  "sessions": {
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
