@@ -5337,8 +5337,15 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         goto done;
     }
     if (nvlstChkDisabled(lst)) {
+        /* Do not instantiate a disabled action: skip actionNewInst() entirely so
+         * the module's instance is never created and its checkCnf/newActInst side
+         * effects (e.g. omelasticsearch probing the server) never run - matching
+         * how disabled includes and input objects are skipped. The statement is
+         * turned into a NOP the optimizer later removes.
+         */
         dbgprintf("action disabled by configuration\n");
-        cnfstmt->nodetype = S_NOP;
+        cnfstmtDisable(cnfstmt);
+        goto done;
     }
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
@@ -5352,8 +5359,13 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
     namebuf[255] = '\0'; /* be on safe side */
     cnfstmt->printable = (uchar *)strdup(namebuf);
     nvlstChkUnused(lst);
-    nvlstDestruct(lst);
 done:
+    /* Single cleanup point: cnfstmtNewAct owns lst on every path (the module only
+     * reads it, and addAction keeps an independent clone as pSyntaxLst), so one
+     * nvlstDestruct() frees it exactly once. This also covers the early
+     * error / cnfstmtNew()-failure returns that previously leaked lst.
+     */
+    nvlstDestruct(lst);
     return cnfstmt;
 }
 
