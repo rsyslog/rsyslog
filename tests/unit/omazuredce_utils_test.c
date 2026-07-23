@@ -2,9 +2,10 @@
  *
  * The timer test freezes a waiter after it observed a false stop predicate.
  * The stop helper must block on the wait mutex until pthread_cond_wait() has
- * registered the waiter and released that mutex. A two-second timed condition
+ * registered the waiter and released that mutex. A short 200 ms timed condition
  * wait first proves the stopper cannot complete while the waiter holds the
- * mutex, then a second bounded wait proves the paired wakeup completes.
+ * mutex without adding a fixed multi-second delay, then a conservative
+ * two-second wait proves the paired wakeup completes.
  *
  * The size test verifies that a request which grows beyond its configured cap
  * is classified for retry rather than successful destructive completion.
@@ -108,7 +109,13 @@ static int test_timer_stop_cannot_lose_wakeup(void) {
     }
 
     (void)clock_gettime(CLOCK_REALTIME, &deadline);
-    deadline.tv_sec += 2;
+    deadline.tv_nsec += 200000000L;
+    if (deadline.tv_nsec >= 1000000000L) {
+        deadline.tv_sec++;
+        deadline.tv_nsec -= 1000000000L;
+    }
+    /* Timing out is the successful outcome here, so scheduler delay cannot make this phase fail. The window
+     * only gives an incorrect non-locking implementation enough time to expose itself by completing. */
     while (!state.stopperFinished && waitRet == 0) {
         waitRet = pthread_cond_timedwait(&state.gateCond, &state.gateMutex, &deadline);
     }

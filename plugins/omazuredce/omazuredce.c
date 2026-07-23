@@ -788,8 +788,9 @@ static rsRetVal flushBatchUnlocked(wrkrInstanceData_t *pWrkrData) {
 
     while (pWrkrData->recordCount > 0) {
         sbool allowOverLimit = 0;
+        sbool hasRemainingRecords;
         size_t payloadLen = 0;
-        char savedEnd;
+        char savedSeparator = '\0';
 
         prefixCount = 0;
         for (size_t i = 0; i < pWrkrData->recordCount; ++i) {
@@ -809,13 +810,21 @@ static rsRetVal flushBatchUnlocked(wrkrInstanceData_t *pWrkrData) {
         }
 
         payloadLen = pWrkrData->recordEnds[prefixCount - 1] + 1;
-        savedEnd = pWrkrData->batchBuf[payloadLen - 1];
+        hasRemainingRecords = prefixCount < pWrkrData->recordCount;
+        if (hasRemainingRecords) {
+            /* A partial prefix replaces its following comma. A full batch instead appends ']' at batchLen,
+             * where no initialized batch byte exists to save. */
+            savedSeparator = pWrkrData->batchBuf[payloadLen - 1];
+        }
         pWrkrData->batchBuf[payloadLen - 1] = ']';
         pWrkrData->batchBuf[payloadLen] = '\0';
         DBGPRINTF("omazuredce[%p]: flush batch posting records=%zu payloadBytes=%zu payload='%s'\n", pWrkrData,
                   prefixCount, payloadLen, pWrkrData->batchBuf);
         iRet = postBatchToAzure(pData, pWrkrData, payloadLen, prefixCount, allowOverLimit);
-        pWrkrData->batchBuf[payloadLen - 1] = savedEnd;
+        if (hasRemainingRecords) {
+            pWrkrData->batchBuf[payloadLen - 1] = savedSeparator;
+        }
+        /* Restore the retained batch after both successful and failed posts. */
         pWrkrData->batchBuf[pWrkrData->batchLen] = '\0';
         CHKiRet(iRet);
         DBGPRINTF("omazuredce[%p]: flushed batch records=%zu payloadBytes=%zu\n", pWrkrData, prefixCount, payloadLen);
