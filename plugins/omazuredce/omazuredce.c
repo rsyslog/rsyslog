@@ -1136,7 +1136,12 @@ BEGINendTransaction
     CHKiRet(retryPendingAsyncFlushUnlocked(pWrkrData));
     /* Always flush at transaction end so queue commit never races ahead of HTTP delivery. */
     if (pWrkrData->recordCount > 0) {
-        CHKiRet(flushBatchUnlocked(pWrkrData));
+        iRet = flushBatchUnlocked(pWrkrData);
+        if (iRet != RS_RET_OK) {
+            /* actionCommit() retains and replays the transaction parameters; drop only our private copy. */
+            resetBatch(pWrkrData);
+            FINALIZE;
+        }
     }
     if (pthread_mutex_unlock(&pWrkrData->batchLock) != 0) {
         lockHeld = 0;
