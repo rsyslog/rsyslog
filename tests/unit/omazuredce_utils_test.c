@@ -6,6 +6,7 @@
  * wait first proves the stopper cannot complete while the waiter holds the
  * mutex without adding a fixed multi-second delay, then a conservative
  * two-second wait proves the paired wakeup completes.
+ * Thread-creation error paths release and join any waiter already started.
  *
  * The size test verifies that a request which grows beyond its configured cap
  * is classified for retry rather than successful destructive completion.
@@ -101,7 +102,15 @@ static int test_timer_stop_cannot_lose_wakeup(void) {
     }
     (void)pthread_mutex_unlock(&state.gateMutex);
 
-    if (pthread_create(&stopper, NULL, timer_stopper, &state) != 0) return 1;
+    if (pthread_create(&stopper, NULL, timer_stopper, &state) != 0) {
+        (void)pthread_mutex_lock(&state.gateMutex);
+        state.releaseWaiter = 1;
+        (void)pthread_cond_broadcast(&state.gateCond);
+        (void)pthread_mutex_unlock(&state.gateMutex);
+        omazuredceRequestTimerStop(&state.batchMutex, &state.timerCond, &state.stopRequested);
+        (void)pthread_join(waiter, NULL);
+        return 1;
+    }
 
     (void)pthread_mutex_lock(&state.gateMutex);
     while (!state.stopperStarted) {
