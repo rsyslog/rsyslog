@@ -407,7 +407,13 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis, uchar *const __restric
             pThis->iBufSize = newlen + 1;
         }
         pThis->iStrLen = newlen;
-        memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
+        if (pThis->iStrLen == 0) {
+            if (pThis->pBuf != NULL) {
+                pThis->pBuf[0] = '\0';
+            }
+        } else {
+            memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
+        }
     }
 
     return RS_RET_OK;
