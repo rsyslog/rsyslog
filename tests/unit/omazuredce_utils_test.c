@@ -9,6 +9,7 @@
  * The size test verifies that a request which grows beyond its configured cap
  * is classified for retry rather than successful destructive completion.
  */
+#include "config.h"
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -29,7 +30,7 @@ typedef struct timer_test_state_s {
     int waiterExited;
 } timer_test_state_t;
 
-static void *timerWaiter(void *arg) {
+static void *timer_waiter(void *arg) {
     timer_test_state_t *const state = arg;
     int observedStop;
 
@@ -56,7 +57,7 @@ static void *timerWaiter(void *arg) {
     return NULL;
 }
 
-static void *timerStopper(void *arg) {
+static void *timer_stopper(void *arg) {
     timer_test_state_t *const state = arg;
 
     (void)pthread_mutex_lock(&state->gateMutex);
@@ -73,7 +74,7 @@ static void *timerStopper(void *arg) {
     return NULL;
 }
 
-static int testTimerStopCannotLoseWakeup(void) {
+static int test_timer_stop_cannot_lose_wakeup(void) {
     timer_test_state_t state = {
         PTHREAD_MUTEX_INITIALIZER,
         PTHREAD_COND_INITIALIZER,
@@ -91,7 +92,7 @@ static int testTimerStopCannotLoseWakeup(void) {
     struct timespec deadline;
     int waitRet = 0;
 
-    if (pthread_create(&waiter, NULL, timerWaiter, &state) != 0) return 1;
+    if (pthread_create(&waiter, NULL, timer_waiter, &state) != 0) return 1;
 
     (void)pthread_mutex_lock(&state.gateMutex);
     while (!state.waiterObservedPredicate) {
@@ -99,7 +100,7 @@ static int testTimerStopCannotLoseWakeup(void) {
     }
     (void)pthread_mutex_unlock(&state.gateMutex);
 
-    if (pthread_create(&stopper, NULL, timerStopper, &state) != 0) return 1;
+    if (pthread_create(&stopper, NULL, timer_stopper, &state) != 0) return 1;
 
     (void)pthread_mutex_lock(&state.gateMutex);
     while (!state.stopperStarted) {
@@ -155,14 +156,14 @@ static int testTimerStopCannotLoseWakeup(void) {
     return 0;
 }
 
-static int testOversizeRequestRetries(void) {
+static int test_oversize_request_retries(void) {
     if (omazuredceClassifyRequestSize(4096, 4096) != OMAZUREDCE_REQUEST_FITS) return 1;
     if (omazuredceClassifyRequestSize(4097, 4096) != OMAZUREDCE_REQUEST_RETRY) return 1;
     return 0;
 }
 
 int main(void) {
-    if (testTimerStopCannotLoseWakeup() != 0) return 1;
-    if (testOversizeRequestRetries() != 0) return 1;
+    if (test_timer_stop_cannot_lose_wakeup() != 0) return 1;
+    if (test_oversize_request_retries() != 0) return 1;
     return 0;
 }

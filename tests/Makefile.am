@@ -2538,9 +2538,7 @@ runtime_unit_queue_da_SOURCES = \
 	unit/queue_da_test.c
 
 runtime_unit_omazuredce_utils_SOURCES = \
-	unit/omazuredce_utils_test.c \
-	../plugins/omazuredce/omazuredce_utils.c \
-	../plugins/omazuredce/omazuredce_utils.h
+	unit/omazuredce_utils_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
