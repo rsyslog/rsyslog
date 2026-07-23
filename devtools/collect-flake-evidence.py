@@ -40,6 +40,14 @@ AUTOMAKE_RE = re.compile(
 )
 
 
+def redirect_host_is_allowed(host: str) -> bool:
+    return (
+        host.endswith(".blob.core.windows.net") or
+        host.endswith(".githubusercontent.com") or
+        host in ("github.com", "objects.githubusercontent.com")
+    )
+
+
 class GitHub:
     def __init__(self, repo: str, token: str):
         self.base = f"https://api.github.com/repos/{repo}"
@@ -68,12 +76,7 @@ class GitHub:
     def download_redirect(self, url: str) -> bytes:
         parsed = urllib.parse.urlsplit(url)
         host = parsed.hostname or ""
-        allowed = (
-            host.endswith(".blob.core.windows.net") or
-            host.endswith(".githubusercontent.com") or
-            host in ("github.com", "objects.githubusercontent.com")
-        )
-        if parsed.scheme != "https" or not allowed:
+        if parsed.scheme != "https" or not redirect_host_is_allowed(host):
             raise ValueError(f"refusing unexpected GitHub log host: {host}")
         request = urllib.request.Request(url, headers={"User-Agent": self.headers["User-Agent"]})
         with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310 - allowlisted HTTPS host

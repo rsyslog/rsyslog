@@ -40,9 +40,14 @@ UPLOAD_RE = re.compile(
     r"\./\.github/actions/upload-flake-evidence\s*(?:#.*)?$",
     re.MULTILINE,
 )
-STEP_IF_RE = re.compile(r"^        if:\s*(.*)$", re.MULTILINE)
-FAILURE_AWARE_RE = re.compile(
-    r"failure\(\)|steps\.[A-Za-z0-9_-]+\.outputs\.[A-Za-z0-9_-]+",
+STEP_IF_RE = re.compile(r"^(?:      - |        )if:\s*(.*)$", re.MULTILINE)
+BLOCK_SCALAR_RE = re.compile(r"^[>|][+-]?$")
+FAILURE_CALL_RE = re.compile(r"\bfailure\(\)")
+NEGATED_FAILURE_RE = re.compile(r"!\s*failure\(\)")
+FAILED_STEP_RE = re.compile(
+    r"steps\.[A-Za-z0-9_-]+\."
+    r"(?:outputs\.[A-Za-z0-9_-]+\s*(?:==\s*['\"]failure['\"]|!=\s*['\"]success['\"])|"
+    r"(?:outcome|conclusion)\s*==\s*['\"]failure['\"])",
 )
 
 
@@ -61,15 +66,39 @@ def job_blocks(text: str):
 
 def step_blocks(job: str):
     steps = job.partition("\n    steps:")[2]
-    matches = list(re.finditer(r"^      - (?:name|uses|run):", steps, re.MULTILINE))
+    matches = list(re.finditer(r"^      - ", steps, re.MULTILINE))
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(steps)
         yield steps[match.start():end]
 
 
+def step_if_condition(step: str) -> str | None:
+    match = STEP_IF_RE.search(step)
+    if not match:
+        return None
+    value = match.group(1).strip()
+    if not BLOCK_SCALAR_RE.fullmatch(value):
+        return value
+    continuation = []
+    for line in step[match.end():].splitlines():
+        if not line.strip():
+            continuation.append("")
+            continue
+        if len(line) - len(line.lstrip()) <= 8:
+            break
+        continuation.append(line.strip())
+    return "\n".join(continuation)
+
+
 def upload_step_is_failure_aware(step: str) -> bool:
-    condition = STEP_IF_RE.search(step)
-    return bool(condition and FAILURE_AWARE_RE.search(step[condition.start():]))
+    condition = step_if_condition(step)
+    if not condition:
+        return False
+    positive_failure_calls = NEGATED_FAILURE_RE.sub("", condition)
+    return bool(
+        FAILURE_CALL_RE.search(positive_failure_calls) or
+        FAILED_STEP_RE.search(condition)
+    )
 
 
 def workflow_paths():

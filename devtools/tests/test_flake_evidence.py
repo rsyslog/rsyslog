@@ -182,6 +182,17 @@ class FlakeEvidenceTests(unittest.TestCase):
         text = collector.decode_job_logs(raw.getvalue())
         self.assertEqual("failure", collector.phases_from_log(text, "job")[0]["status"])
 
+    def test_fallback_allows_actions_log_redirect_host(self):
+        collector = load_collector()
+        self.assertTrue(
+            collector.redirect_host_is_allowed("pipelines.actions.githubusercontent.com")
+        )
+        self.assertFalse(
+            collector.redirect_host_is_allowed(
+                "pipelines.actions.githubusercontent.com.attacker.example"
+            )
+        )
+
     def test_coverage_checker_ignores_commented_uploads(self):
         checker = load_coverage_checker()
         text = "      # uses: ./.github/actions/upload-flake-evidence\n"
@@ -202,6 +213,83 @@ class FlakeEvidenceTests(unittest.TestCase):
         enabled = disabled.replace("if: false", "if: failure()")
         self.assertFalse(checker.upload_step_is_failure_aware(disabled))
         self.assertTrue(checker.upload_step_is_failure_aware(enabled))
+
+    def test_coverage_checker_only_inspects_if_condition(self):
+        checker = load_coverage_checker()
+        step = (
+            "      - name: upload\n"
+            "        if: always()\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+            "        with:\n"
+            "          source: steps.run_tests.outputs.status\n"
+        )
+        self.assertFalse(checker.upload_step_is_failure_aware(step))
+
+    def test_coverage_checker_rejects_negated_failure(self):
+        checker = load_coverage_checker()
+        step = (
+            "      - name: upload\n"
+            "        if: ${{ ! failure() }}\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        self.assertFalse(checker.upload_step_is_failure_aware(step))
+
+    def test_coverage_checker_accepts_list_item_if(self):
+        checker = load_coverage_checker()
+        step = (
+            "      - if: failure()\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        self.assertTrue(checker.upload_step_is_failure_aware(step))
+
+    def test_coverage_checker_accepts_multiline_failure_condition(self):
+        checker = load_coverage_checker()
+        step = (
+            "      - name: upload\n"
+            "        if: >-\n"
+            "          ${{ failure() &&\n"
+            "              env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1' }}\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        self.assertTrue(checker.upload_step_is_failure_aware(step))
+
+    def test_coverage_checker_requires_failed_step_status(self):
+        checker = load_coverage_checker()
+        template = (
+            "      - name: upload\n"
+            "        if: {}\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        self.assertTrue(
+            checker.upload_step_is_failure_aware(
+                template.format("steps.run_tests.outputs.status == 'failure'")
+            )
+        )
+        self.assertTrue(
+            checker.upload_step_is_failure_aware(
+                template.format("steps.run_tests.outputs.status != 'success'")
+            )
+        )
+        self.assertFalse(
+            checker.upload_step_is_failure_aware(
+                template.format("steps.run_tests.outputs.status != ''")
+            )
+        )
+
+    def test_coverage_checker_includes_id_first_steps(self):
+        checker = load_coverage_checker()
+        job = (
+            "  test:\n"
+            "    steps:\n"
+            "      - id: run_tests\n"
+            "        run: make check\n"
+            "      - if: failure()\n"
+            "        uses: ./.github/actions/upload-flake-evidence\n"
+        )
+        steps = list(checker.step_blocks(job))
+        self.assertEqual(2, len(steps))
+        self.assertIn("make check", steps[0])
+        self.assertIn("upload-flake-evidence", steps[1])
 
     def test_coverage_checker_parses_harvester_names(self):
         checker = load_coverage_checker()
