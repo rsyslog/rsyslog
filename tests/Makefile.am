@@ -264,6 +264,7 @@ TESTS_DEFAULT = \
 	daqueue-truncated-segment-startup.sh \
 	diskq-rfc5424.sh \
 	diskqueue-truncated-segment-startup.sh \
+	diskqueue-final-symlink.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
