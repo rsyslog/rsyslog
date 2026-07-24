@@ -11,7 +11,7 @@ Commands:
   build-package <workspace> <source-dir> <dist-tarball> <artifact-dir> <version> <build-log>
   manifest <artifact-dir> <version> <suite> <arch> <channel> <distro> <distro-version>
   generate-repo <artifact-dir> <repo-dir> <suite> <component> <arch>
-  verify-repo <repo-url> <suite> <component> <arch> <version> <expected-key-fingerprint>
+  verify-repo <repo-url> <suite> <component> <arch> <version> <expected-key-fingerprint> [require-source-package]
   self-test
 EOF
 }
@@ -416,8 +416,11 @@ cmd_verify_repo() (
   local arch="$4"
   local version="$5"
   local expected_key_fpr="$6"
+  local require_source_package="${7:-false}"
   local tmp_dir packages_url_path packages_release_path
-  local packages_hash packages_size actual_key_fpr cleanup_command
+  local sources_url_path sources_release_path
+  local packages_hash packages_size sources_hash sources_size
+  local actual_key_fpr cleanup_command
 
   command -v curl >/dev/null 2>&1 || die "curl not found"
   command -v gpg >/dev/null 2>&1 || die "gpg not found"
@@ -425,10 +428,16 @@ cmd_verify_repo() (
   command -v xz >/dev/null 2>&1 || die "xz not found"
   [ -n "$expected_key_fpr" ] ||
     die "missing expected signing key fingerprint"
+  case "$require_source_package" in
+    true|false) ;;
+    *) die "require-source-package must be true or false" ;;
+  esac
 
   repo_url="${repo_url%/}"
   packages_url_path="dists/$suite/$component/binary-$arch/Packages.xz"
   packages_release_path="$component/binary-$arch/Packages.xz"
+  sources_url_path="dists/$suite/$component/source/Sources.xz"
+  sources_release_path="$component/source/Sources.xz"
   tmp_dir="$(mktemp -d)"
   printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
   # Expand now because function-local variables are unavailable to an EXIT trap.
@@ -460,6 +469,23 @@ cmd_verify_repo() (
     die "rsyslog package not found in Packages"
   grep -Fxq "Version: $version" "$tmp_dir/Packages" ||
     die "version $version not found in Packages"
+
+  curl -fsSL "$repo_url/$sources_url_path" -o "$tmp_dir/Sources.xz"
+  sources_hash="$(sha256sum "$tmp_dir/Sources.xz" | awk '{print $1}')"
+  sources_size="$(wc -c < "$tmp_dir/Sources.xz" | tr -d ' ')"
+  awk -v hash="$sources_hash" -v size="$sources_size" \
+    -v path="$sources_release_path" \
+    '$1 == hash && $2 == size && $3 == path { found = 1 } END { exit !found }' \
+    "$tmp_dir/InRelease" ||
+    die "Sources.xz checksum is not present in signed InRelease"
+  xz -dc "$tmp_dir/Sources.xz" > "$tmp_dir/Sources"
+  if [ "$require_source_package" = true ]; then
+    grep -Fxq "Package: rsyslog" "$tmp_dir/Sources" ||
+      die "rsyslog source package not found in Sources"
+    grep -Fxq "Version: $version" "$tmp_dir/Sources" ||
+      die "source version $version not found in Sources"
+  fi
+
   rm -rf "$tmp_dir"
   trap - EXIT
 )
