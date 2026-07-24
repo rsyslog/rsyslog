@@ -572,7 +572,7 @@ static int compute_off_after_pri(const uchar *buf, size_t len, int *pri) {
  * this module as it is expected that allmost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
-static rsRetVal ParsePRI(smsg_t *pMsg) {
+rsRetVal parserParsePRI(smsg_t *pMsg) {
     syslog_pri_t pri;
     DEFiRet;
 
@@ -648,7 +648,7 @@ static rsRetVal ParseMsg(smsg_t *pMsg) {
         if (pParser->bDoSanitazion && bIsSanitized == RSFALSE) {
             CHKiRet(SanitizeMsg(pMsg));
             if (pParser->bDoPRIParsing && bPRIisParsed == RSFALSE) {
-                CHKiRet(ParsePRI(pMsg));
+                CHKiRet(parserParsePRI(pMsg));
                 bPRIisParsed = RSTRUE;
             }
             bIsSanitized = RSTRUE;
