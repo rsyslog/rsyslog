@@ -1,7 +1,7 @@
 #!/bin/bash
+# Verify real Filebeat traffic received by imbeats is delivered through
+# omelasticsearch and becomes queryable in Elasticsearch.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
-require_plugin omelasticsearch
 check_command_available docker
 
 if ! docker info >/dev/null 2>&1 ; then

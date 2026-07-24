@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify client JSON cannot overwrite the reserved imbeats protocol metadata
+# attached during message submission.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -54,6 +55,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"metadata collision","metadata":{"imbeats":{"protocol":"attacker","sequence":999,"tls_enabled":true}}}|lumberjack-v2|1|false'
 cmp_exact
 

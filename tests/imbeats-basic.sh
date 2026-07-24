@@ -1,6 +1,7 @@
 #!/bin/bash
+# Verify a basic JSON event is submitted with its Beats fields, reserved
+# metadata, and cumulative ACK intact.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '
@@ -43,6 +44,7 @@ PY
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"hello","host":{"name":"web01"}}|hello|web01|lumberjack-v2|1'
 cmp_exact
 

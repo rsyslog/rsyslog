@@ -47,6 +47,10 @@ common Elasticsearch-oriented pipelines:
 - transport and protocol metadata is stored under ``$!metadata!imbeats``
 - listener-side size limits reject oversized windows, frames, batches, and
   compressed payload expansion before unbounded allocation
+- instance-wide accounting bounds memory held by incomplete sessions, inflate
+  scratch space, event copies, and window descriptors
+- idle, absolute frame, and absolute window deadlines release sessions that
+  stop making progress or retain incomplete protocol state for too long
 - listener-side session limits and worker settings bound concurrent sender
   fan-in and provide fairness between active sessions
 
@@ -145,6 +149,23 @@ Troubleshooting Elastic Agent delivery
   failures.
 
 
+Protocol validation and acknowledgements
+========================================
+
+Each Lumberjack ``J`` frame payload must contain exactly one complete JSON
+object. Leading and trailing JSON whitespace is accepted. Malformed JSON,
+arrays, scalar values, concatenated values, and any trailing non-whitespace
+bytes are rejected. The original accepted JSON text remains available in
+``msg``, while the decoded object fields are mapped into ``$!``.
+
+Malformed frames, resource-limit violations, decompression-limit violations,
+and session, frame, or window timeouts fail closed. ``imbeats`` closes the affected
+session, releases its charged resources, and does not acknowledge the
+incomplete batch. Lumberjack v2 ``W``, ``J``, and ``C`` traffic retains normal
+cumulative ``A`` acknowledgement behavior when it remains within the
+configured size, resource, compression, and timeout limits.
+
+
 Configuration Parameters
 ========================
 
@@ -168,8 +189,18 @@ Input Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+   * - :ref:`param-imbeats-frametimeout`
+     - .. include:: ../../reference/parameters/imbeats-frametimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
    * - :ref:`param-imbeats-gnutlsprioritystring`
      - .. include:: ../../reference/parameters/imbeats-gnutlsprioritystring.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-idletimeout`
+     - .. include:: ../../reference/parameters/imbeats-idletimeout.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -208,6 +239,11 @@ Input Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+   * - :ref:`param-imbeats-maxcompressionratio`
+     - .. include:: ../../reference/parameters/imbeats-maxcompressionratio.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
    * - :ref:`param-imbeats-maxdecompressedsize`
      - .. include:: ../../reference/parameters/imbeats-maxdecompressedsize.rst
         :start-after: .. summary-start
@@ -215,6 +251,11 @@ Input Parameters
 
    * - :ref:`param-imbeats-maxframesize`
      - .. include:: ../../reference/parameters/imbeats-maxframesize.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+   * - :ref:`param-imbeats-maxinflightbytes`
+     - .. include:: ../../reference/parameters/imbeats-maxinflightbytes.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -318,6 +359,11 @@ Input Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+   * - :ref:`param-imbeats-windowtimeout`
+     - .. include:: ../../reference/parameters/imbeats-windowtimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
 
 Examples
 ========
@@ -332,6 +378,11 @@ RainerScript
    input(type="imbeats"
          port="5044"
          ruleset="beats_to_es"
+         maxInFlightBytes="268435456"
+         maxCompressionRatio="256"
+         idleTimeout="60"
+         frameTimeout="30"
+         windowTimeout="300"
          streamdriver.name="gtls"
          streamdriver.mode="1"
          streamdriver.authmode="anon"
@@ -356,6 +407,11 @@ YAML
      - type: imbeats
        port: "5044"
        ruleset: beats_to_es
+       maxInFlightBytes: 268435456
+       maxCompressionRatio: 256
+       idleTimeout: 60
+       frameTimeout: 30
+       windowTimeout: 300
        streamdriver.name: gtls
        streamdriver.mode: 1
        streamdriver.authmode: anon
@@ -385,21 +441,34 @@ The module exposes these ``impstats`` counters:
 - ``compressed_frames``
 - ``json_decode_failures``
 - ``ack_failures``
+- ``windows.rejected``
+- ``frames.rejected``
+- ``compressed.rejected``
+- ``connections.active``
+- ``connections.rejected``
+- ``starvation_protect``
+- ``resource_bytes`` (current bytes charged to the instance resource budget)
+- ``resource_rejected``
+- ``sessions.timed_out``
 
 
 .. toctree::
    :hidden:
 
    ../../reference/parameters/imbeats-address
+   ../../reference/parameters/imbeats-frametimeout
    ../../reference/parameters/imbeats-gnutlsprioritystring
+   ../../reference/parameters/imbeats-idletimeout
    ../../reference/parameters/imbeats-keepalive
    ../../reference/parameters/imbeats-keepalive-interval
    ../../reference/parameters/imbeats-keepalive-probes
    ../../reference/parameters/imbeats-keepalive-time
    ../../reference/parameters/imbeats-listenportfilename
    ../../reference/parameters/imbeats-maxbatchbytes
+   ../../reference/parameters/imbeats-maxcompressionratio
    ../../reference/parameters/imbeats-maxdecompressedsize
    ../../reference/parameters/imbeats-maxframesize
+   ../../reference/parameters/imbeats-maxinflightbytes
    ../../reference/parameters/imbeats-maxsessions
    ../../reference/parameters/imbeats-maxwindowsize
    ../../reference/parameters/imbeats-name
@@ -421,3 +490,4 @@ The module exposes these ``impstats`` counters:
    ../../reference/parameters/imbeats-streamdriver-tlsrevocationcheck
    ../../reference/parameters/imbeats-streamdriver-tlsverifydepth
    ../../reference/parameters/imbeats-workerthreads
+   ../../reference/parameters/imbeats-windowtimeout

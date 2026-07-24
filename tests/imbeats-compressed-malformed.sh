@@ -1,7 +1,7 @@
 #!/bin/bash
+# Verify malformed compressed input is rejected without an ACK and is counted
+# by the imbeats failure statistics.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
-require_plugin impstats
 
 generate_conf
 add_conf '

@@ -3,7 +3,6 @@
 # during config load. The oracle is rsyslogd -N1 succeeding while emitting the
 # explicit cap warning, so the test avoids opening listeners or sending traffic.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
 
 generate_conf
 add_conf '

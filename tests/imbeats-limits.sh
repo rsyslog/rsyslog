@@ -1,9 +1,7 @@
 #!/bin/bash
+# Verify configured window, frame, decompression, and batch limits reject
+# oversized traffic while preserving valid boundary traffic.
 . ${srcdir:=.}/diag.sh init
-require_plugin imbeats
-if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
-	require_plugin impstats
-fi
 
 generate_conf
 if [ "$IMBEATS_LIMITS_CHECK_STATS" = "YES" ]; then
@@ -95,6 +93,7 @@ rst_msleep 1500
 shutdown_when_empty
 wait_shutdown
 
+# shellcheck disable=SC2034
 EXPECTED='{"message":"ok"}'
 cmp_exact
 

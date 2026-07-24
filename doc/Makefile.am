@@ -232,15 +232,19 @@ EXTRA_DIST = \
     source/configuration/modules/mmutf8fix.rst \
     source/configuration/modules/module_workflow.png \
     source/reference/parameters/imbeats-address.rst \
+    source/reference/parameters/imbeats-frametimeout.rst \
     source/reference/parameters/imbeats-gnutlsprioritystring.rst \
+    source/reference/parameters/imbeats-idletimeout.rst \
     source/reference/parameters/imbeats-keepalive.rst \
     source/reference/parameters/imbeats-keepalive-interval.rst \
     source/reference/parameters/imbeats-keepalive-probes.rst \
     source/reference/parameters/imbeats-keepalive-time.rst \
     source/reference/parameters/imbeats-listenportfilename.rst \
     source/reference/parameters/imbeats-maxbatchbytes.rst \
+    source/reference/parameters/imbeats-maxcompressionratio.rst \
     source/reference/parameters/imbeats-maxdecompressedsize.rst \
     source/reference/parameters/imbeats-maxframesize.rst \
+    source/reference/parameters/imbeats-maxinflightbytes.rst \
     source/reference/parameters/imbeats-maxsessions.rst \
     source/reference/parameters/imbeats-maxwindowsize.rst \
     source/reference/parameters/imbeats-name.rst \
@@ -262,6 +266,7 @@ EXTRA_DIST = \
     source/reference/parameters/imbeats-streamdriver-tlsrevocationcheck.rst \
     source/reference/parameters/imbeats-streamdriver-tlsverifydepth.rst \
     source/reference/parameters/imbeats-workerthreads.rst \
+    source/reference/parameters/imbeats-windowtimeout.rst \
     source/configuration/modules/omamqp1.rst \
     source/configuration/modules/omazuredce.rst \
     source/configuration/modules/omawslogshlc.rst \
