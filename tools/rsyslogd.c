@@ -2616,6 +2616,9 @@ static void deinitAll(void) {
  * @param argv Array of argument strings.
  * @return 0 on clean exit, non-zero on error.
  */
+#ifdef RSYSLOG_FUZZ_TARGET
+int rsyslogd_main(int argc, char **argv);
+#endif
 int main(int argc, char **argv) {
 #if defined(_AIX)
     /* SRC support : fd 0 (stdin) must be the SRC socket

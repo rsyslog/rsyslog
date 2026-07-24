@@ -287,6 +287,34 @@ finalize_it:
     if (pBuf != NULL) free(pBuf);
 ENDparse
 
+#ifdef ENABLE_FUZZING
+rsRetVal pmrfc5424FuzzInit(void);
+void pmrfc5424FuzzExit(void);
+rsRetVal pmrfc5424FuzzParse(smsg_t *pMsg);
+
+rsRetVal pmrfc5424FuzzInit(void) {
+    DEFiRet;
+
+    CHKiRet(objGetObjInterface(&obj));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
+
+finalize_it:
+    RETiRet;
+}
+
+void pmrfc5424FuzzExit(void) {
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
+}
+
+rsRetVal pmrfc5424FuzzParse(smsg_t *pMsg) {
+    return parse(pMsg);
+}
+#endif
+
 
 BEGINmodExit
     CODESTARTmodExit;
