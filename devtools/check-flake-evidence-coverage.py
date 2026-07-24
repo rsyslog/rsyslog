@@ -33,6 +33,7 @@ EXPECTED_UPLOADS = {
     "imbeats.yml": 1,
     "imhttp_prometheus_scrape.yml": 1,
     "impstats_push_victoriametrics.yml": 1,
+    "debian_daily_stable.yml": 2,
 }
 TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
 UPLOAD_RE = re.compile(

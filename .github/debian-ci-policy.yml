@@ -15,6 +15,22 @@
     {
       "patch": "queue-quarantine-runtime-disk-corruption-safely.patch",
       "reason": "Debian latest carries a queue disk-corruption quarantine patch that is already effectively upstream and now applies in reverse."
+    },
+    {
+      "patch": "config-keep-empty-include-globs-silent.patch",
+      "reason": "Debian latest carries the upstream empty IncludeConfig glob behavior from commit e0651c019 and the cherry-picked patch no longer applies."
+    },
+    {
+      "patch": "testbench-add-daemon-termination-oracle.patch",
+      "reason": "Debian latest carries the upstream daemon termination oracle from commit 37a624442 and the cherry-picked patch no longer applies."
+    },
+    {
+      "patch": "Revert-tests-keep-epoll-preload-helper-test-only.patch",
+      "reason": "The Debian revert conflicts with the current upstream test-only preload-helper layout; daily packages must not install the fault-injection helper."
+    },
+    {
+      "patch": "Use-check_LTLIBRARIES-to-generate-liboverride_-test-libra.patch",
+      "reason": "Current upstream already uses check_LTLIBRARIES and TEST_LIBOVERRIDE_LDFLAGS for the preload helpers, so the Debian patch applies in reverse."
     }
   ],
   "supplemental_build_deps": [],
