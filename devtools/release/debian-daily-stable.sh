@@ -409,7 +409,7 @@ cmd_generate_repo() {
     --detach-sign --armor --output "$dist_dir/Release.gpg" "$dist_dir/Release"
 }
 
-cmd_verify_repo() {
+cmd_verify_repo() (
   local repo_url="$1"
   local suite="$2"
   local component="$3"
@@ -417,7 +417,7 @@ cmd_verify_repo() {
   local version="$5"
   local expected_key_fpr="$6"
   local tmp_dir packages_url_path packages_release_path
-  local packages_hash packages_size actual_key_fpr
+  local packages_hash packages_size actual_key_fpr cleanup_command
 
   command -v curl >/dev/null 2>&1 || die "curl not found"
   command -v gpg >/dev/null 2>&1 || die "gpg not found"
@@ -430,6 +430,10 @@ cmd_verify_repo() {
   packages_url_path="dists/$suite/$component/binary-$arch/Packages.xz"
   packages_release_path="$component/binary-$arch/Packages.xz"
   tmp_dir="$(mktemp -d)"
+  printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
+  # Expand now because function-local variables are unavailable to an EXIT trap.
+  # shellcheck disable=SC2064
+  trap "$cleanup_command" EXIT
 
   curl -fsSL "$repo_url/dists/$suite/InRelease" -o "$tmp_dir/InRelease"
   curl -fsSL "$repo_url/rsyslog-archive-keyring.asc" -o "$tmp_dir/repo-key.asc"
@@ -457,7 +461,8 @@ cmd_verify_repo() {
   grep -Fxq "Version: $version" "$tmp_dir/Packages" ||
     die "version $version not found in Packages"
   rm -rf "$tmp_dir"
-}
+  trap - EXIT
+)
 
 build_self_test_deb() {
   local root="$1"
@@ -475,8 +480,9 @@ build_self_test_deb() {
   dpkg-deb --build "$package_dir" "$root/rsyslog_${version}_amd64.deb" >/dev/null
 }
 
-cmd_self_test() {
+cmd_self_test() (
   local tmp_dir repo_dir first_artifacts second_artifacts fingerprint
+  local cleanup_command
 
   for tool in apt-ftparchive curl dpkg-deb gpg gpgv xz; do
     command -v "$tool" >/dev/null 2>&1 ||
@@ -484,13 +490,17 @@ cmd_self_test() {
   done
 
   tmp_dir="$(mktemp -d)"
+  printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
+  # Expand now because function-local variables are unavailable to an EXIT trap.
+  # shellcheck disable=SC2064
+  trap "$cleanup_command" EXIT
   repo_dir="$tmp_dir/repo"
   first_artifacts="$tmp_dir/artifacts-1"
   second_artifacts="$tmp_dir/artifacts-2"
   mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts"
   export GNUPGHOME="$tmp_dir/gnupg"
   install -m 700 -d "$GNUPGHOME"
-  gpg --batch --passphrase '' --quick-generate-key \
+  gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key \
     "rsyslog archive self-test <test@example.invalid>" rsa2048 sign 0 >/dev/null 2>&1
   fingerprint="$(secret_key_fingerprint)"
 
@@ -507,8 +517,9 @@ cmd_self_test() {
     "1.0~daily2" "$fingerprint"
 
   rm -rf "$tmp_dir"
+  trap - EXIT
   echo "Debian daily stable archive self-test passed."
-}
+)
 
 command="${1:-}"
 case "$command" in

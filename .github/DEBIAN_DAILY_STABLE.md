@@ -1,9 +1,10 @@
 # Debian daily stable package archive
 
 The `debian daily stable` workflow builds rsyslog from `v8-stable` for Debian
-13 (`trixie`) on `amd64`. Pull requests that change the archive automation run
-the same build without publishing. Scheduled publishing remains disabled until
-the DigitalOcean archive is provisioned.
+13 (`trixie`) on `amd64`. Pull requests that change the archive automation
+package the PR head so the proposed helper and policy are exercised, but do not
+publish. Scheduled publishing remains disabled until the DigitalOcean archive
+is provisioned.
 
 The workflow owns package construction, APT metadata generation, signing,
 upload ordering, and post-publication installation verification. DigitalOcean

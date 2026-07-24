@@ -168,6 +168,7 @@ jobs:
             xz-utils
 
       - name: Test incremental archive generation
+        id: archive_self_test
         run: |
           devtools/ci-flake-phase.sh run debian-archive-self-test custom -- \
             "$GITHUB_WORKSPACE/$DEBIAN_DAILY_STABLE_HELPER" self-test
@@ -246,6 +247,7 @@ jobs:
             strict
 
       - name: Build source and binary packages
+        id: package_build
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -259,7 +261,12 @@ jobs:
               "$DEBIAN_BUILD_ROOT/debian-daily-stable-build.log"
 
       - name: Upload failure evidence
-        if: failure()
+        if: >-
+          ${{
+            failure() &&
+            (steps.archive_self_test.outcome == 'failure' ||
+             steps.package_build.outcome == 'failure')
+          }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: Debian 13 daily stable package build
@@ -551,6 +558,7 @@ jobs:
             xz-utils
 
       - name: Wait for CDN and verify signed metadata
+        id: published_metadata
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
@@ -591,6 +599,7 @@ jobs:
           fi
 
       - name: Install the published package
+        id: published_install
         env:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
@@ -615,7 +624,12 @@ jobs:
           exit "${install_status[0]}"
 
       - name: Upload publication failure evidence
-        if: failure()
+        if: >-
+          ${{
+            failure() &&
+            (steps.published_metadata.outcome == 'failure' ||
+             steps.published_install.outcome == 'failure')
+          }}
         uses: ./.github/actions/upload-flake-evidence
         with:
           job-name: Debian 13 daily stable publication verification
