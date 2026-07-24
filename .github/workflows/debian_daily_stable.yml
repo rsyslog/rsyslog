@@ -601,7 +601,7 @@ jobs:
             exit "$verification_rc"
           fi
 
-      - name: Install the published package
+      - name: Install and smoke-test the published package
         id: published_install
         env:
           VERSION: ${{ needs.build.outputs.version }}
@@ -618,7 +618,13 @@ jobs:
               > /etc/apt/sources.list.d/rsyslog-daily-stable.list
             apt-get update
             apt-get install -y "rsyslog=$VERSION"
+            installed_version="$(dpkg-query -W -f='${Version}\n' rsyslog)"
+            [ "$installed_version" = "$VERSION" ] || {
+              echo "installed rsyslog version $installed_version does not match $VERSION" >&2
+              exit 1
+            }
             rsyslogd -v
+            rsyslogd -N1
           ) 2>&1 | tee .ci/flake-evidence/logs/debian-published-install.log
           install_status=("${PIPESTATUS[@]}")
           set -e

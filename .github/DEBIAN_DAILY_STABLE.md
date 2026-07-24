@@ -7,9 +7,11 @@ publish. Scheduled publishing remains disabled until the DigitalOcean archive
 is provisioned.
 
 The workflow owns package construction, APT metadata generation, signing,
-upload ordering, and post-publication installation verification. DigitalOcean
-Spaces is passive S3-compatible storage behind its CDN; no package-building
-service runs there.
+upload ordering, and post-publication installation verification. The
+verification job uses the public CDN from a clean Debian 13 container, installs
+the exact published version, and smoke-tests the installed binary and default
+configuration. DigitalOcean Spaces is passive S3-compatible storage behind its
+CDN; no package-building service runs there.
 
 ## Archive layout and retention
 
@@ -77,8 +79,8 @@ Before enabling the schedule:
    artifact.
 2. Provision the Space, CDN, DNS, signing key, variables, and secrets.
 3. Run it manually with publication enabled.
-4. Confirm that signed metadata verification and the clean Debian 13 package
-   installation both pass.
+4. Confirm that signed metadata verification, clean Debian 13 package
+   installation, and installed-configuration smoke test all pass.
 5. Set `DEBIAN_DAILY_STABLE_ENABLED` to `true`.
 
 There is deliberately no five-year GitHub Actions artifact retention. The
