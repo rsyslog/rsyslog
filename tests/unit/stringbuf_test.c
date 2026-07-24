@@ -175,11 +175,26 @@ static int test_destructive_convert_semantics(void) {
 static int test_setszstr_requires_finalize(void) {
     cstr_t *str = NULL;
 
+    /* Empty non-NULL input must remain valid even when no backing buffer has
+     * been allocated yet. UBSan rejects passing that NULL buffer to memcpy,
+     * including when the requested copy length is zero. */
     CHECK(rsCStrConstruct(&str) == RS_RET_OK);
+    CHECK(rsCStrSetSzStr(str, (uchar *)"") == RS_RET_OK);
+    cstrFinalize(str);
+    CHECK(rsCStrLen(str) == 0);
+    CHECK(strcmp((char *)rsCStrGetSzStrNoNULL(str), "") == 0);
+
     CHECK(rsCStrSetSzStr(str, (uchar *)"new-value") == RS_RET_OK);
     cstrFinalize(str);
     CHECK(rsCStrLen(str) == strlen("new-value"));
     CHECK(strcmp((char *)rsCStrGetSzStrNoNULL(str), "new-value") == 0);
+
+    /* Reusing the allocated buffer for an empty string must not expose the
+     * previous value through the NUL-terminated string view. */
+    CHECK(rsCStrSetSzStr(str, (uchar *)"") == RS_RET_OK);
+    cstrFinalize(str);
+    CHECK(rsCStrLen(str) == 0);
+    CHECK(strcmp((char *)rsCStrGetSzStrNoNULL(str), "") == 0);
 
     CHECK(rsCStrSetSzStr(str, NULL) == RS_RET_OK);
     cstrFinalize(str);
