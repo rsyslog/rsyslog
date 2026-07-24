@@ -18,6 +18,7 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 startup
 shutdown_when_empty
 wait_shutdown
-content_check "Error: CA certificate could not be accessed"
+content_check "Error: CA certificate '"
+content_check "could not be accessed"
 content_check "OpenSSL Error Stack:"
 exit_test

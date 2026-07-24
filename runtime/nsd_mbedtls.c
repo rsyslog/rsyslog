@@ -540,6 +540,19 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsCAExtraFiles(nsd_t __attribute__((unused)) * pNsd, const uchar *const pszFile) {
+    DEFiRet;
+    if (pszFile != NULL) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: extra CA Files setting not supported by "
+                 "mbedtls netstream driver");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
     nsd_mbedtls_t *pThis = nsd_mbedtls_from_nsd(pNsd);
@@ -1497,6 +1510,7 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
+    pIf->SetTlsCAExtraFiles = SetTlsCAExtraFiles;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;

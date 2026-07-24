@@ -110,6 +110,7 @@ typedef struct _instanceData {
     int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
     const uchar *pszStrmDrvrCAFile;
     const uchar *pszStrmDrvrCRLFile;
+    const uchar *pszStrmDrvrCAExtraFiles;
     const uchar *pszStrmDrvrKeyFile;
     const uchar *pszStrmDrvrCertFile;
     int nTargets;
@@ -224,8 +225,11 @@ static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
 /* module-global parameters */
-static struct cnfparamdescr modpdescr[] = {{"iobuffer.maxsize", eCmdHdlrNonNegInt, 0},
-                                           {"template", eCmdHdlrGetWord, 0}};
+static struct cnfparamdescr modpdescr[] = {
+    {"iobuffer.maxsize", eCmdHdlrNonNegInt, 0},       {"template", eCmdHdlrGetWord, 0},
+    {"streamdriver.cafile", eCmdHdlrString, 0},       {"streamdriver.crlfile", eCmdHdlrString, 0},
+    {"streamdriver.caextrafiles", eCmdHdlrString, 0}, {"streamdriver.keyfile", eCmdHdlrString, 0},
+    {"streamdriver.certfile", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* action (instance) parameters */
@@ -268,6 +272,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
     {"streamdriver.cafile", eCmdHdlrString, 0},
     {"streamdriver.crlfile", eCmdHdlrString, 0},
+    {"streamdriver.caextrafiles", eCmdHdlrString, 0},
     {"streamdriver.keyfile", eCmdHdlrString, 0},
     {"streamdriver.certfile", eCmdHdlrString, 0},
     {"resendlastmsgonreconnect", eCmdHdlrBinary, 0},
@@ -285,6 +290,11 @@ static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / si
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *tplName; /* default template */
+    uchar *pszStrmDrvrCAFile; /* module default CA file or URI */
+    uchar *pszStrmDrvrCRLFile; /* module default CRL file or URI */
+    uchar *pszStrmDrvrCAExtraFiles; /* module default extra CA files or URIs */
+    uchar *pszStrmDrvrKeyFile; /* module default private key file or URI */
+    uchar *pszStrmDrvrCertFile; /* module default certificate file or URI */
     int maxLenSndBuf; /* default max usable length of sendbuf - primarily for testing */
 };
 
@@ -324,6 +334,91 @@ static uchar *getDfltTpl(void) {
         return (uchar *)"RSYSLOG_TraditionalForwardFormat";
     else
         return cs.pszTplName;
+}
+
+/**
+ * @brief Check whether the effective netstream driver selects the OpenSSL
+ * driver.
+ * @param drvr Effective netstream driver name, or NULL.
+ * @return Non-zero when the effective driver is ``ossl``.
+ */
+static int isOsslNetstrmDrvr(const uchar *const drvr) {
+    return drvr != NULL && !strcasecmp((const char *)drvr, "ossl");
+}
+
+/**
+ * @brief Check whether a TLS object reference uses a strict PKCS#11 URI.
+ * @param ref TLS object reference string, or NULL.
+ * @return Non-zero when the reference begins with ``pkcs11:``.
+ */
+static int isPkcs11UriRef(const uchar *const ref) {
+    return ref != NULL && !strncasecmp((const char *)ref, "pkcs11:", sizeof("pkcs11:") - 1);
+}
+
+/**
+ * @brief Copy a module-scope TLS object default into an action instance.
+ *
+ * The destination is updated only when the action instance did not already set
+ * the corresponding parameter. This preserves the precedence order of action
+ * setting over module default over global netstream default.
+ */
+static rsRetVal ATTR_NONNULL(1) copyModuleTlsDefaultIfUnset(uchar **const ppDst, const uchar *const pSrc) {
+    DEFiRet;
+
+    if (*ppDst == NULL && pSrc != NULL) {
+        CHKmalloc(*ppDst = ustrdup(pSrc));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/**
+ * @brief Apply builtin:omfwd module TLS defaults to an action instance.
+ *
+ * This fills in any unset CA, CRL, key, and certificate references from the
+ * current omfwd module configuration, leaving explicitly configured action
+ * values untouched. Global netstream defaults remain the final fallback in the
+ * driver when both action and module settings are absent.
+ *
+ * Module defaults are applied only when the effective stream driver supports
+ * the corresponding setting. Ordinary filesystem-backed TLS defaults remain
+ * available to every TLS-capable driver, but strict ``pkcs11:`` URI defaults
+ * are inherited only by ``ossl`` actions. This preserves mixed deployments
+ * where ``builtin:omfwd`` provides shared TLS defaults for encrypted
+ * forwarding actions, while other omfwd actions in the same configuration
+ * still use plain TCP or another TLS driver that cannot resolve PKCS#11
+ * objects. Explicit action parameters remain untouched so unsupported
+ * action-level settings still fail in the selected driver instead of being
+ * silently ignored.
+ */
+static rsRetVal ATTR_NONNULL() applyModuleTlsDefaults(instanceData *const pData, const modConfData_t *const pModConf) {
+    DEFiRet;
+    const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(pModConf->pConf, pData->pszStrmDrvr);
+    const int tlsCapable = glblIsTlsCapableNetstrmDrvr(effectiveDrvr);
+    const int osslDriver = isOsslNetstrmDrvr(effectiveDrvr);
+
+    if (tlsCapable) {
+        if (!isPkcs11UriRef(pModConf->pszStrmDrvrCAFile) || osslDriver) {
+            CHKiRet(copyModuleTlsDefaultIfUnset((uchar **)&pData->pszStrmDrvrCAFile, pModConf->pszStrmDrvrCAFile));
+        }
+        if (!isPkcs11UriRef(pModConf->pszStrmDrvrCRLFile)) {
+            CHKiRet(copyModuleTlsDefaultIfUnset((uchar **)&pData->pszStrmDrvrCRLFile, pModConf->pszStrmDrvrCRLFile));
+        }
+        if (!isPkcs11UriRef(pModConf->pszStrmDrvrKeyFile) || osslDriver) {
+            CHKiRet(copyModuleTlsDefaultIfUnset((uchar **)&pData->pszStrmDrvrKeyFile, pModConf->pszStrmDrvrKeyFile));
+        }
+        if (!isPkcs11UriRef(pModConf->pszStrmDrvrCertFile) || osslDriver) {
+            CHKiRet(copyModuleTlsDefaultIfUnset((uchar **)&pData->pszStrmDrvrCertFile, pModConf->pszStrmDrvrCertFile));
+        }
+    }
+    if (osslDriver) {
+        CHKiRet(
+            copyModuleTlsDefaultIfUnset((uchar **)&pData->pszStrmDrvrCAExtraFiles, pModConf->pszStrmDrvrCAExtraFiles));
+    }
+
+finalize_it:
+    RETiRet;
 }
 
 
@@ -777,6 +872,11 @@ BEGINbeginCnfLoad
     loadModConf = pModConf;
     pModConf->pConf = pConf;
     pModConf->tplName = NULL;
+    pModConf->pszStrmDrvrCAFile = NULL;
+    pModConf->pszStrmDrvrCRLFile = NULL;
+    pModConf->pszStrmDrvrCAExtraFiles = NULL;
+    pModConf->pszStrmDrvrKeyFile = NULL;
+    pModConf->pszStrmDrvrCertFile = NULL;
     pModConf->maxLenSndBuf = -1;
 ENDbeginCnfLoad
 
@@ -815,6 +915,21 @@ BEGINsetModCnf
                     loadModConf->maxLenSndBuf = newLen;
                 }
             }
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
+            free(loadModConf->pszStrmDrvrCAFile);
+            CHKmalloc(loadModConf->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
+            free(loadModConf->pszStrmDrvrCRLFile);
+            CHKmalloc(loadModConf->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.caextrafiles")) {
+            free(loadModConf->pszStrmDrvrCAExtraFiles);
+            CHKmalloc(loadModConf->pszStrmDrvrCAExtraFiles = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
+            free(loadModConf->pszStrmDrvrKeyFile);
+            CHKmalloc(loadModConf->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
+            free(loadModConf->pszStrmDrvrCertFile);
+            CHKmalloc(loadModConf->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else {
             LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_ERR, "omfwd: internal error, non-handled param '%s' in beginCnfLoad",
                    modpblk.descr[i].name);
@@ -844,6 +959,11 @@ ENDactivateCnf
 BEGINfreeCnf
     CODESTARTfreeCnf;
     free(pModConf->tplName);
+    free(pModConf->pszStrmDrvrCAFile);
+    free(pModConf->pszStrmDrvrCRLFile);
+    free(pModConf->pszStrmDrvrCAExtraFiles);
+    free(pModConf->pszStrmDrvrKeyFile);
+    free(pModConf->pszStrmDrvrCertFile);
 ENDfreeCnf
 
 BEGINcreateInstance
@@ -909,9 +1029,16 @@ BEGINsetActionInfo
     pData->pAction = pAction;
 ENDsetActionInfo
 
-
+/**
+ * @brief Release all action-instance resources owned by an omfwd action.
+ *
+ * This includes transport-related configuration strings, dynamically
+ * allocated target metadata, TLS object paths or URIs, and the optional
+ * action-level template name used when building the output message stream.
+ */
 BEGINfreeInstance
     CODESTARTfreeInstance;
+    free(pData->tplName);
     free(pData->pszStrmDrvr);
     free(pData->pszStrmDrvrAuthMode);
     free(pData->pszStrmDrvrPermitExpiredCerts);
@@ -937,6 +1064,7 @@ BEGINfreeInstance
     free(pData->device);
     free((void *)pData->pszStrmDrvrCAFile);
     free((void *)pData->pszStrmDrvrCRLFile);
+    free((void *)pData->pszStrmDrvrCAExtraFiles);
     free((void *)pData->pszStrmDrvrKeyFile);
     free((void *)pData->pszStrmDrvrCertFile);
     free(pData->pszRatelimitName);
@@ -1460,6 +1588,7 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
         CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pTarget->pNetstrm, pData->pszStrmDrvrPermitExpiredCerts));
         CHKiRet(netstrm.SetDrvrTlsCAFile(pTarget->pNetstrm, pData->pszStrmDrvrCAFile));
         CHKiRet(netstrm.SetDrvrTlsCRLFile(pTarget->pNetstrm, pData->pszStrmDrvrCRLFile));
+        CHKiRet(netstrm.SetDrvrTlsCAExtraFiles(pTarget->pNetstrm, pData->pszStrmDrvrCAExtraFiles));
         CHKiRet(netstrm.SetDrvrTlsKeyFile(pTarget->pNetstrm, pData->pszStrmDrvrKeyFile));
         CHKiRet(netstrm.SetDrvrTlsCertFile(pTarget->pNetstrm, pData->pszStrmDrvrCertFile));
 
@@ -2039,6 +2168,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->iStrmTlsVerifyDepth = 0;
     pData->pszStrmDrvrCAFile = NULL;
     pData->pszStrmDrvrCRLFile = NULL;
+    pData->pszStrmDrvrCAExtraFiles = NULL;
     pData->pszStrmDrvrKeyFile = NULL;
     pData->pszStrmDrvrCertFile = NULL;
     pData->iRebindInterval = 0;
@@ -2341,6 +2471,8 @@ BEGINnewActInst
             CHKmalloc(pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.crlfile")) {
             CHKmalloc(pData->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "streamdriver.caextrafiles")) {
+            CHKmalloc(pData->pszStrmDrvrCAExtraFiles = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.keyfile")) {
             CHKmalloc(pData->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.certfile")) {
@@ -2477,6 +2609,7 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
+    CHKiRet(applyModuleTlsDefaults(pData, loadModConf));
     CHKiRet(applySecureDefaultsToForwarding(pData));
 
     if (pData->targetSrv != NULL) {
@@ -2751,6 +2884,7 @@ BEGINparseSelectorAct
             cs.pPermPeers = NULL;
         }
     }
+    CHKiRet(applyModuleTlsDefaults(pData, loadModConf));
     CHKiRet(applySecureDefaultsToForwarding(pData));
     warnIfNonTlsForwardingConfigured(pData);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {

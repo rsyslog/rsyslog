@@ -78,6 +78,9 @@ static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeo
 
 typedef rsRetVal (*pModInit_t)(int, int *, rsRetVal (**)(), rsRetVal (*)(), modInfo_t *);
 
+static const char cfgModRefSrc[] = "cfgmodules";
+static rsRetVal Use(const char *srcFile, modInfo_t *pThis);
+
 /* we provide a set of dummy functions for modules that do not support the
  * some interfaces.
  * On the commit feature: As the modules do not support it, they commit each message they
@@ -401,6 +404,12 @@ rsRetVal ATTR_NONNULL(1) addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodu
         abortCnfUse(pNew);
         FINALIZE; /* we are in an early init state */
     }
+
+    /* The config keeps a raw modInfo_t pointer and later calls module entry
+     * points during rsconf teardown, so hold an explicit module reference for
+     * the lifetime of the cfgmodules entry.
+     */
+    CHKiRet(Use(cfgModRefSrc, (*pNew)->pMod));
 
     if (pLast == NULL) {
         loadConf->modules.root = *pNew;

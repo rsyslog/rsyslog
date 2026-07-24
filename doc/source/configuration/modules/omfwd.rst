@@ -36,6 +36,20 @@ To configure global defaults, use ``builtin:omfwd``.
    system resolver. Reverse lookup cache settings (:ref:`reverse_dns_cache`)
    do not affect outbound name resolution.
 
+.. note::
+   When ``StreamDriver="ossl"`` is used on supported OpenSSL 3 builds,
+   ``StreamDriver.CAFile``, ``StreamDriver.CAExtraFiles``,
+   ``StreamDriver.CertFile``, and ``StreamDriver.KeyFile`` on either the
+   ``omfwd`` action or the ``builtin:omfwd`` module may be configured either
+   as normal filesystem paths or as strict ``pkcs11:`` URIs. This allows TLS
+   trust anchors, additional intermediate CA certificates, certificates, and
+   private keys to be loaded from provider-backed PKCS#11 objects instead of
+   PEM files on disk. The global default parameters
+   ``DefaultNetstreamDriverCAFile``, ``DefaultNetstreamDriverCertFile``,
+   ``DefaultNetstreamDriverKeyFile``, and ``NetstreamDriverCAExtraFiles``
+   still validate as filesystem paths today and therefore must not be set to
+   ``pkcs11:`` URIs.
+
 Best Practices
 ==============
 
@@ -97,6 +111,55 @@ The most common forwarding examples:
        StreamDriverMode="1"        # TLS-only mode
        StreamDriverAuthMode="x509/name"
        StreamDriverPermittedPeers="logs.example.com"
+   )
+
+**2a. Secure log forwarding with TLS and PKCS#11 URIs**
+
+.. note::
+   The ``pkcs11:`` values shown in the examples are illustrative. Replace
+   ``token=``, ``object=``, and any other URI attributes with values that
+   match the objects provisioned in your own PKCS#11 token or device.
+   rsyslog recognizes only the strict ``pkcs11:`` prefix and otherwise passes
+   the URI through to OpenSSL and the configured PKCS#11 provider. The exact
+   URI attributes and matching behavior therefore depend on that provider and
+   backend implementation.
+
+.. code-block:: rsyslog
+
+   # Set shared PKCS#11-backed TLS defaults for omfwd actions
+   module(
+       load="builtin:omfwd"
+       StreamDriver.CAFile="pkcs11:token=rsyslog;object=ca-cert;type=cert"
+       StreamDriver.CAExtraFiles="pkcs11:token=rsyslog;object=intermediate-ca-cert;type=cert"
+       StreamDriver.CertFile="pkcs11:token=rsyslog;object=client-cert;type=cert"
+       StreamDriver.KeyFile="pkcs11:token=rsyslog;object=client-key;type=private"
+   )
+
+   # Forward logs securely using those defaults, while overriding
+   # the additional CA list and permitted peer name for this action
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"
+       protocol="tcp"
+       StreamDriver="ossl"
+       StreamDriverMode="1"
+       StreamDriverAuthMode="x509/name"
+       StreamDriver.CAExtraFiles="pkcs11:token=rsyslog;object=region2-intermediate-ca-cert;type=cert"
+       StreamDriverPermittedPeers="logs.example.com"
+       queue.type="linkedList"
+   )
+
+   # A second action may reuse the module defaults unchanged
+   action(
+       type="omfwd"
+       target="logs-backup.example.com"
+       port="6514"
+       protocol="tcp"
+       StreamDriver="ossl"
+       StreamDriverMode="1"
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs-backup.example.com"
    )
 
 **3. Discover receivers via DNS SRV**
@@ -199,6 +262,145 @@ You only need filters (e.g., `if ... then ...`) when you want to **selectively f
    *.* @@remote.example.com
 
 is fully equivalent to the modern example above, **without needing `*.*`.**
+
+Using PKCS#11 Objects with the ossl Driver
+==========================================
+
+When ``omfwd`` is configured with ``StreamDriver="ossl"``, rsyslog can load
+TLS objects from PKCS#11 URIs instead of from PEM files on the local
+filesystem.
+
+This support is useful when you want one or more of the following:
+
+- keep the private key in a hardware security module (HSM), smartcard,
+  trusted platform module (TPM)-backed token, or software
+  token instead of storing it as a readable PEM file
+- use a non-exportable key that OpenSSL may use for signing, but that
+  operators and filesystem backups cannot copy out
+- centralize certificate and key lifecycle in a device or token manager that
+  already speaks PKCS#11
+- satisfy operational or compliance requirements that prohibit writing long
+  lived private key material to disk
+
+Prerequisites
+-------------
+
+Before using PKCS#11 URIs with ``omfwd``, ensure all of the following are true:
+
+- rsyslog is using the ``ossl`` netstream driver
+- OpenSSL 3.x is installed and the rsyslog build uses OpenSSL with provider
+  support
+- an OpenSSL PKCS#11 provider package is installed and configured
+- a PKCS#11 backend implementation for your device or token is installed
+  (for example, a vendor HSM library or a software token such as SoftHSM)
+- the required certificate and private-key objects already exist in the token
+- any required login or PIN handling is configured through the provider or the
+  runtime environment
+
+rsyslog does not implement PKCS#11 token management itself. It passes the
+configured ``pkcs11:`` URI to OpenSSL, and OpenSSL then resolves that URI
+through the configured provider and backend module.
+
+For ``omfwd``, configure PKCS#11 URIs either on the action parameters
+``StreamDriver.CAFile``, ``StreamDriver.CAExtraFiles``,
+``StreamDriver.CertFile``, and ``StreamDriver.KeyFile`` or on the
+``builtin:omfwd`` module defaults with the same parameter names. Do not
+configure ``pkcs11:`` URIs through ``DefaultNetstreamDriverCAFile``,
+``DefaultNetstreamDriverCertFile``, ``DefaultNetstreamDriverKeyFile``, or
+``NetstreamDriverCAExtraFiles`` until those global validation paths are
+extended to accept non-filesystem objects. ``StreamDriver.CRLFile`` also
+remains a filesystem-path setting today.
+
+Action-level Example
+--------------------
+
+Use action parameters when only one forwarding action should use PKCS#11
+objects:
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"
+       protocol="tcp"
+       StreamDriver="ossl"
+       StreamDriverMode="1"
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs.example.com"
+       StreamDriver.CAFile="pkcs11:token=rsyslog;object=ca-cert;type=cert"
+       StreamDriver.CAExtraFiles="pkcs11:token=rsyslog;object=intermediate-ca-cert;type=cert"
+       StreamDriver.CertFile="pkcs11:token=rsyslog;object=client-cert;type=cert"
+       StreamDriver.KeyFile="pkcs11:token=rsyslog;object=client-key;type=private"
+       queue.type="linkedList"
+   )
+
+Module-default Example
+----------------------
+
+Use ``builtin:omfwd`` module defaults when multiple ``omfwd`` actions should
+share the same PKCS#11-backed TLS material:
+
+.. code-block:: rsyslog
+
+   module(
+       load="builtin:omfwd"
+       StreamDriver.CAFile="pkcs11:token=rsyslog;object=ca-cert;type=cert"
+       StreamDriver.CAExtraFiles="pkcs11:token=rsyslog;object=intermediate-ca-cert;type=cert"
+       StreamDriver.CertFile="pkcs11:token=rsyslog;object=client-cert;type=cert"
+       StreamDriver.KeyFile="pkcs11:token=rsyslog;object=client-key;type=private"
+   )
+
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"
+       protocol="tcp"
+       StreamDriver="ossl"
+       StreamDriverMode="1"
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs.example.com"
+   )
+
+Action-level values override the ``builtin:omfwd`` module defaults for the same
+parameter. The module defaults, in turn, override the global netstream driver
+defaults. Filesystem-backed module defaults remain available to any TLS-capable
+driver, but module defaults whose values are strict ``pkcs11:`` URIs are
+inherited only by actions whose effective stream driver is ``ossl``.
+
+Global Defaults
+---------------
+
+The global default TLS file parameters remain filesystem-path settings today:
+
+- ``DefaultNetstreamDriverCAFile``
+- ``DefaultNetstreamDriverCertFile``
+- ``DefaultNetstreamDriverKeyFile``
+- ``NetstreamDriverCAExtraFiles``
+
+They are validated during configuration loading with ordinary file access
+checks, so they currently cannot be set to ``pkcs11:`` URIs. If multiple
+``omfwd`` actions need PKCS#11-backed material, set the PKCS#11 URIs on each
+action explicitly or use ``builtin:omfwd`` module defaults.
+
+Operational Tips
+----------------
+
+- Prefer provider-based PIN handling over embedding ``pin-value=...`` inside
+  the URI in the rsyslog configuration. Provider configuration is usually
+  easier to rotate and less likely to be copied into configuration management
+  artifacts.
+- rsyslog does not interpret provider-specific PKCS#11 URI attributes beyond
+  recognizing the strict ``pkcs11:`` prefix. If your environment needs vendor
+  attributes, token selectors, or provider-specific matching rules, validate
+  them with OpenSSL and the provider first.
+- Keep the CA, certificate, and private key aligned. A mismatched certificate
+  and key will fail the TLS handshake just as it would with PEM files.
+- Use ordinary filesystem paths when PKCS#11 is not needed. PKCS#11 is most
+  useful when the private key must remain outside the filesystem or when your
+  environment already standardizes on token-backed key management.
+- If you use intermediate CA chains, verify how those certificates are
+  provisioned in your environment before switching away from PEM bundle files.
 
 Configuration Parameters
 ========================
@@ -818,6 +1020,24 @@ StreamDriver.CAFile
 This permits to override the CA file set via `global()` config object at the
 per-action basis. This parameter is ignored if the netstream driver and/or its
 mode does not need or support certificates.
+
+StreamDriver.CAExtraFiles
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global() default", "no", "none"
+
+.. versionadded:: 8.2608.0
+
+This permits to override the additional CA certificate list set via the
+`global()` config object at the per-action basis. The value is a comma-separated
+list of filesystem paths or, for the ``ossl`` stream driver on supported
+OpenSSL 3 builds, strict ``pkcs11:`` URIs. This parameter is ignored if the
+netstream driver and/or its mode does not need or support certificates.
 
 StreamDriver.CRLFile
 ^^^^^^^^^^^^^^^^^^^^

@@ -1616,6 +1616,22 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsCAExtraFiles(nsd_t *pNsd, const uchar *const extraCaFiles) {
+    DEFiRet;
+    nsd_ossl_t *const pThis = (nsd_ossl_t *)pNsd;
+
+    ISOBJ_TYPE_assert((pThis), nsd_ossl);
+    free((void *)pThis->pNetOssl->pszExtraCAFiles);
+    pThis->pNetOssl->pszExtraCAFiles = NULL;
+
+    if (extraCaFiles != NULL) {
+        CHKmalloc(pThis->pNetOssl->pszExtraCAFiles = (const uchar *)strdup((const char *)extraCaFiles));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 
 static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
     DEFiRet;
@@ -1720,6 +1736,7 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
     pIf->SetTlsCAFile = SetTlsCAFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->SetTlsCAExtraFiles = SetTlsCAExtraFiles;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->GetRemotePort = GetRemotePort;
