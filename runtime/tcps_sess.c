@@ -173,14 +173,19 @@ static void release_zstd_window_reservation(tcps_sess_t *const pThis) {
 }
 #endif
 
+static void release_zlib_decoder(tcps_sess_t *const pThis) {
+    if (!pThis->zipInitDone) return;
+
+    inflateEnd(&pThis->zstrm);
+    memset(&pThis->zstrm, 0, sizeof(pThis->zstrm));
+    pThis->zipInitDone = 0;
+}
+
 
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(tcps_sess);
-    if (pThis->zipInitDone) {
-        inflateEnd(&pThis->zstrm);
-        pThis->zipInitDone = 0;
-    }
+    release_zlib_decoder(pThis);
 #ifdef ENABLE_LIBZSTD
     if (pThis->zstdDctx != NULL) {
         ZSTD_freeDCtx((ZSTD_DCtx *)pThis->zstdDctx);
@@ -939,6 +944,8 @@ static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis,
                                            "data after end of zlib stream");
                 ABORT_FINALIZE(RS_RET_ZLIB_ERR);
             }
+            release_zlib_decoder(pThis);
+            DBGPRINTF("tcps_sess: released zlib decoder after stream completion\n");
             break;
         }
 
@@ -953,6 +960,7 @@ static rsRetVal DataRcvdCompressedZlib(tcps_sess_t *const pThis,
     } while (pThis->zstrm.avail_in != 0 || pThis->zstrm.avail_out == 0);
 
 finalize_it:
+    if (iRet != RS_RET_OK) release_zlib_decoder(pThis);
     RETiRet;
 }
 
@@ -1112,8 +1120,7 @@ static rsRetVal finishCompressedStream(tcps_sess_t *pThis) {
             FINALIZE;
         }
         logCompressedStreamFailure(pThis, "detected truncated compressed stream", "zlib stream ended before trailer");
-        inflateEnd(&pThis->zstrm);
-        pThis->zipInitDone = 0;
+        release_zlib_decoder(pThis);
         ABORT_FINALIZE(RS_RET_ZLIB_ERR);
     }
 

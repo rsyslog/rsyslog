@@ -840,6 +840,7 @@ TESTS_IMTCP = \
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
 	imtcp-stream-always-zlib-basic.sh \
+	imtcp-stream-always-zlib-completion-release.sh \
 	imtcp-stream-always-zlib-flushoff.sh \
 	imtcp-stream-always-zlib-corrupt.sh \
 	imtcp-stream-always-zlib-truncated.sh \
@@ -2176,7 +2177,8 @@ sndrcv_gzip.log: sndrcv_failover.log
 sndrcv_udp_nonstdpt.log: sndrcv_gzip.log
 sndrcv_udp_nonstdpt_v6.log: sndrcv_udp_nonstdpt.log
 imtcp-stream-always-zlib-basic.log: sndrcv_udp_nonstdpt_v6.log
-imtcp-stream-always-zlib-flushoff.log: imtcp-stream-always-zlib-basic.log
+imtcp-stream-always-zlib-completion-release.log: imtcp-stream-always-zlib-basic.log
+imtcp-stream-always-zlib-flushoff.log: imtcp-stream-always-zlib-completion-release.log
 imtcp-stream-always-zlib-corrupt.log: imtcp-stream-always-zlib-flushoff.log
 imtcp-stream-always-zlib-truncated.log: imtcp-stream-always-zlib-corrupt.log
 imtcp-stream-always-zlib-fragmented-ratio.log: imtcp-stream-always-zlib-truncated.log
