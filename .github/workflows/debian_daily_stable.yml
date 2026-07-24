@@ -126,6 +126,14 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       source_sha: ${{ steps.source.outputs.source_sha }}
     steps:
+      - name: Bootstrap container tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            git \
+            python3
+
       - name: Checkout archive automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -587,6 +595,7 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
+          mkdir -p .ci/flake-evidence/logs
           devtools/ci-flake-phase.sh begin debian-published-install custom
           set +e
           (
