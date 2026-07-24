@@ -2256,11 +2256,13 @@ TESTS_MMTAGHOSTNAME = \
 TESTS_MMKUBERNETES = \
 	mmkubernetes-basic.sh \
 	mmkubernetes-cache-expire.sh \
-	mmkubernetes-url-failover.sh
+	mmkubernetes-url-failover.sh \
+	mmkubernetes-token-reload.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
-	mmkubernetes-cache-expire-vg.sh
+	mmkubernetes-cache-expire-vg.sh \
+	mmkubernetes-token-reload-vg.sh
 
 TESTS_IMKUBERNETES = \
 	imkubernetes-cri-partial-accept.sh \

@@ -152,6 +152,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmkubernetes-tokenfile.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-tokenreloadinterval`
+     - .. include:: ../../reference/parameters/mmkubernetes-tokenreloadinterval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -177,6 +181,7 @@ Action Parameters
    ../../reference/parameters/mmkubernetes-tls-myprivkey
    ../../reference/parameters/mmkubernetes-token
    ../../reference/parameters/mmkubernetes-tokenfile
+   ../../reference/parameters/mmkubernetes-tokenreloadinterval
 
 .. _mmkubernetes-statistic-counter:
 
