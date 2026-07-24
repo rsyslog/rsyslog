@@ -2120,22 +2120,65 @@ finalize_it:
     RETiRet;
 }
 
+/* True when the action carries TLS-specific settings other than the stream
+ * driver name and authmode (which the callers check separately): CA/CRL/key/cert
+ * files, permitted peers, remote SNI, expired-cert handling, or a GnuTLS priority
+ * string. These are consumed only when the TCP stream driver runs in TLS mode, so
+ * on a plain transport (UDP, or streamdriver.mode="0") they are silently ignored
+ * and their presence signals a misconfiguration. */
+static int omfwdActionHasTlsOptions(const instanceData *const pData) {
+    return pData->pszStrmDrvrCAFile != NULL || pData->pszStrmDrvrCRLFile != NULL || pData->pszStrmDrvrKeyFile != NULL ||
+           pData->pszStrmDrvrCertFile != NULL || pData->pPermPeers != NULL || pData->pszStrmDrvrRemoteSNI != NULL ||
+           pData->pszStrmDrvrPermitExpiredCerts != NULL || pData->gnutlsPriorityString != NULL;
+}
+
 /** Warn in secure warn mode when omfwd is configured without TLS transport protection. */
-static void warnIfNonTlsForwardingConfigured(const instanceData *const pData) {
+static void warnIfNonTlsForwardingConfigured(const instanceData *const pData, const int protocolWasSet) {
     if (pData->protocol == FORW_UDP) {
-        glblWarnIfInsecureDefault(loadModConf->pConf,
-                                  "omfwd action uses protocol=\"udp\" (without TLS); "
-                                  "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        /* Only action-level TLS settings count here. UDP never uses a stream
+         * driver, so the global defaultNetstreamDriver is irrelevant to a UDP
+         * action and must NOT trigger a warning for an explicit protocol="udp"
+         * (unlike the TCP mode-0 branch below, where the effective driver does
+         * matter). Any TLS-specific setting placed on the action itself
+         * (streamdriver.name/authmode, certificates, permitted peers, ...) is,
+         * however, a real contradiction.
+         */
+        const int tlsHintsConfigured = (pData->pszStrmDrvrAuthMode != NULL) ||
+                                       glblIsTlsCapableNetstrmDrvr(pData->pszStrmDrvr) ||
+                                       omfwdActionHasTlsOptions(pData);
+        if (tlsHintsConfigured) {
+            /* TLS-related settings on a UDP action are silently ineffective: UDP
+             * never uses a stream driver, so traffic stays plaintext. Warn about
+             * the contradiction even when protocol="udp" is explicit.
+             */
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd has TLS-related settings but protocol=\"udp\"; UDP is always plaintext "
+                                      "so TLS is not active "
+                                      "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+        } else if (!protocolWasSet) {
+            /* An omitted protocol parameter falls back to UDP and deserves the
+             * warning, as does the legacy "@target" selector. Only an explicit
+             * action() protocol="udp" is a
+             * deliberate admin choice and is silenced.
+             */
+            glblWarnIfInsecureDefault(loadModConf->pConf,
+                                      "omfwd action uses protocol=\"udp\" (without TLS); "
+                                      "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
+        }
     } else if (pData->protocol == FORW_TCP && pData->iStrmDrvrMode == 0) {
         const uchar *const effectiveDrvr = glblGetEffectiveNetstrmDrvr(loadModConf->pConf, pData->pszStrmDrvr);
-        const int tlsHintsConfigured =
-            (pData->pszStrmDrvrAuthMode != NULL) || glblIsTlsCapableNetstrmDrvr(effectiveDrvr);
+        const int tlsHintsConfigured = (pData->pszStrmDrvrAuthMode != NULL) ||
+                                       glblIsTlsCapableNetstrmDrvr(effectiveDrvr) || omfwdActionHasTlsOptions(pData);
         if (tlsHintsConfigured) {
             glblWarnIfInsecureDefault(loadModConf->pConf,
                                       "omfwd has TLS-related settings but streamdriver.mode=\"0\"; mode 0 uses plain "
                                       "TCP so TLS is not active "
                                       "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
-        } else {
+        } else if (!pData->bStrmDrvrModeSet) {
+            /* explicit streamdriver.mode="0" is a deliberate admin choice, not an
+             * insecure default - strict mode treats it the same way (see
+             * applySecureDefaultsToForwarding()).
+             */
             glblWarnIfInsecureDefault(
                 loadModConf->pConf,
                 "omfwd action uses protocol=\"tcp\" with streamdriver.mode=\"0\" "
@@ -2560,7 +2603,7 @@ BEGINnewActInst
         LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter \"address\" not supported for tcp -- ignored");
     }
 
-    warnIfNonTlsForwardingConfigured(pData);
+    warnIfNonTlsForwardingConfigured(pData, cnfparamvalsIsSetByName(&actpblk, pvals, "protocol"));
 
     if (pData->pszRatelimitName != NULL) {
         CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, loadModConf->pConf, (char *)pData->pszRatelimitName,
@@ -2752,7 +2795,7 @@ BEGINparseSelectorAct
         }
     }
     CHKiRet(applySecureDefaultsToForwarding(pData));
-    warnIfNonTlsForwardingConfigured(pData);
+    warnIfNonTlsForwardingConfigured(pData, 0);
     CODE_STD_FINALIZERparseSelectorAct if (iRet == RS_RET_OK) {
         setupInstStatsCtrs(pData);
     }
