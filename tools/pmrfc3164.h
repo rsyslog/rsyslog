@@ -30,6 +30,11 @@ rsRetVal modInitpmrfc3164(int iIFVersRequested __attribute__((unused)),
                           rsRetVal (**pQueryEtryPt)(),
                           rsRetVal (*pHostQueryEtryPt)(uchar *, rsRetVal (**)()),
                           modInfo_t *);
+    #ifdef ENABLE_FUZZING
+rsRetVal pmrfc3164FuzzInit(void);
+void pmrfc3164FuzzExit(void);
+rsRetVal pmrfc3164FuzzParse(smsg_t *pMsg);
+    #endif
 
 #endif /* #ifndef PMRFC3164_H_INCLUDED */
 /* vi:set ai:

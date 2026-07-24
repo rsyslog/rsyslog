@@ -936,6 +936,48 @@ if test "$enable_coverage" = "yes"; then
 fi
 AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$enable_coverage" = xyes])
 
+# libFuzzer targets
+AC_ARG_ENABLE([fuzzing],
+        [AS_HELP_STRING([--enable-fuzzing], [Build libFuzzer targets @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_fuzzing="yes" ;;
+          no) enable_fuzzing="no" ;;
+           *) AC_MSG_ERROR([bad value ${enableval} for --enable-fuzzing]) ;;
+         esac],
+        [enable_fuzzing="no"]
+)
+AC_ARG_VAR([LIB_FUZZING_ENGINE],
+        [linker flags or library providing the libFuzzer main function])
+if test "$enable_fuzzing" = "yes"; then
+        if test -z "$LIB_FUZZING_ENGINE"; then
+                if $CC --version 2>/dev/null | grep -i clang >/dev/null; then
+                        LIB_FUZZING_ENGINE="-fsanitize=fuzzer"
+                else
+                        AC_MSG_ERROR([
+--enable-fuzzing requires Clang or an explicit LIB_FUZZING_ENGINE])
+                fi
+        fi
+        save_LDFLAGS="$LDFLAGS"
+        LDFLAGS="$LDFLAGS $LIB_FUZZING_ENGINE"
+        AC_MSG_CHECKING([whether the fuzzing engine links])
+        AC_LINK_IFELSE(
+                [AC_LANG_SOURCE([[
+#include <stddef.h>
+#include <stdint.h>
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
+{
+        return data == NULL && size != 0;
+}
+                ]])],
+                [AC_MSG_RESULT([yes])],
+                [AC_MSG_FAILURE([
+the fuzzing engine does not link; set LIB_FUZZING_ENGINE to usable linker flags])])
+        LDFLAGS="$save_LDFLAGS"
+        AC_DEFINE([ENABLE_FUZZING], [1], [Define to 1 when libFuzzer targets are enabled.])
+fi
+AC_SUBST([LIB_FUZZING_ENGINE])
+AM_CONDITIONAL([ENABLE_FUZZING], [test "x$enable_fuzzing" = xyes])
+
 
 # total debugless: highest performance, but no way at all to enable debug
 # logging
@@ -3907,6 +3949,7 @@ echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    SNMP Tests enabled:                       $enable_snmp_tests"
 echo "    Flaky Tests enabled:                      $enable_flaky_tests"
 echo "    Debug mode enabled:                       $enable_debug"
+echo "    libFuzzer targets enabled:                $enable_fuzzing"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"

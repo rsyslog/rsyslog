@@ -81,6 +81,14 @@ EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 	rscryutil.rst \
 	recover_qi.pl
 
+if ENABLE_FUZZING
+noinst_PROGRAMS = fuzz_rsyslog_message
+fuzz_rsyslog_message_SOURCES = $(rsyslogd_SOURCES) fuzz_rsyslog_message.c
+fuzz_rsyslog_message_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_FUZZ_TARGET -Dmain=rsyslogd_main
+fuzz_rsyslog_message_LDADD = $(rsyslogd_LDADD)
+fuzz_rsyslog_message_LDFLAGS = $(rsyslogd_LDFLAGS) $(LIB_FUZZING_ENGINE)
+endif
+
 EXTRA_rsyslogd_DEPENDENCIES = $(exports_list_file)
 
 if ENABLE_LIBLOGGING_STDLOG

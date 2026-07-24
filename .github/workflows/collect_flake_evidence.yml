@@ -13,6 +13,7 @@ name: collect flake evidence
       - imbeats tests
       - imhttp Prometheus scrape
       - impstats push to VictoriaMetrics
+      - syslog parser fuzzing
       - debian daily stable
       - ubuntu daily stable
       - el10 daily stable
