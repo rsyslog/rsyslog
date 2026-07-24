@@ -83,6 +83,7 @@ struct instanceConf_s {
     ruleset_t *pBindRuleset; /* ruleset to bind listener to */
     sbool bKeepAlive; /* support keep-alive packets */
     sbool bEnableTLS;
+    sbool bEnableTLSSet; /* tls was explicitly configured */
     sbool bEnableTLSZip;
     sbool bEnableLstn; /* flag to permit disabling of listener in error case */
     int dhBits;
@@ -281,6 +282,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->ratelimitBurst = -1;
     inst->pszRatelimitName = NULL;
     inst->bEnableTLS = 0;
+    inst->bEnableTLSSet = 0;
     inst->bEnableTLSZip = 0;
     inst->bEnableLstn = 0;
     inst->dhBits = 0;
@@ -500,13 +502,37 @@ finalize_it:
     RETiRet;
 }
 
+/* True when the listener carries TLS-specific settings (auth mode, certificates,
+ * permitted peers, GnuTLS priority or config command, TLS compression, DH bits).
+ * These are applied only on the TLS-enabled RELP path, so with tls="off" they are
+ * silently ineffective. */
+static int imrelpHasTlsOptions(const instanceConf_t *const inst) {
+    return inst->authmode != NULL || inst->caCertFile != NULL || inst->myCertFile != NULL ||
+           inst->myPrivKeyFile != NULL || inst->pristring != NULL || inst->bEnableTLSZip || inst->dhBits ||
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+           inst->tlscfgcmd != NULL ||
+#endif
+           inst->permittedPeers.nmemb > 0;
+}
+
 /** Warn in secure warn mode when an imrelp listener is configured without TLS. */
 static void warnIfPlainRelpListenerConfigured(const instanceConf_t *const inst) {
-    if (!inst->bEnableTLS) {
+    if (!inst->bEnableTLS && !inst->bEnableTLSSet) {
+        /* omitted tls (implicit off) is an insecure default and warns. */
         glblWarnIfInsecureDefault(loadModConf->pConf,
                                   "imrelp input uses tls=\"off\" (plain RELP without TLS); "
                                   "see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html");
-    } else if (inst->authmode != NULL && strcasecmp((const char *)inst->authmode, "anon") == 0) {
+    } else if (!inst->bEnableTLS && imrelpHasTlsOptions(inst)) {
+        /* explicit tls="off" is a deliberate admin choice and normally silent
+         * (same rationale as omfwd protocol="udp"/streamdriver.mode="0"), but
+         * combining it with TLS-specific options is a contradiction: those
+         * options are silently ignored and traffic stays plaintext.
+         */
+        glblWarnIfInsecureDefault(loadModConf->pConf,
+                                  "imrelp has TLS-related settings but tls=\"off\"; RELP runs plaintext so "
+                                  "those settings are ignored "
+                                  "(see https://docs.rsyslog.com/doc/faq/tls_mode0_disables_tls.html)");
+    } else if (inst->bEnableTLS && inst->authmode != NULL && strcasecmp((const char *)inst->authmode, "anon") == 0) {
         glblWarnIfInsecureDefault(
             loadModConf->pConf,
             "imrelp uses tls.authmode=\"anon\"; peer identity is not authenticated, so MITM is possible "
@@ -608,6 +634,7 @@ BEGINnewInpInst
             CHKmalloc(inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(inppblk.descr[i].name, "tls")) {
             inst->bEnableTLS = (unsigned)pvals[i].val.d.n;
+            inst->bEnableTLSSet = 1;
         } else if (!strcmp(inppblk.descr[i].name, "tls.dhbits")) {
             inst->dhBits = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "tls.prioritystring")) {
