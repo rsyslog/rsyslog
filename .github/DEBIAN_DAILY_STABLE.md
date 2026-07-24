@@ -1,10 +1,11 @@
 # Debian daily stable package archive
 
 The `debian daily stable` workflow builds rsyslog from `v8-stable` for Debian
-13 (`trixie`) on `amd64`. Pull requests that change the archive automation
-package the PR head so the proposed helper and policy are exercised, but do not
-publish. Scheduled publishing remains disabled until the DigitalOcean archive
-is provisioned.
+13 (`trixie`) on `amd64`. Package construction does not run for pull requests;
+the repository's workflow lint and security checks still validate workflow
+changes without consuming a full Debian package-build runner. Manual dispatch
+remains available for bootstrap and recovery. Scheduled publishing remains
+disabled until the DigitalOcean archive is provisioned.
 
 The workflow owns package construction, APT metadata generation, signing,
 upload ordering, and post-publication installation verification. The
@@ -12,6 +13,11 @@ verification job uses the public CDN from a clean Debian 13 container, installs
 the exact published version, and smoke-tests the installed binary and default
 configuration. DigitalOcean Spaces is passive S3-compatible storage behind its
 CDN; no package-building service runs there.
+
+If a scheduled run fails or is cancelled, the workflow creates or updates the
+`[debian-daily-stable] package archive failure` issue with the run URL and each
+job result. Manual bootstrap runs report failures through their Actions run
+without opening this daily-operations issue.
 
 ## Archive layout and retention
 
