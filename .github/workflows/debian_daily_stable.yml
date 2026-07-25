@@ -328,12 +328,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install repository and Spaces tools
+      - name: Prepare repository and Spaces tools
         run: |
+          command -v aws
+          aws --version
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             apt-utils \
-            awscli \
             gnupg \
             xz-utils
 
