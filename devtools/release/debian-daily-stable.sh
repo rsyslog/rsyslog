@@ -44,6 +44,17 @@ short_commit_sha() {
   git rev-parse --short=12 HEAD
 }
 
+daily_version() {
+  local base="$1"
+  local date="$2"
+  local run="$3"
+  local attempt="$4"
+  local short_sha="$5"
+
+  printf '%s+daily%s.%s.%s+git%s-1adiscon1\n' \
+    "$base" "$date" "$run" "$attempt" "$short_sha"
+}
+
 cmd_version() {
   local base date short_sha run attempt version
 
@@ -56,7 +67,7 @@ cmd_version() {
   short_sha="$(short_commit_sha)"
   run="${GITHUB_RUN_NUMBER:-0}"
   attempt="${GITHUB_RUN_ATTEMPT:-1}"
-  version="${base}~daily${date}.${run}.${attempt}+git${short_sha}-1adiscon1"
+  version="$(daily_version "$base" "$date" "$run" "$attempt" "$short_sha")"
 
   printf '%s\n' "$version"
 
@@ -508,12 +519,19 @@ build_self_test_deb() {
 
 cmd_self_test() (
   local tmp_dir repo_dir first_artifacts second_artifacts fingerprint
+  local test_version
   local cleanup_command
 
-  for tool in apt-ftparchive curl dpkg-deb gpg gpgv xz; do
+  for tool in apt-ftparchive curl dpkg dpkg-deb gpg gpgv xz; do
     command -v "$tool" >/dev/null 2>&1 ||
       die "$tool is required for self-test"
   done
+
+  test_version="$(
+    daily_version 8.2606.0 20260725 9 1 31720a4787d4
+  )"
+  dpkg --compare-versions "$test_version" gt 8.2606.0-4 ||
+    die "daily version must sort after the Debian packaging baseline"
 
   tmp_dir="$(mktemp -d)"
   printf -v cleanup_command 'rm -rf -- %q' "$tmp_dir"
