@@ -2042,6 +2042,7 @@ TESTS_IMFILE_EXTENDED = \
 TESTS_IMFILE = \
 	imfile-basic.sh \
 	imfile-basic-legacy.sh \
+	imfile-delay-message.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
