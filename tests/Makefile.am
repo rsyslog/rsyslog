@@ -2256,7 +2256,9 @@ TESTS_MMTAGHOSTNAME = \
 TESTS_MMKUBERNETES = \
 	mmkubernetes-basic.sh \
 	mmkubernetes-cache-expire.sh \
-	mmkubernetes-url-failover.sh
+	mmkubernetes-url-failover.sh \
+	mmkubernetes-namespace-metadata-off.sh \
+	yaml-mmkubernetes-namespace-metadata-off.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
