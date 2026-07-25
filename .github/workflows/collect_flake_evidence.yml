@@ -13,6 +13,7 @@ name: collect flake evidence
       - imbeats tests
       - imhttp Prometheus scrape
       - impstats push to VictoriaMetrics
+      - debian daily stable
     types: [completed]
   workflow_dispatch:
     inputs:
