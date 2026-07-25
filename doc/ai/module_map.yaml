@@ -57,6 +57,18 @@ runtime_msg:
   notes:
     - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
 
+mmnormalize:
+  paths: ["plugins/mmnormalize/"]
+  requires_serialization: true
+  locks:
+    - type: rwlock
+      field: instanceData.ctxlnLock
+    - type: atomic-generation
+      field: instanceData.reloadGeneration
+  notes:
+    - The standard liblognorm context is shared; actions take the read lock and HUP publishes a privately built replacement under the write lock.
+    - Turbo contexts are worker-owned and remain lock-free while normalizing; HUP increments a generation and each worker rebuilds and reclaims its own context between messages.
+
 omfile:
   paths: ["plugins/omfile/"]
   requires_serialization: true

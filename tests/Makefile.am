@@ -1666,12 +1666,14 @@ TESTS_MMNORMALIZE = \
         msgvar-concurrency-array.sh \
         msgvar-concurrency-array-event.tags.sh \
         mmexternal-mmnormalize-json-tree.sh \
+        mmnormalize-hup-reload.sh \
         mmnormalize_rule_from_string.sh \
         mmnormalize_rule_from_array.sh \
         mmnormalize_parsesuccess.sh
 
 TESTS_MMNORMALIZE_TURBO = \
-	mmnormalize-turbo-message-lifecycle.sh
+	mmnormalize-turbo-message-lifecycle.sh \
+	mmnormalize-turbo-hup-tsan.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
 	yaml-mmnormalize-turbo.sh
