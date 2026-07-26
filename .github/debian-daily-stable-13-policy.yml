@@ -1,0 +1,28 @@
+{
+  "allowed_patch_skips": [
+    {
+      "patch": "Increase-timeouts-in-imfile-basic-2GB-file-and-imfile-tru.patch",
+      "reason": "Debian 13 carries the 2 GiB imfile timeout increase that current upstream already includes with later test updates."
+    },
+    {
+      "patch": "Revert-queue-emit-better-warning-messages-on-queue-param-.patch",
+      "reason": "Debian 13 carries the queue warning revert that current upstream already includes, followed by later queue changes."
+    }
+  ],
+  "supplemental_build_deps": [],
+  "control_replacements": [
+    {
+      "pattern": "Build-Depends: debhelper-compat \\(= 13\\),",
+      "replacement": "Build-Depends: debhelper-compat (= 13),\\n               libyaml-dev,\\n               libprotobuf-c-dev,\\n               protobuf-c-compiler,\\n               libsnappy-dev,",
+      "reason": "Current upstream adds YAML configuration and native impstats push support whose build dependencies postdate Debian 13's rsyslog source package."
+    }
+  ],
+  "install_manifest_additions": [
+    {
+      "manifest": "rsyslog.install",
+      "path": "usr/lib/${DEB_HOST_MULTIARCH}/rsyslog/mmleefparse.so",
+      "reason": "Current upstream adds mmleefparse after Debian 13's rsyslog install manifest; it belongs in the core package with the other message-modification modules."
+    }
+  ],
+  "not_installed_paths": []
+}

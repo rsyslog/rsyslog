@@ -57,6 +57,19 @@ with open(replacements_path, "w", encoding="utf-8") as replacements_fh, \
             continue
         replacements_fh.write(f"{pattern}\t{replacement}\n")
         reasons_fh.write(f"{pattern}\t{reason}\n")
+
+manifest_path = os.path.join(out_dir, "install_manifest_additions.tsv")
+manifest_reasons_path = os.path.join(out_dir, "install_manifest_additions.reasons.txt")
+with open(manifest_path, "w", encoding="utf-8") as manifest_fh, \
+        open(manifest_reasons_path, "w", encoding="utf-8") as reasons_fh:
+    for entry in policy.get("install_manifest_additions", []):
+        manifest = entry.get("manifest", "").strip()
+        path = entry.get("path", "").strip()
+        reason = entry.get("reason", "").strip()
+        if not manifest or not path:
+            continue
+        manifest_fh.write(f"{manifest}\t{path}\n")
+        reasons_fh.write(f"{manifest}:{path}\t{reason}\n")
 PY
 }
 
@@ -104,6 +117,72 @@ fetch_debian_packaging() {
   cp -r "$clone_dir/debian" "$target_dir"
 }
 
+enable_debian_source_repositories() {
+  local deb822_files=(/etc/apt/sources.list.d/*.sources)
+
+  if [ -e "${deb822_files[0]}" ]; then
+    python3 - "${deb822_files[@]}" <<'PY'
+import pathlib
+import sys
+
+for name in sys.argv[1:]:
+    path = pathlib.Path(name)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated = []
+    for line in lines:
+        if line.startswith("Types:"):
+            types = line.removeprefix("Types:").split()
+            if "deb" in types and "deb-src" not in types:
+                types.append("deb-src")
+            line = f"Types: {' '.join(types)}"
+        updated.append(line)
+    path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+PY
+  elif [ -f /etc/apt/sources.list ]; then
+    sed -n 's/^deb[[:space:]]\+/deb-src /p' /etc/apt/sources.list \
+      > /etc/apt/sources.list.d/rsyslog-deb-src.list
+  fi
+
+  apt-get update
+  apt-cache showsrc rsyslog >/dev/null 2>&1 || {
+    echo "ERROR: target Debian release does not provide rsyslog source metadata" >&2
+    return 1
+  }
+}
+
+fetch_debian_release_packaging() {
+  local target_dir="$1"
+  local version_file="$2"
+  local source_root
+  local source_dir
+  local packaging_version
+
+  source_root="$(mktemp -d)"
+  rm -rf "$target_dir"
+
+  enable_debian_source_repositories
+  (
+    cd "$source_root"
+    apt-get source --only-source rsyslog
+  )
+
+  source_dir="$(
+    find "$source_root" -mindepth 1 -maxdepth 1 -type d \
+      -name 'rsyslog-*' -print -quit
+  )"
+  if [ -z "$source_dir" ] || [ ! -d "$source_dir/debian" ]; then
+    echo "ERROR: could not extract the target Debian release's rsyslog source package" >&2
+    return 1
+  fi
+
+  packaging_version="$(
+    dpkg-parsechangelog -l "$source_dir/debian/changelog" -S Version
+  )"
+  cp -r "$source_dir/debian" "$target_dir"
+  printf '%s\n' "$packaging_version" > "$version_file"
+  rm -rf "$source_root"
+}
+
 apply_control_replacements() {
   local control_file="$1"
   local replacements_file="$2"
@@ -140,6 +219,34 @@ PY
     record_policy_items "$reasons_file" "$findings_dir" \
       "allowed_packaging_drift" "Update Debian control replacement for"
   fi
+}
+
+apply_install_manifest_additions() {
+  local packaging_dir="$1"
+  local additions_file="$2"
+  local manifest
+  local path
+  local target
+
+  [ -s "$additions_file" ] || return 0
+
+  while IFS=$'\t' read -r manifest path; do
+    [ -n "$manifest" ] && [ -n "$path" ] || continue
+    case "$manifest" in
+      */*|.*)
+        echo "ERROR: invalid Debian install manifest name: $manifest" >&2
+        return 1
+        ;;
+    esac
+    target="$packaging_dir/$manifest"
+    [ -f "$target" ] || {
+      echo "ERROR: missing Debian install manifest: $target" >&2
+      return 1
+    }
+    if ! grep -Fqx "$path" "$target"; then
+      printf '%s\n' "$path" >> "$target"
+    fi
+  done < "$additions_file"
 }
 
 run_dist_build() {
@@ -288,7 +395,7 @@ resolve_patch_policy() {
     quilt pop -a >/dev/null 2>&1 || true
 
     set +e
-    quilt push -a > /tmp/quilt-push.log 2>&1
+    quilt push --fuzz=0 -a > /tmp/quilt-push.log 2>&1
     rc=$?
     set -e
     cat /tmp/quilt-push.log
@@ -438,7 +545,9 @@ case "${1:-}" in
   load_policy) shift; load_policy "$@" ;;
   install_prereqs) shift; install_prereqs "$@" ;;
   fetch_debian_packaging) shift; fetch_debian_packaging "$@" ;;
+  fetch_debian_release_packaging) shift; fetch_debian_release_packaging "$@" ;;
   apply_control_replacements) shift; apply_control_replacements "$@" ;;
+  apply_install_manifest_additions) shift; apply_install_manifest_additions "$@" ;;
   run_dist_build) shift; run_dist_build "$@" ;;
   find_dist_tarball) shift; find_dist_tarball "$@" ;;
   unpack_source_tree) shift; unpack_source_tree "$@" ;;

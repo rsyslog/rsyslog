@@ -23,7 +23,7 @@ name: debian daily stable
       source_ref:
         description: rsyslog source branch, tag, or commit to package
         required: true
-        default: v8-stable
+        default: main
         type: string
       publish_to_archive:
         description: Publish to the configured DigitalOcean Spaces archive
@@ -38,11 +38,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DEBIAN_CI_POLICY_FILE: .github/debian-ci-policy.yml
+  DEBIAN_CI_POLICY_FILE: .github/debian-daily-stable-13-policy.yml
   DEBIAN_CI_HELPER: .github/scripts/debian_package_build.sh
   DEBIAN_DAILY_STABLE_HELPER: devtools/release/debian-daily-stable.sh
-  DEBIAN_PACKAGING_REPO: https://salsa.debian.org/debian/rsyslog.git
-  DEBIAN_PACKAGING_BRANCH: debian/latest
   DEBIAN_BUILD_ROOT: /tmp/rsyslog-debian-daily-stable-build
   DEBIAN_SUITE: trixie
   DEBIAN_COMPONENT: main
@@ -75,12 +73,12 @@ jobs:
           set -euo pipefail
           should_run=false
           should_publish=false
-          source_ref=v8-stable
+          source_ref=main
 
           case "$EVENT_NAME" in
             workflow_dispatch)
               should_run=true
-              source_ref="${MANUAL_SOURCE_REF:-v8-stable}"
+              source_ref="${MANUAL_SOURCE_REF:-main}"
               if [ "${MANUAL_PUBLISH:-false}" = "true" ]; then
                 should_publish=true
               fi
@@ -175,11 +173,15 @@ jobs:
             "$DEBIAN_BUILD_ROOT/debian-ci-policy"
 
       - name: Fetch Debian packaging baseline
+        id: packaging
         run: |
-          "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" fetch_debian_packaging \
-            "$DEBIAN_PACKAGING_REPO" \
-            "$DEBIAN_PACKAGING_BRANCH" \
-            "$DEBIAN_BUILD_ROOT/debian-packaging"
+          baseline_version_file="$DEBIAN_BUILD_ROOT/debian-packaging-version"
+          "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" \
+            fetch_debian_release_packaging \
+            "$DEBIAN_BUILD_ROOT/debian-packaging" \
+            "$baseline_version_file"
+          baseline_version="$(cat "$baseline_version_file")"
+          echo "baseline_version=$baseline_version" >> "$GITHUB_OUTPUT"
 
       - name: Apply packaging baseline policy
         run: |
@@ -187,6 +189,10 @@ jobs:
             "$DEBIAN_BUILD_ROOT/debian-packaging/control" \
             "$DEBIAN_BUILD_ROOT/debian-ci-policy/control_replacements.tsv" \
             "$DEBIAN_BUILD_ROOT/debian-ci-policy/control_replacements.reasons.txt"
+          "$GITHUB_WORKSPACE/$DEBIAN_CI_HELPER" \
+            apply_install_manifest_additions \
+            "$DEBIAN_BUILD_ROOT/debian-packaging" \
+            "$DEBIAN_BUILD_ROOT/debian-ci-policy/install_manifest_additions.tsv"
 
       - name: Install Debian build dependencies
         run: |
@@ -283,6 +289,7 @@ jobs:
 
       - name: Summarize build
         env:
+          BASELINE_VERSION: ${{ steps.packaging.outputs.baseline_version }}
           SOURCE_REF: ${{ needs.preflight.outputs.source_ref }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -292,6 +299,7 @@ jobs:
             echo "- Version: \`$VERSION\`"
             echo "- Source ref: \`$SOURCE_REF\`"
             echo "- Source commit: \`$SOURCE_GIT_SHA\`"
+            echo "- Debian packaging baseline: \`rsyslog $BASELINE_VERSION\`"
             echo "- Target: Debian 13 (\`$DEBIAN_SUITE\`), \`$DEBIAN_ARCH\`"
             echo "- Archive prefix: \`$SPACE_PREFIX\`"
             echo
@@ -547,6 +555,8 @@ jobs:
             ca-certificates \
             curl \
             gnupg \
+            gpgv \
+            python3 \
             xz-utils
 
       - name: Wait for CDN and verify signed metadata
