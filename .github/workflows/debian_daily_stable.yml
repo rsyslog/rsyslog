@@ -536,6 +536,9 @@ jobs:
     container:
       image: debian:trixie
       options: --user root
+    defaults:
+      run:
+        shell: bash
     environment: debian-daily-stable
     permissions:
       contents: read
@@ -626,11 +629,11 @@ jobs:
             rsyslogd -v
             rsyslogd -N1
           ) 2>&1 | tee .ci/flake-evidence/logs/debian-published-install.log
-          install_status=("${PIPESTATUS[@]}")
+          install_status=$?
           set -e
           devtools/ci-flake-phase.sh end \
-            debian-published-install custom "${install_status[0]}"
-          exit "${install_status[0]}"
+            debian-published-install custom "$install_status"
+          exit "$install_status"
 
       - name: Upload publication failure evidence
         if: >-
