@@ -373,8 +373,11 @@ cmd_verify_repo() {
   )"
   [ "$actual_fingerprint" = "$expected_fingerprint" ] ||
     die "archive key fingerprint $actual_fingerprint does not match expected fingerprint"
-  gpg --batch --no-default-keyring --keyring "$verify_dir/keyring.gpg" \
-    --import "$verify_dir/key.asc" >/dev/null 2>&1
+  # EL10 GnuPG creates a .kbx file when importing into a custom keyring, while
+  # gpgv opens the literal path it is given. Dearmor the public key so every
+  # supported verifier gets the same keyring format and filename.
+  gpg --batch --yes --dearmor --output "$verify_dir/keyring.gpg" \
+    "$verify_dir/key.asc"
   curl --fail --silent --show-error --location \
     "$repo_url/$arch/repodata/repomd.xml" --output "$verify_dir/repomd.xml"
   curl --fail --silent --show-error --location \
