@@ -90,6 +90,7 @@ install_prereqs() {
     g++ \
     git \
     libtool \
+    libdistro-info-perl \
     libyaml-dev \
     make \
     pkg-config \
