@@ -1,0 +1,8 @@
+{
+  "supplemental_makedepends": [
+    {
+      "package": "autoconf-archive",
+      "reason": "Current upstream configure.ac uses AX macros while Alpine 3.24's rsyslog 8.2604 APKBUILD does not declare the archive explicitly."
+    }
+  ]
+}
