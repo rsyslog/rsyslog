@@ -1,0 +1,41 @@
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_46cae71b2ce6fd 19
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_54f25b0d35dd4c 497-500
+  s_2dc01c7e3d2940::t_855839f82f6c23 215-216
+  s_2dc01c7e3d2940::t_dd9b95c7700d23 165-167,315,351-352
+  s_2dc01c7e3d2940::t_ff00bdcd3586ff 1-35,37-160,162-164,168-197,200-214,217-220,223-314,316-350,353-483,486-496,501-572
+  s_2dc01c7e3d2940::t_1e7bae63302ca1 198-199
+  s_2dc01c7e3d2940::t_70f53374624498 484-485
+  s_2dc01c7e3d2940::t_ca6e14187a5576 221-222
+  s_2dc01c7e3d2940::t_59c86ebacab8a7 36,161
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_d547d153e319a4 32,47,203,214
+  s_2dc01c7e3d2940::t_c6dce499ce6ac5 175,180
+  s_2dc01c7e3d2940::t_4a2ec6a0317e79 1-9,11-31,33-46,48-64,67-71,73-88,91-95,98,115-162,164-169,173,176-178,182-186,189-202,204-213,215-239
+  s_2dc01c7e3d2940::t_59c86ebacab8a7 10,65-66,72,89-90,96-97,99-107,109-114
+  s_2dc01c7e3d2940::t_28e5bba4d8b9e3 108
+  s_2dc01c7e3d2940::t_9aed6eae5f94d1 163,170-172,174,179,181,187-188
+.github/alpine324-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_59c86ebacab8a7 1-8
+.github/ALPINE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_46cae71b2ce6fd 1-7,10-40,43-78
+  s_2dc01c7e3d2940::t_d547d153e319a4 41-42
+  s_2dc01c7e3d2940::t_59c86ebacab8a7 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "89075b93d9ab54da17506ab41807d47d81a8795a",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
