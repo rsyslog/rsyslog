@@ -1,0 +1,21 @@
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_f4837f9220abb4 456,468,478-486,491,496-497,505
+.github/ALPINE_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_f4837f9220abb4 40-42,64-65,77-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "360cd09b8e0d906e0e6576426239bef93f1f9536",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
