@@ -370,6 +370,7 @@ jobs:
                 /runner-temp/rsyslog-alpine-archive.rsa \
                 alpine-daily-stable-artifacts/rsyslog-alpine-archive.rsa.pub
             '
+          sudo chown -R "$(id -u):$(id -g)" apk-repo
 
       - name: Generate snapshot
         env:
