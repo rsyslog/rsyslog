@@ -453,6 +453,7 @@ jobs:
       contents: read
     env:
       REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_REPO_URL }}
+      ORIGIN_REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_ORIGIN_REPO_URL }}
       EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.ALPINE_DAILY_STABLE_RSA_PUBLIC_KEY_SHA256 }}
       EXPECTED_VERSION: ${{ needs.build.outputs.expected_version }}
     steps:
@@ -464,7 +465,7 @@ jobs:
       - name: Install verification tools
         run: apk add --no-cache bash ca-certificates curl python3
 
-      - name: Wait for CDN and verify exact package installation
+      - name: Verify CDN reachability and exact origin installation
         id: published_install
         shell: bash
         run: |
@@ -474,17 +475,26 @@ jobs:
           set +e
           (
             set -euo pipefail
+            [ -n "$REPO_URL" ]
+            [ -n "$ORIGIN_REPO_URL" ]
+            curl -fsSL "$REPO_URL/rsyslog-alpine-archive.rsa.pub" \
+              -o /tmp/rsyslog-alpine-cdn-key.pub
+            [ "$(sha256sum /tmp/rsyslog-alpine-cdn-key.pub | awk '{print $1}')" = \
+              "$EXPECTED_PUBLIC_KEY_SHA256" ]
+            curl -fsSL "$REPO_URL/$ALPINE_ARCH/APKINDEX.tar.gz" \
+              -o /tmp/rsyslog-alpine-cdn-index.tar.gz
+            tar -tzf /tmp/rsyslog-alpine-cdn-index.tar.gz | grep -Fx APKINDEX
             verification_rc=1
             for attempt in $(seq 1 20); do
               rm -f /tmp/rsyslog-alpine-archive.rsa.pub
               if curl -fsSL \
-                  "$REPO_URL/rsyslog-alpine-archive.rsa.pub" \
+                  "$ORIGIN_REPO_URL/rsyslog-alpine-archive.rsa.pub" \
                   -o /tmp/rsyslog-alpine-archive.rsa.pub &&
                 [ "$(sha256sum /tmp/rsyslog-alpine-archive.rsa.pub | awk '{print $1}')" = \
                   "$EXPECTED_PUBLIC_KEY_SHA256" ]; then
                 cp /tmp/rsyslog-alpine-archive.rsa.pub /etc/apk/keys/
-                if ! grep -Fxq "$REPO_URL" /etc/apk/repositories; then
-                  echo "$REPO_URL" >> /etc/apk/repositories
+                if ! grep -Fxq "$ORIGIN_REPO_URL" /etc/apk/repositories; then
+                  echo "$ORIGIN_REPO_URL" >> /etc/apk/repositories
                 fi
                 if apk update --no-cache &&
                   apk add --no-cache "rsyslog=$EXPECTED_VERSION"; then
@@ -492,7 +502,7 @@ jobs:
                   break
                 fi
               fi
-              echo "Repository not ready yet, retrying ($attempt/20)..."
+              echo "Origin repository not ready yet, retrying ($attempt/20)..."
               [ "$attempt" -eq 20 ] || sleep 30
             done
             [ "$verification_rc" -eq 0 ]
