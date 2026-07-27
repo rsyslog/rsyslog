@@ -289,7 +289,9 @@ create_repo_generation() {
   rm -rf "$output_dir"
   mkdir -p "$output_dir/Packages"
   cp -a "$new_dir/Packages/." "$output_dir/Packages/"
-  if [ -d "$previous_dir/repodata" ]; then
+  # An S3 sync of a missing first-run prefix can still leave an empty local
+  # repodata directory. Only merge when it contains an actual repository.
+  if [ -f "$previous_dir/repodata/repomd.xml" ]; then
     mergerepo_c --all --omit-baseurl \
       --repo "file://$previous_dir" \
       --repo "file://$new_dir" \
