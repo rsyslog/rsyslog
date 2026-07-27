@@ -361,7 +361,7 @@ cmd_verify_repo() {
   local arch="$2"
   local expected_evr="$3"
   local expected_fingerprint="$4"
-  local verify_dir actual_fingerprint
+  local verify_dir actual_fingerprint primary_href
 
   verify_dir="$(mktemp -d)"
   trap 'rm -rf "$verify_dir"' RETURN
@@ -384,6 +384,69 @@ cmd_verify_repo() {
     "$repo_url/$arch/repodata/repomd.xml.asc" --output "$verify_dir/repomd.xml.asc"
   gpgv --keyring "$verify_dir/keyring.gpg" \
     "$verify_dir/repomd.xml.asc" "$verify_dir/repomd.xml"
+  primary_href="$(
+    python3 - "$verify_dir/repomd.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+namespace = {"repo": "http://linux.duke.edu/metadata/repo"}
+location = root.find("repo:data[@type='primary']/repo:location", namespace)
+if location is None or not location.get("href"):
+    raise SystemExit("primary package metadata is missing from repomd.xml")
+print(location.get("href"))
+PY
+  )"
+  case "$primary_href" in
+    repodata/*/../* | repodata/../* | repodata/*/./*)
+      die "unsafe primary metadata path in repomd.xml: $primary_href"
+      ;;
+    repodata/*) ;;
+    *) die "unsafe primary metadata path in repomd.xml: $primary_href" ;;
+  esac
+  curl --fail --silent --show-error --location \
+    "$repo_url/$arch/$primary_href" --output "$verify_dir/primary.xml.gz"
+  python3 - "$verify_dir/repomd.xml" "$verify_dir/primary.xml.gz" \
+    "$expected_evr" <<'PY'
+import gzip
+import hashlib
+import sys
+import xml.etree.ElementTree as ET
+
+repomd_path = sys.argv[1]
+metadata_path = sys.argv[2]
+expected_evr = sys.argv[3]
+repo_namespace = {"repo": "http://linux.duke.edu/metadata/repo"}
+common_namespace = {"common": "http://linux.duke.edu/metadata/common"}
+repomd = ET.parse(repomd_path).getroot()
+primary = repomd.find("repo:data[@type='primary']", repo_namespace)
+checksum = primary.find("repo:checksum", repo_namespace) if primary is not None else None
+if checksum is None or not checksum.get("type") or not checksum.text:
+    raise SystemExit("primary package metadata checksum is missing from repomd.xml")
+try:
+    with open(metadata_path, "rb") as package_metadata:
+        digest = hashlib.new(checksum.get("type"), package_metadata.read()).hexdigest()
+except ValueError as error:
+    raise SystemExit(f"unsupported primary metadata checksum: {error}") from error
+if digest != checksum.text.strip():
+    raise SystemExit("primary package metadata checksum does not match repomd.xml")
+available = set()
+with gzip.open(metadata_path, "rb") as metadata:
+    for _, element in ET.iterparse(metadata, events=("end",)):
+        if element.tag != "{http://linux.duke.edu/metadata/common}package":
+            continue
+        name = element.findtext("common:name", namespaces=common_namespace)
+        if name == "rsyslog":
+            version = element.find("common:version", common_namespace)
+            if version is not None:
+                available.add(f"{version.get('ver')}-{version.get('rel')}")
+        element.clear()
+if expected_evr not in available:
+    versions = ", ".join(sorted(available)) or "none"
+    raise SystemExit(
+        f"expected rsyslog EVR {expected_evr} is absent; available EVRs: {versions}"
+    )
+PY
   printf 'Verified signed repository metadata for %s (%s)\n' \
     "$expected_evr" "$arch"
 
