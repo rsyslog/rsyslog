@@ -15,6 +15,7 @@ name: collect flake evidence
       - impstats push to VictoriaMetrics
       - debian daily stable
       - ubuntu daily stable
+      - el10 daily stable
     types: [completed]
   workflow_dispatch:
     inputs:

@@ -1,0 +1,603 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+---
+name: el10 daily stable
+
+'on':
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: rsyslog source branch, tag, or commit to package
+        required: true
+        default: main
+        type: string
+      publish_to_archive:
+        description: Publish to the configured DigitalOcean Spaces archive
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '43 4 * * *'
+
+concurrency:
+  group: el10-daily-stable
+  cancel-in-progress: false
+
+env:
+  RPM_DAILY_STABLE_HELPER: devtools/release/rpm-daily-stable.sh
+  RPM_POLICY_FILE: .github/el10-daily-stable-policy.yml
+  RPM_MOCK_CONFIG: centos-stream+epel-10-x86_64
+  RPM_ARCH: x86_64
+  PACKAGE_CHANNEL: daily-stable
+  PACKAGE_DISTRO: el
+  PACKAGE_DISTRO_VERSION: '10'
+  SPACE_PREFIX: rpm/daily-stable/el/10
+
+jobs:
+  preflight:
+    name: preflight
+    runs-on: ubuntu-24.04
+    if: github.repository == 'rsyslog/rsyslog'
+    permissions:
+      contents: read
+    outputs:
+      should_run: ${{ steps.decision.outputs.should_run }}
+      should_publish: ${{ steps.decision.outputs.should_publish }}
+      source_ref: ${{ steps.decision.outputs.source_ref }}
+    steps:
+      - name: Decide whether this run is active
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_PUBLISH: ${{ inputs.publish_to_archive }}
+          MANUAL_SOURCE_REF: ${{ inputs.source_ref }}
+          SCHEDULE_ENABLED: ${{ vars.EL10_DAILY_STABLE_ENABLED }}
+        run: |
+          set -euo pipefail
+          should_run=false
+          should_publish=false
+          source_ref=main
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              should_run=true
+              source_ref="${MANUAL_SOURCE_REF:-main}"
+              if [ "${MANUAL_PUBLISH:-false}" = true ]; then
+                should_publish=true
+              fi
+              ;;
+            schedule)
+              if [ "${SCHEDULE_ENABLED:-false}" = true ]; then
+                should_run=true
+                should_publish=true
+              fi
+              ;;
+          esac
+          {
+            echo "should_run=$should_run"
+            echo "should_publish=$should_publish"
+            echo "source_ref=$source_ref"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build EL10 x86_64 packages
+    needs: preflight
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    outputs:
+      archive_date: ${{ steps.version.outputs.archive_date }}
+      expected_evr: ${{ steps.version.outputs.expected_evr }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout source to package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: rsyslog-source
+          persist-credentials: false
+          ref: ${{ needs.preflight.outputs.source_ref }}
+
+      - name: Record packaged source revision
+        id: source
+        run: |
+          set -euo pipefail
+          source_sha="$(git -C rsyslog-source rev-parse HEAD)"
+          {
+            echo "source_sha=$source_sha"
+            echo "SOURCE_GIT_SHA=$source_sha"
+            echo "RSYSLOG_SOURCE_DIR=$GITHUB_WORKSPACE/rsyslog-source"
+          } | tee -a "$GITHUB_ENV" >> "$GITHUB_OUTPUT"
+
+      - name: Generate daily package version
+        id: version
+        run: "$RPM_DAILY_STABLE_HELPER version"
+
+      - name: Fetch official CentOS Stream 10 packaging baseline
+        id: packaging
+        run: |
+          git clone --depth 1 --branch c10s \
+            https://gitlab.com/redhat/centos-stream/rpms/rsyslog.git \
+            "$RUNNER_TEMP/el10-packaging"
+          baseline_sha="$(git -C "$RUNNER_TEMP/el10-packaging" rev-parse HEAD)"
+          echo "baseline_sha=$baseline_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Generate rsyslog dist tarball
+        run: |
+          RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
+            RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+            devtools/devcontainer.sh --rm \
+              .github/scripts/debian_package_build.sh run_dist_build \
+              /rsyslog
+          dist_tarball="$(find rsyslog-source -maxdepth 1 -type f -name 'rsyslog-*.tar.gz' -print -quit)"
+          [ -n "$dist_tarball" ]
+          echo "DIST_TARBALL=$GITHUB_WORKSPACE/$dist_tarball" >> "$GITHUB_ENV"
+
+      - name: Prepare EL10 sources and run Mock build
+        id: package_build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE: ${{ steps.version.outputs.release }}
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/el10-build"
+          devtools/ci-flake-phase.sh begin el10-package-build custom
+          set +e
+          docker run --rm --privileged \
+            -e EXPECTED_EVR -e RELEASE -e VERSION \
+            -e RPM_DAILY_STABLE_HELPER -e RPM_MOCK_CONFIG -e RPM_POLICY_FILE \
+            -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace \
+            quay.io/rockylinux/rockylinux:10 bash -lc '
+              set -euo pipefail
+              dnf -q -y install epel-release >/dev/null
+              dnf -q -y install \
+                curl git mock mock-core-configs python3 rpm-build tar gzip >/dev/null
+              "$RPM_DAILY_STABLE_HELPER" prepare-sources \
+                /runner-temp/el10-packaging \
+                "$DIST_TARBALL" \
+                /runner-temp/el10-prepared \
+                "$RPM_POLICY_FILE" \
+                "$VERSION" \
+                "$RELEASE"
+              "$RPM_DAILY_STABLE_HELPER" build-package \
+                /runner-temp/el10-prepared \
+                "$RPM_MOCK_CONFIG" \
+                /runner-temp/el10-artifacts \
+                /runner-temp/el10-build.log \
+                "$EXPECTED_EVR"
+            '
+          build_status=$?
+          set -e
+          devtools/ci-flake-phase.sh end \
+            el10-package-build custom "$build_status"
+          if [ "$build_status" -eq 0 ]; then
+            sudo chown -R "$(id -u):$(id -g)" \
+              "$RUNNER_TEMP/el10-artifacts" "$RUNNER_TEMP/el10-build.log"
+            cp -a "$RUNNER_TEMP/el10-artifacts" el10-daily-stable-artifacts
+          fi
+          exit "$build_status"
+
+      - name: Upload package-build failure evidence
+        if: failure() && steps.package_build.outcome == 'failure'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: EL10 daily stable package build
+
+      - name: Generate artifact manifest
+        env:
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+        run: |
+          "$RPM_DAILY_STABLE_HELPER" manifest \
+            el10-daily-stable-artifacts \
+            "$EXPECTED_EVR" \
+            "$RPM_ARCH" \
+            "$PACKAGE_CHANNEL" \
+            "$PACKAGE_DISTRO" \
+            "$PACKAGE_DISTRO_VERSION"
+
+      - name: Upload EL10 package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: el10-daily-stable-${{ steps.version.outputs.expected_evr }}
+          path: el10-daily-stable-artifacts/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Summarize build
+        env:
+          BASELINE_SHA: ${{ steps.packaging.outputs.baseline_sha }}
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+          SOURCE_REF: ${{ needs.preflight.outputs.source_ref }}
+        run: |
+          {
+            echo '### Enterprise Linux 10 daily stable build'
+            echo
+            echo "- EVR: \`$EXPECTED_EVR\`"
+            echo "- Source ref: \`$SOURCE_REF\`"
+            echo "- Source commit: \`$SOURCE_GIT_SHA\`"
+            echo "- CentOS Stream 10 packaging baseline: \`$BASELINE_SHA\`"
+            echo "- Mock target: \`$RPM_MOCK_CONFIG\`"
+            echo "- Archive prefix: \`$SPACE_PREFIX\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: publish DigitalOcean Spaces RPM archive
+    needs: [preflight, build]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # This legacy-named environment is the security boundary for the shared
+    # packages.rsyslog.com archive, not a Debian-only destination. Reusing it
+    # deliberately keeps every package family on the same Spaces bucket and
+    # archive signing key without duplicating long-lived credentials.
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      # The DEBIAN_* names are retained for compatibility with the existing
+      # shared archive environment; the values are distribution-neutral.
+      AWS_ACCESS_KEY_ID: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_REGION }}
+      SPACE_BUCKET: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_BUCKET }}
+      SPACE_ENDPOINT: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_ENDPOINT }}
+      REPO_URL: ${{ vars.EL10_DAILY_STABLE_REPO_URL }}
+      ARCHIVE_GPG_PRIVATE_KEY: ${{ secrets.DEBIAN_DAILY_STABLE_GPG_PRIVATE_KEY }}
+      ARCHIVE_GPG_PASSPHRASE: ${{ secrets.DEBIAN_DAILY_STABLE_GPG_PASSPHRASE }}
+      ARCHIVE_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install RPM repository tools
+        run: |
+          command -v aws
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            createrepo-c gnupg rpm
+
+      - name: Validate archive configuration
+        run: |
+          set -euo pipefail
+          for variable in \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION \
+            SPACE_BUCKET SPACE_ENDPOINT REPO_URL ARCHIVE_GPG_PRIVATE_KEY \
+            ARCHIVE_GPG_FINGERPRINT; do
+            [ -n "${!variable:-}" ] || {
+              echo "$variable is empty" >&2
+              exit 1
+            }
+          done
+
+      - name: Download EL10 package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: el10-daily-stable-${{ needs.build.outputs.expected_evr }}
+          path: el10-daily-stable-artifacts
+
+      - name: Verify artifact checksums
+        run: |
+          cd el10-daily-stable-artifacts
+          sha256sum -c SHA256SUMS
+
+      - name: Import signing key and unlock its agent
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.gnupg"
+          echo allow-preset-passphrase > "$HOME/.gnupg/gpg-agent.conf"
+          gpgconf --kill gpg-agent || true
+          printf '%s\n' "$ARCHIVE_GPG_PRIVATE_KEY" | gpg --batch --import
+          keygrip="$(
+            gpg --batch --with-colons --with-keygrip --list-secret-keys \
+              "$ARCHIVE_GPG_FINGERPRINT" |
+              awk -F: '$1 == "grp" { print $10; exit }'
+          )"
+          [ -n "$keygrip" ]
+          preset_tool="$(command -v gpg-preset-passphrase || true)"
+          for candidate in \
+            /usr/lib/gnupg2/gpg-preset-passphrase \
+            /usr/lib/gnupg/gpg-preset-passphrase; do
+            if [ -z "$preset_tool" ] && [ -x "$candidate" ]; then
+              preset_tool="$candidate"
+            fi
+          done
+          [ -n "$preset_tool" ]
+          printf '%s' "$ARCHIVE_GPG_PASSPHRASE" |
+            "$preset_tool" --preset "$keygrip"
+          passphrase_file="$RUNNER_TEMP/archive-gpg-passphrase"
+          install -m 600 /dev/null "$passphrase_file"
+          printf '%s' "$ARCHIVE_GPG_PASSPHRASE" > "$passphrase_file"
+          echo "GPG_PASSPHRASE_FILE=$passphrase_file" >> "$GITHUB_ENV"
+
+      - name: Sign binary and source RPMs
+        run: |
+          "$RPM_DAILY_STABLE_HELPER" sign-rpms \
+            el10-daily-stable-artifacts \
+            "$ARCHIVE_GPG_FINGERPRINT"
+
+      - name: Download current repository metadata
+        run: |
+          set -euo pipefail
+          mkdir -p "rpm-repo/$RPM_ARCH" rpm-repo/SRPMS
+          for repo_subdir in "$RPM_ARCH" SRPMS; do
+            aws s3 sync \
+              --only-show-errors \
+              --endpoint-url "$SPACE_ENDPOINT" \
+              "s3://$SPACE_BUCKET/$SPACE_PREFIX/$repo_subdir/repodata" \
+              "rpm-repo/$repo_subdir/repodata"
+          done
+
+      - name: Generate signed incremental RPM repositories
+        run: |
+          "$RPM_DAILY_STABLE_HELPER" generate-repo \
+            el10-daily-stable-artifacts \
+            rpm-repo \
+            "$RPM_ARCH" \
+            "$ARCHIVE_GPG_FINGERPRINT" \
+            "$GPG_PASSPHRASE_FILE"
+
+      - name: Generate signed artifact manifest and snapshot
+        env:
+          ARCHIVE_DATE: ${{ needs.build.outputs.archive_date }}
+          EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
+        run: |
+          "$RPM_DAILY_STABLE_HELPER" manifest \
+            el10-daily-stable-artifacts \
+            "$EXPECTED_EVR" "$RPM_ARCH" "$PACKAGE_CHANNEL" \
+            "$PACKAGE_DISTRO" "$PACKAGE_DISTRO_VERSION"
+          snapshot_dir="rpm-repo/snapshots/$ARCHIVE_DATE/$EXPECTED_EVR"
+          mkdir -p "$snapshot_dir"
+          cp -a el10-daily-stable-artifacts/manifest.json \
+            el10-daily-stable-artifacts/SHA256SUMS \
+            el10-daily-stable-artifacts/build.log \
+            el10-daily-stable-artifacts/rsyslog.spec \
+            "$snapshot_dir/"
+
+      - name: Generate repository configuration
+        run: |
+          cat > rpm-repo/rsyslog-daily-stable-el10.repo <<EOF
+          [rsyslog-daily-stable]
+          name=rsyslog daily stable for Enterprise Linux 10 - \$basearch
+          baseurl=$REPO_URL/\$basearch
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=$REPO_URL/rsyslog-archive-keyring.asc
+          EOF
+
+      - name: Publish immutable RPMs and snapshots
+        run: |
+          set -euo pipefail
+          upload_immutable() {
+            local path="$1"
+            local relative_path="${path#rpm-repo/}"
+            local key="$SPACE_PREFIX/$relative_path"
+            local local_hash remote_hash remote_key
+            remote_key="$(
+              aws s3api list-objects-v2 \
+                --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
+                --prefix "$key" --max-keys 1 \
+                --query 'Contents[0].Key' --output text
+            )"
+            local_hash="$(sha256sum "$path" | awk '{print $1}')"
+            if [ "$remote_key" = "$key" ]; then
+              remote_hash="$(
+                aws s3 cp --quiet --endpoint-url "$SPACE_ENDPOINT" \
+                  "s3://$SPACE_BUCKET/$key" - | sha256sum | awk '{print $1}'
+              )"
+              [ "$remote_hash" = "$local_hash" ] || {
+                echo "immutable archive collision at $key" >&2
+                exit 1
+              }
+              return
+            fi
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=31536000,immutable' \
+              --metadata "sha256=$local_hash" \
+              "$path" "s3://$SPACE_BUCKET/$key"
+          }
+          while IFS= read -r -d '' path; do
+            upload_immutable "$path"
+          done < <(
+            find "rpm-repo/$RPM_ARCH/Packages" rpm-repo/SRPMS/Packages \
+              rpm-repo/snapshots -type f -print0
+          )
+
+      - name: Publish archive key and mutable metadata
+        run: |
+          set -euo pipefail
+          upload_metadata() {
+            local path="$1"
+            local relative_path="${path#rpm-repo/}"
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=60,must-revalidate' \
+              "$path" "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
+          }
+          upload_metadata rpm-repo/rsyslog-archive-keyring.asc
+          upload_metadata rpm-repo/rsyslog-daily-stable-el10.repo
+          for repo_subdir in "$RPM_ARCH" SRPMS; do
+            while IFS= read -r -d '' path; do
+              upload_metadata "$path"
+            done < <(
+              find "rpm-repo/$repo_subdir/repodata" -type f \
+                ! -name repomd.xml ! -name repomd.xml.asc -print0
+            )
+            upload_metadata "rpm-repo/$repo_subdir/repodata/repomd.xml"
+            upload_metadata "rpm-repo/$repo_subdir/repodata/repomd.xml.asc"
+          done
+
+  verify:
+    name: verify ${{ matrix.name }} EL10 repository
+    needs: [preflight, build, publish]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: CentOS Stream
+            image: quay.io/centos/centos:stream10
+          - name: Rocky Linux
+            image: quay.io/rockylinux/rockylinux:10
+          - name: AlmaLinux
+            image: almalinux:10
+          - name: Oracle Linux
+            image: container-registry.oracle.com/os/oraclelinux:10
+    container:
+      image: ${{ matrix.image }}
+      options: --user root
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      REPO_URL: ${{ vars.EL10_DAILY_STABLE_REPO_URL }}
+      EXPECTED_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
+      EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verification tools
+        run: dnf -y install ca-certificates curl gnupg2 rpm
+
+      - name: Wait for CDN and verify signed metadata
+        id: published_metadata
+        run: |
+          set -euo pipefail
+          devtools/ci-flake-phase.sh begin el10-published-metadata custom
+          set +e
+          verification_rc=1
+          for attempt in $(seq 1 20); do
+            if "$RPM_DAILY_STABLE_HELPER" verify-repo \
+              "$REPO_URL" "$RPM_ARCH" "$EXPECTED_EVR" \
+              "$EXPECTED_GPG_FINGERPRINT"; then
+              verification_rc=0
+              break
+            fi
+            echo "Repository not ready yet, retrying ($attempt/20)..."
+            [ "$attempt" -eq 20 ] || sleep 30
+          done
+          set -e
+          devtools/ci-flake-phase.sh end \
+            el10-published-metadata custom "$verification_rc"
+          exit "$verification_rc"
+
+      - name: Install and smoke-test the exact published RPM
+        id: published_install
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/flake-evidence/logs
+          devtools/ci-flake-phase.sh begin el10-published-install custom
+          set +e
+          (
+            set -euo pipefail
+            curl -fsSL "$REPO_URL/rsyslog-archive-keyring.asc" \
+              -o /tmp/rsyslog-archive-keyring.asc
+            rpm --import /tmp/rsyslog-archive-keyring.asc
+            curl -fsSL "$REPO_URL/rsyslog-daily-stable-el10.repo" \
+              -o /etc/yum.repos.d/rsyslog-daily-stable.repo
+            dnf -y makecache --refresh
+            dnf -y install "rsyslog-$EXPECTED_EVR"
+            installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' rsyslog)"
+            [ "$installed_evr" = "$EXPECTED_EVR" ]
+            rsyslogd -v
+            rsyslogd -N1
+          ) 2>&1 | tee .ci/flake-evidence/logs/el10-published-install.log
+          install_status=$?
+          set -e
+          devtools/ci-flake-phase.sh end \
+            el10-published-install custom "$install_status"
+          exit "$install_status"
+
+      - name: Upload publication failure evidence
+        if: >-
+          ${{
+            failure() &&
+            (steps.published_metadata.outcome == 'failure' ||
+             steps.published_install.outcome == 'failure')
+          }}
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: ${{ matrix.name }} EL10 daily stable verification
+
+  report_failure:
+    name: report failure
+    needs: [preflight, build, publish, verify]
+    if: >-
+      always() &&
+      github.event_name == 'schedule' &&
+      (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Create or update failure issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          VERSION: ${{ needs.build.outputs.expected_evr }}
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        with:
+          script: |
+            const version = process.env.VERSION || `run-${context.runId}`;
+            const title = '[el10-daily-stable] package archive failure';
+            const body = [
+              `Automated EL10 daily stable failed for \`${version}\`.`,
+              '',
+              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `Workflow commit: ${context.sha}`,
+              '',
+              'Job results:',
+              `- preflight: ${process.env.PREFLIGHT_RESULT}`,
+              `- build: ${process.env.BUILD_RESULT}`,
+              `- publish: ${process.env.PUBLISH_RESULT}`,
+              `- verify: ${process.env.VERIFY_RESULT}`
+            ].join('\n');
+            const {owner, repo} = context.repo;
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issue = existing.find(item => item.title === title && !item.pull_request);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body
+              });
+              return;
+            }
+            const created = await github.rest.issues.create({owner, repo, title, body});
+            try {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: created.data.number,
+                labels: ['release', 'packaging', 'daily-stable', 'automated']
+              });
+            } catch (error) {
+              core.warning(`Could not add labels: ${error.message}`);
+            }

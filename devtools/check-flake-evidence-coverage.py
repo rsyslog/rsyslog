@@ -35,6 +35,7 @@ EXPECTED_UPLOADS = {
     "impstats_push_victoriametrics.yml": 1,
     "debian_daily_stable.yml": 2,
     "ubuntu_daily_stable.yml": 2,
+    "el10_daily_stable.yml": 2,
 }
 TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
 UPLOAD_RE = re.compile(
