@@ -17,6 +17,7 @@ name: collect flake evidence
       - ubuntu daily stable
       - el10 daily stable
       - alpine 3.24 daily stable
+      - amazon linux 2023 daily stable
     types: [completed]
   workflow_dispatch:
     inputs:
