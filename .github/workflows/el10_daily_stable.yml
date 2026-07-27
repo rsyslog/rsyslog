@@ -414,7 +414,7 @@ jobs:
             aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
               --acl public-read \
               --cache-control 'public,max-age=31536000,immutable' \
-              --metadata "sha256=$local_hash" \
+              --metadata "sha256=$local_hash,max-age=31536000" \
               "$path" "s3://$SPACE_BUCKET/$key"
           }
           while IFS= read -r -d '' path; do
@@ -433,6 +433,7 @@ jobs:
             aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
               --acl public-read \
               --cache-control 'public,max-age=60,must-revalidate' \
+              --metadata 'max-age=60' \
               "$path" "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
           }
           upload_metadata rpm-repo/rsyslog-archive-keyring.asc
@@ -483,7 +484,7 @@ jobs:
           persist-credentials: false
 
       - name: Install verification tools
-        run: dnf -y install ca-certificates curl gnupg2 rpm
+        run: dnf -y install ca-certificates curl gnupg2 python3 rpm
 
       - name: Wait for CDN and verify signed metadata
         id: published_metadata

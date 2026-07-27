@@ -51,7 +51,12 @@ uploaded first, signed mutable metadata last, and `InRelease` last of all.
 Create one public-read Standard Spaces bucket with object versioning enabled.
 Give the workflow a bucket-scoped read/write Spaces key; do not give it a
 DigitalOcean account API token. Enable the Spaces CDN and route the final
-package hostname to it.
+package hostname to it. The workflows set DigitalOcean's object metadata
+`max-age` override in addition to HTTP `Cache-Control`: 60 seconds for mutable
+repository metadata and one year for immutable package and snapshot objects.
+After first enabling that override, purge previously cached repository metadata
+once in the DigitalOcean control panel so old one-hour cache entries do not
+delay the first verification run.
 
 Configure these GitHub repository variables:
 

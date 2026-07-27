@@ -477,7 +477,7 @@ jobs:
               --endpoint-url "$SPACE_ENDPOINT" \
               --acl public-read \
               --cache-control 'public,max-age=31536000,immutable' \
-              --metadata "sha256=$local_hash" \
+              --metadata "sha256=$local_hash,max-age=31536000" \
               "$path" \
               "s3://$SPACE_BUCKET/$key"
           }
@@ -505,6 +505,7 @@ jobs:
               --endpoint-url "$SPACE_ENDPOINT" \
               --acl public-read \
               --cache-control 'public,max-age=60,must-revalidate' \
+              --metadata 'max-age=60' \
               "$path" \
               "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
           }
