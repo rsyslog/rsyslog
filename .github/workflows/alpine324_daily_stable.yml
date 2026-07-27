@@ -1,0 +1,572 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+---
+name: alpine 3.24 daily stable
+
+'on':
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: rsyslog source branch, tag, or commit to package
+        required: true
+        default: main
+        type: string
+      publish_to_archive:
+        description: Publish to the configured DigitalOcean Spaces archive
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '13 5 * * *'
+
+concurrency:
+  group: alpine324-daily-stable
+  cancel-in-progress: false
+
+env:
+  ALPINE_DAILY_STABLE_HELPER: devtools/release/alpine-daily-stable.sh
+  ALPINE_POLICY_FILE: .github/alpine324-daily-stable-policy.yml
+  ALPINE_BRANCH: 3.24-stable
+  ALPINE_ARCH: x86_64
+  PACKAGE_CHANNEL: daily-stable
+  PACKAGE_DISTRO: alpine
+  PACKAGE_DISTRO_VERSION: '3.24'
+  SPACE_PREFIX: apk/daily-stable/alpine/3.24
+
+jobs:
+  preflight:
+    name: preflight
+    runs-on: ubuntu-24.04
+    if: github.repository == 'rsyslog/rsyslog'
+    permissions:
+      contents: read
+    outputs:
+      should_run: ${{ steps.decision.outputs.should_run }}
+      should_publish: ${{ steps.decision.outputs.should_publish }}
+      source_ref: ${{ steps.decision.outputs.source_ref }}
+    steps:
+      - name: Decide whether this run is active
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_PUBLISH: ${{ inputs.publish_to_archive }}
+          MANUAL_SOURCE_REF: ${{ inputs.source_ref }}
+          SCHEDULE_ENABLED: ${{ vars.ALPINE324_DAILY_STABLE_ENABLED }}
+        run: |
+          set -euo pipefail
+          should_run=false
+          should_publish=false
+          source_ref=main
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              should_run=true
+              source_ref="${MANUAL_SOURCE_REF:-main}"
+              if [ "${MANUAL_PUBLISH:-false}" = true ]; then
+                should_publish=true
+              fi
+              ;;
+            schedule)
+              if [ "${SCHEDULE_ENABLED:-false}" = true ]; then
+                should_run=true
+                should_publish=true
+              fi
+              ;;
+          esac
+          {
+            echo "should_run=$should_run"
+            echo "should_publish=$should_publish"
+            echo "source_ref=$source_ref"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build Alpine 3.24 x86_64 packages
+    needs: preflight
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    outputs:
+      archive_date: ${{ steps.version.outputs.archive_date }}
+      expected_version: ${{ steps.version.outputs.expected_version }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout source to package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: rsyslog-source
+          persist-credentials: false
+          ref: ${{ needs.preflight.outputs.source_ref }}
+
+      - name: Record packaged source revision
+        id: source
+        run: |
+          set -euo pipefail
+          source_sha="$(git -C rsyslog-source rev-parse HEAD)"
+          {
+            echo "source_sha=$source_sha"
+            echo "SOURCE_GIT_SHA=$source_sha"
+            echo "RSYSLOG_SOURCE_DIR=$GITHUB_WORKSPACE/rsyslog-source"
+          } | tee -a "$GITHUB_ENV" >> "$GITHUB_OUTPUT"
+
+      - name: Generate daily package version
+        id: version
+        run: "$ALPINE_DAILY_STABLE_HELPER version"
+
+      - name: Fetch official Alpine 3.24 packaging baseline
+        id: packaging
+        run: |
+          git clone --depth 1 --branch "$ALPINE_BRANCH" --filter=blob:none \
+            --sparse https://gitlab.alpinelinux.org/alpine/aports.git \
+            "$RUNNER_TEMP/alpine-aports"
+          git -C "$RUNNER_TEMP/alpine-aports" sparse-checkout set main/rsyslog
+          baseline_sha="$(git -C "$RUNNER_TEMP/alpine-aports" rev-parse HEAD)"
+          echo "baseline_sha=$baseline_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Generate rsyslog dist tarball
+        run: |
+          RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
+            RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+            devtools/devcontainer.sh --rm \
+              .github/scripts/debian_package_build.sh run_dist_build \
+              /rsyslog
+          dist_tarball="$(find rsyslog-source -maxdepth 1 -type f \
+            -name 'rsyslog-*.tar.gz' -print -quit)"
+          [ -n "$dist_tarball" ]
+          echo "DIST_TARBALL=$GITHUB_WORKSPACE/$dist_tarball" >> "$GITHUB_ENV"
+
+      - name: Prepare Alpine package sources
+        env:
+          PKGVER: ${{ steps.version.outputs.pkgver }}
+        run: |
+          "$ALPINE_DAILY_STABLE_HELPER" prepare-sources \
+            "$RUNNER_TEMP/alpine-aports/main/rsyslog" \
+            "$DIST_TARBALL" \
+            "$RUNNER_TEMP/prepared-aports/main/rsyslog" \
+            "$ALPINE_POLICY_FILE" \
+            "$PKGVER"
+
+      - name: Validate Alpine archive signing key
+        env:
+          ALPINE_RSA_PRIVATE_KEY: ${{ secrets.ALPINE_DAILY_STABLE_RSA_PRIVATE_KEY }}
+          EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.ALPINE_DAILY_STABLE_RSA_PUBLIC_KEY_SHA256 }}
+        run: |
+          set -euo pipefail
+          [ -n "$ALPINE_RSA_PRIVATE_KEY" ]
+          [ -n "$EXPECTED_PUBLIC_KEY_SHA256" ]
+          private_key="$RUNNER_TEMP/rsyslog-alpine-archive.rsa"
+          public_key="$RUNNER_TEMP/rsyslog-alpine-archive.rsa.pub"
+          install -m 600 /dev/null "$private_key"
+          printf '%s\n' "$ALPINE_RSA_PRIVATE_KEY" > "$private_key"
+          openssl rsa -in "$private_key" -pubout -out "$public_key"
+          actual_sha256="$(sha256sum "$public_key" | awk '{print $1}')"
+          [ "$actual_sha256" = "$EXPECTED_PUBLIC_KEY_SHA256" ]
+          echo "ALPINE_PRIVATE_KEY_FILE=$private_key" >> "$GITHUB_ENV"
+          echo "ALPINE_PUBLIC_KEY_FILE=$public_key" >> "$GITHUB_ENV"
+
+      - name: Build signed Alpine packages
+        id: package_build
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.expected_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/alpine-package-output"
+          devtools/ci-flake-phase.sh begin alpine324-package-build custom
+          set +e
+          docker run --rm \
+            -e ALPINE_ARCH -e ALPINE_DAILY_STABLE_HELPER -e EXPECTED_VERSION \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace \
+            alpine:3.24 sh -lc '
+              set -euo pipefail
+              apk update >/dev/null
+              apk add alpine-sdk bash python3 sudo >/dev/null
+              adduser -D builder
+              addgroup builder abuild
+              echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+              chmod 440 /etc/sudoers.d/builder
+              install -d -m 775 -o builder -g abuild /var/cache/distfiles
+              chown -R builder:abuild \
+                /runner-temp/prepared-aports \
+                /runner-temp/alpine-package-output
+              install -d -m 700 -o builder -g builder /home/builder/.abuild
+              install -m 600 -o builder -g builder \
+                /runner-temp/rsyslog-alpine-archive.rsa \
+                /home/builder/.abuild/rsyslog-alpine-archive.rsa
+              install -m 644 -o builder -g builder \
+                /runner-temp/rsyslog-alpine-archive.rsa.pub \
+                /home/builder/.abuild/rsyslog-alpine-archive.rsa.pub
+              install -m 644 /runner-temp/rsyslog-alpine-archive.rsa.pub \
+                /etc/apk/keys/rsyslog-alpine-archive.rsa.pub
+              su builder -c "
+                set -e
+                cd /runner-temp/prepared-aports/main/rsyslog
+                abuild checksum
+                APORTSDIR=/runner-temp/prepared-aports \\
+                  REPODEST=/runner-temp/alpine-package-output \\
+                  PACKAGER_PRIVKEY=/home/builder/.abuild/rsyslog-alpine-archive.rsa \\
+                  abuild -r
+              "
+              mkdir -p /runner-temp/alpine-artifacts
+              cp /runner-temp/alpine-package-output/main/$ALPINE_ARCH/*.apk \
+                /runner-temp/alpine-artifacts/
+              cp /runner-temp/prepared-aports/main/rsyslog/APKBUILD \
+                /runner-temp/alpine-artifacts/APKBUILD
+              cp /runner-temp/rsyslog-alpine-archive.rsa.pub \
+                /runner-temp/alpine-artifacts/rsyslog-alpine-archive.rsa.pub
+              "$ALPINE_DAILY_STABLE_HELPER" verify-artifacts \
+                /runner-temp/alpine-artifacts "$EXPECTED_VERSION" "$ALPINE_ARCH"
+            ' 2>&1 | tee "$RUNNER_TEMP/alpine-build.log"
+          build_status=${PIPESTATUS[0]}
+          set -e
+          devtools/ci-flake-phase.sh end \
+            alpine324-package-build custom "$build_status"
+          if [ "$build_status" -eq 0 ]; then
+            sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/alpine-artifacts"
+            cp "$RUNNER_TEMP/alpine-build.log" \
+              "$RUNNER_TEMP/alpine-artifacts/build.log"
+            cp -a "$RUNNER_TEMP/alpine-artifacts" alpine-daily-stable-artifacts
+          fi
+          exit "$build_status"
+
+      - name: Upload package-build failure evidence
+        if: failure() && steps.package_build.outcome == 'failure'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: Alpine 3.24 daily stable package build
+
+      - name: Generate artifact manifest
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.expected_version }}
+        run: |
+          "$ALPINE_DAILY_STABLE_HELPER" manifest \
+            alpine-daily-stable-artifacts \
+            "$EXPECTED_VERSION" "$ALPINE_ARCH" "$PACKAGE_CHANNEL" \
+            "$PACKAGE_DISTRO" "$PACKAGE_DISTRO_VERSION"
+
+      - name: Upload Alpine package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: alpine324-daily-stable-${{ steps.version.outputs.expected_version }}
+          path: alpine-daily-stable-artifacts/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Summarize build
+        env:
+          BASELINE_SHA: ${{ steps.packaging.outputs.baseline_sha }}
+          EXPECTED_VERSION: ${{ steps.version.outputs.expected_version }}
+          SOURCE_REF: ${{ needs.preflight.outputs.source_ref }}
+        run: |
+          {
+            echo '### Alpine 3.24 daily stable build'
+            echo
+            echo "- Version: \`$EXPECTED_VERSION\`"
+            echo "- Source ref: \`$SOURCE_REF\`"
+            echo "- Source commit: \`$SOURCE_GIT_SHA\`"
+            echo "- Alpine packaging baseline: \`$BASELINE_SHA\`"
+            echo "- Archive prefix: \`$SPACE_PREFIX\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: publish DigitalOcean Spaces APK archive
+    needs: [preflight, build]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_REGION }}
+      SPACE_BUCKET: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_BUCKET }}
+      SPACE_ENDPOINT: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_ENDPOINT }}
+      REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_REPO_URL }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate archive configuration
+        run: |
+          set -euo pipefail
+          command -v aws
+          for variable in \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION \
+            SPACE_BUCKET SPACE_ENDPOINT REPO_URL; do
+            [ -n "${!variable:-}" ] || {
+              echo "$variable is empty" >&2
+              exit 1
+            }
+          done
+
+      - name: Download Alpine package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: alpine324-daily-stable-${{ needs.build.outputs.expected_version }}
+          path: alpine-daily-stable-artifacts
+
+      - name: Verify artifact checksums
+        run: |
+          cd alpine-daily-stable-artifacts
+          sha256sum -c SHA256SUMS
+
+      - name: Download current repository index
+        run: |
+          set -euo pipefail
+          mkdir -p current-repository
+          index_key="$SPACE_PREFIX/$ALPINE_ARCH/APKINDEX.tar.gz"
+          remote_key="$(
+            aws s3api list-objects-v2 \
+              --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
+              --prefix "$index_key" --max-keys 1 \
+              --query 'Contents[0].Key' --output text
+          )"
+          if [ "$remote_key" = "$index_key" ]; then
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              "s3://$SPACE_BUCKET/$index_key" \
+              current-repository/APKINDEX.tar.gz
+          fi
+
+      - name: Generate signed incremental APK repository
+        env:
+          ALPINE_RSA_PRIVATE_KEY: ${{ secrets.ALPINE_DAILY_STABLE_RSA_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          private_key="$RUNNER_TEMP/rsyslog-alpine-archive.rsa"
+          install -m 600 /dev/null "$private_key"
+          printf '%s\n' "$ALPINE_RSA_PRIVATE_KEY" > "$private_key"
+          docker run --rm \
+            -e ALPINE_ARCH -e ALPINE_DAILY_STABLE_HELPER \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace \
+            alpine:3.24 sh -lc '
+              set -euo pipefail
+              apk add --no-cache abuild bash >/dev/null
+              "$ALPINE_DAILY_STABLE_HELPER" generate-index \
+                alpine-daily-stable-artifacts \
+                current-repository/APKINDEX.tar.gz \
+                apk-repo "$ALPINE_ARCH" \
+                /runner-temp/rsyslog-alpine-archive.rsa \
+                alpine-daily-stable-artifacts/rsyslog-alpine-archive.rsa.pub
+            '
+
+      - name: Generate snapshot
+        env:
+          ARCHIVE_DATE: ${{ needs.build.outputs.archive_date }}
+          EXPECTED_VERSION: ${{ needs.build.outputs.expected_version }}
+        run: |
+          snapshot_dir="apk-repo/snapshots/$ARCHIVE_DATE/$EXPECTED_VERSION"
+          mkdir -p "$snapshot_dir"
+          cp -a alpine-daily-stable-artifacts/manifest.json \
+            alpine-daily-stable-artifacts/SHA256SUMS \
+            alpine-daily-stable-artifacts/build.log \
+            alpine-daily-stable-artifacts/APKBUILD \
+            "$snapshot_dir/"
+
+      - name: Publish immutable APKs and snapshots
+        run: |
+          set -euo pipefail
+          upload_immutable() {
+            local path="$1"
+            local relative_path="${path#apk-repo/}"
+            local key="$SPACE_PREFIX/$relative_path"
+            local local_hash remote_hash remote_key
+            remote_key="$(
+              aws s3api list-objects-v2 \
+                --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
+                --prefix "$key" --max-keys 1 \
+                --query 'Contents[0].Key' --output text
+            )"
+            local_hash="$(sha256sum "$path" | awk '{print $1}')"
+            if [ "$remote_key" = "$key" ]; then
+              remote_hash="$(
+                aws s3 cp --quiet --endpoint-url "$SPACE_ENDPOINT" \
+                  "s3://$SPACE_BUCKET/$key" - | sha256sum | awk '{print $1}'
+              )"
+              [ "$remote_hash" = "$local_hash" ] || {
+                echo "immutable archive collision at $key" >&2
+                exit 1
+              }
+              return
+            fi
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=31536000,immutable' \
+              --metadata "sha256=$local_hash,max-age=31536000" \
+              "$path" "s3://$SPACE_BUCKET/$key"
+          }
+          while IFS= read -r -d '' path; do
+            upload_immutable "$path"
+          done < <(
+            find "apk-repo/$ALPINE_ARCH" -maxdepth 1 -type f -name '*.apk' -print0
+            find apk-repo/snapshots -type f -print0
+          )
+
+      - name: Publish archive key and mutable index
+        run: |
+          set -euo pipefail
+          upload_metadata() {
+            local path="$1"
+            local relative_path="${path#apk-repo/}"
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=60,must-revalidate' \
+              --metadata 'max-age=60' \
+              "$path" "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
+          }
+          upload_metadata apk-repo/rsyslog-alpine-archive.rsa.pub
+          upload_metadata "apk-repo/$ALPINE_ARCH/APKINDEX.tar.gz"
+
+  verify:
+    name: verify published Alpine 3.24 repository
+    needs: [preflight, build, publish]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: alpine:3.24
+      options: --user root
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_REPO_URL }}
+      EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.ALPINE_DAILY_STABLE_RSA_PUBLIC_KEY_SHA256 }}
+      EXPECTED_VERSION: ${{ needs.build.outputs.expected_version }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verification tools
+        run: apk add --no-cache bash ca-certificates curl
+
+      - name: Wait for CDN and verify exact package installation
+        id: published_install
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/flake-evidence/logs
+          devtools/ci-flake-phase.sh begin alpine324-published-install custom
+          set +e
+          (
+            set -euo pipefail
+            verification_rc=1
+            for attempt in $(seq 1 20); do
+              rm -f /tmp/rsyslog-alpine-archive.rsa.pub
+              if curl -fsSL \
+                  "$REPO_URL/rsyslog-alpine-archive.rsa.pub" \
+                  -o /tmp/rsyslog-alpine-archive.rsa.pub &&
+                [ "$(sha256sum /tmp/rsyslog-alpine-archive.rsa.pub | awk '{print $1}')" = \
+                  "$EXPECTED_PUBLIC_KEY_SHA256" ]; then
+                cp /tmp/rsyslog-alpine-archive.rsa.pub /etc/apk/keys/
+                if ! grep -Fxq "$REPO_URL" /etc/apk/repositories; then
+                  echo "$REPO_URL" >> /etc/apk/repositories
+                fi
+                if apk update --no-cache &&
+                  apk add --no-cache "rsyslog=$EXPECTED_VERSION"; then
+                  verification_rc=0
+                  break
+                fi
+              fi
+              echo "Repository not ready yet, retrying ($attempt/20)..."
+              [ "$attempt" -eq 20 ] || sleep 30
+            done
+            [ "$verification_rc" -eq 0 ]
+            installed_version="$(
+              apk query --from installed --fields version --format json rsyslog |
+                sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+            )"
+            [ "$installed_version" = "$EXPECTED_VERSION" ]
+            rsyslogd -v
+            rsyslogd -N1
+          ) 2>&1 | tee .ci/flake-evidence/logs/alpine324-published-install.log
+          install_status=${PIPESTATUS[0]}
+          set -e
+          devtools/ci-flake-phase.sh end \
+            alpine324-published-install custom "$install_status"
+          exit "$install_status"
+
+      - name: Upload publication failure evidence
+        if: failure() && steps.published_install.outcome == 'failure'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: Alpine 3.24 daily stable verification
+
+  report_failure:
+    name: report failure
+    needs: [preflight, build, publish, verify]
+    if: >-
+      always() &&
+      github.event_name == 'schedule' &&
+      (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Create or update failure issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          VERSION: ${{ needs.build.outputs.expected_version }}
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        with:
+          script: |
+            const version = process.env.VERSION || `run-${context.runId}`;
+            const title = '[alpine324-daily-stable] package archive failure';
+            const body = [
+              `Automated Alpine 3.24 daily stable failed for \`${version}\`.`,
+              '',
+              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `Workflow commit: ${context.sha}`,
+              '',
+              'Job results:',
+              `- preflight: ${process.env.PREFLIGHT_RESULT}`,
+              `- build: ${process.env.BUILD_RESULT}`,
+              `- publish: ${process.env.PUBLISH_RESULT}`,
+              `- verify: ${process.env.VERIFY_RESULT}`
+            ].join('\n');
+            const {owner, repo} = context.repo;
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issue = existing.find(item => item.title === title && !item.pull_request);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body
+              });
+              return;
+            }
+            const created = await github.rest.issues.create({owner, repo, title, body});
+            try {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: created.data.number,
+                labels: ['release', 'packaging', 'daily-stable', 'automated']
+              });
+            } catch (error) {
+              core.warning(`Could not add labels: ${error.message}`);
+            }
