@@ -137,16 +137,15 @@ cmd_verify_artifacts() {
 	local artifact_dir="$1"
 	local expected_version="$2"
 	local arch="$3"
-	local base_apk actual_version
+	local base_apk
 
 	base_apk="$(find "$artifact_dir" -maxdepth 1 -type f \
 		-name "rsyslog-${expected_version}.apk" -print -quit)"
 	[ -n "$base_apk" ] ||
 		die "base rsyslog APK for $expected_version is absent"
-	actual_version="$(apk info --legacy-info --description "$base_apk" 2>/dev/null |
-		sed -n '1s/^rsyslog-//p')"
-	[ "$actual_version" = "$expected_version" ] ||
-		die "built APK version $actual_version does not match $expected_version"
+	if ! apk verify "$base_apk"; then
+		die "base rsyslog APK failed signature or integrity verification"
+	fi
 	find "$artifact_dir" -maxdepth 1 -type f -name '*.apk' -print -quit |
 		grep -q . || die "no APK artifacts were produced"
 	[ "$(apk --print-arch)" = "$arch" ] ||
