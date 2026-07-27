@@ -1,0 +1,34 @@
+{
+  "allowed_patch_skips": [
+    {
+      "patch": "Increase-timeouts-in-imfile-basic-2GB-file-and-imfile-tru.patch",
+      "reason": "Ubuntu 26.04 carries the 2 GiB imfile timeout increase that current upstream already includes with later test updates."
+    },
+    {
+      "patch": "gnusort-in-tests.patch",
+      "reason": "Ubuntu 26.04 carries an armhf GNU sort test workaround whose patch context is superseded by later upstream testbench changes."
+    },
+    {
+      "patch": "fix-curl-ftbfs.patch",
+      "reason": "Ubuntu 26.04 carries upstream curl compatibility commit b1302a17, which is already part of current main."
+    },
+    {
+      "patch": "imptcp-security.patch",
+      "reason": "Ubuntu 26.04 backports the imptcp regex-framing denial-of-service fix already present in current main."
+    },
+    {
+      "patch": "CVE-2026-61548.patch",
+      "reason": "Ubuntu 26.04 backports custom structured-data container handling already present in current main."
+    }
+  ],
+  "supplemental_build_deps": [],
+  "control_replacements": [
+    {
+      "pattern": "Build-Depends: debhelper-compat \\(= 13\\),",
+      "replacement": "Build-Depends: debhelper-compat (= 13),\\n               libyaml-dev,\\n               libprotobuf-c-dev,\\n               protobuf-c-compiler,\\n               libsnappy-dev,",
+      "reason": "Current upstream adds YAML configuration and native impstats push support whose build dependencies postdate Ubuntu 26.04's rsyslog source package."
+    }
+  ],
+  "install_manifest_additions": [],
+  "not_installed_paths": []
+}

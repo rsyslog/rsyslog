@@ -85,6 +85,8 @@ cmd_version() {
 cmd_stamp_changelog() {
   local source_dir="$1"
   local version="$2"
+  local suite="${DEBIAN_SUITE:-trixie}"
+  local distro_label="${PACKAGE_DISTRO_LABEL:-Debian}"
 
   [ -d "$source_dir/debian" ] ||
     die "missing debian directory: $source_dir/debian"
@@ -92,8 +94,8 @@ cmd_stamp_changelog() {
   cd "$source_dir"
   export DEBEMAIL="${DEBEMAIL:-release-bot@adiscon.com}"
   export DEBFULLNAME="${DEBFULLNAME:-Adiscon package maintainers}"
-  dch --force-distribution --distribution trixie --newversion "$version" \
-    "Automated rsyslog Debian daily stable build."
+  dch --force-distribution --distribution "$suite" --newversion "$version" \
+    "Automated rsyslog $distro_label daily stable build."
 }
 
 cmd_build_package() {
@@ -401,7 +403,7 @@ cmd_generate_repo() {
       -o "APT::FTPArchive::Release::Architectures=$arch" \
       -o "APT::FTPArchive::Release::Components=$component" \
       -o "APT::FTPArchive::Release::Acquire-By-Hash=yes" \
-      -o "APT::FTPArchive::Release::Description=rsyslog Debian daily stable packages" \
+      -o "APT::FTPArchive::Release::Description=rsyslog ${PACKAGE_DISTRO_LABEL:-Debian} daily stable packages" \
       release "dists/$suite" > "dists/$suite/Release"
   )
 
@@ -519,7 +521,7 @@ build_self_test_deb() {
 
 cmd_self_test() (
   local tmp_dir repo_dir first_artifacts second_artifacts fingerprint
-  local test_version
+  local test_suite test_version
   local cleanup_command
 
   for tool in apt-ftparchive curl dpkg dpkg-deb gpg gpgv xz; do
@@ -530,6 +532,7 @@ cmd_self_test() (
   test_version="$(
     daily_version 8.2606.0 20260725 9 1 31720a4787d4
   )"
+  test_suite="${DEBIAN_SUITE:-trixie}"
   dpkg --compare-versions "$test_version" gt 8.2606.0-4 ||
     die "daily version must sort after the Debian packaging baseline"
 
@@ -549,20 +552,20 @@ cmd_self_test() (
   fingerprint="$(secret_key_fingerprint)"
 
   build_self_test_deb "$first_artifacts" "1.0~daily1"
-  cmd_generate_repo "$first_artifacts" "$repo_dir" trixie main amd64
-  cmd_verify_repo "file://$repo_dir" trixie main amd64 \
+  cmd_generate_repo "$first_artifacts" "$repo_dir" "$test_suite" main amd64
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily1" "$fingerprint"
 
   build_self_test_deb "$second_artifacts" "1.0~daily2"
-  cmd_generate_repo "$second_artifacts" "$repo_dir" trixie main amd64
-  cmd_verify_repo "file://$repo_dir" trixie main amd64 \
+  cmd_generate_repo "$second_artifacts" "$repo_dir" "$test_suite" main amd64
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily1" "$fingerprint"
-  cmd_verify_repo "file://$repo_dir" trixie main amd64 \
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily2" "$fingerprint"
 
   rm -rf "$tmp_dir"
   trap - EXIT
-  echo "Debian daily stable archive self-test passed."
+  echo "${PACKAGE_DISTRO_LABEL:-Debian} daily stable archive self-test passed."
 )
 
 command="${1:-}"
