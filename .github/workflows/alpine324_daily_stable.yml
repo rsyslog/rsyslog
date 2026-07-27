@@ -462,10 +462,11 @@ jobs:
           persist-credentials: false
 
       - name: Install verification tools
-        run: apk add --no-cache bash ca-certificates curl
+        run: apk add --no-cache bash ca-certificates curl python3
 
       - name: Wait for CDN and verify exact package installation
         id: published_install
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p .ci/flake-evidence/logs
