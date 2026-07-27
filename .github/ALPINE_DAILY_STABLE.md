@@ -37,7 +37,9 @@ snapshots/YYYY-MM-DD/PACKAGE_VERSION/
 APK files and snapshots are immutable and retained for at least five years.
 The workflow merges the previous signed index with each new package set so
 older daily versions remain installable. Only the small mutable APK index and
-public signing key use the CDN's 60-second metadata cache override.
+public signing key request a 60-second metadata cache override. DigitalOcean's
+CDN currently enforces a one-hour minimum TTL, so consumers can see a newly
+published index up to one hour later.
 The ordered APK version contains the UTC date and GitHub run/attempt serial;
 the manifest records the exact rsyslog source commit.
 
@@ -59,6 +61,8 @@ Add these repository variables:
   publication succeeds.
 - `ALPINE324_DAILY_STABLE_REPO_URL`: public CDN URL ending in
   `/apk/daily-stable/alpine/3.24`.
+- `ALPINE324_DAILY_STABLE_ORIGIN_REPO_URL`: public Spaces origin URL ending in
+  `/apk/daily-stable/alpine/3.24`.
 - `ALPINE_DAILY_STABLE_RSA_PUBLIC_KEY_SHA256`: SHA-256 of the PEM public key.
 
 The existing shared Space bucket, endpoint, region, access key, and secret key
@@ -70,8 +74,10 @@ remain unchanged. A DigitalOcean account API token is not required.
 2. Run the workflow manually with publication disabled and inspect the APK
    artifacts.
 3. Run it manually with publication enabled.
-4. Confirm that a clean `alpine:3.24` container trusts the published key,
-   installs the exact daily rsyslog version, and passes `rsyslogd -N1`.
+4. Confirm that the CDN key and index are reachable and that a clean
+   `alpine:3.24` container trusts the public origin key, installs the exact
+   daily rsyslog version, and passes `rsyslogd -N1`. Exact-version validation
+   uses the origin because the CDN's minimum TTL can exceed CI runtime.
 5. Set `ALPINE324_DAILY_STABLE_ENABLED=true`.
 
 The scheduled workflow opens or updates an issue if its build, publication,
