@@ -1,0 +1,637 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+---
+name: fedora 44 daily stable
+
+'on':
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: rsyslog source branch, tag, or commit to package
+        required: true
+        default: main
+        type: string
+      publish_to_archive:
+        description: Publish to the configured DigitalOcean Spaces archive
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: '47 5 * * *'
+
+concurrency:
+  group: fedora44-daily-stable
+  cancel-in-progress: false
+
+env:
+  FEDORA_DAILY_STABLE_HELPER: devtools/release/fedora-daily-stable.sh
+  FEDORA_POLICY_FILE: .github/fedora44-daily-stable-policy.yml
+  RPM_ARCH: x86_64
+  PACKAGE_CHANNEL: daily-stable
+  PACKAGE_DISTRO: fedora
+  PACKAGE_DISTRO_VERSION: '44'
+  SPACE_PREFIX: rpm/daily-stable/fedora/44
+
+jobs:
+  preflight:
+    name: preflight
+    runs-on: ubuntu-24.04
+    if: github.repository == 'rsyslog/rsyslog'
+    permissions:
+      contents: read
+    outputs:
+      should_run: ${{ steps.decision.outputs.should_run }}
+      should_publish: ${{ steps.decision.outputs.should_publish }}
+      source_ref: ${{ steps.decision.outputs.source_ref }}
+    steps:
+      - name: Decide whether this run is active
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_PUBLISH: ${{ inputs.publish_to_archive }}
+          MANUAL_SOURCE_REF: ${{ inputs.source_ref }}
+          SCHEDULE_ENABLED: ${{ vars.FEDORA44_DAILY_STABLE_ENABLED }}
+        run: |
+          set -euo pipefail
+          should_run=false
+          should_publish=false
+          source_ref=main
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              should_run=true
+              source_ref="${MANUAL_SOURCE_REF:-main}"
+              if [ "${MANUAL_PUBLISH:-false}" = true ]; then
+                should_publish=true
+              fi
+              ;;
+            schedule)
+              if [ "${SCHEDULE_ENABLED:-false}" = true ]; then
+                should_run=true
+                should_publish=true
+              fi
+              ;;
+          esac
+          {
+            echo "should_run=$should_run"
+            echo "should_publish=$should_publish"
+            echo "source_ref=$source_ref"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build Fedora 44 x86_64 packages
+    needs: preflight
+    if: needs.preflight.outputs.should_run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    outputs:
+      archive_date: ${{ steps.version.outputs.archive_date }}
+      expected_evr: ${{ steps.version.outputs.expected_evr }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout source to package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: rsyslog-source
+          persist-credentials: false
+          ref: ${{ needs.preflight.outputs.source_ref }}
+
+      - name: Record packaged source revision
+        id: source
+        run: |
+          set -euo pipefail
+          source_sha="$(git -C rsyslog-source rev-parse HEAD)"
+          {
+            echo "source_sha=$source_sha"
+            echo "SOURCE_GIT_SHA=$source_sha"
+            echo "RSYSLOG_SOURCE_DIR=$GITHUB_WORKSPACE/rsyslog-source"
+          } | tee -a "$GITHUB_ENV" >> "$GITHUB_OUTPUT"
+
+      - name: Generate daily package version
+        id: version
+        run: "$FEDORA_DAILY_STABLE_HELPER version"
+
+      - name: Generate rsyslog dist tarball
+        run: |
+          RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
+            RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+            devtools/devcontainer.sh --rm \
+              .github/scripts/debian_package_build.sh run_dist_build \
+              /rsyslog
+          dist_tarball="$(
+            find rsyslog-source -maxdepth 1 -type f \
+              -name 'rsyslog-*.tar.gz' -print -quit
+          )"
+          [ -n "$dist_tarball" ]
+          echo "DIST_TARBALL=$GITHUB_WORKSPACE/$dist_tarball" >> "$GITHUB_ENV"
+
+      - name: Fetch native baseline and build Fedora RPMs
+        id: package_build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE: ${{ steps.version.outputs.release }}
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fedora44-build"
+          devtools/ci-flake-phase.sh begin fedora44-package-build custom
+          set +e
+          docker run --rm \
+            -e FEDORA_DAILY_STABLE_HELPER \
+            -e FEDORA_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e VERSION \
+            -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace \
+            fedora:44 bash -lc '
+              set -euo pipefail
+              dnf -q -y install \
+                dnf5-plugins findutils gzip python3 rpm-build tar >/dev/null
+              mkdir -p /runner-temp/fedora44-baseline/download \
+                /runner-temp/fedora44-baseline/rpmbuild
+              dnf -q -y download --source \
+                --destdir /runner-temp/fedora44-baseline/download \
+                rsyslog >/dev/null
+              baseline_srpm="$(
+                find /runner-temp/fedora44-baseline/download \
+                  -maxdepth 1 -type f -name "rsyslog-*.src.rpm" -print -quit
+              )"
+              [ -n "$baseline_srpm" ]
+              rpm -qp --qf "%{NAME}-%{VERSION}-%{RELEASE}.src\n" \
+                "$baseline_srpm" \
+                > /runner-temp/fedora44-baseline-nevra
+              sha256sum "$baseline_srpm" | awk "{print \$1}" \
+                > /runner-temp/fedora44-baseline-sha256
+              rpm -ivh \
+                --define "_topdir /runner-temp/fedora44-baseline/rpmbuild" \
+                "$baseline_srpm" >/dev/null
+              "$FEDORA_DAILY_STABLE_HELPER" prepare-sources \
+                /runner-temp/fedora44-baseline/rpmbuild \
+                "$DIST_TARBALL" \
+                /runner-temp/fedora44-prepared \
+                "$FEDORA_POLICY_FILE" \
+                "$VERSION" \
+                "$RELEASE"
+              "$FEDORA_DAILY_STABLE_HELPER" build-package \
+                /runner-temp/fedora44-prepared \
+                /runner-temp/fedora44-artifacts \
+                /runner-temp/fedora44-build.log \
+                "$EXPECTED_EVR" \
+                x86_64
+            '
+          build_status=$?
+          set -e
+          devtools/ci-flake-phase.sh end \
+            fedora44-package-build custom "$build_status"
+          if [ "$build_status" -eq 0 ]; then
+            sudo chown -R "$(id -u):$(id -g)" \
+              "$RUNNER_TEMP/fedora44-artifacts" \
+              "$RUNNER_TEMP/fedora44-build.log" \
+              "$RUNNER_TEMP/fedora44-baseline-nevra" \
+              "$RUNNER_TEMP/fedora44-baseline-sha256"
+            cp -a "$RUNNER_TEMP/fedora44-artifacts" \
+              fedora44-daily-stable-artifacts
+            {
+              echo "baseline_nevra=$(cat "$RUNNER_TEMP/fedora44-baseline-nevra")"
+              echo "baseline_sha256=$(cat "$RUNNER_TEMP/fedora44-baseline-sha256")"
+            } >> "$GITHUB_OUTPUT"
+          fi
+          exit "$build_status"
+
+      - name: Upload package-build failure evidence
+        if: failure() && steps.package_build.outcome == 'failure'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: Fedora 44 daily stable package build
+
+      - name: Generate artifact manifest
+        env:
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+        run: |
+          "$FEDORA_DAILY_STABLE_HELPER" manifest \
+            fedora44-daily-stable-artifacts \
+            "$EXPECTED_EVR" \
+            "$RPM_ARCH" \
+            "$PACKAGE_CHANNEL" \
+            "$PACKAGE_DISTRO" \
+            "$PACKAGE_DISTRO_VERSION"
+
+      - name: Upload Fedora package artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fedora44-daily-stable-${{ steps.version.outputs.expected_evr }}
+          path: fedora44-daily-stable-artifacts/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Summarize build
+        env:
+          BASELINE_NEVRA: ${{ steps.package_build.outputs.baseline_nevra }}
+          BASELINE_SHA256: ${{ steps.package_build.outputs.baseline_sha256 }}
+          EXPECTED_EVR: ${{ steps.version.outputs.expected_evr }}
+          SOURCE_REF: ${{ needs.preflight.outputs.source_ref }}
+        run: |
+          {
+            echo '### Fedora 44 daily stable build'
+            echo
+            echo "- EVR: \`$EXPECTED_EVR\`"
+            echo "- Source ref: \`$SOURCE_REF\`"
+            echo "- Source commit: \`$SOURCE_GIT_SHA\`"
+            echo "- Fedora source RPM: \`$BASELINE_NEVRA\`"
+            echo "- Baseline SHA-256: \`$BASELINE_SHA256\`"
+            echo "- Archive prefix: \`$SPACE_PREFIX\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: publish DigitalOcean Spaces Fedora RPM archive
+    needs: [preflight, build]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # This legacy-named environment is the security boundary for the shared
+    # package archive, not a Debian-only destination.
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEBIAN_DAILY_STABLE_SPACE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_REGION }}
+      SPACE_BUCKET: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_BUCKET }}
+      SPACE_ENDPOINT: ${{ vars.DEBIAN_DAILY_STABLE_SPACE_ENDPOINT }}
+      REPO_URL: ${{ vars.FEDORA44_DAILY_STABLE_REPO_URL }}
+      ARCHIVE_GPG_PRIVATE_KEY: ${{ secrets.DEBIAN_DAILY_STABLE_GPG_PRIVATE_KEY }}
+      ARCHIVE_GPG_PASSPHRASE: ${{ secrets.DEBIAN_DAILY_STABLE_GPG_PASSPHRASE }}
+      ARCHIVE_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
+    steps:
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install RPM repository tools
+        run: |
+          command -v aws
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            createrepo-c gnupg rpm
+
+      - name: Validate archive configuration
+        run: |
+          set -euo pipefail
+          for variable in \
+            AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION \
+            SPACE_BUCKET SPACE_ENDPOINT REPO_URL ARCHIVE_GPG_PRIVATE_KEY \
+            ARCHIVE_GPG_FINGERPRINT; do
+            [ -n "${!variable:-}" ] || {
+              echo "$variable is empty" >&2
+              exit 1
+            }
+          done
+
+      - name: Download Fedora package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: fedora44-daily-stable-${{ needs.build.outputs.expected_evr }}
+          path: fedora44-daily-stable-artifacts
+
+      - name: Verify artifact checksums
+        run: |
+          cd fedora44-daily-stable-artifacts
+          sha256sum -c SHA256SUMS
+
+      - name: Import signing key and unlock its agent
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.gnupg"
+          echo allow-preset-passphrase > "$HOME/.gnupg/gpg-agent.conf"
+          gpgconf --kill gpg-agent || true
+          printf '%s\n' "$ARCHIVE_GPG_PRIVATE_KEY" | gpg --batch --import
+          keygrip="$(
+            gpg --batch --with-colons --with-keygrip --list-secret-keys \
+              "$ARCHIVE_GPG_FINGERPRINT" |
+              awk -F: '$1 == "grp" { print $10; exit }'
+          )"
+          [ -n "$keygrip" ]
+          preset_tool="$(command -v gpg-preset-passphrase || true)"
+          for candidate in \
+            /usr/lib/gnupg2/gpg-preset-passphrase \
+            /usr/lib/gnupg/gpg-preset-passphrase; do
+            if [ -z "$preset_tool" ] && [ -x "$candidate" ]; then
+              preset_tool="$candidate"
+            fi
+          done
+          [ -n "$preset_tool" ]
+          printf '%s' "$ARCHIVE_GPG_PASSPHRASE" |
+            "$preset_tool" --preset "$keygrip"
+          passphrase_file="$RUNNER_TEMP/archive-gpg-passphrase"
+          install -m 600 /dev/null "$passphrase_file"
+          printf '%s' "$ARCHIVE_GPG_PASSPHRASE" > "$passphrase_file"
+          echo "GPG_PASSPHRASE_FILE=$passphrase_file" >> "$GITHUB_ENV"
+
+      - name: Sign binary and source RPMs
+        run: |
+          "$FEDORA_DAILY_STABLE_HELPER" sign-rpms \
+            fedora44-daily-stable-artifacts \
+            "$ARCHIVE_GPG_FINGERPRINT"
+
+      - name: Download current repository metadata
+        run: |
+          set -euo pipefail
+          mkdir -p "rpm-repo/$RPM_ARCH" rpm-repo/SRPMS
+          for repo_subdir in "$RPM_ARCH" SRPMS; do
+            aws s3 sync \
+              --only-show-errors \
+              --endpoint-url "$SPACE_ENDPOINT" \
+              "s3://$SPACE_BUCKET/$SPACE_PREFIX/$repo_subdir/repodata" \
+              "rpm-repo/$repo_subdir/repodata"
+          done
+
+      - name: Generate signed incremental RPM repositories
+        run: |
+          "$FEDORA_DAILY_STABLE_HELPER" generate-repo \
+            fedora44-daily-stable-artifacts \
+            rpm-repo \
+            "$RPM_ARCH" \
+            "$ARCHIVE_GPG_FINGERPRINT" \
+            "$GPG_PASSPHRASE_FILE"
+
+      - name: Generate signed artifact manifest and snapshot
+        env:
+          ARCHIVE_DATE: ${{ needs.build.outputs.archive_date }}
+          EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
+        run: |
+          "$FEDORA_DAILY_STABLE_HELPER" manifest \
+            fedora44-daily-stable-artifacts \
+            "$EXPECTED_EVR" "$RPM_ARCH" "$PACKAGE_CHANNEL" \
+            "$PACKAGE_DISTRO" "$PACKAGE_DISTRO_VERSION"
+          snapshot_dir="rpm-repo/snapshots/$ARCHIVE_DATE/$EXPECTED_EVR"
+          mkdir -p "$snapshot_dir"
+          cp -a fedora44-daily-stable-artifacts/manifest.json \
+            fedora44-daily-stable-artifacts/SHA256SUMS \
+            fedora44-daily-stable-artifacts/build.log \
+            fedora44-daily-stable-artifacts/rsyslog.spec \
+            "$snapshot_dir/"
+
+      - name: Generate repository configuration
+        run: |
+          cat > rpm-repo/rsyslog-daily-stable-fedora44.repo <<EOF
+          [rsyslog-daily-stable]
+          name=rsyslog daily stable for Fedora 44 - \$basearch
+          baseurl=$REPO_URL/\$basearch
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=$REPO_URL/rsyslog-archive-keyring.asc
+          EOF
+
+      - name: Publish immutable RPMs and snapshots
+        run: |
+          set -euo pipefail
+          upload_immutable() {
+            local path="$1"
+            local relative_path="${path#rpm-repo/}"
+            local key="$SPACE_PREFIX/$relative_path"
+            local local_hash remote_hash remote_key
+            remote_key="$(
+              aws s3api list-objects-v2 \
+                --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
+                --prefix "$key" --max-keys 1 \
+                --query 'Contents[0].Key' --output text
+            )"
+            local_hash="$(sha256sum "$path" | awk '{print $1}')"
+            if [ "$remote_key" = "$key" ]; then
+              remote_hash="$(
+                aws s3 cp --quiet --endpoint-url "$SPACE_ENDPOINT" \
+                  "s3://$SPACE_BUCKET/$key" - | sha256sum | awk '{print $1}'
+              )"
+              [ "$remote_hash" = "$local_hash" ] || {
+                echo "immutable archive collision at $key" >&2
+                exit 1
+              }
+              return
+            fi
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=31536000,immutable' \
+              --metadata "sha256=$local_hash,max-age=31536000" \
+              "$path" "s3://$SPACE_BUCKET/$key"
+          }
+          while IFS= read -r -d '' path; do
+            upload_immutable "$path"
+          done < <(
+            find "rpm-repo/$RPM_ARCH/Packages" rpm-repo/SRPMS/Packages \
+              rpm-repo/snapshots -type f -print0
+          )
+
+      - name: Publish archive key and mutable metadata
+        run: |
+          set -euo pipefail
+          upload_metadata() {
+            local path="$1"
+            local relative_path="${path#rpm-repo/}"
+            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+              --acl public-read \
+              --cache-control 'public,max-age=60,must-revalidate' \
+              --metadata 'max-age=60' \
+              "$path" "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
+          }
+          upload_metadata rpm-repo/rsyslog-archive-keyring.asc
+          upload_metadata rpm-repo/rsyslog-daily-stable-fedora44.repo
+          for repo_subdir in "$RPM_ARCH" SRPMS; do
+            while IFS= read -r -d '' path; do
+              upload_metadata "$path"
+            done < <(
+              find "rpm-repo/$repo_subdir/repodata" -type f \
+                ! -name repomd.xml ! -name repomd.xml.asc -print0
+            )
+            upload_metadata "rpm-repo/$repo_subdir/repodata/repomd.xml"
+            upload_metadata "rpm-repo/$repo_subdir/repodata/repomd.xml.asc"
+          done
+
+  verify:
+    name: verify published Fedora 44 repository
+    needs: [preflight, build, publish]
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: fedora:44
+      options: --user root
+    environment: debian-daily-stable
+    permissions:
+      contents: read
+    env:
+      REPO_URL: ${{ vars.FEDORA44_DAILY_STABLE_REPO_URL }}
+      ORIGIN_REPO_URL: ${{ vars.FEDORA44_DAILY_STABLE_ORIGIN_REPO_URL }}
+      EXPECTED_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
+      EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
+    steps:
+      - name: Install container prerequisites
+        run: |
+          dnf -q -y install tar
+          dnf -q -y swap gnupg2-minimal gnupg2
+
+      - name: Checkout archive automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify CDN and exact origin installation
+        id: published_install
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/flake-evidence/logs
+          devtools/ci-flake-phase.sh begin \
+            fedora44-published-install custom
+          set +e
+          (
+            set -euo pipefail
+            for variable in REPO_URL ORIGIN_REPO_URL EXPECTED_EVR \
+              EXPECTED_GPG_FINGERPRINT; do
+              [ -n "${!variable:-}" ]
+            done
+            verify_dir="$(mktemp -d)"
+            curl -fsSL "$REPO_URL/rsyslog-archive-keyring.asc" \
+              -o "$verify_dir/key.asc"
+            actual_fingerprint="$(
+              gpg --batch --show-keys --with-colons "$verify_dir/key.asc" |
+                awk -F: '$1 == "fpr" { print $10; exit }'
+            )"
+            [ "$actual_fingerprint" = "$EXPECTED_GPG_FINGERPRINT" ]
+            gpg --batch --yes --dearmor \
+              --output "$verify_dir/keyring.gpg" "$verify_dir/key.asc"
+            curl -fsSL "$REPO_URL/$RPM_ARCH/repodata/repomd.xml" \
+              -o "$verify_dir/repomd.xml"
+            curl -fsSL "$REPO_URL/$RPM_ARCH/repodata/repomd.xml.asc" \
+              -o "$verify_dir/repomd.xml.asc"
+            gpgv --keyring "$verify_dir/keyring.gpg" \
+              "$verify_dir/repomd.xml.asc" "$verify_dir/repomd.xml"
+            rm -rf "$verify_dir"
+
+            verification_rc=1
+            for attempt in $(seq 1 20); do
+              if "$FEDORA_DAILY_STABLE_HELPER" verify-repo \
+                "$ORIGIN_REPO_URL" "$RPM_ARCH" "$EXPECTED_EVR" \
+                "$EXPECTED_GPG_FINGERPRINT"; then
+                verification_rc=0
+                break
+              fi
+              echo "Origin repository not ready yet, retrying ($attempt/20)..."
+              [ "$attempt" -eq 20 ] || sleep 30
+            done
+            [ "$verification_rc" -eq 0 ]
+
+            curl -fsSL "$ORIGIN_REPO_URL/rsyslog-archive-keyring.asc" \
+              -o /tmp/rsyslog-archive-keyring.asc
+            rpm --import /tmp/rsyslog-archive-keyring.asc
+            # DNF, not this shell, expands the literal $basearch token.
+            # shellcheck disable=SC2016
+            printf '%s\n' \
+              '[rsyslog-daily-stable]' \
+              'name=rsyslog daily stable for Fedora 44 - $basearch' \
+              "baseurl=$ORIGIN_REPO_URL/\$basearch" \
+              'enabled=1' \
+              'gpgcheck=1' \
+              'repo_gpgcheck=1' \
+              "gpgkey=$ORIGIN_REPO_URL/rsyslog-archive-keyring.asc" \
+              > /etc/yum.repos.d/rsyslog-daily-stable.repo
+            dnf -q -y makecache --refresh
+            dnf -q -y install \
+              "rsyslog-$EXPECTED_EVR" \
+              "rsyslog-crypto-$EXPECTED_EVR" \
+              "rsyslog-openssl-$EXPECTED_EVR"
+            for package in rsyslog rsyslog-crypto rsyslog-openssl; do
+              installed_evr="$(
+                rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
+              )"
+              [ "$installed_evr" = "$EXPECTED_EVR" ]
+            done
+            rsyslogd -v
+            rsyslogd -N1
+          ) 2>&1 | tee \
+            .ci/flake-evidence/logs/fedora44-published-install.log
+          install_status=${PIPESTATUS[0]}
+          set -e
+          devtools/ci-flake-phase.sh end \
+            fedora44-published-install custom "$install_status"
+          exit "$install_status"
+
+      - name: Upload publication failure evidence
+        if: failure() && steps.published_install.outcome == 'failure'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: Fedora 44 daily stable verification
+
+  report_failure:
+    name: report failure
+    needs: [preflight, build, publish, verify]
+    if: >-
+      always() &&
+      github.event_name == 'schedule' &&
+      (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Create or update failure issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          VERSION: ${{ needs.build.outputs.expected_evr }}
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        with:
+          script: |
+            const version = process.env.VERSION || `run-${context.runId}`;
+            const title = '[fedora44-daily-stable] package archive failure';
+            const body = [
+              `Automated Fedora 44 daily stable failed for \`${version}\`.`,
+              '',
+              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `Workflow commit: ${context.sha}`,
+              '',
+              'Job results:',
+              `- preflight: ${process.env.PREFLIGHT_RESULT}`,
+              `- build: ${process.env.BUILD_RESULT}`,
+              `- publish: ${process.env.PUBLISH_RESULT}`,
+              `- verify: ${process.env.VERIFY_RESULT}`
+            ].join('\n');
+            const {owner, repo} = context.repo;
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issue = existing.find(item => item.title === title && !item.pull_request);
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body
+              });
+              return;
+            }
+            const created = await github.rest.issues.create({owner, repo, title, body});
+            try {
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: created.data.number,
+                labels: ['release', 'packaging', 'daily-stable', 'automated']
+              });
+            } catch (error) {
+              core.warning(`Could not add labels: ${error.message}`);
+            }
