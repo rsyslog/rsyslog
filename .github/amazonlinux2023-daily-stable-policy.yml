@@ -1,0 +1,39 @@
+{
+  "allowed_patch_skips": [
+    {
+      "patch": "openssl3-compatibility.patch",
+      "reason": "Current upstream already contains the OpenSSL 3 compatibility changes carried by the Amazon Linux 2023 source package."
+    },
+    {
+      "patch": "rsyslog-8.2204.0-rhbz2082302-CVE-heap-based-buffer-overflow.patch",
+      "reason": "Current upstream contains the CVE-2022-24903 fix and later parser development."
+    }
+  ],
+  "drop_stale_html_docs": true,
+  "drop_stale_html_docs_reason": "Amazon Linux 2023 packages HTML documentation from a separate versioned 8.2204.0 tarball. Daily main builds must not relabel those stale files as current documentation.",
+  "supplemental_build_requires": [
+    {
+      "package": "autoconf-archive",
+      "reason": "Current upstream configure.ac uses AX macros that the Amazon Linux 2023 baseline predates."
+    },
+    {
+      "package": "libyaml-devel",
+      "reason": "Current upstream enables YAML configuration support by default."
+    },
+    {
+      "package": "protobuf-c-compiler",
+      "reason": "Current upstream enables the impstats push capability within Amazon's existing impstats module build."
+    },
+    {
+      "package": "protobuf-c-devel",
+      "reason": "Current upstream impstats push support uses protobuf-c."
+    },
+    {
+      "package": "snappy-devel",
+      "reason": "Current upstream impstats push support uses Snappy compression."
+    }
+  ],
+  "supplemental_core_files": [
+    "%{_libdir}/rsyslog/mmleefparse.so"
+  ]
+}
