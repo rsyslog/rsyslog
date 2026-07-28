@@ -484,7 +484,9 @@ jobs:
       EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
     steps:
       - name: Install container prerequisites
-        run: dnf -q -y install ca-certificates curl gnupg2 python3 rpm tar
+        run: |
+          dnf -q -y install tar
+          dnf -q -y swap gnupg2-minimal gnupg2
 
       - name: Checkout archive automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
