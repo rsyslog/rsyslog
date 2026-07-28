@@ -175,6 +175,9 @@ jobs:
               zypper -n install findutils gzip python3 rpm-build tar
               zypper -n modifyrepo --enable openSUSE:repo-oss-source
               zypper -n refresh openSUSE:repo-oss-source
+              # Keep the official source RPM for provenance and extraction;
+              # --build-deps-only does not download it on a clean runner.
+              zypper -n source-install --download-only --no-build-deps rsyslog
               zypper -n source-install --build-deps-only rsyslog
               # These four are already native conditional BuildRequires, but
               # zypper source-install does not resolve them on Leap 16.0.

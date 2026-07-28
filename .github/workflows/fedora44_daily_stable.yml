@@ -484,7 +484,7 @@ jobs:
     steps:
       - name: Install container prerequisites
         run: |
-          dnf -q -y install tar
+          dnf -q -y install python3 tar
           dnf -q -y swap gnupg2-minimal gnupg2
 
       - name: Checkout archive automation
