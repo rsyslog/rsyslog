@@ -1,0 +1,8 @@
+{
+  "supplemental_build_requires": [
+    {
+      "package": "autoconf-archive",
+      "reason": "Current upstream configure.ac uses AX macros that are not bundled in the generated main-branch tarball."
+    }
+  ]
+}
