@@ -483,13 +483,13 @@ jobs:
       EXPECTED_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
       EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
     steps:
+      - name: Install container prerequisites
+        run: dnf -q -y install ca-certificates curl gnupg2 python3 rpm tar
+
       - name: Checkout archive automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Install verification tools
-        run: dnf -q -y install ca-certificates curl gnupg2 python3 rpm
 
       - name: Verify CDN and exact origin installation
         id: published_install
