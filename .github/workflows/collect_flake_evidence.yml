@@ -19,6 +19,7 @@ name: collect flake evidence
       - alpine 3.24 daily stable
       - amazon linux 2023 daily stable
       - fedora 44 daily stable
+      - opensuse leap 16.0 daily stable
     types: [completed]
   workflow_dispatch:
     inputs:

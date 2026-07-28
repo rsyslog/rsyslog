@@ -1,0 +1,19 @@
+{
+  "supplemental_build_requires": [
+    {
+      "package": "libyaml-devel",
+      "reason": "Current upstream enables YAML configuration support by default."
+    },
+    {
+      "package": "protobuf-c-devel",
+      "reason": "Current upstream enables impstats push support and needs the protobuf-c compiler and headers."
+    },
+    {
+      "package": "snappy-devel",
+      "reason": "Current upstream impstats push support uses Snappy compression."
+    }
+  ],
+  "supplemental_core_files": [
+    "%{rsyslog_module_dir_nodeps}/mmleefparse.so"
+  ]
+}
