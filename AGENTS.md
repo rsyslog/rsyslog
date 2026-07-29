@@ -337,6 +337,39 @@ that still need coverage.
   full-suite run. Report which families were disabled and why when that matters
   for the validation claim.
 
+## Cursor Cloud specific instructions
+
+This section captures durable, non-obvious notes for Cursor Cloud agents. The
+VM startup update script already runs `devtools/codex-setup.sh` plus a few extra
+apt packages, so dependencies are present on session start. Standard build/test
+commands live in the `rsyslog_build` and `rsyslog_test` skills; use those rather
+than duplicating them.
+
+- **Toolchain gotcha (`cannot find -lstdc++`)**: The base VM's
+  `update-alternatives` points `cc`/`c++` at **Clang 18**, and Clang selects the
+  newest GCC toolchain (`gcc-14`) for its C++ stdlib. `codex-setup.sh` installs
+  `gcc-14` but not the matching `libstdc++-14-dev`, so CMake-based dependency
+  builds (e.g. `faup`) fail at the compiler check. The update script installs
+  `libstdc++-14-dev` to fix this; if you ever re-run `codex-setup.sh` on a fresh
+  environment, ensure `libstdc++-14-dev` is present first.
+- **Lint tools not in `codex-setup.sh`**: `clang-format-18` (the exact formatter
+  required by `devtools/format-code.sh`) and `shellcheck` are installed by the
+  update script, not by `codex-setup.sh`. `pycodestyle` comes from
+  `codex-setup.sh`.
+- **Running `rsyslogd` from the build tree**: pass in-tree module dirs via `-M`,
+  e.g. `-M"$(pwd)/plugins/imtcp/.libs:$(pwd)/runtime/.libs:$(pwd)/tools/.libs:$(pwd)/tools"`.
+  Validate config with `./tools/rsyslogd -N1 -f <conf> -M...`; plain-TCP inputs
+  emit expected `streamdriver.mode="0"` insecure-default warnings.
+- **`ss`/`netstat` cannot see listeners** in this VM (restricted `/proc/net`
+  access), even with `sudo`. To confirm a listener is up, connect to the port
+  directly (e.g. bash `/dev/tcp`, or the `tests/tcpflood` helper) instead of
+  relying on socket-listing tools.
+- **No container tooling**: Docker/Podman are not installed in the base VM, so
+  the PR-ready `rsyslog_local_container_testing` gate cannot run here. Host-side
+  build + focused `make check TESTS=...` are the available validation; report
+  container validation as not run unless Docker is installed first (see the
+  Docker-in-Docker setup notes).
+
 ## Agent Chat Keywords
 
 - `SETUP`: Triggers the `rsyslog_build` setup workflow.
