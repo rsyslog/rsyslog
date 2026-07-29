@@ -71,6 +71,10 @@ Configure these GitHub repository variables:
 - `DEBIAN_DAILY_STABLE_GPG_FINGERPRINT`: full fingerprint of the archive
   signing key.
 
+All daily-package schedule switches are repository variables. A scheduled
+workflow fails preflight, and therefore reports a failure issue, if its switch
+is missing or is not exactly `true` or `false`.
+
 Create a protected `debian-daily-stable` GitHub Environment and add:
 
 - `DEBIAN_DAILY_STABLE_SPACE_ACCESS_KEY`

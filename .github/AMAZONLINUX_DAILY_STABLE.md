@@ -63,10 +63,16 @@ already held by the protected `debian-daily-stable` GitHub Environment. Despite
 its legacy name, that environment is the security boundary for the shared
 package archive and is not limited to Debian.
 
-Add these environment variables:
+Add this repository variable:
 
 - `AMAZONLINUX2023_DAILY_STABLE_ENABLED`: `true` only after the first complete
   publication succeeds.
+
+The scheduled workflow fails preflight if this switch is missing or is not
+exactly `true` or `false`, so a configuration error cannot appear successful.
+
+Add these variables to the `debian-daily-stable` environment:
+
 - `AMAZONLINUX2023_DAILY_STABLE_REPO_URL`: public CDN URL ending in
   `/rpm/daily-stable/amazonlinux/2023`.
 - `AMAZONLINUX2023_DAILY_STABLE_ORIGIN_REPO_URL`: public Spaces origin URL
