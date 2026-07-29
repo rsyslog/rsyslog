@@ -756,13 +756,19 @@ jobs:
         run: echo "No relevant package changes detected; skipping Ubuntu package build."
 
   package_build_rpm:
-    name: package build (RPM)
+    name: package build (RPM ${{ matrix.mock_config }})
     needs: [compile, changes]
     if: ${{ needs.compile.result == 'success' && needs.changes.outputs.package_rpm == 'true' }}
     permissions:
       contents: read
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        mock_config:
+          - epel-9-x86_64
+          - epel-10-x86_64
     container:
       image: quay.io/rockylinux/rockylinux:9
       options: --privileged
@@ -807,8 +813,11 @@ jobs:
 
       - name: run RPM build
         if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          MOCK_CONFIG: ${{ matrix.mock_config }}
         run: |
           chmod -R go+rw .
+          echo "== Selected mock target: $MOCK_CONFIG =="
           echo "== Install EPEL and mock =="
           dnf install -y epel-release
           dnf install -y mock dnf-utils
@@ -828,7 +837,13 @@ jobs:
           dnf config-manager --set-enabled crb
           dnf install -y libestr-devel libfastjson4-devel zlib-devel libuuid-devel libgcrypt-devel libcurl-devel libyaml-devel file protobuf-c-compiler protobuf-c-devel snappy-devel python3-docutils dos2unix
           echo "== Copy mock configs =="
-          cp -v packaging/rpm/etc-mock/*.cfg /etc/mock/ || true
+          # Replace symlink targets with regular files so custom configs do not
+          # overwrite shared mock-core-configs aliases like centos-stream+epel-*.
+          for cfg in packaging/rpm/etc-mock/*.cfg; do
+            dest="/etc/mock/$(basename "$cfg")"
+            rm -f "$dest"
+            cp -v "$cfg" "$dest"
+          done
           mkdir -p build-result /var/lib/mock
           echo "== Run RPM build =="
           bash devtools/run-rpm-build.sh
@@ -841,7 +856,7 @@ jobs:
         if: steps.code_changes.outputs.any_changed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: rpms-epel-9-x86_64
+          name: rpms-${{ matrix.mock_config }}
           path: build-result/
           if-no-files-found: error
 
