@@ -1,0 +1,4 @@
+# Apple libsystem_trace false positive under ASAN during getaddrinfo init
+# (os_log_create -> _os_trace_get_image_info strcmp into a global redzone).
+# Seen on macos-15 arm64 weekly ASAN in omfwd-rebind-tcp (#7428).
+interceptor_via_fun:_os_trace_get_image_info
