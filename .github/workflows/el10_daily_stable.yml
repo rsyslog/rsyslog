@@ -74,10 +74,18 @@ jobs:
               fi
               ;;
             schedule)
-              if [ "${SCHEDULE_ENABLED:-false}" = true ]; then
-                should_run=true
-                should_publish=true
-              fi
+              case "${SCHEDULE_ENABLED:-}" in
+                true)
+                  should_run=true
+                  should_publish=true
+                  ;;
+                false)
+                  ;;
+                *)
+                  echo "::error::EL10_DAILY_STABLE_ENABLED must be a repository variable set to true or false"
+                  exit 1
+                  ;;
+              esac
               ;;
           esac
           {

@@ -55,10 +55,16 @@ Add this environment secret:
 - `ALPINE_DAILY_STABLE_RSA_PRIVATE_KEY`: PEM-encoded RSA private key used by
   `abuild` to sign APK packages and their APKINDEX.
 
-Add these repository variables:
+Add this repository variable:
 
 - `ALPINE324_DAILY_STABLE_ENABLED`: `true` only after the first end-to-end
   publication succeeds.
+
+The scheduled workflow fails preflight if this switch is missing or is not
+exactly `true` or `false`, so a configuration error cannot appear successful.
+
+Add these variables to the `debian-daily-stable` environment:
+
 - `ALPINE324_DAILY_STABLE_REPO_URL`: public CDN URL ending in
   `/apk/daily-stable/alpine/3.24`.
 - `ALPINE324_DAILY_STABLE_ORIGIN_REPO_URL`: public Spaces origin URL ending in
