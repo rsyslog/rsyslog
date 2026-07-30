@@ -8,7 +8,7 @@ Usage: rpm-daily-stable.sh <command> [args...]
 Commands:
   version
   prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <feature-contract> <version> <release>
-  build-package <prepared-dir> <mock-config> <artifact-dir> <build-log> <expected-evr>
+  build-package <prepared-dir> <mock-config> <artifact-dir> <build-log> <expected-evr> <arch>
   sign-rpms <artifact-dir> <fingerprint>
   generate-repo <artifact-dir> <repo-dir> <arch> <fingerprint> <passphrase-file>
   verify-repo <repo-url> <arch> <expected-evr> <expected-fingerprint>
@@ -211,6 +211,7 @@ cmd_build_package() {
   local artifact_dir="$3"
   local build_log="$4"
   local expected_evr="$5"
+  local arch="$6"
   local srpm rpm_file actual_evr rc
 
   rm -rf "$artifact_dir"
@@ -236,7 +237,7 @@ cmd_build_package() {
   [ "$rc" -eq 0 ] || return "$rc"
 
   rpm_file="$(find "$artifact_dir/rpms" -maxdepth 1 -type f \
-    -name 'rsyslog-[0-9]*.x86_64.rpm' ! -name '*-debuginfo-*' -print -quit)"
+    -name "rsyslog-[0-9]*.${arch}.rpm" ! -name '*-debuginfo-*' -print -quit)"
   [ -n "$rpm_file" ] || die "mock did not produce the base rsyslog RPM"
   actual_evr="$(rpm -qp --qf '%{VERSION}-%{RELEASE}\n' "$rpm_file")"
   [ "$actual_evr" = "$expected_evr" ] ||

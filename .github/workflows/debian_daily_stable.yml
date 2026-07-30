@@ -45,7 +45,7 @@ env:
   DEBIAN_BUILD_ROOT: /tmp/rsyslog-debian-daily-stable-build
   DEBIAN_SUITE: trixie
   DEBIAN_COMPONENT: main
-  DEBIAN_ARCH: amd64
+  PACKAGE_REPOSITORY_ARCHITECTURES: amd64 arm64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: debian
   PACKAGE_DISTRO_VERSION: '13'
@@ -107,16 +107,26 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: build Debian 13 amd64 packages
+    name: build Debian 13 ${{ matrix.arch }} packages
     needs: preflight
     if: needs.preflight.outputs.should_run == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     container:
       image: debian:trixie
       options: --user root
     permissions:
       contents: read
+    env:
+      DEBIAN_ARCH: ${{ matrix.arch }}
     outputs:
       archive_date: ${{ steps.version.outputs.archive_date }}
       version: ${{ steps.version.outputs.version }}
@@ -294,7 +304,7 @@ jobs:
       - name: Upload Debian package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: debian-daily-stable-${{ steps.version.outputs.version }}
+          name: debian-daily-stable-${{ steps.version.outputs.version }}-${{ matrix.arch }}
           path: debian-daily-stable-artifacts/
           retention-days: 14
           if-no-files-found: error
@@ -374,16 +384,23 @@ jobs:
             }
           done
 
-      - name: Download Debian package artifacts
+      - name: Download Debian amd64 package artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: debian-daily-stable-${{ needs.build.outputs.version }}
-          path: debian-daily-stable-artifacts
+          name: debian-daily-stable-${{ needs.build.outputs.version }}-amd64
+          path: debian-daily-stable-artifacts/amd64
+
+      - name: Download Debian arm64 package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: debian-daily-stable-${{ needs.build.outputs.version }}-arm64
+          path: debian-daily-stable-artifacts/arm64
 
       - name: Verify artifact checksums
         run: |
-          cd debian-daily-stable-artifacts
-          sha256sum -c SHA256SUMS
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            (cd "debian-daily-stable-artifacts/$arch" && sha256sum -c SHA256SUMS)
+          done
 
       - name: Import archive signing key
         run: |
@@ -396,7 +413,9 @@ jobs:
       - name: Download current indexes
         run: |
           set -euo pipefail
-          mkdir -p "apt-repo/dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/binary-$DEBIAN_ARCH"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            mkdir -p "apt-repo/dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/binary-$arch"
+          done
           mkdir -p "apt-repo/dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/source"
 
           download_if_present() {
@@ -421,19 +440,23 @@ jobs:
             fi
           }
 
-          download_if_present \
-            "dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/binary-$DEBIAN_ARCH/Packages.xz"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            download_if_present \
+              "dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/binary-$arch/Packages.xz"
+          done
           download_if_present \
             "dists/$DEBIAN_SUITE/$DEBIAN_COMPONENT/source/Sources.xz"
 
       - name: Generate signed incremental APT repository
         run: |
-          "$GITHUB_WORKSPACE/$DEBIAN_DAILY_STABLE_HELPER" generate-repo \
-            "$GITHUB_WORKSPACE/debian-daily-stable-artifacts" \
-            "$GITHUB_WORKSPACE/apt-repo" \
-            "$DEBIAN_SUITE" \
-            "$DEBIAN_COMPONENT" \
-            "$DEBIAN_ARCH"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            "$GITHUB_WORKSPACE/$DEBIAN_DAILY_STABLE_HELPER" generate-repo \
+              "$GITHUB_WORKSPACE/debian-daily-stable-artifacts/$arch" \
+              "$GITHUB_WORKSPACE/apt-repo" \
+              "$DEBIAN_SUITE" \
+              "$DEBIAN_COMPONENT" \
+              "$arch"
+          done
 
       - name: Prepare immutable build snapshot
         env:
@@ -442,12 +465,14 @@ jobs:
         run: |
           set -euo pipefail
           snapshot_dir="apt-repo/snapshots/$ARCHIVE_DATE/$VERSION"
-          mkdir -p "$snapshot_dir"
-          find debian-daily-stable-artifacts -maxdepth 1 -type f \
-            \( -name 'manifest.json' -o -name 'SHA256SUMS' \
-               -o -name '*.changes' -o -name '*.buildinfo' \
-               -o -name 'build.log' \) \
-            -exec cp -a {} "$snapshot_dir/" \;
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            mkdir -p "$snapshot_dir/$arch"
+            find "debian-daily-stable-artifacts/$arch" -maxdepth 1 -type f \
+              \( -name 'manifest.json' -o -name 'SHA256SUMS' \
+                 -o -name '*.changes' -o -name '*.buildinfo' \
+                 -o -name 'build.log' \) \
+              -exec cp -a {} "$snapshot_dir/$arch/" \;
+          done
 
       - name: Publish immutable packages and snapshots
         run: |
@@ -538,13 +563,21 @@ jobs:
           upload_metadata "apt-repo/dists/$DEBIAN_SUITE/InRelease"
 
   verify:
-    name: verify published Debian 13 repository
+    name: verify published Debian 13 ${{ matrix.arch }} repository
     needs:
       - preflight
       - build
       - publish
     if: needs.preflight.outputs.should_publish == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     container:
       image: debian:trixie
@@ -556,6 +589,7 @@ jobs:
     permissions:
       contents: read
     env:
+      DEBIAN_ARCH: ${{ matrix.arch }}
       REPO_URL: ${{ vars.DEBIAN_DAILY_STABLE_REPO_URL }}
       EXPECTED_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}
     steps:

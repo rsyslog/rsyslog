@@ -36,7 +36,7 @@ env:
   ALPINE_POLICY_FILE: .github/alpine324-daily-stable-policy.yml
   PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   ALPINE_BRANCH: 3.24-stable
-  ALPINE_ARCH: x86_64
+  PACKAGE_REPOSITORY_ARCHITECTURES: x86_64 aarch64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: alpine
   PACKAGE_DISTRO_VERSION: '3.24'
@@ -96,14 +96,24 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: build Alpine 3.24 x86_64 packages
+    name: build Alpine 3.24 ${{ matrix.arch }} packages
     needs: preflight
     if: needs.preflight.outputs.should_run == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
     environment: debian-daily-stable
     permissions:
       contents: read
+    env:
+      ALPINE_ARCH: ${{ matrix.arch }}
     outputs:
       archive_date: ${{ steps.version.outputs.archive_date }}
       expected_version: ${{ steps.version.outputs.expected_version }}
@@ -149,11 +159,24 @@ jobs:
 
       - name: Generate rsyslog dist tarball
         run: |
-          RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
-            RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
-            devtools/devcontainer.sh --rm \
+          case "$ALPINE_ARCH" in
+            x86_64)
+              RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
+                RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+                devtools/devcontainer.sh --rm \
+                  .github/scripts/debian_package_build.sh run_dist_build \
+                  /rsyslog
+              ;;
+            aarch64)
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends \
+                autoconf autoconf-archive automake bison build-essential \
+                flex gawk git libestr-dev libfastjson-dev libsystemd-dev \
+                libtool libyaml-dev pkg-config python3-docutils zlib1g-dev
               .github/scripts/debian_package_build.sh run_dist_build \
-              /rsyslog
+                "$GITHUB_WORKSPACE/rsyslog-source"
+              ;;
+          esac
           dist_tarball="$(find rsyslog-source -maxdepth 1 -type f \
             -name 'rsyslog-*.tar.gz' -print -quit)"
           [ -n "$dist_tarball" ]
@@ -273,7 +296,7 @@ jobs:
       - name: Upload Alpine package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: alpine324-daily-stable-${{ steps.version.outputs.expected_version }}
+          name: alpine324-daily-stable-${{ steps.version.outputs.expected_version }}-${{ matrix.arch }}
           path: alpine-daily-stable-artifacts/
           retention-days: 14
           if-no-files-found: error
@@ -329,33 +352,42 @@ jobs:
             }
           done
 
-      - name: Download Alpine package artifacts
+      - name: Download Alpine x86_64 package artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: alpine324-daily-stable-${{ needs.build.outputs.expected_version }}
-          path: alpine-daily-stable-artifacts
+          name: alpine324-daily-stable-${{ needs.build.outputs.expected_version }}-x86_64
+          path: alpine-daily-stable-artifacts/x86_64
+
+      - name: Download Alpine aarch64 package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: alpine324-daily-stable-${{ needs.build.outputs.expected_version }}-aarch64
+          path: alpine-daily-stable-artifacts/aarch64
 
       - name: Verify artifact checksums
         run: |
-          cd alpine-daily-stable-artifacts
-          sha256sum -c SHA256SUMS
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            (cd "alpine-daily-stable-artifacts/$arch" && sha256sum -c SHA256SUMS)
+          done
 
       - name: Download current repository index
         run: |
           set -euo pipefail
-          mkdir -p current-repository
-          index_key="$SPACE_PREFIX/$ALPINE_ARCH/APKINDEX.tar.gz"
-          remote_key="$(
-            aws s3api list-objects-v2 \
-              --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
-              --prefix "$index_key" --max-keys 1 \
-              --query 'Contents[0].Key' --output text
-          )"
-          if [ "$remote_key" = "$index_key" ]; then
-            aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
-              "s3://$SPACE_BUCKET/$index_key" \
-              current-repository/APKINDEX.tar.gz
-          fi
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            mkdir -p "current-repository/$arch"
+            index_key="$SPACE_PREFIX/$arch/APKINDEX.tar.gz"
+            remote_key="$(
+              aws s3api list-objects-v2 \
+                --endpoint-url "$SPACE_ENDPOINT" --bucket "$SPACE_BUCKET" \
+                --prefix "$index_key" --max-keys 1 \
+                --query 'Contents[0].Key' --output text
+            )"
+            if [ "$remote_key" = "$index_key" ]; then
+              aws s3 cp --only-show-errors --endpoint-url "$SPACE_ENDPOINT" \
+                "s3://$SPACE_BUCKET/$index_key" \
+                "current-repository/$arch/APKINDEX.tar.gz"
+            fi
+          done
 
       - name: Generate signed incremental APK repository
         env:
@@ -365,21 +397,23 @@ jobs:
           private_key="$RUNNER_TEMP/rsyslog-alpine-archive.rsa"
           install -m 600 /dev/null "$private_key"
           printf '%s\n' "$ALPINE_RSA_PRIVATE_KEY" > "$private_key"
-          docker run --rm \
-            -e ALPINE_ARCH -e ALPINE_DAILY_STABLE_HELPER \
-            -v "$GITHUB_WORKSPACE:/workspace" \
-            -v "$RUNNER_TEMP:/runner-temp" \
-            -w /workspace \
-            alpine:3.24 sh -lc '
-              set -euo pipefail
-              apk add --no-cache abuild bash >/dev/null
-              "$ALPINE_DAILY_STABLE_HELPER" generate-index \
-                alpine-daily-stable-artifacts \
-                current-repository/APKINDEX.tar.gz \
-                apk-repo "$ALPINE_ARCH" \
-                /runner-temp/rsyslog-alpine-archive.rsa \
-                alpine-daily-stable-artifacts/rsyslog-alpine-archive.rsa.pub
-            '
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            docker run --rm \
+              -e "ALPINE_ARCH=$arch" -e ALPINE_DAILY_STABLE_HELPER \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              -v "$RUNNER_TEMP:/runner-temp" \
+              -w /workspace \
+              alpine:3.24 sh -lc '
+                set -euo pipefail
+                apk add --no-cache abuild bash >/dev/null
+                "$ALPINE_DAILY_STABLE_HELPER" generate-index \
+                  "alpine-daily-stable-artifacts/$ALPINE_ARCH" \
+                  "current-repository/$ALPINE_ARCH/APKINDEX.tar.gz" \
+                  apk-repo "$ALPINE_ARCH" \
+                  /runner-temp/rsyslog-alpine-archive.rsa \
+                  "alpine-daily-stable-artifacts/$ALPINE_ARCH/rsyslog-alpine-archive.rsa.pub"
+              '
+          done
           sudo chown -R "$(id -u):$(id -g)" apk-repo
 
       - name: Generate snapshot
@@ -388,12 +422,15 @@ jobs:
           EXPECTED_VERSION: ${{ needs.build.outputs.expected_version }}
         run: |
           snapshot_dir="apk-repo/snapshots/$ARCHIVE_DATE/$EXPECTED_VERSION"
-          mkdir -p "$snapshot_dir"
-          cp -a alpine-daily-stable-artifacts/manifest.json \
-            alpine-daily-stable-artifacts/SHA256SUMS \
-            alpine-daily-stable-artifacts/build.log \
-            alpine-daily-stable-artifacts/APKBUILD \
-            "$snapshot_dir/"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            artifact_dir="alpine-daily-stable-artifacts/$arch"
+            mkdir -p "$snapshot_dir/$arch"
+            cp -a "$artifact_dir/manifest.json" \
+              "$artifact_dir/SHA256SUMS" \
+              "$artifact_dir/build.log" \
+              "$artifact_dir/APKBUILD" \
+              "$snapshot_dir/$arch/"
+          done
 
       - name: Publish immutable APKs and snapshots
         run: |
@@ -430,7 +467,8 @@ jobs:
           while IFS= read -r -d '' path; do
             upload_immutable "$path"
           done < <(
-            find "apk-repo/$ALPINE_ARCH" -maxdepth 1 -type f -name '*.apk' -print0
+            find apk-repo/x86_64 apk-repo/aarch64 \
+              -maxdepth 1 -type f -name '*.apk' -print0
             find apk-repo/snapshots -type f -print0
           )
 
@@ -447,13 +485,23 @@ jobs:
               "$path" "s3://$SPACE_BUCKET/$SPACE_PREFIX/$relative_path"
           }
           upload_metadata apk-repo/rsyslog-alpine-archive.rsa.pub
-          upload_metadata "apk-repo/$ALPINE_ARCH/APKINDEX.tar.gz"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            upload_metadata "apk-repo/$arch/APKINDEX.tar.gz"
+          done
 
   verify:
-    name: verify published Alpine 3.24 repository
+    name: verify published Alpine 3.24 ${{ matrix.arch }} repository
     needs: [preflight, build, publish]
     if: needs.preflight.outputs.should_publish == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     container:
       image: alpine:3.24
@@ -462,6 +510,7 @@ jobs:
     permissions:
       contents: read
     env:
+      ALPINE_ARCH: ${{ matrix.arch }}
       REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_REPO_URL }}
       ORIGIN_REPO_URL: ${{ vars.ALPINE324_DAILY_STABLE_ORIGIN_REPO_URL }}
       EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.ALPINE_DAILY_STABLE_RSA_PUBLIC_KEY_SHA256 }}

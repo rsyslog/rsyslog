@@ -1,7 +1,7 @@
 # Alpine daily stable package archive
 
 The `alpine 3.24 daily stable` workflow builds current rsyslog `main` for
-Alpine Linux 3.24 on `x86_64`. It starts with Alpine's official
+Alpine Linux 3.24 on `x86_64` and `aarch64`. It starts with Alpine's official
 `3.24-stable` `main/rsyslog` APKBUILD and replaces only the upstream source
 and daily version. This preserves Alpine's configure choices, dependencies,
 subpackage split, OpenRC integration, and default configuration.
@@ -20,19 +20,25 @@ The repository URL ends in:
 /apk/daily-stable/alpine/3.24
 ```
 
-The current `x86_64` repository is below that path:
+The architecture repositories are below that path:
 
 ```text
 x86_64/APKINDEX.tar.gz
 x86_64/*.apk
+aarch64/APKINDEX.tar.gz
+aarch64/*.apk
 ```
 
 Every publication also records its manifest, checksums, prepared APKBUILD,
 and build log below:
 
 ```text
-snapshots/YYYY-MM-DD/PACKAGE_VERSION/
+snapshots/YYYY-MM-DD/PACKAGE_VERSION/x86_64/
+snapshots/YYYY-MM-DD/PACKAGE_VERSION/aarch64/
 ```
+
+Each APK is built and installed on a native runner of the matching
+architecture.
 
 APK files and snapshots are immutable and retained for at least five years.
 The workflow merges the previous signed index with each new package set so
@@ -81,8 +87,9 @@ remain unchanged. A DigitalOcean account API token is not required.
    artifacts.
 3. Run it manually with publication enabled.
 4. Confirm that the CDN key and index are reachable and that a clean
-   `alpine:3.24` container trusts the public origin key, installs the exact
-   daily rsyslog version, and passes `rsyslogd -N1`. Exact-version validation
+   native `alpine:3.24` containers for both architectures trust the public
+   origin key, install the exact daily rsyslog version, and pass
+   `rsyslogd -N1`. Exact-version validation
    uses the origin because the CDN's minimum TTL can exceed CI runtime.
 5. Set `ALPINE324_DAILY_STABLE_ENABLED=true`.
 

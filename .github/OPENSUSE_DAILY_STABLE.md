@@ -1,7 +1,7 @@
 # openSUSE daily stable package archive
 
 The `opensuse leap 16.0 daily stable` workflow builds current rsyslog `main`
-for openSUSE Leap 16.0 on `x86_64`. Every run enables Leap's official disabled
+for openSUSE Leap 16.0 on `x86_64` and `aarch64`. Every run enables Leap's official disabled
 source repository and downloads its current rsyslog source RPM. That native
 spec, configuration, systemd unit, feature choices, file ownership, and
 subpackage split are the packaging authority. The source RPM's NEVRA and
@@ -42,6 +42,8 @@ The binary and source repositories are below that path:
 ```text
 x86_64/Packages/*.rpm
 x86_64/repodata/
+aarch64/Packages/*.rpm
+aarch64/repodata/
 SRPMS/Packages/*.src.rpm
 SRPMS/repodata/
 ```
@@ -50,8 +52,12 @@ Every publication also records its manifest, checksums, prepared spec, and
 build log below:
 
 ```text
-snapshots/YYYY-MM-DD/EVR/
+snapshots/YYYY-MM-DD/EVR/x86_64/
+snapshots/YYYY-MM-DD/EVR/aarch64/
 ```
+
+Each binary package is built and installed on a native runner of the matching
+architecture.
 
 RPMs and snapshots are immutable and retained for at least five years. Each
 new repository generation merges prior signed metadata so old daily versions
@@ -98,8 +104,8 @@ required.
 3. Run it manually with publication enabled.
 4. Confirm the CDN metadata signature and clean-install the exact new EVR of
    `rsyslog`, `rsyslog-module-ossl`, and `rsyslog-doc` from the public origin in
-   `opensuse/leap:16.0`; verify all installed EVRs, `rsyslogd -v`, and
-   `rsyslogd -N1`.
+   native `opensuse/leap:16.0` containers for both architectures; verify all
+   installed EVRs, `rsyslogd -v`, and `rsyslogd -N1`.
 5. Set `OPENSUSE_LEAP160_DAILY_STABLE_ENABLED=true`.
 
 The scheduled workflow opens or updates an issue if its build, publication,
