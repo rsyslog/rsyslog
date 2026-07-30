@@ -9,6 +9,7 @@ Commands:
   version
   prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <feature-contract> <pkgver>
   verify-artifacts <artifact-dir> <expected-version> <arch>
+  verify-published <repo-url> <origin-url> <arch> <expected-version> <public-key-sha256>
   generate-index <artifact-dir> <previous-index> <repo-dir> <arch> <private-key> <public-key>
   manifest <artifact-dir> <expected-version> <arch> <channel> <distro> <distro-version>
 EOF
@@ -159,6 +160,64 @@ cmd_verify_artifacts() {
 		die "builder architecture $(apk --print-arch) does not match $arch"
 }
 
+cmd_verify_published() {
+	local repo_url="$1"
+	local origin_url="$2"
+	local arch="$3"
+	local expected_version="$4"
+	local expected_public_key_sha256="$5"
+	local attempt installed_version module_version verification_rc=1
+
+	[ -n "$repo_url" ] || die "missing public Alpine repository URL"
+	[ -n "$origin_url" ] || die "missing Alpine repository origin URL"
+	curl -fsSL "$repo_url/rsyslog-alpine-archive.rsa.pub" \
+		-o /tmp/rsyslog-alpine-cdn-key.pub
+	[ "$(sha256sum /tmp/rsyslog-alpine-cdn-key.pub | awk '{print $1}')" = \
+		"$expected_public_key_sha256" ] || die "CDN public key digest mismatch"
+	curl -fsSL "$repo_url/$arch/APKINDEX.tar.gz" \
+		-o /tmp/rsyslog-alpine-cdn-index.tar.gz
+	tar -tzf /tmp/rsyslog-alpine-cdn-index.tar.gz | grep -Fxq APKINDEX ||
+		die "CDN repository index is invalid"
+
+	for attempt in $(seq 1 20); do
+		rm -f /tmp/rsyslog-alpine-archive.rsa.pub
+		if curl -fsSL "$origin_url/rsyslog-alpine-archive.rsa.pub" \
+			-o /tmp/rsyslog-alpine-archive.rsa.pub &&
+			[ "$(sha256sum /tmp/rsyslog-alpine-archive.rsa.pub | awk '{print $1}')" = \
+				"$expected_public_key_sha256" ]; then
+			cp /tmp/rsyslog-alpine-archive.rsa.pub /etc/apk/keys/
+			if ! grep -Fxq "$origin_url" /etc/apk/repositories; then
+				echo "$origin_url" >> /etc/apk/repositories
+			fi
+			if apk update --no-cache &&
+				apk add --no-cache \
+					"rsyslog=$expected_version" \
+					"rsyslog-omazuredce=$expected_version"; then
+				verification_rc=0
+				break
+			fi
+		fi
+		echo "Origin repository not ready yet, retrying ($attempt/20)..."
+		[ "$attempt" -eq 20 ] || sleep 30
+	done
+	[ "$verification_rc" -eq 0 ] || die "could not install the expected published packages"
+	installed_version="$(
+		apk query --from installed --fields version --format json rsyslog |
+			sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+	)"
+	[ "$installed_version" = "$expected_version" ] || die "installed rsyslog version mismatch"
+	module_version="$(
+		apk query --from installed --fields version --format json \
+			rsyslog-omazuredce |
+			sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+	)"
+	[ "$module_version" = "$expected_version" ] || die "installed omazuredce version mismatch"
+	apk info -L rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$' ||
+		die "omazuredce module file is absent"
+	rsyslogd -v
+	"$(dirname "$0")/package-feature-smoke.sh"
+}
+
 cmd_generate_index() {
 	local artifact_dir="$1"
 	local previous_index="$2"
@@ -239,6 +298,7 @@ case "$command" in
 	version) shift; cmd_version "$@" ;;
 	prepare-sources) shift; cmd_prepare_sources "$@" ;;
 	verify-artifacts) shift; cmd_verify_artifacts "$@" ;;
+	verify-published) shift; cmd_verify_published "$@" ;;
 	generate-index) shift; cmd_generate_index "$@" ;;
 	manifest) shift; cmd_manifest "$@" ;;
 	*) usage; exit 2 ;;
