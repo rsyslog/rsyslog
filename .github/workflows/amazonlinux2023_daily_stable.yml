@@ -34,6 +34,7 @@ concurrency:
 env:
   AMAZONLINUX_DAILY_STABLE_HELPER: devtools/release/amazonlinux-daily-stable.sh
   AMAZONLINUX_POLICY_FILE: .github/amazonlinux2023-daily-stable-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   RPM_ARCH: x86_64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: amazonlinux
@@ -160,7 +161,7 @@ jobs:
           devtools/ci-flake-phase.sh begin amazonlinux2023-package-build custom
           set +e
           docker run --rm \
-            -e AMAZONLINUX_DAILY_STABLE_HELPER \
+            -e AMAZONLINUX_DAILY_STABLE_HELPER -e PACKAGE_FEATURE_CONTRACT \
             -e AMAZONLINUX_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e VERSION \
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -v "$GITHUB_WORKSPACE:/workspace" \
@@ -194,6 +195,7 @@ jobs:
                 "$DIST_TARBALL" \
                 /runner-temp/amazonlinux2023-prepared \
                 "$AMAZONLINUX_POLICY_FILE" \
+                "$PACKAGE_FEATURE_CONTRACT" \
                 "$VERSION" \
                 "$RELEASE"
               "$AMAZONLINUX_DAILY_STABLE_HELPER" build-package \
@@ -565,15 +567,18 @@ jobs:
             dnf -q -y install \
               "rsyslog-$EXPECTED_EVR" \
               "rsyslog-logrotate-$EXPECTED_EVR" \
+              "rsyslog-omazuredce-$EXPECTED_EVR" \
               "rsyslog-openssl-$EXPECTED_EVR"
-            for package in rsyslog rsyslog-logrotate rsyslog-openssl; do
+            for package in rsyslog rsyslog-logrotate rsyslog-omazuredce \
+              rsyslog-openssl; do
               installed_evr="$(
                 rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
               )"
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
+            rpm -ql rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee \
             .ci/flake-evidence/logs/amazonlinux2023-published-install.log
           install_status=${PIPESTATUS[0]}

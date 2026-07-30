@@ -34,6 +34,7 @@ concurrency:
 env:
   ALPINE_DAILY_STABLE_HELPER: devtools/release/alpine-daily-stable.sh
   ALPINE_POLICY_FILE: .github/alpine324-daily-stable-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   ALPINE_BRANCH: 3.24-stable
   ALPINE_ARCH: x86_64
   PACKAGE_CHANNEL: daily-stable
@@ -167,6 +168,7 @@ jobs:
             "$DIST_TARBALL" \
             "$RUNNER_TEMP/prepared-aports/main/rsyslog" \
             "$ALPINE_POLICY_FILE" \
+            "$PACKAGE_FEATURE_CONTRACT" \
             "$PKGVER"
 
       - name: Validate Alpine archive signing key
@@ -505,7 +507,9 @@ jobs:
                   echo "$ORIGIN_REPO_URL" >> /etc/apk/repositories
                 fi
                 if apk update --no-cache &&
-                  apk add --no-cache "rsyslog=$EXPECTED_VERSION"; then
+                  apk add --no-cache \
+                    "rsyslog=$EXPECTED_VERSION" \
+                    "rsyslog-omazuredce=$EXPECTED_VERSION"; then
                   verification_rc=0
                   break
                 fi
@@ -519,8 +523,16 @@ jobs:
                 sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
             )"
             [ "$installed_version" = "$EXPECTED_VERSION" ]
+            module_version="$(
+              apk query --from installed --fields version --format json \
+                rsyslog-omazuredce |
+                sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+            )"
+            [ "$module_version" = "$EXPECTED_VERSION" ]
+            apk info -L rsyslog-omazuredce | \
+              grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee .ci/flake-evidence/logs/alpine324-published-install.log
           install_status=${PIPESTATUS[0]}
           set -e
