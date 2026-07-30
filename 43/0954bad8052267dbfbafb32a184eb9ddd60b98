@@ -1,0 +1,76 @@
+.github/daily-stable-package-features.yml
+  s_2dc01c7e3d2940::t_7abd468e9dfc8a 1-24
+devtools/release/opensuse-daily-stable.sh
+  s_2dc01c7e3d2940::t_b366d382d5dcb3 10,79-81,91,191-192
+  s_2dc01c7e3d2940::t_b9f50f584fb168 243
+  s_2dc01c7e3d2940::t_a82aa703da1749 242,244
+  s_2dc01c7e3d2940::t_bdb90b16c707bd 193
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_6eae53fff08aca 569,571-572,578,580
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 37,164,197
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_6eae53fff08aca 589,592-593,599-600,602
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 37,175,216
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_6eae53fff08aca 636-638,644-646,648
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 42,205-207
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_b8e4a6900108ea 72,133
+  s_2dc01c7e3d2940::t_7abd468e9dfc8a 1-71,73-132,134-216
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_6eae53fff08aca 637-639,645-647,649
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 42,206-208
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 37,172-173,188
+  s_2dc01c7e3d2940::t_6eae53fff08aca 537-539,542-544,546
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_cc8f38713c3c39 159-161
+.github/workflows/alpine324_daily_stable.yml
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 37,171
+  s_2dc01c7e3d2940::t_6eae53fff08aca 510-512,526-533,535
+devtools/release/package-feature-smoke.sh
+  s_2dc01c7e3d2940::t_7abd468e9dfc8a 1-4,11-16,22-27,32-33
+  s_2dc01c7e3d2940::t_8ccdf53e8e2476 5-10,34-35
+  s_2dc01c7e3d2940::t_681533bf4264af 17-21,28-31
+devtools/release/amazonlinux-daily-stable.sh
+  s_2dc01c7e3d2940::t_b366d382d5dcb3 10,78-80,89,262-263
+  s_2dc01c7e3d2940::t_b9f50f584fb168 316
+  s_2dc01c7e3d2940::t_a82aa703da1749 315,317
+  s_2dc01c7e3d2940::t_3621c1ad5f5ee9 264
+.github/DAILY_STABLE_PACKAGE_FEATURES.md
+  s_2dc01c7e3d2940::t_b06297a4598b6a 1-30
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_8f37b8edcfb32f 37,164,198
+  s_2dc01c7e3d2940::t_6eae53fff08aca 570,572-573,579,581
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_b366d382d5dcb3 10,66-67,74,134-135
+  s_2dc01c7e3d2940::t_a82aa703da1749 151-152
+  s_2dc01c7e3d2940::t_bbc6dfff9c27d7 136
+devtools/release/fedora-daily-stable.sh
+  s_2dc01c7e3d2940::t_a82aa703da1749 217,219
+  s_2dc01c7e3d2940::t_b366d382d5dcb3 10,78-80,89,164-165
+  s_2dc01c7e3d2940::t_b9f50f584fb168 218
+  s_2dc01c7e3d2940::t_9fcd99a17561c1 166
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_b366d382d5dcb3 10
+  s_2dc01c7e3d2940::t_8e27fb400b1fc3 78-80,87,189-190
+  s_2dc01c7e3d2940::t_b9f50f584fb168 245
+  s_2dc01c7e3d2940::t_a82aa703da1749 244,246
+  s_2dc01c7e3d2940::t_c6fd3bfaf5109f 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.17",
+  "base_commit_sha": "430954bad8052267dbfbafb32a184eb9ddd60b98",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
