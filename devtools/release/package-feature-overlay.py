@@ -13,10 +13,10 @@ def fail(message):
 
 
 def replace_once(text, pattern, replacement, label):
-    updated, count = re.subn(pattern, replacement, text, count=1)
-    if count != 1:
+    matches = list(re.finditer(pattern, text))
+    if len(matches) != 1:
         fail(f"could not find unique {label}")
-    return updated
+    return re.sub(pattern, replacement, text, count=1)
 
 
 def load_contract(path):
@@ -30,9 +30,40 @@ def load_contract(path):
     return contract, yaml_feature, modules[0]
 
 
-def require_dependency(text, dependency, source_name):
-    if not re.search(rf"(?m)(?:^|\s){re.escape(dependency)}(?:\s|$|,)", text):
+def require_dependency(declarations, dependency, source_name):
+    dependency_pattern = rf"(?<![A-Za-z0-9_.+-]){re.escape(dependency)}(?![A-Za-z0-9_.+-])"
+    if not re.search(dependency_pattern, "\n".join(declarations)):
         fail(f"{source_name} does not declare required YAML dependency {dependency}")
+
+
+def debian_build_dependencies(control):
+    source_stanza = re.split(r"\n\s*\n", control, maxsplit=1)[0]
+    lines = source_stanza.splitlines()
+    declarations = []
+    for index, line in enumerate(lines):
+        match = re.match(r"^Build-Depends:\s*(.*)$", line)
+        if not match:
+            continue
+        declarations.append(match.group(1))
+        for continuation in lines[index + 1:]:
+            if not continuation.startswith((" ", "\t")):
+                break
+            declarations.append(continuation.strip())
+    return declarations
+
+
+def rpm_build_dependencies(spec):
+    return re.findall(r"(?m)^BuildRequires:\s*(.*)$", spec)
+
+
+def alpine_build_dependencies(apkbuild):
+    match = re.search(
+        r"(?ms)^makedepends=(?P<quote>['\"])(?P<value>.*?)(?P=quote)\s*$",
+        apkbuild,
+    )
+    if not match:
+        fail("could not find Alpine makedepends assignment")
+    return [match.group("value")]
 
 
 def apply_debian(packaging_dir, contract_path):
@@ -46,7 +77,11 @@ def apply_debian(packaging_dir, contract_path):
 
     control = control_path.read_text(encoding="utf-8")
     rules = rules_path.read_text(encoding="utf-8")
-    require_dependency(control, yaml_feature["build_dependencies"]["deb"], "Debian control")
+    require_dependency(
+        debian_build_dependencies(control),
+        yaml_feature["build_dependencies"]["deb"],
+        "Debian Build-Depends",
+    )
     if "--disable-libyaml" in rules:
         fail("Debian rules explicitly disable required YAML support")
 
@@ -116,7 +151,11 @@ def apply_rpm(spec_path, contract_path, flavor):
     contract, yaml_feature, module = load_contract(contract_path)
     del contract
     text = path.read_text(encoding="utf-8")
-    require_dependency(text, yaml_feature["build_dependencies"]["rpm"], "RPM spec")
+    require_dependency(
+        rpm_build_dependencies(text),
+        yaml_feature["build_dependencies"]["rpm"],
+        "RPM BuildRequires",
+    )
     if "--disable-libyaml" in text:
         fail("RPM spec explicitly disables required YAML support")
 
@@ -156,7 +195,11 @@ def apply_alpine(apkbuild_path, contract_path):
     contract, yaml_feature, module = load_contract(contract_path)
     del contract
     text = path.read_text(encoding="utf-8")
-    require_dependency(text, yaml_feature["build_dependencies"]["apk"], "APKBUILD")
+    require_dependency(
+        alpine_build_dependencies(text),
+        yaml_feature["build_dependencies"]["apk"],
+        "Alpine makedepends",
+    )
     if "--disable-libyaml" in text:
         fail("APKBUILD explicitly disables required YAML support")
 
