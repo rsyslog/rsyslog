@@ -1,0 +1,24 @@
+{
+  "yaml": {
+    "required_in_base": true,
+    "build_dependencies": {
+      "deb": "libyaml-dev",
+      "rpm": "libyaml-devel",
+      "apk": "yaml-dev"
+    }
+  },
+  "module_packages": [
+    {
+      "module": "omazuredce",
+      "configure_flag": "--enable-omazuredce",
+      "module_file": "omazuredce.so",
+      "summary": "Microsoft Azure Monitor Data Collection Endpoint output module for rsyslog",
+      "package_names": {
+        "deb": "rsyslog-omazuredce",
+        "rpm": "rsyslog-omazuredce",
+        "opensuse": "rsyslog-module-omazuredce",
+        "apk": "rsyslog-omazuredce"
+      }
+    }
+  ]
+}

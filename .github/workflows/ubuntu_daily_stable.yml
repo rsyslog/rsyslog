@@ -39,6 +39,7 @@ concurrency:
 
 env:
   DEBIAN_CI_POLICY_FILE: .github/ubuntu-daily-stable-26.04-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   DEBIAN_CI_HELPER: .github/scripts/debian_package_build.sh
   DEBIAN_DAILY_STABLE_HELPER: devtools/release/debian-daily-stable.sh
   DEBIAN_BUILD_ROOT: /tmp/rsyslog-ubuntu-daily-stable-build
@@ -202,6 +203,9 @@ jobs:
             apply_install_manifest_additions \
             "$DEBIAN_BUILD_ROOT/debian-packaging" \
             "$DEBIAN_BUILD_ROOT/debian-ci-policy/install_manifest_additions.tsv"
+          python3 devtools/release/package-feature-overlay.py debian \
+            "$DEBIAN_BUILD_ROOT/debian-packaging" \
+            "$PACKAGE_FEATURE_CONTRACT"
 
       - name: Install Ubuntu build dependencies
         run: |
@@ -630,14 +634,19 @@ jobs:
             echo "deb [signed-by=/usr/share/keyrings/rsyslog-archive-keyring.gpg] $REPO_URL $DEBIAN_SUITE $DEBIAN_COMPONENT" \
               > /etc/apt/sources.list.d/rsyslog-daily-stable.list
             apt-get update
-            apt-get install -y "rsyslog=$VERSION"
+            apt-get install -y \
+              "rsyslog=$VERSION" \
+              "rsyslog-omazuredce=$VERSION"
             installed_version="$(dpkg-query -W -f='${Version}\n' rsyslog)"
             [ "$installed_version" = "$VERSION" ] || {
               echo "installed rsyslog version $installed_version does not match $VERSION" >&2
               exit 1
             }
+            [ "$(dpkg-query -W -f='${Version}\n' rsyslog-omazuredce)" = "$VERSION" ]
+            dpkg-query -L rsyslog-omazuredce | \
+              grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee .ci/flake-evidence/logs/ubuntu-published-install.log
           install_status=$?
           set -e

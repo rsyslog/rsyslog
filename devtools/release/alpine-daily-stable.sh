@@ -7,7 +7,7 @@ Usage: alpine-daily-stable.sh <command> [args...]
 
 Commands:
   version
-  prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <pkgver>
+  prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <feature-contract> <pkgver>
   verify-artifacts <artifact-dir> <expected-version> <arch>
   generate-index <artifact-dir> <previous-index> <repo-dir> <arch> <private-key> <public-key>
   manifest <artifact-dir> <expected-version> <arch> <channel> <distro> <distro-version>
@@ -63,13 +63,15 @@ cmd_prepare_sources() {
 	local dist_tarball="$2"
 	local output_dir="$3"
 	local policy_file="$4"
-	local pkgver="$5"
+	local feature_contract="$5"
+	local pkgver="$6"
 	local tmp_dir source_root
 
 	[ -f "$baseline_dir/APKBUILD" ] ||
 		die "missing Alpine packaging baseline: $baseline_dir/APKBUILD"
 	[ -f "$dist_tarball" ] || die "missing dist tarball: $dist_tarball"
 	[ -f "$policy_file" ] || die "missing Alpine packaging policy: $policy_file"
+	[ -f "$feature_contract" ] || die "missing package feature contract: $feature_contract"
 
 	rm -rf "$output_dir"
 	mkdir -p "$output_dir"
@@ -129,6 +131,9 @@ if checksum_count != 1:
 path.write_text(text.rstrip() + "\n", encoding="utf-8")
 PY
 
+	python3 "$(dirname "$0")/package-feature-overlay.py" alpine \
+		"$output_dir/APKBUILD" "$feature_contract"
+
 	rm -rf "$tmp_dir"
 	trap - RETURN
 }
@@ -143,6 +148,8 @@ cmd_verify_artifacts() {
 		-name "rsyslog-${expected_version}.apk" -print -quit)"
 	[ -n "$base_apk" ] ||
 		die "base rsyslog APK for $expected_version is absent"
+	[ -f "$artifact_dir/rsyslog-omazuredce-$expected_version.apk" ] ||
+		die "omazuredce subpackage APK for $expected_version is absent"
 	if ! apk verify "$base_apk"; then
 		die "base rsyslog APK failed signature or integrity verification"
 	fi

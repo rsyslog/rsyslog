@@ -7,7 +7,7 @@ Usage: rpm-daily-stable.sh <command> [args...]
 
 Commands:
   version
-  prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <version> <release>
+  prepare-sources <baseline-dir> <dist-tarball> <output-dir> <policy-file> <feature-contract> <version> <release>
   build-package <prepared-dir> <mock-config> <artifact-dir> <build-log> <expected-evr>
   sign-rpms <artifact-dir> <fingerprint>
   generate-repo <artifact-dir> <repo-dir> <arch> <fingerprint> <passphrase-file>
@@ -75,14 +75,16 @@ cmd_prepare_sources() {
   local dist_tarball="$2"
   local output_dir="$3"
   local policy_file="$4"
-  local version="$5"
-  local release="$6"
+  local feature_contract="$5"
+  local version="$6"
+  local release="$7"
   local sources_dir specs_dir spec_file tmp_dir source_root
 
   [ -f "$baseline_dir/rsyslog.spec" ] ||
     die "missing EL packaging spec: $baseline_dir/rsyslog.spec"
   [ -f "$dist_tarball" ] || die "missing dist tarball: $dist_tarball"
   [ -f "$policy_file" ] || die "missing RPM policy: $policy_file"
+  [ -f "$feature_contract" ] || die "missing package feature contract: $feature_contract"
 
   rm -rf "$output_dir"
   sources_dir="$output_dir/SOURCES"
@@ -184,6 +186,9 @@ if changelog_count != 1:
 spec_path.write_text(spec, encoding="utf-8")
 PY
 
+  python3 "$(dirname "$0")/package-feature-overlay.py" rpm \
+    "$spec_file" "$feature_contract" rpm
+
   while IFS= read -r source_url; do
     case "$source_url" in
       http://*|https://*)
@@ -236,6 +241,9 @@ cmd_build_package() {
   actual_evr="$(rpm -qp --qf '%{VERSION}-%{RELEASE}\n' "$rpm_file")"
   [ "$actual_evr" = "$expected_evr" ] ||
     die "built RPM EVR $actual_evr does not match $expected_evr"
+  find "$artifact_dir/rpms" -maxdepth 1 -type f \
+    -name 'rsyslog*omazuredce-[0-9]*.rpm' -print -quit | grep -q . ||
+    die "omazuredce subpackage RPM was not produced"
 
   cp "$build_log" "$artifact_dir/build.log"
   cp "$prepared_dir/SPECS/rsyslog.spec" "$artifact_dir/rsyslog.spec"

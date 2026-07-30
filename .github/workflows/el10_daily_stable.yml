@@ -34,6 +34,7 @@ concurrency:
 env:
   RPM_DAILY_STABLE_HELPER: devtools/release/rpm-daily-stable.sh
   RPM_POLICY_FILE: .github/el10-daily-stable-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   RPM_MOCK_CONFIG: centos-stream+epel-10-x86_64
   RPM_ARCH: x86_64
   PACKAGE_CHANNEL: daily-stable
@@ -168,7 +169,8 @@ jobs:
           set +e
           docker run --rm --privileged \
             -e EXPECTED_EVR -e RELEASE -e VERSION \
-            -e RPM_DAILY_STABLE_HELPER -e RPM_MOCK_CONFIG -e RPM_POLICY_FILE \
+            -e PACKAGE_FEATURE_CONTRACT -e RPM_DAILY_STABLE_HELPER \
+            -e RPM_MOCK_CONFIG -e RPM_POLICY_FILE \
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -v "$RUNNER_TEMP:/runner-temp" \
@@ -183,6 +185,7 @@ jobs:
                 "$DIST_TARBALL" \
                 /runner-temp/el10-prepared \
                 "$RPM_POLICY_FILE" \
+                "$PACKAGE_FEATURE_CONTRACT" \
                 "$VERSION" \
                 "$RELEASE"
               "$RPM_DAILY_STABLE_HELPER" build-package \
@@ -531,11 +534,16 @@ jobs:
             curl -fsSL "$REPO_URL/rsyslog-daily-stable-el10.repo" \
               -o /etc/yum.repos.d/rsyslog-daily-stable.repo
             dnf -y makecache --refresh
-            dnf -y install "rsyslog-$EXPECTED_EVR"
+            dnf -y install \
+              "rsyslog-$EXPECTED_EVR" \
+              "rsyslog-omazuredce-$EXPECTED_EVR"
             installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' rsyslog)"
             [ "$installed_evr" = "$EXPECTED_EVR" ]
+            [ "$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' rsyslog-omazuredce)" = \
+              "$EXPECTED_EVR" ]
+            rpm -ql rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee .ci/flake-evidence/logs/el10-published-install.log
           install_status=$?
           set -e

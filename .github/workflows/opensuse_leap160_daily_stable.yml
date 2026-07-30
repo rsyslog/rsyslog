@@ -34,6 +34,7 @@ concurrency:
 env:
   OPENSUSE_DAILY_STABLE_HELPER: devtools/release/opensuse-daily-stable.sh
   OPENSUSE_POLICY_FILE: .github/opensuse-leap160-daily-stable-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   RPM_ARCH: x86_64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: opensuse-leap
@@ -171,7 +172,7 @@ jobs:
           devtools/ci-flake-phase.sh begin opensuse-leap160-package-build custom
           set +e
           docker run --rm \
-            -e OPENSUSE_DAILY_STABLE_HELPER \
+            -e OPENSUSE_DAILY_STABLE_HELPER -e PACKAGE_FEATURE_CONTRACT \
             -e OPENSUSE_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e VERSION \
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -e "DOC_TARBALL=/workspace/$(basename "$DOC_TARBALL")" \
@@ -212,6 +213,7 @@ jobs:
                 "$DOC_TARBALL" \
                 /runner-temp/opensuse-leap160-prepared \
                 "$OPENSUSE_POLICY_FILE" \
+                "$PACKAGE_FEATURE_CONTRACT" \
                 "$VERSION" \
                 "$RELEASE"
               "$OPENSUSE_DAILY_STABLE_HELPER" build-package \
@@ -584,16 +586,20 @@ jobs:
             zypper --gpg-auto-import-keys -n refresh rsyslog-daily-stable
             zypper -n install --oldpackage \
               "rsyslog=$EXPECTED_EVR" \
+              "rsyslog-module-omazuredce=$EXPECTED_EVR" \
               "rsyslog-module-ossl=$EXPECTED_EVR" \
               "rsyslog-doc=$EXPECTED_EVR"
-            for package in rsyslog rsyslog-module-ossl rsyslog-doc; do
+            for package in rsyslog rsyslog-module-omazuredce \
+              rsyslog-module-ossl rsyslog-doc; do
               installed_evr="$(
                 rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
               )"
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
+            rpm -ql rsyslog-module-omazuredce | \
+              grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee \
             .ci/flake-evidence/logs/opensuse-leap160-published-install.log
           install_status=${PIPESTATUS[0]}

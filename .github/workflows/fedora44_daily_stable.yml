@@ -34,6 +34,7 @@ concurrency:
 env:
   FEDORA_DAILY_STABLE_HELPER: devtools/release/fedora-daily-stable.sh
   FEDORA_POLICY_FILE: .github/fedora44-daily-stable-policy.yml
+  PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
   RPM_ARCH: x86_64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: fedora
@@ -160,7 +161,7 @@ jobs:
           devtools/ci-flake-phase.sh begin fedora44-package-build custom
           set +e
           docker run --rm \
-            -e FEDORA_DAILY_STABLE_HELPER \
+            -e FEDORA_DAILY_STABLE_HELPER -e PACKAGE_FEATURE_CONTRACT \
             -e FEDORA_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e VERSION \
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -v "$GITHUB_WORKSPACE:/workspace" \
@@ -193,6 +194,7 @@ jobs:
                 "$DIST_TARBALL" \
                 /runner-temp/fedora44-prepared \
                 "$FEDORA_POLICY_FILE" \
+                "$PACKAGE_FEATURE_CONTRACT" \
                 "$VERSION" \
                 "$RELEASE"
               "$FEDORA_DAILY_STABLE_HELPER" build-package \
@@ -564,15 +566,18 @@ jobs:
             dnf -q -y install \
               "rsyslog-$EXPECTED_EVR" \
               "rsyslog-crypto-$EXPECTED_EVR" \
+              "rsyslog-omazuredce-$EXPECTED_EVR" \
               "rsyslog-openssl-$EXPECTED_EVR"
-            for package in rsyslog rsyslog-crypto rsyslog-openssl; do
+            for package in rsyslog rsyslog-crypto rsyslog-omazuredce \
+              rsyslog-openssl; do
               installed_evr="$(
                 rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
               )"
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
+            rpm -ql rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$'
             rsyslogd -v
-            rsyslogd -N1
+            devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee \
             .ci/flake-evidence/logs/fedora44-published-install.log
           install_status=${PIPESTATUS[0]}
