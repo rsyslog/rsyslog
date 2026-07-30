@@ -1,7 +1,7 @@
 # Debian daily stable package archive
 
-The `debian daily stable` workflow builds rsyslog from `v8-stable` for Debian
-13 (`trixie`) on `amd64`. Package construction does not run for pull requests;
+The `debian daily stable` workflow builds current rsyslog `main` for Debian 13
+(`trixie`) on `amd64` and `arm64`. Package construction does not run for pull requests;
 the repository's workflow lint and security checks still validate workflow
 changes without consuming a full Debian package-build runner. Manual dispatch
 remains available for bootstrap and recovery. Scheduled publishing remains
@@ -27,14 +27,19 @@ The initial repository URL ends in:
 /apt/daily-stable/debian/13
 ```
 
-This leaves room for later channels, Debian and Ubuntu versions, RPM-based
-distributions, and additional architectures. Debian packages and source
+This leaves room for later channels, Debian and Ubuntu versions, and RPM-based
+distributions. Debian packages and source
 artifacts use immutable paths below `pool/`. Every run also records its
 manifest, checksums, build information, and build log below:
 
 ```text
-snapshots/YYYY-MM-DD/PACKAGE_VERSION/
+snapshots/YYYY-MM-DD/PACKAGE_VERSION/amd64/
+snapshots/YYYY-MM-DD/PACKAGE_VERSION/arm64/
 ```
+
+Signed APT indexes are published under both `binary-amd64/` and
+`binary-arm64/`. Each package is built and installed on a native runner of the
+matching architecture.
 
 The APT indexes retain every published package version. The Space must not have
 a lifecycle rule that removes package-pool, by-hash, or snapshot objects before

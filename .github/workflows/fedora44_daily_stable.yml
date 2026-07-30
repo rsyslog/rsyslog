@@ -35,7 +35,7 @@ env:
   FEDORA_DAILY_STABLE_HELPER: devtools/release/fedora-daily-stable.sh
   FEDORA_POLICY_FILE: .github/fedora44-daily-stable-policy.yml
   PACKAGE_FEATURE_CONTRACT: .github/daily-stable-package-features.yml
-  RPM_ARCH: x86_64
+  PACKAGE_REPOSITORY_ARCHITECTURES: x86_64 aarch64
   PACKAGE_CHANNEL: daily-stable
   PACKAGE_DISTRO: fedora
   PACKAGE_DISTRO_VERSION: '44'
@@ -95,13 +95,23 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: build Fedora 44 x86_64 packages
+    name: build Fedora 44 ${{ matrix.arch }} packages
     needs: preflight
     if: needs.preflight.outputs.should_run == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
     permissions:
       contents: read
+    env:
+      RPM_ARCH: ${{ matrix.arch }}
     outputs:
       archive_date: ${{ steps.version.outputs.archive_date }}
       expected_evr: ${{ steps.version.outputs.expected_evr }}
@@ -137,11 +147,24 @@ jobs:
 
       - name: Generate rsyslog dist tarball
         run: |
-          RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
-            RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
-            devtools/devcontainer.sh --rm \
+          case "$RPM_ARCH" in
+            x86_64)
+              RSYSLOG_HOME="$GITHUB_WORKSPACE/rsyslog-source" \
+                RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+                devtools/devcontainer.sh --rm \
+                  .github/scripts/debian_package_build.sh run_dist_build \
+                  /rsyslog
+              ;;
+            aarch64)
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends \
+                autoconf autoconf-archive automake bison build-essential \
+                flex gawk git libestr-dev libfastjson-dev libsystemd-dev \
+                libtool libyaml-dev pkg-config python3-docutils zlib1g-dev
               .github/scripts/debian_package_build.sh run_dist_build \
-              /rsyslog
+                "$GITHUB_WORKSPACE/rsyslog-source"
+              ;;
+          esac
           dist_tarball="$(
             find rsyslog-source -maxdepth 1 -type f \
               -name 'rsyslog-*.tar.gz' -print -quit
@@ -162,7 +185,8 @@ jobs:
           set +e
           docker run --rm \
             -e FEDORA_DAILY_STABLE_HELPER -e PACKAGE_FEATURE_CONTRACT \
-            -e FEDORA_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e VERSION \
+            -e FEDORA_POLICY_FILE -e EXPECTED_EVR -e RELEASE -e RPM_ARCH \
+            -e VERSION \
             -e "DIST_TARBALL=/workspace/rsyslog-source/$(basename "$DIST_TARBALL")" \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -v "$RUNNER_TEMP:/runner-temp" \
@@ -202,7 +226,7 @@ jobs:
                 /runner-temp/fedora44-artifacts \
                 /runner-temp/fedora44-build.log \
                 "$EXPECTED_EVR" \
-                x86_64
+                "$RPM_ARCH"
             '
           build_status=$?
           set -e
@@ -244,7 +268,7 @@ jobs:
       - name: Upload Fedora package artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: fedora44-daily-stable-${{ steps.version.outputs.expected_evr }}
+          name: fedora44-daily-stable-${{ steps.version.outputs.expected_evr }}-${{ matrix.arch }}
           path: fedora44-daily-stable-artifacts/
           retention-days: 14
           if-no-files-found: error
@@ -314,16 +338,23 @@ jobs:
             }
           done
 
-      - name: Download Fedora package artifacts
+      - name: Download Fedora x86_64 package artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: fedora44-daily-stable-${{ needs.build.outputs.expected_evr }}
-          path: fedora44-daily-stable-artifacts
+          name: fedora44-daily-stable-${{ needs.build.outputs.expected_evr }}-x86_64
+          path: fedora44-daily-stable-artifacts/x86_64
+
+      - name: Download Fedora aarch64 package artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: fedora44-daily-stable-${{ needs.build.outputs.expected_evr }}-aarch64
+          path: fedora44-daily-stable-artifacts/aarch64
 
       - name: Verify artifact checksums
         run: |
-          cd fedora44-daily-stable-artifacts
-          sha256sum -c SHA256SUMS
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            (cd "fedora44-daily-stable-artifacts/$arch" && sha256sum -c SHA256SUMS)
+          done
 
       - name: Import signing key and unlock its agent
         run: |
@@ -356,15 +387,17 @@ jobs:
 
       - name: Sign binary and source RPMs
         run: |
-          "$FEDORA_DAILY_STABLE_HELPER" sign-rpms \
-            fedora44-daily-stable-artifacts \
-            "$ARCHIVE_GPG_FINGERPRINT"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            "$FEDORA_DAILY_STABLE_HELPER" sign-rpms \
+              "fedora44-daily-stable-artifacts/$arch" \
+              "$ARCHIVE_GPG_FINGERPRINT"
+          done
 
       - name: Download current repository metadata
         run: |
           set -euo pipefail
-          mkdir -p "rpm-repo/$RPM_ARCH" rpm-repo/SRPMS
-          for repo_subdir in "$RPM_ARCH" SRPMS; do
+          for repo_subdir in $PACKAGE_REPOSITORY_ARCHITECTURES SRPMS; do
+            mkdir -p "rpm-repo/$repo_subdir"
             aws s3 sync \
               --only-show-errors \
               --endpoint-url "$SPACE_ENDPOINT" \
@@ -374,29 +407,34 @@ jobs:
 
       - name: Generate signed incremental RPM repositories
         run: |
-          "$FEDORA_DAILY_STABLE_HELPER" generate-repo \
-            fedora44-daily-stable-artifacts \
-            rpm-repo \
-            "$RPM_ARCH" \
-            "$ARCHIVE_GPG_FINGERPRINT" \
-            "$GPG_PASSPHRASE_FILE"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            "$FEDORA_DAILY_STABLE_HELPER" generate-repo \
+              "fedora44-daily-stable-artifacts/$arch" \
+              rpm-repo \
+              "$arch" \
+              "$ARCHIVE_GPG_FINGERPRINT" \
+              "$GPG_PASSPHRASE_FILE"
+          done
 
       - name: Generate signed artifact manifest and snapshot
         env:
           ARCHIVE_DATE: ${{ needs.build.outputs.archive_date }}
           EXPECTED_EVR: ${{ needs.build.outputs.expected_evr }}
         run: |
-          "$FEDORA_DAILY_STABLE_HELPER" manifest \
-            fedora44-daily-stable-artifacts \
-            "$EXPECTED_EVR" "$RPM_ARCH" "$PACKAGE_CHANNEL" \
-            "$PACKAGE_DISTRO" "$PACKAGE_DISTRO_VERSION"
           snapshot_dir="rpm-repo/snapshots/$ARCHIVE_DATE/$EXPECTED_EVR"
-          mkdir -p "$snapshot_dir"
-          cp -a fedora44-daily-stable-artifacts/manifest.json \
-            fedora44-daily-stable-artifacts/SHA256SUMS \
-            fedora44-daily-stable-artifacts/build.log \
-            fedora44-daily-stable-artifacts/rsyslog.spec \
-            "$snapshot_dir/"
+          for arch in $PACKAGE_REPOSITORY_ARCHITECTURES; do
+            artifact_dir="fedora44-daily-stable-artifacts/$arch"
+            "$FEDORA_DAILY_STABLE_HELPER" manifest \
+              "$artifact_dir" \
+              "$EXPECTED_EVR" "$arch" "$PACKAGE_CHANNEL" \
+              "$PACKAGE_DISTRO" "$PACKAGE_DISTRO_VERSION"
+            mkdir -p "$snapshot_dir/$arch"
+            cp -a "$artifact_dir/manifest.json" \
+              "$artifact_dir/SHA256SUMS" \
+              "$artifact_dir/build.log" \
+              "$artifact_dir/rsyslog.spec" \
+              "$snapshot_dir/$arch/"
+          done
 
       - name: Generate repository configuration
         run: |
@@ -445,8 +483,8 @@ jobs:
           while IFS= read -r -d '' path; do
             upload_immutable "$path"
           done < <(
-            find "rpm-repo/$RPM_ARCH/Packages" rpm-repo/SRPMS/Packages \
-              rpm-repo/snapshots -type f -print0
+            find rpm-repo/x86_64/Packages rpm-repo/aarch64/Packages \
+              rpm-repo/SRPMS/Packages rpm-repo/snapshots -type f -print0
           )
 
       - name: Publish archive key and mutable metadata
@@ -463,7 +501,7 @@ jobs:
           }
           upload_metadata rpm-repo/rsyslog-archive-keyring.asc
           upload_metadata rpm-repo/rsyslog-daily-stable-fedora44.repo
-          for repo_subdir in "$RPM_ARCH" SRPMS; do
+          for repo_subdir in $PACKAGE_REPOSITORY_ARCHITECTURES SRPMS; do
             while IFS= read -r -d '' path; do
               upload_metadata "$path"
             done < <(
@@ -475,10 +513,18 @@ jobs:
           done
 
   verify:
-    name: verify published Fedora 44 repository
+    name: verify published Fedora 44 ${{ matrix.arch }} repository
     needs: [preflight, build, publish]
     if: needs.preflight.outputs.should_publish == 'true'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     container:
       image: fedora:44
@@ -487,6 +533,7 @@ jobs:
     permissions:
       contents: read
     env:
+      RPM_ARCH: ${{ matrix.arch }}
       REPO_URL: ${{ vars.FEDORA44_DAILY_STABLE_REPO_URL }}
       ORIGIN_REPO_URL: ${{ vars.FEDORA44_DAILY_STABLE_ORIGIN_REPO_URL }}
       EXPECTED_GPG_FINGERPRINT: ${{ vars.DEBIAN_DAILY_STABLE_GPG_FINGERPRINT }}

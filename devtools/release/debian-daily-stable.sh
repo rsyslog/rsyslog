@@ -377,7 +377,9 @@ cmd_generate_repo() {
 
   (
     cd "$repo_dir"
-    apt-ftparchive packages "pool/$component/r/rsyslog" > "$packages_file.new"
+    apt-ftparchive \
+      -o "APT::FTPArchive::Architecture=$arch" \
+      packages "pool/$component/r/rsyslog" > "$packages_file.new"
     if find "pool/$component/r/rsyslog" -maxdepth 1 -type f -name '*.dsc' |
        grep -q .; then
       apt-ftparchive sources "pool/$component/r/rsyslog" > "$sources_file.new"
@@ -403,7 +405,7 @@ cmd_generate_repo() {
       -o "APT::FTPArchive::Release::Label=rsyslog daily stable" \
       -o "APT::FTPArchive::Release::Suite=$suite" \
       -o "APT::FTPArchive::Release::Codename=$suite" \
-      -o "APT::FTPArchive::Release::Architectures=$arch" \
+      -o "APT::FTPArchive::Release::Architectures=${PACKAGE_REPOSITORY_ARCHITECTURES:-$arch}" \
       -o "APT::FTPArchive::Release::Components=$component" \
       -o "APT::FTPArchive::Release::Acquire-By-Hash=yes" \
       -o "APT::FTPArchive::Release::Description=rsyslog ${PACKAGE_DISTRO_LABEL:-Debian} daily stable packages" \
@@ -509,17 +511,18 @@ cmd_verify_repo() (
 build_self_test_deb() {
   local root="$1"
   local version="$2"
+  local arch="${3:-amd64}"
   local package_dir="$root/package-$version"
 
   install -m 755 -d "$package_dir/DEBIAN"
   {
     echo "Package: rsyslog"
     echo "Version: $version"
-    echo "Architecture: amd64"
+    echo "Architecture: $arch"
     echo "Maintainer: rsyslog test <test@example.invalid>"
     echo "Description: synthetic daily archive test package"
   } > "$package_dir/DEBIAN/control"
-  dpkg-deb --build "$package_dir" "$root/rsyslog_${version}_amd64.deb" >/dev/null
+  dpkg-deb --build "$package_dir" "$root/rsyslog_${version}_${arch}.deb" >/dev/null
 }
 
 cmd_self_test() (
@@ -554,16 +557,40 @@ cmd_self_test() (
     "rsyslog archive self-test <test@example.invalid>" rsa2048 sign 0 >/dev/null 2>&1
   fingerprint="$(secret_key_fingerprint)"
 
-  build_self_test_deb "$first_artifacts" "1.0~daily1"
+  export PACKAGE_REPOSITORY_ARCHITECTURES="amd64 arm64"
+  build_self_test_deb "$first_artifacts" "1.0~daily1" amd64
+  build_self_test_deb "$first_artifacts" "1.0~daily1" arm64
   cmd_generate_repo "$first_artifacts" "$repo_dir" "$test_suite" main amd64
+  cmd_generate_repo "$first_artifacts" "$repo_dir" "$test_suite" main arm64
   cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily1" "$fingerprint"
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main arm64 \
+    "1.0~daily1" "$fingerprint"
+  xz -dc "$repo_dir/dists/$test_suite/main/binary-amd64/Packages.xz" |
+    grep -Fxq 'Architecture: amd64' ||
+    die "amd64 package index is missing its native package"
+  if xz -dc "$repo_dir/dists/$test_suite/main/binary-amd64/Packages.xz" |
+     grep -Fxq 'Architecture: arm64'; then
+    die "amd64 package index contains an arm64 package"
+  fi
+  xz -dc "$repo_dir/dists/$test_suite/main/binary-arm64/Packages.xz" |
+    grep -Fxq 'Architecture: arm64' ||
+    die "arm64 package index is missing its native package"
+  grep -Fxq 'Architectures: amd64 arm64' \
+    "$repo_dir/dists/$test_suite/Release" ||
+    die "Release metadata does not advertise both architectures"
 
-  build_self_test_deb "$second_artifacts" "1.0~daily2"
+  build_self_test_deb "$second_artifacts" "1.0~daily2" amd64
+  build_self_test_deb "$second_artifacts" "1.0~daily2" arm64
   cmd_generate_repo "$second_artifacts" "$repo_dir" "$test_suite" main amd64
+  cmd_generate_repo "$second_artifacts" "$repo_dir" "$test_suite" main arm64
   cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily1" "$fingerprint"
   cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
+    "1.0~daily2" "$fingerprint"
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main arm64 \
+    "1.0~daily1" "$fingerprint"
+  cmd_verify_repo "file://$repo_dir" "$test_suite" main arm64 \
     "1.0~daily2" "$fingerprint"
 
   rm -rf "$tmp_dir"
