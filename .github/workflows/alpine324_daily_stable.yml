@@ -503,9 +503,6 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
-    container:
-      image: alpine:3.24
-      options: --user root
     environment: debian-daily-stable
     permissions:
       contents: read
@@ -521,9 +518,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install verification tools
-        run: apk add --no-cache bash ca-certificates curl python3
-
       - name: Verify CDN reachability and exact origin installation
         id: published_install
         shell: bash
@@ -532,57 +526,18 @@ jobs:
           mkdir -p .ci/flake-evidence/logs
           devtools/ci-flake-phase.sh begin alpine324-published-install custom
           set +e
-          (
-            set -euo pipefail
-            [ -n "$REPO_URL" ]
-            [ -n "$ORIGIN_REPO_URL" ]
-            curl -fsSL "$REPO_URL/rsyslog-alpine-archive.rsa.pub" \
-              -o /tmp/rsyslog-alpine-cdn-key.pub
-            [ "$(sha256sum /tmp/rsyslog-alpine-cdn-key.pub | awk '{print $1}')" = \
-              "$EXPECTED_PUBLIC_KEY_SHA256" ]
-            curl -fsSL "$REPO_URL/$ALPINE_ARCH/APKINDEX.tar.gz" \
-              -o /tmp/rsyslog-alpine-cdn-index.tar.gz
-            tar -tzf /tmp/rsyslog-alpine-cdn-index.tar.gz | grep -Fx APKINDEX
-            verification_rc=1
-            for attempt in $(seq 1 20); do
-              rm -f /tmp/rsyslog-alpine-archive.rsa.pub
-              if curl -fsSL \
-                  "$ORIGIN_REPO_URL/rsyslog-alpine-archive.rsa.pub" \
-                  -o /tmp/rsyslog-alpine-archive.rsa.pub &&
-                [ "$(sha256sum /tmp/rsyslog-alpine-archive.rsa.pub | awk '{print $1}')" = \
-                  "$EXPECTED_PUBLIC_KEY_SHA256" ]; then
-                cp /tmp/rsyslog-alpine-archive.rsa.pub /etc/apk/keys/
-                if ! grep -Fxq "$ORIGIN_REPO_URL" /etc/apk/repositories; then
-                  echo "$ORIGIN_REPO_URL" >> /etc/apk/repositories
-                fi
-                if apk update --no-cache &&
-                  apk add --no-cache \
-                    "rsyslog=$EXPECTED_VERSION" \
-                    "rsyslog-omazuredce=$EXPECTED_VERSION"; then
-                  verification_rc=0
-                  break
-                fi
-              fi
-              echo "Origin repository not ready yet, retrying ($attempt/20)..."
-              [ "$attempt" -eq 20 ] || sleep 30
-            done
-            [ "$verification_rc" -eq 0 ]
-            installed_version="$(
-              apk query --from installed --fields version --format json rsyslog |
-                sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
-            )"
-            [ "$installed_version" = "$EXPECTED_VERSION" ]
-            module_version="$(
-              apk query --from installed --fields version --format json \
-                rsyslog-omazuredce |
-                sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
-            )"
-            [ "$module_version" = "$EXPECTED_VERSION" ]
-            apk info -L rsyslog-omazuredce | \
-              grep -Eq '/rsyslog/omazuredce\.so$'
-            rsyslogd -v
-            devtools/release/package-feature-smoke.sh
-          ) 2>&1 | tee .ci/flake-evidence/logs/alpine324-published-install.log
+          docker run --rm \
+            -e ALPINE_ARCH -e ALPINE_DAILY_STABLE_HELPER \
+            -e EXPECTED_PUBLIC_KEY_SHA256 \
+            -e EXPECTED_VERSION -e ORIGIN_REPO_URL -e REPO_URL \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            alpine:3.24 sh -lc '
+            apk add --no-cache bash ca-certificates curl python3
+            "$ALPINE_DAILY_STABLE_HELPER" verify-published \
+              "$REPO_URL" "$ORIGIN_REPO_URL" "$ALPINE_ARCH" \
+              "$EXPECTED_VERSION" "$EXPECTED_PUBLIC_KEY_SHA256"
+          ' 2>&1 | tee .ci/flake-evidence/logs/alpine324-published-install.log
           install_status=${PIPESTATUS[0]}
           set -e
           devtools/ci-flake-phase.sh end \

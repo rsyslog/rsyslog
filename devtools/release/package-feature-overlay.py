@@ -168,7 +168,7 @@ def apply_rpm(spec_path, contract_path, flavor):
     if configure_flag not in text:
         text = replace_once(
             text,
-            r"(?m)^(\s*--enable-omhttp(?:fs)?\s*\\)$",
+            r"(?m)^(\s*--enable-omhttp\s*\\)$",
             rf"\t{configure_flag} \\" + "\n" + r"\g<1>",
             "RPM configure option anchor",
         )

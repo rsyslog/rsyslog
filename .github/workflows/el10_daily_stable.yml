@@ -501,7 +501,7 @@ jobs:
           done
 
   verify:
-    name: verify ${{ matrix.name }} EL10 ${{ matrix.target.arch }} repository
+    name: verify ${{ matrix.distro.name }} EL10 ${{ matrix.target.arch }} repository
     needs: [preflight, build, publish]
     if: needs.preflight.outputs.should_publish == 'true'
     runs-on: ${{ matrix.target.runner }}
@@ -514,7 +514,7 @@ jobs:
             runner: ubuntu-24.04
           - arch: aarch64
             runner: ubuntu-24.04-arm
-        include:
+        distro:
           - name: CentOS Stream
             image: quay.io/centos/centos:stream10
           - name: Rocky Linux
@@ -524,7 +524,7 @@ jobs:
           - name: Oracle Linux
             image: container-registry.oracle.com/os/oraclelinux:10
     container:
-      image: ${{ matrix.image }}
+      image: ${{ matrix.distro.image }}
       options: --user root
     environment: debian-daily-stable
     permissions:
@@ -606,7 +606,7 @@ jobs:
           }}
         uses: ./.github/actions/upload-flake-evidence
         with:
-          job-name: ${{ matrix.name }} EL10 daily stable verification
+          job-name: ${{ matrix.distro.name }} EL10 daily stable verification
 
   report_failure:
     name: report failure
