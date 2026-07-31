@@ -1,6 +1,10 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
 
+- 2026-07-31: testbench: ship qradar_json-with-dots in dist
+  Include testsuites/qradar_json-with-dots in EXTRA_DIST so
+  data_pipeline-qradar.sh can run from release tarballs.
+  Closes https://github.com/rsyslog/rsyslog/issues/7456
 - 2026-07-15: imjournal: stop invalidation recovery busy-loop
   Reopened journal handles now initialize their change notification state
   before cursor restoration. This prevents journal rotation or invalidation

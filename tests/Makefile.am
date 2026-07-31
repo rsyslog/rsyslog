@@ -3969,6 +3969,7 @@ EXTRA_DIST += \
 	testsuites/pmnormalize_basic.rulebase \
 	validate_json_equality.py \
 	testsuites/qradar_json \
+	testsuites/qradar_json-with-dots \
 	snmptrapreceiver.py \
 	omamqp1-common.sh
 
