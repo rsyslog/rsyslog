@@ -634,8 +634,15 @@ jobs:
             zypper -n install --oldpackage \
               "rsyslog=$EXPECTED_EVR" \
               "rsyslog-standard=$EXPECTED_EVR" \
-              "rsyslog-full=$EXPECTED_EVR" \
               "rsyslog-doc=$EXPECTED_EVR"
+            for package in rsyslog rsyslog-module-ossl rsyslog-module-gtls \
+              rsyslog-module-omotel rsyslog-standard rsyslog-doc; do
+              installed_evr="$(
+                rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
+              )"
+              [ "$installed_evr" = "$EXPECTED_EVR" ]
+            done
+            zypper -n install --oldpackage "rsyslog-full=$EXPECTED_EVR"
             for package in rsyslog rsyslog-module-ossl rsyslog-module-gtls \
               rsyslog-module-omotel rsyslog-module-omazuredce \
               rsyslog-standard rsyslog-full rsyslog-doc; do
@@ -651,6 +658,7 @@ jobs:
               rsyslog-module-omazuredce:omazuredce.so; do
               package="${package_file%%:*}"
               module_file="${package_file#*:}"
+              module_file="${module_file//./\\.}"
               rpm -ql "$package" | grep -Eq "/rsyslog/$module_file$"
             done
             rsyslogd -v

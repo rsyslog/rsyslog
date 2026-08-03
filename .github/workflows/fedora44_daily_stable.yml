@@ -613,8 +613,15 @@ jobs:
             dnf -q -y install \
               "rsyslog-$EXPECTED_EVR" \
               "rsyslog-crypto-$EXPECTED_EVR" \
-              "rsyslog-standard-$EXPECTED_EVR" \
-              "rsyslog-full-$EXPECTED_EVR"
+              "rsyslog-standard-$EXPECTED_EVR"
+            for package in rsyslog rsyslog-crypto rsyslog-openssl rsyslog-gnutls \
+              rsyslog-omotel rsyslog-standard; do
+              installed_evr="$(
+                rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
+              )"
+              [ "$installed_evr" = "$EXPECTED_EVR" ]
+            done
+            dnf -q -y install "rsyslog-full-$EXPECTED_EVR"
             for package in rsyslog rsyslog-crypto rsyslog-openssl \
               rsyslog-gnutls rsyslog-omotel rsyslog-omazuredce \
               rsyslog-standard rsyslog-full; do
@@ -630,6 +637,7 @@ jobs:
               rsyslog-omazuredce:omazuredce.so; do
               package="${package_file%%:*}"
               module_file="${package_file#*:}"
+              module_file="${module_file//./\\.}"
               rpm -ql "$package" | grep -Eq "/rsyslog/$module_file$"
             done
             rsyslogd -v

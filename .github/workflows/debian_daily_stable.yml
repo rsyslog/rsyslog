@@ -669,8 +669,12 @@ jobs:
             apt-get update
             apt-get install -y \
               "rsyslog=$VERSION" \
-              "rsyslog-standard=$VERSION" \
-              "rsyslog-full=$VERSION"
+              "rsyslog-standard=$VERSION"
+            for package in rsyslog rsyslog-openssl rsyslog-gnutls rsyslog-omotel \
+              rsyslog-standard; do
+              [ "$(dpkg-query -W -f='${Version}\n' "$package")" = "$VERSION" ]
+            done
+            apt-get install -y "rsyslog-full=$VERSION"
             installed_version="$(dpkg-query -W -f='${Version}\n' rsyslog)"
             [ "$installed_version" = "$VERSION" ] || {
               echo "installed rsyslog version $installed_version does not match $VERSION" >&2
@@ -687,6 +691,7 @@ jobs:
               rsyslog-omazuredce:omazuredce.so; do
               package="${package_file%%:*}"
               module_file="${package_file#*:}"
+              module_file="${module_file//./\\.}"
               dpkg-query -L "$package" | grep -Eq "/rsyslog/$module_file$"
             done
             rsyslogd -v

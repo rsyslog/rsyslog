@@ -195,8 +195,7 @@ cmd_verify_published() {
 			if apk update --no-cache &&
 				apk add --no-cache \
 					"rsyslog=$expected_version" \
-					"rsyslog-standard=$expected_version" \
-					"rsyslog-full=$expected_version"; then
+					"rsyslog-standard=$expected_version"; then
 				verification_rc=0
 				break
 			fi
@@ -211,7 +210,17 @@ cmd_verify_published() {
 	)"
 	[ "$installed_version" = "$expected_version" ] || die "installed rsyslog version mismatch"
 	local package module_file
-	for package in openssl gnutls omotel omazuredce standard full; do
+	for package in openssl gnutls omotel standard; do
+		module_version="$(
+			apk query --from installed --fields version --format json "rsyslog-$package" |
+				sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+		)"
+		[ "$module_version" = "$expected_version" ] ||
+			die "installed rsyslog-$package version mismatch"
+	done
+	apk add --no-cache "rsyslog-full=$expected_version" ||
+		die "could not install the expected full profile package"
+	for package in omazuredce full; do
 		module_version="$(
 			apk query --from installed --fields version --format json "rsyslog-$package" |
 				sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
@@ -225,6 +234,7 @@ cmd_verify_published() {
 			gnutls) module_file=lmnsd_gtls.so ;;
 			*) module_file=$package.so ;;
 		esac
+		module_file="${module_file//./\\.}"
 		apk info -L "rsyslog-$package" | grep -Eq "/rsyslog/$module_file$" ||
 			die "$package module file is absent"
 	done

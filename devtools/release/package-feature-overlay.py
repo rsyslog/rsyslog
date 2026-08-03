@@ -85,9 +85,10 @@ def alpine_build_dependencies(apkbuild):
 def add_configure_flag(text, configure_flag, pattern, label, indentation=None):
     if configure_flag in text:
         return text
-    match = re.search(pattern, text)
-    if not match:
+    matches = list(re.finditer(pattern, text))
+    if len(matches) != 1:
         fail(f"could not find unique {label}")
+    match = matches[0]
     if indentation is None:
         indentation = match.group(1)
     addition = f"{indentation}{configure_flag} \\\n"
