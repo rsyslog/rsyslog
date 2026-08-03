@@ -1,0 +1,53 @@
+devtools/release/fedora-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 217-222
+devtools/release/amazonlinux-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 315-320
+.github/workflows/fedora44_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 616-620,626-634
+devtools/release/opensuse-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 242-248
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 585-600
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 617-621,627-635
+.github/daily-stable-package-features.yml
+  s_2dc01c7e3d2940::t_6eaabd320add51 11-49,55,63-85
+  s_2dc01c7e3d2940::t_c251205b7bfcdd 86
+devtools/release/rpm-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 245-250
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 636-637,639-641,647-655
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_c54d601be328be 338
+  s_2dc01c7e3d2940::t_20d9aebd2f43c9 187,190
+  s_2dc01c7e3d2940::t_b7a7c7ea074b5b 40-41
+  s_2dc01c7e3d2940::t_341d53a4d27d5f 2,27,29-39,42-46,85-127,130,146-149,151,153-154,158-171,177-183,186,191-192,194-216,222,232-236,238,240-241,243,246-273,278-293,296,309-322,324-327,330-334,337,339,341-345
+devtools/release/alpine-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 152-156,198-199,213-230
+.github/el10-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_20d9aebd2f43c9 28-35
+.github/workflows/debian_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 672-673,679-691
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_6deadaa4db4848 159-165
+.github/workflows/ubuntu_daily_stable.yml
+  s_2dc01c7e3d2940::t_abd9107f3a1a6b 673-674,680-692
+devtools/release/package-feature-smoke.sh
+  s_2dc01c7e3d2940::t_20d9aebd2f43c9 2,24-27,30,36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6786b240929eb558aa57a728744adc3e1e41e695",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
