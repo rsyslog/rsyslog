@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify the package contract after installing the base and module packages.
+# Verify YAML support and the modules in the package-profile POC.
 set -euo pipefail
 
 rsyslogd_bin="${RSYSLOGD_BIN:-rsyslogd}"
@@ -21,15 +21,17 @@ rulesets:
       action(type="omfile" file="/dev/null")
 EOF
 
-cat > "$tmp_dir/omazuredce.yaml" <<'EOF'
+"$rsyslogd_bin" -N1 -f "$tmp_dir/base.yaml" "${module_args[@]}"
+
+for module in lmnsd_ossl lmnsd_gtls omotel omazuredce; do
+	cat > "$tmp_dir/$module.yaml" <<EOF
 version: 2
 modules:
-  - load: omazuredce
+  - load: $module
 rulesets:
   - name: main
     script: |
       action(type="omfile" file="/dev/null")
 EOF
-
-"$rsyslogd_bin" -N1 -f "$tmp_dir/base.yaml" "${module_args[@]}"
-"$rsyslogd_bin" -N1 -f "$tmp_dir/omazuredce.yaml" "${module_args[@]}"
+	"$rsyslogd_bin" -N1 -f "$tmp_dir/$module.yaml" "${module_args[@]}"
+done

@@ -25,6 +25,14 @@
     {
       "package": "libyaml-devel",
       "reason": "Current upstream enables YAML configuration support by default while the EL10 8.2604 source package predates that build dependency."
+    },
+    {
+      "package": "protobuf-c-devel",
+      "reason": "The daily-stable omotel package uses protobuf-c generated message bindings."
+    },
+    {
+      "package": "protobuf-c-compiler",
+      "reason": "The daily-stable omotel package regenerates its protobuf-c message bindings."
     }
   ]
 }

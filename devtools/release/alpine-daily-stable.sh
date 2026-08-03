@@ -149,8 +149,11 @@ cmd_verify_artifacts() {
 		-name "rsyslog-${expected_version}.apk" -print -quit)"
 	[ -n "$base_apk" ] ||
 		die "base rsyslog APK for $expected_version is absent"
-	[ -f "$artifact_dir/rsyslog-omazuredce-$expected_version.apk" ] ||
-		die "omazuredce subpackage APK for $expected_version is absent"
+	local package
+	for package in openssl gnutls omotel omazuredce standard full; do
+		[ -f "$artifact_dir/rsyslog-$package-$expected_version.apk" ] ||
+			die "rsyslog-$package APK for $expected_version is absent"
+	done
 	if ! apk verify "$base_apk"; then
 		die "base rsyslog APK failed signature or integrity verification"
 	fi
@@ -192,7 +195,8 @@ cmd_verify_published() {
 			if apk update --no-cache &&
 				apk add --no-cache \
 					"rsyslog=$expected_version" \
-					"rsyslog-omazuredce=$expected_version"; then
+					"rsyslog-standard=$expected_version" \
+					"rsyslog-full=$expected_version"; then
 				verification_rc=0
 				break
 			fi
@@ -206,14 +210,24 @@ cmd_verify_published() {
 			sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
 	)"
 	[ "$installed_version" = "$expected_version" ] || die "installed rsyslog version mismatch"
-	module_version="$(
-		apk query --from installed --fields version --format json \
-			rsyslog-omazuredce |
-			sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
-	)"
-	[ "$module_version" = "$expected_version" ] || die "installed omazuredce version mismatch"
-	apk info -L rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$' ||
-		die "omazuredce module file is absent"
+	local package module_file
+	for package in openssl gnutls omotel omazuredce standard full; do
+		module_version="$(
+			apk query --from installed --fields version --format json "rsyslog-$package" |
+				sed -n 's/.*"version": "\([^"]*\)".*/\1/p'
+		)"
+		[ "$module_version" = "$expected_version" ] ||
+			die "installed rsyslog-$package version mismatch"
+	done
+	for package in openssl gnutls omotel omazuredce; do
+		case "$package" in
+			openssl) module_file=lmnsd_ossl.so ;;
+			gnutls) module_file=lmnsd_gtls.so ;;
+			*) module_file=$package.so ;;
+		esac
+		apk info -L "rsyslog-$package" | grep -Eq "/rsyslog/$module_file$" ||
+			die "$package module file is absent"
+	done
 	rsyslogd -v
 	"$(dirname "$0")/package-feature-smoke.sh"
 }

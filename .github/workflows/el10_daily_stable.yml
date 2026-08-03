@@ -582,12 +582,22 @@ jobs:
             dnf -y makecache --refresh
             dnf -y install \
               "rsyslog-$EXPECTED_EVR" \
-              "rsyslog-omazuredce-$EXPECTED_EVR"
-            installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' rsyslog)"
-            [ "$installed_evr" = "$EXPECTED_EVR" ]
-            [ "$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' rsyslog-omazuredce)" = \
-              "$EXPECTED_EVR" ]
-            rpm -ql rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$'
+              "rsyslog-standard-$EXPECTED_EVR" \
+              "rsyslog-full-$EXPECTED_EVR"
+            for package in rsyslog rsyslog-openssl rsyslog-gnutls \
+              rsyslog-omotel rsyslog-omazuredce rsyslog-standard rsyslog-full; do
+              installed_evr="$(rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package")"
+              [ "$installed_evr" = "$EXPECTED_EVR" ]
+            done
+            for package_file in \
+              rsyslog-openssl:lmnsd_ossl.so \
+              rsyslog-gnutls:lmnsd_gtls.so \
+              rsyslog-omotel:omotel.so \
+              rsyslog-omazuredce:omazuredce.so; do
+              package="${package_file%%:*}"
+              module_file="${package_file#*:}"
+              rpm -ql "$package" | grep -Eq "/rsyslog/$module_file$"
+            done
             rsyslogd -v
             devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee .ci/flake-evidence/logs/el10-published-install.log

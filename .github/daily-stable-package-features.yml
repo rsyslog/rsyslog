@@ -9,15 +9,79 @@
   },
   "module_packages": [
     {
+      "module": "openssl",
+      "configure_flag": "--enable-openssl",
+      "module_file": "lmnsd_ossl.so",
+      "summary": "OpenSSL TLS support for rsyslog",
+      "description": "This package provides the OpenSSL network stream driver for encrypted TLS transport.",
+      "package_names": {
+        "deb": "rsyslog-openssl",
+        "rpm": "rsyslog-openssl",
+        "opensuse": "rsyslog-module-ossl",
+        "apk": "rsyslog-openssl"
+      }
+    },
+    {
+      "module": "gnutls",
+      "configure_flag": "--enable-gnutls",
+      "module_file": "lmnsd_gtls.so",
+      "summary": "GnuTLS TLS support for rsyslog",
+      "description": "This package provides the GnuTLS network stream driver for encrypted TLS transport.",
+      "package_names": {
+        "deb": "rsyslog-gnutls",
+        "rpm": "rsyslog-gnutls",
+        "opensuse": "rsyslog-module-gtls",
+        "apk": "rsyslog-gnutls"
+      }
+    },
+    {
+      "module": "omotel",
+      "configure_flag": "--enable-omotel",
+      "module_file": "omotel.so",
+      "summary": "OpenTelemetry output module for rsyslog",
+      "description": "This package provides the omotel output module for sending logs with OpenTelemetry OTLP/HTTP.",
+      "package_names": {
+        "deb": "rsyslog-omotel",
+        "rpm": "rsyslog-omotel",
+        "opensuse": "rsyslog-module-omotel",
+        "apk": "rsyslog-omotel"
+      }
+    },
+    {
       "module": "omazuredce",
       "configure_flag": "--enable-omazuredce",
       "module_file": "omazuredce.so",
       "summary": "Microsoft Azure Monitor Data Collection Endpoint output module for rsyslog",
+      "description": "This package provides the omazuredce output module for sending logs to Microsoft Azure Monitor through a Data Collection Endpoint.",
       "package_names": {
         "deb": "rsyslog-omazuredce",
         "rpm": "rsyslog-omazuredce",
         "opensuse": "rsyslog-module-omazuredce",
         "apk": "rsyslog-omazuredce"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile": "standard",
+      "summary": "Rsyslog standard functionality profile",
+      "modules": ["openssl", "gnutls", "omotel"],
+      "package_names": {
+        "deb": "rsyslog-standard",
+        "rpm": "rsyslog-standard",
+        "opensuse": "rsyslog-standard",
+        "apk": "rsyslog-standard"
+      }
+    },
+    {
+      "profile": "full",
+      "summary": "Rsyslog extended functionality profile",
+      "modules": ["openssl", "gnutls", "omotel", "omazuredce"],
+      "package_names": {
+        "deb": "rsyslog-full",
+        "rpm": "rsyslog-full",
+        "opensuse": "rsyslog-full",
+        "apk": "rsyslog-full"
       }
     }
   ]

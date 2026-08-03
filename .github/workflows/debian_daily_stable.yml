@@ -669,15 +669,26 @@ jobs:
             apt-get update
             apt-get install -y \
               "rsyslog=$VERSION" \
-              "rsyslog-omazuredce=$VERSION"
+              "rsyslog-standard=$VERSION" \
+              "rsyslog-full=$VERSION"
             installed_version="$(dpkg-query -W -f='${Version}\n' rsyslog)"
             [ "$installed_version" = "$VERSION" ] || {
               echo "installed rsyslog version $installed_version does not match $VERSION" >&2
               exit 1
             }
-            [ "$(dpkg-query -W -f='${Version}\n' rsyslog-omazuredce)" = "$VERSION" ]
-            dpkg-query -L rsyslog-omazuredce | \
-              grep -Eq '/rsyslog/omazuredce\.so$'
+            for package in rsyslog-openssl rsyslog-gnutls rsyslog-omotel \
+              rsyslog-omazuredce rsyslog-standard rsyslog-full; do
+              [ "$(dpkg-query -W -f='${Version}\n' "$package")" = "$VERSION" ]
+            done
+            for package_file in \
+              rsyslog-openssl:lmnsd_ossl.so \
+              rsyslog-gnutls:lmnsd_gtls.so \
+              rsyslog-omotel:omotel.so \
+              rsyslog-omazuredce:omazuredce.so; do
+              package="${package_file%%:*}"
+              module_file="${package_file#*:}"
+              dpkg-query -L "$package" | grep -Eq "/rsyslog/$module_file$"
+            done
             rsyslogd -v
             devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee .ci/flake-evidence/logs/debian-published-install.log

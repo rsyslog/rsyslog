@@ -312,9 +312,12 @@ cmd_build_package() {
 	actual_evr="$(rpm -qp --qf '%{VERSION}-%{RELEASE}\n' "$rpm_file")"
 	[ "$actual_evr" = "$expected_evr" ] ||
 		die "built RPM EVR $actual_evr does not match $expected_evr"
-	find "$artifact_dir/rpms" -maxdepth 1 -type f \
-		-name 'rsyslog*omazuredce-[0-9]*.rpm' -print -quit | grep -q . ||
-		die "omazuredce subpackage RPM was not produced"
+	local package
+	for package in openssl gnutls omotel omazuredce standard full; do
+		find "$artifact_dir/rpms" -maxdepth 1 -type f \
+			-name "rsyslog-${package}-[0-9]*.rpm" -print -quit | grep -q . ||
+			die "rsyslog-$package RPM was not produced"
+	done
 
 	cp "$build_log" "$artifact_dir/build.log"
 	cp "$prepared_dir/SPECS/rsyslog.spec" "$artifact_dir/rsyslog.spec"

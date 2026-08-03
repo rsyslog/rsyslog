@@ -633,18 +633,26 @@ jobs:
             zypper --gpg-auto-import-keys -n refresh rsyslog-daily-stable
             zypper -n install --oldpackage \
               "rsyslog=$EXPECTED_EVR" \
-              "rsyslog-module-omazuredce=$EXPECTED_EVR" \
-              "rsyslog-module-ossl=$EXPECTED_EVR" \
+              "rsyslog-standard=$EXPECTED_EVR" \
+              "rsyslog-full=$EXPECTED_EVR" \
               "rsyslog-doc=$EXPECTED_EVR"
-            for package in rsyslog rsyslog-module-omazuredce \
-              rsyslog-module-ossl rsyslog-doc; do
+            for package in rsyslog rsyslog-module-ossl rsyslog-module-gtls \
+              rsyslog-module-omotel rsyslog-module-omazuredce \
+              rsyslog-standard rsyslog-full rsyslog-doc; do
               installed_evr="$(
                 rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
               )"
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
-            rpm -ql rsyslog-module-omazuredce | \
-              grep -Eq '/rsyslog/omazuredce\.so$'
+            for package_file in \
+              rsyslog-module-ossl:lmnsd_ossl.so \
+              rsyslog-module-gtls:lmnsd_gtls.so \
+              rsyslog-module-omotel:omotel.so \
+              rsyslog-module-omazuredce:omazuredce.so; do
+              package="${package_file%%:*}"
+              module_file="${package_file#*:}"
+              rpm -ql "$package" | grep -Eq "/rsyslog/$module_file$"
+            done
             rsyslogd -v
             devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee \

@@ -614,16 +614,25 @@ jobs:
             dnf -q -y install \
               "rsyslog-$EXPECTED_EVR" \
               "rsyslog-logrotate-$EXPECTED_EVR" \
-              "rsyslog-omazuredce-$EXPECTED_EVR" \
-              "rsyslog-openssl-$EXPECTED_EVR"
-            for package in rsyslog rsyslog-logrotate rsyslog-omazuredce \
-              rsyslog-openssl; do
+              "rsyslog-standard-$EXPECTED_EVR" \
+              "rsyslog-full-$EXPECTED_EVR"
+            for package in rsyslog rsyslog-logrotate rsyslog-openssl \
+              rsyslog-gnutls rsyslog-omotel rsyslog-omazuredce \
+              rsyslog-standard rsyslog-full; do
               installed_evr="$(
                 rpm -q --qf '%{VERSION}-%{RELEASE}\n' "$package"
               )"
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
-            rpm -ql rsyslog-omazuredce | grep -Eq '/rsyslog/omazuredce\.so$'
+            for package_file in \
+              rsyslog-openssl:lmnsd_ossl.so \
+              rsyslog-gnutls:lmnsd_gtls.so \
+              rsyslog-omotel:omotel.so \
+              rsyslog-omazuredce:omazuredce.so; do
+              package="${package_file%%:*}"
+              module_file="${package_file#*:}"
+              rpm -ql "$package" | grep -Eq "/rsyslog/$module_file$"
+            done
             rsyslogd -v
             devtools/release/package-feature-smoke.sh
           ) 2>&1 | tee \
