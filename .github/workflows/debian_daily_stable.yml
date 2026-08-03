@@ -676,10 +676,19 @@ jobs:
             done
             apt-get install -y "rsyslog-full=$VERSION"
             full_dependencies="$(dpkg-query -W -f='${Depends}\n' rsyslog-full)"
-            for package in rsyslog rsyslog-openssl rsyslog-gnutls rsyslog-omotel \
-              rsyslog-omazuredce; do
-              printf '%s\n' "$full_dependencies" | grep -Fq "$package (= $VERSION)"
-            done
+            expected_full_dependencies="$(
+              printf '%s\n' \
+                "rsyslog (= $VERSION)" \
+                "rsyslog-openssl (= $VERSION)" \
+                "rsyslog-gnutls (= $VERSION)" \
+                "rsyslog-omotel (= $VERSION)" \
+                "rsyslog-omazuredce (= $VERSION)" | sort
+            )"
+            actual_full_dependencies="$(
+              printf '%s\n' "$full_dependencies" | tr ',' '\n' |
+                sed 's/^ *//; s/ *$//' | grep '^rsyslog' | sort
+            )"
+            [ "$actual_full_dependencies" = "$expected_full_dependencies" ]
             installed_version="$(dpkg-query -W -f='${Version}\n' rsyslog)"
             [ "$installed_version" = "$VERSION" ] || {
               echo "installed rsyslog version $installed_version does not match $VERSION" >&2

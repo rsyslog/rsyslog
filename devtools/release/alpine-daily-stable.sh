@@ -221,10 +221,19 @@ cmd_verify_published() {
 	apk add --no-cache "rsyslog-full=$expected_version" ||
 		die "could not install the expected full profile package"
 	full_dependencies="$(apk info -R --from installed rsyslog-full)"
-	for package in rsyslog rsyslog-openssl rsyslog-gnutls rsyslog-omotel rsyslog-omazuredce; do
-		printf '%s\n' "$full_dependencies" | grep -Fq "$package=$expected_version" ||
-			die "rsyslog-full is missing its $package dependency"
-	done
+	expected_full_dependencies="$(
+		printf '%s\n' \
+			"rsyslog=$expected_version" \
+			"rsyslog-openssl=$expected_version" \
+			"rsyslog-gnutls=$expected_version" \
+			"rsyslog-omotel=$expected_version" \
+			"rsyslog-omazuredce=$expected_version" | sort
+	)"
+	actual_full_dependencies="$(
+		printf '%s\n' "$full_dependencies" | sed '1d' | grep '^rsyslog' | sort
+	)"
+	[ "$actual_full_dependencies" = "$expected_full_dependencies" ] ||
+		die "rsyslog-full dependency set differs from the package profile"
 	for package in omazuredce full; do
 		module_version="$(
 			apk query --from installed --fields version --format json "rsyslog-$package" |
