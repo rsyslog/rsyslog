@@ -643,6 +643,11 @@ jobs:
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
             zypper -n install --oldpackage "rsyslog-full=$EXPECTED_EVR"
+            full_requirements="$(rpm -q --requires rsyslog-full)"
+            for package in rsyslog rsyslog-module-ossl rsyslog-module-gtls \
+              rsyslog-module-omotel rsyslog-module-omazuredce; do
+              printf '%s\n' "$full_requirements" | grep -Fqx "$package = $EXPECTED_EVR"
+            done
             for package in rsyslog rsyslog-module-ossl rsyslog-module-gtls \
               rsyslog-module-omotel rsyslog-module-omazuredce \
               rsyslog-standard rsyslog-full rsyslog-doc; do

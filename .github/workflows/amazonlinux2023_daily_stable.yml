@@ -623,6 +623,11 @@ jobs:
               [ "$installed_evr" = "$EXPECTED_EVR" ]
             done
             dnf -q -y install "rsyslog-full-$EXPECTED_EVR"
+            full_requirements="$(rpm -q --requires rsyslog-full)"
+            for package in rsyslog rsyslog-openssl rsyslog-gnutls rsyslog-omotel \
+              rsyslog-omazuredce; do
+              printf '%s\n' "$full_requirements" | grep -Fqx "$package = $EXPECTED_EVR"
+            done
             for package in rsyslog rsyslog-logrotate rsyslog-openssl \
               rsyslog-gnutls rsyslog-omotel rsyslog-omazuredce \
               rsyslog-standard rsyslog-full; do
