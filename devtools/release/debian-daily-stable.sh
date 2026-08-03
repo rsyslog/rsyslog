@@ -156,9 +156,13 @@ cmd_build_package() {
 
   find "$artifact_dir" -maxdepth 1 -type f -name '*.deb' | grep -q . ||
     die "no .deb artifacts collected"
-  find "$artifact_dir" -maxdepth 1 -type f \
-    -name 'rsyslog-omazuredce_*.deb' -print -quit | grep -q . ||
-    die "omazuredce subpackage DEB was not produced"
+  local package
+  for package in rsyslog-openssl rsyslog-gnutls rsyslog-omotel \
+    rsyslog-omazuredce rsyslog-standard rsyslog-full; do
+    find "$artifact_dir" -maxdepth 1 -type f \
+      -name "${package}_*.deb" -print -quit | grep -q . ||
+      die "$package DEB was not produced"
+  done
   find "$artifact_dir" -maxdepth 1 -type f -name '*.dsc' | grep -q . ||
     die "no .dsc artifact collected"
   find "$artifact_dir" -maxdepth 1 -type f -name '*.changes' | grep -q . ||

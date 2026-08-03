@@ -8,23 +8,28 @@ layout.
 The prototype contract requires:
 
 - libyaml-backed YAML configuration support in the base `rsyslog` package;
-- a separately installable `omazuredce` module package; and
-- published-package smoke tests that parse YAML and load `omazuredce`.
+- separately installable OpenSSL, GnuTLS, `omotel`, and `omazuredce` module
+  packages;
+- an `rsyslog-standard` profile that pulls in the TLS drivers and `omotel`;
+- an `rsyslog-full` profile that extends `standard` with `omazuredce`; and
+- published-package smoke tests that parse YAML and load every profile module.
 
 The overlay fails when a native baseline disables YAML, omits the distribution's
 YAML development dependency, or no longer contains a unique structural anchor.
 This makes native packaging drift a review event instead of silently generating
 a different package.
 
-Package names follow native conventions:
+The module package names follow native conventions:
 
-| Packaging family | Package |
-| --- | --- |
-| Debian, Ubuntu | `rsyslog-omazuredce` |
-| Fedora, EL, Amazon Linux | `rsyslog-omazuredce` |
-| openSUSE | `rsyslog-module-omazuredce` |
-| Alpine | `rsyslog-omazuredce` |
+| Packaging family | OpenSSL | GnuTLS | omotel | omazuredce |
+| --- | --- | --- | --- | --- |
+| Debian, Ubuntu | `rsyslog-openssl` | `rsyslog-gnutls` | `rsyslog-omotel` | `rsyslog-omazuredce` |
+| Fedora, EL, Amazon Linux | `rsyslog-openssl` | `rsyslog-gnutls` | `rsyslog-omotel` | `rsyslog-omazuredce` |
+| openSUSE | `rsyslog-module-ossl` | `rsyslog-module-gtls` | `rsyslog-module-omotel` | `rsyslog-module-omazuredce` |
+| Alpine | `rsyslog-openssl` | `rsyslog-gnutls` | `rsyslog-omotel` | `rsyslog-omazuredce` |
 
-The feature smoke test runs only after installing the exact published versions
-of both the base and module packages. Scheduled workflow failures continue to
-create or update the distribution-specific daily-stable failure issue.
+Both profiles depend on the exact build version of the base and their selected
+modules. Published verification installs `standard` before `full`, then checks
+the installed version, module ownership, YAML parsing, and module loading.
+Scheduled workflow failures continue to create or update the
+distribution-specific daily-stable failure issue.
