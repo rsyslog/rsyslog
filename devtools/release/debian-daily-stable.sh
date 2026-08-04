@@ -358,6 +358,15 @@ copy_pool_artifacts() {
         # artifact instead of silently overwriting the indexed file.
         continue
       fi
+      case "$path" in
+        *.dsc|*.orig.tar.*|*.debian.tar.*)
+          # One source package is built beside each native package set.  The
+          # source archive names are stable but their bytes need not be (for
+          # example, tar timestamps may differ).  Keep the complete first set
+          # so its .dsc checksums and pool files remain consistent.
+          continue
+          ;;
+      esac
       die "conflicting package artifact for pool path: $(basename "$path")"
     fi
     cp -a "$path" "$target"
@@ -550,7 +559,8 @@ build_self_test_deb() {
 }
 
 cmd_self_test() (
-  local tmp_dir repo_dir first_artifacts second_artifacts first_all_artifacts second_all_artifacts fingerprint
+  local tmp_dir repo_dir first_artifacts second_artifacts first_all_artifacts second_all_artifacts
+  local first_source_artifacts second_source_artifacts fingerprint
   local test_suite test_version
   local cleanup_command
 
@@ -576,8 +586,11 @@ cmd_self_test() (
   second_artifacts="$tmp_dir/artifacts-2"
   first_all_artifacts="$tmp_dir/artifacts-all-amd64"
   second_all_artifacts="$tmp_dir/artifacts-all-arm64"
+  first_source_artifacts="$tmp_dir/artifacts-source-amd64"
+  second_source_artifacts="$tmp_dir/artifacts-source-arm64"
   mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts" \
-    "$first_all_artifacts" "$second_all_artifacts"
+    "$first_all_artifacts" "$second_all_artifacts" \
+    "$first_source_artifacts" "$second_source_artifacts"
   export GNUPGHOME="$tmp_dir/gnupg"
   install -m 700 -d "$GNUPGHOME"
   gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key \
@@ -623,6 +636,20 @@ cmd_self_test() (
   if dpkg-deb -c "$repo_dir/pool/main/r/rsyslog/rsyslog-standard_1.0~daily1_all.deb" |
      grep -Fq 'from-arm64'; then
     die "pool overwrote the first all-architecture profile artifact"
+  fi
+  # Source artifacts arrive from both native package builds as well.  Their
+  # content differs deliberately, which proves we retain one coherent source
+  # set instead of replacing files named by the same source package version.
+  printf '%s\n' from-amd64 > "$first_source_artifacts/rsyslog_1.0~daily1.orig.tar.gz"
+  printf '%s\n' from-arm64 > "$second_source_artifacts/rsyslog_1.0~daily1.orig.tar.gz"
+  copy_pool_artifacts "$first_source_artifacts" "$repo_dir/pool/main/r/rsyslog"
+  copy_pool_artifacts "$second_source_artifacts" "$repo_dir/pool/main/r/rsyslog"
+  grep -Fxq from-amd64 \
+    "$repo_dir/pool/main/r/rsyslog/rsyslog_1.0~daily1.orig.tar.gz" ||
+    die "pool did not retain the first source artifact"
+  if grep -Fxq from-arm64 \
+     "$repo_dir/pool/main/r/rsyslog/rsyslog_1.0~daily1.orig.tar.gz"; then
+    die "pool overwrote the first source artifact"
   fi
   grep -Fxq 'Architectures: amd64 arm64' \
     "$repo_dir/dists/$test_suite/Release" ||
