@@ -225,10 +225,17 @@ jobs:
           set -e
           devtools/ci-flake-phase.sh end \
             el10-package-build custom "$build_status"
+          sudo chown -R "$(id -u):$(id -g)" \
+            "$RUNNER_TEMP/el10-artifacts" "$RUNNER_TEMP/el10-build.log" || true
           if [ "$build_status" -eq 0 ]; then
-            sudo chown -R "$(id -u):$(id -g)" \
-              "$RUNNER_TEMP/el10-artifacts" "$RUNNER_TEMP/el10-build.log"
             cp -a "$RUNNER_TEMP/el10-artifacts" el10-daily-stable-artifacts
+          else
+            {
+              echo 'EL10 Mock build log:'
+              cat "$RUNNER_TEMP/el10-build.log"
+              find "$RUNNER_TEMP/el10-artifacts" -type f -name '*.log' \
+                -exec sh -c 'echo; echo "Mock result log: $1"; cat "$1"' sh {} \;
+            } > failed-tests.log
           fi
           exit "$build_status"
 
