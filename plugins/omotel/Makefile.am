@@ -13,15 +13,16 @@ OTLP_PB_RESOURCE_H = opentelemetry/proto/resource/v1/resource.pb-c.h
 OTLP_PB_LOGS_C = opentelemetry/proto/logs/v1/logs.pb-c.c
 OTLP_PB_LOGS_H = opentelemetry/proto/logs/v1/logs.pb-c.h
 
-nodist_omotel_la_SOURCES = \
-       $(OTLP_PB_COMMON_C) \
-       $(OTLP_PB_RESOURCE_C) \
-       $(OTLP_PB_LOGS_C)
-
 noinst_HEADERS = \
        otlp_json.h \
        omotel_http.h \
        otlp_protobuf.h
+
+if ENABLE_OMOTEL
+nodist_omotel_la_SOURCES = \
+       $(OTLP_PB_COMMON_C) \
+       $(OTLP_PB_RESOURCE_C) \
+       $(OTLP_PB_LOGS_C)
 
 nodist_noinst_HEADERS = \
        $(OTLP_PB_COMMON_H) \
@@ -54,6 +55,7 @@ $(OTLP_PB_RESOURCE_C) $(OTLP_PB_RESOURCE_H): $(srcdir)/proto/opentelemetry/proto
 
 $(OTLP_PB_LOGS_C) $(OTLP_PB_LOGS_H): $(srcdir)/proto/opentelemetry/proto/logs/v1/logs.proto $(OTLP_PB_COMMON_H) $(OTLP_PB_RESOURCE_H)
 	$(PROTOC_C) --proto_path=$(srcdir)/proto --c_out=$(builddir) $<
+endif
 
 CLEANFILES = $(OTLP_PB_COMMON_C) $(OTLP_PB_COMMON_H) \
              $(OTLP_PB_RESOURCE_C) $(OTLP_PB_RESOURCE_H) \

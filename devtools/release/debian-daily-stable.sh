@@ -343,12 +343,29 @@ add_by_hash() {
 copy_pool_artifacts() {
   local artifact_dir="$1"
   local pool_dir="$2"
+  local path target
 
   mkdir -p "$pool_dir"
-  find "$artifact_dir" -maxdepth 1 -type f \
-    \( -name '*.deb' -o -name '*.dsc' -o -name '*.orig.tar.*' \
-       -o -name '*.debian.tar.*' \) \
-    -exec cp -a {} "$pool_dir/" \;
+  while IFS= read -r -d '' path; do
+    target="$pool_dir/$(basename "$path")"
+    if [ -e "$target" ]; then
+      if cmp -s "$path" "$target"; then
+        continue
+      fi
+      if [[ "$path" = *.deb ]] && [ "$(dpkg-deb -f "$path" Architecture)" = all ]; then
+        # Each native build produces the same profile filename.  Keep the first
+        # copy so both architecture indexes and the pool reference one immutable
+        # artifact instead of silently overwriting the indexed file.
+        continue
+      fi
+      die "conflicting package artifact for pool path: $(basename "$path")"
+    fi
+    cp -a "$path" "$target"
+  done < <(
+    find "$artifact_dir" -maxdepth 1 -type f \
+      \( -name '*.deb' -o -name '*.dsc' -o -name '*.orig.tar.*' \
+         -o -name '*.debian.tar.*' \) -print0
+  )
 }
 
 cmd_generate_repo() {
@@ -516,21 +533,24 @@ build_self_test_deb() {
   local root="$1"
   local version="$2"
   local arch="${3:-amd64}"
-  local package_dir="$root/package-$version"
+  local package="${4:-rsyslog}"
+  local marker="${5:-$arch}"
+  local package_dir="$root/package-$package-$version"
 
-  install -m 755 -d "$package_dir/DEBIAN"
+  install -m 755 -d "$package_dir/DEBIAN" "$package_dir/usr/share/$package"
+  printf '%s\n' "$marker" > "$package_dir/usr/share/$package/$marker"
   {
-    echo "Package: rsyslog"
+    echo "Package: $package"
     echo "Version: $version"
     echo "Architecture: $arch"
     echo "Maintainer: rsyslog test <test@example.invalid>"
     echo "Description: synthetic daily archive test package"
   } > "$package_dir/DEBIAN/control"
-  dpkg-deb --build "$package_dir" "$root/rsyslog_${version}_${arch}.deb" >/dev/null
+  dpkg-deb --build "$package_dir" "$root/${package}_${version}_${arch}.deb" >/dev/null
 }
 
 cmd_self_test() (
-  local tmp_dir repo_dir first_artifacts second_artifacts fingerprint
+  local tmp_dir repo_dir first_artifacts second_artifacts first_all_artifacts second_all_artifacts fingerprint
   local test_suite test_version
   local cleanup_command
 
@@ -554,7 +574,10 @@ cmd_self_test() (
   repo_dir="$tmp_dir/repo"
   first_artifacts="$tmp_dir/artifacts-1"
   second_artifacts="$tmp_dir/artifacts-2"
-  mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts"
+  first_all_artifacts="$tmp_dir/artifacts-all-amd64"
+  second_all_artifacts="$tmp_dir/artifacts-all-arm64"
+  mkdir -p "$repo_dir" "$first_artifacts" "$second_artifacts" \
+    "$first_all_artifacts" "$second_all_artifacts"
   export GNUPGHOME="$tmp_dir/gnupg"
   install -m 700 -d "$GNUPGHOME"
   gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key \
@@ -566,6 +589,15 @@ cmd_self_test() (
   build_self_test_deb "$first_artifacts" "1.0~daily1" arm64
   cmd_generate_repo "$first_artifacts" "$repo_dir" "$test_suite" main amd64
   cmd_generate_repo "$first_artifacts" "$repo_dir" "$test_suite" main arm64
+  # Profile packages are Architecture: all but arrive from both native builds.
+  # Their contents differ deliberately, proving the first immutable pool file
+  # stays aligned with the indexes instead of being overwritten by the second.
+  build_self_test_deb "$first_all_artifacts" "1.0~daily1" all \
+    rsyslog-standard from-amd64
+  build_self_test_deb "$second_all_artifacts" "1.0~daily1" all \
+    rsyslog-standard from-arm64
+  cmd_generate_repo "$first_all_artifacts" "$repo_dir" "$test_suite" main amd64
+  cmd_generate_repo "$second_all_artifacts" "$repo_dir" "$test_suite" main arm64
   cmd_verify_repo "file://$repo_dir" "$test_suite" main amd64 \
     "1.0~daily1" "$fingerprint"
   cmd_verify_repo "file://$repo_dir" "$test_suite" main arm64 \
@@ -580,6 +612,18 @@ cmd_self_test() (
   xz -dc "$repo_dir/dists/$test_suite/main/binary-arm64/Packages.xz" |
     grep -Fxq 'Architecture: arm64' ||
     die "arm64 package index is missing its native package"
+  for arch in amd64 arm64; do
+    xz -dc "$repo_dir/dists/$test_suite/main/binary-$arch/Packages.xz" |
+      grep -Fxq 'Package: rsyslog-standard' ||
+      die "$arch package index is missing the all-architecture profile"
+  done
+  dpkg-deb -c "$repo_dir/pool/main/r/rsyslog/rsyslog-standard_1.0~daily1_all.deb" |
+    grep -Fq 'from-amd64' ||
+    die "pool did not retain the first all-architecture profile artifact"
+  if dpkg-deb -c "$repo_dir/pool/main/r/rsyslog/rsyslog-standard_1.0~daily1_all.deb" |
+     grep -Fq 'from-arm64'; then
+    die "pool overwrote the first all-architecture profile artifact"
+  fi
   grep -Fxq 'Architectures: amd64 arm64' \
     "$repo_dir/dists/$test_suite/Release" ||
     die "Release metadata does not advertise both architectures"
