@@ -158,7 +158,7 @@ def has_unconditional_build_requirement(package):
         rf"^BuildRequires:\s*{re.escape(package)}(?:\s|$)"
     )
     for line in spec.splitlines():
-        if re.match(r"^%if(?:arch|narch)?(?:\s|$)", line):
+        if re.match(r"^%if(?:arch|narch|os|nos)?(?:\s|$)", line):
             conditional_depth += 1
             continue
         if re.match(r"^%endif(?:\s|$)", line):

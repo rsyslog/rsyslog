@@ -544,7 +544,7 @@ build_self_test_deb() {
   local arch="${3:-amd64}"
   local package="${4:-rsyslog}"
   local marker="${5:-$arch}"
-  local package_dir="$root/package-$package-$version"
+  local package_dir="$root/package-$package-$version-$arch"
 
   install -m 755 -d "$package_dir/DEBIAN" "$package_dir/usr/share/$package"
   printf '%s\n' "$marker" > "$package_dir/usr/share/$package/$marker"
