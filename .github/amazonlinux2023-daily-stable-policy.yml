@@ -11,6 +11,12 @@
   ],
   "drop_stale_html_docs": true,
   "drop_stale_html_docs_reason": "Amazon Linux 2023 packages HTML documentation from a separate versioned 8.2204.0 tarball. Daily main builds must not relabel those stale files as current documentation.",
+  "enabled_bconds": [
+    {
+      "feature": "gnutls",
+      "reason": "The daily-stable feature contract requires the GnuTLS network stream driver."
+    }
+  ],
   "supplemental_build_requires": [
     {
       "package": "autoconf-archive",
