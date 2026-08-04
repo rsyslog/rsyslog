@@ -224,7 +224,7 @@ jobs:
           build_status=$?
           set -e
           devtools/ci-flake-phase.sh end \
-            el10-package-build custom "$build_status"
+            el10-package-build custom "$build_status" || true
           sudo chown -R "$(id -u):$(id -g)" \
             "$RUNNER_TEMP/el10-artifacts" "$RUNNER_TEMP/el10-build.log" || true
           if [ "$build_status" -eq 0 ]; then
