@@ -1,0 +1,21 @@
+devtools/release/amazonlinux-daily-stable.sh
+  s_2dc01c7e3d2940::t_4568ed34a4a47a 208-223
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_4568ed34a4a47a 14-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0b5901abb4790da091ca891aa0cd52a5e6bcda11",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
