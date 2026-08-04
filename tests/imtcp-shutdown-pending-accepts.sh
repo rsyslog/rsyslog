@@ -1,10 +1,15 @@
 #!/bin/bash
-# Regression test for listener-descriptor teardown racing imtcp workers.
+# Regression test for imtcp listener-descriptor teardown after concurrent TCP
+# connection acceptance on Linux's epoll worker path. The client marks ready
+# only after 128 sessions are established and holds those sessions open until
+# shutdown completes. Passing requires the normal shutdown marker and no
+# leftover pid file; sanitizer builds also turn a teardown UAF into a failure.
 . ${srcdir:=.}/diag.sh init
 
-skip_platform "FreeBSD" "the tcpsrv worker-pool race is specific to epoll"
-skip_platform "SunOS" "the tcpsrv worker-pool race is specific to epoll"
-skip_platform "Darwin" "the tcpsrv worker-pool race is specific to epoll"
+if [ "$(uname)" != "Linux" ]; then
+	echo "the tcpsrv worker-pool regression is specific to Linux epoll"
+	exit 77
+fi
 check_command_available python3
 
 generate_conf
@@ -23,12 +28,14 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 
 startup
 rm -f "$RSYSLOG_DYNNAME.client-ready"
+release_file="$RSYSLOG_DYNNAME.client-release"
+rm -f "$release_file"
 
-# Fill the listen backlog while a tcpsrv worker drains it. Reaching the marker
-# proves that enough connects are pending to keep doAccept() active when the
-# input thread starts shutdown. ASan turns the historical teardown race into a
-# reliable UAF report; non-sanitizer jobs still check clean termination.
-python3 - "$TCPFLOOD_PORT" "$RSYSLOG_DYNNAME.client-ready" <<'PY' &
+# Concurrent connects establish the workload before the shell requests
+# shutdown. The release file is an explicit completion signal, replacing a
+# host-speed-dependent delay while keeping established client sessions alive.
+python3 - "$TCPFLOOD_PORT" "$RSYSLOG_DYNNAME.client-ready" "$release_file" <<'PY' &
+import os
 import socket
 import sys
 import threading
@@ -36,16 +43,25 @@ import time
 
 port = int(sys.argv[1])
 ready_file = sys.argv[2]
+release_file = sys.argv[3]
 sockets = []
 lock = threading.Lock()
 ready = threading.Event()
+failed = threading.Event()
 
 
 def connect_many():
     for _ in range(256):
+        if failed.is_set():
+            return
         try:
             sock = socket.create_connection(("127.0.0.1", port), timeout=2)
-        except OSError:
+        except OSError as error:
+            with lock:
+                if not ready.is_set() and not failed.is_set():
+                    with open(ready_file, "w", encoding="ascii") as stream:
+                        stream.write(f"error: {error}\n")
+                    failed.set()
             return
         with lock:
             sockets.append(sock)
@@ -61,7 +77,12 @@ for thread in threads:
 for thread in threads:
     thread.join()
 
-time.sleep(1)
+if not ready.is_set():
+    sys.exit(1)
+
+while not os.path.exists(release_file):
+    time.sleep(0.05)
+
 for sock in sockets:
     try:
         sock.close()
@@ -69,13 +90,20 @@ for sock in sockets:
         pass
 PY
 client_pid=$!
+trap 'touch "$release_file"; wait "$client_pid" 2>/dev/null || true' EXIT
 
 wait_file_exists "$RSYSLOG_DYNNAME.client-ready"
+if ! grep -qx "ready" "$RSYSLOG_DYNNAME.client-ready"; then
+	cat "$RSYSLOG_DYNNAME.client-ready"
+	error_exit 1 "connection setup failed before the shutdown workload was ready"
+fi
 shutdown_immediate
 wait_shutdown "" 15
 if [ -e "$RSYSLOG_PIDBASE.pid" ]; then
 	error_exit 1 "rsyslogd left its pid file behind after shutdown"
 fi
+touch "$release_file"
 wait "$client_pid" || error_exit 1
+trap - EXIT
 
 exit_test
