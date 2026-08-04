@@ -1,0 +1,27 @@
+devtools/release/package-feature-overlay.py
+  s_2dc01c7e3d2940::t_6d27b193808219 129-133,168-171
+devtools/release/debian-daily-stable.sh
+  s_2dc01c7e3d2940::t_9d90118d8d42ea 346
+  s_2dc01c7e3d2940::t_6d27b193808219 349-368
+  s_2dc01c7e3d2940::t_124316b1de2b4e 536-538,540-541,543,549,553,577-580,592-600,615-626
+plugins/omotel/Makefile.am
+  s_2dc01c7e3d2940::t_6d27b193808219 21-22,58
+  s_2dc01c7e3d2940::t_9d90118d8d42ea 23-25
+  s_2dc01c7e3d2940::t_ca9351f5b70582 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5ba8d57cbb040ed316ca3fe7ce28765271310f02",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
