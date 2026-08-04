@@ -151,8 +151,25 @@ build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
 if any(not package for package in packages):
     raise SystemExit("policy contains an empty supplemental BuildRequires package")
+
+def has_unconditional_build_requirement(package):
+    conditional_depth = 0
+    requirement = re.compile(
+        rf"^BuildRequires:\s*{re.escape(package)}(?:\s|$)"
+    )
+    for line in spec.splitlines():
+        if re.match(r"^%if(?:arch|narch)?(?:\s|$)", line):
+            conditional_depth += 1
+            continue
+        if re.match(r"^%endif(?:\s|$)", line):
+            conditional_depth = max(0, conditional_depth - 1)
+            continue
+        if conditional_depth == 0 and requirement.match(line):
+            return True
+    return False
+
 for package in packages:
-    if re.search(rf"(?m)^BuildRequires:\s*{re.escape(package)}(?:\s|$)", spec):
+    if has_unconditional_build_requirement(package):
         continue
     spec, count = re.subn(
         r"(?m)^(BuildRequires:\s*autoconf\s*)$",
