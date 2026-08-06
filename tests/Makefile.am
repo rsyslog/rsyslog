@@ -14,10 +14,29 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
-TESTS_FUZZING = fuzz-syslog-message-smoke.sh
+TESTS_FUZZING = \
+	fuzz-syslog-message-smoke.sh \
+	fuzz-imtcp-session-smoke.sh
 TESTS_RELEASE_PACKAGING = rpm-baseline-patch-policy.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \
+	fuzz/prepare-imtcp-session-corpus.py \
+	fuzz/corpus/imtcp-session/additional-delimiter.hex \
+	fuzz/corpus/imtcp-session/multiline.hex \
+	fuzz/corpus/imtcp-session/octet-counted.hex \
+	fuzz/corpus/imtcp-session/octet-malformed.hex \
+	fuzz/corpus/imtcp-session/oversized.hex \
+	fuzz/corpus/imtcp-session/plain-lf.hex \
+	fuzz/corpus/imtcp-session/regex-framing.hex \
+	fuzz/corpus/imtcp-session/zlib-octet.hex \
+	fuzz/corpus/imtcp-session/zlib-trailer.hex \
+	fuzz/corpus/imtcp-session/zlib-truncated.hex \
+	fuzz/corpus/imtcp-session/zlib-valid.hex \
+	fuzz/corpus/imtcp-session/zstd-octet.hex \
+	fuzz/corpus/imtcp-session/zstd-trailer.hex \
+	fuzz/corpus/imtcp-session/zstd-truncated.hex \
+	fuzz/corpus/imtcp-session/zstd-valid.hex \
+	fuzz/corpus/imtcp-session/zstd-window-limit.hex \
 	fuzz/corpus/syslog-message/rfc3164-basic \
 	fuzz/corpus/syslog-message/rfc3164-no-pri \
 	fuzz/corpus/syslog-message/rfc3164-rfc3339 \
