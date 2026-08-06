@@ -14,6 +14,18 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_FUZZING = fuzz-syslog-message-smoke.sh
+FUZZING_CORPUS = \
+	fuzz/README.md \
+	fuzz/corpus/syslog-message/rfc3164-basic \
+	fuzz/corpus/syslog-message/rfc3164-no-pri \
+	fuzz/corpus/syslog-message/rfc3164-rfc3339 \
+	fuzz/corpus/syslog-message/rfc3164-short \
+	fuzz/corpus/syslog-message/rfc5424-basic \
+	fuzz/corpus/syslog-message/rfc5424-escaped-sd \
+	fuzz/corpus/syslog-message/rfc5424-nil
+EXTRA_DIST += $(TESTS_FUZZING) $(FUZZING_CORPUS)
+
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
 
@@ -2526,6 +2538,10 @@ check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_par
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
+
+if ENABLE_FUZZING
+TESTS += $(TESTS_FUZZING)
+endif
 
 runtime_unit_linkedlist_SOURCES = \
 	unit/linkedlist_test.c

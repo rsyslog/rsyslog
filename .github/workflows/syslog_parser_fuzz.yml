@@ -1,0 +1,232 @@
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: syslog parser fuzzing
+
+'on':
+  pull_request:
+    paths:
+      - '.github/workflows/syslog_parser_fuzz.yml'
+      - 'configure.ac'
+      - 'devtools/devcontainer.sh'
+      - 'devtools/run-configure.sh'
+      - 'runtime/**'
+      - 'tests/Makefile.am'
+      - 'tests/fuzz-syslog-message-smoke.sh'
+      - 'tests/fuzz/**'
+      - 'tools/Makefile.am'
+      - 'tools/fuzz_rsyslog_message.c'
+      - 'tools/pmrfc3164.c'
+      - 'tools/pmrfc3164.h'
+      - 'tools/pmrfc5424.c'
+      - 'tools/pmrfc5424.h'
+  schedule:
+    # Run before the broader daily suites. An exact successful-HEAD cache hit
+    # makes unchanged days finish without rebuilding or repeating a campaign.
+    - cron: '13 1 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run even if this exact HEAD already passed
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  RSYSLOG_UPLOAD_FAILURE_ARTIFACTS: '1'
+
+jobs:
+  pr_smoke:
+    name: syslog parser fuzz smoke
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build instrumented fuzzer
+        env:
+          CC: clang-21
+          CFLAGS: >-
+            -O1 -g -fno-omit-frame-pointer
+            -fsanitize=fuzzer-no-link,address,undefined
+            -fno-sanitize=function
+          LDFLAGS: >-
+            -fsanitize=address,undefined
+            -fno-sanitize=function
+          RSYSLOG_CONFIGURE_OPTIONS_EXTRA: >-
+            --enable-debug --enable-testbench --enable-imdiag
+            --enable-fuzzing --disable-elasticsearch-tests
+            --disable-kafka-tests --disable-libfaketime
+            --without-valgrind-testbench --disable-valgrind
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
+        run: |
+          devtools/devcontainer.sh --rm bash -lc '
+            set -e
+            autoreconf -fvi
+            devtools/run-configure.sh
+            make -j10
+          '
+
+      - name: Run bounded parser fuzz smoke
+        id: smoke
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
+        run: |
+          devtools/devcontainer.sh --rm bash -lc '
+            set -e
+            export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
+            export UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+            devtools/ci-flake-phase.sh run syslog-parser-fuzz-smoke custom -- \
+              ./tests/fuzz-syslog-message-smoke.sh
+          '
+
+      - name: Upload test failure evidence
+        if: >-
+          failure() &&
+          steps.smoke.outcome == 'failure' &&
+          env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: syslog-parser-fuzz-smoke
+
+  daily:
+    name: daily syslog parser fuzzing
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore successful-HEAD marker
+        id: prior_success
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci/fuzz-success
+          key: syslog-parser-fuzz-success-v1-${{ github.sha }}
+
+      - name: Restore evolving corpus
+        if: steps.prior_success.outputs.cache-hit != 'true' || inputs.force == true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz-corpus-work
+          key: >-
+            syslog-parser-fuzz-corpus-v1-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            syslog-parser-fuzz-corpus-v1-${{ github.sha }}-
+            syslog-parser-fuzz-corpus-v1-
+
+      - name: Build instrumented fuzzer
+        if: steps.prior_success.outputs.cache-hit != 'true' || inputs.force == true
+        env:
+          CC: clang-21
+          CFLAGS: >-
+            -O1 -g -fno-omit-frame-pointer
+            -fsanitize=fuzzer-no-link,address,undefined
+            -fno-sanitize=function
+          LDFLAGS: >-
+            -fsanitize=address,undefined
+            -fno-sanitize=function
+          RSYSLOG_CONFIGURE_OPTIONS_EXTRA: >-
+            --enable-debug --enable-testbench --enable-imdiag
+            --enable-fuzzing --disable-elasticsearch-tests
+            --disable-kafka-tests --disable-libfaketime
+            --without-valgrind-testbench --disable-valgrind
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
+        run: |
+          mkdir -p fuzz-artifacts fuzz-corpus-work
+          devtools/devcontainer.sh --rm bash -lc '
+            set -e
+            autoreconf -fvi
+            devtools/run-configure.sh
+            make -j10
+          '
+
+      - name: Run daily parser fuzz campaign
+        if: steps.prior_success.outputs.cache-hit != 'true' || inputs.force == true
+        id: fuzz
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:26.04
+        run: |
+          devtools/devcontainer.sh --rm bash -lc '
+            set -e
+            export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
+            export UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+            devtools/ci-flake-phase.sh run syslog-parser-fuzz-daily custom -- \
+              ./tools/fuzz_rsyslog_message \
+                -max_total_time=600 \
+                -max_len=65536 \
+                -timeout=5 \
+                -rss_limit_mb=2048 \
+                -artifact_prefix=fuzz-artifacts/ \
+                fuzz-corpus-work \
+                tests/fuzz/corpus/syslog-message
+          '
+
+      - name: Save evolving corpus
+        if: steps.fuzz.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz-corpus-work
+          key: >-
+            syslog-parser-fuzz-corpus-v1-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Create successful-HEAD marker
+        if: steps.fuzz.outcome == 'success'
+        run: |
+          mkdir -p .ci/fuzz-success
+          touch .ci/fuzz-success/passed
+
+      - name: Save successful-HEAD marker
+        if: >-
+          steps.fuzz.outcome == 'success' &&
+          steps.prior_success.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci/fuzz-success
+          key: syslog-parser-fuzz-success-v1-${{ github.sha }}
+
+      - name: Upload fuzzer artifacts
+        if: failure() && hashFiles('fuzz-artifacts/*') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: syslog-parser-fuzz-artifacts-${{ github.run_id }}
+          path: fuzz-artifacts
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload test failure evidence
+        if: >-
+          failure() &&
+          steps.fuzz.outcome == 'failure' &&
+          env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
+        uses: ./.github/actions/upload-flake-evidence
+        with:
+          job-name: syslog-parser-fuzz-daily

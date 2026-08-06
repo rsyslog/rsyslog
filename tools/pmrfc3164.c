@@ -515,6 +515,43 @@ finalize_it:
     MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 ENDparse2
 
+#ifdef ENABLE_FUZZING
+static instanceConf_t* fuzzParserInstance;
+rsRetVal pmrfc3164FuzzInit(void);
+void pmrfc3164FuzzExit(void);
+rsRetVal pmrfc3164FuzzParse(smsg_t* pMsg);
+
+rsRetVal pmrfc3164FuzzInit(void) {
+    DEFiRet;
+
+    CHKiRet(objGetObjInterface(&obj));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(createInstance(&fuzzParserInstance));
+
+finalize_it:
+    RETiRet;
+}
+
+void pmrfc3164FuzzExit(void) {
+    if (fuzzParserInstance != NULL) {
+        freeParserInst(fuzzParserInstance);
+        fuzzParserInstance = NULL;
+    }
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
+    objRelease(ruleset, CORE_COMPONENT);
+}
+
+rsRetVal pmrfc3164FuzzParse(smsg_t* pMsg) {
+    if (fuzzParserInstance == NULL) return RS_RET_ERR;
+    return parse2(fuzzParserInstance, pMsg);
+}
+#endif
+
 
 BEGINmodExit
     CODESTARTmodExit;
