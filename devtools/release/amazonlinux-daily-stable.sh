@@ -205,6 +205,22 @@ for pattern, replacement, expected, label in doc_edits:
     if count != expected:
         raise SystemExit(f"Amazon Linux spec {label} did not match exactly once")
 
+enabled_bconds = policy.get("enabled_bconds", [])
+features = [entry.get("feature", "").strip() for entry in enabled_bconds]
+if any(not feature for feature in features):
+    raise SystemExit("policy contains an empty enabled bcond feature")
+if len(features) != len(set(features)):
+    raise SystemExit("policy contains duplicate enabled bcond features")
+for feature in features:
+    spec, count = re.subn(
+        rf"(?m)^%bcond_with\s+{re.escape(feature)}\s*$",
+        f"%bcond_without {feature}",
+        spec,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"could not enable Amazon Linux bcond: {feature}")
+
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
 if any(not package for package in packages):

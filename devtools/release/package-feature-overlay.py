@@ -126,6 +126,11 @@ def debian_profile_stanza(profile, modules_by_name):
     )
 
 
+def normalize_debian_install_path(path):
+    """Normalize Debian multiarch spellings used in baseline install manifests."""
+    return path.replace("${DEB_HOST_MULTIARCH}", "*")
+
+
 def apply_debian(packaging_dir, contract_path):
     root = pathlib.Path(packaging_dir)
     yaml_feature, modules, profiles = load_contract(contract_path)
@@ -160,7 +165,10 @@ def apply_debian(packaging_dir, contract_path):
         expected_path = f"usr/lib/${{DEB_HOST_MULTIARCH}}/rsyslog/{module['module_file']}"
         if manifest.exists():
             entries = manifest.read_text(encoding="utf-8").splitlines()
-            if expected_path not in entries:
+            normalized_expected_path = normalize_debian_install_path(expected_path)
+            if normalized_expected_path not in {
+                normalize_debian_install_path(entry) for entry in entries
+            }:
                 fail(f"existing {manifest.name} does not own {expected_path}")
         else:
             manifest.write_text(expected_path + "\n", encoding="utf-8")
