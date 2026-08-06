@@ -82,11 +82,15 @@ EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 	recover_qi.pl
 
 if ENABLE_FUZZING
-noinst_PROGRAMS = fuzz_rsyslog_message
+noinst_PROGRAMS = fuzz_rsyslog_message fuzz_imtcp_session
 fuzz_rsyslog_message_SOURCES = $(rsyslogd_SOURCES) fuzz_rsyslog_message.c
 fuzz_rsyslog_message_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_FUZZ_TARGET -Dmain=rsyslogd_main
 fuzz_rsyslog_message_LDADD = $(rsyslogd_LDADD)
 fuzz_rsyslog_message_LDFLAGS = $(rsyslogd_LDFLAGS) $(LIB_FUZZING_ENGINE)
+fuzz_imtcp_session_SOURCES = $(rsyslogd_SOURCES) fuzz_imtcp_session.c
+fuzz_imtcp_session_CPPFLAGS = $(rsyslogd_CPPFLAGS) -DRSYSLOG_FUZZ_TARGET -Dmain=rsyslogd_main
+fuzz_imtcp_session_LDADD = ../runtime/lmtcpsrv.la $(rsyslogd_LDADD)
+fuzz_imtcp_session_LDFLAGS = $(rsyslogd_LDFLAGS) $(LIB_FUZZING_ENGINE)
 endif
 
 EXTRA_rsyslogd_DEPENDENCIES = $(exports_list_file)

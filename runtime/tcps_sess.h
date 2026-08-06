@@ -131,5 +131,11 @@ ENDinterface(tcps_sess)
 PROTOTYPEObjFull(tcps_sess);
 PROTOTYPEObjDebugPrint(tcps_sess);
 
+#ifdef ENABLE_FUZZING
+rsRetVal tcps_sessFuzzInit(void);
+rsRetVal tcps_sessFuzzInput(const uint8_t *data, size_t size);
+void tcps_sessFuzzExit(void);
+#endif
+
 
 #endif /* #ifndef INCLUDED_TCPS_SESS_H */
