@@ -3721,17 +3721,17 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/mmnormalize/Makefile \
-        plugins/mmjsonparse/Makefile \
-        plugins/mmjsontransform/Makefile \
-        plugins/mmleefparse/Makefile \
+		plugins/mmjsonparse/Makefile \
+		plugins/mmjsontransform/Makefile \
+		plugins/mmleefparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmrm1stspace/Makefile \
 		plugins/mmutf8fix/Makefile \
-        plugins/mmfields/Makefile \
-        plugins/mmpstrucdata/Makefile \
-        plugins/mmaitag/Makefile \
-        plugins/omelasticsearch/Makefile \
+		plugins/mmfields/Makefile \
+		plugins/mmpstrucdata/Makefile \
+		plugins/mmaitag/Makefile \
+		plugins/omelasticsearch/Makefile \
 		plugins/omclickhouse/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
@@ -3743,10 +3743,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
-        contrib/fmhash/Makefile \
-        contrib/fmunflatten/Makefile \
-        plugins/fmpcre/Makefile \
-        contrib/ffaup/Makefile \
+		contrib/fmhash/Makefile \
+		contrib/fmunflatten/Makefile \
+		plugins/fmpcre/Makefile \
+		contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
