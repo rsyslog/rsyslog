@@ -78,6 +78,7 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 typedef struct _instanceData {
     sbool bUseRawMsg; /**< use %rawmsg% instead of %msg% */
+    sbool bDebug; /**< enable liblognorm debugging */
     uchar *rule; /* rule to use */
     uchar *rulebase; /**< name of rulebase to use */
     ln_ctx ctxln; /**< context to be used for liblognorm */
@@ -89,6 +90,7 @@ typedef struct _instanceData {
     uchar *rulebaseForReload; /**< saved rulebase path for HUP reload */
     uchar *ruleForReload; /**< saved inline rules for HUP reload */
     unsigned ctxOpts; /**< saved context options for HUP reload */
+    FILE *debugFile; /**< optional liblognorm debug output */
     char *pszPath; /**< path of normalized data */
     msgPropDescr_t *varDescr; /**< name of variable to use */
 #ifdef HAVE_LOGNORM_TURBO
@@ -114,8 +116,9 @@ static configSettings_t cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    {"rulebase", eCmdHdlrGetWord, 0}, {"rule", eCmdHdlrArray, 0},       {"path", eCmdHdlrGetWord, 0},
-    {"userawmsg", eCmdHdlrBinary, 0}, {"variable", eCmdHdlrGetWord, 0},
+    {"rulebase", eCmdHdlrGetWord, 0},  {"rule", eCmdHdlrArray, 0},       {"path", eCmdHdlrGetWord, 0},
+    {"userawmsg", eCmdHdlrBinary, 0},  {"variable", eCmdHdlrGetWord, 0}, {"debug", eCmdHdlrBinary, 0},
+    {"debugfile", eCmdHdlrGetWord, 0},
 #ifdef HAVE_LOGNORM_TURBO
     {"turbo", eCmdHdlrBinary, 0},
 #endif
@@ -133,6 +136,22 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 /* callback for liblognorm error messages */
 static void errCallBack(void __attribute__((unused)) * cookie, const char *msg, size_t __attribute__((unused)) lenMsg) {
     LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+}
+
+/* callback for liblognorm debug messages */
+static void debugCallBack(void *cookie, const char *msg, size_t lenMsg) {
+    FILE *const debugFile = cookie;
+
+    if (debugFile == NULL) {
+        LogMsg(0, RS_RET_OK, LOG_DEBUG, "mmnormalize: liblognorm debug: %s", msg);
+        return;
+    }
+
+    flockfile(debugFile);
+    (void)fwrite(msg, 1, lenMsg, debugFile);
+    if (lenMsg == 0 || msg[lenMsg - 1] != '\n') (void)fputc('\n', debugFile);
+    (void)fflush(debugFile);
+    funlockfile(debugFile);
 }
 
 /* Build a complete context without publishing it. The saved rule source is
@@ -153,6 +172,13 @@ static ln_ctx buildContext(const instanceData *const pData, const sbool enableTu
     (void)enableTurbo;
 #endif
     ln_setErrMsgCB(ctx, errCallBack, NULL);
+    if (pData->bDebug) {
+        if (ln_setDebugCB(ctx, debugCallBack, pData->debugFile) != 0) {
+            ln_exitCtx(ctx);
+            return NULL;
+        }
+        ln_enableDebug(ctx, 1);
+    }
 
     if (pData->ruleForReload != NULL) {
         loadRet = ln_loadSamplesFromString(ctx, (char *)pData->ruleForReload);
@@ -183,7 +209,6 @@ static ln_ctx buildTurboWorkerContext(const instanceData *const pData) {
     return ctx;
 }
 #endif
-
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
  * (and set within pData!).
  */
@@ -198,6 +223,13 @@ static rsRetVal buildInstance(instanceData *pData) {
     }
     ln_setCtxOpts(pData->ctxln, pData->ctxOpts);
     ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
+    if (pData->bDebug) {
+        if (ln_setDebugCB(pData->ctxln, debugCallBack, pData->debugFile) != 0) {
+            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: could not set liblognorm debug callback");
+            ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
+        }
+        ln_enableDebug(pData->ctxln, 1);
+    }
 #ifdef HAVE_LOGNORM_TURBO
     /* Enable turbo on shared ctx so compilation happens during loadSamples */
     if (pData->bTurbo) {
@@ -342,6 +374,7 @@ BEGINfreeInstance
     free(pData->pszPath);
     msgPropDescrDestruct(pData->varDescr);
     free(pData->varDescr);
+    if (pData->debugFile != NULL) fclose(pData->debugFile);
 ENDfreeInstance
 
 
@@ -364,6 +397,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\trule='%s'\n", pData->rule);
     dbgprintf("\tpath='%s'\n", pData->pszPath);
     dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
+    dbgprintf("\tdebug='%d'\n", pData->bDebug);
 #ifdef HAVE_LOGNORM_TURBO
     dbgprintf("\tturbo='%d'\n", pData->bTurbo);
 #endif
@@ -719,6 +753,8 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->rulebaseForReload = NULL;
     pData->ruleForReload = NULL;
     pData->ctxOpts = 0;
+    pData->bDebug = 0;
+    pData->debugFile = NULL;
     pData->pszPath = strdup("$!");
     pData->varDescr = NULL;
 #ifdef HAVE_LOGNORM_TURBO
@@ -768,6 +804,7 @@ BEGINnewActInst
     char *varName = NULL;
     char *buffer;
     char *tStr;
+    char *debugFileName = NULL;
     int size = 0;
     CODESTARTnewActInst;
     DBGPRINTF("newActInst (mmnormalize)\n");
@@ -820,6 +857,10 @@ BEGINnewActInst
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "variable")) {
             CHKmalloc(varName = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "debug")) {
+            pData->bDebug = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "debugfile")) {
+            CHKmalloc(debugFileName = es_str2cstr(pvals[i].val.d.estr, NULL));
 #ifdef HAVE_LOGNORM_TURBO
         } else if (!strcmp(actpblk.descr[i].name, "turbo")) {
             pData->bTurbo = (int)pvals[i].val.d.n;
@@ -863,6 +904,19 @@ BEGINnewActInst
         free(varName);
         varName = NULL;
     }
+    if (debugFileName != NULL) {
+        if (!pData->bDebug) {
+            LogError(0, RS_RET_CONFIG_ERROR, "mmnormalize: 'debugFile' requires 'debug=on'");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        pData->debugFile = fopen(debugFileName, "a");
+        if (pData->debugFile == NULL) {
+            LogError(errno, RS_RET_CONFIG_ERROR, "mmnormalize: could not open debug file '%s'", debugFileName);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        free(debugFileName);
+        debugFileName = NULL;
+    }
     if (!pData->rulebase) {
         if (!pData->rule) {
             LogError(0, RS_RET_CONFIG_ERROR,
@@ -882,6 +936,7 @@ BEGINnewActInst
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
     iRet = buildInstance(pData);
     CODE_STD_FINALIZERnewActInst;
+    free(debugFileName);
     if (bDestructPValsOnExit) cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
