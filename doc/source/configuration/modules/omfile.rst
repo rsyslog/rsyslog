@@ -83,6 +83,7 @@ about different configuration languages in use by rsyslog.
    ../../reference/parameters/omfile-filegroupnum
    ../../reference/parameters/omfile-fileowner
    ../../reference/parameters/omfile-fileownernum
+   ../../reference/parameters/omfile-followsymlinks
    ../../reference/parameters/omfile-flushinterval
    ../../reference/parameters/omfile-flushontxend
    ../../reference/parameters/omfile-iobuffersize
@@ -145,6 +146,10 @@ Module Parameters
         :end-before: .. summary-end
    * - :ref:`param-omfile-filegroupnum`
      - .. include:: ../../reference/parameters/omfile-filegroupnum.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-followsymlinks`
+     - .. include:: ../../reference/parameters/omfile-followsymlinks.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omfile-dirowner`
@@ -284,6 +289,10 @@ selects whether a static or dynamic file (name) shall be written to.
         :end-before: .. summary-end
    * - :ref:`param-omfile-filecreatemode`
      - .. include:: ../../reference/parameters/omfile-filecreatemode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-followsymlinks`
+     - .. include:: ../../reference/parameters/omfile-followsymlinks.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omfile-dircreatemode`
