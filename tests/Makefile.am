@@ -1660,11 +1660,15 @@ TESTS_LIBYAML_OMSTDOUT = \
 
 TESTS_PMNORMALIZE = \
 	pmnormalize-basic.sh \
+	pmnormalize-debug.sh \
 	pmnormalize-invld-rulebase.sh \
 	pmnormalize-rule.sh \
 	pmnormalize-rule_and_rulebase.sh \
 	pmnormalize-neither_rule_rulebase.sh \
 	pmnormalize-rule_invld-data.sh
+
+TESTS_PMNORMALIZE_YAML = \
+	yaml-pmnormalize-debug.sh
 
 TESTS_PMNORMALIZE_VALGRIND = \
 	pmnormalize-basic-vg.sh \
@@ -1678,9 +1682,13 @@ TESTS_MMNORMALIZE = \
         msgvar-concurrency-array.sh \
         msgvar-concurrency-array-event.tags.sh \
         mmexternal-mmnormalize-json-tree.sh \
+	mmnormalize-debug.sh \
         mmnormalize_rule_from_string.sh \
         mmnormalize_rule_from_array.sh \
         mmnormalize_parsesuccess.sh
+
+TESTS_MMNORMALIZE_YAML = \
+	yaml-mmnormalize-debug.sh
 
 TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh
@@ -2438,8 +2446,10 @@ EXTRA_DIST += $(TESTS_MMRM1STSPACE)
 EXTRA_DIST += $(TESTS_PMNULL)
 EXTRA_DIST += $(TESTS_OMSTDOUT)
 EXTRA_DIST += $(TESTS_PMNORMALIZE)
+EXTRA_DIST += $(TESTS_PMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_PMNORMALIZE_VALGRIND)
 EXTRA_DIST += $(TESTS_MMNORMALIZE)
+EXTRA_DIST += $(TESTS_MMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_VALGRIND)
@@ -3450,6 +3460,9 @@ endif
 
 if ENABLE_PMNORMALIZE
 TESTS += $(TESTS_PMNORMALIZE)
+if HAVE_LIBYAML
+TESTS += $(TESTS_PMNORMALIZE_YAML)
+endif
 if HAVE_VALGRIND
 TESTS += $(TESTS_PMNORMALIZE_VALGRIND)
 endif
@@ -3461,6 +3474,10 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS += $(TESTS_MMNORMALIZE)
+
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMNORMALIZE_YAML)
+endif
 
 if ENABLE_IMTCP_TESTS
 if LOGNORM_TURBO_SUPPORTED

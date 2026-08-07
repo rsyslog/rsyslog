@@ -89,6 +89,13 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - ``debug``
+     - Enables verbose liblognorm debugging for this action. By default, trace
+       records are sent to rsyslog's internal diagnostic stream.
+   * - ``debugFile``
+     - Redirects this action's liblognorm debug records to the specified
+       append-only file. Requires ``debug="on"`` and causes configuration to
+       fail if the file cannot be opened.
 
 .. toctree::
    :hidden:

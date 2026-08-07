@@ -75,6 +75,35 @@ With this parameter an error message is controlled, which will be put out
 every time pmnormalize can't normalize a message.
 
 
+debug
+^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Enables verbose liblognorm debugging for this parser. By default, trace records
+are sent to rsyslog's internal diagnostic stream.
+
+
+debugFile
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Redirects this parser's liblognorm debug records to the specified append-only
+file. Requires **debug="on"** and causes configuration to fail if the file
+cannot be opened.
+
+
 Examples
 ========
 
@@ -117,4 +146,3 @@ Same as above, but messages are  normalized with the given rule array.
    ruleset(name="outp" parser="custom.pmnormalize") {
    	action(type="omfile" File="/tmp/output")
    }
-

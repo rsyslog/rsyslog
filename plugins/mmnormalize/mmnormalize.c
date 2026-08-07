@@ -69,9 +69,11 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 typedef struct _instanceData {
     sbool bUseRawMsg; /**< use %rawmsg% instead of %msg% */
+    sbool bDebug; /**< enable liblognorm debugging */
     uchar *rule; /* rule to use */
     uchar *rulebase; /**< name of rulebase to use */
     ln_ctx ctxln; /**< context to be used for liblognorm */
+    FILE *debugFile; /**< optional liblognorm debug output */
     char *pszPath; /**< path of normalized data */
     msgPropDescr_t *varDescr; /**< name of variable to use */
 #ifdef HAVE_LOGNORM_TURBO
@@ -100,8 +102,9 @@ static configSettings_t cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    {"rulebase", eCmdHdlrGetWord, 0}, {"rule", eCmdHdlrArray, 0},       {"path", eCmdHdlrGetWord, 0},
-    {"userawmsg", eCmdHdlrBinary, 0}, {"variable", eCmdHdlrGetWord, 0},
+    {"rulebase", eCmdHdlrGetWord, 0},  {"rule", eCmdHdlrArray, 0},       {"path", eCmdHdlrGetWord, 0},
+    {"userawmsg", eCmdHdlrBinary, 0},  {"variable", eCmdHdlrGetWord, 0}, {"debug", eCmdHdlrBinary, 0},
+    {"debugfile", eCmdHdlrGetWord, 0},
 #ifdef HAVE_LOGNORM_TURBO
     {"turbo", eCmdHdlrBinary, 0},
 #endif
@@ -121,6 +124,22 @@ static void errCallBack(void __attribute__((unused)) * cookie, const char *msg, 
     LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
+/* callback for liblognorm debug messages */
+static void debugCallBack(void *cookie, const char *msg, size_t lenMsg) {
+    FILE *const debugFile = cookie;
+
+    if (debugFile == NULL) {
+        LogMsg(0, RS_RET_OK, LOG_DEBUG, "mmnormalize: liblognorm debug: %s", msg);
+        return;
+    }
+
+    flockfile(debugFile);
+    (void)fwrite(msg, 1, lenMsg, debugFile);
+    if (lenMsg == 0 || msg[lenMsg - 1] != '\n') (void)fputc('\n', debugFile);
+    (void)fflush(debugFile);
+    funlockfile(debugFile);
+}
+
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
  * (and set within pData!).
  */
@@ -134,6 +153,13 @@ static rsRetVal buildInstance(instanceData *pData) {
     }
     ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
     ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
+    if (pData->bDebug) {
+        if (ln_setDebugCB(pData->ctxln, debugCallBack, pData->debugFile) != 0) {
+            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: could not set liblognorm debug callback");
+            ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
+        }
+        ln_enableDebug(pData->ctxln, 1);
+    }
 #ifdef HAVE_LOGNORM_TURBO
     /* Save context options for per-worker cloning */
     pData->ctxOpts = loadModConf->allow_regex;
@@ -223,24 +249,31 @@ BEGINcreateWrkrInstance
             ln_setCtxOpts(pWrkrData->ctxlnTurbo, pData->ctxOpts);
             ln_setCtxOpts(pWrkrData->ctxlnTurbo, LN_CTXOPT_TURBO);
             ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
+            if (!pData->bDebug || ln_setDebugCB(pWrkrData->ctxlnTurbo, debugCallBack, pData->debugFile) == 0) {
+                if (pData->bDebug) ln_enableDebug(pWrkrData->ctxlnTurbo, 1);
 
-            if (pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pData->ruleForClone);
-            } else if (pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pData->rulebaseForClone);
-            }
+                if (pData->ruleForClone != NULL) {
+                    loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pData->ruleForClone);
+                } else if (pData->rulebaseForClone != NULL) {
+                    loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pData->rulebaseForClone);
+                }
 
-            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
-                LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
-                         "mmnormalize: turbo worker rulebase "
-                         "load/compile failed, falling back "
-                         "to standard normalization");
+                if (loadRet == 0 && ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
+                    DBGPRINTF(
+                        "mmnormalize: turbo worker context "
+                        "ready\n");
+                } else {
+                    LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
+                             "mmnormalize: turbo worker rulebase "
+                             "load/compile failed, falling back "
+                             "to standard normalization");
+                    ln_exitCtx(pWrkrData->ctxlnTurbo);
+                    pWrkrData->ctxlnTurbo = NULL;
+                }
+            } else {
+                LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: could not set liblognorm turbo debug callback");
                 ln_exitCtx(pWrkrData->ctxlnTurbo);
                 pWrkrData->ctxlnTurbo = NULL;
-            } else {
-                DBGPRINTF(
-                    "mmnormalize: turbo worker context "
-                    "ready\n");
             }
         }
     }
@@ -292,6 +325,7 @@ BEGINfreeInstance
     free(pData->pszPath);
     msgPropDescrDestruct(pData->varDescr);
     free(pData->varDescr);
+    if (pData->debugFile != NULL) fclose(pData->debugFile);
 #ifdef HAVE_LOGNORM_TURBO
     free(pData->rulebaseForClone);
     free(pData->ruleForClone);
@@ -318,6 +352,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\trule='%s'\n", pData->rule);
     dbgprintf("\tpath='%s'\n", pData->pszPath);
     dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
+    dbgprintf("\tdebug='%d'\n", pData->bDebug);
 #ifdef HAVE_LOGNORM_TURBO
     dbgprintf("\tturbo='%d' (available=%d)\n", pData->bTurbo, pData->bTurboAvail);
 #endif
@@ -639,6 +674,8 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->rulebase = NULL;
     pData->rule = NULL;
     pData->bUseRawMsg = 0;
+    pData->bDebug = 0;
+    pData->debugFile = NULL;
     pData->pszPath = strdup("$!");
     pData->varDescr = NULL;
 #ifdef HAVE_LOGNORM_TURBO
@@ -692,6 +729,7 @@ BEGINnewActInst
     char *varName = NULL;
     char *buffer;
     char *tStr;
+    char *debugFileName = NULL;
     int size = 0;
     CODESTARTnewActInst;
     DBGPRINTF("newActInst (mmnormalize)\n");
@@ -744,6 +782,10 @@ BEGINnewActInst
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "variable")) {
             CHKmalloc(varName = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(actpblk.descr[i].name, "debug")) {
+            pData->bDebug = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "debugfile")) {
+            CHKmalloc(debugFileName = es_str2cstr(pvals[i].val.d.estr, NULL));
 #ifdef HAVE_LOGNORM_TURBO
         } else if (!strcmp(actpblk.descr[i].name, "turbo")) {
             pData->bTurbo = (int)pvals[i].val.d.n;
@@ -787,6 +829,19 @@ BEGINnewActInst
         free(varName);
         varName = NULL;
     }
+    if (debugFileName != NULL) {
+        if (!pData->bDebug) {
+            LogError(0, RS_RET_CONFIG_ERROR, "mmnormalize: 'debugFile' requires 'debug=on'");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        pData->debugFile = fopen(debugFileName, "a");
+        if (pData->debugFile == NULL) {
+            LogError(errno, RS_RET_CONFIG_ERROR, "mmnormalize: could not open debug file '%s'", debugFileName);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        free(debugFileName);
+        debugFileName = NULL;
+    }
     if (!pData->rulebase) {
         if (!pData->rule) {
             LogError(0, RS_RET_CONFIG_ERROR,
@@ -806,6 +861,7 @@ BEGINnewActInst
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
     iRet = buildInstance(pData);
     CODE_STD_FINALIZERnewActInst;
+    free(debugFileName);
     if (bDestructPValsOnExit) cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -860,23 +916,31 @@ BEGINdoHUPWrkr
             ln_setCtxOpts(pWrkrData->ctxlnTurbo, pWrkrData->pData->ctxOpts);
             ln_setCtxOpts(pWrkrData->ctxlnTurbo, LN_CTXOPT_TURBO);
             ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
+            if (!pWrkrData->pData->bDebug ||
+                ln_setDebugCB(pWrkrData->ctxlnTurbo, debugCallBack, pWrkrData->pData->debugFile) == 0) {
+                if (pWrkrData->pData->bDebug) ln_enableDebug(pWrkrData->ctxlnTurbo, 1);
 
-            if (pWrkrData->pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->ruleForClone);
-            } else if (pWrkrData->pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->rulebaseForClone);
-            }
+                if (pWrkrData->pData->ruleForClone != NULL) {
+                    loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->ruleForClone);
+                } else if (pWrkrData->pData->rulebaseForClone != NULL) {
+                    loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->rulebaseForClone);
+                }
 
-            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
-                LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
-                         "mmnormalize: HUP turbo reload failed, "
-                         "falling back to standard");
+                if (loadRet == 0 && ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
+                    LogMsg(0, RS_RET_OK, LOG_INFO,
+                           "mmnormalize: turbo worker context "
+                           "reloaded");
+                } else {
+                    LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
+                             "mmnormalize: HUP turbo reload failed, "
+                             "falling back to standard");
+                    ln_exitCtx(pWrkrData->ctxlnTurbo);
+                    pWrkrData->ctxlnTurbo = NULL;
+                }
+            } else {
+                LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: could not set liblognorm turbo debug callback");
                 ln_exitCtx(pWrkrData->ctxlnTurbo);
                 pWrkrData->ctxlnTurbo = NULL;
-            } else {
-                LogMsg(0, RS_RET_OK, LOG_INFO,
-                       "mmnormalize: turbo worker context "
-                       "reloaded");
             }
         } else {
             LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: HUP turbo ctx init failed");
