@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert-fail.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 )
 
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="ossl" StreamDriver.Mode="1")

@@ -251,6 +251,18 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsCAExtraFiles(nsd_t __attribute__((unused)) * pNsd, const uchar *const pszFile) {
+    DEFiRet;
+    if (pszFile != NULL) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: extra CA Files setting not supported by "
+                 "ptcp netstream driver");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal SetTlsKeyFile(nsd_t __attribute__((unused)) * pNsd, const uchar *const pszFile) {
     DEFiRet;
     if (pszFile != NULL) {
@@ -774,6 +786,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         CHKiRet(pNS->Drvr.SetPrioritizeSAN(pNewNsd, netstrms.GetDrvrPrioritizeSAN(pNS)));
         CHKiRet(pNS->Drvr.SetTlsCAFile(pNewNsd, netstrms.GetDrvrTlsCAFile(pNS)));
         CHKiRet(pNS->Drvr.SetTlsCRLFile(pNewNsd, netstrms.GetDrvrTlsCRLFile(pNS)));
+        CHKiRet(pNS->Drvr.SetTlsCAExtraFiles(pNewNsd, NULL));
         CHKiRet(pNS->Drvr.SetTlsKeyFile(pNewNsd, netstrms.GetDrvrTlsKeyFile(pNS)));
         CHKiRet(pNS->Drvr.SetTlsCertFile(pNewNsd, netstrms.GetDrvrTlsCertFile(pNS)));
         CHKiRet(pNS->Drvr.SetTlsVerifyDepth(pNewNsd, netstrms.GetDrvrTlsVerifyDepth(pNS)));
@@ -1272,6 +1285,7 @@ BEGINobjQueryInterface(nsd_ptcp)
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->SetTlsCAExtraFiles = SetTlsCAExtraFiles;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->SetRemoteSNI = SetRemoteSNI;

@@ -14,6 +14,81 @@ by action parameters.
 List of Module Parameters
 =========================
 
+StreamDriver.CAFile
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the default TLS CA file for ``omfwd`` actions that do not set
+``StreamDriver.CAFile`` on the action itself. If the value is a strict
+``pkcs11:`` URI, that module default is inherited only by actions whose
+effective stream driver is ``ossl``.
+
+StreamDriver.CRLFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the default TLS certificate revocation list file for ``omfwd`` actions
+that do not set ``StreamDriver.CRLFile`` on the action itself.
+
+StreamDriver.CAExtraFiles
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the default additional CA certificate file list or strict ``pkcs11:``
+URI list for ``omfwd`` actions that use the ``ossl`` stream driver and do not
+set ``StreamDriver.CAExtraFiles`` on the action itself. Multiple entries use
+the same comma-separated format as ``NetstreamDriverCAExtraFiles``. Module
+defaults for this parameter are inherited only by actions whose effective
+stream driver is ``ossl``.
+
+StreamDriver.KeyFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the default TLS private-key file for ``omfwd`` actions that do not set
+``StreamDriver.KeyFile`` on the action itself. If the value is a strict
+``pkcs11:`` URI, that module default is inherited only by actions whose
+effective stream driver is ``ossl``.
+
+StreamDriver.CertFile
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Sets the default TLS certificate file for ``omfwd`` actions that do not set
+``StreamDriver.CertFile`` on the action itself. If the value is a strict
+``pkcs11:`` URI, that module default is inherited only by actions whose
+effective stream driver is ``ossl``.
+
 Template
 ^^^^^^^^
 

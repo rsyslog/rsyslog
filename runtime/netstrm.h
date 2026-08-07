@@ -92,12 +92,13 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
     /* v15 -- Tls cert functions */
     rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar *file);
     rsRetVal (*SetDrvrTlsCRLFile)(netstrm_t *pThis, const uchar *file);
+    rsRetVal (*SetDrvrTlsCAExtraFiles)(netstrm_t *pThis, const uchar *file);
     rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar *file);
     rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar *file);
     /* v18 -- allow remote server's TLS SNI to be set manually */
     rsRetVal (*SetDrvrRemoteSNI)(netstrm_t *pThis, uchar *pszRemoteSNI);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 19 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -110,6 +111,7 @@ ENDinterface(netstrm)
  * interface version 17 added nextIODirection parameter to Rcv() -- rgehards, 2025-04-17
  * interface version 18 added SetDrvrRemoteSNI -- jfcantu, 2020-01-15
  * interface version 19 added SetTcpUserTimeout
+ * interface version 20 added SetDrvrTlsCAExtraFiles
  * */
 
 /* prototypes */
