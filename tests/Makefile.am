@@ -244,6 +244,8 @@ TESTS_DEFAULT = \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
 	mmexternal-SegFault.sh \
+	mmexternal-set-msg-null-crash.sh \
+	mmexternal-set-syslogtag-null-crash.sh \
 	mmexternal-interface-output-none.sh \
 	mmexternal-single-instance.sh \
 	mmexternal-response-too-long.sh \
@@ -3793,6 +3795,7 @@ EXTRA_DIST += \
 	testsuites/mmexternal-hang-no-reply.sh \
 	testsuites/mmexternal-no-output.sh \
 	testsuites/mmexternal-single-instance-bin.sh \
+	testsuites/mmexternal-null-prop-bin.sh \
 	testsuites/mmexternal-too-long-reply-bin.sh \
 	testsuites/mmexternal-trickle-no-lf.sh \
 	testsuites/mmsnareparse/sample-custom-pattern.data \
