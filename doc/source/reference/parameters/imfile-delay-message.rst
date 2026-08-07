@@ -43,13 +43,9 @@ drop messages when rate limits are exceeded, ``delay.message`` slows down proces
 without message loss. This makes it suitable for scenarios where all messages must
 be preserved but bandwidth sharing is required.
 
-.. note::
-   The delay value is specified in **microseconds**, but the current implementation
-   has a known issue where the seconds and microseconds components are swapped
-   internally. For values less than 1,000,000 microseconds (1 second), the actual
-   delay will be much longer than documented. For example, ``delay.message="1000"``
-   (intended as 1 ms) currently results in approximately a 1000-second delay.
-   Users should be aware of this behavior when configuring this parameter.
+The value is converted into whole seconds and remaining microseconds before
+rsyslog sleeps. For example, ``delay.message="1000"`` adds a 1 millisecond
+delay, while ``delay.message="1500000"`` adds a 1.5 second delay.
 
 Input usage
 -----------
@@ -64,11 +60,6 @@ Input usage
          delay.message="1000")
 
 The above example configures a delay value of 1000 microseconds.
-
-.. note::
-   Due to a known implementation issue, small delay values (less than 1,000,000)
-   may result in much longer delays than expected. See the Description section
-   above for details.
 
 Notes
 -----

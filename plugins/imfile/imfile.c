@@ -1648,14 +1648,14 @@ static rsRetVal ATTR_NONNULL(1, 2)
                 continue;
             } else if (localRet != RS_RET_OK) {
                 if (inst->delay_perMsg) {
-                    srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+                    srSleep(inst->delay_perMsg / 1000000, inst->delay_perMsg % 1000000);
                 }
                 ABORT_FINALIZE(localRet);
             }
         }
 
         if (inst->delay_perMsg) {
-            srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+            srSleep(inst->delay_perMsg / 1000000, inst->delay_perMsg % 1000000);
         }
     }
 
