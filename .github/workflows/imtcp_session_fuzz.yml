@@ -96,6 +96,15 @@ jobs:
               ./tests/fuzz-imtcp-session-smoke.sh
           '
 
+      - name: Upload fuzzer crash artifacts
+        if: failure() && steps.smoke.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: imtcp-session-fuzz-smoke-artifacts-${{ github.run_id }}
+          path: fuzz-imtcp-session-work.*
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Upload test failure evidence
         if: >-
           failure() &&

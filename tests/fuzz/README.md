@@ -67,8 +67,10 @@ these fixed anchored expressions:
 - `^BEGIN:`
 
 Byte 2 uses bits 6-7 to select whole-input, bytewise, fixed-size, or
-deterministic pseudo-random chunking; its low six bits supply the fixed chunk
-size or pseudo-random seed. Byte 3 uses bit 0 for `PrepareClose`, bits 1-2 for
+deterministic pseudo-random chunking. For fixed-size chunking, its low six bits
+encode chunk sizes from 1 through 64; for pseudo-random chunking, they seed
+deterministic chunk sizes in the same range. Byte 3 uses bit 0 for
+`PrepareClose`, bits 1-2 for
 the expansion-ratio limit (`0`, `2`, `8`, or `64`), bits 3-4 for the
 decompressed-byte limit (`64`, `4096`, `65536`, or `1048576`), and bits 5-6
 for the zstd window budget (`0`, `65536`, `262144`, or `2097152`). Unassigned

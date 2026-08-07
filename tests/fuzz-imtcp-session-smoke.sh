@@ -10,11 +10,13 @@ seed_source="${srcdir:-"$test_dir"}/fuzz/corpus/imtcp-session"
 prepare_corpus="${srcdir:-"$test_dir"}/fuzz/prepare-imtcp-session-corpus.py"
 test -x "$fuzzer" || exit 77
 
-work_corpus=$(mktemp -d ./fuzz-imtcp-session-work.XXXXXX)
+work_corpus=$(mktemp -d "$PWD/fuzz-imtcp-session-work.XXXXXX")
 cleanup_work_corpus() {
 	rc=$?
 	if test "$rc" -eq 0; then
 		rm -rf -- "$work_corpus"
+	else
+		printf 'preserving failed imtcp fuzz corpus: %s\n' "$work_corpus" >&2
 	fi
 }
 trap cleanup_work_corpus 0
