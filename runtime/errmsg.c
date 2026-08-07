@@ -44,6 +44,7 @@
 #include "msg.h"
 #include "errmsg.h"
 #include "operatingstate.h"
+#include "atomic.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "rsconf.h"
@@ -56,6 +57,12 @@
 static int bHadErrMsgs; /* indicates if we had error messages since reset of this flag
                          * This is used to abort a run if the config is unclean.
                          */
+#ifndef HAVE_ATOMIC_BUILTINS
+static DEF_ATOMIC_HELPER_MUT(mutHadErrMsgs) = PTHREAD_MUTEX_INITIALIZER;
+    #define MUT_HAD_ERR_MSGS &mutHadErrMsgs
+#else
+    #define MUT_HAD_ERR_MSGS NULL
+#endif
 
 static int fdOversizeMsgLog = -1;
 static pthread_mutex_t oversizeMsgLogMut = PTHREAD_MUTEX_INITIALIZER;
@@ -167,11 +174,11 @@ finalize_it:
  * files.
  */
 void resetErrMsgsFlag(void) {
-    bHadErrMsgs = 0;
+    ATOMIC_STORE_32BIT(&bHadErrMsgs, MUT_HAD_ERR_MSGS, 0);
 }
 
 int hadErrMsgs(void) {
-    return bHadErrMsgs;
+    return ATOMIC_LOAD_32BIT(&bHadErrMsgs, MUT_HAD_ERR_MSGS);
 }
 
 /** @internal
@@ -221,7 +228,7 @@ static void doLogMsg(const int iErrno, const int iErrCode, const int severity, c
 
     glblErrLogger(severity, iErrCode, (uchar *)buf);
 
-    if (severity == LOG_ERR) bHadErrMsgs = 1;
+    if (severity == LOG_ERR) ATOMIC_STORE_32BIT(&bHadErrMsgs, MUT_HAD_ERR_MSGS, 1);
 }
 
 /* We now receive three parameters: one is the internal error code
