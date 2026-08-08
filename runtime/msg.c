@@ -4749,6 +4749,13 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
      *       string. So we MUST NOT free it!
      */
     dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
+    if (json == NULL) {
+        /* Ignore a JSON null value: a core property can be neither null nor
+         * unset, and the setters below would otherwise crash on
+         * strlen(jsonToString(NULL)). */
+        DBGPRINTF("msgSetPropViaJSON: null value for property '%s' ignored\n", name);
+        return RS_RET_OK;
+    }
     if (!strcmp(name, "rawmsg")) {
         psz = jsonToString(json);
         MsgSetRawMsg(pMsg, psz, strlen(psz));
