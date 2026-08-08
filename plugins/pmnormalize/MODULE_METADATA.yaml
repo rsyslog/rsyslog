@@ -1,0 +1,12 @@
+support_status: core-supported
+maturity_level: mature
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-08-08
+build_dependencies:
+  - liblognorm
+documentation:
+  - doc/source/configuration/modules/pmnormalize.rst
+notes:
+  - A configured debugFile belongs to one parser instance.
+  - liblognorm callbacks can share the parser debug file and flockfile serializes writes.
+  - Parser users stop before instance cleanup closes the debug file.

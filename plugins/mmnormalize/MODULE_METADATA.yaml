@@ -1,0 +1,12 @@
+support_status: core-supported
+maturity_level: mature
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2026-08-08
+build_dependencies:
+  - liblognorm
+documentation:
+  - doc/source/configuration/modules/mmnormalize.rst
+notes:
+  - Turbo normalization contexts are private to workers.
+  - When debugFile is configured, liblognorm callbacks share the instance debug file and flockfile serializes writes.
+  - The action lifetime ends after workers stop, before instance cleanup closes the debug file.
