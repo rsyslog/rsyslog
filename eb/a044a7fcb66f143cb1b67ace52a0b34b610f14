@@ -1,0 +1,16 @@
+tests/rsyslog-segqueue-tool.py
+  h_95716f3de0caf5 166-178
+tools/rsyslog-segqueue
+  h_95716f3de0caf5 200-217,1377,1412-1414,1455
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "eba044a7fcb66f143cb1b67ace52a0b34b610f14",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
