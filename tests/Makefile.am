@@ -1662,12 +1662,14 @@ TESTS_LIBYAML_OMSTDOUT = \
 
 TESTS_PMNORMALIZE = \
 	pmnormalize-basic.sh \
-	pmnormalize-debug.sh \
 	pmnormalize-invld-rulebase.sh \
 	pmnormalize-rule.sh \
 	pmnormalize-rule_and_rulebase.sh \
 	pmnormalize-neither_rule_rulebase.sh \
 	pmnormalize-rule_invld-data.sh
+
+TESTS_PMNORMALIZE_DEBUG = \
+	pmnormalize-debug.sh
 
 TESTS_PMNORMALIZE_YAML = \
 	yaml-pmnormalize-debug.sh
@@ -1685,10 +1687,12 @@ TESTS_MMNORMALIZE = \
         msgvar-concurrency-array-event.tags.sh \
         mmexternal-mmnormalize-json-tree.sh \
         mmnormalize-hup-reload.sh \
-	mmnormalize-debug.sh \
         mmnormalize_rule_from_string.sh \
         mmnormalize_rule_from_array.sh \
         mmnormalize_parsesuccess.sh
+
+TESTS_MMNORMALIZE_DEBUG = \
+	mmnormalize-debug.sh
 
 TESTS_MMNORMALIZE_YAML = \
 	yaml-mmnormalize-debug.sh
@@ -2450,9 +2454,11 @@ EXTRA_DIST += $(TESTS_MMRM1STSPACE)
 EXTRA_DIST += $(TESTS_PMNULL)
 EXTRA_DIST += $(TESTS_OMSTDOUT)
 EXTRA_DIST += $(TESTS_PMNORMALIZE)
+EXTRA_DIST += $(TESTS_PMNORMALIZE_DEBUG)
 EXTRA_DIST += $(TESTS_PMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_PMNORMALIZE_VALGRIND)
 EXTRA_DIST += $(TESTS_MMNORMALIZE)
+EXTRA_DIST += $(TESTS_MMNORMALIZE_DEBUG)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_YAML)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO)
 EXTRA_DIST += $(TESTS_MMNORMALIZE_TURBO_YAML)
@@ -3463,14 +3469,15 @@ endif
 
 
 if ENABLE_PMNORMALIZE
-if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_PMNORMALIZE)
+if HAVE_VALGRIND
+TESTS += $(TESTS_PMNORMALIZE_VALGRIND)
+endif
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_PMNORMALIZE_DEBUG)
 if HAVE_LIBYAML
 TESTS += $(TESTS_PMNORMALIZE_YAML)
 endif
-endif
-if HAVE_VALGRIND
-TESTS += $(TESTS_PMNORMALIZE_VALGRIND)
 endif
 endif
 
@@ -3479,8 +3486,14 @@ endif
 
 
 if ENABLE_MMNORMALIZE
-if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_MMNORMALIZE)
+
+if HAVE_VALGRIND
+TESTS += $(TESTS_MMNORMALIZE_VALGRIND)
+endif
+
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_MMNORMALIZE_DEBUG)
 
 if HAVE_LIBYAML
 TESTS += $(TESTS_MMNORMALIZE_YAML)
@@ -3492,10 +3505,6 @@ if HAVE_LIBYAML
 TESTS += $(TESTS_MMNORMALIZE_TURBO_YAML)
 endif
 endif
-endif
-
-if HAVE_VALGRIND
-TESTS += $(TESTS_MMNORMALIZE_VALGRIND)
 endif
 
 if ENABLE_IMPTCP
