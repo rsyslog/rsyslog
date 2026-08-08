@@ -64,6 +64,14 @@ MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmnormalize")
 
+/* Concurrency & Locking
+ * ---------------------
+ * Turbo normalization contexts are private to their workers. When debugFile
+ * is configured, callbacks from the action and its worker contexts share the
+ * instance-owned FILE; flockfile serializes writes. The action lifetime ends
+ * after workers stop, before freeInstance closes that FILE.
+ */
+
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* static data */

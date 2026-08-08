@@ -1,3 +1,9 @@
+.. _mmnormalize:
+
+.. meta::
+   :description: Normalize log messages with liblognorm and configure optional per-action debug tracing.
+   :keywords: rsyslog, mmnormalize, liblognorm, normalization, debug
+
 *********************************************
 mmnormalize: Log Message Normalization Module
 *********************************************
@@ -7,6 +13,13 @@ mmnormalize: Log Message Normalization Module
 **Author:**           Rainer Gerhards <rgerhards@adiscon.com>
 **Available since:**  6.1.2+
 ====================  =======================================
+
+.. summary-start
+
+Normalizes log messages with liblognorm and can emit per-action liblognorm
+debug records to rsyslog diagnostics or a dedicated file.
+
+.. summary-end
 
 Purpose
 =======
@@ -89,13 +102,14 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmnormalize-turbo.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - ``debug``
-     - Enables verbose liblognorm debugging for this action. By default, trace
-       records are sent to rsyslog's internal diagnostic stream.
-   * - ``debugFile``
-     - Redirects this action's liblognorm debug records to the specified
-       append-only file. Requires ``debug="on"`` and causes configuration to
-       fail if the file cannot be opened.
+   * - :ref:`param-mmnormalize-debug`
+     - .. include:: ../../reference/parameters/mmnormalize-debug.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-debugfile`
+     - .. include:: ../../reference/parameters/mmnormalize-debugfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -107,6 +121,8 @@ Action Parameters
    ../../reference/parameters/mmnormalize-path
    ../../reference/parameters/mmnormalize-variable
    ../../reference/parameters/mmnormalize-turbo
+   ../../reference/parameters/mmnormalize-debug
+   ../../reference/parameters/mmnormalize-debugfile
 
 See Also
 ========
