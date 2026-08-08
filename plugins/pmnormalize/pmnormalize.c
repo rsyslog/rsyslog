@@ -47,6 +47,13 @@ MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.pmnormalize")
 MODULE_CNFNAME("pmnormalize")
 
+/* Concurrency & Locking
+ * ---------------------
+ * A configured debugFile belongs to one parser instance. liblognorm callbacks
+ * can share that FILE, so flockfile serializes writes. Parser teardown occurs
+ * after parser users stop, before the instance cleanup closes the FILE.
+ */
+
 /* internal structures */
 DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)

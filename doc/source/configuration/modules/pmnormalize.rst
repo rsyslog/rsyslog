@@ -1,3 +1,9 @@
+.. _pmnormalize:
+
+.. meta::
+   :description: Normalize incoming log messages with liblognorm and configure optional parser debug tracing.
+   :keywords: rsyslog, pmnormalize, liblognorm, parser, normalization, debug
+
 *********************************************
 pmnormalize: Log Message Normalization parser
 *********************************************
@@ -8,6 +14,12 @@ pmnormalize: Log Message Normalization parser
 **Available since:**         8.27.0
 ===========================  ===========================================================================
 
+.. summary-start
+
+Normalizes incoming messages with liblognorm and can emit per-parser
+liblognorm debug records to rsyslog diagnostics or a dedicated file.
+
+.. summary-end
 
 Purpose
 =======
@@ -88,6 +100,23 @@ debug
 Enables verbose liblognorm debugging for this parser. By default, trace records
 are sent to rsyslog's internal diagnostic stream.
 
+RainerScript usage:
+
+.. code-block:: rsyslog
+
+   parser(name="custom.pmnormalize" type="pmnormalize"
+          rulebase="/path/to/rules.rb" debug="on")
+
+YAML usage:
+
+.. code-block:: yaml
+
+   parsers:
+     - name: custom.pmnormalize
+       type: pmnormalize
+       rulebase: /path/to/rules.rb
+       debug: on
+
 
 debugFile
 ^^^^^^^^^
@@ -102,6 +131,25 @@ debugFile
 Redirects this parser's liblognorm debug records to the specified append-only
 file. Requires **debug="on"** and causes configuration to fail if the file
 cannot be opened.
+
+RainerScript usage:
+
+.. code-block:: rsyslog
+
+   parser(name="custom.pmnormalize" type="pmnormalize"
+          rulebase="/path/to/rules.rb" debug="on"
+          debugFile="/path/to/pmnormalize-debug.log")
+
+YAML usage:
+
+.. code-block:: yaml
+
+   parsers:
+     - name: custom.pmnormalize
+       type: pmnormalize
+       rulebase: /path/to/rules.rb
+       debug: on
+       debugFile: /path/to/pmnormalize-debug.log
 
 
 Examples

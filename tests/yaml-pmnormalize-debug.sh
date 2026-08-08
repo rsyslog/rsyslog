@@ -2,7 +2,6 @@
 # Verify that YAML passes pmnormalize's debug parameters and directs liblognorm
 # trace output to its configured file. A non-empty trace file is the oracle.
 . ${srcdir:=.}/diag.sh init
-require_plugin imtcp
 require_plugin pmnormalize
 DEBUG_LOG="${RSYSLOG_DYNNAME}.yaml-pmnormalize-debug.log"
 generate_conf --yaml-only

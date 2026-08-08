@@ -2,7 +2,6 @@
 # Verify that pmnormalize directs enabled liblognorm tracing to its configured
 # file. A non-empty trace file after parsing a message is the success oracle.
 . ${srcdir:=.}/diag.sh init
-require_plugin imtcp
 require_plugin pmnormalize
 DEBUG_LOG="${RSYSLOG_DYNNAME}.pmnormalize-debug.log"
 generate_conf

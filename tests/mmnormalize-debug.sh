@@ -2,7 +2,6 @@
 # Verify that mmnormalize directs enabled liblognorm tracing to its configured
 # file. A non-empty trace file after a normalized message is the success oracle.
 . ${srcdir:=.}/diag.sh init
-require_plugin imtcp
 require_plugin mmnormalize
 DEBUG_LOG="${RSYSLOG_DYNNAME}.mmnormalize-debug.log"
 generate_conf

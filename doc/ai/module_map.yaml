@@ -136,6 +136,25 @@ mmjsonrewrite:
   notes:
     - Expands dotted JSON property names into nested containers per message.
 
+mmnormalize:
+  paths: ["plugins/mmnormalize/"]
+  requires_serialization: true
+  locks:
+    - type: stdio
+      field: instanceData.debugFile
+  notes:
+    - Turbo normalization contexts are private to workers.
+    - When debugFile is configured, liblognorm callbacks share an instance FILE and use flockfile to serialize writes.
+
+pmnormalize:
+  paths: ["plugins/pmnormalize/"]
+  requires_serialization: true
+  locks:
+    - type: stdio
+      field: instanceConf.debugFile
+  notes:
+    - When debugFile is configured, liblognorm callbacks share a parser-instance FILE and use flockfile to serialize writes.
+
 mmexternal:
   paths: ["plugins/mmexternal/"]
   requires_serialization: true
