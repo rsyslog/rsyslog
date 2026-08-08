@@ -94,6 +94,7 @@ BuildRequires: ruby-devel
 
 Requires: logrotate >= 3.5.2
 Requires: bash >= 2.0
+Requires: python3
 Requires: libestr >= 0.1.11
 Requires: %{libfastjson_pkg} >= 0.99.8
 
@@ -805,6 +806,8 @@ done
 %dir %{rsyslog_pkidir}
 %{_sbindir}/rsyslogd
 %attr(755,root,root) %{_bindir}/rsyslog-recover-qi.pl
+%attr(755,root,root) %{_bindir}/rsyslog-segqueue
+%{_mandir}/man1/rsyslog-segqueue.1.gz
 %{_mandir}/man5/rsyslog.conf.5.gz
 %{_mandir}/man8/rsyslogd.8.gz
 %{_unitdir}/rsyslog.service

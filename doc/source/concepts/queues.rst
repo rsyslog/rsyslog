@@ -220,6 +220,10 @@ and requests offline recovery instead of delaying daemon startup with a full
 scan. Version 1 of this unmerged experimental format is intentionally rejected;
 there is no migration guarantee for experimental queue data.
 
+Use :doc:`../reference/tools/rsyslog-segqueue` while rsyslog is stopped to
+inspect the store, export live records as JSON Lines, restore state redundancy,
+or conservatively rebuild and salvage version 2 queue data.
+
 The segmented store is also the default disk child for new disk-assisted
 ``FixedArray`` and ``LinkedList`` queues. Their memory tier remains primary and
 the segmented child stays unmaterialized until the first spill. The
