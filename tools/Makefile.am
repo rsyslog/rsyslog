@@ -2,6 +2,7 @@ sbin_PROGRAMS =
 CLEANFILES =
 man5_MANS = rsyslog.conf.5
 man8_MANS = rsyslogd.8
+man1_MANS =
 
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
@@ -103,6 +104,14 @@ endif
 
 if ENABLE_USERTOOLS
 bin_PROGRAMS =
+dist_bin_SCRIPTS = rsyslog-segqueue
+EXTRA_DIST += rsyslog-segqueue.rst rsyslog-segqueue.1
+rsyslog-segqueue.1: rsyslog-segqueue.rst
+	$(AM_V_GEN) $(RST2MAN) rsyslog-segqueue.rst $@
+if ENABLE_GENERATE_MAN_PAGES
+man1_MANS += rsyslog-segqueue.1
+CLEANFILES += rsyslog-segqueue.1
+endif
 if ENABLE_OMMONGODB
 bin_PROGRAMS += logctl
 logctl_SOURCES = logctl.c
@@ -130,7 +139,6 @@ rscryutil_LDFLAGS = \
 -Wl,--whole-archive,--no-whole-archive
 
 if ENABLE_GENERATE_MAN_PAGES
-man1_MANS =
 RSTMANFILE = rscryutil.rst
 rscryutil.1: $(RSTMANFILE)
 	$(AM_V_GEN) $(RST2MAN) $(RSTMANFILE) $@

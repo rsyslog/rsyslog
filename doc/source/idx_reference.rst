@@ -14,4 +14,5 @@ Reference
    community
    features
    proposals/index
+   reference/tools/index
    whitepapers/index

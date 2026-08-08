@@ -1247,6 +1247,8 @@ EXTRA_DIST = \
     source/reference/parameters/pmrfc3164-permit-slashesinhostname.rst \
     source/reference/parameters/pmrfc3164-permit-squarebracketsinhostname.rst \
     source/reference/parameters/pmrfc3164-remove-msgfirstspace.rst \
+    source/reference/tools/index.rst \
+    source/reference/tools/rsyslog-segqueue.rst \
     source/reference/properties/message-app-name.rst \
     source/reference/properties/message-fromhost-ip.rst \
     source/reference/properties/message-fromhost-port.rst \

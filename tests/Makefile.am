@@ -40,6 +40,8 @@ TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
 TESTS_SEGMENTED_DISK_QUEUE = \
+	rsyslog-segqueue-tool.py \
+	rsyslog-segqueue-runtime.sh \
 	segmented-diskqueue-config.sh \
 	segmented-diskqueue.sh \
 	segmented-diskqueue-restart.sh \

@@ -1034,6 +1034,10 @@ AC_ARG_ENABLE(usertools,
         [enable_usertools=no]
 )
 AM_CONDITIONAL(ENABLE_USERTOOLS, test x$enable_usertools = xyes)
+if test x$enable_usertools = xyes; then
+        AC_PATH_PROG([PYTHON3], [python3])
+        AS_IF([test -z "$PYTHON3"], [AC_MSG_ERROR([python3 is required when end user tools are enabled])])
+fi
 
 
 # MySQL support

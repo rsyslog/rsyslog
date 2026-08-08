@@ -1,0 +1,1670 @@
+#!/usr/bin/env python3
+"""Inspect, export, and repair rsyslog segmentedDisk queue stores."""
+
+import argparse
+import base64
+import datetime
+import errno
+import json
+import os
+import re
+import shutil
+import stat
+import struct
+import sys
+import tempfile
+
+
+SEG_MAGIC = b"RSSEGH02"
+REC_MAGIC = b"RSRECD02"
+FOOT_MAGIC = b"RSSEAL02"
+STATE_MAGIC = b"RSSEGST2"
+STORE_VERSION = 2
+CODEC_VERSION = 1
+SEG_HEADER_LEN = 52
+RECORD_HEADER_LEN = 32
+FOOTER_LEN = 48
+STATE_SLOT_LEN = 256
+STATE_FILE_LEN = 2 * STATE_SLOT_LEN
+MAX_RECORD_SIZE = 128 * 1024 * 1024
+STATE_FLAG_RECOVERY = 1
+STATE_FLAG_DEMATERIALIZING = 2
+KNOWN_STATE_FLAGS = STATE_FLAG_RECOVERY | STATE_FLAG_DEMATERIALIZING
+SEGMENT_RE = re.compile(r"^segment-([0-9]{20})\.(seg|recover|open)$")
+UINT64_MASK = (1 << 64) - 1
+UINT32_UNSET = (1 << 32) - 1
+
+TLV_U8 = 1
+TLV_U16 = 2
+TLV_U32 = 3
+TLV_U64 = 4
+TLV_BYTES = 5
+TLV_TIME = 6
+TLV_CRITICAL = 1
+
+FIELD_NAMES = {
+    1: "protocol_version",
+    2: "severity",
+    3: "facility",
+    4: "flags",
+    5: "timegenerated_unix",
+    6: "timereceived",
+    7: "timereported",
+    8: "tag",
+    9: "rawmsg",
+    10: "hostname",
+    11: "inputname",
+    12: "fromhost",
+    13: "fromhost_ip",
+    14: "fromhost_port",
+    15: "structured_data",
+    16: "json",
+    17: "localvars",
+    18: "app_name",
+    19: "procid",
+    20: "msgid",
+    21: "uuid",
+    22: "ruleset",
+    23: "msg_offset",
+    24: "after_pri_offset",
+    25: "parse_success",
+}
+
+FIELD_TYPES = {
+    1: (TLV_U16, 2),
+    2: (TLV_U16, 2),
+    3: (TLV_U16, 2),
+    4: (TLV_U32, 4),
+    5: (TLV_U64, 8),
+    6: (TLV_TIME, 20),
+    7: (TLV_TIME, 20),
+    8: (TLV_BYTES, None),
+    9: (TLV_BYTES, None),
+    10: (TLV_BYTES, None),
+    11: (TLV_BYTES, None),
+    12: (TLV_BYTES, None),
+    13: (TLV_BYTES, None),
+    14: (TLV_BYTES, None),
+    15: (TLV_BYTES, None),
+    16: (TLV_BYTES, None),
+    17: (TLV_BYTES, None),
+    18: (TLV_BYTES, None),
+    19: (TLV_BYTES, None),
+    20: (TLV_BYTES, None),
+    21: (TLV_BYTES, None),
+    22: (TLV_BYTES, None),
+    23: (TLV_U32, 4),
+    24: (TLV_U32, 4),
+    25: (TLV_U8, 1),
+}
+
+TEXT_FIELDS = {
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    18,
+    19,
+    20,
+    21,
+    22,
+}
+
+
+class QueueToolError(Exception):
+    """Operational or invocation error with a user-facing explanation."""
+
+
+def crc32c(data):
+    crc = 0xFFFFFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            crc = (crc >> 1) ^ (0x82F63B78 if crc & 1 else 0)
+    return (~crc) & 0xFFFFFFFF
+
+
+def unpack_u16(data, offset):
+    return struct.unpack_from(">H", data, offset)[0]
+
+
+def unpack_u32(data, offset):
+    return struct.unpack_from(">I", data, offset)[0]
+
+
+def unpack_u64(data, offset):
+    return struct.unpack_from(">Q", data, offset)[0]
+
+
+def unpack_i64(data, offset):
+    return struct.unpack_from(">q", data, offset)[0]
+
+
+def pack_u16(value):
+    return struct.pack(">H", value)
+
+
+def pack_u32(value):
+    return struct.pack(">I", value)
+
+
+def pack_u64(value):
+    return struct.pack(">Q", value & UINT64_MASK)
+
+
+def generation_newer(candidate, reference):
+    if candidate == reference:
+        return False
+    return ((candidate - reference) & UINT64_MASK) < (1 << 63)
+
+
+def uuid_text(value):
+    if value is None or len(value) != 16:
+        return None
+    raw = value.hex()
+    return "{}-{}-{}-{}-{}".format(raw[:8], raw[8:12], raw[12:16], raw[16:20], raw[20:])
+
+
+def add_issue(report, severity, code, message, path=None, segment=None, offset=None, repair=None):
+    issue = {"severity": severity, "code": code, "message": message}
+    if path is not None:
+        issue["path"] = str(path)
+    if segment is not None:
+        issue["segment"] = segment
+    if offset is not None:
+        issue["offset"] = offset
+    if repair is not None:
+        issue["suggested_repair"] = repair
+    report["issues"].append(issue)
+    if severity == "error":
+        report["error_count"] += 1
+    else:
+        report["warning_count"] += 1
+
+
+def safe_lstat_regular(path, description):
+    try:
+        info = os.lstat(path)
+    except OSError as error:
+        raise QueueToolError("cannot inspect {} '{}': {}".format(description, path, error))
+    if not stat.S_ISREG(info.st_mode):
+        raise QueueToolError("{} '{}' is not a regular file".format(description, path))
+    return info
+
+
+def read_regular(path, description, exact_size=None):
+    info = safe_lstat_regular(path, description)
+    if exact_size is not None and info.st_size != exact_size:
+        raise QueueToolError(
+            "{} '{}' has size {}, expected {}".format(description, path, info.st_size, exact_size)
+        )
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise QueueToolError("cannot open {} '{}': {}".format(description, path, error))
+    try:
+        chunks = []
+        remaining = info.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(remaining, 1024 * 1024))
+            if not chunk:
+                raise QueueToolError("short read from {} '{}'".format(description, path))
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b"".join(chunks), info
+    finally:
+        os.close(descriptor)
+
+
+def file_signature(path):
+    info = os.lstat(path)
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns)
+
+
+def state_slot_valid(slot):
+    return (
+        len(slot) == STATE_SLOT_LEN
+        and slot[:8] == STATE_MAGIC
+        and unpack_u16(slot, 8) == STORE_VERSION
+        and unpack_u16(slot, 10) == CODEC_VERSION
+        and unpack_u32(slot, STATE_SLOT_LEN - 4) == crc32c(slot[: STATE_SLOT_LEN - 4])
+    )
+
+
+def decode_state(slot):
+    return {
+        "uuid_bytes": slot[12:28],
+        "uuid": uuid_text(slot[12:28]),
+        "generation": unpack_u64(slot, 28),
+        "flags": unpack_u32(slot, 36),
+        "committed_segment": unpack_u64(slot, 40),
+        "committed_offset": unpack_i64(slot, 48),
+        "committed_record_sequence": unpack_u64(slot, 56),
+        "first_live_segment": unpack_u64(slot, 64),
+        "last_data_segment": unpack_u64(slot, 72),
+        "active_segment": unpack_u64(slot, 80),
+        "recovery_first": unpack_u64(slot, 88),
+        "recovery_last": unpack_u64(slot, 96),
+        "next_segment": unpack_u64(slot, 104),
+        "known_queue_size": unpack_u64(slot, 112),
+        "bytes": unpack_i64(slot, 120),
+        "segments": unpack_u64(slot, 128),
+        "writer_segment": unpack_u64(slot, 136),
+        "writer_end": unpack_i64(slot, 144),
+        "writer_sequence": unpack_u64(slot, 152),
+        "writer_count": unpack_u64(slot, 160),
+        "delete_first": unpack_u64(slot, 168),
+        "delete_last": unpack_u64(slot, 176),
+        "delete_bytes": unpack_i64(slot, 184),
+        "delete_segments": unpack_u64(slot, 192),
+    }
+
+
+def encode_state(state, generation):
+    data = bytearray(STATE_SLOT_LEN)
+    data[:8] = STATE_MAGIC
+    data[8:10] = pack_u16(STORE_VERSION)
+    data[10:12] = pack_u16(CODEC_VERSION)
+    data[12:28] = state["uuid_bytes"]
+    data[28:36] = pack_u64(generation)
+    fields = (
+        (36, "flags", 4),
+        (40, "committed_segment", 8),
+        (48, "committed_offset", 8),
+        (56, "committed_record_sequence", 8),
+        (64, "first_live_segment", 8),
+        (72, "last_data_segment", 8),
+        (80, "active_segment", 8),
+        (88, "recovery_first", 8),
+        (96, "recovery_last", 8),
+        (104, "next_segment", 8),
+        (112, "known_queue_size", 8),
+        (120, "bytes", 8),
+        (128, "segments", 8),
+        (136, "writer_segment", 8),
+        (144, "writer_end", 8),
+        (152, "writer_sequence", 8),
+        (160, "writer_count", 8),
+        (168, "delete_first", 8),
+        (176, "delete_last", 8),
+        (184, "delete_bytes", 8),
+        (192, "delete_segments", 8),
+    )
+    for offset, name, width in fields:
+        value = state.get(name, 0)
+        data[offset: offset + width] = pack_u32(value) if width == 4 else pack_u64(value)
+    data[-4:] = pack_u32(crc32c(data[:-4]))
+    return bytes(data)
+
+
+def validate_state_image(report, state, path):
+    if state["flags"] & ~KNOWN_STATE_FLAGS:
+        add_issue(report, "error", "state.unknown_flags", "state contains unknown flags", path=path)
+    if bool(state["delete_first"]) != bool(state["delete_last"]):
+        add_issue(report, "error", "state.delete_range_partial",
+                  "pending-delete range has one zero endpoint", path=path)
+    if state["delete_first"] and state["delete_first"] > state["delete_last"]:
+        add_issue(report, "error", "state.delete_range_reverse", "pending-delete range is reversed", path=path)
+    if bool(state["recovery_first"]) != bool(state["recovery_last"]):
+        add_issue(report, "error", "state.recovery_range_partial", "recovery range has one zero endpoint", path=path)
+    if state["recovery_first"] and state["recovery_first"] > state["recovery_last"]:
+        add_issue(report, "error", "state.recovery_range_reverse", "recovery range is reversed", path=path)
+    if state["committed_segment"] and state["committed_offset"] < SEG_HEADER_LEN:
+        add_issue(report, "error", "state.commit_offset_small", "commit offset precedes the segment payload", path=path)
+    for name in ("bytes", "writer_end", "delete_bytes"):
+        if state[name] < 0:
+            add_issue(
+                report,
+                "error",
+                "state.{}_negative".format(name),
+                "state {} is negative".format(name),
+                path=path,
+            )
+    if state["next_segment"] == 0:
+        add_issue(report, "error", "state.next_segment_zero", "next segment id is zero", path=path)
+
+
+def inspect_state(queue_dir, report):
+    state_path = os.path.join(queue_dir, "state")
+    result = {"present": False, "size": 0, "slots": [], "selected": None, "selected_slot": None}
+    try:
+        info = os.lstat(state_path)
+    except FileNotFoundError:
+        return result
+    except OSError as error:
+        add_issue(report, "error", "state.stat_failed", str(error), path=state_path)
+        return result
+    result["present"] = True
+    result["size"] = info.st_size
+    if not stat.S_ISREG(info.st_mode):
+        add_issue(report, "error", "state.not_regular", "state is not a regular file", path=state_path)
+        return result
+    if info.st_size != STATE_FILE_LEN:
+        add_issue(
+            report,
+            "error",
+            "state.wrong_size",
+            "state is {} bytes; expected {}".format(info.st_size, STATE_FILE_LEN),
+            path=state_path,
+            repair="rebuild",
+        )
+        return result
+    try:
+        data, _ = read_regular(state_path, "state file", STATE_FILE_LEN)
+    except QueueToolError as error:
+        add_issue(report, "error", "state.read_failed", str(error), path=state_path)
+        return result
+    for index in range(2):
+        raw = data[index * STATE_SLOT_LEN: (index + 1) * STATE_SLOT_LEN]
+        valid = state_slot_valid(raw)
+        item = {"index": index, "valid": valid, "raw": raw}
+        if valid:
+            item["image"] = decode_state(raw)
+        result["slots"].append(item)
+    valid_slots = [slot for slot in result["slots"] if slot["valid"]]
+    if not valid_slots:
+        add_issue(
+            report,
+            "error",
+            "state.no_valid_slot",
+            "neither state slot is valid",
+            path=state_path,
+            repair="rebuild",
+        )
+        return result
+    if len(valid_slots) == 1:
+        add_issue(
+            report,
+            "warning",
+            "state.single_valid_slot",
+            "only state slot {} is valid".format(valid_slots[0]["index"]),
+            path=state_path,
+            repair="state-slot",
+        )
+        selected = valid_slots[0]
+    else:
+        first, second = valid_slots
+        if first["image"]["uuid_bytes"] != second["image"]["uuid_bytes"]:
+            add_issue(report, "error", "state.uuid_mismatch", "valid state slots have different UUIDs", path=state_path)
+            return result
+        generation0 = first["image"]["generation"]
+        generation1 = second["image"]["generation"]
+        if generation0 == generation1:
+            # Match segdiskStateSelect(): equal generations deterministically use slot 0.
+            selected = first
+        elif generation_newer(generation1, generation0):
+            selected = second
+        elif generation_newer(generation0, generation1):
+            selected = first
+        else:
+            add_issue(report, "error", "state.generation_ambiguous",
+                      "state generations are incomparable", path=state_path)
+            return result
+        older = first if selected is second else second
+        distance = (selected["image"]["generation"] - older["image"]["generation"]) & UINT64_MASK
+        if distance != 1:
+            add_issue(
+                report,
+                "warning",
+                "state.generation_gap",
+                "valid state slots differ by {} generations".format(distance),
+                path=state_path,
+            )
+    result["selected"] = selected["image"]
+    result["selected_slot"] = selected["index"]
+    validate_state_image(report, result["selected"], state_path)
+    return result
+
+
+def inventory_segments(queue_dir, report):
+    segments = []
+    by_id = {}
+    try:
+        entries = list(os.scandir(queue_dir))
+    except OSError as error:
+        raise QueueToolError("cannot enumerate queue directory '{}': {}".format(queue_dir, error))
+    for entry in sorted(entries, key=lambda item: item.name):
+        if entry.name == "state" or entry.name.startswith("state.backup-"):
+            continue
+        match = SEGMENT_RE.match(entry.name)
+        if not match:
+            add_issue(
+                report,
+                "warning",
+                "directory.foreign_entry",
+                "unrecognized entry in queue directory",
+                path=entry.path,
+            )
+            continue
+        try:
+            info = entry.stat(follow_symlinks=False)
+        except OSError as error:
+            add_issue(report, "error", "segment.stat_failed", str(error), path=entry.path)
+            continue
+        if not stat.S_ISREG(info.st_mode):
+            add_issue(report, "error", "segment.not_regular", "segment is not a regular file", path=entry.path)
+            continue
+        segment_id = int(match.group(1))
+        item = {
+            "id": segment_id,
+            "suffix": match.group(2),
+            "path": entry.path,
+            "size": info.st_size,
+            "signature": (info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns),
+        }
+        segments.append(item)
+        by_id.setdefault(segment_id, []).append(item)
+    for segment_id, items in by_id.items():
+        if len(items) > 1:
+            add_issue(
+                report,
+                "error",
+                "segment.duplicate_id",
+                "segment id {} has multiple representations: {}".format(
+                    segment_id, ", ".join(item["suffix"] for item in items)
+                ),
+                segment=segment_id,
+                repair="salvage",
+            )
+    return segments
+
+
+def inspect_segment_metadata(item, report, expected_uuid=None):
+    path = item["path"]
+    try:
+        descriptor = os.open(
+            path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        )
+    except OSError as error:
+        add_issue(report, "error", "segment.open_failed", str(error), path=path, segment=item["id"])
+        return None
+    try:
+        header = os.pread(descriptor, SEG_HEADER_LEN, 0)
+        if len(header) != SEG_HEADER_LEN:
+            add_issue(
+                report,
+                "error",
+                "segment.header_short",
+                "segment is shorter than its header",
+                path=path,
+                segment=item["id"],
+                repair="salvage",
+            )
+            return None
+        checks = (
+            (header[:8] == SEG_MAGIC, "segment.header_magic", "invalid segment magic"),
+            (unpack_u16(header, 8) == STORE_VERSION, "segment.store_version", "unsupported store version"),
+            (unpack_u16(header, 10) == CODEC_VERSION, "segment.codec_version", "unsupported codec version"),
+            (unpack_u64(header, 28) == item["id"], "segment.id_mismatch", "header id does not match filename"),
+            (unpack_u32(header, 44) == SEG_HEADER_LEN, "segment.header_length", "invalid header length"),
+            (
+                unpack_u32(header, 48) == crc32c(header[:48]),
+                "segment.header_crc",
+                "segment header checksum mismatch",
+            ),
+        )
+        valid = True
+        for condition, code, message in checks:
+            if not condition:
+                valid = False
+                add_issue(
+                    report,
+                    "error",
+                    code,
+                    message,
+                    path=path,
+                    segment=item["id"],
+                    offset=0,
+                    repair="salvage",
+                )
+        segment_uuid = header[12:28]
+        if expected_uuid is not None and segment_uuid != expected_uuid:
+            valid = False
+            add_issue(
+                report,
+                "error",
+                "segment.uuid_mismatch",
+                "segment UUID does not match selected state",
+                path=path,
+                segment=item["id"],
+                repair="salvage",
+            )
+        metadata = {
+            "uuid_bytes": segment_uuid,
+            "uuid": uuid_text(segment_uuid),
+            "first_sequence": unpack_u64(header, 36),
+            "data_end": item["size"],
+            "sealed": item["suffix"] == "seg",
+            "footer": None,
+            "header_valid": valid,
+        }
+        if metadata["sealed"]:
+            if item["size"] < SEG_HEADER_LEN + FOOTER_LEN:
+                add_issue(
+                    report,
+                    "error",
+                    "segment.footer_missing",
+                    "sealed segment is too short for a footer",
+                    path=path,
+                    segment=item["id"],
+                    repair="salvage",
+                )
+                metadata["header_valid"] = False
+                return metadata
+            footer = os.pread(descriptor, FOOTER_LEN, item["size"] - FOOTER_LEN)
+            footer_valid = (
+                len(footer) == FOOTER_LEN
+                and footer[:8] == FOOT_MAGIC
+                and unpack_u64(footer, 8) == item["id"]
+                and unpack_u32(footer, 44) == crc32c(footer[:44])
+            )
+            if not footer_valid:
+                add_issue(
+                    report,
+                    "error",
+                    "segment.footer_invalid",
+                    "sealed segment footer is invalid",
+                    path=path,
+                    segment=item["id"],
+                    offset=item["size"] - FOOTER_LEN,
+                    repair="salvage",
+                )
+            else:
+                metadata["footer"] = {
+                    "first_sequence": unpack_u64(footer, 16),
+                    "last_sequence": unpack_u64(footer, 24),
+                    "record_count": unpack_u64(footer, 32),
+                    "rolling_crc": unpack_u32(footer, 40),
+                }
+                metadata["data_end"] -= FOOTER_LEN
+        return metadata
+    finally:
+        os.close(descriptor)
+
+
+def find_next_magic(descriptor, start, end):
+    position = start
+    overlap = b""
+    chunk_size = 1024 * 1024
+    while position < end:
+        chunk = os.pread(descriptor, min(chunk_size, end - position), position)
+        if not chunk:
+            return None
+        data = overlap + chunk
+        found = data.find(REC_MAGIC)
+        if found >= 0:
+            return position - len(overlap) + found
+        overlap = data[-(len(REC_MAGIC) - 1):]
+        position += len(chunk)
+    return None
+
+
+def decode_time(value):
+    result = {
+        "time_type": value[0],
+        "month": value[1],
+        "day": value[2],
+        "weekday": value[3],
+        "hour": value[4],
+        "minute": value[5],
+        "second": value[6],
+        "fraction_precision": value[7],
+        "offset_minute": value[8],
+        "offset_hour": value[9],
+        "offset_mode": chr(value[10]) if 32 <= value[10] <= 126 else value[10],
+        "in_utc": bool(value[11]),
+        "year": unpack_u16(value, 12),
+        "fraction": unpack_u32(value, 14),
+    }
+    try:
+        base = datetime.datetime(
+            result["year"],
+            result["month"],
+            result["day"],
+            result["hour"],
+            result["minute"],
+            min(result["second"], 59),
+        )
+        fraction = str(result["fraction"]).zfill(result["fraction_precision"])
+        suffix = "Z" if result["in_utc"] else "{}{:02d}:{:02d}".format(
+            "-" if result["offset_mode"] == "-" else "+", result["offset_hour"], result["offset_minute"]
+        )
+        result["rfc3339"] = base.strftime("%Y-%m-%dT%H:%M:%S")
+        if result["fraction_precision"]:
+            result["rfc3339"] += "." + fraction
+        result["rfc3339"] += suffix
+    except (ValueError, OverflowError):
+        result["rfc3339"] = None
+    return result
+
+
+def decode_codec(payload):
+    position = 0
+    seen = set()
+    values = {}
+    while position < len(payload):
+        if len(payload) - position < 8:
+            raise ValueError("truncated TLV header at payload offset {}".format(position))
+        field, field_type, flags, length = struct.unpack_from(">HBBI", payload, position)
+        position += 8
+        if length > MAX_RECORD_SIZE or length > len(payload) - position:
+            raise ValueError("invalid TLV length for field {}".format(field))
+        value = payload[position: position + length]
+        position += length
+        if 1 <= field <= 31:
+            if field in seen:
+                raise ValueError("duplicate TLV field {}".format(field))
+            seen.add(field)
+        expected = FIELD_TYPES.get(field)
+        if expected is None:
+            if flags & TLV_CRITICAL:
+                raise ValueError("unknown critical TLV field {}".format(field))
+            continue
+        expected_type, expected_length = expected
+        if field_type != expected_type or (expected_length is not None and length != expected_length):
+            raise ValueError("invalid type or length for TLV field {}".format(field))
+        if field_type == TLV_U8:
+            decoded = value[0]
+        elif field_type == TLV_U16:
+            decoded = unpack_u16(value, 0)
+        elif field_type == TLV_U32:
+            decoded = unpack_u32(value, 0)
+        elif field_type == TLV_U64:
+            decoded = unpack_u64(value, 0)
+            if field == 5 and decoded & (1 << 63):
+                decoded -= 1 << 64
+        elif field_type == TLV_TIME:
+            decoded = decode_time(value)
+        else:
+            decoded = value
+        if field in (16, 17):
+            try:
+                decoded = json.loads(value.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError) as error:
+                raise ValueError("invalid JSON in TLV field {}: {}".format(field, error))
+        values[field] = decoded
+    if 9 not in values or 23 not in values:
+        raise ValueError("codec is missing rawmsg or msg_offset")
+    raw = values[9]
+    if values[23] != UINT32_UNSET and values[23] > len(raw):
+        raise ValueError("msg_offset exceeds rawmsg length")
+    if 24 in values and values[24] != UINT32_UNSET and values[24] > len(raw):
+        raise ValueError("after_pri_offset exceeds rawmsg length")
+    return values
+
+
+def json_bytes(value):
+    try:
+        return value.decode("utf-8")
+    except UnicodeDecodeError:
+        return {"encoding": "base64", "data": base64.b64encode(value).decode("ascii")}
+
+
+def message_json(values):
+    output = {}
+    for field, value in values.items():
+        name = FIELD_NAMES[field]
+        if field in TEXT_FIELDS:
+            output[name] = json_bytes(value)
+        else:
+            output[name] = value
+    raw = values[9]
+    if values[23] == UINT32_UNSET:
+        output["msg"] = json_bytes(raw)
+        output["msg_offset_unset"] = True
+    else:
+        output["msg"] = json_bytes(raw[values[23]:])
+    if 24 in values:
+        if values[24] == UINT32_UNSET:
+            output["rawmsg_after_pri"] = None
+            output["after_pri_offset_unset"] = True
+        else:
+            output["rawmsg_after_pri"] = json_bytes(raw[values[24]:])
+    if 25 in values:
+        output["parse_success"] = bool(values[25])
+    return output
+
+
+def scan_segment(item, metadata, report, callback=None, salvage=True):
+    if metadata is None:
+        return {"record_count": 0, "valid_records": 0, "invalid_records": 0, "rolling_crc": 0, "boundaries": []}
+    path = item["path"]
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
+    position = SEG_HEADER_LEN
+    record_count = 0
+    valid_records = 0
+    invalid_records = 0
+    rolling_crc = 0
+    boundaries = [SEG_HEADER_LEN]
+    expected_sequence = metadata["first_sequence"] if metadata["header_valid"] else 1
+    try:
+        while position < metadata["data_end"]:
+            if metadata["data_end"] - position < RECORD_HEADER_LEN:
+                add_issue(
+                    report,
+                    "error",
+                    "record.trailing_bytes",
+                    "{} trailing bytes do not form a record".format(metadata["data_end"] - position),
+                    path=path,
+                    segment=item["id"],
+                    offset=position,
+                    repair="salvage",
+                )
+                break
+            header = os.pread(descriptor, RECORD_HEADER_LEN, position)
+            header_valid = (
+                len(header) == RECORD_HEADER_LEN
+                and header[:8] == REC_MAGIC
+                and unpack_u16(header, 8) == STORE_VERSION
+                and unpack_u32(header, 24) == crc32c(header[:24])
+            )
+            length = unpack_u32(header, 12) if len(header) == RECORD_HEADER_LEN else MAX_RECORD_SIZE + 1
+            if header_valid and (
+                length > MAX_RECORD_SIZE or position + RECORD_HEADER_LEN + length > metadata["data_end"]
+            ):
+                header_valid = False
+            if not header_valid:
+                next_position = find_next_magic(descriptor, position + 1, metadata["data_end"])
+                corrupt_end = next_position if next_position is not None else metadata["data_end"]
+                add_issue(
+                    report,
+                    "error",
+                    "record.framing",
+                    "invalid record framing across {} bytes".format(corrupt_end - position),
+                    path=path,
+                    segment=item["id"],
+                    offset=position,
+                    repair="salvage",
+                )
+                invalid_records += 1
+                if not salvage or next_position is None:
+                    break
+                position = next_position
+                continue
+            sequence = unpack_u64(header, 16)
+            payload = os.pread(descriptor, length, position + RECORD_HEADER_LEN)
+            payload_valid = len(payload) == length and unpack_u32(header, 28) == crc32c(payload)
+            codec_values = None
+            codec_error = None
+            if payload_valid:
+                try:
+                    codec_values = decode_codec(payload)
+                except ValueError as error:
+                    codec_error = str(error)
+            if sequence != expected_sequence:
+                add_issue(
+                    report,
+                    "error",
+                    "record.sequence",
+                    "record sequence {} does not match expected {}".format(sequence, expected_sequence),
+                    path=path,
+                    segment=item["id"],
+                    offset=position,
+                    repair="salvage",
+                )
+            expected_sequence = sequence + 1
+            record_count += 1
+            rolling_crc ^= crc32c(header) ^ unpack_u32(header, 28)
+            end = position + RECORD_HEADER_LEN + length
+            boundaries.append(end)
+            if not payload_valid:
+                invalid_records += 1
+                add_issue(
+                    report,
+                    "error",
+                    "record.payload_crc",
+                    "record payload checksum mismatch",
+                    path=path,
+                    segment=item["id"],
+                    offset=position,
+                    repair="salvage",
+                )
+            elif codec_error is not None:
+                invalid_records += 1
+                add_issue(
+                    report,
+                    "error",
+                    "record.codec",
+                    codec_error,
+                    path=path,
+                    segment=item["id"],
+                    offset=position,
+                    repair="salvage",
+                )
+            else:
+                valid_records += 1
+                if callback is not None:
+                    callback(
+                        {
+                            "segment_id": item["id"],
+                            "offset": position,
+                            "end_offset": end,
+                            "sequence": sequence,
+                            "payload": payload,
+                            "codec": codec_values,
+                            "path": path,
+                        }
+                    )
+            position = end
+        footer = metadata.get("footer")
+        if footer is not None:
+            if footer["first_sequence"] != metadata["first_sequence"]:
+                add_issue(report, "error", "footer.first_sequence",
+                          "footer first sequence disagrees with header", path=path)
+            if footer["record_count"] != record_count:
+                add_issue(
+                    report,
+                    "error",
+                    "footer.record_count",
+                    "footer count {} differs from scanned count {}".format(footer["record_count"], record_count),
+                    path=path,
+                    segment=item["id"],
+                    repair="salvage",
+                )
+            if record_count and footer["last_sequence"] != expected_sequence - 1:
+                add_issue(report, "error", "footer.last_sequence",
+                          "footer last sequence disagrees with records", path=path)
+            if footer["rolling_crc"] != rolling_crc:
+                add_issue(
+                    report,
+                    "error",
+                    "footer.rolling_crc",
+                    "footer rolling checksum differs from scanned records",
+                    path=path,
+                    segment=item["id"],
+                    repair="salvage",
+                )
+        return {
+            "record_count": record_count,
+            "valid_records": valid_records,
+            "invalid_records": invalid_records,
+            "rolling_crc": rolling_crc,
+            "boundaries": boundaries,
+        }
+    finally:
+        os.close(descriptor)
+
+
+def new_report(queue_dir, mode):
+    return {
+        "tool": "rsyslog-segqueue",
+        "mode": mode,
+        "queue_directory": queue_dir,
+        "format": {"store_version": STORE_VERSION, "codec_version": CODEC_VERSION},
+        "issues": [],
+        "error_count": 0,
+        "warning_count": 0,
+    }
+
+
+def inspect_store(queue_dir, full=False):
+    queue_dir = os.path.abspath(queue_dir)
+    report = new_report(queue_dir, "check" if full else "status")
+    try:
+        directory_info = os.lstat(queue_dir)
+    except OSError as error:
+        raise QueueToolError("cannot inspect queue directory '{}': {}".format(queue_dir, error))
+    if not stat.S_ISDIR(directory_info.st_mode):
+        raise QueueToolError("queue path '{}' is not a directory".format(queue_dir))
+    if stat.S_ISLNK(directory_info.st_mode):
+        raise QueueToolError("queue directory may not be a symbolic link")
+    state = inspect_state(queue_dir, report)
+    selected = state["selected"]
+    segments = inventory_segments(queue_dir, report)
+    expected_uuid = selected["uuid_bytes"] if selected is not None else None
+    uuids = set()
+    total_bytes = 0
+    total_records = 0
+    total_valid_records = 0
+    metadata_by_path = {}
+    scans_by_path = {}
+    for item in segments:
+        total_bytes += item["size"]
+        metadata = inspect_segment_metadata(item, report, expected_uuid)
+        metadata_by_path[item["path"]] = metadata
+        if metadata is not None:
+            uuids.add(metadata["uuid_bytes"])
+        if full and metadata is not None:
+            scan = scan_segment(item, metadata, report)
+            scans_by_path[item["path"]] = scan
+            total_records += scan["record_count"]
+            total_valid_records += scan["valid_records"]
+    ids = sorted(set(item["id"] for item in segments))
+    if ids:
+        missing_count = 0
+        missing_preview = []
+        for previous, current in zip(ids, ids[1:]):
+            gap = current - previous - 1
+            if gap <= 0:
+                continue
+            missing_count += gap
+            for segment_id in range(previous + 1, min(current, previous + 1 + (8 - len(missing_preview)))):
+                missing_preview.append(segment_id)
+        if missing_count:
+            preview = ", ".join(str(segment_id) for segment_id in missing_preview)
+            if missing_count > len(missing_preview):
+                preview += ", ..."
+            add_issue(
+                report,
+                "error",
+                "segment.id_gap",
+                "missing segment id(s): {}".format(preview),
+                path=queue_dir,
+                repair="salvage",
+            )
+    if len(uuids) > 1:
+        add_issue(
+            report,
+            "error",
+            "store.mixed_uuid",
+            "segments from multiple queue UUIDs are present",
+            path=queue_dir,
+        )
+    if not state["present"] and segments:
+        add_issue(
+            report,
+            "error",
+            "state.missing",
+            "state is missing while segments remain",
+            path=os.path.join(queue_dir, "state"),
+            repair="rebuild",
+        )
+    if selected is not None:
+        if selected["segments"] != len(segments):
+            add_issue(
+                report,
+                "warning",
+                "state.segment_count",
+                "state counts {} segments but {} files exist".format(selected["segments"], len(segments)),
+                repair="rebuild",
+            )
+        if selected["bytes"] != total_bytes:
+            add_issue(
+                report,
+                "warning",
+                "state.byte_count",
+                "state counts {} bytes but {} bytes exist".format(selected["bytes"], total_bytes),
+                repair="rebuild",
+            )
+        if ids and selected["next_segment"] <= max(ids):
+            add_issue(report, "error", "state.next_segment_used",
+                      "next segment id is not above existing ids", repair="rebuild")
+        if selected["first_live_segment"] and ids and selected["first_live_segment"] not in ids:
+            add_issue(
+                report,
+                "error",
+                "state.first_live_missing",
+                "first live segment is missing",
+                segment=selected["first_live_segment"],
+                repair="rebuild",
+            )
+        if selected["last_data_segment"] and ids and selected["last_data_segment"] not in ids:
+            add_issue(
+                report,
+                "error",
+                "state.last_data_missing",
+                "last data segment is missing",
+                segment=selected["last_data_segment"],
+                repair="rebuild",
+            )
+        if full and selected["committed_segment"]:
+            candidates = [item for item in segments if item["id"] == selected["committed_segment"]]
+            if not candidates:
+                add_issue(
+                    report,
+                    "error",
+                    "state.committed_segment_missing",
+                    "committed segment is missing",
+                    segment=selected["committed_segment"],
+                    repair="rebuild",
+                )
+            elif len(candidates) == 1:
+                scan = scans_by_path.get(candidates[0]["path"])
+                if scan is not None and selected["committed_offset"] not in scan["boundaries"]:
+                    add_issue(
+                        report,
+                        "error",
+                        "state.commit_not_boundary",
+                        "commit offset is not a record boundary",
+                        segment=selected["committed_segment"],
+                        offset=selected["committed_offset"],
+                        repair="rebuild",
+                    )
+    report["state"] = state_for_json(state)
+    report["summary"] = {
+        "segment_files": len(segments),
+        "segment_ids": ids,
+        "physical_bytes": total_bytes,
+        "record_count": total_records if full else None,
+        "valid_record_count": total_valid_records if full else None,
+        "queue_uuid": (
+            selected["uuid"]
+            if selected is not None
+            else (uuid_text(next(iter(uuids))) if len(uuids) == 1 else None)
+        ),
+    }
+    report["_internal"] = {
+        "state": state,
+        "segments": segments,
+        "metadata": metadata_by_path,
+        "scans": scans_by_path,
+        "directory_signature": (
+            directory_info.st_dev,
+            directory_info.st_ino,
+            directory_info.st_mode,
+            directory_info.st_mtime_ns,
+        ),
+    }
+    return report
+
+
+def state_for_json(state):
+    result = {
+        "present": state["present"],
+        "size": state["size"],
+        "selected_slot": state["selected_slot"],
+        "slots": [],
+        "selected": None,
+    }
+    for slot in state["slots"]:
+        item = {"index": slot["index"], "valid": slot["valid"]}
+        if slot["valid"]:
+            item["generation"] = slot["image"]["generation"]
+            item["uuid"] = slot["image"]["uuid"]
+        result["slots"].append(item)
+    if state["selected"] is not None:
+        result["selected"] = {key: value for key, value in state["selected"].items() if key != "uuid_bytes"}
+    return result
+
+
+def public_report(report):
+    return {key: value for key, value in report.items() if key != "_internal"}
+
+
+def print_human_report(report):
+    summary = report["summary"]
+    state = report["state"]
+    print("Queue: {}".format(report["queue_directory"]))
+    print("Format: store v{}, codec v{}".format(STORE_VERSION, CODEC_VERSION))
+    print("UUID: {}".format(summary["queue_uuid"] or "unknown"))
+    print("State: {}".format("present" if state["present"] else "missing"))
+    if state["selected"] is not None:
+        selected = state["selected"]
+        print("Selected slot/generation: {}/{}".format(state["selected_slot"], selected["generation"]))
+        print(
+            "Commit frontier: segment {}, offset {}, sequence {}".format(
+                selected["committed_segment"],
+                selected["committed_offset"],
+                selected["committed_record_sequence"],
+            )
+        )
+        print(
+            "Live/recovery/delete: {}-{} / {}-{} / {}-{}".format(
+                selected["first_live_segment"],
+                selected["last_data_segment"],
+                selected["recovery_first"],
+                selected["recovery_last"],
+                selected["delete_first"],
+                selected["delete_last"],
+            )
+        )
+    print("Segments: {} files, {} bytes".format(summary["segment_files"], summary["physical_bytes"]))
+    if summary["record_count"] is not None:
+        print(
+            "Records: {} framed, {} valid".format(summary["record_count"], summary["valid_record_count"])
+        )
+    print("Result: {} error(s), {} warning(s)".format(report["error_count"], report["warning_count"]))
+    for issue in report["issues"]:
+        location = issue.get("path", "")
+        if "segment" in issue:
+            location += " segment={}".format(issue["segment"])
+        if "offset" in issue:
+            location += " offset={}".format(issue["offset"])
+        print("{} {}: {}{}".format(issue["severity"].upper(), issue["code"],
+              issue["message"], " [" + location.strip() + "]" if location else ""))
+
+
+def record_is_live(record, selected):
+    if selected is None or selected["committed_segment"] == 0:
+        return True
+    if record["segment_id"] > selected["committed_segment"]:
+        return True
+    if record["segment_id"] < selected["committed_segment"]:
+        return False
+    return record["offset"] >= selected["committed_offset"]
+
+
+def write_json_line(stream, record):
+    item = {
+        "queue": {
+            "segment_id": record["segment_id"],
+            "offset": record["offset"],
+            "end_offset": record["end_offset"],
+            "record_sequence": record["sequence"],
+        },
+        "message": message_json(record["codec"]),
+    }
+    stream.write(json.dumps(item, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
+    stream.write("\n")
+
+
+def export_records(args):
+    report = inspect_store(args.queue_dir, full=True)
+    selected = report["_internal"]["state"]["selected"]
+    if args.scope == "live" and selected is None:
+        raise QueueToolError("live export requires a valid state slot; use --scope all for forensic export")
+    if report["error_count"] and not args.salvage:
+        print_human_report(report)
+        return 2
+    output_path = args.output
+    temporary = None
+    if output_path == "-":
+        stream = sys.stdout
+    else:
+        output_path = os.path.abspath(output_path)
+        parent = os.path.dirname(output_path) or "."
+        descriptor, temporary = tempfile.mkstemp(prefix=".rsyslog-segqueue-export-", dir=parent, text=True)
+        stream = os.fdopen(descriptor, "w", encoding="utf-8", newline="\n")
+    count = 0
+
+    def emit(record):
+        nonlocal count
+        if args.scope == "all" or record_is_live(record, selected):
+            write_json_line(stream, record)
+            count += 1
+
+    try:
+        export_report = new_report(report["queue_directory"], "export")
+        for item in report["_internal"]["segments"]:
+            metadata = report["_internal"]["metadata"].get(item["path"])
+            scan_segment(item, metadata, export_report, callback=emit)
+        if stream is not sys.stdout:
+            stream.flush()
+            os.fsync(stream.fileno())
+            stream.close()
+            os.replace(temporary, output_path)
+            temporary = None
+        print(
+            "exported {} record(s){}".format(count, " with integrity errors" if report["error_count"] else ""),
+            file=sys.stderr,
+        )
+    finally:
+        if stream is not sys.stdout and not stream.closed:
+            stream.close()
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+    return 2 if report["error_count"] else 0
+
+
+def timestamp_tag():
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def fsync_directory(path):
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def atomic_write(path, data, source_info=None):
+    parent = os.path.dirname(path)
+    descriptor, temporary = tempfile.mkstemp(prefix=".rsyslog-segqueue-state-", dir=parent)
+    try:
+        os.write(descriptor, data)
+        os.fsync(descriptor)
+        if source_info is not None:
+            os.fchmod(descriptor, stat.S_IMODE(source_info.st_mode))
+            try:
+                os.fchown(descriptor, source_info.st_uid, source_info.st_gid)
+            except PermissionError:
+                current = os.fstat(descriptor)
+                if (current.st_uid, current.st_gid) != (source_info.st_uid, source_info.st_gid):
+                    raise
+        os.close(descriptor)
+        descriptor = -1
+        os.replace(temporary, path)
+        fsync_directory(parent)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def make_replay_state(uuid_bytes, segment_count, byte_count, record_count):
+    first = 1 if segment_count else 0
+    last = segment_count if segment_count else 0
+    return {
+        "uuid_bytes": uuid_bytes,
+        "flags": STATE_FLAG_RECOVERY if segment_count else 0,
+        "committed_segment": first,
+        "committed_offset": SEG_HEADER_LEN,
+        "committed_record_sequence": 0,
+        "first_live_segment": first,
+        "last_data_segment": last,
+        "active_segment": 0,
+        "recovery_first": first,
+        "recovery_last": last,
+        "next_segment": segment_count + 1,
+        "known_queue_size": record_count,
+        "bytes": byte_count,
+        "segments": segment_count,
+        "writer_segment": 0,
+        "writer_end": SEG_HEADER_LEN,
+        "writer_sequence": 0,
+        "writer_count": 0,
+        "delete_first": 0,
+        "delete_last": 0,
+        "delete_bytes": 0,
+        "delete_segments": 0,
+    }
+
+
+def write_segment_header(stream, uuid_bytes, segment_id):
+    header = bytearray(SEG_HEADER_LEN)
+    header[:8] = SEG_MAGIC
+    header[8:10] = pack_u16(STORE_VERSION)
+    header[10:12] = pack_u16(CODEC_VERSION)
+    header[12:28] = uuid_bytes
+    header[28:36] = pack_u64(segment_id)
+    header[36:44] = pack_u64(1)
+    header[44:48] = pack_u32(SEG_HEADER_LEN)
+    header[48:52] = pack_u32(crc32c(header[:48]))
+    stream.write(header)
+
+
+def write_clean_record(stream, payload, sequence):
+    header = bytearray(RECORD_HEADER_LEN)
+    header[:8] = REC_MAGIC
+    header[8:10] = pack_u16(STORE_VERSION)
+    header[12:16] = pack_u32(len(payload))
+    header[16:24] = pack_u64(sequence)
+    header[24:28] = pack_u32(crc32c(header[:24]))
+    payload_crc = crc32c(payload)
+    header[28:32] = pack_u32(payload_crc)
+    stream.write(header)
+    stream.write(payload)
+    return crc32c(header) ^ payload_crc
+
+
+def write_footer(stream, segment_id, record_count, rolling_crc):
+    footer = bytearray(FOOTER_LEN)
+    footer[:8] = FOOT_MAGIC
+    footer[8:16] = pack_u64(segment_id)
+    footer[16:24] = pack_u64(1)
+    footer[24:32] = pack_u64(record_count)
+    footer[32:40] = pack_u64(record_count)
+    footer[40:44] = pack_u32(rolling_crc)
+    footer[44:48] = pack_u32(crc32c(footer[:44]))
+    stream.write(footer)
+
+
+def choose_repair_uuid(report):
+    uuids = {
+        metadata["uuid_bytes"]
+        for metadata in report["_internal"]["metadata"].values()
+        if metadata is not None and metadata["header_valid"]
+    }
+    if len(uuids) > 1:
+        raise QueueToolError("repair refuses a store containing multiple queue UUIDs")
+    selected = report["_internal"]["state"]["selected"]
+    if selected is not None:
+        if uuids and selected["uuid_bytes"] not in uuids:
+            raise QueueToolError("selected state UUID does not match the recoverable segments")
+        return selected["uuid_bytes"]
+    if len(uuids) == 1:
+        return next(iter(uuids))
+    if not report["_internal"]["segments"]:
+        value = bytearray(os.urandom(16))
+        value[6] = (value[6] & 0x0F) | 0x40
+        value[8] = (value[8] & 0x3F) | 0x80
+        return bytes(value)
+    raise QueueToolError("repair requires exactly one unambiguous queue UUID")
+
+
+def build_repaired_store(report, mode, stage):
+    uuid_bytes = choose_repair_uuid(report)
+    os.mkdir(stage, 0o700)
+    source_info = os.lstat(report["queue_directory"])
+    os.chmod(stage, stat.S_IMODE(source_info.st_mode))
+    records_written = 0
+    segments_written = 0
+    bytes_written = 0
+    skipped = 0
+    repair_report = new_report(report["queue_directory"], "repair-build")
+    for source_item in report["_internal"]["segments"]:
+        metadata = report["_internal"]["metadata"].get(source_item["path"])
+        if metadata is not None and metadata["uuid_bytes"] != uuid_bytes:
+            raise QueueToolError(
+                "repair refuses segment {!r} because its UUID differs from the selected store UUID".format(
+                    source_item["name"]
+                )
+            )
+        target_stream = None
+        target_path = None
+        target_sequence = 0
+        target_rolling_crc = 0
+
+        def collect(record):
+            nonlocal target_stream, target_path, target_sequence, target_rolling_crc
+            if target_stream is None:
+                target_id = segments_written + 1
+                name = "segment-{:020d}.seg".format(target_id)
+                target_path = os.path.join(stage, name)
+                flags = (
+                    os.O_WRONLY
+                    | os.O_CREAT
+                    | os.O_EXCL
+                    | getattr(os, "O_CLOEXEC", 0)
+                    | getattr(os, "O_NOFOLLOW", 0)
+                )
+                descriptor = os.open(target_path, flags, 0o600)
+                target_stream = os.fdopen(descriptor, "wb")
+                write_segment_header(target_stream, uuid_bytes, target_id)
+            target_sequence += 1
+            target_rolling_crc ^= write_clean_record(target_stream, record["payload"], target_sequence)
+
+        try:
+            before_errors = repair_report["error_count"]
+            scan = scan_segment(source_item, metadata, repair_report, callback=collect)
+            skipped += scan["invalid_records"]
+            if mode == "rebuild" and repair_report["error_count"] != before_errors:
+                raise QueueToolError("rebuild requires clean segments; use salvage for damaged records")
+            if target_stream is None:
+                continue
+            segments_written += 1
+            records_written += target_sequence
+            write_footer(target_stream, segments_written, target_sequence, target_rolling_crc)
+            target_stream.flush()
+            os.fsync(target_stream.fileno())
+            target_stream.close()
+            target_stream = None
+            bytes_written += os.path.getsize(target_path)
+        finally:
+            if target_stream is not None:
+                target_stream.close()
+    state = make_replay_state(uuid_bytes, segments_written, bytes_written, records_written)
+    state_data = encode_state(state, 0) + encode_state(state, 1)
+    state_path = os.path.join(stage, "state")
+    descriptor = os.open(state_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
+    with os.fdopen(descriptor, "wb") as stream:
+        stream.write(state_data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    fsync_directory(stage)
+    staged_report = inspect_store(stage, full=True)
+    if staged_report["error_count"]:
+        raise QueueToolError("the staged repaired store did not pass validation")
+    return {
+        "uuid": uuid_text(uuid_bytes),
+        "segments_written": segments_written,
+        "records_written": records_written,
+        "skipped_corrupt_regions_or_records": skipped,
+        "bytes_written": bytes_written + STATE_FILE_LEN,
+    }
+
+
+def store_signature(report):
+    signatures = {report["queue_directory"]: file_signature(report["queue_directory"])}
+    state_path = os.path.join(report["queue_directory"], "state")
+    if os.path.exists(state_path):
+        signatures[state_path] = file_signature(state_path)
+    for item in report["_internal"]["segments"]:
+        signatures[item["path"]] = file_signature(item["path"])
+    return signatures
+
+
+def verify_store_unchanged(signatures):
+    for path, signature in signatures.items():
+        try:
+            current = file_signature(path)
+        except OSError as error:
+            raise QueueToolError("queue changed during repair planning: {}".format(error))
+        if current != signature:
+            raise QueueToolError("queue changed during repair planning: '{}'".format(path))
+
+
+def repair_state_slot(report, apply):
+    state = report["_internal"]["state"]
+    valid = [slot for slot in state["slots"] if slot["valid"]]
+    if len(valid) != 1:
+        raise QueueToolError("state-slot repair requires exactly one valid state slot")
+    semantic_errors = [
+        issue
+        for issue in report["issues"]
+        if issue["severity"] == "error" and issue["code"].startswith("state.")
+    ]
+    if semantic_errors:
+        raise QueueToolError("state-slot repair refuses a semantically invalid surviving state slot")
+    source = valid[0]
+    target_index = 1 - source["index"]
+    generation = (source["image"]["generation"] + 1) & UINT64_MASK
+    new_slot = encode_state(source["image"], generation)
+    state_path = os.path.join(report["queue_directory"], "state")
+    data, info = read_regular(state_path, "state file", STATE_FILE_LEN)
+    expected_source = source["raw"]
+    actual_source = data[source["index"] * STATE_SLOT_LEN: (source["index"] + 1) * STATE_SLOT_LEN]
+    if actual_source != expected_source:
+        raise QueueToolError("state changed during repair planning")
+    repaired = bytearray(data)
+    repaired[target_index * STATE_SLOT_LEN: (target_index + 1) * STATE_SLOT_LEN] = new_slot
+    plan = {
+        "mode": "state-slot",
+        "apply": apply,
+        "target_slot": target_index,
+        "new_generation": generation,
+        "preserves_commit_frontier": True,
+    }
+    if not apply:
+        return plan
+    backup = state_path + ".backup-" + timestamp_tag()
+    if os.path.exists(backup):
+        raise QueueToolError("backup already exists: '{}'".format(backup))
+    shutil.copy2(state_path, backup, follow_symlinks=False)
+    atomic_write(state_path, bytes(repaired), info)
+    plan["backup"] = backup
+    verified = inspect_store(report["queue_directory"], full=False)
+    if verified["_internal"]["state"]["selected"] is None:
+        raise QueueToolError("state-slot repair verification failed; backup remains at '{}'".format(backup))
+    return plan
+
+
+def repair_rebuild(report, mode, apply):
+    if mode == "rebuild" and report["error_count"]:
+        non_state = [issue for issue in report["issues"] if not issue["code"].startswith("state.")]
+        if non_state:
+            raise QueueToolError("rebuild requires clean segment data; use salvage for corruption")
+    if not apply:
+        uuid_bytes = choose_repair_uuid(report)
+        scans = report["_internal"]["scans"].values()
+        projected = {
+            "uuid": uuid_text(uuid_bytes),
+            "segments_written": sum(1 for scan in scans if scan["valid_records"]),
+            "records_written": sum(scan["valid_records"] for scan in scans),
+            "skipped_corrupt_regions_or_records": sum(scan["invalid_records"] for scan in scans),
+        }
+        return {
+            "mode": mode,
+            "apply": False,
+            "replays_all_recovered_records": True,
+            "possible_duplicates": True,
+            "projected_result": projected,
+        }
+    signatures = store_signature(report)
+    parent = os.path.dirname(report["queue_directory"])
+    base = os.path.basename(report["queue_directory"])
+    stage = tempfile.mkdtemp(prefix=".{}-stage-".format(base), dir=parent)
+    os.rmdir(stage)
+    try:
+        result = build_repaired_store(report, mode, stage)
+        plan = {
+            "mode": mode,
+            "apply": apply,
+            "replays_all_recovered_records": True,
+            "possible_duplicates": True,
+            "staged_result": result,
+        }
+        verify_store_unchanged(signatures)
+        backup = report["queue_directory"] + ".backup-" + timestamp_tag()
+        if os.path.exists(backup):
+            raise QueueToolError("backup already exists: '{}'".format(backup))
+        os.rename(report["queue_directory"], backup)
+        try:
+            os.rename(stage, report["queue_directory"])
+            stage = None
+            fsync_directory(parent)
+        except Exception:
+            os.rename(backup, report["queue_directory"])
+            fsync_directory(parent)
+            raise
+        plan["backup"] = backup
+        verified = inspect_store(report["queue_directory"], full=True)
+        if verified["error_count"]:
+            raise QueueToolError(
+                "installed repaired store failed validation; original backup remains at '{}'".format(backup))
+        return plan
+    finally:
+        if stage is not None and os.path.isdir(stage):
+            shutil.rmtree(stage)
+
+
+def run_repair(queue_dir, mode, apply, offline):
+    if mode not in ("state-slot", "rebuild", "salvage"):
+        raise QueueToolError("unknown repair mode '{}'".format(mode))
+    if apply and not offline:
+        raise QueueToolError("--apply requires --offline to acknowledge that rsyslog is stopped")
+    report = inspect_store(queue_dir, full=True)
+    if mode == "state-slot":
+        plan = repair_state_slot(report, apply)
+    else:
+        plan = repair_rebuild(report, mode, apply)
+    return {"queue_directory": report["queue_directory"], "repair": plan}
+
+
+def print_repair(result, as_json=False):
+    if as_json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return
+    repair = result["repair"]
+    print("Queue: {}".format(result["queue_directory"]))
+    print("Repair mode: {}".format(repair["mode"]))
+    print("Action: {}".format("applied" if repair["apply"] else "plan only; no files changed"))
+    result_name = "staged_result" if "staged_result" in repair else "projected_result"
+    if result_name in repair:
+        staged = repair[result_name]
+        print(
+            "Recovered: {} records in {} segments; skipped {} corrupt region(s) or record(s)".format(
+                staged["records_written"],
+                staged["segments_written"],
+                staged["skipped_corrupt_regions_or_records"],
+            )
+        )
+        print("All recovered records will replay; duplicates are possible.")
+    if "backup" in repair:
+        print("Backup: {}".format(repair["backup"]))
+
+
+def guided_tui(queue_dir=None):
+    print("rsyslog segmentedDisk queue maintenance")
+    if queue_dir is None:
+        queue_dir = input("Queue .segq directory: ").strip()
+    while True:
+        print("\n1) Status\n2) Check\n3) Export JSONL\n4) Repair\n5) Quit")
+        choice = input("Selection: ").strip()
+        if choice == "1" or choice == "2":
+            report = inspect_store(queue_dir, full=choice == "2")
+            print_human_report(report)
+        elif choice == "3":
+            output = input("Output file ('-' for stdout): ").strip() or "-"
+            scope = input("Scope [live/all] (live): ").strip() or "live"
+            if scope not in ("live", "all"):
+                print("Scope must be 'live' or 'all'.", file=sys.stderr)
+                continue
+            salvage = input("Salvage valid records despite corruption? [y/N]: ").strip().lower() == "y"
+            export_args = argparse.Namespace(queue_dir=queue_dir, output=output, scope=scope, salvage=salvage)
+            export_records(export_args)
+        elif choice == "4":
+            mode = input("Repair mode [state-slot/rebuild/salvage]: ").strip()
+            result = run_repair(queue_dir, mode, False, False)
+            print_repair(result)
+            confirmation = input("Type the exact queue path to apply, or press Enter to cancel: ").strip()
+            if confirmation:
+                expected = os.path.abspath(queue_dir)
+                if os.path.abspath(confirmation) != expected:
+                    print("Confirmation did not match; repair cancelled.", file=sys.stderr)
+                else:
+                    print_repair(run_repair(queue_dir, mode, True, True))
+        elif choice == "5":
+            return 0
+        else:
+            print("Unknown selection.", file=sys.stderr)
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="rsyslog-segqueue", description="Maintain rsyslog segmentedDisk queue stores while rsyslog is stopped."
+    )
+    parser.add_argument("--version", action="version", version="%(prog)s format-v2")
+    subparsers = parser.add_subparsers(dest="command")
+    for name in ("status", "check"):
+        subparser = subparsers.add_parser(name, help="{} a segmentedDisk store".format(name))
+        subparser.add_argument("queue_dir")
+        subparser.add_argument("--json", action="store_true", help="emit a machine-readable report")
+    export_parser = subparsers.add_parser("export", help="export queue records as JSON Lines")
+    export_parser.add_argument("queue_dir")
+    export_parser.add_argument("--output", default="-", help="output path, or '-' for stdout")
+    export_parser.add_argument("--scope", choices=("live", "all"), default="live")
+    export_parser.add_argument("--salvage", action="store_true", help="export valid records despite corruption")
+    repair_parser = subparsers.add_parser("repair", help="plan or apply an offline repair")
+    repair_parser.add_argument("queue_dir")
+    repair_parser.add_argument("--mode", choices=("state-slot", "rebuild", "salvage"), required=True)
+    repair_parser.add_argument("--apply", action="store_true", help="apply the otherwise read-only repair plan")
+    repair_parser.add_argument("--offline", action="store_true", help="acknowledge that rsyslog is stopped")
+    repair_parser.add_argument("--json", action="store_true", help="emit a machine-readable plan or result")
+    tui_parser = subparsers.add_parser("tui", help="open the guided terminal interface")
+    tui_parser.add_argument("queue_dir", nargs="?")
+    return parser
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command is None:
+        parser.print_help(sys.stderr)
+        return 1
+    try:
+        if args.command in ("status", "check"):
+            report = inspect_store(args.queue_dir, full=args.command == "check")
+            if args.json:
+                print(json.dumps(public_report(report), indent=2, sort_keys=True))
+            else:
+                print_human_report(report)
+            return 2 if report["error_count"] else 0
+        if args.command == "export":
+            return export_records(args)
+        if args.command == "repair":
+            result = run_repair(args.queue_dir, args.mode, args.apply, args.offline)
+            print_repair(result, args.json)
+            return 0
+        if args.command == "tui":
+            return guided_tui(args.queue_dir)
+    except (QueueToolError, OSError) as error:
+        print("rsyslog-segqueue: error: {}".format(error), file=sys.stderr)
+        return 1
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
