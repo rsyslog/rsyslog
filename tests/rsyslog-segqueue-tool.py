@@ -163,7 +163,19 @@ def main():
         os.chmod(os.path.join(rebuild_queue, "state"), 0o640)
         os.chmod(os.path.join(rebuild_queue, "segment-00000000000000000001.seg"), 0o640)
         os.unlink(os.path.join(rebuild_queue, "state"))
-        rebuilt = TOOL.run_repair(rebuild_queue, "rebuild", True, True)
+        original_chown = TOOL.os.chown
+        original_fchown = TOOL.os.fchown
+
+        def deny_chown(*_args):
+            raise PermissionError("simulated ownership change denial")
+
+        TOOL.os.chown = deny_chown
+        TOOL.os.fchown = deny_chown
+        try:
+            rebuilt = TOOL.run_repair(rebuild_queue, "rebuild", True, True)
+        finally:
+            TOOL.os.chown = original_chown
+            TOOL.os.fchown = original_fchown
         check(os.path.isdir(rebuilt["repair"]["backup"]), "rebuild backup was not retained")
         check(TOOL.inspect_store(rebuild_queue, full=True)["error_count"] == 0, "rebuilt store is invalid")
         check(stat.S_IMODE(os.stat(rebuild_queue).st_mode) == 0o750, "rebuild changed the queue directory mode")

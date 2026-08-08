@@ -197,6 +197,24 @@ def safe_lstat_regular(path, description):
     return info
 
 
+def preserve_path_ownership(path, uid, gid):
+    try:
+        os.chown(path, uid, gid)
+    except PermissionError as error:
+        current = os.lstat(path)
+        if (current.st_uid, current.st_gid) != (uid, gid):
+            raise QueueToolError("cannot preserve ownership of '{}': {}".format(path, error))
+
+
+def preserve_fd_ownership(descriptor, path, uid, gid):
+    try:
+        os.fchown(descriptor, uid, gid)
+    except PermissionError as error:
+        current = os.fstat(descriptor)
+        if (current.st_uid, current.st_gid) != (uid, gid):
+            raise QueueToolError("cannot preserve ownership of '{}': {}".format(path, error))
+
+
 def read_regular(path, description, exact_size=None):
     info = safe_lstat_regular(path, description)
     if exact_size is not None and info.st_size != exact_size:
@@ -1356,7 +1374,7 @@ def build_repaired_store(report, mode, stage):
     uuid_bytes = choose_repair_uuid(report)
     os.mkdir(stage, 0o700)
     source_info = os.lstat(report["queue_directory"])
-    os.chown(stage, source_info.st_uid, source_info.st_gid)
+    preserve_path_ownership(stage, source_info.st_uid, source_info.st_gid)
     os.chmod(stage, stat.S_IMODE(source_info.st_mode))
     records_written = 0
     segments_written = 0
@@ -1391,7 +1409,9 @@ def build_repaired_store(report, mode, stage):
                 )
                 descriptor = os.open(target_path, flags, 0o600)
                 target_info = os.lstat(source_item["path"])
-                os.fchown(descriptor, target_info.st_uid, target_info.st_gid)
+                preserve_fd_ownership(
+                    descriptor, target_path, target_info.st_uid, target_info.st_gid
+                )
                 os.fchmod(descriptor, stat.S_IMODE(target_info.st_mode))
                 target_stream = os.fdopen(descriptor, "wb")
                 write_segment_header(target_stream, uuid_bytes, target_id)
@@ -1432,7 +1452,7 @@ def build_repaired_store(report, mode, stage):
             else source_info
         )
         state_mode = 0o600
-    os.fchown(descriptor, state_info.st_uid, state_info.st_gid)
+    preserve_fd_ownership(descriptor, state_path, state_info.st_uid, state_info.st_gid)
     os.fchmod(descriptor, state_mode)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(state_data)
