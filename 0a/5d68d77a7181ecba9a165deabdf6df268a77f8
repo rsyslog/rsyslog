@@ -1,0 +1,19 @@
+.github/workflows/syslog_parser_fuzz.yml
+  s_0715b227193d07::t_d4c149c1873ea3 36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0a5d68d77a7181ecba9a165deabdf6df268a77f8",
+  "prompts": {},
+  "sessions": {
+    "s_0715b227193d07": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe0a2-ce4c-7fc0-ade1-6e97f3c22a5a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
