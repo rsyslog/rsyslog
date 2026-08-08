@@ -1166,6 +1166,217 @@ finalize_it:
     RETiRet;
 }
 
+#ifdef ENABLE_FUZZING
+typedef struct tcps_sess_fuzz_capture_s {
+    size_t messages;
+    size_t bytes;
+    size_t max_message_size;
+    uint64_t hash;
+    sbool failed;
+} tcps_sess_fuzz_capture_t;
+
+static sbool tcps_sess_fuzz_initialized;
+static sbool tcps_sess_fuzz_class_initialized;
+
+static rsRetVal tcps_sessFuzzSubmit(tcps_sess_t *const session, uchar *const message, const int message_len) {
+    tcps_sess_fuzz_capture_t *const capture = session->pUsr;
+
+    if (capture == NULL || message == NULL || message_len <= 0 || (size_t)message_len > capture->max_message_size ||
+        capture->messages == SIZE_MAX || capture->bytes > SIZE_MAX - (size_t)message_len) {
+        if (capture != NULL) capture->failed = RSTRUE;
+        return RS_RET_ERR;
+    }
+
+    ++capture->messages;
+    capture->bytes += (size_t)message_len;
+    for (int i = 0; i < message_len; ++i) {
+        capture->hash = (capture->hash * 33U) ^ message[i];
+    }
+    return RS_RET_OK;
+}
+
+static size_t tcps_sessFuzzNextChunk(const uint8_t chunk_control, uint32_t *const state, const size_t remaining) {
+    size_t chunk_size;
+
+    switch (chunk_control >> 6) {
+        case 0:
+            chunk_size = remaining;
+            break;
+        case 1:
+            chunk_size = 1;
+            break;
+        case 2:
+            chunk_size = 1U + (chunk_control & 0x3fU);
+            break;
+        default:
+            *state ^= *state << 13;
+            *state ^= *state >> 17;
+            *state ^= *state << 5;
+            chunk_size = 1U + (*state & 0x3fU);
+            break;
+    }
+
+    return chunk_size < remaining ? chunk_size : remaining;
+}
+
+rsRetVal tcps_sessFuzzInit(void) {
+    DEFiRet;
+
+    if (tcps_sess_fuzz_initialized) FINALIZE;
+    if (runConf != NULL) ABORT_FINALIZE(RS_RET_ERR);
+
+    CHKiRet(objGetObjInterface(&obj));
+    CHKiRet(tcps_sessClassInit(NULL));
+    tcps_sess_fuzz_class_initialized = RSTRUE;
+    CHKiRet(rsconfConstruct(&runConf));
+    tcps_sess_fuzz_initialized = RSTRUE;
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (runConf != NULL) rsconfDestruct(&runConf);
+        if (tcps_sess_fuzz_class_initialized) {
+            tcps_sessClassExit();
+            tcps_sess_fuzz_class_initialized = RSFALSE;
+        }
+    }
+    RETiRet;
+}
+
+void tcps_sessFuzzExit(void) {
+    if (!tcps_sess_fuzz_initialized) return;
+
+    if (runConf != NULL) rsconfDestruct(&runConf);
+    tcps_sessClassExit();
+    tcps_sess_fuzz_class_initialized = RSFALSE;
+    tcps_sess_fuzz_initialized = RSFALSE;
+}
+
+rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
+    static const int max_line_sizes[] = {32, 128, 512, 2048};
+    static const int additional_delimiters[] = {TCPSRV_NO_ADDTL_DELIMITER, 0, '|', '\r'};
+    static const uint64_t expansion_ratios[] = {0, 2, 8, 64};
+    static const uint64_t decompressed_limits[] = {64, 4096, 65536, 1048576};
+    static const uint64_t zstd_window_limits[] = {0, 65536, 262144, 2097152};
+    #ifdef FEATURE_REGEXP
+    static const char *const start_regexes[] = {
+        "^<[0-9]{1,3}>",
+        "^<[0-9]{1,3}>[A-Z][a-z][a-z] [ 0-9][0-9]",
+        "^BEGIN:",
+    };
+    #endif
+    tcps_sess_fuzz_capture_t capture = {0};
+    tcpLstnParams_t params = {0};
+    tcpLstnPortList_t listener = {0};
+    tcpsrv_t server = {0};
+    tcps_sess_t *session = NULL;
+    rsRetVal input_ret = RS_RET_OK;
+    sbool regex_initialized = RSFALSE;
+    sbool regex_active = RSFALSE;
+    sbool atomic_helpers_initialized = RSFALSE;
+    uint32_t chunk_state;
+    size_t offset;
+    size_t processed_bytes = 0;
+    DEFiRet;
+
+    if (!tcps_sess_fuzz_initialized || runConf == NULL) ABORT_FINALIZE(RS_RET_ERR);
+    if (size < 4) FINALIZE;
+
+    const uint8_t mode = data[0] & 0x03U;
+    const sbool use_regex = (data[0] & 0x04U) != 0;
+    const int max_line = max_line_sizes[data[1] & 0x03U];
+
+    runConf->globals.iMaxLine = max_line;
+    params.pszInputName = UCHAR_CONSTANT("fuzz-imtcp");
+    params.bSuppOctetFram = (data[0] & 0x08U) != 0;
+    params.bMultiLine = (data[0] & 0x10U) != 0;
+    params.bSPFramingFix = (data[0] & 0x80U) != 0;
+
+    server.pszOrigin = UCHAR_CONSTANT("fuzz-imtcp-session");
+    server.addtlFrameDelim = additional_delimiters[(data[1] >> 2) & 0x03U];
+    server.maxFrameSize = 200000;
+    server.bDisableLFDelim = (data[0] & 0x40U) != 0;
+    server.discardTruncatedMsg = (data[0] & 0x20U) != 0;
+
+    listener.cnf_params = &params;
+    listener.pSrv = &server;
+    listener.compressionMode = mode == 1 || mode == 2 ? TCPSRV_COMPRESS_STREAM_ALWAYS : TCPSRV_COMPRESS_NEVER;
+    listener.compressionDriver = mode == 2 ? TCPSRV_COMPRESS_DRIVER_ZSTD : TCPSRV_COMPRESS_DRIVER_ZLIB;
+    listener.compressionMaxExpansionRatio = expansion_ratios[(data[3] >> 1) & 0x03U];
+    listener.compressionMaxDecompressedBytesPerReceive = decompressed_limits[(data[3] >> 3) & 0x03U];
+    listener.compressionMaxTotalZstdWindowBytes = zstd_window_limits[(data[3] >> 5) & 0x03U];
+    INIT_ATOMIC_HELPER_MUT64(listener.mutCompressionZstdWindow);
+    atomic_helpers_initialized = RSTRUE;
+    STATSCOUNTER_INIT(listener.ctrSubmit, listener.mutCtrSubmit);
+    STATSCOUNTER_INIT(listener.ctrBytesRcvd, listener.mutCtrBytesRcvd);
+    STATSCOUNTER_INIT(listener.ctrBytesDecompressed, listener.mutCtrBytesDecompressed);
+    STATSCOUNTER_INIT(listener.ctrDecompressErr, listener.mutCtrDecompressErr);
+
+    #ifdef FEATURE_REGEXP
+    if (use_regex) {
+        const size_t regex_index = ((data[1] >> 4) & 0x03U) % (sizeof(start_regexes) / sizeof(start_regexes[0]));
+        const int regex_ret = regexp.regcomp(&listener.start_preg, start_regexes[regex_index], REG_EXTENDED);
+        if (regex_ret != 0) ABORT_FINALIZE(RS_RET_ERR);
+        listener.bHasStartRegex = RSTRUE;
+        regex_initialized = RSTRUE;
+        regex_active = RSTRUE;
+    }
+    #else
+    (void)use_regex;
+    #endif
+
+    CHKiRet(tcps_sessConstruct(&session));
+    session->pSrv = &server;
+    session->pLstnInfo = &listener;
+    session->bSuppOctetFram = params.bSuppOctetFram;
+    session->bSPFramingFix = params.bSPFramingFix;
+    session->compressionMode = listener.compressionMode;
+    session->compressionDriver = listener.compressionDriver;
+    session->compressionMaxExpansionRatio = listener.compressionMaxExpansionRatio;
+    session->compressionMaxDecompressedBytesPerReceive = listener.compressionMaxDecompressedBytesPerReceive;
+    session->compressionMaxTotalZstdWindowBytes = listener.compressionMaxTotalZstdWindowBytes;
+    session->tlsProbeDone = RSTRUE;
+    capture.max_message_size = regex_active ? (size_t)max_line * 2U : (size_t)max_line;
+    capture.hash = 5381U;
+    session->pUsr = &capture;
+    session->DoSubmitMessage = tcps_sessFuzzSubmit;
+    CHKiRet(tcps_sessConstructFinalize(session));
+
+    chunk_state = 0x9e3779b9U ^ data[2];
+    for (offset = 4; offset < size;) {
+        const size_t chunk_size = tcps_sessFuzzNextChunk(data[2], &chunk_state, size - offset);
+        input_ret = DataRcvd(session, (char *)data + offset, chunk_size);
+        processed_bytes += chunk_size;
+        offset += chunk_size;
+        if (input_ret != RS_RET_OK) break;
+    }
+
+    if ((data[3] & 0x01U) != 0 && input_ret == RS_RET_OK) input_ret = PrepareClose(session);
+    if (input_ret != RS_RET_OK && !session->compressedStreamFailed) ABORT_FINALIZE(input_ret);
+    if (capture.failed) ABORT_FINALIZE(RS_RET_ERR);
+
+    const size_t output_budget = session->compressionMode == TCPSRV_COMPRESS_STREAM_ALWAYS
+                                     ? (size_t)session->compressionTotalBytesOut
+                                     : processed_bytes;
+    if (capture.bytes > output_budget || capture.messages > output_budget) ABORT_FINALIZE(RS_RET_ERR);
+
+finalize_it:
+    if (session != NULL) tcps_sessDestruct(&session);
+    #ifdef FEATURE_REGEXP
+    if (regex_initialized) regexp.regfree(&listener.start_preg);
+    #endif
+    if (atomic_helpers_initialized) {
+        if (ATOMIC_LOAD_uint64(&listener.compressionZstdWindowBytesInUse, &listener.mutCompressionZstdWindow) != 0)
+            iRet = RS_RET_ERR;
+        DESTROY_ATOMIC_HELPER_MUT64(listener.mutCtrDecompressErr);
+        DESTROY_ATOMIC_HELPER_MUT64(listener.mutCtrBytesDecompressed);
+        DESTROY_ATOMIC_HELPER_MUT64(listener.mutCtrBytesRcvd);
+        DESTROY_ATOMIC_HELPER_MUT64(listener.mutCtrSubmit);
+        DESTROY_ATOMIC_HELPER_MUT64(listener.mutCompressionZstdWindow);
+    }
+    RETiRet;
+}
+#endif
+
 
 /* queryInterface function
  * rgerhards, 2008-02-29
