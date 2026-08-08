@@ -159,7 +159,7 @@ def main():
 
         rebuild_queue = os.path.join(root, "rebuild.segq")
         create_store(rebuild_queue)
-        os.chmod(rebuild_queue, 0o750)
+        os.chmod(rebuild_queue, 0o750)  # nosec B103 - intentional queue directory permissions
         os.chmod(os.path.join(rebuild_queue, "state"), 0o640)
         os.chmod(os.path.join(rebuild_queue, "segment-00000000000000000001.seg"), 0o640)
         os.unlink(os.path.join(rebuild_queue, "state"))
