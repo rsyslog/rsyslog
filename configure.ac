@@ -1034,10 +1034,14 @@ AC_ARG_ENABLE(usertools,
         [enable_usertools=no]
 )
 AM_CONDITIONAL(ENABLE_USERTOOLS, test x$enable_usertools = xyes)
+enable_segqueue_tool=no
 if test x$enable_usertools = xyes; then
-        AC_PATH_PROG([PYTHON3], [python3])
-        AS_IF([test -z "$PYTHON3"], [AC_MSG_ERROR([python3 is required when end user tools are enabled])])
+	AC_PATH_PROG([PYTHON3], [python3], [no])
+	AS_IF([test x$PYTHON3 = xno],
+		[AC_MSG_WARN([python3 not found; rsyslog-segqueue will not be installed or tested])],
+		[enable_segqueue_tool=yes])
 fi
+AM_CONDITIONAL(ENABLE_SEGQUEUE_TOOL, test x$enable_segqueue_tool = xyes)
 
 
 # MySQL support

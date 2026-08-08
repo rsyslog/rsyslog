@@ -39,9 +39,10 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
+TESTS_SEGQUEUE_TOOL = rsyslog-segqueue-tool.py rsyslog-segqueue-runtime.sh
+EXTRA_DIST += $(TESTS_SEGQUEUE_TOOL)
+
 TESTS_SEGMENTED_DISK_QUEUE = \
-	rsyslog-segqueue-tool.py \
-	rsyslog-segqueue-runtime.sh \
 	segmented-diskqueue-config.sh \
 	segmented-diskqueue.sh \
 	segmented-diskqueue-restart.sh \
@@ -2819,6 +2820,9 @@ if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
+if ENABLE_SEGQUEUE_TOOL
+TESTS += $(TESTS_SEGQUEUE_TOOL)
+endif
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE_IMPSTATS)
 endif
