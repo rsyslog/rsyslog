@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -93,11 +94,19 @@ def main():
     check(TOOL.crc32c(b"123456789") == 0xE3069283, "CRC32C canonical vector failed")
     sentinel_values = TOOL.decode_codec(
         tlv(9, TOOL.TLV_BYTES, b"unparsed")
+        + struct.pack(">HBBI", 99, TOOL.TLV_BYTES, 0, 2)
+        + b"\x00\xff"
         + tlv(23, TOOL.TLV_U32, struct.pack(">I", TOOL.UINT32_UNSET))
     )
     sentinel_json = TOOL.message_json(sentinel_values)
     check(sentinel_json["msg"] == "unparsed", "unset message offset did not preserve the raw message")
     check(sentinel_json["msg_offset_unset"], "unset message offset was not marked")
+    check(
+        sentinel_json["unknown_optional_tlvs"]
+        == [{"field": 99, "type": TOOL.TLV_BYTES, "flags": 0,
+             "value": {"encoding": "base64", "data": "AP8="}}],
+        "unknown optional TLV was not exported losslessly",
+    )
     root = tempfile.mkdtemp(prefix="rsyslog-segqueue-test-")
     try:
         queue = os.path.join(root, "mainq.segq")
@@ -150,10 +159,35 @@ def main():
 
         rebuild_queue = os.path.join(root, "rebuild.segq")
         create_store(rebuild_queue)
+        os.chmod(rebuild_queue, 0o750)
+        os.chmod(os.path.join(rebuild_queue, "state"), 0o640)
+        os.chmod(os.path.join(rebuild_queue, "segment-00000000000000000001.seg"), 0o640)
         os.unlink(os.path.join(rebuild_queue, "state"))
         rebuilt = TOOL.run_repair(rebuild_queue, "rebuild", True, True)
         check(os.path.isdir(rebuilt["repair"]["backup"]), "rebuild backup was not retained")
         check(TOOL.inspect_store(rebuild_queue, full=True)["error_count"] == 0, "rebuilt store is invalid")
+        check(stat.S_IMODE(os.stat(rebuild_queue).st_mode) == 0o750, "rebuild changed the queue directory mode")
+        rebuilt_segment = os.path.join(rebuild_queue, "segment-00000000000000000001.seg")
+        backup_segment = os.path.join(rebuilt["repair"]["backup"], "segment-00000000000000000001.seg")
+        check(
+            (os.stat(rebuilt_segment).st_uid, os.stat(rebuilt_segment).st_gid,
+             stat.S_IMODE(os.stat(rebuilt_segment).st_mode))
+            == (os.stat(backup_segment).st_uid, os.stat(backup_segment).st_gid, 0o640),
+            "rebuild did not preserve segment ownership and mode",
+        )
+
+        mismatch_queue = os.path.join(root, "mismatch.segq")
+        create_store(mismatch_queue)
+        mismatch_segment = os.path.join(mismatch_queue, "segment-00000000000000000001.seg")
+        with open(mismatch_segment, "r+b") as stream:
+            stream.seek(12)
+            stream.write(b"different-uuid!!")
+        try:
+            TOOL.run_repair(mismatch_queue, "salvage", True, True)
+        except TOOL.QueueToolError as error:
+            check(mismatch_segment in str(error), "UUID mismatch did not name the segment path")
+        else:
+            raise AssertionError("UUID mismatch salvage was not refused")
 
         slot_queue = os.path.join(root, "slot.segq")
         create_store(slot_queue)

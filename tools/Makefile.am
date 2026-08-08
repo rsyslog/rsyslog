@@ -81,8 +81,7 @@ endif # if OS_LINUX
 EXTRA_DIST = $(man5_MANS) $(man8_MANS) \
 	rscryutil.rst \
 	recover_qi.pl \
-	rsyslog-segqueue.rst \
-	rsyslog-segqueue.1
+	rsyslog-segqueue.rst
 
 if ENABLE_FUZZING
 noinst_PROGRAMS = fuzz_rsyslog_message
@@ -113,6 +112,7 @@ rsyslog-segqueue.1: rsyslog-segqueue.rst
 if ENABLE_GENERATE_MAN_PAGES
 man1_MANS += rsyslog-segqueue.1
 CLEANFILES += rsyslog-segqueue.1
+EXTRA_DIST += rsyslog-segqueue.1
 endif
 endif
 if ENABLE_OMMONGODB

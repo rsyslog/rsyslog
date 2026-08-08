@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 """Inspect, export, and repair rsyslog segmentedDisk queue stores."""
 
 import argparse
@@ -647,6 +648,7 @@ def decode_codec(payload):
     position = 0
     seen = set()
     values = {}
+    unknown_optional = []
     while position < len(payload):
         if len(payload) - position < 8:
             raise ValueError("truncated TLV header at payload offset {}".format(position))
@@ -664,6 +666,17 @@ def decode_codec(payload):
         if expected is None:
             if flags & TLV_CRITICAL:
                 raise ValueError("unknown critical TLV field {}".format(field))
+            unknown_optional.append(
+                {
+                    "field": field,
+                    "type": field_type,
+                    "flags": flags,
+                    "value": {
+                        "encoding": "base64",
+                        "data": base64.b64encode(value).decode("ascii"),
+                    },
+                }
+            )
             continue
         expected_type, expected_length = expected
         if field_type != expected_type or (expected_length is not None and length != expected_length):
@@ -695,6 +708,8 @@ def decode_codec(payload):
         raise ValueError("msg_offset exceeds rawmsg length")
     if 24 in values and values[24] != UINT32_UNSET and values[24] > len(raw):
         raise ValueError("after_pri_offset exceeds rawmsg length")
+    if unknown_optional:
+        values["unknown_optional_tlvs"] = unknown_optional
     return values
 
 
@@ -708,6 +723,9 @@ def json_bytes(value):
 def message_json(values):
     output = {}
     for field, value in values.items():
+        if field == "unknown_optional_tlvs":
+            output[field] = value
+            continue
         name = FIELD_NAMES[field]
         if field in TEXT_FIELDS:
             output[name] = json_bytes(value)
@@ -1338,6 +1356,7 @@ def build_repaired_store(report, mode, stage):
     uuid_bytes = choose_repair_uuid(report)
     os.mkdir(stage, 0o700)
     source_info = os.lstat(report["queue_directory"])
+    os.chown(stage, source_info.st_uid, source_info.st_gid)
     os.chmod(stage, stat.S_IMODE(source_info.st_mode))
     records_written = 0
     segments_written = 0
@@ -1349,7 +1368,7 @@ def build_repaired_store(report, mode, stage):
         if metadata is not None and metadata["uuid_bytes"] != uuid_bytes:
             raise QueueToolError(
                 "repair refuses segment {!r} because its UUID differs from the selected store UUID".format(
-                    source_item["name"]
+                    source_item["path"]
                 )
             )
         target_stream = None
@@ -1371,6 +1390,9 @@ def build_repaired_store(report, mode, stage):
                     | getattr(os, "O_NOFOLLOW", 0)
                 )
                 descriptor = os.open(target_path, flags, 0o600)
+                target_info = os.lstat(source_item["path"])
+                os.fchown(descriptor, target_info.st_uid, target_info.st_gid)
+                os.fchmod(descriptor, stat.S_IMODE(target_info.st_mode))
                 target_stream = os.fdopen(descriptor, "wb")
                 write_segment_header(target_stream, uuid_bytes, target_id)
             target_sequence += 1
@@ -1399,6 +1421,19 @@ def build_repaired_store(report, mode, stage):
     state_data = encode_state(state, 0) + encode_state(state, 1)
     state_path = os.path.join(stage, "state")
     descriptor = os.open(state_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
+    source_state_path = os.path.join(report["queue_directory"], "state")
+    try:
+        state_info = safe_lstat_regular(source_state_path, "state file")
+        state_mode = stat.S_IMODE(state_info.st_mode)
+    except QueueToolError:
+        state_info = (
+            os.lstat(report["_internal"]["segments"][0]["path"])
+            if report["_internal"]["segments"]
+            else source_info
+        )
+        state_mode = 0o600
+    os.fchown(descriptor, state_info.st_uid, state_info.st_gid)
+    os.fchmod(descriptor, state_mode)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(state_data)
         stream.flush()
