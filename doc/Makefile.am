@@ -917,6 +917,8 @@ EXTRA_DIST = \
     source/reference/parameters/mmkubernetes-token.rst \
     source/reference/parameters/mmkubernetes-tokenfile.rst \
     source/reference/parameters/mmnormalize-allowregex.rst \
+    source/reference/parameters/mmnormalize-debug.rst \
+    source/reference/parameters/mmnormalize-debugfile.rst \
     source/reference/parameters/mmnormalize-path.rst \
     source/reference/parameters/mmnormalize-rule.rst \
     source/reference/parameters/mmnormalize-rulebase.rst \
