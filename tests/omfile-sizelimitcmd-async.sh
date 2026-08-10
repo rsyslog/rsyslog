@@ -1,24 +1,22 @@
 #!/bin/bash
-# added 2026-08-10 by Owen Rotenberg, released under ASL 2.0
+# added 2026-08-10 by owen-rote, released under ASL 2.0
 #
-# Intent: guard the invariant that an omfile stream stays usable after a
-# rotation.sizeLimit rotation when asyncWriting is enabled.
+# intent: an omfile stream must stay usable after a rotation.sizeLimit rotation
+# with asyncWriting enabled.
 #
-# Regression guard: doSizeLimitProcessing() used to reach stopWriter() via
-# strmCloseFile(), which joined the stream's async writer thread. Nothing ever
-# recreated it, so the stream kept accepting buffers into a queue with no
-# consumer. The first buffer handed over after the rotation was accepted and the
-# next one blocked forever on the notFull condition, wedging the queue worker
-# that drives the action. Output stopped after the first rotation and shutdown
-# hung.
+# regression guard: doSizeLimitProcessing() reached stopWriter() via
+# strmCloseFile(), joining the stream's async writer thread. nothing recreated
+# it, so the stream kept queueing buffers with no consumer. the first buffer
+# after the rotation was accepted, the next blocked on notFull forever and
+# wedged the queue worker driving the action. output stopped after the first
+# rotation and shutdown hung.
 #
-# Oracle: seq_check over the concatenated rotated files. Every injected message
-# must be present exactly once, which can only happen if the stream keeps
-# writing across all rotations. The wedge fails this deterministically: it also
-# stalls the queue, so shutdown_when_empty/wait_shutdown time out first. No
-# sleeps or thresholds are involved; the testbench timeoutGuard remains the hang
-# backstop. This mirrors omfile-sizelimitcmd-many.sh, which covers the same
-# rotation path with the default synchronous writer.
+# oracle: seq_check over the concatenated rotated files. every injected message
+# must appear exactly once, which requires the stream to keep writing across all
+# rotations. the wedge also stalls the queue, so shutdown_when_empty /
+# wait_shutdown time out first. no sleeps, no thresholds; the testbench
+# timeoutGuard is the hang backstop. mirrors omfile-sizelimitcmd-many.sh, which
+# covers the same rotation path with the default synchronous writer.
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50000
 echo "mv -f $RSYSLOG_DYNNAME.channel.log.prev.9 $RSYSLOG_DYNNAME.channel.log.prev.10 2>/dev/null
