@@ -1,0 +1,30 @@
+doc/Makefile.am
+  h_95716f3de0caf5 920-921
+doc/ai/module_map.yaml
+  h_95716f3de0caf5 151-169
+doc/source/configuration/modules/mmnormalize.rst
+  h_95716f3de0caf5 1-6,17-23,105-112,124-125
+doc/source/configuration/modules/pmnormalize.rst
+  h_95716f3de0caf5 1-6,17-22,103-119,135-153
+doc/source/reference/parameters/mmnormalize-debug.rst
+  h_95716f3de0caf5 1-62
+doc/source/reference/parameters/mmnormalize-debugfile.rst
+  h_95716f3de0caf5 1-66
+plugins/mmnormalize/mmnormalize.c
+  h_95716f3de0caf5 67-74
+plugins/pmnormalize/pmnormalize.c
+  h_95716f3de0caf5 50-56
+tests/Makefile.am
+  h_95716f3de0caf5 3466,3471,3482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "17168aa8f3956d2773e9bf2633f5b9cf21b730c3",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
