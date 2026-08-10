@@ -24,6 +24,14 @@
  * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ *
+ * Concurrency and locking:
+ * - ctxln is shared by all action workers. Normalization holds ctxlnLock for
+ *   reading; HUP builds a replacement privately and swaps it under the write
+ *   lock.
+ * - ctxlnTurbo is owned and used only by its action worker. HUP publishes an
+ *   atomic reload generation, and each worker rebuilds its context between
+ *   messages. The HUP thread never reads, replaces, or destroys worker state.
  */
 #include "config.h"
 #include "rsyslog.h"
@@ -50,6 +58,7 @@
 #include "cfsysline.h"
 #include "dirty.h"
 #include "unicode-helper.h"
+#include "atomic.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -72,14 +81,18 @@ typedef struct _instanceData {
     uchar *rule; /* rule to use */
     uchar *rulebase; /**< name of rulebase to use */
     ln_ctx ctxln; /**< context to be used for liblognorm */
+    pthread_rwlock_t ctxlnLock; /**< protects replacement and use of shared ctxln */
+    int ctxlnLockInitialized;
+    unsigned reloadGeneration; /**< HUP generation adopted by action workers */
+    pthread_mutex_t mutReloadGeneration; /**< no-atomics fallback for reloadGeneration */
+    int mutReloadGenerationInitialized;
+    uchar *rulebaseForReload; /**< saved rulebase path for HUP reload */
+    uchar *ruleForReload; /**< saved inline rules for HUP reload */
+    unsigned ctxOpts; /**< saved context options for HUP reload */
     char *pszPath; /**< path of normalized data */
     msgPropDescr_t *varDescr; /**< name of variable to use */
 #ifdef HAVE_LOGNORM_TURBO
     sbool bTurbo; /**< user requested turbo mode */
-    sbool bTurboAvail; /**< turbo compilation succeeded at startup */
-    uchar *rulebaseForClone; /**< saved rulebase path for per-worker cloning */
-    uchar *ruleForClone; /**< saved inline rules for per-worker cloning */
-    unsigned ctxOpts; /**< saved context options for per-worker cloning */
 #endif
 } instanceData;
 
@@ -87,6 +100,7 @@ typedef struct wrkrInstanceData {
     instanceData *pData;
 #ifdef HAVE_LOGNORM_TURBO
     ln_ctx ctxlnTurbo; /**< per-worker turbo context (thread-safe) */
+    unsigned reloadGeneration; /**< rulebase generation loaded into ctxlnTurbo */
 #endif
 } wrkrInstanceData_t;
 
@@ -121,58 +135,98 @@ static void errCallBack(void __attribute__((unused)) * cookie, const char *msg, 
     LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
+/* Build a complete context without publishing it. The saved rule source is
+ * immutable after configuration, so this helper can be used by HUP and by an
+ * action worker without protecting the potentially expensive compilation. */
+static ln_ctx buildContext(const instanceData *const pData, const sbool enableTurbo, sbool *const turboAvailable) {
+    ln_ctx ctx;
+    int loadRet = -1;
+
+    if (turboAvailable != NULL) *turboAvailable = 0;
+    ctx = ln_initCtx();
+    if (ctx == NULL) return NULL;
+
+    ln_setCtxOpts(ctx, pData->ctxOpts);
+#ifdef HAVE_LOGNORM_TURBO
+    if (enableTurbo) ln_setCtxOpts(ctx, LN_CTXOPT_TURBO);
+#else
+    (void)enableTurbo;
+#endif
+    ln_setErrMsgCB(ctx, errCallBack, NULL);
+
+    if (pData->ruleForReload != NULL) {
+        loadRet = ln_loadSamplesFromString(ctx, (char *)pData->ruleForReload);
+    } else if (pData->rulebaseForReload != NULL) {
+        loadRet = ln_loadSamples(ctx, (char *)pData->rulebaseForReload);
+    }
+
+    if (loadRet != 0) {
+        ln_exitCtx(ctx);
+        return NULL;
+    }
+
+#ifdef HAVE_LOGNORM_TURBO
+    if (enableTurbo && turboAvailable != NULL) *turboAvailable = ln_turbo_is_available(ctx);
+#endif
+    return ctx;
+}
+
+#ifdef HAVE_LOGNORM_TURBO
+static ln_ctx buildTurboWorkerContext(const instanceData *const pData) {
+    sbool turboAvailable = 0;
+    ln_ctx ctx = buildContext(pData, 1, &turboAvailable);
+
+    if (ctx != NULL && !turboAvailable) {
+        ln_exitCtx(ctx);
+        ctx = NULL;
+    }
+    return ctx;
+}
+#endif
+
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
  * (and set within pData!).
  */
 static rsRetVal buildInstance(instanceData *pData) {
     DEFiRet;
+    pData->ctxOpts = loadModConf->allow_regex;
     if ((pData->ctxln = ln_initCtx()) == NULL) {
         LogError(0, RS_RET_ERR_LIBLOGNORM_INIT,
                  "error: could not initialize "
                  "liblognorm ctx, cannot activate action");
         ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
     }
-    ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
+    ln_setCtxOpts(pData->ctxln, pData->ctxOpts);
     ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
 #ifdef HAVE_LOGNORM_TURBO
-    /* Save context options for per-worker cloning */
-    pData->ctxOpts = loadModConf->allow_regex;
-
     /* Enable turbo on shared ctx so compilation happens during loadSamples */
     if (pData->bTurbo) {
         ln_setCtxOpts(pData->ctxln, LN_CTXOPT_TURBO);
     }
 #endif
     if (pData->rule != NULL && pData->rulebase == NULL) {
-#ifdef HAVE_LOGNORM_TURBO
-        /* Save rule string for per-worker cloning BEFORE it gets freed */
-        if (pData->bTurbo) {
-            CHKmalloc(pData->ruleForClone = (uchar *)strdup((char *)pData->rule));
-        }
-#endif
+        /* Preserve the inline rule before the configuration copy is freed. */
+        CHKmalloc(pData->ruleForReload = (uchar *)strdup((char *)pData->rule));
         if (ln_loadSamplesFromString(pData->ctxln, (char *)pData->rule) != 0) {
             LogError(0, RS_RET_NO_RULEBASE,
                      "error: normalization rule '%s' "
                      "could not be loaded cannot activate action",
                      pData->rule);
             ln_exitCtx(pData->ctxln);
+            pData->ctxln = NULL;
             ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
         }
         free(pData->rule);
         pData->rule = NULL;
     } else if (pData->rule == NULL && pData->rulebase != NULL) {
-#ifdef HAVE_LOGNORM_TURBO
-        /* Save rulebase path for per-worker cloning */
-        if (pData->bTurbo) {
-            CHKmalloc(pData->rulebaseForClone = (uchar *)strdup((char *)pData->rulebase));
-        }
-#endif
+        CHKmalloc(pData->rulebaseForReload = (uchar *)strdup((char *)pData->rulebase));
         if (ln_loadSamples(pData->ctxln, (char *)pData->rulebase) != 0) {
             LogError(0, RS_RET_NO_RULEBASE,
                      "error: normalization rulebase '%s' "
                      "could not be loaded cannot activate action",
                      pData->rulebase);
             ln_exitCtx(pData->ctxln);
+            pData->ctxln = NULL;
             ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
         }
     }
@@ -180,10 +234,8 @@ static rsRetVal buildInstance(instanceData *pData) {
     /* Verify turbo compilation succeeded on the shared ctx */
     if (pData->bTurbo) {
         if (ln_turbo_is_available(pData->ctxln)) {
-            pData->bTurboAvail = 1;
             LogMsg(0, RS_RET_OK, LOG_INFO, "mmnormalize: turbo mode available and enabled");
         } else {
-            pData->bTurboAvail = 0;
             LogMsg(0, NO_ERRCODE, LOG_WARNING,
                    "mmnormalize: turbo mode requested but compilation "
                    "failed, using standard normalization");
@@ -203,45 +255,39 @@ ENDinitConfVars
 
 
 BEGINcreateInstance
+    int lockRet;
     CODESTARTcreateInstance;
+    if ((lockRet = pthread_rwlock_init(&pData->ctxlnLock, NULL)) != 0) {
+        errno = lockRet;
+        ABORT_FINALIZE(RS_RET_CONC_CTRL_ERR);
+    }
+    pData->ctxlnLockInitialized = 1;
+    if ((lockRet = pthread_mutex_init(&pData->mutReloadGeneration, NULL)) != 0) {
+        errno = lockRet;
+        pthread_rwlock_destroy(&pData->ctxlnLock);
+        pData->ctxlnLockInitialized = 0;
+        ABORT_FINALIZE(RS_RET_CONC_CTRL_ERR);
+    }
+    pData->mutReloadGenerationInitialized = 1;
+    ATOMIC_STORE_32BIT_unsigned(&pData->reloadGeneration, &pData->mutReloadGeneration, 0);
+finalize_it:
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
 #ifdef HAVE_LOGNORM_TURBO
+    pWrkrData->reloadGeneration = ATOMIC_LOAD_32BIT_unsigned(&pData->reloadGeneration, &pData->mutReloadGeneration);
     pWrkrData->ctxlnTurbo = NULL;
-    if (pData->bTurbo && pData->bTurboAvail) {
+    if (pData->bTurbo) {
         /* Create a SEPARATE ln_ctx for this worker's turbo mode */
-        pWrkrData->ctxlnTurbo = ln_initCtx();
+        pWrkrData->ctxlnTurbo = buildTurboWorkerContext(pData);
         if (pWrkrData->ctxlnTurbo == NULL) {
-            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT,
-                     "mmnormalize: turbo worker ctx init failed, "
+            LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
+                     "mmnormalize: turbo worker context build failed, "
                      "falling back to standard normalization");
         } else {
-            int loadRet = -1;
-            ln_setCtxOpts(pWrkrData->ctxlnTurbo, pData->ctxOpts);
-            ln_setCtxOpts(pWrkrData->ctxlnTurbo, LN_CTXOPT_TURBO);
-            ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
-
-            if (pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pData->ruleForClone);
-            } else if (pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pData->rulebaseForClone);
-            }
-
-            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
-                LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
-                         "mmnormalize: turbo worker rulebase "
-                         "load/compile failed, falling back "
-                         "to standard normalization");
-                ln_exitCtx(pWrkrData->ctxlnTurbo);
-                pWrkrData->ctxlnTurbo = NULL;
-            } else {
-                DBGPRINTF(
-                    "mmnormalize: turbo worker context "
-                    "ready\n");
-            }
+            DBGPRINTF("mmnormalize: turbo worker context ready\n");
         }
     }
 #endif
@@ -288,14 +334,14 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->rulebase);
     free(pData->rule);
-    ln_exitCtx(pData->ctxln);
+    if (pData->ctxln != NULL) ln_exitCtx(pData->ctxln);
+    if (pData->ctxlnLockInitialized) pthread_rwlock_destroy(&pData->ctxlnLock);
+    if (pData->mutReloadGenerationInitialized) pthread_mutex_destroy(&pData->mutReloadGeneration);
+    free(pData->rulebaseForReload);
+    free(pData->ruleForReload);
     free(pData->pszPath);
     msgPropDescrDestruct(pData->varDescr);
     free(pData->varDescr);
-#ifdef HAVE_LOGNORM_TURBO
-    free(pData->rulebaseForClone);
-    free(pData->ruleForClone);
-#endif
 ENDfreeInstance
 
 
@@ -319,7 +365,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tpath='%s'\n", pData->pszPath);
     dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
 #ifdef HAVE_LOGNORM_TURBO
-    dbgprintf("\tturbo='%d' (available=%d)\n", pData->bTurbo, pData->bTurboAvail);
+    dbgprintf("\tturbo='%d'\n", pData->bTurbo);
 #endif
 ENDdbgPrintInstInfo
 
@@ -534,6 +580,34 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
 }
 #endif /* HAVE_LOGNORM_TURBO */
 
+#ifdef HAVE_LOGNORM_TURBO
+/* Adopt a pending HUP generation at a worker-owned safe point. Building the
+ * replacement before swapping keeps the previous context usable during
+ * compilation. Both the swap and reclamation occur on the owning worker. */
+static void refreshTurboContext(wrkrInstanceData_t *const pWrkrData) {
+    instanceData *const pData = pWrkrData->pData;
+    const unsigned targetGeneration = ATOMIC_LOAD_32BIT_unsigned(&pData->reloadGeneration, &pData->mutReloadGeneration);
+    ln_ctx newCtx;
+    ln_ctx oldCtx;
+
+    if (!pData->bTurbo || pWrkrData->reloadGeneration == targetGeneration) return;
+
+    newCtx = buildTurboWorkerContext(pData);
+    oldCtx = pWrkrData->ctxlnTurbo;
+    pWrkrData->ctxlnTurbo = newCtx;
+    pWrkrData->reloadGeneration = targetGeneration;
+    if (oldCtx != NULL) ln_exitCtx(oldCtx);
+
+    if (newCtx == NULL) {
+        LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
+                 "mmnormalize: HUP turbo worker context build failed, "
+                 "falling back to standard normalization");
+    } else {
+        DBGPRINTF("mmnormalize: turbo worker adopted HUP generation %u\n", targetGeneration);
+    }
+}
+#endif
+
 
 BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
@@ -553,6 +627,7 @@ BEGINdoAction_NoStrings
         len = getMSGLen(pMsg);
     }
 #ifdef HAVE_LOGNORM_TURBO
+    refreshTurboContext(pWrkrData);
     if (pWrkrData->ctxlnTurbo != NULL) {
         const sbool isCeeRoot = pWrkrData->pData->pszPath[0] == '$' && pWrkrData->pData->pszPath[1] == '!' &&
                                 pWrkrData->pData->pszPath[2] == '\0';
@@ -610,7 +685,9 @@ BEGINdoAction_NoStrings
 #endif
 
     /* STANDARD PATH: original ln_normalize (fallback or non-turbo) */
+    pthread_rwlock_rdlock(&pWrkrData->pData->ctxlnLock);
     r = ln_normalize(pWrkrData->pData->ctxln, (char *)buf, len, &json);
+    pthread_rwlock_unlock(&pWrkrData->pData->ctxlnLock);
 
 #ifdef HAVE_LOGNORM_TURBO
 add_json:
@@ -639,14 +716,13 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->rulebase = NULL;
     pData->rule = NULL;
     pData->bUseRawMsg = 0;
+    pData->rulebaseForReload = NULL;
+    pData->ruleForReload = NULL;
+    pData->ctxOpts = 0;
     pData->pszPath = strdup("$!");
     pData->varDescr = NULL;
 #ifdef HAVE_LOGNORM_TURBO
     pData->bTurbo = 0;
-    pData->bTurboAvail = 0;
-    pData->rulebaseForClone = NULL;
-    pData->ruleForClone = NULL;
-    pData->ctxOpts = 0;
 #endif
 }
 
@@ -848,42 +924,47 @@ BEGINparseSelectorAct
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
+BEGINdoHUP
+    ln_ctx newCtx;
+    ln_ctx oldCtx;
+    sbool turboAvailable = 0;
+    sbool enableTurbo = 0;
+    CODESTARTdoHUP;
+    DBGPRINTF("mmnormalize: HUP received\n");
 #ifdef HAVE_LOGNORM_TURBO
-BEGINdoHUPWrkr
-    CODESTARTdoHUPWrkr DBGPRINTF("mmnormalize: HUP received\n");
-    if (pWrkrData->ctxlnTurbo != NULL && pWrkrData->pData->bTurbo) {
-        DBGPRINTF("mmnormalize: HUP - rebuilding turbo worker context\n");
-        ln_exitCtx(pWrkrData->ctxlnTurbo);
-        pWrkrData->ctxlnTurbo = ln_initCtx();
-        if (pWrkrData->ctxlnTurbo != NULL) {
-            int loadRet = -1;
-            ln_setCtxOpts(pWrkrData->ctxlnTurbo, pWrkrData->pData->ctxOpts);
-            ln_setCtxOpts(pWrkrData->ctxlnTurbo, LN_CTXOPT_TURBO);
-            ln_setErrMsgCB(pWrkrData->ctxlnTurbo, errCallBack, NULL);
-
-            if (pWrkrData->pData->ruleForClone != NULL) {
-                loadRet = ln_loadSamplesFromString(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->ruleForClone);
-            } else if (pWrkrData->pData->rulebaseForClone != NULL) {
-                loadRet = ln_loadSamples(pWrkrData->ctxlnTurbo, (char *)pWrkrData->pData->rulebaseForClone);
-            }
-
-            if (loadRet != 0 || !ln_turbo_is_available(pWrkrData->ctxlnTurbo)) {
-                LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
-                         "mmnormalize: HUP turbo reload failed, "
-                         "falling back to standard");
-                ln_exitCtx(pWrkrData->ctxlnTurbo);
-                pWrkrData->ctxlnTurbo = NULL;
-            } else {
-                LogMsg(0, RS_RET_OK, LOG_INFO,
-                       "mmnormalize: turbo worker context "
-                       "reloaded");
-            }
-        } else {
-            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "mmnormalize: HUP turbo ctx init failed");
-        }
+    enableTurbo = pData->bTurbo;
+#endif
+    newCtx = buildContext(pData, enableTurbo, &turboAvailable);
+    if (newCtx == NULL) {
+        LogError(0, RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD,
+                 "mmnormalize: HUP rulebase reload failed, "
+                 "keeping the previous context");
+        ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
     }
-ENDdoHUPWrkr
-#endif /* HAVE_LOGNORM_TURBO */
+
+    pthread_rwlock_wrlock(&pData->ctxlnLock);
+    oldCtx = pData->ctxln;
+    pData->ctxln = newCtx;
+    pthread_rwlock_unlock(&pData->ctxlnLock);
+    ln_exitCtx(oldCtx);
+
+#ifdef HAVE_LOGNORM_TURBO
+    if (pData->bTurbo) {
+        const unsigned generation =
+            ATOMIC_INC_AND_FETCH_unsigned(&pData->reloadGeneration, &pData->mutReloadGeneration);
+        if (!turboAvailable) {
+            LogMsg(0, NO_ERRCODE, LOG_WARNING,
+                   "mmnormalize: HUP reloaded the standard rulebase, "
+                   "but Turbo compilation is unavailable");
+        }
+        DBGPRINTF("mmnormalize: published HUP generation %u for Turbo workers\n", generation);
+    }
+#else
+    (void)turboAvailable;
+#endif
+    LogMsg(0, RS_RET_OK, LOG_INFO, "mmnormalize: rulebase reloaded");
+finalize_it:
+ENDdoHUP
 
 BEGINmodExit
     CODESTARTmodExit;
@@ -897,9 +978,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_QUERIES;
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
-#ifdef HAVE_LOGNORM_TURBO
-    CODEqueryEtryPt_doHUPWrkr
-#endif
+    CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
