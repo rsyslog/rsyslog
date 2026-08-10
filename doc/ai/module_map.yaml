@@ -65,9 +65,12 @@ mmnormalize:
       field: instanceData.ctxlnLock
     - type: atomic-generation
       field: instanceData.reloadGeneration
+    - type: stdio
+      field: instanceData.debugFile
   notes:
     - The standard liblognorm context is shared; actions take the read lock and HUP publishes a privately built replacement under the write lock.
     - Turbo contexts are worker-owned and remain lock-free while normalizing; HUP increments a generation and each worker rebuilds and reclaims its own context between messages.
+    - When debugFile is configured, liblognorm callbacks share an instance FILE and use flockfile to serialize writes.
 
 omfile:
   paths: ["plugins/omfile/"]
@@ -147,16 +150,6 @@ mmjsonrewrite:
   requires_serialization: false
   notes:
     - Expands dotted JSON property names into nested containers per message.
-
-mmnormalize:
-  paths: ["plugins/mmnormalize/"]
-  requires_serialization: true
-  locks:
-    - type: stdio
-      field: instanceData.debugFile
-  notes:
-    - Turbo normalization contexts are private to workers.
-    - When debugFile is configured, liblognorm callbacks share an instance FILE and use flockfile to serialize writes.
 
 pmnormalize:
   paths: ["plugins/pmnormalize/"]
