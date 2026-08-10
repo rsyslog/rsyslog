@@ -224,11 +224,11 @@ static rsRetVal doSizeLimitProcessing(strm_t *pThis) {
          * need to preserve it.
          */
         CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
-        /* The stream keeps being written to after the rotation, so the async
-         * writer thread must survive it. Stopping the writer here would leave
-         * the stream without a consumer for its buffer queue, and the producer
-         * would block on notFull forever. Keeping it alive also preserves the
-         * caller's mutex, which stopWriter() would otherwise release.
+        /* the stream is written to again after the rotation, so the async
+         * writer thread must survive it. stopping it here leaves the buffer
+         * queue without a consumer and the producer blocks on notFull forever.
+         * keeping it also preserves the caller's mutex, which stopWriter()
+         * would release.
          */
         CHKiRet(strmCloseFileInternal(pThis, 0));
         CHKiRet(resolveFileSizeLimit(pThis, pszCurrFName));
@@ -480,15 +480,15 @@ static rsRetVal strmCloseFile(strm_t *pThis) {
 
 
 /**
- * @brief Workhorse for strmCloseFile().
+ * @brief workhorse for strmCloseFile().
  *
- * @param bStopAsyncWriter if set, the async writer thread is terminated, which
- * as a side effect also unlocks pThis->mut (see stopWriter()). This is what
- * every caller that is done with the stream wants. If cleared, the writer
- * thread is kept running and the caller's mutex stays locked; the pending
- * buffers are drained via strmWaitAsyncWriterDone() instead, so the data is on
- * disk before the file descriptor is closed. Callers that continue to use the
- * stream afterwards, like size-limit rotation, must use this mode.
+ * @param bStopAsyncWriter if set, terminates the async writer thread, which
+ * also unlocks pThis->mut as a side effect (see stopWriter()). that is what
+ * callers who are done with the stream want. if cleared, the writer keeps
+ * running and the caller's mutex stays locked; pending buffers drain via
+ * strmWaitAsyncWriterDone() instead, so the data is on disk before the fd is
+ * closed. callers that keep using the stream afterwards, such as size-limit
+ * rotation, must use this mode.
  */
 static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter) {
     off64_t currOffs;
