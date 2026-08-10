@@ -84,6 +84,7 @@ DEFobjCurrIf(zlibw) DEFobjCurrIf(zstdw)
 static rsRetVal strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, const size_t lenBuf);
 static rsRetVal strmOpenFile(strm_t *pThis);
 static rsRetVal strmCloseFile(strm_t *pThis);
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter);
 static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
 static rsRetVal doZipFinish(strm_t *pThis);
@@ -223,7 +224,13 @@ static rsRetVal doSizeLimitProcessing(strm_t *pThis) {
          * need to preserve it.
          */
         CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
-        CHKiRet(strmCloseFile(pThis));
+        /* The stream keeps being written to after the rotation, so the async
+         * writer thread must survive it. Stopping the writer here would leave
+         * the stream without a consumer for its buffer queue, and the producer
+         * would block on notFull forever. Keeping it alive also preserves the
+         * caller's mutex, which stopWriter() would otherwise release.
+         */
+        CHKiRet(strmCloseFileInternal(pThis, 0));
         CHKiRet(resolveFileSizeLimit(pThis, pszCurrFName));
     }
 
@@ -468,6 +475,22 @@ static void stopWriter(strm_t *const pThis) {
  * close it again (this is done via strmFlushInternal and friends).
  */
 static rsRetVal strmCloseFile(strm_t *pThis) {
+    return strmCloseFileInternal(pThis, 1);
+}
+
+
+/**
+ * @brief Workhorse for strmCloseFile().
+ *
+ * @param bStopAsyncWriter if set, the async writer thread is terminated, which
+ * as a side effect also unlocks pThis->mut (see stopWriter()). This is what
+ * every caller that is done with the stream wants. If cleared, the writer
+ * thread is kept running and the caller's mutex stays locked; the pending
+ * buffers are drained via strmWaitAsyncWriterDone() instead, so the data is on
+ * disk before the file descriptor is closed. Callers that continue to use the
+ * stream afterwards, like size-limit rotation, must use this mode.
+ */
+static rsRetVal strmCloseFileInternal(strm_t *pThis, const int bStopAsyncWriter) {
     off64_t currOffs;
     DEFiRet;
 
@@ -484,7 +507,11 @@ static rsRetVal strmCloseFile(strm_t *pThis) {
             doZipFinish(pThis);
         }
         if (pThis->bAsyncWrite) {
-            stopWriter(pThis);
+            if (bStopAsyncWriter) {
+                stopWriter(pThis);
+            } else {
+                strmWaitAsyncWriterDone(pThis);
+            }
         }
     }
 
