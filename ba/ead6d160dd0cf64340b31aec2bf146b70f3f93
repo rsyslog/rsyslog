@@ -1,0 +1,14 @@
+plugins/imrelp/imrelp.c
+  h_95716f3de0caf5 876,881
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "baead6d160dd0cf64340b31aec2bf146b70f3f93",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
