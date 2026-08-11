@@ -205,7 +205,8 @@ struct tcpsrv_s {
         int iSynBacklog;
         unsigned int ratelimitInterval;
         unsigned int ratelimitBurst;
-        tcps_sess_t **pSessions; /**< array of all of our sessions */
+        tcps_sess_t **pSessions; /**< session slots shared by accept and worker threads */
+        DEF_ATOMIC_HELPER_MUT(mut_sessions);
         unsigned int starvationMaxReads;
         void *pUsr; /**< a user-settable pointer (provides extensibility for "derived classes")*/
         /* callbacks */
