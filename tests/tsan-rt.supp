@@ -6,7 +6,6 @@ race:^bs_arrcmp_glblDbgFiles$
 race:^imptcp_destruct_epd$
 race:doLogMsg
 race:setlocale
-race:doSIGTTIN
 race:libfaketime
 # ommysql uses per-worker MYSQL handles. Ubuntu 26.04/Clang 21 can report the
 # existing stock libmysqlclient false positive through OpenSSL frames
