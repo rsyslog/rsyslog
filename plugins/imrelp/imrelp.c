@@ -872,11 +872,13 @@ ENDfreeCnf
  * we terminate, relpEngine is called, and it's select() loop interrupted. But
  * only *after this function is done*. So we do not have a race!
  */
-static void doSIGTTIN(int __attribute__((unused)) sig) {
+static void imrelpDoSIGTTIN(int __attribute__((unused)) sig) {
+    const int saved_errno = errno;
     const int bTerminate = PREFER_LOAD_INT(&bTerminateInputsSigSafe);
     if (bTerminate && (pRelpEngine != NULL)) {
         relpEngineSetStop(pRelpEngine);
     }
+    errno = saved_errno;
 }
 
 
@@ -897,7 +899,7 @@ BEGINrunInput
     pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
     memset(&sigAct, 0, sizeof(sigAct));
     sigemptyset(&sigAct.sa_mask);
-    sigAct.sa_handler = doSIGTTIN;
+    sigAct.sa_handler = imrelpDoSIGTTIN;
     sigaction(SIGTTIN, &sigAct, NULL);
 
     iRet = relpEngineRun(pRelpEngine);
