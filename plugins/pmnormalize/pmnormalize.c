@@ -23,6 +23,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -46,22 +47,34 @@ MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.pmnormalize")
 MODULE_CNFNAME("pmnormalize")
 
+/* Concurrency & Locking
+ * ---------------------
+ * A configured debugFile belongs to one parser instance. liblognorm callbacks
+ * can share that FILE, so flockfile serializes writes. Parser teardown occurs
+ * after parser users stop, before the instance cleanup closes the FILE.
+ */
+
 /* internal structures */
 DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)
 
 
     /* parser instance parameters */
-    static struct cnfparamdescr parserpdescr[] = {
-        {"rulebase", eCmdHdlrGetWord, 0}, {"rule", eCmdHdlrArray, 0}, {"undefinedpropertyerror", eCmdHdlrBinary, 0}};
+    static struct cnfparamdescr parserpdescr[] = {{"rulebase", eCmdHdlrGetWord, 0},
+                                                  {"rule", eCmdHdlrArray, 0},
+                                                  {"undefinedpropertyerror", eCmdHdlrBinary, 0},
+                                                  {"debug", eCmdHdlrBinary, 0},
+                                                  {"debugfile", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
 
 struct instanceConf_s {
     sbool undefPropErr;
+    sbool bDebug;
     char *rulebase;
     char *rule;
     ln_ctx ctxln; /*context to be used for liblognorm*/
+    FILE *debugFile; /* optional liblognorm debug output */
     char *pszPath; /*path of normalized data*/
 };
 
@@ -79,9 +92,11 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     DEFiRet;
     CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
     inst->undefPropErr = 0;
+    inst->bDebug = 0;
     inst->rulebase = NULL;
     inst->rule = NULL;
     inst->ctxln = NULL;
+    inst->debugFile = NULL;
     *pinst = inst;
 finalize_it:
     RETiRet;
@@ -90,6 +105,22 @@ finalize_it:
 /* callback for liblognorm error messages */
 static void errCallBack(void __attribute__((unused)) * cookie, const char *msg, size_t __attribute__((unused)) lenMsg) {
     LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+}
+
+/* callback for liblognorm debug messages */
+static void debugCallBack(void *cookie, const char *msg, size_t lenMsg) {
+    FILE *const debugFile = cookie;
+
+    if (debugFile == NULL) {
+        LogMsg(0, RS_RET_OK, LOG_DEBUG, "pmnormalize: liblognorm debug: %s", msg);
+        return;
+    }
+
+    flockfile(debugFile);
+    (void)fwrite(msg, 1, lenMsg, debugFile);
+    if (lenMsg == 0 || msg[lenMsg - 1] != '\n') (void)fputc('\n', debugFile);
+    (void)fflush(debugFile);
+    funlockfile(debugFile);
 }
 
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
@@ -104,6 +135,13 @@ static rsRetVal buildInstance(instanceConf_t *inst) {
         ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
     }
     ln_setErrMsgCB(inst->ctxln, errCallBack, NULL);
+    if (inst->bDebug) {
+        if (ln_setDebugCB(inst->ctxln, debugCallBack, inst->debugFile) != 0) {
+            LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "pmnormalize: could not set liblognorm debug callback");
+            ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
+        }
+        ln_enableDebug(inst->ctxln, 1);
+    }
 
     if (inst->rule != NULL && inst->rulebase == NULL) {
         if (ln_loadSamplesFromString(inst->ctxln, inst->rule) != 0) {
@@ -135,6 +173,7 @@ BEGINfreeParserInst
     if (pInst->ctxln != NULL) {
         ln_exitCtx(pInst->ctxln);
     }
+    if (pInst->debugFile != NULL) fclose(pInst->debugFile);
 ENDfreeParserInst
 
 BEGINcheckParserInst
@@ -145,6 +184,7 @@ ENDcheckParserInst
 BEGINnewParserInst
     struct cnfparamvals *pvals = NULL;
     int i;
+    char *debugFileName = NULL;
     CODESTARTnewParserInst;
     DBGPRINTF("newParserInst (pmnormalize)\n");
 
@@ -166,6 +206,10 @@ BEGINnewParserInst
         if (!pvals[i].bUsed) continue;
         if (!strcmp(parserpblk.descr[i].name, "undefinedpropertyerror")) {
             inst->undefPropErr = (int)pvals[i].val.d.n;
+        } else if (!strcmp(parserpblk.descr[i].name, "debug")) {
+            inst->bDebug = (int)pvals[i].val.d.n;
+        } else if (!strcmp(parserpblk.descr[i].name, "debugfile")) {
+            CHKmalloc(debugFileName = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "rulebase")) {
             CHKmalloc(inst->rulebase = (char *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(parserpblk.descr[i].name, "rule")) {
@@ -194,10 +238,24 @@ BEGINnewParserInst
                  "one of the parameters 'rule' and 'rulebase', but not both");
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
+    if (debugFileName != NULL) {
+        if (!inst->bDebug) {
+            LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: 'debugFile' requires 'debug=on'");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        inst->debugFile = fopen(debugFileName, "a");
+        if (inst->debugFile == NULL) {
+            LogError(errno, RS_RET_CONFIG_ERROR, "pmnormalize: could not open debug file '%s'", debugFileName);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        free(debugFileName);
+        debugFileName = NULL;
+    }
 
     iRet = buildInstance(inst);
 finalize_it:
     CODE_STD_FINALIZERnewParserInst if (lst != NULL) cnfparamvalsDestruct(pvals, &parserpblk);
+    free(debugFileName);
     if (iRet != RS_RET_OK && inst != NULL) freeParserInst(inst);
 ENDnewParserInst
 
