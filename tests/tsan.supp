@@ -12,7 +12,6 @@ fun:doSIGTTIN
 #fun:
 
 # actual bugs that should be fixed ASAP after TSAN is in place:
-fun:TCPSessTblFindFreeSpot
 fun:processWorksetItem
 
 fun:doLogMsg

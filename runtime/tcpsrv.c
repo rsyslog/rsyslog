@@ -530,17 +530,33 @@ finalize_it:
 }
 
 
-/* find a free spot in the session table. If the table
- * is full, -1 is returned, else the index of the free
- * entry (0 or higher).
+static tcps_sess_t tcpsess_slot_reserved;
+
+
+#if !defined(ENABLE_IMTCP_EPOLL)
+static inline tcps_sess_t *ATTR_NONNULL() TCPSessTblLoad(tcpsrv_t *const pThis, const int i) {
+    tcps_sess_t *const pSess = (tcps_sess_t *)ATOMIC_LOAD_PTR((void **)&pThis->pSessions[i], &pThis->mut_sessions);
+    return pSess == &tcpsess_slot_reserved ? NULL : pSess;
+}
+#endif
+
+
+static inline void ATTR_NONNULL(1) TCPSessTblStore(tcpsrv_t *const pThis, const int i, tcps_sess_t *const pSess) {
+    ATOMIC_STORE_PTR((void **)&pThis->pSessions[i], &pThis->mut_sessions, pSess);
+}
+
+
+/* Atomically reserve a free spot in the session table. If the table is full,
+ * -1 is returned, else the index of the reserved entry (0 or higher). Readers
+ * treat the reservation marker like an empty slot until initialization is done.
  */
-static int ATTR_NONNULL() TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
+static int ATTR_NONNULL() TCPSessTblClaimFreeSpot(tcpsrv_t *const pThis) {
     register int i;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     for (i = 0; i < pThis->iSessMax; ++i) {
-        if (pThis->pSessions[i] == NULL) break;
+        if (ATOMIC_CAS_PTR((void **)&pThis->pSessions[i], NULL, &tcpsess_slot_reserved, &pThis->mut_sessions)) break;
     }
 
     return ((i < pThis->iSessMax) ? i : -1);
@@ -562,7 +578,7 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pThis->pSessions != NULL);
     for (i = iCurr + 1; i < pThis->iSessMax; ++i) {
-        if (pThis->pSessions[i] != NULL) break;
+        if (TCPSessTblLoad(pThis, i) != NULL) break;
     }
 
     return ((i < pThis->iSessMax) ? i : -1);
@@ -588,7 +604,9 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         /* close all TCP connections! */
         i = TCPSessGetNxtSess(pThis, -1);
         while (i != -1) {
-            tcps_sess.Destruct(&pThis->pSessions[i]);
+            tcps_sess_t *pSess = TCPSessTblLoad(pThis, i);
+            tcps_sess.Destruct(&pSess);
+            TCPSessTblStore(pThis, i, NULL);
             /* now get next... */
             i = TCPSessGetNxtSess(pThis, i);
         }
@@ -748,7 +766,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
     /* Add to session list */
-    iSess = TCPSessTblFindFreeSpot(pThis);
+    iSess = TCPSessTblClaimFreeSpot(pThis);
     if (iSess == -1) {
         errno = 0;
         LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
@@ -838,7 +856,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     }
 
     *ppSess = pSess;
-    pThis->pSessions[iSess] = pSess;
+    TCPSessTblStore(pThis, iSess, pSess);
     *piSessIdx = iSess;
     pSess = NULL; /* this is now also handed over */
 
@@ -849,6 +867,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
 finalize_it:
     if (iRet != RS_RET_OK) {
+        if (iSess >= 0) TCPSessTblStore(pThis, iSess, NULL);
         if (iRet != RS_RET_HOST_NOT_PERMITTED && pThis->bEmitMsgOnOpen) {
             LogError(0, NO_ERRCODE,
                      "imtcp: connection could not be "
@@ -906,7 +925,7 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     pThis->pOnRegularClose(pSess);
 
     tcps_sess.Destruct(&pSess);
-    pThis->pSessions[pioDescr->id] = NULL;
+    TCPSessTblStore(pThis, pioDescr->id, NULL);
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
@@ -1569,6 +1588,7 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
     int iWorkset;
     int iTCPSess;
     int bIsReady;
+    tcps_sess_t *pSess;
     tcpsrv_io_descr_t *pWorkset[NSPOLL_MAX_EVENTS_PER_WAIT];
     tcpsrv_io_descr_t workset[NSPOLL_MAX_EVENTS_PER_WAIT];
     const int sizeWorkset = sizeof(workset) / sizeof(tcpsrv_io_descr_t);
@@ -1601,8 +1621,13 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         /* do the sessions */
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
         while (iTCPSess != -1) {
+            pSess = TCPSessTblLoad(pThis, iTCPSess);
+            if (pSess == NULL) {
+                iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+                continue;
+            }
             /* TODO: access to pNsd is NOT really CLEAN, use method... */
-            CHKiRet(poll_Add(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+            CHKiRet(poll_Add(pThis, pSess->pStrm, NSDSEL_RD));
             DBGPRINTF("tcpsrv process session %d:\n", iTCPSess);
 
             /* now get next... */
@@ -1642,15 +1667,20 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
         while (nfds && iTCPSess != -1) {
             if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM);
-            localRet = poll_IsReady(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady);
+            pSess = TCPSessTblLoad(pThis, iTCPSess);
+            if (pSess == NULL) {
+                iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+                continue;
+            }
+            localRet = poll_IsReady(pThis, pSess->pStrm, NSDSEL_RD, &bIsReady);
             if (bIsReady || localRet != RS_RET_OK) {
                 workset[iWorkset].pSrv = pThis;
                 workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
                 workset[iWorkset].id = iTCPSess;
                 workset[iWorkset].isInError = 0;
                 workset[iWorkset].ioDirection = NSDSEL_RD; /* non-epoll: ensure sane default */
-                CHKiRet(netstrm.GetSock(pThis->pSessions[iTCPSess]->pStrm, &(workset[iWorkset].sock)));
-                workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
+                CHKiRet(netstrm.GetSock(pSess->pStrm, &(workset[iWorkset].sock)));
+                workset[iWorkset].ptr.pSess = pSess;
                 ++iWorkset;
                 if (iWorkset >= (int)sizeWorkset) {
                     processWorkset(iWorkset, pWorkset);
@@ -1792,6 +1822,7 @@ finalize_it:
 
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
+    INIT_ATOMIC_HELPER_MUT(pThis->mut_sessions);
     pThis->iSessMax = TCPSESS_MAX_DEFAULT;
     pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
     pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
@@ -1889,6 +1920,7 @@ BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and C
     free(pThis->ppLstnPort);
     free(pThis->ppioDescrPtr);
     free(pThis->pszOrigin);
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mut_sessions);
 ENDobjDestruct(tcpsrv)
 
 
