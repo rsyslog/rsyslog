@@ -190,6 +190,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/el10-build"
+          evidence_log=".ci/flake-evidence/logs/el10-package-build.log"
+          mkdir -p "$(dirname "$evidence_log")"
           devtools/ci-flake-phase.sh begin el10-package-build custom
           set +e
           docker run --rm --privileged \
@@ -220,8 +222,13 @@ jobs:
                 /runner-temp/el10-build.log \
                 "$EXPECTED_EVR" \
                 "$RPM_ARCH"
-            '
-          build_status=$?
+            ' 2>&1 | tee "$evidence_log"
+          pipeline_status=("${PIPESTATUS[@]}")
+          build_status="${pipeline_status[0]}"
+          tee_status="${pipeline_status[1]}"
+          if [ "$build_status" -eq 0 ] && [ "$tee_status" -ne 0 ]; then
+            build_status="$tee_status"
+          fi
           set -e
           devtools/ci-flake-phase.sh end \
             el10-package-build custom "$build_status" || true
@@ -232,10 +239,18 @@ jobs:
           else
             {
               echo 'EL10 Mock build log:'
-              cat "$RUNNER_TEMP/el10-build.log"
-              find "$RUNNER_TEMP/el10-artifacts" -type f -name '*.log' \
-                -exec sh -c 'echo; echo "Mock result log: $1"; cat "$1"' sh {} \;
-            } > failed-tests.log
+              if [ -f "$RUNNER_TEMP/el10-build.log" ]; then
+                cat "$RUNNER_TEMP/el10-build.log"
+              else
+                echo 'EL10 helper build log is unavailable.'
+              fi
+              if [ -d "$RUNNER_TEMP/el10-artifacts" ]; then
+                find "$RUNNER_TEMP/el10-artifacts" -type f -name '*.log' \
+                  -exec sh -c 'echo; echo "Mock result log: $1"; cat "$1"' sh {} \;
+              else
+                echo 'EL10 Mock result directory is unavailable.'
+              fi
+            } >> "$evidence_log"
           fi
           exit "$build_status"
 
