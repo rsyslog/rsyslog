@@ -15,5 +15,18 @@
   ],
   "supplemental_core_files": [
     "%{rsyslog_module_dir_nodeps}/mmleefparse.so"
+  ],
+  "integrated_baseline_patches": [
+    {
+      "name": "0001-imptcp-guard-regex-framing-match-at-line-start.patch",
+      "sha256": "bd54507ac5151c3c2b25e19cfa04a215e41fda7a01bb0177d245331955dab22d",
+      "upstream_commit": "07b3c40a5a78c79ed9109251f842ca7e955dd586",
+      "reason": "Already present in the daily-stable source."
+    },
+    {
+      "name": "0001-rsyslogd-fix-rsyslog-mmpstrucdata-stack-overflow.patch",
+      "sha256": "9102ebba992cb7a7c4dd408ed097f28a938b160800c2ec74fcfe8735e2c56fd9",
+      "reason": "Superseded by current main's dynamically allocated structured-data parser value buffer."
+    }
   ]
 }

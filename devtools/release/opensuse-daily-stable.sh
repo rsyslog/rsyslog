@@ -109,6 +109,7 @@ cmd_prepare_sources() {
 	cp "$doc_tarball" "$output_dir/SOURCES/rsyslog-doc-$version.tar.gz"
 
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
+import hashlib
 import json
 import pathlib
 import re
@@ -122,8 +123,63 @@ release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
 
-if re.search(r"(?m)^Patch\d*:\s*", spec):
-    raise SystemExit("openSUSE baseline gained patches; review them before packaging main")
+reviewed_patches = policy.get("integrated_baseline_patches", [])
+if not isinstance(reviewed_patches, list):
+    raise SystemExit("integrated_baseline_patches must be a list")
+reviewed_patch_hashes = {}
+for entry in reviewed_patches:
+    if not isinstance(entry, dict):
+        raise SystemExit("integrated baseline patch entry must be an object")
+    name = entry.get("name", "").strip()
+    digest = entry.get("sha256", "").lower()
+    if not name or not re.fullmatch(r"[A-Za-z0-9._+-]+", name):
+        raise SystemExit("integrated baseline patch has an invalid name")
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SystemExit(f"integrated baseline patch {name} has an invalid SHA-256")
+    if name in reviewed_patch_hashes:
+        raise SystemExit(f"integrated baseline patch {name} is listed more than once")
+    reviewed_patch_hashes[name] = digest
+
+patch_declarations = re.findall(r"(?m)^Patch(\d*):\s*(\S+)\s*$", spec)
+patch_numbers = [number for number, _ in patch_declarations]
+patches = [name for _, name in patch_declarations]
+duplicate_patch_numbers = sorted(
+    number for number in set(patch_numbers) if patch_numbers.count(number) > 1
+)
+duplicate_patches = sorted(name for name in set(patches) if patches.count(name) > 1)
+if duplicate_patch_numbers or duplicate_patches:
+    details = []
+    if duplicate_patch_numbers:
+        details.append("numbers: " + ", ".join(duplicate_patch_numbers))
+    if duplicate_patches:
+        details.append("names: " + ", ".join(duplicate_patches))
+    raise SystemExit("duplicate openSUSE baseline patch declaration (" + "; ".join(details) + ")")
+
+baseline_patches = set(patches)
+unreviewed_patches = sorted(baseline_patches - set(reviewed_patch_hashes))
+if unreviewed_patches:
+    raise SystemExit(
+        "openSUSE baseline gained unreviewed patches; review them before packaging main: "
+        + ", ".join(unreviewed_patches)
+    )
+missing_patches = sorted(set(reviewed_patch_hashes) - baseline_patches)
+if missing_patches:
+    raise SystemExit(
+        "reviewed baseline patches are absent from openSUSE baseline: "
+        + ", ".join(missing_patches)
+    )
+for name in patches:
+    patch_path = spec_path.parent.parent / "SOURCES" / name
+    if not patch_path.is_file():
+        raise SystemExit(f"reviewed baseline patch is missing: {name}")
+    digest = hashlib.sha256(patch_path.read_bytes()).hexdigest()
+    if digest != reviewed_patch_hashes[name]:
+        raise SystemExit(f"reviewed baseline patch changed: {name}")
+    patch_path.unlink()
+
+spec, removed_patch_count = re.subn(r"(?m)^Patch\d*:\s*\S+\s*\n", "", spec)
+if removed_patch_count != len(patches):
+    raise SystemExit("openSUSE baseline patch declarations did not match exactly")
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
