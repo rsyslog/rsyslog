@@ -17,6 +17,7 @@ forwarded, or otherwise processed.
        property(name="timegenerated")         # Add message timestamp
        constant(value=" ")                    # Add a space
        property(name="hostname")              # Add the hostname
+       constant(value=" ")                    # Add a space
        property(name="syslogtag")             # Add the syslog tag
        property(name="msg" droplastlf="on")   # Add the message, removing the trailing LF
        constant(value="\n")                   # End with a newline
