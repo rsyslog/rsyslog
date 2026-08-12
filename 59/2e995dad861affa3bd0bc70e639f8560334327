@@ -1,0 +1,27 @@
+runtime/tcpsrv.h
+  h_95716f3de0caf5 208-209
+runtime/tcpsrv.c
+  h_95716f3de0caf5 537-540,542-548,559,581,607-609,859,928,1591,1624-1628,1630,1670-1675,1682-1683,1825,1923
+  s_2dc01c7e3d2940::t_13aad78418c2dc 533-536,541,549-551,553,769,870
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "592e995dad861affa3bd0bc70e639f8560334327",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  },
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
