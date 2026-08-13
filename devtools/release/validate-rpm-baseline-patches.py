@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Verify and remove reviewed downstream RPM baseline patches.
 
 Daily-stable packages replace a distribution's source archive with current
@@ -53,7 +67,12 @@ def main():
     declarations = re.findall(r"(?m)^Patch(\d*):\s*(\S+)\s*$", spec)
     numbers = [number for number, _ in declarations]
     names = [name for _, name in declarations]
-    duplicate_numbers = sorted(number for number in set(numbers) if numbers.count(number) > 1)
+    normalized_numbers = [int(number or "0") for number in numbers]
+    duplicate_numbers = sorted(
+        str(number)
+        for number in set(normalized_numbers)
+        if normalized_numbers.count(number) > 1
+    )
     duplicate_names = sorted(name for name in set(names) if names.count(name) > 1)
     if duplicate_numbers or duplicate_names:
         details = []
@@ -78,6 +97,7 @@ def main():
         )
 
     sources_dir = spec_path.parent.parent / "SOURCES"
+    patch_paths = []
     for number, name in declarations:
         patch_path = sources_dir / name
         if not patch_path.is_file():
@@ -85,16 +105,22 @@ def main():
         digest = hashlib.sha256(patch_path.read_bytes()).hexdigest()
         if digest != reviewed_hashes[name]:
             fail(f"reviewed baseline patch changed: {name}")
-        patch_path.unlink()
+        patch_paths.append(patch_path)
 
         spec, declaration_count = re.subn(
             rf"(?m)^Patch{re.escape(number)}:\s*{re.escape(name)}\s*\n", "", spec
         )
-        application_pattern = (
-            rf"(?m)^%patch(?:{re.escape(number)}(?=\s|$)|"
-            rf"\s+-P\s*{re.escape(number)}|\s+-P{re.escape(number)}|"
-            rf"\s+{re.escape(number)})(?:\s+[^\n]*)?\s*\n"
-        )
+        if number:
+            application_pattern = (
+                rf"(?m)^%patch(?:{re.escape(number)}(?=\s|$)|"
+                rf"\s+-P\s*{re.escape(number)}|\s+-P{re.escape(number)}|"
+                rf"\s+{re.escape(number)})(?:\s+[^\n]*)?\s*\n"
+            )
+        else:
+            application_pattern = (
+                r"(?m)^%patch(?!\s+(?:-P\s*\d+|-P\d+|\d+)(?:\s|$))"
+                r"(?:\s+[^\n]*)?\s*\n"
+            )
         spec, application_count = re.subn(application_pattern, "", spec)
         if declaration_count != 1:
             fail(f"could not remove exactly one declaration for {name}")
@@ -104,6 +130,8 @@ def main():
             fail(f"could not remove exactly one application for {name}")
 
     spec_path.write_text(spec, encoding="utf-8")
+    for patch_path in patch_paths:
+        patch_path.unlink()
 
 
 if __name__ == "__main__":
