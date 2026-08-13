@@ -372,6 +372,7 @@ Architecture: any
 Priority: extra
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         python3,
          rsyslog (= ${binary:Version}),
          rsyslog-gnutls
 Description: rsyslog utilities
