@@ -1,20 +1,30 @@
 {
-  "allowed_patch_skips": [
+  "integrated_baseline_patches": [
     {
-      "patch": "imfile-inotify-fd-release-on-delete.patch",
+      "name": "imfile-inotify-fd-release-on-delete.patch",
+      "sha256": "9001a56b1f4d660056d4328c35850b8d8f6db10b805d7bb4c29a4f0343a73d13",
       "reason": "The EL10 deferred-delete fix is already represented by newer imfile lifecycle handling in current upstream."
     },
     {
-      "patch": "imjournal-warn-on-missing-MESSAGE-field.patch",
+      "name": "imjournal-warn-on-missing-MESSAGE-field.patch",
+      "sha256": "ac3397b44fbeef92904454e899585022c8661582fa84d261119ffe17036cf8cc",
       "reason": "The EL10 missing MESSAGE warning patch is already present in current upstream."
     },
     {
-      "patch": "omelasticsearch-pqc-tls.patch",
+      "name": "omelasticsearch-pqc-tls.patch",
+      "sha256": "b485f0c0440c658b230f95e6d26bcbce71e323d4d245cd3cc0df07b45fdc0a89",
       "reason": "The EL10 Elasticsearch TLS controls are already present in current upstream with later development."
     },
     {
-      "patch": "omelasticsearch-apply-tls-opts-during-detection.patch",
+      "name": "omelasticsearch-apply-tls-opts-during-detection.patch",
+      "sha256": "dda4f2faf62f1832e017705910892bbb397c83cce0c0c2b4d8559cea52ca9d4d",
       "reason": "The EL10 Elasticsearch detection TLS fix is already present in current upstream with later development."
+    },
+    {
+      "name": "imptcp-guard-regex-framing-at-line-start.patch",
+      "sha256": "b59b0ab26da84c6c6baf408e697f71b8a320fa74e360c5a5a88ff0629ce8e1e5",
+      "upstream_commit": "07b3c40a5a78c79ed9109251f842ca7e955dd586",
+      "reason": "The EL10 imptcp regex framing fix is already present in the daily-stable source."
     }
   ],
   "supplemental_build_requires": [

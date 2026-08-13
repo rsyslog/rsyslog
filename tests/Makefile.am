@@ -15,6 +15,7 @@ EXTRA_DIST = \
 	unit/README.md
 
 TESTS_FUZZING = fuzz-syslog-message-smoke.sh
+TESTS_RELEASE_PACKAGING = rpm-baseline-patch-policy.sh
 FUZZING_CORPUS = \
 	fuzz/README.md \
 	fuzz/corpus/syslog-message/rfc3164-basic \
@@ -24,7 +25,7 @@ FUZZING_CORPUS = \
 	fuzz/corpus/syslog-message/rfc5424-basic \
 	fuzz/corpus/syslog-message/rfc5424-escaped-sd \
 	fuzz/corpus/syslog-message/rfc5424-nil
-EXTRA_DIST += $(TESTS_FUZZING) $(FUZZING_CORPUS)
+EXTRA_DIST += $(TESTS_FUZZING) $(TESTS_RELEASE_PACKAGING) $(FUZZING_CORPUS)
 
 TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
 EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
@@ -3783,6 +3784,8 @@ endif # ENABLE_OMAMQP1
 if HAVE_SRV_DISCOVERY
 TESTS += $(TESTS_SRV_DISCOVERY)
 endif # HAVE_SRV_DISCOVERY
+
+TESTS += $(TESTS_RELEASE_PACKAGING)
 
 if ENABLE_GNUTLS
 check_PROGRAMS += gnutls_sni_server

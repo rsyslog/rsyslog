@@ -17,7 +17,8 @@ EXTRA_DIST = \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
-	scripts/generate_distro_component_map.py
+	scripts/generate_distro_component_map.py \
+	devtools/release/validate-rpm-baseline-patches.py
 
 SUBDIRS = doc compat grammar runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)

@@ -1,4 +1,5 @@
 {
+  "integrated_baseline_patches": [],
   "supplemental_build_requires": [
     {
       "package": "autoconf-archive",
