@@ -100,6 +100,30 @@ test ! -e "$work_dir/unnumbered/SOURCES/unnumbered.patch"
 test ! -e "$work_dir/unnumbered/SOURCES/numbered.patch"
 test "$(grep -c '^%patch' "$work_dir/unnumbered/SPECS/rsyslog.spec" || true)" -eq 0
 
+variant=0
+for unnumbered_application in '%patch0 -p1' '%patch 0 -p1' '%patch -P0 -p1'; do
+	variant=$((variant + 1))
+	fixture="$work_dir/unnumbered-zero-$variant"
+	mkdir -p "$fixture/SPECS" "$fixture/SOURCES"
+	{
+		printf '%s\n' 'Patch: unnumbered.patch'
+		printf '%%prep\n'
+		printf '%s\n' "$unnumbered_application"
+	} >"$fixture/SPECS/rsyslog.spec"
+	printf '%s\n' 'unnumbered zero-form content' >"$fixture/SOURCES/unnumbered.patch"
+	zero_digest=$(digest "$fixture/SOURCES/unnumbered.patch")
+	cat >"$fixture/policy.json" <<EOF
+{
+  "integrated_baseline_patches": [
+    {"name": "unnumbered.patch", "sha256": "$zero_digest", "reason": "fixture"}
+  ]
+}
+EOF
+	python3 "$helper" "$fixture/SPECS/rsyslog.spec" "$fixture/policy.json" test
+	test ! -e "$fixture/SOURCES/unnumbered.patch"
+	test "$(grep -c '^%patch' "$fixture/SPECS/rsyslog.spec" || true)" -eq 0
+done
+
 mkdir -p "$work_dir/atomic/SPECS" "$work_dir/atomic/SOURCES"
 cat >"$work_dir/atomic/SPECS/rsyslog.spec" <<'EOF'
 Patch0: first.patch

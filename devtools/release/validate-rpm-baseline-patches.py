@@ -118,7 +118,9 @@ def main():
             )
         else:
             application_pattern = (
-                r"(?m)^%patch(?!\s+(?:-P\s*\d+|-P\d+|\d+)(?:\s|$))"
+                r"(?m)^%patch(?:0(?=\s|$)|\s+-P\s*0(?=\s|$)|"
+                r"\s+-P0(?=\s|$)|\s+0(?=\s|$)|"
+                r"(?!\s+(?:-P\s*[1-9]\d*|-P[1-9]\d*|[1-9]\d*)(?:\s|$)))"
                 r"(?:\s+[^\n]*)?\s*\n"
             )
         spec, application_count = re.subn(application_pattern, "", spec)
