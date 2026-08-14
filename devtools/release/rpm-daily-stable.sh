@@ -184,6 +184,27 @@ PY
   python3 "$(dirname "$0")/package-feature-overlay.py" rpm \
     "$spec_file" "$feature_contract" rpm
 
+  python3 - "$spec_file" <<'PY'
+import pathlib
+import re
+import sys
+
+spec_path = pathlib.Path(sys.argv[1])
+spec = spec_path.read_text(encoding="utf-8")
+segqueue_files = (
+    "%attr(755,root,root) %{_bindir}/rsyslog-segqueue\n"
+    "%{_mandir}/man1/rsyslog-segqueue.1.gz"
+)
+
+if segqueue_files not in spec:
+    anchor = r"(?m)^(%\{_sbindir\}/rsyslogd)$"
+    spec, count = re.subn(anchor, rf"\1\n{segqueue_files}", spec, count=1)
+    if count != 1:
+        raise SystemExit("could not add rsyslog-segqueue files to the RPM spec")
+
+spec_path.write_text(spec, encoding="utf-8")
+PY
+
   while IFS= read -r source_url; do
     case "$source_url" in
       http://*|https://*)
