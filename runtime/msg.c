@@ -722,6 +722,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
     pM->turbo_result_free = NULL;
     pM->turbo_result_to_json = NULL;
     pM->turbo_result_get_str = NULL;
+    pM->turbo_result_refs = NULL;
 #endif
     pM->dfltTZ[0] = '\0';
     memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
@@ -815,6 +816,28 @@ static inline void freeHOSTNAME(smsg_t *pThis) {
 }
 
 
+#ifdef HAVE_LOGNORM_TURBO
+/* Release one reference on the turbo parse snapshot and clear this message's
+ * slot.  refs == NULL means sole ownership (the message was never duplicated):
+ * free directly, no atomics.  Otherwise the counter is shared across MsgDup()
+ * copies and the last owner out frees both the snapshot and the counter. */
+void MsgReleaseTurboResult(smsg_t *const pMsg) {
+    if (pMsg->turbo_result != NULL && pMsg->turbo_result_free != NULL) {
+        if (pMsg->turbo_result_refs == NULL) {
+            pMsg->turbo_result_free(pMsg->turbo_result);
+        } else if (__atomic_sub_fetch(pMsg->turbo_result_refs, 1, __ATOMIC_ACQ_REL) == 0) {
+            pMsg->turbo_result_free(pMsg->turbo_result);
+            free(pMsg->turbo_result_refs);
+        }
+    }
+    pMsg->turbo_result = NULL;
+    pMsg->turbo_result_free = NULL;
+    pMsg->turbo_result_to_json = NULL;
+    pMsg->turbo_result_get_str = NULL;
+    pMsg->turbo_result_refs = NULL;
+}
+#endif
+
 rsRetVal msgDestruct(smsg_t **ppThis) {
     DEFiRet;
     smsg_t *pThis;
@@ -864,8 +887,7 @@ rsRetVal msgDestruct(smsg_t **ppThis) {
         if (pThis->json != NULL) json_object_put(pThis->json);
         if (pThis->localvars != NULL) json_object_put(pThis->localvars);
 #ifdef HAVE_LOGNORM_TURBO
-        if (pThis->turbo_result != NULL && pThis->turbo_result_free != NULL)
-            pThis->turbo_result_free(pThis->turbo_result);
+        MsgReleaseTurboResult(pThis);
 #endif
         if (pThis->pszUUID != NULL) free(pThis->pszUUID);
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -1021,16 +1043,37 @@ ENDobjDestruct
     tmpCOPYCSTR(PROCID);
     tmpCOPYCSTR(MSGID);
 
-#ifdef HAVE_LOGNORM_TURBO
-    /* Turbo snapshots are opaque and cannot be duplicated generically.  Turn
-     * one into the normal owned JSON representation before copying so callers
-     * of MsgDup() retain CEE properties just like the standard path does. */
-    MsgLock(pOld);
-    msgMaterializeTurboJSON(pOld);
-    MsgUnlock(pOld);
-#endif
     if (pOld->json != NULL) pNew->json = jsonDeepCopy(pOld->json);
     if (pOld->localvars != NULL) pNew->localvars = jsonDeepCopy(pOld->localvars);
+
+#ifdef HAVE_LOGNORM_TURBO
+    /* Share the turbo parse snapshot with the duplicate.  The snapshot is
+     * immutable after parsing, so copies may read it concurrently; ownership
+     * is tracked by a lazily-allocated shared counter (see msg.h).  Only the
+     * processing worker duplicates a message, so mutating pOld's bookkeeping
+     * pointer here is single-threaded by the same contract that makes the
+     * rest of this function lock-free.  On counter allocation failure the
+     * duplicate simply proceeds without the snapshot (consumers fall back to
+     * the deep-copied $! tree). */
+    if (pOld->turbo_result != NULL) {
+        if (pOld->turbo_result_refs == NULL) {
+            unsigned *refs = malloc(sizeof(*refs));
+            if (refs != NULL) {
+                *refs = 2; /* pOld + pNew */
+                pOld->turbo_result_refs = refs;
+            }
+        } else {
+            __atomic_add_fetch(pOld->turbo_result_refs, 1, __ATOMIC_RELAXED);
+        }
+        if (pOld->turbo_result_refs != NULL) {
+            pNew->turbo_result = pOld->turbo_result;
+            pNew->turbo_result_free = pOld->turbo_result_free;
+            pNew->turbo_result_to_json = pOld->turbo_result_to_json;
+            pNew->turbo_result_get_str = pOld->turbo_result_get_str;
+            pNew->turbo_result_refs = pOld->turbo_result_refs;
+        }
+    }
+#endif
 
     /* we do not copy all other cache properties, as we do not even know
      * if they are needed once again. So we let them re-create if needed.
