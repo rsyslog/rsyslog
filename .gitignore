@@ -32,6 +32,8 @@ missing
 compile
 rsyslogd
 /tools/fuzz_rsyslog_message
+/tools/fuzz_imtcp_session
+/fuzz-imtcp-corpus-work/
 rsyslog.service
 ylwrap
 *.orig
