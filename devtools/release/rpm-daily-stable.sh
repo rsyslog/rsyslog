@@ -108,6 +108,9 @@ cmd_prepare_sources() {
   tar -C "$tmp_dir" -czf "$sources_dir/rsyslog-$version.tar.gz" \
     "rsyslog-$version"
 
+  python3 "$(dirname "$0")/validate-rpm-baseline-patches.py" \
+    "$spec_file" "$policy_file" "EL10/Fedora"
+
   python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
 import json
 import pathlib
@@ -121,31 +124,6 @@ version = sys.argv[3]
 release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
-
-patches = {}
-for match in re.finditer(r"(?m)^Patch(\d+):\s*(\S+)\s*$", spec):
-    patches[match.group(2)] = match.group(1)
-
-allowed = policy.get("allowed_patch_skips", [])
-allowed_names = [entry.get("patch", "").strip() for entry in allowed]
-if any(not name for name in allowed_names):
-    raise SystemExit("policy contains an empty allowed patch name")
-missing = sorted(set(allowed_names) - set(patches))
-if missing:
-    raise SystemExit(f"allowed patch is absent from EL10 baseline: {missing}")
-
-for name in allowed_names:
-    number = patches[name]
-    spec, declaration_count = re.subn(
-        rf"(?m)^Patch{re.escape(number)}:\s*{re.escape(name)}\s*\n", "", spec
-    )
-    spec, application_count = re.subn(
-        rf"(?m)^%patch\s+-P{re.escape(number)}(?:\s+[^\n]*)?\s*\n", "", spec
-    )
-    if declaration_count != 1 or application_count != 1:
-        raise SystemExit(
-            f"could not remove exactly one declaration/application for {name}"
-        )
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]

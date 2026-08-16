@@ -1,11 +1,13 @@
 {
-  "allowed_patch_skips": [
+  "integrated_baseline_patches": [
     {
-      "patch": "openssl3-compatibility.patch",
+      "name": "openssl3-compatibility.patch",
+      "sha256": "df627935d9ffbee0dfae8053fb12c15481e51d27b0465c90a18df718186b08f4",
       "reason": "Current upstream already contains the OpenSSL 3 compatibility changes carried by the Amazon Linux 2023 source package."
     },
     {
-      "patch": "rsyslog-8.2204.0-rhbz2082302-CVE-heap-based-buffer-overflow.patch",
+      "name": "rsyslog-8.2204.0-rhbz2082302-CVE-heap-based-buffer-overflow.patch",
+      "sha256": "3ab3c768b0dd8d500f0541ca290ca7858046908175117f0e8ffd62a4e05631e2",
       "reason": "Current upstream contains the CVE-2022-24903 fix and later parser development."
     }
   ],
