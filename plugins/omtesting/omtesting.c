@@ -66,7 +66,7 @@ MODULE_CNFNAME("omtesting")
 DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
-    enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND } mode;
+    enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND, MD_BARRIER_ERROR, MD_BARRIER_SUSPEND } mode;
     int bEchoStdout;
     int iWaitSeconds;
     int iWaitUSeconds; /* micro-seconds (one millionth of a second, just to make sure...) */
@@ -77,7 +77,11 @@ typedef struct _instanceData {
     int bFailed; /* indicates if we are already in failed state - this is necessary
                   * to work properly together with multiple worker instances.
                   */
+    int barrierTarget;
+    int barrierCount;
+    int barrierTriggered;
     pthread_mutex_t mut;
+    pthread_cond_t barrierCond;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -99,6 +103,7 @@ BEGINcreateInstance
     pData->iWaitSeconds = 1;
     pData->iWaitUSeconds = 0;
     pthread_mutex_init(&pData->mut, NULL);
+    pthread_cond_init(&pData->barrierCond, NULL);
 ENDcreateInstance
 
 
@@ -182,6 +187,32 @@ static rsRetVal doRandFail(void) {
 }
 
 
+/* Synchronize action workers so TSan tests can exercise concurrent core paths.
+ * Returns one for every worker in the first complete barrier generation and
+ * zero for later calls.
+ */
+static int barrierTrigger(instanceData *const pData) {
+    int triggered = 0;
+
+    pthread_mutex_lock(&pData->mut);
+    if (!pData->barrierTriggered) {
+        ++pData->barrierCount;
+        if (pData->barrierCount == pData->barrierTarget) {
+            pData->barrierTriggered = 1;
+            pthread_cond_broadcast(&pData->barrierCond);
+        } else {
+            while (!pData->barrierTriggered) {
+                pthread_cond_wait(&pData->barrierCond, &pData->mut);
+            }
+        }
+        triggered = 1;
+    }
+    pthread_mutex_unlock(&pData->mut);
+
+    return triggered;
+}
+
+
 BEGINtryResume
     CODESTARTtryResume;
     dbgprintf("omtesting tryResume() called\n");
@@ -197,6 +228,11 @@ BEGINtryResume
             break;
         case MD_ALWAYS_SUSPEND:
             iRet = RS_RET_SUSPENDED;
+            break;
+        case MD_BARRIER_ERROR:
+        case MD_BARRIER_SUSPEND:
+            iRet = RS_RET_OK;
+            break;
         default:
             // No action needed for other cases
             break;
@@ -211,36 +247,49 @@ BEGINdoAction
     CODESTARTdoAction;
     dbgprintf("omtesting received msg '%s'\n", ppString[0]);
     pData = pWrkrData->pData;
-    pthread_mutex_lock(&pData->mut);
-    switch (pData->mode) {
-        case MD_SLEEP:
-            iRet = doSleep(pData);
-            break;
-        case MD_FAIL:
-            iRet = doFail(pData);
-            break;
-        case MD_RANDFAIL:
-            iRet = doRandFail();
-            break;
-        case MD_ALWAYS_SUSPEND:
+    if (pData->mode == MD_BARRIER_ERROR || pData->mode == MD_BARRIER_SUSPEND) {
+        const int triggered = barrierTrigger(pData);
+        if (triggered && pData->mode == MD_BARRIER_ERROR) {
+            LogError(0, RS_RET_ERR, "omtesting synchronized error");
+        } else if (triggered) {
             iRet = RS_RET_SUSPENDED;
-            break;
-        default:
-            // No action needed for other cases
-            break;
-    }
+        }
+    } else {
+        pthread_mutex_lock(&pData->mut);
+        switch (pData->mode) {
+            case MD_SLEEP:
+                iRet = doSleep(pData);
+                break;
+            case MD_FAIL:
+                iRet = doFail(pData);
+                break;
+            case MD_RANDFAIL:
+                iRet = doRandFail();
+                break;
+            case MD_ALWAYS_SUSPEND:
+                iRet = RS_RET_SUSPENDED;
+                break;
+            case MD_BARRIER_ERROR:
+            case MD_BARRIER_SUSPEND:
+                break;
+            default:
+                // No action needed for other cases
+                break;
+        }
 
-    if (iRet == RS_RET_OK && pData->bEchoStdout) {
-        fprintf(stdout, "%s", ppString[0]);
-        fflush(stdout);
+        if (iRet == RS_RET_OK && pData->bEchoStdout) {
+            fprintf(stdout, "%s", ppString[0]);
+            fflush(stdout);
+        }
+        pthread_mutex_unlock(&pData->mut);
     }
-    pthread_mutex_unlock(&pData->mut);
     dbgprintf(":omtesting: end doAction(), iRet %d\n", iRet);
 ENDdoAction
 
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
+    pthread_cond_destroy(&pData->barrierCond);
     pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
 
@@ -318,6 +367,16 @@ BEGINparseSelectorAct
         pData->mode = MD_RANDFAIL;
     } else if (!strcmp((char *)szBuf, "always_suspend")) {
         pData->mode = MD_ALWAYS_SUSPEND;
+    } else if (!strcmp((char *)szBuf, "barrier_error") || !strcmp((char *)szBuf, "barrier_suspend")) {
+        pData->mode = !strcmp((char *)szBuf, "barrier_error") ? MD_BARRIER_ERROR : MD_BARRIER_SUSPEND;
+        for (i = 0; *p && !isspace(*p) && ((unsigned)i < sizeof(szBuf) - 1); ++i) {
+            szBuf[i] = *p++;
+        }
+        szBuf[i] = '\0';
+        pData->barrierTarget = atoi((char *)szBuf);
+        if (pData->barrierTarget < 2) {
+            pData->barrierTarget = 2;
+        }
     } else {
         dbgprintf("invalid mode '%s', doing 'sleep 1 0' - fix your config\n", szBuf);
     }
