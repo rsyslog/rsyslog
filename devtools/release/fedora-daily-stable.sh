@@ -105,6 +105,9 @@ cmd_prepare_sources() {
 	tar -C "$tmp_dir" -czf "$output_dir/SOURCES/rsyslog-$version.tar.gz" \
 		"rsyslog-$version"
 
+	python3 "$(dirname "$0")/validate-rpm-baseline-patches.py" \
+		"$spec_file" "$policy_file" "Fedora 44"
+
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
 import json
 import pathlib
@@ -118,9 +121,6 @@ version = sys.argv[3]
 release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
-
-if re.search(r"(?m)^Patch\d*:\s*", spec):
-    raise SystemExit("Fedora baseline gained patches; review them before packaging main")
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
@@ -137,6 +137,28 @@ for package in packages:
     )
     if count != 1:
         raise SystemExit(f"could not insert supplemental BuildRequires: {package}")
+
+main_files = policy.get("supplemental_main_files", [])
+if not isinstance(main_files, list):
+    raise SystemExit("supplemental_main_files must be a list")
+for entry in main_files:
+    if not isinstance(entry, dict):
+        raise SystemExit("supplemental main file entry must be an object")
+    path = entry.get("path", "").strip()
+    anchor = entry.get("anchor", "").strip()
+    reason = entry.get("reason", "").strip()
+    if not path or not anchor or not reason:
+        raise SystemExit("supplemental main file requires path, anchor, and reason")
+    if re.search(rf"(?m)^{re.escape(path)}\s*$", spec):
+        continue
+    spec, count = re.subn(
+        rf"(?m)^({re.escape(anchor)}\s*)$",
+        rf"\1\n{path}",
+        spec,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"could not add supplemental main file: {path}")
 
 spec, version_count = re.subn(r"(?m)^Version:\s*.*$", f"Version: {version}", spec)
 spec, release_count = re.subn(
