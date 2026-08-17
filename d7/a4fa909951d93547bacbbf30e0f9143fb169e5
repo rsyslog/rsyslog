@@ -1,0 +1,28 @@
+.codex/README.md
+  s_48737998f77d00::t_e2039400b0109b 18-19
+tests/Makefile.am
+  s_48737998f77d00::t_4f37269b6fac69 197
+tests/codex-pre-push-container-gate.sh
+  s_48737998f77d00::t_4f37269b6fac69 1-50
+Makefile.am
+  s_48737998f77d00::t_617bd42b415d56 17
+.codex/pre_push_container_gate.sh
+  s_48737998f77d00::t_e2039400b0109b 110-135,137,141,145,150,152-157,181-185,189-191
+  s_48737998f77d00::t_b7395ff3c0c2d7 192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d7a4fa909951d93547bacbbf30e0f9143fb169e5",
+  "prompts": {},
+  "sessions": {
+    "s_48737998f77d00": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f19-61c6-7661-bac3-b7033265bb88",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
