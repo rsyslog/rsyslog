@@ -107,8 +107,8 @@ def unwrap_shell_command(words):
 
     return None
 
-def inline_validation_skip(words):
-    """Return whether the simple command sets the documented push override."""
+def inline_validation_override(words):
+    """Return the documented push override, or None when the command omits it."""
     assignment_re = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)")
     i = 0
     override = None
@@ -130,10 +130,13 @@ def inline_validation_skip(words):
             i += 1
             continue
         break
+    if override is None:
+        return None
     return override == "1"
 
 def classify_git_push(words, inherited_skip=False):
-    effective_skip = inherited_skip or inline_validation_skip(words)
+    override = inline_validation_override(words)
+    effective_skip = inherited_skip if override is None else override
     if is_git_push(words):
         return "skip" if effective_skip else "gate"
 

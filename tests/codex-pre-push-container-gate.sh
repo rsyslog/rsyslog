@@ -5,9 +5,10 @@
 #
 # Regression test for the Codex pre-push gate's explicit validation bypass.
 # It proves that direct, env-prefixed, and shell-wrapped inline overrides are
-# accepted, while ordinary pushes, false overrides, and mixed command lists
-# still produce the hook's deny decision. Empty output is the allow oracle;
-# the JSON permissionDecision=deny response is the block oracle.
+# accepted, while ordinary and shell-wrapped pushes, false overrides, and
+# mixed command lists still produce the hook's deny decision. Empty output is
+# the allow oracle; the JSON permissionDecision=deny response is the block
+# oracle. The shell-wrapped blocked case proves wrapper push recognition.
 # This is intentionally standalone rather than a diag.sh scenario: it exercises
 # only hook command parsing and needs neither rsyslogd nor testbench helpers.
 # The hook is intentionally absent from release tarballs, so this test skips
@@ -69,6 +70,8 @@ assert_allowed "SKIP_CONTAINER_VALIDATION=1 bash -lc 'git push origin topic'"
 assert_allowed "env SKIP_CONTAINER_VALIDATION=1 sh -c 'git push origin topic'"
 
 assert_blocked 'git push origin topic'
+assert_blocked "bash -lc 'git push origin topic'"
 assert_blocked 'SKIP_CONTAINER_VALIDATION=0 git push origin topic'
 assert_blocked "SKIP_CONTAINER_VALIDATION=0 bash -lc 'git push origin topic'"
+assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'SKIP_CONTAINER_VALIDATION=0 git push origin topic'"
 assert_blocked 'SKIP_CONTAINER_VALIDATION=1 git push origin topic; git push origin other'
