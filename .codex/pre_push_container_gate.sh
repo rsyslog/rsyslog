@@ -18,7 +18,7 @@ import re
 import shlex
 import sys
 
-def split_simple_commands(command: str) -> list[list[str]]:
+def split_simple_commands(command):
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -35,7 +35,7 @@ def split_simple_commands(command: str) -> list[list[str]]:
         commands.append(current)
     return commands
 
-def strip_prefixes(words: list[str]) -> list[str]:
+def strip_prefixes(words):
     i = 0
     assignment_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*")
     while i < len(words):
@@ -57,7 +57,7 @@ def strip_prefixes(words: list[str]) -> list[str]:
         break
     return words[i:]
 
-def is_git_push(words: list[str]) -> bool:
+def is_git_push(words):
     words = strip_prefixes(words)
     if not words or words[0] != "git":
         return False
@@ -77,7 +77,7 @@ def is_git_push(words: list[str]) -> bool:
         return False
     return False
 
-def unwrap_shell_command(words: list[str]) -> list[str] | None:
+def unwrap_shell_command(words):
     words = strip_prefixes(words)
     if not words:
         return None
@@ -107,7 +107,7 @@ def unwrap_shell_command(words: list[str]) -> list[str] | None:
 
     return None
 
-def inline_validation_skip(words: list[str]) -> bool:
+def inline_validation_skip(words):
     """Return whether the simple command sets the documented push override."""
     assignment_re = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)")
     i = 0
@@ -132,7 +132,7 @@ def inline_validation_skip(words: list[str]) -> bool:
         break
     return override == "1"
 
-def classify_git_push(words: list[str], inherited_skip: bool = False) -> str | None:
+def classify_git_push(words, inherited_skip=False):
     effective_skip = inherited_skip or inline_validation_skip(words)
     if is_git_push(words):
         return "skip" if effective_skip else "gate"
