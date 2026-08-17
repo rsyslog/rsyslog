@@ -15,6 +15,8 @@ This repository ships a repo-local Codex hook configuration for trusted projects
 - If formatting fails, the `git commit` tool call is blocked and Codex is told to fix formatting first
 - If formatting updates `.c` or `.h` files, the hook stages those tracked formatter updates automatically and then allows the commit
 - If partially staged `.c` or `.h` files are present, the hook blocks because auto-restaging would not be safe
+- Blocks pushes when source, build, or test changes are newer than the local container-validation marker
+- Allows an explicit one-command override with `SKIP_CONTAINER_VALIDATION=1 git push ...`; the hook reads the assignment from the command payload because hook processes do not inherit inline command assignments
 
 ## Repo-local skills
 

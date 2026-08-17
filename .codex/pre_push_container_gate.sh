@@ -107,24 +107,54 @@ def unwrap_shell_command(words: list[str]) -> list[str] | None:
 
     return None
 
-def contains_git_push(words: list[str]) -> bool:
+def inline_validation_skip(words: list[str]) -> bool:
+    """Return whether the simple command sets the documented push override."""
+    assignment_re = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)")
+    i = 0
+    override = None
+    while i < len(words):
+        token = words[i]
+        if token == "sudo":
+            i += 1
+            continue
+        if token in {"command", "builtin", "noglob", "time"}:
+            i += 1
+            continue
+        if token == "env":
+            i += 1
+            continue
+        match = assignment_re.fullmatch(token)
+        if match:
+            if match.group(1) == "SKIP_CONTAINER_VALIDATION":
+                override = match.group(2)
+            i += 1
+            continue
+        break
+    return override == "1"
+
+def classify_git_push(words: list[str]) -> str | None:
     if is_git_push(words):
-        return True
+        return "skip" if inline_validation_skip(words) else "gate"
 
     nested_command = unwrap_shell_command(words)
     if not nested_command:
-        return False
+        return None
 
     command = nested_command[0]
     if not isinstance(command, str) or not command.strip():
-        return False
+        return None
 
     try:
         commands = split_simple_commands(command)
     except ValueError:
-        return False
+        return None
 
-    return any(contains_git_push(simple_command) for simple_command in commands)
+    decisions = [classify_git_push(simple_command) for simple_command in commands]
+    if "gate" in decisions:
+        return "gate"
+    if "skip" in decisions:
+        return "skip"
+    return None
 
 payload_raw = os.environ.get("PAYLOAD")
 if payload_raw is None:
@@ -148,12 +178,17 @@ try:
 except ValueError:
     sys.exit(0)
 
-for simple_command in commands:
-    if contains_git_push(simple_command):
-        print("yes")
-        break
+decisions = [classify_git_push(simple_command) for simple_command in commands]
+if "gate" in decisions:
+    print("yes")
+elif "skip" in decisions:
+    print("skip")
 PY
 )"
+
+if [[ "${should_gate}" == "skip" ]]; then
+  exit 0
+fi
 
 if [[ "${should_gate}" != "yes" ]]; then
   exit 0

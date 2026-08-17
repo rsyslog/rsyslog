@@ -194,6 +194,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	codex-pre-push-container-gate.sh \
 	backtick-cat-procfs.sh \
 	preservefqdn-localhostname-internal.sh \
 	net-enabledns-off-localhostname.sh \

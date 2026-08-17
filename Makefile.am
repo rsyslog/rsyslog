@@ -14,6 +14,7 @@ EXTRA_DIST = \
 	COPYING \
 	COPYING.LESSER \
 	COPYING.ASL20 \
+	.codex/pre_push_container_gate.sh \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
