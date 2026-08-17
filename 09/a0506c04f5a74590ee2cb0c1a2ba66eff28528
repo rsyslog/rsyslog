@@ -1,0 +1,27 @@
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_8d234cfc584863::t_e2be78665499be 3,60-61,119-120,203,205,210-213,215,219,221-222,263-264,267,269,503,506
+tests/codex-pre-push-container-gate.sh
+  s_8d234cfc584863::t_390610f5744959 2-5,11-12,31-40,68-69,73
+  s_8d234cfc584863::t_5470667095b79e 13-14,21-24,26
+  s_8d234cfc584863::t_f87cd728e024c5 20
+.codex/pre_push_container_gate.sh
+  s_8d234cfc584863::t_390610f5744959 135-136,138,153
+.agent/skills/rsyslog_commit/SKILL.md
+  s_8d234cfc584863::t_390610f5744959 48-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "09a0506c04f5a74590ee2cb0c1a2ba66eff28528",
+  "prompts": {},
+  "sessions": {
+    "s_8d234cfc584863": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f57-e3fb-7241-8e0c-23cd8057a43f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
