@@ -908,6 +908,7 @@ EXTRA_DIST = \
     source/reference/parameters/mmkubernetes-filenamerulebase.rst \
     source/reference/parameters/mmkubernetes-filenamerules.rst \
     source/reference/parameters/mmkubernetes-kubernetesurl.rst \
+    source/reference/parameters/mmkubernetes-includenamespacemetadata.rst \
     source/reference/parameters/mmkubernetes-skipverifyhost.rst \
     source/reference/parameters/mmkubernetes-srcmetadatapath.rst \
     source/reference/parameters/mmkubernetes-sslpartialchain.rst \

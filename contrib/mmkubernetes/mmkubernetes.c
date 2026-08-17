@@ -102,6 +102,7 @@ DEFobjCurrIf(regexp) DEFobjCurrIf(statsobj) DEFobjCurrIf(datetime)
 #define DFLT_BUSY_RETRY_INTERVAL 5 /* retry every 5 seconds */
 #define DFLT_SSL_PARTIAL_CHAIN 0 /* disallow X509_V_FLAG_PARTIAL_CHAIN by default */
 #define DFLT_CACHE_ENTRY_TTL 3600 /* delete entries from the cache older than 3600 seconds */
+#define DFLT_INCLUDE_NAMESPACE_METADATA 1
 #define DFLT_CACHE_EXPIRE_INTERVAL                                  \
     -1 /* delete all expired entries from the cache every N seconds \
 -1 disables cache expiration/ttl checking                           \
@@ -119,6 +120,7 @@ DEFobjCurrIf(regexp) DEFobjCurrIf(statsobj) DEFobjCurrIf(datetime)
 
 static struct cache_s {
     const uchar *kbUrl;
+    sbool includeNamespaceMetadata;
     struct hashtable *mdHt;
     struct hashtable *nsHt;
     pthread_mutex_t *cacheMtx;
@@ -159,6 +161,7 @@ struct modConfData_s {
     sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
     int cacheEntryTTL; /* delete entries from the cache if they are older than this many seconds */
     int cacheExpireInterval; /* delete all expired entries from the cache every this many seconds */
+    sbool includeNamespaceMetadata; /* query and attach namespace metadata */
 };
 
 /* action (instance) configuration data */
@@ -192,6 +195,7 @@ typedef struct _instanceData {
     sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
     int cacheEntryTTL; /* delete entries from the cache if they are older than this many seconds */
     int cacheExpireInterval; /* delete all expired entries from the cache every this many seconds */
+    sbool includeNamespaceMetadata; /* query and attach namespace metadata */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -238,7 +242,8 @@ static struct cnfparamdescr modpdescr[] = {{"kubernetesurl", eCmdHdlrArray, 0},
                                            {"busyretryinterval", eCmdHdlrInt, 0},
                                            {"sslpartialchain", eCmdHdlrBinary, 0},
                                            {"cacheentryttl", eCmdHdlrInt, 0},
-                                           {"cacheexpireinterval", eCmdHdlrInt, 0}
+                                           {"cacheexpireinterval", eCmdHdlrInt, 0},
+                                           {"includenamespacemetadata", eCmdHdlrBinary, 0}
 #if HAVE_LOADSAMPLESFROMSTRING == 1
                                            ,
                                            {"filenamerules", eCmdHdlrArray, 0},
@@ -266,7 +271,8 @@ static struct cnfparamdescr actpdescr[] = {{"kubernetesurl", eCmdHdlrArray, 0},
                                            {"busyretryinterval", eCmdHdlrInt, 0},
                                            {"sslpartialchain", eCmdHdlrBinary, 0},
                                            {"cacheentryttl", eCmdHdlrInt, 0},
-                                           {"cacheexpireinterval", eCmdHdlrInt, 0}
+                                           {"cacheexpireinterval", eCmdHdlrInt, 0},
+                                           {"includenamespacemetadata", eCmdHdlrBinary, 0}
 #if HAVE_LOADSAMPLESFROMSTRING == 1
                                            ,
                                            {"filenamerules", eCmdHdlrArray, 0},
@@ -645,6 +651,7 @@ BEGINsetModCnf
     loadModConf->sslPartialChain = DFLT_SSL_PARTIAL_CHAIN;
     loadModConf->cacheEntryTTL = DFLT_CACHE_ENTRY_TTL;
     loadModConf->cacheExpireInterval = DFLT_CACHE_EXPIRE_INTERVAL;
+    loadModConf->includeNamespaceMetadata = DFLT_INCLUDE_NAMESPACE_METADATA;
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) {
             continue;
@@ -776,6 +783,8 @@ BEGINsetModCnf
             loadModConf->cacheEntryTTL = pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "cacheexpireinterval")) {
             loadModConf->cacheExpireInterval = pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "includenamespacemetadata")) {
+            loadModConf->includeNamespaceMetadata = pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "mmkubernetes: program error, non-handled "
@@ -1059,6 +1068,7 @@ static struct cache_s *cacheNew(instanceData *pData) {
     need_mutex_destroy = 1;
     datetime.GetTime(&now);
     cache->kbUrl = pData->kubernetesUrl;
+    cache->includeNamespaceMetadata = pData->includeNamespaceMetadata;
     cache->expirationTime = 0;
     if (pData->cacheExpireInterval > -1)
         cache->expirationTime = pData->cacheExpireInterval + pData->cacheEntryTTL + now;
@@ -1288,6 +1298,7 @@ BEGINnewActInst
     pData->sslPartialChain = loadModConf->sslPartialChain;
     pData->cacheEntryTTL = loadModConf->cacheEntryTTL;
     pData->cacheExpireInterval = loadModConf->cacheExpireInterval;
+    pData->includeNamespaceMetadata = loadModConf->includeNamespaceMetadata;
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) {
             continue;
@@ -1420,6 +1431,8 @@ BEGINnewActInst
             pData->cacheEntryTTL = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "cacheexpireinterval")) {
             pData->cacheExpireInterval = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "includenamespacemetadata")) {
+            pData->includeNamespaceMetadata = pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "mmkubernetes: program error, non-handled "
@@ -1493,7 +1506,9 @@ BEGINnewActInst
 
     /* get the cache for this url */
     for (i = 0; caches[i] != NULL; i++) {
-        if (!strcmp((char *)pData->kubernetesUrl, (char *)caches[i]->kbUrl)) break;
+        if (!strcmp((char *)pData->kubernetesUrl, (char *)caches[i]->kbUrl) &&
+            pData->includeNamespaceMetadata == caches[i]->includeNamespaceMetadata)
+            break;
     }
     if (caches[i] != NULL) {
         pData->cache = caches[i];
@@ -1592,6 +1607,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tbusyretryinterval='%d'\n", pData->busyRetryInterval);
     dbgprintf("\tcacheentryttl='%d'\n", pData->cacheEntryTTL);
     dbgprintf("\tcacheexpireinterval='%d'\n", pData->cacheExpireInterval);
+    dbgprintf("\tincludenamespacemetadata='%d'\n", pData->includeNamespaceMetadata);
 ENDdbgPrintInstInfo
 
 
@@ -1856,10 +1872,12 @@ BEGINdoAction
     if (jMetadata == NULL) {
         struct json_object *jReply = NULL, *jo2 = NULL, *jNsMeta = NULL, *jPodData = NULL;
 
-        /* check cache for namespace metadata */
-        jNsMeta = cache_entry_get_nsmd(pWrkrData, (const char *)ns, now);
+        /* Namespace metadata is optional. The namespace name parsed from the
+         * input path remains part of the basic pod identity either way. */
+        if (pWrkrData->pData->includeNamespaceMetadata)
+            jNsMeta = cache_entry_get_nsmd(pWrkrData, (const char *)ns, now);
 
-        if (jNsMeta == NULL) {
+        if (pWrkrData->pData->includeNamespaceMetadata && jNsMeta == NULL) {
             /* query kubernetes for namespace info */
             if ((-1 == asprintf(&apiPath, "/api/v1/namespaces/%s", ns)) || (!apiPath)) {
                 pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
