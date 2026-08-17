@@ -74,4 +74,5 @@ assert_blocked "bash -lc 'git push origin topic'"
 assert_blocked 'SKIP_CONTAINER_VALIDATION=0 git push origin topic'
 assert_blocked "SKIP_CONTAINER_VALIDATION=0 bash -lc 'git push origin topic'"
 assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'SKIP_CONTAINER_VALIDATION=0 git push origin topic'"
+assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'unset SKIP_CONTAINER_VALIDATION; git push origin topic'"
 assert_blocked 'SKIP_CONTAINER_VALIDATION=1 git push origin topic; git push origin other'
