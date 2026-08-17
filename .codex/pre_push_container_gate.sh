@@ -48,8 +48,15 @@ def strip_prefixes(words):
             continue
         if token == "env":
             i += 1
-            while i < len(words) and assignment_re.fullmatch(words[i]):
-                i += 1
+            while i < len(words):
+                token = words[i]
+                if token == "-u" and i + 1 < len(words):
+                    i += 2
+                    continue
+                if token.startswith("-") or assignment_re.fullmatch(token):
+                    i += 1
+                    continue
+                break
             continue
         if assignment_re.fullmatch(token):
             i += 1
@@ -145,19 +152,12 @@ def inline_validation_override(words):
         return None
     return override == "1"
 
-def shell_validation_override(words):
-    """Return a persistent override set by a shell builtin, if any."""
+def shell_validation_reset(words):
+    """Return whether a shell builtin clears the push override."""
     words = strip_prefixes(words)
     if not words:
-        return None
-    if words[0] == "unset" and "SKIP_CONTAINER_VALIDATION" in words[1:]:
         return False
-    if words[0] != "export":
-        return None
-    for token in words[1:]:
-        if token.startswith("SKIP_CONTAINER_VALIDATION="):
-            return token.split("=", 1)[1] == "1"
-    return None
+    return words[0] == "unset" and "SKIP_CONTAINER_VALIDATION" in words[1:]
 
 def classify_git_push(words, inherited_skip=False):
     override = inline_validation_override(words)
@@ -178,14 +178,11 @@ def classify_git_push(words, inherited_skip=False):
     except ValueError:
         return None
 
-    nested_skip = effective_skip
     decisions = []
     for simple_command in commands:
-        shell_override = shell_validation_override(simple_command)
-        if shell_override is not None:
-            nested_skip = shell_override
-            continue
-        decisions.append(classify_git_push(simple_command, nested_skip))
+        if effective_skip and shell_validation_reset(simple_command):
+            return "gate"
+        decisions.append(classify_git_push(simple_command, effective_skip))
     if "gate" in decisions:
         return "gate"
     if "skip" in decisions:
@@ -214,14 +211,9 @@ try:
 except ValueError:
     sys.exit(0)
 
-skip = False
 decisions = []
 for simple_command in commands:
-    shell_override = shell_validation_override(simple_command)
-    if shell_override is not None:
-        skip = shell_override
-        continue
-    decisions.append(classify_git_push(simple_command, skip))
+    decisions.append(classify_git_push(simple_command))
 if "gate" in decisions:
     print("yes")
 elif "skip" in decisions:
