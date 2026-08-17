@@ -1,6 +1,6 @@
 ---
 name: rsyslog_local_container_testing
-description: Mirror rsyslog run_checks.yml container validation locally, including the change-gated Ubuntu 26.04 run-ci.sh check run, the clang static analyzer job, late prompt-based audit passes, Cubic review where applicable, service-skip validation, clean-tree rules, and container path caveats.
+description: Mirror rsyslog run_checks.yml container validation locally, including the change-gated Ubuntu 26.04 run-ci.sh check run, the clang static analyzer job, late prompt-based audit passes, service-skip validation, clean-tree rules, and container path caveats.
 ---
 
 # rsyslog_local_container_testing
@@ -57,8 +57,8 @@ container validation failure.
 By default the helper compares committed branch changes against the worktree's
 creation baseline: `RSYSLOG_LOCAL_VALIDATION_BASE` when set, otherwise
 `rsyslog.localValidationBase` from git config when present, otherwise the
-oldest `HEAD` reflog entry for the worktree. This keeps local Cubic and local
-diff classification tied to the commit that was `HEAD` when the dedicated
+oldest `HEAD` reflog entry for the worktree. This keeps local diff
+classification tied to the commit that was `HEAD` when the dedicated
 worktree was created, even after `origin/main` moves. Use `--base REF` for an
 intentional one-off override.
 
@@ -116,8 +116,8 @@ is too noisy for routine rsyslog PR validation.
   docs build unless they also change rendered Sphinx inputs.
 - **Tier 1: default PR-ready gate for code or testbench changes**. Run a
   change-gated Ubuntu 26.04 `devtools/run-ci.sh` check first, then the existing
-  static-analyzer pass, then late prompt-based audit passes and local Cubic
-  review when applicable. This is the normal local confidence gate for C,
+  static-analyzer pass and late prompt-based audit passes. This is the normal
+  local confidence gate for C,
   parser, module, runtime, `tests/*.sh`, `diag.sh`, `Makefile.am`,
   `configure.ac`, and `run_checks.yml` changes.
 - **Tier 2: compile portability gate for non-trivial C/header changes**. Add
@@ -200,27 +200,26 @@ that the audit was clean. Skip prompt audits for documentation-only and
 instruction-only changes unless the edited instructions themselves change audit
 or validation behavior.
 
-## Cubic Review
+## Optional Cubic Review
 
-Run the local `cubic` CLI as an AI review gate when it applies. Cubic is a small
+The local `cubic` CLI can provide additional AI review when it applies. Cubic is a small
 local shim that forwards the review request to the configured cloud AI service,
 so it should run late on the stabilized candidate. It is a broad review pass,
 not a fast compile detector.
 
-- **Docs-only changes**: do not run Cubic.
-- **Code changes (`*.c`, `*.h`, grammar/parser/runtime/module logic)**: always
-  run Cubic when the command is installed and reachable.
-- **Test-only changes**: run Cubic for non-trivial test logic, timing/sync
+- **Docs-only changes**: Cubic is usually not useful.
+- **Code changes (`*.c`, `*.h`, grammar/parser/runtime/module logic)**: consider
+  Cubic when the command is installed and reachable.
+- **Test-only changes**: consider Cubic for non-trivial test logic, timing/sync
   changes, helper changes, or broad testbench behavior.
-- **Workflow, build, and tooling changes**: run Cubic when the change is
+- **Workflow, build, and tooling changes**: consider Cubic when the change is
   non-trivial, behavior-affecting, security-sensitive, or large. Use
   `actionlint`, pinned `zizmor`, and the relevant local linters as the primary
   deterministic checks for workflow syntax/security.
-- **Mixed or large changes**: run Cubic.
+- **Mixed or large changes**: consider Cubic.
 
-Hosted Cubic or Gemini PR comments are useful additional feedback, but they do
-not replace local Cubic for code changes and do not replace local analyzer,
-build, or container checks.
+Hosted Cubic or Gemini PR comments are useful additional feedback. Neither
+local nor hosted AI review replaces local analyzer, build, or container checks.
 
 ## Extended Lane Triggers
 
@@ -261,14 +260,13 @@ change-gated Ubuntu 26.04 check would not expose. Do not add lanes by habit.
 
 ## Preferred Order
 
-For the PR-ready final gate, run Cubic where applicable and two container
-validations for broad local confidence. Mirror these
+For the PR-ready final gate, run two container validations for broad local
+confidence. Mirror these
 `.github/workflows/run_checks.yml` paths:
 
-1. Local Cubic review and the `clang static analyzer` job's container command.
-   These can run in parallel when the agent harness supports parallel commands.
+1. The `clang static analyzer` job's container command.
 2. The change-gated Ubuntu 26.04 `devtools/run-ci.sh` check run, only after the
-   analyzer and Cubic results are clean or their findings are understood.
+   analyzer results are clean or their findings are understood.
 
 This sequence is what "PR-ready local container validation" means in agent
 status reports. It is intentionally not an unconditional full-suite run; it
@@ -502,12 +500,10 @@ environment:
 - Provide the exact local container lanes or hosted CI lanes that a container
   capable agent should run next.
 - Missing local tools such as `shellcheck`, `checkbashisms`, `actionlint`,
-  `zizmor`, `hadolint`, `trivy`, `jscpd`, `pycodestyle`, Cubic, Docker, or
+  `zizmor`, `hadolint`, `trivy`, `jscpd`, `pycodestyle`, Docker, or
   Podman are not fatal by themselves. Report the missing checks and continue
   with all deterministic checks that are available and relevant.
-- For code changes, still run or request Cubic according to the Cubic rules
-  when the local CLI is available. If Cubic is unavailable, report that as a
-  separate AI-review limitation.
+- Local Cubic review is optional and does not affect validation completeness.
 
 ## Service Relevance
 

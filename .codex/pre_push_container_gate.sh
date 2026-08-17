@@ -132,9 +132,10 @@ def inline_validation_skip(words: list[str]) -> bool:
         break
     return override == "1"
 
-def classify_git_push(words: list[str]) -> str | None:
+def classify_git_push(words: list[str], inherited_skip: bool = False) -> str | None:
+    effective_skip = inherited_skip or inline_validation_skip(words)
     if is_git_push(words):
-        return "skip" if inline_validation_skip(words) else "gate"
+        return "skip" if effective_skip else "gate"
 
     nested_command = unwrap_shell_command(words)
     if not nested_command:
@@ -149,7 +150,7 @@ def classify_git_push(words: list[str]) -> str | None:
     except ValueError:
         return None
 
-    decisions = [classify_git_push(simple_command) for simple_command in commands]
+    decisions = [classify_git_push(simple_command, effective_skip) for simple_command in commands]
     if "gate" in decisions:
         return "gate"
     if "skip" in decisions:
