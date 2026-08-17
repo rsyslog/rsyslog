@@ -53,6 +53,9 @@ def strip_prefixes(words):
                 if token == "-u" and i + 1 < len(words):
                     i += 2
                     continue
+                if token == "--unset" and i + 1 < len(words):
+                    i += 2
+                    continue
                 if token.startswith("-") or assignment_re.fullmatch(token):
                     i += 1
                     continue
@@ -135,6 +138,15 @@ def inline_validation_override(words):
                     if words[i + 1] == "SKIP_CONTAINER_VALIDATION":
                         override = "0"
                     i += 2
+                    continue
+                if token == "--unset" and i + 1 < len(words):
+                    if words[i + 1] == "SKIP_CONTAINER_VALIDATION":
+                        override = "0"
+                    i += 2
+                    continue
+                if token in {"-uSKIP_CONTAINER_VALIDATION", "--unset=SKIP_CONTAINER_VALIDATION"}:
+                    override = "0"
+                    i += 1
                     continue
                 if token.startswith("-"):
                     i += 1
