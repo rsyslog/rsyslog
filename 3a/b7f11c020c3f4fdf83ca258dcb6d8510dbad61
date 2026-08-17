@@ -1,0 +1,37 @@
+tests/testsuites/omprog-resume-interval-bin.sh
+  s_6224eda96fc0da::t_3a922d42fc3e45 3,16-17
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-2,5-15,18-48
+  s_6224eda96fc0da::t_40ecd1a8953cfa 4
+tests/omprog-resume-interval.sh
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-5,10-27,29-54
+  s_6224eda96fc0da::t_40ecd1a8953cfa 6-9,28
+tests/Makefile.am
+  s_6224eda96fc0da::t_d0a905417af9e4 1001,3609
+runtime/action.c
+  s_6224eda96fc0da::t_5c76580a70cc8a 1657,1680
+  s_6224eda96fc0da::t_96b250326bfabd 866-868,913-915
+  s_6224eda96fc0da::t_237eb7f8146dc5 1073,1100,1122-1124,1133,1169-1172,1474-1478,1482,1529-1533,1665-1670,1675
+  s_6224eda96fc0da::t_7f8735ac6c2c3e 1778
+  s_6224eda96fc0da::t_69b0bc67beb67f 1749-1750
+  s_6224eda96fc0da::t_6cc301084bdfa8 1759
+  s_6224eda96fc0da::t_c38b9bdb7f5d9d 1784-1785,1792-1793
+  s_6224eda96fc0da::t_0bfecabdfcd4a9 1631-1632
+  s_6224eda96fc0da::t_1f74cc856ac09b 1534,1633-1647,1708,1775-1777
+  s_6224eda96fc0da::t_1efef3543d7f18 859
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "3ab7f11c020c3f4fdf83ca258dcb6d8510dbad61",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

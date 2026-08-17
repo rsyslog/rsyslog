@@ -1,0 +1,27 @@
+.github/workflows/doc_build.yml
+  s_cf144905ab59ed::t_ccfccdd457ce56 42-43,67,134-135,154,157-211
+devtools/local-validation-plan.sh
+  s_cf144905ab59ed::t_469294fa7f2227 274-275,433-470,638
+doc/Makefile.am
+  s_cf144905ab59ed::t_aabe817ac934e2 1361-1362
+doc/source/reference/properties/message-msg.rst
+  s_cf144905ab59ed::t_1d308dfa4d37ea 31-32,39-40
+doc/source/tutorials/database.rst
+  s_cf144905ab59ed::t_75f3204adaad48 124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "93164b76768483209c9beed05d5dec6878dff273",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

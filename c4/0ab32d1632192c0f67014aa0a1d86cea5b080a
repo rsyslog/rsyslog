@@ -1,0 +1,20 @@
+ChangeLog
+  s_2e888d0bafbab5::t_8e859feb420ce3 2-9,277-279
+  s_2e888d0bafbab5::t_875e3a297aaf45 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "c40ab32d1632192c0f67014aa0a1d86cea5b080a",
+  "prompts": {},
+  "sessions": {
+    "s_2e888d0bafbab5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f02dd-92ae-7020-8310-99dd6e196029",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

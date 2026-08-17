@@ -1,0 +1,29 @@
+runtime/action.c
+  s_6224eda96fc0da::t_86b62abc61dab4 1433-1434
+  s_6224eda96fc0da::t_ee11e43c0dce30 1435
+  s_6224eda96fc0da::t_23dab3ac01340f 1436
+tests/omfwd-suspended-no-early-commit.sh
+  s_6224eda96fc0da::t_416a03b4b5b9bf 41
+  s_6224eda96fc0da::t_1834b93a0d57f2 10-11
+  s_6224eda96fc0da::t_2917f996c056a3 42
+  s_6224eda96fc0da::t_9159e3d7120009 1-9,12-16,18-40,43-46
+  s_6224eda96fc0da::t_6710146342a397 17
+tests/Makefile.am
+  s_6224eda96fc0da::t_ba6aba9e652269 148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "404ab29ff850800f4bb7a5efb550d196bbc26816",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

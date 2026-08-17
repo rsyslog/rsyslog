@@ -1,0 +1,23 @@
+tools/rsyslogd.c
+  s_6224eda96fc0da::t_2d487574adced8 29,164-191
+tests/config_output-o-option-same-file.sh
+  s_6224eda96fc0da::t_b0e2a9461e2ce2 1-49
+tests/Makefile.am
+  s_6224eda96fc0da::t_b0e2a9461e2ce2 455
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "348edc766ace266072d3ff084e9e681cc2d60d80",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

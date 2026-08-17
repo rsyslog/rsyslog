@@ -1,0 +1,24 @@
+grammar/rainerscript.c
+  s_6224eda96fc0da::t_f87c30e642c82c 5587-5589
+tests/abort-uncleancfg-continue-nop.sh
+  s_6224eda96fc0da::t_3cd92915ba3587 22
+  s_6224eda96fc0da::t_f87c30e642c82c 1-21,23-32
+tests/Makefile.am
+  s_6224eda96fc0da::t_f87c30e642c82c 309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "883fdb4575e44ca8a4e5f73f1fcb22769a8d9ea6",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

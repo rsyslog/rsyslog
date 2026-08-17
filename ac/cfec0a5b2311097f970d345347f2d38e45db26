@@ -1,0 +1,23 @@
+plugins/omazuredce/omazuredce.c
+  s_2f89000869a42c::t_a48a25bdb8177f 791,813-814,818,824,826
+  s_2f89000869a42c::t_70d0b27f77619b 793,815-817,825,827
+tests/unit/omazuredce_utils_test.c
+  s_2f89000869a42c::t_a48a25bdb8177f 5,7-8,112-116
+  s_2f89000869a42c::t_70d0b27f77619b 117-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "accfec0a5b2311097f970d345347f2d38e45db26",
+  "prompts": {},
+  "sessions": {
+    "s_2f89000869a42c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f89d2-7002-7821-8550-0d33e8527d33",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

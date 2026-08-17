@@ -1,0 +1,20 @@
+.github/workflows/el10_daily_stable.yml
+  s_2dc01c7e3d2940::t_238303c88f7925 193-194,225,242-253
+  s_2dc01c7e3d2940::t_737f0e777382a5 226-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b186d06c6a8d6a7d6cd239cdcb420de89c76ec6e",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

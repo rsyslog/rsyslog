@@ -1,0 +1,35 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_d0a905417af9e4 1001,3609
+runtime/action.c
+  s_6224eda96fc0da::t_1f74cc856ac09b 937,1625-1639,1699,1766-1768
+  s_6224eda96fc0da::t_0bfecabdfcd4a9 1623-1624
+  s_6224eda96fc0da::t_f6382b680b4867 1671
+  s_6224eda96fc0da::t_c38b9bdb7f5d9d 1775-1776,1783-1784
+  s_6224eda96fc0da::t_7f8735ac6c2c3e 1649,1657-1660,1666,1769
+  s_6224eda96fc0da::t_96b250326bfabd 866-868,913-915,935-936
+  s_6224eda96fc0da::t_69b0bc67beb67f 1740-1741
+  s_6224eda96fc0da::t_1efef3543d7f18 859
+tests/testsuites/omprog-resume-interval-bin.sh
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-2,5-15,18-48
+  s_6224eda96fc0da::t_3a922d42fc3e45 3,16-17
+  s_6224eda96fc0da::t_40ecd1a8953cfa 4
+tests/omprog-resume-interval.sh
+  s_6224eda96fc0da::t_dab007cbfd2e42 1-5,10-27,29-54
+  s_6224eda96fc0da::t_40ecd1a8953cfa 6-9,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "0a417082d441d505cf39b7b383193e1a0fac571e",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

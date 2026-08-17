@@ -1,0 +1,19 @@
+tests/ratelimit-persource-port-keys-common.sh
+  s_008ef65e7b10ec::t_c7355b9a1525dd 6-7,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0f8efb775e003d415ff67b9db301a8d5028bf6a0",
+  "prompts": {},
+  "sessions": {
+    "s_008ef65e7b10ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b05-32f8-7150-a3b1-ae45d4d9015a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+tests/imuxsock-NUL-vg.sh
+  s_6224eda96fc0da::t_a58681f3198db7 6-9
+  s_6224eda96fc0da::t_7825064d4d05c0 1-5
+tests/Makefile.am
+  s_6224eda96fc0da::t_7825064d4d05c0 335,535
+tests/imuxsock-NUL.sh
+  s_6224eda96fc0da::t_7825064d4d05c0 1-16,18-22,27-29
+  s_6224eda96fc0da::t_94343e632f4455 23-26
+  s_6224eda96fc0da::t_d1b83a01d5b14e 17
+tests/syslog_caller.c
+  s_6224eda96fc0da::t_4b3e5eeb4561c6 12,74-75,79-90,116-117,135,171,180,182,209-211,233
+plugins/imuxsock/imuxsock.c
+  s_6224eda96fc0da::t_999ac7aef210ff 1118,1648
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d2fcc3dd9fcec21fc0e9bbb03bd4edff737ffed4",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

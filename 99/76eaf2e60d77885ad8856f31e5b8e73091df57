@@ -1,0 +1,28 @@
+plugins/omsendertrack/omsendertrack.c
+  s_f67b54b127aca7::t_87d78688fe4e42 454
+runtime/rshash.c
+  s_f67b54b127aca7::t_058fab06f2dfd4 27-37,104,111,135-138,140,168-235,248,252-265,267-268,281,304,317-318,322,328,352,368,372-374,396,400,402,412,424,429-438,449,455-471,474-486,490,497,501-502,508,510,512
+  s_f67b54b127aca7::t_63786279922fd1 503-507,509,513-514,518
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_058fab06f2dfd4 27,30-33,39,43
+  s_f67b54b127aca7::t_87d78688fe4e42 1-4
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_4e7a4505ed8571 182-210,259
+  s_f67b54b127aca7::t_c53bd43d0667f4 181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "9976eaf2e60d77885ad8856f31e5b8e73091df57",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

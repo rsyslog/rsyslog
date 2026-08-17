@@ -1,0 +1,20 @@
+SECURITY.md
+  s_2211d00224abdf::t_516c08d9c3f83e 120-123
+  s_2211d00224abdf::t_4d906a2470c8c7 117-119,124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ccc5978ab5db34cb4b0b66366bc50665439493ee",
+  "prompts": {},
+  "sessions": {
+    "s_2211d00224abdf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7fc9-8e30-7130-b847-6b5dc1a62abb",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}

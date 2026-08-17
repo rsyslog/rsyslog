@@ -1,0 +1,25 @@
+tests/Makefile.am
+  s_a9719629ed5597::t_cacadc8754738f 750
+  s_a9719629ed5597::t_a5272e4631c2e8 721,1984-1985
+tests/yaml-imtcp-stream-always-zlib-basic.sh
+  s_a9719629ed5597::t_cacadc8754738f 1-29,31-61
+  s_a9719629ed5597::t_8a3898070bb574 30
+doc/source/reference/parameters/imtcp-compression-maxexpansionratio.rst
+  s_a9719629ed5597::t_cacadc8754738f 17,34-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "bf971e927fb92c1f96b451023f637edfa1677978",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+tests/allowed-sender-wildcard-invalid-bits.sh
+  s_6224eda96fc0da::t_12317e819ff010 28
+  s_6224eda96fc0da::t_d5b22c4bd66b53 1-14,19,25-27,33
+  s_6224eda96fc0da::t_1e3688d5919c83 15-18,20-24,29-32
+tests/Makefile.am
+  s_6224eda96fc0da::t_2943973ac04a79 242,657
+runtime/parse.c
+  s_6224eda96fc0da::t_4d06047bf6a22a 49-57,431,433,467,469
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "295144351a81b4e5d46f944e796fb4f4a65b670b",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

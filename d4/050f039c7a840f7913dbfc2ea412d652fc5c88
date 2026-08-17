@@ -1,0 +1,33 @@
+devtools/release/amazonlinux-daily-stable.sh
+  s_2dc01c7e3d2940::t_04187e2ed793d7 172
+  s_2dc01c7e3d2940::t_191c04cc55c774 189-194
+  s_2dc01c7e3d2940::t_58b79d229c1d12 1-171,173-188,195-338
+.github/amazonlinux2023-daily-stable-policy.yml
+  s_2dc01c7e3d2940::t_e8d37506619f8a 1-21,34-35,39
+  s_2dc01c7e3d2940::t_6a1dd4d85f58ca 22-33
+  s_2dc01c7e3d2940::t_191c04cc55c774 36-38
+.github/workflows/collect_flake_evidence.yml
+  s_2dc01c7e3d2940::t_853c6bf88c1307 20
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_2dc01c7e3d2940::t_1cedd343b3fa34 543-544
+  s_2dc01c7e3d2940::t_09b486cf82886a 1-542,554-636
+  s_2dc01c7e3d2940::t_425d7bf2cb4f81 545-553
+.github/AMAZONLINUX_DAILY_STABLE.md
+  s_2dc01c7e3d2940::t_853c6bf88c1307 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d4050f039c7a840f7913dbfc2ea412d652fc5c88",
+  "prompts": {},
+  "sessions": {
+    "s_2dc01c7e3d2940": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92d5-fd41-77a2-b0d8-60411c679d82",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

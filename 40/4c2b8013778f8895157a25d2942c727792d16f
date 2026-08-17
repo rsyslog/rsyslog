@@ -1,0 +1,50 @@
+doc/source/reference/parameters/mmnormalize-turbo.rst
+  s_8641b8fb44298b::t_a606a96d94ca17 4-7,26,65-73
+  s_5424d888acca0b::t_dbe13cc4e69ab3 74
+doc/source/configuration/modules/mmnormalize.rst
+  s_8641b8fb44298b::t_a606a96d94ca17 88
+tests/Makefile.am
+  s_8641b8fb44298b::t_37973b07a7d0d5 1521,1525-1526,2257,3214-3215,3219-3220
+  s_8641b8fb44298b::t_4b1d32ba15ad06 3213
+  s_8641b8fb44298b::t_d5bc7b643e6a24 1522-1524,2258,3216-3218
+  s_5424d888acca0b::t_7687155deeea71 3221
+runtime/msg.c
+  s_8641b8fb44298b::t_a606a96d94ca17 82-85,1023-1030,1089-1095,2910-2911,2914,2927-2928,2933,3038
+tests/mmnormalize-turbo-message-lifecycle.sh
+  s_8641b8fb44298b::t_2a5447e7363bb8 1-32,36
+  s_8641b8fb44298b::t_d8fbe5539a57f1 33
+  s_8641b8fb44298b::t_064145163063ec 34-35
+tests/yaml-mmnormalize-turbo.sh
+  s_8641b8fb44298b::t_3087a9dfa0582a 19
+  s_8641b8fb44298b::t_d8fbe5539a57f1 23-29,34
+  s_8641b8fb44298b::t_c6e6c05a459ed8 1-18,20-22,30-33,36
+  s_8641b8fb44298b::t_064145163063ec 35
+plugins/mmnormalize/mmnormalize.c
+  s_8641b8fb44298b::t_dc07ffec2a4d55 578
+  s_8641b8fb44298b::t_8e9b91a5d19933 572,575-577
+  s_8641b8fb44298b::t_dc8f00abce2c18 579-591
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "404c2b8013778f8895157a25d2942c727792d16f",
+  "prompts": {},
+  "sessions": {
+    "s_5424d888acca0b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4dd5-73fd-7af3-9aef-a1169b92629a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_8641b8fb44298b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6ee9-08f2-7f91-9f4e-4b068beae36a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

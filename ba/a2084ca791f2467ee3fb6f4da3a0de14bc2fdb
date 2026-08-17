@@ -1,0 +1,29 @@
+tests/unit/hashtable_test.c
+  s_f67b54b127aca7::t_68019a10f7760a 4,33-39,263-311,318
+runtime/hashtable_private.h
+  s_f67b54b127aca7::t_cfb3dc8e1611b5 25
+runtime/rshash.c
+  s_f67b54b127aca7::t_4be231592b7b4e 59,92,118,126
+  s_f67b54b127aca7::t_ae29088ec66534 93,155,170
+  s_f67b54b127aca7::t_a583d8766b293a 322-323,325-332
+  s_f67b54b127aca7::t_858a776de2adbd 335
+  s_f67b54b127aca7::t_e331897c37336b 174-207
+  s_f67b54b127aca7::t_a5e85aeaaef771 333-334,336-342
+  s_f67b54b127aca7::t_81c7303a9d7249 143-144,276-278,288,295-296,313-316,497,499,559,571,573
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "baa2084ca791f2467ee3fb6f4da3a0de14bc2fdb",
+  "prompts": {},
+  "sessions": {
+    "s_f67b54b127aca7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f13ed-9c10-79e1-90b8-d3d5ecf987b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

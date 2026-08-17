@@ -1,0 +1,29 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_6729404bc4cbc2 1682
+tests/uxsock_action_isolation.sh
+  s_6224eda96fc0da::t_6729404bc4cbc2 1-4,9-15,21-26,28-41,44-99,101-107,109-118,120-129,131
+  s_6224eda96fc0da::t_25b85ae838ec31 6-8,27,100,108,119
+  s_6224eda96fc0da::t_74df68a2aa2e01 16-20,42-43
+  s_6224eda96fc0da::t_9f386b4c0558ba 130
+  s_6224eda96fc0da::t_3bc169bcb6e3ab 5
+plugins/omuxsock/omuxsock.c
+  s_6224eda96fc0da::t_c4d558b2e67272 71,328,347
+  s_6224eda96fc0da::t_d2e4d550933ca8 70,558,560,568,582
+  s_6224eda96fc0da::t_695f13f2c5dafb 319,323-327,329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.9",
+  "base_commit_sha": "3f19ece22a39ab24c577de5633c4dffd7dc16813",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

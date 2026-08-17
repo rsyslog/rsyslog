@@ -1,0 +1,74 @@
+runtime/action.c
+  s_cf144905ab59ed::t_81170334a5adc3 1023,1041
+tools/omfwd.c
+  s_cf144905ab59ed::t_84821701c25117 1575,1633,1728,1961
+runtime/threads.h
+  s_cf144905ab59ed::t_46635013e38718 42,46
+runtime/dynstats.c
+  s_cf144905ab59ed::t_c32a87f80479c6 1160
+  s_cf144905ab59ed::t_c619a89959209d 1041,1175
+m4/atomic_operations_64bit.m4
+  s_cf144905ab59ed::t_62982e417b9ede 16,33,43-44
+  s_cf144905ab59ed::t_2436405af06132 18,23,26,31-32,34-39,42,45,48,50
+runtime/wtp.c
+  s_cf144905ab59ed::t_05638d3528affb 203,227,229,282,285,351,466,479,516,519,528,532,563,566,570
+runtime/glbl.c
+  s_cf144905ab59ed::t_65b756a87957ae 304,312
+m4/atomic_operations.m4
+  s_cf144905ab59ed::t_6162cfabca6a25 19,31,40-41,55
+  s_cf144905ab59ed::t_8eeb8f8bcbf1dd 14,21,24,26,29-30,32-37,39,42,45,48,50,53-54,56-61,64,66
+plugins/omsendertrack/omsendertrack.c
+  s_cf144905ab59ed::t_aead4604e3ae2d 557,559,671
+runtime/atomic.h
+  s_cf144905ab59ed::t_c8aaa774c5befe 107-108,110
+  s_cf144905ab59ed::t_97d7709b3b4bfb 58-88,90-96,109,111-114,207,212,221-222,226,248,290-294
+plugins/imrelp/imrelp.c
+  s_cf144905ab59ed::t_ba2c4e14841b38 876
+runtime/tcpsrv.c
+  s_cf144905ab59ed::t_06560e4bf36e9d 219,1009-1010
+runtime/wti.h
+  s_a92b7e9f815247::t_95f6421ec3c094 103
+  s_a92b7e9f815247::t_46f15b81f70537 101
+plugins/imptcp/imptcp.c
+  s_cf144905ab59ed::t_b8ab629e093ad5 2196
+plugins/omrelp/omrelp.c
+  s_cf144905ab59ed::t_536376852ebc0e 238,638,681,746
+plugins/imdiag/imdiag.c
+  s_cf144905ab59ed::t_3e8eef4bbb153e 542,566
+contrib/impcap/impcap.c
+  s_cf144905ab59ed::t_881a3555eee2a0 589
+runtime/wti.c
+  s_cf144905ab59ed::t_aca29ad1e08bb3 79,119
+plugins/imkafka/imkafka.c
+  s_cf144905ab59ed::t_80c790989ab0ad 1177,1225,1398,1416,1419
+plugins/omkafka/omkafka.c
+  s_cf144905ab59ed::t_39b0ae1a6d0fef 312,336,353,1836
+runtime/queue.c
+  s_a92b7e9f815247::t_ee30cb066d72cd 506,511
+runtime/action.h
+  s_cf144905ab59ed::t_2f7d358f2fd5ba 123,128,130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "a8f6c98745b4157bcbaa6304e7444752c945e94a",
+  "prompts": {},
+  "sessions": {
+    "s_a92b7e9f815247": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f180c-aa86-7951-8a7f-c99bdfa6a3ee",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

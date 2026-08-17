@@ -1,0 +1,23 @@
+doc/tools/release_build.sh
+  s_a9719629ed5597::t_53e64f359b87a1 124,129
+doc/source/conf.py
+  s_a9719629ed5597::t_058d25b350675b 211-213
+doc/Makefile.am
+  s_a9719629ed5597::t_6bfd4be9e2938d 1337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "84be397a1b55ceb4fe0d52bcfd67bf3bf753ec63",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

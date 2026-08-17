@@ -1,0 +1,22 @@
+tools/rsyslogd.c
+  s_cf144905ab59ed::t_1d3d57990600a8 220-221,223,264-267
+  s_cf144905ab59ed::t_8519b45265da65 2134
+  s_cf144905ab59ed::t_59dc12f1450ffd 2472,2521,2548
+  s_cf144905ab59ed::t_b571a94c63aad2 2388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "8ac8b676b77431a61533356f10ce793eb02d37ab",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

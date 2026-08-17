@@ -1,0 +1,23 @@
+contrib/imhttp/imhttp.c
+  s_a9719629ed5597::t_5180a04960f757 1716-1718
+  s_a9719629ed5597::t_524229ffcfd258 1715
+  s_a9719629ed5597::t_51ce9d391367c9 1719
+doc/source/configuration/modules/imhttp.rst
+  s_a9719629ed5597::t_9bd4f0123e26d6 406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "d9f69e4100a0f91d2196c482e6daa7de58ee5258",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

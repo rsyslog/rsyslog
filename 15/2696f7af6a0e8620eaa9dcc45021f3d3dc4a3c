@@ -1,0 +1,29 @@
+plugins/imrelp/imrelp.c
+  s_b7ba76450d1bc5::t_b8d7ae212920c2 517
+  s_b7ba76450d1bc5::t_053826d7aa9b67 503-505,516,717
+tools/omfwd.c
+  s_b7ba76450d1bc5::t_b8d7ae212920c2 2136,2158,2160-2161,2606,2798
+grammar/rainerscript.h
+  s_b7ba76450d1bc5::t_b8d7ae212920c2 412
+plugins/omrelp/omrelp.c
+  s_b7ba76450d1bc5::t_053826d7aa9b67 475-476,487,616
+  s_b7ba76450d1bc5::t_b8d7ae212920c2 488
+grammar/rainerscript.c
+  s_b7ba76450d1bc5::t_b8d7ae212920c2 1352-1361
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "152696f7af6a0e8620eaa9dcc45021f3d3dc4a3c",
+  "prompts": {},
+  "sessions": {
+    "s_b7ba76450d1bc5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f88ca-54b8-74b0-8d21-7623fd6bef4a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

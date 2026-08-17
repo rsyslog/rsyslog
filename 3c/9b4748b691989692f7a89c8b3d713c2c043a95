@@ -1,0 +1,19 @@
+tests/testsuites/segmented-diskqueue-crash-driver.sh
+  s_03ebdf641d2e87::t_eeed0f89ca1085 5-7,77-81,86-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "3c9b4748b691989692f7a89c8b3d713c2c043a95",
+  "prompts": {},
+  "sessions": {
+    "s_03ebdf641d2e87": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f836d-6373-7db2-9b9f-7e1b61603eaa",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

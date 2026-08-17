@@ -1,0 +1,37 @@
+tests/mmutf8fix_replacement_sequence.sh
+  s_cf144905ab59ed::t_cc7d00529dc6d8 40-42,51
+contrib/impcap/impcap.c
+  s_cf144905ab59ed::t_8dbf58e57c2230 589
+runtime/atomic.h
+  s_cf144905ab59ed::t_630d1007bc1c0b 113-114
+  s_cf144905ab59ed::t_2b3b9a1f358434 288-290
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  s_cf144905ab59ed::t_a6c430a5ba8c58 19-20,718-728,749
+runtime/dynstats.c
+  s_cf144905ab59ed::t_da55e3226d8a06 178
+  s_cf144905ab59ed::t_431ee639ae9f96 145-146,1171,1177
+  s_cf144905ab59ed::t_8dbf58e57c2230 569,591-592,1162,1225-1226
+plugins/imrelp/imrelp.c
+  s_cf144905ab59ed::t_8dbf58e57c2230 876
+runtime/dynstats.h
+  s_cf144905ab59ed::t_8dbf58e57c2230 85
+plugins/mmutf8fix/mmutf8fix.c
+  s_cf144905ab59ed::t_dda981dfa69ae0 446-447
+  s_cf144905ab59ed::t_8eaff1448d9409 448-449
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "ee0f39bbcfa472ea41a46a464fa0e96e36a8d81f",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

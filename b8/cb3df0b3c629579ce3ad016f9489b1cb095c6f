@@ -1,0 +1,32 @@
+tests/yaml-imtcp-ruleset-no-queue-warning.sh
+  s_6224eda96fc0da::t_8b5e0d993f10a1 1-12,14,16-41,43,45-70
+  s_6224eda96fc0da::t_41a554d7e1b6e2 15,44
+  s_6224eda96fc0da::t_245d41f5abce8d 13,42
+runtime/im-helper.h
+  s_6224eda96fc0da::t_de99f225b8ca0d 32,60
+  s_6224eda96fc0da::t_17f974f01434db 56
+  s_6224eda96fc0da::t_54b338bac66db7 31,57-59
+tests/imtcp-ruleset-no-queue-warning.sh
+  s_6224eda96fc0da::t_e610b9ef3ee2fb 28,49
+  s_6224eda96fc0da::t_17f974f01434db 1-5,7-27,29-48,50-52
+  s_6224eda96fc0da::t_00d83eec4e5683 6
+tests/Makefile.am
+  s_6224eda96fc0da::t_8b5e0d993f10a1 751
+  s_6224eda96fc0da::t_17f974f01434db 682
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "b8cb3df0b3c629579ce3ad016f9489b1cb095c6f",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,21 @@
+tests/diag.sh
+  s_21a8eefcb5d3df::t_7b0c89db695cba 3378
+  s_21a8eefcb5d3df::t_d704272481666b 3375-3377
+  s_21a8eefcb5d3df::t_62a231f35314a6 3379-3381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0a27b60f39aed03cfbaf9eb5dfac856122a969b6",
+  "prompts": {},
+  "sessions": {
+    "s_21a8eefcb5d3df": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4e82-0b74-79a1-a6f3-c5d74a7c4cb8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+tests/omudpspoof-fragment-send-failure.sh
+  s_6224eda96fc0da::t_605dd8f61826f3 1-44
+tests/Makefile.am
+  s_6224eda96fc0da::t_f5db9a4c0ae958 1806-1808,2241,3309-3311
+  s_6224eda96fc0da::t_605dd8f61826f3 2355,2385-2394
+plugins/omudpspoof/omudpspoof.c
+  s_6224eda96fc0da::t_7ff19ba89dd66c 450-452,494
+  s_6224eda96fc0da::t_65c05a25211c28 398-399
+tests/override_libnet_write_fail.c
+  s_6224eda96fc0da::t_605dd8f61826f3 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "f85ea37eada5758c8db489013a88a3a8f9b794f8",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

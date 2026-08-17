@@ -1,0 +1,23 @@
+doc/tools/release_build.sh
+  s_a9719629ed5597::t_53e64f359b87a1 124,129
+doc/Makefile.am
+  s_a9719629ed5597::t_6bfd4be9e2938d 1337
+doc/source/conf.py
+  s_a9719629ed5597::t_92a1a62e1f6eb9 211-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.1",
+  "base_commit_sha": "8fbf83f34add5decf2a73350525ae58e39f42e3b",
+  "prompts": {},
+  "sessions": {
+    "s_a9719629ed5597": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e630a-648a-7c61-bdd8-e84f18b98ca7",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

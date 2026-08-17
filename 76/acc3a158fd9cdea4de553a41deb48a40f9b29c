@@ -1,0 +1,19 @@
+runtime/statsobj.c
+  s_41b995fcc6f588::t_0ac08a74998e84 616-617,644-647,649-652
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "76acc3a158fd9cdea4de553a41deb48a40f9b29c",
+  "prompts": {},
+  "sessions": {
+    "s_41b995fcc6f588": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6691-5cc5-7943-b583-9f0e7f26659a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

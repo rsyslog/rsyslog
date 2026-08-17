@@ -1,0 +1,22 @@
+tools/omfwd.c
+  s_cf144905ab59ed::t_11fce87a1b5b0a 1575,1633-1634,1729,1962
+  s_cf144905ab59ed::t_a526131d2df327 1572
+plugins/omsendertrack/omsendertrack.c
+  s_cf144905ab59ed::t_11fce87a1b5b0a 557,559,671
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "390a4aac17448e49b9fd5ede9b1f4a717b2cdb53",
+  "prompts": {},
+  "sessions": {
+    "s_cf144905ab59ed": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1e6d-12cb-7701-8396-6c6f2c6e7d3a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

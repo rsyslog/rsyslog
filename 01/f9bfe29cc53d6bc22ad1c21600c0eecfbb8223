@@ -1,0 +1,44 @@
+tests/omhttp-datafail-continues.sh
+  s_6224eda96fc0da::t_5974061da19440 5,7-9,17,22
+  s_6224eda96fc0da::t_511cd66b6d5f51 11-12
+  s_6224eda96fc0da::t_555e057a8f7645 48-57
+  s_6224eda96fc0da::t_98afdfc2b34c54 1-4,6,10,13-16,18-21,23-47,58
+tests/omhttp-datafail-continues-batch-single.sh
+  s_6224eda96fc0da::t_9a8a03781543a9 1-59
+contrib/omhttp/omhttp.c
+  s_6224eda96fc0da::t_9a8a03781543a9 1928-1941,1980,1993,2016,2042
+  s_6224eda96fc0da::t_766d857f0ee5fb 1994
+  s_6224eda96fc0da::t_ba22edad7ddc1e 2030-2035
+tests/omhttp_server.py
+  s_6224eda96fc0da::t_5974061da19440 111-116,160-161,175
+doc/source/reference/parameters/omhttp-httpignorablecodes.rst
+  s_6224eda96fc0da::t_b3707e411dc5fe 28-35
+tests/Makefile.am
+  s_6224eda96fc0da::t_9a8a03781543a9 1041
+  s_6224eda96fc0da::t_e9bf808d24dddd 1040
+  s_6224eda96fc0da::t_98afdfc2b34c54 1039
+doc/source/reference/parameters/omhttp-httpretrycodes.rst
+  s_6224eda96fc0da::t_8c919cc2c56ab5 22,28-33
+tests/omhttp-datafail-continues-batch.sh
+  s_6224eda96fc0da::t_e4e02eeda79b31 7-10,53-60
+  s_6224eda96fc0da::t_e9bf808d24dddd 1-6,11-52,61
+doc/source/configuration/modules/omhttp.rst
+  s_6224eda96fc0da::t_06d599f3715796 331-333,339-344
+  s_6224eda96fc0da::t_4c52f7344b2fad 323-330,334-338,345-346
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "01f9bfe29cc53d6bc22ad1c21600c0eecfbb8223",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

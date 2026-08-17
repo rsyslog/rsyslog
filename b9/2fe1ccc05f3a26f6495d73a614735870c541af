@@ -1,0 +1,33 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_7938736abf5768 89
+tests/net-enabledns-off-localhostname.sh
+  s_6224eda96fc0da::t_7938736abf5768 1-2,7-9,12-15,26-27
+  s_6224eda96fc0da::t_08ab242caf2d11 10
+  s_6224eda96fc0da::t_65dda9e67f24ef 11,21-25
+  s_6224eda96fc0da::t_bcd4ff906b715c 3-6,16
+  s_6224eda96fc0da::t_5756bdb0bbdae4 17-20
+tests/override_getaddrinfo.c
+  s_6224eda96fc0da::t_ba72a1e5f5da39 56-57
+  s_6224eda96fc0da::t_890950b1545054 2,11,44,46-47,52-55,58-60,66-67,69
+  s_6224eda96fc0da::t_9bf1ca630b65a8 4,13-16,18,20-41,45,48-50
+  s_6224eda96fc0da::t_e62bc6223313d1 6
+  s_6224eda96fc0da::t_65dda9e67f24ef 7
+  s_6224eda96fc0da::t_fdfad6d1d80b9b 8,10,51,61-65,68
+  s_6224eda96fc0da::t_22b59a1fde47dd 17,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "b92fe1ccc05f3a26f6495d73a614735870c541af",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": null
+    }
+  }
+}

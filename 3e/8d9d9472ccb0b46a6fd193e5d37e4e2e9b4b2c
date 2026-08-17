@@ -1,0 +1,22 @@
+grammar/rainerscript.c
+  s_6224eda96fc0da::t_6be346b6398b07 5734,5762-5764
+tests/incltest_dir_empty_wildcard.sh
+  s_6224eda96fc0da::t_b9b7d8d8a60792 4-5,13
+  s_6224eda96fc0da::t_6be346b6398b07 2-3,12,14-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "3e8d9d9472ccb0b46a6fd193e5d37e4e2e9b4b2c",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

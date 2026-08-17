@@ -1,0 +1,46 @@
+configure.ac
+  h_95716f3de0caf5 1037-1040
+doc/Makefile.am
+  h_95716f3de0caf5 1250-1251
+doc/source/concepts/queues.rst
+  h_95716f3de0caf5 223-226
+doc/source/idx_reference.rst
+  h_95716f3de0caf5 17
+doc/source/reference/tools/index.rst
+  h_95716f3de0caf5 1-20
+doc/source/reference/tools/rsyslog-segqueue.rst
+  h_95716f3de0caf5 1-107
+packaging/rpm/rpmbuild/SPECS/rsyslog-v8-stable.spec
+  h_95716f3de0caf5 97,809-810
+packaging/ubuntu/focal/v8-stable/debian/control
+  h_95716f3de0caf5 356
+packaging/ubuntu/focal/v8-stable/debian/rsyslog-utils.install
+  h_95716f3de0caf5 3
+packaging/ubuntu/jammy/v8-stable/debian/control
+  h_95716f3de0caf5 375
+packaging/ubuntu/jammy/v8-stable/debian/rsyslog-utils.install
+  h_95716f3de0caf5 3
+tests/Makefile.am
+  h_95716f3de0caf5 43-44
+tests/rsyslog-segqueue-runtime.sh
+  h_95716f3de0caf5 1-62
+tests/rsyslog-segqueue-tool.py
+  h_95716f3de0caf5 1-197
+tools/Makefile.am
+  h_95716f3de0caf5 5,107-114
+tools/rsyslog-segqueue
+  h_95716f3de0caf5 1-1670
+tools/rsyslog-segqueue.rst
+  h_95716f3de0caf5 1-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f3e7e747bac6a262e89310a3d8143d80bfd9802e",
+  "prompts": {},
+  "humans": {
+    "h_95716f3de0caf5": {
+      "author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

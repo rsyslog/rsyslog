@@ -1,0 +1,32 @@
+tests/Makefile.am
+  s_6224eda96fc0da::t_2e9b45cbf571e7 1123
+contrib/imdocker/imdocker.c
+  s_6224eda96fc0da::t_be39c4036fb91a 1653-1679,1683,1703
+  s_6224eda96fc0da::t_f6e9743ad0b223 146,195,1734
+  s_6224eda96fc0da::t_c7e9128c7b33a4 196,758,1688-1690,1707-1708,1729,1732,1735-1736,1739-1746,1754
+  s_6224eda96fc0da::t_588fafe9242c17 869-882
+  s_6224eda96fc0da::t_67bf98a44b0d0e 1680-1682,1684
+  s_6224eda96fc0da::t_2c6c42c9a7b409 1700-1702,1704-1706
+  s_6224eda96fc0da::t_3246a7bed4b41c 1597-1598,1737
+  s_6224eda96fc0da::t_92c732adfbb51d 853-868
+  s_6224eda96fc0da::t_fc1f24db6380fc 1595-1596,1635,1733,1738,1753
+  s_6224eda96fc0da::t_bf2afdd83416b9 725,754-756
+tests/imdocker-since-deleted-anchor.sh
+  s_6224eda96fc0da::t_62116a7391aed3 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.10",
+  "base_commit_sha": "f0617cd991d6a0202bb10f788fa1209d16b64c24",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

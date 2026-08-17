@@ -1,0 +1,33 @@
+tests/imrelp-tls-mixed-chainedcert.sh
+  s_6224eda96fc0da::t_971d41bb2fbf88 42
+tests/imrelp-tls-mixed-chainedcert2.sh
+  s_6224eda96fc0da::t_9c228601762160 42
+tests/imdtls-basic-timeout.sh
+  s_6224eda96fc0da::t_39a3c8c278c820 39,41-43
+tests/imdtls-basic.sh
+  s_6224eda96fc0da::t_027d6cd7050680 35
+tests/imrelp-tls-chainedcert.sh
+  s_6224eda96fc0da::t_9920c3ca21cac1 35
+tests/imrelp-tls.sh
+  s_6224eda96fc0da::t_d3bcb401ac8f79 21-23
+tests/imtcp-listen-port-file-2.sh
+  s_6224eda96fc0da::t_44dff70a933812 28-29
+tests/tcpflood.c
+  s_6224eda96fc0da::t_0c8c53cee6a4db 119,350-354
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "2944618c8451cc499b086965ad1746f0e630f1b4",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

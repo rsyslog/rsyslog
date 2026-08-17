@@ -1,0 +1,23 @@
+tests/omfwd-rebind-tcp-vg.sh
+  s_6224eda96fc0da::t_6f3dec66c956dc 1-41
+tests/Makefile.am
+  s_6224eda96fc0da::t_6f3dec66c956dc 686-687
+tools/omfwd.c
+  s_6224eda96fc0da::t_6f3dec66c956dc 1706-1709
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3c2b55142215e602806cb07b8dbfca798fb144aa",
+  "prompts": {},
+  "sessions": {
+    "s_6224eda96fc0da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fb8-e308-7352-b47e-2b0b16be680b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
