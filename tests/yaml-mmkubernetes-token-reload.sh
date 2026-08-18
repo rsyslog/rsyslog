@@ -1,12 +1,15 @@
 #!/bin/bash
-# Verify YAML delivers tokenreloadinterval=0 to mmkubernetes while exercising
-# the reactive ServiceAccount token reload. The first record starts the worker
-# with token v1; after the token file rotates, the second cache miss must reload
-# v2 on HTTP 401 and be enriched. The second record's API-derived pod ID is the
-# oracle: the server accepts it only after mmkubernetes re-reads token v2. The
-# two-minute server timeout is hang protection; PID/port files provide readiness
-# and cleanup without sleeps.
-# This file is part of the rsyslog project, released under ASL 2.0.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
+# Verify the YAML action's tokenreloadinterval=0 overrides the module's one
+# second interval while exercising reactive ServiceAccount token reload. The
+# first record starts the worker with token v1; after the token file rotates, a
+# 1.2-second wait makes a non-overridden proactive reload inevitable. The
+# second cache miss must instead receive 401, reload v2 reactively, and enrich
+# the record. The server's stale-token rejection and the API-derived second pod
+# ID are the oracle. The two-minute server timeout is hang protection; PID/port
+# files provide readiness and cleanup without sleeps.
 . ${srcdir:=.}/diag.sh init
 check_command_available timeout
 require_yaml_support
@@ -36,6 +39,7 @@ add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imfile/.libs/imfile"'
 add_yaml_conf '  - load: "../plugins/mmjsonparse/.libs/mmjsonparse"'
 add_yaml_conf '  - load: "../contrib/mmkubernetes/.libs/mmkubernetes"'
+add_yaml_conf '    tokenreloadinterval: 1'
 add_yaml_conf 'inputs:'
 add_yaml_conf '  - type: imfile'
 add_yaml_conf '    file: "'$RSYSLOG_DYNNAME.spool'/pod-*.log"'
@@ -45,7 +49,7 @@ add_yaml_conf '    ruleset: main'
 add_yaml_conf 'templates:'
 add_yaml_conf '  - name: outfmt'
 add_yaml_conf '    type: string'
-add_yaml_conf '    string: "%$!all-json-plain%\\n"'
+add_yaml_conf '    string: "%$!all-json-plain%\n"'
 add_yaml_conf 'rulesets:'
 add_yaml_conf '  - name: main'
 add_yaml_conf '    statements:'
@@ -71,9 +75,11 @@ cat > "${RSYSLOG_DYNNAME}.spool/pod-name1_namespace-name1_container-name1-id1.lo
 EOF
 wait_queueempty
 
-# Rotate the projected token. With tokenreloadinterval=0, the following cache
-# miss must use the reactive 401 path rather than a periodic reload.
+# Rotate the projected token. Waiting 1.2 seconds exceeds the module-level
+# one-second interval: without the action-level zero override, mmkubernetes
+# would proactively load v2 and the mock server would not record a 401.
 printf 'token-v2' > "$token_file"
+./msleep 1200
 cat > "${RSYSLOG_DYNNAME}.spool/pod-name2_namespace-name2_container-name2-id2.log" <<EOF
 {"log":"{\"message\":\"HEAD2 / 200 1ms - 9.0B\"}\\n","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z","testid":2}
 EOF
@@ -87,5 +93,8 @@ wait_pid_termination "${RSYSLOG_DYNNAME}${testsrv}.pid"
 # The second ID can only come from the API after it accepts reloaded token v2.
 content_check 'pod-name1-id'
 content_check 'pod-name2-id'
+# The server records the stale v1 rejection; the API-derived second ID above
+# then proves token v2 recovered the lookup.
+content_check 'invalid bearer token' "${RSYSLOG_DYNNAME}.spool/mmk8s_srv.log"
 
 exit_test
