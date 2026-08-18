@@ -1046,7 +1046,9 @@ EXTRA_DIST = \
     source/reference/parameters/omfile-dirgroupnum.rst \
     source/reference/parameters/omfile-dirowner.rst \
     source/reference/parameters/omfile-dirownernum.rst \
+    source/reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst \
     source/reference/parameters/omfile-dynafile-donotsuspend.rst \
+    source/reference/parameters/omfile-dynafile-restricttemplatetype.rst \
     source/reference/parameters/omfile-dynafile.rst \
     source/reference/parameters/omfile-dynafilecachesize.rst \
     source/reference/parameters/omfile-failonchownfailure.rst \

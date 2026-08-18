@@ -209,7 +209,13 @@ placeholders:
        string: "%HOSTNAME% %syslogfacility-text%.%syslogseverity-text% %msg%\n"
      - name: filePerHost     # use with omfile dynafile: filePerHost
        type: string
-       string: "/var/log/hosts/%HOSTNAME%.log"
+       string: "/var/log/hosts/%HOSTNAME:::secpath-replace%.log"
+
+When a template is used as an ``omfile`` dynafile name, escape every
+message-derived path component. In string templates, use
+``secpath-replace`` on fields such as ``HOSTNAME``, ``programname``, or
+``APP-NAME`` so sender-controlled values cannot select parent
+directories or absolute paths.
 
 *Subtree template* — serialises a JSON sub-tree of the message object:
 

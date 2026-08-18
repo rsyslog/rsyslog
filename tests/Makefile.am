@@ -279,6 +279,9 @@ TESTS_DEFAULT = \
 	omusrmsg-noabort.sh \
 	omusrmsg_ratelimit_name.sh \
 	omfile-module-params.sh \
+	omfile-dynafile-template-type-invalid.sh \
+	omfile-dynafile-template-type-list-default.sh \
+	omfile-dynafile-template-type-override.sh \
 	omfile-dynafilecachesize-invalid.sh \
 	omfile-dynafile-mmnormalize-property.sh \
 	omfile-read-only-errmsg.sh \
@@ -858,7 +861,12 @@ TESTS_IMTCP = \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp_nonstdpt.sh \
-	sndrcv_udp_nonstdpt_v6.sh
+	sndrcv_udp_nonstdpt_v6.sh \
+	omfile-dynafile-traversal-default-template.sh \
+	omfile-dynafile-traversal-list-template.sh \
+	omfile-dynafile-traversal-permit-escape.sh \
+	omfile-dynafile-traversal-repro.sh \
+	omfile-dynafile-traversal-root-base.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
 	imtcp-stream-always-zlib-basic.sh \
@@ -905,6 +913,7 @@ TESTS_IMTCP_YAML = \
 	yaml-imtcp-ruleset-no-queue-warning.sh \
 	yaml-imtcp-stream-always-zlib-basic.sh \
 	yaml-imtcp-spacelf-escape.sh \
+	yaml-omfile-dynafile-traversal-list-template.sh \
 	yaml-allowed-sender-modern.sh \
 	imtcp-persource-ratelimit.sh \
 	ratelimit-legacy-persource-discard.sh \

@@ -74,7 +74,9 @@ about different configuration languages in use by rsyslog.
    ../../reference/parameters/omfile-dirowner
    ../../reference/parameters/omfile-dirownernum
    ../../reference/parameters/omfile-dynafile
+   ../../reference/parameters/omfile-dynafile-dangerouspermitpathescape
    ../../reference/parameters/omfile-dynafile-donotsuspend
+   ../../reference/parameters/omfile-dynafile-restricttemplatetype
    ../../reference/parameters/omfile-dynafilecachesize
    ../../reference/parameters/omfile-failonchownfailure
    ../../reference/parameters/omfile-file
@@ -172,6 +174,14 @@ Module Parameters
      - .. include:: ../../reference/parameters/omfile-dynafile-donotsuspend.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omfile-dynafile-dangerouspermitpathescape`
+     - .. include:: ../../reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-dynafile-restricttemplatetype`
+     - .. include:: ../../reference/parameters/omfile-dynafile-restricttemplatetype.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omfile-compression-driver`
      - .. include:: ../../reference/parameters/omfile-compression-driver.rst
         :start-after: .. summary-start
@@ -241,6 +251,10 @@ selects whether a static or dynamic file (name) shall be written to.
         :end-before: .. summary-end
    * - :ref:`param-omfile-dynafile`
      - .. include:: ../../reference/parameters/omfile-dynafile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-dynafile-dangerouspermitpathescape`
+     - .. include:: ../../reference/parameters/omfile-dynafile-dangerouspermitpathescape.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omfile-closetimeout`

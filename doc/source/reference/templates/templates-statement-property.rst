@@ -63,8 +63,11 @@ Parameters
                controlCharacters: escape-octal
            - constant:
                value: "\n"
-- ``securePath`` – create safe paths for dynafile templates; ``drop`` or
-  ``replace``
+- ``securePath`` – escape a property for use as one path component in an
+  ``omfile`` dynafile template; ``drop`` removes path separators and
+  ``replace`` changes them to ``_``. Use ``replace`` for message-derived
+  fields such as host names, application names, program names, or parsed
+  variables.
 - ``format`` – field format. Supported values:
 
   - ``csv`` – generate CSV data
@@ -121,3 +124,21 @@ Parameters
 
 - ``onEmpty`` – for ``jsonf`` format only; handling of empty values:
   ``keep``, ``skip``, or ``null``
+
+Dynafile path components
+------------------------
+
+When a list template is used as an ``omfile`` ``dynaFile`` name, apply
+``securePath="replace"`` to every property that can be influenced by the
+message or sender. Fixed directory separators belong in ``constant()``
+statements; do not apply ``securePath`` to the complete path.
+
+.. code-block:: none
+
+   template(name="DynFile" type="list") {
+     constant(value="/var/log/hosts/")
+     property(name="hostname" securePath="replace")
+     constant(value="/")
+     property(name="programname" securePath="replace")
+     constant(value=".log")
+   }

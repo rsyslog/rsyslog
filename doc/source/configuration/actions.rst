@@ -332,7 +332,15 @@ file for it.
 **Creating directories is also supported**. For example you can use the
 hostname as directory and the program name as file name:
 
-    ``$template DynFile,"/var/log/%HOSTNAME%/%programname%.log"``
+    ``$template DynFile,"/var/log/%HOSTNAME:::secpath-replace%/%programname:::secpath-replace%.log"``
+
+When a dynafile template uses message properties in path components,
+escape each message-derived component. The ``secpath-replace`` property
+option replaces path separators with ``_`` and makes special ``.`` and
+``..`` components non-special, which prevents remote messages from
+selecting parent directories or absolute paths. Apply it to every field
+that can come from the message or sender, such as ``HOSTNAME``,
+``programname``, ``APP-NAME``, or data extracted into variables.
 
 Named Pipes
 ~~~~~~~~~~~
