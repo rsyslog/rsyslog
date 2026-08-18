@@ -122,6 +122,11 @@ struct msg {
         void (*turbo_result_free)(void *);
         void (*turbo_result_to_json)(void *, struct json_object **);
         int (*turbo_result_get_str)(void *, const uchar *, int, const uchar **, rs_size_t *);
+        /* Shared-ownership refcount for turbo_result across MsgDup() copies.
+         * NULL while a single message owns the snapshot (the common case:
+         * no allocation, no atomics); lazily allocated on the first dup.
+         * The last owner (counter reaches 0) frees the snapshot. */
+        unsigned *turbo_result_refs;
     #endif
         /* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
         uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
@@ -188,6 +193,20 @@ rsRetVal msgConstructForDeserializer(smsg_t **ppThis);
 rsRetVal msgConstructFinalizer(smsg_t *pThis);
 rsRetVal msgDestruct(smsg_t **ppM);
 smsg_t *MsgDup(smsg_t *pOld);
+    #ifdef HAVE_LOGNORM_TURBO
+/**
+ * @brief Release a message's reference to its turbo parse snapshot.
+ *
+ * The snapshot can be shared across MsgDup() copies. This function decrements
+ * the shared ownership count, frees the snapshot for the last owner, and
+ * clears the message's snapshot pointer and all associated callbacks. Callers
+ * must hold @p pMsg's mutex or otherwise have exclusive access to the message.
+ * Never invoke turbo_result_free directly.
+ *
+ * @param pMsg Message whose turbo snapshot reference is released.
+ */
+void MsgReleaseTurboResult(smsg_t *pMsg);
+    #endif
 smsg_t *MsgAddRef(smsg_t *pM);
 void setProtocolVersion(smsg_t *pM, int iNewVersion);
 /** Set a message's input-name property.

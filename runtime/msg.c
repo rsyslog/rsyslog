@@ -27,6 +27,19 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
+
+/* Concurrency & Locking
+ *
+ * A message's mut mutex protects its mutable JSON trees and turbo snapshot
+ * slots.  MsgDup() holds the source mutex while it takes a coherent copy of
+ * JSON state and establishes shared snapshot ownership.  Lazy snapshot
+ * materialization also runs under that mutex.
+ *
+ * Turbo snapshots are immutable after publication.  Separate MsgDup() copies
+ * may therefore read one snapshot concurrently; turbo_result_refs tracks
+ * their shared ownership with atomic increments and decrements.  Each message
+ * releases its reference exactly once through MsgReleaseTurboResult().
+ */
 #include "config.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -80,7 +93,7 @@ static pthread_mutex_t glblVars_lock;
 struct json_object *global_var_root = NULL;
 
 #ifdef HAVE_LOGNORM_TURBO
-static void msgMaterializeTurboJSON(smsg_t *pMsg);
+static int msgMaterializeTurboJSON(smsg_t *pMsg);
 #endif
 
 /* static data */
@@ -722,6 +735,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
     pM->turbo_result_free = NULL;
     pM->turbo_result_to_json = NULL;
     pM->turbo_result_get_str = NULL;
+    pM->turbo_result_refs = NULL;
 #endif
     pM->dfltTZ[0] = '\0';
     memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
@@ -815,6 +829,28 @@ static inline void freeHOSTNAME(smsg_t *pThis) {
 }
 
 
+#ifdef HAVE_LOGNORM_TURBO
+/* Release one reference on the turbo parse snapshot and clear this message's
+ * slot.  refs == NULL means sole ownership (the message was never duplicated):
+ * free directly, no atomics.  Otherwise the counter is shared across MsgDup()
+ * copies and the last owner out frees both the snapshot and the counter. */
+void MsgReleaseTurboResult(smsg_t *const pMsg) {
+    if (pMsg->turbo_result != NULL && pMsg->turbo_result_free != NULL) {
+        if (pMsg->turbo_result_refs == NULL) {
+            pMsg->turbo_result_free(pMsg->turbo_result);
+        } else if (__atomic_sub_fetch(pMsg->turbo_result_refs, 1, __ATOMIC_ACQ_REL) == 0) {
+            pMsg->turbo_result_free(pMsg->turbo_result);
+            free(pMsg->turbo_result_refs);
+        }
+    }
+    pMsg->turbo_result = NULL;
+    pMsg->turbo_result_free = NULL;
+    pMsg->turbo_result_to_json = NULL;
+    pMsg->turbo_result_get_str = NULL;
+    pMsg->turbo_result_refs = NULL;
+}
+#endif
+
 rsRetVal msgDestruct(smsg_t **ppThis) {
     DEFiRet;
     smsg_t *pThis;
@@ -864,8 +900,7 @@ rsRetVal msgDestruct(smsg_t **ppThis) {
         if (pThis->json != NULL) json_object_put(pThis->json);
         if (pThis->localvars != NULL) json_object_put(pThis->localvars);
 #ifdef HAVE_LOGNORM_TURBO
-        if (pThis->turbo_result != NULL && pThis->turbo_result_free != NULL)
-            pThis->turbo_result_free(pThis->turbo_result);
+        MsgReleaseTurboResult(pThis);
 #endif
         if (pThis->pszUUID != NULL) free(pThis->pszUUID);
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -927,12 +962,9 @@ ENDobjDestruct
     }
 
     /* Constructs a message object by duplicating another one.
-     * Returns NULL if duplication failed. We do not need to lock the
-     * message object here, because a fully-created msg object is never
-     * allowed to be manipulated. For this, MsgDup() must be used, so MsgDup()
-     * can never run into a situation where the message object is being
-     * modified while its content is copied - it's forbidden by definition.
-     * rgerhards, 2007-07-10
+     * Returns NULL if duplication failed. Most message fields are immutable
+     * after construction. The JSON and turbo snapshot fields are mutable, so
+     * they are copied coherently under the source message lock below.
      */
     smsg_t *MsgDup(smsg_t *pOld) {
     smsg_t *pNew;
@@ -1021,16 +1053,45 @@ ENDobjDestruct
     tmpCOPYCSTR(PROCID);
     tmpCOPYCSTR(MSGID);
 
-#ifdef HAVE_LOGNORM_TURBO
-    /* Turbo snapshots are opaque and cannot be duplicated generically.  Turn
-     * one into the normal owned JSON representation before copying so callers
-     * of MsgDup() retain CEE properties just like the standard path does. */
     MsgLock(pOld);
-    msgMaterializeTurboJSON(pOld);
-    MsgUnlock(pOld);
+
+#ifdef HAVE_LOGNORM_TURBO
+    /* Share the turbo parse snapshot with the duplicate.  The snapshot is
+     * immutable after parsing, so copies may read it concurrently; ownership
+     * is tracked by a lazily-allocated shared counter (see msg.h).  The source
+     * message lock serializes first-counter publication and makes the JSON and
+     * lazy-callback snapshot coherent.  On counter allocation failure,
+     * materialize the source while locked so the duplicate still receives the
+     * normalized fields through its deep-copied $! tree. */
+    if (pOld->turbo_result != NULL) {
+        if (pOld->turbo_result_refs == NULL) {
+            unsigned *refs = malloc(sizeof(*refs));
+            if (refs != NULL) {
+                *refs = 2; /* pOld + pNew */
+                pOld->turbo_result_refs = refs;
+            } else if (!msgMaterializeTurboJSON(pOld)) {
+                /* A second allocation failure means neither shared snapshot
+                 * ownership nor a complete JSON copy can be established. */
+                MsgUnlock(pOld);
+                msgDestruct(&pNew);
+                return NULL;
+            }
+        } else {
+            __atomic_add_fetch(pOld->turbo_result_refs, 1, __ATOMIC_RELAXED);
+        }
+        if (pOld->turbo_result_refs != NULL) {
+            pNew->turbo_result = pOld->turbo_result;
+            pNew->turbo_result_free = pOld->turbo_result_free;
+            pNew->turbo_result_to_json = pOld->turbo_result_to_json;
+            pNew->turbo_result_get_str = pOld->turbo_result_get_str;
+            pNew->turbo_result_refs = pOld->turbo_result_refs;
+        }
+    }
 #endif
+
     if (pOld->json != NULL) pNew->json = jsonDeepCopy(pOld->json);
     if (pOld->localvars != NULL) pNew->localvars = jsonDeepCopy(pOld->localvars);
+    MsgUnlock(pOld);
 
     /* we do not copy all other cache properties, as we do not even know
      * if they are needed once again. So we let them re-create if needed.
@@ -1090,8 +1151,9 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm) {
 #ifdef HAVE_LOGNORM_TURBO
     /* Disk queues persist JSON, not the opaque module-owned snapshot. */
     MsgLock(pThis);
-    msgMaterializeTurboJSON(pThis);
+    const int materialized = msgMaterializeTurboJSON(pThis);
     MsgUnlock(pThis);
+    if (!materialized) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #endif
 
     /* then serialize elements */
@@ -2984,22 +3046,25 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC) {
 /* Lazy materialization of turbo result into json_object* tree.
  * Called when template/property access needs pMsg->json but mmnormalize
  * stored a turbo snapshot instead.  One-shot: turbo_result_to_json is
- * NULLed after firing so we never double-materialize, while turbo_result
- * stays valid for the get_str fast-path.
+ * NULLed after successful materialization so we never double-materialize,
+ * while turbo_result stays valid for the get_str fast-path.
  * When pMsg->json is already non-NULL (imfile metadata, enrichment, ...),
  * snapshot fields are merged in using msgAddJSON() semantics: later
  * normalization fields replace colliding top-level keys.
  * Must be called with pMsg->mut held.
  */
-static void msgMaterializeTurboJSON(smsg_t *pMsg) {
+static int msgMaterializeTurboJSON(smsg_t *pMsg) {
     struct json_object *snap_json = NULL;
 
-    if (pMsg->turbo_result == NULL || pMsg->turbo_result_to_json == NULL) return;
+    if (pMsg->turbo_result == NULL || pMsg->turbo_result_to_json == NULL) return 1;
 
     pMsg->turbo_result_to_json(pMsg->turbo_result, &snap_json);
-    pMsg->turbo_result_to_json = NULL; /* one-shot */
 
-    if (snap_json == NULL) return;
+    /* Keep the callback live after allocation failure so a later access may
+     * retry instead of permanently losing the normalized fields. */
+    if (snap_json == NULL) return 0;
+
+    pMsg->turbo_result_to_json = NULL; /* materialized successfully */
 
     if (pMsg->json == NULL) {
         pMsg->json = snap_json;
@@ -3015,6 +3080,7 @@ static void msgMaterializeTurboJSON(smsg_t *pMsg) {
         }
         json_object_put(snap_json);
     }
+    return 1;
 }
 #endif
 
