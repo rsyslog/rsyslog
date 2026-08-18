@@ -59,6 +59,7 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 #include "atomic.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -79,6 +80,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+#ifdef HAVE_LOGNORM_TURBO
+DEFobjCurrIf(statsobj)
+    /* Module-level impstats. turbo.truncated counts messages whose TurboVM result
+     * dropped at least one field or tag because a per-result capacity was hit
+     * (ln_fast_result_is_truncated()). A non-zero value means some parsed fields
+     * never reached the message on the turbo path. */
+    static statsobj_t *mmnormalizeStats;
+STATSCOUNTER_DEF(ctrTurboTruncated, mutCtrTurboTruncated)
+#endif
 
 static struct cnfparamdescr modpdescr[] = {{"allowregex", eCmdHdlrBinary, 0}};
 
@@ -676,6 +686,9 @@ BEGINdoAction_NoStrings
         const ln_fast_result_t *result = NULL;
         r = ln_turbo_normalize_raw(pWrkrData->ctxlnTurbo, (char *)buf, len, &result);
         if (r == 0 && result != NULL) {
+            if (ln_fast_result_is_truncated(result)) {
+                STATSCOUNTER_INC(ctrTurboTruncated, mutCtrTurboTruncated);
+            }
             /* SNAPSHOT PATH: when path is "$!" (CEE root).
              * Create a deep-copy snapshot of the turbo result.
              * The snapshot is a single allocation (~6KB) that owns
@@ -1031,6 +1044,10 @@ ENDdoHUP
 
 BEGINmodExit
     CODESTARTmodExit;
+#ifdef HAVE_LOGNORM_TURBO
+    if (mmnormalizeStats != NULL) statsobj.Destruct(&mmnormalizeStats);
+    objRelease(statsobj, CORE_COMPONENT);
+#endif
 ENDmodExit
 
 
@@ -1098,6 +1115,16 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));
+#ifdef HAVE_LOGNORM_TURBO
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(statsobj.Construct(&mmnormalizeStats));
+    CHKiRet(statsobj.SetName(mmnormalizeStats, (uchar *)"mmnormalize"));
+    CHKiRet(statsobj.SetOrigin(mmnormalizeStats, (uchar *)"mmnormalize"));
+    STATSCOUNTER_INIT(ctrTurboTruncated, mutCtrTurboTruncated);
+    CHKiRet(statsobj.AddCounter(mmnormalizeStats, UCHAR_CONSTANT("turbo.truncated"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &ctrTurboTruncated));
+    CHKiRet(statsobj.ConstructFinalize(mmnormalizeStats));
+#endif
 ENDmodInit
 
 /* vi:set ai:
