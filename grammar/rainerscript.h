@@ -409,6 +409,7 @@ int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params, struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
 int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
+int cnfparamvalsIsSetByName(const struct cnfparamblk *params, const struct cnfparamvals *vals, const char *name);
 void varDelete(const struct svar *v);
 void cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk);
 struct cnfstmt *cnfstmtNew(unsigned s_type);
