@@ -1,0 +1,27 @@
+tests/imbeats-tls-listener-rearm.sh
+  s_99f487444ebabc::t_72840a5bc1cc3f 13,15-17,19,21
+  s_99f487444ebabc::t_da5c613b4dc0ff 2-5,58-59
+  s_99f487444ebabc::t_0eb50c24bb8909 1,6-12,14,18,20,22-42,44-56,60-61,65-70,83-86,88-102
+  s_99f487444ebabc::t_f3619626c75906 43
+  s_99f487444ebabc::t_60d3478a12873d 57,62-64,71-82,87
+tests/Makefile.am
+  s_99f487444ebabc::t_0eb50c24bb8909 1380-1382,2493,3408-3410
+plugins/imbeats/imbeats.c
+  s_99f487444ebabc::t_da5c613b4dc0ff 1587-1593
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6217336a5d974d3f2903011dfa700172c567975e",
+  "prompts": {},
+  "sessions": {
+    "s_99f487444ebabc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a014bd-d476-7240-839c-8debc5867c26",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}
