@@ -57,6 +57,18 @@ runtime_msg:
   notes:
     - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
 
+runtime_stream:
+  paths: ["runtime/stream.c", "runtime/stream.h"]
+  requires_serialization: true
+  locks:
+    - type: recursive-mutex
+      field: strm_t.mut
+  notes:
+    - strm_t.mut, notFull, notEmpty and isEmpty exist only when bAsyncWrite is set; omfile is the only caller that enables async streams and it serializes writes behind its own pData.mutWrite.
+    - The async writer thread is created once in strmConstructFinalize(); no other code path recreates it, so any caller that stops it must be done with the stream.
+    - strmCloseFile() stops the async writer and, as a documented side effect, leaves pThis->mut unlocked on return; callers must either hold no expectation of the lock or use the non-stopping variant.
+    - Size-limit rotation uses the non-stopping close: the writer thread survives, pending buffers are drained with strmWaitAsyncWriterDone() before the fd is closed, and the caller's mutex stays held across the rotation command.
+
 mmnormalize:
   paths: ["plugins/mmnormalize/"]
   requires_serialization: true
