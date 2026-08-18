@@ -14,3 +14,6 @@ check_relpEngineVersion
 testbench_test_failed_rsyslog
 gnutls_sni_server
 openssl_sni_server
+openssl_mtls_server
+runtime_unit_msg_replace
+runtime_unit_ommongodb_date

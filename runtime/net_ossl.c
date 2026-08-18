@@ -50,6 +50,7 @@
 #include "errmsg.h"
 #include "net.h"
 #include "net_ossl.h"
+#include "net_ossl_store.h"
 #include "nsd_ptcp.h"
 #include "rsconf.h"
 
@@ -420,10 +421,18 @@ void osslGlblExit(void) {
 }
 
 
-/* initialize openssl context; called on
- * - listener creation
- * - outbound connection creation
- * Once created, the ctx object is used by-subobjects (accepted inbound connections)
+/**
+ * @brief Create and configure the OpenSSL SSL_CTX for a listener or outbound
+ * connection.
+ *
+ * The context is populated from the effective netstream driver configuration,
+ * including CA certificates, certificate chains, and private keys. Those TLS
+ * objects may come from ordinary PEM files or, on supported OpenSSL 3 builds,
+ * from strict pkcs11: URIs handled through the URI-aware lmnsd_ossl helpers.
+ *
+ * @param pThis OpenSSL netstream instance being initialized.
+ * @param method SSL/TLS method used to create the context.
+ * @return RS_RET_OK on success, or an rsyslog TLS-related error code.
  */
 static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method) {
     DEFiRet;
@@ -433,21 +442,25 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     int bHaveKey;
     int bHaveExtraCAFiles;
     const char *caFile, *crlFile, *certFile, *keyFile;
-    char *extraCaFiles, *extraCaFile;
+    char *caFileSanitized, *crlFileSanitized, *certFileSanitized, *keyFileSanitized, *extraCaFilesSanitized;
+    char *extraCaFiles, *extraCaFilesCopy, *extraCaFile;
+
+    caFileSanitized = crlFileSanitized = certFileSanitized = keyFileSanitized = extraCaFilesSanitized = NULL;
+    extraCaFilesCopy = NULL;
     /* Setup certificates */
     caFile = (char *)((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
     if (caFile == NULL) {
         LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING, "Warning: CA certificate is not set");
         bHaveCA = 0;
     } else {
-        dbgprintf("osslCtxInit: OSSL CA file: '%s'\n", caFile);
+        dbgprintf("osslCtxInit: OSSL CA file: '%s'\n", net_ossl_sanitize_log_value(caFile, &caFileSanitized));
         bHaveCA = 1;
     }
     crlFile = (char *)((pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile);
     if (crlFile == NULL) {
         bHaveCRL = 0;
     } else {
-        dbgprintf("osslCtxInit: OSSL CRL file: '%s'\n", crlFile);
+        dbgprintf("osslCtxInit: OSSL CRL file: '%s'\n", net_ossl_sanitize_log_value(crlFile, &crlFileSanitized));
         bHaveCRL = 1;
     }
     certFile = (char *)((pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile);
@@ -455,7 +468,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "Warning: Certificate file is not set");
         bHaveCert = 0;
     } else {
-        dbgprintf("osslCtxInit: OSSL CERT file: '%s'\n", certFile);
+        dbgprintf("osslCtxInit: OSSL CERT file: '%s'\n", net_ossl_sanitize_log_value(certFile, &certFileSanitized));
         bHaveCert = 1;
     }
     keyFile = (char *)((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile);
@@ -463,7 +476,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "Warning: Key file is not set");
         bHaveKey = 0;
     } else {
-        dbgprintf("osslCtxInit: OSSL KEY file: '%s'\n", keyFile);
+        dbgprintf("osslCtxInit: OSSL KEY file: '%s'\n", net_ossl_sanitize_log_value(keyFile, &keyFileSanitized));
         bHaveKey = 1;
     }
     extraCaFiles =
@@ -471,7 +484,8 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     if (extraCaFiles == NULL) {
         bHaveExtraCAFiles = 0;
     } else {
-        dbgprintf("osslCtxInit: OSSL EXTRA CA files: '%s'\n", extraCaFiles);
+        dbgprintf("osslCtxInit: OSSL EXTRA CA files: '%s'\n",
+                  net_ossl_sanitize_log_value(extraCaFiles, &extraCaFilesSanitized));
         bHaveExtraCAFiles = 1;
     }
 
@@ -483,26 +497,38 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     pThis->ctx = SSL_CTX_new(method);
 
     if (bHaveExtraCAFiles == 1) {
+        CHKmalloc(extraCaFilesCopy = strdup(extraCaFiles));
+        extraCaFiles = extraCaFilesCopy;
         while ((extraCaFile = strsep(&extraCaFiles, ","))) {
-            if (SSL_CTX_load_verify_locations(pThis->ctx, extraCaFile, NULL) != 1) {
-                LogError(0, RS_RET_TLS_CERT_ERR,
-                         "Error: Extra Certificate file could not be accessed. "
+            iRet = net_ossl_load_ca_file(pThis->ctx, extraCaFile);
+            if (iRet != RS_RET_OK) {
+                char *extraCaFileSanitized = NULL;
+                const char *logExtraCaFile = net_ossl_sanitize_log_value(extraCaFile, &extraCaFileSanitized);
+                LogError(0, iRet,
+                         "Error: Extra Certificate file '%s' could not be accessed. "
                          "Check at least: 1) file path is correct, 2) file exist, "
                          "3) permissions are correct, 4) file content is correct. "
-                         "OpenSSL error info may follow in next messages");
-                net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "osslCtxInit", "SSL_CTX_load_verify_locations");
-                ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+                         "OpenSSL error info may follow in next messages",
+                         logExtraCaFile);
+                net_ossl_free_sanitized_log_value(&extraCaFileSanitized);
+                ABORT_FINALIZE(iRet);
             }
         }
     }
-    if (bHaveCA == 1 && SSL_CTX_load_verify_locations(pThis->ctx, caFile, NULL) != 1) {
-        LogError(0, RS_RET_TLS_CERT_ERR,
-                 "Error: CA certificate could not be accessed. "
-                 "Check at least: 1) file path is correct, 2) file exist, "
-                 "3) permissions are correct, 4) file content is correct. "
-                 "OpenSSL error info may follow in next messages");
-        net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "osslCtxInit", "SSL_CTX_load_verify_locations");
-        ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+    if (bHaveCA == 1) {
+        iRet = net_ossl_load_ca_file(pThis->ctx, caFile);
+        if (iRet != RS_RET_OK) {
+            char *caFileLoadSanitized = NULL;
+            const char *logCaFile = net_ossl_sanitize_log_value(caFile, &caFileLoadSanitized);
+            LogError(0, iRet,
+                     "Error: CA certificate '%s' could not be accessed. "
+                     "Check at least: 1) file path is correct, 2) file exist, "
+                     "3) permissions are correct, 4) file content is correct. "
+                     "OpenSSL error info may follow in next messages",
+                     logCaFile);
+            net_ossl_free_sanitized_log_value(&caFileLoadSanitized);
+            ABORT_FINALIZE(iRet);
+        }
     }
     if (bHaveCRL == 1) {
 #if defined(ENABLE_WOLFSSL)
@@ -626,22 +652,33 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         dbgprintf("osslCtxInit: wolfSSL OCSP revocation checking enabled\n");
     }
 #endif
-    if (bHaveCert == 1 && SSL_CTX_use_certificate_chain_file(pThis->ctx, certFile) != 1) {
-        LogError(0, RS_RET_TLS_CERT_ERR,
-                 "Error: Certificate file could not be accessed. "
-                 "Check at least: 1) file path is correct, 2) file exist, "
-                 "3) permissions are correct, 4) file content is correct. "
-                 "OpenSSL error info may follow in next messages");
-        net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "osslCtxInit", "SSL_CTX_use_certificate_chain_file");
-        ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+    if (bHaveKey == 1) {
+        iRet = net_ossl_load_key_file(pThis->ctx, keyFile);
+        if (iRet != RS_RET_OK) {
+            LogError(0, iRet,
+                     "Error: Key could not be accessed. "
+                     "Check at least: 1) file path is correct, 2) file exist, "
+                     "3) permissions are correct, 4) file content is correct. "
+                     "OpenSSL error info may follow in next messages");
+            ABORT_FINALIZE(iRet);
+        }
     }
-    if (bHaveKey == 1 && SSL_CTX_use_PrivateKey_file(pThis->ctx, keyFile, SSL_FILETYPE_PEM) != 1) {
+    if (bHaveCert == 1) {
+        iRet = net_ossl_load_cert_file(pThis->ctx, certFile);
+        if (iRet != RS_RET_OK) {
+            LogError(0, iRet,
+                     "Error: Certificate file could not be accessed. "
+                     "Check at least: 1) file path is correct, 2) file exist, "
+                     "3) permissions are correct, 4) file content is correct. "
+                     "OpenSSL error info may follow in next messages");
+            ABORT_FINALIZE(iRet);
+        }
+    }
+    if (bHaveCert == 1 && bHaveKey == 1 && SSL_CTX_check_private_key(pThis->ctx) != 1) {
         LogError(0, RS_RET_TLS_KEY_ERR,
-                 "Error: Key could not be accessed. "
-                 "Check at least: 1) file path is correct, 2) file exist, "
-                 "3) permissions are correct, 4) file content is correct. "
+                 "Error: Certificate and key are not usable together. "
                  "OpenSSL error info may follow in next messages");
-        net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "osslCtxInit", "SSL_CTX_use_PrivateKey_file");
+        net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "osslCtxInit", "SSL_CTX_check_private_key");
         ABORT_FINALIZE(RS_RET_TLS_KEY_ERR);
     }
 
@@ -687,6 +724,12 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     #endif
 #endif
 finalize_it:
+    net_ossl_free_sanitized_log_value(&caFileSanitized);
+    net_ossl_free_sanitized_log_value(&crlFileSanitized);
+    net_ossl_free_sanitized_log_value(&certFileSanitized);
+    net_ossl_free_sanitized_log_value(&keyFileSanitized);
+    net_ossl_free_sanitized_log_value(&extraCaFilesSanitized);
+    free(extraCaFilesCopy);
     RETiRet;
 }
 

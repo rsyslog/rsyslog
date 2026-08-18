@@ -228,7 +228,7 @@ endif # if ENABLE_INET
 if ENABLE_OSSL
 # noinst_LTLIBRARIES += lmnsd_ossl.la
 pkglib_LTLIBRARIES += lmnsd_ossl.la
-lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h nsd_ossl.c nsd_ossl.h
+lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h net_ossl_store.c net_ossl_store.h nsd_ossl.c nsd_ossl.h
 lmnsd_ossl_la_LDFLAGS = -module -avoid-version
 
 if ENABLE_WOLFSSL

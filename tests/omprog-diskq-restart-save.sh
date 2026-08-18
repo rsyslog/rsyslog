@@ -12,6 +12,11 @@ QUEUE_TYPE=${QUEUE_TYPE:-Disk}
 export RSYSLOG_OMPROG_RESTART_OK="$PWD/$RSYSLOG_DYNNAME.allow-ok"
 export RSYSLOG_OMPROG_RESTART_OUT="$PWD/$RSYSLOG_OUT_LOG"
 
+if [ ! -f ../plugins/omprog/.libs/omprog.so ]; then
+	echo "omprog module not built - skipping test"
+	exit 77
+fi
+
 cp -f "$srcdir/testsuites/omprog-diskq-restart-save-bin.sh" \
 	"$RSYSLOG_DYNNAME.omprog-diskq-restart-save-bin.sh"
 chmod +x "$RSYSLOG_DYNNAME.omprog-diskq-restart-save-bin.sh"
