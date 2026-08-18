@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------------
-Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
+Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-18
 
 - 2026-08-18: omfile: contain dynamic file paths by default
   dynaFile paths derived from message data are now lexically contained below

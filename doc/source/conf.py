@@ -210,8 +210,8 @@ rst_epilog = """
 ###############################################################################
 # BOTH release AND version are needed for manual release builds.
 version = '8.2608'  # IMPORTANT: keep in sync with scheduled stable; build docs before commit.
-# release = '8.2608.0'
-release = version + ' daily stable'
+release = '8.2608.0'
+# release = version + ' daily stable'
 
 # Allow override from environment (e.g. Docker/CI builds without .git)
 _env_version = os.environ.get('RSYSLOG_DOC_VERSION')
