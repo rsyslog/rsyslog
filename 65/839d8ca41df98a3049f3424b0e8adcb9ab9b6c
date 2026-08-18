@@ -1,0 +1,22 @@
+tests/yaml-mmkubernetes-token-reload.sh
+  s_0eedf0d0f806c9::t_d03f4df10bc4a2 9-13,94-96
+  s_0eedf0d0f806c9::t_05f4f467ef8eca 2-4,52,97
+tests/Makefile.am
+  s_0eedf0d0f806c9::t_05f4f467ef8eca 2297-2300,2534,3762-3764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "65839d8ca41df98a3049f3424b0e8adcb9ab9b6c",
+  "prompts": {},
+  "sessions": {
+    "s_0eedf0d0f806c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a013c0-2e97-7571-a432-55326dc57bdd",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
