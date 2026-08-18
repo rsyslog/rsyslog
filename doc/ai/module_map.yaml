@@ -56,6 +56,8 @@ runtime_msg:
   requires_serialization: true
   notes:
     - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
+    - MsgDup locks the source message while coherently copying JSON state and the lazy turbo snapshot callbacks.
+    - Turbo parse snapshots are immutable and may be shared by MsgDup copies through an atomic reference count; each owner must release only through MsgReleaseTurboResult while holding the message lock or exclusive access.
 
 mmnormalize:
   paths: ["plugins/mmnormalize/"]

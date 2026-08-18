@@ -699,12 +699,14 @@ BEGINdoAction_NoStrings
                      * overwriting — rsyslog action chains can stack
                      * parsers, and each snapshot owns ~6KB of string
                      * data that would otherwise leak. */
+                    MsgLock(pMsg);
                     MsgReleaseTurboResult(pMsg);
                     pMsg->turbo_result = (void *)snap;
                     pMsg->turbo_result_free = turbo_result_snapshot_free;
                     pMsg->turbo_result_to_json = turbo_result_to_json_cb;
                     pMsg->turbo_result_get_str = turbo_result_get_str_cb;
                     MsgSetParseSuccess(pMsg, 1);
+                    MsgUnlock(pMsg);
                     goto turbo_done;
                 }
             }

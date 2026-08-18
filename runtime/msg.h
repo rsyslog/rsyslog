@@ -194,9 +194,17 @@ rsRetVal msgConstructFinalizer(smsg_t *pThis);
 rsRetVal msgDestruct(smsg_t **ppM);
 smsg_t *MsgDup(smsg_t *pOld);
     #ifdef HAVE_LOGNORM_TURBO
-/* Release this message's reference on its turbo parse snapshot (shared across
- * MsgDup() copies) and clear the slot.  The last owner frees the snapshot.
- * Use this instead of calling turbo_result_free() directly. */
+/**
+ * @brief Release a message's reference to its turbo parse snapshot.
+ *
+ * The snapshot can be shared across MsgDup() copies. This function decrements
+ * the shared ownership count, frees the snapshot for the last owner, and
+ * clears the message's snapshot pointer and all associated callbacks. Callers
+ * must hold @p pMsg's mutex or otherwise have exclusive access to the message.
+ * Never invoke turbo_result_free directly.
+ *
+ * @param pMsg Message whose turbo snapshot reference is released.
+ */
 void MsgReleaseTurboResult(smsg_t *pMsg);
     #endif
 smsg_t *MsgAddRef(smsg_t *pM);
