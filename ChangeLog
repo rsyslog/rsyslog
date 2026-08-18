@@ -1,10 +1,109 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-??
 
+- 2026-08-18: omfile: contain dynamic file paths by default
+  dynaFile paths derived from message data are now lexically contained below
+  their configured base by default. Compatibility controls remain available
+  for established configurations that intentionally use other paths.
+- 2026-08-18: imbeats: recover listeners after failed TLS handshakes
+  A failed TLS handshake no longer leaves an imbeats listener disarmed.
+  The input continues accepting later valid clients while retaining its safe
+  shutdown and accept-error handling.
+  Thanks to 0xseiryuu for reporting the issue and preliminary analysis.
+- 2026-08-18: mmnormalize: preserve Turbo snapshots across message copies
+  Turbo-mode normalized data can now be shared safely by duplicated messages
+  without forcing JSON materialization. Concurrent copies and lazy
+  materialization retain the snapshot lifetime and ownership guarantees.
+  Thanks to Jérémie Jourdin for the contribution.
+- 2026-08-18: omfwd/ossl: support PKCS#11 TLS-object URIs
+  OpenSSL forwarding configurations can use strict pkcs11: URIs for CA,
+  certificate, and private-key objects. URI values containing PIN attributes
+  are sanitized in logs, and client-auth object loading is validated.
+  Thanks to Billie R. Alsup for the contribution.
+- 2026-08-18: mmkubernetes: refresh ServiceAccount tokens
+  Kubernetes metadata lookups now refresh projected ServiceAccount tokens at
+  a configurable interval and retry once after HTTP 401. This keeps metadata
+  enrichment working after token rotation without restarting rsyslog.
+  Thanks to Pradyumna Godavarthi for the contribution.
+  Closes https://github.com/rsyslog/rsyslog/issues/7402
+- 2026-08-18: omfile/diskqueue: control final-component symlink following
+  omfile now has a followSymlinks setting governed by the secure
+  compatibility policy, while disk queue streams reject final-component
+  symlinks. This protects queue spools and offers a safer omfile default
+  without silently breaking established configurations.
+  Thanks to 0xseiryuu for the report and analysis.
+  Closes https://github.com/rsyslog/rsyslog/issues/6718
+- 2026-08-17: mmkubernetes: make namespace metadata optional
+  The new default-on includeNamespaceMetadata parameter lets deployments keep
+  pod enrichment while skipping namespace labels, annotations, and IDs.
+  Closes https://github.com/rsyslog/rsyslog/issues/2578
+- 2026-08-13: tools: add the segmented queue maintenance utility
+  The packaged utility can inspect segmented queues, export lossless JSONL,
+  and plan or explicitly apply offline repairs while retaining backups.
+- 2026-08-13: imfile: fix delay.message sub-second delays
+  delay.message now passes seconds and microseconds in the correct order, so
+  values such as 1000 correctly delay for one millisecond instead of about
+  1000 seconds.
+  Closes https://github.com/rsyslog/rsyslog/issues/7348
+  Closes https://github.com/rsyslog/rsyslog/issues/3116
+- 2026-08-12: mmnormalize/pmnormalize: add liblognorm debugging
+  Both normalizer modules now provide per-instance debug and debugFile
+  parameters, allowing liblognorm tracing without process-wide diagnostics.
+- 2026-08-12: docs: correct template example spacing
+  Fix a missing space in the configuration example template.
+  Thanks to Julien Élie for the contribution.
+- 2026-08-10: mmnormalize: make HUP rulebase reload worker-safe
+  Reloading a rulebase now publishes a new generation that workers adopt
+  between messages, avoiding races with active Turbo and standard
+  normalization contexts.
+- 2026-08-08: core: ignore JSON null core message properties
+  msgSetPropViaJSON() now leaves a core property unchanged for a JSON null
+  rather than dereferencing a null string. This prevents crashes reachable
+  through mmexternal, mmlua, and pmnormalize.
+  Thanks to Julien Thomas for the contribution.
+- 2026-08-07: build: normalize AC_CONFIG_FILES list formatting
+  The configure input's generated-file list has consistent indentation.
+  Thanks to Wang Shuo for the contribution.
 - 2026-07-31: testbench: ship qradar_json-with-dots in dist
   Include testsuites/qradar_json-with-dots in EXTRA_DIST so
   data_pipeline-qradar.sh can run from release tarballs.
   Closes https://github.com/rsyslog/rsyslog/issues/7456
+- 2026-07-24: imbeats: add resource and protocol guardrails
+  imbeats now accounts input-instance memory, bounds compressed expansion,
+  validates complete JSON batches, and provides configurable receive and
+  protocol deadlines for more predictable Lumberjack input handling.
+- 2026-07-23: imptcp: reject invalid regex-framing recovery transitions
+  Regex-framed imptcp input now rejects a match at the start of an oversize
+  recovery buffer, avoiding an invalid negative message length.
+  Thanks to Raphael Eikenberg for reporting the issue.
+  See https://github.com/rsyslog/rsyslog/security/advisories/GHSA-cj5r-wh2m-7w29
+- 2026-07-23: config: do not instantiate disabled actions
+  Actions with config.enabled="off" no longer process their parameters,
+  create module instances, or perform configuration-time side effects.
+  Thanks to Julien Thomas for the contribution.
+- 2026-07-23: build: improve STAILQ feature detection and fallback support
+  The configure test now correctly detects system STAILQ support, and the
+  local fallback supplies the missing iteration macros for affected platforms.
+  Thanks to Julien Thomas for the contribution.
+- 2026-07-21: imkubernetes: bound unfinished CRI partial records
+  Incomplete CRI partial-message assemblies are limited by maxMessageSize.
+  Oversized streams discard partial state until a final record resynchronizes
+  the input, while normal completed partial messages are unchanged.
+  Thanks to Bin Luo (bin) for the contribution.
+- 2026-07-20: imjournal: warn when MESSAGE cannot be read
+  imjournal now reports journal entries whose MESSAGE field cannot be
+  retrieved instead of silently discarding them.
+  Thanks to Renaud Métrich for the contribution.
+- 2026-07-19: RainerScript: refine constant AND/OR warnings
+  The parser now reports accidental bare constant operands at their source
+  location without warning about legitimate comparisons that fold to a
+  constant value.
+  Thanks to Julien Thomas for the contribution.
+- 2026-07-17: mmnormalize: add optional liblognorm TurboVM acceleration
+  With liblognorm 2.1.0 or later built with TurboVM support, mmnormalize can
+  use turbo="on" for per-worker accelerated normalization and lazy JSON
+  materialization. Configure options can explicitly enable or disable it.
+  Thanks to Jérémie Jourdin for the contribution.
 - 2026-07-15: imjournal: stop invalidation recovery busy-loop
   Reopened journal handles now initialize their change notification state
   before cursor restoration. This prevents journal rotation or invalidation
