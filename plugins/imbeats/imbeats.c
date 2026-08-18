@@ -1584,7 +1584,13 @@ static void *listenerThread(void *arg) {
                 continue;
             }
             if (io->type == IMBEATS_IO_LISTENER) {
-                if (acceptReadyListener(inst, io->listener_idx) == RS_RET_OK && !instanceIsShuttingDown(inst)) {
+                const rsRetVal acceptRet = acceptReadyListener(inst, io->listener_idx);
+                /* An accept(2) error can leave the pending connection readable.
+                 * Keep the listener disarmed in that case to avoid an epoll busy
+                 * loop; connection-specific errors have already consumed their
+                 * connection and must not disable the listener.
+                 */
+                if (acceptRet != RS_RET_ACCEPT_ERR && !instanceIsShuttingDown(inst)) {
                     (void)rearmListener(inst, io->listener_idx);
                 }
             } else if (io->type == IMBEATS_IO_SESSION && io->sess != NULL) {
