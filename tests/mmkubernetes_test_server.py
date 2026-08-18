@@ -98,6 +98,24 @@ err_template = '''{{
 
 is_busy = False
 include_node_name = os.environ.get("MMK8S_INCLUDE_NODE_NAME") == "1"
+# Optional path to a file holding the currently-valid bearer token. When set
+# (via MMK8S_EXPECTED_TOKEN_FILE), the server rejects any request whose
+# "Authorization: Bearer <tok>" does not match the file's current contents with
+# HTTP 401. The test rotates this file to exercise the token reload-on-401 path
+# in mmkubernetes. When unset, no auth check is performed and existing tests
+# behave as before.
+expected_token_file = os.environ.get("MMK8S_EXPECTED_TOKEN_FILE")
+
+
+def read_expected_token():
+    """Read the currently-valid token from expected_token_file, or None."""
+    if not expected_token_file:
+        return None
+    try:
+        with open(expected_token_file) as ff:
+            return ff.read().strip()
+    except IOError:
+        return None
 
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -108,6 +126,20 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # or
         # /api/v1/namespaces/$ns_name/pods/$pod_name
         global is_busy
+        # if token checking is enabled, reject a stale/missing bearer token with
+        # 401 so the module reloads the token from disk and retries
+        want_token = read_expected_token()
+        if want_token is not None:
+            auth = self.headers.get('Authorization', '')
+            got_token = auth[len('Bearer '):].strip() if auth.startswith('Bearer ') else ''
+            if got_token != want_token:
+                resp = err_template.format(kind='pods', objectname=self.path,
+                                           err='invalid bearer token', reason='Unauthorized', code=401)
+                self.log_error(resp)
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(json.dumps(json.loads(resp), separators=(',', ':')).encode())
+                return
         comps = self.path.split('/')
         status = 400
         if len(comps) >= 5 and comps[1] == 'api' and comps[2] == 'v1' and comps[3] == 'namespaces':

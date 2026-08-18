@@ -2291,11 +2291,13 @@ TESTS_MMKUBERNETES = \
 	mmkubernetes-cache-expire.sh \
 	mmkubernetes-url-failover.sh \
 	mmkubernetes-namespace-metadata-off.sh \
-	yaml-mmkubernetes-namespace-metadata-off.sh
+	yaml-mmkubernetes-namespace-metadata-off.sh \
+	mmkubernetes-token-reload.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
-	mmkubernetes-cache-expire-vg.sh
+	mmkubernetes-cache-expire-vg.sh \
+	mmkubernetes-token-reload-vg.sh
 
 TESTS_IMKUBERNETES = \
 	imkubernetes-cri-partial-accept.sh \
