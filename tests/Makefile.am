@@ -2293,6 +2293,7 @@ TESTS_MMKUBERNETES = \
 	mmkubernetes-url-failover.sh \
 	mmkubernetes-namespace-metadata-off.sh \
 	yaml-mmkubernetes-namespace-metadata-off.sh \
+	yaml-mmkubernetes-token-reload.sh \
 	mmkubernetes-token-reload.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
