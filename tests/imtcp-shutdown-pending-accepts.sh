@@ -80,7 +80,12 @@ for thread in threads:
 if not ready.is_set():
     sys.exit(1)
 
+# The shell normally creates the release file after shutdown. Do not leave this
+# background helper holding sessions if the test harness terminates the shell.
+release_deadline = time.monotonic() + 30
 while not os.path.exists(release_file):
+    if time.monotonic() >= release_deadline:
+        raise SystemExit("timed out waiting for the test shutdown to complete")
     time.sleep(0.05)
 
 for sock in sockets:
