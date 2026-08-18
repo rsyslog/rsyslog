@@ -832,6 +832,7 @@ TESTS_IMTCP = \
 	imtcp-multiline.sh \
 	imtcp-spacelf-escape.sh \
 	imtcp-basic-hup.sh \
+	imtcp-shutdown-pending-accepts.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
 	imtcp-starvation-1.sh \
