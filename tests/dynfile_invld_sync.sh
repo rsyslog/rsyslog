@@ -14,7 +14,11 @@ $template dynfile,"%msg:F,58:2%.log" # complete name is in message
 $OMFileFlushOnTXEnd on
 $OMFileAsyncWriting off
 $DynaFileCacheSize 4
-local0.* ?dynfile;outfmt
+# This test deliberately uses /proc to make the open fail after dynafile cache
+# handling. The action-level compatibility option keeps that historic test
+# stimulus available while containment remains the default for other actions.
+local0.* action(type="omfile" dynafile="dynfile" template="outfmt"
+                dynafile.dangerousPermitPathEscape="on")
 '
 startup
 # Send the handcrafted messages in one imdiag session so the invalid open

@@ -143,5 +143,11 @@ messages by host name:
 
 .. code-block:: none
 
-   template(name="DynFile" type="string" string="/var/log/system-%HOSTNAME%.log")
+   template(name="DynFile" type="string"
+            string="/var/log/system-%HOSTNAME:::secpath-replace%.log")
 
+If a template is used with ``omfile`` ``dynaFile``, treat every
+message-derived path component as untrusted. Use ``secpath-replace`` in
+string templates, or ``securePath="replace"`` in list template property
+statements, for fields such as ``HOSTNAME``, ``programname``,
+``APP-NAME``, and variables extracted from the message.

@@ -346,12 +346,16 @@ options are defined:
   forget about it ;)
 
 **secpath-drop**
-  Drops slashes inside the field (e.g. "a/b" becomes "ab"). Useful for
-  secure pathname generation (with dynafiles).
+  Drops slashes inside the field (e.g. "a/b" becomes "ab") and makes
+  empty, "." and ".." path components non-special. Useful for secure
+  pathname generation with dynafiles, but may create name collisions
+  because separators are removed.
 
 **secpath-replace**
-  Replace slashes inside the field by an underscore. (e.g. "a/b" becomes
-  "a\_b"). Useful for secure pathname generation (with dynafiles).
+  Replaces slashes inside the field by an underscore (e.g. "a/b" becomes
+  "a\_b") and makes empty, "." and ".." path components non-special.
+  This is usually preferred for dynafile path components because it keeps
+  a visible separator while preventing path traversal.
 
 To use multiple options, simply place them one after each other with a
 comma delimiting them. For example "escape-cc,sp-if-no-1st-sp". If you

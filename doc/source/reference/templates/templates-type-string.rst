@@ -26,3 +26,15 @@ The text between percent signs is interpreted by the property replacer,
 which reads message properties and applies options for formatting and
 processing.
 
+When a string template is used as an ``omfile`` ``dynaFile`` name,
+escape each message-derived path component with ``secpath-replace``.
+This is needed for fields such as ``HOSTNAME``, ``programname``,
+``APP-NAME``, or variables populated from message content:
+
+.. code-block:: none
+
+   template(name="DynFile" type="string"
+            string="/var/log/hosts/%HOSTNAME:::secpath-replace%/%programname:::secpath-replace%.log")
+
+The escaping must be applied to the properties that form path
+components, not to the whole path including fixed separators.

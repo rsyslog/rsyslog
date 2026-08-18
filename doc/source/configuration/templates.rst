@@ -130,6 +130,20 @@ If your output is a **structured JSON pipeline** (e.g. to Elasticsearch
 or a file), you do not need to add any textual header.
 
 
+Templates for dynamic file names
+--------------------------------
+
+Templates used as ``omfile`` ``dynaFile`` names need additional care:
+each message-derived path component must be escaped. Use
+``secpath-replace`` in string templates, or ``securePath="replace"`` in
+list template ``property()`` statements. Apply this to fields such as
+``HOSTNAME``, ``programname``, ``APP-NAME``, and variables parsed from
+the message. Fixed directory separators should remain in constant text.
+
+This prevents sender-controlled values from selecting parent directories
+or absolute paths while keeping readable file names.
+
+
 .. _templates.template-object:
 
 The ``template()`` object
