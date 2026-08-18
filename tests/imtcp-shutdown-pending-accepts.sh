@@ -52,7 +52,7 @@ failed = threading.Event()
 
 def connect_many():
     for _ in range(256):
-        if failed.is_set():
+        if failed.is_set() or ready.is_set():
             return
         try:
             sock = socket.create_connection(("127.0.0.1", port), timeout=2)
@@ -65,7 +65,7 @@ def connect_many():
             return
         with lock:
             sockets.append(sock)
-            if len(sockets) >= 128 and not ready.is_set():
+            if len(sockets) >= 128 and not ready.is_set() and not failed.is_set():
                 with open(ready_file, "w", encoding="ascii") as stream:
                     stream.write("ready\n")
                 ready.set()
