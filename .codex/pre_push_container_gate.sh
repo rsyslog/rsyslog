@@ -18,7 +18,7 @@ import re
 import shlex
 import sys
 
-def split_simple_commands(command: str) -> list[list[str]]:
+def split_simple_commands(command):
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -35,7 +35,7 @@ def split_simple_commands(command: str) -> list[list[str]]:
         commands.append(current)
     return commands
 
-def strip_prefixes(words: list[str]) -> list[str]:
+def strip_prefixes(words):
     i = 0
     assignment_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*")
     while i < len(words):
@@ -48,8 +48,18 @@ def strip_prefixes(words: list[str]) -> list[str]:
             continue
         if token == "env":
             i += 1
-            while i < len(words) and assignment_re.fullmatch(words[i]):
-                i += 1
+            while i < len(words):
+                token = words[i]
+                if token == "-u" and i + 1 < len(words):
+                    i += 2
+                    continue
+                if token == "--unset" and i + 1 < len(words):
+                    i += 2
+                    continue
+                if token.startswith("-") or assignment_re.fullmatch(token):
+                    i += 1
+                    continue
+                break
             continue
         if assignment_re.fullmatch(token):
             i += 1
@@ -57,7 +67,7 @@ def strip_prefixes(words: list[str]) -> list[str]:
         break
     return words[i:]
 
-def is_git_push(words: list[str]) -> bool:
+def is_git_push(words):
     words = strip_prefixes(words)
     if not words or words[0] != "git":
         return False
@@ -77,7 +87,7 @@ def is_git_push(words: list[str]) -> bool:
         return False
     return False
 
-def unwrap_shell_command(words: list[str]) -> list[str] | None:
+def unwrap_shell_command(words):
     words = strip_prefixes(words)
     if not words:
         return None
@@ -107,24 +117,89 @@ def unwrap_shell_command(words: list[str]) -> list[str] | None:
 
     return None
 
-def contains_git_push(words: list[str]) -> bool:
+def inline_validation_override(words):
+    """Return the documented push override, or None when the command omits it."""
+    assignment_re = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)")
+    i = 0
+    override = None
+    while i < len(words):
+        token = words[i]
+        if token == "sudo":
+            i += 1
+            continue
+        if token in {"command", "builtin", "noglob", "time"}:
+            i += 1
+            continue
+        if token == "env":
+            i += 1
+            while i < len(words):
+                token = words[i]
+                if token == "-u" and i + 1 < len(words):
+                    if words[i + 1] == "SKIP_CONTAINER_VALIDATION":
+                        override = "0"
+                    i += 2
+                    continue
+                if token == "--unset" and i + 1 < len(words):
+                    if words[i + 1] == "SKIP_CONTAINER_VALIDATION":
+                        override = "0"
+                    i += 2
+                    continue
+                if token in {"-uSKIP_CONTAINER_VALIDATION", "--unset=SKIP_CONTAINER_VALIDATION"}:
+                    override = "0"
+                    i += 1
+                    continue
+                if token.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        match = assignment_re.fullmatch(token)
+        if match:
+            if match.group(1) == "SKIP_CONTAINER_VALIDATION":
+                override = match.group(2)
+            i += 1
+            continue
+        break
+    if override is None:
+        return None
+    return override == "1"
+
+def shell_validation_reset(words):
+    """Return whether a shell builtin clears the push override."""
+    words = strip_prefixes(words)
+    if not words:
+        return False
+    return words[0] == "unset" and "SKIP_CONTAINER_VALIDATION" in words[1:]
+
+def classify_git_push(words, inherited_skip=False):
+    override = inline_validation_override(words)
+    effective_skip = inherited_skip if override is None else override
     if is_git_push(words):
-        return True
+        return "skip" if effective_skip else "gate"
 
     nested_command = unwrap_shell_command(words)
     if not nested_command:
-        return False
+        return None
 
     command = nested_command[0]
     if not isinstance(command, str) or not command.strip():
-        return False
+        return None
 
     try:
         commands = split_simple_commands(command)
     except ValueError:
-        return False
+        return None
 
-    return any(contains_git_push(simple_command) for simple_command in commands)
+    decisions = []
+    for simple_command in commands:
+        if effective_skip and shell_validation_reset(simple_command):
+            return "gate"
+        decisions.append(classify_git_push(simple_command, effective_skip))
+    if "gate" in decisions:
+        return "gate"
+    if "skip" in decisions:
+        return "skip"
+    return None
 
 payload_raw = os.environ.get("PAYLOAD")
 if payload_raw is None:
@@ -148,12 +223,19 @@ try:
 except ValueError:
     sys.exit(0)
 
+decisions = []
 for simple_command in commands:
-    if contains_git_push(simple_command):
-        print("yes")
-        break
+    decisions.append(classify_git_push(simple_command))
+if "gate" in decisions:
+    print("yes")
+elif "skip" in decisions:
+    print("skip")
 PY
 )"
+
+if [[ "${should_gate}" == "skip" ]]; then
+  exit 0
+fi
 
 if [[ "${should_gate}" != "yes" ]]; then
   exit 0

@@ -13,7 +13,7 @@
 #
 # Keep this script portable POSIX sh. It is meant to run on lean developer and
 # container images, including Alpine-style environments where Bash may be
-# absent. Optional diff-scoped tools such as shellcheck, checkbashisms, Cubic,
+# absent. Optional diff-scoped tools such as shellcheck and checkbashisms,
 # and pycodestyle-backed formatters must not make this helper fail merely
 # because they are unavailable; print a warning and continue. A validation tool
 # that exists but reports a real finding still fails normally. Do not run
@@ -288,7 +288,6 @@ print_plan() {
 		echo "  - Change-gated Ubuntu 26.04 run-ci.sh check."
 		echo "  - Ubuntu 26.04 static analyzer for C/testbench/code changes."
 		echo "  - Late prompt-based audit passes for applicable C/H, concurrency, test, or build changes."
-		echo "  - Cubic where applicable."
 		;;
 	esac
 	if [ "$has_dist_risk" -eq 1 ]; then
@@ -510,19 +509,6 @@ have_devcontainer_script() {
 	return 1
 }
 
-run_cubic_if_available() {
-	case "$classification" in
-	agent-doc-only | internal-doc-only | rendered-docs)
-		return 0
-		;;
-	esac
-	if command -v cubic >/dev/null 2>&1; then
-		cubic review --print-logs --base "$base_ref"
-	else
-		echo "warning: cubic not installed; skipping local Cubic review" >&2
-	fi
-}
-
 run_mock_distcheck_if_needed() {
 	if [ "$has_dist_risk" -ne 1 ]; then
 		return 0
@@ -653,6 +639,5 @@ testbench-plumbing | code-or-ci | general)
 	run_change_gated_ubuntu26
 	run_static_analyzer
 	run_prompt_audit_reminder
-	run_cubic_if_available
 	;;
 esac

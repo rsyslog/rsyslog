@@ -45,12 +45,11 @@ This skill standardizes the final step of the development workflow: committing a
     plumbing changes, follow the local container-testing skill's late
     prompt-audit stage. Read and apply the project's canned prompts directly;
     do not launch another AI CLI from repository scripts.
-  - **Local Cubic**: Run local Cubic review for code changes when `cubic` is
-    installed and reachable. Skip Cubic for documentation-only changes. For
-    tests, workflows, build tooling, and mixed changes, use Cubic when the
-    change is non-trivial, behavior-affecting, security-sensitive, or large.
-    Hosted Cubic/Gemini PR comments are additional review feedback, not a
-    substitute for local Cubic where local Cubic applies.
+  - **Optional AI Review**: Local Cubic review may provide useful additional
+    feedback when `cubic` is installed and reachable, especially for
+    non-trivial code, test, workflow, build, or tooling changes. It is not a
+    required validation gate. Hosted Cubic/Gemini PR comments likewise provide
+    supplemental review feedback and must be considered when present.
   - **Container Gate**: For implementation changes, run the
     `rsyslog_local_container_testing` skill's PR-ready change-gated local
     container sequence when container tooling is available. Focused

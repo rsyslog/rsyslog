@@ -37,7 +37,6 @@ Follow these steps for a typical development task:
 2.  **Validate**: Use the `rsyslog_test` skill to run relevant shell tests.
 3.  **Container Validation**: Use the `rsyslog_local_container_testing` skill
     when Docker or Podman container tooling is available.
-4.  **Local AI Review**: Run local Cubic review when `cubic` is available.
 5.  **Commit**: Use the `rsyslog_commit` skill to format code and draft your message.
 
 Tip: You do NOT need to re-run your build, test, or container validation cycle
@@ -107,19 +106,12 @@ validation as the final validation gate when container tooling is available.
 - PR-ready local container validation means the skill's ordered
   change-gated sequence: the Ubuntu 26.04 `run-ci.sh` check run using the same
   relevance gates as regular PR CI, the Ubuntu 26.04 static analyzer where
-  applicable, late prompt-based audit passes where applicable, and local Cubic
-  where applicable. Focused container tests are useful targeted evidence, but
+  applicable, and late prompt-based audit passes where applicable. Focused container tests are useful targeted evidence, but
   they are not the final gate unless the skill explicitly allows the reduced
   lane for the touched area.
 - Use the skill's configured CI-equivalent dev image, including Docker Hub dev
   images when appropriate. Use a locally built image only when validating that
   local image or the runtime container produced by the task.
-- Run local Cubic validation for code changes when `cubic` is installed and
-  reachable. Do not run Cubic for documentation-only changes. For tests,
-  workflow, build, and other non-code changes, use Cubic when the change is
-  non-trivial, behavior-affecting, security-sensitive, or large. Hosted Cubic
-  or Gemini PR comments are additional review feedback, not substitutes for
-  local Cubic or local container validation.
 - Agents should honor local machine capacity knobs when running broad local
   checks: `RSYSLOG_LOCAL_CHECK_JOBS` for `make check` concurrency and
   `RSYSLOG_LOCAL_BUILD_JOBS` for build concurrency, both defaulting to `10`
@@ -138,7 +130,7 @@ validation as the final validation gate when container tooling is available.
   the reduced validation scope after the blocker was reported.
 - Session ledgers and final summaries for PR work must distinguish fully
   PR-ready container-validated work from targeted container-tested-only work.
-  Include the local Cubic status, hosted AI review status, image tag and ID,
+  Include hosted AI review status, image tag and ID,
   exact commands, local concurrency values, lane relaxations, and pass/fail
   results.
 
@@ -278,7 +270,7 @@ test classifications, a no-container agent should report the recommended lanes
 instead of trying to replace them with weaker local evidence.
 
 Missing optional tools such as `shellcheck`, `checkbashisms`, `actionlint`,
-`zizmor`, `hadolint`, `trivy`, `jscpd`, `pycodestyle`, Cubic, Docker, or
+`zizmor`, `hadolint`, `trivy`, `jscpd`, `pycodestyle`, Docker, or
 Podman are not fatal by themselves. Record which checks could not run, run the
 available applicable subset, and name the missing checks or container lanes
 that still need coverage.
