@@ -1,0 +1,21 @@
+tests/Makefile.am
+  s_30421e054f7af1::t_b648b480efc323 782
+tests/yaml-omfile-dynafile-template-type-invalid.sh
+  s_30421e054f7af1::t_b648b480efc323 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "85de61d73dba194af5ed981b09f8929387dac770",
+  "prompts": {},
+  "sessions": {
+    "s_30421e054f7af1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00f56-743b-74b0-a007-68cda17ac9bc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
