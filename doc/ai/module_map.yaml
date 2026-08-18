@@ -72,6 +72,21 @@ mmnormalize:
     - Turbo contexts are worker-owned and remain lock-free while normalizing; HUP increments a generation and each worker rebuilds and reclaims its own context between messages.
     - When debugFile is configured, liblognorm callbacks share an instance FILE and use flockfile to serialize writes.
 
+netstream_driver_api:
+  paths:
+    - "runtime/nsd.h"
+    - "runtime/netstrm.h"
+    - "runtime/netstrm.c"
+    - "runtime/nsd_gtls.c"
+    - "runtime/nsd_mbedtls.c"
+    - "runtime/nsd_ossl.c"
+    - "runtime/nsd_ptcp.c"
+  requires_serialization: false
+  notes:
+    - netstrm API v20 delegates SetDrvrTlsCAExtraFiles() to NSD API v21 SetTlsCAExtraFiles().
+    - Every NSD driver implementation must provide SetTlsCAExtraFiles(), returning its normal unsupported-setting result when it cannot load additional CA sources.
+    - The ossl driver accepts comma-separated file lists or strict pkcs11: URI lists; the other current drivers reject non-null extra CA sources as unsupported.
+
 omfile:
   paths: ["plugins/omfile/"]
   requires_serialization: true
