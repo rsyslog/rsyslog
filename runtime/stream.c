@@ -279,6 +279,11 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         DBGPRINTF("Note: stream '%s' is a named pipe, open with O_NONBLOCK\n", pThis->pszCurrFName);
         iFlags |= O_NONBLOCK;
     }
+#ifdef O_NOFOLLOW
+    if (pThis->bNoFollowFinal) {
+        iFlags |= O_NOFOLLOW;
+    }
+#endif
 
     /* Keep lock held through open + init to avoid async close/open races. */
     if (bDoLock) d_pthread_mutex_lock(&pThis->mut);
@@ -2026,13 +2031,15 @@ finalize_it:
 /* simple ones first */
 DEFpropSetMeth(strm, iMaxFileSize, int64) DEFpropSetMeth(strm, iFileNumDigits, int)
     DEFpropSetMeth(strm, tOperationsMode, int) DEFpropSetMeth(strm, tOpenMode, mode_t)
-        DEFpropSetMeth(strm, compressionDriver, strm_compressionDriver_t) DEFpropSetMeth(strm, sType, strmType_t)
-            DEFpropSetMeth(strm, iZipLevel, int) DEFpropSetMeth(strm, bVeryReliableZip, int)
-                DEFpropSetMeth(strm, bSync, int) DEFpropSetMeth(strm, bReopenOnTruncate, int)
-                    DEFpropSetMeth(strm, sIOBufSize, size_t) DEFpropSetMeth(strm, iSizeLimit, off_t)
-                        DEFpropSetMeth(strm, iFlushInterval, int) DEFpropSetMeth(strm, pszSizeLimitCmd, uchar *)
-                            DEFpropSetMeth(strm, bSizeLimitCmdPassFileName, int)
-                                DEFpropSetMeth(strm, cryprov, cryprov_if_t *) DEFpropSetMeth(strm, cryprovData, void *)
+        DEFpropSetMeth(strm, bNoFollowFinal, int) DEFpropSetMeth(strm, compressionDriver, strm_compressionDriver_t)
+            DEFpropSetMeth(strm, sType, strmType_t) DEFpropSetMeth(strm, iZipLevel, int)
+                DEFpropSetMeth(strm, bVeryReliableZip, int) DEFpropSetMeth(strm, bSync, int)
+                    DEFpropSetMeth(strm, bReopenOnTruncate, int) DEFpropSetMeth(strm, sIOBufSize, size_t)
+                        DEFpropSetMeth(strm, iSizeLimit, off_t) DEFpropSetMeth(strm, iFlushInterval, int)
+                            DEFpropSetMeth(strm, pszSizeLimitCmd, uchar *)
+                                DEFpropSetMeth(strm, bSizeLimitCmdPassFileName, int)
+                                    DEFpropSetMeth(strm, cryprov, cryprov_if_t *)
+                                        DEFpropSetMeth(strm, cryprovData, void *)
 
     /* sets timeout in seconds */
     void ATTR_NONNULL() strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val) {
@@ -2239,6 +2246,7 @@ static rsRetVal strmDup(strm_t *const pThis, strm_t **ppNew) {
     pNew->lenDir = pThis->lenDir;
     pNew->tOperationsMode = pThis->tOperationsMode;
     pNew->tOpenMode = pThis->tOpenMode;
+    pNew->bNoFollowFinal = pThis->bNoFollowFinal;
     pNew->compressionDriver = pThis->compressionDriver;
     pNew->iMaxFileSize = pThis->iMaxFileSize;
     pNew->iMaxFiles = pThis->iMaxFiles;
@@ -2410,6 +2418,7 @@ BEGINobjQueryInterface(strm)
     pIf->SetiFileNumDigits = strmSetiFileNumDigits;
     pIf->SettOperationsMode = strmSettOperationsMode;
     pIf->SettOpenMode = strmSettOpenMode;
+    pIf->SetbNoFollowFinal = strmSetbNoFollowFinal;
     pIf->SetcompressionDriver = strmSetcompressionDriver;
     pIf->SetsType = strmSetsType;
     pIf->SetiZipLevel = strmSetiZipLevel;
