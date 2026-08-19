@@ -1,0 +1,29 @@
+devtools/release/opensuse-daily-stable.sh
+  s_249598f19af6b2::t_ede25882af8efb 130,135
+  s_249598f19af6b2::t_7b79f00dd3d554 129,133,136-152
+devtools/release/amazonlinux-daily-stable.sh
+  s_249598f19af6b2::t_7b79f00dd3d554 126,130,133-149,270
+  s_249598f19af6b2::t_ede25882af8efb 127,132
+devtools/release/fedora-daily-stable.sh
+  s_249598f19af6b2::t_ede25882af8efb 127,132
+  s_249598f19af6b2::t_7b79f00dd3d554 126,130,133-149
+devtools/release/rpm-daily-stable.sh
+  s_249598f19af6b2::t_7b79f00dd3d554 129,133,136-152
+  s_249598f19af6b2::t_ede25882af8efb 130,135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6e2eaca9da1caf2fa2eb6397ef719c901bdac04d",
+  "prompts": {},
+  "sessions": {
+    "s_249598f19af6b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018cd-3dd2-7251-a691-ad0882f16fa0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
