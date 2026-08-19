@@ -228,6 +228,28 @@ for path in core_files:
     if count != 1:
         raise SystemExit(f"could not add supplemental core file: {path}")
 
+main_files = policy.get("supplemental_main_files", [])
+if not isinstance(main_files, list):
+    raise SystemExit("supplemental_main_files must be a list")
+for entry in main_files:
+    if not isinstance(entry, dict):
+        raise SystemExit("supplemental main file entry must be an object")
+    path = entry.get("path", "").strip()
+    anchor = entry.get("anchor", "").strip()
+    reason = entry.get("reason", "").strip()
+    if not path or not anchor or not reason:
+        raise SystemExit("supplemental main file requires path, anchor, and reason")
+    if re.search(rf"(?m)^{re.escape(path)}\s*$", spec):
+        continue
+    spec, count = re.subn(
+        rf"(?m)^({re.escape(anchor)}\s*)$",
+        rf"\1\n{path}",
+        spec,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"could not add supplemental main file: {path}")
+
 spec, version_count = re.subn(r"(?m)^Version:\s*.*$", f"Version: {version}", spec)
 spec, release_count = re.subn(
     r"(?m)^Release:\s*.*$", f"Release: {release}%{{?dist}}", spec

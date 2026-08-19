@@ -361,13 +361,24 @@ jobs:
 
       - name: Prepare repository and Spaces tools
         run: |
+          set -euo pipefail
           command -v aws
           aws --version
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            apt-utils \
-            gnupg \
-            xz-utils
+
+          packages=()
+          command -v apt-ftparchive >/dev/null 2>&1 || packages+=(apt-utils)
+          command -v gpg >/dev/null 2>&1 || packages+=(gnupg)
+          command -v gpgv >/dev/null 2>&1 || packages+=(gnupg)
+          command -v xz >/dev/null 2>&1 || packages+=(xz-utils)
+          if [ "${#packages[@]}" -gt 0 ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends "${packages[@]}"
+          fi
+
+          command -v apt-ftparchive
+          command -v gpg
+          command -v gpgv
+          command -v xz
 
       - name: Validate archive configuration
         run: |
