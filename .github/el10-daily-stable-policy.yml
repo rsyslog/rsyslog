@@ -44,5 +44,18 @@
       "package": "protobuf-c-compiler",
       "reason": "The daily-stable omotel package regenerates its protobuf-c message bindings."
     }
+  ],
+  "supplemental_main_files": [
+    {
+      "path": "%{_bindir}/rsyslog-segqueue",
+      "entry": "%attr(755,root,root) %{_bindir}/rsyslog-segqueue",
+      "anchor": "%{_sbindir}/rsyslogd",
+      "reason": "Current upstream installs the segmented queue maintenance utility in the base package."
+    },
+    {
+      "path": "%{_mandir}/man1/rsyslog-segqueue.1.gz",
+      "anchor": "%{_mandir}/man5/rsyslog.conf.5.gz",
+      "reason": "Current upstream installs the segmented queue maintenance utility manual page in the base package."
+    }
   ]
 }

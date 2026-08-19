@@ -16,6 +16,13 @@
   "supplemental_core_files": [
     "%{rsyslog_module_dir_nodeps}/mmleefparse.so"
   ],
+  "supplemental_main_files": [
+    {
+      "path": "%{_bindir}/rsyslog-segqueue",
+      "anchor": "%{_sbindir}/rsyslogd",
+      "reason": "Current upstream installs the segmented queue maintenance utility in the base package."
+    }
+  ],
   "integrated_baseline_patches": [
     {
       "name": "0001-imptcp-guard-regex-framing-match-at-line-start.patch",

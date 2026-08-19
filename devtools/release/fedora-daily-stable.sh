@@ -105,7 +105,11 @@ cmd_prepare_sources() {
 	tar -C "$tmp_dir" -czf "$output_dir/SOURCES/rsyslog-$version.tar.gz" \
 		"rsyslog-$version"
 
+	python3 "$(dirname "$0")/validate-rpm-baseline-patches.py" \
+		"$spec_file" "$policy_file" "Fedora 44"
+
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
+import fnmatch
 import json
 import pathlib
 import re
@@ -119,8 +123,32 @@ release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
 
-if re.search(r"(?m)^Patch\d*:\s*", spec):
-    raise SystemExit("Fedora baseline gained patches; review them before packaging main")
+manifest_directive = re.compile(r"^%(?!\{)([A-Za-z]+)(?:\([^)]*\))?(?:\s+|$)")
+main_files_header = re.compile(r"^%files(?:\s+-f\s+\S+)*\s*$")
+
+def has_manifest_path(path):
+    in_main_package = False
+    for line in spec.splitlines():
+        if main_files_header.match(line):
+            in_main_package = True
+            continue
+        if re.match(r"^%files(?:\s|$)", line):
+            in_main_package = False
+            continue
+        if not in_main_package:
+            continue
+        manifest_path = line.strip()
+        while (match := manifest_directive.match(manifest_path)):
+            if match.group(1) == "exclude":
+                manifest_path = ""
+                break
+            manifest_path = manifest_path[match.end():].lstrip()
+        if manifest_path == path:
+            return True
+        if any(character in manifest_path for character in "*?[") and \
+                fnmatch.fnmatchcase(path, manifest_path):
+            return True
+    return False
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
@@ -137,6 +165,28 @@ for package in packages:
     )
     if count != 1:
         raise SystemExit(f"could not insert supplemental BuildRequires: {package}")
+
+main_files = policy.get("supplemental_main_files", [])
+if not isinstance(main_files, list):
+    raise SystemExit("supplemental_main_files must be a list")
+for entry in main_files:
+    if not isinstance(entry, dict):
+        raise SystemExit("supplemental main file entry must be an object")
+    path = entry.get("path", "").strip()
+    anchor = entry.get("anchor", "").strip()
+    reason = entry.get("reason", "").strip()
+    if not path or not anchor or not reason:
+        raise SystemExit("supplemental main file requires path, anchor, and reason")
+    if has_manifest_path(path):
+        continue
+    spec, count = re.subn(
+        rf"(?m)^({re.escape(anchor)}\s*)$",
+        rf"\1\n{path}",
+        spec,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"could not add supplemental main file: {path}")
 
 spec, version_count = re.subn(r"(?m)^Version:\s*.*$", f"Version: {version}", spec)
 spec, release_count = re.subn(
