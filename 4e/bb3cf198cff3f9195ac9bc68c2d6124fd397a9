@@ -1,0 +1,28 @@
+devtools/release/opensuse-daily-stable.sh
+  s_249598f19af6b2::t_f0233099874227 115,129-137,158,180
+.github/el10-daily-stable-policy.yml
+  s_249598f19af6b2::t_f0233099874227 47-59
+devtools/release/amazonlinux-daily-stable.sh
+  s_249598f19af6b2::t_ceeb24e19360b8 112,126-134,230
+devtools/release/fedora-daily-stable.sh
+  s_249598f19af6b2::t_f0233099874227 112,126-134,162
+devtools/release/rpm-daily-stable.sh
+  s_249598f19af6b2::t_f0233099874227 115,129-137,171-192
+  s_249598f19af6b2::t_7f456e8c5f0872 193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4ebb3cf198cff3f9195ac9bc68c2d6124fd397a9",
+  "prompts": {},
+  "sessions": {
+    "s_249598f19af6b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018cd-3dd2-7251-a691-ad0882f16fa0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
