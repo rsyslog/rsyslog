@@ -126,12 +126,30 @@ release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
 
-manifest_prefix = re.compile(r"^(?:(?:%(?!\{)[A-Za-z][^\s]*)\s+)*")
+manifest_directive = re.compile(r"^%(?!\{)([A-Za-z]+)(?:\([^)]*\))?(?:\s+|$)")
+main_files_header = re.compile(r"^%files(?:\s+-f\s+\S+)*\s*$")
 
 def has_manifest_path(path):
+    in_main_package = False
     for line in spec.splitlines():
-        manifest_path = manifest_prefix.sub("", line).strip()
-        if manifest_path == path or fnmatch.fnmatchcase(path, manifest_path):
+        if main_files_header.match(line):
+            in_main_package = True
+            continue
+        if re.match(r"^%files(?:\s|$)", line):
+            in_main_package = False
+            continue
+        if not in_main_package:
+            continue
+        manifest_path = line.strip()
+        while (match := manifest_directive.match(manifest_path)):
+            if match.group(1) == "exclude":
+                manifest_path = ""
+                break
+            manifest_path = manifest_path[match.end():].lstrip()
+        if manifest_path == path:
+            return True
+        if any(character in manifest_path for character in "*?[") and \
+                fnmatch.fnmatchcase(path, manifest_path):
             return True
     return False
 
