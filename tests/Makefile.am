@@ -2355,8 +2355,11 @@ TESTS_MMKUBERNETES = \
 	mmkubernetes-cache-expire.sh \
 	mmkubernetes-url-failover.sh \
 	mmkubernetes-namespace-metadata-off.sh \
-	yaml-mmkubernetes-namespace-metadata-off.sh \
 	mmkubernetes-token-reload.sh
+
+TESTS_MMKUBERNETES_LIBYAML = \
+	yaml-mmkubernetes-namespace-metadata-off.sh \
+	yaml-mmkubernetes-token-reload.sh
 
 TESTS_MMKUBERNETES_VALGRIND = \
 	mmkubernetes-basic-vg.sh \
@@ -2593,6 +2596,7 @@ EXTRA_DIST += $(TESTS_IMBATCHREPORT_VALGRIND)
 EXTRA_DIST += $(TESTS_OMTCL)
 EXTRA_DIST += $(TESTS_MMTAGHOSTNAME)
 EXTRA_DIST += $(TESTS_MMKUBERNETES)
+EXTRA_DIST += $(TESTS_MMKUBERNETES_LIBYAML)
 EXTRA_DIST += $(TESTS_MMKUBERNETES_VALGRIND)
 EXTRA_DIST += $(TESTS_IMKUBERNETES)
 EXTRA_DIST += $(TESTS_IMTUXEDOULOG)
@@ -3826,6 +3830,9 @@ if ENABLE_MMJSONPARSE
 if ENABLE_IMFILE
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_MMKUBERNETES)
+if HAVE_LIBYAML
+TESTS += $(TESTS_MMKUBERNETES_LIBYAML)
+endif # HAVE_LIBYAML
 if HAVE_VALGRIND
 TESTS += $(TESTS_MMKUBERNETES_VALGRIND)
 endif

@@ -1,6 +1,10 @@
 .. _param-mmkubernetes-tokenreloadinterval:
 .. _mmkubernetes.parameter.action.tokenreloadinterval:
 
+.. meta::
+   :description: Configure proactive Kubernetes ServiceAccount token reloads in mmkubernetes.
+   :keywords: rsyslog, mmkubernetes, ServiceAccount, token, token reload, Kubernetes
+
 tokenreloadinterval
 ===================
 
