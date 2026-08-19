@@ -112,6 +112,7 @@ cmd_prepare_sources() {
 		"$spec_file" "$policy_file" "openSUSE"
 
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
+import fnmatch
 import json
 import pathlib
 import re
@@ -124,6 +125,15 @@ version = sys.argv[3]
 release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
+
+manifest_prefix = re.compile(r"^(?:(?:%(?!\{)[A-Za-z][^\s]*)\s+)*")
+
+def has_manifest_path(path):
+    for line in spec.splitlines():
+        manifest_path = manifest_prefix.sub("", line).strip()
+        if manifest_path == path or fnmatch.fnmatchcase(path, manifest_path):
+            return True
+    return False
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
@@ -145,7 +155,7 @@ core_files = policy.get("supplemental_core_files", [])
 if any(not path.strip() for path in core_files):
     raise SystemExit("policy contains an empty supplemental core file")
 for path in core_files:
-    if re.search(rf"(?m)^{re.escape(path)}\s*$", spec):
+    if has_manifest_path(path):
         continue
     spec, count = re.subn(
         r"(?m)^(%\{rsyslog_module_dir_nodeps\}/lmzlibw\.so\s*)$",
@@ -167,7 +177,7 @@ for entry in main_files:
     reason = entry.get("reason", "").strip()
     if not path or not anchor or not reason:
         raise SystemExit("supplemental main file requires path, anchor, and reason")
-    if re.search(rf"(?m)^{re.escape(path)}\s*$", spec):
+    if has_manifest_path(path):
         continue
     spec, count = re.subn(
         rf"(?m)^({re.escape(anchor)}\s*)$",

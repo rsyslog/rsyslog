@@ -109,6 +109,7 @@ cmd_prepare_sources() {
 		"$spec_file" "$policy_file" "Amazon Linux 2023"
 
 	python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
+import fnmatch
 import json
 import pathlib
 import re
@@ -121,6 +122,15 @@ version = sys.argv[3]
 release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
+
+manifest_prefix = re.compile(r"^(?:(?:%(?!\{)[A-Za-z][^\s]*)\s+)*")
+
+def has_manifest_path(path):
+    for line in spec.splitlines():
+        manifest_path = manifest_prefix.sub("", line).strip()
+        if manifest_path == path or fnmatch.fnmatchcase(path, manifest_path):
+            return True
+    return False
 
 if not policy.get("drop_stale_html_docs", False):
     raise SystemExit("Amazon Linux policy must explicitly decide about stale HTML docs")
@@ -217,7 +227,7 @@ core_files = policy.get("supplemental_core_files", [])
 if any(not path.strip() for path in core_files):
     raise SystemExit("policy contains an empty supplemental core file")
 for path in core_files:
-    if re.search(rf"(?m)^{re.escape(path)}\s*$", spec):
+    if has_manifest_path(path):
         continue
     spec, count = re.subn(
         r"(?m)^(%\{_libdir\}/rsyslog/lmzlibw\.so\s*)$",

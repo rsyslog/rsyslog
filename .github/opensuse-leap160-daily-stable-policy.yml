@@ -21,11 +21,6 @@
       "path": "%{_bindir}/rsyslog-segqueue",
       "anchor": "%{_sbindir}/rsyslogd",
       "reason": "Current upstream installs the segmented queue maintenance utility in the base package."
-    },
-    {
-      "path": "%{_mandir}/man1/rsyslog-segqueue.1.gz",
-      "anchor": "%{_mandir}/man5/rsyslog.conf.5*",
-      "reason": "Current upstream installs the segmented queue maintenance utility manual page in the base package."
     }
   ],
   "integrated_baseline_patches": [

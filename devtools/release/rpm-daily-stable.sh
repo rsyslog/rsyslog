@@ -112,6 +112,7 @@ cmd_prepare_sources() {
     "$spec_file" "$policy_file" "EL10/Fedora"
 
   python3 - "$spec_file" "$policy_file" "$version" "$release" <<'PY'
+import fnmatch
 import json
 import pathlib
 import re
@@ -124,6 +125,15 @@ version = sys.argv[3]
 release = sys.argv[4]
 spec = spec_path.read_text(encoding="utf-8")
 policy = json.loads(policy_path.read_text(encoding="utf-8"))
+
+manifest_prefix = re.compile(r"^(?:(?:%(?!\{)[A-Za-z][^\s]*)\s+)*")
+
+def has_manifest_path(path):
+    for line in spec.splitlines():
+        manifest_path = manifest_prefix.sub("", line).strip()
+        if manifest_path == path or fnmatch.fnmatchcase(path, manifest_path):
+            return True
+    return False
 
 build_requires = policy.get("supplemental_build_requires", [])
 packages = [entry.get("package", "").strip() for entry in build_requires]
@@ -158,6 +168,29 @@ for package in packages:
     if count != 1:
         raise SystemExit(f"could not insert supplemental BuildRequires: {package}")
 
+main_files = policy.get("supplemental_main_files", [])
+if not isinstance(main_files, list):
+    raise SystemExit("supplemental_main_files must be a list")
+for entry in main_files:
+    if not isinstance(entry, dict):
+        raise SystemExit("supplemental main file entry must be an object")
+    path = entry.get("path", "").strip()
+    manifest_entry = entry.get("entry", path).strip()
+    anchor = entry.get("anchor", "").strip()
+    reason = entry.get("reason", "").strip()
+    if not path or not manifest_entry or not anchor or not reason:
+        raise SystemExit("supplemental main file requires path, anchor, and reason")
+    if has_manifest_path(path):
+        continue
+    spec, count = re.subn(
+        rf"(?m)^({re.escape(anchor)}\s*)$",
+        rf"\1\n{manifest_entry}",
+        spec,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"could not add supplemental main file: {path}")
+
 spec, version_count = re.subn(r"(?m)^Version:\s*.*$", f"Version: {version}", spec)
 spec, release_count = re.subn(
     r"(?m)^Release:\s*.*$", f"Release: {release}%{{?dist}}", spec
@@ -183,27 +216,6 @@ PY
 
   python3 "$(dirname "$0")/package-feature-overlay.py" rpm \
     "$spec_file" "$feature_contract" rpm
-
-  python3 - "$spec_file" <<'PY'
-import pathlib
-import re
-import sys
-
-spec_path = pathlib.Path(sys.argv[1])
-spec = spec_path.read_text(encoding="utf-8")
-segqueue_files = (
-    "%attr(755,root,root) %{_bindir}/rsyslog-segqueue\n"
-    "%{_mandir}/man1/rsyslog-segqueue.1.gz"
-)
-
-if segqueue_files not in spec:
-    anchor = r"(?m)^(%\{_sbindir\}/rsyslogd)$"
-    spec, count = re.subn(anchor, rf"\1\n{segqueue_files}", spec, count=1)
-    if count != 1:
-        raise SystemExit("could not add rsyslog-segqueue files to the RPM spec")
-
-spec_path.write_text(spec, encoding="utf-8")
-PY
 
   while IFS= read -r source_url; do
     case "$source_url" in
