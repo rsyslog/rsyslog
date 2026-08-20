@@ -37,6 +37,9 @@ EXTRA_DIST += $(TESTS_TEMPLATE_REGEX_BOUNDS) $(TESTS_TEMPLATE_REGEX_BOUNDS_LIBYA
 TESTS_RSCRIPT_OBJECT_STRINGS = rscript-object-string-escapes.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 
+TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
+EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
+
 TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
@@ -529,6 +532,7 @@ TESTS_DEFAULT = \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
+	$(TESTS_RSCRIPT_REPLACE_OVERLAP) \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh \
 	rscript_re_extract_i.sh \
