@@ -1,0 +1,19 @@
+tests/fieldtest-udp.sh
+  s_1cef71b42e2a41::t_c139803e582fa4 4-6,10,18-21,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "97debf78f8da25d4b6d3476bdb4d1c0f43d6911d",
+  "prompts": {},
+  "sessions": {
+    "s_1cef71b42e2a41": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01e69-ded0-7c91-bf15-f7944174f21a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
