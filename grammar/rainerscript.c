@@ -1827,8 +1827,8 @@ static es_str_t *doFuncReplace(struct svar *__restrict__ const operandVal,
         if (src_buff[i] == find[j]) {
             j++;
         } else if (j > 0) {
-            i -= (j - 1);
-            lDst -= (j - 1);
+            i -= j;
+            lDst -= j;
             j = 0;
         }
     }
