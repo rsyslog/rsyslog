@@ -3,9 +3,9 @@
 The `debian daily stable` workflow builds current rsyslog `main` for Debian 13
 (`trixie`) on `amd64` and `arm64`. Package construction does not run for pull requests;
 the repository's workflow lint and security checks still validate workflow
-changes without consuming a full Debian package-build runner. Manual dispatch
-remains available for bootstrap and recovery. Scheduled publishing remains
-disabled until the DigitalOcean archive is provisioned.
+changes without consuming a full Debian package-build runner. Scheduled
+publishing is enabled; manual dispatch remains available for recovery and
+controlled verification.
 
 The workflow owns package construction, APT metadata generation, signing,
 upload ordering, and post-publication installation verification. The
@@ -91,9 +91,10 @@ The passphrase may be empty only if the archive key was intentionally created
 without one. Keep stable-release publishing in a separate environment when it
 is added later.
 
-## Activation
+## Provisioning and recovery
 
-Before enabling the schedule:
+For a new archive environment, or after material archive-configuration
+changes:
 
 1. Run the workflow manually with publication disabled and review its package
    artifact.

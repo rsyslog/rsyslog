@@ -53,6 +53,17 @@ after formatting if you already validated the code immediately before.
   issues, hardening, and invalid findings before using security severity or CWE
   language.
 
+## Package Archive Automation
+
+For any daily-stable, scheduled-release packaging, package archive, or
+distribution-extension work, first read the
+[`Daily Stable Package Archive Program`](.github/DAILY_STABLE_PACKAGE_ARCHIVE.md).
+It defines the current-main/native-baseline model, DigitalOcean Spaces archive,
+five-year retention, publication verification, and common feature-contract
+rules.  Treat a package build as incomplete until the public archive has been
+signature-verified and the exact published package has been installed and
+smoke-tested on the matching target.
+
 ## Container Images
 
 - Runtime container definitions live in `packaging/docker/rsyslog`.
@@ -71,7 +82,9 @@ after formatting if you already validated the code immediately before.
 - Manual release flows use two fixed channels:
   `stable` maps `8.yymm.0` to `20yy-mm` via `ppa:adiscon/v8-stable`,
   and `daily-stable` uses `ppa:adiscon/daily-stable` with the fixed tag
-  `daily-stable`.
+  `daily-stable`. These PPA references govern the legacy container-image
+  release flow only; multi-distribution package archive work uses the
+  DigitalOcean Spaces program above.
 - AI agents must not introduce release-looking fallback tags such as
   `2026-03` as the default local container build version.
 
