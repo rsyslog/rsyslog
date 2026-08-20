@@ -8,9 +8,9 @@ subpackage split, OpenRC integration, and default configuration.
 The only current policy addition is `autoconf-archive`, required by AX macros
 used by current upstream but not by Alpine's released 8.2604 source package.
 
-Package construction does not run for pull requests. Manual dispatch remains
-available for bootstrap and recovery. The schedule is inactive until a manual
-publication and clean Alpine installation test pass.
+Package construction does not run for pull requests. Scheduled publishing is
+enabled; manual dispatch remains available for recovery and controlled
+end-to-end verification.
 
 ## Archive layout and retention
 
@@ -80,7 +80,7 @@ Add these variables to the `debian-daily-stable` environment:
 The existing shared Space bucket, endpoint, region, access key, and secret key
 remain unchanged. A DigitalOcean account API token is not required.
 
-## End-to-end activation
+## Provisioning and recovery
 
 1. Generate and store the Alpine RSA key and its public-key SHA-256.
 2. Run the workflow manually with publication disabled and inspect the APK

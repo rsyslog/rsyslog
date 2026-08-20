@@ -16,9 +16,9 @@ omitted instead of being relabeled as current documentation; current source
 licenses, README, ChangeLog, and recovery-tool documentation remain in the
 core package.
 
-Package construction does not run for pull requests. Manual dispatch remains
-available for bootstrap and recovery. The schedule is inactive until a manual
-publication and clean Amazon Linux installation test pass.
+Package construction does not run for pull requests. Scheduled publishing is
+enabled; manual dispatch remains available for recovery and controlled
+end-to-end verification.
 
 ## Archive layout and retention
 
@@ -87,7 +87,7 @@ Add these variables to the `debian-daily-stable` environment:
 No new private key, DigitalOcean account API token, or bucket permission is
 required.
 
-## End-to-end activation
+## Provisioning and recovery
 
 1. Set the CDN and public-origin repository variables while leaving the
    schedule flag unset or false.
