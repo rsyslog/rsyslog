@@ -1,5 +1,10 @@
 #!/bin/bash
-# addd 2016-05-13 by RGerhards, released under ASL 2.0
+# added 2016-05-13 by RGerhards, released under ASL 2.0
+# Verifies that imptcp discards the excess portion of each oversized LF-framed
+# message while continuing to process following messages. Separate TCP client
+# connections may be handled by different workers, so delivery order is not an
+# invariant. The oracle requires exactly two truncated long messages and two
+# intact short messages among exactly four output lines after shutdown.
 
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -24,9 +29,7 @@ tcpflood -m1 -M "\"<120> 2011-03-01T11:22:12Z host tag: this is a way to long me
 shutdown_when_empty
 wait_shutdown
 
-export EXPECTED='<120> 2011-03-01T11:22:12Z host tag: this is a way to long message that has abcdefghijklmnopqrstuvwxyz test1 test2 test3 test4 t
-<120> 2011-03-01T11:22:12Z host tag: this is a way to long message
-<120> 2011-03-01T11:22:12Z host tag: this is a way to long message that has abcdefghijklmnopqrstuvwxyz test1 test2 test3 test4 t
-<120> 2011-03-01T11:22:12Z host tag: this is a way to long message'
-cmp_exact
+wait_file_lines "$RSYSLOG_OUT_LOG" 4
+content_count_check '<120> 2011-03-01T11:22:12Z host tag: this is a way to long message that has abcdefghijklmnopqrstuvwxyz test1 test2 test3 test4 t' 2
+content_count_check --regex '^<120> 2011-03-01T11:22:12Z host tag: this is a way to long message$' 2
 exit_test
