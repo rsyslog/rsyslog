@@ -115,8 +115,8 @@ def raw_tail(payload):
     return (1 | (len(body) << 3)).to_bytes(3, "little") + body
 
 
-def complete_frame(payload):
-    return header_1m + raw_tail(payload)
+def complete_frame(payload, header=header_1m):
+    return header + raw_tail(payload)
 
 
 held_one = connect(limited_port)
@@ -142,7 +142,7 @@ oversized.close()
 # admitted, rather than merely proving a later rejection occurred. Then hold a
 # 64 MiB window and verify that a concurrent second one is rejected.
 with connect(default_port) as default_boundary:
-    default_boundary.sendall(complete_frame(control + b"-default-boundary"))
+    default_boundary.sendall(complete_frame(control + b"-default-boundary", header_64m))
 if not wait_for(output_path, b"window-budget-control-default-boundary", time.monotonic() + 10):
     raise SystemExit("default budget rejected a 64 MiB advertised window")
 
