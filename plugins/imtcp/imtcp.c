@@ -529,13 +529,6 @@ static rsRetVal applySecureDefaultsToZstdWindow(instanceConf_t *const inst, cons
         return RS_RET_PARAM_ERROR;
     }
 
-    if (!inst->compressionMaxTotalZstdWindowBytesSet) {
-        glblWarnIfInsecureDefault(
-            modConf->pConf,
-            "imtcp zstd stream decompression has unlimited aggregate decoder-window memory because "
-            "compression.maxTotalZstdWindowBytes was not explicitly set; configure a positive byte limit, or "
-            "set it to 0 explicitly to acknowledge unlimited operation");
-    }
     return RS_RET_OK;
 }
 

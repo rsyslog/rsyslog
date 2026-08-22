@@ -3,15 +3,16 @@
 # Exercises the listener-wide zstd decoder-window budget with deliberately held
 # frames. Diagnostics prove exact aggregate rejection and oversized-window
 # rejection; delivered messages prove reservations are released after close,
-# completion, and decode failure. A second unlimited listener holds three
-# simultaneous windows and later completes them, proving that explicit zero
-# does not impose a hidden cap. Polling allows ten seconds for loaded CI, while
-# diagnostics and delivered messages—not elapsed time—are the oracle.
+# completion, and decode failure. A complete 64 MiB-advertised frame proves the
+# default accepts its exact boundary before a held first window rejects a
+# concurrent second window. An explicit-zero listener holds three simultaneous
+# windows and later completes them. Polling allows ten seconds for loaded CI,
+# while diagnostics and delivered messages—not elapsed time—are the oracle.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin lmzstdw ../runtime
 check_command_available python3
-export NUMMESSAGES=6
+export NUMMESSAGES=7
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 
 generate_conf
@@ -23,6 +24,9 @@ input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DY
 	compression.mode="stream:always"
 	compression.driver="zstd"
 	compression.maxTotalZstdWindowBytes="2097152")
+input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.default_port"
+	compression.mode="stream:always"
+	compression.driver="zstd")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.unlimited_port"
 	compression.mode="stream:always"
 	compression.driver="zstd"
@@ -40,7 +44,7 @@ startup
 
 printf '<129>Mar 10 01:00:00 127.0.0.1 tag: window-budget-control\n' > "$RSYSLOG_DYNNAME.rawmsg"
 
-python3 - "$RSYSLOG_DYNNAME.limited_port" "$RSYSLOG_DYNNAME.unlimited_port" "$RSYSLOG2_OUT_LOG" \
+python3 - "$RSYSLOG_DYNNAME.limited_port" "$RSYSLOG_DYNNAME.default_port" "$RSYSLOG_DYNNAME.unlimited_port" "$RSYSLOG2_OUT_LOG" \
     "$RSYSLOG_OUT_LOG" "$RSYSLOG_DYNNAME.rawmsg" <<'PY'
 import socket
 import sys
@@ -59,10 +63,11 @@ def read_port(path):
 
 
 limited_port = read_port(sys.argv[1])
-unlimited_port = read_port(sys.argv[2])
-diagnostic_path = sys.argv[3]
-output_path = sys.argv[4]
-payload_path = sys.argv[5]
+default_port = read_port(sys.argv[2])
+unlimited_port = read_port(sys.argv[3])
+diagnostic_path = sys.argv[4]
+output_path = sys.argv[5]
+payload_path = sys.argv[6]
 
 
 def wait_for(path, needle, deadline):
@@ -94,9 +99,11 @@ def connect(port):
 
 
 # Standard zstd magic, a frame descriptor without a content size, and window
-# descriptors for 1 MiB and 4 MiB. Omitting the block keeps the reservation live.
+# descriptors for 1 MiB, 4 MiB, and 64 MiB. Omitting the block keeps the
+# reservation live.
 header_1m = bytes.fromhex("28b52ffd0050")
 header_4m = bytes.fromhex("28b52ffd0060")
+header_64m = bytes.fromhex("28b52ffd0080")
 
 with open(payload_path, "rb") as stream:
     control = stream.read().rstrip(b"\n")
@@ -108,8 +115,8 @@ def raw_tail(payload):
     return (1 | (len(body) << 3)).to_bytes(3, "little") + body
 
 
-def complete_frame(payload):
-    return header_1m + raw_tail(payload)
+def complete_frame(payload, header=header_1m):
+    return header + raw_tail(payload)
 
 
 held_one = connect(limited_port)
@@ -129,6 +136,25 @@ if not wait_for_count(
         diagnostic_path, b"zstd decoder window budget exhausted", 2, time.monotonic() + 10):
     raise SystemExit("listener did not reject a frame larger than its entire budget")
 oversized.close()
+
+# The omitted setting uses the finite 64 MiB default. First complete an exactly
+# 64 MiB-advertised frame: its delivered message proves the boundary is
+# admitted, rather than merely proving a later rejection occurred. Then hold a
+# 64 MiB window and verify that a concurrent second one is rejected.
+with connect(default_port) as default_boundary:
+    default_boundary.sendall(complete_frame(control + b"-default-boundary", header_64m))
+if not wait_for(output_path, b"window-budget-control-default-boundary", time.monotonic() + 10):
+    raise SystemExit("default budget rejected a 64 MiB advertised window")
+
+default_held = connect(default_port)
+default_held.sendall(header_64m)
+default_denied = connect(default_port)
+default_denied.sendall(header_64m)
+if not wait_for_count(
+        diagnostic_path, b"zstd decoder window budget exhausted", 3, time.monotonic() + 10):
+    raise SystemExit("listener admitted a second 64 MiB window with the default budget")
+default_denied.close()
+default_held.close()
 
 # Closing one held session must make exactly one 1 MiB slot reusable. Split the
 # replacement header across writes to exercise fragmented-header retention.
@@ -193,11 +219,12 @@ for index in range(1, 4):
         raise SystemExit("explicit zero imposed an aggregate decoder-window cap")
 PY
 
-wait_file_lines "$RSYSLOG_OUT_LOG" 6
+wait_file_lines "$RSYSLOG_OUT_LOG" 7
 shutdown_when_empty
 wait_shutdown
 
 content_check "zstd decoder window budget exhausted" "$RSYSLOG2_OUT_LOG"
+content_check "window-budget-control-default-boundary" "$RSYSLOG_OUT_LOG"
 content_check "window-budget-control-close-release" "$RSYSLOG_OUT_LOG"
 content_check "window-budget-control-completion-release" "$RSYSLOG_OUT_LOG"
 content_check "window-budget-control-error-release" "$RSYSLOG_OUT_LOG"
