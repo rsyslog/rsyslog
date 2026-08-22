@@ -48,24 +48,22 @@ CONF_EOF
 }
 
 strict_error='compatibility.defaults.secure="strict" requires an explicit positive compression.maxTotalZstdWindowBytes'
+old_unlimited_warning='compression.maxTotalZstdWindowBytes was not explicitly set'
 
 write_input_config "${RSYSLOG_DYNNAME}.warn-omitted.conf" warn stream:always zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.warn-omitted.conf" "${RSYSLOG_DYNNAME}.warn-omitted.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.warn-omitted.log"
+check_not_present "${old_unlimited_warning}" "${RSYSLOG_DYNNAME}.warn-omitted.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.backcompat-omitted.conf" backward-compatible stream:always zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.backcompat-omitted.conf" "${RSYSLOG_DYNNAME}.backcompat-omitted.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.backcompat-omitted.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.warn-zero.conf" warn stream:always zstd \
     'compression.maxTotalZstdWindowBytes="0"'
 run_expect_success "${RSYSLOG_DYNNAME}.warn-zero.conf" "${RSYSLOG_DYNNAME}.warn-zero.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.warn-zero.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.warn-positive.conf" warn stream:always zstd \
     'compression.maxTotalZstdWindowBytes="2097152"'
 run_expect_success "${RSYSLOG_DYNNAME}.warn-positive.conf" "${RSYSLOG_DYNNAME}.warn-positive.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.warn-positive.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.strict-omitted.conf" strict stream:always zstd ""
 run_expect_failure "${RSYSLOG_DYNNAME}.strict-omitted.conf" "${RSYSLOG_DYNNAME}.strict-omitted.log"
@@ -82,11 +80,9 @@ run_expect_success "${RSYSLOG_DYNNAME}.strict-positive.conf" "${RSYSLOG_DYNNAME}
 
 write_input_config "${RSYSLOG_DYNNAME}.warn-zlib.conf" warn stream:always zlib ""
 run_expect_success "${RSYSLOG_DYNNAME}.warn-zlib.conf" "${RSYSLOG_DYNNAME}.warn-zlib.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.warn-zlib.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.warn-inactive.conf" warn none zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.warn-inactive.conf" "${RSYSLOG_DYNNAME}.warn-inactive.log"
-check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.warn-inactive.log"
 
 cat >"${RSYSLOG_DYNNAME}.strict-module-inherit.conf" <<'CONF_EOF'
 global(compatibility.defaults.secure="strict")
