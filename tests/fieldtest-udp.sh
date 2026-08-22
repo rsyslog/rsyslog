@@ -1,11 +1,13 @@
 #!/bin/bash
 # add 2018-06-29 by Pascal Withopf, released under ASL 2.0
 # Verify UDP parser field extraction from a PIX-style message. The test uses
-# an imudp-assigned port file so parallel test runs cannot cross-feed messages;
-# the extracted field in RSYSLOG_OUT_LOG is the pass/fail oracle.
+# an imudp-assigned port file and a per-run payload marker, so parallel or host
+# UDP traffic cannot cross-feed messages; the extracted field in
+# RSYSLOG_OUT_LOG is the pass/fail oracle.
 . ${srcdir:=.}/diag.sh init
 generate_conf
 PORT_RCVR_FILE="$RSYSLOG_DYNNAME.imudp.port"
+TEST_MARKER="fieldtest-udp-$RSYSLOG_DYNNAME"
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
 input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_FILE'" ruleset="ruleset1")
@@ -13,14 +15,16 @@ input(type="imudp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_RCVR_
 template(name="outfmt" type="string" string="%msg:F,32:2%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
-	       template="outfmt")
+	if $msg contains "'$TEST_MARKER'" then {
+		action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
+		       template="outfmt")
+	}
 }
 
 '
 startup
 assign_tcpflood_port "$PORT_RCVR_FILE"
-tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: DROP_url_www.sina.com.cn:IN=eth1 OUT=eth0 SRC=192.168.10.78 DST=61.172.201.194 LEN=1182 TOS=0x00 PREC=0x00 TTL=63 ID=14368 DF PROTO=TCP SPT=33343 DPT=80 WINDOW=92 RES=0x00 ACK PSH URGP=0\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: DROP_url_www.sina.com.cn:IN=eth1 OUT=eth0 SRC=192.168.10.78 DST=61.172.201.194 LEN=1182 TOS=0x00 PREC=0x00 TTL=63 ID=14368 DF PROTO=TCP SPT=33343 DPT=80 WINDOW=92 RES=0x00 ACK PSH URGP=0 $TEST_MARKER\""
 shutdown_when_empty
 wait_shutdown
 
