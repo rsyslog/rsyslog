@@ -59,27 +59,26 @@ rulesets:
 YAML_EOF
 }
 
-warning='compression.maxTotalZstdWindowBytes was not explicitly set'
 strict_error='compatibility.defaults.secure="strict" requires an explicit positive compression.maxTotalZstdWindowBytes'
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-warn-omitted.yaml" warn stream:always zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-warn-omitted.yaml" "${RSYSLOG_DYNNAME}.yaml-warn-omitted.log"
-content_check "${warning}" "${RSYSLOG_DYNNAME}.yaml-warn-omitted.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-warn-omitted.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-backcompat-omitted.yaml" backward-compatible stream:always zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-backcompat-omitted.yaml" \
     "${RSYSLOG_DYNNAME}.yaml-backcompat-omitted.log"
-check_not_present "${warning}" "${RSYSLOG_DYNNAME}.yaml-backcompat-omitted.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-backcompat-omitted.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-warn-zero.yaml" warn stream:always zstd \
     '    compression.maxTotalZstdWindowBytes: "0"'
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-warn-zero.yaml" "${RSYSLOG_DYNNAME}.yaml-warn-zero.log"
-check_not_present "${warning}" "${RSYSLOG_DYNNAME}.yaml-warn-zero.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-warn-zero.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-warn-positive.yaml" warn stream:always zstd \
     '    compression.maxTotalZstdWindowBytes: "2097152"'
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-warn-positive.yaml" "${RSYSLOG_DYNNAME}.yaml-warn-positive.log"
-check_not_present "${warning}" "${RSYSLOG_DYNNAME}.yaml-warn-positive.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-warn-positive.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-strict-omitted.yaml" strict stream:always zstd ""
 run_expect_failure "${RSYSLOG_DYNNAME}.yaml-strict-omitted.yaml" "${RSYSLOG_DYNNAME}.yaml-strict-omitted.log"
@@ -96,11 +95,11 @@ run_expect_success "${RSYSLOG_DYNNAME}.yaml-strict-positive.yaml" "${RSYSLOG_DYN
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-warn-zlib.yaml" warn stream:always zlib ""
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-warn-zlib.yaml" "${RSYSLOG_DYNNAME}.yaml-warn-zlib.log"
-check_not_present "${warning}" "${RSYSLOG_DYNNAME}.yaml-warn-zlib.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-warn-zlib.log"
 
 write_input_config "${RSYSLOG_DYNNAME}.yaml-warn-inactive.yaml" warn none zstd ""
 run_expect_success "${RSYSLOG_DYNNAME}.yaml-warn-inactive.yaml" "${RSYSLOG_DYNNAME}.yaml-warn-inactive.log"
-check_not_present "${warning}" "${RSYSLOG_DYNNAME}.yaml-warn-inactive.log"
+check_not_present 'unlimited aggregate decoder-window memory' "${RSYSLOG_DYNNAME}.yaml-warn-inactive.log"
 
 cat >"${RSYSLOG_DYNNAME}.yaml-strict-module-inherit.yaml" <<'YAML_EOF'
 version: 2

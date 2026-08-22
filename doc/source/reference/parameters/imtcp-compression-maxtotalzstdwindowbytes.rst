@@ -24,7 +24,7 @@ This parameter applies to :doc:`../../configuration/modules/imtcp`.
 :Name: compression.maxTotalZstdWindowBytes
 :Scope: input/module
 :Type: integer
-:Default: 0
+:Default: 67108864 (64 MiB)
 :Required?: no
 :Introduced: 8.2608.0
 
@@ -38,18 +38,17 @@ listener. It applies only when ``compression.mode="stream:always"`` and
 exceed the limit is rejected and its session is closed without affecting
 already admitted sessions.
 
-The default ``0`` leaves aggregate decoder-window memory unlimited for
-compatibility. This setting is independent of
+The default is ``67108864`` bytes (64 MiB). Set the value to ``0`` only when
+unlimited aggregate decoder-window memory is explicitly required. This setting
+is independent of
 :ref:`param-imtcp-compression-maxdecompressedbytesperreceive`, which limits
 decompressed output from one TCP receive operation.
 
-The secure-default policy controls omitted values:
+The secure-default policy controls explicit unlimited values:
 
-- ``compatibility.defaults.secure="backward-compatible"`` accepts the
-  unlimited default silently.
-- ``compatibility.defaults.secure="warn"`` accepts it and emits a startup
-  warning. Explicitly setting ``0`` acknowledges unlimited operation and
-  suppresses that warning.
+- ``compatibility.defaults.secure="backward-compatible"`` and
+  ``compatibility.defaults.secure="warn"`` use the finite default when the
+  parameter is omitted. Both accept an explicit ``0`` for compatibility.
 - ``compatibility.defaults.secure="strict"`` requires an explicitly configured
   positive value and rejects omitted or explicit-zero values.
 
