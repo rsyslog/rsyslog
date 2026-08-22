@@ -6,7 +6,10 @@
 # Verify a malformed plaintext connection does not disarm an imbeats TLS
 # listener. The plaintext peer waits for its close to prove the failed accept
 # completed; a subsequent TLS Lumberjack event must receive its ACK and reach
-# the output file. Socket timeouts only bound a listener that remains disarmed.
+# the output file. The listener may reject the malformed handshake before the
+# peer can shut down its write side, so that expected socket error is tolerated
+# before observing the close. Socket timeouts only bound a listener that
+# remains disarmed.
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
@@ -41,6 +44,7 @@ startup
 assign_rs_port "$RSYSLOG_DYNNAME.imbeats.port"
 
 if ! $PYTHON - "$RS_PORT" <<'PY'
+import errno
 import json
 import socket
 import ssl
@@ -52,7 +56,12 @@ port = int(sys.argv[1])
 with socket.create_connection(("127.0.0.1", port), timeout=5) as plain:
     plain.settimeout(5)
     plain.sendall(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
-    plain.shutdown(socket.SHUT_WR)
+    try:
+        plain.shutdown(socket.SHUT_WR)
+    except OSError as e:
+        # The listener may already have closed after rejecting plaintext.
+        if e.errno != errno.ENOTCONN:
+            raise
     try:
         response = plain.recv(1)
     except socket.timeout as e:
