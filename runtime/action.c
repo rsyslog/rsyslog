@@ -834,12 +834,9 @@ finalize_it:
 }
 
 
-/* we need to defer setting the action's own bReportSuspension state until
- * after the full config has been processed. So the most simple case to do
- * that is here. It's not a performance problem, as it happens infrequently.
- * it's not a threading race problem, as always the same value will be written.
- * As we need to do this in several places, we have moved the code to its own
- * helper function.
+/* Resolve action-specific suspension reporting defaults after the full config
+ * has been processed. This must happen before action or main-queue workers can
+ * use the action; concurrent same-value writes are still a C data race.
  */
 static void setSuspendMessageConfVars(action_t *__restrict__ const pThis) {
     if (pThis->bReportSuspension == -1) pThis->bReportSuspension = runConf->globals.bActionReportSuspension;
@@ -2344,6 +2341,7 @@ PRAGMA_DIAGNOSTIC_POP
 DEFFUNC_llExecFunc(doActivateActions) {
     rsRetVal localRet;
     action_t *const pThis = (action_t *)pData;
+    setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
         if (runConf->globals.bAbortOnFailedQueueStartup) {

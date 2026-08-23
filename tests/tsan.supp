@@ -6,14 +6,6 @@ src:lookup.c
 src:rainerscript.c
 src:imdiag.c
 
-fun:setlocale
 fun:doSIGTTIN
 # Queue code intentionally is not using atomics
 #fun:
-
-# actual bugs that should be fixed ASAP after TSAN is in place:
-fun:processWorksetItem
-
-fun:doLogMsg
-
-fun:setSuspendMessageConfVars

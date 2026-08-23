@@ -585,18 +585,10 @@ void packet_parse(uchar *arg, const struct pcap_pkthdr *pkthdr, const uchar *pac
 /* This is used to terminate the plugin.
  */
 static void doSIGTTIN(int __attribute__((unused)) sig) {
-    pthread_t tid = pthread_self();
-    const int bTerminate = PREFER_LOAD_INT(&bTerminateInputsSigSafe);
-    DBGPRINTF("impcap: awoken via SIGTTIN; bTerminateInputsSigSafe: %d\n", bTerminate);
-    if (bTerminate) {
-        for (instanceConf_t *inst = runModConf->root; inst != NULL; inst = inst->next) {
-            if (pthread_equal(tid, inst->tid)) {
-                pcap_breakloop(inst->device);
-                DBGPRINTF("impcap: thread %lx, termination requested via SIGTTIN - telling libpcap\n",
-                          (long unsigned int)tid);
-            }
-        }
-    }
+    /* pcap_breakloop() is called by the controller before this signal is sent.
+     * The empty handler only interrupts a blocking capture syscall on platforms
+     * where libpcap cannot wake it from another thread.
+     */
 }
 
 /*
@@ -653,6 +645,7 @@ BEGINrunInput
 
     DBGPRINTF("impcap: received close signal, signaling instance threads...\n");
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
+        pcap_breakloop(inst->device);
         pthread_kill(inst->tid, SIGTTIN);
     }
 

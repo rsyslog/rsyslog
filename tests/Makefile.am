@@ -469,6 +469,7 @@ TESTS_DEFAULT = \
 	execonlywhenprevsuspended3.sh \
 	execonlywhenprevsuspended4.sh \
 	execonlywhenprevsuspended_multiwrkr.sh \
+	action-reporting-concurrency-tsan.sh \
 	execonlywhenprevsuspended-queue.sh \
 	execonlywhenprevsuspended-nonsusp.sh \
 	execonlywhenprevsuspended-nonsusp-queue.sh \
