@@ -20,7 +20,8 @@ import sys
 
 def split_simple_commands(command):
     lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
-    lexer.whitespace_split = True
+    # Keep the default lexer mode: Python 3.6 ignores punctuation characters
+    # adjacent to a word when whitespace_split is enabled.
     lexer.commenters = ""
     commands = []
     current = []
