@@ -1,0 +1,23 @@
+tools/fuzz_rsyslog_message.c
+  s_404d68867328c1::t_3fc7feacf38ef8 47
+  s_404d68867328c1::t_9fdf4d3268470b 45
+tests/fuzz-syslog-message-smoke.sh
+  s_404d68867328c1::t_9fdf4d3268470b 4
+  s_404d68867328c1::t_3fc7feacf38ef8 5-6,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "13e13a63f99b1c1a67e269ec6ee10e259e797148",
+  "prompts": {},
+  "sessions": {
+    "s_404d68867328c1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e3e-eef5-7611-a093-616e53fe00dc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}
