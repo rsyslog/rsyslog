@@ -1,0 +1,20 @@
+tests/imtcp-tls-ossl-input-basic.sh
+  s_738bf53f23f264::t_de89270a1a4c57 4-5,31,38
+  s_738bf53f23f264::t_6c74224d5e2f55 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "10c7c0ea0b17fac4624ba29ec541eb8a3e532261",
+  "prompts": {},
+  "sessions": {
+    "s_738bf53f23f264": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0301e-9183-71e3-a983-4e4e0bc9e84a",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
