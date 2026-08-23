@@ -192,7 +192,7 @@ static rsRetVal doRandFail(void) {
  * zero for later calls.
  */
 static int barrier_trigger(instanceData *const pData) {
-    int triggered = 0;
+    volatile int triggered = 0;
 
     pthread_mutex_lock(&pData->mut);
     pthread_cleanup_push(mutexCancelCleanup, &pData->mut);
