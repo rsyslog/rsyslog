@@ -77,11 +77,11 @@ typedef struct _instanceData {
     int bFailed; /* indicates if we are already in failed state - this is necessary
                   * to work properly together with multiple worker instances.
                   */
-    int barrierTarget;
-    int barrierCount;
-    int barrierTriggered;
+    int barrier_target;
+    int barrier_count;
+    int barrier_triggered;
     pthread_mutex_t mut;
-    pthread_cond_t barrierCond;
+    pthread_cond_t barrier_cond;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -103,7 +103,7 @@ BEGINcreateInstance
     pData->iWaitSeconds = 1;
     pData->iWaitUSeconds = 0;
     pthread_mutex_init(&pData->mut, NULL);
-    pthread_cond_init(&pData->barrierCond, NULL);
+    pthread_cond_init(&pData->barrier_cond, NULL);
 ENDcreateInstance
 
 
@@ -191,23 +191,24 @@ static rsRetVal doRandFail(void) {
  * Returns one for every worker in the first complete barrier generation and
  * zero for later calls.
  */
-static int barrierTrigger(instanceData *const pData) {
+static int barrier_trigger(instanceData *const pData) {
     int triggered = 0;
 
     pthread_mutex_lock(&pData->mut);
-    if (!pData->barrierTriggered) {
-        ++pData->barrierCount;
-        if (pData->barrierCount == pData->barrierTarget) {
-            pData->barrierTriggered = 1;
-            pthread_cond_broadcast(&pData->barrierCond);
+    pthread_cleanup_push(mutexCancelCleanup, &pData->mut);
+    if (!pData->barrier_triggered) {
+        ++pData->barrier_count;
+        if (pData->barrier_count == pData->barrier_target) {
+            pData->barrier_triggered = 1;
+            pthread_cond_broadcast(&pData->barrier_cond);
         } else {
-            while (!pData->barrierTriggered) {
-                pthread_cond_wait(&pData->barrierCond, &pData->mut);
+            while (!pData->barrier_triggered) {
+                pthread_cond_wait(&pData->barrier_cond, &pData->mut);
             }
         }
         triggered = 1;
     }
-    pthread_mutex_unlock(&pData->mut);
+    pthread_cleanup_pop(1);
 
     return triggered;
 }
@@ -248,7 +249,7 @@ BEGINdoAction
     dbgprintf("omtesting received msg '%s'\n", ppString[0]);
     pData = pWrkrData->pData;
     if (pData->mode == MD_BARRIER_ERROR || pData->mode == MD_BARRIER_SUSPEND) {
-        const int triggered = barrierTrigger(pData);
+        const int triggered = barrier_trigger(pData);
         if (triggered && pData->mode == MD_BARRIER_ERROR) {
             LogError(0, RS_RET_ERR, "omtesting synchronized error");
         } else if (triggered) {
@@ -289,7 +290,7 @@ ENDdoAction
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
-    pthread_cond_destroy(&pData->barrierCond);
+    pthread_cond_destroy(&pData->barrier_cond);
     pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
 
@@ -373,9 +374,9 @@ BEGINparseSelectorAct
             szBuf[i] = *p++;
         }
         szBuf[i] = '\0';
-        pData->barrierTarget = atoi((char *)szBuf);
-        if (pData->barrierTarget < 2) {
-            pData->barrierTarget = 2;
+        pData->barrier_target = atoi((char *)szBuf);
+        if (pData->barrier_target < 2) {
+            pData->barrier_target = 2;
         }
     } else {
         dbgprintf("invalid mode '%s', doing 'sleep 1 0' - fix your config\n", szBuf);
