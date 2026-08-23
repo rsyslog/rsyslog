@@ -8,12 +8,13 @@ subpackage split as the packaging authority. The source RPM's NEVRA and
 SHA-256 are recorded with each build.
 
 The explicit current-source deltas are recorded in
-`fedora44-daily-stable-policy.yml`. The only current delta is an explicit
-`autoconf-archive` build dependency because the generated main-branch tarball
-does not bundle the AX macros used by current `configure.ac`. Fedora's feature
-selection, package split, configuration, documentation, service unit, and
-file ownership remain unchanged. If Fedora adds a downstream patch, the build
-stops for review instead of silently dropping it.
+`fedora44-daily-stable-policy.yml`: an explicit `autoconf-archive` build
+dependency because the generated main-branch tarball does not bundle the AX
+macros used by current `configure.ac`, and the `rsyslog-segqueue` binary and
+manual page in the base-package file manifest because the Fedora baseline does
+not yet list them. Fedora's feature selection, package split, configuration,
+documentation, and service unit remain unchanged. If Fedora adds a downstream
+patch, the build stops for review instead of silently dropping it.
 
 Package construction does not run for pull requests. Manual dispatch remains
 available for bootstrap and recovery. The schedule is inactive until a manual
