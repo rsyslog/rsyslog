@@ -893,7 +893,7 @@ static const unsigned char *ossl_asn1_string_data(const ASN1_STRING *const str) 
 #endif
 }
 
-static rsRetVal ossl_asn1_string_to_cstr(ASN1_STRING *const str, uchar **const ppszOut) {
+static rsRetVal ossl_asn1_string_to_cstr(const ASN1_STRING *const str, uchar **const ppszOut) {
     uchar *pszOut = NULL;
     int len;
     const unsigned char *data = NULL;
@@ -1118,9 +1118,9 @@ finalize_it:
 }
 
 static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pStr, int *bFoundPositiveMatch) {
-    X509_NAME *subject;
-    X509_NAME_ENTRY *entry;
-    ASN1_STRING *cn;
+    const X509_NAME *subject;
+    const X509_NAME_ENTRY *entry;
+    const ASN1_STRING *cn;
     uchar *cnName = NULL;
     int idx;
     DEFiRet;
@@ -1417,7 +1417,7 @@ static char *ocsp_make_cache_key(X509 *cert, X509 *issuer) {
     if (!serial || !issuer) ABORT_FINALIZE(RS_RET_ERR);
 
     /* Hash issuer name for compact key */
-    X509_NAME *issuer_name = X509_get_subject_name(issuer);
+    const X509_NAME *issuer_name = X509_get_subject_name(issuer);
     if (!X509_NAME_digest(issuer_name, EVP_sha256(), md, &md_len)) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
@@ -1663,7 +1663,20 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
 
     /* find issuer among local trusted issuers */
     if (store != NULL) {
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #if OPENSSL_VERSION_NUMBER >= 0x30300000L && !defined(LIBRESSL_VERSION_NUMBER)
+        /* OpenSSL 3.3+ provides an owned snapshot; get0_objects() is deprecated
+         * in OpenSSL 4 and is unsafe when the store is shared between threads.
+         */
+        objs = X509_STORE_get1_objects(store);
+        for (int i = 0; objs != NULL && i < sk_X509_OBJECT_num(objs); i++) {
+            X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
+            if (cert && X509_check_issued(cert, target_cert) == X509_V_OK) {
+                issuer = cert;
+                break;
+            }
+        }
+        sk_X509_OBJECT_pop_free(objs, X509_OBJECT_free);
+    #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
         objs = X509_STORE_get0_objects(store);
         for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
             X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
