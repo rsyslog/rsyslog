@@ -42,8 +42,9 @@ static void fuzzOneParser(const uint8_t *data, const size_t size, rsRetVal (*par
 
     ret = parseFn(msg);
     if (ret == RS_RET_OK) {
+        /* MsgSetMSGoffs permits one-past-end for an empty MSG. */
         if (msg->offAfterPRI < 0 || msg->offAfterPRI > msg->iLenRawMsg || msg->offMSG < 0 ||
-            msg->offMSG > msg->iLenRawMsg) {
+            (msg->offMSG > msg->iLenRawMsg && (msg->offMSG - msg->iLenRawMsg != 1 || msg->iLenMSG != 0))) {
             abort();
         }
     }
