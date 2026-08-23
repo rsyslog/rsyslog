@@ -1,0 +1,25 @@
+tools/fuzz_imtcp_session.c
+  s_3174538268dd29::t_b199ea21f9bb4b 1,3-18
+tests/fuzz/README.md
+  s_3174538268dd29::t_b199ea21f9bb4b 70-73
+.github/workflows/imtcp_session_fuzz.yml
+  s_3174538268dd29::t_b199ea21f9bb4b 99-107
+tests/fuzz-imtcp-session-smoke.sh
+  s_3174538268dd29::t_b199ea21f9bb4b 13,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "745bd0bc6d7b3ff9d9e95259bece91d587cf34bc",
+  "prompts": {},
+  "sessions": {
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
