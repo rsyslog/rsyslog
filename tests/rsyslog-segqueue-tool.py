@@ -86,7 +86,7 @@ def run_cli(*arguments):
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
+        universal_newlines=True,
     )
 
 
@@ -230,7 +230,7 @@ def main():
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            universal_newlines=True,
         )
         check(tui.returncode == 0 and "Selected slot/generation" in tui.stdout, "guided TUI smoke test failed")
     finally:
