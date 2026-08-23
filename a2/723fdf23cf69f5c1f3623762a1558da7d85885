@@ -1,0 +1,32 @@
+tools/omfwd.c
+  s_52daf9b39e2b17::t_d6f4e73cdffb06 2129,2132-2133
+  s_52daf9b39e2b17::t_0cd6baabacbaf0 2134,2150,2173-2174
+tests/yaml-relp-compat.sh
+  s_52daf9b39e2b17::t_d6f4e73cdffb06 1-133
+tests/compat-configformat-yaml.sh
+  s_52daf9b39e2b17::t_8688e1d4f7b8f4 383-385,392,394-397,399-402
+plugins/imrelp/imrelp.c
+  s_52daf9b39e2b17::t_d6f4e73cdffb06 506,522
+tests/compat-configformat-rainerscript.sh
+  s_52daf9b39e2b17::t_8688e1d4f7b8f4 175-188
+plugins/omrelp/omrelp.c
+  s_52daf9b39e2b17::t_d6f4e73cdffb06 477,493
+tests/Makefile.am
+  s_52daf9b39e2b17::t_d6f4e73cdffb06 1932-1933,4008
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "a2723fdf23cf69f5c1f3623762a1558da7d85885",
+  "prompts": {},
+  "sessions": {
+    "s_52daf9b39e2b17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e37-aaac-7b52-9bab-3daba670393e",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
