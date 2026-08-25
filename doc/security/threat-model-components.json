@@ -19,7 +19,7 @@
       "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01"],
       "exposure": "explicitly-enabled-network-input",
       "evidence": ["plugins/imtcp/imtcp.c", "plugins/imbeats/imbeats.c"],
-      "test_hints": ["tests/imtcp-basic.sh", "tests/imptcp-basic.sh", "tests/imudp-basic.sh"],
+      "test_hints": ["tests/imtcp-basic.sh", "tests/imptcp-basic-hup.sh", "tests/imudp_error_msg.sh"],
       "requires_lead": false
     },
     {
@@ -39,7 +39,7 @@
       "invariants": ["SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01", "SI-INPUT-BOUNDS-01"],
       "exposure": "configured-network-transport",
       "evidence": ["runtime/nsd_ossl.c", "runtime/nsd_gtls.c", "runtime/net.c"],
-      "test_hints": ["tests/ossl-basic.sh", "tests/gnutls-basic.sh"],
+      "test_hints": ["tests/imtcp-tls-ossl-basic.sh", "tests/imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh"],
       "requires_lead": true
     },
     {
@@ -69,17 +69,17 @@
       "invariants": ["SI-PATH-CONTROL-01", "SI-MESSAGE-TRUST-01", "SI-INPUT-BOUNDS-01"],
       "exposure": "configured-local-filesystem",
       "evidence": ["tools/omfile.c", "runtime/template.c", "plugins/imfile/imfile.c"],
-      "test_hints": ["tests/imfile-basic.sh", "tests/omfile-basic.sh"],
+      "test_hints": ["tests/imfile-basic.sh", "tests/omfile-addlf.sh"],
       "requires_lead": true
     },
     {
       "id": "external-programs",
-      "paths": ["plugins/improg/**", "plugins/mmexternal/**", "plugins/omprog/**", "tools/omshell.c", "tools/ompipe.c"],
+      "paths": ["contrib/improg/**", "plugins/mmexternal/**", "plugins/omprog/**", "tools/omshell.c", "tools/ompipe.c"],
       "boundaries": ["TB-EXEC", "TB-LOCAL-IN", "TB-OUTBOUND"],
       "invariants": ["SI-EXEC-DATA-01", "SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01"],
       "exposure": "administrator-configured-helper",
       "evidence": ["plugins/omprog/omprog.c", "plugins/mmexternal/mmexternal.c"],
-      "test_hints": ["tests/omprog-basic.sh", "tests/mmexternal-basic.sh"],
+      "test_hints": ["tests/omprog-defaults.sh", "tests/mmexternal-single-instance.sh"],
       "requires_lead": true
     },
     {

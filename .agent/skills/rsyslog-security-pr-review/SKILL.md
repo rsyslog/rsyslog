@@ -40,7 +40,8 @@ validation base.
 - `not_applicable`: write a minimal receipt and stop. Do not start discovery.
 - `quick`: use one fresh Terra/medium discovery agent. Review every path in
   `coverage.expected_files` and only directly supporting code needed to trace
-  the mapped boundaries and invariants.
+  the mapped boundaries and invariants. Record expected-file coverage in
+  `reviewed_files`; record supporting paths separately in `context_files`.
 - `lead_required`: run the same bounded discovery, then give the package and
   results to a fresh Terra/high security lead. Model changes, unmapped source,
   high-risk components, and ambiguous trust-boundary changes use this route.
@@ -106,8 +107,8 @@ Write `.codex/security-review/receipt.json` only after coverage and disposition
 are known. Include at least:
 
 - `schema_version`, `input_schema_version`, `diff_digest`, `model_revision`
-- `route`, `coverage.expected_files`, `coverage.reviewed_files`, and whether
-  coverage is complete
+- `route`, `coverage.expected_files`, `coverage.reviewed_files`, optional
+  `coverage.context_files`, and whether expected-file coverage is complete
 - candidate counts by disposition and introduced-or-worsened status
 - `started_at`, `completed_at`, elapsed time, agent roles used, and approximate
   aggregate tokens
@@ -115,7 +116,9 @@ are known. Include at least:
 
 A receipt is current only if a freshly rebuilt `input.json` has the same
 `diff_digest` and model revision, `reviewed_files` has no duplicates, and its
-set exactly equals the rebuilt `expected_files` set. Never reuse a stale
+set exactly equals the rebuilt `expected_files` set. `context_files` may list
+additional supporting paths and does not participate in this equality check.
+Never reuse a stale
 receipt. `FINISH` and agent-led container completion require a current `passed`
 or `not_applicable` receipt for code PR work. This comparison is performed by
 the agent; no shell or CI hook enforces it.

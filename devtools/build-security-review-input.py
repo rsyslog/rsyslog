@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Rainer Gerhards and Others
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Build the deterministic input package for a local PR security review."""
 
@@ -184,17 +194,30 @@ def collect_changes(repo: Path, merge_base: str, head: str) -> tuple[list[dict[s
 
 
 def collect_numstat(repo: Path, merge_base: str, untracked: list[str]) -> tuple[dict[str, dict[str, object]], int]:
-    result = git(repo, ["diff", "--numstat", "--no-renames", merge_base, "--"])
+    result = git(repo, ["diff", "--numstat", "-z", "--find-renames", merge_base, "--"], text=False)
     by_path: dict[str, dict[str, object]] = {}
     total = 0
-    for line in result.stdout.splitlines():
-        parts = line.split("\t", 2)
+    fields = result.stdout.split(b"\0")
+    index = 0
+    while index < len(fields) and fields[index]:
+        parts = fields[index].split(b"\t", 2)
+        index += 1
         if len(parts) != 3:
-            continue
+            raise ReviewInputError("malformed numstat entry from git")
         added, deleted, path = parts
-        binary = added == "-" or deleted == "-"
+        paths: list[bytes]
+        if path:
+            paths = [path]
+        else:
+            if index + 1 >= len(fields):
+                raise ReviewInputError("truncated rename/copy numstat entry from git")
+            paths = [fields[index], fields[index + 1]]
+            index += 2
+        binary = added == b"-" or deleted == b"-"
         changed = 0 if binary else int(added) + int(deleted)
-        by_path[path] = {"changed_lines": changed, "binary": binary}
+        for changed_path in paths:
+            decoded_path = changed_path.decode("utf-8", "surrogateescape")
+            by_path[decoded_path] = {"changed_lines": changed, "binary": binary}
         total += changed
     for path in untracked:
         file_path = repo / path
@@ -215,7 +238,10 @@ def path_matches(path: str, pattern: str) -> bool:
 def load_model(path: Path) -> tuple[set[str], int]:
     if not path.is_file():
         raise ReviewInputError(f"threat model is missing: {path}")
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ReviewInputError(f"invalid threat model UTF-8: {exc}") from exc
     ids = set(MODEL_ID_RE.findall(text))
     if not ids:
         raise ReviewInputError(f"threat model contains no TB-/SI- identifiers: {path}")
@@ -285,8 +311,8 @@ def match_components(path: str, components: list[dict[str, object]]) -> list[dic
     return [component for component in components if any(path_matches(path, pattern) for pattern in component["paths"])]
 
 
-def is_reviewable(path: str, components: list[dict[str, object]]) -> bool:
-    if path in SECURITY_POLICY_PATHS or path.startswith(SECURITY_POLICY_PREFIXES):
+def is_reviewable(path: str, components: list[dict[str, object]], policy_paths: set[str]) -> bool:
+    if path in policy_paths or path.startswith(SECURITY_POLICY_PREFIXES):
         return True
     pure = PurePosixPath(path)
     if pure.name in SOURCE_BASENAMES or pure.suffix.lower() in SOURCE_SUFFIXES:
@@ -343,6 +369,7 @@ def build_package(args: argparse.Namespace) -> dict[str, object]:
     model_ids, model_revision = load_model(model_path)
     routing = load_components(map_path, repo, model_ids, model_revision)
     components = routing["components"]
+    policy_paths = SECURITY_POLICY_PATHS | {model_rel, map_rel}
 
     changes, untracked = collect_changes(repo, merge_base, head_commit)
     numstat, total_changed_lines = collect_numstat(repo, merge_base, untracked)
@@ -364,7 +391,7 @@ def build_package(args: argparse.Namespace) -> dict[str, object]:
                     matched.append(component)
                     seen_components.add(component["id"])
         reviewable = any(
-            is_reviewable(relevant_path, match_components(relevant_path, components))
+            is_reviewable(relevant_path, match_components(relevant_path, components), policy_paths)
             or is_executable(repo, merge_base, relevant_path)
             for relevant_path in relevant_paths
         )

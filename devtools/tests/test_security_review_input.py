@@ -95,7 +95,9 @@ class SecurityReviewInputTest(unittest.TestCase):
             json.dumps({"schema_version": 1, "model_revision": 1, "components": components}) + "\n",
         )
 
-    def run_builder(self, *, check: bool = True) -> tuple[subprocess.CompletedProcess[str], dict[str, object] | None]:
+    def run_builder(
+        self, *, check: bool = True, extra_args: list[str] | None = None
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object] | None]:
         result = subprocess.run(
             [
                 "python3",
@@ -104,8 +106,8 @@ class SecurityReviewInputTest(unittest.TestCase):
                 str(self.repo),
                 "--base",
                 self.base,
-                "--output",
-                "-",
+                *(extra_args or []),
+                "--output", "-",
             ],
             text=True,
             capture_output=True,
@@ -166,6 +168,19 @@ class SecurityReviewInputTest(unittest.TestCase):
         self.assertEqual(["runtime"], item["components"])
         self.assertEqual(["doc/moved.md"], package["coverage"]["expected_files"])
 
+    def test_renamed_filename_with_tab_keeps_numstat_accounting(self) -> None:
+        original = "".join(f"int line_{number};\n" for number in range(10))
+        self.write("runtime/rename-me.c", original)
+        self.git("add", "runtime/rename-me.c")
+        self.git("commit", "-qm", "add rename input")
+        self.base = self.git("rev-parse", "HEAD").stdout.strip()
+        self.git("mv", "runtime/rename-me.c", "runtime/renamed\tfile.c")
+        self.write("runtime/renamed\tfile.c", original + "int another;\n")
+        _, package = self.run_builder()
+        item = self.changes(package)["runtime/renamed\tfile.c"]
+        self.assertEqual("R", item["status"])
+        self.assertEqual(1, item["changed_lines"])
+
     def test_digest_is_stable_and_any_untracked_content_change_invalidates_it(self) -> None:
         self.write("runtime/new.c", "int value = 1;\n")
         first = self.run_builder()[1]["diff_digest"]
@@ -206,6 +221,48 @@ class SecurityReviewInputTest(unittest.TestCase):
         _, package = self.run_builder()
         self.assertEqual("lead_required", package["route"])
         self.assertIn("security-review-policy", " ".join(package["route_reasons"]))
+
+    def test_custom_model_path_change_requires_lead(self) -> None:
+        self.write(
+            "doc/security/custom-model.md",
+            (self.repo / "doc/security/project-threat-model.md").read_text(encoding="utf-8"),
+        )
+        self.git("add", "doc/security/custom-model.md")
+        self.git("commit", "-qm", "add custom model")
+        self.write(
+            "doc/security/custom-model.md",
+            (self.repo / "doc/security/custom-model.md").read_text(encoding="utf-8") + "\nAssumption.\n",
+        )
+        _, package = self.run_builder(extra_args=["--model", "doc/security/custom-model.md"])
+        self.assertEqual("lead_required", package["route"])
+
+    def test_custom_component_map_path_change_requires_lead(self) -> None:
+        self.write_map(self.default_components())
+        self.git("mv", "doc/security/threat-model-components.json", "doc/security/custom-components.json")
+        self.git("commit", "-qm", "add custom component map")
+        custom_map = self.repo / "doc/security/custom-components.json"
+        custom_map.write_text(custom_map.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        _, package = self.run_builder(extra_args=["--component-map", "doc/security/custom-components.json"])
+        self.assertEqual("lead_required", package["route"])
+
+    def test_invalid_model_utf8_is_reported_without_traceback(self) -> None:
+        self.write("doc/security/project-threat-model.md", b"\xff\xfe")
+        result, _ = self.run_builder(check=False)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("invalid threat model UTF-8", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_checked_in_test_hints_exist(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        component_map = json.loads(
+            (repository / "doc/security/threat-model-components.json").read_text(encoding="utf-8")
+        )
+        for component in component_map["components"]:
+            for hint in component["test_hints"]:
+                if hint.startswith("tests/"):
+                    self.assertTrue(
+                        any(repository.glob(hint)), f"missing test hint for {component['id']}: {hint}"
+                    )
 
     def test_unknown_source_path_is_conservatively_unmapped(self) -> None:
         self.write("plugins/newinput/newinput.c", "int newinput;\n")
