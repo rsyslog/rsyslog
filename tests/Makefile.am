@@ -347,6 +347,7 @@ TESTS_DEFAULT = \
 	template-const-jsonf.sh \
 	$(TESTS_TEMPLATE_REGEX_BOUNDS) \
 	template-topos-neg.sh \
+	template-regex-submatch-nomatch.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \

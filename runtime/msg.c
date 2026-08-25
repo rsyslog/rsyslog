@@ -4286,27 +4286,30 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                             pRes = UCHAR_CONSTANT("");
                         }
                     }
-                } else {
-                    /* Match- but did it match the one we wanted? */
-                    /* we got no match! */
-                    if (pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
-                        if (pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
-                            if (*pbMustBeFreed == 1) {
-                                free(pRes);
-                                *pbMustBeFreed = 0;
-                            }
-                            if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
-                                bufLen = sizeof("**NO MATCH**") - 1;
-                                pRes = UCHAR_CONSTANT("**NO MATCH**");
-                            } else if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
-                                bufLen = 1;
-                                pRes = UCHAR_CONSTANT("0");
-                            } else {
-                                bufLen = 0;
-                                pRes = UCHAR_CONSTANT("");
-                            }
+                } else if (pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
+                    /* the regex matched, but the requested submatch did not
+                     * take part in that match. This is a "no match" for the
+                     * property, so the configured no-match policy applies.
+                     * Note: we must NOT fall through to the extraction below,
+                     * as rm_so/rm_eo are -1 for an absent submatch.
+                     */
+                    if (pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
+                        if (*pbMustBeFreed == 1) {
+                            free(pRes);
+                            *pbMustBeFreed = 0;
+                        }
+                        if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
+                            bufLen = sizeof("**NO MATCH**") - 1;
+                            pRes = UCHAR_CONSTANT("**NO MATCH**");
+                        } else if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+                            bufLen = 1;
+                            pRes = UCHAR_CONSTANT("0");
+                        } else {
+                            bufLen = 0;
+                            pRes = UCHAR_CONSTANT("");
                         }
                     }
+                } else {
                     /* OK, we have a usable match - we now need to malloc pB */
                     int iLenBuf;
 
