@@ -1,0 +1,19 @@
+runtime/net_ossl.c
+  s_bd0a51f3deb79c::t_ad9454e851da92 911-914,916,1661-1662,1667-1668,1679-1682,2203,2213,2287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "819c22b3f805b09da7f0c3c18b5c4a634a9936af",
+  "prompts": {},
+  "sessions": {
+    "s_bd0a51f3deb79c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a037f1-a4b5-7590-8f7c-6185a456ac0b",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
