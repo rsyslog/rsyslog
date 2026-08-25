@@ -1,0 +1,59 @@
+doc/security/project-threat-model.md
+  s_bd203615f89354::t_7addb7c84b5810 1-34,36-45,47-136,143-276,278-308
+  s_bd203615f89354::t_8f0bb768560a21 35,46,137-142,277
+doc/security/threat-model-components.json
+  s_bd203615f89354::t_1c2fd8923ca11a 26-35
+  s_bd203615f89354::t_7975f8f97ded4d 117
+  s_bd203615f89354::t_7addb7c84b5810 1-25,36-116,118-126
+doc/ai/AGENTS.md
+  s_bd203615f89354::t_7addb7c84b5810 11-12
+devtools/tests/test_security_review_input.py
+  s_bd203615f89354::t_cc4f55d9fd75b6 38,255-261
+  s_bd203615f89354::t_2afa2985099293 31
+  s_bd203615f89354::t_1c2fd8923ca11a 196,201
+  s_bd203615f89354::t_885fba9e240466 144
+  s_bd203615f89354::t_8eebc8c2e88ec9 156-168
+  s_bd203615f89354::t_859a21705b93bd 1-30,34-37,39-143,145-155,169-191,203-254,262-297
+  s_bd203615f89354::t_2a68fd8cb86c28 32-33
+  s_bd203615f89354::t_f02f4a895e86b9 192-195,197-200,202
+doc/ai/README.md
+  s_bd203615f89354::t_7addb7c84b5810 16-17
+devtools/build-security-review-input.py
+  s_bd203615f89354::t_cc4f55d9fd75b6 25,215,218-219,222-225,234,245-248,343-344,424
+  s_bd203615f89354::t_ba3864720c784d 67-69,307-309
+  s_bd203615f89354::t_34536010570892 210-212,439-447
+  s_bd203615f89354::t_f02f4a895e86b9 299-306,368
+  s_bd203615f89354::t_8eebc8c2e88ec9 356-367,369-370
+  s_bd203615f89354::t_7ef098741deb3d 1-24,26,28-66,70-209,213-214,216-217,220-221,226-233,235-244,249-298,310-342,345-355,371-423,425-438,449-480
+  s_bd203615f89354::t_1c2fd8923ca11a 27,448
+AGENTS.md
+  s_bd203615f89354::t_34536010570892 19,39-42,376-382
+.agent/skills/rsyslog-security-pr-review/SKILL.md
+  s_bd203615f89354::t_e751dd6f5e560b 117-121
+  s_bd203615f89354::t_9b576c13fe5c2f 6-51,56-72,77-116,122-163
+  s_bd203615f89354::t_cc4f55d9fd75b6 52-55,73-76
+  s_bd203615f89354::t_2f3462cf139e31 3
+  s_bd203615f89354::t_ec399a4355fc42 1-2,4-5
+.gitignore
+  s_bd203615f89354::t_7addb7c84b5810 150-152
+.agent/skills/rsyslog_local_container_testing/SKILL.md
+  s_bd203615f89354::t_34536010570892 28-36
+.agent/skills/rsyslog-security-pr-review/agents/openai.yaml
+  s_bd203615f89354::t_ec399a4355fc42 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "931ea1b96bd1a9588130d264eb0412a74b25d257",
+  "prompts": {},
+  "sessions": {
+    "s_bd203615f89354": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a037d0-b72d-7972-9a42-3cb7941f4f41",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
