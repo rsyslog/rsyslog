@@ -1,7 +1,9 @@
 #!/bin/sh
 # Smoke-test the opt-in syslog parser fuzzer against its seed corpus. A clean
 # fixed iteration run is the oracle; any crash, sanitizer report, or invariant
-# failure makes libFuzzer return non-zero.
+# failure makes libFuzzer return non-zero. The work corpus recreates the
+# minimized empty-MSG offset regression exactly: its final question marks have
+# no newline.
 set -eu
 
 test_dir=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
@@ -11,6 +13,7 @@ test -x "$fuzzer" || exit 77
 
 work_corpus="./fuzz-syslog-message-work.$$"
 mkdir "$work_corpus"
+printf '%s' '2021 Oct 1 ::1 Oc???wwwwwwwwwwwwwwwwwww??????' > "$work_corpus/rfc3164-empty-msg-offset"
 cleanup_work_corpus() {
 	rc=$?
 	if test "$rc" -eq 0; then
