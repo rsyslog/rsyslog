@@ -1,5 +1,9 @@
 .. _param-omsendertrack-cmdfile:
-.. _omsendertrack.parameter.input.cmdfile:
+.. _omsendertrack.parameter.action.cmdfile:
+
+.. meta::
+   :description: Compatibility command-file parameter for omsendertrack.
+   :keywords: rsyslog, omsendertrack, cmdFile, compatibility
 
 cmdfile
 =======
@@ -10,34 +14,29 @@ cmdfile
 
 .. summary-start
 
-Defines the absolute path to the command file that omsendertrack reads when
-rsyslog receives a HUP signal.
+Compatibility parameter reserved for a future omsendertrack command file.
 
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: cmdfile
-:Scope: input
+:Scope: action
 :Type: string
-:Default: input=none
+:Default: action=none
 :Required?: no
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
 Description
 -----------
-This optional parameter allows you to specify the **absolute path to a command
-file**. This file *is designed to be processed when rsyslog receives a HUP
-signal* (for example via ``systemctl reload rsyslog``).
+This optional compatibility parameter currently has no effect. Command-file
+processing is not implemented: ``omsendertrack`` does not read, create, or
+delete the configured file, and a missing file cannot prevent startup. Do not
+create a command file solely for the current module version.
 
-**Note:** Command file support is currently **not implemented** in this
-proof-of-concept version of the module. When implemented, this feature is
-intended to allow dynamic control over the module's behavior, such as resetting
-statistics for specific senders, without requiring an rsyslog restart.
-
-Input usage
------------
-.. _omsendertrack.parameter.input.cmdfile-usage:
+Action usage
+------------
+.. _omsendertrack.parameter.action.cmdfile-usage:
 
 .. code-block:: rsyslog
 
@@ -50,4 +49,3 @@ Input usage
 See also
 --------
 See also :doc:`../../configuration/modules/omsendertrack`.
-
