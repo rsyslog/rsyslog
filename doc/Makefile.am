@@ -1214,6 +1214,7 @@ EXTRA_DIST = \
     source/reference/parameters/omrelp-windowsize.rst \
     source/reference/parameters/omsendertrack-cmdfile.rst \
     source/reference/parameters/omsendertrack-interval.rst \
+    source/reference/parameters/omsendertrack-ignoreinvalidstatefile.rst \
     source/reference/parameters/omsendertrack-senderid.rst \
     source/reference/parameters/omsendertrack-statefile.rst \
     source/reference/parameters/omsnmp-community.rst \

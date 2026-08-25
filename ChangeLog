@@ -1,6 +1,12 @@
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2610.0 (aka 2026.10) 2026-10-??
 
+- 2026-08-23: omsendertrack: recover safely from invalid state files
+  Sender tracking now treats missing and empty state files as a normal first
+  start and can preserve corrupt JSON before starting with empty statistics. A
+  strict per-action setting remains available for deployments that must fail
+  closed.
+
 --------------------------------------------------------------------------------------
 Scheduled Release 8.2608.0 (aka 2026.08) 2026-08-18
 

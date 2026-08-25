@@ -2,8 +2,19 @@
 
 .. _omsendertrack:
 
+.. meta::
+   :description: Track message senders with crash-resilient JSON state recovery.
+   :keywords: rsyslog, omsendertrack, sender statistics, state file, recovery
+
 omsendertrack: Sender Tracking Output Module
 =============================================
+
+.. summary-start
+
+``omsendertrack`` tracks message senders and persists their statistics in a
+JSON state file that can recover safely from corruption by default.
+
+.. summary-end
 
 .. rst-class:: AdisconInfo
 
@@ -54,6 +65,13 @@ This ensures that message statistics are restored and tracking continues
 seamlessly across daemon restarts. A background task is then spawned to handle
 periodic state persistence.
 
+A missing state file is treated as a normal first start. An empty state file is
+also accepted by default and starts with empty statistics. For nonempty invalid
+files, the default :ref:`IgnoreInvalidStatefile
+<param-omsendertrack-ignoreinvalidstatefile>` behavior preserves the original
+as a ``.corrupt.<timestamp>.<attempt>`` file before starting with empty state.
+Set that parameter to ``off`` when tracking must fail closed instead.
+
 OnAction Call (Message Processing)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -73,23 +91,19 @@ When a message is routed to an ``omsendertrack`` action:
 HUP Signal Handling
 ^^^^^^^^^^^^^^^^^^^
 
-When rsyslog receives a HUP signal (typically used for configuration reloads),
-the ``omsendertrack`` module is designed to check for the existence of a
-:ref:`cmdfile <param-omsendertrack-cmdfile>`. If a `cmdfile` is specified and found,
-it would be read and its commands processed. After processing, the `cmdfile`
-would be deleted to prevent re-execution on subsequent HUP signals.
-
-**Note:** Command file support is currently **not implemented** in this
-proof-of-concept version of the module.
+The optional :ref:`cmdfile <param-omsendertrack-cmdfile>` parameter is accepted
+for compatibility but has no current runtime behavior. ``omsendertrack`` does
+not read, create, or remove that file, including on HUP.
 
 Background Task
 ^^^^^^^^^^^^^^^
 
 A dedicated background task is responsible for persisting the module's current
 state to the configured :ref:`statefile <param-omsendertrack-statefile>`. This task
-wakes up at the `interval` specified in the configuration. It performs atomic
-writes to the `statefile` to prevent data corruption, even if rsyslog
-unexpectedly terminates during a write operation.
+wakes up at the `interval` specified in the configuration. It writes a unique
+temporary file in the target directory, synchronizes it, renames it into place,
+and synchronizes the directory. This protects the last successfully persisted
+state against interrupted writes on filesystems that support these operations.
 
 Shutdown
 ^^^^^^^^
@@ -129,6 +143,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omsendertrack-statefile.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omsendertrack-ignoreinvalidstatefile`
+     - .. include:: ../../reference/parameters/omsendertrack-ignoreinvalidstatefile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omsendertrack-cmdfile`
      - .. include:: ../../reference/parameters/omsendertrack-cmdfile.rst
         :start-after: .. summary-start
@@ -140,6 +158,7 @@ Action Parameters
    ../../reference/parameters/omsendertrack-senderid
    ../../reference/parameters/omsendertrack-interval
    ../../reference/parameters/omsendertrack-statefile
+   ../../reference/parameters/omsendertrack-ignoreinvalidstatefile
    ../../reference/parameters/omsendertrack-cmdfile
 
 Statistic Counter
@@ -158,28 +177,24 @@ state file.
 **Note:** There are currently **no statistics counters available** in this
 proof-of-concept version of the module.
 
-The JSON structure for each sender entry is envisioned to look like this:
+The persisted JSON array contains entries with this structure:
 
 .. code-block:: json
 
    {
-     "senderid": "value_from_template",
-     "last-event-time": "YYYY-MM-DDTHH:MM:SS.sssZ",
-     "message-count": "N_VALUE",
-     "avg-message-count": "M_POINT_M_VALUE"
+     "sender": "value_from_template",
+     "messages": 42,
+     "firstseen": 1710000000,
+     "lastseen": 1710000060
    }
 
 Where:
 
-* ``senderid``: The unique identifier for the sender, as determined by the
+* ``sender``: The unique identifier for the sender, as determined by the
     :ref:`senderid <param-omsendertrack-senderid>` template.
-* ``last-event-time``: A UTC timestamp (ISO 8601 format) indicating when the
-    last message from this sender was received.
-* ``message-count``: The total number of messages received from this sender
-    since tracking began (or since the last reset).
-* ``avg-message-count``: (Optional) The average message rate from this sender
-    since tracking began, calculated over the total elapsed time. This field's
-    presence depends on future module configuration and implementation details.
+* ``messages``: The total number of messages received from this sender.
+* ``firstseen`` and ``lastseen``: UTC Unix timestamps for the first and latest
+    message observed for the sender.
 
 Usage within Rsyslog Configuration
 ----------------------------------
@@ -229,6 +244,12 @@ adhere to the following best practices:
     proper write permissions to the directory specified in the :ref:`statefile
     <param-omsendertrack-statefile>` parameter. Without this, statistics cannot be
     persisted.
+* **Use a Persistent Directory:** Put the state file in a persistent directory
+  such as ``/var/lib/rsyslog``. When using a separate mount, ensure systemd has
+  mounted it and created the directory before rsyslog starts.
+* **Choose Recovery Deliberately:** Keep the default recovery behavior for
+  observability use cases. Set ``IgnoreInvalidStatefile="off"`` only when a
+  missing continuation of sender statistics must stop the service.
 * **Dedicated Ruleset for Unified Stats:** Use a dedicated ruleset that is
     called from multiple input-bound rulesets (Example 2) **only when** you
     need to collect statistics from those diverse inputs into a **single,
@@ -289,7 +310,7 @@ processing flows for other actions.
            senderId="id-template"
            interval="60"
            stateFile="/var/lib/rsyslog/senderstats.json"
-           cmdFile="/var/lib/rsyslog/sendercommands.txt"
+           ignoreInvalidStatefile="on"
        )
    }
 

@@ -665,11 +665,16 @@ TESTS_MMSNAREPARSE_VALGRIND = \
 
 TESTS_OMSENDERTRACK = \
         omsendertrack-basic.sh \
-	omsendertrack-statefile.sh
+	omsendertrack-statefile.sh \
+	omsendertrack-statefile-recovery.sh
 
 TESTS_OMSENDERTRACK_VALGRIND = \
 	omsendertrack-basic-vg.sh \
-	omsendertrack-statefile-vg.sh
+	omsendertrack-statefile-vg.sh \
+	omsendertrack-statefile-recovery-vg.sh
+
+TESTS_OMSENDERTRACK_LIBYAML = \
+	yaml-omsendertrack-statefile-recovery.sh
 
 TESTS_LIBZSTD = \
         zstd.sh
@@ -2407,6 +2412,7 @@ EXTRA_DIST += $(TESTS_MMSNAREPARSE_MINIMAL)
 EXTRA_DIST += $(TESTS_MMSNAREPARSE_VALGRIND)
 EXTRA_DIST += $(TESTS_OMSENDERTRACK)
 EXTRA_DIST += $(TESTS_OMSENDERTRACK_VALGRIND)
+EXTRA_DIST += $(TESTS_OMSENDERTRACK_LIBYAML)
 EXTRA_DIST += $(TESTS_LIBZSTD)
 EXTRA_DIST += $(TESTS_LIBZSTD_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT)
@@ -2934,6 +2940,9 @@ TESTS += $(TESTS_OMSENDERTRACK)
 if HAVE_VALGRIND
 TESTS += $(TESTS_OMSENDERTRACK_VALGRIND)
 endif # if HAVE_VALGRIND
+if HAVE_LIBYAML
+TESTS += $(TESTS_OMSENDERTRACK_LIBYAML)
+endif
 endif
 
 if ENABLE_LIBZSTD
