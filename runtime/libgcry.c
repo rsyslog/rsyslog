@@ -367,7 +367,7 @@ finalize_it:
     RETiRet;
 }
 
-/* this is a special functon for use by the rsyslog disk queue subsystem. It
+/* this is a special function for use by the rsyslog disk queue subsystem. It
  * needs to have the capability to delete state when a queue file is rolled
  * over. This simply generates the file name and deletes it. It must take care
  * of "all" state files, which currently happens to be a single one.
@@ -460,7 +460,7 @@ static void ATTR_NONNULL() removePadding(uchar *const buf, size_t *const plen) {
     *plen = iDst;
 }
 
-/* returns 0 on succes, positive if key length does not match and key
+/* returns 0 on success, positive if key length does not match and key
  * of return value size is required.
  */
 int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen) {
@@ -510,7 +510,7 @@ finalize_it:
  * we get a sufficiently large number.
  */
 static rsRetVal seedIV(gcryfile gf, uchar **iv) {
-    unsigned long rndnum = 0; /* keep compiler happy -- this value is always overriden */
+    unsigned long rndnum = 0; /* keep compiler happy -- this value is always overridden */
     DEFiRet;
 
     CHKmalloc(*iv = calloc(1, gf->blkLength));

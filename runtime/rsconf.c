@@ -534,11 +534,11 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
     if (pThis->globals.bDebugPrintModuleList) module.PrintList();
     if (pThis->globals.bDebugPrintCfSysLineHandlerList) dbgPrintCfSysLineHandlers();
     /* we use the now traditional messages, albeit they originally were expected to become
-     * "streamlined". Also we do not add any more, as the config system ouputs this data in
+     * "streamlined". Also we do not add any more, as the config system outputs this data in
      * any case and we have seen no need for more info in the past 10+ years.
      */
     dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
-    dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+    dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Persists every %d updates.\n",
               pThis->globals.mainQ.iMainMsgQueueNumWorkers, pThis->globals.mainQ.iMainMsgQtoWrkShutdown,
               pThis->globals.mainQ.iMainMsgQPersistUpdCnt);
     dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
@@ -990,7 +990,7 @@ finalize_it:
 }
 
 
-/* tell the rsysog core (including ourselfs) that the config load is done and
+/* tell the rsysog core (including ourselves) that the config load is done and
  * we need to prepare to move over to activate mode.
  */
 static inline rsRetVal tellCoreConfigLoadDone(void) {
@@ -1305,7 +1305,7 @@ static rsRetVal setMaxFiles(void *pVal, int iFiles) {
 }
 
 
-/* Switch the default ruleset (that, what servcies bind to if nothing specific
+/* Switch the default ruleset (that, what services bind to if nothing specific
  * is specified).
  * rgerhards, 2009-06-12
  */
@@ -1416,7 +1416,7 @@ finalize_it:
 }
 
 
-/* load build-in modules
+/* load built-in modules
  * very first version begun on 2007-07-23 by rgerhards
  */
 static rsRetVal loadBuildInModules(void) {
@@ -1441,7 +1441,7 @@ static rsRetVal loadBuildInModules(void) {
      */
     CHKiRet(regBuildInModule(modInitUsrMsg, (uchar *)"builtin:omusrmsg", NULL));
 
-    /* load build-in parser modules */
+    /* load built-in parser modules */
     CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin:pmrfc5424"), NULL));
     CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin:pmrfc3164"), NULL));
 
@@ -1450,7 +1450,7 @@ static rsRetVal loadBuildInModules(void) {
     CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc5424")));
     CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
-    /* load build-in strgen modules */
+    /* load built-in strgen modules */
     CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin:smfile"), NULL));
     CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin:smtradfile"), NULL));
     CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin:smfwd"), NULL));
@@ -1579,7 +1579,7 @@ static rsRetVal initLegacyConf(void) {
     CHKiRet(
         regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
-    /* initialize the build-in templates */
+    /* initialize the built-in templates */
     pTmp = template_DebugFormat;
     tplAddLine(ourConf, "RSYSLOG_DebugFormat", &pTmp);
     pTmp = template_SyslogProtocol23Format;

@@ -137,7 +137,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar *psz, size_t iStrLen)
 rsRetVal rsCStrAppendParts(cstr_t *pThis, const rs_cstr_part_t *parts, size_t count);
 
 /**
- * Append a printf-style formated string to the buffer.
+ * Append a printf-style formatted string to the buffer.
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
  *

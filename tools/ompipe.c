@@ -1,5 +1,5 @@
 /* ompipe.c
- * This is the implementation of the build-in pipe output module.
+ * This is the implementation of the built-in pipe output module.
  * Note that this module stems back to the "old" (4.4.2 and below)
  * omfile. There were some issues with the new omfile code and pipes
  * (namely in regard to xconsole), so we took out the pipe code and moved

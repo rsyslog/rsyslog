@@ -526,7 +526,7 @@ static void prepareBackground(const int parentPipeFD) {
 
     /* close unnecessary open files - first try to use /proc file system,
      * if that is not possible iterate through all potentially open file
-     * descriptors. This can be lenghty, but in practice /proc should work
+     * descriptors. This can be lengthy, but in practice /proc should work
      * for almost all current systems, and the fallback is primarily for
      * Solaris and AIX, where we do expect a decent max numbers of fds.
      */
@@ -748,12 +748,12 @@ static rsRetVal rsyslogd_InitGlobalClasses(void) {
     DEFiRet;
     const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-    /* Intialize the runtime system */
+    /* Initialize the runtime system */
     pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
     CHKiRet(rsrtInit(&pErrObj, &obj));
     rsrtSetErrLogger(rsyslogd_submitErrMsg);
 
-    /* Now tell the system which classes we need ourselfs */
+    /* Now tell the system which classes we need ourselves */
     pErrObj = "glbl";
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     pErrObj = "module";
@@ -1129,7 +1129,7 @@ finalize_it:
 
 
 /* rgerhards 2004-11-09: the following is a function that can be used
- * to log a message orginating from the syslogd itself.
+ * to log a message originating from the syslogd itself.
  */
 rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags) {
     size_t lenMsg;
@@ -1137,7 +1137,7 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
     char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
     DEFiRet;
 
-    /* we first do a path the remove control characters that may have accidently
+    /* we first do a path the remove control characters that may have accidentally
      * introduced (program error!). This costs performance, but we do not expect
      * to be called very frequently in any case ;) -- rgerhards, 2013-12-19.
      */
@@ -1159,7 +1159,7 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
      * it here. -- rgerhards, 2008-07-28
      * Note that error messages can not be disabled during a config verify. This
      * permits us to process unmodified config files which otherwise contain a
-     * supressor statement.
+     * suppressor statement.
      */
     int emit_to_stderr = (ourConf == NULL) ? 1 : (ourConf->globals.bErrMsgToStderr || ourConf->globals.bAllMsgToStderr);
     int emit_supress_msg = 0;
@@ -1344,7 +1344,7 @@ rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub) {
 /* some support for command line option parsing. Any non-trivial options must be
  * buffered until the complete command line has been parsed. This is necessary to
  * prevent dependencies between the options. That, in turn, means we need to have
- * something that is capable of buffering options and there values. The follwing
+ * something that is capable of buffering options and there values. The following
  * functions handle that.
  * rgerhards, 2008-04-04
  */
@@ -1404,7 +1404,7 @@ finalize_it:
 static void hdlr_sigttin_ou(void) {
     /* this is just a dummy to care for our sigttin input
      * module cancel interface and sigttou internal message
-     * notificaton/mainloop wakeup mechanism. The important
+     * notification/mainloop wakeup mechanism. The important
      * point is that it actually does *NOTHING*.
      */
 }
@@ -1420,7 +1420,7 @@ static void hdlr_enable(int sig, void (*hdlr)()) {
 static void hdlr_sighup(void) {
     PREFER_STORE_INT(&bHadHUP, 1);
     /* at least on FreeBSD we seem not to necessarily awake the main thread.
-     * So let's do it explicitely.
+     * So let's do it explicitly.
      */
     dbgprintf("awaking mainthread on HUP\n");
     pthread_kill(mainthread, SIGTTIN);
@@ -1693,7 +1693,7 @@ static void initAll(int argc, char **argv) {
             case 'C':
                 bChDirRoot = 0;
                 break;
-            case 'w': /* disable disallowed host warnigs */
+            case 'w': /* disable disallowed host warnings */
                 fprintf(stderr,
                         "rsyslogd: the -w command line option has gone away.\n"
                         "Please use the global(net.permitWarning=\"off\") "
@@ -1949,7 +1949,7 @@ static void initAll(int argc, char **argv) {
         CHKiRet(writePidFile());
     }
 
-    /* END OF INTIALIZATION */
+    /* END OF INITIALIZATION */
     DBGPRINTF("rsyslogd: initialization completed, transitioning to regular run mode\n");
 
     if (doFork) {
@@ -2158,7 +2158,7 @@ void rsyslogdDoDie(int sig) {
 #undef MSG1
 #undef MSG2
     /* at least on FreeBSD we seem not to necessarily awake the main thread.
-     * So let's do it explicitely.
+     * So let's do it explicitly.
      */
     dbgprintf("awaking mainthread\n");
     pthread_kill(mainthread, SIGTTIN);
@@ -2564,7 +2564,7 @@ static void deinitAll(void) {
     qqueueDestruct(&runConf->pMsgQueue);
     runConf->pMsgQueue = NULL;
 
-    /* Free ressources and close connections. This includes flushing any remaining
+    /* Free resources and close connections. This includes flushing any remaining
      * repeated msgs.
      */
     DBGPRINTF("Terminating outputs...\n");

@@ -130,7 +130,7 @@ static rsRetVal SetCnfParam(void *pT, struct nvlst *lst, int paramType) {
     /* note: key must be set AFTER algo/mode is set (as it depends on them) */
     if (nKeys != 1) {
         LogError(0, RS_RET_INVALID_PARAMS,
-                 "excactly one of the following "
+                 "exactly one of the following "
                  "parameters can be specified: cry.key, cry.keyfile\n");
         ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     }
@@ -270,6 +270,6 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(lmcry_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

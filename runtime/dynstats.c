@@ -899,7 +899,7 @@ static int getFullStateFileName(dynstats_bucket_t *b, uchar *pszstatefile, uchar
     int lenout;
     const uchar *pszworkdir;
 
-    /* Get Raw Workdir, if it is NULL we need to propper handle it */
+    /* Get Raw Workdir, if it is NULL we need to proper handle it */
     pszworkdir = getStateFileDir(b);
 
     /* Construct file name */
@@ -919,7 +919,7 @@ static int getFullStateFileName(dynstats_bucket_t *b, uchar *pszstatefile, uchar
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
  * RETURN VALUE!
- * This function is guranteed to work only on config data and DOES NOT
+ * This function is guaranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
 static uchar *ATTR_NONNULL(1, 2)

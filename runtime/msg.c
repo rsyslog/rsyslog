@@ -681,7 +681,7 @@ uchar *propIDToName(propid_t propID) {
  * NOTE: this constructor does NOT call calloc(), as we have many bytes
  * inside the structure which do not need to be cleared. bzero() will
  * heavily thrash the cache, so we do the init manually (which also
- * is the right thing to do with pointers, as they are not neccessarily
+ * is the right thing to do with pointers, as they are not necessarily
  * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
@@ -797,7 +797,7 @@ rsRetVal msgConstruct(smsg_t **ppThis) {
      * are consistent. Also, this saves us from doing any further time calls just
      * to obtain a timestamp. The memcpy() should not really make a difference,
      * especially as I think there is no codepath currently where it would not be
-     * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
+     * required (after I have cleaned up the paths ;)). -- rgerhards, 2008-10-02
      */
     datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime), TIME_IN_LOCALTIME);
     memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
@@ -936,7 +936,7 @@ rsRetVal msgDestruct(smsg_t **ppThis) {
 ENDobjDestruct
 (msg)
 /* The macros below are used in MsgDup(). I use macros
- * to keep the fuction code somewhat more readyble. It is my
+ * to keep the function code somewhat more readyble. It is my
  * replacement for inline functions in CPP
  */
 #define tmpCOPYSZ(name)                                                                    \
@@ -1615,8 +1615,8 @@ void getRawMsgAfterPRI(smsg_t *const pM, uchar **pBuf, int *piLen) {
             /* unfortunately, pM->offAfterPRI seems NOT to be
              * correct/consistent in all cases. imuxsock and imudp
              * seem to have other values than imptcp. Testbench
-             * covers some of that. As a work-around, we caluculate
-             * the value ourselfes here. -- rgerhards, 2015-10-09
+             * covers some of that. As a work-around, we calculate
+             * the value ourselves here. -- rgerhards, 2015-10-09
              */
             size_t offAfterPRI = 0;
             if (pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
@@ -2119,7 +2119,7 @@ rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
  * This is not locked, because it either is called during message
  * construction (where we need no locking) or later as part of a function
  * which already obtained the lock. So in general, this function here must
- * only be called when it it safe to do so without it aquiring a lock.
+ * only be called when it it safe to do so without it acquiring a lock.
  */
 rsRetVal ATTR_NONNULL(1, 2) MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char *pszAPPNAME) {
     DEFiRet;
@@ -2240,7 +2240,7 @@ static const char *getMSGID(smsg_t *const pM) {
     }
 }
 
-/* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
+/* rgerhards 2012-03-15: set parser success (an integer, actually bool)
  */
 void MsgSetParseSuccess(smsg_t *const pMsg, int bSuccess) {
     assert(pMsg != NULL);
@@ -2365,7 +2365,7 @@ void MsgSetTAG(smsg_t *__restrict__ const pMsg, const uchar *pszBuf, const size_
         pBuf = pMsg->TAG.szBuf;
     } else {
         if ((pBuf = (uchar *)malloc(pMsg->iLenTAG + 1)) == NULL) {
-            /* truncate message, better than completely loosing it... */
+            /* truncate message, better than completely losing it... */
             pBuf = pMsg->TAG.szBuf;
             pMsg->iLenTAG = CONF_TAG_BUFSIZE - 1;
         } else {
@@ -2728,7 +2728,7 @@ void MsgSetRcvFrom(smsg_t *pThis, prop_t *new) {
  * called if there is a reliable way for a caller to make sure that the
  * same name can be used across multiple messages. However, if it can not
  * ensure that, calling this function is the second best thing, because it
- * will re-use the previously created property if it contained the same
+ * will reuse the previously created property if it contained the same
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
@@ -2759,7 +2759,7 @@ rsRetVal MsgSetRcvFromIP(smsg_t *pThis, prop_t *new) {
  * called if there is a reliable way for a caller to make sure that the
  * same name can be used across multiple messages. However, if it can not
  * ensure that, calling this function is the second best thing, because it
- * will re-use the previously created property if it contained the same
+ * will reuse the previously created property if it contained the same
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
@@ -2814,7 +2814,7 @@ void MsgSetHOSTNAME(smsg_t *pThis, const uchar *pszHOSTNAME, const int lenHOSTNA
         /* small enough: use fixed buffer (faster!) */
         pThis->pszHOSTNAME = pThis->szHOSTNAME;
     } else if ((pThis->pszHOSTNAME = (uchar *)malloc(pThis->iLenHOSTNAME + 1)) == NULL) {
-        /* truncate message, better than completely loosing it... */
+        /* truncate message, better than completely losing it... */
         pThis->pszHOSTNAME = pThis->szHOSTNAME;
         pThis->iLenHOSTNAME = CONF_HOSTNAME_BUFSIZE - 1;
     }
@@ -2914,7 +2914,7 @@ void ATTR_NONNULL() MsgSetRawMsg(smsg_t *const pThis, const char *const pszRawMs
         /* small enough: use fixed buffer (faster!) */
         pThis->pszRawMsg = pThis->szRawMsg;
     } else if ((pThis->pszRawMsg = (uchar *)malloc(pThis->iLenRawMsg + 1)) == NULL) {
-        /* truncate message, better than completely loosing it... */
+        /* truncate message, better than completely losing it... */
         pThis->pszRawMsg = pThis->szRawMsg;
         pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
     }
@@ -3545,7 +3545,7 @@ finalize_it:
 /* encode a property in JSON escaped format. This is a helper
  * to MsgGetProp. It needs to update all provided parameters.
  * For performance reasons, we begin to copy the string only
- * when we recognice that we actually need to do some escaping.
+ * when we recognize that we actually need to do some escaping.
  * rgerhards, 2012-03-16
  */
 static rsRetVal jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escapeAll) {
@@ -4456,7 +4456,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         /* now do control character dropping/escaping/replacement
          * Only one of these can be used. If multiple options are given, the
          * result is random (though currently there obviously is an order of
-         * preferrence, see code below. But this is NOT guaranteed.
+         * preference, see code below. But this is NOT guaranteed.
          * RGerhards, 2006-11-17
          * We must copy the strings if we modify them, because they may either
          * point to static memory or may point into the message object, in which
@@ -4525,7 +4525,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 *pbMustBeFreed = 1;
             }
         } else if (pTpe->data.field.options.bEscapeCC || pTpe->data.field.options.bEscapeCCOctal) {
-            /* we must first count how many control charactes are
+            /* we must first count how many control characters are
              * present, because we need this to compute the new string
              * buffer length. While doing so, we also compute the string
              * length.
@@ -4867,7 +4867,7 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
         MsgSetRcvFromIPStr(pMsg, (const uchar *)psz, strlen(psz), &propRcvFromIP);
         prop.Destruct(&propRcvFromIP);
     } else if (!strcmp(name, "$!")) {
-        /* msgAddJSON expects that it can keep the object without incremeting
+        /* msgAddJSON expects that it can keep the object without incrementing
          * the json reference count. So we MUST NOT free (_put) the object in
          * this case. -- rgerhards, 2018-09-14
          */
@@ -4875,7 +4875,7 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
         msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedReference);
     } else {
         /* we ignore unknown properties */
-        DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n", name);
+        DBGPRINTF("msgSetPropViaJSON: unknown property ignored: %s\n", name);
     }
 
     if (bNeedFree) {
@@ -4889,9 +4889,9 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
 /* set message properties based on JSON string. This function does it all,
  * including parsing the JSON string. If an error is detected, the operation
  * is aborted at the time of error. Any modifications made before the
- * error ocurs are still PERSISTED.
+ * error occurs are still PERSISTED.
  * This function is meant to support the external message modifiction module
- * interface. As such, replacing properties is expressively permited. Note that
+ * interface. As such, replacing properties is expressively permitted. Note that
  * properties which were derived from the message during parsing are NOT
  * updated if the underlying (raw)msg property is changed.
  */
@@ -5190,7 +5190,7 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
         }
         if (jsonVarExtract(parent, (char *)leaf, &leafnode) == FALSE) leafnode = NULL;
         /* json-c code indicates we can simply replace a
-         * json type. Unfortunaltely, this is not documented
+         * json type. Unfortunately, this is not documented
          * as part of the interface spec. We still use it,
          * because it speeds up processing. If it does not work
          * at some point, use
@@ -5412,7 +5412,7 @@ finalize_it:
 }
 
 
-/* Fill a message propert description. Space must already be alloced
+/* Fill a message property description. Space must already be alloced
  * by the caller. This is for efficiency, as we expect this to happen
  * as part of a larger structure alloc.
  * Note that CEE/LOCAL_VAR properties can come in either as

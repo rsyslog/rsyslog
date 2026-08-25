@@ -64,7 +64,7 @@ OPTIONS
   steps. This option may be removed in the future.
 
 -a, --algo <algo>
-  Sets the encryption algorightm (cipher) to be used. Refer to the
+  Sets the encryption algorithm (cipher) to be used. Refer to the
   list of supported algorithms below for the "gcry" library. The
   default algorithm for "gcry" is "AES128". For the "ossl" library,
   both the algorithm and mode are specified using this option,
@@ -85,7 +85,7 @@ OPERATION MODES
 
 The operation mode specifies what exactly the tool does with the provided
 files. The default operation mode is "dump", but this may change in the future.
-Thus, it is recommended to always set the operations mode explicitely. If
+Thus, it is recommended to always set the operations mode explicitly. If
 multiple operations mode are set on the command line, results are
 unpredictable.
 
@@ -193,7 +193,7 @@ Specifying keys directly on the command line (*--key* option) is very
 insecure and should
 not be done, except for testing purposes with test keys. Even then it is
 recommended to use keyfiles, which are also easy to handle during testing.
-Keep in mind that command history is usally be kept by bash and can also
+Keep in mind that command history is usually be kept by bash and can also
 easily be monitored.
 
 Local keyfiles are also a security risk. At a minimum, they should be

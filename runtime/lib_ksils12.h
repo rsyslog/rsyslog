@@ -138,7 +138,7 @@ struct rsksictx_s {
 /* this describes a file, as far as librsksi is concerned */
 struct ksifile_s {
     /* the following data items are mirrored from rsksictx to
-     * increase cache hit ratio (they are frequently accesed).
+     * increase cache hit ratio (they are frequently accessed).
      */
     KSI_HashAlgorithm hashAlg;
     uint8_t bKeepRecordHashes;
@@ -180,8 +180,8 @@ struct rsksistatefile {
 /* error states */
 #define RSGTE_SUCCESS 0 /* Success state */
 #define RSGTE_IO 1 /* any kind of io error */
-#define RSGTE_FMT 2 /* data fromat error */
-#define RSGTE_INVLTYP 3 /* invalid TLV type record (unexcpected at this point) */
+#define RSGTE_FMT 2 /* data format error */
+#define RSGTE_INVLTYP 3 /* invalid TLV type record (unexpected at this point) */
 #define RSGTE_OOM 4 /* ran out of memory */
 #define RSGTE_LEN 5 /* error related to length records */
 #define RSGTE_SIG_EXTEND 6 /* error extending signature */

@@ -1,5 +1,5 @@
 /* omfile.h
- * These are the definitions for the build-in file output module.
+ * These are the definitions for the built-in file output module.
  *
  * File begun on 2007-07-21 by RGerhards
  *

@@ -696,7 +696,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         net_ossl_set_ctx_verify_callback(pThis->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
     }
 
-    SSL_CTX_set_timeout(pThis->ctx, 30); /* Default Session Timeout, TODO: Make configureable */
+    SSL_CTX_set_timeout(pThis->ctx, 30); /* Default Session Timeout, TODO: Make configurable */
     SSL_CTX_set_mode(pThis->ctx, SSL_MODE_AUTO_RETRY);
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
@@ -711,7 +711,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     SSL_CTX_set_ecdh_auto(pThis->ctx, 1);
         #else
         /*
-         * SSL_CTX_set_ecdh_auto and SSL_CTX_set_tmp_ecdh are depreceated in higher
+         * SSL_CTX_set_ecdh_auto and SSL_CTX_set_tmp_ecdh are deprecated in higher
          * OpenSSL Versions, so we no more need them - see for more:
          * https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_ecdh_auto.html
          */
@@ -733,7 +733,7 @@ finalize_it:
     RETiRet;
 }
 
-/* Helper function to print usefull OpenSSL errors
+/* Helper function to print useful OpenSSL errors
  */
 void net_ossl_lastOpenSSLErrorMsg(
     uchar *fromHost, int ret, SSL *ssl, int severity, const char *pszCallSource, const char *pszOsslApi) {

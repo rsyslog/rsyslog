@@ -124,7 +124,7 @@ finalize_it:
     RETiRet;
 }
 
-/* destruction of caller's zstd ressources */
+/* destruction of caller's zstd resources */
 static rsRetVal zstd_Destruct(strm_t *const pThis) {
     DEFiRet;
     assert(pThis != NULL);

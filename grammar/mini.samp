@@ -25,9 +25,9 @@ if 1 then { /var/log/log3
     	rger
     }
 if not (1==0) and 2*4/-5--(10-3)>7/*pri("*.*")*/ then {
-   action(type="omfile" taget="/var/log/log5")
-   action(type="omfile" taget="/var/log/log6")
-   action(type="omfwd" taget="10.0.0.1" port="514")
-   action(type="omwusr" taget="rger" taget="rger2")
+   action(type="omfile" target="/var/log/log5")
+   action(type="omfile" target="/var/log/log6")
+   action(type="omfwd" target="10.0.0.1" port="514")
+   action(type="omwusr" target="rger" target="rger2")
 }
 if getenv("user") == "test" then /var/log/testlog

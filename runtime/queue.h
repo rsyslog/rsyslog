@@ -99,7 +99,7 @@ struct queue_s {
         int bShutdownImmediate; /* should all workers cease processing messages? */
         DEF_ATOMIC_HELPER_MUT(mutShutdownImmediate);
         sbool bEnqOnly; /* does queue run in enqueue-only mode (1) or not (0)? */
-        sbool bSaveOnShutdown; /* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
+        sbool bSaveOnShutdown; /* persists everything on shutdown (if DA!)? 1-yes, 0-no */
         sbool bQueueStarted; /* has queueStart() been called on this queue? 1-yes, 0-no */
         sbool takeFlowCtlFromMsg; /* override enq flow ctl by message property? */
         int iQueueSize; /* Current number of elements in the queue */
@@ -112,7 +112,7 @@ struct queue_s {
         wtp_t *pWtpReg;
         action_t *pAction; /* for action queues, ptr to action object; for main queues unused */
         int iUpdsSincePersist; /* nbr of queue updates since the last persist call */
-        int iPersistUpdCnt; /* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
+        int iPersistUpdCnt; /* persists queue info after this nbr of updates - 0 -> persist only on shutdown */
         sbool bSyncQueueFiles; /* if working with files, sync them after each write? */
         int iHighWtrMrk; /* high water mark for disk-assisted memory queues */
         int iLowWtrMrk; /* low water mark for disk-assisted memory queues */
@@ -163,7 +163,7 @@ struct queue_s {
         /* end public entry points */
         /* synchronization variables */
         pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
-        pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
+        pthread_mutex_t *mut; /* mutex for enqueuing and dequeueing messages */
         pthread_cond_t notFull;
         pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
         pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */

@@ -1,7 +1,7 @@
 /* prop.c - rsyslog's prop object
  *
  * This object is meant to support message properties that are stored
- * seperately from the message. The main intent is to support properties
+ * separately from the message. The main intent is to support properties
  * that are "constant" during a period of time, so that many messages may
  * contain a reference to the same property. It is important, though, that
  * properties are destroyed when they are no longer needed.
@@ -123,7 +123,7 @@ static rsRetVal propConstructFinalize(prop_t __attribute__((unused)) * pThis) {
 
 
 /* add a new reference. It is VERY IMPORTANT to call this function whenever
- * the property is handed over to some entitiy that later call Destruct() on it.
+ * the property is handed over to some entity that later call Destruct() on it.
  */
 static rsRetVal AddRef(prop_t *pThis) {
     if (pThis == NULL) {
@@ -164,7 +164,7 @@ finalize_it:
  * If the string is different (or the pointer NULL), the current property
  * is destructed and a new one created. This can be used to get a specific
  * name in those cases where there is a good chance that the property
- * immediatly previously processed already contained the value we need - in
+ * immediately previously processed already contained the value we need - in
  * which case we save us all the creation overhead by just reusing the already
  * existing property).
  * rgerhards, 2009-07-01
@@ -179,13 +179,13 @@ static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const
         /* we need to create a property */
         CHKiRet(CreateStringProp(ppThis, psz, len));
     } else {
-        /* already exists, check if we can re-use it */
+        /* already exists, check if we can reuse it */
         GetString(*ppThis, &pszPrev, &lenPrev);
         if (len != lenPrev || ustrcmp(psz, pszPrev)) {
             /* different, need to discard old & create new one */
             propDestruct(ppThis);
             CHKiRet(CreateStringProp(ppThis, psz, len));
-        } /* else we can re-use the existing one! */
+        } /* else we can reuse the existing one! */
     }
 
 finalize_it:

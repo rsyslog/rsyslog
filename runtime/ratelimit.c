@@ -2427,7 +2427,7 @@ static int ATTR_NONNULL()
      * sets the message generation time to the journal timestamp.
      * As such, we do not get a proper indication of the actual
      * message rate. To prevent this, we need to query local
-     * system time ourselvs.
+     * system time ourselves.
      */
     if (ratelimit->bNoTimeCache) tt = time(NULL);
 
@@ -2601,9 +2601,9 @@ rsRetVal ATTR_NONNULL(1, 2, 3)
     }
 
     /* Only the messages having severity level at or below the
-     * treshold (the value is >=) are subject to ratelimiting. */
+     * threshold (the value is >=) are subject to ratelimiting. */
     if (interval && (severity >= threshold)) {
-        char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
+        char namebuf[512]; /* 256 for FGDN and 256 for APPNAME should be enough */
         snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
         if (withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
             msgDestruct(&pMsg);
@@ -2890,7 +2890,7 @@ static void ratelimitEnsureMutexInitialized(ratelimit_t *ratelimit) {
 /* enable thread-safe operations mode. This make sure that
  * a single ratelimiter can be called from multiple threads. As
  * this causes some overhead and is not always required, it needs
- * to be explicitely enabled. This operation cannot be undone
+ * to be explicitly enabled. This operation cannot be undone
  * (think: why should one do that???)
  */
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit) {

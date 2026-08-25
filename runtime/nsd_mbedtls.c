@@ -621,7 +621,7 @@ finalize_it:
 }
 
 /* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_mbedtls) who utilize ourselfs
+ * useful for other drivers (like nsd_mbedtls) who utilize ourselves
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
@@ -924,7 +924,7 @@ finalize_it:
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
  * to 0 by the caller (this is a performance enhancement as we expect to be
  * called multiple times).
- * TODO: implemet wildcards?
+ * TODO: implement wildcards?
  * rgerhards, 2008-05-26
  */
 static rsRetVal mbedtlsChkOnePeerName(nsd_mbedtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch) {
@@ -1060,7 +1060,7 @@ finalize_it:
     RETiRet;
 }
 
-/* This is a callback fonction to allow extra checks
+/* This is a callback function to allow extra checks
  * in addition to default verifications already done by Mbed TLS's
  * default processing.
  */
@@ -1568,6 +1568,6 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(nsd_mbedtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

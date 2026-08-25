@@ -1020,11 +1020,11 @@ static void rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose) {
 
 /**
  * Output a human-readable representation of a block_hdr_t
- * to proviced file pointer. This function is mainly inteded for
+ * to provided file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_hdr_t to output
+ * @param[in] bsig pointer to block_hdr_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 void rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose) {
@@ -1044,11 +1044,11 @@ void rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose) {
 
 /**
  * Output a human-readable representation of a block_sig_t
- * to proviced file pointer. This function is mainly inteded for
+ * to provided file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_sig_t to output
+ * @param[in] bsig pointer to block_sig_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose) {
@@ -1063,11 +1063,11 @@ void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose) {
 
 /**
  * Output a human-readable representation of a block_hashchain_t
- * to proviced file pointer. This function is mainly inteded for
+ * to provided file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_sig_t to output
+ * @param[in] bsig pointer to block_sig_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 static void rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose) {
@@ -1079,11 +1079,11 @@ static void rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose) {
 
 /**
  * Output a human-readable representation of a block_hashchain_t
- * to proviced file pointer. This function is mainly inteded for
+ * to provided file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] hashchain step ponter to block_hashstep_s to output
+ * @param[in] hashchain step pointer to block_hashstep_s to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 static void rsksi_printHASHCHAINSTEP(FILE *fp, block_hashchain_t *hschain, uint8_t verbose) {
@@ -1226,13 +1226,13 @@ done:
  * purely sequential and variable size, we need to read all records up to
  * the next signature record.
  * If a caller intends to verify a log file based on the parameters,
- * he must re-read the file from the begining (we could keep things
+ * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
  * to facitate this, the function permits to rewind to the original
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
- * @param[in] bRewind 0 - do not rewind at end of procesing, 1 - do so
+ * @param[in] bRewind 0 - do not rewind at end of processing, 1 - do so
  * @param[out] bs block signature record
  * @param[out] bHasRecHashes 0 if record hashes are present, 1 otherwise
  * @param[out] bHasIntermedHashes 0 if intermediate hashes are present,
@@ -1307,13 +1307,13 @@ done:
  * Read Excerpt block parameters. This detects if the block contains
  * hash chains for log records.
  * If a caller intends to verify a log file based on the parameters,
- * he must re-read the file from the begining (we could keep things
+ * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
  * to facitate this, the function permits to rewind to the original
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
- * @param[in] bRewind 0 - do not rewind at end of procesing, 1 - do so
+ * @param[in] bRewind 0 - do not rewind at end of processing, 1 - do so
  * @param[out] bs block signature record
  *
  * @returns 0 if ok, something else otherwise
@@ -1368,7 +1368,7 @@ int rsksi_getExcerptBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, blo
                 break;
         }
 
-        /* Free second Signatur object if set! */
+        /* Free second Signature object if set! */
         if (bSig == 1 && obj != NULL) rsksi_objfree(rec.tlvtype, obj);
     }
 done:
@@ -1429,7 +1429,7 @@ done:
  * Read the file header and compare it to the expected value.
  * The file pointer is placed right after the header.
  * @param[in] fp file pointer of tlv file
- * @param[in] excpect expected header (e.g. "LOGSIG10")
+ * @param[in] expect expected header (e.g. "LOGSIG10")
  * @returns 0 if ok, something else otherwise
  */
 int rsksi_chkFileHdr(FILE *fp, char *expect, uint8_t verbose) {
@@ -1495,7 +1495,7 @@ void rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint
         memcpy(ksi->IV, bh->iv, getIVLenKSI(bh));
     }
     if (bh->lastHash.data != NULL) {
-        rsksiimprintDel(ksi->x_prev); /* Delete first incase isset */
+        rsksiimprintDel(ksi->x_prev); /* Delete first in case isset */
         ksi->x_prev = malloc(sizeof(imprint_t));
         ksi->x_prev->len = bh->lastHash.len;
         ksi->x_prev->hashID = bh->lastHash.hashID;
@@ -1578,7 +1578,7 @@ done:
     return r;
 }
 
-/* Helper function to verifiy the next record in the signature file */
+/* Helper function to verify the next record in the signature file */
 int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx) {
     int r = 0;
     KSI_DataHash *x; /* current hash */
@@ -1647,7 +1647,7 @@ done:
     return r;
 }
 
-/* Helper function to verifiy the next record in the signature file */
+/* Helper function to verify the next record in the signature file */
 int rsksi_vrfy_nextRecExtract(ksifile ksi,
                               FILE *sigfp,
                               FILE *nsigfp,
@@ -1840,7 +1840,7 @@ done:
     return r;
 }
 
-/* Helper function to verifiy the next hash chain record in the signature file */
+/* Helper function to verify the next hash chain record in the signature file */
 int rsksi_vrfy_nextHashChain(
     ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx) {
     unsigned int j;
@@ -1957,7 +1957,7 @@ int rsksi_vrfy_nextHashChain(
         if (rsksi_read_debug)
             printf(
                 "debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_parse "
-                "was successfull\n");
+                "was successful\n");
     }
 
     /* Verify KSI Signature */
@@ -1973,7 +1973,7 @@ int rsksi_vrfy_nextHashChain(
         if (rsksi_read_debug)
             printf(
                 "debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verify "
-                "was successfull\n");
+                "was successful\n");
     }
 
     /* Verify Roothash against Signature */
@@ -1991,7 +1991,7 @@ int rsksi_vrfy_nextHashChain(
         if (rsksi_read_debug)
             printf(
                 "debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verifyDataHash "
-                "was successfull\n");
+                "was successful\n");
         if (rsksi_read_showVerified) reportVerifySuccess(ectx);
     }
 done:
@@ -2276,7 +2276,7 @@ int verifyBLOCK_SIGKSI(block_sig_t *bs,
         ectx->ksistate = ksistate;
         goto done;
     } else {
-        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse was successfull\n");
+        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse was successful\n");
     }
     /* Verify KSI Signature */
     ksistate = KSI_Signature_verify(sig, ksi->ctx->ksi_ctx);
@@ -2288,7 +2288,7 @@ int verifyBLOCK_SIGKSI(block_sig_t *bs,
         ectx->ksistate = ksistate;
         goto done;
     } else {
-        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successfull\n");
+        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successful\n");
     }
     ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
     if (ksistate != KSI_OK) {
@@ -2301,7 +2301,7 @@ int verifyBLOCK_SIGKSI(block_sig_t *bs,
         ectx->ksistate = ksistate;
         goto done;
     } else {
-        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash was successfull\n");
+        if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash was successful\n");
     }
 
     if (rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t processed without error's\n");

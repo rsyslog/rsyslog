@@ -1,5 +1,5 @@
 /* omfile.c
- * This is the implementation of the build-in file output module.
+ * This is the implementation of the built-in file output module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  * works!
@@ -142,7 +142,7 @@ struct s_dynaFileCacheEntry {
     strm_t *pStrm; /**< our output stream */
     void *sigprovFileData; /**< opaque data ptr for provider use */
     uint64 clkTickAccessed; /**< for LRU - based on clockFileAccess */
-    short nInactive; /**< number of minutes not writen - for close timeout */
+    short nInactive; /**< number of minutes not written - for close timeout */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
@@ -167,7 +167,7 @@ typedef struct _instanceData {
     sbool bPermitDynaFilePathEscape; /**< permit dynafile paths outside the derived base */
     sbool bRestrictDynaFileTplType; /**< reject template types without an inspectable fixed prefix */
     strm_t *pStrm; /**< our output stream */
-    short nInactive; /**< number of minutes not writen (STATIC files only) */
+    short nInactive; /**< number of minutes not written (STATIC files only) */
     char bDynamicName; /**< 0 - static name, 1 - dynamic name (with properties) */
     int isDevNull; /**< do we "write" to /dev/null? - if so, do nothing */
     int fCreateMode; /**< file creation mode for open() */
@@ -983,7 +983,7 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData,
         /* file does not exist, create it (and eventually parent directories */
         if (pData->bCreateDirs) {
             /* We first need to create parent dirs if they are missing.
-             * We do not report any errors here ourselfs but let the code
+             * We do not report any errors here ourselves but let the code
              * fall through to error handler below.
              */
             if (makeFileParentDirs(newFileName, ustrlen(newFileName), pData->fDirCreateMode, pData->dirUID,
@@ -1137,7 +1137,7 @@ static rsRetVal ATTR_NONNULL()
         CHKiRet(validateDynaFilePath(pData, newFileName));
     }
 
-    /* ok, no luck - current file cannot be re-used */
+    /* ok, no luck - current file cannot be reused */
 
     /* if we need to flush (at least) on TXEnd, we need to flush now - because
      * we do not know if we will otherwise come back to this file to flush it
@@ -2046,7 +2046,7 @@ BEGINparseSelectorAct
     uchar fname[MAXFNAME];
     CODESTARTparseSelectorAct;
     /* Note: the indicator sequence permits us to use '$' to signify
-     * outchannel, what otherwise is not possible due to truely
+     * outchannel, what otherwise is not possible due to truly
      * unresolvable grammar conflicts (*this time no way around*).
      * rgerhards, 2011-07-09
      */
@@ -2118,7 +2118,7 @@ BEGINparseSelectorAct
             ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
     }
 
-    /* freeze current paremeters for this action */
+    /* freeze current parameters for this action */
     pData->iDynaFileCacheSize = cs.iDynaFileCacheSize;
     pData->fCreateMode = cs.fCreateMode;
     pData->fDirCreateMode = cs.fDirCreateMode;

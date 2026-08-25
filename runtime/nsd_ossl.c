@@ -71,7 +71,7 @@ static rsRetVal doRetry(nsd_ossl_t *pNsd) {
 
     dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
 
-    /* We follow a common scheme here: first, we do the systen call and
+    /* We follow a common scheme here: first, we do the system call and
      * then we check the result. So far, the result is checked after the
      * switch, because the result check is the same for all calls. Note that
      * this may change once we deal with the read and write calls (but
@@ -304,7 +304,7 @@ rsRetVal osslRecordRecv(nsd_ossl_t *pThis, unsigned *const nextIODirection) {
             nsd_ossl_lastOpenSSLErrorMsg(pThis, lenRcvd, pThis->pNetOssl->ssl, LOG_INFO, "osslRecordRecv",
                                          "SSL_read 1");
             iRet = RS_RET_TLS_ERR_SYSCALL;
-            /* Check for underlaying socket errors **/
+            /* Check for underlying socket errors **/
             if (errno == ECONNRESET) {
                 DBGPRINTF("osslRecordRecv: SSL_ERROR_SYSCALL Errno %d, connection reset by peer\n", errno);
                 /* Connection was dropped from remote site */
@@ -730,7 +730,7 @@ finalize_it:
 
 
 /* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_ossl) who utilize ourselfs
+ * useful for other drivers (like nsd_ossl) who utilize ourselves
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
@@ -843,7 +843,7 @@ finalize_it:
 }
 
 
-/* initialize the tcp socket for a listner
+/* initialize the tcp socket for a listener
  * Here, we use the ptcp driver - because there is nothing special
  * at this point with OpenSSL. Things become special once we accept
  * a session, but not during listener setup.
@@ -1150,7 +1150,7 @@ finalize_it:
  * to supply the SAME buffer on the retry. We can not assure this, as the
  * caller is free to call us with any buffer location (and in current
  * implementation, it is on the stack and extremely likely to change). To
- * work-around this problem, we allocate a buffer ourselfs and always receive
+ * work-around this problem, we allocate a buffer ourselves and always receive
  * into that buffer. We pass data on to the caller only after we have received it.
  * To save some space, we allocate that internal buffer only when it is actually
  * needed, which means when we reach this function for the first time. To keep
@@ -1177,7 +1177,7 @@ static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr
 
     /* --- in TLS mode now --- */
     if (pThis->rtryCall == osslRtry_handshake) {
-        /* note: we are in receive, so we acually will retry receive in any case */
+        /* note: we are in receive, so we actually will retry receive in any case */
         CHKiRet(doRetry(pThis));
         ABORT_FINALIZE(RS_RET_RETRY);
     }
@@ -1300,7 +1300,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                 /* Output error and abort */
                 nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_INFO, "Send", "SSL_write");
                 iRet = RS_RET_TLS_ERR_SYSCALL;
-                /* Check for underlaying socket errors **/
+                /* Check for underlying socket errors **/
                 if (errno == ECONNRESET) {
                     dbgprintf("Send: SSL_ERROR_SYSCALL Connection was reset by remote\n");
                     /* Connection was dropped from remote site */
@@ -1492,7 +1492,7 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t __attribute__((unused)) *co
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)) || defined(ENABLE_WOLFSSL)
-    /* Note: we disable unkonwn functions. The corresponding error message is
+    /* Note: we disable unknown functions. The corresponding error message is
      * generated during SetGntuTLSPriorityString().
      */
     if (pThis->gnutlsPriorityString == NULL || pThis->pNetOssl->ctx == NULL) {
@@ -1793,7 +1793,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     DBGPRINTF("modInit\n");
     CHKiRet(net_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
     CHKiRet(nsd_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

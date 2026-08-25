@@ -1483,7 +1483,7 @@ done:
 /* We support decimal integers. Unfortunately, previous versions
  * said they support oct and hex, but that wasn't really the case.
  * Everything based on JSON was just dec-converted. As this was/is
- * the norm, we fix that inconsistency. Luckly, oct and hex support
+ * the norm, we fix that inconsistency. Luckily, oct and hex support
  * was never documented.
  * rgerhards, 2015-11-12
  */
@@ -1565,7 +1565,7 @@ uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bM
 
 /* frees struct svar members, but not the struct itself. This is because
  * it usually is allocated on the stack. Callers why dynamically allocate
- * struct svar need to free the struct themselfes!
+ * struct svar need to free the struct themselves!
  */
 
 int SKIP_NOTHING = 0x0;
@@ -1778,7 +1778,7 @@ finalize_it:
 
 /* note that we do not need to evaluate any parameters, as the template pointer
  * is set during initialization().
- * TODO: think if we can keep our buffer; but that may not be trival thinking about
+ * TODO: think if we can keep our buffer; but that may not be trivial thinking about
  *       multiple threads.
  */
 static void doFunc_exec_template(struct cnffunc *__restrict__ const func,
@@ -2418,7 +2418,7 @@ static void ATTR_NONNULL() doFunct_Ipv42num(struct cnffunc *__restrict__ const f
                 if (endblank == 1) {
                     DBGPRINTF(
                         "rainerscript: (ipv42num) error: wrong IP-Address format "
-                        "(inalid space(2))\n");
+                        "(invalid space(2))\n");
                     goto done;
                 }
                 startblank = 0;
@@ -2438,7 +2438,7 @@ static void ATTR_NONNULL() doFunct_Ipv42num(struct cnffunc *__restrict__ const f
                 }
                 break;
             default:
-                DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid charakter)\n");
+                DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid character)\n");
                 goto done;
         }
     }
@@ -3742,7 +3742,7 @@ static void evalVar(struct cnfvar *__restrict__ const var,
     }
 }
 
-/* perform a string comparision operation against a while array. Semantic is
+/* perform a string comparison operation against a while array. Semantic is
  * that one one comparison is true, the whole construct is true.
  * TODO: we can obviously optimize this process. One idea is to
  * compile a regex, which should work faster than serial comparison.
@@ -3887,7 +3887,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 
     DBGPRINTF("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
     switch (expr->nodetype) {
-        /* note: comparison operations are extremely similar. The code can be copyied, only
+        /* note: comparison operations are extremely similar. The code can be copied, only
          * places flagged with "CMP" need to be changed.
          */
         case CMP_EQ:
@@ -5209,7 +5209,7 @@ struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams) {
                     parser_errmsg(
                         "statement ignored: reload_lookup_table(table_name, "
                         "optional:stub_value_in_case_reload_fails) "
-                        "expects a litteral string for second argument\n");
+                        "expects a literal string for second argument\n");
                     failed = 1;
                 }
                 if ((cnfstmt->d.s_reload_lookup_table.stub_value =
@@ -5226,7 +5226,7 @@ struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams) {
                     parser_errmsg(
                         "statement ignored: reload_lookup_table(table_name, "
                         "optional:stub_value_in_case_reload_fails) "
-                        "expects a litteral string for first argument\n");
+                        "expects a literal string for first argument\n");
                     failed = 1;
                 }
                 if ((cnfstmt->d.s_reload_lookup_table.table_name =
@@ -5625,7 +5625,7 @@ static struct cnfexpr *cnfexprOptimize_CMP_var(struct cnfexpr *expr) {
                     "evaluate to FALSE",
                     cstr);
             } else {
-                /* we can acutally optimize! */
+                /* we can actually optimize! */
                 DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
                 func = cnffuncNew_prifilt(0);
                 prifiltSetSeverity(func->funcdata, sev, expr->nodetype);
@@ -6051,7 +6051,7 @@ static rscriptFuncPtr funcName2Ptr(char *const fname, const unsigned short nPara
 }
 
 rsRetVal addMod2List(const int __attribute__((unused)) version, struct scriptFunct *functArray)
-/*version currently not used, might be needed later for versin check*/
+/*version currently not used, might be needed later for version check*/
 {
     DEFiRet;
     int i;

@@ -1747,7 +1747,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         /* check if we need to ignore the i/o ready state. We do this if we got an invalid
          * return state. Validly, this can happen for RS_RET_EINTR, for other cases it may
          * not be the right thing, but what is the right thing is really hard at this point...
-         * Note: numEntries can be validly 0 in some rare cases (eg spurios wakeup).
+         * Note: numEntries can be validly 0 in some rare cases (eg spurious wakeup).
          */
         if (localRet != RS_RET_OK || numEntries == 0) {
             continue;

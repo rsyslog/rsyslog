@@ -357,7 +357,7 @@ void qqueueDoneLoadCnf(void) {
  ***********************************************************************/
 
 /* generate next uniqueue dequeue ID. Note that uniqueness is only required
- * on a per-queue basis and while this instance runs. So a stricly monotonically
+ * on a per-queue basis and while this instance runs. So a strictly monotonically
  * increasing counter is sufficient (if enough bits are used).
  */
 static inline qDeqID getNextDeqID(qqueue_t *pQueue) {
@@ -1921,7 +1921,7 @@ static rsRetVal qqueueTryLoadPersistedInfo(qqueue_t *pThis) {
     CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
     CHKiRet(strm.ConstructFinalize(psQIF));
 
-    /* first, we try to read the property bag for ourselfs */
+    /* first, we try to read the property bag for ourselves */
     CHKiRet(obj.DeserializePropBag((obj_t *)pThis, psQIF));
 
     /* then the stream objects (same order as when persisted!) */
@@ -2255,7 +2255,7 @@ static rsRetVal qAddDirectWithWti(qqueue_t *pThis, smsg_t *pMsg, wti_t *pWti) {
 
     /* calling the consumer is quite different here than it is from a worker thread */
     /* we need to provide the consumer's return value back to the caller because in direct
-     * mode the consumer probably has a lot to convey (which get's lost in the other modes
+     * mode the consumer probably has a lot to convey (which gets lost in the other modes
      * because they are asynchronous. But direct mode is deliberately synchronous.
      * rgerhards, 2008-02-12
      * We use our knowledge about the batch_t structure below, but without that, we
@@ -2294,7 +2294,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg) {
 /* generic code to add a queue entry
  * We use some specific code to most efficiently support direct mode
  * queues. This is justified in spite of the gain and the need to do some
- * things truely different. -- rgerhards, 2008-02-12
+ * things truly different. -- rgerhards, 2008-02-12
  */
 static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
@@ -2705,7 +2705,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->bSyncQueueFiles = 0;
     pThis->toQShutdown = loadConf->globals.actq_dflt_toQShutdown; /* queue shutdown */
     pThis->toActShutdown = loadConf->globals.actq_dflt_toActShutdown; /* action shutdown (in phase 2) */
-    pThis->toEnq = loadConf->globals.actq_dflt_toEnq; /* timeout for queue enque */
+    pThis->toEnq = loadConf->globals.actq_dflt_toEnq; /* timeout for queue enqueue */
     pThis->toWrkShutdown = loadConf->globals.actq_dflt_toWrkShutdown; /* timeout for worker thread shutdown */
     pThis->iMinMsgsPerWrkr = -1; /* minimum messages per worker needed to start a new one */
     pThis->bSaveOnShutdown = 1; /* save queue on shutdown (when DA enabled)? */
@@ -3368,7 +3368,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     /* it is sufficient to persist only when the bulk of work is done */
     qqueueChkPersist(pThis, nDequeued + nDiscarded + nDeleted);
 
-    /* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
+    /* If messages where DISCARDED, we need to subtract them from the OverallQueueSize */
 #ifdef ENABLE_IMDIAG
     #ifdef HAVE_ATOMIC_BUILTINS
     ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
@@ -3571,7 +3571,7 @@ finalize_it:
  * batch. Otherwise, we may not complete it, and then the cancel
  * handler also tries to delete the batch. But then it finds some of
  * the messages already destructed. This was a bug we have seen, especially
- * with disk mode, where a delete takes rather long. Anyhow, the coneptual
+ * with disk mode, where a delete takes rather long. Anyhow, the conceptual
  * problem exists in all queue modes.
  * rgerhards, 2009-05-27
  */
@@ -3716,7 +3716,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
                 }
             }
         }
-        pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
+        pWti->batch.eltState[i] = BATCH_STATE_COMM; /* committed to other queue! */
     }
 
     /* but now cancellation is no longer permitted */
@@ -3739,7 +3739,7 @@ finalize_it:
      *	this has not been done so consistently. Andre convinced me that the current
      *	code is an elegant solution. However, if problems with queue workers and/or
      *	shutdown come up, this code here should be looked at suspiciously. In those
-     *	cases it may work out to check all status codes explicitely, just to avoid
+     *	cases it may work out to check all status codes explicitly, just to avoid
      *	a pitfall due to unexpected states being passed on to the caller.
      */
     if (iRet != RS_RET_OK && iRet != RS_RET_ERR_QUEUE_EMERGENCY && iRet < 0) {
@@ -4156,7 +4156,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     CHKiRet(strm.SetFName(psQIF, (uchar *)tmpQIFName, lentmpQIFName));
     CHKiRet(strm.ConstructFinalize(psQIF));
 
-    /* first, write the property bag for ourselfs
+    /* first, write the property bag for ourselves
      * And, surprisingly enough, we currently need to persist only the size of the
      * queue. All the rest is re-created with then-current config parameters when the
      * queue is re-created. Well, we'll also save the current queue type, just so that
@@ -4188,7 +4188,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     }
 
     /* we have persisted the queue object. So whenever it comes to an empty queue,
-     * we need to delete the QIF. Thus, we indicte that need.
+     * we need to delete the QIF. Thus, we indicate that need.
      */
     pThis->bNeedDelQIF = 1;
 
@@ -4560,7 +4560,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
                 msgDestruct(&pMsg);
                 ABORT_FINALIZE(RS_RET_QUEUE_FULL);
             }
-            dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueing\n");
+            dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueuing\n");
         }
     }
 

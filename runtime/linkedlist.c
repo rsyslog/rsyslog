@@ -3,7 +3,7 @@
  * wherever a linke list is required.
  *
  * NOTE: we do not currently provide a constructor and destructor for the
- * object itself as we assume it will always be part of another strucuture.
+ * object itself as we assume it will always be part of another structure.
  * Having a pointer to it, I think, does not really make sense but costs
  * performance. Consequently, there is is llInit() and llDestroy() and they
  * do what a constructor and destructur do, except for creating the
@@ -94,7 +94,7 @@ rsRetVal llDestroy(linkedList_t *pThis) {
     pElt = pThis->pRoot;
     while (pElt != NULL) {
         /* keep the list structure in a consistent state as
-         * the destructor bellow may reference it again
+         * the destructor below may reference it again
          */
         pThis->pRoot = pElt->pNext;
         if (pElt->pNext == NULL) pThis->pLast = NULL;

@@ -23,7 +23,7 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#include "template.h" /* this is a quirk, but these two are too interdependant... */
+#include "template.h" /* this is a quirk, but these two are too interdependent... */
 
 #ifndef MSG_H_INCLUDED
     #define MSG_H_INCLUDED 1
@@ -42,10 +42,10 @@
  *
  * Important Note:
  * The message object is used for multiple purposes (once it
- * has been created). Once created, it actully is a read-only
+ * has been created). Once created, it actually is a read-only
  * object (though we do not specifically express this). In order
  * to avoid multiple copies of the same object, we use a
- * reference counter. This counter is set to 1 by the constructer
+ * reference counter. This counter is set to 1 by the constructor
  * and increased by 1 with a call to MsgAddRef(). The destructor
  * checks the reference count. If it is more than 1, only the counter
  * will be decremented. If it is 1, however, the object is actually
@@ -332,7 +332,7 @@ void msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri);
  * of rsyslog metadata.
  * added 2015-01-09 rgerhards
  */
-/* set raw message size. This is needed in some cases where a trunctation is necessary
+/* set raw message size. This is needed in some cases where a truncation is necessary
  * but the raw message must not be newly set. The most important (and currently only)
  * use case is if we remove trailing LF or NUL characters. Note that the size can NOT
  * be extended, only shrunk!

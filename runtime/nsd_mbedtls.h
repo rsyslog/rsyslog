@@ -45,7 +45,7 @@ struct nsd_mbedtls_s {
         const uchar *pszKeyFile;
         const uchar *pszCertFile;
         int iMode; /* 0 - plain tcp, 1 - TLS */
-        int bAbortConn; /* if set, abort conncection (fatal error had happened) */
+        int bAbortConn; /* if set, abort connection (fatal error had happened) */
         enum {
             MBEDTLS_AUTH_CERTNAME = 0,
             MBEDTLS_AUTH_CERTFINGERPRINT = 1,
