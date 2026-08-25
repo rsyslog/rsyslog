@@ -4381,6 +4381,19 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 if (pTpe->data.field.options.bFixedWidth == 0) iTo = bufLen - 1;
 
             iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+            if (iLen < 0) {
+                /* A negative position.to may push iTo in front of iFrom, e.g.
+                 * position.from="5" position.to="-2" on a 5-character value.
+                 * The requested substring is empty in that case. Without this
+                 * guard iLen stays negative, malloc(0) succeeds and the copy
+                 * loop below never terminates.
+                 */
+                DBGPRINTF(
+                    "msgGetProp: iTo %d is in front of iFrom %d, "
+                    "returning empty string\n",
+                    iTo, iFrom);
+                iLen = 0;
+            }
             pBufStart = pBuf = malloc(iLen + 1);
             if (pBuf == NULL) {
                 if (*pbMustBeFreed == 1) free(pRes);
