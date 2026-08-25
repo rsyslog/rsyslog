@@ -595,9 +595,9 @@ static int in_setupWatch(act_obj_t *const act, const int is_file) {
         goto done;
     }
 
-    wd = inotify_add_watch(
-        ino_fd, act->name,
-        (is_file) ? IN_FILE_UPDATE_EVENTS | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
+    wd = inotify_add_watch(ino_fd, act->name,
+                           (is_file) ? IN_FILE_UPDATE_EVENTS | IN_MOVE_SELF | IN_DELETE_SELF | IN_DONT_FOLLOW
+                                     : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
     if (wd < 0) {
         if (errno == EACCES) { /* There is high probability of selinux denial on top-level paths */
             DBGPRINTF("imfile: permission denied when adding watch for '%s'\n", act->name);
@@ -2729,13 +2729,26 @@ static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
         goto done;
     }
 
+    DBGPRINTF("in_processEvent process Event %x for %s\n", ev->mask, ev->name);
+    const wd_map_t *const etry = wdmapLookup(ev->wd);
     if (ev->mask & IN_IGNORED) {
-        DBGPRINTF("imfile: got IN_IGNORED event\n");
+        if (etry != NULL) {
+            act_obj_t *const act = etry->act;
+            fs_node_t *const node = act->edge->node;
+
+            DBGPRINTF("imfile: watch %d for '%s' was removed, rescanning\n", ev->wd, act->name);
+            if (act->wd == ev->wd) {
+                act->wd = -1;
+            }
+            wdmapDel(ev->wd);
+            fs_node_walk(node, poll_tree);
+            fs_node_walk(node, in_retryMissingWatches);
+        } else {
+            DBGPRINTF("imfile: got IN_IGNORED for already removed watch %d\n", ev->wd);
+        }
         goto done;
     }
 
-    DBGPRINTF("in_processEvent process Event %x for %s\n", ev->mask, ev->name);
-    const wd_map_t *const etry = wdmapLookup(ev->wd);
     if (etry == NULL) {
         LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_WARNING,
                "imfile: internal error? "
@@ -2744,18 +2757,26 @@ static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
                ev->wd);
         goto done;
     }
+    fs_node_t *const node = etry->act->edge->node;
     DBGPRINTF("in_processEvent process Event %x is_file %d, act->name '%s'\n", ev->mask, etry->act->edge->is_file,
               etry->act->name);
 
     if ((ev->mask & IN_MOVED_FROM)) {
-        flag_in_move(etry->act->edge->node->edges, ev->name);
+        flag_in_move(node->edges, ev->name);
     }
-    if (ev->mask & (IN_MOVED_FROM | IN_MOVED_TO)) {
-        fs_node_walk(etry->act->edge->node, poll_tree);
+    if (ev->mask & (IN_MOVED_FROM | IN_MOVED_TO | IN_MOVE_SELF | IN_DELETE_SELF)) {
+        /* Drain the old inode before reconciling names and watches. A file watch
+         * follows an inode across rename, so without this rescan the newly-created
+         * pathname can remain unwatched after a rapid log rotation. */
+        if (etry->act->edge->is_file && !(etry->act->is_symlink)) {
+            pollFile(etry->act);
+        }
+        fs_node_walk(node, poll_tree);
+        fs_node_walk(node, in_retryMissingWatches);
     } else if (etry->act->edge->is_file && !(etry->act->is_symlink)) {
         in_handleFileEvent(ev, etry);  // esentially poll_file()!
     } else {
-        fs_node_walk(etry->act->edge->node, poll_tree);
+        fs_node_walk(node, poll_tree);
     }
 done:
     return;
