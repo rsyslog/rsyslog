@@ -908,7 +908,12 @@ static rsRetVal ossl_asn1_string_to_cstr(const ASN1_STRING *const str, uchar **c
     }
 
 #ifndef ENABLE_WOLFSSL
+    /* OpenSSL 1.0.2 declared this input mutable; newer versions do not. */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    len = ASN1_STRING_to_UTF8(&utf8, (ASN1_STRING *)str);
+    #else
     len = ASN1_STRING_to_UTF8(&utf8, str);
+    #endif
     if (len < 0 || utf8 == NULL) {
         FINALIZE;
     }
@@ -1653,13 +1658,13 @@ static int crl_check(X509 *current_cert, int *is_revoked) {
  * The resulting issuer certificate might be an untrusted certificate,
  * which should be used to generate OCSP requests.
  */
-static X509 *ocsp_find_issuer(X509 *target_cert,
-                              const char *cert_name,
-                              SSL_CTX *ctx,
-                              STACK_OF(X509) * untrusted_peer_certs) {
+static X509 *ocsp_find_issuer(
+    X509 *target_cert, const char *cert_name, SSL_CTX *ctx, STACK_OF(X509) * untrusted_peer_certs, int *issuer_owned) {
     X509 *issuer = NULL;
     X509_STORE *store = SSL_CTX_get_cert_store(ctx);
     STACK_OF(X509_OBJECT) * objs;
+
+    *issuer_owned = 0;
 
     /* find issuer among local trusted issuers */
     if (store != NULL) {
@@ -1671,7 +1676,10 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
         for (int i = 0; objs != NULL && i < sk_X509_OBJECT_num(objs); i++) {
             X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
             if (cert && X509_check_issued(cert, target_cert) == X509_V_OK) {
-                issuer = cert;
+                if (X509_up_ref(cert) == 1) {
+                    issuer = cert;
+                    *issuer_owned = 1;
+                }
                 break;
             }
         }
@@ -2192,6 +2200,7 @@ static int ocsp_check(
     int at_least_one_responder = 0;
     char *cache_key = NULL;
     int cached_status;
+    int issuer_owned;
 
     X509_NAME_oneline(X509_get_subject_name(current_cert), cert_name, sizeof(cert_name));
 
@@ -2201,7 +2210,7 @@ static int ocsp_check(
     /*
      * 1. Lookup the issuer cert of the current certificate, required to marshal a OCSP request.
      */
-    if (!(issuer = ocsp_find_issuer(current_cert, cert_name, ctx, untrusted_peer_certs))) goto err;
+    if (!(issuer = ocsp_find_issuer(current_cert, cert_name, ctx, untrusted_peer_certs, &issuer_owned))) goto err;
 
     /*
      * 2. Check cache first to avoid network I/O
@@ -2275,6 +2284,7 @@ static int ocsp_check(
 err:
     if (ocsp_responders) X509_email_free(ocsp_responders);
     if (cache_key) free(cache_key);
+    if (issuer_owned) X509_free(issuer);
 
     return ret;
 }
