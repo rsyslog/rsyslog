@@ -25,6 +25,15 @@ Focused host-side tests from `rsyslog_test` are still the right first step when
 debugging a specific behavior. After the patch is stable, run this skill before
 pushing if the change is intended for review.
 
+For agent-led PR completion, first apply `rsyslog-security-pr-review` to the
+stabilized candidate. Rebuild its deterministic input immediately before this
+container gate and require a local `receipt.json` with the same diff digest and
+model revision and a `passed` or `not_applicable` disposition. A missing,
+stale, `blocked`, or `needs_human` receipt means the agent may still run useful
+container checks, but must not claim the candidate is PR-ready. This is an
+agent workflow rule, not a shell or CI dependency; repository scripts must not
+invoke an AI client.
+
 ## Pre-PR Testbed Tiers
 
 Use these tiers as a session testbed before opening or updating PRs. The goal is

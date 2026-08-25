@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "model_revision": 1,
+  "components": [
+    {
+      "id": "core-message-pipeline",
+      "paths": ["runtime/parser.*", "runtime/msg.*", "runtime/ruleset.*", "tools/pm*.c", "tools/rsyslogd.c"],
+      "boundaries": ["TB-PIPELINE", "TB-NET-IN", "TB-LOCAL-IN"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "shared-runtime",
+      "evidence": ["tools/rsyslogd.c", "runtime/parser.c", "runtime/msg.c"],
+      "test_hints": ["tests/fuzz-syslog-message-smoke.sh", "tests/validation-run.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "network-inputs",
+      "paths": ["plugins/imtcp/**", "plugins/imptcp/**", "plugins/imudp/**", "plugins/imrelp/**", "plugins/imdtls/**", "plugins/imgssapi/**", "plugins/imbeats/**"],
+      "boundaries": ["TB-NET-IN", "TB-PIPELINE", "TB-MODULE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01"],
+      "exposure": "explicitly-enabled-network-input",
+      "evidence": ["plugins/imtcp/imtcp.c", "plugins/imbeats/imbeats.c"],
+      "test_hints": ["tests/imtcp-basic.sh", "tests/imptcp-basic.sh", "tests/imudp-basic.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "rainerscript-runtime-expressions",
+      "paths": ["grammar/rainerscript.c", "grammar/rainerscript.h"],
+      "boundaries": ["TB-PIPELINE", "TB-CONFIG"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "shared-expression-runtime",
+      "evidence": ["grammar/rainerscript.c"],
+      "test_hints": ["tests/rscript*.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "transport-security",
+      "paths": ["runtime/net.*", "runtime/netstrm.*", "runtime/netstrms.*", "runtime/nsd*", "runtime/tcpsrv.*", "runtime/tcps_sess.*", "tools/omfwd.c", "plugins/omrelp/**"],
+      "boundaries": ["TB-NET-IN", "TB-OUTBOUND"],
+      "invariants": ["SI-PEER-IDENTITY-01", "SI-TLS-EFFECTIVE-01", "SI-INPUT-BOUNDS-01"],
+      "exposure": "configured-network-transport",
+      "evidence": ["runtime/nsd_ossl.c", "runtime/nsd_gtls.c", "runtime/net.c"],
+      "test_hints": ["tests/ossl-basic.sh", "tests/gnutls-basic.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "configuration-and-modules",
+      "paths": ["grammar/**", "runtime/conf.*", "runtime/glbl.*", "runtime/modules.*", "runtime/rsconf.*", "runtime/yamlconf.*", "tools/rsyslogd.c"],
+      "boundaries": ["TB-CONFIG", "TB-MODULE", "TB-PRIV"],
+      "invariants": ["SI-CONFIG-AUTHORITY-01", "SI-PRIV-DROP-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "administrator-controlled",
+      "evidence": ["runtime/modules.c", "runtime/rsconf.c", "runtime/yamlconf.c"],
+      "test_hints": ["tests/validation-run.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "queues-and-state",
+      "paths": ["runtime/queue*", "runtime/segdisk_store*", "runtime/wti.*", "runtime/wtp.*", "tools/rsyslog-segqueue*"],
+      "boundaries": ["TB-PIPELINE", "TB-STORAGE"],
+      "invariants": ["SI-QUEUE-INTEGRITY-01", "SI-INPUT-BOUNDS-01", "SI-MESSAGE-TRUST-01"],
+      "exposure": "shared-runtime-and-local-storage",
+      "evidence": ["runtime/queue.c", "runtime/segdisk_store.c"],
+      "test_hints": ["tests/queue-persist.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "filesystem-inputs-and-outputs",
+      "paths": ["plugins/imfile/**", "plugins/imfifo/**", "tools/omfile.c", "tools/ompipe.c", "runtime/stream.*", "runtime/template.*"],
+      "boundaries": ["TB-LOCAL-IN", "TB-STORAGE", "TB-PIPELINE"],
+      "invariants": ["SI-PATH-CONTROL-01", "SI-MESSAGE-TRUST-01", "SI-INPUT-BOUNDS-01"],
+      "exposure": "configured-local-filesystem",
+      "evidence": ["tools/omfile.c", "runtime/template.c", "plugins/imfile/imfile.c"],
+      "test_hints": ["tests/imfile-basic.sh", "tests/omfile-basic.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "external-programs",
+      "paths": ["plugins/improg/**", "plugins/mmexternal/**", "plugins/omprog/**", "tools/omshell.c", "tools/ompipe.c"],
+      "boundaries": ["TB-EXEC", "TB-LOCAL-IN", "TB-OUTBOUND"],
+      "invariants": ["SI-EXEC-DATA-01", "SI-MESSAGE-TRUST-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "administrator-configured-helper",
+      "evidence": ["plugins/omprog/omprog.c", "plugins/mmexternal/mmexternal.c"],
+      "test_hints": ["tests/omprog-basic.sh", "tests/mmexternal-basic.sh"],
+      "requires_lead": true
+    },
+    {
+      "id": "contrib-network-surfaces",
+      "paths": ["contrib/imhttp/**", "contrib/omhttp/**", "contrib/imkubernetes/**", "contrib/mmkubernetes/**"],
+      "boundaries": ["TB-NET-IN", "TB-OUTBOUND", "TB-MODULE"],
+      "invariants": ["SI-INPUT-BOUNDS-01", "SI-PARSER-SAFETY-01", "SI-PEER-IDENTITY-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "optional-contrib-component",
+      "evidence": ["contrib/imhttp/imhttp.c", "contrib/omhttp/omhttp.c"],
+      "test_hints": [],
+      "requires_lead": false
+    },
+    {
+      "id": "ci-build-and-release",
+      "paths": [".github/**", "packaging/**", "devtools/**", "scripts/**", "Makefile.am", "configure.ac", "m4/**"],
+      "boundaries": ["TB-CI", "TB-MODULE"],
+      "invariants": ["SI-CI-TRUST-01", "SI-CONFIG-AUTHORITY-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "repository-and-release-automation",
+      "evidence": [".github/workflows/codeql.yml", ".github/workflows/draft_release.yml"],
+      "test_hints": ["python3 devtools/check-flake-evidence-coverage.py"],
+      "requires_lead": true
+    },
+    {
+      "id": "test-infrastructure",
+      "paths": ["tests/**"],
+      "boundaries": ["TB-CI"],
+      "invariants": ["SI-CI-TRUST-01", "SI-INPUT-BOUNDS-01"],
+      "exposure": "developer-and-ci",
+      "evidence": ["tests/AGENTS.md", "tests/diag.sh"],
+      "test_hints": ["devtools/check-test-antipatterns.sh"],
+      "requires_lead": false
+    },
+    {
+      "id": "security-review-policy",
+      "paths": ["SECURITY.md", "AGENTS.md", ".gitignore", "doc/ai/security_triage_rubric.md", "doc/security/project-threat-model.md", "doc/security/threat-model-components.json", ".agent/skills/rsyslog-security-pr-review/**", ".agent/skills/rsyslog_local_container_testing/SKILL.md"],
+      "boundaries": ["TB-CI"],
+      "invariants": ["SI-CI-TRUST-01", "SI-SECRET-HANDLING-01"],
+      "exposure": "repository-policy",
+      "evidence": ["SECURITY.md", "doc/ai/security_triage_rubric.md"],
+      "test_hints": ["skill quick validation"],
+      "requires_lead": true
+    }
+  ]
+}
