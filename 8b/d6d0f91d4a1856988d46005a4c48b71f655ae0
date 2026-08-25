@@ -1,0 +1,79 @@
+tests/fuzz-imtcp-session-smoke.sh
+  s_3174538268dd29::t_8b0bcb0cc50199 13
+  s_3174538268dd29::t_4e6f90e6de51bb 1-12,14-29
+tests/fuzz/corpus/imtcp-session/zlib-octet.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+.gitignore
+  s_3174538268dd29::t_22c3bd055340b0 36
+  s_3174538268dd29::t_0835a15e6e9a5d 35
+runtime/tcps_sess.h
+  s_3174538268dd29::t_fe7c8e9c91bf0e 134-139
+tools/fuzz_imtcp_session.c
+  s_3174538268dd29::t_2f7ccdcd86f274 40-41,45-54,57-58
+  s_3174538268dd29::t_fe7c8e9c91bf0e 1-15,17-24,29-39,42-44,55-56,59-63,65-73
+  s_3174538268dd29::t_3b6b398ae45c2b 16
+  s_3174538268dd29::t_e9f8c8095dbb10 25-28,64
+tests/Makefile.am
+  s_3174538268dd29::t_4e6f90e6de51bb 17-19,23-39
+tests/fuzz/corpus/imtcp-session/zstd-trailer.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/prepare-imtcp-session-corpus.py
+  s_3174538268dd29::t_4e6f90e6de51bb 1-21
+tests/fuzz/corpus/imtcp-session/multiline.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zstd-truncated.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zstd-octet.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/octet-malformed.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+runtime/tcps_sess.c
+  s_3174538268dd29::t_f736d41da2c719 1179,1232,1239-1242,1252,1276,1323,1340
+  s_3174538268dd29::t_fe7c8e9c91bf0e 1169-1178,1180-1231,1233-1238,1243-1251,1253-1275,1277-1322,1324-1339,1341-1379
+tests/fuzz/corpus/imtcp-session/zlib-truncated.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zlib-trailer.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/regex-framing.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zstd-valid.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/octet-counted.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/plain-lf.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zlib-valid.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/additional-delimiter.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/oversized.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/corpus/imtcp-session/zstd-window-limit.hex
+  s_3174538268dd29::t_4e6f90e6de51bb 1
+tests/fuzz/README.md
+  s_3174538268dd29::t_1c41f149a600b7 57-75
+  s_3174538268dd29::t_4e6f90e6de51bb 48-56,76-93
+.github/workflows/collect_flake_evidence.yml
+  s_3174538268dd29::t_effc8cc713c309 17
+tools/Makefile.am
+  s_3174538268dd29::t_fe7c8e9c91bf0e 87,92-93,95
+  s_3174538268dd29::t_6e044bcd061fb7 94
+.github/workflows/imtcp_session_fuzz.yml
+  s_3174538268dd29::t_effc8cc713c309 1-225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8bd6d0f91d4a1856988d46005a4c48b71f655ae0",
+  "prompts": {},
+  "sessions": {
+    "s_3174538268dd29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f38-e8ea-7fb2-a855-adec6d97f99c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
