@@ -3128,8 +3128,9 @@ static int msgMaterializeTurboJSON(smsg_t *pMsg) {
     return 1;
 }
 
-/* Project the turbo snapshot into pMsg->json under the message mutex, for
- * callers outside msg.c that persist the JSON tree (queue codecs). */
+/* Project the turbo snapshot into pMsg->json, for callers outside msg.c that
+ * persist the JSON tree (queue codecs). Takes the message mutex itself; the
+ * mutex is not recursive, so the caller must not already hold it. */
 rsRetVal MsgTurboMaterialize(smsg_t *const pMsg) {
     int ok;
     MsgLock(pMsg);

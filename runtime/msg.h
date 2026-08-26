@@ -216,10 +216,14 @@ smsg_t *MsgDup(smsg_t *pOld);
  */
 void MsgReleaseTurboResult(smsg_t *pMsg);
 /**
- * @brief Project the turbo snapshot into pMsg->json under the message mutex.
+ * @brief Project the turbo snapshot into pMsg->json.
  *
  * For callers that persist the JSON tree (queue codecs): the snapshot is an
  * opaque module-owned blob and cannot cross a queue file. Idempotent.
+ *
+ * This function acquires and releases @p pMsg's mutex itself, unlike
+ * MsgReleaseTurboResult() above, which requires the caller to hold it. The
+ * mutex is not recursive, so a caller already holding it must not call this.
  *
  * @return RS_RET_OK, or RS_RET_OUT_OF_MEMORY when the tree could not be built.
  */
