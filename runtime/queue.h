@@ -82,6 +82,17 @@ typedef struct qLinkedList_S {
     smsg_t *pMsg;
 } qLinkedList_t;
 
+typedef struct qqueue_egress_entry_s {
+    smsg_t *pMsg;
+    qLinkedList_t *pLinkedListEntry;
+    int sourceIndex;
+    unsigned char state;
+    unsigned char admissionCounted;
+} qqueue_egress_entry_t;
+
+#define QQUEUE_EGRESS_STAGED 1
+#define QQUEUE_EGRESS_PUBLISHED 2
+
 /**
  * @brief The "queue object for the queueing subsystem".
  *
@@ -264,6 +275,11 @@ struct queue_s {
         int segdiskIdleCleanupFailures;
         int iSmpInterval; /* line interval of sampling logs */
         int isRunning;
+        /* Append-only: queue_s is visible to loadable modules and is allocated by core. */
+        int nEgressReservations; /* accepted, prepared, but not yet published entries */
+        STATSCOUNTER_DEF(ctrEgressPublishedBatches, mutCtrEgressPublishedBatches)
+        STATSCOUNTER_DEF(ctrEgressPublishedMessages, mutCtrEgressPublishedMessages)
+        STATSCOUNTER_DEF(ctrEgressPublicationAdvice, mutCtrEgressPublicationAdvice)
 };
 
 
@@ -277,6 +293,10 @@ struct queue_s {
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
+rsRetVal qqueueEgressPrepare(qqueue_t *pThis, smsg_t *pMsg, int sourceIndex, qqueue_egress_entry_t *pEntry);
+rsRetVal qqueueEgressReserve(qqueue_t *pThis, qqueue_egress_entry_t *pEntry, int tryOnly);
+void qqueueEgressPublish(qqueue_t *pThis, qqueue_egress_entry_t *pEntries, size_t nEntries);
+int qqueueSupportsReservedEgress(const qqueue_t *pThis);
 rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);

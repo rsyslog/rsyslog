@@ -1753,7 +1753,9 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     tellModulesCheckConfig();
     CHKiRet(checkParserInstances());
     CHKiRet(validateConf(loadConf));
+    CHKiRet(rulesetValidateQueues(loadConf));
     CHKiRet(loadMainQueue());
+    CHKiRet(rulesetValidateMainQueue(loadConf));
 
     if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;

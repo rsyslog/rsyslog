@@ -56,6 +56,26 @@ DEFobjCurrIf(glbl)
 
     pthread_key_t thrd_wti_key;
 
+/* Testbench-only, process-local one-shot allocator fault. Ordinary builds do
+ * not carry the branch or shared state. */
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+static pthread_mutex_t egressTestFaultMut = PTHREAD_MUTEX_INITIALIZER;
+static int egressTestFaultConsumed;
+
+static int egressTestAllocFault(const char *const point) {
+    const char *const requested = getenv("RSYSLOG_TEST_EGRESS_ALLOC_FAIL");
+    if (requested == NULL || strcmp(requested, point)) return 0;
+    pthread_mutex_lock(&egressTestFaultMut);
+    const int inject = !egressTestFaultConsumed;
+    egressTestFaultConsumed = 1;
+    pthread_mutex_unlock(&egressTestFaultMut);
+    DBGPRINTF("reserved egress test allocation fault point=%s inject=%d\n", point, inject);
+    return inject;
+}
+#else
+    #define egressTestAllocFault(point) 0
+#endif
+
 
 /* methods */
 
@@ -264,6 +284,120 @@ finalize_it:
     RETiRet;
 }
 
+void wtiEgressBegin(wti_t *const pThis, const rsconf_t *const batchConfig, const int enabled) {
+    assert(pThis->egress.state == EGRESS_EMPTY);
+    pThis->egress.sourceIndex = -1;
+    pThis->egress.enabled = enabled;
+    pThis->egress.batchConfig = batchConfig;
+    pThis->egress.error = RS_RET_OK;
+    pThis->egress.state = enabled ? EGRESS_EXECUTING : EGRESS_EMPTY;
+}
+
+static void wtiEgressPublishBucket(egress_bucket_t *const bucket) {
+    const size_t nStaged = bucket->nEntries - bucket->nPublished;
+    if (nStaged == 0) return;
+    qqueueEgressPublish(bucket->pQueue, bucket->entries + bucket->nPublished, nStaged);
+    bucket->nPublished = bucket->nEntries;
+}
+
+rsRetVal wtiEgressStage(wti_t *const pThis, qqueue_t *const pQueue, smsg_t *const pMsg) {
+    egress_bucket_t *bucket = NULL;
+    qqueue_egress_entry_t prepared = {0};
+    int preparedOwned = 0;
+    int cancelState;
+    DEFiRet;
+
+    assert(pThis->egress.state == EGRESS_EXECUTING);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+    /* Ownership transfers at entry. Until reserve() either installs or
+     * destroys it, prepared.pMsg is the unique cleanup handle. */
+    prepared.pMsg = pMsg;
+    for (size_t i = 0; i < pThis->egress.nBuckets; ++i) {
+        if (pThis->egress.buckets[i].pQueue == pQueue) bucket = &pThis->egress.buckets[i];
+    }
+    if (bucket == NULL) {
+        if (pThis->egress.nBuckets == pThis->egress.nAllocated) {
+            if (egressTestAllocFault("bucket")) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            if (pThis->egress.nAllocated > SIZE_MAX / 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            const size_t n = pThis->egress.nAllocated == 0 ? 4 : pThis->egress.nAllocated * 2;
+            if (n > SIZE_MAX / sizeof(egress_bucket_t)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            egress_bucket_t *const buckets = realloc(pThis->egress.buckets, n * sizeof(egress_bucket_t));
+            CHKmalloc(buckets);
+            pThis->egress.buckets = buckets;
+            memset(pThis->egress.buckets + pThis->egress.nAllocated, 0,
+                   (n - pThis->egress.nAllocated) * sizeof(egress_bucket_t));
+            pThis->egress.nAllocated = n;
+        }
+        bucket = &pThis->egress.buckets[pThis->egress.nBuckets++];
+        bucket->pQueue = pQueue;
+    }
+    if (bucket->nEntries == bucket->nAllocated) {
+        if (egressTestAllocFault("entry")) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        if (bucket->nAllocated > SIZE_MAX / 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        const size_t n = bucket->nAllocated == 0 ? 16 : bucket->nAllocated * 2;
+        if (n > SIZE_MAX / sizeof(qqueue_egress_entry_t)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        qqueue_egress_entry_t *const entries = realloc(bucket->entries, n * sizeof(qqueue_egress_entry_t));
+        CHKmalloc(entries);
+        bucket->entries = entries;
+        bucket->nAllocated = n;
+    }
+    if (egressTestAllocFault("prepare")) {
+        prepared.pMsg = pMsg;
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    iRet = qqueueEgressPrepare(pQueue, pMsg, pThis->egress.sourceIndex, &prepared);
+    if (iRet != RS_RET_OK) FINALIZE;
+    preparedOwned = 1;
+    iRet = qqueueEgressReserve(pQueue, &prepared, 1);
+    if (iRet == RS_RET_RETRY) {
+        /* Slow path: expose every reservation held by this WTI before any
+         * capacity wait. Buckets are visited in encounter order and each
+         * publication releases its target lock before the next is acquired. */
+        for (size_t i = 0; i < pThis->egress.nBuckets; ++i) wtiEgressPublishBucket(&pThis->egress.buckets[i]);
+        iRet = qqueueEgressReserve(pQueue, &prepared, 0);
+    }
+    if (iRet == RS_RET_OK) bucket->entries[bucket->nEntries++] = prepared;
+    if (iRet == RS_RET_QUEUE_FULL || iRet == RS_RET_FORCE_TERM) iRet = RS_RET_OK;
+
+finalize_it:
+    if (iRet != RS_RET_OK) pThis->egress.error = iRet;
+    if (iRet != RS_RET_OK && !preparedOwned) {
+        if (prepared.pMsg != NULL) msgDestruct(&prepared.pMsg);
+        free(prepared.pLinkedListEntry);
+    }
+    pthread_setcancelstate(cancelState, NULL);
+    RETiRet;
+}
+
+void wtiEgressPublish(wti_t *const pThis) {
+    int cancelState;
+    if (pThis->egress.state != EGRESS_EXECUTING) return;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+    pThis->egress.state = EGRESS_PUBLISHING;
+    for (size_t i = 0; i < pThis->egress.nBuckets; ++i) {
+        egress_bucket_t *const bucket = &pThis->egress.buckets[i];
+        wtiEgressPublishBucket(bucket);
+    }
+    pThis->egress.state = EGRESS_PUBLISHED;
+    pthread_setcancelstate(cancelState, NULL);
+}
+
+void wtiEgressCleanup(wti_t *const pThis) {
+    if (pThis->egress.state == EGRESS_EXECUTING) wtiEgressPublish(pThis);
+    assert(pThis->egress.state == EGRESS_PUBLISHED || pThis->egress.state == EGRESS_EMPTY);
+    for (size_t i = 0; i < pThis->egress.nBuckets; ++i) {
+        pThis->egress.buckets[i].nEntries = 0;
+        pThis->egress.buckets[i].nPublished = 0;
+        pThis->egress.buckets[i].pQueue = NULL;
+    }
+    pThis->egress.nBuckets = 0;
+    pThis->egress.state = EGRESS_EMPTY;
+    pThis->egress.sourceIndex = -1;
+    pThis->egress.enabled = 0;
+    pThis->egress.batchConfig = NULL;
+    pThis->egress.error = RS_RET_OK;
+}
+
 
 /* Destructor */
 BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODESTART macros! */
@@ -277,6 +411,9 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
         }
     }
     /* actual destruction */
+    assert(pThis->egress.state == EGRESS_EMPTY);
+    for (size_t i = 0; i < pThis->egress.nAllocated; ++i) free(pThis->egress.buckets[i].entries);
+    free(pThis->egress.buckets);
     batchFree(&pThis->batch);
     free(pThis->actWrkrInfo);
     pthread_cond_destroy(&pThis->pcondBusy);
@@ -340,6 +477,7 @@ static void wtiWorkerCancelCleanup(void *arg) {
     ISOBJ_TYPE_assert(pWtp, wtp);
 
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+    wtiEgressCleanup(pThis);
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }

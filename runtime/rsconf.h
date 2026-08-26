@@ -291,6 +291,8 @@ struct rsconf_s {
         timezones_t timezones;
         qqueue_t *pMsgQueue; /* the main message queue */
         ratelimit_cfgs_t ratelimit_cfgs;
+        /* Append-only: rsconf_s is visible to loadable modules and is allocated by core. */
+        int executionEngine; /* 0: legacy, 1: experimental reserved-batch queued ruleset calls */
 };
 
 

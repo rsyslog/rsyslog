@@ -456,13 +456,18 @@ generate_conf() {
 			RSTB_NET_IPPROTO="ipv4-only"
 		fi
 		local ipproto_line=""
+		local execution_engine_line=""
 		if [ -n "$RSTB_NET_IPPROTO" ]; then
 			ipproto_line="  net.ipprotocol: \"${RSTB_NET_IPPROTO}\""
+		fi
+		if [ -n "$RSTB_EXECUTION_ENGINE" ]; then
+			execution_engine_line="  executionEngine: \"${RSTB_EXECUTION_ENGINE}\""
 		fi
 		{
 			printf 'version: 2\n\nglobal:\n'
 			printf '  debug.abortOnProgramError: "on"\n'
 			[ -n "$ipproto_line" ] && printf '%s\n' "$ipproto_line"
+			[ -n "$execution_engine_line" ] && printf '%s\n' "$execution_engine_line"
 			printf '\ntestbench_modules:\n'
 			printf '  - load: "../plugins/imdiag/.libs/imdiag"\n'
 			printf '    listenportfilename: "%s.imdiag%s.port"\n' "$RSYSLOG_DYNNAME" "$1"

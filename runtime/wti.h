@@ -67,6 +67,27 @@ typedef struct actWrkrInfo {
     } p; /* short name for "parameters" */
 } actWrkrInfo_t;
 
+typedef struct egress_bucket_s {
+    qqueue_t *pQueue;
+    qqueue_egress_entry_t *entries;
+    size_t nEntries;
+    size_t nPublished;
+    size_t nAllocated;
+} egress_bucket_t;
+
+typedef enum { EGRESS_EMPTY = 0, EGRESS_EXECUTING, EGRESS_PUBLISHING, EGRESS_PUBLISHED } egress_state_t;
+
+typedef struct egress_ledger_s {
+    egress_bucket_t *buckets;
+    size_t nBuckets;
+    size_t nAllocated;
+    int sourceIndex;
+    int enabled;
+    const rsconf_t *batchConfig;
+    rsRetVal error;
+    egress_state_t state;
+} egress_ledger_t;
+
 /* the worker thread instance class */
 struct wti_s {
     BEGINobjInstance
@@ -94,6 +115,7 @@ struct wti_s {
                                     */
             uint16_t rulesetCallDepth; /* synchronous ruleset call nesting depth */
         } execState; /* state for the execution engine */
+        egress_ledger_t egress;
 };
 
 
@@ -155,4 +177,8 @@ static inline void __attribute__((unused)) wtiResetExecState(wti_t *const pWti, 
 
 
 rsRetVal wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams);
+void wtiEgressBegin(wti_t *pThis, const rsconf_t *batchConfig, int enabled);
+rsRetVal wtiEgressStage(wti_t *pThis, qqueue_t *pQueue, smsg_t *pMsg);
+void wtiEgressPublish(wti_t *pThis);
+void wtiEgressCleanup(wti_t *pThis);
 #endif /* #ifndef WTI_H_INCLUDED */

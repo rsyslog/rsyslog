@@ -204,6 +204,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"debug.whitelist", eCmdHdlrBinary, 0},
     {"libcapng.default", eCmdHdlrBinary, 0},
     {"libcapng.enable", eCmdHdlrBinary, 0},
+    {"executionengine", eCmdHdlrGetWord, 0},
 };
 static struct cnfparamblk paramblk = {CNFPARAMBLK_VERSION, sizeof(cnfparamdescr) / sizeof(struct cnfparamdescr),
                                       cnfparamdescr};
@@ -1171,6 +1172,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     loadConf->globals.oversizeMsgErrorFile = NULL;
     loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
     loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    loadConf->executionEngine = 0;
     free(loadConf->globals.pszWorkDir);
     loadConf->globals.pszWorkDir = NULL;
     free((void *)loadConf->globals.operatingStateFile);
@@ -1406,6 +1408,18 @@ rsRetVal glblDoneLoadCnf(void) {
             const int val = (int)cnfparamvals[i].val.d.n;
             fjson_global_do_case_sensitive_comparison(val);
             DBGPRINTF("global/config: set case sensitive variables to %d\n", val);
+        } else if (!strcmp(paramblk.descr[i].name, "executionengine")) {
+            const char *const engine = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+            if (engine == NULL) {
+                parser_errmsg("out of memory processing global parameter executionEngine");
+            } else if (!strcmp(engine, "legacy")) {
+                loadConf->executionEngine = 0;
+            } else if (!strcmp(engine, "reservedBatch")) {
+                loadConf->executionEngine = 1;
+            } else {
+                parser_errmsg("invalid global executionEngine '%s'; expected 'legacy' or 'reservedBatch'", engine);
+            }
+            free((void *)engine);
         } else if (!strcmp(paramblk.descr[i].name, "localhostname")) {
             free(LocalHostNameOverride);
             LocalHostNameOverride = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);

@@ -100,6 +100,8 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
+rsRetVal rulesetValidateQueues(rsconf_t *conf);
+rsRetVal rulesetValidateMainQueue(rsconf_t *conf);
 rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */

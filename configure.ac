@@ -2191,6 +2191,25 @@ AC_ARG_ENABLE(testbench,
         [enable_testbench=no]
 )
 
+# Internal reserved-egress fault/probe hooks. These are deliberately separate
+# from imdiag so ordinary diagnostic and benchmark builds carry no hook code.
+AC_ARG_ENABLE(reserved-egress-test-hooks,
+        [AS_HELP_STRING([--enable-reserved-egress-test-hooks],
+         [reserved-egress internal test hooks enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_reserved_egress_test_hooks="yes" ;;
+          no) enable_reserved_egress_test_hooks="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-reserved-egress-test-hooks) ;;
+         esac],
+        [enable_reserved_egress_test_hooks=no]
+)
+if test "x$enable_reserved_egress_test_hooks" = "xyes"; then
+	AC_DEFINE([ENABLE_RESERVED_EGRESS_TEST_HOOKS], [1],
+	          [Enable internal reserved-egress test fault and selector hooks])
+fi
+AM_CONDITIONAL(ENABLE_RESERVED_EGRESS_TEST_HOOKS,
+               test x$enable_reserved_egress_test_hooks = xyes)
+
 # Add a capability to turn off libfaketime tests. Unfortunately, libfaketime
 # becomes more and more problematic in newer versions and causes aborts
 # on some platforms. This provides the ability to turn it off. In the
