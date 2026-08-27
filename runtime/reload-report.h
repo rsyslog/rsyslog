@@ -7,34 +7,10 @@
 #ifndef RELOAD_REPORT_H_INCLUDED
 #define RELOAD_REPORT_H_INCLUDED 1
 
-#include "modules.h"
+#include "reload-normalized-graph.h"
 
-#define RS_RELOAD_NORMALIZED_GRAPH_V1 1
-#define RS_RELOAD_NORMALIZED_NODE_V1 1
 #define RS_RELOAD_REPORT_ENTRY_V1 1
 #define RS_RELOAD_REPORT_V1 1
-
-/* Append-only stable report object kinds. */
-typedef enum eRsReloadObjectKind_ {
-    RS_RELOAD_OBJ_GLOBAL,
-    RS_RELOAD_OBJ_MODULE,
-    RS_RELOAD_OBJ_INPUT,
-    RS_RELOAD_OBJ_RULESET,
-    RS_RELOAD_OBJ_TEMPLATE,
-    RS_RELOAD_OBJ_ACTION,
-    RS_RELOAD_OBJ_PARSER,
-    RS_RELOAD_OBJ_MAIN_QUEUE,
-    RS_RELOAD_OBJ_TIMEZONE,
-    RS_RELOAD_OBJ_LOOKUP_TABLE,
-    RS_RELOAD_OBJ_DYN_STATS,
-    RS_RELOAD_OBJ_PERCTILE_STATS,
-    RS_RELOAD_OBJ_RATELIMIT,
-    RS_RELOAD_OBJ_PROPERTY,
-    RS_RELOAD_OBJ_CONSTANT,
-    RS_RELOAD_OBJ_LEGACY_OPAQUE,
-    RS_RELOAD_OBJ_OPAQUE,
-    RS_RELOAD_OBJ_COUNT
-} rsReloadObjectKind_t;
 
 /* Append-only stable diff categories. */
 typedef enum eRsReloadDiffKind_ {
@@ -67,25 +43,6 @@ typedef enum eRsReloadReportReason_ {
     RS_RELOAD_REASON_INVALID_NODE,
     RS_RELOAD_REASON_DUPLICATE_IDENTITY
 } rsReloadReportReason_t;
-
-typedef struct rsReloadNormalizedNodeV1_s {
-    unsigned version;
-    size_t structSize;
-    rsReloadObjectKind_t objectKind;
-    const char *identity; /* normalized identity supplied by the graph producer */
-    const char *fingerprint; /* normalized content fingerprint supplied by the producer */
-    const modInfo_t *pModule; /* optional module owner */
-    const void *pModuleCnf; /* optional opaque module configuration */
-} rsReloadNormalizedNodeV1_t;
-
-typedef rsRetVal (*rsReloadGraphVisitorV1_t)(const rsReloadNormalizedNodeV1_t *node, void *context);
-
-typedef struct rsReloadNormalizedGraphV1_s {
-    unsigned version;
-    size_t structSize;
-    void *context;
-    rsRetVal (*enumerate)(void *context, rsReloadGraphVisitorV1_t visitor, void *visitorContext);
-} rsReloadNormalizedGraphV1_t;
 
 /* The V1 entry and report layouts are frozen; extensions require V2 types. */
 typedef struct rsReloadReportEntryV1_s {
