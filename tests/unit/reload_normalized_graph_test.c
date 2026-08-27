@@ -51,10 +51,11 @@ int main(void) {
     rsReloadNormalizedGraphV1_t oldGraph;
     rsReloadNormalizedGraphV1_t newGraph;
     rsReloadReportV1_t *report = NULL;
-    observedNodes_t observed = {0};
+    observedNodes_t observed;
     char identity[16] = "z-rule";
     char fingerprint[16] = "fp-z";
 
+    memset(&observed, 0, sizeof(observed));
     CHECK(rsReloadNormalizedGraphBuilderV1Construct(&oldBuilder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1Construct(&oldBuilder) == RS_RET_PARAM_ERROR);
     CHECK(rsReloadNormalizedGraphBuilderV1Construct(&newBuilder) == RS_RET_OK);
