@@ -155,9 +155,7 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
     }
 }
 
-void perctileBucketsDestruct(void) {
-    perctile_buckets_t *bkts = &runConf->perctile_buckets;
-
+void perctileBucketsDestruct(perctile_buckets_t *bkts) {
     if (bkts->initialized) {
         /* Global counters point into bucket storage, so detach the object
          * before buckets start releasing that storage. */
@@ -180,6 +178,7 @@ void perctileBucketsDestruct(void) {
         }
         // destroy any global stats we keep specifically for this.
         pthread_rwlock_destroy(&bkts->lock);
+        bkts->initialized = 0;
     }
 }
 

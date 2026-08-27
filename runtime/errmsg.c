@@ -192,6 +192,7 @@ int hadErrMsgs(void) {
 static void doLogMsg(const int iErrno, const int iErrCode, const int severity, const char *msg) {
     char buf[2048];
     char errStr[1024];
+    rsconf_t *const activeOrLoadConf = (runConf != NULL) ? runConf : loadConf;
 
     dbgprintf("Called LogMsg, msg: %s\n", msg);
     osf_write(OSF_TAG_MSG, msg);
@@ -214,8 +215,9 @@ static void doLogMsg(const int iErrno, const int iErrCode, const int severity, c
     buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
     errno = 0;
 
+    const int maxLine = glblGetMaxLine(activeOrLoadConf);
     const int msglen = (int)strlen(buf);
-    if (msglen > glblGetMaxLine(ourConf)) {
+    if (msglen > maxLine) {
         /* in extreme cases, our error messages may be longer than the configured
          * max message size. If so, we just truncate without further indication, as
          * anything else would probably lead to a death loop on error messages.
@@ -223,7 +225,7 @@ static void doLogMsg(const int iErrno, const int iErrCode, const int severity, c
          * much value in supporting extremely short max message sizes - we assume
          * it's just a testbench thing. -- rgerhards, 2018-05-11
          */
-        buf[glblGetMaxLine(ourConf)] = '\0'; /* space must be available! */
+        buf[maxLine] = '\0'; /* space must be available! */
     }
 
     glblErrLogger(severity, iErrCode, (uchar *)buf);

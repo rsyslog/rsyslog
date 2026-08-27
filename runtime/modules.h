@@ -92,6 +92,102 @@ struct dlhandle_s {
 /* should this module be kept linked? */
 typedef enum eModKeepType_ { eMOD_NOKEEP, eMOD_KEEP } eModKeepType_t;
 
+/**
+ * @brief Capability for one old/new configuration pair; numeric values are ABI.
+ * Reload capability declared by a module for a particular old/new
+ * configuration pair.  A module must never return a less restrictive class
+ * unless it can preserve the stated lifecycle guarantee.
+ *
+ * The enum deliberately describes a capability, not a request to reload. No
+ * current caller acts on it; a future configuration-diff manager may use it
+ * to decide whether a running process can apply a change.
+ */
+typedef enum eModReloadCapability_ {
+    eMOD_RELOAD_RESTART_REQUIRED = 0, /**< Conservative default; process restart needed. */
+    eMOD_RELOAD_LIVE_SWAP = 1, /**< Switch existing users to the replacement. */
+    eMOD_RELOAD_NEW_SESSIONS = 2, /**< Existing users retain the old configuration. */
+    eMOD_RELOAD_DRAIN_REPLACE = 3 /**< Drain old users before using the replacement. */
+} eModReloadCapability_t;
+
+/**
+ * @brief Optional version-1 module reload lifecycle and ownership contract.
+ * Optional module reload lifecycle, version 1.  The configuration pointers
+ * are core-owned, opaque module configuration objects; they are const because
+ * classification and preparation must not mutate either configuration.
+ * pReloadState is module-owned
+ * state allocated by reloadPrepare and consumed by reloadAbort, or by
+ * reloadCommit followed by reloadRetire.
+ *
+ * reloadCommit must be infallible: it has no return value and may not leave
+ * the module in a state that requires rollback.  Any fallible work belongs in
+ * reloadPrepare, which returns an rsRetVal and leaves pReloadState NULL on
+ * failure.  reloadRetire reports failure so a future controller can retain
+ * state and retry retirement.  The hooks are intentionally optional so that
+ * modules built for the established module interface remain supported.
+ */
+/** @brief Classify borrowed, immutable configurations without external effects.
+ * @param pOldCnf Core-owned old module configuration.
+ * @param pNewCnf Core-owned candidate module configuration.
+ * @param pCapability Required output, written on RS_RET_OK.
+ * @return RS_RET_OK on classification; any error requires restart.
+ */
+typedef rsRetVal (*modReloadClassifyV1_t)(const void *pOldCnf,
+                                          const void *pNewCnf,
+                                          eModReloadCapability_t *pCapability);
+/** @brief Prepare private resources without changing either borrowed configuration.
+ * @param pOldCnf Core-owned old module configuration.
+ * @param pNewCnf Core-owned candidate module configuration.
+ * @param pReloadState Required output for module-owned transaction state.
+ * @return RS_RET_OK when prepared; on error unwind all acquisitions and set
+ * *pReloadState to NULL. Successful state is consumed by abort, or commit
+ * followed by successful retire. The controller must keep configurations alive
+ * for as long as the state borrows them.
+ */
+typedef rsRetVal (*modReloadPrepareV1_t)(const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+/** @brief Infallibly publish successfully prepared state; retain it for retire.
+ * @param pReloadState State returned by successful prepare, not yet committed.
+ */
+typedef void (*modReloadCommitV1_t)(void *pReloadState);
+/** @brief Unwind and consume successfully prepared, uncommitted state.
+ * @param pReloadState State returned by successful prepare. Never call after
+ * commit or failed prepare, and never release resources owned by the active
+ * configuration. NULL is valid only if successful prepare returned NULL.
+ */
+typedef void (*modReloadAbortV1_t)(void *pReloadState);
+/** @brief Retire committed state after all old consumers have quiesced.
+ * @param pReloadState Committed module-owned transaction state.
+ * @return RS_RET_OK after consuming state; on failure retain valid state so
+ * the controller can retry. Never reactivate the old configuration.
+ */
+typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
+/** @brief Explicit guarantees required before invoking the live lifecycle. */
+typedef enum eModReloadCapabilityFlags_ {
+    eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0, /**< Validation has no external effects. */
+    eMOD_RELOAD_CAP_PREPARE = 1U << 1, /**< Fallible preparation can be unwound. */
+    eMOD_RELOAD_CAP_REUSE = 1U << 2, /**< Active reused resources retain their owner. */
+    eMOD_RELOAD_CAP_COMMIT = 1U << 3, /**< Commit cannot fail. */
+    eMOD_RELOAD_CAP_RETIRE = 1U << 4 /**< Old resources survive until quiescence. */
+} eModReloadCapabilityFlags_t;
+/** @brief Module-supplied optional interface, copied into the core module record. */
+typedef struct modReloadInterfaceV1_s {
+    unsigned version; /**< Must equal eMOD_RELOAD_INTERFACE_V1. */
+    size_t structSize; /**< Supplied structure size, at least the v1 size. */
+    unsigned capabilityFlags; /**< Bitset of eModReloadCapabilityFlags_t. */
+    modReloadClassifyV1_t classify; /**< Optional side-effect-free classifier. */
+    modReloadPrepareV1_t prepare; /**< Private preparation callback. */
+    modReloadCommitV1_t commit; /**< Infallible publication callback. */
+    modReloadAbortV1_t abort; /**< Uncommitted-state cleanup callback. */
+    modReloadRetireV1_t retire; /**< Quiescent committed-state cleanup callback. */
+} modReloadInterfaceV1_t;
+/** @brief Version identifier for the optional reload interface. */
+#define eMOD_RELOAD_INTERFACE_V1 1
+/** @brief Populate the core-owned interface output without transferring resources.
+ * @param pInterface Writable core-owned v1 storage with version and size preset.
+ * @return RS_RET_OK when populated; any error aborts module loading. Legacy
+ * modules remain supported by not exporting this optional entry point.
+ */
+typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
+
 struct modInfo_s {
     struct modInfo_s *pPrev; /* support for creating a double linked module list */
     struct modInfo_s *pNext; /* support for creating a linked module list */
@@ -169,7 +265,36 @@ struct modInfo_s {
     /* we add some home-grown support to track our users (and detect who does not free us). */
     modUsr_t *pModUsrRoot;
 #endif
+    /** Optional reload lifecycle; unavailable hooks mean restart required. */
+    modReloadInterfaceV1_t reloadV1;
 };
+
+/** @brief Test whether a module advertises every required v1 lifecycle hook.
+ * @param pMod Borrowed module record, or NULL for unsupported.
+ * @return True only for a valid interface, complete flags, and lifecycle hooks.
+ * A future diff manager must use this predicate before accepting any
+ * non-restart capability.  It also makes partially implemented optional
+ * interfaces conservative.
+ */
+sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
+/** @brief Check version and minimum size without invoking callbacks.
+ * @param pMod Borrowed module record; NULL is accepted.
+ * @return True for a supported v1 header, false otherwise.
+ */
+sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
+
+/** @brief Conservatively classify a change using borrowed immutable objects.
+ * @param pMod Borrowed module record, or NULL for unsupported.
+ * @param pOldCnf Core-owned old module configuration, passed to the classifier.
+ * @param pNewCnf Core-owned candidate configuration, passed to the classifier.
+ * @return Restart-required for unsupported, failed, or incomplete interfaces;
+ * otherwise the validated module capability. No ownership is transferred.
+ * Classify a module change without enabling reload.  Legacy modules and
+ * missing, failing, or invalid classifiers are deliberately classified as
+ * restart-required.  Callers that need the classifier's exact failure can
+ * invoke reloadV1.classify directly after this conservative preflight.
+ */
+eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
 
 
 /* interfaces */
