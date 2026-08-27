@@ -89,6 +89,10 @@ DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl)
 rsconf_t *loadConf = NULL; /* the config currently being loaded (no concurrent config load supported!) */
 static const char cfgModRefSrc[] = "cfgmodules";
 
+reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf) {
+    return cnf == NULL ? RELOAD_ON_HUP_OFF : cnf->globals.reloadOnHUP;
+}
+
 #ifdef HAVE_LIBSYSTEMD
 /* module readiness barrier: modules that need startup time call rsconfRegisterReadiness(),
  * then rsconfSignalReady() once initialised. When global(systemd.notifyReadyDelay="on")
@@ -124,10 +128,6 @@ static void initModulesReadyCond(void) {
 
 int rsconfShouldDelayReadyNotify(rsconf_t *cnf) {
     return cnf != NULL && cnf->globals.systemdNotifyReadyDelay;
-}
-
-reloadOnHUPMode_t rsconfGetReloadOnHUPMode(const rsconf_t *cnf) {
-    return cnf == NULL ? RELOAD_ON_HUP_OFF : cnf->globals.reloadOnHUP;
 }
 
 void rsconfRegisterReadiness(void) {
