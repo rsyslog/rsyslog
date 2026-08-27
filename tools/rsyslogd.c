@@ -68,6 +68,7 @@
 #include "srUtils.h"
 #include "rainerscript.h"
 #include "rsconf.h"
+#include "shadow_reload.h"
 #include "translate.h"
 #include "cfsysline.h"
 #include "datetime.h"
@@ -225,7 +226,8 @@ static volatile sig_atomic_t bFinished = 0; /* signal number requesting terminat
 const char *PidFile = NULL;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0; /* is this just a config verify run? */
-rsconf_t *ourConf = NULL; /* our config object */
+/* Legacy load-time compatibility pointer. New runtime paths use runConf. */
+rsconf_t *ourConf = NULL;
 int MarkInterval = 20 * 60; /* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar *)PATH_CONFFILE;
@@ -768,6 +770,8 @@ static rsRetVal rsyslogd_InitGlobalClasses(void) {
     CHKiRet(objUse(parser, CORE_COMPONENT));
     pErrObj = "rsconf";
     CHKiRet(objUse(rsconf, CORE_COMPONENT));
+    pErrObj = "shadow reload statistics";
+    CHKiRet(shadowReloadInit());
 
     /* initialize some dummy classes that are not part of the runtime */
     pErrObj = "action";
@@ -913,9 +917,10 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
     }
 
     /* create message queue */
-    CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType,
-                                 ourConf->globals.mainQ.iMainMsgQueueNumWorkers,
-                                 ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
+    assert(loadConf != NULL);
+    CHKiRet_Hdlr(qqueueConstruct(ppQueue, loadConf->globals.mainQ.MainMsgQueType,
+                                 loadConf->globals.mainQ.iMainMsgQueueNumWorkers,
+                                 loadConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
         /* no queue is fatal, we need to give up in that case... */
         LogError(0, iRet, "could not create (ruleset) main message queue");
     }
@@ -941,57 +946,58 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
                  iRet);                                                             \
     }
 
-        if (ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
+        if (loadConf->globals.mainQ.pszMainMsgQFName != NULL) {
             /* check if the queue file name is unique, else emit an error */
             for (qfn = queuefilenames; qfn != NULL; qfn = qfn->next) {
-                dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName);
-                if (!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
+                dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, loadConf->globals.mainQ.pszMainMsgQFName);
+                if (!ustrcmp(qfn->name, loadConf->globals.mainQ.pszMainMsgQFName)) {
                     snprintf((char *)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s", ++qfn_renamenum,
-                             ourConf->globals.mainQ.pszMainMsgQFName,
+                             loadConf->globals.mainQ.pszMainMsgQFName,
                              (queueName == NULL) ? "NONAME" : (char *)queueName);
                     qfname = ustrdup(qfrenamebuf);
                     LogError(0, NO_ERRCODE,
                              "Error: queue file name '%s' already in use "
                              " - using '%s' instead",
-                             ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+                             loadConf->globals.mainQ.pszMainMsgQFName, qfname);
                     break;
                 }
             }
-            if (qfname == NULL) qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+            if (qfname == NULL) qfname = ustrdup(loadConf->globals.mainQ.pszMainMsgQFName);
             qfn = malloc(sizeof(struct queuefilenames_s));
             qfn->name = qfname;
             qfn->next = queuefilenames;
             queuefilenames = qfn;
         }
 
-        setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", ourConf->globals.mainQ.iMainMsgQueMaxFileSize);
-        setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", ourConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
+        setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", loadConf->globals.mainQ.iMainMsgQueMaxFileSize);
+        setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", loadConf->globals.mainQ.iMainMsgQueMaxDiskSpace);
         setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize",
-                 ourConf->globals.mainQ.iMainMsgQueDeqBatchSize);
+                 loadConf->globals.mainQ.iMainMsgQueDeqBatchSize);
         setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", qfname);
         setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval",
-                 ourConf->globals.mainQ.iMainMsgQPersistUpdCnt);
+                 loadConf->globals.mainQ.iMainMsgQPersistUpdCnt);
         setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles",
-                 ourConf->globals.mainQ.bMainMsgQSyncQeueFiles);
-        setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", ourConf->globals.mainQ.iMainMsgQtoQShutdown);
+                 loadConf->globals.mainQ.bMainMsgQSyncQeueFiles);
+        setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", loadConf->globals.mainQ.iMainMsgQtoQShutdown);
         setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion",
-                 ourConf->globals.mainQ.iMainMsgQtoActShutdown);
+                 loadConf->globals.mainQ.iMainMsgQtoActShutdown);
         setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown",
-                 ourConf->globals.mainQ.iMainMsgQtoWrkShutdown);
-        setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", ourConf->globals.mainQ.iMainMsgQtoEnq);
-        setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", ourConf->globals.mainQ.iMainMsgQHighWtrMark);
-        setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", ourConf->globals.mainQ.iMainMsgQLowWtrMark);
-        setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", ourConf->globals.mainQ.iMainMsgQDiscardMark);
+                 loadConf->globals.mainQ.iMainMsgQtoWrkShutdown);
+        setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", loadConf->globals.mainQ.iMainMsgQtoEnq);
+        setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", loadConf->globals.mainQ.iMainMsgQHighWtrMark);
+        setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", loadConf->globals.mainQ.iMainMsgQLowWtrMark);
+        setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", loadConf->globals.mainQ.iMainMsgQDiscardMark);
         setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity",
-                 ourConf->globals.mainQ.iMainMsgQDiscardSeverity);
+                 loadConf->globals.mainQ.iMainMsgQDiscardSeverity);
         setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages",
-                 ourConf->globals.mainQ.iMainMsgQWrkMinMsgs);
+                 loadConf->globals.mainQ.iMainMsgQWrkMinMsgs);
         setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown",
-                 ourConf->globals.mainQ.bMainMsgQSaveOnShutdown);
-        setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", ourConf->globals.mainQ.iMainMsgQDeqSlowdown);
+                 loadConf->globals.mainQ.bMainMsgQSaveOnShutdown);
+        setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", loadConf->globals.mainQ.iMainMsgQDeqSlowdown);
         setQPROP(qqueueSetiDeqtWinFromHr, "$MainMsgQueueDequeueTimeBegin",
-                 ourConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
-        setQPROP(qqueueSetiDeqtWinToHr, "$MainMsgQueueDequeueTimeEnd", ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
+                 loadConf->globals.mainQ.iMainMsgQueueDeqtWinFromHr);
+        setQPROP(qqueueSetiDeqtWinToHr, "$MainMsgQueueDequeueTimeEnd",
+                 loadConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
 
 #undef setQPROP
 #undef setQPROPstr
@@ -1135,6 +1141,7 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
     size_t lenMsg;
     unsigned i;
     char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
+    rsconf_t *const activeOrLoadConf = (runConf != NULL) ? runConf : loadConf;
     DEFiRet;
 
     /* we first do a path the remove control characters that may have accidently
@@ -1161,21 +1168,24 @@ rsRetVal logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg
      * permits us to process unmodified config files which otherwise contain a
      * supressor statement.
      */
-    int emit_to_stderr = (ourConf == NULL) ? 1 : (ourConf->globals.bErrMsgToStderr || ourConf->globals.bAllMsgToStderr);
+    int emit_to_stderr = (activeOrLoadConf == NULL)
+                             ? 1
+                             : (activeOrLoadConf->globals.bErrMsgToStderr || activeOrLoadConf->globals.bAllMsgToStderr);
     int emit_supress_msg = 0;
     if (Debug == DEBUG_FULL || !doFork) {
         emit_to_stderr = 1;
     }
-    if (ourConf != NULL && ourConf->globals.maxErrMsgToStderr != -1) {
-        if (emit_to_stderr && ourConf->globals.maxErrMsgToStderr != -1 && ourConf->globals.maxErrMsgToStderr) {
-            --ourConf->globals.maxErrMsgToStderr;
-            if (ourConf->globals.maxErrMsgToStderr == 0) emit_supress_msg = 1;
+    if (activeOrLoadConf != NULL && activeOrLoadConf->globals.maxErrMsgToStderr != -1) {
+        if (emit_to_stderr && activeOrLoadConf->globals.maxErrMsgToStderr != -1 &&
+            activeOrLoadConf->globals.maxErrMsgToStderr) {
+            --activeOrLoadConf->globals.maxErrMsgToStderr;
+            if (activeOrLoadConf->globals.maxErrMsgToStderr == 0) emit_supress_msg = 1;
         } else {
             emit_to_stderr = 0;
         }
     }
     if (emit_to_stderr || iConfigVerify) {
-        if ((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
+        if ((activeOrLoadConf != NULL && activeOrLoadConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR ||
             (iConfigVerify && pri2sev(pri) <= LOG_WARNING))
             fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char *)msg : bufModMsg);
     }
@@ -1419,6 +1429,7 @@ static void hdlr_enable(int sig, void (*hdlr)()) {
 
 static void hdlr_sighup(void) {
     PREFER_STORE_INT(&bHadHUP, 1);
+    shadowReloadRequestFromSignal();
     /* at least on FreeBSD we seem not to necessarily awake the main thread.
      * So let's do it explicitely.
      */
@@ -1755,7 +1766,7 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
-    localRet = rsconf.Load(&ourConf, ConfFile);
+    localRet = rsconf.Load(&loadConf, ConfFile);
 
 #ifdef ENABLE_LIBCAPNG
     if (loadConf->globals.bCapabilityDropEnabled) {
@@ -1940,7 +1951,9 @@ static void initAll(int argc, char **argv) {
         CHKiRet(writePidFile());
     }
 
-    CHKiRet(rsconf.Activate(ourConf));
+    CHKiRet(rsconf.Activate(loadConf));
+
+    shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf));
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -2099,7 +2112,7 @@ static void doHUP(void) {
     char buf[512];
 
     DBGPRINTF("doHUP: doing modules\n");
-    if (ourConf != NULL && ourConf->globals.bLogStatusMsgs) {
+    if (runConf != NULL && runConf->globals.bLogStatusMsgs) {
         snprintf(buf, sizeof(buf),
                  "[origin software=\"rsyslogd\" "
                  "swVersion=\"" VERSION "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
@@ -2109,7 +2122,8 @@ static void doHUP(void) {
     }
 
     queryLocalHostname(runConf); /* re-read our name */
-    ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+    assert(runConf != NULL);
+    ruleset.IterateAllActions(runConf, doHUPActions, NULL);
     DBGPRINTF("doHUP: doing modules\n");
     modDoHUP();
     DBGPRINTF("doHUP: doing lookup tables\n");
@@ -2118,6 +2132,9 @@ static void doHUP(void) {
     ratelimitDoHUP();
     DBGPRINTF("doHUP: doing errmsgs\n");
     errmsgDoHUP();
+    /* Keep historic HUP hooks above unconditional for log rotation and module
+     * refresh. The Release B coordinator only accounts for the request. */
+    shadowReloadProcess();
 }
 
 /**
@@ -2390,8 +2407,14 @@ static void mainloop(void) {
             reapChild();
         }
 
+        /* A TERM received with (or before) HUP wins: never begin another HUP
+         * cycle while shutdown is pending. This is also before the reload
+         * manager, which never restarts or activates anything in Release B. */
+        if (bFinished) break;
+
         if (PREFER_LOAD_INT(&bHadHUP)) {
             PREFER_STORE_INT(&bHadHUP, 0);
+            shadowReloadBeginRequest();
             PREFER_STORE_INT(&bHUPInProgress, 1);
             doHUP();
             PREFER_STORE_INT(&bHUPInProgress, 0);
@@ -2546,6 +2569,7 @@ static void deinitAll(void) {
     glbl.SetGlobalInputTermination();
 
     thrdTerminateAll();
+    shadowReloadExit();
 
     /* and THEN send the termination log message (see long comment above) */
     if (bFinished && runConf->globals.bLogStatusMsgs) {

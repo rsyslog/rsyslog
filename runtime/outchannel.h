@@ -33,6 +33,6 @@ struct outchannel {
 struct outchannel *ochConstruct(void);
 struct outchannel *ochAddLine(char *pName, unsigned char **pRestOfConfLine);
 struct outchannel *ochFind(char *pName, int iLenName);
-void ochDeleteAll(void);
+void ochDeleteAll(rsconf_t *cnf);
 void ochPrintList(rsconf_t *cnf);
 #endif /* #ifdef OUTCHANNEL_H */

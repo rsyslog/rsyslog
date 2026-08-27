@@ -147,10 +147,10 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #define glblSetOurPid(pid) \
     { glbl_ourpid = (pid); }
 
-void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
-void glblDestructMainqCnfObj(void);
+void glblDestructMainqCnfObj(rsconf_t *cnf);
+void glblCnfDestruct(rsconf_t *cnf);
 rsRetVal glblDoneLoadCnf(void);
 const uchar *glblGetWorkDirRaw(rsconf_t *cnf);
 int GetGnuTLSLoglevel(rsconf_t *cnf);

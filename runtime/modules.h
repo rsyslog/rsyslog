@@ -92,6 +92,64 @@ struct dlhandle_s {
 /* should this module be kept linked? */
 typedef enum eModKeepType_ { eMOD_NOKEEP, eMOD_KEEP } eModKeepType_t;
 
+/*
+ * Reload capability declared by a module for a particular old/new
+ * configuration pair.  A module must never return a less restrictive class
+ * unless it can preserve the stated lifecycle guarantee.
+ *
+ * The enum deliberately describes a capability, not a request to reload. No
+ * current caller acts on it; a future configuration-diff manager may use it
+ * to decide whether a running process can apply a change.
+ */
+typedef enum eModReloadCapability_ {
+    eMOD_RELOAD_LIVE_SWAP, /* switch existing users to the replacement */
+    eMOD_RELOAD_NEW_SESSIONS, /* existing users retain the old configuration */
+    eMOD_RELOAD_DRAIN_REPLACE, /* drain old users before using the replacement */
+    eMOD_RELOAD_RESTART_REQUIRED /* the conservative default */
+} eModReloadCapability_t;
+
+/*
+ * Optional module reload lifecycle, version 1.  The configuration pointers
+ * are core-owned, opaque module configuration objects; they are const because
+ * classification and preparation must not mutate either configuration.
+ * pReloadState is module-owned
+ * state allocated by reloadPrepare and consumed by reloadAbort, or by
+ * reloadCommit followed by reloadRetire.
+ *
+ * reloadCommit must be infallible: it has no return value and may not leave
+ * the module in a state that requires rollback.  Any fallible work belongs in
+ * reloadPrepare, which returns an rsRetVal and leaves pReloadState NULL on
+ * failure.  reloadRetire reports failure so a future controller can retain
+ * state and retry retirement.  The hooks are intentionally optional so that
+ * modules built for the established module interface remain supported.
+ */
+typedef rsRetVal (*modReloadClassifyV1_t)(const void *pOldCnf,
+                                          const void *pNewCnf,
+                                          eModReloadCapability_t *pCapability);
+typedef rsRetVal (*modReloadPrepareV1_t)(const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+typedef void (*modReloadCommitV1_t)(void *pReloadState);
+typedef void (*modReloadAbortV1_t)(void *pReloadState);
+typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
+typedef enum eModReloadCapabilityFlags_ {
+    eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0,
+    eMOD_RELOAD_CAP_PREPARE = 1U << 1,
+    eMOD_RELOAD_CAP_REUSE = 1U << 2,
+    eMOD_RELOAD_CAP_COMMIT = 1U << 3,
+    eMOD_RELOAD_CAP_RETIRE = 1U << 4
+} eModReloadCapabilityFlags_t;
+typedef struct modReloadInterfaceV1_s {
+    unsigned version;
+    size_t structSize;
+    unsigned capabilityFlags;
+    modReloadClassifyV1_t classify;
+    modReloadPrepareV1_t prepare;
+    modReloadCommitV1_t commit;
+    modReloadAbortV1_t abort;
+    modReloadRetireV1_t retire;
+} modReloadInterfaceV1_t;
+#define eMOD_RELOAD_INTERFACE_V1 1
+typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
+
 struct modInfo_s {
     struct modInfo_s *pPrev; /* support for creating a double linked module list */
     struct modInfo_s *pNext; /* support for creating a linked module list */
@@ -169,7 +227,25 @@ struct modInfo_s {
     /* we add some home-grown support to track our users (and detect who does not free us). */
     modUsr_t *pModUsrRoot;
 #endif
+    /* Optional reload lifecycle; unavailable hooks mean restart required. */
+    modReloadInterfaceV1_t reloadV1;
 };
+
+/*
+ * A future diff manager must use this predicate before accepting any
+ * non-restart capability.  It also makes partially implemented optional
+ * interfaces conservative.
+ */
+sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
+sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
+
+/*
+ * Classify a module change without enabling reload.  Legacy modules and
+ * missing, failing, or invalid classifiers are deliberately classified as
+ * restart-required.  Callers that need the classifier's exact failure can
+ * invoke reloadClassify directly after this conservative preflight.
+ */
+eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
 
 
 /* interfaces */
