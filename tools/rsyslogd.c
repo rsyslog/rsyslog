@@ -221,6 +221,7 @@ void rsyslogdDoDie(int sig);
 static volatile sig_atomic_t bChildDied = 0;
 static volatile sig_atomic_t bHadHUP = 0;
 static volatile sig_atomic_t bHUPInProgress = 0;
+static volatile sig_atomic_t hupProcessedCount = 0;
 static int doFork = 1; /* fork - run in daemon mode - read-only after startup */
 static volatile sig_atomic_t bFinished = 0; /* signal number requesting termination, or 0 */
 const char *PidFile = NULL;
@@ -274,6 +275,12 @@ int get_bHadHUP(void) {
     const int ret = PREFER_LOAD_INT(&bHadHUP) || PREFER_LOAD_INT(&bHUPInProgress);
     /* note: at this point ret can already be invalid */
     return ret;
+}
+
+/* Testbench synchronization point. The main thread publishes a new value only
+ * after all legacy HUP hooks and reload-manager accounting have completed. */
+int getHUPProcessedCount(void) {
+    return PREFER_LOAD_INT(&hupProcessedCount);
 }
 
 /* we need a pointer to the conf, because in early startup stage we
@@ -2417,6 +2424,7 @@ static void mainloop(void) {
             shadowReloadBeginRequest();
             PREFER_STORE_INT(&bHUPInProgress, 1);
             doHUP();
+            PREFER_STORE_INT(&hupProcessedCount, PREFER_LOAD_INT(&hupProcessedCount) + 1);
             PREFER_STORE_INT(&bHUPInProgress, 0);
         }
 

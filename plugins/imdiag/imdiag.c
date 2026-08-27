@@ -456,14 +456,34 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal awaitHUPComplete(tcps_sess_t *pSess) {
+static int parsePosLong(const uchar *s, long *val);
+
+static rsRetVal awaitHUPComplete(uchar *pszCmd, tcps_sess_t *pSess) {
     const int max_tries = 10;
     const int ms_to_sleep = 50;
     const char *return_msg;
     int b_saw_HUP = 0;
     int tries = max_tries;
     unsigned actual_tries = 0;
+    long target = -1;
     DEFiRet;
+
+    while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
+    if (*pszCmd != '\0' && !parsePosLong(pszCmd, &target)) {
+        CHKiRet(sendResponse(pSess, "ERROR: invalid HUP completion generation\n"));
+        FINALIZE;
+    }
+
+    if (target >= 0) {
+        tries = 400;
+        while (tries-- > 0 && getHUPProcessedCount() < target) srSleep(0, 25000);
+        if (getHUPProcessedCount() >= target) {
+            CHKiRet(sendResponse(pSess, "HUP completed generation %ld\n", target));
+        } else {
+            CHKiRet(sendResponse(pSess, "ERROR: HUP generation %ld did not complete\n", target));
+        }
+        FINALIZE;
+    }
 
     while (tries > 0) {
         ++actual_tries;
@@ -736,7 +756,9 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
         CHKiRet(awaitStatsReport(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
-        CHKiRet(awaitHUPComplete(pSess));
+        CHKiRet(awaitHUPComplete(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupprocessedcount"))) {
+        CHKiRet(sendResponse(pSess, "%d\n", getHUPProcessedCount()));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

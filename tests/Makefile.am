@@ -2722,11 +2722,8 @@ CLEANFILES=\
 	tmp.qi nocert
 
 CLEANFILES+= \
-	IN_AUTO_DEBUG \
 	runtime_unit_imbeats_seq \
 	runtime_unit_mmaitag_gemini_response
-# IN_AUTO_DEBUG should be deleted each time make check is run, but
-# there exists no such hook. Se we at least delete it on make clean.
 # These unit binaries are conditional, but an outer build with their modules
 # enabled can leave them for an inner distcheck configured without them.
 
