@@ -1424,12 +1424,23 @@ static rsRetVal parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,
     numitems = fjson_object_array_length(items);
 
     int errors = 0;
-    if (fjson_object_object_get_ex(replyRoot, "errors", &jo_errors)) {
+    const int has_errors = fjson_object_object_get_ex(replyRoot, "errors", &jo_errors);
+    const int errors_is_boolean = has_errors && fjson_object_is_type(jo_errors, fjson_type_boolean);
+    if (errors_is_boolean) {
         errors = fjson_object_get_boolean(jo_errors);
         if (!errors && pWrkrData->pData->retryFailures) {
             STATSCOUNTER_ADD(indexSuccess, mutIndexSuccess, numitems);
             return RS_RET_OK;
         }
+    }
+
+    /* Both Elasticsearch and OpenSearch set errors to false only when every
+     * item in a bulk response succeeded. Without retry or error-file handling,
+     * there is no per-item work left to do. Keep the full parsing path for
+     * absent or failing errors fields so malformed responses stay conservative.
+     */
+    if (errors_is_boolean && !errors && !pWrkrData->pData->retryFailures && pWrkrData->pData->errorFile == NULL) {
+        return RS_RET_OK;
     }
 
     if (reqmsg) {
