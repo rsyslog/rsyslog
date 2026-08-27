@@ -1,0 +1,31 @@
+tests/segdisk-inspect.py
+  s_f2c089be484e12::t_cb5d4286227592 156-160,281,296-297
+  s_83566911eeff21::t_591e3bbdd0f195 298
+tests/testsuites/segmented-diskqueue-checkpoint-driver.sh
+  s_f2c089be484e12::t_8b1b4aa430f35b 38
+  s_f2c089be484e12::t_cb5d4286227592 5-7,32,39-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "050ccb389b54faf777b116865bc1d2cd681a08b6",
+  "prompts": {},
+  "sessions": {
+    "s_83566911eeff21": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a044c1-9e07-7e21-b6ec-b07c7ffff0a8",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
