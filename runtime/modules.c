@@ -400,6 +400,8 @@ rsRetVal ATTR_NONNULL(1) addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodu
     DEFiRet;
     assert(*pNew != NULL);
 
+    if (*pNew == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+
     if (loadConf == NULL) {
         abortCnfUse(pNew);
         FINALIZE; /* we are in an early init state */
@@ -419,6 +421,7 @@ rsRetVal ATTR_NONNULL(1) addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodu
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK) abortCnfUse(pNew);
     *pNew = NULL;
     RETiRet;
 }
