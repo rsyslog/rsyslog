@@ -2344,6 +2344,15 @@ static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
     curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
     curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1L);
     curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TIMEOUT_MS, pWrkrData->pData->indexTimeout);
+
+    CURLcode cRet;
+    /* Enable TCP keep-alive for idle reusable bulk POST connections. */
+    cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPALIVE, 1L);
+    if (cRet != CURLE_OK) DBGPRINTF("omelasticsearch: curlPostSetup unknown option CURLOPT_TCP_KEEPALIVE\n");
+    cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPIDLE, 120L);
+    if (cRet != CURLE_OK) DBGPRINTF("omelasticsearch: curlPostSetup unknown option CURLOPT_TCP_KEEPIDLE\n");
+    cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPINTVL, 60L);
+    if (cRet != CURLE_OK) DBGPRINTF("omelasticsearch: curlPostSetup unknown option CURLOPT_TCP_KEEPINTVL\n");
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
