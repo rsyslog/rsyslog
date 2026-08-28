@@ -835,6 +835,7 @@ TESTS_LIBYAML = \
 	global-maxopenfiles-yaml.sh \
 	global-reloadonhup-yaml.sh \
 	global-systemd-notifyreadydelay-yaml.sh \
+	yaml-reload-ruleset-graph-parity.sh \
 	action-ratelimit-drop.sh \
 	action-ratelimit-pace.sh \
 	action-ratelimit-reload.sh \

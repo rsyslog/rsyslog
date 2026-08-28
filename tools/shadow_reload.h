@@ -20,6 +20,11 @@ void shadowReloadExit(void);
  * candidate configuration. */
 void shadowReloadConfigure(reloadOnHUPMode_t mode);
 
+/* Return the active generation's normalized ruleset fingerprint. The
+ * returned pointer remains owned by the reload manager. This control-path
+ * accessor exists so testbench diagnostics do not rebuild the graph. */
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint);
+
 /* This is called from the SIGHUP handler. It must remain limited to setting
  * a sig_atomic_t flag; the main thread performs all accounting and logging. */
 void shadowReloadRequestFromSignal(void);

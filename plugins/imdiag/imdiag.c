@@ -63,6 +63,7 @@
 #include "queue.h"
 #include "rsconf.h"
 #include "lookup.h"
+#include "tools/shadow_reload.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
 
@@ -521,6 +522,41 @@ finalize_it:
     RETiRet;
 }
 
+/* Testbench oracle for the real, frontend-neutral ruleset graph producer. */
+static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
+    const char *fingerprint = NULL;
+    char *response = NULL;
+    size_t fingerprintLen;
+    ssize_t responseLen;
+    uchar name[512];
+    DEFiRet;
+
+    getFirstWord(&pszCmd, name, sizeof(name), NO_MODIFY);
+    if (name[0] == '\0') {
+        CHKiRet(sendResponse(pSess, "ERROR: missing ruleset name\n"));
+        FINALIZE;
+    }
+    iRet = shadowReloadGetRulesetFingerprint((const char *)name, &fingerprint);
+    if (iRet == RS_RET_NOT_FOUND) {
+        CHKiRet(sendResponse(pSess, "ERROR: ruleset not found\n"));
+        iRet = RS_RET_OK;
+    } else {
+        CHKiRet(iRet);
+        fingerprintLen = strlen(fingerprint);
+        if (fingerprintLen > (size_t)SSIZE_MAX - 1) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        CHKmalloc(response = malloc(fingerprintLen + 2));
+        memcpy(response, fingerprint, fingerprintLen);
+        response[fingerprintLen] = '\n';
+        response[fingerprintLen + 1] = '\0';
+        responseLen = (ssize_t)fingerprintLen + 1;
+        CHKiRet(netstrm.Send(pSess->pStrm, (uchar *)response, &responseLen));
+    }
+
+finalize_it:
+    free(response);
+    RETiRet;
+}
+
 static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
                                      void __attribute__((unused)) *const ignore_ctx) {
     long long waitStartTimeMs = currentTimeMills();
@@ -759,6 +795,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(awaitHUPComplete(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("gethupprocessedcount"))) {
         CHKiRet(sendResponse(pSess, "%d\n", getHUPProcessedCount()));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadrulesetfingerprint"))) {
+        CHKiRet(getReloadRulesetFingerprint(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {
