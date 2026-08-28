@@ -1,0 +1,19 @@
+benchmarks/panw-rainerscript/.gitignore
+  s_32a2e38c1eab73::t_4a1da198c73f7c 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a1021eb779a1ca99a0d9c6c997a616b3e221da6b",
+  "prompts": {},
+  "sessions": {
+    "s_32a2e38c1eab73": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0478f-6eb8-7823-adc2-2c05909fbf78",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
