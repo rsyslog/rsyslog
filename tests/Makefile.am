@@ -531,6 +531,7 @@ TESTS_DEFAULT = \
 	rcvr_fail_restore.sh \
 	snd-array-cmp-json.sh \
 	rscript_b64_decode.sh \
+	rscript-json-var-eval-semantics.sh \
 	rscript_tocef.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
@@ -732,6 +733,7 @@ TESTS_DEFAULT_VALGRIND = \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
 	rscript_b64_decode-vg.sh \
+	rscript-json-var-eval-semantics-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript_backticks_empty_envvar.sh \

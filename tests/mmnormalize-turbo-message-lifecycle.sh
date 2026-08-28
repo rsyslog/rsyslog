@@ -1,7 +1,9 @@
 #!/bin/bash
 # Verify that turbo mmnormalize CEE fields survive both MsgDup() through a
-# queued ruleset and disk-queue serialization. The output files are the
-# oracle: each must contain the normalized field after synchronized shutdown.
+# queued ruleset and disk-queue serialization. Also exercise RainerScript JSON
+# expression reads before and after a mutation: the first read may use the
+# Turbo snapshot, while the second must observe the materialized later write.
+# The output files are the exact oracle after synchronized shutdown.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin mmnormalize
@@ -12,7 +14,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="normalize")
 
-template(name="outfmt" type="string" string="%$!host% %$!tag%\n")
+template(name="outfmt" type="string" string="%$!before% %$!after% %$!host% %$!tag%\n")
 
 ruleset(name="copy" queue.type="LinkedList") {
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
@@ -21,6 +23,9 @@ ruleset(name="copy" queue.type="LinkedList") {
 ruleset(name="normalize") {
 	action(type="mmnormalize" useRawMsg="on" turbo="on"
 	       rule="rule=:%host:word% %tag:char-to:\\x3a%: no longer listening on %ip:ipv4%#%port:number%")
+	set $!before = $!host;
+	set $!host = "override";
+	set $!after = $!host;
 	call copy
 	action(type="omfile" file="'$RSYSLOG2_OUT_LOG'" template="outfmt"
 	       queue.type="disk" queue.filename="turbo-lifecycle")
@@ -30,7 +35,7 @@ startup
 tcpflood -m1 -M "\"ubuntu tag1: no longer listening on 127.168.0.1#10514\""
 shutdown_when_empty
 wait_shutdown
-export EXPECTED='ubuntu tag1'
+export EXPECTED='ubuntu override override tag1'
 cmp_exact "$RSYSLOG_OUT_LOG"
 cmp_exact "$RSYSLOG2_OUT_LOG"
 exit_test

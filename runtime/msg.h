@@ -308,6 +308,7 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
                                     msgPropDescr_t *pProp,
                                     struct json_object **pjson,
                                     uchar **pcstr);
+rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct svar *out);
 rsRetVal getJSONPropVal(
     smsg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(smsg_t *pMsg, uchar *varname, struct svar *var, int force_reset);
