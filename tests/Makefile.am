@@ -202,6 +202,7 @@ TESTS_ELASTICSEARCH_SERVER = \
 
 TESTS_ELASTICSEARCH_IMPSTATS = \
 	es-basic-ha.sh \
+	es-bulk-response-errors.sh \
 	es-bulk-retry.sh
 
 TESTS_ELASTICSEARCH_IMFILE = \
@@ -2898,7 +2899,8 @@ if ENABLE_IMPSTATS
 TESTS += $(TESTS_ELASTICSEARCH_IMPSTATS)
 
 es-basic-ha.log: es-writeoperation.log
-es-bulk-retry.log: es-basic-ha.log
+es-bulk-response-errors.log: es-basic-ha.log
+es-bulk-retry.log: es-bulk-response-errors.log
 elasticsearch-stop.log: es-bulk-retry.log
 endif
 
