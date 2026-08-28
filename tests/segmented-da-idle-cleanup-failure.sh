@@ -27,6 +27,24 @@ wait_path() {
 	done
 }
 
+wait_restored_empty_store() {
+	local timeoutend=$((SECONDS + 30)) segment_count
+	while true; do
+		# Cleanup retries may briefly leave only the deliberately foreign blocker
+		# between deleting the old topology and recreating the empty one.  Inspect
+		# the replacement state as one predicate rather than treating those
+		# independent filesystem observations as a stable snapshot.
+		if [ -f "$SEG_DIR/state" ] &&
+			find "$SEG_DIR" -maxdepth 1 -name '*.open' -print -quit | grep -q .; then
+			segment_count=$(find "$SEG_DIR" -maxdepth 1 -type f -name 'segment-*' -print | wc -l)
+			[ "$segment_count" -eq 1 ] && return
+		fi
+		[ "$SECONDS" -lt "$timeoutend" ] ||
+			error_exit 1 "cleanup failure did not restore one active segment"
+		./msleep 50
+	done
+}
+
 generate_conf
 add_conf '
 global(workDirectory="'"$SPOOL_DIR"'")
@@ -47,12 +65,7 @@ wait_path present "$SEG_DIR"
 touch "$SEG_DIR/blocker"
 wait_file_lines "$RSYSLOG_OUT_LOG" "$NUMMESSAGES" 300
 wait_content 'store.idleCleanupFailures=1' "$STATS_FILE"
-wait_path present "$SEG_DIR/state"
-find "$SEG_DIR" -maxdepth 1 -name '*.open' -print -quit | grep -q . ||
-	error_exit 1 "cleanup failure did not restore an active segment"
-segment_count=$(find "$SEG_DIR" -maxdepth 1 -type f -name 'segment-*' -print | wc -l)
-[ "$segment_count" -eq 1 ] ||
-	error_exit 1 "cleanup failure retained $segment_count segments instead of one replacement active segment"
+wait_restored_empty_store
 rm -f "$SEG_DIR/blocker"
 wait_path absent "$SEG_DIR"
 wait_content 'store.idleDematerializations=1' "$STATS_FILE"
