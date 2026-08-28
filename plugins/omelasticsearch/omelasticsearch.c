@@ -1189,13 +1189,10 @@ static size_t computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
     getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
     r += ustrlen((char *)message);
     if (searchIndex != NULL) {
+        if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE) r += sizeof(META_IX) - 1;
         r += jsonEscapedLen(searchIndex);
-    }
-    if (searchType != NULL) {
-        if (searchType[0] == '\0') {
-            r += 4;  // "_doc"
-        } else {
-            r += jsonEscapedLen(searchType);
+        if (searchType != NULL && searchType[0] != '\0') {
+            r += sizeof(META_TYPE) - 1 + jsonEscapedLen(searchType);
         }
     }
     if (parent != NULL) {
@@ -2220,7 +2217,8 @@ BEGINdoAction
 
         /* If max bytes is set and this next message will put us over the limit,
          * submit the current buffer and reset */
-        if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes) {
+        if (pWrkrData->batch.nmemb > 0 && pWrkrData->pData->maxbytes > 0 &&
+            es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes) {
             dbgprintf(
                 "omelasticsearch: maxbytes limit reached, submitting partial "
                 "batch of %d elements.\n",
