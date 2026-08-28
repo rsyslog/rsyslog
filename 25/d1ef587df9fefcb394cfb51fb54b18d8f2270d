@@ -1,0 +1,51 @@
+benchmarks/panw-rainerscript/runner.py
+  s_32a2e38c1eab73::t_874dcf26254c7f 1,7,82,136
+  s_32a2e38c1eab73::t_22c767b66e0988 2-6,8-81,83-135,137-197
+benchmarks/panw-rainerscript/.gitignore
+  s_32a2e38c1eab73::t_874dcf26254c7f 1
+tests/testsuites/panw-timestamp-rulesets.conf
+  s_32a2e38c1eab73::t_db6f503d09c661 1,8-9,11-21,24-25,29,32-33,35-39,41-44,46,49-53,55-57,59-61,63-64,66
+  s_32a2e38c1eab73::t_fb4a12ad3912b0 7
+  s_32a2e38c1eab73::t_b25bddec35f0bb 10,22-23,26-28,30-31,34,40,45,47-48,54,58,62,65
+  s_32a2e38c1eab73::t_2022c8f9ac819b 2-6
+tests/panw-timestamp-normalization.sh
+  s_32a2e38c1eab73::t_88e61dfa0e7532 16,26,28,30-35
+  s_32a2e38c1eab73::t_632f3ecbc33f75 4-7,13-15,38-39,48,52,55-59,61,64-65,86-88
+  s_32a2e38c1eab73::t_023d08cd4b32b3 17-24
+  s_32a2e38c1eab73::t_2e75fe66ad3427 69-82
+  s_32a2e38c1eab73::t_db6f503d09c661 1-3,8-12,36-37,40,46-47,49-51,53-54,60,62-63,66-68,83-85,89-90
+  s_32a2e38c1eab73::t_5683a5d90500e6 41-45
+  s_32a2e38c1eab73::t_d9c9ee77efb912 25,27,29
+tests/Makefile.am
+  s_32a2e38c1eab73::t_98179024491c39 62-66,561
+tests/testsuites/panw-months.lkp
+  s_32a2e38c1eab73::t_fb4a12ad3912b0 1
+  s_32a2e38c1eab73::t_db6f503d09c661 2-8
+benchmarks/panw-rainerscript/run.sh
+  s_32a2e38c1eab73::t_874dcf26254c7f 1-3
+benchmarks/panw-rainerscript/trial.sh
+  s_32a2e38c1eab73::t_874dcf26254c7f 1-8,10-17,26-35
+  s_32a2e38c1eab73::t_f8370eb2b98d58 18-23,25
+  s_32a2e38c1eab73::t_2699e26cdf3926 9,24
+benchmarks/panw-rainerscript/README.md
+  s_32a2e38c1eab73::t_874dcf26254c7f 1-19
+benchmarks/panw-rainerscript/send.py
+  s_32a2e38c1eab73::t_874dcf26254c7f 1-2,4-8,10-12,14-21,23-25,31,33-34,36-42,44-45,50,53,55
+  s_32a2e38c1eab73::t_6f591060aac123 3,9,13,22,26-30,32,35,43,46-49,51-52,54,56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "25d1ef587df9fefcb394cfb51fb54b18d8f2270d",
+  "prompts": {},
+  "sessions": {
+    "s_32a2e38c1eab73": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0478f-6eb8-7823-adc2-2c05909fbf78",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
