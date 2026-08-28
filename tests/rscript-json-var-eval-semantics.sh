@@ -3,9 +3,12 @@
 # missing/null, root, and NUL semantics while values flow through set. Exact
 # serialized output after synchronized shutdown is the oracle: it detects a
 # type/value change as well as the legacy set-side NUL removal and read-side
-# first-NUL truncation rules.
+# first-NUL truncation rules. With internal debugging enabled, the debug log is
+# also an oracle: embedded NUL bytes must be dropped without creating a cstr.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
+export RSYSLOG_DEBUG="debug nostdout"
+export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
 
 generate_conf
 add_conf '
@@ -16,6 +19,7 @@ template(name="outfmt" type="string" string="%$!out%\n")
 if $msg contains "msgnum:" then {
 	# es_str2cstr(..., NULL) historically removes all embedded NUL bytes.
 	set $!out!set_nul = b64_decode("YWIAY2QAZWY=");
+	set $.nul_debug = b64_decode("YWIAY2QAZWY=");
 	set $.ret = parse_json("{\"flat.key\":\"flat\",\"nested\":{\"value\":\"nested\"},\"string\":\"text\",\"empty\":\"\",\"null\":null,\"integer\":42,\"boolean\":true,\"double\":1.5,\"array\":[\"one\",2],\"object\":{\"child\":\"value\"},\"nul\":\"ab\\u0000cd\"}", "\$!src");
 	set $.ret = parse_json("{\"string\":\"local\",\"integer\":7,\"boolean\":false}", "\$.src");
 	set $.ret = parse_json("{\"string\":\"global\",\"integer\":9,\"boolean\":true}", "\$/src");
@@ -32,6 +36,7 @@ if $msg contains "msgnum:" then {
 	set $!out!array = $!src!array;
 	set $!out!object = $!src!object;
 	set $!out!nul_read = $!src!nul;
+	set $.nul_debug_copy = $.nul_debug;
 	set $!out!whole = $!src;
 	set $!out!local_string = $.src!string;
 	set $!out!local_integer = $.src!integer;
@@ -49,6 +54,9 @@ startup
 injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
+
+content_check "rainerscript: (json/string) var" "$RSYSLOG_DEBUGLOG"
+content_check --regex "rainerscript: (json/string) var [0-9][0-9]*: 'abcdef'" "$RSYSLOG_DEBUGLOG"
 
 export EXPECTED='{ "set_nul": "abcdef", "flat": "flat", "nested": "nested", "string": "text", "empty": "", "missing": "", "null": "", "integer": 42, "boolean": true, "double": 1.5, "array": [ "one", 2 ], "object": { "child": "value" }, "nul_read": "ab", "whole": { "flat.key": "flat", "nested": { "value": "nested" }, "string": "text", "empty": "", "null": null, "integer": 42, "boolean": true, "double": 1.5, "array": [ "one", 2 ], "object": { "child": "value" }, "nul": "ab" }, "local_string": "local", "local_integer": 7, "local_boolean": false, "local_whole": { "string": "local", "integer": 7, "boolean": false }, "global_string": "global", "global_integer": 9, "global_boolean": true, "global_whole": { "string": "global", "integer": 9, "boolean": true } }'
 cmp_exact
