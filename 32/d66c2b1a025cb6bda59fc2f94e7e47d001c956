@@ -1,0 +1,30 @@
+benchmarks/panw-rainerscript/README.md
+  s_32a2e38c1eab73::t_7343230721e7b4 3
+benchmarks/panw-rainerscript/trial.sh
+  s_32a2e38c1eab73::t_9ff20520942e34 9,19
+  s_32a2e38c1eab73::t_3443987200a4ae 16
+benchmarks/panw-rainerscript/runner.py
+  s_32a2e38c1eab73::t_7343230721e7b4 16
+tests/panw-timestamp-normalization.sh
+  s_32a2e38c1eab73::t_7343230721e7b4 2,24-26,45,51,70
+  s_32a2e38c1eab73::t_ef0e8e5caae5a1 63
+tests/testsuites/panw-timestamp-rulesets.conf
+  s_32a2e38c1eab73::t_7343230721e7b4 8-10,51-62
+  s_32a2e38c1eab73::t_4dc08ff7194bc0 63-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "32d66c2b1a025cb6bda59fc2f94e7e47d001c956",
+  "prompts": {},
+  "sessions": {
+    "s_32a2e38c1eab73": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0478f-6eb8-7823-adc2-2c05909fbf78",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
