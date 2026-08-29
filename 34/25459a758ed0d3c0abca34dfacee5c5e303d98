@@ -1,0 +1,44 @@
+runtime/Makefile.am
+  s_f2c089be484e12::t_a3bbe5f5341af7 63-64
+tools/shadow_reload.h
+  s_f2c089be484e12::t_b616a31f64f712 23-27
+plugins/imdiag/imdiag.c
+  s_f2c089be484e12::t_924971cd5a7fa8 525-527,542-549,553
+  s_f2c089be484e12::t_b616a31f64f712 66,524,536-537,539,541
+  s_f2c089be484e12::t_a7d3a80aee9452 522-523,528-535,538,540,550-552,554-556,768-769
+tests/yaml-reload-ruleset-graph-parity.sh
+  s_f2c089be484e12::t_684ac617cf99cf 1-11,16-34,36-73,75-84,90-93
+  s_f2c089be484e12::t_5d5e4bca6dad7c 12-15
+  s_f2c089be484e12::t_bc3721e8fd2aa5 35,74,85-89
+tests/Makefile.am
+  s_f2c089be484e12::t_684ac617cf99cf 809
+tools/shadow_reload.c
+  s_f2c089be484e12::t_924971cd5a7fa8 153-154,160-161,163,166,168-171
+  s_f2c089be484e12::t_d71f003058f238 3-8,14-15
+  s_f2c089be484e12::t_b616a31f64f712 22,49-50,147,155-156,162,164-165,167,172,176-213
+  s_f2c089be484e12::t_3948f5d7b53dad 214
+runtime/reload-ruleset-graph.h
+  s_f2c089be484e12::t_a3bbe5f5341af7 1-28
+runtime/reload-ruleset-graph.c
+  s_f2c089be484e12::t_a9e94916e7731d 164
+  s_f2c089be484e12::t_d20411f1e34ff3 224-232
+  s_f2c089be484e12::t_688b8109ca065b 20
+  s_f2c089be484e12::t_6eeab642cdac6d 46
+  s_f2c089be484e12::t_a3bbe5f5341af7 1-19,21-45,47-163,165-223,233-324
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "3425459a758ed0d3c0abca34dfacee5c5e303d98",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
