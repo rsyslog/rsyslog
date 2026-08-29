@@ -915,7 +915,10 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
+static rsRetVal prepareListenerServer(modConfData_t *const modConf,
+                                      instanceConf_t *const inst,
+                                      tcpsrv_t **const preparedServer,
+                                      tcpLstnParams_t **const preparedParams) {
     DEFiRet;
     uchar *psz; /* work variable */
     char *ns; /**< network namespace */
@@ -924,6 +927,8 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     tcpLstnParams_t *configuredParams;
 
     tcpsrv_t *pOurTcpsrv = NULL;
+    if (preparedServer == NULL || *preparedServer != NULL || preparedParams == NULL || *preparedParams != NULL)
+        return RS_RET_PARAM_ERROR;
     CHKiRet(cloneRuntimeListenerParams(inst->cnf_params, &listenerParams));
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
@@ -1037,9 +1042,9 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     listenerParams = NULL; /* configureTCPListen consumes the clone on every path */
     CHKiRet(iRet);
 
-    CHKiRet(endpointRegistryAdd(pOurTcpsrv, configuredParams, ns,
-                                inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
-    pOurTcpsrv = NULL; /* endpoint registry owns the configured runtime server */
+    *preparedServer = pOurTcpsrv;
+    *preparedParams = configuredParams; /* borrowed from the prepared server */
+    pOurTcpsrv = NULL;
 
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -1050,6 +1055,24 @@ finalize_it:
         }
     }
     freeRuntimeListenerParams(listenerParams);
+    RETiRet;
+}
+
+static rsRetVal addListner(modConfData_t *const modConf, instanceConf_t *const inst) {
+    tcpsrv_t *server = NULL;
+    tcpLstnParams_t *params = NULL;
+    DEFiRet;
+
+    CHKiRet(prepareListenerServer(modConf, inst, &server, &params));
+    CHKiRet(endpointRegistryAdd(server, params, params->pszNetworkNamespace,
+                                inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
+    server = NULL; /* endpoint registry owns the configured runtime server */
+
+finalize_it:
+    if (server != NULL) {
+        tcpsrv.SetUsrP(server, NULL);
+        tcpsrv.Destruct(&server);
+    }
     RETiRet;
 }
 
