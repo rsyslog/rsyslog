@@ -274,7 +274,11 @@ queue barrier.  Repeating that source is then a true report-only no-op instead
 of rediscovering the same effective-equivalent change on every HUP.
 The first imtcp comparator pairs listener instances in source order; a pure
 reorder is therefore conservatively restart-required until endpoint-key
-reconciliation is connected to the runtime registry.
+reconciliation is connected to the runtime registry.  Each configured runtime
+listener owns an independent deep copy of its listener parameters; the active
+module configuration retains its source-owned copy.  This ownership split is
+the prepare/abort foundation for constructing replacement endpoints without
+consuming or mutating the candidate configuration.
 
 Release C extends that foundation with a deliberately narrow private compiler
 and batch-boundary activation path.  In ``on`` mode, only modifications to

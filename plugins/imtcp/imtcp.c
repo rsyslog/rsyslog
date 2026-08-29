@@ -874,13 +874,57 @@ finalize_it:
 }
 
 
+static void freeRuntimeListenerParams(tcpLstnParams_t *const params) {
+    if (params == NULL) return;
+    free((void *)params->pszPort);
+    free((void *)params->pszAddr);
+    free((void *)params->pszLstnPortFileName);
+    free((void *)params->pszNetworkNamespace);
+    free((void *)params->pszStrmDrvrName);
+    free((void *)params->pszInputName);
+    free((void *)params->pszStartRegex);
+    free((void *)params->pszRatelimitName);
+    free(params);
+}
+
+static rsRetVal cloneRuntimeListenerParams(const tcpLstnParams_t *const source, tcpLstnParams_t **const destination) {
+    tcpLstnParams_t *clone = NULL;
+    DEFiRet;
+
+    if (source == NULL || destination == NULL || *destination != NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(clone = calloc(1, sizeof(*clone)));
+    clone->bSuppOctetFram = source->bSuppOctetFram;
+    clone->bSPFramingFix = source->bSPFramingFix;
+    clone->bPreserveCase = source->bPreserveCase;
+    clone->bMultiLine = source->bMultiLine;
+    clone->pRuleset = source->pRuleset;
+    clone->pAllowedSenderRoot = source->pAllowedSenderRoot;
+    clone->bUseLegacyAllowedSender = source->bUseLegacyAllowedSender;
+    memcpy(clone->dfltTZ, source->dfltTZ, sizeof(clone->dfltTZ));
+    if (source->pszPort != NULL) CHKmalloc(clone->pszPort = ustrdup(source->pszPort));
+    if (source->pszAddr != NULL) CHKmalloc(clone->pszAddr = ustrdup(source->pszAddr));
+    if (source->pszLstnPortFileName != NULL)
+        CHKmalloc(clone->pszLstnPortFileName = ustrdup(source->pszLstnPortFileName));
+    if (source->pszStartRegex != NULL) CHKmalloc(clone->pszStartRegex = ustrdup(source->pszStartRegex));
+    if (source->pszRatelimitName != NULL) CHKmalloc(clone->pszRatelimitName = ustrdup(source->pszRatelimitName));
+    *destination = clone;
+    clone = NULL;
+
+finalize_it:
+    freeRuntimeListenerParams(clone);
+    RETiRet;
+}
+
 static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     DEFiRet;
     uchar *psz; /* work variable */
     char *ns; /**< network namespace */
     permittedPeers_t *peers;
+    tcpLstnParams_t *listenerParams = NULL;
+    tcpLstnParams_t *configuredParams;
 
     tcpsrv_t *pOurTcpsrv = NULL;
+    CHKiRet(cloneRuntimeListenerParams(inst->cnf_params, &listenerParams));
     CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
     /* callbacks */
     CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -953,21 +997,20 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
 
     /* initialized, now add socket and listener params */
     DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
-    inst->cnf_params->pRuleset = inst->pBindRuleset;
+    listenerParams->pRuleset = inst->pBindRuleset;
 
     ns = (inst->pszNetworkNamespace == NULL) ? modConf->pszNetworkNamespace : inst->pszNetworkNamespace;
-    CHKiRet(tcpsrv.SetNetworkNamespace(pOurTcpsrv, inst->cnf_params, ns));
+    CHKiRet(tcpsrv.SetNetworkNamespace(pOurTcpsrv, listenerParams, ns));
 
-    CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->cnf_params,
+    CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, listenerParams,
                                 inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
     CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar *)"imtcp"));
     CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar *)"" : inst->dfltTZ));
     CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
     CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 
-    if ((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0 &&
-         inst->cnf_params->pszLstnPortFileName == NULL) ||
-        ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
+    if ((ustrcmp(listenerParams->pszPort, UCHAR_CONSTANT("0")) == 0 && listenerParams->pszLstnPortFileName == NULL) ||
+        ustrcmp(listenerParams->pszPort, UCHAR_CONSTANT("0")) < 0) {
         uchar *newPort = NULL;
         if (runConf->globals.bRequireAllInputs) {
             LogError(0, RS_RET_INVALID_PORT, "imtcp: port 0 needs listenPortFileName in require-all mode");
@@ -975,26 +1018,26 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
         }
         LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
         CHKmalloc(newPort = (uchar *)strdup("514"));
-        free((void *)inst->cnf_params->pszPort);
-        inst->cnf_params->pszPort = newPort;
+        free((void *)listenerParams->pszPort);
+        listenerParams->pszPort = newPort;
     }
     if (inst->bAllowedSendersSet) {
-        inst->cnf_params->pAllowedSenderRoot = inst->pAllowedSendersRoot;
-        inst->cnf_params->bUseLegacyAllowedSender = 0;
+        listenerParams->pAllowedSenderRoot = inst->pAllowedSendersRoot;
+        listenerParams->bUseLegacyAllowedSender = 0;
     } else if (modConf->bAllowedSendersSet) {
-        inst->cnf_params->pAllowedSenderRoot = modConf->pAllowedSendersRoot;
-        inst->cnf_params->bUseLegacyAllowedSender = 0;
+        listenerParams->pAllowedSenderRoot = modConf->pAllowedSendersRoot;
+        listenerParams->bUseLegacyAllowedSender = 0;
     } else {
-        inst->cnf_params->pAllowedSenderRoot = NULL;
-        inst->cnf_params->bUseLegacyAllowedSender = 1;
+        listenerParams->pAllowedSenderRoot = NULL;
+        listenerParams->bUseLegacyAllowedSender = 1;
     }
-    CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, inst->cnf_params));
-    tcpLstnParams_t *const listenerParams = inst->cnf_params;
-    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, listenerParams);
-    inst->cnf_params = NULL; /* ownership transferred to tcpsrv, including setup failure cleanup */
+    CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, listenerParams));
+    configuredParams = listenerParams;
+    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, configuredParams);
+    listenerParams = NULL; /* configureTCPListen consumes the clone on every path */
     CHKiRet(iRet);
 
-    CHKiRet(endpointRegistryAdd(pOurTcpsrv, listenerParams, ns,
+    CHKiRet(endpointRegistryAdd(pOurTcpsrv, configuredParams, ns,
                                 inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
     pOurTcpsrv = NULL; /* endpoint registry owns the configured runtime server */
 
@@ -1006,6 +1049,7 @@ finalize_it:
             tcpsrv.Destruct(&pOurTcpsrv);
         }
     }
+    freeRuntimeListenerParams(listenerParams);
     RETiRet;
 }
 
