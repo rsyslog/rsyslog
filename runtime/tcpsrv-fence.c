@@ -266,6 +266,14 @@ void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *const server, const int pre
     }
 }
 
+void tcpsrvApplyKeepAliveForNewSessions(
+    tcpsrv_t *const server, const int enabled, const int interval, const int probes, const int time) {
+    server->bUseKeepAlive = enabled;
+    server->iKeepAliveIntvl = interval;
+    server->iKeepAliveProbes = probes;
+    server->iKeepAliveTime = time;
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

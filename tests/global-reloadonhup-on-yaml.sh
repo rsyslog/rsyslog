@@ -66,11 +66,15 @@ fi
 
 # Module defaults use the same YAML lifecycle path as input overrides. Toggle
 # flow control and connection notifications while retaining both established
-# TCP sessions; preserveCase applies to connections accepted afterwards.
+# TCP sessions; preserveCase and keepalive apply to later accepts.
 sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"\
     notifyOnConnectionOpen: "on"\
     notifyOnConnectionClose: "on"\
-    preserveCase: "off"' "$CONF_FILE.base" >"$CONF_FILE"
+    preserveCase: "off"\
+    keepAlive: "on"\
+    keepAlive.probes: "3"\
+    keepAlive.time: "30"\
+    keepAlive.interval: "2"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then

@@ -2143,28 +2143,32 @@ static rsRetVal ATTR_NONNULL(1) SetUsrP(tcpsrv_t *pThis, void *pUsr) {
 static rsRetVal ATTR_NONNULL(1) SetKeepAlive(tcpsrv_t *pThis, const int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive set to %d\n", iVal);
-    pThis->bUseKeepAlive = iVal;
+    tcpsrvApplyKeepAliveForNewSessions(pThis, iVal, pThis->iKeepAliveIntvl, pThis->iKeepAliveProbes,
+                                       pThis->iKeepAliveTime);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) SetKeepAliveIntvl(tcpsrv_t *pThis, const int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
-    pThis->iKeepAliveIntvl = iVal;
+    tcpsrvApplyKeepAliveForNewSessions(pThis, pThis->bUseKeepAlive, iVal, pThis->iKeepAliveProbes,
+                                       pThis->iKeepAliveTime);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) SetKeepAliveProbes(tcpsrv_t *pThis, int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
-    pThis->iKeepAliveProbes = iVal;
+    tcpsrvApplyKeepAliveForNewSessions(pThis, pThis->bUseKeepAlive, pThis->iKeepAliveIntvl, iVal,
+                                       pThis->iKeepAliveTime);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) SetKeepAliveTime(tcpsrv_t *pThis, int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
-    pThis->iKeepAliveTime = iVal;
+    tcpsrvApplyKeepAliveForNewSessions(pThis, pThis->bUseKeepAlive, pThis->iKeepAliveIntvl, pThis->iKeepAliveProbes,
+                                       iVal);
     RETiRet;
 }
 

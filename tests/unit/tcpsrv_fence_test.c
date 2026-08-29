@@ -288,6 +288,16 @@ static int preserveCaseNewSessions(void) {
     return 0;
 }
 
+static int keepAliveNewSessions(void) {
+    tcpsrv_t server = {0};
+    tcpsrvApplyKeepAliveForNewSessions(&server, 1, 2, 3, 30);
+    CHECK(server.bUseKeepAlive == 1);
+    CHECK(server.iKeepAliveIntvl == 2);
+    CHECK(server.iKeepAliveProbes == 3);
+    CHECK(server.iKeepAliveTime == 30);
+    return 0;
+}
+
 static int defaultTZSnapshot(void) {
     tcpsrv_t server = {0};
     tcps_sess_t first = {0};
@@ -344,6 +354,7 @@ int main(void) {
     if (starvationMaxReadsSnapshot() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
+    if (keepAliveNewSessions() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
     if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");

@@ -1677,10 +1677,11 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->iStrmDrvrExtendedCertCheck == right->iStrmDrvrExtendedCertCheck &&
            left->iStrmDrvrSANPreference == right->iStrmDrvrSANPreference &&
            left->iStrmTlsVerifyDepth == right->iStrmTlsVerifyDepth &&
-           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck && left->bKeepAlive == right->bKeepAlive &&
-           left->iKeepAliveIntvl == right->iKeepAliveIntvl && left->iKeepAliveProbes == right->iKeepAliveProbes &&
-           left->iKeepAliveTime == right->iKeepAliveTime && left->compressionMode == right->compressionMode &&
-           left->compressionDriver == right->compressionDriver &&
+           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck &&
+           (ignoreNewSessionFields ||
+            (left->bKeepAlive == right->bKeepAlive && left->iKeepAliveIntvl == right->iKeepAliveIntvl &&
+             left->iKeepAliveProbes == right->iKeepAliveProbes && left->iKeepAliveTime == right->iKeepAliveTime)) &&
+           left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
            left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
            left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
            left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
@@ -1735,6 +1736,10 @@ typedef struct imtcpReloadEntryV1_s {
     int notifyOnConnectionClose;
     int notifyOnConnectionOpen;
     int preserveCase;
+    int keepAlive;
+    int keepAliveInterval;
+    int keepAliveProbes;
+    int keepAliveTime;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1801,6 +1806,10 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
         state->entries[index].notifyOnConnectionOpen = newInst->bEmitMsgOnOpen;
         state->entries[index].preserveCase = newInst->bPreserveCase;
+        state->entries[index].keepAlive = newInst->bKeepAlive;
+        state->entries[index].keepAliveInterval = newInst->iKeepAliveIntvl;
+        state->entries[index].keepAliveProbes = newInst->iKeepAliveProbes;
+        state->entries[index].keepAliveTime = newInst->iKeepAliveTime;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1865,6 +1874,10 @@ static void commitReloadV1(void *const pReloadState) {
         (void)tcpsrv.SetNotificationOnRemoteOpen(server, state->entries[i].notifyOnConnectionOpen);
         (void)tcpsrv.SetNotificationOnRemoteClose(server, state->entries[i].notifyOnConnectionClose);
         (void)tcpsrv.SetPreserveCase(server, state->entries[i].preserveCase);
+        (void)tcpsrv.SetKeepAlive(server, state->entries[i].keepAlive);
+        (void)tcpsrv.SetKeepAliveIntvl(server, state->entries[i].keepAliveInterval);
+        (void)tcpsrv.SetKeepAliveProbes(server, state->entries[i].keepAliveProbes);
+        (void)tcpsrv.SetKeepAliveTime(server, state->entries[i].keepAliveTime);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

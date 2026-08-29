@@ -292,11 +292,12 @@ open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
 ``starvationProtection.maxReads`` values and connection-open/close notification
 policy are published at the safepoint.  An effective ``preserveCase`` change is
 classified ``new_sessions``: established sessions retain their already
-resolved peer identity, while the listener accept profile changes atomically
-for later connections.  The framing, compression, TLS, endpoint, ACL,
-rate-limit, and listener-structure fields remain conservatively
-restart-required until their corresponding prepare, ownership, and
-reconciliation contracts are implemented.
+resolved peer identity and socket options, while the listener accept profile
+changes atomically for later connections.  TCP keepalive enablement, interval,
+probe count, and idle time use the same ``new_sessions`` contract.  The framing,
+compression, TLS, endpoint, ACL, rate-limit, and listener-structure fields
+remain conservatively restart-required until their corresponding prepare,
+ownership, and reconciliation contracts are implemented.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
