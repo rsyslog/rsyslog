@@ -1010,6 +1010,214 @@ finalize_it:
 }
 
 
+static rsRetVal applyInputEndpointParam(const char *const name,
+                                        const struct cnfparamvals *const value,
+                                        instanceConf_t *const inst,
+                                        int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "port")) {
+        CHKmalloc(inst->cnf_params->pszPort = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "networknamespace")) {
+        CHKmalloc(inst->pszNetworkNamespace = es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "address")) {
+        CHKmalloc(inst->cnf_params->pszAddr = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "name")) {
+        CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "defaulttz")) {
+        CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "ruleset")) {
+        CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "maxsessions")) {
+        inst->iTCPSessMax = (int)value->val.d.n;
+    } else if (!strcmp(name, "maxlisteners")) {
+        inst->iTCPLstnMax = (int)value->val.d.n;
+    } else if (!strcmp(name, "workerthreads")) {
+        inst->numWrkr = (int)value->val.d.n;
+    } else if (!strcmp(name, "starvationprotection.maxreads")) {
+        inst->starvationMaxReads = (unsigned)value->val.d.n;
+    } else if (!strcmp(name, "socketbacklog")) {
+        inst->iSynBacklog = (int)value->val.d.n;
+    } else if (!strcmp(name, "listenportfilename")) {
+        CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputStreamStringParam(const char *const name,
+                                            const struct cnfparamvals *const value,
+                                            instanceConf_t *const inst,
+                                            int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "streamdriver.authmode")) {
+        CHKmalloc(inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.permitexpiredcerts")) {
+        CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.cafile")) {
+        CHKmalloc(inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.crlfile")) {
+        CHKmalloc(inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.keyfile")) {
+        CHKmalloc(inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.certfile")) {
+        CHKmalloc(inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "streamdriver.name")) {
+        CHKmalloc(inst->pszStrmDrvrName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "gnutlsprioritystring")) {
+        CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "permittedpeer")) {
+        for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
+            uchar *const peer = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
+            CHKmalloc(peer);
+            const rsRetVal entryRet = net.AddPermittedPeer(&inst->pPermPeersRoot, peer);
+            free(peer);
+            CHKiRet(entryRet);
+        }
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputStreamScalarParam(const char *const name,
+                                            const struct cnfparamvals *const value,
+                                            instanceConf_t *const inst,
+                                            const sbool emitDiagnostics,
+                                            int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "streamdriver.mode")) {
+        inst->iStrmDrvrMode = (int)value->val.d.n;
+        inst->bStrmDrvrModeSet = 1;
+    } else if (!strcmp(name, "streamdriver.CheckExtendedKeyPurpose")) {
+        inst->iStrmDrvrExtendedCertCheck = (int)value->val.d.n;
+    } else if (!strcmp(name, "streamdriver.PrioritizeSAN")) {
+        inst->iStrmDrvrSANPreference = (int)value->val.d.n;
+    } else if (!strcmp(name, "streamdriver.TlsVerifyDepth")) {
+        if (value->val.d.n >= 2) {
+            inst->iStrmTlsVerifyDepth = (int)value->val.d.n;
+        } else if (emitDiagnostics) {
+            parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)value->val.d.n);
+        } else {
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+    } else if (!strcmp(name, "streamdriver.TlsRevocationCheck")) {
+        inst->iStrmTlsRevocationCheck = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive")) {
+        inst->bKeepAlive = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.probes")) {
+        inst->iKeepAliveProbes = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.time")) {
+        inst->iKeepAliveTime = (int)value->val.d.n;
+    } else if (!strcmp(name, "keepalive.interval")) {
+        inst->iKeepAliveIntvl = (int)value->val.d.n;
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputMessageParam(const char *const name,
+                                       const struct cnfparamvals *const value,
+                                       instanceConf_t *const inst,
+                                       const sbool emitDiagnostics,
+                                       int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "framingfix.cisco.asa")) {
+        inst->bSPFramingFix = (int)value->val.d.n;
+    } else if (!strcmp(name, "flowcontrol")) {
+        inst->bUseFlowControl = (int)value->val.d.n;
+    } else if (!strcmp(name, "disablelfdelimiter")) {
+        inst->bDisableLFDelim = (int)value->val.d.n;
+    } else if (!strcmp(name, "discardtruncatedmsg")) {
+        inst->discardTruncatedMsg = (int)value->val.d.n;
+    } else if (!strcmp(name, "notifyonconnectionclose")) {
+        inst->bEmitMsgOnClose = (int)value->val.d.n;
+    } else if (!strcmp(name, "notifyonconnectionopen")) {
+        inst->bEmitMsgOnOpen = (int)value->val.d.n;
+    } else if (!strcmp(name, "addtlframedelimiter")) {
+        inst->iAddtlFrameDelim = (int)value->val.d.n;
+    } else if (!strcmp(name, "maxframesize")) {
+        const int max = (int)value->val.d.n;
+        CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
+        inst->maxFrameSize = max;
+    } else if (!strcmp(name, "supportoctetcountedframing")) {
+        inst->cnf_params->bSuppOctetFram = (int)value->val.d.n;
+    } else if (!strcmp(name, "preservecase")) {
+        inst->bPreserveCase = (int)value->val.d.n;
+    } else if (!strcmp(name, "multiline")) {
+        inst->cnf_params->bMultiLine = (int)value->val.d.n;
+    } else if (!strcmp(name, "framing.delimiter.regex")) {
+        CHKmalloc(inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal applyInputRateCompressionParam(const char *const name,
+                                               const struct cnfparamvals *const value,
+                                               instanceConf_t *const inst,
+                                               const sbool emitDiagnostics,
+                                               int *const handled) {
+    DEFiRet;
+
+    *handled = 1;
+    if (!strcmp(name, "allowedsender")) {
+        if (value->val.d.ar == NULL || value->val.d.ar->nmemb == 0) {
+            if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+            ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+        }
+        inst->bAllowedSendersSet = 1;
+        for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
+            uchar *sender = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
+            CHKmalloc(sender);
+            const rsRetVal entryRet =
+                net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
+            free(sender);
+            CHKiRet(entryRet);
+        }
+    } else if (!strcmp(name, "ratelimit.burst")) {
+        inst->ratelimitBurst = (int)value->val.d.n;
+    } else if (!strcmp(name, "ratelimit.interval")) {
+        inst->ratelimitInterval = (int)value->val.d.n;
+    } else if (!strcmp(name, "ratelimit.name")) {
+        CHKmalloc(inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(value->val.d.estr, NULL));
+    } else if (!strcmp(name, "compression.mode")) {
+        CHKiRet(parseCompressionMode(value->val.d.estr, &inst->compressionMode, emitDiagnostics));
+    } else if (!strcmp(name, "compression.driver")) {
+        CHKiRet(parseCompressionDriver(value->val.d.estr, &inst->compressionDriver, emitDiagnostics));
+    } else if (!strcmp(name, "compression.maxexpansionratio")) {
+        inst->compressionMaxExpansionRatio = (uint64_t)value->val.d.n;
+    } else if (!strcmp(name, "compression.maxdecompressedbytesperreceive")) {
+        inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)value->val.d.n;
+    } else if (!strcmp(name, "compression.maxtotalzstdwindowbytes")) {
+        inst->compressionMaxTotalZstdWindowBytes = (uint64_t)value->val.d.n;
+        inst->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
+    } else {
+        *handled = 0;
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Apply the parsed input parameter block to an already initialized, owned
  * instance.  The caller controls whether that instance is detached or linked
  * into the normal load configuration. */
@@ -1023,142 +1231,18 @@ static rsRetVal applyInputParams(const modConfData_t *const moduleConfig,
     if (moduleConfig == NULL || inst == NULL || inst->cnf_params == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
 
     for (i = 0; i < inppblk.nParams; ++i) {
+        int handled;
         if (!pvals[i].bUsed) continue;
-        if (!strcmp(inppblk.descr[i].name, "port")) {
-            CHKmalloc(inst->cnf_params->pszPort = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "networknamespace")) {
-            CHKmalloc(inst->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "address")) {
-            CHKmalloc(inst->cnf_params->pszAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "name")) {
-            CHKmalloc(inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
-            CHKmalloc(inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
-            inst->bSPFramingFix = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
-            CHKmalloc(inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.mode")) {
-            inst->iStrmDrvrMode = (int)pvals[i].val.d.n;
-            inst->bStrmDrvrModeSet = 1;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
-            inst->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
-            inst->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
-            if (pvals[i].val.d.n >= 2) {
-                inst->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
-            } else {
-                if (emitDiagnostics)
-                    parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
-                else
-                    ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
-            inst->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.authmode")) {
-            CHKmalloc(inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
-            CHKmalloc(inst->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.crlfile")) {
-            CHKmalloc(inst->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
-            CHKmalloc(inst->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
-            CHKmalloc(inst->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
-            CHKmalloc(inst->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "starvationprotection.maxreads")) {
-            inst->starvationMaxReads = (unsigned)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
-            CHKmalloc(inst->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "permittedpeer")) {
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
-                free(peer);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "allowedsender")) {
-            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
-                if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-            inst->bAllowedSendersSet = 1;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKmalloc(sender);
-                const rsRetVal entryRet =
-                    net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
-                free(sender);
-                CHKiRet(entryRet);
-            }
-        } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
-            inst->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
-            inst->bDisableLFDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
-            inst->discardTruncatedMsg = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
-            inst->bEmitMsgOnClose = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "notifyonconnectionopen")) {
-            inst->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "addtlframedelimiter")) {
-            inst->iAddtlFrameDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "maxframesize")) {
-            const int max = (int)pvals[i].val.d.n;
-            CHKiRet(validateMaxFrameSize(max, emitDiagnostics));
-            inst->maxFrameSize = max;
-        } else if (!strcmp(inppblk.descr[i].name, "maxsessions")) {
-            inst->iTCPSessMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "maxlisteners")) {
-            inst->iTCPLstnMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "workerthreads")) {
-            inst->numWrkr = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
-            inst->cnf_params->bSuppOctetFram = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive")) {
-            inst->bKeepAlive = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
-            inst->iKeepAliveProbes = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.time")) {
-            inst->iKeepAliveTime = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
-            inst->iKeepAliveIntvl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
-            CHKmalloc(inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
-            inst->bPreserveCase = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
-            inst->iSynBacklog = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-            CHKmalloc(inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.mode")) {
-            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &inst->compressionMode, emitDiagnostics));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.driver")) {
-            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &inst->compressionDriver, emitDiagnostics));
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxexpansionratio")) {
-            inst->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
-            inst->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
-            inst->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
-            inst->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
-        } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
-            inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
-            CHKmalloc(inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else {
-            dbgprintf(
-                "imtcp: program error, non-handled "
-                "param '%s'\n",
-                inppblk.descr[i].name);
-        }
+        CHKiRet(applyInputEndpointParam(inppblk.descr[i].name, &pvals[i], inst, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputStreamStringParam(inppblk.descr[i].name, &pvals[i], inst, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputStreamScalarParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputMessageParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (handled) continue;
+        CHKiRet(applyInputRateCompressionParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        if (!handled) dbgprintf("imtcp: program error, non-handled param '%s'\n", inppblk.descr[i].name);
     }
 
     if (inst->cnf_params->pszRatelimitName != NULL) {

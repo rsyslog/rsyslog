@@ -495,9 +495,9 @@ int main(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
 
-    /* Fixed imtcp listeners use their endpoint. Bare port zero follows
-     * imtcp's effective fixed-port fallback to 514; only port-file allocation
-     * remains dynamic and therefore retains the per-type ordinal. */
+    /* Core graph identities remain module-neutral. Anonymous imtcp inputs use
+     * stable per-type ordinals; the imtcp source lowerer separately derives
+     * effective endpoint keys from module and input defaults. */
     {
         rsReloadCandidate_t *endpoints = calloc(1, sizeof(*endpoints));
         rsReloadNormalizedGraphBuilderV1_t *endpointBuilder = NULL;
@@ -522,49 +522,11 @@ int main(void) {
         CHECK(rsReloadCandidateBuildNormalizedGraphV1(endpoints, &endpointBuilder) == RS_RET_OK);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(endpointBuilder, &endpointGraph) == RS_RET_OK);
         CHECK(endpointGraph.enumerate(endpointGraph.context, observe, &endpointObserved) == RS_RET_OK);
-        CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n9:blue:proda11:2001:db8::1p514") != NULL);
-        CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n0:a1:*p514") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:imtcp:anonymous:1") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:imtcp:anonymous:2") != NULL);
         CHECK(findObserved(&endpointObserved, "input:imtcp:anonymous:3") != NULL);
         rsReloadNormalizedGraphBuilderV1Destruct(&endpointBuilder);
         rsReloadCandidateDestruct(&endpoints);
-
-        /* Canonical decimal spelling and length-prefixing are properties of
-         * the endpoint identity itself, independent of graph enumeration. */
-        {
-            struct cnfobj *canonical = object(CNFOBJ_INPUT, parameter("port", "514"), NULL);
-            struct cnfobj *defaults = object(CNFOBJ_INPUT, parameter("port", "5514"), NULL);
-            struct cnfobj *separatorLeft = object(CNFOBJ_INPUT, parameter("port", "6514"), NULL);
-            struct cnfobj *separatorRight = object(CNFOBJ_INPUT, parameter("port", "6514"), NULL);
-            char *canonicalIdentity = NULL;
-            char *defaultIdentity = NULL;
-            char *separatorLeftIdentity = NULL;
-            char *separatorRightIdentity = NULL;
-            CHECK(canonical != NULL && defaults != NULL && separatorLeft != NULL && separatorRight != NULL);
-            canonical->nvlst->next = parameter("address", "2001:db8::1");
-            canonical->nvlst->next->next = parameter("networknamespace", "blue:prod");
-            CHECK(canonical->nvlst->next != NULL && canonical->nvlst->next->next != NULL);
-            separatorLeft->nvlst->next = parameter("address", "b:c");
-            separatorLeft->nvlst->next->next = parameter("networknamespace", "a");
-            separatorRight->nvlst->next = parameter("address", "c");
-            separatorRight->nvlst->next->next = parameter("networknamespace", "a:b");
-            CHECK(separatorLeft->nvlst->next != NULL && separatorLeft->nvlst->next->next != NULL &&
-                  separatorRight->nvlst->next != NULL && separatorRight->nvlst->next->next != NULL);
-            CHECK(makeImtcpEndpointIdentity(canonical, &canonicalIdentity) == RS_RET_OK);
-            CHECK(!strcmp(canonicalIdentity, "input:imtcp:endpoint:n9:blue:proda11:2001:db8::1p514"));
-            CHECK(makeImtcpEndpointIdentity(defaults, &defaultIdentity) == RS_RET_OK);
-            CHECK(!strcmp(defaultIdentity, "input:imtcp:endpoint:n0:a1:*p5514"));
-            CHECK(makeImtcpEndpointIdentity(separatorLeft, &separatorLeftIdentity) == RS_RET_OK);
-            CHECK(makeImtcpEndpointIdentity(separatorRight, &separatorRightIdentity) == RS_RET_OK);
-            CHECK(strcmp(separatorLeftIdentity, separatorRightIdentity));
-            free(canonicalIdentity);
-            free(defaultIdentity);
-            free(separatorLeftIdentity);
-            free(separatorRightIdentity);
-            cnfobjDestruct(canonical);
-            cnfobjDestruct(defaults);
-            cnfobjDestruct(separatorLeft);
-            cnfobjDestruct(separatorRight);
-        }
     }
 
     /* Both branches of legacy priority/property filters are part of the

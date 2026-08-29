@@ -466,6 +466,9 @@ struct cnfstmt *cnfstmtNewContinue(void);
 struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
 rsRetVal cnfstmtCloneReloadSafe(const struct cnfstmt *src, struct cnfstmt **out);
+/* Convert one capture-only legacy filter into its executable form against an
+ * explicit immutable configuration. The node retains ownership on failure. */
+rsRetVal cnfstmtLowerReloadFilterV1(struct cnfstmt *stmt, rsconf_t *config);
 struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);

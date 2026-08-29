@@ -150,10 +150,58 @@ static rsRetVal validatePreparedStatements(const struct cnfstmt *stmt) {
                 CHKiRet(validatePreparedStatements(stmt->d.s_if.t_then));
                 CHKiRet(validatePreparedStatements(stmt->d.s_if.t_else));
                 break;
+            case S_FOREACH:
+                CHKiRet(validatePreparedStatements(stmt->d.s_foreach.body));
+                break;
+            case S_RELOAD_PRIFILT:
+                CHKiRet(validatePreparedStatements(stmt->d.s_prifilt.t_then));
+                CHKiRet(validatePreparedStatements(stmt->d.s_prifilt.t_else));
+                break;
+            case S_RELOAD_PROPFILT:
+                CHKiRet(validatePreparedStatements(stmt->d.s_propfilt.t_then));
+                CHKiRet(validatePreparedStatements(stmt->d.s_propfilt.t_else));
+                break;
             default:
                 ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         }
     }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal lowerPreparedFilters(struct cnfstmt *stmt, rsconf_t *const active) {
+    DEFiRet;
+
+    for (; stmt != NULL; stmt = stmt->next) {
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+            case S_SET:
+            case S_UNSET:
+            case S_RELOAD_ACT:
+                break;
+            case S_IF:
+                CHKiRet(lowerPreparedFilters(stmt->d.s_if.t_then, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_if.t_else, active));
+                break;
+            case S_FOREACH:
+                CHKiRet(lowerPreparedFilters(stmt->d.s_foreach.body, active));
+                break;
+            case S_RELOAD_PRIFILT:
+                CHKiRet(cnfstmtLowerReloadFilterV1(stmt, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_prifilt.t_then, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_prifilt.t_else, active));
+                break;
+            case S_RELOAD_PROPFILT:
+                CHKiRet(cnfstmtLowerReloadFilterV1(stmt, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_propfilt.t_then, active));
+                CHKiRet(lowerPreparedFilters(stmt->d.s_propfilt.t_else, active));
+                break;
+            default:
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        }
+    }
+
 finalize_it:
     RETiRet;
 }
@@ -170,6 +218,17 @@ static rsRetVal lowerPreparedStatements(struct cnfstmt *stmt, prepareContextV1_t
             case S_IF:
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_then, prepare));
                 CHKiRet(lowerPreparedStatements(stmt->d.s_if.t_else, prepare));
+                break;
+            case S_FOREACH:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_foreach.body, prepare));
+                break;
+            case S_PRIFILT:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_prifilt.t_then, prepare));
+                CHKiRet(lowerPreparedStatements(stmt->d.s_prifilt.t_else, prepare));
+                break;
+            case S_PROPFILT:
+                CHKiRet(lowerPreparedStatements(stmt->d.s_propfilt.t_then, prepare));
+                CHKiRet(lowerPreparedStatements(stmt->d.s_propfilt.t_else, prepare));
                 break;
             case S_RELOAD_ACT: {
                 char *fingerprint = NULL;
@@ -230,6 +289,7 @@ static rsRetVal prepareFragment(
     entry->runtime = runtime;
     CHKiRet(cnfstmtCloneReloadSafe(fragment, &entry->root));
     CHKiRet(validatePreparedStatements(entry->root));
+    CHKiRet(lowerPreparedFilters(entry->root, prepare->active));
     /* Match startup's runtime-required expression canonicalization before
      * binding borrowed actions. In particular, array equality relies on the
      * optimizer to move arrays to the RHS and sort them for bsearch(). */

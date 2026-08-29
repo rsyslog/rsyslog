@@ -1761,6 +1761,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
+	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \
 	yaml-include-recursion.sh
 
