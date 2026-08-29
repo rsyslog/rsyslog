@@ -338,6 +338,7 @@ static rsRetVal SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
     assert(pLstnInfo != NULL);
+    if (pThis->pSrv == NULL) return RS_RET_PARAM_ERROR;
     pThis->pLstnInfo = pLstnInfo;
     /* set cached elements */
     pThis->bSuppOctetFram = pLstnInfo->cnf_params->bSuppOctetFram;
@@ -1342,6 +1343,7 @@ rsRetVal tcps_sessFuzzInput(const uint8_t *const data, const size_t size) {
     #endif
 
     CHKiRet(tcps_sessConstruct(&session));
+    if (SetLstnInfo(session, &listener) != RS_RET_PARAM_ERROR) ABORT_FINALIZE(RS_RET_ERR);
     CHKiRet(SetTcpsrv(session, &server));
     CHKiRet(SetLstnInfo(session, &listener));
     session->tlsProbeDone = RSTRUE;

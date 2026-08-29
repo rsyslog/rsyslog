@@ -820,8 +820,7 @@ static rsRetVal parseFixedTcpPort(const char *const text, const size_t length, u
         if (value > (65535U - (unsigned)(text[i] - '0')) / 10U) return RS_RET_NOT_FOUND;
         value = value * 10U + (unsigned)(text[i] - '0');
     }
-    if (value == 0) return RS_RET_NOT_FOUND;
-    *port = value;
+    *port = value == 0 ? 514U : value;
     return RS_RET_OK;
 }
 

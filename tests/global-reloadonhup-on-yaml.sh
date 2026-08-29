@@ -110,7 +110,7 @@ wait_queueempty
 shutdown_when_empty
 wait_shutdown
 content_check 'msgnum:00000000' "$RSYSLOG_OUT_LOG"
-assert_content_missing 'msgnum:00000001' "$RSYSLOG_OUT_LOG"
+custom_assert_content_missing 'msgnum:00000001' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000002' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000003' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"

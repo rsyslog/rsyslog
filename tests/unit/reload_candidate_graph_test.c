@@ -474,8 +474,9 @@ int main(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
 
-    /* Fixed imtcp listeners use their endpoint; dynamic listeners retain the
-     * per-type ordinal so port-file allocation cannot rename them. */
+    /* Fixed imtcp listeners use their endpoint. Bare port zero follows
+     * imtcp's effective fixed-port fallback to 514; only port-file allocation
+     * remains dynamic and therefore retains the per-type ordinal. */
     {
         rsReloadCandidate_t *endpoints = calloc(1, sizeof(*endpoints));
         rsReloadNormalizedGraphBuilderV1_t *endpointBuilder = NULL;
@@ -501,7 +502,7 @@ int main(void) {
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(endpointBuilder, &endpointGraph) == RS_RET_OK);
         CHECK(endpointGraph.enumerate(endpointGraph.context, observe, &endpointObserved) == RS_RET_OK);
         CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n9:blue:proda11:2001:db8::1p514") != NULL);
-        CHECK(findObserved(&endpointObserved, "input:imtcp:anonymous:2") != NULL);
+        CHECK(findObserved(&endpointObserved, "input:imtcp:endpoint:n0:a1:*p514") != NULL);
         CHECK(findObserved(&endpointObserved, "input:imtcp:anonymous:3") != NULL);
         rsReloadNormalizedGraphBuilderV1Destruct(&endpointBuilder);
         rsReloadCandidateDestruct(&endpoints);

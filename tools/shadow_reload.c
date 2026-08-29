@@ -404,7 +404,7 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
             result = "candidate_scope_unsupported";
             break;
         case SHADOW_RELOAD_REJECTED_ACTIVATION:
-            result = "activation_not_implemented";
+            result = "activation_failed";
             break;
         case SHADOW_RELOAD_IDLE:
         default:
@@ -613,7 +613,8 @@ static int rejectedResult(void) {
         const int expectedActivationFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
             (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
-             pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR);
+             pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
+             pendingCandidateResult == RS_RET_ERR);
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
             !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;
@@ -688,10 +689,15 @@ static rsRetVal shadowReloadEnterCommit(void *const context) {
 
 static void shadowReloadLeaveCommit(void *const context) {
     reloadCommitSignalGuard_t *const guard = context;
+    int maskRet;
 
     if (guard == NULL || !guard->active) return;
+    maskRet = pthread_sigmask(SIG_SETMASK, &guard->previousMask, NULL);
+    if (maskRet != 0) {
+        LogError(maskRet, RS_RET_ERR, "shadow_reload: could not restore the termination-signal mask after commit");
+        return;
+    }
     guard->active = 0;
-    pthread_sigmask(SIG_SETMASK, &guard->previousMask, NULL);
 }
 
 static void publishActivatedGraph(void __attribute__((unused)) *const context) {
