@@ -2238,7 +2238,9 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionMode(tcpsrv_t *pThis, int mode) {
     if (mode != TCPSRV_COMPRESS_NEVER && mode != TCPSRV_COMPRESS_STREAM_ALWAYS) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
-    pThis->compressionMode = (uint8_t)mode;
+    tcpsrvApplyCompressionForNewSessions(pThis, mode, pThis->compressionDriver, pThis->compressionMaxExpansionRatio,
+                                         pThis->compressionMaxDecompressedBytesPerReceive,
+                                         pThis->compressionMaxTotalZstdWindowBytes);
 finalize_it:
     RETiRet;
 }
@@ -2254,7 +2256,9 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionDriver(tcpsrv_t *pThis, int driver
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 #endif
-    pThis->compressionDriver = (uint8_t)driver;
+    tcpsrvApplyCompressionForNewSessions(pThis, pThis->compressionMode, driver, pThis->compressionMaxExpansionRatio,
+                                         pThis->compressionMaxDecompressedBytesPerReceive,
+                                         pThis->compressionMaxTotalZstdWindowBytes);
 finalize_it:
     RETiRet;
 }
@@ -2262,21 +2266,27 @@ finalize_it:
 static rsRetVal ATTR_NONNULL(1) SetCompressionMaxExpansionRatio(tcpsrv_t *pThis, const uint64_t ratio) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    pThis->compressionMaxExpansionRatio = ratio;
+    tcpsrvApplyCompressionForNewSessions(pThis, pThis->compressionMode, pThis->compressionDriver, ratio,
+                                         pThis->compressionMaxDecompressedBytesPerReceive,
+                                         pThis->compressionMaxTotalZstdWindowBytes);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) SetCompressionMaxDecompressedBytesPerReceive(tcpsrv_t *pThis, const uint64_t maxBytes) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    pThis->compressionMaxDecompressedBytesPerReceive = maxBytes;
+    tcpsrvApplyCompressionForNewSessions(pThis, pThis->compressionMode, pThis->compressionDriver,
+                                         pThis->compressionMaxExpansionRatio, maxBytes,
+                                         pThis->compressionMaxTotalZstdWindowBytes);
     RETiRet;
 }
 
 static rsRetVal ATTR_NONNULL(1) SetCompressionMaxTotalZstdWindowBytes(tcpsrv_t *pThis, const uint64_t maxBytes) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    pThis->compressionMaxTotalZstdWindowBytes = maxBytes;
+    tcpsrvApplyCompressionForNewSessions(pThis, pThis->compressionMode, pThis->compressionDriver,
+                                         pThis->compressionMaxExpansionRatio,
+                                         pThis->compressionMaxDecompressedBytesPerReceive, maxBytes);
     RETiRet;
 }
 

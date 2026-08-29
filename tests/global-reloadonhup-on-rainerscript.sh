@@ -57,7 +57,7 @@ fi
 # atomic while retaining the established session; preserveCase and TCP
 # keepalive and the scalar framing profile change only the accept profile used
 # after the fence.
-sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off" notifyOnConnectionOpen="on" notifyOnConnectionClose="on" preserveCase="off" keepAlive="on" keepAlive.probes="3" keepAlive.time="30" keepAlive.interval="2" maxFrameSize="210000" octetCountedFraming="off")|' \
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off" notifyOnConnectionOpen="on" notifyOnConnectionClose="on" preserveCase="off" keepAlive="on" keepAlive.probes="3" keepAlive.time="30" keepAlive.interval="2" maxFrameSize="210000" octetCountedFraming="off" compression.maxExpansionRatio="2048")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"

@@ -437,6 +437,12 @@ void tcpsrvApplyFramingForNewSessions(tcpsrv_t *pThis,
                                       int disableLFDelimiter,
                                       int discardTruncatedMessage);
 void tcpsrvApplyOctetCountedFramingForNewSessions(tcpsrv_t *pThis, int enabled);
+void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
+                                          int mode,
+                                          int driver,
+                                          uint64_t maxExpansionRatio,
+                                          uint64_t maxDecompressedBytesPerReceive,
+                                          uint64_t maxTotalZstdWindowBytes);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

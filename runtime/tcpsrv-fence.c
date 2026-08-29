@@ -300,6 +300,28 @@ void tcpsrvApplyOctetCountedFramingForNewSessions(tcpsrv_t *const server, const 
     }
 }
 
+void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *const server,
+                                          const int mode,
+                                          const int driver,
+                                          const uint64_t maxExpansionRatio,
+                                          const uint64_t maxDecompressedBytesPerReceive,
+                                          const uint64_t maxTotalZstdWindowBytes) {
+    tcpLstnPortList_t *listener;
+
+    server->compressionMode = (uint8_t)mode;
+    server->compressionDriver = (uint8_t)driver;
+    server->compressionMaxExpansionRatio = maxExpansionRatio;
+    server->compressionMaxDecompressedBytesPerReceive = maxDecompressedBytesPerReceive;
+    server->compressionMaxTotalZstdWindowBytes = maxTotalZstdWindowBytes;
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        listener->compressionMode = (uint8_t)mode;
+        listener->compressionDriver = (uint8_t)driver;
+        listener->compressionMaxExpansionRatio = maxExpansionRatio;
+        listener->compressionMaxDecompressedBytesPerReceive = maxDecompressedBytesPerReceive;
+        listener->compressionMaxTotalZstdWindowBytes = maxTotalZstdWindowBytes;
+    }
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

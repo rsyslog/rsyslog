@@ -326,6 +326,34 @@ static int framingNewSessions(void) {
     return 0;
 }
 
+/* Compression state is copied from the listener into a new session. The
+ * helper updates the complete server/listener profile while existing sessions
+ * remain untouched. */
+static int compressionNewSessions(void) {
+    tcpsrv_t server = {0};
+    tcpLstnPortList_t secondListener = {0};
+    tcpLstnPortList_t firstListener = {.pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyCompressionForNewSessions(&server, TCPSRV_COMPRESS_STREAM_ALWAYS, TCPSRV_COMPRESS_DRIVER_ZLIB, 2048,
+                                         1024 * 1024, 2 * 1024 * 1024);
+    CHECK(server.compressionMode == TCPSRV_COMPRESS_STREAM_ALWAYS);
+    CHECK(server.compressionDriver == TCPSRV_COMPRESS_DRIVER_ZLIB);
+    CHECK(server.compressionMaxExpansionRatio == 2048);
+    CHECK(server.compressionMaxDecompressedBytesPerReceive == 1024 * 1024);
+    CHECK(server.compressionMaxTotalZstdWindowBytes == 2 * 1024 * 1024);
+    CHECK(firstListener.compressionMode == server.compressionMode);
+    CHECK(firstListener.compressionDriver == server.compressionDriver);
+    CHECK(firstListener.compressionMaxExpansionRatio == server.compressionMaxExpansionRatio);
+    CHECK(firstListener.compressionMaxDecompressedBytesPerReceive == server.compressionMaxDecompressedBytesPerReceive);
+    CHECK(firstListener.compressionMaxTotalZstdWindowBytes == server.compressionMaxTotalZstdWindowBytes);
+    CHECK(secondListener.compressionMode == server.compressionMode);
+    CHECK(secondListener.compressionDriver == server.compressionDriver);
+    CHECK(secondListener.compressionMaxExpansionRatio == server.compressionMaxExpansionRatio);
+    CHECK(secondListener.compressionMaxDecompressedBytesPerReceive == server.compressionMaxDecompressedBytesPerReceive);
+    CHECK(secondListener.compressionMaxTotalZstdWindowBytes == server.compressionMaxTotalZstdWindowBytes);
+    return 0;
+}
+
 static int defaultTZSnapshot(void) {
     tcpsrv_t server = {0};
     tcps_sess_t first = {0};
@@ -384,6 +412,7 @@ int main(void) {
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;
     if (framingNewSessions() != 0) return 1;
+    if (compressionNewSessions() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
     if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");
