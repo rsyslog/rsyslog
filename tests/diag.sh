@@ -523,6 +523,9 @@ generate_conf() {
 		if [ -n "$RSTB_NET_IPPROTO" ]; then
 			add_conf "global(net.ipprotocol=\"${RSTB_NET_IPPROTO}\")" "$1"
 		fi
+		if [ -n "$RSTB_EXECUTION_ENGINE" ]; then
+			add_conf "global(executionEngine=\"${RSTB_EXECUTION_ENGINE}\")" "$1"
+		fi
 	fi
 }
 

@@ -2210,6 +2210,25 @@ fi
 AM_CONDITIONAL(ENABLE_RESERVED_EGRESS_TEST_HOOKS,
                test x$enable_reserved_egress_test_hooks = xyes)
 
+# Reserved-egress publication diagnostics are compile-time optional so the
+# performance experiment's ordinary timing builds carry no shared stats RMWs.
+AC_ARG_ENABLE(reserved-egress-stats,
+        [AS_HELP_STRING([--enable-reserved-egress-stats],
+         [reserved-egress publication diagnostics enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_reserved_egress_stats="yes" ;;
+          no) enable_reserved_egress_stats="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-reserved-egress-stats) ;;
+         esac],
+        [enable_reserved_egress_stats=no]
+)
+if test "x$enable_reserved_egress_stats" = "xyes"; then
+	AC_DEFINE([ENABLE_RESERVED_EGRESS_STATS], [1],
+	          [Enable reserved-egress publication diagnostic counters])
+fi
+AM_CONDITIONAL(ENABLE_RESERVED_EGRESS_STATS,
+               test x$enable_reserved_egress_stats = xyes)
+
 # Add a capability to turn off libfaketime tests. Unfortunately, libfaketime
 # becomes more and more problematic in newer versions and causes aborts
 # on some platforms. This provides the ability to turn it off. In the

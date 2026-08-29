@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify YAML global.executionEngine reaches the shared backend and enables a
 # reserved-batch queued ruleset call. Exact output after synchronized shutdown
 # is the oracle; startup alone is not sufficient.

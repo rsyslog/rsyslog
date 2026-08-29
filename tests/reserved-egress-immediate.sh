@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Exercise immediate shutdown while reserved egress is under sustained one-slot
 # target pressure. A deliberately slow target and short queue shutdown limits
 # make worker cancellation reachable. Clean bounded termination (including the

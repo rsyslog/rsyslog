@@ -16,6 +16,7 @@ EXTRA_DIST = \
 
 TESTS_RESERVED_EGRESS = \
 	reserved-egress-basic.sh \
+	reserved-egress-immediate-tail.sh \
 	reserved-egress-concurrent.sh \
 	reserved-egress-crossed-targets.sh \
 	reserved-egress-crossed-targets-immediate.sh \
@@ -2971,9 +2972,11 @@ if ENABLE_IMDIAG
 TESTS += $(TESTS_RESERVED_EGRESS)
 if ENABLE_RESERVED_EGRESS_TEST_HOOKS
 TESTS += $(TESTS_RESERVED_EGRESS_HOOKS)
-endif
+if ENABLE_RESERVED_EGRESS_STATS
 if ENABLE_IMPSTATS
 TESTS += $(TESTS_RESERVED_EGRESS_IMPSTATS)
+endif
+endif
 endif
 if HAVE_LIBYAML
 if ENABLE_IMTCP_TESTS

@@ -681,6 +681,14 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+    /* A test-only gate lets focused tests form a source batch without
+     * queue.minDequeueBatchSize. Removing the named file and submitting one
+     * release message restores the ordinary immediate worker advice path. */
+    const char *const egressWorkerGate = getenv("RSYSLOG_TEST_EGRESS_WORKER_GATE");
+    if (egressWorkerGate != NULL && access(egressWorkerGate, F_OK) == 0) return RS_RET_OK;
+#endif
+
     if (!pThis->bEnqOnly) {
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
@@ -4036,6 +4044,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrNFDscrd));
 
+#ifdef ENABLE_RESERVED_EGRESS_STATS
     STATSCOUNTER_INIT(pThis->ctrEgressPublishedBatches, pThis->mutCtrEgressPublishedBatches);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("egress.published.batches"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &pThis->ctrEgressPublishedBatches));
@@ -4045,6 +4054,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     STATSCOUNTER_INIT(pThis->ctrEgressPublicationAdvice, pThis->mutCtrEgressPublicationAdvice);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("egress.publication.advice"), ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &pThis->ctrEgressPublicationAdvice));
+#endif
 
     pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"), ctrType_Int, CTR_FLAG_NONE,
@@ -4692,14 +4702,10 @@ int qqueueSupportsReservedEgress(const qqueue_t *const pThis) {
            pThis->pszFilePrefix == NULL && !pThis->bIsDA && pThis->iSmpInterval == 0 && pThis->iMaxQueueSize > 0;
 }
 
-rsRetVal qqueueEgressPrepare(qqueue_t *const pThis,
-                             smsg_t *const pMsg,
-                             const int sourceIndex,
-                             qqueue_egress_entry_t *const pEntry) {
+rsRetVal qqueueEgressPrepare(qqueue_t *const pThis, smsg_t *const pMsg, qqueue_egress_entry_t *const pEntry) {
     DEFiRet;
     memset(pEntry, 0, sizeof(*pEntry));
     pEntry->pMsg = pMsg;
-    pEntry->sourceIndex = sourceIndex;
     if (!qqueueSupportsReservedEgress(pThis)) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     if (pThis->qType == QUEUETYPE_LINKEDLIST) {
         CHKmalloc(pEntry->pLinkedListEntry = malloc(sizeof(qLinkedList_t)));
@@ -4710,8 +4716,12 @@ finalize_it:
     RETiRet;
 }
 
-/* tryOnly reports pressure without counters, waits, or ownership transfer so
- * the WTI can first publish its own invisible reservations. */
+/* The first attempt accounts admission and checks discard policy exactly once,
+ * including when it is a tryOnly probe. If that probe finds capacity pressure,
+ * it returns RS_RET_RETRY without incrementing full/discard counters, waiting,
+ * or transferring ownership so the WTI can first publish its own invisible
+ * reservations. A later non-tryOnly retry reuses the recorded admission and
+ * performs the ordinary full observation, wait, timeout, and drop accounting. */
 rsRetVal qqueueEgressReserve(qqueue_t *const pThis, qqueue_egress_entry_t *const pEntry, const int tryOnly) {
     struct timespec t;
     DEFiRet;
@@ -4804,10 +4814,14 @@ void qqueueEgressPublish(qqueue_t *const pThis, qqueue_egress_entry_t *const pEn
     qqueueAddOverallQueueSize((int)nEntries);
     STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
     qqueueChkPersist(pThis, (int)nEntries);
+#ifdef ENABLE_RESERVED_EGRESS_STATS
     STATSCOUNTER_INC(pThis->ctrEgressPublishedBatches, pThis->mutCtrEgressPublishedBatches);
     STATSCOUNTER_ADD(pThis->ctrEgressPublishedMessages, pThis->mutCtrEgressPublishedMessages, nEntries);
+#endif
     qqueueAdviseMaxWorkers(pThis);
+#ifdef ENABLE_RESERVED_EGRESS_STATS
     STATSCOUNTER_INC(pThis->ctrEgressPublicationAdvice, pThis->mutCtrEgressPublicationAdvice);
+#endif
     d_pthread_mutex_unlock(pThis->mut);
 }
 

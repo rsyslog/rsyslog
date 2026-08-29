@@ -81,7 +81,6 @@ typedef struct egress_ledger_s {
     egress_bucket_t *buckets;
     size_t nBuckets;
     size_t nAllocated;
-    int sourceIndex;
     int enabled;
     const rsconf_t *batchConfig;
     rsRetVal error;

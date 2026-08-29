@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify both the explicit legacy selector and an omitted selector leave queued
 # ruleset calls on the existing submitMsg2 path. The omitted case deliberately
 # uses queue.size="0", which reservedBatch rejects as unbounded, so successful

@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Verify the opt-in reserved-batch engine publishes snapshots from conditional
 # call and foreach/call_indirect statements to LinkedList and FixedArray targets.
 # An explicitly configured Direct ruleset must execute synchronously and mutate

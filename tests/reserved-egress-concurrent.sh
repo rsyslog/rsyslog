@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Exercise the pressure slow path with four source WTIs sharing a two-slot
 # FixedArray target. Without partial publication, WTIs can hold both slots as
 # invisible reservations and then self-block. Exact 500-line delivery after

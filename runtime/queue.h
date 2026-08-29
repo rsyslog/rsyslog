@@ -85,7 +85,6 @@ typedef struct qLinkedList_S {
 typedef struct qqueue_egress_entry_s {
     smsg_t *pMsg;
     qLinkedList_t *pLinkedListEntry;
-    int sourceIndex;
     unsigned char state;
     unsigned char admissionCounted;
 } qqueue_egress_entry_t;
@@ -277,9 +276,11 @@ struct queue_s {
         int isRunning;
         /* Append-only: queue_s is visible to loadable modules and is allocated by core. */
         int nEgressReservations; /* accepted, prepared, but not yet published entries */
+#ifdef ENABLE_RESERVED_EGRESS_STATS
         STATSCOUNTER_DEF(ctrEgressPublishedBatches, mutCtrEgressPublishedBatches)
         STATSCOUNTER_DEF(ctrEgressPublishedMessages, mutCtrEgressPublishedMessages)
         STATSCOUNTER_DEF(ctrEgressPublicationAdvice, mutCtrEgressPublicationAdvice)
+#endif
 };
 
 
@@ -293,7 +294,7 @@ struct queue_s {
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
-rsRetVal qqueueEgressPrepare(qqueue_t *pThis, smsg_t *pMsg, int sourceIndex, qqueue_egress_entry_t *pEntry);
+rsRetVal qqueueEgressPrepare(qqueue_t *pThis, smsg_t *pMsg, qqueue_egress_entry_t *pEntry);
 rsRetVal qqueueEgressReserve(qqueue_t *pThis, qqueue_egress_entry_t *pEntry, int tryOnly);
 void qqueueEgressPublish(qqueue_t *pThis, qqueue_egress_entry_t *pEntries, size_t nEntries);
 int qqueueSupportsReservedEgress(const qqueue_t *pThis);

@@ -60,16 +60,29 @@ DEFobjCurrIf(glbl)
  * not carry the branch or shared state. */
 #ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
 static pthread_mutex_t egressTestFaultMut = PTHREAD_MUTEX_INITIALIZER;
-static int egressTestFaultConsumed;
+static unsigned int egressTestFaultMatches;
 
 static int egressTestAllocFault(const char *const point) {
     const char *const requested = getenv("RSYSLOG_TEST_EGRESS_ALLOC_FAIL");
-    if (requested == NULL || strcmp(requested, point)) return 0;
+    if (requested == NULL) return 0;
+    const size_t pointLen = strlen(point);
+    if (strncmp(requested, point, pointLen) != 0 || (requested[pointLen] != '\0' && requested[pointLen] != ':'))
+        return 0;
+    unsigned long requestedMatch = 1;
+    if (requested[pointLen] == ':') {
+        char *end = NULL;
+        errno = 0;
+        requestedMatch = strtoul(requested + pointLen + 1, &end, 10);
+        if (errno != 0 || end == requested + pointLen + 1 || *end != '\0' || requestedMatch == 0 ||
+            requestedMatch > UINT_MAX)
+            return 0;
+    }
     pthread_mutex_lock(&egressTestFaultMut);
-    const int inject = !egressTestFaultConsumed;
-    egressTestFaultConsumed = 1;
+    const unsigned int match = ++egressTestFaultMatches;
+    const int inject = match == requestedMatch;
     pthread_mutex_unlock(&egressTestFaultMut);
-    DBGPRINTF("reserved egress test allocation fault point=%s inject=%d\n", point, inject);
+    DBGPRINTF("reserved egress test allocation fault point=%s match=%u requested=%lu inject=%d\n", point, match,
+              requestedMatch, inject);
     return inject;
 }
 #else
@@ -286,7 +299,6 @@ finalize_it:
 
 void wtiEgressBegin(wti_t *const pThis, const rsconf_t *const batchConfig, const int enabled) {
     assert(pThis->egress.state == EGRESS_EMPTY);
-    pThis->egress.sourceIndex = -1;
     pThis->egress.enabled = enabled;
     pThis->egress.batchConfig = batchConfig;
     pThis->egress.error = RS_RET_OK;
@@ -345,7 +357,7 @@ rsRetVal wtiEgressStage(wti_t *const pThis, qqueue_t *const pQueue, smsg_t *cons
         prepared.pMsg = pMsg;
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
-    iRet = qqueueEgressPrepare(pQueue, pMsg, pThis->egress.sourceIndex, &prepared);
+    iRet = qqueueEgressPrepare(pQueue, pMsg, &prepared);
     if (iRet != RS_RET_OK) FINALIZE;
     preparedOwned = 1;
     iRet = qqueueEgressReserve(pQueue, &prepared, 1);
@@ -392,7 +404,6 @@ void wtiEgressCleanup(wti_t *const pThis) {
     }
     pThis->egress.nBuckets = 0;
     pThis->egress.state = EGRESS_EMPTY;
-    pThis->egress.sourceIndex = -1;
     pThis->egress.enabled = 0;
     pThis->egress.batchConfig = NULL;
     pThis->egress.error = RS_RET_OK;

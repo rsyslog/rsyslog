@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Force two source WTIs to reserve different one-slot targets, synchronize at a
 # direct-action barrier, and then request the other WTI's target. Both targets
 # receiving both messages is the deterministic oracle: flushing only the

@@ -1,4 +1,8 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # Repeat the crossed-target two-WTI schedule with timeoutEnqueue=0. Immediate
 # admission may drop either crossed branch, so clean bounded shutdown plus one
 # published prefix at each target is the delivery oracle. The direct barrier

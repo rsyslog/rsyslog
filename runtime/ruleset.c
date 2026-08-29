@@ -684,7 +684,6 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
 
     /* execution phase */
     for (i = 0; i < batchNumMsgs(pBatch) && !wtiIsShutdownImmediate(pWti); ++i) {
-        if (pWti->egress.enabled) pWti->egress.sourceIndex = i;
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
         pRuleset = (pMsg->pRuleset == NULL) ? batchConfig->rulesets.pDflt : pMsg->pRuleset;

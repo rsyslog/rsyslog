@@ -1411,13 +1411,17 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "executionengine")) {
             const char *const engine = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
             if (engine == NULL) {
-                parser_errmsg("out of memory processing global parameter executionEngine");
+                LogError(0, RS_RET_OUT_OF_MEMORY, "out of memory processing global parameter executionEngine");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             } else if (!strcmp(engine, "legacy")) {
                 loadConf->executionEngine = 0;
             } else if (!strcmp(engine, "reservedBatch")) {
                 loadConf->executionEngine = 1;
             } else {
-                parser_errmsg("invalid global executionEngine '%s'; expected 'legacy' or 'reservedBatch'", engine);
+                LogError(0, RS_RET_ERR, "invalid global executionEngine '%s'; expected 'legacy' or 'reservedBatch'",
+                         engine);
+                free((void *)engine);
+                ABORT_FINALIZE(RS_RET_ERR);
             }
             free((void *)engine);
         } else if (!strcmp(paramblk.descr[i].name, "localhostname")) {
