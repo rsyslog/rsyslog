@@ -1643,10 +1643,11 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
            left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
            left->maxFrameSize == right->maxFrameSize &&
-           (ignoreLiveFields || (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
-                                 left->bUseFlowControl == right->bUseFlowControl &&
-                                 reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
-                                                    right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
+           (ignoreLiveFields ||
+            (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+             left->bUseFlowControl == right->bUseFlowControl && left->starvationMaxReads == right->starvationMaxReads &&
+             reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
+                                right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
            left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
            left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
@@ -1676,8 +1677,8 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->iStrmTlsVerifyDepth == right->iStrmTlsVerifyDepth &&
            left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck && left->bKeepAlive == right->bKeepAlive &&
            left->iKeepAliveIntvl == right->iKeepAliveIntvl && left->iKeepAliveProbes == right->iKeepAliveProbes &&
-           left->iKeepAliveTime == right->iKeepAliveTime && left->starvationMaxReads == right->starvationMaxReads &&
-           left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
+           left->iKeepAliveTime == right->iKeepAliveTime && left->compressionMode == right->compressionMode &&
+           left->compressionDriver == right->compressionDriver &&
            left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
            left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
            left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
@@ -1723,6 +1724,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
 typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
     int flowControl;
+    unsigned starvationMaxReads;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1783,6 +1785,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->entries[index].flowControl = newInst->bUseFlowControl;
+        state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1843,6 +1846,7 @@ static void commitReloadV1(void *const pReloadState) {
     for (size_t i = 0; i < state->count; ++i) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
+        tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

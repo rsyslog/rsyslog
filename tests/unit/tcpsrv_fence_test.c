@@ -257,6 +257,15 @@ static int flowControlSnapshot(void) {
     return 0;
 }
 
+static int starvationMaxReadsSnapshot(void) {
+    tcpsrv_t server = {.starvationMaxReads = 500};
+    tcpsrvApplyStarvationMaxReadsLive(&server, 1);
+    CHECK(server.starvationMaxReads == 1);
+    tcpsrvApplyStarvationMaxReadsLive(&server, 0);
+    CHECK(server.starvationMaxReads == 0);
+    return 0;
+}
+
 static int defaultTZSnapshot(void) {
     tcpsrv_t server = {0};
     tcps_sess_t first = {0};
@@ -310,6 +319,7 @@ int main(void) {
     if (timeoutDrainAndRetry() != 0) return 1;
     if (termWhileParked() != 0) return 1;
     if (flowControlSnapshot() != 0) return 1;
+    if (starvationMaxReadsSnapshot() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
     if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");

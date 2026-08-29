@@ -1,10 +1,11 @@
-/* Transactional reload-manager foundation (Releases B and C).
+/* Transactional reload-manager foundation (Releases B, C, and early E).
  *
  * This owns request state, observability, and the active generation's
  * source-syntactic configuration graph. It parses candidates into an owned
  * representation without dispatching configuration objects into modules or
- * runtime globals. A deliberately narrow existing-ruleset-only scope can be
- * prepared and atomically activated; all other changes remain fail-closed.
+ * runtime globals. Existing ruleset plans and explicitly classified live
+ * imtcp fields can be prepared and atomically activated; all other changes
+ * remain fail-closed.
  * Historic HUP hooks remain outside this manager.
  */
 #include "config.h"

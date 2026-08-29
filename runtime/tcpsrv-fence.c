@@ -248,6 +248,10 @@ void tcpsrvApplyFlowControlLive(tcpsrv_t *const server, const int useFlowControl
     }
 }
 
+void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *const server, const unsigned maxReads) {
+    server->starvationMaxReads = maxReads;
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

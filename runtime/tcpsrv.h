@@ -420,9 +420,11 @@ void tcpsrvParkAtFence(tcpsrv_t *pThis);
 void tcpsrvAbortFenceLocked(tcpsrv_t *pThis);
 int tcpsrvFenceTerminated(void);
 
-/* Update listener defaults and every established session. If sessions exist,
- * the caller must hold a successfully acquired tcpsrv fence. */
+/* Live control-path mutations. The caller must hold a successfully acquired
+ * tcpsrv fence whenever the server is running. Snapshot-bearing settings also
+ * update listener/session copies before the fence is released. */
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
+void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

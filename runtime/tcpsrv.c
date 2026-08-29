@@ -2542,7 +2542,7 @@ static rsRetVal ATTR_NONNULL(1) SetSynBacklog(tcpsrv_t *pThis, const int iSynBac
 
 
 static rsRetVal ATTR_NONNULL(1) SetStarvationMaxReads(tcpsrv_t *pThis, const unsigned int maxReads) {
-    pThis->starvationMaxReads = maxReads;
+    tcpsrvApplyStarvationMaxReadsLive(pThis, maxReads);
     return RS_RET_OK;
 }
 

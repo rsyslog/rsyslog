@@ -280,6 +280,14 @@ queues without a safe batch barrier are rejected before commit.  This is the
 first Release C scope; it does not imply that other configuration objects are
 live-reloadable.
 
+The first Release E foundation coordinates that ruleset plan with an ``imtcp``
+event-loop/worker fence.  Compatible existing listeners and sessions are kept
+open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
+``starvationProtection.maxReads`` values are published at the safepoint.  The
+framing, compression, TLS, endpoint, ACL, rate-limit, and listener-structure
+fields remain conservatively restart-required until their corresponding
+prepare, ownership, and reconciliation contracts are implemented.
+
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
 for configuration provenance or audit logging.
