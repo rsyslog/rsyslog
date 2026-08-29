@@ -149,3 +149,6 @@ AGENTS.local.md
 
 # Codex container validation marker
 .codex/container_validated.marker
+
+# Local Codex security review packages and receipts
+.codex/security-review/

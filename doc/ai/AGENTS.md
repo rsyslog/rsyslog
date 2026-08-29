@@ -8,6 +8,8 @@ This file defines specific guidelines for AI assistants working on the documenta
 - **Structure and Paths:** [`doc/ai/structure_and_paths.md`](./structure_and_paths.md)
 - **Terminology:** [`doc/ai/terminology.md`](./terminology.md)
 - **Security Triage Rubric:** [`doc/ai/security_triage_rubric.md`](./security_triage_rubric.md)
+- **Project Threat Model:** [`doc/security/project-threat-model.md`](../security/project-threat-model.md)
+- **Threat-Model Routing:** [`doc/security/threat-model-components.json`](../security/threat-model-components.json)
 - **Doc Assistant Prompt:** [`ai/rsyslog_doc_assistant/base_prompt.txt`](../../ai/rsyslog_doc_assistant/base_prompt.txt)
 
 ## Critical Requirements for Documentation
