@@ -1641,16 +1641,17 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
-           left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
-           left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
-           left->maxFrameSize == right->maxFrameSize &&
+           left->ratelimitInterval == right->ratelimitInterval && left->ratelimitBurst == right->ratelimitBurst &&
+           (ignoreNewSessionFields ||
+            (left->bSPFramingFix == right->bSPFramingFix && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
+             left->maxFrameSize == right->maxFrameSize && left->bDisableLFDelim == right->bDisableLFDelim &&
+             left->discardTruncatedMsg == right->discardTruncatedMsg)) &&
            (ignoreLiveFields ||
             (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
              left->bUseFlowControl == right->bUseFlowControl && left->starvationMaxReads == right->starvationMaxReads &&
              left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
              reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                 right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
-           left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
            (ignoreNewSessionFields || left->bPreserveCase == right->bPreserveCase) &&
            left->iSynBacklog == right->iSynBacklog &&
            reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
@@ -1740,6 +1741,11 @@ typedef struct imtcpReloadEntryV1_s {
     int keepAliveInterval;
     int keepAliveProbes;
     int keepAliveTime;
+    int framingFix;
+    int additionalFrameDelimiter;
+    int maxFrameSize;
+    int disableLFDelimiter;
+    int discardTruncatedMessage;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1810,6 +1816,11 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         state->entries[index].keepAliveInterval = newInst->iKeepAliveIntvl;
         state->entries[index].keepAliveProbes = newInst->iKeepAliveProbes;
         state->entries[index].keepAliveTime = newInst->iKeepAliveTime;
+        state->entries[index].framingFix = newInst->bSPFramingFix;
+        state->entries[index].additionalFrameDelimiter = newInst->iAddtlFrameDelim;
+        state->entries[index].maxFrameSize = newInst->maxFrameSize;
+        state->entries[index].disableLFDelimiter = newInst->bDisableLFDelim;
+        state->entries[index].discardTruncatedMessage = newInst->discardTruncatedMsg;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1878,6 +1889,11 @@ static void commitReloadV1(void *const pReloadState) {
         (void)tcpsrv.SetKeepAliveIntvl(server, state->entries[i].keepAliveInterval);
         (void)tcpsrv.SetKeepAliveProbes(server, state->entries[i].keepAliveProbes);
         (void)tcpsrv.SetKeepAliveTime(server, state->entries[i].keepAliveTime);
+        (void)tcpsrv.SetbSPFramingFix(server, state->entries[i].framingFix);
+        (void)tcpsrv.SetAddtlFrameDelim(server, state->entries[i].additionalFrameDelimiter);
+        (void)tcpsrv.SetMaxFrameSize(server, state->entries[i].maxFrameSize);
+        (void)tcpsrv.SetbDisableLFDelim(server, state->entries[i].disableLFDelimiter);
+        (void)tcpsrv.SetDiscardTruncatedMsg(server, state->entries[i].discardTruncatedMessage);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

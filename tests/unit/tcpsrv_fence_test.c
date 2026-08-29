@@ -298,6 +298,31 @@ static int keepAliveNewSessions(void) {
     return 0;
 }
 
+/* Framing fields are copied when a session is accepted. The control-path
+ * helper must update the server profile and the listener-owned Cisco framing
+ * flag without mutating already established sessions. */
+static int framingNewSessions(void) {
+    tcpsrv_t server = {.bSPFramingFix = 0,
+                       .addtlFrameDelim = -1,
+                       .maxFrameSize = 200000,
+                       .bDisableLFDelim = 0,
+                       .discardTruncatedMsg = 0};
+    tcpLstnParams_t firstParams = {.bSPFramingFix = 0};
+    tcpLstnParams_t secondParams = {.bSPFramingFix = 0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyFramingForNewSessions(&server, 1, 10, 210000, 1, 1);
+    CHECK(server.bSPFramingFix == 1);
+    CHECK(server.addtlFrameDelim == 10);
+    CHECK(server.maxFrameSize == 210000);
+    CHECK(server.bDisableLFDelim == 1);
+    CHECK(server.discardTruncatedMsg == 1);
+    CHECK(firstParams.bSPFramingFix == 1);
+    CHECK(secondParams.bSPFramingFix == 1);
+    return 0;
+}
+
 static int defaultTZSnapshot(void) {
     tcpsrv_t server = {0};
     tcps_sess_t first = {0};
@@ -355,6 +380,7 @@ int main(void) {
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;
+    if (framingNewSessions() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
     if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");

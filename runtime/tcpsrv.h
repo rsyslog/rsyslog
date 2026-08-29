@@ -428,6 +428,12 @@ void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
 void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
 void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *pThis, int preserveCase);
 void tcpsrvApplyKeepAliveForNewSessions(tcpsrv_t *pThis, int enabled, int interval, int probes, int time);
+void tcpsrvApplyFramingForNewSessions(tcpsrv_t *pThis,
+                                      int spFramingFix,
+                                      int additionalDelimiter,
+                                      int maxFrameSize,
+                                      int disableLFDelimiter,
+                                      int discardTruncatedMessage);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

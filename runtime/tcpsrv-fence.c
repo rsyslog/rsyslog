@@ -274,6 +274,24 @@ void tcpsrvApplyKeepAliveForNewSessions(
     server->iKeepAliveTime = time;
 }
 
+void tcpsrvApplyFramingForNewSessions(tcpsrv_t *const server,
+                                      const int spFramingFix,
+                                      const int additionalDelimiter,
+                                      const int maxFrameSize,
+                                      const int disableLFDelimiter,
+                                      const int discardTruncatedMessage) {
+    tcpLstnPortList_t *listener;
+
+    server->bSPFramingFix = spFramingFix;
+    server->addtlFrameDelim = additionalDelimiter;
+    server->maxFrameSize = maxFrameSize;
+    server->bDisableLFDelim = disableLFDelimiter;
+    server->discardTruncatedMsg = discardTruncatedMessage;
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->cnf_params != NULL) listener->cnf_params->bSPFramingFix = spFramingFix;
+    }
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;
