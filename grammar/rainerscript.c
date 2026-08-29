@@ -5537,6 +5537,15 @@ done:
     return cnfstmt;
 }
 
+struct cnfstmt *cnfstmtNewBorrowedAct(struct action_s *const action) {
+    struct cnfstmt *cnfstmt;
+
+    if (action == NULL || (cnfstmt = cnfstmtNew(S_ACT)) == NULL) return NULL;
+    cnfstmt->flags |= CNFSTMT_FLAG_BORROWED_ACTION;
+    cnfstmt->d.act = action;
+    return cnfstmt;
+}
+
 struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
     struct cnfstmt *cnfstmt;
     char *const ownedActline = actline;
