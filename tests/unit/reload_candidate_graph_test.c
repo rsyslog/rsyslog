@@ -16,6 +16,8 @@
 #include "reload-normalized-graph.h"
 
 #include "../../runtime/reload-normalized-graph.c"
+#include "../../runtime/module-reload.c"
+#include "../../runtime/reload-report.c"
 #include "../../runtime/reload-candidate.c"
 
 #define CHECK(condition)                                                                    \
@@ -536,6 +538,58 @@ int main(void) {
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_CONF_PARSE_ERROR);
     CHECK(builder == NULL);
     rsReloadCandidateDestruct(&candidate);
+
+    /* The first live-reload gate accepts only a changed program for an
+     * existing ruleset while the referenced named action stays identical.
+     * Any global change remains fail-closed at this milestone. */
+    {
+        rsReloadCandidate_t *activeCandidate = calloc(1, sizeof(*activeCandidate));
+        rsReloadCandidate_t *rulesetCandidate = calloc(1, sizeof(*rulesetCandidate));
+        rsReloadCandidate_t *globalCandidate = calloc(1, sizeof(*globalCandidate));
+        rsReloadNormalizedGraphBuilderV1_t *activeBuilder = NULL;
+        rsReloadNormalizedGraphV1_t activeGraph;
+        rsReloadReportV1_t *report = NULL;
+        struct cnfstmt *changedFilter;
+
+        CHECK(activeCandidate != NULL && rulesetCandidate != NULL && globalCandidate != NULL);
+        addObject(activeCandidate, object(CNFOBJ_RULESET, parameter("name", "route"),
+                                          propertyFilter(action("stable-action", "same-config"))));
+        changedFilter = propertyFilter(action("stable-action", "same-config"));
+        CHECK(changedFilter != NULL);
+        free(changedFilter->printable);
+        changedFilter->printable = (uchar *)strdup(":msg, contains, \"changed\"");
+        CHECK(changedFilter->printable != NULL);
+        addObject(rulesetCandidate, object(CNFOBJ_RULESET, parameter("name", "route"), changedFilter));
+        addObject(globalCandidate, object(CNFOBJ_GLOBAL, parameter("workdirectory", "/changed"), NULL));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(activeCandidate, &activeBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(activeBuilder, &activeGraph) == RS_RET_OK);
+        {
+            rsReloadNormalizedGraphBuilderV1_t *candidateBuilder = NULL;
+            rsReloadNormalizedGraphV1_t candidateGraph;
+            CHECK(rsReloadCandidateBuildNormalizedGraphV1(rulesetCandidate, &candidateBuilder) == RS_RET_OK);
+            CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(candidateBuilder, &candidateGraph) == RS_RET_OK);
+            CHECK(rsReloadReportBuildV1(&activeGraph, &candidateGraph, &report) == RS_RET_OK);
+            rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
+        }
+        CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_OK);
+        CHECK(report != NULL && report->modifiedCount == 1 && report->invalidCount == 0);
+        rsReloadReportDestructV1(&report);
+        {
+            rsReloadNormalizedGraphBuilderV1_t *candidateBuilder = NULL;
+            rsReloadNormalizedGraphV1_t candidateGraph;
+            CHECK(rsReloadCandidateBuildNormalizedGraphV1(globalCandidate, &candidateBuilder) == RS_RET_OK);
+            CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(candidateBuilder, &candidateGraph) == RS_RET_OK);
+            CHECK(rsReloadReportBuildV1(&activeGraph, &candidateGraph, &report) == RS_RET_OK);
+            rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
+        }
+        CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_NOT_IMPLEMENTED);
+        rsReloadReportDestructV1(&report);
+        rsReloadNormalizedGraphBuilderV1Destruct(&activeBuilder);
+        rsReloadCandidateDestruct(&activeCandidate);
+        rsReloadCandidateDestruct(&rulesetCandidate);
+        rsReloadCandidateDestruct(&globalCandidate);
+    }
 
     /* Main queue is a singleton runtime resource. Two syntax objects cannot
      * be normalized into an unambiguous report-only candidate. */

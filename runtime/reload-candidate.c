@@ -1081,6 +1081,21 @@ finalize_it:
     RETiRet;
 }
 
+rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *const report) {
+    size_t i;
+    if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report))
+        return RS_RET_PARAM_ERROR;
+    for (i = 0; i < report->entryCount; ++i) {
+        const rsReloadReportEntryV1_t *entry = &report->entries[i];
+        if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
+        /* Added/removed rulesets alter call targets. Any changed action,
+         * input, parser, queue, module, template, or global fails closed. */
+        if (entry->objectKind != RS_RELOAD_OBJ_RULESET || entry->diffKind != RS_RELOAD_DIFF_MODIFIED)
+            return RS_RET_NOT_IMPLEMENTED;
+    }
+    return RS_RET_OK;
+}
+
 rsRetVal rsReloadCandidateSourceBegin(void) {
     rsReloadCandidateSourceAbort();
     sourceOrdinal = 0;

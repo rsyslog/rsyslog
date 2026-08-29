@@ -40,6 +40,7 @@ static intctr_t onTotal = 0;
 static intctr_t rejectedTotal = 0;
 static intctr_t rejectedValidateTotal = 0;
 static intctr_t rejectedOnTotal = 0;
+static intctr_t capabilityRejectedTotal = 0;
 static intctr_t legacyHookTotal = 0;
 static intctr_t durationTotalUsec = 0;
 static intctr_t lastDurationUsec = 0;
@@ -75,6 +76,7 @@ enum shadowReloadResult_e {
     SHADOW_RELOAD_REJECTED_NORMALIZE,
     SHADOW_RELOAD_REJECTED_BASELINE,
     SHADOW_RELOAD_REJECTED_REPORT,
+    SHADOW_RELOAD_REJECTED_CAPABILITY,
     SHADOW_RELOAD_REJECTED_ACTIVATION
 };
 static int lastResult = SHADOW_RELOAD_IDLE;
@@ -83,7 +85,8 @@ enum shadowReloadFailurePhase_e {
     SHADOW_RELOAD_FAILURE_PARSE,
     SHADOW_RELOAD_FAILURE_NORMALIZE,
     SHADOW_RELOAD_FAILURE_BASELINE,
-    SHADOW_RELOAD_FAILURE_REPORT
+    SHADOW_RELOAD_FAILURE_REPORT,
+    SHADOW_RELOAD_FAILURE_CAPABILITY
 };
 static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
 
@@ -105,6 +108,7 @@ STATSCOUNTER_DEF(ctrOn, mutCtrOn)
 STATSCOUNTER_DEF(ctrRejected, mutCtrRejected)
 STATSCOUNTER_DEF(ctrRejectedValidate, mutCtrRejectedValidate)
 STATSCOUNTER_DEF(ctrRejectedOn, mutCtrRejectedOn)
+STATSCOUNTER_DEF(ctrCapabilityRejected, mutCtrCapabilityRejected)
 STATSCOUNTER_DEF(ctrLegacyHooks, mutCtrLegacyHooks)
 STATSCOUNTER_DEF(ctrDurationTotalUsec, mutCtrDurationTotalUsec)
 
@@ -135,22 +139,23 @@ static void logState(const char *const event,
                      const size_t candidateObjects,
                      const rsReloadReportV1_t *const report,
                      const uint64_t reportHashValue) {
-    LogMsg(
-        0, !strcmp(result, "rejected") ? RS_RET_ERR : RS_RET_OK, !strcmp(result, "rejected") ? LOG_WARNING : LOG_INFO,
-        "shadow_reload event=%s result=%s mode=%s candidate_objects=%zu unchanged=%zu added=%zu removed=%zu "
-        "modified=%zu invalid=%zu disposition=%u report_hash=%016" PRIx64 " requests_total=%" PRIu64
-        " reload_hup_off_total=%" PRIu64 " reload_validate_total=%" PRIu64 " reload_on_total=%" PRIu64
-        " rejected_total=%" PRIu64 " reload_validate_rejected_total=%" PRIu64 " reload_on_rejected_total=%" PRIu64
-        " reload_legacy_hook_total=%" PRIu64
-        " in_progress=%d pending=%d active_generation=%u duration_total_usec=%" PRIu64 " last_duration_usec=%" PRIu64
-        " rejected_mode=%s rejected_reason=%s",
-        event, result, modeName(configuredMode), candidateObjects, report == NULL ? 0 : report->unchangedCount,
-        report == NULL ? 0 : report->addedCount, report == NULL ? 0 : report->removedCount,
-        report == NULL ? 0 : report->modifiedCount, report == NULL ? 0 : report->invalidCount,
-        report == NULL ? 0 : report->overallDisposition, reportHashValue, (uint64_t)requestsTotal, (uint64_t)offTotal,
-        (uint64_t)validateTotal, (uint64_t)onTotal, (uint64_t)rejectedTotal, (uint64_t)rejectedValidateTotal,
-        (uint64_t)rejectedOnTotal, (uint64_t)legacyHookTotal, requestInProgress, signalRequestPending != 0,
-        activeGeneration, (uint64_t)durationTotalUsec, (uint64_t)lastDurationUsec, rejectedMode, rejectedReason);
+    LogMsg(0, !strcmp(result, "rejected") ? RS_RET_ERR : RS_RET_OK,
+           !strcmp(result, "rejected") ? LOG_WARNING : LOG_INFO,
+           "shadow_reload event=%s result=%s mode=%s candidate_objects=%zu unchanged=%zu added=%zu removed=%zu "
+           "modified=%zu invalid=%zu disposition=%u report_hash=%016" PRIx64 " requests_total=%" PRIu64
+           " reload_hup_off_total=%" PRIu64 " reload_validate_total=%" PRIu64 " reload_on_total=%" PRIu64
+           " rejected_total=%" PRIu64 " reload_validate_rejected_total=%" PRIu64 " reload_on_rejected_total=%" PRIu64
+           " reload_capability_rejected_total=%" PRIu64 " reload_legacy_hook_total=%" PRIu64
+           " in_progress=%d pending=%d active_generation=%u duration_total_usec=%" PRIu64 " last_duration_usec=%" PRIu64
+           " rejected_mode=%s rejected_reason=%s",
+           event, result, modeName(configuredMode), candidateObjects, report == NULL ? 0 : report->unchangedCount,
+           report == NULL ? 0 : report->addedCount, report == NULL ? 0 : report->removedCount,
+           report == NULL ? 0 : report->modifiedCount, report == NULL ? 0 : report->invalidCount,
+           report == NULL ? 0 : report->overallDisposition, reportHashValue, (uint64_t)requestsTotal,
+           (uint64_t)offTotal, (uint64_t)validateTotal, (uint64_t)onTotal, (uint64_t)rejectedTotal,
+           (uint64_t)rejectedValidateTotal, (uint64_t)rejectedOnTotal, (uint64_t)capabilityRejectedTotal,
+           (uint64_t)legacyHookTotal, requestInProgress, signalRequestPending != 0, activeGeneration,
+           (uint64_t)durationTotalUsec, (uint64_t)lastDurationUsec, rejectedMode, rejectedReason);
 }
 
 rsRetVal shadowReloadInit(void) {
@@ -165,6 +170,7 @@ rsRetVal shadowReloadInit(void) {
     STATSCOUNTER_INIT(ctrRejected, mutCtrRejected);
     STATSCOUNTER_INIT(ctrRejectedValidate, mutCtrRejectedValidate);
     STATSCOUNTER_INIT(ctrRejectedOn, mutCtrRejectedOn);
+    STATSCOUNTER_INIT(ctrCapabilityRejected, mutCtrCapabilityRejected);
     STATSCOUNTER_INIT(ctrLegacyHooks, mutCtrLegacyHooks);
     STATSCOUNTER_INIT(ctrDurationTotalUsec, mutCtrDurationTotalUsec);
     CHKiRet(statsobj.Construct(&reloadStats));
@@ -182,6 +188,8 @@ rsRetVal shadowReloadInit(void) {
                                 &ctrRejectedValidate));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_on_rejected_total", ctrType_IntCtr, CTR_FLAG_NONE,
                                 &ctrRejectedOn));
+    CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_capability_rejected_total", ctrType_IntCtr, CTR_FLAG_NONE,
+                                &ctrCapabilityRejected));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_legacy_hook_total", ctrType_IntCtr, CTR_FLAG_NONE,
                                 &ctrLegacyHooks));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_duration_total_usec", ctrType_IntCtr, CTR_FLAG_NONE,
@@ -348,6 +356,9 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
         case SHADOW_RELOAD_REJECTED_REPORT:
             result = "candidate_report_invalid";
             break;
+        case SHADOW_RELOAD_REJECTED_CAPABILITY:
+            result = "candidate_scope_unsupported";
+            break;
         case SHADOW_RELOAD_REJECTED_ACTIVATION:
             result = "activation_not_implemented";
             break;
@@ -431,6 +442,10 @@ void shadowReloadBeginRequest(void) {
                     pendingCandidateResult = RS_RET_NOT_IMPLEMENTED;
                 }
                 rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
+                if (pendingCandidateResult == RS_RET_OK && configuredMode == RELOAD_ON_HUP_ON) {
+                    pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                }
             }
         }
     }
@@ -505,7 +520,10 @@ static int rejectedResult(void) {
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_NORMALIZE &&
             (pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
              pendingCandidateResult == RS_RET_CONF_PARAM_INVLD);
-        if (!expectedParseFailure && !expectedNormalizeFailure) return SHADOW_RELOAD_REJECTED_INTERNAL;
+        const int expectedCapabilityFailure =
+            pendingFailurePhase == SHADOW_RELOAD_FAILURE_CAPABILITY && pendingCandidateResult == RS_RET_NOT_IMPLEMENTED;
+        if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure)
+            return SHADOW_RELOAD_REJECTED_INTERNAL;
     }
     switch (pendingFailurePhase) {
         case SHADOW_RELOAD_FAILURE_PARSE:
@@ -516,6 +534,8 @@ static int rejectedResult(void) {
             return SHADOW_RELOAD_REJECTED_BASELINE;
         case SHADOW_RELOAD_FAILURE_REPORT:
             return SHADOW_RELOAD_REJECTED_REPORT;
+        case SHADOW_RELOAD_FAILURE_CAPABILITY:
+            return SHADOW_RELOAD_REJECTED_CAPABILITY;
         case SHADOW_RELOAD_FAILURE_NONE:
         default:
             if (pendingCandidateResult != RS_RET_OK) return SHADOW_RELOAD_REJECTED_INTERNAL;
@@ -540,6 +560,8 @@ static const char *rejectedReason(const int result) {
             return "baseline_unavailable";
         case SHADOW_RELOAD_REJECTED_REPORT:
             return "candidate_report_invalid";
+        case SHADOW_RELOAD_REJECTED_CAPABILITY:
+            return "candidate_scope_unsupported";
         case SHADOW_RELOAD_REJECTED_ACTIVATION:
         default:
             return "activation_not_implemented";
@@ -569,6 +591,10 @@ void shadowReloadProcess(void) {
         } else {
             ++rejectedOnTotal;
             STATSCOUNTER_INC(ctrRejectedOn, mutCtrRejectedOn);
+        }
+        if (terminalResult == SHADOW_RELOAD_REJECTED_CAPABILITY) {
+            ++capabilityRejectedTotal;
+            STATSCOUNTER_INC(ctrCapabilityRejected, mutCtrCapabilityRejected);
         }
         accountDuration();
         requestInProgress = 0;

@@ -10,6 +10,7 @@
 
 #include "rsyslog.h"
 #include "reload-normalized-graph.h"
+#include "reload-report.h"
 
 struct cnfobj;
 struct cnfstmt;
@@ -30,6 +31,14 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
  */
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+
+/*
+ * Conservative scope gate for the first live-ruleset milestone.
+ * It only accepts a report whose changed nodes are existing rulesets; action
+ * nodes must be byte-for-byte unchanged. It builds no runtime objects; a
+ * later private compiler still has to validate and prepare the accepted AST.
+ */
+rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *report);
 
 /*
  * Normal startup observes the already-parsed source once, before regular

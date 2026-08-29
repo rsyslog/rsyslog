@@ -255,6 +255,13 @@ module capability classification, preparation, and ``on`` activation remain
 fail-closed until their later gates are complete.  Later releases retain or
 refine these counters alongside the target outcome counters above.
 
+Before private compilation is enabled, ``on`` applies a conservative scope
+gate to that report.  Only modifications to already existing rulesets pass to
+the unavailable activation phase; added or removed rulesets and every change
+to actions, inputs, parsers, queues, templates, modules, or global settings are
+rejected as ``candidate_scope_unsupported``.  This is a capability boundary,
+not yet a claim that the accepted ruleset syntax has been semantically prepared.
+
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
 for configuration provenance or audit logging.

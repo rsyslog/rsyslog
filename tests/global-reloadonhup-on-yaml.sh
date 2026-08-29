@@ -22,11 +22,22 @@ add_yaml_conf '        file: "'$RSYSLOG_OUT_LOG'"'
 startup
 tcpflood -m1 -i0
 wait_queueempty
+# The unchanged graph is inside the ruleset-only scope and reaches the
+# deliberately unavailable activation phase.
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1"* ]]; then
+	echo "FAIL: unchanged YAML candidate did not reach the activation gate: $reload_status"
+	error_exit 1
+fi
+
+# Changing the named action is outside the first live-ruleset scope and must
+# be classified before any prepare or activation work occurs.
 sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1"* ]]; then
 	echo "FAIL: unexpected reload status: $reload_status"
 	error_exit 1
 fi
