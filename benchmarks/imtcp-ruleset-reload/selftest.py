@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic checks for Release B matrix, fixed policy, and order bias."""
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import tempfile
@@ -34,6 +35,7 @@ def raw(label, session, ratios, unsupported_reload=False):
     other = "candidate" if label == "baseline" else "base"
     return {"schema_version": 2,
             "metadata": {"label": label, "session": session,
+                         "role": label,
                          "revision": "base" if label == "baseline" else "candidate",
                          "source_fingerprint": label + "-fp", "pair_revision": other,
                          "pair_source_fingerprint": "candidate-fp" if label == "baseline" else "baseline-fp",
@@ -49,14 +51,23 @@ def compare(root, name, ratios, expect_success, unsupported_reload=False):
                "--markdown", str(root / (name + ".md"))]
     result = subprocess.run(command, check=False)
     check((result.returncode == 0) == expect_success, name + " decision changed")
+    report = root / (name + ".json")
+    check(report.is_file(), name + " did not produce an explicit comparison report")
+    expected = "pass" if expect_success else "not-pass"
+    check(json.loads(report.read_text())["acceptance"]["result"] == expected,
+          name + " did not report the expected explicit result")
 
 
 def evidence_manifest(root, session):
     path = root / (session + "-evidence.json")
+    evidence = {}
+    for name in ("perf_stat", "profile", "disassembly"):
+        artifact = root / (session + "-" + name + ".raw")
+        artifact.write_text(session + ":" + name + "\n")
+        evidence[name] = {"applicable": True, "status": "present", "artifacts": [artifact.name],
+                          "sha256": {artifact.name: hashlib.sha256(artifact.read_bytes()).hexdigest()}}
     path.write_text(json.dumps({"schema_version": 1, "session": session,
-                                "required_evidence": {
-                                    name: {"applicable": True, "status": "present", "artifacts": [name + ".raw"]}
-                                    for name in ("perf_stat", "profile", "disassembly")}}))
+                                "required_evidence": evidence}))
     return path
 
 
@@ -67,6 +78,11 @@ def main():
         reload_send_wait_us = 10
     matrix = runner.workloads(Args())
     check(len(matrix) == 8, "Release B matrix must remain representative, not Cartesian")
+    expected_matrix = {(profile[0], profile[1], profile[2], profile[3], profile[4], profile[5], phase)
+                       for profile in runner.WORKLOAD_PROFILES for phase in runner.PHASES}
+    actual_matrix = {(item["workload_id"], item["payload_bytes"], item["tcp_sessions"], item["ruleset"],
+                      item["queue"], item["batch_size"], item["phase"]) for item in matrix}
+    check(actual_matrix == expected_matrix, "Release B representative dimensions changed")
     check({item["reload_send_wait_us"] for item in matrix} == {10}, "reload pacing must propagate")
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -91,6 +107,15 @@ def main():
                                  "--output", str(root / "bad.json"), "--evidence-manifest", str(one_evidence),
                                  "--evidence-manifest", str(two_evidence)], check=False)
         check(result.returncode != 0, "acceptance accepted a changed policy")
+        missing = json.loads(two_evidence.read_text())
+        missing["required_evidence"]["profile"]["artifacts"] = ["missing.raw"]
+        missing["required_evidence"]["profile"]["sha256"] = {"missing.raw": "0" * 64}
+        (root / "missing-evidence.json").write_text(json.dumps(missing))
+        result = subprocess.run(["python3", str(Path(__file__).with_name("acceptance.py")), "--session",
+                                 str(root / "one.json"), "--session", str(root / "two.json"),
+                                 "--output", str(root / "missing.json"), "--evidence-manifest", str(one_evidence),
+                                 "--evidence-manifest", str(root / "missing-evidence.json")], check=False)
+        check(result.returncode != 0, "acceptance accepted missing evidence")
     print("imtcp/ruleset reload benchmark self-tests passed")
 
 

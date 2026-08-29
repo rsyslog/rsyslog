@@ -1411,7 +1411,11 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 /* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
     free(loadConf->globals.mainQ.pszMainMsgQFName);
+    loadConf->globals.mainQ.pszMainMsgQFName = NULL;
     freeActionNames(loadConf);
+    /* These objects became rsconf-owned so a reset must release them before
+     * cnfSetDefaults() clears their pointers. */
+    glblCnfDestruct(loadConf);
 
     cnfSetDefaults(loadConf);
 

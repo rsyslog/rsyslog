@@ -28,6 +28,20 @@ static rsRetVal classify_live_swap(const void __attribute__((unused)) * pOldCnf,
     return RS_RET_OK;
 }
 
+static rsRetVal classify_new_sessions(const void __attribute__((unused)) * pOldCnf,
+                                      const void __attribute__((unused)) * pNewCnf,
+                                      eModReloadCapability_t *pCapability) {
+    *pCapability = eMOD_RELOAD_NEW_SESSIONS;
+    return RS_RET_OK;
+}
+
+static rsRetVal classify_drain_replace(const void __attribute__((unused)) * pOldCnf,
+                                       const void __attribute__((unused)) * pNewCnf,
+                                       eModReloadCapability_t *pCapability) {
+    *pCapability = eMOD_RELOAD_DRAIN_REPLACE;
+    return RS_RET_OK;
+}
+
 static rsRetVal classify_invalid(const void __attribute__((unused)) * pOldCnf,
                                  const void __attribute__((unused)) * pNewCnf,
                                  eModReloadCapability_t *pCapability) {
@@ -70,6 +84,15 @@ int main(void) {
                                       eMOD_RELOAD_CAP_REUSE | eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
     CHECK(modReloadHasLifecycleHooks(&legacy));
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_LIVE_SWAP);
+
+    legacy.reloadV1.classify = classify_new_sessions;
+    CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_NEW_SESSIONS);
+    legacy.reloadV1.classify = classify_drain_replace;
+    CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_DRAIN_REPLACE);
+    legacy.reloadV1.retire = NULL;
+    CHECK(!modReloadHasLifecycleHooks(&legacy));
+    CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_RESTART_REQUIRED);
+    legacy.reloadV1.retire = reload_retire;
 
     legacy.reloadV1.classify = classify_invalid;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_RESTART_REQUIRED);

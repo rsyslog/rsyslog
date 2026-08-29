@@ -96,6 +96,7 @@ int main(void) {
     rsReloadNormalizedNodeV1_t coreNew[1];
     rsReloadNormalizedNodeV1_t addedModule[1];
     rsReloadNormalizedNodeV1_t shortNode;
+    rsReloadNormalizedNodeV1_t invalidKindNode;
     rsReloadReportV1_t *savedReport;
     rsReloadReportV1_t *report = NULL;
     rsReloadReportV1_t *reorderedReport = NULL;
@@ -236,6 +237,15 @@ int main(void) {
     newGraph = graphFor(NULL, 0);
     CHECK(rsReloadReportBuildV1(&oldGraph, &newGraph, &report) == RS_RET_PARAM_ERROR);
     CHECK(report == NULL);
+
+    invalidKindNode = node((rsReloadObjectKind_t)99, "bad-kind", "v1", NULL);
+    oldGraph = graphFor(&invalidKindNode, 1);
+    newGraph = graphFor(NULL, 0);
+    CHECK(rsReloadReportBuildV1(&oldGraph, &newGraph, &report) == RS_RET_OK);
+    CHECK(report->entryCount == 1);
+    CHECK(report->entries[0].objectKind == RS_RELOAD_OBJ_COUNT);
+    CHECK(report->entries[0].diffKind == RS_RELOAD_DIFF_INVALID);
+    rsReloadReportDestructV1(&report);
 
     oldGraph = graphFor(NULL, 0);
     oldGraph.enumerate = enumerateFailure;

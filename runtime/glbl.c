@@ -1572,6 +1572,7 @@ rsRetVal glblDoneLoadCnf(void) {
                 loadConf->globals.reloadOnHUP = RELOAD_ON_HUP_ON;
             } else {
                 parser_errmsg("invalid config.reloadOnHUP value '%s'; expected off, validate, or on", mode);
+                iRet = RS_RET_CONF_PARAM_INVLD;
             }
             free(mode);
         } else if (!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {

@@ -476,7 +476,10 @@ static rsRetVal awaitHUPComplete(uchar *pszCmd, tcps_sess_t *pSess) {
     }
 
     if (target >= 0) {
-        tries = 400;
+        /* Sanitizer and high-concurrency builders can hold a legacy action's
+         * HUP lock longer than ten seconds while an existing batch finishes.
+         * The generation is still the oracle; this only widens its deadline. */
+        tries = 2400;
         while (tries-- > 0 && getHUPProcessedCount() < target) srSleep(0, 25000);
         if (getHUPProcessedCount() >= target) {
             CHKiRet(sendResponse(pSess, "HUP completed generation %ld\n", target));
@@ -525,18 +528,21 @@ finalize_it:
 /* Testbench oracle for the real, frontend-neutral ruleset graph producer. */
 static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
     const char *fingerprint = NULL;
+    char *name = NULL;
     char *response = NULL;
+    size_t nameLen;
     size_t fingerprintLen;
     ssize_t responseLen;
-    uchar name[512];
     DEFiRet;
 
-    getFirstWord(&pszCmd, name, sizeof(name), NO_MODIFY);
-    if (name[0] == '\0') {
+    while (*pszCmd == ' ' || *pszCmd == '\t') ++pszCmd;
+    nameLen = strcspn((const char *)pszCmd, " \t\r\n");
+    if (nameLen == 0) {
         CHKiRet(sendResponse(pSess, "ERROR: missing ruleset name\n"));
         FINALIZE;
     }
-    iRet = shadowReloadGetRulesetFingerprint((const char *)name, &fingerprint);
+    CHKmalloc(name = strndup((const char *)pszCmd, nameLen));
+    iRet = shadowReloadGetRulesetFingerprint(name, &fingerprint);
     if (iRet == RS_RET_NOT_FOUND) {
         CHKiRet(sendResponse(pSess, "ERROR: ruleset not found\n"));
         iRet = RS_RET_OK;
@@ -548,11 +554,18 @@ static rsRetVal getReloadRulesetFingerprint(uchar *pszCmd, tcps_sess_t *pSess) {
         memcpy(response, fingerprint, fingerprintLen);
         response[fingerprintLen] = '\n';
         response[fingerprintLen + 1] = '\0';
+        size_t sent = 0;
         responseLen = (ssize_t)fingerprintLen + 1;
-        CHKiRet(netstrm.Send(pSess->pStrm, (uchar *)response, &responseLen));
+        while (sent < (size_t)responseLen) {
+            ssize_t chunkLen = responseLen - (ssize_t)sent;
+            CHKiRet(netstrm.Send(pSess->pStrm, (uchar *)response + sent, &chunkLen));
+            if (chunkLen <= 0) ABORT_FINALIZE(RS_RET_IO_ERROR);
+            sent += (size_t)chunkLen;
+        }
     }
 
 finalize_it:
+    free(name);
     free(response);
     RETiRet;
 }

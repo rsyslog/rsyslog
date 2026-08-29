@@ -22,8 +22,8 @@ sbool modReloadHasLifecycleHooks(const modInfo_t *pMod) {
                                    eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
 
     return modReloadHasValidInterfaceV1(pMod) && (pMod->reloadV1.capabilityFlags & requiredFlags) == requiredFlags &&
-           pMod->reloadV1.prepare != NULL && pMod->reloadV1.commit != NULL && pMod->reloadV1.abort != NULL &&
-           pMod->reloadV1.retire != NULL;
+           pMod->reloadV1.classify != NULL && pMod->reloadV1.prepare != NULL && pMod->reloadV1.commit != NULL &&
+           pMod->reloadV1.abort != NULL && pMod->reloadV1.retire != NULL;
 }
 
 eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf) {

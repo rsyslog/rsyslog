@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
@@ -41,7 +42,7 @@ static intctr_t rejectedOnTotal = 0;
 static intctr_t legacyHookTotal = 0;
 static intctr_t durationTotalUsec = 0;
 static intctr_t lastDurationUsec = 0;
-static int activeGeneration = 0;
+static unsigned activeGeneration = 0;
 static int requestInProgress = 0;
 static int pendingGauge = 0;
 static uint64_t requestStartedUsec = 0;
@@ -71,13 +72,12 @@ static const char *modeName(const reloadOnHUPMode_t mode) {
     }
 }
 
-static uint64_t monotonicUsec(void) {
+static sbool monotonicUsec(uint64_t *const value) {
     struct timespec ts;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
-        return 0;
-    }
-    return ((uint64_t)ts.tv_sec * 1000000ULL) + (uint64_t)(ts.tv_nsec / 1000ULL);
+    if (value == NULL || clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
+    *value = ((uint64_t)ts.tv_sec * 1000000ULL) + (uint64_t)(ts.tv_nsec / 1000ULL);
+    return 1;
 }
 
 static void logState(const char *const event,
@@ -181,7 +181,7 @@ typedef struct reloadRulesetLookup_s {
 static rsRetVal findReloadRuleset(const rsReloadNormalizedNodeV1_t *node, void *context) {
     reloadRulesetLookup_t *lookup = context;
 
-    if (node->objectKind == RS_RELOAD_OBJ_RULESET && !strcmp(node->identity, lookup->identity)) {
+    if (node->objectKind == RS_RELOAD_OBJ_RULESET && !strcasecmp(node->identity, lookup->identity)) {
         lookup->fingerprint = node->fingerprint;
     }
     return RS_RET_OK;
@@ -238,7 +238,17 @@ void shadowReloadBeginRequest(void) {
         ++onTotal;
         STATSCOUNTER_INC(ctrOn, mutCtrOn);
     }
-    requestStartedUsec = monotonicUsec();
+    if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
+}
+
+static void accountDuration(void) {
+    uint64_t finishedUsec;
+
+    lastDurationUsec = 0;
+    if (requestStartedUsec == 0 || !monotonicUsec(&finishedUsec) || finishedUsec < requestStartedUsec) return;
+    lastDurationUsec = finishedUsec - requestStartedUsec;
+    durationTotalUsec += lastDurationUsec;
+    STATSCOUNTER_ADD(ctrDurationTotalUsec, mutCtrDurationTotalUsec, lastDurationUsec);
 }
 
 void shadowReloadProcess(void) {
@@ -256,16 +266,12 @@ void shadowReloadProcess(void) {
             ++rejectedOnTotal;
             STATSCOUNTER_INC(ctrRejectedOn, mutCtrRejectedOn);
         }
-        lastDurationUsec = monotonicUsec() - requestStartedUsec;
-        durationTotalUsec += lastDurationUsec;
-        STATSCOUNTER_ADD(ctrDurationTotalUsec, mutCtrDurationTotalUsec, lastDurationUsec);
+        accountDuration();
         requestInProgress = 0;
         pendingGauge = signalRequestPending != 0;
         logState("request", "rejected", modeName(configuredMode), "unsupported_release_b");
     } else {
-        lastDurationUsec = monotonicUsec() - requestStartedUsec;
-        durationTotalUsec += lastDurationUsec;
-        STATSCOUNTER_ADD(ctrDurationTotalUsec, mutCtrDurationTotalUsec, lastDurationUsec);
+        accountDuration();
         requestInProgress = 0;
         pendingGauge = signalRequestPending != 0;
         logState("request", "ignored", "none", "mode_off");

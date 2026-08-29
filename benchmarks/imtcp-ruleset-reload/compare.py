@@ -4,8 +4,11 @@ import argparse
 from collections import defaultdict
 import hashlib
 import json
+import math
 from pathlib import Path
 import statistics
+
+import runner
 
 
 POLICY = {
@@ -53,6 +56,16 @@ def signature(records):
     return sorted({workload_key(record) for record in records if record.get("measured")})
 
 
+def required_signature():
+    return sorted((workload_id, payload, sessions, ruleset, queue, batch, phase)
+                  for workload_id, payload, sessions, ruleset, queue, batch in runner.WORKLOAD_PROFILES
+                  for phase in runner.PHASES)
+
+
+def file_digest(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def policy_fingerprint():
     return hashlib.sha256(json.dumps(POLICY, sort_keys=True).encode()).hexdigest()
 
@@ -64,6 +77,8 @@ def main():
     if base.get("schema_version") != 2 or candidate.get("schema_version") != 2:
         raise SystemExit("Release B requires schema version 2 raw sessions")
     bm, cm = base["metadata"], candidate["metadata"]
+    if bm.get("role") != "baseline" or cm.get("role") != "candidate":
+        raise SystemExit("inputs must declare baseline and candidate roles")
     if not bm.get("session") or bm.get("session") != cm.get("session"):
         raise SystemExit("a comparison must use a single paired session")
     if bm.get("pair_revision") != cm.get("revision") or cm.get("pair_revision") != bm.get("revision"):
@@ -73,12 +88,21 @@ def main():
         raise SystemExit("build metadata does not prove baseline/candidate source provenance")
     base_records = [item for item in base["records"] if item.get("measured")]
     candidate_records = [item for item in candidate["records"] if item.get("measured")]
+    if not base_records or not candidate_records:
+        raise SystemExit("comparison requires nonempty measured datasets")
     if signature(base_records) != signature(candidate_records):
         raise SystemExit("baseline and candidate must use identical workload sets")
-    required = set(bm.get("required_workload_ids", ()))
-    all_phases = set(bm.get("phases", ()))
-    selected = {(item[0], item[-1]) for item in signature(base_records)}
-    complete_coverage = {(workload_id, phase) for workload_id in required for phase in all_phases} <= selected
+    expected_signature = required_signature()
+    complete_coverage = signature(base_records) == expected_signature
+    if set(bm.get("required_workload_ids", ())) != {profile[0] for profile in runner.WORKLOAD_PROFILES} or \
+            tuple(bm.get("phases", ())) != runner.PHASES:
+        raise SystemExit("baseline metadata does not declare the fixed Release B matrix")
+    if not complete_coverage:
+        raise SystemExit("measured records do not cover the fixed Release B matrix")
+    base_keys = [key(item) for item in base_records]
+    candidate_keys = [key(item) for item in candidate_records]
+    if len(set(base_keys)) != len(base_keys) or len(set(candidate_keys)) != len(candidate_keys):
+        raise SystemExit("duplicate measured trial keys are not valid evidence")
     br = {key(item): item for item in base_records}
     cr = {key(item): item for item in candidate_records}
     if set(br) != set(cr):
@@ -90,6 +114,8 @@ def main():
     for workload, pairs in sorted(grouped.items()):
         descriptor = workload_dict(workload)
         phase = descriptor["phase"]
+        if phase not in runner.PHASES:
+            raise SystemExit("unknown benchmark phase %r" % phase)
         orders = [baseline.get("pair_order") for baseline, _candidate in pairs]
         matching_order = all(baseline.get("pair_order") == candidate.get("pair_order")
                              for baseline, candidate in pairs)
@@ -118,8 +144,19 @@ def main():
                 item.get("rss_before_kib") is not None and item.get("rss_after_kib") is not None and
                 item.get("hot_path_invariants", {}).get("socket_continuity") for pair in pairs for item in pair)
         if phase == "steady":
-            ratios = [c["throughput_messages_per_second"] / b["throughput_messages_per_second"]
-                      for b, c in pairs if b.get("throughput_messages_per_second", 0) > 0]
+            rates = [(b.get("throughput_messages_per_second"), c.get("throughput_messages_per_second"))
+                     for b, c in pairs]
+            rates_valid = all(isinstance(b, (int, float)) and isinstance(c, (int, float)) and
+                              math.isfinite(b) and math.isfinite(c) and b > 0 and c > 0 for b, c in rates)
+            if not rates_valid:
+                rows.append({"workload": descriptor, "primary_metric": "throughput_messages_per_second",
+                             "paired_ratios": [], "median_ratio": None, "median_absolute_deviation": None,
+                             "order_median_gap": None, "robust_lower_ratio": None,
+                             "counterbalanced": counterbalanced, "invariants_ok": invariant_ok,
+                             "status": "inconclusive", "reason": "nonpositive_or_nonfinite_throughput"})
+                passed = False
+                continue
+            ratios = [c / b for b, c in rates]
             center, dispersion = statistics.median(ratios), mad(ratios)
             by_order = defaultdict(list)
             for (b, c), ratio in zip(pairs, ratios):
@@ -130,7 +167,7 @@ def main():
             core_valid = len(ratios) >= POLICY["minimum_pairs"] and invariant_ok and counterbalanced
             no_detectable_regression = center >= POLICY["steady_minimum_median_ratio"] and \
                 robust_lower >= POLICY["steady_minimum_robust_lower_ratio"]
-            stable = dispersion <= POLICY["steady_max_mad"] and \
+            stable = dispersion <= POLICY["steady_max_mad"] and order_gap is not None and \
                 order_gap <= POLICY["steady_max_order_median_gap"]
             if core_valid and stable and no_detectable_regression:
                 status = "pass"
@@ -156,6 +193,8 @@ def main():
                 "baseline_source_fingerprint": bm["source_fingerprint"],
                 "candidate_source_fingerprint": cm["source_fingerprint"], "policy": POLICY,
                 "policy_fingerprint": policy_fingerprint(), "workload_set": signature(base_records),
+                "run_provenance": hashlib.sha256((file_digest(options.baseline) + ":" +
+                                                  file_digest(options.candidate)).encode()).hexdigest(),
                 "full_required_coverage": complete_coverage,
                 "acceptance": {"result": "pass" if passed else "not-pass"}, "workloads": rows}
     Path(options.json).parent.mkdir(parents=True, exist_ok=True)

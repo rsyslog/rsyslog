@@ -228,9 +228,9 @@ limit is rejected before commit, rather than allowing unbounded deferred state.
 Observability and operator contract
 -----------------------------------
 
-The reload controller must expose the active generation identifier, candidate
-state, last rejection reason, activation time, retirement backlog, and the
-following exact monotonic counters: ``reload_hup_off_total``,
+The completed multi-release reload controller must expose the active generation
+identifier, candidate state, last rejection reason, activation time, retirement
+backlog, and the following target monotonic counters: ``reload_hup_off_total``,
 ``reload_validate_total``, ``reload_validate_rejected_total``,
 ``reload_capability_rejected_total``, ``reload_tombstone_limit_rejected_total``,
 ``reload_prepare_total``, ``reload_prepare_failed_total``,
@@ -243,6 +243,12 @@ result, and commit outcome at an operator-visible level.  Metrics and debug
 diagnostics must allow a maintainer to answer: which generation is active, why
 a candidate was rejected, which consumers still prevent retirement, and whether
 listener, session, or module state was preserved or replaced.
+
+The Release B foundation additionally exposes request-, mode-, rejection-, and
+duration-accounting counters while ``validate`` and ``on`` remain fail-closed.
+Those foundation counters are not a promise that candidate validation or
+activation has occurred; later releases retain or refine them alongside the
+target outcome counters above.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

@@ -2399,7 +2399,6 @@ static void mainloop(void) {
     uint64_t next_janitor_run_ms;
 
     sigemptyset(&sigblockset);
-    sigaddset(&sigblockset, SIGTERM);
     sigaddset(&sigblockset, SIGCHLD);
     sigaddset(&sigblockset, SIGHUP);
     next_janitor_run_ms = mainloopMonotonicMs() + ((uint64_t)runConf->globals.janitorInterval * 60ULL * 1000ULL);
@@ -2414,9 +2413,9 @@ static void mainloop(void) {
             reapChild();
         }
 
-        /* A TERM received with (or before) HUP wins: never begin another HUP
-         * cycle while shutdown is pending. This is also before the reload
-         * manager, which never restarts or activates anything in Release B. */
+        /* SIGTERM stays unblocked while HUP and SIGCHLD flags are claimed, so
+         * a termination request cannot remain pending behind this check. The
+         * handler publishes bFinished and wakes this thread. */
         if (bFinished) break;
 
         if (PREFER_LOAD_INT(&bHadHUP)) {

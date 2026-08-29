@@ -2502,12 +2502,12 @@ custom_assert_content_missing() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 issue_HUP() {
-	local instance pidfile port response baseline target
+	local instance pidfile port response baseline target sleeptime
 	if [ "$1" == "--sleep" ]; then
 		sleeptime="$2"
 		shift 2
 	else
-		sleeptime=1000
+		sleeptime=0
 	fi
 	instance="${1:-}"
 	wait_rsyslog_instance_pid "$instance"
@@ -2528,7 +2528,7 @@ issue_HUP() {
 	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
 		"$(cat "$pidfile")"
 	await_HUP_processed "$instance" "$target"
-	#$TESTTOOL_DIR/msleep $sleeptime
+	$TESTTOOL_DIR/msleep "$sleeptime"
 }
 
 

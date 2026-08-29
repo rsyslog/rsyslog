@@ -102,10 +102,10 @@ typedef enum eModKeepType_ { eMOD_NOKEEP, eMOD_KEEP } eModKeepType_t;
  * to decide whether a running process can apply a change.
  */
 typedef enum eModReloadCapability_ {
-    eMOD_RELOAD_LIVE_SWAP, /* switch existing users to the replacement */
-    eMOD_RELOAD_NEW_SESSIONS, /* existing users retain the old configuration */
-    eMOD_RELOAD_DRAIN_REPLACE, /* drain old users before using the replacement */
-    eMOD_RELOAD_RESTART_REQUIRED /* the conservative default */
+    eMOD_RELOAD_RESTART_REQUIRED = 0, /* the conservative zero/default */
+    eMOD_RELOAD_LIVE_SWAP = 1, /* switch existing users to the replacement */
+    eMOD_RELOAD_NEW_SESSIONS = 2, /* existing users retain the old configuration */
+    eMOD_RELOAD_DRAIN_REPLACE = 3 /* drain old users before using the replacement */
 } eModReloadCapability_t;
 
 /*
@@ -243,7 +243,8 @@ sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
  * Classify a module change without enabling reload.  Legacy modules and
  * missing, failing, or invalid classifiers are deliberately classified as
  * restart-required.  Callers that need the classifier's exact failure can
- * invoke reloadClassify directly after this conservative preflight.
+ * invoke the validated pMod->reloadV1.classify callback directly after this
+ * conservative preflight.
  */
 eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
 

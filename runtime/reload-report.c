@@ -85,7 +85,12 @@ static rsRetVal collectGraph(const rsReloadNormalizedGraphV1_t *graph, rsReloadC
         return RS_RET_PARAM_ERROR;
     }
     CHKiRet(graph->enumerate(graph->context, collectNode, collection));
-    qsort(collection->nodes, collection->count, sizeof(*collection->nodes), compareNodes);
+    /* ISO C permits a NULL base only when the implementation never evaluates
+     * it.  Some qsort declarations carry a nonnull attribute, so avoid the
+     * empty/singleton call entirely (and keep UBSan quiet). */
+    if (collection->count > 1) {
+        qsort(collection->nodes, collection->count, sizeof(*collection->nodes), compareNodes);
+    }
 finalize_it:
     return iRet;
 }
@@ -174,8 +179,13 @@ static rsRetVal appendEntry(rsReloadReportV1_t *report,
 static rsRetVal appendInvalidNode(rsReloadReportV1_t *report,
                                   const rsReloadNormalizedNodeV1_t *node,
                                   rsReloadReportReason_t reason) {
-    return appendEntry(report, node == NULL ? RS_RELOAD_OBJ_COUNT : node->objectKind, RS_RELOAD_DIFF_INVALID,
-                       node == NULL ? NULL : node->identity, 0, 0, RS_RELOAD_DISPOSITION_INVALID, reason);
+    const rsReloadObjectKind_t kind =
+        node != NULL && node->objectKind >= RS_RELOAD_OBJ_GLOBAL && node->objectKind < RS_RELOAD_OBJ_COUNT
+            ? node->objectKind
+            : RS_RELOAD_OBJ_COUNT;
+
+    return appendEntry(report, kind, RS_RELOAD_DIFF_INVALID, node == NULL ? NULL : node->identity, 0, 0,
+                       RS_RELOAD_DISPOSITION_INVALID, reason);
 }
 
 static size_t duplicateRunLength(const rsReloadCollection_t *collection, size_t index) {

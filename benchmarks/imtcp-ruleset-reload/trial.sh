@@ -6,6 +6,7 @@ set -eu
 : "${BENCH_BUILD_DIR:?}" "${BENCH_METRIC_FILE:?}" "${BENCH_PHASE:?}"
 cd "$BENCH_BUILD_DIR/tests"
 export srcdir="$BENCH_BUILD_DIR/tests"
+export RS_REDIR=''
 . "$srcdir/diag.sh" init
 PORT_FILE="$PWD/${RSYSLOG_DYNNAME}.listen"
 PERF_FILE="$PWD/${RSYSLOG_DYNNAME}.perf.csv"
@@ -17,13 +18,26 @@ PERF_RECORD_FILE="$PWD/${RSYSLOG_DYNNAME}.perf.data"
 DISASSEMBLY_FILE="$PWD/${RSYSLOG_DYNNAME}.rsyslogd.disassembly"
 cleanup() { rm -f "$PORT_FILE" "$PERF_FILE" "$STRACE_FILE" "$VG_FILE" "$LOCK_FILE" "$PERF_RECORD_FILE"; }
 trap cleanup EXIT
+wait_reload_log() {
+	local pattern=$1
+	local offset=${2:-0}
+	local tries=300
+	while [ "$tries" -gt 0 ]; do
+		if [ -f "$RELOAD_LOG" ] && tail -c +$((offset + 1)) "$RELOAD_LOG" | grep -q "$pattern"; then
+			return 0
+		fi
+		tries=$((tries - 1))
+		"$TESTTOOL_DIR/msleep" 100
+	done
+	return 1
+}
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 template(name="benchOut" type="string" string="%msg%\n")
 ruleset(name="reloadProbe") { stop }
 '
-if [ "$BENCH_PHASE" = reload ]; then
+if [ "$BENCH_PHASE" = reload ] && [ "$BENCH_ROLE" = candidate ]; then
 	add_conf 'global(config.reloadOnHUP="validate")'
 fi
 if [ "$BENCH_RULESET" = named ]; then
@@ -58,14 +72,17 @@ startup
 assign_file_content INPUT_PORT "$PORT_FILE"
 start_ns=$(date +%s%N)
 reload_ns=0
+socket_continuity=false
 if [ "$BENCH_PHASE" = reload ]; then
 	# Validate mode is intentionally unsupported in the current runtime.  Probe
 	# the controller first and record an explicit skip, never a fabricated pass.
 	issue_HUP
-	if grep -q "config.reloadOnHUP=validate is not supported yet" "$RELOAD_LOG"; then
+	if [ "$BENCH_ROLE" = candidate ] &&
+		wait_reload_log "config.reloadOnHUP=validate is not supported yet"; then
 		shutdown_immediate
 		wait_shutdown
 		mkdir -p "$(dirname "$BENCH_METRIC_FILE")"
+		cp "$RELOAD_LOG" "$BENCH_METRIC_FILE.reload.log"
 		printf '{"workload_id":"%s","payload_bytes":%d,"tcp_sessions":%d,"ruleset":"%s","queue":"%s","batch_size":%d,"phase":"reload","messages":%d,"execution":"skipped-unsupported","skip_reason":"runtime config.reloadOnHUP=validate capability unavailable","controller_diagnostic":"config.reloadOnHUP=validate is not supported yet"}\n' \
 		 "$BENCH_WORKLOAD_ID" "$BENCH_PAYLOAD_BYTES" "$BENCH_TCP_SESSIONS" "$BENCH_RULESET" "$BENCH_QUEUE" "$BENCH_BATCH_SIZE" "$BENCH_MESSAGES" >"$BENCH_METRIC_FILE"
 		exit_test
@@ -81,13 +98,17 @@ if [ "$BENCH_PHASE" = reload ]; then
 	# confirm this candidate without swapping the active configuration.
 	sed -i 's/reloadProbe/reloadProbeNext/' "$CONF_FILE"
 	if [ -n "${BENCH_CONFIG_ARTIFACT:-}" ]; then cp "$CONF_FILE" "${BENCH_CONFIG_ARTIFACT}.candidate.conf"; fi
+	reload_log_offset=$(wc -c < "$RELOAD_LOG")
   reload_start=$(date +%s%N)
   issue_HUP
-  reload_ns=$(( $(date +%s%N) - reload_start ))
-	rss_after=$(ps -o rss= -p "$(cat "$RSYSLOG_PIDBASE.pid")" | tr -d ' ')
-	grep -q "shadow reload: configuration.*validated" "$RELOAD_LOG" || \
+	wait_reload_log "shadow reload: configuration.*validated" "$reload_log_offset" || \
 		error_exit 1 "transactional validate HUP did not report candidate validation"
+	reload_ns=$(( $(date +%s%N) - reload_start ))
+	rss_after=$(ps -o rss= -p "$(cat "$RSYSLOG_PIDBASE.pid")" | tr -d ' ')
 	wait "$sender_pid"
+	# tcpflood does not reconnect. Successful completion of the same process
+	# therefore proves all established sockets survived the HUP boundary.
+	socket_continuity=true
 else
 	tcpflood -p"$INPUT_PORT" -c"$BENCH_TCP_SESSIONS" -Y -m"$BENCH_MESSAGES" -d"$BENCH_PAYLOAD_BYTES" >/dev/null
 fi
@@ -108,7 +129,7 @@ cut -d: -f2 "$RSYSLOG_OUT_LOG" >"${RSYSLOG_OUT_LOG}.seq"
 mv "${RSYSLOG_OUT_LOG}.seq" "$RSYSLOG_OUT_LOG"
 export NUMMESSAGES="$BENCH_MESSAGES"
 if [ "$BENCH_TCP_SESSIONS" -eq 1 ]; then
-	awk -v expected="$BENCH_MESSAGES" '($0 + 0) != NR - 1 { exit 1 } END { exit NR == expected ? 0 : 1 }' "$RSYSLOG_OUT_LOG" || \
+	awk -v expected="$BENCH_MESSAGES" '($0 + 0) != NR - 1 { bad=1 } END { exit (bad || NR != expected) ? 1 : 0 }' "$RSYSLOG_OUT_LOG" || \
 		error_exit 1 "single TCP session violated strict delivery order"
 	oracle=strict_order
 else
@@ -147,5 +168,5 @@ instrumentation=$(cat "$BENCH_METRIC_FILE.instrumentation")
 printf '{"workload_id":"%s","payload_bytes":%d,"tcp_sessions":%d,"ruleset":"%s","queue":"%s","batch_size":%d,"phase":"%s","messages":%d,"execution":"completed","throughput_messages_per_second":%.3f,"cpu_seconds_per_message":null,"send_ns":%d,"delivery_latency_ns":%d,"reload_ns":%d,"rss_before_kib":%d,"rss_after_kib":%d,"hot_path_invariants":{"exact_delivery":true,"delivery_oracle":"%s","hup_processed":%s,"socket_continuity":%s},"instrumentation":%s}\n' \
  "$BENCH_WORKLOAD_ID" "$BENCH_PAYLOAD_BYTES" "$BENCH_TCP_SESSIONS" "$BENCH_RULESET" "$BENCH_QUEUE" "$BENCH_BATCH_SIZE" "$BENCH_PHASE" "$BENCH_MESSAGES" \
  "$(awk -v n="$BENCH_MESSAGES" -v t="$((delivered_ns-start_ns))" 'BEGIN{print n*1000000000/t}')" "$((sent_ns-start_ns))" "$((delivered_ns-sent_ns))" "$reload_ns" "$rss_before" "$rss_after" \
- "$oracle" "$( [ "$BENCH_PHASE" = reload ] && echo true || echo false )" "$( [ "$BENCH_PHASE" = reload ] && echo true || echo false )" "$instrumentation" >"$BENCH_METRIC_FILE"
+ "$oracle" "$( [ "$BENCH_PHASE" = reload ] && echo true || echo false )" "$socket_continuity" "$instrumentation" >"$BENCH_METRIC_FILE"
 exit_test

@@ -149,11 +149,19 @@ def record_key(record):
 
 
 def optional_tools(args):
-    return {"perf_stat": bool(args.perf_stat and shutil.which("perf")),
+    def usable(command):
+        try:
+            return subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                  timeout=10, check=False).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
+    perf = shutil.which("perf")
+    return {"perf_stat": bool(args.perf_stat and perf and usable([perf, "stat", "--", "true"])),
             "strace_summary": bool(args.strace_summary and shutil.which("strace")),
             "allocation_summary": bool(args.allocation_summary and shutil.which("valgrind")),
-            "lock_report": bool(args.lock_report and shutil.which("perf")),
-            "perf_record": bool(args.perf_record and shutil.which("perf")),
+            "lock_report": bool(args.lock_report and perf and usable([perf, "lock", "record", "--", "true"])),
+            "perf_record": bool(args.perf_record and perf and usable([perf, "record", "-o", os.devnull, "--", "true"])),
             "disassembly": bool(args.disassembly and shutil.which("objdump"))}
 
 
@@ -199,34 +207,37 @@ def write(path, metadata_value, records, enabled):
 
 def main():
     args = arguments()
-    builds = [(Path(args.build_dir).resolve(), args.label, Path(args.output).resolve()),
-              (Path(args.pair_build_dir).resolve(), args.pair_label, Path(args.pair_output).resolve())]
-    for build, _, _ in builds:
+    builds = [(Path(args.build_dir).resolve(), args.label, Path(args.output).resolve(), "baseline"),
+              (Path(args.pair_build_dir).resolve(), args.pair_label, Path(args.pair_output).resolve(), "candidate")]
+    for build, _, _, _ in builds:
         verify(build)
-    meta = {label: metadata(build, label, args.session) for build, label, _ in builds}
+    meta = {label: metadata(build, label, args.session) for build, label, _, _ in builds}
+    meta[args.label]["role"] = "baseline"
+    meta[args.pair_label]["role"] = "candidate"
     meta[args.label]["pair_revision"] = meta[args.pair_label]["revision"]
     meta[args.pair_label]["pair_revision"] = meta[args.label]["revision"]
     meta[args.label]["pair_source_fingerprint"] = meta[args.pair_label]["source_fingerprint"]
     meta[args.pair_label]["pair_source_fingerprint"] = meta[args.label]["source_fingerprint"]
     enabled = optional_tools(args)
-    results = {label: [] for _, label, _ in builds}
+    results = {label: [] for _, label, _, _ in builds}
     root = Path(args.output).resolve().parent / "artifacts" / args.session
     root.mkdir(parents=True, exist_ok=True)
     for workload in workloads(args):
         workload_name = "%s-%s" % (workload["workload_id"], workload["phase"])
         # Calibration is deliberately unscored, but still starts/stops both revisions.
         for calibration in range(args.calibration):
-            for build, label, _ in builds:
-                run_trial(Path(__file__).with_name("trial.sh"), build, workload, -(calibration + 1), False,
+            for build, label, _, role in builds:
+                workload_with_role = {**workload, "role": role}
+                run_trial(Path(__file__).with_name("trial.sh"), build, workload_with_role, -(calibration + 1), False,
                           root / "calibration" / label / workload_name, enabled)
         for trial in range(args.trials):
             order = builds if trial % 2 == 0 else list(reversed(builds))
-            for build, label, _ in order:
-                result = run_trial(Path(__file__).with_name("trial.sh"), build, workload, trial, True,
+            for build, label, _, role in order:
+                result = run_trial(Path(__file__).with_name("trial.sh"), build, {**workload, "role": role}, trial, True,
                                    root / label / workload_name, enabled)
                 result["pair_order"] = "baseline-first" if order[0][1] == args.label else "candidate-first"
                 results[label].append(result)
-    for _, label, output in builds:
+    for _, label, output, _ in builds:
         write(output, meta[label], results[label], enabled)
 
 
