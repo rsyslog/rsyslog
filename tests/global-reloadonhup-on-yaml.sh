@@ -75,7 +75,8 @@ sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"\
     keepAlive.probes: "3"\
     keepAlive.time: "30"\
     keepAlive.interval: "2"\
-    maxFrameSize: "210000"' "$CONF_FILE.base" >"$CONF_FILE"
+    maxFrameSize: "210000"\
+    octetCountedFraming: "off"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then

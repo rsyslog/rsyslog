@@ -1689,7 +1689,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet &&
            reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
            reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
-           leftParams->bSuppOctetFram == rightParams->bSuppOctetFram &&
+           (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
            leftParams->bMultiLine == rightParams->bMultiLine &&
            reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
@@ -1746,6 +1746,7 @@ typedef struct imtcpReloadEntryV1_s {
     int maxFrameSize;
     int disableLFDelimiter;
     int discardTruncatedMessage;
+    int supportOctetCountedFraming;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1821,6 +1822,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         state->entries[index].maxFrameSize = newInst->maxFrameSize;
         state->entries[index].disableLFDelimiter = newInst->bDisableLFDelim;
         state->entries[index].discardTruncatedMessage = newInst->discardTruncatedMsg;
+        state->entries[index].supportOctetCountedFraming = newInst->cnf_params->bSuppOctetFram;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1894,6 +1896,7 @@ static void commitReloadV1(void *const pReloadState) {
         (void)tcpsrv.SetMaxFrameSize(server, state->entries[i].maxFrameSize);
         (void)tcpsrv.SetbDisableLFDelim(server, state->entries[i].disableLFDelimiter);
         (void)tcpsrv.SetDiscardTruncatedMsg(server, state->entries[i].discardTruncatedMessage);
+        (void)tcpsrv.SetSupportOctetCountedFraming(server, state->entries[i].supportOctetCountedFraming);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

@@ -297,8 +297,8 @@ changes atomically for later connections.  TCP keepalive enablement, interval,
 probe count, and idle time use the same ``new_sessions`` contract.  The scalar
 framing profile—Cisco framing correction, the additional delimiter, maximum
 frame size, LF-delimiter disablement, and truncated-message policy—also changes
-only for later connections.  Octet-counted framing support, multiline/regular
-expression framing, compression, TLS, endpoint, ACL, rate-limit, and
+only for later connections, as does octet-counted framing support.
+Multiline/regular expression framing, compression, TLS, endpoint, ACL, rate-limit, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.
 

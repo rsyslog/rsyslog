@@ -320,6 +320,9 @@ static int framingNewSessions(void) {
     CHECK(server.discardTruncatedMsg == 1);
     CHECK(firstParams.bSPFramingFix == 1);
     CHECK(secondParams.bSPFramingFix == 1);
+    tcpsrvApplyOctetCountedFramingForNewSessions(&server, 0);
+    CHECK(firstParams.bSuppOctetFram == 0);
+    CHECK(secondParams.bSuppOctetFram == 0);
     return 0;
 }
 
