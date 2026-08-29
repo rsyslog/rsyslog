@@ -4754,6 +4754,10 @@ void cnfexprDestruct(struct cnfexpr *__restrict__ const expr) {
             free(((struct cnfvar *)expr)->name);
             msgPropDescrDestruct(&(((struct cnfvar *)expr)->prop));
             break;
+        case S_FUNC_EXISTS:
+            free((void *)((struct cnffuncexists *)expr)->varname);
+            msgPropDescrDestruct(&(((struct cnffuncexists *)expr)->prop));
+            break;
         case 'F':
             cnffuncDestruct((struct cnffunc *)expr);
             break;
@@ -5171,14 +5175,20 @@ struct cnfarray *cnfarrayDup(struct cnfarray *old) {
 }
 
 struct cnfvar *cnfvarNew(char *name) {
-    struct cnfvar *var;
-    if ((var = malloc(sizeof(struct cnfvar))) != NULL) {
+    struct cnfvar *var = NULL;
+    rsRetVal ret = RS_RET_OUT_OF_MEMORY;
+
+    if ((var = calloc(1, sizeof(*var))) != NULL) {
         var->nodetype = 'V';
         var->name = name;
-        msgPropDescrFill(&var->prop, (uchar *)var->name, strlen(var->name));
         var->cache_slot = -1;
+        ret = msgPropDescrFill(&var->prop, (uchar *)var->name, strlen(var->name));
+        if (ret == RS_RET_OK) return var;
     }
-    return var;
+    if (ret == RS_RET_OUT_OF_MEMORY) cnfNoteFatalParseError(ret);
+    free(name);
+    free(var);
+    return NULL;
 }
 
 struct cnfstmt *cnfstmtNew(unsigned s_type) {
@@ -6465,14 +6475,19 @@ struct cnffunc *cnffuncNew_prifilt(int fac) {
  * also needs special code (we must not evaluate the var but need its name).
  */
 struct cnffuncexists *ATTR_NONNULL() cnffuncexistsNew(const char *const varname) {
-    struct cnffuncexists *f_exists;
+    struct cnffuncexists *f_exists = NULL;
+    rsRetVal ret = RS_RET_OUT_OF_MEMORY;
 
-    if ((f_exists = malloc(sizeof(struct cnffuncexists))) != NULL) {
+    if ((f_exists = calloc(1, sizeof(*f_exists))) != NULL) {
         f_exists->nodetype = S_FUNC_EXISTS;
         f_exists->varname = varname;
-        msgPropDescrFill(&f_exists->prop, (uchar *)varname, strlen(varname));
+        ret = msgPropDescrFill(&f_exists->prop, (uchar *)varname, strlen(varname));
+        if (ret == RS_RET_OK) return f_exists;
     }
-    return f_exists;
+    if (ret == RS_RET_OUT_OF_MEMORY) cnfNoteFatalParseError(ret);
+    free((void *)varname);
+    free(f_exists);
+    return NULL;
 }
 
 static rsRetVal fatalParseError = RS_RET_OK;

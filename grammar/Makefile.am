@@ -8,6 +8,7 @@ libgrammar_la_SOURCES = \
 	grammar.y \
 	lexer.l \
 	rainerscript.c \
+	reload-syntax-clone.c \
 	rainerscript.h \
 	parserif.h \
 	grammar.h

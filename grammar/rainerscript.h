@@ -423,6 +423,11 @@ void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr,
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
 struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
+/* Control-path clones for private reload preparation. They retain no parser or
+ * runtime cache pointers, leave *out NULL on failure, and reject constructs
+ * whose executable state cannot yet be rebuilt safely. */
+rsRetVal cnfexprCloneReloadSafe(const struct cnfexpr *src, struct cnfexpr **out);
+rsRetVal nvlstCloneReloadSafe(const struct nvlst *src, struct nvlst **out);
 void cnfarrayDestruct(struct cnfarray *ar);
 void cnffparamlstDestruct(struct cnffparamlst *params);
 void cnfIteratorDestruct(struct cnfitr *itr);
@@ -460,6 +465,7 @@ struct cnfstmt *cnfstmtNewCall(es_str_t *name);
 struct cnfstmt *cnfstmtNewContinue(void);
 struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
+rsRetVal cnfstmtCloneReloadSyntax(const struct cnfstmt *src, struct cnfstmt **out);
 struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray *cnfarrayNew(es_str_t *val);
 struct cnfarray *cnfarrayDup(struct cnfarray *old);

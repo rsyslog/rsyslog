@@ -264,12 +264,18 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
 	| '(' expr ')'			{ $$ = $2; }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
-	| EXISTS '(' VAR ')'		{ $$ = (struct cnfexpr*) cnffuncexistsNew($3); }
+	| EXISTS '(' VAR ')'		{
+		if(($$ = (struct cnfexpr*) cnffuncexistsNew($3)) == NULL)
+			YYABORT;
+	}
 	| FUNC '(' ')'			{ $$ = (struct cnfexpr*) cnffuncNew($1, NULL); }
 	| FUNC '(' fparams ')'		{ $$ = (struct cnfexpr*) cnffuncNew($1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
-	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
+	| VAR				{
+		if(($$ = (struct cnfexpr*) cnfvarNew($1)) == NULL)
+			YYABORT;
+	}
 	| array				{ $$ = (struct cnfexpr*) $1; }
 fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
