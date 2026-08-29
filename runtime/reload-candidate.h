@@ -31,6 +31,10 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
+/* Build an independent, ordered catalog containing only module and input
+ * declarations. This is the source material required by module-specific
+ * effective-profile classifiers; unrelated scripts and objects are omitted. */
+rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *candidate, rsReloadCandidate_t **ppCatalog);
 /* Identity and fragment are borrowed for the callback only. The visitor must
  * not mutate or retain them. Fragments are visited in effective parse order. */
 rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *candidate,
@@ -68,7 +72,8 @@ rsRetVal rsReloadCandidateSourceBegin(void);
 int rsReloadCandidateSourceActive(void);
 void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object);
 void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script);
-rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder,
+                                       rsReloadCandidate_t **ppObjectCatalog);
 void rsReloadCandidateSourceAbort(void);
 void rsReloadCandidateSourceNoteError(void);
 

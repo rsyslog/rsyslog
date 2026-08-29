@@ -1983,19 +1983,25 @@ static int initAll(int argc, char **argv) {
 
     {
         rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder = NULL;
+        rsReloadCandidate_t *sourceObjectCatalog = NULL;
 
         if (localRet == RS_RET_OK) {
-            if (rsReloadCandidateSourceFinish(&sourceGraphBuilder) != RS_RET_OK) sourceGraphBuilder = NULL;
+            if (rsReloadCandidateSourceFinish(&sourceGraphBuilder, &sourceObjectCatalog) != RS_RET_OK) {
+                sourceGraphBuilder = NULL;
+                sourceObjectCatalog = NULL;
+            }
         } else {
             rsReloadCandidateSourceAbort();
         }
         localRet = rsconf.Activate(loadConf);
         if (localRet != RS_RET_OK) {
             rsReloadNormalizedGraphBuilderV1Destruct(&sourceGraphBuilder);
+            rsReloadCandidateDestruct(&sourceObjectCatalog);
             CHKiRet(localRet);
         }
 
-        CHKiRet(shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf), reloadConfFile, sourceGraphBuilder));
+        CHKiRet(shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf), reloadConfFile, sourceGraphBuilder,
+                                      sourceObjectCatalog));
     }
 
     if (runConf->globals.bLogStatusMsgs) {

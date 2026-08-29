@@ -55,9 +55,12 @@ static int pendingGauge = 0;
 static uint64_t requestStartedUsec = 0;
 static statsobj_t *reloadStats = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *activeRulesetGraphBuilder = NULL;
+static rsReloadCandidate_t *activeSourceObjectCatalog = NULL;
+static rsReloadCandidate_t *retiredSourceObjectCatalog = NULL;
 static rsReloadNormalizedGraphV1_t activeRulesetGraph;
 static char *candidateConfigPath = NULL;
 static rsReloadCandidate_t *pendingCandidate = NULL;
+static rsReloadCandidate_t *pendingSourceObjectCatalog = NULL;
 static rsReloadReportV1_t *pendingReport = NULL;
 static rsReloadRulesetPlanV1_t *pendingPlan = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *pendingRulesetGraphBuilder = NULL;
@@ -225,6 +228,7 @@ finalize_it:
 
 void shadowReloadExit(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
+    rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -232,13 +236,16 @@ void shadowReloadExit(void) {
     free(candidateConfigPath);
     candidateConfigPath = NULL;
     rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
+    rsReloadCandidateDestruct(&activeSourceObjectCatalog);
+    rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
     if (reloadStats != NULL) statsobj.Destruct(&reloadStats);
     objRelease(statsobj, CORE_COMPONENT);
 }
 
 rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
                                const char *const configPath,
-                               rsReloadNormalizedGraphBuilderV1_t *newBuilder) {
+                               rsReloadNormalizedGraphBuilderV1_t *newBuilder,
+                               rsReloadCandidate_t *sourceObjectCatalog) {
     rsReloadNormalizedGraphV1_t newGraph;
     rsRetVal graphRet;
 
@@ -247,6 +254,7 @@ rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
     candidateConfigPath = configPath == NULL ? NULL : strdup(configPath);
     if (configPath != NULL && candidateConfigPath == NULL) {
         rsReloadNormalizedGraphBuilderV1Destruct(&newBuilder);
+        rsReloadCandidateDestruct(&sourceObjectCatalog);
         return RS_RET_OUT_OF_MEMORY;
     }
     pthread_mutex_lock(&statusMut);
@@ -260,12 +268,13 @@ rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
     pthread_mutex_unlock(&statusMut);
     pendingGauge = signalRequestPending != 0;
     memset(&newGraph, 0, sizeof(newGraph));
-    graphRet = newBuilder == NULL ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
+    graphRet = newBuilder == NULL || sourceObjectCatalog == NULL ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
     if (graphRet == RS_RET_OK) {
         graphRet = rsReloadNormalizedGraphBuilderV1GetGraph(newBuilder, &newGraph);
     }
     if (graphRet != RS_RET_OK) {
         rsReloadNormalizedGraphBuilderV1Destruct(&newBuilder);
+        rsReloadCandidateDestruct(&sourceObjectCatalog);
         pthread_mutex_lock(&statusMut);
         baselineAvailable = 0;
         lastResult = SHADOW_RELOAD_REJECTED_BASELINE;
@@ -277,6 +286,8 @@ rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
         rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
         activeRulesetGraphBuilder = newBuilder;
         activeRulesetGraph = newGraph;
+        rsReloadCandidateDestruct(&activeSourceObjectCatalog);
+        activeSourceObjectCatalog = sourceObjectCatalog;
         baselineAvailable = 1;
         lastResult = SHADOW_RELOAD_IDLE;
         pthread_mutex_unlock(&statusMut);
@@ -439,6 +450,7 @@ void shadowReloadBeginRequest(void) {
     }
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
     rsReloadCandidateDestruct(&pendingCandidate);
+    rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -492,6 +504,12 @@ void shadowReloadBeginRequest(void) {
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
+                        pendingCandidateResult =
+                            rsReloadCandidateBuildObjectCatalogV1(pendingCandidate, &pendingSourceObjectCatalog);
+                        if (pendingCandidateResult != RS_RET_OK) {
+                            pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
+                            goto candidate_done;
+                        }
                         pendingCandidateResult =
                             rsReloadRulesetPlanPrepareV1(runConf, pendingCandidate, pendingReport, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
@@ -682,6 +700,9 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
     activeRulesetGraphBuilder = pendingRulesetGraphBuilder;
     activeRulesetGraph = pendingRulesetGraph;
     pendingRulesetGraphBuilder = NULL;
+    retiredSourceObjectCatalog = activeSourceObjectCatalog;
+    activeSourceObjectCatalog = pendingSourceObjectCatalog;
+    pendingSourceObjectCatalog = NULL;
     memset(&pendingRulesetGraph, 0, sizeof(pendingRulesetGraph));
     ++activeGeneration;
     ATOMIC_STORE_uint64(&ctrActiveGeneration, &mutCtrActiveGeneration, activeGeneration);
@@ -769,4 +790,6 @@ void shadowReloadProcess(void) {
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
+    rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
+    rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }

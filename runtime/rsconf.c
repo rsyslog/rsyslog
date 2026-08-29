@@ -799,7 +799,8 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
     }
 
     /* Capture the same source AST that this normal startup dispatch will
-     * consume. The observer retains only canonical control-plane data. */
+     * consume. The observer retains canonical graph data plus independent
+     * module/input syntax needed by later control-path classifiers. */
     rsReloadCandidateSourceCaptureObject(o);
 
     if (rsReloadCandidateCaptureActive()) {

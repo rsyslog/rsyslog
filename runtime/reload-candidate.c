@@ -46,6 +46,7 @@ struct rsReloadCandidate_s {
 
 static rsReloadCandidate_t *captureCandidate = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *sourceBuilder = NULL;
+static rsReloadCandidate_t *sourceObjectCatalog = NULL;
 static es_str_t *sourceDefaultSerialized = NULL;
 static struct nvlst *sourceGlobalParams = NULL;
 static struct nvlst *sourceGlobalParamsTail = NULL;
@@ -61,6 +62,37 @@ typedef struct sourceInputOrdinal_s {
     struct sourceInputOrdinal_s *next;
 } sourceInputOrdinal_t;
 static sourceInputOrdinal_t *sourceInputOrdinals = NULL;
+
+static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, const struct cnfobj *const object) {
+    struct nvlst *parameters = NULL;
+    struct cnfobj *copy = NULL;
+    rsReloadCandidateObject_t *entry = NULL;
+    DEFiRet;
+
+    if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
+    if (object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT) return RS_RET_OK;
+    CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
+    copy = cnfobjNew(object->objType, parameters);
+    if (copy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    parameters = NULL;
+    entry = calloc(1, sizeof(*entry));
+    if (entry == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    entry->object = copy;
+    copy = NULL;
+    if (catalog->tail == NULL)
+        catalog->head = entry;
+    else
+        catalog->tail->next = entry;
+    catalog->tail = entry;
+    ++catalog->objectCount;
+    entry = NULL;
+
+finalize_it:
+    nvlstDestruct(parameters);
+    cnfobjDestruct(copy);
+    free(entry);
+    RETiRet;
+}
 
 void rsReloadCandidateSourceNoteError(void) {
     if (sourceBuilder != NULL) sourceError = 1;
@@ -1203,6 +1235,8 @@ rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *con
 }
 
 rsRetVal rsReloadCandidateSourceBegin(void) {
+    rsRetVal ret;
+
     rsReloadCandidateSourceAbort();
     sourceOrdinal = 0;
     sourceDefaultActionOrdinal = 0;
@@ -1210,7 +1244,14 @@ rsRetVal rsReloadCandidateSourceBegin(void) {
     sourceHaveGlobal = 0;
     sourceHaveMainQueue = 0;
     sourceInputOrdinalsDestruct();
-    return rsReloadNormalizedGraphBuilderV1Construct(&sourceBuilder);
+    sourceObjectCatalog = calloc(1, sizeof(*sourceObjectCatalog));
+    if (sourceObjectCatalog == NULL) return RS_RET_OUT_OF_MEMORY;
+    ret = rsReloadNormalizedGraphBuilderV1Construct(&sourceBuilder);
+    if (ret != RS_RET_OK) {
+        rsReloadCandidateDestruct(&sourceObjectCatalog);
+        return ret;
+    }
+    return RS_RET_OK;
 }
 
 int rsReloadCandidateSourceActive(void) {
@@ -1224,6 +1265,12 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     rsRetVal ret;
 
     if (sourceBuilder == NULL || sourceError || object == NULL) return;
+    if (object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT) {
+        if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
+            sourceError = 1;
+            return;
+        }
+    }
     ++sourceOrdinal;
     if (object->objType == CNFOBJ_RULESET && object->nvlst == NULL) {
         if (sourceDefaultSerialized == NULL) sourceDefaultSerialized = es_newStr(256);
@@ -1297,11 +1344,14 @@ void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script) {
     rsReloadCandidateSourceCaptureObject(&object);
 }
 
-rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder) {
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder,
+                                       rsReloadCandidate_t **ppObjectCatalog) {
     char *fingerprint = NULL;
     rsRetVal ret;
 
-    if (ppBuilder == NULL || *ppBuilder != NULL || sourceBuilder == NULL) return RS_RET_PARAM_ERROR;
+    if (ppBuilder == NULL || *ppBuilder != NULL || ppObjectCatalog == NULL || *ppObjectCatalog != NULL ||
+        sourceBuilder == NULL || sourceObjectCatalog == NULL)
+        return RS_RET_PARAM_ERROR;
     if (sourceError) {
         rsReloadCandidateSourceAbort();
         return RS_RET_NOT_IMPLEMENTED;
@@ -1339,6 +1389,8 @@ rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBu
     }
     *ppBuilder = sourceBuilder;
     sourceBuilder = NULL;
+    *ppObjectCatalog = sourceObjectCatalog;
+    sourceObjectCatalog = NULL;
     if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
     sourceDefaultSerialized = NULL;
     nvlstDestruct(sourceGlobalParams);
@@ -1352,6 +1404,7 @@ rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBu
 
 void rsReloadCandidateSourceAbort(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&sourceBuilder);
+    rsReloadCandidateDestruct(&sourceObjectCatalog);
     if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
     sourceDefaultSerialized = NULL;
     nvlstDestruct(sourceGlobalParams);
@@ -1459,6 +1512,25 @@ rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *const candid
         ++ordinal;
     }
     return RS_RET_OK;
+}
+
+rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *const candidate,
+                                               rsReloadCandidate_t **const ppCatalog) {
+    const rsReloadCandidateObject_t *entry;
+    rsReloadCandidate_t *catalog = NULL;
+    DEFiRet;
+
+    if (candidate == NULL || ppCatalog == NULL || *ppCatalog != NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(catalog = calloc(1, sizeof(*catalog)));
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        CHKiRet(appendObjectCatalogClone(catalog, entry->object));
+    }
+    *ppCatalog = catalog;
+    catalog = NULL;
+
+finalize_it:
+    rsReloadCandidateDestruct(&catalog);
+    RETiRet;
 }
 
 typedef struct visitedRulesetIdentity_s {

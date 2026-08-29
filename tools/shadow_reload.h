@@ -13,16 +13,18 @@
 
 #include "typedefs.h"
 #include "rsconf.h"
+#include "reload-candidate.h"
 #include "reload-normalized-graph.h"
 
 rsRetVal shadowReloadInit(void);
 void shadowReloadExit(void);
 
-/* Configure the Release-B manager after the active configuration exists.
- * Ownership of sourceGraphBuilder is transferred on every return path. */
+/* Configure the reload manager after the active configuration exists.
+ * Ownership of both source artifacts is transferred on every return path. */
 rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode,
                                const char *configPath,
-                               rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder);
+                               rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder,
+                               rsReloadCandidate_t *sourceObjectCatalog);
 
 /* Copy the active generation's normalized ruleset fingerprint. The caller
  * owns the returned string. This control-path accessor exists so testbench

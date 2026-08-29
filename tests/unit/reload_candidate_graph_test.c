@@ -144,6 +144,12 @@ struct nvlst *rsconfTranslateCloneNvlst(const struct nvlst *list) {
     return head;
 }
 
+rsRetVal nvlstCloneReloadSafe(const struct nvlst *const source, struct nvlst **const output) {
+    if (output == NULL || *output != NULL) return RS_RET_PARAM_ERROR;
+    *output = rsconfTranslateCloneNvlst(source);
+    return source != NULL && *output == NULL ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
+}
+
 void cnfstmtDestructLst(struct cnfstmt *list) {
     while (list != NULL) {
         struct cnfstmt *next = list->next;
@@ -320,15 +326,24 @@ static const rsReloadNormalizedNodeV1_t *findObserved(const observed_t *observed
 typedef struct objectObserved_s {
     enum cnfobjType types[8];
     size_t ordinals[8];
+    char discriminator[8][32];
     size_t count;
     size_t failAt;
 } objectObserved_t;
 
 static rsRetVal observeObject(const struct cnfobj *const object, const size_t parseOrdinal, void *const context) {
     objectObserved_t *const observed = context;
+    const char *value;
+    size_t length = 0;
 
     if (observed->count >= sizeof(observed->types) / sizeof(observed->types[0])) return RS_RET_OUT_OF_MEMORY;
     observed->types[observed->count] = object->objType;
+    value = nvlstString(object->nvlst, object->objType == CNFOBJ_MODULE ? "load" : "type", &length);
+    if (value != NULL) {
+        if (length >= sizeof(observed->discriminator[observed->count])) return RS_RET_OUT_OF_MEMORY;
+        memcpy(observed->discriminator[observed->count], value, length);
+        observed->discriminator[observed->count][length] = '\0';
+    }
     observed->ordinals[observed->count++] = parseOrdinal;
     return parseOrdinal == observed->failAt ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
 }
@@ -404,6 +419,8 @@ int main(void) {
     {
         objectObserved_t objectObserved = {.failAt = SIZE_MAX};
         objectObserved_t failedObserved = {.failAt = 2};
+        objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
+        rsReloadCandidate_t *objectCatalog = NULL;
 
         CHECK(rsReloadCandidateVisitObjectsV1(NULL, observeObject, &objectObserved) == RS_RET_PARAM_ERROR);
         CHECK(rsReloadCandidateVisitObjectsV1(candidate, NULL, &objectObserved) == RS_RET_PARAM_ERROR);
@@ -414,6 +431,12 @@ int main(void) {
         CHECK(objectObserved.types[5] == CNFOBJ_INPUT && objectObserved.ordinals[5] == 5);
         CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &failedObserved) == RS_RET_NOT_IMPLEMENTED);
         CHECK(failedObserved.count == 3);
+        CHECK(rsReloadCandidateBuildObjectCatalogV1(candidate, &objectCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateVisitObjectsV1(objectCatalog, observeObject, &catalogObserved) == RS_RET_OK);
+        CHECK(catalogObserved.count == 2);
+        CHECK(catalogObserved.types[0] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[0], "imtcp"));
+        CHECK(catalogObserved.types[1] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[1], "imtcp"));
+        rsReloadCandidateDestruct(&objectCatalog);
     }
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
@@ -682,6 +705,7 @@ int main(void) {
         rsReloadCandidate_t *emptyCandidate = calloc(1, sizeof(*emptyCandidate));
         rsReloadNormalizedGraphBuilderV1_t *emptyCandidateBuilder = NULL;
         rsReloadNormalizedGraphBuilderV1_t *emptySourceBuilder = NULL;
+        rsReloadCandidate_t *emptySourceCatalog = NULL;
         rsReloadNormalizedGraphV1_t emptyCandidateGraph;
         rsReloadNormalizedGraphV1_t emptySourceGraph;
         observed_t emptyCandidateObserved = OBSERVED_INIT;
@@ -694,7 +718,8 @@ int main(void) {
         CHECK(rsReloadCandidateBuildNormalizedGraphV1(emptyCandidate, &emptyCandidateBuilder) == RS_RET_OK);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceCaptureObject(&emptySourceObject);
-        CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder, &emptySourceCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateObjectCount(emptySourceCatalog) == 0);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptyCandidateBuilder, &emptyCandidateGraph) == RS_RET_OK);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptySourceBuilder, &emptySourceGraph) == RS_RET_OK);
         CHECK(emptyCandidateGraph.enumerate(emptyCandidateGraph.context, observe, &emptyCandidateObserved) ==
@@ -704,6 +729,7 @@ int main(void) {
         CHECK(!strcmp(emptyCandidateObserved.nodes[0]->fingerprint, emptySourceObserved.nodes[0]->fingerprint));
         rsReloadNormalizedGraphBuilderV1Destruct(&emptyCandidateBuilder);
         rsReloadNormalizedGraphBuilderV1Destruct(&emptySourceBuilder);
+        rsReloadCandidateDestruct(&emptySourceCatalog);
         rsReloadCandidateDestruct(&emptyCandidate);
     }
 
@@ -711,10 +737,12 @@ int main(void) {
      * baseline may be handed to the report-only HUP path afterwards. */
     {
         rsReloadNormalizedGraphBuilderV1_t *dirtySourceBuilder = NULL;
+        rsReloadCandidate_t *dirtySourceCatalog = NULL;
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceNoteError();
-        CHECK(rsReloadCandidateSourceFinish(&dirtySourceBuilder) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(rsReloadCandidateSourceFinish(&dirtySourceBuilder, &dirtySourceCatalog) == RS_RET_NOT_IMPLEMENTED);
         CHECK(dirtySourceBuilder == NULL);
+        CHECK(dirtySourceCatalog == NULL);
     }
 
     /* The startup source mirror uses the same per-type anonymous input
@@ -722,34 +750,53 @@ int main(void) {
      * ordinal, and casing of the input type must not split that namespace. */
     {
         rsReloadNormalizedGraphBuilderV1_t *observedSourceBuilder = NULL;
+        rsReloadCandidate_t *observedSourceCatalog = NULL;
         rsReloadNormalizedGraphV1_t sourceGraph;
         observed_t sourceObserved = OBSERVED_INIT;
         struct nvlst *namedInput = parameter("type", "IMTCP");
+        struct nvlst *moduleParams = parameter("load", "imtcp");
+        struct cnfobj *moduleObject;
         struct cnfobj *namedObject;
         struct cnfobj *otherObject;
         struct cnfobj *anonymousObject;
 
-        CHECK(namedInput != NULL);
+        CHECK(namedInput != NULL && moduleParams != NULL);
+        moduleParams->next = parameter("networknamespace", "blue");
+        CHECK(moduleParams->next != NULL);
         namedInput->next = parameter("name", "named-before");
         CHECK(namedInput->next != NULL);
+        moduleObject = object(CNFOBJ_MODULE, moduleParams, NULL);
         namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
         otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
         anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
-        CHECK(namedObject != NULL && otherObject != NULL && anonymousObject != NULL && otherObject->nvlst != NULL &&
-              anonymousObject->nvlst != NULL);
+        CHECK(moduleObject != NULL && namedObject != NULL && otherObject != NULL && anonymousObject != NULL &&
+              otherObject->nvlst != NULL && anonymousObject->nvlst != NULL);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(moduleObject);
         rsReloadCandidateSourceCaptureObject(namedObject);
         rsReloadCandidateSourceCaptureObject(otherObject);
         rsReloadCandidateSourceCaptureObject(anonymousObject);
-        CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder) == RS_RET_OK);
-        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
-        CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
-        CHECK(sourceObserved.count == 3);
-        CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
-        rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
+        CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder, &observedSourceCatalog) == RS_RET_OK);
+        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 4);
+        cnfobjDestruct(moduleObject);
         cnfobjDestruct(namedObject);
         cnfobjDestruct(otherObject);
         cnfobjDestruct(anonymousObject);
+        {
+            objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
+            CHECK(rsReloadCandidateVisitObjectsV1(observedSourceCatalog, observeObject, &catalogObserved) == RS_RET_OK);
+            CHECK(catalogObserved.count == 4);
+            CHECK(catalogObserved.types[0] == CNFOBJ_MODULE);
+            CHECK(!strcmp(catalogObserved.discriminator[0], "imtcp"));
+            CHECK(catalogObserved.types[3] == CNFOBJ_INPUT);
+            CHECK(!strcmp(catalogObserved.discriminator[3], "ImTcP"));
+        }
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
+        CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
+        CHECK(sourceObserved.count == 4);
+        CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
+        rsReloadCandidateDestruct(&observedSourceCatalog);
     }
 
     candidate = calloc(1, sizeof(*candidate));
