@@ -2320,6 +2320,13 @@ static rsRetVal ATTR_NONNULL(1) SetSupportOctetCountedFraming(tcpsrv_t *const pT
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL(1) SetMultiLineForNewSessions(tcpsrv_t *const pThis, const int enabled) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    tcpsrvApplyMultiLineForNewSessions(pThis, enabled);
+    RETiRet;
+}
+
 static rsRetVal ATTR_NONNULL(1) SetOrigin(tcpsrv_t *pThis, uchar *origin) {
     DEFiRet;
     free(pThis->pszOrigin);
@@ -2661,6 +2668,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->WaitFence = tcpsrvWaitFence;
     pIf->ReleaseFence = tcpsrvReleaseFence;
     pIf->SetSupportOctetCountedFraming = SetSupportOctetCountedFraming;
+    pIf->SetMultiLineForNewSessions = SetMultiLineForNewSessions;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

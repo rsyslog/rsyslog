@@ -384,9 +384,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*ReleaseFence)(tcpsrv_t *pThis, uint64_t token);
     /* added v34 -- update the accept profile while fenced */
     rsRetVal (*SetSupportOctetCountedFraming)(tcpsrv_t *pThis, int enabled);
+    /* added v35 -- update the accept profile while fenced */
+    rsRetVal (*SetMultiLineForNewSessions)(tcpsrv_t *pThis, int enabled);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 34 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 35 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -443,6 +445,7 @@ void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
                                           uint64_t maxExpansionRatio,
                                           uint64_t maxDecompressedBytesPerReceive,
                                           uint64_t maxTotalZstdWindowBytes);
+void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

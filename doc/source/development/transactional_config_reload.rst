@@ -298,7 +298,8 @@ probe count, and idle time use the same ``new_sessions`` contract.  The scalar
 framing profile—Cisco framing correction, the additional delimiter, maximum
 frame size, LF-delimiter disablement, and truncated-message policy—also changes
 only for later connections, as do octet-counted framing support and the
-compression mode, driver, and resource limits.  Multiline/regular expression
+compression mode, driver, and resource limits.  Multiline framing without a
+changed delimiter regex is also an accept-profile update.  Regular expression
 framing, TLS, endpoint, ACL, rate-limit, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.

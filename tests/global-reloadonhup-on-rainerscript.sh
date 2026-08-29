@@ -84,8 +84,9 @@ fi
 
 # The imtcp source lowerer must parse a valid changed input through the same
 # descriptor/default path as startup. The existing listener/session remain
-# live while the session-local flow-control snapshot is updated.
-sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled="on" flowControl="off")/' \
+# live while flow control updates immediately and multiline changes only the
+# profile used for later accepts.
+sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled="on" flowControl="off" multiLine="on")/' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -93,8 +94,8 @@ if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=8 add
 	echo "FAIL: valid imtcp candidate did not activate: $reload_status"
 	error_exit 1
 fi
-if [[ "$reload_status" != *"source_capability=live_swap"* ]]; then
-	echo "FAIL: changed RainerScript imtcp profile was not classified live: $reload_status"
+if [[ "$reload_status" != *"source_capability=new_sessions"* ]]; then
+	echo "FAIL: changed RainerScript imtcp profile was not classified for new sessions: $reload_status"
 	error_exit 1
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"

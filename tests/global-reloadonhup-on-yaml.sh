@@ -99,14 +99,15 @@ if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 add
 fi
 
 # Native YAML reaches the same materializer and imtcp source lowerer. The
-# existing session is fenced while both the new flow-control snapshot and root
-# are published as one generation.
+# existing session is fenced while flow control, the later-accept multiline
+# profile, and the root are published as one generation.
 sed -e 's/contains "msgnum"/contains "cutover-ack"/' \
-	-e '/name: first/a\    flowControl: "off"' "$CONF_FILE" >"$CONF_FILE.candidate"
+	-e '/name: first/a\    flowControl: "off"\
+    multiline: "on"' "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=new_sessions"* ]]; then
 	echo "FAIL: coordinated YAML imtcp/ruleset activation did not publish generation five: $reload_status"
 	error_exit 1
 fi

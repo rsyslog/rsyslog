@@ -322,6 +322,14 @@ void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *const server,
     }
 }
 
+void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *const server, const int enabled) {
+    tcpLstnPortList_t *listener;
+
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->cnf_params != NULL) listener->cnf_params->bMultiLine = enabled;
+    }
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

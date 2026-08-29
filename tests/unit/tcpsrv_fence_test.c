@@ -323,6 +323,9 @@ static int framingNewSessions(void) {
     tcpsrvApplyOctetCountedFramingForNewSessions(&server, 0);
     CHECK(firstParams.bSuppOctetFram == 0);
     CHECK(secondParams.bSuppOctetFram == 0);
+    tcpsrvApplyMultiLineForNewSessions(&server, 1);
+    CHECK(firstParams.bMultiLine == 1);
+    CHECK(secondParams.bMultiLine == 1);
     return 0;
 }
 
