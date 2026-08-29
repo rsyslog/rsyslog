@@ -1646,10 +1646,10 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            (ignoreLiveFields ||
             (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
              left->bUseFlowControl == right->bUseFlowControl && left->starvationMaxReads == right->starvationMaxReads &&
+             left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
              reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                 right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
-           left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
            left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
            reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
                              reloadEffectiveNamespace(right, rightModule)) &&
@@ -1725,6 +1725,8 @@ typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
     int flowControl;
     unsigned starvationMaxReads;
+    int notifyOnConnectionClose;
+    int notifyOnConnectionOpen;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1786,6 +1788,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
+        state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
+        state->entries[index].notifyOnConnectionOpen = newInst->bEmitMsgOnOpen;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1847,6 +1851,8 @@ static void commitReloadV1(void *const pReloadState) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
         tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
+        (void)tcpsrv.SetNotificationOnRemoteOpen(server, state->entries[i].notifyOnConnectionOpen);
+        (void)tcpsrv.SetNotificationOnRemoteClose(server, state->entries[i].notifyOnConnectionClose);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

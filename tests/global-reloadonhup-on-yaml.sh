@@ -1,7 +1,8 @@
 #!/bin/bash
 # Verify native YAML activation: persistent TCP sessions span the coordinated
-# imtcp flow-control and ruleset cutover. Exact HUP generation/status and
-# output checks prove the old/new rules plus later fail-closed rejections.
+# imtcp flow-control/notification and ruleset cutover. Exact HUP
+# generation/status and output checks prove the old/new rules plus later
+# fail-closed rejections.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -64,14 +65,23 @@ if [[ "$reload_status" != *"result=reported_only active_generation=2 unchanged=7
 fi
 
 # Module defaults use the same YAML lifecycle path as input overrides. Toggle
-# flow control off and back on while retaining both established TCP sessions.
-sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"' "$CONF_FILE.base" >"$CONF_FILE"
+# flow control and connection notifications while retaining both established
+# TCP sessions.
+sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"\
+    notifyOnConnectionOpen: "on"\
+    notifyOnConnectionClose: "on"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: YAML module-level flow-control update did not activate: $reload_status"
 	error_exit 1
 fi
+exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:notification-live\n' >&9; then error_exit 1; fi
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:notification-new-session\n' >&7; then error_exit 1; fi
+wait_content 'msgnum:notification-live' "$RSYSLOG_OUT_LOG"
+wait_content 'msgnum:notification-new-session' "$RSYSLOG_OUT_LOG"
+exec 7>&-
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -165,6 +175,8 @@ exec 8>&-
 shutdown_when_empty
 wait_shutdown
 content_check 'msgnum:00000000-first' "$RSYSLOG_OUT_LOG"
+content_check 'msgnum:notification-live' "$RSYSLOG_OUT_LOG"
+content_check 'msgnum:notification-new-session' "$RSYSLOG_OUT_LOG"
 content_check 'cutover-ack-first' "$RSYSLOG_OUT_LOG"
 content_check 'cutover-ack-second' "$RSYSLOG_OUT_LOG"
 custom_assert_content_missing 'msgnum:00000001' "$RSYSLOG_OUT_LOG"

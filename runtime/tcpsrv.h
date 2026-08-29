@@ -425,6 +425,7 @@ int tcpsrvFenceTerminated(void);
  * update listener/session copies before the fence is released. */
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
+void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

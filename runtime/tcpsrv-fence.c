@@ -252,6 +252,11 @@ void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *const server, const unsigned ma
     server->starvationMaxReads = maxReads;
 }
 
+void tcpsrvApplyNotificationsLive(tcpsrv_t *const server, const int onOpen, const int onClose) {
+    server->bEmitMsgOnOpen = onOpen;
+    server->bEmitMsgOnClose = onClose;
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

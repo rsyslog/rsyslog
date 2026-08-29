@@ -2353,13 +2353,13 @@ static rsRetVal ATTR_NONNULL(1)
 
 /* Set connection open notification */
 static rsRetVal ATTR_NONNULL(1) SetNotificationOnRemoteOpen(tcpsrv_t *pThis, const int bNewVal) {
-    pThis->bEmitMsgOnOpen = bNewVal;
+    tcpsrvApplyNotificationsLive(pThis, bNewVal, pThis->bEmitMsgOnClose);
     return RS_RET_OK;
 }
 /* Set connection close notification */
 static rsRetVal ATTR_NONNULL(1) SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal) {
     DEFiRet;
-    pThis->bEmitMsgOnClose = bNewVal;
+    tcpsrvApplyNotificationsLive(pThis, pThis->bEmitMsgOnOpen, bNewVal);
     RETiRet;
 }
 

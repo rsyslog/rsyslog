@@ -1,8 +1,8 @@
 #!/bin/bash
 # Verify RainerScript activation and its fail-closed boundaries. Effective
-# imtcp flow-control changes and an eligible named-ruleset update publish
-# atomically while one TCP session stays open. HUP completion plus exact
-# generation/output checks prove the cutover without timing assumptions.
+# imtcp flow-control/notification changes and an eligible named-ruleset update
+# publish atomically while one TCP session stays open. HUP completion plus
+# exact generation/output checks prove the cutover without timing assumptions.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
@@ -52,9 +52,10 @@ if [[ "$reload_status" != *"result=reported_only active_generation=2 unchanged=9
 	error_exit 1
 fi
 
-# A real module-default change reaches every input that does not override it.
-# The input event-loop fence makes the cached session update atomic.
-sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off")|' \
+# Real module-default changes reach every input that does not override them.
+# The input event-loop fence makes flow control and connection notifications
+# atomic while retaining the established session.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off" notifyOnConnectionOpen="on" notifyOnConnectionClose="on")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -62,8 +63,14 @@ if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 add
 	echo "FAIL: changed RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
+exec 7<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+wait_content 'imtcp: connection established with host:' "$RSYSLOG_DYNNAME.started"
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:notification-live\n' >&9; then error_exit 1; fi
+wait_content 'msgnum:notification-live' "$RSYSLOG_OUT_LOG"
+exec 7>&-
+wait_content 'closed by remote peer' "$RSYSLOG_DYNNAME.started"
 
-# Restore the omitted/on default through the same live path so the next input
+# Restore the omitted/on defaults through the same live path so the next input
 # override begins from a published source/runtime baseline.
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
@@ -195,6 +202,7 @@ exec 9>&-
 shutdown_when_empty
 wait_shutdown
 content_check 'msgnum:00000000' "$RSYSLOG_OUT_LOG"
+content_check 'msgnum:notification-live' "$RSYSLOG_OUT_LOG"
 content_check 'cutover-ack' "$RSYSLOG_OUT_LOG"
 assert_content_missing 'msgnum:00000001' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000002' "$RSYSLOG_OUT_LOG"
