@@ -644,17 +644,19 @@ void shadowReloadBeginRequest(void) {
                     const int sourceReloadable = pendingSourceModuleCapabilityEvaluated &&
                                                  (pendingSourceModuleCapability == eMOD_RELOAD_REUSE ||
                                                   pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP ||
-                                                  pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS);
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS ||
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_DRAIN_REPLACE);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    pendingCandidateResult =
-                        sourceReloadable ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
-                                         : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    pendingCandidateResult = sourceReloadable
+                                                 ? rsReloadCandidateCheckRulesetImtcpReportV1(
+                                                       activeSourceObjectCatalog, pendingCandidate, pendingReport)
+                                                 : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
-                            runConf, pendingCandidate, pendingReport,
+                            runConf, activeSourceObjectCatalog, pendingCandidate, pendingReport,
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
                             &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
@@ -663,7 +665,9 @@ void shadowReloadBeginRequest(void) {
                                 modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
                                                  pendingSourceModuleCnf, &pendingModuleReloadState);
                             if (pendingCandidateResult != RS_RET_OK)
-                                pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                                pendingFailurePhase = pendingCandidateResult == RS_RET_NOT_IMPLEMENTED
+                                                          ? SHADOW_RELOAD_FAILURE_CAPABILITY
+                                                          : SHADOW_RELOAD_FAILURE_ACTIVATION;
                         }
                         if (pendingCandidateResult == RS_RET_OK && pendingPlan != NULL &&
                             (pendingReport->modifiedCount != 0 || pendingReport->addedCount != 0 ||
@@ -769,7 +773,8 @@ static int rejectedResult(void) {
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
             (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
              pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_ERR);
+             pendingCandidateResult == RS_RET_ERR || pendingCandidateResult == RS_RET_COULD_NOT_BIND ||
+             pendingCandidateResult == RS_RET_RETRY);
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
             !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;
@@ -976,7 +981,8 @@ void shadowReloadProcess(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
-    if (destructPendingSourceModule() != RS_RET_OK)
-        LogError(0, RS_RET_ERR, "shadow_reload: module reload retirement remains pending for retry");
+    const rsRetVal retirementRet = destructPendingSourceModule();
+    if (retirementRet != RS_RET_OK && retirementRet != RS_RET_RETRY)
+        LogError(0, retirementRet, "shadow_reload: module reload retirement failed and remains pending");
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }

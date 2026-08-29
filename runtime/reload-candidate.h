@@ -62,7 +62,8 @@ rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **bor
  * later private compiler still has to validate and prepare the accepted AST.
  */
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *report);
-rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *candidate,
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *activeSourceCatalog,
+                                                    const rsReloadCandidate_t *candidate,
                                                     const rsReloadReportV1_t *report);
 
 /*

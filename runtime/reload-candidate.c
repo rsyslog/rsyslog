@@ -1214,7 +1214,8 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const candidate,
+rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
+                                                    const rsReloadCandidate_t *const candidate,
                                                     const rsReloadReportV1_t *const report) {
     size_t i;
     if (candidate == NULL || report == NULL || report->version != RS_RELOAD_REPORT_V1 ||
@@ -1225,11 +1226,21 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *c
         const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
         const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
-        if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED) return RS_RET_NOT_IMPLEMENTED;
-        if (entry->objectKind == RS_RELOAD_OBJ_RULESET) continue;
+        if (entry->diffKind != RS_RELOAD_DIFF_MODIFIED && entry->diffKind != RS_RELOAD_DIFF_ADDED &&
+            entry->diffKind != RS_RELOAD_DIFF_REMOVED)
+            return RS_RET_NOT_IMPLEMENTED;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET) {
+            if (entry->diffKind == RS_RELOAD_DIFF_MODIFIED) continue;
+            return RS_RET_NOT_IMPLEMENTED;
+        }
+        if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind != RS_RELOAD_OBJ_INPUT)
+            return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {
             int found;
-            const rsRetVal ret = candidateHasImtcpIdentity(candidate, entry->objectKind, entry->identity, &found);
+            const rsReloadCandidate_t *const catalog =
+                entry->diffKind == RS_RELOAD_DIFF_REMOVED ? activeSourceCatalog : candidate;
+            if (catalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+            const rsRetVal ret = candidateHasImtcpIdentity(catalog, entry->objectKind, entry->identity, &found);
             if (ret != RS_RET_OK) return ret;
             if (found) continue;
         }

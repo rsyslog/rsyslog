@@ -604,12 +604,10 @@ finalize_it:
 static tcps_sess_t tcpsess_slot_reserved;
 
 
-#if !defined(ENABLE_IMTCP_EPOLL)
 static inline tcps_sess_t *ATTR_NONNULL() TCPSessTblLoad(tcpsrv_t *const pThis, const int i) {
     tcps_sess_t *const pSess = (tcps_sess_t *)ATOMIC_LOAD_PTR((void **)&pThis->pSessions[i], &pThis->mut_sessions);
     return pSess == &tcpsess_slot_reserved ? NULL : pSess;
 }
-#endif
 
 
 static inline void ATTR_NONNULL(1) TCPSessTblStore(tcpsrv_t *const pThis, const int i, tcps_sess_t *const pSess) {
@@ -655,6 +653,13 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
     return ((i < pThis->iSessMax) ? i : -1);
 }
 #endif
+
+static int ATTR_NONNULL() tcpsrvHasSessions(tcpsrv_t *const pThis) {
+    if (pThis->pSessions == NULL) return 0;
+    for (int i = 0; i < pThis->iSessMax; ++i)
+        if (TCPSessTblLoad(pThis, i) != NULL) return 1;
+    return 0;
+}
 
 
 /* De-Initialize TCP listener sockets.
@@ -780,6 +785,7 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
                 (pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszPort,
                 (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr,
                 (ns == NULL) ? "" : " namespace ", (ns == NULL) ? "" : ns);
+            if (pThis->strictListenerInit) ABORT_FINALIZE(localRet);
         }
         pEntry = pEntry->pNext;
     }
@@ -1001,6 +1007,11 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
 
     tcps_sess.Destruct(&pSess);
     TCPSessTblStore(pThis, pioDescr->id, NULL);
+    if (pThis->retireWhenDrained && pThis->controlPipe[1] >= 0) {
+        const unsigned char wake = 1;
+        const ssize_t writeRet = write(pThis->controlPipe[1], &wake, sizeof(wake));
+        (void)writeRet;
+    }
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
@@ -1358,6 +1369,7 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
     /* Initialize queue state first. */
     queue->head = NULL;
     queue->tail = NULL;
+    queue->stop = 0;
 
     /* Allocate arrays. */
     CHKmalloc(queue->wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
@@ -1444,6 +1456,7 @@ static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
         pthread_mutex_unlock(&pThis->fenceMut);
     }
     pthread_mutex_lock(&queue->mut);
+    queue->stop = 1;
     pthread_cond_broadcast(&queue->workRdy);
     pthread_mutex_unlock(&queue->mut);
 
@@ -1470,7 +1483,7 @@ static tcpsrv_io_descr_t ATTR_NONNULL() * dequeueWork(tcpsrv_t *pSrv) {
     tcpsrv_io_descr_t *pioDescr;
 
     pthread_mutex_lock(&queue->mut);
-    while ((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
+    while (queue->head == NULL && !queue->stop && !glbl.GetGlobalInputTermState()) {
         pthread_cond_wait(&queue->workRdy, &queue->mut);
     }
 
@@ -1710,6 +1723,7 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
     }
 
     while (1) {
+        if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
         pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
         /* do the sessions */
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -1850,6 +1864,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     }
 
     while (glbl.GetGlobalInputTermState() == 0) {
+        if (pThis->retireWhenDrained && !tcpsrvHasSessions(pThis)) break;
         numEntries = sizeof(workset) / sizeof(tcpsrv_io_descr_t *);
         localRet = epoll_Wait(pThis, -1, &numEntries, workset, &haveControl);
         if (glbl.GetGlobalInputTermState() == 1) {
@@ -1880,10 +1895,12 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     stopWrkrPool(pThis);
 
     /* remove the tcp listen sockets from the epoll set */
-    for (i = 0; i < pThis->iLstnCurr; ++i) {
-        CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
+    for (i = 0; i < pThis->iLstnMax; ++i) {
+        if (pThis->ppioDescrPtr[i] == NULL) continue;
+        if (pThis->ppLstn[i] != NULL) CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
         DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
         free(pThis->ppioDescrPtr[i]);
+        pThis->ppioDescrPtr[i] = NULL;
     }
 
 finalize_it:
@@ -1984,9 +2001,13 @@ ENDobjConstruct(tcpsrv)
 
 
 /* ConstructionFinalizer */
-static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalizeInternal(tcpsrv_t *pThis, const sbool deferListen) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
+
+    for (tcpLstnPortList_t *entry = pThis->pLstnPorts; entry != NULL; entry = entry->pNext)
+        entry->cnf_params->bDeferListen = deferListen;
+    pThis->strictListenerInit = deferListen;
 
     /* prepare network stream subsystem */
     CHKiRet(netstrms.Construct(&pThis->pNS));
@@ -2032,6 +2053,52 @@ finalize_it:
                  (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName);
     }
     RETiRet;
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
+    return tcpsrvConstructFinalizeInternal(pThis, 0);
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalizePrepared(tcpsrv_t *pThis) {
+    const rsRetVal ret = tcpsrvConstructFinalizeInternal(pThis, 1);
+    return ret == RS_RET_OK && pThis->iLstnCurr == 0 ? RS_RET_COULD_NOT_BIND : ret;
+}
+
+
+static rsRetVal ATTR_NONNULL() tcpsrvActivatePreparedListeners(tcpsrv_t *pThis) {
+    DEFiRet;
+    int sock;
+    const int backlog = (pThis->iSynBacklog == 0) ? pThis->iSessMax / 10 + 5 : pThis->iSynBacklog;
+
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    for (int i = 0; i < pThis->iLstnCurr; ++i) {
+        if (!pThis->ppLstnPort[i]->cnf_params->bDeferListen) continue;
+        CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &sock));
+        if (listen(sock, backlog) != 0 && listen(sock, 32) != 0) ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    for (int i = 0; i < pThis->iLstnCurr; ++i) pThis->ppLstnPort[i]->cnf_params->bDeferListen = 0;
+
+finalize_it:
+    RETiRet;
+}
+
+
+static void ATTR_NONNULL() tcpsrvDisableAcceptWhileFenced(tcpsrv_t *pThis) {
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pthread_mutex_lock(&pThis->fenceMut);
+    const int validOwner =
+        pThis->fenceAcquired && pThis->fenceOwnerValid && pthread_equal(pThis->fenceOwner, pthread_self());
+    assert(validOwner);
+    if (!validOwner) {
+        pthread_mutex_unlock(&pThis->fenceMut);
+        return;
+    }
+    for (int i = 0; i < pThis->iLstnCurr; ++i) netstrm.Destruct(pThis->ppLstn + i);
+    pThis->iLstnCurr = 0;
+    pThis->retireWhenDrained = 1;
+    pthread_mutex_unlock(&pThis->fenceMut);
 }
 
 
@@ -2669,6 +2736,9 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->ReleaseFence = tcpsrvReleaseFence;
     pIf->SetSupportOctetCountedFraming = SetSupportOctetCountedFraming;
     pIf->SetMultiLineForNewSessions = SetMultiLineForNewSessions;
+    pIf->ConstructFinalizePrepared = tcpsrvConstructFinalizePrepared;
+    pIf->ActivatePreparedListeners = tcpsrvActivatePreparedListeners;
+    pIf->DisableAcceptWhileFenced = tcpsrvDisableAcceptWhileFenced;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

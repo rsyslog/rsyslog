@@ -21,6 +21,7 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
  * ruleset-only gate. REUSE can publish a new source baseline without changing
  * runtime objects. */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
+                                      const rsReloadCandidate_t *activeSourceCatalog,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
                                       eModReloadCapability_t sourceCapability,

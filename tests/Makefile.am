@@ -495,6 +495,7 @@ TESTS_DEFAULT = \
 	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
 	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-imtcp-reorder-rainerscript.sh \
+	global-reloadonhup-imtcp-add-rainerscript.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
@@ -1766,6 +1767,7 @@ TESTS_LIBYAML_IMTCP = \
 	global-reloadonhup-imtcp-defaulttz-yaml.sh \
 	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-imtcp-reorder-yaml.sh \
+	global-reloadonhup-imtcp-add-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
 	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \

@@ -62,6 +62,7 @@
 #include "netstrm.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "srUtils.h"
 #include "tcpsrv.h"
 #include "ruleset.h"
 #include "rainerscript.h"
@@ -75,7 +76,7 @@ MODULE_CNFNAME("imtcp")
 /* static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(ruleset)
-    DEFobjCurrIf(prop)
+    DEFobjCurrIf(prop) DEFobjCurrIf(glbl)
 
         static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
@@ -88,12 +89,19 @@ typedef struct tcpsrv_etry_s {
     enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
+    pthread_mutex_t startMut;
+    pthread_cond_t startCond;
+    int startSyncInitialized;
+    int startAuthorized;
+    int startCancelled;
+    int runFinished;
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
 
-/* Runtime-owned registry foundation for a later reload lifecycle.  It is
- * private to imtcp and deliberately has no lookup, activation, or message
- * path role yet: retaining the current list ordering preserves all behavior. */
+/* Runtime-owned endpoint registry. Reload preparation builds entries privately;
+ * commit publishes additions or disables accepts for removals while established
+ * sessions retain their tcpsrv generation until retirement. Registry access is
+ * confined to the serialized input/control lifecycle, never the message path. */
 static struct {
     tcpsrv_etry_t *head;
     int count;
@@ -129,15 +137,17 @@ static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
     return RS_RET_OK;
 }
 
-static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
-                                    const tcpLstnParams_t *const params,
-                                    const char *const networkNamespace,
-                                    const uchar *const configName) {
+static rsRetVal endpointRegistryBuild(tcpsrv_t *const server,
+                                      const tcpLstnParams_t *const params,
+                                      const char *const networkNamespace,
+                                      const uchar *const configName,
+                                      const size_t sourceOrdinal,
+                                      tcpsrv_etry_t **const result) {
     tcpsrv_etry_t *entry = NULL;
     const tcpsrv_etry_t *existing;
     DEFiRet;
 
-    if (server == NULL || params == NULL) return RS_RET_PARAM_ERROR;
+    if (server == NULL || params == NULL || result == NULL || *result != NULL) return RS_RET_PARAM_ERROR;
     CHKmalloc(entry = calloc(1, sizeof(*entry)));
     iRet = endpointKeyBuild(params, networkNamespace, &entry->endpoint_key);
     if (iRet == RS_RET_NOT_IMPLEMENTED)
@@ -151,12 +161,16 @@ static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
         }
     }
     if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
+    if (pthread_mutex_init(&entry->startMut, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    if (pthread_cond_init(&entry->startCond, NULL) != 0) {
+        pthread_mutex_destroy(&entry->startMut);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    entry->startSyncInitialized = 1;
     entry->tcpsrv = server;
-    entry->source_ordinal = (size_t)endpoint_registry.count;
+    entry->source_ordinal = sourceOrdinal;
     entry->state = IMTCP_ENDPOINT_ACTIVE;
-    entry->next = endpoint_registry.head;
-    endpoint_registry.head = entry;
-    ++endpoint_registry.count;
+    *result = entry;
     entry = NULL;
 
 finalize_it:
@@ -168,8 +182,40 @@ finalize_it:
     RETiRet;
 }
 
+static void endpointRegistryPublish(tcpsrv_etry_t *const entry) {
+    entry->next = endpoint_registry.head;
+    endpoint_registry.head = entry;
+    ++endpoint_registry.count;
+}
+
+static void endpointRegistryUnlink(tcpsrv_etry_t *const entry) {
+    if (entry == NULL) return;
+    tcpsrv_etry_t **cursor = &endpoint_registry.head;
+    while (*cursor != NULL && *cursor != entry) cursor = &(*cursor)->next;
+    if (*cursor == entry) {
+        *cursor = entry->next;
+        entry->next = NULL;
+        --endpoint_registry.count;
+    }
+}
+
+static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
+                                    const tcpLstnParams_t *const params,
+                                    const char *const networkNamespace,
+                                    const uchar *const configName) {
+    tcpsrv_etry_t *entry = NULL;
+    const rsRetVal ret =
+        endpointRegistryBuild(server, params, networkNamespace, configName, (size_t)endpoint_registry.count, &entry);
+    if (ret == RS_RET_OK) endpointRegistryPublish(entry);
+    return ret;
+}
+
 static void endpointRegistryRemove(tcpsrv_etry_t *const entry) {
     entry->state = IMTCP_ENDPOINT_RETIRING;
+    if (entry->startSyncInitialized) {
+        pthread_cond_destroy(&entry->startCond);
+        pthread_mutex_destroy(&entry->startMut);
+    }
     free(entry->endpoint_key);
     free(entry->config_name);
     free(entry);
@@ -1864,7 +1910,7 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
         return 1;
     }
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
-        *capability = eMOD_RELOAD_NEW_SESSIONS;
+        if (*capability != eMOD_RELOAD_DRAIN_REPLACE) *capability = eMOD_RELOAD_NEW_SESSIONS;
         return 1;
     }
     return 0;
@@ -1884,6 +1930,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     char *identity = NULL;
     size_t oldCount = 0;
     size_t newCount = 0;
+    size_t matchedCount = 0;
     DEFiRet;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
@@ -1891,7 +1938,6 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
     for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
-    if (oldCount != newCount) return RS_RET_OK;
     CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
     CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
     if (oldIdentitiesUsable && newIdentitiesUsable) {
@@ -1900,13 +1946,18 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
             CHKiRet(reloadFindInstanceByIdentity(newConfig, identity, &matchedInst));
             free(identity);
             identity = NULL;
-            if (matchedInst == NULL ||
-                !mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability))
-                FINALIZE;
+            if (matchedInst == NULL) {
+                capability = eMOD_RELOAD_DRAIN_REPLACE;
+                continue;
+            }
+            ++matchedCount;
+            if (!mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability)) FINALIZE;
         }
+        if (newCount > matchedCount && capability == eMOD_RELOAD_REUSE) capability = eMOD_RELOAD_LIVE_SWAP;
         *pCapability = capability;
         FINALIZE;
     }
+    if (oldCount != newCount) FINALIZE;
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
@@ -1923,6 +1974,9 @@ finalize_it:
 
 typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
+    int addition;
+    int additionPublished;
+    int removal;
     int flowControl;
     unsigned starvationMaxReads;
     int notifyOnConnectionClose;
@@ -1955,6 +2009,29 @@ typedef struct imtcpReloadStateV1_s {
     imtcpReloadEntryV1_t entries[];
 } imtcpReloadStateV1_t;
 
+static rsRetVal startSrvWrkr(tcpsrv_etry_t *etry, int parked);
+static void authorizeSrvWrkr(tcpsrv_etry_t *etry);
+static void cancelParkedSrvWrkr(tcpsrv_etry_t *etry);
+static void stopSrvWrkr(tcpsrv_etry_t *etry);
+
+static void destructPreparedEndpoint(tcpsrv_etry_t **const pEntry) {
+    tcpsrv_etry_t *entry;
+    if (pEntry == NULL || *pEntry == NULL) return;
+    entry = *pEntry;
+    *pEntry = NULL;
+    cancelParkedSrvWrkr(entry);
+    if (entry->tcpsrv != NULL) tcpsrv.Destruct(&entry->tcpsrv);
+    endpointRegistryRemove(entry);
+}
+
+static void destructUnpublishedAdditions(imtcpReloadStateV1_t *const state) {
+    if (state == NULL) return;
+    for (size_t i = 0; i < state->count; ++i) {
+        if (state->entries[i].addition && !state->entries[i].additionPublished)
+            destructPreparedEndpoint(&state->entries[i].runtime);
+    }
+}
+
 static tcpsrv_etry_t *findRuntimeEndpoint(const char *const key) {
     tcpsrv_etry_t *entry;
     if (key == NULL) return NULL;
@@ -1983,14 +2060,37 @@ static tcpsrv_etry_t *findRuntimeEndpointByConfigName(const uchar *const name) {
     return match;
 }
 
+static rsRetVal findRuntimeForInstance(const instanceConf_t *const inst,
+                                       const modConfData_t *const config,
+                                       const size_t ordinal,
+                                       const size_t count,
+                                       tcpsrv_etry_t **const runtime) {
+    char *key = NULL;
+    const rsRetVal keyRet = endpointKeyBuild(inst->cnf_params, reloadEffectiveNamespace(inst, config), &key);
+    if (runtime == NULL) return RS_RET_PARAM_ERROR;
+    *runtime = NULL;
+    if (keyRet == RS_RET_OK)
+        *runtime = findRuntimeEndpoint(key);
+    else if (keyRet == RS_RET_NOT_IMPLEMENTED)
+        *runtime = inst->pszInputName == NULL ? findRuntimeEndpointBySourceOrdinal(ordinal, count)
+                                              : findRuntimeEndpointByConfigName(inst->pszInputName);
+    free(key);
+    return keyRet == RS_RET_NOT_IMPLEMENTED ? RS_RET_OK : keyRet;
+}
+
 static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNewCnf, void **const pReloadState) {
     const modConfData_t *const oldConfig = pOldCnf;
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *newInst;
+    const instanceConf_t *oldInst;
     imtcpReloadStateV1_t *state = NULL;
     eModReloadCapability_t capability;
     size_t count = 0;
+    size_t oldCount = 0;
+    size_t capacity;
     size_t index = 0;
+    int oldIdentitiesUsable;
+    int newIdentitiesUsable;
     DEFiRet;
 
     if (oldConfig == NULL || newConfig == NULL || newConfig->pConf == NULL || pReloadState == NULL ||
@@ -1998,27 +2098,53 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         return RS_RET_PARAM_ERROR;
     CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
     if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE &&
-        capability != eMOD_RELOAD_NEW_SESSIONS)
+        capability != eMOD_RELOAD_NEW_SESSIONS && capability != eMOD_RELOAD_DRAIN_REPLACE)
         ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++count;
-    if (count > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    CHKmalloc(state = calloc(1, sizeof(*state) + count * sizeof(state->entries[0])));
-    state->count = count;
+    for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
+    CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
+    CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
+    if (oldCount > SIZE_MAX - count) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    capacity = oldCount + count;
+    if (capacity > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(state = calloc(1, sizeof(*state) + capacity * sizeof(state->entries[0])));
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
         char *key = NULL;
+        tcpsrv_t *preparedServer = NULL;
+        tcpLstnParams_t *preparedParams = NULL;
         const rsRetVal keyRet =
             endpointKeyBuild(newInst->cnf_params, reloadEffectiveNamespace(newInst, newConfig), &key);
         if (keyRet == RS_RET_OK)
             state->entries[index].runtime = findRuntimeEndpoint(key);
-        else if (keyRet == RS_RET_NOT_IMPLEMENTED) {
+        else if (keyRet == RS_RET_NOT_IMPLEMENTED)
             state->entries[index].runtime = newInst->pszInputName == NULL
-                                                ? findRuntimeEndpointBySourceOrdinal(index, count)
+                                                ? findRuntimeEndpointBySourceOrdinal(index, oldCount)
                                                 : findRuntimeEndpointByConfigName(newInst->pszInputName);
-        } else
+        else
             ABORT_FINALIZE(keyRet);
         free(key);
+        key = NULL;
+        if (state->entries[index].runtime == NULL && keyRet == RS_RET_OK) {
+            CHKiRet(prepareListenerServer((modConfData_t *)newConfig, (instanceConf_t *)newInst, &preparedServer,
+                                          &preparedParams));
+            iRet =
+                endpointRegistryBuild(preparedServer, preparedParams, preparedParams->pszNetworkNamespace,
+                                      newInst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : newInst->pszInputName,
+                                      index, &state->entries[index].runtime);
+            if (iRet != RS_RET_OK) {
+                tcpsrv.SetUsrP(preparedServer, NULL);
+                tcpsrv.Destruct(&preparedServer);
+                ABORT_FINALIZE(iRet);
+            }
+            preparedServer = NULL;
+            state->entries[index].addition = 1;
+            state->count = index + 1;
+            CHKiRet(tcpsrv.ConstructFinalizePrepared(state->entries[index].runtime->tcpsrv));
+            CHKiRet(startSrvWrkr(state->entries[index].runtime, 1));
+        }
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        state->count = index + 1;
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
@@ -2051,32 +2177,58 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         if (state->entries[index].ruleset == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         ++index;
     }
+    if (oldIdentitiesUsable && newIdentitiesUsable) {
+        size_t oldOrdinal = 0;
+        for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next, ++oldOrdinal) {
+            char *identity = NULL;
+            const instanceConf_t *matched = NULL;
+            iRet = reloadEndpointIdentity(oldInst, oldConfig, &identity);
+            if (iRet == RS_RET_OK) iRet = reloadFindInstanceByIdentity(newConfig, identity, &matched);
+            free(identity);
+            if (iRet != RS_RET_OK) ABORT_FINALIZE(iRet);
+            if (matched != NULL) continue;
+            CHKiRet(findRuntimeForInstance(oldInst, oldConfig, oldOrdinal, oldCount, &state->entries[index].runtime));
+            if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            state->entries[index].removal = 1;
+            ++index;
+            state->count = index;
+        }
+    }
     *pReloadState = state;
     state = NULL;
 
 finalize_it:
+    destructUnpublishedAdditions(state);
     free(state);
     RETiRet;
 }
 
 static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec *const deadline) {
     imtcpReloadStateV1_t *const state = pReloadState;
-    size_t acquired = 0;
     rsRetVal ret = RS_RET_OK;
     if (state == NULL || deadline == NULL) return RS_RET_PARAM_ERROR;
     for (size_t i = 0; i < state->count; ++i) {
+        if (state->entries[i].addition) continue;
         ret = tcpsrv.RequestFence(state->entries[i].runtime->tcpsrv, &state->entries[i].fenceToken);
         if (ret != RS_RET_OK) break;
         ret = tcpsrv.WaitFence(state->entries[i].runtime->tcpsrv, state->entries[i].fenceToken, deadline);
         if (ret != RS_RET_OK) break;
         state->entries[i].fenceAcquired = 1;
-        ++acquired;
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            if (!state->entries[i].addition) continue;
+            ret = tcpsrv.ActivatePreparedListeners(state->entries[i].runtime->tcpsrv);
+            if (ret != RS_RET_OK) break;
+        }
     }
     if (ret != RS_RET_OK) {
-        while (acquired != 0) {
-            --acquired;
-            (void)tcpsrv.ReleaseFence(state->entries[acquired].runtime->tcpsrv, state->entries[acquired].fenceToken);
-            state->entries[acquired].fenceAcquired = 0;
+        for (size_t i = state->count; i != 0; --i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i - 1];
+            if (!entry->fenceAcquired) continue;
+            (void)tcpsrv.ReleaseFence(entry->runtime->tcpsrv, entry->fenceToken);
+            entry->fenceAcquired = 0;
         }
     }
     return ret;
@@ -2099,6 +2251,7 @@ static rsRetVal resumeReloadV1(void *const pReloadState) {
 static void commitReloadV1(void *const pReloadState) {
     imtcpReloadStateV1_t *const state = pReloadState;
     for (size_t i = 0; i < state->count; ++i) {
+        if (state->entries[i].removal) continue;
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
         tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
@@ -2126,19 +2279,51 @@ static void commitReloadV1(void *const pReloadState) {
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }
+    for (size_t i = 0; i < state->count; ++i) {
+        imtcpReloadEntryV1_t *const entry = &state->entries[i];
+        if (!entry->removal) continue;
+        tcpsrv.DisableAcceptWhileFenced(entry->runtime->tcpsrv);
+        entry->runtime->state = IMTCP_ENDPOINT_NO_ACCEPT;
+    }
+    for (size_t i = 0; i < state->count; ++i) {
+        imtcpReloadEntryV1_t *const entry = &state->entries[i];
+        if (!entry->addition) continue;
+        endpointRegistryPublish(entry->runtime);
+        entry->additionPublished = 1;
+        authorizeSrvWrkr(entry->runtime);
+    }
 }
 
 static void abortReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return;
     (void)resumeReloadV1(pReloadState);
+    destructUnpublishedAdditions(pReloadState);
     free(pReloadState);
 }
 
 static rsRetVal retireReloadV1(void *const pReloadState) {
+    imtcpReloadStateV1_t *const state = pReloadState;
     rsRetVal ret;
     if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
     ret = resumeReloadV1(pReloadState);
     if (ret != RS_RET_OK) return ret;
+    for (size_t i = 0; i < state->count; ++i) {
+        imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
+        if (!reloadEntry->removal || reloadEntry->runtime == NULL) continue;
+        pthread_mutex_lock(&reloadEntry->runtime->startMut);
+        const int finished = reloadEntry->runtime->runFinished;
+        pthread_mutex_unlock(&reloadEntry->runtime->startMut);
+        if (!finished) return RS_RET_RETRY;
+    }
+    for (size_t i = 0; i < state->count; ++i) {
+        imtcpReloadEntryV1_t *const reloadEntry = &state->entries[i];
+        if (!reloadEntry->removal || reloadEntry->runtime == NULL) continue;
+        stopSrvWrkr(reloadEntry->runtime);
+        endpointRegistryUnlink(reloadEntry->runtime);
+        tcpsrv.Destruct(&reloadEntry->runtime->tcpsrv);
+        endpointRegistryRemove(reloadEntry->runtime);
+        reloadEntry->runtime = NULL;
+    }
     free(pReloadState);
     return RS_RET_OK;
 }
@@ -2451,16 +2636,25 @@ ENDfreeCnf
 static void *RunServerThread(void *myself) {
     tcpsrv_etry_t *const etry = (tcpsrv_etry_t *)myself;
     rsRetVal iRet;
+    pthread_mutex_lock(&etry->startMut);
+    while (!etry->startAuthorized && !etry->startCancelled) pthread_cond_wait(&etry->startCond, &etry->startMut);
+    const int cancelled = etry->startCancelled;
+    pthread_mutex_unlock(&etry->startMut);
+    if (cancelled) return NULL;
     iRet = tcpsrv.Run(etry->tcpsrv);
     if (iRet != RS_RET_OK) {
         LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");
     }
+    pthread_mutex_lock(&etry->startMut);
+    etry->runFinished = 1;
+    pthread_cond_broadcast(&etry->startCond);
+    pthread_mutex_unlock(&etry->startMut);
     return NULL;
 }
 
 
 /* support for running multiple servers on multiple threads (one server per thread) */
-static void startSrvWrkr(tcpsrv_etry_t *const etry) {
+static rsRetVal startSrvWrkr(tcpsrv_etry_t *const etry, const int parked) {
     int r;
     pthread_attr_t sessThrdAttr;
 
@@ -2480,6 +2674,11 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
 
     pthread_attr_init(&sessThrdAttr);
     pthread_attr_setstacksize(&sessThrdAttr, 4096 * 1024);
+    pthread_mutex_lock(&etry->startMut);
+    etry->startAuthorized = !parked;
+    etry->startCancelled = 0;
+    etry->runFinished = 0;
+    pthread_mutex_unlock(&etry->startMut);
     r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
     if (r != 0) {
         LogError(r, NO_ERRCODE, "imtcp error creating server thread");
@@ -2490,6 +2689,24 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
     }
     pthread_attr_destroy(&sessThrdAttr);
     pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
+    return r == 0 ? RS_RET_OK : RS_RET_ERR;
+}
+
+static void authorizeSrvWrkr(tcpsrv_etry_t *const etry) {
+    pthread_mutex_lock(&etry->startMut);
+    etry->startAuthorized = 1;
+    pthread_cond_signal(&etry->startCond);
+    pthread_mutex_unlock(&etry->startMut);
+}
+
+static void cancelParkedSrvWrkr(tcpsrv_etry_t *const etry) {
+    if (!etry->thread_started) return;
+    pthread_mutex_lock(&etry->startMut);
+    etry->startCancelled = 1;
+    pthread_cond_signal(&etry->startCond);
+    pthread_mutex_unlock(&etry->startMut);
+    pthread_join(etry->tid, NULL);
+    etry->thread_started = 0;
 }
 
 /* stop server worker thread
@@ -2510,16 +2727,16 @@ static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
  */
 BEGINrunInput
     CODESTARTrunInput;
-    tcpsrv_etry_t *etry = endpoint_registry.head->next;
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     while (etry != NULL) {
-        startSrvWrkr(etry);
+        (void)startSrvWrkr(etry, 0);
         etry = etry->next;
     }
 
-    iRet = tcpsrv.Run(endpoint_registry.head->tcpsrv);
+    while (glbl.GetGlobalInputTermState() == 0) srSleep(0, 100000);
 
-    /* de-init remaining servers */
-    etry = endpoint_registry.head->next;
+    /* De-initialize every runtime server, including endpoints added by HUP. */
+    etry = endpoint_registry.head;
     while (etry != NULL) {
         stopSrvWrkr(etry);
         etry = etry->next;
@@ -2564,6 +2781,8 @@ BEGINmodExit
     objRelease(tcps_sess, LM_TCPSRV_FILENAME);
     objRelease(tcpsrv, LM_TCPSRV_FILENAME);
     objRelease(ruleset, CORE_COMPONENT);
+    objRelease(prop, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -2626,6 +2845,7 @@ BEGINmodInit()
     CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
 
     /* register config file handlers */
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord, addInstance, NULL,

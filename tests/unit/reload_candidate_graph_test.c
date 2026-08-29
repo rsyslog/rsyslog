@@ -92,7 +92,8 @@ struct cnfobj *cnfobjNew(enum cnfobjType type, struct nvlst *list) {
     return object;
 }
 
-static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const candidate,
+static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const activeCatalog,
+                                const rsReloadCandidate_t *const candidate,
                                 const rsReloadObjectKind_t kind,
                                 const rsReloadDiffKind_t diff,
                                 const char *const identity) {
@@ -102,7 +103,7 @@ static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const candidate,
                                  .entryCount = 1,
                                  .entryStride = sizeof(entry),
                                  .entries = &entry};
-    return rsReloadCandidateCheckRulesetImtcpReportV1(candidate, &report);
+    return rsReloadCandidateCheckRulesetImtcpReportV1(activeCatalog, candidate, &report);
 }
 
 static struct nvlst *parameterPair(const char *const firstName,
@@ -859,25 +860,38 @@ int main(void) {
     rsReloadCandidateDestruct(&candidate);
 
     /* The broadened materializer gate is authorized only for candidate-side
-     * imtcp objects already classified LIVE_SWAP. Other modules/inputs and
-     * every add/remove operation must remain fail-closed. */
+     * imtcp objects already classified LIVE_SWAP. Existing imtcp inputs and
+     * newly added and active-catalog removed imtcp inputs are accepted; other
+     * modules/inputs and module additions remain fail-closed. */
     candidate = calloc(1, sizeof(*candidate));
-    CHECK(candidate != NULL);
+    rsReloadCandidate_t *activeCatalog = calloc(1, sizeof(*activeCatalog));
+    CHECK(candidate != NULL && activeCatalog != NULL);
     addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
     addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "omfile"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "tcp1"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "name", "udp1"), NULL));
+    addObject(activeCatalog, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
+    addObject(activeCatalog, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "retired"), NULL));
     CHECK(!constructionFailed);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:imtcp") == RS_RET_OK);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:tcp1") == RS_RET_OK);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:omfile") ==
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:imtcp") ==
+          RS_RET_OK);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:tcp1") ==
+          RS_RET_OK);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:omfile") ==
           RS_RET_NOT_IMPLEMENTED);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:udp1") ==
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:udp1") ==
           RS_RET_NOT_IMPLEMENTED);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_ADDED, "module:imtcp") ==
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:udp1") ==
           RS_RET_NOT_IMPLEMENTED);
-    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:tcp1") ==
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_ADDED, "module:imtcp") ==
           RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_ADDED, "input:tcp1") ==
+          RS_RET_OK);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:retired") ==
+          RS_RET_OK);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:tcp1") ==
+          RS_RET_NOT_IMPLEMENTED);
+    rsReloadCandidateDestruct(&activeCatalog);
     rsReloadCandidateDestruct(&candidate);
     puts("reload candidate graph tests passed");
     return 0;

@@ -68,6 +68,7 @@ struct tcpLstnParams_s {
     uchar *pszRatelimitName; /**< name of rate limit configuration */
     struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
     sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
+    sbool bDeferListen; /**< control-path prepare binds without accepting connections */
 };
 
 /* list of tcp listen ports */
@@ -115,6 +116,7 @@ typedef struct workQueue_s {
     unsigned numWrkr; /* how many workers to spawn */
     pthread_t *wrkr_tids; /* array of thread IDs */
     tcpsrvWrkrData_t *wrkr_data;
+    int stop; /* server-local worker shutdown, independent of global TERM */
 } workQueue_t;
 
 /**
@@ -248,6 +250,8 @@ struct tcpsrv_s {
         sbool fenceReleaseCommitted;
         sbool fenceSyncInitialized;
         sbool fenceReady;
+        sbool strictListenerInit; /**< candidate prepare requires every resolved socket */
+        sbool retireWhenDrained; /**< accept is disabled; stop after the last session closes */
 };
 
 
@@ -386,9 +390,14 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetSupportOctetCountedFraming)(tcpsrv_t *pThis, int enabled);
     /* added v35 -- update the accept profile while fenced */
     rsRetVal (*SetMultiLineForNewSessions)(tcpsrv_t *pThis, int enabled);
+    /* added v36 -- prepare and activate fixed listener sockets in two phases */
+    rsRetVal (*ConstructFinalizePrepared)(tcpsrv_t *pThis);
+    rsRetVal (*ActivatePreparedListeners)(tcpsrv_t *pThis);
+    /* added v37 -- infallibly stop accepts while the reload fence is held */
+    void (*DisableAcceptWhileFenced)(tcpsrv_t *pThis);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 35 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 37 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

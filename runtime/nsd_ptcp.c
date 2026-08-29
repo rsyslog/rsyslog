@@ -719,6 +719,8 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
     assert(cnf_params->pszPort != NULL);
     assert(iSessMax >= 0);
 
+    if (cnf_params->bDeferListen && cnf_params->pszLstnPortFileName != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+
     dbgprintf("creating tcp listen socket on port %s\n", cnf_params->pszPort);
 
     memset(&hints, 0, sizeof(hints));
@@ -860,7 +862,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         }
 
         const int iSynBacklog = (pNS->iSynBacklog == 0) ? iSessMax / 10 + 5 : pNS->iSynBacklog;
-        if (listen(sock, iSynBacklog) < 0) {
+        if (!cnf_params->bDeferListen && listen(sock, iSynBacklog) < 0) {
             /* If the listen fails, it most probably fails because we ask
              * for a too-large backlog. So in this case we first set back
              * to a fixed, reasonable, limit that should work. Only if
@@ -916,6 +918,8 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
             "We could initialize %d TCP listen sockets out of %d we received "
             "- this may or may not be an error indication.\n",
             numSocks, maxs);
+
+    if (cnf_params->bDeferListen && numSocks != maxs) ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 
     if (numSocks == 0) {
         dbgprintf("No TCP listen sockets could successfully be initialized\n");
