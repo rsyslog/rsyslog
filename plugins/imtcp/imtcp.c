@@ -1767,6 +1767,109 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
                                      reloadEffectivePermittedPeers(right, rightModule));
 }
 
+static rsRetVal reloadEndpointIdentity(const instanceConf_t *const inst,
+                                       const modConfData_t *const module,
+                                       char **const identity) {
+    rsRetVal ret;
+    char *key = NULL;
+    int printed;
+    size_t required;
+
+    if (inst == NULL || inst->cnf_params == NULL || module == NULL || identity == NULL || *identity != NULL)
+        return RS_RET_PARAM_ERROR;
+    ret = endpointKeyBuild(inst->cnf_params, reloadEffectiveNamespace(inst, module), &key);
+    if (ret == RS_RET_OK) {
+        *identity = key;
+        return RS_RET_OK;
+    }
+    if (ret != RS_RET_NOT_IMPLEMENTED || inst->pszInputName == NULL) return ret;
+    printed = snprintf(NULL, 0, "config-name|%zu:%s", ustrlen(inst->pszInputName), inst->pszInputName);
+    if (printed < 0) return RS_RET_PARAM_ERROR;
+    required = (size_t)printed;
+    if ((*identity = malloc(required + 1)) == NULL) return RS_RET_OUT_OF_MEMORY;
+    snprintf(*identity, required + 1, "config-name|%zu:%s", ustrlen(inst->pszInputName), inst->pszInputName);
+    return RS_RET_OK;
+}
+
+static rsRetVal reloadConfigHasUniqueIdentities(const modConfData_t *const config, int *const usable) {
+    const instanceConf_t *current;
+    const instanceConf_t *previous;
+    char *currentIdentity = NULL;
+    char *previousIdentity = NULL;
+    DEFiRet;
+
+    *usable = 0;
+    for (current = config->root; current != NULL; current = current->next) {
+        iRet = reloadEndpointIdentity(current, config, &currentIdentity);
+        if (iRet == RS_RET_NOT_IMPLEMENTED) {
+            iRet = RS_RET_OK;
+            FINALIZE;
+        }
+        CHKiRet(iRet);
+        for (previous = config->root; previous != current; previous = previous->next) {
+            iRet = reloadEndpointIdentity(previous, config, &previousIdentity);
+            if (iRet == RS_RET_NOT_IMPLEMENTED) {
+                iRet = RS_RET_OK;
+                FINALIZE;
+            }
+            CHKiRet(iRet);
+            if (!strcmp(currentIdentity, previousIdentity)) FINALIZE;
+            free(previousIdentity);
+            previousIdentity = NULL;
+        }
+        free(currentIdentity);
+        currentIdentity = NULL;
+    }
+    *usable = 1;
+
+finalize_it:
+    free(currentIdentity);
+    free(previousIdentity);
+    RETiRet;
+}
+
+static rsRetVal reloadFindInstanceByIdentity(const modConfData_t *const config,
+                                             const char *const identity,
+                                             const instanceConf_t **const match) {
+    const instanceConf_t *inst;
+    char *candidateIdentity = NULL;
+    DEFiRet;
+
+    *match = NULL;
+    for (inst = config->root; inst != NULL; inst = inst->next) {
+        CHKiRet(reloadEndpointIdentity(inst, config, &candidateIdentity));
+        if (!strcmp(identity, candidateIdentity)) {
+            *match = inst;
+            free(candidateIdentity);
+            candidateIdentity = NULL;
+            break;
+        }
+        free(candidateIdentity);
+        candidateIdentity = NULL;
+    }
+
+finalize_it:
+    free(candidateIdentity);
+    RETiRet;
+}
+
+static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
+                                         const modConfData_t *const oldConfig,
+                                         const instanceConf_t *const newInst,
+                                         const modConfData_t *const newConfig,
+                                         eModReloadCapability_t *const capability) {
+    if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0)) {
+        if (*capability == eMOD_RELOAD_REUSE) *capability = eMOD_RELOAD_LIVE_SWAP;
+        return 1;
+    }
+    if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
+        *capability = eMOD_RELOAD_NEW_SESSIONS;
+        return 1;
+    }
+    return 0;
+}
+
 static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
                                                 const void *const pNewCnf,
                                                 eModReloadCapability_t *const pCapability) {
@@ -1774,28 +1877,48 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *oldInst;
     const instanceConf_t *newInst;
+    const instanceConf_t *matchedInst;
     eModReloadCapability_t capability = eMOD_RELOAD_REUSE;
+    int oldIdentitiesUsable;
+    int newIdentitiesUsable;
+    char *identity = NULL;
+    size_t oldCount = 0;
+    size_t newCount = 0;
+    DEFiRet;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
     if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
+    for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) ++oldCount;
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++newCount;
+    if (oldCount != newCount) return RS_RET_OK;
+    CHKiRet(reloadConfigHasUniqueIdentities(oldConfig, &oldIdentitiesUsable));
+    CHKiRet(reloadConfigHasUniqueIdentities(newConfig, &newIdentitiesUsable));
+    if (oldIdentitiesUsable && newIdentitiesUsable) {
+        for (oldInst = oldConfig->root; oldInst != NULL; oldInst = oldInst->next) {
+            CHKiRet(reloadEndpointIdentity(oldInst, oldConfig, &identity));
+            CHKiRet(reloadFindInstanceByIdentity(newConfig, identity, &matchedInst));
+            free(identity);
+            identity = NULL;
+            if (matchedInst == NULL ||
+                !mergeReloadInstanceCapability(oldInst, oldConfig, matchedInst, newConfig, &capability))
+                FINALIZE;
+        }
+        *pCapability = capability;
+        FINALIZE;
+    }
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) {
-            if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0)) {
-                if (capability == eMOD_RELOAD_REUSE) capability = eMOD_RELOAD_LIVE_SWAP;
-            } else if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
-                capability = eMOD_RELOAD_NEW_SESSIONS;
-            } else {
-                return RS_RET_OK;
-            }
-        }
+        if (!mergeReloadInstanceCapability(oldInst, oldConfig, newInst, newConfig, &capability)) FINALIZE;
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
     if (oldInst == NULL && newInst == NULL) *pCapability = capability;
-    return RS_RET_OK;
+
+finalize_it:
+    free(identity);
+    RETiRet;
 }
 
 typedef struct imtcpReloadEntryV1_s {
@@ -1848,6 +1971,18 @@ static tcpsrv_etry_t *findRuntimeEndpointBySourceOrdinal(const size_t ordinal, c
     return NULL;
 }
 
+static tcpsrv_etry_t *findRuntimeEndpointByConfigName(const uchar *const name) {
+    tcpsrv_etry_t *entry;
+    tcpsrv_etry_t *match = NULL;
+    if (name == NULL) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next) {
+        if (entry->config_name == NULL || strcmp(entry->config_name, (const char *)name)) continue;
+        if (match != NULL) return NULL;
+        match = entry;
+    }
+    return match;
+}
+
 static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNewCnf, void **const pReloadState) {
     const modConfData_t *const oldConfig = pOldCnf;
     const modConfData_t *const newConfig = pNewCnf;
@@ -1875,9 +2010,11 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             endpointKeyBuild(newInst->cnf_params, reloadEffectiveNamespace(newInst, newConfig), &key);
         if (keyRet == RS_RET_OK)
             state->entries[index].runtime = findRuntimeEndpoint(key);
-        else if (keyRet == RS_RET_NOT_IMPLEMENTED)
-            state->entries[index].runtime = findRuntimeEndpointBySourceOrdinal(index, count);
-        else
+        else if (keyRet == RS_RET_NOT_IMPLEMENTED) {
+            state->entries[index].runtime = newInst->pszInputName == NULL
+                                                ? findRuntimeEndpointBySourceOrdinal(index, count)
+                                                : findRuntimeEndpointByConfigName(newInst->pszInputName);
+        } else
             ABORT_FINALIZE(keyRet);
         free(key);
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)

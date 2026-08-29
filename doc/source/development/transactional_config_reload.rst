@@ -272,13 +272,15 @@ leaving the existing module runtime objects untouched.  This advances the
 configuration generation but requires neither an input fence nor a consumer
 queue barrier.  Repeating that source is then a true report-only no-op instead
 of rediscovering the same effective-equivalent change on every HUP.
-The first imtcp comparator pairs listener instances in source order; a pure
-reorder is therefore conservatively restart-required until endpoint-key
-reconciliation is connected to the runtime registry.  Each configured runtime
-listener owns an independent deep copy of its listener parameters; the active
-module configuration retains its source-owned copy.  This ownership split is
-the prepare/abort foundation for constructing replacement endpoints without
-consuming or mutating the candidate configuration.
+The imtcp comparator pairs fixed listeners by effective endpoint key and
+unkeyable dynamic listeners with an explicit ``name`` by that stable config
+identity.  Reordering either kind therefore preserves the runtime listener;
+unnamed dynamic/service endpoints still fall back to source order and remain
+conservative.  Each configured runtime listener owns an independent deep copy
+of its listener parameters; the active module configuration retains its
+source-owned copy.  This ownership split is the prepare/abort foundation for
+constructing replacement endpoints without consuming or mutating the candidate
+configuration.
 
 Release C extends that foundation with a deliberately narrow private compiler
 and batch-boundary activation path.  In ``on`` mode, only modifications to
