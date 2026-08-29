@@ -3726,25 +3726,27 @@ static void evalVar(struct cnfvar *__restrict__ const var,
             DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n", var->prop.id, var->prop.name,
                       (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
         } else { /* we have a string */
-            debugStr = (jsonVar.d.estr == NULL) ? (const uchar *)"" : es_getBufAddr(jsonVar.d.estr);
-            debugStrLen = (jsonVar.d.estr == NULL) ? 0 : es_strlen(jsonVar.d.estr);
-            DBGPRINTF("rainerscript: (json/string) var %d: '", var->prop.id);
-            while (debugStrLen != 0) {
-                const uchar *const nul = memchr(debugStr, '\0', debugStrLen);
-                es_size_t chunkLen = (nul == NULL) ? debugStrLen : (es_size_t)(nul - debugStr);
+            if (Debug) {
+                debugStr = (jsonVar.d.estr == NULL) ? (const uchar *)"" : es_getBufAddr(jsonVar.d.estr);
+                debugStrLen = (jsonVar.d.estr == NULL) ? 0 : es_strlen(jsonVar.d.estr);
+                DBGPRINTF("rainerscript: (json/string) var %d: '", var->prop.id);
+                while (debugStrLen != 0) {
+                    const uchar *const nul = memchr(debugStr, '\0', debugStrLen);
+                    es_size_t chunkLen = (nul == NULL) ? debugStrLen : (es_size_t)(nul - debugStr);
 
-                while (chunkLen != 0) {
-                    const int printLen = (chunkLen > INT_MAX) ? INT_MAX : (int)chunkLen;
-                    DBGPRINTF("%.*s", printLen, debugStr);
-                    debugStr += printLen;
-                    chunkLen -= printLen;
-                    debugStrLen -= printLen;
+                    while (chunkLen != 0) {
+                        const int printLen = (chunkLen > INT_MAX) ? INT_MAX : (int)chunkLen;
+                        DBGPRINTF("%.*s", printLen, debugStr);
+                        debugStr += printLen;
+                        chunkLen -= printLen;
+                        debugStrLen -= printLen;
+                    }
+                    if (nul == NULL) break;
+                    ++debugStr;
+                    --debugStrLen;
                 }
-                if (nul == NULL) break;
-                ++debugStr;
-                --debugStrLen;
+                DBGPRINTF("'\n");
             }
-            DBGPRINTF("'\n");
             ret->datatype = 'S';
             ret->d.estr = (localRet != RS_RET_OK || jsonVar.d.estr == NULL) ? es_newStr(1) : jsonVar.d.estr;
         }
