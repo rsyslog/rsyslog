@@ -226,6 +226,70 @@ rsRetVal rulesetVisitAllActionsV1(rsconf_t *conf, rulesetActionVisitorV1_t visit
     return llExecFunc(&conf->rulesets.llRulesets, doVisitAllActionsV1, &visit);
 }
 
+typedef struct statementVisitorV1Context_s {
+    ruleset_t *ruleset;
+    rulesetStatementVisitorV1_t visitor;
+    void *context;
+} statementVisitorV1Context_t;
+
+static rsRetVal scriptVisitAllStatementsV1(struct cnfstmt *stmt, statementVisitorV1Context_t *visit) {
+    DEFiRet;
+    for (; stmt != NULL; stmt = stmt->next) {
+        iRet = visit->visitor(visit->ruleset, stmt, visit->context);
+        if (iRet == RS_RET_OK_DELETE_LISTENTRY) iRet = RS_RET_PARAM_ERROR;
+        CHKiRet(iRet);
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+            case S_SET:
+            case S_UNSET:
+            case S_ACT:
+            case S_CALL:
+            case S_CALL_INDIRECT:
+            case S_RELOAD_LOOKUP_TABLE:
+                break;
+            case S_IF:
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_if.t_then, visit));
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_if.t_else, visit));
+                break;
+            case S_FOREACH:
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_foreach.body, visit));
+                break;
+            case S_PRIFILT:
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_prifilt.t_then, visit));
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_prifilt.t_else, visit));
+                break;
+            case S_PROPFILT:
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_propfilt.t_then, visit));
+                CHKiRet(scriptVisitAllStatementsV1(stmt->d.s_propfilt.t_else, visit));
+                break;
+            default:
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        }
+    }
+finalize_it:
+    RETiRet;
+}
+
+DEFFUNC_llExecFunc(doVisitAllStatementsV1) {
+    statementVisitorV1Context_t *const visit = pParam;
+    rsRetVal ret;
+    visit->ruleset = pData;
+    ret = scriptVisitAllStatementsV1(visit->ruleset->root, visit);
+    return ret == RS_RET_OK_DELETE_LISTENTRY ? RS_RET_PARAM_ERROR : ret;
+}
+
+rsRetVal rulesetVisitAllStatementsV1(rsconf_t *const conf,
+                                     rulesetStatementVisitorV1_t const visitor,
+                                     void *const context) {
+    statementVisitorV1Context_t visit;
+
+    if (conf == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    visit.visitor = visitor;
+    visit.context = context;
+    return llExecFunc(&(conf->rulesets.llRulesets), doVisitAllStatementsV1, &visit);
+}
+
 /* driver to iterate over all rulesets */
 DEFFUNC_llExecFunc(doActivateRulesetQueues) {
     DEFiRet;

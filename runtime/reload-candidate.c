@@ -1111,11 +1111,12 @@ finalize_it:
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *const report) {
     size_t i;
     if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
-        report->entryStride < sizeof(rsReloadReportEntryV1_t))
+        report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+        report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
     for (i = 0; i < report->entryCount; ++i) {
-        const rsReloadReportEntryV1_t *entry =
-            (const rsReloadReportEntryV1_t *)((const unsigned char *)report->entries + i * report->entryStride);
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *entry = (const rsReloadReportEntryV1_t *)(const void *)address;
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
         /* Added/removed rulesets alter call targets. Any changed action,
          * input, parser, queue, module, template, or global fails closed. */
@@ -1388,12 +1389,12 @@ rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *can
                                                   void *context) {
     const rsReloadCandidateObject_t *entry;
     visitedRulesetIdentity_t *visited = NULL;
+    char *identity = NULL;
     DEFiRet;
     if (candidate == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
     for (entry = candidate->head; entry != NULL; entry = entry->next) {
         const struct cnfobj *object = entry->object;
         visitedRulesetIdentity_t *seen;
-        char *identity = NULL;
         int first = 1;
         const int isSyntheticDefault = object != NULL && object->objType == CNFOBJ_RULESET && object->nvlst == NULL;
         if (object == NULL || object->objType != CNFOBJ_RULESET) continue;
@@ -1402,7 +1403,6 @@ rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *can
         for (seen = visited; seen != NULL; seen = seen->next) {
             if (strcmp(seen->identity, identity)) continue;
             if (!isSyntheticDefault || !seen->syntheticDefault) {
-                free(identity);
                 ABORT_FINALIZE(RS_RET_DUP_PARAM);
             }
             first = 0;
@@ -1421,6 +1421,7 @@ rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *can
         CHKiRet(visitor(seen->identity, object->script, first, isSyntheticDefault, context));
     }
 finalize_it:
+    free(identity);
     visitedRulesetIdentitiesDestruct(visited);
     RETiRet;
 }

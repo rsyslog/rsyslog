@@ -3,8 +3,8 @@
  * SIGHUP handling remains in rsyslogd.c. The option plumbing calls
  * shadowReloadConfigure(), which records the requested policy and master
  * configuration path. Validate mode produces a side-effect-free,
- * source-syntactic diff report; semantic preparation and activation remain
- * fail-closed.
+ * source-syntactic diff report. ON mode can activate the narrow supported
+ * existing-ruleset plan scope; all other changes remain fail-closed.
  */
 #ifndef INCLUDED_SHADOW_RELOAD_H
 #define INCLUDED_SHADOW_RELOAD_H
@@ -24,10 +24,10 @@ rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode,
                                const char *configPath,
                                rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder);
 
-/* Return the active generation's normalized ruleset fingerprint. The
- * returned pointer remains owned by the reload manager. This control-path
- * accessor exists so testbench diagnostics do not rebuild the graph. */
-rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint);
+/* Copy the active generation's normalized ruleset fingerprint. The caller
+ * owns the returned string. This control-path accessor exists so testbench
+ * diagnostics do not rebuild the graph. */
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, char **ppFingerprint);
 
 /* Copy the last terminal request result into a caller-owned buffer. This is a
  * testbench/control-plane accessor and performs no message-path work. */
@@ -40,6 +40,9 @@ void shadowReloadRequestFromSignal(void);
 /* Begin pre-legacy accounting for the HUP cycle that the main loop is about
  * to run. Future candidate validation must happen at this seam. */
 void shadowReloadBeginRequest(void);
+
+/* Account for one actually completed historic HUP-hook cycle. */
+void shadowReloadLegacyHooksCompleted(void);
 
 /* Called by doHUP() after the historic HUP hooks have completed. */
 void shadowReloadProcess(void);

@@ -2,9 +2,10 @@
  *
  * This owns request state, observability, and the active generation's
  * source-syntactic configuration graph. It parses candidates into an owned
- * representation without dispatching configuration objects into
- * modules or runtime globals. Semantic preparation and activation remain
- * disabled. Historic HUP hooks are outside this manager and unconditional.
+ * representation without dispatching configuration objects into modules or
+ * runtime globals. A deliberately narrow existing-ruleset-only scope can be
+ * prepared and atomically activated; all other changes remain fail-closed.
+ * Historic HUP hooks remain outside this manager.
  */
 #include "config.h"
 
@@ -19,6 +20,7 @@
 #include <time.h>
 
 #include "rsyslog.h"
+#include "dirty.h"
 #include "obj.h"
 #include "reload-candidate.h"
 #include "reload-report.h"
@@ -45,6 +47,8 @@ static intctr_t capabilityRejectedTotal = 0;
 static intctr_t legacyHookTotal = 0;
 static intctr_t durationTotalUsec = 0;
 static intctr_t lastDurationUsec = 0;
+static intctr_t quiescePauseTotalUsec = 0;
+static intctr_t lastQuiescePauseUsec = 0;
 static unsigned activeGeneration = 0;
 static int requestInProgress = 0;
 static int pendingGauge = 0;
@@ -56,6 +60,9 @@ static char *candidateConfigPath = NULL;
 static rsReloadCandidate_t *pendingCandidate = NULL;
 static rsReloadReportV1_t *pendingReport = NULL;
 static rsReloadRulesetPlanV1_t *pendingPlan = NULL;
+static rsReloadNormalizedGraphBuilderV1_t *pendingRulesetGraphBuilder = NULL;
+static rsReloadNormalizedGraphV1_t pendingRulesetGraph;
+static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
 static size_t pendingCandidateObjects = 0;
 static uint64_t pendingReportHash = 0;
@@ -71,6 +78,7 @@ enum shadowReloadResult_e {
     SHADOW_RELOAD_IN_PROGRESS,
     SHADOW_RELOAD_IGNORED,
     SHADOW_RELOAD_REPORTED,
+    SHADOW_RELOAD_ACTIVATED,
     SHADOW_RELOAD_REJECTED_IO,
     SHADOW_RELOAD_REJECTED_RESOURCE,
     SHADOW_RELOAD_REJECTED_INTERNAL,
@@ -88,7 +96,8 @@ enum shadowReloadFailurePhase_e {
     SHADOW_RELOAD_FAILURE_NORMALIZE,
     SHADOW_RELOAD_FAILURE_BASELINE,
     SHADOW_RELOAD_FAILURE_REPORT,
-    SHADOW_RELOAD_FAILURE_CAPABILITY
+    SHADOW_RELOAD_FAILURE_CAPABILITY,
+    SHADOW_RELOAD_FAILURE_ACTIVATION
 };
 static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
 
@@ -113,6 +122,8 @@ STATSCOUNTER_DEF(ctrRejectedOn, mutCtrRejectedOn)
 STATSCOUNTER_DEF(ctrCapabilityRejected, mutCtrCapabilityRejected)
 STATSCOUNTER_DEF(ctrLegacyHooks, mutCtrLegacyHooks)
 STATSCOUNTER_DEF(ctrDurationTotalUsec, mutCtrDurationTotalUsec)
+STATSCOUNTER_DEF(ctrQuiescePauseTotalUsec, mutCtrQuiescePauseTotalUsec)
+STATSCOUNTER_DEF(ctrActiveGeneration, mutCtrActiveGeneration)
 
 static const char *modeName(const reloadOnHUPMode_t mode) {
     switch (mode) {
@@ -141,23 +152,23 @@ static void logState(const char *const event,
                      const size_t candidateObjects,
                      const rsReloadReportV1_t *const report,
                      const uint64_t reportHashValue) {
-    LogMsg(0, !strcmp(result, "rejected") ? RS_RET_ERR : RS_RET_OK,
-           !strcmp(result, "rejected") ? LOG_WARNING : LOG_INFO,
-           "shadow_reload event=%s result=%s mode=%s candidate_objects=%zu unchanged=%zu added=%zu removed=%zu "
-           "modified=%zu invalid=%zu disposition=%u report_hash=%016" PRIx64 " requests_total=%" PRIu64
-           " reload_hup_off_total=%" PRIu64 " reload_validate_total=%" PRIu64 " reload_on_total=%" PRIu64
-           " rejected_total=%" PRIu64 " reload_validate_rejected_total=%" PRIu64 " reload_on_rejected_total=%" PRIu64
-           " reload_capability_rejected_total=%" PRIu64 " reload_legacy_hook_total=%" PRIu64
-           " in_progress=%d pending=%d active_generation=%u duration_total_usec=%" PRIu64 " last_duration_usec=%" PRIu64
-           " rejected_mode=%s rejected_reason=%s",
-           event, result, modeName(configuredMode), candidateObjects, report == NULL ? 0 : report->unchangedCount,
-           report == NULL ? 0 : report->addedCount, report == NULL ? 0 : report->removedCount,
-           report == NULL ? 0 : report->modifiedCount, report == NULL ? 0 : report->invalidCount,
-           report == NULL ? 0 : report->overallDisposition, reportHashValue, (uint64_t)requestsTotal,
-           (uint64_t)offTotal, (uint64_t)validateTotal, (uint64_t)onTotal, (uint64_t)rejectedTotal,
-           (uint64_t)rejectedValidateTotal, (uint64_t)rejectedOnTotal, (uint64_t)capabilityRejectedTotal,
-           (uint64_t)legacyHookTotal, requestInProgress, signalRequestPending != 0, activeGeneration,
-           (uint64_t)durationTotalUsec, (uint64_t)lastDurationUsec, rejectedMode, rejectedReason);
+    LogMsg(
+        0, !strcmp(result, "rejected") ? RS_RET_ERR : RS_RET_OK, !strcmp(result, "rejected") ? LOG_WARNING : LOG_INFO,
+        "shadow_reload event=%s result=%s mode=%s candidate_objects=%zu unchanged=%zu added=%zu removed=%zu "
+        "modified=%zu invalid=%zu disposition=%u report_hash=%016" PRIx64 " requests_total=%" PRIu64
+        " reload_hup_off_total=%" PRIu64 " reload_validate_total=%" PRIu64 " reload_on_total=%" PRIu64
+        " rejected_total=%" PRIu64 " reload_validate_rejected_total=%" PRIu64 " reload_on_rejected_total=%" PRIu64
+        " reload_capability_rejected_total=%" PRIu64 " reload_legacy_hook_total=%" PRIu64
+        " in_progress=%d pending=%d active_generation=%u duration_total_usec=%" PRIu64 " last_duration_usec=%" PRIu64
+        " quiesce_pause_total_usec=%" PRIu64 " last_quiesce_pause_usec=%" PRIu64 " rejected_mode=%s rejected_reason=%s",
+        event, result, modeName(configuredMode), candidateObjects, report == NULL ? 0 : report->unchangedCount,
+        report == NULL ? 0 : report->addedCount, report == NULL ? 0 : report->removedCount,
+        report == NULL ? 0 : report->modifiedCount, report == NULL ? 0 : report->invalidCount,
+        report == NULL ? 0 : report->overallDisposition, reportHashValue, (uint64_t)requestsTotal, (uint64_t)offTotal,
+        (uint64_t)validateTotal, (uint64_t)onTotal, (uint64_t)rejectedTotal, (uint64_t)rejectedValidateTotal,
+        (uint64_t)rejectedOnTotal, (uint64_t)capabilityRejectedTotal, (uint64_t)legacyHookTotal, requestInProgress,
+        signalRequestPending != 0, activeGeneration, (uint64_t)durationTotalUsec, (uint64_t)lastDurationUsec,
+        (uint64_t)quiescePauseTotalUsec, (uint64_t)lastQuiescePauseUsec, rejectedMode, rejectedReason);
 }
 
 rsRetVal shadowReloadInit(void) {
@@ -175,6 +186,8 @@ rsRetVal shadowReloadInit(void) {
     STATSCOUNTER_INIT(ctrCapabilityRejected, mutCtrCapabilityRejected);
     STATSCOUNTER_INIT(ctrLegacyHooks, mutCtrLegacyHooks);
     STATSCOUNTER_INIT(ctrDurationTotalUsec, mutCtrDurationTotalUsec);
+    STATSCOUNTER_INIT(ctrQuiescePauseTotalUsec, mutCtrQuiescePauseTotalUsec);
+    STATSCOUNTER_INIT(ctrActiveGeneration, mutCtrActiveGeneration);
     CHKiRet(statsobj.Construct(&reloadStats));
     CHKiRet(statsobj.SetName(reloadStats, (uchar *)"reload"));
     CHKiRet(statsobj.SetOrigin(reloadStats, (uchar *)"core.reload"));
@@ -196,8 +209,10 @@ rsRetVal shadowReloadInit(void) {
                                 &ctrLegacyHooks));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_duration_total_usec", ctrType_IntCtr, CTR_FLAG_NONE,
                                 &ctrDurationTotalUsec));
-    CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_active_generation", ctrType_Int, CTR_FLAG_NONE,
-                                &activeGeneration));
+    CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_quiesce_pause_total_usec", ctrType_IntCtr, CTR_FLAG_NONE,
+                                &ctrQuiescePauseTotalUsec));
+    CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_active_generation", ctrType_IntCtr, CTR_FLAG_NONE,
+                                &ctrActiveGeneration));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_in_progress", ctrType_Int, CTR_FLAG_NONE,
                                 &requestInProgress));
     CHKiRet(statsobj.AddCounter(reloadStats, (uchar *)"reload_pending", ctrType_Int, CTR_FLAG_NONE, &pendingGauge));
@@ -212,6 +227,8 @@ void shadowReloadExit(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
+    rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
+    rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     free(candidateConfigPath);
     candidateConfigPath = NULL;
     rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
@@ -234,6 +251,7 @@ rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
     }
     pthread_mutex_lock(&statusMut);
     activeGeneration = 1;
+    ATOMIC_STORE_uint64(&ctrActiveGeneration, &mutCtrActiveGeneration, activeGeneration);
     lastUnchangedCount = 0;
     lastAddedCount = 0;
     lastRemovedCount = 0;
@@ -281,7 +299,7 @@ static rsRetVal findReloadRuleset(const rsReloadNormalizedNodeV1_t *node, void *
     return RS_RET_OK;
 }
 
-rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFingerprint) {
+rsRetVal shadowReloadGetRulesetFingerprint(const char *name, char **ppFingerprint) {
     reloadRulesetLookup_t lookup;
     char *identity = NULL;
     size_t identityLen;
@@ -302,10 +320,14 @@ rsRetVal shadowReloadGetRulesetFingerprint(const char *name, const char **ppFing
     } else {
         iRet = activeRulesetGraph.enumerate(activeRulesetGraph.context, findReloadRuleset, &lookup);
     }
+    if (iRet == RS_RET_OK) {
+        if (lookup.fingerprint == NULL) {
+            iRet = RS_RET_NOT_FOUND;
+        } else if ((*ppFingerprint = strdup(lookup.fingerprint)) == NULL) {
+            iRet = RS_RET_OUT_OF_MEMORY;
+        }
+    }
     pthread_mutex_unlock(&statusMut);
-    CHKiRet(iRet);
-    if (lookup.fingerprint == NULL) ABORT_FINALIZE(RS_RET_NOT_FOUND);
-    *ppFingerprint = lookup.fingerprint;
 
 finalize_it:
     free(identity);
@@ -342,6 +364,9 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
             break;
         case SHADOW_RELOAD_REPORTED:
             result = "reported_only";
+            break;
+        case SHADOW_RELOAD_ACTIVATED:
+            result = "activated";
             break;
         case SHADOW_RELOAD_REJECTED_IO:
             result = "candidate_io_error";
@@ -386,6 +411,13 @@ void shadowReloadRequestFromSignal(void) {
     signalRequestPending = 1;
 }
 
+static int stopBeginForTermination(void) {
+    if (!get_bFinished()) return 0;
+    pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
+    pendingCandidateResult = RS_RET_NO_RUN;
+    return 1;
+}
+
 void shadowReloadBeginRequest(void) {
     /* This runs in lockstep with bHadHUP before doHUP(). A signal arriving
      * during doHUP() sets this flag again and is retained for the next legacy
@@ -395,8 +427,6 @@ void shadowReloadBeginRequest(void) {
     requestInProgress = 1;
     ++requestsTotal;
     STATSCOUNTER_INC(ctrRequests, mutCtrRequests);
-    ++legacyHookTotal;
-    STATSCOUNTER_INC(ctrLegacyHooks, mutCtrLegacyHooks);
     if (configuredMode == RELOAD_ON_HUP_OFF) {
         ++offTotal;
         STATSCOUNTER_INC(ctrOff, mutCtrOff);
@@ -411,8 +441,11 @@ void shadowReloadBeginRequest(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
+    rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
+    memset(&pendingRulesetGraph, 0, sizeof(pendingRulesetGraph));
     pendingCandidateObjects = 0;
     pendingReportHash = 0;
+    lastQuiescePauseUsec = 0;
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = RS_RET_OK;
@@ -420,7 +453,9 @@ void shadowReloadBeginRequest(void) {
         pthread_mutex_lock(&statusMut);
         const int haveBaseline = baselineAvailable;
         pthread_mutex_unlock(&statusMut);
-        if (!haveBaseline) {
+        if (stopBeginForTermination()) {
+            /* TERM wins before candidate I/O begins. */
+        } else if (!haveBaseline) {
             pendingFailurePhase = SHADOW_RELOAD_FAILURE_BASELINE;
             pendingCandidateResult = RS_RET_NOT_IMPLEMENTED;
         } else if (candidateConfigPath == NULL) {
@@ -429,7 +464,7 @@ void shadowReloadBeginRequest(void) {
         } else {
             pendingCandidateResult = rsReloadCandidateParse(candidateConfigPath, &pendingCandidate);
             if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_PARSE;
-            if (pendingCandidateResult == RS_RET_OK) {
+            if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination()) {
                 rsReloadNormalizedGraphBuilderV1_t *candidateBuilder = NULL;
                 rsReloadNormalizedGraphV1_t candidateGraph;
 
@@ -437,12 +472,13 @@ void shadowReloadBeginRequest(void) {
                 memset(&candidateGraph, 0, sizeof(candidateGraph));
                 pendingCandidateResult = rsReloadCandidateBuildNormalizedGraphV1(pendingCandidate, &candidateBuilder);
                 if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
-                if (pendingCandidateResult == RS_RET_OK) {
+                if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination()) {
                     pendingCandidateResult =
                         rsReloadNormalizedGraphBuilderV1GetGraph(candidateBuilder, &candidateGraph);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
                 }
-                if (pendingCandidateResult == RS_RET_OK && activeRulesetGraphBuilder != NULL) {
+                if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
+                    activeRulesetGraphBuilder != NULL) {
                     pendingCandidateResult =
                         rsReloadReportBuildV1(&activeRulesetGraph, &candidateGraph, &pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_REPORT;
@@ -450,20 +486,33 @@ void shadowReloadBeginRequest(void) {
                     pendingFailurePhase = SHADOW_RELOAD_FAILURE_BASELINE;
                     pendingCandidateResult = RS_RET_NOT_IMPLEMENTED;
                 }
-                rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
-                if (pendingCandidateResult == RS_RET_OK && configuredMode == RELOAD_ON_HUP_ON &&
-                    pendingReport->invalidCount == 0) {
+                if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
+                    configuredMode == RELOAD_ON_HUP_ON && pendingReport->invalidCount == 0) {
                     pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
+                        if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult =
                             rsReloadRulesetPlanPrepareV1(runConf, pendingCandidate, pendingReport, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                        if (pendingCandidateResult == RS_RET_OK && pendingPlan != NULL &&
+                            rsReloadRulesetPlanCountV1(pendingPlan) != 0) {
+                            pendingRulesetGraphBuilder = candidateBuilder;
+                            pendingRulesetGraph = candidateGraph;
+                            candidateBuilder = NULL;
+                        }
                     }
                 }
+            candidate_done:
+                rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
             }
         }
     }
+}
+
+void shadowReloadLegacyHooksCompleted(void) {
+    ++legacyHookTotal;
+    STATSCOUNTER_INC(ctrLegacyHooks, mutCtrLegacyHooks);
 }
 
 static void accountDuration(void) {
@@ -474,6 +523,12 @@ static void accountDuration(void) {
     lastDurationUsec = finishedUsec - requestStartedUsec;
     durationTotalUsec += lastDurationUsec;
     STATSCOUNTER_ADD(ctrDurationTotalUsec, mutCtrDurationTotalUsec, lastDurationUsec);
+}
+
+static void accountQuiescePause(const uint64_t pauseUsec) {
+    lastQuiescePauseUsec = (intctr_t)pauseUsec;
+    quiescePauseTotalUsec += (intctr_t)pauseUsec;
+    STATSCOUNTER_ADD(ctrQuiescePauseTotalUsec, mutCtrQuiescePauseTotalUsec, pauseUsec);
 }
 
 static uint64_t reportHashByte(const uint64_t hash, const unsigned char value) {
@@ -537,7 +592,12 @@ static int rejectedResult(void) {
              pendingCandidateResult == RS_RET_CONF_PARAM_INVLD || pendingCandidateResult == RS_RET_CONF_PARSE_ERROR);
         const int expectedCapabilityFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_CAPABILITY && pendingCandidateResult == RS_RET_NOT_IMPLEMENTED;
-        if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure)
+        const int expectedActivationFailure =
+            pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
+            (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
+             pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR);
+        if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
+            !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;
     }
     switch (pendingFailurePhase) {
@@ -551,6 +611,8 @@ static int rejectedResult(void) {
             return SHADOW_RELOAD_REJECTED_REPORT;
         case SHADOW_RELOAD_FAILURE_CAPABILITY:
             return SHADOW_RELOAD_REJECTED_CAPABILITY;
+        case SHADOW_RELOAD_FAILURE_ACTIVATION:
+            return SHADOW_RELOAD_REJECTED_ACTIVATION;
         case SHADOW_RELOAD_FAILURE_NONE:
         default:
             if (pendingCandidateResult != RS_RET_OK) return SHADOW_RELOAD_REJECTED_INTERNAL;
@@ -579,11 +641,61 @@ static const char *rejectedReason(const int result) {
             return "candidate_scope_unsupported";
         case SHADOW_RELOAD_REJECTED_ACTIVATION:
         default:
-            return "activation_not_implemented";
+            return "activation_failed";
     }
 }
 
+static sbool shadowReloadCancelled(void __attribute__((unused)) *const context) {
+    return get_bFinished() != 0;
+}
+
+typedef struct reloadCommitSignalGuard_s {
+    sigset_t previousMask;
+    int active;
+} reloadCommitSignalGuard_t;
+
+static rsRetVal shadowReloadEnterCommit(void *const context) {
+    reloadCommitSignalGuard_t *const guard = context;
+    sigset_t terminationSignals;
+
+    if (guard == NULL || guard->active) return RS_RET_PARAM_ERROR;
+    sigemptyset(&terminationSignals);
+    sigaddset(&terminationSignals, SIGTERM);
+    sigaddset(&terminationSignals, SIGINT);
+    sigaddset(&terminationSignals, SIGQUIT);
+    if (pthread_sigmask(SIG_BLOCK, &terminationSignals, &guard->previousMask) != 0) return RS_RET_ERR;
+    guard->active = 1;
+    return RS_RET_OK;
+}
+
+static void shadowReloadLeaveCommit(void *const context) {
+    reloadCommitSignalGuard_t *const guard = context;
+
+    if (guard == NULL || !guard->active) return;
+    guard->active = 0;
+    pthread_sigmask(SIG_SETMASK, &guard->previousMask, NULL);
+}
+
+static void publishActivatedGraph(void __attribute__((unused)) *const context) {
+    pthread_mutex_lock(&statusMut);
+    retiredRulesetGraphBuilder = activeRulesetGraphBuilder;
+    activeRulesetGraphBuilder = pendingRulesetGraphBuilder;
+    activeRulesetGraph = pendingRulesetGraph;
+    pendingRulesetGraphBuilder = NULL;
+    memset(&pendingRulesetGraph, 0, sizeof(pendingRulesetGraph));
+    ++activeGeneration;
+    ATOMIC_STORE_uint64(&ctrActiveGeneration, &mutCtrActiveGeneration, activeGeneration);
+    lastResult = SHADOW_RELOAD_ACTIVATED;
+    lastUnchangedCount = pendingReport == NULL ? 0 : pendingReport->unchangedCount;
+    lastAddedCount = pendingReport == NULL ? 0 : pendingReport->addedCount;
+    lastRemovedCount = pendingReport == NULL ? 0 : pendingReport->removedCount;
+    lastModifiedCount = pendingReport == NULL ? 0 : pendingReport->modifiedCount;
+    lastInvalidCount = pendingReport == NULL ? 0 : pendingReport->invalidCount;
+    pthread_mutex_unlock(&statusMut);
+}
+
 void shadowReloadProcess(void) {
+    int terminalResult;
     if (!requestInProgress) {
         return;
     }
@@ -596,8 +708,36 @@ void shadowReloadProcess(void) {
         pendingGauge = signalRequestPending != 0;
         publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
         logState("request", "reported_only", "none", "none", pendingCandidateObjects, pendingReport, pendingReportHash);
+    } else if (configuredMode == RELOAD_ON_HUP_ON && pendingCandidateResult == RS_RET_OK && pendingReport != NULL &&
+               pendingReport->invalidCount == 0 && pendingPlan != NULL) {
+        if (rsReloadRulesetPlanCountV1(pendingPlan) != 0) {
+            struct timespec deadline;
+            reloadCommitSignalGuard_t commitGuard = {0};
+            uint64_t pauseUsec = 0;
+            if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) {
+                pendingCandidateResult = RS_RET_ERR;
+            } else {
+                deadline.tv_sec += 5;
+                pendingCandidateResult = rsReloadRulesetPlanActivateV1(
+                    pendingPlan, &deadline, shadowReloadCancelled, NULL, shadowReloadEnterCommit,
+                    shadowReloadLeaveCommit, &commitGuard, publishActivatedGraph, NULL, &pauseUsec);
+                accountQuiescePause(pauseUsec);
+            }
+        }
+        if (pendingCandidateResult == RS_RET_OK) {
+            accountDuration();
+            requestInProgress = 0;
+            pendingGauge = signalRequestPending != 0;
+            if (rsReloadRulesetPlanCountV1(pendingPlan) == 0) publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
+            logState("request", rsReloadRulesetPlanCountV1(pendingPlan) == 0 ? "reported_only" : "activated", "none",
+                     "none", pendingCandidateObjects, pendingReport, pendingReportHash);
+        } else {
+            pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
+            goto rejected;
+        }
     } else if (configuredMode == RELOAD_ON_HUP_VALIDATE || configuredMode == RELOAD_ON_HUP_ON) {
-        const int terminalResult = rejectedResult();
+    rejected:
+        terminalResult = rejectedResult();
         ++rejectedTotal;
         STATSCOUNTER_INC(ctrRejected, mutCtrRejected);
         if (configuredMode == RELOAD_ON_HUP_VALIDATE) {
@@ -627,4 +767,6 @@ void shadowReloadProcess(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
+    rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
+    rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
 }

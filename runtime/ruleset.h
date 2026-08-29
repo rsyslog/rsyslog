@@ -87,6 +87,8 @@ typedef rsRetVal (*rulesetActionVisitorV1_t)(ruleset_t *ruleset,
 /* Read-only preorder traversal. Callback status never has linked-list delete
  * semantics; owner and action remain owned by the active configuration. */
 rsRetVal rulesetVisitAllActionsV1(rsconf_t *conf, rulesetActionVisitorV1_t visitor, void *context);
+typedef rsRetVal (*rulesetStatementVisitorV1_t)(ruleset_t *ruleset, struct cnfstmt *stmt, void *context);
+rsRetVal rulesetVisitAllStatementsV1(rsconf_t *conf, rulesetStatementVisitorV1_t visitor, void *context);
 rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
 
 /* Get name associated to ruleset. This function cannot fail (except,
