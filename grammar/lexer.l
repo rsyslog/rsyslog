@@ -213,14 +213,14 @@ expand_backticks(char *const param)
 {
 	es_str_t *estr;
 	assert(param != NULL);
+	if(rsReloadCandidateCaptureActive()) {
+		parser_errmsg("backtick expansion is not reloadable");
+		return es_newStr(1);
+	}
 
 	if(strncmp(param, "echo ", sizeof("echo ")-1) == 0) {
 		estr = expand_backticks_echo(param);
 	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
-		if(rsReloadCandidateCaptureActive()) {
-			parser_errmsg("backtick file reads are not reloadable");
-			return es_newStr(1);
-		}
 		const char *val = read_file(param+4);
 		if(val == NULL) {
 			parser_errmsg("file could not be accessed for `%s`", param);

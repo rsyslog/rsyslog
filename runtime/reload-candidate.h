@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "rsyslog.h"
+#include "reload-normalized-graph.h"
 
 struct cnfobj;
 struct cnfstmt;
@@ -17,6 +18,18 @@ typedef struct rsReloadCandidate_s rsReloadCandidate_t;
 rsRetVal rsReloadCandidateParse(const char *path, rsReloadCandidate_t **ppCandidate);
 void rsReloadCandidateDestruct(rsReloadCandidate_t **ppCandidate);
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
+
+/*
+ * Convert the private, frontend-neutral cnfobj/nvlst capture into an owned
+ * normalized graph.  This is deliberately a control-path API: it retains no
+ * runtime object or module pointers and consumes the shared capture objects
+ * produced by either frontend. Cross-frontend semantic equivalence still
+ * requires integration-level parity tests before activation. The graph is
+ * structural evidence only, not semantic validation or an activation
+ * decision.
+ */
+rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
+                                                 rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
 
 /* Parser integration. These functions are meaningful only while
  * rsReloadCandidateParse() owns the single-threaded parser. */

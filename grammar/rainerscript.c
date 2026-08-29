@@ -347,6 +347,9 @@ const char *cnfobjType2str(const enum cnfobjType ot) {
         case CNFOBJ_PERCTILE_STATS:
             return "perctile_stats";
             break;
+        case CNFOBJ_RATELIMIT:
+            return "ratelimit";
+            break;
         default:
             return "error: invalid cnfobjType";
     }
@@ -651,6 +654,13 @@ struct nvlst *ATTR_NONNULL(1) nvlstNewStr(es_str_t *const value) {
 struct nvlst *ATTR_NONNULL(1) nvlstNewStrBackticks(es_str_t *const value) {
     es_str_t *val = NULL;
     const char *realval;
+
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("backtick expansion is not reloadable");
+        val = es_newStr(1);
+        es_deleteStr(value);
+        goto done;
+    }
 
     char *const param = es_str2cstr(value, NULL);
     if (param == NULL) goto done;
@@ -6629,11 +6639,8 @@ void includeProcessCnf(struct nvlst *const lst) {
 
     if (inc_file != NULL) {
         if (cnfDoInclude(inc_file, optional) != 0 && abort_if_missing) {
-            fprintf(stderr,
-                    "include file '%s' mode is set to abort-if-missing "
-                    "and the file is indeed missing - thus aborting rsyslog\n",
-                    inc_file);
-            exit(1); /* "good exit" - during config processing, requested by user */
+            parser_errmsg("include file '%s' is missing and mode is abort-if-missing", inc_file);
+            goto done;
         }
     } else if (text != NULL) {
         es_str_t *estr = es_newStrFromCStr((char *)text, strlen(text));

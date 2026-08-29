@@ -899,6 +899,11 @@ void cnfDoCfsysline(char *ln) {
 }
 
 void cnfDoBSDTag(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style tag blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style tag block '%s' is not supported by the translator", ln);
@@ -913,6 +918,11 @@ void cnfDoBSDTag(char *ln) {
 }
 
 void cnfDoBSDHost(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("BSD-style host blocks are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno,
                                       "BSD-style host block '%s' is not supported by the translator", ln);

@@ -73,6 +73,37 @@ fi
 injectmsg 0 1
 wait_queueempty
 
+# A required missing include is a parser error, never a reason for lower-level
+# code to terminate the process. During reload it must remain candidate-local;
+# the live PID and old action stay available. The HUP acknowledgement is the
+# deterministic proof that parsing returned through the reload manager.
+printf 'global(config.reloadOnHUP="validate")\ninclude(file="%s" mode="abort-if-missing")\n' \
+	"$RSYSLOG_DYNNAME.missing-reload-include" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_syntax_invalid active_generation=1"* ]]; then
+	echo "FAIL: missing mandatory include was not rejected safely: $reload_status"
+	error_exit 1
+fi
+injectmsg 1 1
+wait_queueempty
+
+# Backticks read the process environment before the candidate's declarative
+# global(environment=...) could be applied privately. Until a private overlay
+# exists, fail closed instead of producing a context-dependent graph.
+cat >"$CONF_FILE" <<'CONF_EOF'
+global(config.reloadOnHUP="validate")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
+CONF_EOF
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_syntax_invalid active_generation=1"* ]]; then
+	echo "FAIL: candidate backtick expansion was not rejected: $reload_status"
+	error_exit 1
+fi
+injectmsg 2 1
+wait_queueempty
+
 # Restore a valid candidate and prove that lexer/include state was completely
 # unwound after the failed attempt.
 cp "$CONF_FILE.valid" "$CONF_FILE"
@@ -88,5 +119,7 @@ wait_shutdown
 content_check 'shadow_reload event=request result=validated_syntax_only mode=validate'
 content_check 'candidate_syntax_invalid'
 content_check 'msgnum:00000000'
+content_check 'msgnum:00000001'
+content_check 'msgnum:00000002'
 
 exit_test

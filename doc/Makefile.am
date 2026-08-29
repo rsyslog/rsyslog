@@ -354,6 +354,7 @@ EXTRA_DIST = \
     source/development/architecture.rst \
     source/development/coding_practices.rst \
     source/development/coding_practices/defensive_coding.rst \
+    source/development/coding_practices/no_process_exit.rst \
     source/development/coding_practices/embedded_ipv4_tail_helper.rst \
     source/development/coding_practices/error_logging_with_errno.rst \
     source/development/coding_practices/externalized_helper_contracts.rst \
