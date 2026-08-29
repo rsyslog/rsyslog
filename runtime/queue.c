@@ -244,7 +244,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 /* forward-definitions */
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
-static rsRetVal RateLimiter(qqueue_t *pThis);
+static rsRetVal RateLimiter(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis);
 static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal);
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
@@ -3563,7 +3563,7 @@ static rsRetVal DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkip
  * logic accordingly. Of course, sleep calculations need to be done up to the minute,
  * but you get the idea from the code above.
  */
-static rsRetVal RateLimiter(qqueue_t *pThis) {
+static rsRetVal RateLimiter(qqueue_t *pThis, wti_t *pWti) {
     DEFiRet;
     int iDelay;
     int iHrCurr;
@@ -3612,10 +3612,18 @@ static rsRetVal RateLimiter(qqueue_t *pThis) {
     }
 
     if (iDelay > 0) {
-        pthread_mutex_unlock(pThis->mut);
+        struct timespec deadline;
+        int waitRet;
         DBGOPRINT((obj_t *)pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
-        srSleep(iDelay, 0);
-        qqueueLock(pThis);
+        timeoutComp(&deadline, (long)iDelay * 1000L);
+        /* The condition wait releases the queue mutex atomically. A reload
+         * quiesce or shutdown request signals this worker condition, so a
+         * long dequeue window can never strand a batch-boundary barrier.
+         * Ordinary worker wakeups are ignored while the pool stays RUNNING. */
+        do {
+            waitRet = d_pthread_cond_timedwait(&pWti->pcondBusy, pThis->mut, &deadline);
+        } while (waitRet == 0 && (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pWti->pWtp->wtpState,
+                                                               &pWti->pWtp->mutWtpState) == wtpState_RUNNING);
     }
 
     RETiRet;
@@ -4047,7 +4055,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     }
     CHKiRet(wtpConstruct(&pThis->pWtpReg));
     CHKiRet(wtpSetDbgHdr(pThis->pWtpReg, pszBuf, lenBuf));
-    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))RateLimiter));
+    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, wti_t *pWti))RateLimiter));
     CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int))ChkStopWrkrReg));
     CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int *))GetDeqBatchSize));
     CHKiRet(wtpSetpfDoWork(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, void *pWti))ConsumerReg));

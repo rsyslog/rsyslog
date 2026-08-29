@@ -753,7 +753,8 @@ enum rsRetVal_ {
                   (mostly used with threads) */
     RS_RET_NO_RUN = 3, /**< operation successful, but function does not like to be executed */
     RS_RET_IDLE = 4, /**< operation successful, but callee is idle (e.g. because queue is empty) */
-    RS_RET_TERMINATE_WHEN_IDLE = 5 /**< operation successful, function is requested to terminate when idle */
+    RS_RET_TERMINATE_WHEN_IDLE = 5, /**< operation successful, function is requested to terminate when idle */
+    RS_RET_QUIESCE = 6 /**< operation successful, worker must pause at its current batch boundary */
 };
 
 /* some helpful macros to work with srRetVals.

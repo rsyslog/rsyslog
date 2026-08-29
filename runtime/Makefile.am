@@ -82,10 +82,12 @@ librsyslog_la_SOURCES = \
 	var.h \
 	wtp.c \
 	wtp.h \
+	wtp-quiesce.c \
 	wti.c \
 	wti.h \
 	queue.c \
 	queue.h \
+	queue-barrier.c \
 	queue_da.c \
 	queue_da.h \
 	segdisk_codec.c \
