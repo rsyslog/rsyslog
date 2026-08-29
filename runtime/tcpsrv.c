@@ -2275,7 +2275,7 @@ static rsRetVal ATTR_NONNULL(1) SetCompressionMaxTotalZstdWindowBytes(tcpsrv_t *
 static rsRetVal ATTR_NONNULL(1) SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    u_cstr_copy(pThis->dfltTZ, tz, sizeof(pThis->dfltTZ));
+    tcpsrvApplyDefaultTZLive(pThis, tz);
     RETiRet;
 }
 

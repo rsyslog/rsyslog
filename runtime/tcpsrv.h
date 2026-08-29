@@ -420,9 +420,10 @@ void tcpsrvParkAtFence(tcpsrv_t *pThis);
 void tcpsrvAbortFenceLocked(tcpsrv_t *pThis);
 int tcpsrvFenceTerminated(void);
 
-/* Update the listener default and every established session. If sessions
- * exist, the caller must hold a successfully acquired tcpsrv fence. */
+/* Update listener defaults and every established session. If sessions exist,
+ * the caller must hold a successfully acquired tcpsrv fence. */
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
+void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

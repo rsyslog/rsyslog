@@ -1640,12 +1640,12 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            left->numWrkr == right->numWrkr && reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
-           reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
-                              right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ) &&
            left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
            left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
            left->maxFrameSize == right->maxFrameSize &&
-           (ignoreLiveFields || left->bUseFlowControl == right->bUseFlowControl) &&
+           (ignoreLiveFields || (left->bUseFlowControl == right->bUseFlowControl &&
+                                 reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
+                                                    right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
            left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
            left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
@@ -1722,6 +1722,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
 typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
     int flowControl;
+    uchar defaultTZ[8];
     uint64_t fenceToken;
     int fenceAcquired;
 } imtcpReloadEntryV1_t;
@@ -1779,6 +1780,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->entries[index].flowControl = newInst->bUseFlowControl;
+        u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
+                    sizeof(state->entries[index].defaultTZ));
         ++index;
     }
     *pReloadState = state;
@@ -1831,6 +1834,7 @@ static void commitReloadV1(void *const pReloadState) {
     for (size_t i = 0; i < state->count; ++i) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
+        (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
     }
 }
 

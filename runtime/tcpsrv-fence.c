@@ -9,6 +9,7 @@
 #include "rsyslog.h"
 #include "dirty.h"
 #include "tcpsrv.h"
+#include "unicode-helper.h"
 
 static rsRetVal ATTR_NONNULL() wakeEventLoop(tcpsrv_t *const server) {
     const char wake = 'F';
@@ -244,5 +245,21 @@ void tcpsrvApplyFlowControlLive(tcpsrv_t *const server, const int useFlowControl
     for (int i = 0; i < server->iSessMax; ++i) {
         tcps_sess_t *const session = server->pSessions[i];
         if (session != NULL) session->bUseFlowControl = useFlowControl;
+    }
+}
+
+void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
+    tcpLstnPortList_t *listener;
+    const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;
+
+    u_cstr_copy(server->dfltTZ, value, sizeof(server->dfltTZ));
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->cnf_params != NULL)
+            u_cstr_copy(listener->cnf_params->dfltTZ, value, sizeof(listener->cnf_params->dfltTZ));
+    }
+    if (server->pSessions == NULL) return;
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = server->pSessions[i];
+        if (session != NULL) u_cstr_copy(session->dfltTZ, value, sizeof(session->dfltTZ));
     }
 }

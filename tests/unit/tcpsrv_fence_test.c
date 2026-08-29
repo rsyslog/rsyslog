@@ -256,11 +256,39 @@ static int flowControlSnapshot(void) {
     return 0;
 }
 
+static int defaultTZSnapshot(void) {
+    tcpsrv_t server = {0};
+    tcps_sess_t first = {0};
+    tcps_sess_t second = {0};
+    tcps_sess_t *sessions[] = {&first, NULL, &second};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t secondParams = {0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.iSessMax = 3;
+    server.pSessions = sessions;
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyDefaultTZLive(&server, UCHAR_CONSTANT("+02:00"));
+    CHECK(!strcmp((const char *)server.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)firstParams.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)secondParams.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)first.dfltTZ, "+02:00"));
+    CHECK(!strcmp((const char *)second.dfltTZ, "+02:00"));
+    tcpsrvApplyDefaultTZLive(&server, NULL);
+    CHECK(server.dfltTZ[0] == '\0');
+    CHECK(firstParams.dfltTZ[0] == '\0');
+    CHECK(secondParams.dfltTZ[0] == '\0');
+    CHECK(first.dfltTZ[0] == '\0');
+    CHECK(second.dfltTZ[0] == '\0');
+    return 0;
+}
+
 int main(void) {
     if (singleWorkerRoundTrip() != 0) return 1;
     if (timeoutDrainAndRetry() != 0) return 1;
     if (termWhileParked() != 0) return 1;
     if (flowControlSnapshot() != 0) return 1;
+    if (defaultTZSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");
     return 0;
 }
