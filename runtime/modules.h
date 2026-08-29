@@ -150,6 +150,41 @@ typedef struct modReloadInterfaceV1_s {
 #define eMOD_RELOAD_INTERFACE_V1 1
 typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
 
+/* Optional source-lowering companion for modules whose effective
+ * configuration cannot be reconstructed generically by the core. */
+struct rsReloadCandidate_s;
+typedef enum modReloadSourceBuildFlagsV1_e {
+    /* The controller proved that globals/base settings used by the module did
+     * not change. V1 lowerers may therefore consult activeBase. */
+    MOD_RELOAD_SOURCE_BASE_UNCHANGED = 1U << 0
+} modReloadSourceBuildFlagsV1_t;
+typedef struct modReloadSourceBuildContextV1_s {
+    unsigned version;
+    size_t structSize;
+    unsigned flags;
+    const struct rsReloadCandidate_s *sourceCatalog;
+    const rsconf_t *activeBase;
+} modReloadSourceBuildContextV1_t;
+#define MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1 1
+/* buildCandidate borrows the context and catalog and publishes output only on
+ * success. The controller owns that effective source snapshot and keeps the
+ * module referenced. It lowers both the published active source catalog and
+ * the candidate catalog for comparison, so consumed runtime module configs are
+ * never used as baselines. Classification and preparation only borrow these
+ * snapshots; preparation must deep-own anything retained. The controller
+ * destroys both snapshots after prepare and atomically publishes the candidate
+ * source catalog only if commit succeeds. */
+typedef rsRetVal (*modReloadSourceBuildV1_t)(const modReloadSourceBuildContextV1_t *context, void **pCandidateCnf);
+typedef void (*modReloadSourceDestructV1_t)(void **pCandidateCnf);
+typedef struct modReloadSourceInterfaceV1_s {
+    unsigned version;
+    size_t structSize;
+    modReloadSourceBuildV1_t buildCandidate;
+    modReloadSourceDestructV1_t destructCandidate;
+} modReloadSourceInterfaceV1_t;
+#define eMOD_RELOAD_SOURCE_INTERFACE_V1 1
+typedef rsRetVal (*modReloadSourceGetInterfaceV1_t)(modReloadSourceInterfaceV1_t *pInterface);
+
 struct modInfo_s {
     struct modInfo_s *pPrev; /* support for creating a double linked module list */
     struct modInfo_s *pNext; /* support for creating a linked module list */
@@ -229,6 +264,8 @@ struct modInfo_s {
 #endif
     /* Optional reload lifecycle; unavailable hooks mean restart required. */
     modReloadInterfaceV1_t reloadV1;
+    /* Optional private source lowerer used before reload classification. */
+    modReloadSourceInterfaceV1_t reloadSourceV1;
 };
 
 /*
@@ -238,6 +275,11 @@ struct modInfo_s {
  */
 sbool modReloadHasLifecycleHooks(const modInfo_t *pMod);
 sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod);
+sbool modReloadHasValidSourceInterfaceV1(const modInfo_t *pMod);
+rsRetVal modReloadBuildSourceCandidateV1(const modInfo_t *pMod,
+                                         const modReloadSourceBuildContextV1_t *context,
+                                         void **pCandidateCnf);
+void modReloadDestructSourceCandidateV1(const modInfo_t *pMod, void **pCandidateCnf);
 
 /*
  * Classify a module change without enabling reload.  Legacy modules and

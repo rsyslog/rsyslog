@@ -255,6 +255,14 @@ module capability classification, preparation, and ``on`` activation remain
 fail-closed until their later gates are complete.  Later releases retain or
 refine these counters alongside the target outcome counters above.
 
+Modules may opt in to a private source-lowering interface as those later gates
+are developed.  Both ``validate`` and ``on`` then lower the active and candidate
+source catalogs through the module's ordinary parameter and default logic.  A
+lowerer may reject a syntactically captured but semantically invalid setting,
+but it must not construct runtime resources, change the active generation, or
+retain borrowed catalog data.  In ``validate`` mode this remains report-only;
+successful lowering is not permission to activate the module.
+
 Release C extends that foundation with a deliberately narrow private compiler
 and batch-boundary activation path.  In ``on`` mode, only modifications to
 already existing rulesets can be prepared and atomically activated.  Added or

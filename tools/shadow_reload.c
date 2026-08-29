@@ -27,6 +27,7 @@
 #include "reload-ruleset-materializer.h"
 #include "shadow_reload.h"
 #include "statsobj.h"
+#include "modules.h"
 
 DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
@@ -66,6 +67,9 @@ static rsReloadRulesetPlanV1_t *pendingPlan = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *pendingRulesetGraphBuilder = NULL;
 static rsReloadNormalizedGraphV1_t pendingRulesetGraph;
 static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
+static modInfo_t *pendingSourceModule = NULL;
+static void *pendingActiveSourceModuleCnf = NULL;
+static void *pendingSourceModuleCnf = NULL;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
 static size_t pendingCandidateObjects = 0;
 static uint64_t pendingReportHash = 0;
@@ -103,6 +107,12 @@ enum shadowReloadFailurePhase_e {
     SHADOW_RELOAD_FAILURE_ACTIVATION
 };
 static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
+
+static void destructPendingSourceModule(void) {
+    modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
+    modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
+    pendingSourceModule = NULL;
+}
 
 static void publishStatus(const int result, const rsReloadReportV1_t *const report) {
     pthread_mutex_lock(&statusMut);
@@ -229,6 +239,7 @@ finalize_it:
 void shadowReloadExit(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
+    destructPendingSourceModule();
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -308,6 +319,62 @@ static rsRetVal findReloadRuleset(const rsReloadNormalizedNodeV1_t *node, void *
         lookup->fingerprint = node->fingerprint;
     }
     return RS_RET_OK;
+}
+
+static int reportChangesObjectKind(const rsReloadReportV1_t *const report, const rsReloadObjectKind_t objectKind) {
+    size_t i;
+    if (report == NULL || report->entries == NULL || report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
+        report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
+        return 1;
+    for (i = 0; i < report->entryCount; ++i) {
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *const entry = (const rsReloadReportEntryV1_t *)(const void *)address;
+        if (entry->objectKind == objectKind && entry->diffKind != RS_RELOAD_DIFF_UNCHANGED) return 1;
+    }
+    return 0;
+}
+
+static cfgmodules_etry_t *findActiveInputModule(const char *const configName) {
+    cfgmodules_etry_t *entry;
+    if (runConf == NULL) return NULL;
+    for (entry = runConf->modules.root; entry != NULL; entry = entry->next) {
+        if (entry->pMod != NULL && entry->pMod->eType == eMOD_IN && entry->pMod->cnfName != NULL &&
+            !strcasecmp((const char *)entry->pMod->cnfName, configName))
+            return entry;
+    }
+    return NULL;
+}
+
+static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report) {
+    cfgmodules_etry_t *const activeModule = findActiveInputModule("imtcp");
+    modReloadSourceBuildContextV1_t context;
+
+    if (activeModule == NULL || !modReloadHasValidSourceInterfaceV1(activeModule->pMod)) return RS_RET_OK;
+    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
+    memset(&context, 0, sizeof(context));
+    context.version = MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1;
+    context.structSize = sizeof(context);
+    context.flags = MOD_RELOAD_SOURCE_BASE_UNCHANGED;
+    context.activeBase = runConf;
+    pendingSourceModule = activeModule->pMod;
+    context.sourceCatalog = activeSourceObjectCatalog;
+    rsRetVal ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingActiveSourceModuleCnf);
+    if (ret == RS_RET_NOT_FOUND) {
+        /* Legacy imtcp syntax has no v2 source objects to lower. It remains
+         * governed by the existing conservative scope gate. */
+        pendingSourceModule = NULL;
+        return RS_RET_OK;
+    }
+    if (ret != RS_RET_OK) return ret;
+    context.sourceCatalog = pendingSourceObjectCatalog;
+    return modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingSourceModuleCnf);
+}
+
+static enum shadowReloadFailurePhase_e sourceLoweringFailurePhase(const rsRetVal ret) {
+    if (ret == RS_RET_CONF_PARSE_ERROR || ret == RS_RET_CONF_PARAM_INVLD || ret == RS_RET_INVALID_PARAMS ||
+        ret == RS_RET_PARAM_ERROR || ret == RS_RET_MODULE_ALREADY_IN_CONF || ret == RS_RET_NOT_FOUND)
+        return SHADOW_RELOAD_FAILURE_NORMALIZE;
+    return SHADOW_RELOAD_FAILURE_CAPABILITY;
 }
 
 rsRetVal shadowReloadGetRulesetFingerprint(const char *name, char **ppFingerprint) {
@@ -451,6 +518,7 @@ void shadowReloadBeginRequest(void) {
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
+    destructPendingSourceModule();
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -499,17 +567,25 @@ void shadowReloadBeginRequest(void) {
                     pendingCandidateResult = RS_RET_NOT_IMPLEMENTED;
                 }
                 if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
+                    pendingReport->invalidCount == 0) {
+                    pendingCandidateResult =
+                        rsReloadCandidateBuildObjectCatalogV1(pendingCandidate, &pendingSourceObjectCatalog);
+                    if (pendingCandidateResult != RS_RET_OK) {
+                        pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
+                        goto candidate_done;
+                    }
+                    pendingCandidateResult = lowerImtcpSourceCandidate(pendingReport);
+                    if (pendingCandidateResult != RS_RET_OK) {
+                        pendingFailurePhase = sourceLoweringFailurePhase(pendingCandidateResult);
+                        goto candidate_done;
+                    }
+                }
+                if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
                     configuredMode == RELOAD_ON_HUP_ON && pendingReport->invalidCount == 0) {
                     pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
-                        pendingCandidateResult =
-                            rsReloadCandidateBuildObjectCatalogV1(pendingCandidate, &pendingSourceObjectCatalog);
-                        if (pendingCandidateResult != RS_RET_OK) {
-                            pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
-                            goto candidate_done;
-                        }
                         pendingCandidateResult =
                             rsReloadRulesetPlanPrepareV1(runConf, pendingCandidate, pendingReport, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
@@ -607,7 +683,9 @@ static int rejectedResult(void) {
         const int expectedNormalizeFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_NORMALIZE &&
             (pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_CONF_PARAM_INVLD || pendingCandidateResult == RS_RET_CONF_PARSE_ERROR);
+             pendingCandidateResult == RS_RET_CONF_PARAM_INVLD || pendingCandidateResult == RS_RET_CONF_PARSE_ERROR ||
+             pendingCandidateResult == RS_RET_INVALID_PARAMS ||
+             pendingCandidateResult == RS_RET_MODULE_ALREADY_IN_CONF || pendingCandidateResult == RS_RET_NOT_FOUND);
         const int expectedCapabilityFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_CAPABILITY && pendingCandidateResult == RS_RET_NOT_IMPLEMENTED;
         const int expectedActivationFailure =
@@ -797,5 +875,6 @@ void shadowReloadProcess(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
+    destructPendingSourceModule();
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }

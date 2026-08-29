@@ -5,7 +5,6 @@
  */
 #include "config.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "rsyslog.h"
 #include "modules.h"
@@ -17,7 +16,7 @@
     do {                                                                                    \
         if (!(condition)) {                                                                 \
             fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
-            exit(1);                                                                        \
+            return 1;                                                                       \
         }                                                                                   \
     } while (0)
 
@@ -62,10 +61,38 @@ static rsRetVal reload_retire(void __attribute__((unused)) * pReloadState) {
     return RS_RET_OK;
 }
 
+static int sourceSentinel;
+static int sourceDestructCount;
+
+static rsRetVal source_build(const modReloadSourceBuildContextV1_t __attribute__((unused)) * context,
+                             void **candidateCnf) {
+    *candidateCnf = &sourceSentinel;
+    return RS_RET_OK;
+}
+
+static rsRetVal source_build_null(const modReloadSourceBuildContextV1_t __attribute__((unused)) * context,
+                                  void __attribute__((unused)) * *candidateCnf) {
+    return RS_RET_OK;
+}
+
+static rsRetVal source_build_failure(const modReloadSourceBuildContextV1_t __attribute__((unused)) * context,
+                                     void **candidateCnf) {
+    *candidateCnf = &sourceSentinel;
+    return RS_RET_OUT_OF_MEMORY;
+}
+
+static void source_destruct(void **candidateCnf) {
+    ++sourceDestructCount;
+    *candidateCnf = NULL;
+}
+
 int main(void) {
     modInfo_t legacy;
+    modReloadSourceBuildContextV1_t sourceContext;
+    void *candidateCnf = NULL;
     memset(&legacy, 0, sizeof(legacy));
     CHECK(!modReloadHasLifecycleHooks(&legacy));
+    CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_RESTART_REQUIRED);
     CHECK(modReloadClassify(NULL, NULL, NULL) == eMOD_RELOAD_RESTART_REQUIRED);
 
@@ -96,6 +123,35 @@ int main(void) {
 
     legacy.reloadV1.classify = classify_invalid;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_RESTART_REQUIRED);
+
+    legacy.reloadSourceV1.version = eMOD_RELOAD_SOURCE_INTERFACE_V1;
+    legacy.reloadSourceV1.structSize = sizeof(legacy.reloadSourceV1);
+    CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
+    legacy.reloadSourceV1.buildCandidate = source_build;
+    CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
+    legacy.reloadSourceV1.destructCandidate = source_destruct;
+    CHECK(modReloadHasValidSourceInterfaceV1(&legacy));
+    memset(&sourceContext, 0, sizeof(sourceContext));
+    sourceContext.version = MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1;
+    sourceContext.structSize = sizeof(sourceContext);
+    CHECK(modReloadBuildSourceCandidateV1(&legacy, &sourceContext, &candidateCnf) == RS_RET_OK);
+    CHECK(candidateCnf == &sourceSentinel);
+    modReloadDestructSourceCandidateV1(&legacy, &candidateCnf);
+    CHECK(candidateCnf == NULL);
+    CHECK(sourceDestructCount == 1);
+    modReloadDestructSourceCandidateV1(&legacy, &candidateCnf);
+    CHECK(sourceDestructCount == 1);
+
+    legacy.reloadSourceV1.buildCandidate = source_build_null;
+    CHECK(modReloadBuildSourceCandidateV1(&legacy, &sourceContext, &candidateCnf) == RS_RET_ERR);
+    CHECK(candidateCnf == NULL);
+    legacy.reloadSourceV1.buildCandidate = source_build_failure;
+    CHECK(modReloadBuildSourceCandidateV1(&legacy, &sourceContext, &candidateCnf) == RS_RET_OUT_OF_MEMORY);
+    CHECK(candidateCnf == NULL);
+    CHECK(sourceDestructCount == 2);
+    legacy.reloadSourceV1.buildCandidate = source_build;
+    legacy.reloadSourceV1.structSize = sizeof(legacy.reloadSourceV1) - 1;
+    CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
 
     puts("module reload capability tests passed");
     return 0;

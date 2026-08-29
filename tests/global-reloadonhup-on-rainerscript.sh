@@ -8,8 +8,8 @@ generate_conf
 add_conf '
 global(processInternalMessages="on" config.reloadOnHUP="on")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="prepared")
+module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="prepared" config.enabled="on")
 ruleset(name="prepared") {
     if $msg contains "msgnum" then
         action(type="omfile" name="prepared_sink" file="'$RSYSLOG_OUT_LOG'")
@@ -24,6 +24,20 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=9
 	echo "FAIL: unchanged on candidate unexpectedly advanced activation: $reload_status"
 	error_exit 1
 fi
+cp "$CONF_FILE" "$CONF_FILE.base"
+
+# The imtcp source lowerer must parse a valid changed input through the same
+# descriptor/default path as startup before the still-conservative capability
+# gate rejects runtime mutation. The generation and listener remain unchanged.
+sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled="on" flowControl="off")/' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: valid imtcp candidate did not reach the capability boundary: $reload_status"
+	error_exit 1
+fi
+cp "$CONF_FILE.base" "$CONF_FILE"
 
 # A ruleset-only expression change with an unchanged named action must pass
 # private materialization and live activation.
