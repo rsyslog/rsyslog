@@ -16,8 +16,8 @@ typedef rsRetVal (*rsReloadCommitEnterV1_t)(void *context);
 typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 
 /* sourceCapability authorizes additional imtcp module/input report entries
- * only when the caller has already obtained REUSE or LIVE_SWAP from the
- * private effective module classifier. Every other value keeps the
+ * only when the caller has already obtained REUSE, LIVE_SWAP, or NEW_SESSIONS
+ * from the private effective module classifier. Every other value keeps the
  * ruleset-only gate. REUSE can publish a new source baseline without changing
  * runtime objects. */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,

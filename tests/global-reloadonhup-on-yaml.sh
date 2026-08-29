@@ -1,8 +1,8 @@
 #!/bin/bash
 # Verify native YAML activation: persistent TCP sessions span the coordinated
-# imtcp flow-control/notification and ruleset cutover. Exact HUP
-# generation/status and output checks prove the old/new rules plus later
-# fail-closed rejections.
+# imtcp live/new-session profile and ruleset cutover. Exact HUP generation,
+# status, and output checks prove the old/new rules plus later fail-closed
+# rejections.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -66,13 +66,14 @@ fi
 
 # Module defaults use the same YAML lifecycle path as input overrides. Toggle
 # flow control and connection notifications while retaining both established
-# TCP sessions.
+# TCP sessions; preserveCase applies to connections accepted afterwards.
 sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"\
     notifyOnConnectionOpen: "on"\
-    notifyOnConnectionClose: "on"' "$CONF_FILE.base" >"$CONF_FILE"
+    notifyOnConnectionClose: "on"\
+    preserveCase: "off"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
 	echo "FAIL: YAML module-level flow-control update did not activate: $reload_status"
 	error_exit 1
 fi
@@ -85,7 +86,7 @@ exec 7>&-
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
 	echo "FAIL: YAML module-level flow-control restore did not activate: $reload_status"
 	error_exit 1
 fi

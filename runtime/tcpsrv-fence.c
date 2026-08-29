@@ -257,6 +257,15 @@ void tcpsrvApplyNotificationsLive(tcpsrv_t *const server, const int onOpen, cons
     server->bEmitMsgOnClose = onClose;
 }
 
+void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *const server, const int preserveCase) {
+    tcpLstnPortList_t *listener;
+
+    server->bPreserveCase = preserveCase;
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->cnf_params != NULL) listener->cnf_params->bPreserveCase = preserveCase;
+    }
+}
+
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const defaultTZ) {
     tcpLstnPortList_t *listener;
     const uchar *const value = defaultTZ == NULL ? UCHAR_CONSTANT("") : defaultTZ;

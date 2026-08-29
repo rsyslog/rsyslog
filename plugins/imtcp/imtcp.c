@@ -1626,7 +1626,8 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
                                const modConfData_t *const leftModule,
                                const instanceConf_t *const right,
                                const modConfData_t *const rightModule,
-                               const int ignoreLiveFields) {
+                               const int ignoreLiveFields,
+                               const int ignoreNewSessionFields) {
     int leftLegacyAcl;
     int rightLegacyAcl;
     const struct AllowedSenders *const leftAllowed = reloadEffectiveAllowedSenders(left, leftModule, &leftLegacyAcl);
@@ -1650,7 +1651,8 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                 right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
-           left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
+           (ignoreNewSessionFields || left->bPreserveCase == right->bPreserveCase) &&
+           left->iSynBacklog == right->iSynBacklog &&
            reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
                              reloadEffectiveNamespace(right, rightModule)) &&
            reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
@@ -1702,7 +1704,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *oldInst;
     const instanceConf_t *newInst;
-    int liveOnly = 0;
+    eModReloadCapability_t capability = eMOD_RELOAD_REUSE;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
@@ -1710,14 +1712,19 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0)) {
-            if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1)) return RS_RET_OK;
-            liveOnly = 1;
+        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) {
+            if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0)) {
+                if (capability == eMOD_RELOAD_REUSE) capability = eMOD_RELOAD_LIVE_SWAP;
+            } else if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) {
+                capability = eMOD_RELOAD_NEW_SESSIONS;
+            } else {
+                return RS_RET_OK;
+            }
         }
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
-    if (oldInst == NULL && newInst == NULL) *pCapability = liveOnly ? eMOD_RELOAD_LIVE_SWAP : eMOD_RELOAD_REUSE;
+    if (oldInst == NULL && newInst == NULL) *pCapability = capability;
     return RS_RET_OK;
 }
 
@@ -1727,6 +1734,7 @@ typedef struct imtcpReloadEntryV1_s {
     unsigned starvationMaxReads;
     int notifyOnConnectionClose;
     int notifyOnConnectionOpen;
+    int preserveCase;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -1768,7 +1776,9 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         *pReloadState != NULL)
         return RS_RET_PARAM_ERROR;
     CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
-    if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE &&
+        capability != eMOD_RELOAD_NEW_SESSIONS)
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++count;
     if (count > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     CHKmalloc(state = calloc(1, sizeof(*state) + count * sizeof(state->entries[0])));
@@ -1790,6 +1800,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
         state->entries[index].notifyOnConnectionOpen = newInst->bEmitMsgOnOpen;
+        state->entries[index].preserveCase = newInst->bPreserveCase;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -1853,6 +1864,7 @@ static void commitReloadV1(void *const pReloadState) {
         tcpsrv.SetStarvationMaxReads(server, state->entries[i].starvationMaxReads);
         (void)tcpsrv.SetNotificationOnRemoteOpen(server, state->entries[i].notifyOnConnectionOpen);
         (void)tcpsrv.SetNotificationOnRemoteClose(server, state->entries[i].notifyOnConnectionClose);
+        (void)tcpsrv.SetPreserveCase(server, state->entries[i].preserveCase);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
         (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }

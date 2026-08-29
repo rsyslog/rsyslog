@@ -426,6 +426,7 @@ int tcpsrvFenceTerminated(void);
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
 void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
+void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *pThis, int preserveCase);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 

@@ -274,6 +274,20 @@ static int notificationSnapshot(void) {
     return 0;
 }
 
+static int preserveCaseNewSessions(void) {
+    tcpsrv_t server = {.bPreserveCase = 1};
+    tcpLstnParams_t firstParams = {.bPreserveCase = 1};
+    tcpLstnParams_t secondParams = {.bPreserveCase = 1};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyPreserveCaseForNewSessions(&server, 0);
+    CHECK(server.bPreserveCase == 0);
+    CHECK(firstParams.bPreserveCase == 0);
+    CHECK(secondParams.bPreserveCase == 0);
+    return 0;
+}
+
 static int defaultTZSnapshot(void) {
     tcpsrv_t server = {0};
     tcps_sess_t first = {0};
@@ -329,6 +343,7 @@ int main(void) {
     if (flowControlSnapshot() != 0) return 1;
     if (starvationMaxReadsSnapshot() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
+    if (preserveCaseNewSessions() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
     if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");

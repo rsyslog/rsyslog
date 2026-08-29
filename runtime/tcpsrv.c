@@ -2530,7 +2530,7 @@ static rsRetVal ATTR_NONNULL(1) SetSessMax(tcpsrv_t *pThis, int iMax) {
 static rsRetVal ATTR_NONNULL(1) SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    pThis->bPreserveCase = bPreserveCase;
+    tcpsrvApplyPreserveCaseForNewSessions(pThis, bPreserveCase);
     RETiRet;
 }
 

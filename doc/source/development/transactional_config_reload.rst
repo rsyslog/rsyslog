@@ -290,8 +290,11 @@ The first Release E foundation coordinates that ruleset plan with an ``imtcp``
 event-loop/worker fence.  Compatible existing listeners and sessions are kept
 open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
 ``starvationProtection.maxReads`` values and connection-open/close notification
-policy are published at the safepoint.  The framing, compression, TLS,
-endpoint, ACL, rate-limit, and listener-structure fields remain conservatively
+policy are published at the safepoint.  An effective ``preserveCase`` change is
+classified ``new_sessions``: established sessions retain their already
+resolved peer identity, while the listener accept profile changes atomically
+for later connections.  The framing, compression, TLS, endpoint, ACL,
+rate-limit, and listener-structure fields remain conservatively
 restart-required until their corresponding prepare, ownership, and
 reconciliation contracts are implemented.
 

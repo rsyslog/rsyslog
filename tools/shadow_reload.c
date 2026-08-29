@@ -643,8 +643,10 @@ void shadowReloadBeginRequest(void) {
                     configuredMode == RELOAD_ON_HUP_ON && pendingReport->invalidCount == 0) {
                     const int sourceReloadable = pendingSourceModuleCapabilityEvaluated &&
                                                  (pendingSourceModuleCapability == eMOD_RELOAD_REUSE ||
-                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP);
-                    const int moduleLive = sourceReloadable && pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP;
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP ||
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_NEW_SESSIONS);
+                    const int moduleNeedsCommit =
+                        sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
                     pendingCandidateResult =
                         sourceReloadable ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
                                          : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
@@ -656,7 +658,7 @@ void shadowReloadBeginRequest(void) {
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
                             &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
-                        if (pendingCandidateResult == RS_RET_OK && moduleLive) {
+                        if (pendingCandidateResult == RS_RET_OK && moduleNeedsCommit) {
                             pendingCandidateResult =
                                 modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
                                                  pendingSourceModuleCnf, &pendingModuleReloadState);

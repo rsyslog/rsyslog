@@ -1,6 +1,6 @@
 #!/bin/bash
 # Verify RainerScript activation and its fail-closed boundaries. Effective
-# imtcp flow-control/notification changes and an eligible named-ruleset update
+# imtcp live/new-session profile changes and an eligible named-ruleset update
 # publish atomically while one TCP session stays open. HUP completion plus
 # exact generation/output checks prove the cutover without timing assumptions.
 . ${srcdir:=.}/diag.sh init
@@ -54,12 +54,13 @@ fi
 
 # Real module-default changes reach every input that does not override them.
 # The input event-loop fence makes flow control and connection notifications
-# atomic while retaining the established session.
-sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off" notifyOnConnectionOpen="on" notifyOnConnectionClose="on")|' \
+# atomic while retaining the established session; preserveCase changes only
+# the accept profile used by connections opened after the fence.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off" notifyOnConnectionOpen="on" notifyOnConnectionClose="on" preserveCase="off")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
 	echo "FAIL: changed RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
@@ -75,7 +76,7 @@ wait_content 'closed by remote peer' "$RSYSLOG_DYNNAME.started"
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
 	echo "FAIL: restored RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
