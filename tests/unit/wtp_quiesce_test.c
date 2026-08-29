@@ -3,7 +3,9 @@
  * synchronized with conditions rather than sleeps. The oracle is that idle and
  * active workers acknowledge only at a boundary, zero-worker pools complete
  * immediately, timeouts leave the token releasable, direct queues fail closed,
- * both DA consumer pools pause, and shutdown state is never overwritten.
+ * both DA consumer pools pause under their own mutexes, latent segmented-disk
+ * work and zero-worker demand are advised on resume, token ownership is
+ * enforced, and shutdown state is never overwritten.
  */
 #include "config.h"
 
@@ -19,13 +21,30 @@
 #include "wti.h"
 #include "wtp.h"
 
+typedef struct advice_call_s {
+    wtp_t *pool;
+    int workers;
+} advice_call_t;
+
+static advice_call_t adviceCalls[8];
+static size_t adviceCallCount;
+static sbool segmentedDiskMayHaveData;
+
 /* Keep this synchronization unit independent of the daemon/runtime link
- * closure. The queue barrier calls this only when messages accumulated while
- * a zero-worker pool was paused; the dedicated test queues remain empty. */
-rsRetVal wtpAdviseMaxWorkers(wtp_t __attribute__((unused)) * pThis,
-                             int __attribute__((unused)) nMaxWrkr,
+ * closure while retaining an exact oracle for resume-time worker demand. */
+rsRetVal wtpAdviseMaxWorkers(wtp_t *const pThis,
+                             const int nMaxWrkr,
                              const int __attribute__((unused)) permit_during_shutdown) {
+    if (adviceCallCount < sizeof(adviceCalls) / sizeof(adviceCalls[0])) {
+        adviceCalls[adviceCallCount].pool = pThis;
+        adviceCalls[adviceCallCount].workers = nMaxWrkr;
+    }
+    ++adviceCallCount;
     return RS_RET_OK;
+}
+
+sbool segdiskStoreMayHaveData(const segdisk_store_t __attribute__((unused)) * store) {
+    return segmentedDiskMayHaveData;
 }
 
 #include "../../runtime/wtp-quiesce.c"
@@ -62,6 +81,13 @@ typedef struct worker_ctx_s {
     int releaseWork;
     int active;
 } worker_ctx_t;
+
+typedef struct foreign_owner_ctx_s {
+    qqueue_batch_barrier_t *barrier;
+    rsRetVal waitResult;
+    rsRetVal releaseResult;
+    int retainedToken;
+} foreign_owner_ctx_t;
 
 static objInfo_t wtpObjInfo = {.pszID = (uchar *)"wtp"};
 
@@ -106,12 +132,30 @@ static int deadlineMs(const long milliseconds, struct timespec *const deadline) 
     return 0;
 }
 
+static void *foreignOwnerMain(void *const arg) {
+    foreign_owner_ctx_t *const ctx = arg;
+    qqueue_batch_barrier_t *alias = ctx->barrier;
+    struct timespec deadline;
+
+    THREAD_CHECK(deadlineMs(100, &deadline) == 0);
+    ctx->waitResult = qqueueBatchBarrierWait(alias, &deadline);
+    ctx->releaseResult = qqueueBatchBarrierRelease(&alias);
+    ctx->retainedToken = alias == ctx->barrier;
+    return NULL;
+}
+
 static wtpState_t poolState(test_pool_t *const testPool) {
     return (wtpState_t)ATOMIC_LOAD_32BIT((int *)&testPool->pool.wtpState, &testPool->pool.mutWtpState);
 }
 
 static void setPoolState(test_pool_t *const testPool, const wtpState_t state) {
     ATOMIC_STORE_32BIT((int *)&testPool->pool.wtpState, &testPool->pool.mutWtpState, state);
+}
+
+static int advised(const wtp_t *const pool, const int workers) {
+    for (size_t i = 0; i < adviceCallCount && i < sizeof(adviceCalls) / sizeof(adviceCalls[0]); ++i)
+        if (adviceCalls[i].pool == pool && adviceCalls[i].workers == workers) return 1;
+    return 0;
 }
 
 static void *workerMain(void *const arg) {
@@ -169,15 +213,11 @@ static int testIdleWorker(void) {
     CHECK(pthread_create(&thread, NULL, workerMain, &ctx) == 0);
     waitWorkerReady(&ctx);
 
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpRequestQuiesceLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpRequestQuiesce(&testPool.pool) == RS_RET_OK);
     struct timespec deadline;
     CHECK(deadlineMs(1000, &deadline) == 0);
     CHECK(wtpWaitQuiesced(&testPool.pool, &deadline) == RS_RET_OK);
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpResumeLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpResume(&testPool.pool) == RS_RET_OK);
     void *threadResult = NULL;
     CHECK(pthread_join(thread, &threadResult) == 0);
     CHECK(threadResult == NULL);
@@ -196,9 +236,7 @@ static int testActiveWorkerAndTimeout(void) {
     CHECK(pthread_create(&thread, NULL, workerMain, &ctx) == 0);
     waitWorkerReady(&ctx);
 
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpRequestQuiesceLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpRequestQuiesce(&testPool.pool) == RS_RET_OK);
     struct timespec deadline;
     CHECK(deadlineMs(10, &deadline) == 0);
     CHECK(wtpWaitQuiesced(&testPool.pool, &deadline) == RS_RET_TIMED_OUT);
@@ -209,9 +247,7 @@ static int testActiveWorkerAndTimeout(void) {
     pthread_mutex_unlock(&ctx.gateMutex);
     CHECK(deadlineMs(1000, &deadline) == 0);
     CHECK(wtpWaitQuiesced(&testPool.pool, &deadline) == RS_RET_OK);
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpResumeLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpResume(&testPool.pool) == RS_RET_OK);
     void *threadResult = NULL;
     CHECK(pthread_join(thread, &threadResult) == 0);
     CHECK(threadResult == NULL);
@@ -223,16 +259,12 @@ static int testActiveWorkerAndTimeout(void) {
 static int testZeroWorkerAndShutdownPriority(void) {
     test_pool_t testPool;
     initPool(&testPool, 0);
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpRequestQuiesceLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpRequestQuiesce(&testPool.pool) == RS_RET_OK);
     struct timespec deadline;
     CHECK(deadlineMs(100, &deadline) == 0);
     CHECK(wtpWaitQuiesced(&testPool.pool, &deadline) == RS_RET_OK);
     setPoolState(&testPool, wtpState_SHUTDOWN_IMMEDIATE);
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpResumeLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpResume(&testPool.pool) == RS_RET_OK);
     CHECK(poolState(&testPool) == wtpState_SHUTDOWN_IMMEDIATE);
     cleanupPool(&testPool);
     return 0;
@@ -249,18 +281,14 @@ static int testParkedWorkerShutdownPriority(void) {
     initWorkerContext(&ctx, &testPool, 0);
     CHECK(pthread_create(&thread, NULL, workerMain, &ctx) == 0);
     waitWorkerReady(&ctx);
-    pthread_mutex_lock(&testPool.queueMutex);
-    CHECK(wtpRequestQuiesceLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpRequestQuiesce(&testPool.pool) == RS_RET_OK);
     CHECK(deadlineMs(1000, &deadline) == 0);
     CHECK(wtpWaitQuiesced(&testPool.pool, &deadline) == RS_RET_OK);
 
     /* This models TERM winning after the barrier acknowledgement but before
      * release. Resume must wake the parked worker without restoring RUNNING. */
-    pthread_mutex_lock(&testPool.queueMutex);
     setPoolState(&testPool, wtpState_SHUTDOWN_IMMEDIATE);
-    CHECK(wtpResumeLocked(&testPool.pool) == RS_RET_OK);
-    pthread_mutex_unlock(&testPool.queueMutex);
+    CHECK(wtpResume(&testPool.pool) == RS_RET_OK);
     CHECK(pthread_join(thread, &threadResult) == 0);
     CHECK(threadResult == NULL);
     CHECK(poolState(&testPool) == wtpState_SHUTDOWN_IMMEDIATE);
@@ -280,12 +308,99 @@ static int testQueueDirectAndDA(void) {
 
     test_pool_t parentPool;
     test_pool_t childPool;
+    test_pool_t transferPool;
     qqueue_t parentQueue;
     qqueue_t childQueue;
     initPool(&parentPool, 0);
     initPool(&childPool, 0);
-    /* A DA parent and child intentionally share their queue mutex. */
-    childPool.pool.pmutUsr = &parentPool.queueMutex;
+    initPool(&transferPool, 0);
+    memset(&parentQueue, 0, sizeof(parentQueue));
+    memset(&childQueue, 0, sizeof(childQueue));
+    parentQueue.qType = QUEUETYPE_LINKEDLIST;
+    parentQueue.mut = &parentPool.queueMutex;
+    parentQueue.pWtpReg = &parentPool.pool;
+    parentQueue.pWtpDA = &transferPool.pool;
+    parentQueue.bIsDA = 1;
+    parentQueue.pqDA = &childQueue;
+    parentQueue.iQueueSize = 3;
+    parentQueue.iMinMsgsPerWrkr = 2;
+    parentQueue.iHighWtrMrk = 2;
+    childQueue.qType = QUEUETYPE_SEGMENTED_DISK;
+    childQueue.mut = &childPool.queueMutex;
+    childQueue.pWtpReg = &childPool.pool;
+    childQueue.iMinMsgsPerWrkr = 1;
+    childQueue.tVars.segdisk = (segdisk_store_t *)(uintptr_t)1;
+    segmentedDiskMayHaveData = 1;
+    adviceCallCount = 0;
+
+    CHECK(qqueueBatchBarrierBegin(&parentQueue, &barrier) == RS_RET_OK);
+    CHECK(poolState(&parentPool) == wtpState_QUIESCE);
+    CHECK(poolState(&childPool) == wtpState_QUIESCE);
+    struct timespec deadline;
+    CHECK(deadlineMs(100, &deadline) == 0);
+    CHECK(qqueueBatchBarrierWait(barrier, &deadline) == RS_RET_OK);
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK);
+    CHECK(barrier == NULL);
+    CHECK(poolState(&parentPool) == wtpState_RUNNING);
+    CHECK(poolState(&childPool) == wtpState_RUNNING);
+    CHECK(adviceCallCount == 3);
+    CHECK(advised(&parentPool.pool, 2));
+    CHECK(advised(&transferPool.pool, 1));
+    CHECK(advised(&childPool.pool, 2));
+
+    segmentedDiskMayHaveData = 0;
+    cleanupPool(&transferPool);
+    cleanupPool(&childPool);
+    cleanupPool(&parentPool);
+    return 0;
+}
+
+static int testQueueBarrierOwner(void) {
+    test_pool_t testPool;
+    qqueue_t queue;
+    qqueue_batch_barrier_t *barrier = NULL;
+    foreign_owner_ctx_t ctx;
+    pthread_t thread;
+    void *threadResult = NULL;
+
+    initPool(&testPool, 0);
+    memset(&queue, 0, sizeof(queue));
+    memset(&ctx, 0, sizeof(ctx));
+    queue.qType = QUEUETYPE_LINKEDLIST;
+    queue.mut = &testPool.queueMutex;
+    queue.pWtpReg = &testPool.pool;
+    CHECK(qqueueBatchBarrierBegin(&queue, &barrier) == RS_RET_OK);
+    ctx.barrier = barrier;
+    CHECK(pthread_create(&thread, NULL, foreignOwnerMain, &ctx) == 0);
+    CHECK(pthread_join(thread, &threadResult) == 0);
+    CHECK(threadResult == NULL);
+    CHECK(ctx.waitResult == RS_RET_PARAM_ERROR);
+    CHECK(ctx.releaseResult == RS_RET_PARAM_ERROR);
+    CHECK(ctx.retainedToken);
+    CHECK(barrier != NULL);
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK);
+    CHECK(barrier == NULL);
+    cleanupPool(&testPool);
+    return 0;
+}
+
+static int testQueueDADistinctWorkerMutexes(void) {
+    test_pool_t parentPool;
+    test_pool_t childPool;
+    worker_ctx_t parentCtx;
+    worker_ctx_t childCtx;
+    qqueue_t parentQueue;
+    qqueue_t childQueue;
+    qqueue_batch_barrier_t *barrier = NULL;
+    pthread_t parentThread;
+    pthread_t childThread;
+    void *threadResult = NULL;
+    struct timespec deadline;
+
+    initPool(&parentPool, 1);
+    initPool(&childPool, 1);
+    initWorkerContext(&parentCtx, &parentPool, 0);
+    initWorkerContext(&childCtx, &childPool, 0);
     memset(&parentQueue, 0, sizeof(parentQueue));
     memset(&childQueue, 0, sizeof(childQueue));
     parentQueue.qType = QUEUETYPE_LINKEDLIST;
@@ -294,22 +409,62 @@ static int testQueueDirectAndDA(void) {
     parentQueue.bIsDA = 1;
     parentQueue.pqDA = &childQueue;
     childQueue.qType = QUEUETYPE_DISK;
-    childQueue.mut = &parentPool.queueMutex;
+    childQueue.mut = &childPool.queueMutex;
     childQueue.pWtpReg = &childPool.pool;
+    CHECK(pthread_create(&parentThread, NULL, workerMain, &parentCtx) == 0);
+    CHECK(pthread_create(&childThread, NULL, workerMain, &childCtx) == 0);
+    waitWorkerReady(&parentCtx);
+    waitWorkerReady(&childCtx);
 
     CHECK(qqueueBatchBarrierBegin(&parentQueue, &barrier) == RS_RET_OK);
-    CHECK(poolState(&parentPool) == wtpState_QUIESCE);
-    CHECK(poolState(&childPool) == wtpState_QUIESCE);
-    struct timespec deadline;
-    CHECK(deadlineMs(100, &deadline) == 0);
+    CHECK(deadlineMs(1000, &deadline) == 0);
     CHECK(qqueueBatchBarrierWait(barrier, &deadline) == RS_RET_OK);
-    qqueueBatchBarrierRelease(&barrier);
+    CHECK(qqueueBatchBarrierRelease(&barrier) == RS_RET_OK);
+    CHECK(pthread_join(parentThread, &threadResult) == 0);
+    CHECK(threadResult == NULL);
+    threadResult = NULL;
+    CHECK(pthread_join(childThread, &threadResult) == 0);
+    CHECK(threadResult == NULL);
+    CHECK(parentPool.pool.iNumQuiesced == 0);
+    CHECK(childPool.pool.iNumQuiesced == 0);
+
+    cleanupWorkerContext(&childCtx);
+    cleanupWorkerContext(&parentCtx);
+    cleanupPool(&childPool);
+    cleanupPool(&parentPool);
+    return 0;
+}
+
+static int testQueueBarrierPartialBeginRollback(void) {
+    test_pool_t parentPool;
+    test_pool_t childPool;
+    qqueue_t parentQueue;
+    qqueue_t childQueue;
+    qqueue_batch_barrier_t *barrier = NULL;
+
+    initPool(&parentPool, 0);
+    initPool(&childPool, 0);
+    memset(&parentQueue, 0, sizeof(parentQueue));
+    memset(&childQueue, 0, sizeof(childQueue));
+    parentQueue.qType = QUEUETYPE_LINKEDLIST;
+    parentQueue.mut = &parentPool.queueMutex;
+    parentQueue.pWtpReg = &parentPool.pool;
+    parentQueue.bIsDA = 1;
+    parentQueue.pqDA = &childQueue;
+    parentQueue.iQueueSize = 1;
+    parentQueue.iMinMsgsPerWrkr = 1;
+    childQueue.qType = QUEUETYPE_DISK;
+    childQueue.mut = &childPool.queueMutex;
+    childQueue.pWtpReg = &childPool.pool;
+    setPoolState(&childPool, wtpState_SHUTDOWN_IMMEDIATE);
+    adviceCallCount = 0;
+
+    CHECK(qqueueBatchBarrierBegin(&parentQueue, &barrier) == RS_RET_NO_RUN);
     CHECK(barrier == NULL);
     CHECK(poolState(&parentPool) == wtpState_RUNNING);
-    CHECK(poolState(&childPool) == wtpState_RUNNING);
+    CHECK(poolState(&childPool) == wtpState_SHUTDOWN_IMMEDIATE);
+    CHECK(advised(&parentPool.pool, 2));
 
-    /* childPool owns a separate test mutex which was replaced only as its
-     * runtime predicate pointer; cleanup remains responsible for that mutex. */
     cleanupPool(&childPool);
     cleanupPool(&parentPool);
     return 0;
@@ -317,7 +472,8 @@ static int testQueueDirectAndDA(void) {
 
 int main(void) {
     if (testIdleWorker() != 0 || testActiveWorkerAndTimeout() != 0 || testZeroWorkerAndShutdownPriority() != 0 ||
-        testParkedWorkerShutdownPriority() != 0 || testQueueDirectAndDA() != 0)
+        testParkedWorkerShutdownPriority() != 0 || testQueueDirectAndDA() != 0 || testQueueBarrierOwner() != 0 ||
+        testQueueDADistinctWorkerMutexes() != 0 || testQueueBarrierPartialBeginRollback() != 0)
         return 1;
     puts("WTP and queue batch barrier tests passed");
     return 0;

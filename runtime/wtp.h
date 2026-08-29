@@ -94,12 +94,12 @@ rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
-/* The request and resume calls require pmutUsr to be held by the caller. */
-rsRetVal wtpRequestQuiesceLocked(wtp_t *pThis);
+/* The request and resume calls serialize with workers through pmutUsr. */
+rsRetVal wtpRequestQuiesce(wtp_t *pThis);
 /* ptTimeout is an absolute CLOCK_REALTIME deadline, matching the default
  * pthread condition-variable clock. */
 rsRetVal wtpWaitQuiesced(wtp_t *pThis, const struct timespec *ptTimeout);
-rsRetVal wtpResumeLocked(wtp_t *pThis);
+rsRetVal wtpResume(wtp_t *pThis);
 void wtpWorkerQuiesce(wtp_t *pThis, pthread_cond_t *pcondBusy);
 /** Wake every existing worker without creating a stopped worker.
  *

@@ -6,10 +6,11 @@
 #include "wti.h"
 #include "wtp.h"
 
-rsRetVal wtpRequestQuiesceLocked(wtp_t *const pThis) {
+rsRetVal wtpRequestQuiesce(wtp_t *const pThis) {
     rsRetVal ret = RS_RET_OK;
 
     if (pThis == NULL || pThis->pmutUsr == NULL) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(pThis->pmutUsr);
     d_pthread_mutex_lock(&pThis->mutWtp);
     const wtpState_t state = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
     if (state != wtpState_RUNNING) {
@@ -19,6 +20,7 @@ rsRetVal wtpRequestQuiesceLocked(wtp_t *const pThis) {
         for (int i = 0; i < pThis->iNumWorkerThreads; ++i) pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
     }
     d_pthread_mutex_unlock(&pThis->mutWtp);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
     return ret;
 }
 
@@ -37,13 +39,15 @@ rsRetVal wtpWaitQuiesced(wtp_t *const pThis, const struct timespec *const ptTime
     return timedOut ? RS_RET_TIMED_OUT : RS_RET_OK;
 }
 
-rsRetVal wtpResumeLocked(wtp_t *const pThis) {
+rsRetVal wtpResume(wtp_t *const pThis) {
     if (pThis == NULL || pThis->pmutUsr == NULL) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(pThis->pmutUsr);
     d_pthread_mutex_lock(&pThis->mutWtp);
     const wtpState_t state = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
     if (state == wtpState_QUIESCE) ATOMIC_STORE_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState, wtpState_RUNNING);
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
     d_pthread_mutex_unlock(&pThis->mutWtp);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
     return RS_RET_OK;
 }
 

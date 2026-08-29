@@ -79,7 +79,9 @@ typedef enum {
 /* Opaque control-path token for a non-destructive consumer batch barrier.
  * The queue and its worker pools must outlive the token. In DA mode the parent
  * transfer pool deliberately continues moving records; only pools that can
- * invoke the configured message consumer are quiesced. */
+ * invoke the configured message consumer are quiesced. The thread that begins
+ * the barrier exclusively owns the token and must serialize wait and release;
+ * calls from another thread fail without consuming the token. */
 typedef struct qqueue_batch_barrier_s qqueue_batch_barrier_t;
 
 /* list member definition for linked list types of queues: */
@@ -304,7 +306,7 @@ rsRetVal qqueueBatchBarrierBegin(qqueue_t *pThis, qqueue_batch_barrier_t **ppBar
 /* ptTimeout is an absolute CLOCK_REALTIME deadline. A timeout does not release
  * the barrier; the owner must always call qqueueBatchBarrierRelease(). */
 rsRetVal qqueueBatchBarrierWait(qqueue_batch_barrier_t *pBarrier, const struct timespec *ptTimeout);
-void qqueueBatchBarrierRelease(qqueue_batch_barrier_t **ppBarrier);
+rsRetVal qqueueBatchBarrierRelease(qqueue_batch_barrier_t **ppBarrier);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);
