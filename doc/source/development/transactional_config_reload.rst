@@ -255,12 +255,15 @@ module capability classification, preparation, and ``on`` activation remain
 fail-closed until their later gates are complete.  Later releases retain or
 refine these counters alongside the target outcome counters above.
 
-Before private compilation is enabled, ``on`` applies a conservative scope
-gate to that report.  Only modifications to already existing rulesets pass to
-the unavailable activation phase; added or removed rulesets and every change
-to actions, inputs, parsers, queues, templates, modules, or global settings are
-rejected as ``candidate_scope_unsupported``.  This is a capability boundary,
-not yet a claim that the accepted ruleset syntax has been semantically prepared.
+Release C extends that foundation with a deliberately narrow private compiler
+and batch-boundary activation path.  In ``on`` mode, only modifications to
+already existing rulesets can be prepared and atomically activated.  Added or
+removed rulesets and every change to actions, inputs, parsers, queues,
+templates, modules, or global settings remain rejected as
+``candidate_scope_unsupported``.  Unsupported ruleset syntax and consumer
+queues without a safe batch barrier are rejected before commit.  This is the
+first Release C scope; it does not imply that other configuration objects are
+live-reloadable.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

@@ -1,4 +1,4 @@
-/* Release B reload-manager foundation.
+/* Transactional reload-manager foundation (Releases B and C).
  *
  * This owns request state, observability, and the active generation's
  * source-syntactic configuration graph. It parses candidates into an owned
