@@ -61,8 +61,8 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5
 	error_exit 1
 fi
 
-# Module defaults use the same private lowering path as input overrides. This
-# report-only change proves the module descriptor loop is not bypassed.
+# Module defaults use the same private lowering path as input overrides. The
+# change is live-capable, but validate remains strictly report-only.
 sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -70,8 +70,8 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5
 	echo "FAIL: valid YAML imtcp module candidate did not lower report-only: $reload_status"
 	error_exit 1
 fi
-if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
-	echo "FAIL: changed YAML imtcp module profile was not classified conservatively: $reload_status"
+if [[ "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: changed YAML imtcp module profile was not classified live-capable: $reload_status"
 	error_exit 1
 fi
 
@@ -86,8 +86,8 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5
 fi
 
 # A valid imtcp input change is lowered privately through the module's full
-# parameter/default path. Validate remains report-only and cannot alter the
-# established listener or generation.
+# parameter/default path and classified live-capable. Validate remains
+# report-only and cannot alter the established listener or generation.
 sed '/ruleset: main/a\    flowControl: "off"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -95,8 +95,8 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5
 	echo "FAIL: valid YAML imtcp candidate did not lower report-only: $reload_status"
 	error_exit 1
 fi
-if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
-	echo "FAIL: changed YAML imtcp input profile was not classified conservatively: $reload_status"
+if [[ "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: changed YAML imtcp input profile was not classified live-capable: $reload_status"
 	error_exit 1
 fi
 

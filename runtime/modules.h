@@ -35,6 +35,7 @@
 #ifndef MODULES_H_INCLUDED
 #define MODULES_H_INCLUDED 1
 
+#include <time.h>
 #include "objomsr.h"
 #include "rainerscript.h"
 
@@ -131,12 +132,15 @@ typedef rsRetVal (*modReloadPrepareV1_t)(const void *pOldCnf, const void *pNewCn
 typedef void (*modReloadCommitV1_t)(void *pReloadState);
 typedef void (*modReloadAbortV1_t)(void *pReloadState);
 typedef rsRetVal (*modReloadRetireV1_t)(void *pReloadState);
+typedef rsRetVal (*modReloadQuiesceV1_t)(void *pReloadState, const struct timespec *deadline);
+typedef rsRetVal (*modReloadResumeV1_t)(void *pReloadState);
 typedef enum eModReloadCapabilityFlags_ {
     eMOD_RELOAD_CAP_VALIDATE_PRIVATE = 1U << 0,
     eMOD_RELOAD_CAP_PREPARE = 1U << 1,
     eMOD_RELOAD_CAP_REUSE = 1U << 2,
     eMOD_RELOAD_CAP_COMMIT = 1U << 3,
-    eMOD_RELOAD_CAP_RETIRE = 1U << 4
+    eMOD_RELOAD_CAP_RETIRE = 1U << 4,
+    eMOD_RELOAD_CAP_QUIESCE = 1U << 5
 } eModReloadCapabilityFlags_t;
 typedef struct modReloadInterfaceV1_s {
     unsigned version;
@@ -147,6 +151,9 @@ typedef struct modReloadInterfaceV1_s {
     modReloadCommitV1_t commit;
     modReloadAbortV1_t abort;
     modReloadRetireV1_t retire;
+    /* Optional append-only input/runtime safepoint hooks. */
+    modReloadQuiesceV1_t quiesce;
+    modReloadResumeV1_t resume;
 } modReloadInterfaceV1_t;
 #define eMOD_RELOAD_INTERFACE_V1 1
 typedef rsRetVal (*modReloadGetInterfaceV1_t)(modReloadInterfaceV1_t *pInterface);
@@ -299,6 +306,12 @@ rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *pMod,
  * conservative preflight.
  */
 eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf);
+rsRetVal modReloadPrepare(const modInfo_t *pMod, const void *pOldCnf, const void *pNewCnf, void **pReloadState);
+void modReloadCommit(const modInfo_t *pMod, void *pReloadState);
+void modReloadAbort(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadRetire(const modInfo_t *pMod, void *pReloadState);
+rsRetVal modReloadQuiesce(const modInfo_t *pMod, void *pReloadState, const struct timespec *deadline);
+rsRetVal modReloadResume(const modInfo_t *pMod, void *pReloadState);
 
 
 /* interfaces */

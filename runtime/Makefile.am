@@ -338,6 +338,7 @@ pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
 lmtcpsrv_la_SOURCES = \
 	tcps_sess.c \
 	tcps_sess.h \
+	tcpsrv-fence.c \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)

@@ -14,8 +14,9 @@
  * failed, and partial extensions to the safe restart-required result.
  */
 sbool modReloadHasValidInterfaceV1(const modInfo_t *pMod) {
+    const size_t minimumSize = offsetof(modReloadInterfaceV1_t, retire) + sizeof(((modReloadInterfaceV1_t *)0)->retire);
     return pMod != NULL && pMod->reloadV1.version == eMOD_RELOAD_INTERFACE_V1 &&
-           pMod->reloadV1.structSize >= sizeof(pMod->reloadV1);
+           pMod->reloadV1.structSize >= minimumSize;
 }
 
 sbool modReloadHasValidSourceInterfaceV1(const modInfo_t *pMod) {
@@ -94,4 +95,53 @@ eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOld
         default:
             return eMOD_RELOAD_RESTART_REQUIRED;
     }
+}
+
+rsRetVal modReloadPrepare(const modInfo_t *const pMod,
+                          const void *const pOldCnf,
+                          const void *const pNewCnf,
+                          void **const pReloadState) {
+    if (!modReloadHasLifecycleHooks(pMod) || pOldCnf == NULL || pNewCnf == NULL || pReloadState == NULL ||
+        *pReloadState != NULL)
+        return RS_RET_PARAM_ERROR;
+    const rsRetVal ret = pMod->reloadV1.prepare(pOldCnf, pNewCnf, pReloadState);
+    if (ret != RS_RET_OK || *pReloadState == NULL) {
+        if (*pReloadState != NULL) pMod->reloadV1.abort(*pReloadState);
+        *pReloadState = NULL;
+        return ret == RS_RET_OK ? RS_RET_ERR : ret;
+    }
+    return RS_RET_OK;
+}
+
+void modReloadCommit(const modInfo_t *const pMod, void *const pReloadState) {
+    if (modReloadHasLifecycleHooks(pMod) && pReloadState != NULL) pMod->reloadV1.commit(pReloadState);
+}
+
+void modReloadAbort(const modInfo_t *const pMod, void *const pReloadState) {
+    if (modReloadHasLifecycleHooks(pMod) && pReloadState != NULL) pMod->reloadV1.abort(pReloadState);
+}
+
+rsRetVal modReloadRetire(const modInfo_t *const pMod, void *const pReloadState) {
+    return modReloadHasLifecycleHooks(pMod) && pReloadState != NULL ? pMod->reloadV1.retire(pReloadState)
+                                                                    : RS_RET_PARAM_ERROR;
+}
+
+static int modReloadHasQuiesceHooks(const modInfo_t *const pMod) {
+    const size_t quiesceSize = offsetof(modReloadInterfaceV1_t, resume) + sizeof(((modReloadInterfaceV1_t *)0)->resume);
+    return modReloadHasLifecycleHooks(pMod) && pMod->reloadV1.structSize >= quiesceSize &&
+           (pMod->reloadV1.capabilityFlags & eMOD_RELOAD_CAP_QUIESCE) != 0 && pMod->reloadV1.quiesce != NULL &&
+           pMod->reloadV1.resume != NULL;
+}
+
+rsRetVal modReloadQuiesce(const modInfo_t *const pMod,
+                          void *const pReloadState,
+                          const struct timespec *const deadline) {
+    return modReloadHasQuiesceHooks(pMod) && pReloadState != NULL && deadline != NULL
+               ? pMod->reloadV1.quiesce(pReloadState, deadline)
+               : RS_RET_NOT_IMPLEMENTED;
+}
+
+rsRetVal modReloadResume(const modInfo_t *const pMod, void *const pReloadState) {
+    return modReloadHasQuiesceHooks(pMod) && pReloadState != NULL ? pMod->reloadV1.resume(pReloadState)
+                                                                  : RS_RET_NOT_IMPLEMENTED;
 }

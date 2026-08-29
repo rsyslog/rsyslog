@@ -1,7 +1,8 @@
 /*
- * Unit coverage for the dormant module reload capability contract.  The
- * oracle is an exact capability result from synthetic module records, so no
- * daemon configuration, activation, or timing is involved.
+ * Unit coverage for the module reload capability and lifecycle contract. The
+ * oracle is an exact capability/state result from synthetic module records:
+ * optional append-only quiesce hooks remain backward compatible, invalid or
+ * partial callbacks fail closed, and no daemon timing is involved.
  */
 #include "config.h"
 #include <stddef.h>
@@ -49,16 +50,32 @@ static rsRetVal classify_invalid(const void __attribute__((unused)) * pOldCnf,
     return RS_RET_OK;
 }
 
+static int reloadStateSentinel;
+static int quiesceCount;
+static int resumeCount;
+
 static rsRetVal reload_prepare(const void __attribute__((unused)) * pOldCnf,
                                const void __attribute__((unused)) * pNewCnf,
                                void **pReloadState) {
-    *pReloadState = NULL;
+    *pReloadState = &reloadStateSentinel;
     return RS_RET_OK;
 }
 
 static void reload_commit_or_abort(void __attribute__((unused)) * pReloadState) {}
 
 static rsRetVal reload_retire(void __attribute__((unused)) * pReloadState) {
+    return RS_RET_OK;
+}
+
+static rsRetVal reload_quiesce(void *const pReloadState, const struct timespec *const deadline) {
+    if (pReloadState != &reloadStateSentinel || deadline == NULL) return RS_RET_PARAM_ERROR;
+    ++quiesceCount;
+    return RS_RET_OK;
+}
+
+static rsRetVal reload_resume(void *const pReloadState) {
+    if (pReloadState != &reloadStateSentinel) return RS_RET_PARAM_ERROR;
+    ++resumeCount;
     return RS_RET_OK;
 }
 
@@ -113,6 +130,8 @@ int main(void) {
     modInfo_t legacy;
     modReloadSourceBuildContextV1_t sourceContext;
     void *candidateCnf = NULL;
+    void *reloadState = NULL;
+    struct timespec deadline = {.tv_sec = 1, .tv_nsec = 0};
     memset(&legacy, 0, sizeof(legacy));
     CHECK(!modReloadHasLifecycleHooks(&legacy));
     CHECK(!modReloadHasValidSourceInterfaceV1(&legacy));
@@ -134,6 +153,22 @@ int main(void) {
                                       eMOD_RELOAD_CAP_REUSE | eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
     CHECK(modReloadHasLifecycleHooks(&legacy));
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_LIVE_SWAP);
+    CHECK(modReloadPrepare(&legacy, &legacy, &legacy, &reloadState) == RS_RET_OK);
+    CHECK(reloadState == &reloadStateSentinel);
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(modReloadResume(&legacy, reloadState) == RS_RET_NOT_IMPLEMENTED);
+    legacy.reloadV1.capabilityFlags |= eMOD_RELOAD_CAP_QUIESCE;
+    legacy.reloadV1.quiesce = reload_quiesce;
+    legacy.reloadV1.resume = reload_resume;
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_OK);
+    CHECK(modReloadResume(&legacy, reloadState) == RS_RET_OK);
+    CHECK(quiesceCount == 1);
+    CHECK(resumeCount == 1);
+    legacy.reloadV1.structSize = offsetof(modReloadInterfaceV1_t, quiesce);
+    CHECK(modReloadHasValidInterfaceV1(&legacy));
+    CHECK(modReloadQuiesce(&legacy, reloadState, &deadline) == RS_RET_NOT_IMPLEMENTED);
+    legacy.reloadV1.structSize = sizeof(legacy.reloadV1);
+    reloadState = NULL;
 
     legacy.reloadV1.classify = classify_new_sessions;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_NEW_SESSIONS);

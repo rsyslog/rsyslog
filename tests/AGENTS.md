@@ -57,6 +57,12 @@ minimal containers. Findings are review prompts, not automatic blockers.
   clients, or probes need deterministic readiness and cleanup. Prefer existing
   testbench helpers; if custom plumbing is required, make ownership and cleanup
   explicit.
+- **Calling `exit()` from a test or test helper**: direct process termination is
+  never an acceptable test oracle. It bypasses normal cleanup, can strand
+  locks or worker threads, and hides which invariant failed. Return a failure
+  to the owning test thread instead; for worker-thread failures, record the
+  result and assert it after `pthread_join()` (or the equivalent lifecycle
+  join) so cleanup and diagnostics still run.
 - **Daemonized shutdown tests without a final rsyslogd oracle**: shell ``wait``
   cannot observe the real daemon process exit status after rsyslogd forks.
   Regular ``generate_conf`` tests get a proper termination file automatically

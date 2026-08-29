@@ -84,6 +84,7 @@ typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
     char *endpoint_key; /* canonical runtime socket identity, never a config name */
     char *config_name; /* operator-facing inputname, retained separately for future diagnostics */
+    size_t source_ordinal; /* stable startup order for unkeyable dynamic endpoints */
     enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
@@ -151,6 +152,7 @@ static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
     }
     if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
     entry->tcpsrv = server;
+    entry->source_ordinal = (size_t)endpoint_registry.count;
     entry->state = IMTCP_ENDPOINT_ACTIVE;
     entry->next = endpoint_registry.head;
     endpoint_registry.head = entry;
@@ -1539,7 +1541,8 @@ static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instance
 static int reloadInstanceEqual(const instanceConf_t *const left,
                                const modConfData_t *const leftModule,
                                const instanceConf_t *const right,
-                               const modConfData_t *const rightModule) {
+                               const modConfData_t *const rightModule,
+                               const int ignoreLiveFields) {
     int leftLegacyAcl;
     int rightLegacyAcl;
     const struct AllowedSenders *const leftAllowed = reloadEffectiveAllowedSenders(left, leftModule, &leftLegacyAcl);
@@ -1557,7 +1560,8 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
                               right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ) &&
            left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
            left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
-           left->maxFrameSize == right->maxFrameSize && left->bUseFlowControl == right->bUseFlowControl &&
+           left->maxFrameSize == right->maxFrameSize &&
+           (ignoreLiveFields || left->bUseFlowControl == right->bUseFlowControl) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
            left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
            left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
@@ -1612,6 +1616,7 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     const modConfData_t *const newConfig = pNewCnf;
     const instanceConf_t *oldInst;
     const instanceConf_t *newInst;
+    int liveOnly = 0;
 
     if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
     *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
@@ -1619,11 +1624,164 @@ static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
     oldInst = oldConfig->root;
     newInst = newConfig->root;
     while (oldInst != NULL && newInst != NULL) {
-        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig)) return RS_RET_OK;
+        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0)) {
+            if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1)) return RS_RET_OK;
+            liveOnly = 1;
+        }
         oldInst = oldInst->next;
         newInst = newInst->next;
     }
-    if (oldInst == NULL && newInst == NULL) *pCapability = eMOD_RELOAD_REUSE;
+    if (oldInst == NULL && newInst == NULL) *pCapability = liveOnly ? eMOD_RELOAD_LIVE_SWAP : eMOD_RELOAD_REUSE;
+    return RS_RET_OK;
+}
+
+typedef struct imtcpReloadEntryV1_s {
+    tcpsrv_etry_t *runtime;
+    int flowControl;
+    uint64_t fenceToken;
+    int fenceAcquired;
+} imtcpReloadEntryV1_t;
+
+typedef struct imtcpReloadStateV1_s {
+    size_t count;
+    imtcpReloadEntryV1_t entries[];
+} imtcpReloadStateV1_t;
+
+static tcpsrv_etry_t *findRuntimeEndpoint(const char *const key) {
+    tcpsrv_etry_t *entry;
+    if (key == NULL) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
+        if (entry->endpoint_key != NULL && !strcmp(entry->endpoint_key, key)) return entry;
+    return NULL;
+}
+
+static tcpsrv_etry_t *findRuntimeEndpointBySourceOrdinal(const size_t ordinal, const size_t count) {
+    tcpsrv_etry_t *entry;
+    if (endpoint_registry.count < 0 || (size_t)endpoint_registry.count != count || ordinal >= count) return NULL;
+    for (entry = endpoint_registry.head; entry != NULL; entry = entry->next)
+        if (entry->source_ordinal == ordinal) return entry;
+    return NULL;
+}
+
+static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNewCnf, void **const pReloadState) {
+    const modConfData_t *const oldConfig = pOldCnf;
+    const modConfData_t *const newConfig = pNewCnf;
+    const instanceConf_t *newInst;
+    imtcpReloadStateV1_t *state = NULL;
+    eModReloadCapability_t capability;
+    size_t count = 0;
+    size_t index = 0;
+    DEFiRet;
+
+    if (oldConfig == NULL || newConfig == NULL || pReloadState == NULL || *pReloadState != NULL)
+        return RS_RET_PARAM_ERROR;
+    CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
+    if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) ++count;
+    if (count > (SIZE_MAX - sizeof(*state)) / sizeof(state->entries[0])) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(state = calloc(1, sizeof(*state) + count * sizeof(state->entries[0])));
+    state->count = count;
+    for (newInst = newConfig->root; newInst != NULL; newInst = newInst->next) {
+        char *key = NULL;
+        const rsRetVal keyRet =
+            endpointKeyBuild(newInst->cnf_params, reloadEffectiveNamespace(newInst, newConfig), &key);
+        if (keyRet == RS_RET_OK)
+            state->entries[index].runtime = findRuntimeEndpoint(key);
+        else if (keyRet == RS_RET_NOT_IMPLEMENTED)
+            state->entries[index].runtime = findRuntimeEndpointBySourceOrdinal(index, count);
+        else
+            ABORT_FINALIZE(keyRet);
+        free(key);
+        if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        state->entries[index].flowControl = newInst->bUseFlowControl;
+        ++index;
+    }
+    *pReloadState = state;
+    state = NULL;
+
+finalize_it:
+    free(state);
+    RETiRet;
+}
+
+static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec *const deadline) {
+    imtcpReloadStateV1_t *const state = pReloadState;
+    size_t acquired = 0;
+    rsRetVal ret = RS_RET_OK;
+    if (state == NULL || deadline == NULL) return RS_RET_PARAM_ERROR;
+    for (size_t i = 0; i < state->count; ++i) {
+        ret = tcpsrv.RequestFence(state->entries[i].runtime->tcpsrv, &state->entries[i].fenceToken);
+        if (ret != RS_RET_OK) break;
+        ret = tcpsrv.WaitFence(state->entries[i].runtime->tcpsrv, state->entries[i].fenceToken, deadline);
+        if (ret != RS_RET_OK) break;
+        state->entries[i].fenceAcquired = 1;
+        ++acquired;
+    }
+    if (ret != RS_RET_OK) {
+        while (acquired != 0) {
+            --acquired;
+            (void)tcpsrv.ReleaseFence(state->entries[acquired].runtime->tcpsrv, state->entries[acquired].fenceToken);
+            state->entries[acquired].fenceAcquired = 0;
+        }
+    }
+    return ret;
+}
+
+static rsRetVal resumeReloadV1(void *const pReloadState) {
+    imtcpReloadStateV1_t *const state = pReloadState;
+    rsRetVal ret = RS_RET_OK;
+    if (state == NULL) return RS_RET_PARAM_ERROR;
+    for (size_t i = state->count; i != 0; --i) {
+        imtcpReloadEntryV1_t *const entry = &state->entries[i - 1];
+        if (!entry->fenceAcquired) continue;
+        const rsRetVal releaseRet = tcpsrv.ReleaseFence(entry->runtime->tcpsrv, entry->fenceToken);
+        if (ret == RS_RET_OK && releaseRet != RS_RET_OK) ret = releaseRet;
+        if (releaseRet == RS_RET_OK) entry->fenceAcquired = 0;
+    }
+    return ret;
+}
+
+static void commitReloadV1(void *const pReloadState) {
+    imtcpReloadStateV1_t *const state = pReloadState;
+    for (size_t i = 0; i < state->count; ++i) {
+        tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
+        tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
+    }
+}
+
+static void abortReloadV1(void *const pReloadState) {
+    if (pReloadState == NULL) return;
+    (void)resumeReloadV1(pReloadState);
+    free(pReloadState);
+}
+
+static rsRetVal retireReloadV1(void *const pReloadState) {
+    rsRetVal ret;
+    if (pReloadState == NULL) return RS_RET_PARAM_ERROR;
+    ret = resumeReloadV1(pReloadState);
+    if (ret != RS_RET_OK) return ret;
+    free(pReloadState);
+    return RS_RET_OK;
+}
+
+static rsRetVal getReloadInterfaceV1(modReloadInterfaceV1_t *const interface) {
+    const size_t minimumSize = offsetof(modReloadInterfaceV1_t, retire) + sizeof(interface->retire);
+    const size_t quiesceSize = offsetof(modReloadInterfaceV1_t, resume) + sizeof(interface->resume);
+    if (interface == NULL || interface->version != eMOD_RELOAD_INTERFACE_V1 || interface->structSize < minimumSize)
+        return RS_RET_MISSING_INTERFACE;
+    interface->capabilityFlags = eMOD_RELOAD_CAP_VALIDATE_PRIVATE | eMOD_RELOAD_CAP_PREPARE | eMOD_RELOAD_CAP_REUSE |
+                                 eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
+    interface->classify = classifyReloadSourceCandidateV1;
+    interface->prepare = prepareReloadV1;
+    interface->commit = commitReloadV1;
+    interface->abort = abortReloadV1;
+    interface->retire = retireReloadV1;
+    if (interface->structSize >= quiesceSize) {
+        interface->capabilityFlags |= eMOD_RELOAD_CAP_QUIESCE;
+        interface->quiesce = quiesceReloadV1;
+        interface->resume = resumeReloadV1;
+    }
     return RS_RET_OK;
 }
 
@@ -2072,6 +2230,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
     CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+    CODEqueryEtryPt_RELOAD_V1_QUERIES;
     CODEqueryEtryPt_RELOAD_SOURCE_V1_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt

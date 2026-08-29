@@ -15,9 +15,13 @@ typedef void (*rsReloadCommitPublishV1_t)(void *context);
 typedef rsRetVal (*rsReloadCommitEnterV1_t)(void *context);
 typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 
+/* sourceCapability authorizes additional imtcp module/input report entries
+ * only when the caller has already obtained LIVE_SWAP from the private
+ * effective module classifier. Every other value keeps the ruleset-only gate. */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
+                                      eModReloadCapability_t sourceCapability,
                                       rsReloadRulesetPlanV1_t **out);
 void rsReloadRulesetPlanDestructV1(rsReloadRulesetPlanV1_t **plan);
 size_t rsReloadRulesetPlanCountV1(const rsReloadRulesetPlanV1_t *plan);

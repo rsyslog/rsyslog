@@ -1,7 +1,8 @@
 #!/bin/bash
-# Verify RainerScript activation and its fail-closed boundaries. The no-op
-# remains generation one, the eligible named-ruleset update atomically
-# publishes generation two, and later rejected candidates retain it.
+# Verify RainerScript activation and its fail-closed boundaries. Effective
+# imtcp flow-control changes and an eligible named-ruleset update publish
+# atomically while one TCP session stays open. HUP completion plus exact
+# generation/output checks prove the cutover without timing assumptions.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
@@ -16,8 +17,9 @@ ruleset(name="prepared") {
 }
 '
 startup
-tcpflood -m1 -i0
-wait_queueempty
+exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000000\n' >&9; then error_exit 1; fi
+wait_content 'msgnum:00000000' "$RSYSLOG_OUT_LOG"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
@@ -42,71 +44,83 @@ if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation
 	error_exit 1
 fi
 
-# A real module-default change reaches every input that does not override it
-# and is conservatively restart-required until imtcp profile commit exists.
+# A real module-default change reaches every input that does not override it.
+# The input event-loop fence makes the cached session update atomic.
 sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=restart_required"* ]]; then
-	echo "FAIL: changed RainerScript imtcp module profile was not classified conservatively: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: changed RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
+
+# Restore the omitted/on default through the same live path so the next input
+# override begins from a published source/runtime baseline.
 cp "$CONF_FILE.base" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: restored RainerScript imtcp module profile was not activated: $reload_status"
+	error_exit 1
+fi
 
 # The imtcp source lowerer must parse a valid changed input through the same
-# descriptor/default path as startup before the still-conservative capability
-# gate rejects runtime mutation. The generation and listener remain unchanged.
+# descriptor/default path as startup. The existing listener/session remain
+# live while the session-local flow-control snapshot is updated.
 sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled="on" flowControl="off")/' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
-	echo "FAIL: valid imtcp candidate did not reach the capability boundary: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: valid imtcp candidate did not activate: $reload_status"
 	error_exit 1
 fi
-if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
-	echo "FAIL: changed RainerScript imtcp profile was not classified conservatively: $reload_status"
+if [[ "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: changed RainerScript imtcp profile was not classified live: $reload_status"
 	error_exit 1
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"
 
-# A ruleset-only expression change with an unchanged named action must pass
-# private materialization and live activation.
-sed 's/contains "msgnum"/contains "never-match"/' "$CONF_FILE" >"$CONF_FILE.candidate"
+# A ruleset expression plus the restored input profile must pass private
+# materialization and the coordinated input-fence/queue-barrier activation.
+sed 's/contains "msgnum"/contains "cutover-ack"/' "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
-	echo "FAIL: private ruleset materialization did not activate: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=7 added=0 removed=0 modified=2 invalid=0"* ]]; then
+	echo "FAIL: coordinated imtcp/ruleset materialization did not activate: $reload_status"
 	error_exit 1
 fi
 # The newly published graph is the next comparison baseline. Repeating the
 # same candidate must be a no-op and must not advance the generation.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=2 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=5 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
 	echo "FAIL: activated RainerScript graph was not retained as baseline: $reload_status"
 	error_exit 1
 fi
-tcpflood -m1 -i1
-wait_queueempty
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000001\n' >&9; then error_exit 1; fi
+if ! printf '<167>Mar 10 01:00:00 host app: cutover-ack\n' >&9; then error_exit 1; fi
+# TCP ordering plus this visible marker proves the preceding rejected record
+# was evaluated by generation five before the next HUP.
+wait_content 'cutover-ack' "$RSYSLOG_OUT_LOG"
 
 # Runtime array equality depends on startup's optimizer moving an array to the
 # right-hand side and sorting it for bsearch(). An intentionally unsorted
 # left-hand array therefore proves that private plans receive the same
 # canonicalization before publication.
-sed 's/$msg contains "never-match"/["z-last", "match_me", "a-first"] == "match_me"/' "$CONF_FILE" \
+sed 's/$msg contains "cutover-ack"/["z-last", "match_me", "a-first"] == "match_me"/' "$CONF_FILE" \
 	>"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimized array comparison did not activate: $reload_status"
 	error_exit 1
 fi
-tcpflood -m1 -i2
-wait_queueempty
+if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002\n' >&9; then error_exit 1; fi
+wait_content 'msgnum:00000002' "$RSYSLOG_OUT_LOG"
 
 # Startup optimization would remove this branch and its syntactically
 # unchanged action. Until action queues have independent generation ownership,
@@ -115,11 +129,11 @@ sed 's/\["z-last", "match_me", "a-first"\] == "match_me"/0/' "$CONF_FILE" >"$CON
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimizer-eliminated action was not rejected: $reload_status"
 	error_exit 1
 fi
-tcpflood -m1 -i3
+printf '<167>Mar 10 01:00:00 host app: msgnum:00000003\n' >&9
 wait_queueempty
 
 # A function remains deliberately outside B1 lowering. Although the graph
@@ -129,11 +143,11 @@ sed 's/if 0 then/if tolower($msg) == "never-match" then/' "$CONF_FILE" >"$CONF_F
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unsupported function was not rejected by private Prepare: $reload_status"
 	error_exit 1
 fi
-tcpflood -m1 -i4
+printf '<167>Mar 10 01:00:00 host app: msgnum:00000004\n' >&9
 wait_queueempty
 
 # An action change is outside the first ruleset-only activation scope. The
@@ -143,11 +157,11 @@ sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=3"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6"* ]]; then
 	echo "FAIL: action change was not rejected by the ruleset-only scope gate: $reload_status"
 	error_exit 1
 fi
-tcpflood -m1 -i5
+printf '<167>Mar 10 01:00:00 host app: msgnum:00000005\n' >&9
 wait_queueempty
 
 # An invalid normalized report must keep its report-invalid reason. The ON
@@ -164,14 +178,16 @@ ruleset(name="second") {
 CONF_EOF
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=3"* ]]; then
+if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=6"* ]]; then
 	echo "FAIL: invalid ON report was hidden by the scope gate: $reload_status"
 	error_exit 1
 fi
 wait_queueempty
+exec 9>&-
 shutdown_when_empty
 wait_shutdown
 content_check 'msgnum:00000000' "$RSYSLOG_OUT_LOG"
+content_check 'cutover-ack' "$RSYSLOG_OUT_LOG"
 assert_content_missing 'msgnum:00000001' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000002' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000003' "$RSYSLOG_OUT_LOG"
@@ -179,10 +195,10 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000005' "$RSYSLOG_OUT_LOG"
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=10'
-content_check 'reload_on_rejected_total=6'
-content_check 'reload_capability_rejected_total=5'
-content_check 'reload_legacy_hook_total=10'
+content_check 'reload_on_total=12'
+content_check 'reload_on_rejected_total=5'
+content_check 'reload_capability_rejected_total=4'
+content_check 'reload_legacy_hook_total=12'
 assert_content_missing 'result=validated'
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 exit_test

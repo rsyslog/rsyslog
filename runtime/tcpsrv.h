@@ -21,6 +21,8 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
+#include <time.h>
+
 #if defined(ENABLE_IMTCP_EPOLL) && defined(HAVE_SYS_EPOLL_H)
     #include <sys/epoll.h>
 #endif
@@ -123,7 +125,7 @@ struct tcpsrv_io_descr_s {
     int id; /* index into listener or session table, depending on ptrType */
     int sock; /* socket descriptor we need to "monitor" */
     unsigned ioDirection;
-    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS } ptrType;
+    enum { NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS, NSD_PTR_TYPE_FENCE, NSD_PTR_TYPE_CONTROL } ptrType;
     union {
         tcps_sess_t *pSess;
         netstrm_t **ppLstn; /**<  accept listener's netstream */
@@ -226,6 +228,26 @@ struct tcpsrv_s {
         /* work queue */
         workQueue_t workQueue;
         int currWrkrs;
+        /* Append-only control-path state. Existing instance-field offsets stay stable. */
+        int controlPipe[2]; /**< nonblocking self-pipe used to wake poll/epoll */
+        tcpsrv_io_descr_t controlDescr;
+        tcpsrv_io_descr_t *fenceItems; /**< stable FIFO sentinels, one per worker */
+        pthread_mutex_t fenceMut;
+        pthread_cond_t fenceCond;
+        uint64_t fenceGeneration;
+        unsigned fenceAcks;
+        unsigned fenceParked;
+        unsigned fenceOutstanding;
+        sbool fenceEventLoopParked;
+        pthread_t fenceOwner;
+        sbool fenceOwnerValid;
+        sbool fenceRequested;
+        sbool fenceActive;
+        sbool fenceRelease;
+        sbool fenceAcquired;
+        sbool fenceReleaseCommitted;
+        sbool fenceSyncInitialized;
+        sbool fenceReady;
 };
 
 
@@ -356,9 +378,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
      */
     rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
                                     const char *const networkNamespace);
+    /* added v33 -- live-reload activation control-path fence */
+    rsRetVal (*RequestFence)(tcpsrv_t *pThis, uint64_t *token);
+    rsRetVal (*WaitFence)(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+    rsRetVal (*ReleaseFence)(tcpsrv_t *pThis, uint64_t token);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 32 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 33 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -371,6 +397,32 @@ ENDinterface(tcpsrv)
 /* prototypes */
 PROTOTYPEObjFull(tcpsrv);
 PROTOTYPEObjDebugPrint(tcpsrv);
+
+/*
+ * Request an exclusive event-loop/worker fence. The requesting thread owns
+ * the token and must also Wait and Release it. A successful Wait guarantees
+ * that the complete ready-I/O batch observed before the request and all work
+ * queued ahead of the fence have finished, and that both the event loop and
+ * every worker remain parked until Release.
+ *
+ * The Wait deadline is absolute CLOCK_REALTIME. A Wait error (including
+ * timeout or termination) aborts and resumes the
+ * fence automatically; the caller must not Release that token. While aborted
+ * sentinels drain, a new Request fails closed. The caller must pin the tcpsrv
+ * object and its Run lifetime through the final Wait/Release return. These are
+ * control-path operations; normal TCP message processing never calls them.
+ */
+rsRetVal tcpsrvRequestFence(tcpsrv_t *pThis, uint64_t *token);
+rsRetVal tcpsrvWaitFence(tcpsrv_t *pThis, uint64_t token, const struct timespec *deadline);
+rsRetVal tcpsrvReleaseFence(tcpsrv_t *pThis, uint64_t token);
+void tcpsrvActivateFence(tcpsrv_t *pThis);
+void tcpsrvParkAtFence(tcpsrv_t *pThis);
+void tcpsrvAbortFenceLocked(tcpsrv_t *pThis);
+int tcpsrvFenceTerminated(void);
+
+/* Update the listener default and every established session. If sessions
+ * exist, the caller must hold a successfully acquired tcpsrv fence. */
+void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

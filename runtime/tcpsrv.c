@@ -104,6 +104,48 @@ DEFobjCurrIf(regexp);
 
 static void enqueueWork(tcpsrv_io_descr_t *const pioDescr);
 
+int tcpsrvFenceTerminated(void) {
+    return glbl.GetGlobalInputTermState();
+}
+
+static rsRetVal ATTR_NONNULL() controlNotifyInit(tcpsrv_t *const pThis) {
+    DEFiRet;
+    pThis->controlPipe[0] = pThis->controlPipe[1] = -1;
+    if (pipe(pThis->controlPipe) != 0) ABORT_FINALIZE(RS_RET_IO_ERROR);
+    for (unsigned i = 0; i < 2; ++i) {
+        const int statusFlags = fcntl(pThis->controlPipe[i], F_GETFL);
+        const int descriptorFlags = fcntl(pThis->controlPipe[i], F_GETFD);
+        if (statusFlags < 0 || descriptorFlags < 0 ||
+            fcntl(pThis->controlPipe[i], F_SETFL, statusFlags | O_NONBLOCK) < 0 ||
+            fcntl(pThis->controlPipe[i], F_SETFD, descriptorFlags | FD_CLOEXEC) < 0)
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (pThis->controlPipe[0] >= 0) close(pThis->controlPipe[0]);
+        if (pThis->controlPipe[1] >= 0) close(pThis->controlPipe[1]);
+        pThis->controlPipe[0] = pThis->controlPipe[1] = -1;
+    }
+    RETiRet;
+}
+
+static void ATTR_NONNULL() controlNotifyExit(tcpsrv_t *const pThis) {
+    if (!pThis->fenceSyncInitialized) return;
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->fenceReady = 0;
+    tcpsrvAbortFenceLocked(pThis);
+    if (pThis->controlPipe[0] >= 0) close(pThis->controlPipe[0]);
+    if (pThis->controlPipe[1] >= 0) close(pThis->controlPipe[1]);
+    pThis->controlPipe[0] = pThis->controlPipe[1] = -1;
+    pthread_mutex_unlock(&pThis->fenceMut);
+}
+
+static void ATTR_NONNULL() drainControlPipe(tcpsrv_t *const pThis) {
+    char drain[64];
+    while (read(pThis->controlPipe[0], drain, sizeof(drain)) > 0) {
+    }
+}
+
 /* We check which event notification mechanism we have and use the best available one.
  * We switch back from library-specific drivers, because event notification always works
  * at the socket layer and is conceptually the same. As such, we can reduce code, code
@@ -115,6 +157,7 @@ static void enqueueWork(tcpsrv_io_descr_t *const pioDescr);
 
 static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis) {
     DEFiRet;
+    pThis->evtdata.epoll.efd = -1;
     #if defined(ENABLE_IMTCP_EPOLL) && defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
     DBGPRINTF("tcpsrv uses epoll_create1()\n");
     pThis->evtdata.epoll.efd = epoll_create1(EPOLL_CLOEXEC);
@@ -130,7 +173,19 @@ static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis) {
         DBGPRINTF("epoll_create1() could not create fd\n");
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
+    memset(&pThis->controlDescr, 0, sizeof(pThis->controlDescr));
+    pThis->controlDescr.pSrv = pThis;
+    pThis->controlDescr.ptrType = NSD_PTR_TYPE_CONTROL;
+    pThis->controlDescr.sock = pThis->controlPipe[0];
+    pThis->controlDescr.event.events = EPOLLIN;
+    pThis->controlDescr.event.data.ptr = &pThis->controlDescr;
+    if (epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD, pThis->controlPipe[0], &pThis->controlDescr.event) != 0)
+        ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 finalize_it:
+    if (iRet != RS_RET_OK && pThis->evtdata.epoll.efd >= 0) {
+        close(pThis->evtdata.epoll.efd);
+        pThis->evtdata.epoll.efd = -1;
+    }
     RETiRet;
 }
 
@@ -187,14 +242,18 @@ finalize_it:
  * number of entries actually read on exit.
  * rgerhards, 2009-11-18
  */
-static rsRetVal ATTR_NONNULL()
-    epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcpsrv_io_descr_t *pWorkset[]) {
+static rsRetVal ATTR_NONNULL() epoll_Wait(tcpsrv_t *const pThis,
+                                          const int timeout,
+                                          int *const numEntries,
+                                          tcpsrv_io_descr_t *pWorkset[],
+                                          int *const haveControl) {
     struct epoll_event event[NSPOLL_MAX_EVENTS_PER_WAIT];
     int nfds;
     int i;
     DEFiRet;
 
     assert(pWorkset != NULL);
+    *haveControl = 0;
 
     if (*numEntries > NSPOLL_MAX_EVENTS_PER_WAIT) *numEntries = NSPOLL_MAX_EVENTS_PER_WAIT;
     DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
@@ -212,14 +271,21 @@ static rsRetVal ATTR_NONNULL()
 
     /* we got valid events, so tell the caller... */
     DBGPRINTF("epoll_wait returned %d entries\n", nfds);
+    int workCount = 0;
     for (i = 0; i < nfds; ++i) {
-        pWorkset[i] = event[i].data.ptr;
+        tcpsrv_io_descr_t *const descriptor = event[i].data.ptr;
+        if (descriptor->ptrType == NSD_PTR_TYPE_CONTROL) {
+            drainControlPipe(pThis);
+            *haveControl = 1;
+            continue;
+        }
+        pWorkset[workCount++] = descriptor;
         /* default is no error, on error we terminate, so we need only to set in error case! */
         if (event[i].events & EPOLLERR) {
-            ATOMIC_STORE_32BIT(&pWorkset[i]->isInError, &pWorkset[i]->mut_isInError, 1);
+            ATOMIC_STORE_32BIT(&descriptor->isInError, &descriptor->mut_isInError, 1);
         }
     }
-    *numEntries = nfds;
+    *numEntries = workCount;
 
 finalize_it:
     RETiRet;
@@ -294,7 +360,11 @@ static rsRetVal ATTR_NONNULL() poll_Poll(tcpsrv_t *const pThis, int *const piNum
     assert(pThis->evtdata.poll.currfds >= 1);
 
     /* now do the select */
-    *piNumReady = poll(pThis->evtdata.poll.fds, pThis->evtdata.poll.currfds, -1);
+    /* SIGTTIN is the historical cooperative-shutdown wakeup, but poll(2) may
+     * be restarted by the platform signal machinery. Keep a bounded fallback
+     * so the non-epoll input thread always observes global termination. The
+     * control pipe still provides immediate wakeups for reload fences. */
+    *piNumReady = poll(pThis->evtdata.poll.fds, pThis->evtdata.poll.currfds, 1000);
     if (*piNumReady < 0) {
         if (errno == EINTR) {
             DBGPRINTF("tcpsrv received EINTR\n");
@@ -1303,6 +1373,11 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
     cond_initialized = 1;
+    CHKmalloc(pThis->fenceItems = calloc(queue->numWrkr, sizeof(tcpsrv_io_descr_t)));
+    for (unsigned i = 0; i < queue->numWrkr; ++i) {
+        pThis->fenceItems[i].pSrv = pThis;
+        pThis->fenceItems[i].ptrType = NSD_PTR_TYPE_FENCE;
+    }
 
     /* Spawn workers. */
     pThis->currWrkrs = 0;
@@ -1339,6 +1414,8 @@ finalize_it:
         /* Free arrays (they might be NULL if allocation failed early). */
         free(queue->wrkr_tids);
         free(queue->wrkr_data);
+        free(pThis->fenceItems);
+        pThis->fenceItems = NULL;
         queue->wrkr_tids = NULL;
         queue->wrkr_data = NULL;
     }
@@ -1361,6 +1438,11 @@ static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
     }
 
     /* Signal all workers to wake and exit. */
+    if (pThis->fenceSyncInitialized) {
+        pthread_mutex_lock(&pThis->fenceMut);
+        tcpsrvAbortFenceLocked(pThis);
+        pthread_mutex_unlock(&pThis->fenceMut);
+    }
     pthread_mutex_lock(&queue->mut);
     pthread_cond_broadcast(&queue->workRdy);
     pthread_mutex_unlock(&queue->mut);
@@ -1373,11 +1455,12 @@ static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
     /* Free allocated resources. */
     free(queue->wrkr_tids);
     free(queue->wrkr_data);
+    free(pThis->fenceItems);
+    pThis->fenceItems = NULL;
 
     /* Destroy synchronization primitives. */
     pthread_mutex_destroy(&queue->mut);
     pthread_cond_destroy(&queue->workRdy);
-
     queue->wrkr_tids = NULL;
     queue->wrkr_data = NULL;
 }
@@ -1539,6 +1622,11 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
             break;
         }
 
+        if (unlikely(pioDescr->ptrType == NSD_PTR_TYPE_FENCE)) {
+            tcpsrvParkAtFence(pThis);
+            continue;
+        }
+
         /* note: we ignore the result as we cannot do anything against errors in any
          * case. Also, errors are reported inside processWorksetItem().
          */
@@ -1639,12 +1727,29 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
             iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
         }
 
+        if (pThis->evtdata.poll.currfds == pThis->evtdata.poll.maxfds) {
+            struct pollfd *const newfds = realloc(
+                pThis->evtdata.poll.fds, sizeof(struct pollfd) * (pThis->evtdata.poll.maxfds + FDSET_INCREMENT + 1));
+            if (newfds == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            pThis->evtdata.poll.maxfds += FDSET_INCREMENT;
+            pThis->evtdata.poll.fds = newfds;
+        }
+        const uint32_t controlIdx = pThis->evtdata.poll.currfds++;
+        pThis->evtdata.poll.fds[controlIdx].fd = pThis->controlPipe[0];
+        pThis->evtdata.poll.fds[controlIdx].events = POLLIN;
+        pThis->evtdata.poll.fds[controlIdx].revents = 0;
+
         /* zero-out the last fd - space for it is always reserved! */
         assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
         pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
         /* wait for io to become ready */
         CHKiRet(poll_Poll(pThis, &nfds));
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
+        const int haveControl = (pThis->evtdata.poll.fds[controlIdx].revents & POLLIN) != 0;
+        if (haveControl) {
+            drainControlPipe(pThis);
+            --nfds;
+        }
 
         iWorkset = 0;
         for (i = 0; i < pThis->iLstnCurr && nfds; ++i) {
@@ -1699,6 +1804,7 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         if (iWorkset > 0) {
             processWorkset(iWorkset, pWorkset);
         }
+        if (haveControl) tcpsrvActivateFence(pThis);
 
         /* we need to copy back close descriptors */
     finalize_it: /* this is a very special case - this time only we do not exit the function,
@@ -1722,6 +1828,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     int i;
     tcpsrv_io_descr_t *workset[NSPOLL_MAX_EVENTS_PER_WAIT];
     int numEntries;
+    int haveControl;
     rsRetVal localRet;
 
     DBGPRINTF("tcpsrv uses epoll() interface\n");
@@ -1744,7 +1851,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
 
     while (glbl.GetGlobalInputTermState() == 0) {
         numEntries = sizeof(workset) / sizeof(tcpsrv_io_descr_t *);
-        localRet = epoll_Wait(pThis, -1, &numEntries, workset);
+        localRet = epoll_Wait(pThis, -1, &numEntries, workset, &haveControl);
         if (glbl.GetGlobalInputTermState() == 1) {
             break; /* terminate input! */
         }
@@ -1754,17 +1861,22 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
          * not be the right thing, but what is the right thing is really hard at this point...
          * Note: numEntries can be validly 0 in some rare cases (eg spurios wakeup).
          */
-        if (localRet != RS_RET_OK || numEntries == 0) {
+        if (localRet != RS_RET_OK || (numEntries == 0 && !haveControl)) {
             continue;
         }
-
-        processWorkset(numEntries, workset);
+        /* The complete ready batch precedes the fence sentinels by design. */
+        if (numEntries > 0) processWorkset(numEntries, workset);
+        if (haveControl) tcpsrvActivateFence(pThis);
     }
 
     /* Workers can still process listener events queued just before shutdown.
      * Join them before freeing listener descriptors so rearmIoEvent() cannot
      * observe descriptor storage that RunEpoll() is tearing down.
      */
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->fenceReady = 0;
+    tcpsrvAbortFenceLocked(pThis);
+    pthread_mutex_unlock(&pThis->fenceMut);
     stopWrkrPool(pThis);
 
     /* remove the tcp listen sockets from the epoll set */
@@ -1787,6 +1899,8 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     DEFiRet;
+    int controlInitialized = 0;
+    int eventInitialized = 0;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     if (pThis->iLstnCurr == 0) {
@@ -1799,7 +1913,10 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     pThis->workQueue.numWrkr = 1;
 #endif
 
-    eventNotify_init(pThis);
+    CHKiRet(controlNotifyInit(pThis));
+    controlInitialized = 1;
+    CHKiRet(eventNotify_init(pThis));
+    eventInitialized = 1;
     if (pThis->workQueue.numWrkr > 1) {
         iRet = startWrkrPool(pThis);
         if (iRet != RS_RET_OK) {
@@ -1810,6 +1927,9 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
             pThis->workQueue.numWrkr = 1;
         }
     }
+    pthread_mutex_lock(&pThis->fenceMut);
+    pThis->fenceReady = 1;
+    pthread_mutex_unlock(&pThis->fenceMut);
 #if defined(ENABLE_IMTCP_EPOLL)
     iRet = RunEpoll(pThis);
 #else
@@ -1817,10 +1937,16 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     iRet = RunPoll(pThis);
 #endif
 
-    stopWrkrPool(pThis);
-    eventNotify_exit(pThis);
-
 finalize_it:
+    if (controlInitialized) {
+        pthread_mutex_lock(&pThis->fenceMut);
+        pThis->fenceReady = 0;
+        tcpsrvAbortFenceLocked(pThis);
+        pthread_mutex_unlock(&pThis->fenceMut);
+    }
+    stopWrkrPool(pThis);
+    if (eventInitialized) eventNotify_exit(pThis);
+    if (controlInitialized) controlNotifyExit(pThis);
     RETiRet;
 }
 
@@ -1850,6 +1976,10 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
     pThis->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     pThis->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+    pThis->controlPipe[0] = pThis->controlPipe[1] = -1;
+    pthread_mutex_init(&pThis->fenceMut, NULL);
+    pthread_cond_init(&pThis->fenceCond, NULL);
+    pThis->fenceSyncInitialized = 1;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1927,6 +2057,11 @@ BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and C
     free(pThis->ppLstnPort);
     free(pThis->ppioDescrPtr);
     free(pThis->pszOrigin);
+    if (pThis->fenceSyncInitialized) {
+        pthread_cond_destroy(&pThis->fenceCond);
+        pthread_mutex_destroy(&pThis->fenceMut);
+        pThis->fenceSyncInitialized = 0;
+    }
     DESTROY_ATOMIC_HELPER_MUT(pThis->mut_sessions);
 ENDobjDestruct(tcpsrv)
 
@@ -2368,7 +2503,7 @@ static rsRetVal ATTR_NONNULL(1) SetLstnMax(tcpsrv_t *pThis, int iMax) {
 static rsRetVal ATTR_NONNULL(1) SetUseFlowControl(tcpsrv_t *pThis, int bUseFlowControl) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    pThis->bUseFlowControl = bUseFlowControl;
+    tcpsrvApplyFlowControlLive(pThis, bUseFlowControl);
     RETiRet;
 }
 
@@ -2488,6 +2623,9 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetSynBacklog = SetSynBacklog;
     pIf->SetNumWrkr = SetNumWrkr;
     pIf->SetStarvationMaxReads = SetStarvationMaxReads;
+    pIf->RequestFence = tcpsrvRequestFence;
+    pIf->WaitFence = tcpsrvWaitFence;
+    pIf->ReleaseFence = tcpsrvReleaseFence;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

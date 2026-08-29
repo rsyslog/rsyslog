@@ -284,17 +284,29 @@ static rsRetVal requireEveryActiveActionTransfer(const prepareContextV1_t *const
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
+                                      const eModReloadCapability_t sourceCapability,
                                       rsReloadRulesetPlanV1_t **out) {
     prepareContextV1_t prepare = {0};
     rsReloadRulesetPlanV1_t *plan = NULL;
+    size_t modifiedRulesets = 0;
     DEFiRet;
     if (active == NULL || candidate == NULL || report == NULL || out == NULL || *out != NULL) return RS_RET_PARAM_ERROR;
     if (report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
-    CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));
+    if (sourceCapability == eMOD_RELOAD_LIVE_SWAP) {
+        CHKiRet(rsReloadCandidateCheckRulesetImtcpReportV1(candidate, report));
+    } else {
+        CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));
+    }
+    for (size_t i = 0; i < report->entryCount; ++i) {
+        const uintptr_t address = (uintptr_t)(const void *)report->entries + i * report->entryStride;
+        const rsReloadReportEntryV1_t *const entry = (const rsReloadReportEntryV1_t *)(const void *)address;
+        if (entry->objectKind == RS_RELOAD_OBJ_RULESET && entry->diffKind == RS_RELOAD_DIFF_MODIFIED)
+            ++modifiedRulesets;
+    }
     CHKmalloc(plan = calloc(1, sizeof(*plan)));
-    if (report->modifiedCount == 0) {
+    if (modifiedRulesets == 0) {
         *out = plan;
         plan = NULL;
         FINALIZE;
@@ -305,7 +317,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     plan->active = active;
     CHKiRet(rulesetVisitAllActionsV1(active, collectActiveAction, &prepare));
     CHKiRet(rsReloadCandidateVisitRulesetFragmentsV1(candidate, prepareFragment, &prepare));
-    if (plan->count != report->modifiedCount) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    if (plan->count != modifiedRulesets) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     /* The private optimizer may remove unreachable syntax. Do not let that
      * silently retire an active action (and its queue) while the normalized
      * action node is otherwise reported unchanged. Action replacement/removal

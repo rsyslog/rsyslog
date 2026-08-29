@@ -70,6 +70,8 @@ static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
 static modInfo_t *pendingSourceModule = NULL;
 static void *pendingActiveSourceModuleCnf = NULL;
 static void *pendingSourceModuleCnf = NULL;
+static void *pendingModuleReloadState = NULL;
+static int pendingModuleReloadCommitted = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -112,10 +114,21 @@ enum shadowReloadFailurePhase_e {
 };
 static enum shadowReloadFailurePhase_e pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
 
-static void destructPendingSourceModule(void) {
+static rsRetVal destructPendingSourceModule(void) {
+    if (pendingModuleReloadState != NULL) {
+        if (pendingModuleReloadCommitted) {
+            const rsRetVal ret = modReloadRetire(pendingSourceModule, pendingModuleReloadState);
+            if (ret != RS_RET_OK) return ret;
+        } else {
+            modReloadAbort(pendingSourceModule, pendingModuleReloadState);
+        }
+        pendingModuleReloadState = NULL;
+        pendingModuleReloadCommitted = 0;
+    }
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
     pendingSourceModule = NULL;
+    return RS_RET_OK;
 }
 
 static void publishStatus(const int result, const rsReloadReportV1_t *const report) {
@@ -265,7 +278,8 @@ finalize_it:
 void shadowReloadExit(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
-    destructPendingSourceModule();
+    if (destructPendingSourceModule() != RS_RET_OK)
+        LogError(0, RS_RET_ERR, "shadow_reload: module reload retirement remained pending during shutdown");
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -535,6 +549,7 @@ static int stopBeginForTermination(void) {
 }
 
 void shadowReloadBeginRequest(void) {
+    rsRetVal moduleCleanupRet;
     /* This runs in lockstep with bHadHUP before doHUP(). A signal arriving
      * during doHUP() sets this flag again and is retained for the next legacy
      * HUP cycle rather than being cleared while this one completes. */
@@ -556,7 +571,7 @@ void shadowReloadBeginRequest(void) {
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
-    destructPendingSourceModule();
+    moduleCleanupRet = destructPendingSourceModule();
     rsReloadReportDestructV1(&pendingReport);
     rsReloadRulesetPlanDestructV1(&pendingPlan);
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
@@ -568,8 +583,9 @@ void shadowReloadBeginRequest(void) {
     pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
     pendingSourceModuleCapabilityEvaluated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
-    pendingCandidateResult = RS_RET_OK;
-    if (configuredMode != RELOAD_ON_HUP_OFF) {
+    pendingCandidateResult = moduleCleanupRet;
+    if (moduleCleanupRet != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
+    if (configuredMode != RELOAD_ON_HUP_OFF && pendingCandidateResult == RS_RET_OK) {
         pthread_mutex_lock(&statusMut);
         const int haveBaseline = baselineAvailable;
         pthread_mutex_unlock(&statusMut);
@@ -622,15 +638,27 @@ void shadowReloadBeginRequest(void) {
                 }
                 if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
                     configuredMode == RELOAD_ON_HUP_ON && pendingReport->invalidCount == 0) {
-                    pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    const int moduleLive = pendingSourceModuleCapabilityEvaluated &&
+                                           pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP;
+                    pendingCandidateResult =
+                        moduleLive ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
+                                   : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
-                        pendingCandidateResult =
-                            rsReloadRulesetPlanPrepareV1(runConf, pendingCandidate, pendingReport, &pendingPlan);
+                        pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
+                            runConf, pendingCandidate, pendingReport,
+                            moduleLive ? eMOD_RELOAD_LIVE_SWAP : eMOD_RELOAD_RESTART_REQUIRED, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                        if (pendingCandidateResult == RS_RET_OK && moduleLive) {
+                            pendingCandidateResult =
+                                modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
+                                                 pendingSourceModuleCnf, &pendingModuleReloadState);
+                            if (pendingCandidateResult != RS_RET_OK)
+                                pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                        }
                         if (pendingCandidateResult == RS_RET_OK && pendingPlan != NULL &&
-                            rsReloadRulesetPlanCountV1(pendingPlan) != 0) {
+                            (rsReloadRulesetPlanCountV1(pendingPlan) != 0 || pendingModuleReloadState != NULL)) {
                             pendingRulesetGraphBuilder = candidateBuilder;
                             pendingRulesetGraph = candidateGraph;
                             candidateBuilder = NULL;
@@ -841,6 +869,14 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
     pthread_mutex_unlock(&statusMut);
 }
 
+static void publishActivatedGeneration(void *const context) {
+    if (pendingModuleReloadState != NULL) {
+        modReloadCommit(pendingSourceModule, pendingModuleReloadState);
+        pendingModuleReloadCommitted = 1;
+    }
+    publishActivatedGraph(context);
+}
+
 void shadowReloadProcess(void) {
     int terminalResult;
     if (!requestInProgress) {
@@ -857,17 +893,30 @@ void shadowReloadProcess(void) {
         logState("request", "reported_only", "none", "none", pendingCandidateObjects, pendingReport, pendingReportHash);
     } else if (configuredMode == RELOAD_ON_HUP_ON && pendingCandidateResult == RS_RET_OK && pendingReport != NULL &&
                pendingReport->invalidCount == 0 && pendingPlan != NULL) {
-        if (rsReloadRulesetPlanCountV1(pendingPlan) != 0) {
+        if (rsReloadRulesetPlanCountV1(pendingPlan) != 0 || pendingModuleReloadState != NULL) {
             struct timespec deadline;
             reloadCommitSignalGuard_t commitGuard = {0};
             uint64_t pauseUsec = 0;
+            uint64_t inputPauseStartedUsec = 0;
             if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) {
                 pendingCandidateResult = RS_RET_ERR;
             } else {
                 deadline.tv_sec += 5;
-                pendingCandidateResult = rsReloadRulesetPlanActivateV1(
-                    pendingPlan, &deadline, shadowReloadCancelled, NULL, shadowReloadEnterCommit,
-                    shadowReloadLeaveCommit, &commitGuard, publishActivatedGraph, NULL, &pauseUsec);
+                if (pendingModuleReloadState != NULL) {
+                    (void)monotonicUsec(&inputPauseStartedUsec);
+                    pendingCandidateResult = modReloadQuiesce(pendingSourceModule, pendingModuleReloadState, &deadline);
+                }
+                if (pendingCandidateResult == RS_RET_OK)
+                    pendingCandidateResult = rsReloadRulesetPlanActivateV1(
+                        pendingPlan, &deadline, shadowReloadCancelled, NULL, shadowReloadEnterCommit,
+                        shadowReloadLeaveCommit, &commitGuard, publishActivatedGeneration, NULL, &pauseUsec);
+                if (pendingModuleReloadState != NULL)
+                    (void)modReloadResume(pendingSourceModule, pendingModuleReloadState);
+                if (inputPauseStartedUsec != 0) {
+                    uint64_t inputPauseFinishedUsec;
+                    if (monotonicUsec(&inputPauseFinishedUsec) && inputPauseFinishedUsec >= inputPauseStartedUsec)
+                        pauseUsec = inputPauseFinishedUsec - inputPauseStartedUsec;
+                }
                 accountQuiescePause(pauseUsec);
             }
         }
@@ -875,9 +924,12 @@ void shadowReloadProcess(void) {
             accountDuration();
             requestInProgress = 0;
             pendingGauge = signalRequestPending != 0;
-            if (rsReloadRulesetPlanCountV1(pendingPlan) == 0) publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
-            logState("request", rsReloadRulesetPlanCountV1(pendingPlan) == 0 ? "reported_only" : "activated", "none",
-                     "none", pendingCandidateObjects, pendingReport, pendingReportHash);
+            if (rsReloadRulesetPlanCountV1(pendingPlan) == 0 && !pendingModuleReloadCommitted)
+                publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
+            logState("request",
+                     rsReloadRulesetPlanCountV1(pendingPlan) == 0 && !pendingModuleReloadCommitted ? "reported_only"
+                                                                                                   : "activated",
+                     "none", "none", pendingCandidateObjects, pendingReport, pendingReportHash);
         } else {
             pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
             goto rejected;
@@ -917,6 +969,7 @@ void shadowReloadProcess(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&pendingRulesetGraphBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
-    destructPendingSourceModule();
+    if (destructPendingSourceModule() != RS_RET_OK)
+        LogError(0, RS_RET_ERR, "shadow_reload: module reload retirement remains pending for retry");
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }

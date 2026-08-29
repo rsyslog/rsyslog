@@ -31,6 +31,7 @@
 static int constructionFailed;
 static int parserResult = 1;
 static rsRetVal parserCaptureError = RS_RET_OK;
+static struct nvlst *parameter(const char *name, const char *value);
 
 /* Parser-facing stubs let the unit drive classification without bringing up
  * either frontend. */
@@ -91,6 +92,28 @@ struct cnfobj *cnfobjNew(enum cnfobjType type, struct nvlst *list) {
     return object;
 }
 
+static rsRetVal imtcpGateResult(const rsReloadCandidate_t *const candidate,
+                                const rsReloadObjectKind_t kind,
+                                const rsReloadDiffKind_t diff,
+                                const char *const identity) {
+    rsReloadReportEntryV1_t entry = {.objectKind = kind, .diffKind = diff, .identity = (char *)identity};
+    rsReloadReportV1_t report = {.version = RS_RELOAD_REPORT_V1,
+                                 .structSize = sizeof(report),
+                                 .entryCount = 1,
+                                 .entryStride = sizeof(entry),
+                                 .entries = &entry};
+    return rsReloadCandidateCheckRulesetImtcpReportV1(candidate, &report);
+}
+
+static struct nvlst *parameterPair(const char *const firstName,
+                                   const char *const firstValue,
+                                   const char *const secondName,
+                                   const char *const secondValue) {
+    struct nvlst *const first = parameter(firstName, firstValue);
+    if (first != NULL) first->next = parameter(secondName, secondValue);
+    return first;
+}
+
 struct nvlst *nvlstNewStr(es_str_t *value) {
     struct nvlst *node = calloc(1, sizeof(*node));
     if (node != NULL) {
@@ -99,8 +122,6 @@ struct nvlst *nvlstNewStr(es_str_t *value) {
     }
     return node;
 }
-
-static struct nvlst *parameter(const char *name, const char *value);
 
 void nvlstDestruct(struct nvlst *list) {
     while (list != NULL) {
@@ -873,6 +894,28 @@ int main(void) {
     CHECK(!constructionFailed);
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_CONF_PARSE_ERROR);
     CHECK(builder == NULL);
+    rsReloadCandidateDestruct(&candidate);
+
+    /* The broadened materializer gate is authorized only for candidate-side
+     * imtcp objects already classified LIVE_SWAP. Other modules/inputs and
+     * every add/remove operation must remain fail-closed. */
+    candidate = calloc(1, sizeof(*candidate));
+    CHECK(candidate != NULL);
+    addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
+    addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "omfile"), NULL));
+    addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "tcp1"), NULL));
+    addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "name", "udp1"), NULL));
+    CHECK(!constructionFailed);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:imtcp") == RS_RET_OK);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:tcp1") == RS_RET_OK);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:omfile") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_MODIFIED, "input:udp1") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_ADDED, "module:imtcp") ==
+          RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:tcp1") ==
+          RS_RET_NOT_IMPLEMENTED);
     rsReloadCandidateDestruct(&candidate);
     puts("reload candidate graph tests passed");
     return 0;
