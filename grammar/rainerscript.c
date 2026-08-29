@@ -5185,6 +5185,7 @@ struct cnfstmt *cnfstmtNew(unsigned s_type) {
     struct cnfstmt *cnfstmt;
     if ((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
         cnfstmt->nodetype = s_type;
+        cnfstmt->flags = 0;
         cnfstmt->printable = NULL;
         cnfstmt->next = NULL;
         if (s_type == S_IF) {
@@ -5219,7 +5220,7 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             cnfexprDestruct(stmt->d.s_call_ind.expr);
             break;
         case S_ACT:
-            actionDestruct(stmt->d.act);
+            if ((stmt->flags & CNFSTMT_FLAG_BORROWED_ACTION) == 0) actionDestruct(stmt->d.act);
             break;
         case S_RELOAD_ACT:
             nvlstDestruct(stmt->d.reload_action);

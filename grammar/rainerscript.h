@@ -132,8 +132,13 @@ enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char *cnfFiltType2str(const enum cnfFiltType filttype);
 
 
+/* A prepared reload script may borrow an already-active action. Such a node
+ * owns its statement storage but must never destruct the shared action. */
+#define CNFSTMT_FLAG_BORROWED_ACTION 0x0001U
+
 struct cnfstmt {
     unsigned nodetype;
+    unsigned flags;
     struct cnfstmt *next;
     uchar *printable; /* printable text for debugging */
     union {
