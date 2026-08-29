@@ -590,7 +590,7 @@ static rsRetVal applySecureDefaultsToModuleConfig(modConfData_t *const modConf) 
                                              getEffectiveModuleStreamDriver(modConf), "imtcp module");
 }
 
-static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst, modConfData_t *const modConf) {
+static rsRetVal applySecureDefaultsToInstanceConfig(instanceConf_t *const inst, const modConfData_t *const modConf) {
     return applySecureDefaultsToStreamDriver(modConf->pConf, &inst->iStrmDrvrMode, inst->bStrmDrvrModeSet,
                                              getEffectiveInstanceStreamDriver(inst, modConf), "imtcp input");
 }
@@ -991,25 +991,16 @@ finalize_it:
 }
 
 
-BEGINnewInpInst
-    struct cnfparamvals *pvals;
-    instanceConf_t *inst;
+/* Apply the parsed input parameter block to an already initialized, owned
+ * instance.  The caller controls whether that instance is detached or linked
+ * into the normal load configuration. */
+static rsRetVal applyInputParams(const modConfData_t *const moduleConfig,
+                                 instanceConf_t *const inst,
+                                 struct cnfparamvals *const pvals) {
     int i;
-    CODESTARTnewInpInst;
-    DBGPRINTF("newInpInst (imtcp)\n");
+    DEFiRet;
 
-    pvals = nvlstGetParams(lst, &inppblk, NULL);
-    if (pvals == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: required parameter are missing\n");
-        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-    }
-
-    if (Debug) {
-        dbgprintf("input param blk in imtcp:\n");
-        cnfparamsPrint(&inppblk, pvals);
-    }
-
-    CHKiRet(createInstance(&inst));
+    if (moduleConfig == NULL || inst == NULL || inst->cnf_params == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
 
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
@@ -1162,13 +1153,38 @@ BEGINnewInpInst
             inst->ratelimitBurst = 10000;
         }
     }
-    CHKiRet(applySecureDefaultsToInstanceConfig(inst, loadModConf));
-    CHKiRet(applySecureDefaultsToZstdWindow(inst, loadModConf));
-    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, loadModConf),
-                                     getEffectiveInstanceAuthMode(inst, loadModConf));
+    CHKiRet(applySecureDefaultsToInstanceConfig(inst, moduleConfig));
+    CHKiRet(applySecureDefaultsToZstdWindow(inst, moduleConfig));
+    warnIfInsecureListenerConfigured(inst->iStrmDrvrMode, getEffectiveInstanceStreamDriver(inst, moduleConfig),
+                                     getEffectiveInstanceAuthMode(inst, moduleConfig));
 
 finalize_it:
-    CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
+    RETiRet;
+}
+
+
+BEGINnewInpInst
+    struct cnfparamvals *pvals = NULL;
+    instanceConf_t *inst = NULL;
+    CODESTARTnewInpInst;
+    DBGPRINTF("newInpInst (imtcp)\n");
+
+    pvals = nvlstGetParams(lst, &inppblk, NULL);
+    if (pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: required parameter are missing\n");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+
+    if (Debug) {
+        dbgprintf("input param blk in imtcp:\n");
+        cnfparamsPrint(&inppblk, pvals);
+    }
+
+    CHKiRet(createInstance(&inst));
+    CHKiRet(applyInputParams(loadModConf, inst, pvals));
+
+finalize_it:
+    CODE_STD_FINALIZERnewInpInst if (pvals != NULL) cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 
 
@@ -1183,9 +1199,140 @@ BEGINbeginCnfLoad
 ENDbeginCnfLoad
 
 
+/* Apply a parsed module parameter block to the explicitly supplied
+ * configuration generation.  No load-list selection happens here. */
+static rsRetVal applyModuleParams(modConfData_t *const moduleConfig, struct cnfparamvals *const pvals) {
+    int i;
+    DEFiRet;
+
+    if (moduleConfig == NULL || pvals == NULL) return RS_RET_PARAM_ERROR;
+
+    for (i = 0; i < modpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
+            moduleConfig->bUseFlowControl = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
+            moduleConfig->bDisableLFDelim = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
+            moduleConfig->discardTruncatedMsg = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
+            moduleConfig->bSuppOctetFram = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
+            moduleConfig->bEmitMsgOnClose = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionopen")) {
+            moduleConfig->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
+            moduleConfig->iAddtlFrameDelim = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
+            const int max = (int)pvals[i].val.d.n;
+            CHKiRet(validateMaxFrameSize(max));
+            moduleConfig->maxFrameSize = max;
+        } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
+            moduleConfig->iTCPSessMax = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
+            moduleConfig->starvationMaxReads = (unsigned)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners") ||
+                   !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
+            moduleConfig->iTCPLstnMax = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "workerthreads")) {
+            moduleConfig->numWrkr = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive")) {
+            moduleConfig->bKeepAlive = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
+            moduleConfig->iKeepAliveProbes = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.time")) {
+            moduleConfig->iKeepAliveTime = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
+            moduleConfig->iKeepAliveIntvl = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
+            CHKmalloc(moduleConfig->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
+            CHKmalloc(moduleConfig->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
+            moduleConfig->iStrmDrvrMode = (int)pvals[i].val.d.n;
+            moduleConfig->bStrmDrvrModeSet = 1;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
+            moduleConfig->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
+            moduleConfig->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
+            if (pvals[i].val.d.n >= 2) {
+                moduleConfig->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
+            } else {
+                parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
+            moduleConfig->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
+            CHKmalloc(moduleConfig->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+        } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKiRet(net.AddPermittedPeer(&moduleConfig->pPermPeersRoot, peer));
+                free(peer);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
+            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            moduleConfig->bAllowedSendersSet = 1;
+            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                CHKmalloc(sender);
+                const rsRetVal entryRet = net.addAllowedSenderEntry(&moduleConfig->pAllowedSendersRoot,
+                                                                    &moduleConfig->pAllowedSendersLast, sender);
+                free(sender);
+                CHKiRet(entryRet);
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
+            moduleConfig->bPreserveCase = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.mode")) {
+            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &moduleConfig->compressionMode));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
+            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &moduleConfig->compressionDriver));
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
+            moduleConfig->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
+            moduleConfig->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
+            moduleConfig->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
+            moduleConfig->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
+        } else {
+            dbgprintf(
+                "imtcp: program error, non-handled "
+                "param '%s' in beginCnfLoad\n",
+                modpblk.descr[i].name);
+        }
+    }
+
+    /* remove all of our legacy handlers, as they can not used in addition
+     * the the new-style config method.
+     */
+    moduleConfig->configSetViaV2Method = 1;
+    CHKiRet(applySecureDefaultsToModuleConfig(moduleConfig));
+    warnIfInsecureListenerConfigured(moduleConfig->iStrmDrvrMode, getEffectiveModuleStreamDriver(moduleConfig),
+                                     moduleConfig->pszStrmDrvrAuthMode);
+
+finalize_it:
+    RETiRet;
+}
+
+
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
-    int i;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -1200,125 +1347,10 @@ BEGINsetModCnf
         cnfparamsPrint(&modpblk, pvals);
     }
 
-    for (i = 0; i < modpblk.nParams; ++i) {
-        if (!pvals[i].bUsed) continue;
-        if (!strcmp(modpblk.descr[i].name, "flowcontrol")) {
-            loadModConf->bUseFlowControl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
-            loadModConf->bDisableLFDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
-            loadModConf->discardTruncatedMsg = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
-            loadModConf->bSuppOctetFram = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
-            loadModConf->bEmitMsgOnClose = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "notifyonconnectionopen")) {
-            loadModConf->bEmitMsgOnOpen = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
-            loadModConf->iAddtlFrameDelim = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "maxframesize")) {
-            const int max = (int)pvals[i].val.d.n;
-            CHKiRet(validateMaxFrameSize(max));
-            loadModConf->maxFrameSize = max;
-        } else if (!strcmp(modpblk.descr[i].name, "maxsessions")) {
-            loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
-            loadModConf->starvationMaxReads = (unsigned)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners") ||
-                   !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
-            loadModConf->iTCPLstnMax = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "workerthreads")) {
-            loadModConf->numWrkr = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive")) {
-            loadModConf->bKeepAlive = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
-            loadModConf->iKeepAliveProbes = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.time")) {
-            loadModConf->iKeepAliveTime = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
-            loadModConf->iKeepAliveIntvl = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
-            CHKmalloc(loadModConf->gnutlsPriorityString = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
-            CHKmalloc(loadModConf->pszNetworkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
-            loadModConf->iStrmDrvrMode = (int)pvals[i].val.d.n;
-            loadModConf->bStrmDrvrModeSet = 1;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
-            loadModConf->iStrmDrvrExtendedCertCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
-            loadModConf->iStrmDrvrSANPreference = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
-            if (pvals[i].val.d.n >= 2) {
-                loadModConf->iStrmTlsVerifyDepth = (int)pvals[i].val.d.n;
-            } else {
-                parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
-            loadModConf->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
-            CHKmalloc(loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-            CHKmalloc(loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCRLFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
-            CHKmalloc(loadModConf->pszStrmDrvrCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
-            CHKmalloc(loadModConf->pszStrmDrvrName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(modpblk.descr[i].name, "permittedpeer")) {
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *const peer = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
-                free(peer);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
-            if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
-                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-            loadModConf->bAllowedSendersSet = 1;
-            for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
-                uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-                CHKmalloc(sender);
-                const rsRetVal entryRet = net.addAllowedSenderEntry(&loadModConf->pAllowedSendersRoot,
-                                                                    &loadModConf->pAllowedSendersLast, sender);
-                free(sender);
-                CHKiRet(entryRet);
-            }
-        } else if (!strcmp(modpblk.descr[i].name, "preservecase")) {
-            loadModConf->bPreserveCase = (int)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.mode")) {
-            CHKiRet(parseCompressionMode(pvals[i].val.d.estr, &loadModConf->compressionMode));
-        } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
-            CHKiRet(parseCompressionDriver(pvals[i].val.d.estr, &loadModConf->compressionDriver));
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxexpansionratio")) {
-            loadModConf->compressionMaxExpansionRatio = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxdecompressedbytesperreceive")) {
-            loadModConf->compressionMaxDecompressedBytesPerReceive = (uint64_t)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "compression.maxtotalzstdwindowbytes")) {
-            loadModConf->compressionMaxTotalZstdWindowBytes = (uint64_t)pvals[i].val.d.n;
-            loadModConf->compressionMaxTotalZstdWindowBytesSet = RSTRUE;
-        } else {
-            dbgprintf(
-                "imtcp: program error, non-handled "
-                "param '%s' in beginCnfLoad\n",
-                modpblk.descr[i].name);
-        }
-    }
-
-    /* remove all of our legacy handlers, as they can not used in addition
-     * the the new-style config method.
-     */
+    CHKiRet(applyModuleParams(loadModConf, pvals));
+    /* New-style module configuration disables the legacy handlers only after
+     * the explicit generation has accepted the complete parameter block. */
     bLegacyCnfModGlobalsPermitted = 0;
-    loadModConf->configSetViaV2Method = 1;
-    CHKiRet(applySecureDefaultsToModuleConfig(loadModConf));
-    warnIfInsecureListenerConfigured(loadModConf->iStrmDrvrMode, getEffectiveModuleStreamDriver(loadModConf),
-                                     loadModConf->pszStrmDrvrAuthMode);
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
