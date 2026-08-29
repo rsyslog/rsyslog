@@ -1747,6 +1747,31 @@ static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instance
     return NULL;
 }
 
+static int reloadEndpointConfigEqual(const instanceConf_t *const left,
+                                     const modConfData_t *const leftModule,
+                                     const instanceConf_t *const right,
+                                     const modConfData_t *const rightModule) {
+    char *leftKey = NULL;
+    char *rightKey = NULL;
+    const rsRetVal leftRet = endpointKeyBuild(left->cnf_params, reloadEffectiveNamespace(left, leftModule), &leftKey);
+    const rsRetVal rightRet =
+        endpointKeyBuild(right->cnf_params, reloadEffectiveNamespace(right, rightModule), &rightKey);
+    int equal = 0;
+
+    if (leftRet == RS_RET_OK && rightRet == RS_RET_OK) {
+        equal = !strcmp(leftKey, rightKey);
+    } else if (leftRet == RS_RET_NOT_IMPLEMENTED && rightRet == RS_RET_NOT_IMPLEMENTED) {
+        equal = reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
+                                  reloadEffectiveNamespace(right, rightModule)) &&
+                reloadUStringEqual(left->cnf_params->pszPort, right->cnf_params->pszPort) &&
+                reloadUStringEqual(left->cnf_params->pszAddr, right->cnf_params->pszAddr) &&
+                reloadUStringEqual(left->cnf_params->pszLstnPortFileName, right->cnf_params->pszLstnPortFileName);
+    }
+    free(leftKey);
+    free(rightKey);
+    return equal;
+}
+
 static int reloadInstanceEqual(const instanceConf_t *const left,
                                const modConfData_t *const leftModule,
                                const instanceConf_t *const right,
@@ -1778,9 +1803,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                 right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            (ignoreNewSessionFields || left->bPreserveCase == right->bPreserveCase) &&
-           left->iSynBacklog == right->iSynBacklog &&
-           reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
-                             reloadEffectiveNamespace(right, rightModule)) &&
+           left->iSynBacklog == right->iSynBacklog && reloadEndpointConfigEqual(left, leftModule, right, rightModule) &&
            reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
                               reloadEffectiveString(right->pszStrmDrvrName, rightModule->pszStrmDrvrName)) &&
            left->iStrmDrvrMode == right->iStrmDrvrMode &&
@@ -1813,10 +1836,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
              left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
              left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet)) &&
-           reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
-           reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
-           reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&

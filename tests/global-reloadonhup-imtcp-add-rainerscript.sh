@@ -2,7 +2,9 @@
 # Verify that a named imtcp endpoint can be prepared and published by HUP.
 # The original TCP session remains open across activation. A connection to the
 # newly configured fixed port plus visible records from both persistent sockets
-# are the publication and session-retention oracles. Removal must stop new
+# are the publication and session-retention oracles. Rewriting that port with
+# leading zeroes proves endpoint matching and effective comparison use the same
+# canonical socket identity. Removal must stop new
 # accepts while the already established session keeps delivering. After that
 # session closes, bounded HUP/status retries prove asynchronous drain retirement
 # completes without changing the activated generation. The testbench-selected
@@ -21,7 +23,7 @@ exec 9<>"/dev/tcp/127.0.0.1/$TCPFLOOD_PORT"
 cp "$CONF_FILE" "$CONF_FILE.base"
 ADDED_PORT="$(get_free_port)"
 
-sed '/name="first"/a input(type="imtcp" port="'$ADDED_PORT'" name="second" ruleset="main")' \
+sed '/name="first"/a input(type="imtcp" address="127.0.0.1" port="'$ADDED_PORT'" name="second" ruleset="main")' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -31,21 +33,37 @@ if [[ "$reload_status" != *"result=activated active_generation=2"* ||
 	echo "FAIL: added endpoint was not activated: $reload_status"
 	error_exit 1
 fi
-cp "$CONF_FILE" "$CONF_FILE.added"
 exec 8<>"/dev/tcp/127.0.0.1/$ADDED_PORT"
 if ! printf '<167>Mar 10 01:00:00 host app: add-first\n' >&9; then error_exit 1; fi
 if ! printf '<167>Mar 10 01:00:00 host app: add-second\n' >&8; then error_exit 1; fi
 wait_content 'add-first' "$RSYSLOG_OUT_LOG"
 wait_content 'add-second' "$RSYSLOG_OUT_LOG"
 
+# The numeric port spelling changes, but its canonical endpoint tuple and all
+# effective listener/session settings remain identical. The existing runtime
+# and both established sessions must therefore be reused.
+sed 's/port="'$ADDED_PORT'"/port="0'$ADDED_PORT'"/' "$CONF_FILE" >"$CONF_FILE.candidate"
+mv "$CONF_FILE.candidate" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=3"* ||
+      "$reload_status" != *"added=0 removed=0 modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=reuse"* ]]; then
+	echo "FAIL: canonical endpoint spelling was not reused: $reload_status"
+	error_exit 1
+fi
+if ! printf '<167>Mar 10 01:00:00 host app: canonical-endpoint-session\n' >&8; then error_exit 1; fi
+wait_content 'canonical-endpoint-session' "$RSYSLOG_OUT_LOG"
+cp "$CONF_FILE" "$CONF_FILE.added"
+
 # Preparing another endpoint on imdiag's already-bound loopback port must fail
-# before publication. Generation two and both established imtcp sessions are
+# before publication. Generation three and both established imtcp sessions are
 # the rollback oracle; no timing or external helper listener is involved.
 sed '/name="second"/a input(type="imtcp" address="127.0.0.1" port="'$IMDIAG_PORT'" name="bind-conflict" ruleset="main")' \
 	"$CONF_FILE.added" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activation_failed active_generation=2"* ||
+if [[ "$reload_status" != *"result=activation_failed active_generation=3"* ||
       "$reload_status" != *"added=1"* ]]; then
 	echo "FAIL: listener bind failure did not roll back prepare: $reload_status"
 	error_exit 1
@@ -56,7 +74,7 @@ wait_content 'add-survives-bind-failure' "$RSYSLOG_OUT_LOG"
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3"* ||
+if [[ "$reload_status" != *"result=activated active_generation=4"* ||
       "$reload_status" != *"removed=1"* ||
       "$reload_status" != *"source_capability=drain_replace"* ]]; then
 	echo "FAIL: endpoint removal was not activated: $reload_status"
@@ -73,13 +91,13 @@ exec 8>&-
 for ((retire_try = 1; retire_try <= 20; ++retire_try)); do
 	issue_HUP
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=reported_only active_generation=3"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activation_failed active_generation=3"* ]]; then
+	if [[ "$reload_status" == *"result=reported_only active_generation=4"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activation_failed active_generation=4"* ]]; then
 		echo "FAIL: unexpected status while retiring drained endpoint: $reload_status"
 		error_exit 1
 	fi
 done
-if [[ "$reload_status" != *"result=reported_only active_generation=3"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=4"* ]]; then
 	echo "FAIL: removed endpoint did not finish retirement after $((retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi
