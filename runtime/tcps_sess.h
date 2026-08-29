@@ -92,6 +92,28 @@ struct tcps_sess_s {
         size_t zstd_frame_header_len;
         sbool zstd_frame_header_processed;
         uint64_t zstd_window_reservation;
+
+        /* Appended to preserve the offsets of the public v4 instance layout.
+         * Frozen at accept time and borrowed from the listener generation,
+         * which must outlive every session accepted from it. Listener counters,
+         * rate limiting, and zstd window accounting intentionally remain
+         * listener-owned runtime state. */
+        ruleset_t *pRuleset;
+        prop_t *pInputName;
+        const uchar *pszInputName;
+        uchar dfltTZ[8];
+        sbool bMultiLine;
+        sbool bDisableLFDelim;
+        int addtlFrameDelim;
+        int maxFrameSize;
+        int discardTruncatedMsg;
+        sbool bUseFlowControl;
+        const uchar *pszOrigin;
+        int iDrvrMode;
+#ifdef FEATURE_REGEXP
+        sbool bHasStartRegex;
+        regex_t *pStartRegex;
+#endif
 };
 
 
