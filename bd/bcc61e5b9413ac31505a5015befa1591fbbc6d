@@ -1,0 +1,24 @@
+plugins/imtcp/imtcp.c
+  s_f2c089be484e12::t_f080f1cbf83b17 1746-1770
+  s_f2c089be484e12::t_1f72751b7bc333 1802
+tests/global-reloadonhup-imtcp-add-yaml.sh
+  s_f2c089be484e12::t_3831ca544ec0fa 4-5,33,51-54,58-69,86-87,92
+tests/global-reloadonhup-imtcp-add-rainerscript.sh
+  s_f2c089be484e12::t_3831ca544ec0fa 5-7,26,42-58,60,66,77,94-95,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bdbcc61e5b9413ac31505a5015befa1591fbbc6d",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
