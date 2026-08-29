@@ -16,6 +16,7 @@ struct cnfobj;
 struct cnfstmt;
 struct nvlst;
 typedef struct rsReloadCandidate_s rsReloadCandidate_t;
+typedef rsRetVal (*rsReloadCandidateObjectVisitorV1_t)(const struct cnfobj *object, size_t parseOrdinal, void *context);
 typedef rsRetVal (*rsReloadCandidateRulesetFragmentVisitorV1_t)(const char *canonicalIdentity,
                                                                 const struct cnfstmt *fragment,
                                                                 int firstForCanonicalIdentity,
@@ -25,6 +26,11 @@ typedef rsRetVal (*rsReloadCandidateRulesetFragmentVisitorV1_t)(const char *cano
 rsRetVal rsReloadCandidateParse(const char *path, rsReloadCandidate_t **ppCandidate);
 void rsReloadCandidateDestruct(rsReloadCandidate_t **ppCandidate);
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
+/* Objects are borrowed for the callback only and retain frontend parse order.
+ * The visitor must not mutate, destruct, or retain them. */
+rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
+                                         rsReloadCandidateObjectVisitorV1_t visitor,
+                                         void *context);
 /* Identity and fragment are borrowed for the callback only. The visitor must
  * not mutate or retain them. Fragments are visited in effective parse order. */
 rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *candidate,

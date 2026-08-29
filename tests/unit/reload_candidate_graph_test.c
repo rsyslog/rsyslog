@@ -317,6 +317,22 @@ static const rsReloadNormalizedNodeV1_t *findObserved(const observed_t *observed
     return NULL;
 }
 
+typedef struct objectObserved_s {
+    enum cnfobjType types[8];
+    size_t ordinals[8];
+    size_t count;
+    size_t failAt;
+} objectObserved_t;
+
+static rsRetVal observeObject(const struct cnfobj *const object, const size_t parseOrdinal, void *const context) {
+    objectObserved_t *const observed = context;
+
+    if (observed->count >= sizeof(observed->types) / sizeof(observed->types[0])) return RS_RET_OUT_OF_MEMORY;
+    observed->types[observed->count] = object->objType;
+    observed->ordinals[observed->count++] = parseOrdinal;
+    return parseOrdinal == observed->failAt ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
+}
+
 int main(void) {
     rsReloadCandidate_t *candidate = calloc(1, sizeof(*candidate));
     rsReloadNormalizedGraphBuilderV1_t *builder = NULL;
@@ -385,6 +401,20 @@ int main(void) {
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     CHECK(!constructionFailed);
+    {
+        objectObserved_t objectObserved = {.failAt = SIZE_MAX};
+        objectObserved_t failedObserved = {.failAt = 2};
+
+        CHECK(rsReloadCandidateVisitObjectsV1(NULL, observeObject, &objectObserved) == RS_RET_PARAM_ERROR);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, NULL, &objectObserved) == RS_RET_PARAM_ERROR);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &objectObserved) == RS_RET_OK);
+        CHECK(objectObserved.count == 6);
+        CHECK(objectObserved.types[0] == CNFOBJ_GLOBAL && objectObserved.ordinals[0] == 0);
+        CHECK(objectObserved.types[1] == CNFOBJ_RULESET && objectObserved.ordinals[1] == 1);
+        CHECK(objectObserved.types[5] == CNFOBJ_INPUT && objectObserved.ordinals[5] == 5);
+        CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &failedObserved) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(failedObserved.count == 3);
+    }
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
     CHECK(graph.enumerate(graph.context, observe, &observed) == RS_RET_OK);

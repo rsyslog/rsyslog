@@ -1445,6 +1445,22 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) 
     return candidate == NULL ? 0 : candidate->objectCount;
 }
 
+rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *const candidate,
+                                         const rsReloadCandidateObjectVisitorV1_t visitor,
+                                         void *const context) {
+    const rsReloadCandidateObject_t *entry;
+    size_t ordinal = 0;
+    rsRetVal ret;
+
+    if (candidate == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        ret = visitor(entry->object, ordinal, context);
+        if (ret != RS_RET_OK) return ret;
+        ++ordinal;
+    }
+    return RS_RET_OK;
+}
+
 typedef struct visitedRulesetIdentity_s {
     char *identity;
     int syntheticDefault;
