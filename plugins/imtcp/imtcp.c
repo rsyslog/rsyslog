@@ -110,8 +110,9 @@ static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
     int printed;
     size_t required;
 
-    if (key == NULL || *key != NULL || params->pszLstnPortFileName != NULL || *port == '\0')
-        return RS_RET_NOT_IMPLEMENTED;
+    if (key == NULL || *key != NULL) return RS_RET_PARAM_ERROR;
+    if (params->pszLstnPortFileName != NULL) return RS_RET_NOT_IMPLEMENTED;
+    if (*port == '\0') return RS_RET_PARAM_ERROR;
     errno = 0;
     numericPort = strtoul(port, &end, 10);
     if (errno != 0 || end == port || *end != '\0' || numericPort == 0 || numericPort > UINT16_MAX)
@@ -743,25 +744,44 @@ static void initInstanceDefaults(instanceConf_t *const inst, const modConfData_t
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
-static rsRetVal createInstance(instanceConf_t **pinst) {
+/* Allocate an owned input configuration without touching loadModConf or
+ * appending it to a live parse tree. Candidate lowering uses this boundary;
+ * callers own the result until they explicitly append or destroy it. */
+static rsRetVal createDetachedInstance(const modConfData_t *const moduleConfig, instanceConf_t **const pinst) {
     instanceConf_t *inst = NULL;
 
     DEFiRet;
+    if (moduleConfig == NULL || pinst == NULL || *pinst != NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     CHKmalloc(inst = (instanceConf_t *)calloc(1, sizeof(instanceConf_t)));
     CHKmalloc(inst->cnf_params = (tcpLstnParams_t *)calloc(1, sizeof(tcpLstnParams_t)));
-    initInstanceDefaults(inst, loadModConf);
+    initInstanceDefaults(inst, moduleConfig);
 
-    /* node created, let's add to config */
-    if (loadModConf->tail == NULL) {
+    *pinst = inst;
+    inst = NULL;
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (inst != NULL) free(inst->cnf_params);
+        free(inst);
+    }
+    RETiRet;
+}
+
+static rsRetVal createInstance(instanceConf_t **const pinst) {
+    instanceConf_t *inst = NULL;
+    DEFiRet;
+
+    if (loadModConf == NULL) return RS_RET_PARAM_ERROR;
+    CHKiRet(createDetachedInstance(loadModConf, &inst));
+    if (loadModConf->tail == NULL)
         loadModConf->tail = loadModConf->root = inst;
-    } else {
+    else {
         loadModConf->tail->next = inst;
         loadModConf->tail = inst;
     }
-
     *pinst = inst;
+    inst = NULL;
 finalize_it:
-    if (iRet != RS_RET_OK) {
+    if (inst != NULL) {
         free(inst->cnf_params);
         free(inst);
     }
