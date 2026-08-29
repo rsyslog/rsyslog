@@ -62,6 +62,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "atomic.h"
+#include "reload-candidate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -1403,6 +1404,13 @@ void cnfobjDestruct(struct cnfobj *o) {
         objlstDestruct(o->subobjs);
         free(o);
     }
+}
+
+void cnfobjDestructAll(struct cnfobj *const o) {
+    if (o == NULL) return;
+    cnfstmtDestructLst(o->script);
+    o->script = NULL;
+    cnfobjDestruct(o);
 }
 
 void cnfobjPrint(struct cnfobj *o) {
@@ -4665,12 +4673,15 @@ static void cnffuncDestruct(struct cnffunc *func) {
         cnfexprDestruct(func->expr[i]);
     }
 
-    /* some functions require special destruction */
-    char *cstr = es_str2cstr(func->fname, NULL);
-    struct scriptFunct *foundFunc = searchModList(cstr);
-    free(cstr);
-    if (foundFunc && foundFunc->destruct != NULL) {
-        foundFunc->destruct(func);
+    /* Capture-only functions were never initialized and must not call module
+     * destructors while a rejected candidate is released. */
+    if (func->fPtr != NULL) {
+        char *cstr = es_str2cstr(func->fname, NULL);
+        struct scriptFunct *foundFunc = searchModList(cstr);
+        free(cstr);
+        if (foundFunc && foundFunc->destruct != NULL) {
+            foundFunc->destruct(func);
+        }
     }
 
     if (func->destructable_funcdata) {
@@ -5177,8 +5188,6 @@ static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr);
-
 /* delete a single stmt */
 static void cnfstmtDestruct(struct cnfstmt *stmt) {
     switch (stmt->nodetype) {
@@ -5193,6 +5202,9 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             break;
         case S_ACT:
             actionDestruct(stmt->d.act);
+            break;
+        case S_RELOAD_ACT:
+            nvlstDestruct(stmt->d.reload_action);
             break;
         case S_IF:
             cnfexprDestruct(stmt->d.s_if.expr);
@@ -5218,10 +5230,16 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
             cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
             break;
+        case S_RELOAD_PRIFILT:
+            cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
+            break;
         case S_PROPFILT:
             msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
             if (stmt->d.s_propfilt.regex_cache != NULL) rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
             if (stmt->d.s_propfilt.pCSCompValue != NULL) cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+            cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+            break;
+        case S_RELOAD_PROPFILT:
             cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
             break;
         case S_RELOAD_LOOKUP_TABLE:
@@ -5259,10 +5277,25 @@ struct cnfitr *cnfNewIterator(char *var, struct cnfexpr *collection) {
     return itr;
 }
 
-static void cnfIteratorDestruct(struct cnfitr *itr) {
+void cnfIteratorDestruct(struct cnfitr *itr) {
     free(itr->var);
     if (itr->collection != NULL) cnfexprDestruct(itr->collection);
     free(itr);
+}
+
+void cnfarrayDestruct(struct cnfarray *const ar) {
+    if (ar == NULL) return;
+    cnfarrayContentDestruct(ar);
+    free(ar);
+}
+
+void cnffparamlstDestruct(struct cnffparamlst *params) {
+    while (params != NULL) {
+        struct cnffparamlst *const next = params->next;
+        cnfexprDestruct(params->expr);
+        free(params);
+        params = next;
+    }
 }
 
 struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) {
@@ -5396,6 +5429,10 @@ struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
         cnfstmt->printable = (uchar *)prifilt;
         cnfstmt->d.s_prifilt.t_then = t_then;
         cnfstmt->d.s_prifilt.t_else = NULL;
+        if (rsReloadCandidateCaptureActive()) {
+            cnfstmt->nodetype = S_RELOAD_PRIFILT;
+            return cnfstmt;
+        }
         if (glblPermitSyslogdConfigFilter(loadConf, prifilt)) {
             DecodePRIFilter((uchar *)prifilt, cnfstmt->d.s_prifilt.pmask);
         } else {
@@ -5416,6 +5453,10 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
         cnfstmt->d.s_propfilt.t_then = t_then;
         cnfstmt->d.s_propfilt.regex_cache = NULL;
         cnfstmt->d.s_propfilt.pCSCompValue = NULL;
+        if (rsReloadCandidateCaptureActive()) {
+            cnfstmt->nodetype = S_RELOAD_PROPFILT;
+            return cnfstmt;
+        }
         if (!glblPermitPropertyConfigFilter(loadConf, propfilt)) {
             free(cnfstmt->printable);
             cnfstmt->printable = NULL;
@@ -5448,6 +5489,12 @@ struct cnfstmt *cnfstmtNewAct(struct nvlst *lst) {
         cnfstmtDisable(cnfstmt);
         goto done;
     }
+    if (rsReloadCandidateCaptureActive()) {
+        cnfstmt->nodetype = S_RELOAD_ACT;
+        cnfstmt->d.reload_action = lst;
+        lst = NULL;
+        goto done;
+    }
     localRet = actionNewInst(lst, &cnfstmt->d.act);
     if (localRet == RS_RET_OK_WARN) {
         parser_errmsg("warnings occurred in file '%s' around line %d", cnfcurrfn, yylineno);
@@ -5473,6 +5520,11 @@ done:
 struct cnfstmt *cnfstmtNewLegaAct(char *actline) {
     struct cnfstmt *cnfstmt;
     rsRetVal localRet;
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy actions are not reloadable");
+        free(actline);
+        return cnfstmtNew(S_NOP);
+    }
     if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) goto done;
     cnfstmt->printable = (uchar *)strdup((char *)actline);
     localRet = cflineDoAction(loadConf, (uchar **)&actline, &cnfstmt->d.act);
@@ -6306,6 +6358,7 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
     unsigned short i;
     unsigned short nParams;
     char *cstr;
+    const int reloadSyntaxOnly = rsReloadCandidateCaptureActive();
 
     /* we first need to find out how many params we have */
     nParams = 0;
@@ -6317,10 +6370,10 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
         func->funcdata = NULL;
         func->destructable_funcdata = 1;
         cstr = es_str2cstr(fname, NULL);
-        func->fPtr = funcName2Ptr(cstr, nParams);
+        func->fPtr = reloadSyntaxOnly ? NULL : funcName2Ptr(cstr, nParams);
 
         /* parse error if we have an unknown function */
-        if (func->fPtr == NULL) {
+        if (!reloadSyntaxOnly && func->fPtr == NULL) {
             parser_errmsg("Invalid function %s", cstr);
         }
 
@@ -6333,7 +6386,7 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst) {
             free(toDel);
         }
         /* some functions require special initialization */
-        struct scriptFunct *foundFunc = searchModList(cstr);
+        struct scriptFunct *foundFunc = reloadSyntaxOnly ? NULL : searchModList(cstr);
         if (foundFunc && foundFunc->initFunc != NULL) {
             foundFunc->initFunc(func);
         }

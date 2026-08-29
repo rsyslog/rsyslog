@@ -245,10 +245,13 @@ a candidate was rejected, which consumers still prevent retirement, and whether
 listener, session, or module state was preserved or replaced.
 
 The Release B foundation additionally exposes request-, mode-, rejection-, and
-duration-accounting counters while ``validate`` and ``on`` remain fail-closed.
-Those foundation counters are not a promise that candidate validation or
-activation has occurred; later releases retain or refine them alongside the
-target outcome counters above.
+duration-accounting counters.  Its first implementation parses RainerScript and
+YAML candidates into owned syntax objects without invoking module constructors,
+global setters, queue construction, or input activation.  A successful result
+is explicitly reported as ``validated_syntax_only``: semantic preparation and
+``on`` activation remain fail-closed until the normalized diff and capability
+gates are complete.  Later releases retain or refine these counters alongside
+the target outcome counters above.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

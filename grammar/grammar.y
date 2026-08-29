@@ -34,6 +34,10 @@
 #include <libestr.h>
 #include "rainerscript.h"
 #include "parserif.h"
+#if defined(__GNUC__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 #define YYDEBUG 1
 extern int yylineno;
 extern char *yytext;
@@ -118,6 +122,20 @@ extern int yyerror(const char*);
 %type <itr> iterator_decl
 %type <fparams> fparams
 %type <arr> array arrayelt
+
+/* Bison discards partially reduced values during error recovery. Explicit
+ * ownership destructors are required because HUP may parse many rejected
+ * candidates in one daemon lifetime. */
+%destructor { free($$); } <s>
+%destructor { es_deleteStr($$); } <estr>
+%destructor { cnfobjDestructAll($$); } <obj>
+%destructor { cnfstmtDestructLst($$); } <stmt>
+%destructor { nvlstDestruct($$); } <nvlst>
+%destructor { objlstDestruct($$); } <objlst>
+%destructor { cnfexprDestruct($$); } <expr>
+%destructor { cnfarrayDestruct($$); } <arr>
+%destructor { cnffparamlstDestruct($$); } <fparams>
+%destructor { cnfIteratorDestruct($$); } <itr>
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH
@@ -254,6 +272,9 @@ arrayelt: STRING			{ $$ = cnfarrayNew($1); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 
 %%
+#if defined(__GNUC__)
+# pragma GCC diagnostic pop
+#endif
 /*
 int yyerror(char *s)
 {

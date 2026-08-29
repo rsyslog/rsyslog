@@ -1,11 +1,10 @@
 /* Release B reload-manager foundation.
  *
  * This owns request state, observability, and the active generation's
- * normalized ruleset-plan graph. It does not parse, validate, construct, or
- * activate a candidate configuration generation. Those operations remain
- * unsafe until their process-global lifetime and side effects are isolated.
- * Historic HUP hooks are intentionally outside this manager and remain
- * unconditional.
+ * normalized ruleset-plan graph. It parses candidates into an owned,
+ * syntax-only representation without dispatching configuration objects into
+ * modules or runtime globals. Semantic preparation and activation remain
+ * disabled. Historic HUP hooks are outside this manager and unconditional.
  */
 #include "config.h"
 
@@ -21,6 +20,7 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "reload-ruleset-graph.h"
+#include "reload-candidate.h"
 #include "shadow_reload.h"
 #include "statsobj.h"
 
@@ -49,6 +49,18 @@ static uint64_t requestStartedUsec = 0;
 static statsobj_t *reloadStats = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *activeRulesetGraphBuilder = NULL;
 static rsReloadNormalizedGraphV1_t activeRulesetGraph;
+static char *candidateConfigPath = NULL;
+static rsReloadCandidate_t *pendingCandidate = NULL;
+static rsRetVal pendingCandidateResult = RS_RET_OK;
+static size_t pendingCandidateObjects = 0;
+enum shadowReloadResult_e {
+    SHADOW_RELOAD_IDLE = 0,
+    SHADOW_RELOAD_IGNORED,
+    SHADOW_RELOAD_VALIDATED_SYNTAX,
+    SHADOW_RELOAD_REJECTED_SYNTAX,
+    SHADOW_RELOAD_REJECTED_ACTIVATION
+};
+static int lastResult = SHADOW_RELOAD_IDLE;
 /* Scrapeable counters are separate from the always-on log state above. */
 STATSCOUNTER_DEF(ctrRequests, mutCtrRequests)
 STATSCOUNTER_DEF(ctrOff, mutCtrOff)
@@ -144,17 +156,23 @@ finalize_it:
 }
 
 void shadowReloadExit(void) {
+    rsReloadCandidateDestruct(&pendingCandidate);
+    free(candidateConfigPath);
+    candidateConfigPath = NULL;
     rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
     if (reloadStats != NULL) statsobj.Destruct(&reloadStats);
     objRelease(statsobj, CORE_COMPONENT);
 }
 
-void shadowReloadConfigure(const reloadOnHUPMode_t mode) {
+rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode, const char *const configPath) {
     rsReloadNormalizedGraphBuilderV1_t *newBuilder = NULL;
     rsReloadNormalizedGraphV1_t newGraph;
     rsRetVal graphRet;
 
     configuredMode = mode;
+    free(candidateConfigPath);
+    candidateConfigPath = configPath == NULL ? NULL : strdup(configPath);
+    if (configPath != NULL && candidateConfigPath == NULL) return RS_RET_OUT_OF_MEMORY;
     activeGeneration = 1;
     pendingGauge = signalRequestPending != 0;
     memset(&newGraph, 0, sizeof(newGraph));
@@ -171,6 +189,7 @@ void shadowReloadConfigure(const reloadOnHUPMode_t mode) {
         activeRulesetGraph = newGraph;
     }
     logState("configured", "idle", "none", "none");
+    return RS_RET_OK;
 }
 
 typedef struct reloadRulesetLookup_s {
@@ -212,6 +231,33 @@ finalize_it:
     RETiRet;
 }
 
+rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
+    const char *result;
+    int n;
+
+    if (buffer == NULL || bufferSize == 0) return RS_RET_PARAM_ERROR;
+    switch (PREFER_LOAD_INT(&lastResult)) {
+        case SHADOW_RELOAD_IGNORED:
+            result = "ignored";
+            break;
+        case SHADOW_RELOAD_VALIDATED_SYNTAX:
+            result = "validated_syntax_only";
+            break;
+        case SHADOW_RELOAD_REJECTED_SYNTAX:
+            result = "candidate_syntax_invalid";
+            break;
+        case SHADOW_RELOAD_REJECTED_ACTIVATION:
+            result = "activation_not_implemented";
+            break;
+        case SHADOW_RELOAD_IDLE:
+        default:
+            result = "idle";
+            break;
+    }
+    n = snprintf(buffer, bufferSize, "result=%s active_generation=%u", result, activeGeneration);
+    return n < 0 || (size_t)n >= bufferSize ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
+}
+
 void shadowReloadRequestFromSignal(void) {
     /* Coalesce repeated signals. Do not count or log from signal context. */
     signalRequestPending = 1;
@@ -239,6 +285,19 @@ void shadowReloadBeginRequest(void) {
         STATSCOUNTER_INC(ctrOn, mutCtrOn);
     }
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
+    rsReloadCandidateDestruct(&pendingCandidate);
+    pendingCandidateObjects = 0;
+    pendingCandidateResult = RS_RET_OK;
+    if (configuredMode != RELOAD_ON_HUP_OFF) {
+        if (candidateConfigPath == NULL) {
+            pendingCandidateResult = RS_RET_CONF_FILE_NOT_FOUND;
+        } else {
+            pendingCandidateResult = rsReloadCandidateParse(candidateConfigPath, &pendingCandidate);
+            if (pendingCandidateResult == RS_RET_OK) {
+                pendingCandidateObjects = rsReloadCandidateObjectCount(pendingCandidate);
+            }
+        }
+    }
 }
 
 static void accountDuration(void) {
@@ -256,7 +315,16 @@ void shadowReloadProcess(void) {
         return;
     }
 
-    if (configuredMode == RELOAD_ON_HUP_VALIDATE || configuredMode == RELOAD_ON_HUP_ON) {
+    if (configuredMode == RELOAD_ON_HUP_VALIDATE && pendingCandidateResult == RS_RET_OK) {
+        accountDuration();
+        requestInProgress = 0;
+        pendingGauge = signalRequestPending != 0;
+        PREFER_STORE_INT(&lastResult, SHADOW_RELOAD_VALIDATED_SYNTAX);
+        LogMsg(0, RS_RET_OK, LOG_INFO,
+               "shadow_reload event=request result=validated_syntax_only mode=validate candidate_objects=%zu "
+               "active_generation=%u in_progress=0 pending=%d",
+               pendingCandidateObjects, activeGeneration, pendingGauge);
+    } else if (configuredMode == RELOAD_ON_HUP_VALIDATE || configuredMode == RELOAD_ON_HUP_ON) {
         ++rejectedTotal;
         STATSCOUNTER_INC(ctrRejected, mutCtrRejected);
         if (configuredMode == RELOAD_ON_HUP_VALIDATE) {
@@ -269,11 +337,16 @@ void shadowReloadProcess(void) {
         accountDuration();
         requestInProgress = 0;
         pendingGauge = signalRequestPending != 0;
-        logState("request", "rejected", modeName(configuredMode), "unsupported_release_b");
+        PREFER_STORE_INT(&lastResult, pendingCandidateResult == RS_RET_OK ? SHADOW_RELOAD_REJECTED_ACTIVATION
+                                                                          : SHADOW_RELOAD_REJECTED_SYNTAX);
+        logState("request", "rejected", modeName(configuredMode),
+                 pendingCandidateResult == RS_RET_OK ? "activation_not_implemented" : "candidate_syntax_invalid");
     } else {
         accountDuration();
         requestInProgress = 0;
         pendingGauge = signalRequestPending != 0;
+        PREFER_STORE_INT(&lastResult, SHADOW_RELOAD_IGNORED);
         logState("request", "ignored", "none", "mode_off");
     }
+    rsReloadCandidateDestruct(&pendingCandidate);
 }

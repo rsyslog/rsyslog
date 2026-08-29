@@ -122,6 +122,11 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 #define S_CALL_INDIRECT 4011
 #define S_FUNC_EXISTS 4012 /* special case function which must get varname only */
+/* Capture-only nodes. They are destroyed before a candidate can become a
+ * runtime plan and therefore never occur in message processing. */
+#define S_RELOAD_ACT 4013
+#define S_RELOAD_PRIFILT 4014
+#define S_RELOAD_PROPFILT 4015
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char *cnfFiltType2str(const enum cnfFiltType filttype);
@@ -170,6 +175,7 @@ struct cnfstmt {
             struct cnfstmt *t_else;
         } s_propfilt;
         struct action_s *act;
+        struct nvlst *reload_action;
         struct {
             struct cnfitr *iter;
             struct cnfstmt *body;
@@ -404,6 +410,7 @@ struct nvlst *nvlstFindName(struct nvlst *lst, es_str_t *name);
 int nvlstChkDisabled(struct nvlst *lst);
 struct cnfobj *cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
+void cnfobjDestructAll(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
@@ -411,6 +418,9 @@ void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr,
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
 struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
+void cnfarrayDestruct(struct cnfarray *ar);
+void cnffparamlstDestruct(struct cnffparamlst *params);
+void cnfIteratorDestruct(struct cnfitr *itr);
 struct cnfnumval *cnfnumvalNew(long long val);
 struct cnfstringval *cnfstringvalNew(es_str_t *estr);
 struct cnfvar *cnfvarNew(char *name);

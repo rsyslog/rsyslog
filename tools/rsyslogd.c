@@ -232,6 +232,7 @@ rsconf_t *ourConf = NULL;
 int MarkInterval = 20 * 60; /* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar *)PATH_CONFFILE;
+static char *reloadConfFile = NULL;
 int bHaveMainQueue = 0; /* set to 1 if the main queue - in queueing mode - is available
                          * If the main queue is either not yet ready or not running in
                          * queueing mode (mode DIRECT!), then this is set to 0.
@@ -1773,6 +1774,14 @@ static void initAll(int argc, char **argv) {
     }
 
     resetErrMsgsFlag();
+    free(reloadConfFile);
+    if (ConfFile[0] == '/') {
+        reloadConfFile = strdup((const char *)ConfFile);
+    } else {
+        char *cwd = getcwd(NULL, 0);
+        if (cwd != NULL && asprintf(&reloadConfFile, "%s/%s", cwd, ConfFile) < 0) reloadConfFile = NULL;
+        free(cwd);
+    }
     localRet = rsconf.Load(&loadConf, ConfFile);
 
 #ifdef ENABLE_LIBCAPNG
@@ -1960,7 +1969,7 @@ static void initAll(int argc, char **argv) {
 
     CHKiRet(rsconf.Activate(loadConf));
 
-    shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf));
+    CHKiRet(shadowReloadConfigure(rsconfGetReloadOnHUPMode(runConf), reloadConfFile));
 
     if (runConf->globals.bLogStatusMsgs) {
         char bufStartUpMsg[512];
@@ -2632,6 +2641,8 @@ static void deinitAll(void) {
 
     module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
+    free(reloadConfFile);
+    reloadConfFile = NULL;
     rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
     DBGPRINTF("Clean shutdown completed, bye\n");
 

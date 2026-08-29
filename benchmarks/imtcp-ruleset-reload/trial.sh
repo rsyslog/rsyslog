@@ -74,19 +74,6 @@ start_ns=$(date +%s%N)
 reload_ns=0
 socket_continuity=false
 if [ "$BENCH_PHASE" = reload ]; then
-	# Validate mode is intentionally unsupported in the current runtime.  Probe
-	# the controller first and record an explicit skip, never a fabricated pass.
-	issue_HUP
-	if [ "$BENCH_ROLE" = candidate ] &&
-		wait_reload_log "config.reloadOnHUP=validate is not supported yet"; then
-		shutdown_immediate
-		wait_shutdown
-		mkdir -p "$(dirname "$BENCH_METRIC_FILE")"
-		cp "$RELOAD_LOG" "$BENCH_METRIC_FILE.reload.log"
-		printf '{"workload_id":"%s","payload_bytes":%d,"tcp_sessions":%d,"ruleset":"%s","queue":"%s","batch_size":%d,"phase":"reload","messages":%d,"execution":"skipped-unsupported","skip_reason":"runtime config.reloadOnHUP=validate capability unavailable","controller_diagnostic":"config.reloadOnHUP=validate is not supported yet"}\n' \
-		 "$BENCH_WORKLOAD_ID" "$BENCH_PAYLOAD_BYTES" "$BENCH_TCP_SESSIONS" "$BENCH_RULESET" "$BENCH_QUEUE" "$BENCH_BATCH_SIZE" "$BENCH_MESSAGES" >"$BENCH_METRIC_FILE"
-		exit_test
-	fi
 	# -b1/-W keeps the same TCP connections sending while HUP is processed.
 	# Seeing record zero first proves the sender is active before the transactional reload.
 	tcpflood -p"$INPUT_PORT" -c"$BENCH_TCP_SESSIONS" -Y -m"$BENCH_MESSAGES" -d"$BENCH_PAYLOAD_BYTES" \
@@ -101,7 +88,7 @@ if [ "$BENCH_PHASE" = reload ]; then
 	reload_log_offset=$(wc -c < "$RELOAD_LOG")
   reload_start=$(date +%s%N)
   issue_HUP
-	wait_reload_log "shadow reload: configuration.*validated" "$reload_log_offset" || \
+	wait_reload_log "shadow_reload event=request result=validated_syntax_only mode=validate" "$reload_log_offset" || \
 		error_exit 1 "transactional validate HUP did not report candidate validation"
 	reload_ns=$(( $(date +%s%N) - reload_start ))
 	rss_after=$(ps -o rss= -p "$(cat "$RSYSLOG_PIDBASE.pid")" | tr -d ' ')

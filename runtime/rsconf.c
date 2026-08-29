@@ -72,6 +72,7 @@
 #include "timezones.h"
 #include "ratelimit.h"
 #include "translate.h"
+#include "reload-candidate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -755,6 +756,7 @@ void parser_errmsg(const char *fmt, ...) {
     va_list ap;
     char errBuf[1024];
 
+    rsReloadCandidateNoteParseError();
     va_start(ap, fmt);
     if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) errBuf[sizeof(errBuf) - 1] = '\0';
     if (cnfcurrfn == NULL) {
@@ -768,7 +770,14 @@ void parser_errmsg(const char *fmt, ...) {
 
 int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int yyerror(const char *s) {
-    parser_errmsg("%s on token '%s'", s, yytext);
+    /* At final EOF flex may already have released the backing buffer. The
+     * candidate path therefore must not dereference yytext while reporting a
+     * rejected parse. */
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("%s", s);
+    } else {
+        parser_errmsg("%s on token '%s'", s, yytext);
+    }
     return 0;
 }
 void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
@@ -784,6 +793,15 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
      */
     if (nvlstChkDisabled(o->nvlst)) {
         dbgprintf("object disabled by configuration\n");
+        if (rsReloadCandidateCaptureActive()) cnfobjDestruct(o);
+        return;
+    }
+
+    if (rsReloadCandidateCaptureActive()) {
+        if (rsReloadCandidateTakeObject(o) != RS_RET_OK) {
+            rsReloadCandidateNoteParseError();
+            cnfobjDestruct(o);
+        }
         return;
     }
 
@@ -846,6 +864,13 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
 }
 
 void cnfDoScript(struct cnfstmt *script) {
+    if (rsReloadCandidateCaptureActive()) {
+        if (rsReloadCandidateTakeDefaultScript(script) != RS_RET_OK) {
+            rsReloadCandidateNoteParseError();
+            cnfstmtDestructLst(script);
+        }
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateCaptureScript(script, cnfcurrfn, yylineno);
     }
@@ -854,6 +879,11 @@ void cnfDoScript(struct cnfstmt *script) {
 }
 
 void cnfDoCfsysline(char *ln) {
+    if (rsReloadCandidateCaptureActive()) {
+        parser_errmsg("legacy configuration directives are not reloadable");
+        free(ln);
+        return;
+    }
     if (rsconfTranslateEnabled()) {
         rsconfTranslateAddUnsupported(cnfcurrfn, yylineno, "legacy $-directive '%s' is not supported by the translator",
                                       ln);

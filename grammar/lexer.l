@@ -59,6 +59,7 @@
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "parserif.h"
+#include "reload-candidate.h"
 
 PRAGMA_IGNORE_Wsign_compare;
 PRAGMA_IGNORE_Wmissing_noreturn;
@@ -216,6 +217,10 @@ expand_backticks(char *const param)
 	if(strncmp(param, "echo ", sizeof("echo ")-1) == 0) {
 		estr = expand_backticks_echo(param);
 	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
+		if(rsReloadCandidateCaptureActive()) {
+			parser_errmsg("backtick file reads are not reloadable");
+			return es_newStr(1);
+		}
 		const char *val = read_file(param+4);
 		if(val == NULL) {
 			parser_errmsg("file could not be accessed for `%s`", param);
@@ -676,6 +681,20 @@ tellLexEndParsing(void)
 {
 	free(cnfcurrfn);
 	cnfcurrfn= NULL;
+}
+
+/* A syntax error can return from yyparse() before flex has consumed and popped
+ * the current buffer. A later HUP must not inherit that buffer or its start
+ * condition. This is deliberately separate from tellLexEndParsing(), whose
+ * startup caller historically invokes it only after a fully drained parse. */
+void
+cnfResetParser(void)
+{
+	while(currbs != NULL)
+		(void) popfile();
+	BEGIN INITIAL;
+	tellLexEndParsing();
+	yylineno = 1;
 }
 
 /* Returns non-zero when there are config buffers queued for yyparse()

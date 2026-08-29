@@ -570,6 +570,17 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal getReloadStatus(tcps_sess_t *const pSess) {
+    char status[256];
+    DEFiRet;
+
+    CHKiRet(shadowReloadGetStatus(status, sizeof(status)));
+    CHKiRet(sendResponse(pSess, "%s\n", status));
+
+finalize_it:
+    RETiRet;
+}
+
 static void imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
                                      void __attribute__((unused)) *const ignore_ctx) {
     long long waitStartTimeMs = currentTimeMills();
@@ -810,6 +821,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(sendResponse(pSess, "%d\n", getHUPProcessedCount()));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadrulesetfingerprint"))) {
         CHKiRet(getReloadRulesetFingerprint(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadstatus"))) {
+        CHKiRet(getReloadStatus(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

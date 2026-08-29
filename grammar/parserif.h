@@ -23,6 +23,9 @@ int cnfSetLexFile(const char *);
 void parser_errmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);
+/* Abort/reset all lexer buffers and start conditions after a candidate parse.
+ * Safe after both successful and failed yyparse() calls. */
+void cnfResetParser(void);
 /* Returns non-zero when there are config buffers queued for yyparse() to
  * consume.  Used by rsconf.c to run yyparse() after yamlconf_load() has pushed
  * synthesised RainerScript script: blocks via cnfAddConfigBuffer(). */

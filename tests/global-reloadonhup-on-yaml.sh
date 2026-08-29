@@ -1,7 +1,7 @@
 #!/bin/bash
-# Verify native YAML reloadOnHUP=on fails closed in the Release-B foundation.
-# The candidate changes only the omfile target; because activation is not yet
-# safe, both numbered records must use the old active ruleset after HUP.
+# Verify native YAML reloadOnHUP=on safely parses the candidate, then fails
+# closed at the unavailable activation phase. Both numbered records must use
+# the old active ruleset after HUP.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -25,6 +25,11 @@ wait_queueempty
 sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1"* ]]; then
+	echo "FAIL: unexpected reload status: $reload_status"
+	error_exit 1
+fi
 tcpflood -m1 -i1
 wait_queueempty
 shutdown_when_empty
