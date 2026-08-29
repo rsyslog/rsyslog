@@ -204,9 +204,28 @@ jobs:
             -w /workspace \
             quay.io/rockylinux/rockylinux:10 bash -lc '
               set -euo pipefail
-              dnf -q -y install epel-release >/dev/null
-              dnf -q -y install \
-                curl git mock mock-core-configs python3 rpm-build tar gzip >/dev/null
+              bootstrap_log=/tmp/el10-bootstrap.log
+              bootstrap_status=1
+              for attempt in 1 2 3; do
+                set +e
+                (
+                  dnf -q -y install epel-release &&
+                    dnf -q -y install \
+                      curl git mock mock-core-configs python3 rpm-build tar gzip
+                ) 2>&1 | tee "$bootstrap_log"
+                bootstrap_status="${PIPESTATUS[0]}"
+                set -e
+                [ "$bootstrap_status" -eq 0 ] && break
+                if ! grep -Fq "No URLs in mirrorlist" "$bootstrap_log"; then
+                  exit "$bootstrap_status"
+                fi
+                echo "CentOS mirrorlist was unavailable (attempt $attempt/3)"
+                [ "$attempt" -eq 3 ] || {
+                  dnf -q clean all || true
+                  sleep "$((attempt * 15))"
+                }
+              done
+              [ "$bootstrap_status" -eq 0 ] || exit "$bootstrap_status"
               "$RPM_DAILY_STABLE_HELPER" prepare-sources \
                 /runner-temp/el10-packaging \
                 "$DIST_TARBALL" \
