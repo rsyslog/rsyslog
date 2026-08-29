@@ -86,10 +86,12 @@ if [ "$BENCH_PHASE" = reload ]; then
 	sed -i 's/reloadProbe/reloadProbeNext/' "$CONF_FILE"
 	if [ -n "${BENCH_CONFIG_ARTIFACT:-}" ]; then cp "$CONF_FILE" "${BENCH_CONFIG_ARTIFACT}.candidate.conf"; fi
 	reload_log_offset=$(wc -c < "$RELOAD_LOG")
-  reload_start=$(date +%s%N)
-  issue_HUP
-	wait_reload_log "shadow_reload event=request result=validated_syntax_only mode=validate" "$reload_log_offset" || \
-		error_exit 1 "transactional validate HUP did not report candidate validation"
+	reload_start=$(date +%s%N)
+	issue_HUP
+	if [ "$BENCH_ROLE" = candidate ]; then
+		wait_reload_log "shadow_reload event=request result=reported_only mode=validate" "$reload_log_offset" || \
+			error_exit 1 "transactional validate HUP did not report the candidate diff"
+	fi
 	reload_ns=$(( $(date +%s%N) - reload_start ))
 	rss_after=$(ps -o rss= -p "$(cat "$RSYSLOG_PIDBASE.pid")" | tr -d ' ')
 	wait "$sender_pid"

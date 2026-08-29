@@ -27,19 +27,26 @@
     } while (0)
 
 static int constructionFailed;
+static int parserResult = 1;
+static rsRetVal parserCaptureError = RS_RET_OK;
 
-/* Parser-facing symbols are deliberately unused by this unit. They make the
- * candidate implementation linkable without bringing up either frontend. */
+/* Parser-facing stubs let the unit drive classification without bringing up
+ * either frontend. */
 int yyparse(void) {
-    return 1;
+    if (parserCaptureError != RS_RET_OK) rsReloadCandidateNoteError(parserCaptureError);
+    return parserResult;
 }
 int cnfSetLexFile(const char __attribute__((unused)) * path) {
-    return 1;
+    return 0;
 }
 int cnfHasPendingBuffers(void) {
     return 0;
 }
 void cnfResetParser(void) {}
+void cnfClearFatalParseError(void) {}
+rsRetVal cnfTakeFatalParseError(void) {
+    return RS_RET_OK;
+}
 rsRetVal yamlconf_load(const char __attribute__((unused)) * path) {
     return RS_RET_CONF_PARSE_ERROR;
 }
@@ -53,11 +60,15 @@ const char *cnfobjType2str(const enum cnfobjType type) {
         case CNFOBJ_INPUT:
             return "input";
         case CNFOBJ_ACTION:
+            return "action";
         case CNFOBJ_MODULE:
+            return "module";
         case CNFOBJ_TPL:
+            return "template";
+        case CNFOBJ_MAINQ:
+            return "main_queue";
         case CNFOBJ_PROPERTY:
         case CNFOBJ_CONSTANT:
-        case CNFOBJ_MAINQ:
         case CNFOBJ_LOOKUP_TABLE:
         case CNFOBJ_PARSER:
         case CNFOBJ_TIMEZONE:
@@ -87,6 +98,8 @@ struct nvlst *nvlstNewStr(es_str_t *value) {
     return node;
 }
 
+static struct nvlst *parameter(const char *name, const char *value);
+
 void nvlstDestruct(struct nvlst *list) {
     while (list != NULL) {
         struct nvlst *next = list->next;
@@ -95,6 +108,30 @@ void nvlstDestruct(struct nvlst *list) {
         free(list);
         list = next;
     }
+}
+
+struct nvlst *rsconfTranslateCloneNvlst(const struct nvlst *list) {
+    struct nvlst *head = NULL;
+    struct nvlst *tail = NULL;
+
+    for (; list != NULL; list = list->next) {
+        struct nvlst *copy;
+        if (list->val.datatype != 'S' || list->name == NULL || list->val.d.estr == NULL) {
+            nvlstDestruct(head);
+            return NULL;
+        }
+        copy = parameter((const char *)es_getBufAddr(list->name), (const char *)es_getBufAddr(list->val.d.estr));
+        if (copy == NULL) {
+            nvlstDestruct(head);
+            return NULL;
+        }
+        if (tail == NULL)
+            head = copy;
+        else
+            tail->next = copy;
+        tail = copy;
+    }
+    return head;
 }
 
 void cnfstmtDestructLst(struct cnfstmt *list) {
@@ -213,9 +250,12 @@ typedef struct observed_s {
     const rsReloadNormalizedNodeV1_t *nodes[16];
     size_t count;
 } observed_t;
+#define OBSERVED_INIT \
+    { {NULL}, 0 }
 
 static rsRetVal observe(const rsReloadNormalizedNodeV1_t *node, void *context) {
     observed_t *observed = context;
+    if (observed->count >= sizeof(observed->nodes) / sizeof(observed->nodes[0])) return RS_RET_OUT_OF_MEMORY;
     observed->nodes[observed->count++] = node;
     return RS_RET_OK;
 }
@@ -234,10 +274,44 @@ int main(void) {
     rsReloadNormalizedGraphBuilderV1_t *builder = NULL;
     rsReloadNormalizedGraphV1_t graph;
     rsReloadNormalizedGraphV1_t permutedGraph;
-    observed_t observed = {0};
-    observed_t permuted = {0};
+    observed_t observed = OBSERVED_INIT;
+    observed_t permuted = OBSERVED_INIT;
     struct nvlst *global = parameter("secret", "supersecret");
     struct nvlst *named = parameter("name", "MiXeD");
+
+    /* Parser resource failures are control-plane failures, not malformed
+     * configuration. Both Bison's documented memory-exhaustion result and a
+     * capture callback preserve RS_RET_OUT_OF_MEMORY exactly. */
+    {
+        char configPath[] = "/tmp/rsyslog-reload-candidate-XXXXXX";
+        rsReloadCandidate_t *parsedCandidate = NULL;
+        const int configFd = mkstemp(configPath);
+
+        CHECK(configFd >= 0);
+        CHECK(close(configFd) == 0);
+        parserResult = 2;
+        CHECK(rsReloadCandidateParse(configPath, &parsedCandidate) == RS_RET_OUT_OF_MEMORY);
+        CHECK(parsedCandidate == NULL);
+        parserResult = 0;
+        parserCaptureError = RS_RET_OUT_OF_MEMORY;
+        CHECK(rsReloadCandidateParse(configPath, &parsedCandidate) == RS_RET_OUT_OF_MEMORY);
+        CHECK(parsedCandidate == NULL);
+        parserCaptureError = RS_RET_OK;
+        parserResult = 1;
+        CHECK(unlink(configPath) == 0);
+
+        /* A later resource failure must dominate earlier syntax/I/O errors;
+         * subsequent weaker errors must not downgrade it. */
+        parsedCandidate = calloc(1, sizeof(*parsedCandidate));
+        CHECK(parsedCandidate != NULL);
+        captureCandidate = parsedCandidate;
+        rsReloadCandidateNoteError(RS_RET_CONF_PARSE_ERROR);
+        rsReloadCandidateNoteError(RS_RET_OUT_OF_MEMORY);
+        rsReloadCandidateNoteError(RS_RET_IO_ERROR);
+        CHECK(parsedCandidate->captureError == RS_RET_OUT_OF_MEMORY);
+        captureCandidate = NULL;
+        rsReloadCandidateDestruct(&parsedCandidate);
+    }
 
     /* Independent known vector for the private SHA-256 helper, including its
      * domain separator. This prevents a self-consistent broken digest from
@@ -274,9 +348,9 @@ int main(void) {
     CHECK(!strcmp(observed.nodes[2]->identity, "input:imtcp:anonymous:2"));
     CHECK(!strcmp(observed.nodes[3]->identity, "ruleset:default"));
     CHECK(!strcmp(observed.nodes[4]->identity, "ruleset:mixed"));
-    CHECK(!strcmp(observed.nodes[5]->identity, "action:ruleset:default:first"));
-    CHECK(!strcmp(observed.nodes[6]->identity, "action:ruleset:default:second"));
-    CHECK(!strcmp(observed.nodes[7]->identity, "action:ruleset:mixed:named-action"));
+    CHECK(!strcmp(observed.nodes[5]->identity, "action:first"));
+    CHECK(!strcmp(observed.nodes[6]->identity, "action:named-action"));
+    CHECK(!strcmp(observed.nodes[7]->identity, "action:second"));
 
     {
         rsReloadCandidate_t *permutedCandidate = calloc(1, sizeof(*permutedCandidate));
@@ -299,9 +373,8 @@ int main(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
 
-    /* Global fragments are one semantic singleton. A combined YAML-shaped
-     * mapping and split RainerScript-shaped objects must produce one node and
-     * the same digest, irrespective of parameter order. */
+    /* Global fragments are a case-folded last-write map. Equivalent split
+     * RainerScript and combined YAML blocks therefore hash identically. */
     {
         rsReloadCandidate_t *split = calloc(1, sizeof(*split));
         rsReloadCandidate_t *combined = calloc(1, sizeof(*combined));
@@ -309,14 +382,12 @@ int main(void) {
         rsReloadNormalizedGraphBuilderV1_t *combinedBuilder = NULL;
         rsReloadNormalizedGraphV1_t splitGraph;
         rsReloadNormalizedGraphV1_t combinedGraph;
-        observed_t splitObserved = {0};
-        observed_t combinedObserved = {0};
-        struct nvlst *combinedParams = parameter("beta", "two");
+        observed_t splitObserved = OBSERVED_INIT;
+        observed_t combinedObserved = OBSERVED_INIT;
+        struct nvlst *combinedParams = parameter("alpha", "two");
         CHECK(split != NULL && combined != NULL && combinedParams != NULL);
-        combinedParams->next = parameter("alpha", "one");
-        CHECK(combinedParams->next != NULL);
         addObject(split, object(CNFOBJ_GLOBAL, parameter("alpha", "one"), NULL));
-        addObject(split, object(CNFOBJ_GLOBAL, parameter("beta", "two"), NULL));
+        addObject(split, object(CNFOBJ_GLOBAL, parameter("ALPHA", "two"), NULL));
         addObject(combined, object(CNFOBJ_GLOBAL, combinedParams, NULL));
         CHECK(!constructionFailed);
         CHECK(rsReloadCandidateBuildNormalizedGraphV1(split, &splitBuilder) == RS_RET_OK);
@@ -344,8 +415,8 @@ int main(void) {
         rsReloadNormalizedGraphBuilderV1_t *unrelatedBuilder = NULL;
         rsReloadNormalizedGraphV1_t baseGraph;
         rsReloadNormalizedGraphV1_t unrelatedGraph;
-        observed_t baseObserved = {0};
-        observed_t unrelatedObserved = {0};
+        observed_t baseObserved = OBSERVED_INIT;
+        observed_t unrelatedObserved = OBSERVED_INIT;
         struct cnfstmt *namedAction = action("named-before", "secret");
         struct cnfstmt *anonymousAction = action(NULL, "same-secret");
         struct nvlst *namedInput = parameter("type", "IMTCP");
@@ -379,6 +450,82 @@ int main(void) {
         rsReloadCandidateDestruct(&withUnrelated);
     }
 
+    /* An explicit empty global object exists in both graphs. The source
+     * mirror must not lose it merely because it has no parameter list. */
+    {
+        rsReloadCandidate_t *emptyCandidate = calloc(1, sizeof(*emptyCandidate));
+        rsReloadNormalizedGraphBuilderV1_t *emptyCandidateBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *emptySourceBuilder = NULL;
+        rsReloadNormalizedGraphV1_t emptyCandidateGraph;
+        rsReloadNormalizedGraphV1_t emptySourceGraph;
+        observed_t emptyCandidateObserved = OBSERVED_INIT;
+        observed_t emptySourceObserved = OBSERVED_INIT;
+        struct cnfobj emptySourceObject = {.objType = CNFOBJ_GLOBAL};
+
+        CHECK(emptyCandidate != NULL);
+        addObject(emptyCandidate, object(CNFOBJ_GLOBAL, NULL, NULL));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(emptyCandidate, &emptyCandidateBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(&emptySourceObject);
+        CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptyCandidateBuilder, &emptyCandidateGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptySourceBuilder, &emptySourceGraph) == RS_RET_OK);
+        CHECK(emptyCandidateGraph.enumerate(emptyCandidateGraph.context, observe, &emptyCandidateObserved) ==
+              RS_RET_OK);
+        CHECK(emptySourceGraph.enumerate(emptySourceGraph.context, observe, &emptySourceObserved) == RS_RET_OK);
+        CHECK(emptyCandidateObserved.count == 1 && emptySourceObserved.count == 1);
+        CHECK(!strcmp(emptyCandidateObserved.nodes[0]->fingerprint, emptySourceObserved.nodes[0]->fingerprint));
+        rsReloadNormalizedGraphBuilderV1Destruct(&emptyCandidateBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&emptySourceBuilder);
+        rsReloadCandidateDestruct(&emptyCandidate);
+    }
+
+    /* A normal-startup parser error invalidates the source mirror; no partial
+     * baseline may be handed to the report-only HUP path afterwards. */
+    {
+        rsReloadNormalizedGraphBuilderV1_t *dirtySourceBuilder = NULL;
+        CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceNoteError();
+        CHECK(rsReloadCandidateSourceFinish(&dirtySourceBuilder) == RS_RET_NOT_IMPLEMENTED);
+        CHECK(dirtySourceBuilder == NULL);
+    }
+
+    /* The startup source mirror uses the same per-type anonymous input
+     * ordinal as the candidate. A named IMTCP sibling must not consume the
+     * ordinal, and casing of the input type must not split that namespace. */
+    {
+        rsReloadNormalizedGraphBuilderV1_t *observedSourceBuilder = NULL;
+        rsReloadNormalizedGraphV1_t sourceGraph;
+        observed_t sourceObserved = OBSERVED_INIT;
+        struct nvlst *namedInput = parameter("type", "IMTCP");
+        struct cnfobj *namedObject;
+        struct cnfobj *otherObject;
+        struct cnfobj *anonymousObject;
+
+        CHECK(namedInput != NULL);
+        namedInput->next = parameter("name", "named-before");
+        CHECK(namedInput->next != NULL);
+        namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
+        otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
+        anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
+        CHECK(namedObject != NULL && otherObject != NULL && anonymousObject != NULL && otherObject->nvlst != NULL &&
+              anonymousObject->nvlst != NULL);
+        CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(namedObject);
+        rsReloadCandidateSourceCaptureObject(otherObject);
+        rsReloadCandidateSourceCaptureObject(anonymousObject);
+        CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
+        CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
+        CHECK(sourceObserved.count == 3);
+        CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
+        cnfobjDestruct(namedObject);
+        cnfobjDestruct(otherObject);
+        cnfobjDestruct(anonymousObject);
+    }
+
     candidate = calloc(1, sizeof(*candidate));
     builder = NULL;
     global = parameter("duplicate", "one");
@@ -386,6 +533,18 @@ int main(void) {
     global->next = parameter("DuPlicate", "two");
     CHECK(global->next != NULL);
     addObject(candidate, object(CNFOBJ_GLOBAL, global, NULL));
+    CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_CONF_PARSE_ERROR);
+    CHECK(builder == NULL);
+    rsReloadCandidateDestruct(&candidate);
+
+    /* Main queue is a singleton runtime resource. Two syntax objects cannot
+     * be normalized into an unambiguous report-only candidate. */
+    candidate = calloc(1, sizeof(*candidate));
+    builder = NULL;
+    CHECK(candidate != NULL);
+    addObject(candidate, object(CNFOBJ_MAINQ, NULL, NULL));
+    addObject(candidate, object(CNFOBJ_MAINQ, NULL, NULL));
+    CHECK(!constructionFailed);
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_CONF_PARSE_ERROR);
     CHECK(builder == NULL);
     rsReloadCandidateDestruct(&candidate);

@@ -2,8 +2,9 @@
  *
  * SIGHUP handling remains in rsyslogd.c. The option plumbing calls
  * shadowReloadConfigure(), which records the requested policy and master
- * configuration path. Validate mode performs side-effect-free syntax capture;
- * semantic preparation and activation remain fail-closed.
+ * configuration path. Validate mode produces a side-effect-free,
+ * source-syntactic diff report; semantic preparation and activation remain
+ * fail-closed.
  */
 #ifndef INCLUDED_SHADOW_RELOAD_H
 #define INCLUDED_SHADOW_RELOAD_H
@@ -12,12 +13,16 @@
 
 #include "typedefs.h"
 #include "rsconf.h"
+#include "reload-normalized-graph.h"
 
 rsRetVal shadowReloadInit(void);
 void shadowReloadExit(void);
 
-/* Configure the Release-B manager after the active configuration exists. */
-rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode, const char *configPath);
+/* Configure the Release-B manager after the active configuration exists.
+ * Ownership of sourceGraphBuilder is transferred on every return path. */
+rsRetVal shadowReloadConfigure(reloadOnHUPMode_t mode,
+                               const char *configPath,
+                               rsReloadNormalizedGraphBuilderV1_t *sourceGraphBuilder);
 
 /* Return the active generation's normalized ruleset fingerprint. The
  * returned pointer remains owned by the reload manager. This control-path

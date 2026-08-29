@@ -246,12 +246,14 @@ listener, session, or module state was preserved or replaced.
 
 The Release B foundation additionally exposes request-, mode-, rejection-, and
 duration-accounting counters.  Its first implementation parses RainerScript and
-YAML candidates into owned syntax objects without invoking module constructors,
-global setters, queue construction, or input activation.  A successful result
-is explicitly reported as ``validated_syntax_only``: semantic preparation and
-``on`` activation remain fail-closed until the normalized diff and capability
-gates are complete.  Later releases retain or refine these counters alongside
-the target outcome counters above.
+YAML candidates into owned source-syntax objects without invoking module
+constructors, global setters, queue construction, or input activation.  It
+compares that graph with a mirror captured during the original startup parse and
+reports a successful comparison as ``reported_only``.  This result is a
+conservative source-syntactic diff, not semantic validation: effective defaults,
+module capability classification, preparation, and ``on`` activation remain
+fail-closed until their later gates are complete.  Later releases retain or
+refine these counters alongside the target outcome counters above.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

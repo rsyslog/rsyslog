@@ -31,11 +31,25 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
 
+/*
+ * Normal startup observes the already-parsed source once, before regular
+ * cnfobj dispatch consumes it. The finished builder is owned by the caller;
+ * this records no runtime pointers and never reads the configuration again.
+ */
+rsRetVal rsReloadCandidateSourceBegin(void);
+int rsReloadCandidateSourceActive(void);
+void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object);
+void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script);
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+void rsReloadCandidateSourceAbort(void);
+void rsReloadCandidateSourceNoteError(void);
+
 /* Parser integration. These functions are meaningful only while
  * rsReloadCandidateParse() owns the single-threaded parser. */
 int rsReloadCandidateCaptureActive(void);
 rsRetVal rsReloadCandidateTakeObject(struct cnfobj *object);
 rsRetVal rsReloadCandidateTakeDefaultScript(struct cnfstmt *script);
 void rsReloadCandidateNoteParseError(void);
+void rsReloadCandidateNoteError(rsRetVal error);
 
 #endif /* RELOAD_CANDIDATE_H_INCLUDED */

@@ -83,6 +83,7 @@
 #include "batch.h"
 #include "wti.h"
 #include "rsconf.h"
+#include "reload-candidate.h"
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "atomic.h"
@@ -2502,7 +2503,7 @@ rsRetVal addAction(action_t **ppAction,
     CHKiRet(actionConstruct(&pAction)); /* create action object first */
     pAction->pMod = pMod;
     pAction->pModData = pModData;
-    if (rsconfTranslateEnabled() && lst != NULL && pAction->pSyntaxLst == NULL) {
+    if ((rsconfTranslateEnabled() || rsReloadCandidateSourceActive()) && lst != NULL && pAction->pSyntaxLst == NULL) {
         pAction->pSyntaxLst = rsconfTranslateCloneNvlst(lst);
     }
     if (actParams == NULL) { /* use legacy systemn */

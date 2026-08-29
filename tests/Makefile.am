@@ -490,6 +490,7 @@ TESTS_DEFAULT = \
 	tcpflood-proper-termination.sh \
 	global-maxopenfiles-rainerscript.sh \
 	global-reloadonhup-off-hup.sh \
+	global-reloadonhup-dirty-baseline.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
@@ -500,6 +501,7 @@ TESTS_DEFAULT = \
 	abort-uncleancfg-continue-nop.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
+	include-abort-if-missing.sh \
 	variable_leading_underscore.sh \
 	gzipwr_hup_multi_file.sh \
 	gzipwr_hup_single_file.sh \

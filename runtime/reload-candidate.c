@@ -12,6 +12,7 @@
  */
 #include "config.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -19,8 +20,10 @@
 #include <sys/stat.h>
 
 #include "rsyslog.h"
+#include "action.h"
 #include "reload-candidate.h"
 #include "stringbuf.h"
+#include "translate.h"
 #ifdef HAVE_LIBYAML
     #include "yamlconf.h"
 #endif
@@ -38,9 +41,30 @@ struct rsReloadCandidate_s {
     rsReloadCandidateObject_t *tail;
     size_t objectCount;
     int parseError;
+    rsRetVal captureError;
 };
 
 static rsReloadCandidate_t *captureCandidate = NULL;
+static rsReloadNormalizedGraphBuilderV1_t *sourceBuilder = NULL;
+static es_str_t *sourceDefaultSerialized = NULL;
+static struct nvlst *sourceGlobalParams = NULL;
+static struct nvlst *sourceGlobalParamsTail = NULL;
+static int sourceHaveGlobal = 0;
+static size_t sourceOrdinal = 0;
+static size_t sourceDefaultActionOrdinal = 0;
+static int sourceError = 0;
+static int sourceHaveMainQueue = 0;
+typedef struct sourceInputOrdinal_s {
+    char *type;
+    size_t length;
+    size_t count;
+    struct sourceInputOrdinal_s *next;
+} sourceInputOrdinal_t;
+static sourceInputOrdinal_t *sourceInputOrdinals = NULL;
+
+void rsReloadCandidateSourceNoteError(void) {
+    if (sourceBuilder != NULL) sourceError = 1;
+}
 
 /* This compact SHA-256 implementation keeps reload fingerprints available in
  * minimal builds where OpenSSL is optional. It is used only on the control
@@ -79,32 +103,32 @@ static void sha256Block(reloadSha256_t *ctx, const unsigned char *block) {
     for (; i < 64; ++i) {
         const uint32_t s0 = rotr32(w[i - 15], 7) ^ rotr32(w[i - 15], 18) ^ (w[i - 15] >> 3);
         const uint32_t s1 = rotr32(w[i - 2], 17) ^ rotr32(w[i - 2], 19) ^ (w[i - 2] >> 10);
-        w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+        w[i] = (uint32_t)((uint64_t)w[i - 16] + s0 + w[i - 7] + s1);
     }
     for (i = 0; i < 64; ++i) {
         const uint32_t s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
         const uint32_t ch = (e & f) ^ (~e & g);
-        const uint32_t temp1 = h + s1 + ch + k[i] + w[i];
+        const uint32_t temp1 = (uint32_t)((uint64_t)h + s1 + ch + k[i] + w[i]);
         const uint32_t s0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
         const uint32_t maj = (a & b) ^ (a & c) ^ (b & c);
-        const uint32_t temp2 = s0 + maj;
+        const uint32_t temp2 = (uint32_t)((uint64_t)s0 + maj);
         h = g;
         g = f;
         f = e;
-        e = d + temp1;
+        e = (uint32_t)((uint64_t)d + temp1);
         d = c;
         c = b;
         b = a;
-        a = temp1 + temp2;
+        a = (uint32_t)((uint64_t)temp1 + temp2);
     }
-    ctx->state[0] += a;
-    ctx->state[1] += b;
-    ctx->state[2] += c;
-    ctx->state[3] += d;
-    ctx->state[4] += e;
-    ctx->state[5] += f;
-    ctx->state[6] += g;
-    ctx->state[7] += h;
+    ctx->state[0] = (uint32_t)((uint64_t)ctx->state[0] + a);
+    ctx->state[1] = (uint32_t)((uint64_t)ctx->state[1] + b);
+    ctx->state[2] = (uint32_t)((uint64_t)ctx->state[2] + c);
+    ctx->state[3] = (uint32_t)((uint64_t)ctx->state[3] + d);
+    ctx->state[4] = (uint32_t)((uint64_t)ctx->state[4] + e);
+    ctx->state[5] = (uint32_t)((uint64_t)ctx->state[5] + f);
+    ctx->state[6] = (uint32_t)((uint64_t)ctx->state[6] + g);
+    ctx->state[7] = (uint32_t)((uint64_t)ctx->state[7] + h);
 }
 
 static void sha256Update(reloadSha256_t *ctx, const unsigned char *data, size_t length) {
@@ -341,6 +365,66 @@ finalize_it:
     RETiRet;
 }
 
+static int equalFoldedName(const es_str_t *left, const es_str_t *right) {
+    size_t i;
+    const size_t leftLen = left == NULL ? 0 : es_strlen((es_str_t *)left);
+    const size_t rightLen = right == NULL ? 0 : es_strlen((es_str_t *)right);
+
+    if (leftLen == 0 || leftLen != rightLen) return 0;
+    for (i = 0; i < leftLen; ++i) {
+        unsigned char a = es_getBufAddr((es_str_t *)left)[i];
+        unsigned char b = es_getBufAddr((es_str_t *)right)[i];
+        if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+        if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
+static rsRetVal appendGlobalMap(es_str_t **out, const struct nvlst *list) {
+    const struct nvlst *entry;
+    const struct nvlst **entries = NULL;
+    size_t count = 0;
+    size_t capacity = 0;
+    size_t i;
+    DEFiRet;
+
+    for (entry = list; entry != NULL; entry = entry->next) {
+        for (i = 0; i < count; ++i) {
+            if (equalFoldedName(entries[i]->name, entry->name)) break;
+        }
+        if (i != count) {
+            entries[i] = entry;
+            continue;
+        }
+        if (count == capacity) {
+            const size_t newCapacity = capacity == 0 ? 8 : capacity * 2;
+            if (newCapacity < capacity || newCapacity > SIZE_MAX / sizeof(*entries))
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            CHKmalloc(entries = realloc(entries, newCapacity * sizeof(*entries)));
+            capacity = newCapacity;
+        }
+        entries[count++] = entry;
+    }
+    CHKiRet(appendNvlstEntries(out, entries, count));
+
+finalize_it:
+    free(entries);
+    RETiRet;
+}
+
+static rsRetVal validateNvlst(const struct nvlst *list) {
+    es_str_t *serialized = NULL;
+    DEFiRet;
+
+    CHKmalloc(serialized = es_newStr(64));
+    CHKiRet(appendNvlst(&serialized, list));
+
+finalize_it:
+    if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
 static const struct nvlst *findNvlst(const struct nvlst *list, const char *name) {
     size_t nameLen = strlen(name);
 
@@ -443,18 +527,52 @@ finalize_it:
 
 static rsRetVal appendStmtList(es_str_t **out, const struct cnfstmt *stmt);
 
+static rsRetVal appendActionReference(es_str_t **out, const struct nvlst *syntax) {
+    const char *name;
+    size_t nameLen;
+    DEFiRet;
+
+    if (syntax == NULL) return RS_RET_PARAM_ERROR;
+    name = nvlstString(syntax, "name", &nameLen);
+    CHKiRet(appendToken(out, "A"));
+    if (name == NULL) {
+        /* The surrounding statement-list position is the stable anonymous
+         * slot. Do not include mutable action parameters in a ruleset hash. */
+        CHKiRet(appendToken(out, "anonymous"));
+    } else {
+        CHKiRet(appendToken(out, "named"));
+        CHKiRet(appendBytes(out, (const uchar *)name, nameLen));
+    }
+    CHKiRet(appendToken(out, "."));
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
+    unsigned canonicalType;
     DEFiRet;
 
     if (stmt == NULL) return RS_RET_PARAM_ERROR;
+    canonicalType = stmt->nodetype;
+    if (stmt->nodetype == S_ACT || stmt->nodetype == S_RELOAD_ACT)
+        canonicalType = S_RELOAD_ACT;
+    else if (stmt->nodetype == S_PRIFILT || stmt->nodetype == S_RELOAD_PRIFILT)
+        canonicalType = S_RELOAD_PRIFILT;
+    else if (stmt->nodetype == S_PROPFILT || stmt->nodetype == S_RELOAD_PROPFILT)
+        canonicalType = S_RELOAD_PROPFILT;
     CHKiRet(appendToken(out, "T"));
-    CHKiRet(appendUnsigned(out, stmt->nodetype));
+    CHKiRet(appendUnsigned(out, canonicalType));
     switch (stmt->nodetype) {
         case S_NOP:
         case S_STOP:
             break;
         case S_RELOAD_ACT:
-            CHKiRet(appendNvlst(out, stmt->d.reload_action));
+            CHKiRet(appendActionReference(out, stmt->d.reload_action));
+            break;
+        case S_ACT:
+            if (stmt->d.act == NULL || stmt->d.act->pSyntaxLst == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            CHKiRet(appendActionReference(out, stmt->d.act->pSyntaxLst));
             break;
         case S_IF:
             CHKiRet(appendExpr(out, stmt->d.s_if.expr));
@@ -482,11 +600,13 @@ static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
             CHKiRet(appendExpr(out, stmt->d.s_call_ind.expr));
             break;
         case S_RELOAD_PRIFILT:
+        case S_PRIFILT:
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_prifilt.t_then));
             break;
         case S_RELOAD_PROPFILT:
+        case S_PROPFILT:
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_propfilt.t_then));
@@ -583,11 +703,9 @@ finalize_it:
 
 static rsRetVal globalFingerprint(const rsReloadCandidate_t *candidate, char **fingerprint) {
     const rsReloadCandidateObject_t *candidateEntry;
-    const struct nvlst *parameter;
-    const struct nvlst **entries = NULL;
+    struct nvlst *params = NULL;
+    struct nvlst *tail = NULL;
     es_str_t *serialized = NULL;
-    size_t count = 0;
-    size_t i = 0;
     DEFiRet;
 
     if (candidate == NULL || fingerprint == NULL || *fingerprint != NULL) return RS_RET_PARAM_ERROR;
@@ -595,23 +713,27 @@ static rsRetVal globalFingerprint(const rsReloadCandidate_t *candidate, char **f
         if (candidateEntry->object->objType != CNFOBJ_GLOBAL) continue;
         if (candidateEntry->object->script != NULL || candidateEntry->object->subobjs != NULL)
             return RS_RET_NOT_IMPLEMENTED;
-        for (parameter = candidateEntry->object->nvlst; parameter != NULL; parameter = parameter->next) ++count;
-    }
-    if (count != 0) {
-        CHKmalloc(entries = calloc(count, sizeof(*entries)));
-        for (candidateEntry = candidate->head; candidateEntry != NULL; candidateEntry = candidateEntry->next) {
-            if (candidateEntry->object->objType != CNFOBJ_GLOBAL) continue;
-            for (parameter = candidateEntry->object->nvlst; parameter != NULL; parameter = parameter->next)
-                entries[i++] = parameter;
+        CHKiRet(validateNvlst(candidateEntry->object->nvlst));
+        {
+            struct nvlst *copy = rsconfTranslateCloneNvlst(candidateEntry->object->nvlst);
+            if (candidateEntry->object->nvlst != NULL && copy == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            if (tail == NULL)
+                params = copy;
+            else
+                tail->next = copy;
+            if (copy != NULL) {
+                tail = copy;
+                while (tail->next != NULL) tail = tail->next;
+            }
         }
     }
     CHKmalloc(serialized = es_newStr(256));
     CHKiRet(appendToken(&serialized, "rsyslog.reload.global.v1;"));
-    CHKiRet(appendNvlstEntries(&serialized, entries, count));
+    CHKiRet(appendGlobalMap(&serialized, params));
     CHKiRet(sha256Fingerprint(serialized, fingerprint));
 
 finalize_it:
-    free(entries);
+    nvlstDestruct(params);
     if (serialized != NULL) es_deleteStr(serialized);
     RETiRet;
 }
@@ -672,6 +794,9 @@ static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, 
         case CNFOBJ_MODULE:
             key = "load";
             break;
+        case CNFOBJ_TIMEZONE:
+            key = "id";
+            break;
         case CNFOBJ_INPUT:
             key = "name";
             value = nvlstString(object->nvlst, key, &valueLen);
@@ -709,7 +834,6 @@ static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, 
         case CNFOBJ_CONSTANT:
         case CNFOBJ_LOOKUP_TABLE:
         case CNFOBJ_PARSER:
-        case CNFOBJ_TIMEZONE:
         case CNFOBJ_DYN_STATS:
         case CNFOBJ_PERCTILE_STATS:
         case CNFOBJ_RATELIMIT:
@@ -777,6 +901,47 @@ static size_t inputTypeOrdinal(const rsReloadCandidate_t *candidate, const rsRel
     return ordinal;
 }
 
+static void sourceInputOrdinalsDestruct(void) {
+    sourceInputOrdinal_t *entry;
+    while (sourceInputOrdinals != NULL) {
+        entry = sourceInputOrdinals;
+        sourceInputOrdinals = entry->next;
+        free(entry->type);
+        free(entry);
+    }
+}
+
+static rsRetVal sourceInputTypeOrdinal(const struct cnfobj *object, size_t *ordinal) {
+    const char *type;
+    size_t length;
+    sourceInputOrdinal_t *entry;
+
+    if (object == NULL || ordinal == NULL) return RS_RET_PARAM_ERROR;
+    *ordinal = 0;
+    if (nvlstString(object->nvlst, "name", NULL) != NULL) return RS_RET_OK;
+    type = nvlstString(object->nvlst, "type", &length);
+    for (entry = sourceInputOrdinals; entry != NULL; entry = entry->next) {
+        if ((type == NULL && entry->length == 0) ||
+            (type != NULL && equalFoldedString(type, length, entry->type, entry->length))) {
+            *ordinal = ++entry->count;
+            return RS_RET_OK;
+        }
+    }
+    entry = calloc(1, sizeof(*entry));
+    if (entry == NULL) return RS_RET_OUT_OF_MEMORY;
+    entry->type = type == NULL ? strdup("") : strndup(type, length);
+    if (entry->type == NULL) {
+        free(entry);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    entry->length = length;
+    entry->count = 1;
+    entry->next = sourceInputOrdinals;
+    sourceInputOrdinals = entry;
+    *ordinal = 1;
+    return RS_RET_OK;
+}
+
 static void lowerRulesetIdentity(char *identity) {
     char *value = strchr(identity, ':');
 
@@ -798,8 +963,13 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
     DEFiRet;
 
     for (; stmt != NULL; stmt = stmt->next) {
-        if (stmt->nodetype == S_RELOAD_ACT) {
-            name = nvlstString(stmt->d.reload_action, "name", &nameLen);
+        if (stmt->nodetype == S_RELOAD_ACT || stmt->nodetype == S_ACT) {
+            const struct nvlst *const actionSyntax = stmt->nodetype == S_RELOAD_ACT
+                                                         ? stmt->d.reload_action
+                                                         : (stmt->d.act == NULL ? NULL : stmt->d.act->pSyntaxLst);
+
+            if (actionSyntax == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            name = nvlstString(actionSyntax, "name", &nameLen);
             if (name == NULL) {
                 ++*ordinal;
                 const int n = snprintf(NULL, 0, "action:%s:anonymous:%zu", rulesetIdentity, *ordinal);
@@ -807,14 +977,14 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
                 CHKmalloc(identity = malloc((size_t)n + 1));
                 snprintf(identity, (size_t)n + 1, "action:%s:anonymous:%zu", rulesetIdentity, *ordinal);
             } else {
-                const size_t prefixLen = strlen("action:") + strlen(rulesetIdentity) + 1;
+                const size_t prefixLen = strlen("action:");
                 if (nameLen > SIZE_MAX - prefixLen - 1) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
                 CHKmalloc(identity = malloc(prefixLen + nameLen + 1));
-                snprintf(identity, prefixLen + nameLen + 1, "action:%s:%.*s", rulesetIdentity, (int)nameLen, name);
+                snprintf(identity, prefixLen + nameLen + 1, "action:%.*s", (int)nameLen, name);
             }
             CHKmalloc(serialized = es_newStr(128));
             CHKiRet(appendToken(&serialized, "rsyslog.reload.action.v1;"));
-            CHKiRet(appendNvlst(&serialized, stmt->d.reload_action));
+            CHKiRet(appendNvlst(&serialized, actionSyntax));
             CHKiRet(sha256Fingerprint(serialized, &fingerprint));
             es_deleteStr(serialized);
             serialized = NULL;
@@ -829,9 +999,9 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_if.t_else, ordinal));
         } else if (stmt->nodetype == S_FOREACH) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_foreach.body, ordinal));
-        } else if (stmt->nodetype == S_RELOAD_PRIFILT) {
+        } else if (stmt->nodetype == S_RELOAD_PRIFILT || stmt->nodetype == S_PRIFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_prifilt.t_then, ordinal));
-        } else if (stmt->nodetype == S_RELOAD_PROPFILT) {
+        } else if (stmt->nodetype == S_RELOAD_PROPFILT || stmt->nodetype == S_PROPFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_propfilt.t_then, ordinal));
         }
     }
@@ -851,6 +1021,7 @@ rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *cand
     size_t defaultActionOrdinal = 0;
     int haveDefaultRuleset = 0;
     int haveGlobal = 0;
+    int haveMainQueue = 0;
     char *identity = NULL;
     char *fingerprint = NULL;
     DEFiRet;
@@ -860,14 +1031,13 @@ rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *cand
     CHKiRet(rsReloadNormalizedGraphBuilderV1Construct(&builder));
     for (entry = candidate->head; entry != NULL; entry = entry->next) {
         ++ordinal;
-        if (entry->object->objType == CNFOBJ_GLOBAL && findNvlst(entry->object->nvlst, "environment") != NULL) {
-            /* Historic environment expansion makes a captured tree process
-             * dependent. Normalization is not semantic validation. */
-            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-        }
         if (entry->object->objType == CNFOBJ_GLOBAL) {
             haveGlobal = 1;
             continue;
+        }
+        if (entry->object->objType == CNFOBJ_MAINQ) {
+            if (haveMainQueue) ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+            haveMainQueue = 1;
         }
         if (entry->object->objType == CNFOBJ_RULESET && entry->object->nvlst == NULL) {
             haveDefaultRuleset = 1;
@@ -909,6 +1079,167 @@ finalize_it:
     free(fingerprint);
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     RETiRet;
+}
+
+rsRetVal rsReloadCandidateSourceBegin(void) {
+    rsReloadCandidateSourceAbort();
+    sourceOrdinal = 0;
+    sourceDefaultActionOrdinal = 0;
+    sourceError = 0;
+    sourceHaveGlobal = 0;
+    sourceHaveMainQueue = 0;
+    sourceInputOrdinalsDestruct();
+    return rsReloadNormalizedGraphBuilderV1Construct(&sourceBuilder);
+}
+
+int rsReloadCandidateSourceActive(void) {
+    return sourceBuilder != NULL && !sourceError;
+}
+
+void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
+    char *identity = NULL;
+    char *fingerprint = NULL;
+    size_t identityOrdinal;
+    rsRetVal ret;
+
+    if (sourceBuilder == NULL || sourceError || object == NULL) return;
+    ++sourceOrdinal;
+    if (object->objType == CNFOBJ_RULESET && object->nvlst == NULL) {
+        if (sourceDefaultSerialized == NULL) sourceDefaultSerialized = es_newStr(256);
+        if (sourceDefaultSerialized == NULL ||
+            (es_strlen(sourceDefaultSerialized) == 0 &&
+             appendToken(&sourceDefaultSerialized, "rsyslog.reload.default-ruleset.v1;") != RS_RET_OK) ||
+            appendObject(&sourceDefaultSerialized, object) != RS_RET_OK ||
+            addActionNodes(sourceBuilder, "ruleset:default", object->script, &sourceDefaultActionOrdinal) !=
+                RS_RET_OK) {
+            sourceError = 1;
+        }
+        return;
+    }
+    /* Merge sequential global blocks into the same case-insensitive,
+     * last-write map used by the candidate graph. */
+    if (object->objType == CNFOBJ_GLOBAL) {
+        struct nvlst *copy;
+        sourceHaveGlobal = 1;
+        if (validateNvlst(object->nvlst) != RS_RET_OK) {
+            sourceError = 1;
+            return;
+        }
+        copy = rsconfTranslateCloneNvlst(object->nvlst);
+        if (object->nvlst != NULL && copy == NULL) {
+            sourceError = 1;
+            return;
+        }
+        if (sourceGlobalParamsTail == NULL)
+            sourceGlobalParams = copy;
+        else
+            sourceGlobalParamsTail->next = copy;
+        if (copy != NULL) {
+            sourceGlobalParamsTail = copy;
+            while (sourceGlobalParamsTail->next != NULL) sourceGlobalParamsTail = sourceGlobalParamsTail->next;
+        }
+        return;
+    }
+    if (object->objType == CNFOBJ_MAINQ) {
+        if (sourceHaveMainQueue) {
+            sourceError = 1;
+            return;
+        }
+        sourceHaveMainQueue = 1;
+    }
+    identityOrdinal = sourceOrdinal;
+    if (object->objType == CNFOBJ_INPUT) {
+        ret = sourceInputTypeOrdinal(object, &identityOrdinal);
+        if (ret != RS_RET_OK) {
+            sourceError = 1;
+            return;
+        }
+    }
+    ret = makeIdentity(object, identityOrdinal, &identity);
+    if (ret == RS_RET_OK && object->objType == CNFOBJ_RULESET) lowerRulesetIdentity(identity);
+    if (ret == RS_RET_OK) ret = objectFingerprint(object, &fingerprint);
+    if (ret == RS_RET_OK)
+        ret = rsReloadNormalizedGraphBuilderV1Add(sourceBuilder, objectKind(object), identity, fingerprint);
+    if (ret == RS_RET_OK && object->objType == CNFOBJ_RULESET) {
+        size_t actionOrdinal = 0;
+        ret = addActionNodes(sourceBuilder, identity, object->script, &actionOrdinal);
+    }
+    free(identity);
+    free(fingerprint);
+    if (ret != RS_RET_OK) sourceError = 1;
+}
+
+void rsReloadCandidateSourceCaptureDefaultScript(const struct cnfstmt *script) {
+    struct cnfobj object = {
+        .objType = CNFOBJ_RULESET, .nvlst = NULL, .subobjs = NULL, .script = (struct cnfstmt *)script};
+
+    rsReloadCandidateSourceCaptureObject(&object);
+}
+
+rsRetVal rsReloadCandidateSourceFinish(rsReloadNormalizedGraphBuilderV1_t **ppBuilder) {
+    char *fingerprint = NULL;
+    rsRetVal ret;
+
+    if (ppBuilder == NULL || *ppBuilder != NULL || sourceBuilder == NULL) return RS_RET_PARAM_ERROR;
+    if (sourceError) {
+        rsReloadCandidateSourceAbort();
+        return RS_RET_NOT_IMPLEMENTED;
+    }
+    if (sourceDefaultSerialized != NULL) {
+        ret = sha256Fingerprint(sourceDefaultSerialized, &fingerprint);
+        if (ret == RS_RET_OK)
+            ret = rsReloadNormalizedGraphBuilderV1Add(sourceBuilder, RS_RELOAD_OBJ_RULESET, "ruleset:default",
+                                                      fingerprint);
+        free(fingerprint);
+        fingerprint = NULL;
+        if (ret != RS_RET_OK) {
+            rsReloadCandidateSourceAbort();
+            return ret;
+        }
+    }
+    if (sourceHaveGlobal) {
+        es_str_t *serialized = es_newStr(256);
+        if (serialized == NULL)
+            ret = RS_RET_OUT_OF_MEMORY;
+        else {
+            ret = appendToken(&serialized, "rsyslog.reload.global.v1;");
+            if (ret == RS_RET_OK) ret = appendGlobalMap(&serialized, sourceGlobalParams);
+            if (ret == RS_RET_OK) ret = sha256Fingerprint(serialized, &fingerprint);
+            es_deleteStr(serialized);
+        }
+        if (ret == RS_RET_OK)
+            ret = rsReloadNormalizedGraphBuilderV1Add(sourceBuilder, RS_RELOAD_OBJ_GLOBAL, "global", fingerprint);
+        free(fingerprint);
+        fingerprint = NULL;
+        if (ret != RS_RET_OK) {
+            rsReloadCandidateSourceAbort();
+            return ret;
+        }
+    }
+    *ppBuilder = sourceBuilder;
+    sourceBuilder = NULL;
+    if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
+    sourceDefaultSerialized = NULL;
+    nvlstDestruct(sourceGlobalParams);
+    sourceGlobalParams = NULL;
+    sourceGlobalParamsTail = NULL;
+    sourceHaveGlobal = 0;
+    sourceHaveMainQueue = 0;
+    sourceInputOrdinalsDestruct();
+    return RS_RET_OK;
+}
+
+void rsReloadCandidateSourceAbort(void) {
+    rsReloadNormalizedGraphBuilderV1Destruct(&sourceBuilder);
+    if (sourceDefaultSerialized != NULL) es_deleteStr(sourceDefaultSerialized);
+    sourceDefaultSerialized = NULL;
+    nvlstDestruct(sourceGlobalParams);
+    sourceGlobalParams = NULL;
+    sourceGlobalParamsTail = NULL;
+    sourceHaveGlobal = 0;
+    sourceError = 0;
+    sourceHaveMainQueue = 0;
+    sourceInputOrdinalsDestruct();
 }
 
 static void objectDestruct(struct cnfobj *const object) {
@@ -973,6 +1304,22 @@ void rsReloadCandidateNoteParseError(void) {
     if (captureCandidate != NULL) captureCandidate->parseError = 1;
 }
 
+static int candidateErrorPriority(const rsRetVal error) {
+    if (error == RS_RET_OUT_OF_MEMORY) return 3;
+    if (error == RS_RET_IO_ERROR || error == RS_RET_FILE_OPEN_ERROR || error == RS_RET_CONF_FILE_NOT_FOUND ||
+        error == RS_RET_FILE_NOT_FOUND || error == RS_RET_FILENAME_INVALID) {
+        return 2;
+    }
+    return error == RS_RET_OK ? 0 : 1;
+}
+
+void rsReloadCandidateNoteError(const rsRetVal error) {
+    if (captureCandidate != NULL &&
+        candidateErrorPriority(error) > candidateErrorPriority(captureCandidate->captureError)) {
+        captureCandidate->captureError = error;
+    }
+}
+
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) {
     return candidate == NULL ? 0 : candidate->objectCount;
 }
@@ -980,6 +1327,7 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) 
 rsRetVal rsReloadCandidateParse(const char *const path, rsReloadCandidate_t **const ppCandidate) {
     const char *ext;
     int parseResult;
+    rsRetVal frontendResult = RS_RET_OK;
     struct stat pathStat;
     rsReloadCandidate_t *candidate = NULL;
     DEFiRet;
@@ -987,16 +1335,25 @@ rsRetVal rsReloadCandidateParse(const char *const path, rsReloadCandidate_t **co
     if (path == NULL || ppCandidate == NULL || *ppCandidate != NULL || captureCandidate != NULL) {
         return RS_RET_PARAM_ERROR;
     }
-    if (stat(path, &pathStat) != 0) return RS_RET_CONF_FILE_NOT_FOUND;
-    if (!S_ISREG(pathStat.st_mode)) return RS_RET_CONF_PARSE_ERROR;
+    if (stat(path, &pathStat) != 0) {
+        return errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+    }
+    if (!S_ISREG(pathStat.st_mode)) return RS_RET_FILENAME_INVALID;
     CHKmalloc(candidate = calloc(1, sizeof(*candidate)));
     captureCandidate = candidate;
+    cnfClearFatalParseError();
     ext = strrchr(path, '.');
 #ifdef HAVE_LIBYAML
     if (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml"))) {
-        const rsRetVal yamlResult = yamlconf_load(path);
-        parseResult = yamlResult == RS_RET_OK ? 0 : (yamlResult == RS_RET_CONF_FILE_NOT_FOUND ? 2 : 1);
-        if (parseResult == 0 && cnfHasPendingBuffers()) parseResult = yyparse();
+        frontendResult = yamlconf_load(path);
+        parseResult = frontendResult == RS_RET_OK ? 0 : 1;
+        if (parseResult == 0 && cnfHasPendingBuffers()) {
+            parseResult = yyparse();
+            if (parseResult == 2)
+                frontendResult = RS_RET_OUT_OF_MEMORY;
+            else if (parseResult != 0)
+                frontendResult = RS_RET_CONF_PARSE_ERROR;
+        }
     } else {
 #else
     if (ext != NULL && (!strcmp(ext, ".yaml") || !strcmp(ext, ".yml"))) {
@@ -1004,11 +1361,28 @@ rsRetVal rsReloadCandidateParse(const char *const path, rsReloadCandidate_t **co
     } else {
 #endif
         parseResult = cnfSetLexFile(path);
-        if (parseResult == 0) parseResult = yyparse();
+        if (parseResult == 2) {
+            frontendResult = errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+        } else if (parseResult == 3) {
+            frontendResult = RS_RET_OUT_OF_MEMORY;
+        } else if (parseResult == 4) {
+            frontendResult = RS_RET_IO_ERROR;
+        }
+        if (parseResult == 0) {
+            parseResult = yyparse();
+            if (parseResult == 2) frontendResult = RS_RET_OUT_OF_MEMORY;
+        }
+    }
+    {
+        const rsRetVal fatalParseRet = cnfTakeFatalParseError();
+        if ((frontendResult == RS_RET_OK || frontendResult == RS_RET_CONF_PARSE_ERROR) && fatalParseRet != RS_RET_OK) {
+            frontendResult = fatalParseRet;
+        }
     }
     cnfResetParser();
     captureCandidate = NULL;
-    if (parseResult == 2) ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
+    if (candidate->captureError != RS_RET_OK) ABORT_FINALIZE(candidate->captureError);
+    if (frontendResult != RS_RET_OK) ABORT_FINALIZE(frontendResult);
     if (parseResult != 0 || candidate->parseError) ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
     *ppCandidate = candidate;
     candidate = NULL;

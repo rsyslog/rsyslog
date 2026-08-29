@@ -126,16 +126,16 @@ extern int yyerror(const char*);
 /* Bison discards partially reduced values during error recovery. Explicit
  * ownership destructors are required because HUP may parse many rejected
  * candidates in one daemon lifetime. */
-%destructor { free($$); } <s>
-%destructor { es_deleteStr($$); } <estr>
-%destructor { cnfobjDestructAll($$); } <obj>
-%destructor { cnfstmtDestructLst($$); } <stmt>
-%destructor { nvlstDestruct($$); } <nvlst>
-%destructor { objlstDestruct($$); } <objlst>
-%destructor { cnfexprDestruct($$); } <expr>
-%destructor { cnfarrayDestruct($$); } <arr>
-%destructor { cnffparamlstDestruct($$); } <fparams>
-%destructor { cnfIteratorDestruct($$); } <itr>
+%destructor { free($$); } LEGACY_ACTION LEGACY_RULESET PRIFILT PROPFILT BSD_TAG_SELECTOR BSD_HOST_SELECTOR VAR
+%destructor { es_deleteStr($$); } NAME FUNC STRING
+%destructor { cnfobjDestructAll($$); } obj property constant
+%destructor { cnfstmtDestructLst($$); } stmt s_act actlst block script
+%destructor { nvlstDestruct($$); } nv nvlst value
+%destructor { objlstDestruct($$); } propconst
+%destructor { cnfexprDestruct($$); } expr
+%destructor { cnfarrayDestruct($$); } array arrayelt
+%destructor { cnffparamlstDestruct($$); } fparams
+%destructor { cnfIteratorDestruct($$); } iterator_decl
 
 %left AND OR
 %left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH
@@ -157,7 +157,7 @@ conf:	/* empty (to end recursion) */
 	| conf LEGACY_RULESET		{ cnfDoCfsysline($2); }
 	| conf BSD_TAG_SELECTOR		{ cnfDoBSDTag($2); }
 	| conf BSD_HOST_SELECTOR	{ cnfDoBSDHost($2); }
-include:  BEGIN_INCLUDE nvlst ENDOBJ	{ includeProcessCnf($2); }
+include:  BEGIN_INCLUDE nvlst ENDOBJ	{ if(includeProcessCnf($2) != 0) YYABORT; }
 obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
         | BEGIN_TPL nvlst ENDOBJ	{ $$ = cnfobjNew(CNFOBJ_TPL, $2); }
         | BEGIN_TPL nvlst ENDOBJ '{' propconst '}'

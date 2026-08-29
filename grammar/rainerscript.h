@@ -395,7 +395,7 @@ struct funcData_prifilt {
 
 void varFreeMembers(const struct svar *r);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
-void readConfFile(FILE *fp, es_str_t **str);
+rsRetVal readConfFile(FILE *fp, es_str_t **str);
 struct objlst *objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
 void objlstPrint(struct objlst *lst);
@@ -428,6 +428,8 @@ struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst);
 struct cnffuncexists *cnffuncexistsNew(const char *varname);
 struct cnffparamlst *cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(const char *name, const int optional);
+void cnfClearFatalParseError(void);
+rsRetVal cnfTakeFatalParseError(void);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params, struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
@@ -462,7 +464,7 @@ void unescapeStr(uchar *s, int len);
 const char *tokenval2str(int tok);
 uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
 long long var2Number(struct svar *r, int *bSuccess);
-void includeProcessCnf(struct nvlst *const lst);
+int includeProcessCnf(struct nvlst *const lst);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);
