@@ -2371,6 +2371,25 @@ static rsRetVal ATTR_NONNULL(1) SetRuleset(tcpsrv_t *const pThis, ruleset_t *con
     RETiRet;
 }
 
+static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const tcpsrv_reload_profile_t *const profile) {
+    tcpsrvApplyFlowControlLive(pThis, profile->useFlowControl);
+    tcpsrvApplyStarvationMaxReadsLive(pThis, profile->starvationMaxReads);
+    tcpsrvApplyNotificationsLive(pThis, profile->notifyOnConnectionOpen, profile->notifyOnConnectionClose);
+    tcpsrvApplyPreserveCaseForNewSessions(pThis, profile->preserveCase);
+    tcpsrvApplyKeepAliveForNewSessions(pThis, profile->keepAlive, profile->keepAliveInterval, profile->keepAliveProbes,
+                                       profile->keepAliveTime);
+    tcpsrvApplyFramingForNewSessions(pThis, profile->framingFix, profile->additionalFrameDelimiter,
+                                     profile->maxFrameSize, profile->disableLFDelimiter,
+                                     profile->discardTruncatedMessage);
+    tcpsrvApplyOctetCountedFramingForNewSessions(pThis, profile->supportOctetCountedFraming);
+    tcpsrvApplyCompressionForNewSessions(
+        pThis, profile->compressionMode, profile->compressionDriver, profile->compressionMaxExpansionRatio,
+        profile->compressionMaxDecompressedBytesPerReceive, profile->compressionMaxTotalZstdWindowBytes);
+    tcpsrvApplyMultiLineForNewSessions(pThis, profile->multiLine);
+    tcpsrvApplyDefaultTZLive(pThis, profile->defaultTZ);
+    tcpsrvApplyRulesetLive(pThis, profile->ruleset);
+}
+
 
 static rsRetVal ATTR_NONNULL(1) SetbSPFramingFix(tcpsrv_t *pThis, const sbool val) {
     DEFiRet;
@@ -2739,6 +2758,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->ConstructFinalizePrepared = tcpsrvConstructFinalizePrepared;
     pIf->ActivatePreparedListeners = tcpsrvActivatePreparedListeners;
     pIf->DisableAcceptWhileFenced = tcpsrvDisableAcceptWhileFenced;
+    pIf->ApplyReloadProfile = ApplyReloadProfile;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

@@ -7,6 +7,7 @@
 # correct runtime listener. Persistent connections and visible output are the
 # session-retention oracle; synchronization uses imdiag acknowledgements.
 . ${srcdir:=.}/diag.sh init
+require_plugin imtcp
 generate_conf
 add_conf 'global(config.reloadOnHUP="on")'
 add_conf 'module(load="../plugins/imtcp/.libs/imtcp")'

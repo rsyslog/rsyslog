@@ -36,6 +36,13 @@ static rsRetVal classify_new_sessions(const void __attribute__((unused)) * pOldC
     return RS_RET_OK;
 }
 
+static rsRetVal classify_live_and_new_sessions(const void __attribute__((unused)) * pOldCnf,
+                                               const void __attribute__((unused)) * pNewCnf,
+                                               eModReloadCapability_t *pCapability) {
+    *pCapability = eMOD_RELOAD_LIVE_AND_NEW_SESSIONS;
+    return RS_RET_OK;
+}
+
 static rsRetVal classify_drain_replace(const void __attribute__((unused)) * pOldCnf,
                                        const void __attribute__((unused)) * pNewCnf,
                                        eModReloadCapability_t *pCapability) {
@@ -172,6 +179,8 @@ int main(void) {
 
     legacy.reloadV1.classify = classify_new_sessions;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_NEW_SESSIONS);
+    legacy.reloadV1.classify = classify_live_and_new_sessions;
+    CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_LIVE_AND_NEW_SESSIONS);
     legacy.reloadV1.classify = classify_drain_replace;
     CHECK(modReloadClassify(&legacy, NULL, NULL) == eMOD_RELOAD_DRAIN_REPLACE);
     legacy.reloadV1.retire = NULL;

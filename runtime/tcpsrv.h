@@ -98,6 +98,35 @@ struct tcpLstnPortList_s {
     tcpLstnPortList_t *pNext; /**< next port or NULL */
 };
 
+/* Fully validated control-path values applied while a reload fence is held.
+ * The operation is deliberately infallible: preparation owns validation and
+ * resolution, while commit only copies scalars and stable runtime pointers. */
+typedef struct tcpsrv_reload_profile_s {
+    int useFlowControl;
+    unsigned starvationMaxReads;
+    int notifyOnConnectionClose;
+    int notifyOnConnectionOpen;
+    int preserveCase;
+    int keepAlive;
+    int keepAliveInterval;
+    int keepAliveProbes;
+    int keepAliveTime;
+    int framingFix;
+    int additionalFrameDelimiter;
+    int maxFrameSize;
+    int disableLFDelimiter;
+    int discardTruncatedMessage;
+    int supportOctetCountedFraming;
+    int compressionMode;
+    int compressionDriver;
+    uint64_t compressionMaxExpansionRatio;
+    uint64_t compressionMaxDecompressedBytesPerReceive;
+    uint64_t compressionMaxTotalZstdWindowBytes;
+    int multiLine;
+    uchar defaultTZ[8];
+    ruleset_t *ruleset;
+} tcpsrv_reload_profile_t;
+
 
 typedef struct tcpsrvWrkrData_s {
     statsobj_t *stats;
@@ -395,9 +424,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*ActivatePreparedListeners)(tcpsrv_t *pThis);
     /* added v37 -- infallibly stop accepts while the reload fence is held */
     void (*DisableAcceptWhileFenced)(tcpsrv_t *pThis);
+    /* added v38 -- infallibly publish a validated live/accept profile */
+    void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 37 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 38 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

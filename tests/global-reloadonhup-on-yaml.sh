@@ -80,7 +80,7 @@ sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"\
     compression.maxExpansionRatio: "2048"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_and_new_sessions"* ]]; then
 	echo "FAIL: YAML module-level flow-control update did not activate: $reload_status"
 	error_exit 1
 fi
@@ -93,7 +93,7 @@ exec 7>&-
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=new_sessions"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_and_new_sessions"* ]]; then
 	echo "FAIL: YAML module-level flow-control restore did not activate: $reload_status"
 	error_exit 1
 fi
@@ -107,7 +107,7 @@ sed -e 's/contains "msgnum"/contains "cutover-ack"/' \
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=new_sessions"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=live_and_new_sessions"* ]]; then
 	echo "FAIL: coordinated YAML imtcp/ruleset activation did not publish generation five: $reload_status"
 	error_exit 1
 fi

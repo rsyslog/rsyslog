@@ -62,8 +62,8 @@ rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *const pMod,
     ret = pMod->reloadSourceV1.classifyCandidate(pOldCnf, pNewCnf, &classified);
     if (ret != RS_RET_OK) return ret;
     if (classified != eMOD_RELOAD_RESTART_REQUIRED && classified != eMOD_RELOAD_LIVE_SWAP &&
-        classified != eMOD_RELOAD_NEW_SESSIONS && classified != eMOD_RELOAD_DRAIN_REPLACE &&
-        classified != eMOD_RELOAD_REUSE)
+        classified != eMOD_RELOAD_NEW_SESSIONS && classified != eMOD_RELOAD_LIVE_AND_NEW_SESSIONS &&
+        classified != eMOD_RELOAD_DRAIN_REPLACE && classified != eMOD_RELOAD_REUSE)
         return RS_RET_PARAM_ERROR;
     *pCapability = classified;
     return RS_RET_OK;
@@ -89,6 +89,7 @@ eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOld
             return capability;
         case eMOD_RELOAD_LIVE_SWAP:
         case eMOD_RELOAD_NEW_SESSIONS:
+        case eMOD_RELOAD_LIVE_AND_NEW_SESSIONS:
         case eMOD_RELOAD_DRAIN_REPLACE:
             return modReloadHasLifecycleHooks(pMod) ? capability : eMOD_RELOAD_RESTART_REQUIRED;
         case eMOD_RELOAD_RESTART_REQUIRED:
