@@ -684,6 +684,61 @@ finalize_it:
     RETiRet;
 }
 
+/* Keep effective defaults in side-effect-free helpers so normal startup and
+ * private reload lowering cannot drift apart. Pointer fields remain NULL from
+ * calloc and are populated only by the normal or private parameter pass. */
+static void initModuleDefaults(modConfData_t *const config) {
+    config->iTCPSessMax = 200;
+    config->iTCPLstnMax = 20;
+    config->numWrkr = DEFAULT_NUMWRKR;
+    config->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
+    config->bSuppOctetFram = 1;
+    config->iStrmDrvrMode = 0;
+    config->bUseFlowControl = 1;
+    config->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+    config->maxFrameSize = 200000;
+    config->bPreserveCase = 1;
+    config->compressionMode = TCPSRV_COMPRESS_NEVER;
+    config->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
+    config->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
+    config->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
+    config->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+}
+
+static void initInstanceDefaults(instanceConf_t *const inst, const modConfData_t *const moduleConfig) {
+    inst->cnf_params->bSuppOctetFram = FRAMING_UNSET;
+    inst->ratelimitInterval = -1;
+    inst->ratelimitBurst = -1;
+    inst->iStrmDrvrMode = moduleConfig->iStrmDrvrMode;
+    inst->bStrmDrvrModeSet = moduleConfig->bStrmDrvrModeSet;
+    inst->iStrmDrvrExtendedCertCheck = moduleConfig->iStrmDrvrExtendedCertCheck;
+    inst->iStrmDrvrSANPreference = moduleConfig->iStrmDrvrSANPreference;
+    inst->iStrmTlsVerifyDepth = moduleConfig->iStrmTlsVerifyDepth;
+    inst->iStrmTlsRevocationCheck = moduleConfig->iStrmTlsRevocationCheck;
+    inst->bKeepAlive = moduleConfig->bKeepAlive;
+    inst->iKeepAliveIntvl = moduleConfig->iKeepAliveIntvl;
+    inst->iKeepAliveProbes = moduleConfig->iKeepAliveProbes;
+    inst->iKeepAliveTime = moduleConfig->iKeepAliveTime;
+    inst->iAddtlFrameDelim = moduleConfig->iAddtlFrameDelim;
+    inst->maxFrameSize = moduleConfig->maxFrameSize;
+    inst->bUseFlowControl = moduleConfig->bUseFlowControl;
+    inst->bDisableLFDelim = moduleConfig->bDisableLFDelim;
+    inst->discardTruncatedMsg = moduleConfig->discardTruncatedMsg;
+    inst->bEmitMsgOnClose = moduleConfig->bEmitMsgOnClose;
+    inst->bEmitMsgOnOpen = moduleConfig->bEmitMsgOnOpen;
+    inst->bPreserveCase = moduleConfig->bPreserveCase;
+    inst->iTCPLstnMax = moduleConfig->iTCPLstnMax;
+    inst->iTCPSessMax = moduleConfig->iTCPSessMax;
+    inst->numWrkr = moduleConfig->numWrkr;
+    inst->starvationMaxReads = moduleConfig->starvationMaxReads;
+    inst->compressionMode = moduleConfig->compressionMode;
+    inst->compressionDriver = moduleConfig->compressionDriver;
+    inst->compressionMaxExpansionRatio = moduleConfig->compressionMaxExpansionRatio;
+    inst->compressionMaxDecompressedBytesPerReceive = moduleConfig->compressionMaxDecompressedBytesPerReceive;
+    inst->compressionMaxTotalZstdWindowBytes = moduleConfig->compressionMaxTotalZstdWindowBytes;
+    inst->compressionMaxTotalZstdWindowBytesSet = moduleConfig->compressionMaxTotalZstdWindowBytesSet;
+}
+
 
 /* create input instance, set default parameters, and
  * add it to the list of instances.
@@ -694,61 +749,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     DEFiRet;
     CHKmalloc(inst = (instanceConf_t *)calloc(1, sizeof(instanceConf_t)));
     CHKmalloc(inst->cnf_params = (tcpLstnParams_t *)calloc(1, sizeof(tcpLstnParams_t)));
-    inst->next = NULL;
-    inst->pszBindRuleset = NULL;
-    inst->pszInputName = NULL;
-    inst->dfltTZ = NULL;
-    inst->cnf_params->bSuppOctetFram = -1; /* unset */
-    inst->bSPFramingFix = 0;
-    inst->ratelimitInterval = -1;
-    inst->ratelimitBurst = -1;
-
-    inst->pszNetworkNamespace = NULL;
-    inst->pszStrmDrvrName = NULL;
-    inst->pszStrmDrvrAuthMode = NULL;
-    inst->pszStrmDrvrPermitExpiredCerts = NULL;
-    inst->pszStrmDrvrCAFile = NULL;
-    inst->pszStrmDrvrCRLFile = NULL;
-    inst->pszStrmDrvrKeyFile = NULL;
-    inst->pszStrmDrvrCertFile = NULL;
-    inst->pPermPeersRoot = NULL;
-    inst->gnutlsPriorityString = NULL;
-    inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
-    inst->bStrmDrvrModeSet = loadModConf->bStrmDrvrModeSet;
-    inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
-    inst->iStrmDrvrSANPreference = loadModConf->iStrmDrvrSANPreference;
-    inst->iStrmTlsVerifyDepth = loadModConf->iStrmTlsVerifyDepth;
-    inst->iStrmTlsRevocationCheck = loadModConf->iStrmTlsRevocationCheck;
-    inst->bKeepAlive = loadModConf->bKeepAlive;
-    inst->iKeepAliveIntvl = loadModConf->iKeepAliveIntvl;
-    inst->iKeepAliveProbes = loadModConf->iKeepAliveProbes;
-    inst->iKeepAliveTime = loadModConf->iKeepAliveTime;
-    inst->iAddtlFrameDelim = loadModConf->iAddtlFrameDelim;
-    inst->maxFrameSize = loadModConf->maxFrameSize;
-    inst->bUseFlowControl = loadModConf->bUseFlowControl;
-    inst->bDisableLFDelim = loadModConf->bDisableLFDelim;
-    inst->discardTruncatedMsg = loadModConf->discardTruncatedMsg;
-    inst->bEmitMsgOnClose = loadModConf->bEmitMsgOnClose;
-    inst->bEmitMsgOnOpen = loadModConf->bEmitMsgOnOpen;
-    inst->bPreserveCase = loadModConf->bPreserveCase;
-    inst->iSynBacklog = 0; /* default: unset */
-    inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
-    inst->iTCPSessMax = loadModConf->iTCPSessMax;
-    inst->numWrkr = loadModConf->numWrkr;
-    inst->starvationMaxReads = loadModConf->starvationMaxReads;
-    inst->compressionMode = loadModConf->compressionMode;
-    inst->compressionDriver = loadModConf->compressionDriver;
-    inst->compressionMaxExpansionRatio = loadModConf->compressionMaxExpansionRatio;
-    inst->compressionMaxDecompressedBytesPerReceive = loadModConf->compressionMaxDecompressedBytesPerReceive;
-    inst->compressionMaxTotalZstdWindowBytes = loadModConf->compressionMaxTotalZstdWindowBytes;
-    inst->compressionMaxTotalZstdWindowBytesSet = loadModConf->compressionMaxTotalZstdWindowBytesSet;
-    inst->pAllowedSendersRoot = NULL;
-    inst->pAllowedSendersLast = NULL;
-    inst->bAllowedSendersSet = 0;
-
-    inst->cnf_params->pszLstnPortFileName = NULL;
-    inst->cnf_params->bMultiLine = 0;
-    inst->cnf_params->pszStartRegex = NULL;
+    initInstanceDefaults(inst, loadModConf);
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -1155,50 +1156,7 @@ BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
     loadModConf = pModConf;
     pModConf->pConf = pConf;
-    /* init our settings */
-    loadModConf->iTCPSessMax = 200;
-    loadModConf->iTCPLstnMax = 20;
-    loadModConf->numWrkr = DEFAULT_NUMWRKR;
-    loadModConf->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
-    loadModConf->bSuppOctetFram = 1;
-    loadModConf->iStrmDrvrMode = 0;
-    loadModConf->bStrmDrvrModeSet = 0;
-    loadModConf->iStrmDrvrExtendedCertCheck = 0;
-    loadModConf->iStrmDrvrSANPreference = 0;
-    loadModConf->iStrmTlsVerifyDepth = 0;
-    loadModConf->iStrmTlsRevocationCheck = 0; /* disabled by default */
-    loadModConf->bUseFlowControl = 1;
-    loadModConf->bKeepAlive = 0;
-    loadModConf->iKeepAliveIntvl = 0;
-    loadModConf->iKeepAliveProbes = 0;
-    loadModConf->iKeepAliveTime = 0;
-    loadModConf->bEmitMsgOnClose = 0;
-    loadModConf->bEmitMsgOnOpen = 0;
-    loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
-    loadModConf->maxFrameSize = 200000;
-    loadModConf->bDisableLFDelim = 0;
-    loadModConf->discardTruncatedMsg = 0;
-    loadModConf->gnutlsPriorityString = NULL;
-    loadModConf->pszNetworkNamespace = NULL;
-    loadModConf->pszStrmDrvrName = NULL;
-    loadModConf->pszStrmDrvrAuthMode = NULL;
-    loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
-    loadModConf->pszStrmDrvrCAFile = NULL;
-    loadModConf->pszStrmDrvrCRLFile = NULL;
-    loadModConf->pszStrmDrvrKeyFile = NULL;
-    loadModConf->pszStrmDrvrCertFile = NULL;
-    loadModConf->pPermPeersRoot = NULL;
-    loadModConf->pAllowedSendersRoot = NULL;
-    loadModConf->pAllowedSendersLast = NULL;
-    loadModConf->bAllowedSendersSet = 0;
-    loadModConf->configSetViaV2Method = 0;
-    loadModConf->bPreserveCase = 1; /* default to true */
-    loadModConf->compressionMode = TCPSRV_COMPRESS_NEVER;
-    loadModConf->compressionDriver = TCPSRV_COMPRESS_DRIVER_ZLIB;
-    loadModConf->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
-    loadModConf->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
-    loadModConf->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
-    loadModConf->compressionMaxTotalZstdWindowBytesSet = RSFALSE;
+    initModuleDefaults(loadModConf);
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config variables */
     resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
