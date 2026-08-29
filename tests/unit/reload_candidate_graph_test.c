@@ -2,8 +2,9 @@
  * Unit coverage for the private reload-candidate graph producer. The oracle
  * checks structural-only graph behavior without parsing, modules, a daemon,
  * or activation: default fragments merge, ruleset identities fold, secrets
- * never appear in digests, duplicate parameter keys fail, fixed imtcp endpoint
- * identities are canonical and collision-safe, and enumeration is deterministic.
+ * never appear in digests, duplicate parameter keys fail, the source catalog
+ * retains owned global/module/input syntax, fixed imtcp endpoint identities
+ * are canonical and collision-safe, and enumeration is deterministic.
  */
 #include "config.h"
 
@@ -455,10 +456,44 @@ int main(void) {
         CHECK(failedObserved.count == 3);
         CHECK(rsReloadCandidateBuildObjectCatalogV1(candidate, &objectCatalog) == RS_RET_OK);
         CHECK(rsReloadCandidateVisitObjectsV1(objectCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-        CHECK(catalogObserved.count == 2);
-        CHECK(catalogObserved.types[0] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[0], "imtcp"));
+        CHECK(catalogObserved.count == 3);
+        CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
         CHECK(catalogObserved.types[1] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[1], "imtcp"));
+        CHECK(catalogObserved.types[2] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[2], "imtcp"));
         rsReloadCandidateDestruct(&objectCatalog);
+    }
+    /* A narrow base classifier can extract one effective global string while
+     * proving that every other last-write global value stayed unchanged. */
+    {
+        rsReloadCandidate_t *changedValue = calloc(1, sizeof(*changedValue));
+        rsReloadCandidate_t *changedOther = calloc(1, sizeof(*changedOther));
+        char *value = NULL;
+        char *baseOther = NULL;
+        char *changedValueOther = NULL;
+        char *changedOtherFingerprint = NULL;
+
+        CHECK(changedValue != NULL && changedOther != NULL);
+        addObject(changedValue, object(CNFOBJ_GLOBAL, parameterPair("secret", "replacement", "zeta", "one"), NULL));
+        addObject(changedOther, object(CNFOBJ_GLOBAL, parameterPair("secret", "replacement", "zeta", "two"), NULL));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateGlobalStringProfileV1(candidate, "secret", &value, &baseOther) == RS_RET_OK);
+        CHECK(value != NULL && !strcmp(value, "supersecret"));
+        free(value);
+        value = NULL;
+        CHECK(rsReloadCandidateGlobalStringProfileV1(changedValue, "secret", &value, &changedValueOther) == RS_RET_OK);
+        CHECK(value != NULL && !strcmp(value, "replacement"));
+        CHECK(!strcmp(baseOther, changedValueOther));
+        free(value);
+        value = NULL;
+        CHECK(rsReloadCandidateGlobalStringProfileV1(changedOther, "secret", &value, &changedOtherFingerprint) ==
+              RS_RET_OK);
+        CHECK(strcmp(baseOther, changedOtherFingerprint));
+        free(value);
+        free(baseOther);
+        free(changedValueOther);
+        free(changedOtherFingerprint);
+        rsReloadCandidateDestruct(&changedValue);
+        rsReloadCandidateDestruct(&changedOther);
     }
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
@@ -704,7 +739,7 @@ int main(void) {
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceCaptureObject(&emptySourceObject);
         CHECK(rsReloadCandidateSourceFinish(&emptySourceBuilder, &emptySourceCatalog) == RS_RET_OK);
-        CHECK(rsReloadCandidateObjectCount(emptySourceCatalog) == 0);
+        CHECK(rsReloadCandidateObjectCount(emptySourceCatalog) == 1);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptyCandidateBuilder, &emptyCandidateGraph) == RS_RET_OK);
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(emptySourceBuilder, &emptySourceGraph) == RS_RET_OK);
         CHECK(emptyCandidateGraph.enumerate(emptyCandidateGraph.context, observe, &emptyCandidateObserved) ==
@@ -741,6 +776,7 @@ int main(void) {
         struct nvlst *namedInput = parameter("type", "IMTCP");
         struct nvlst *moduleParams = parameter("load", "imtcp");
         struct cnfobj *moduleObject;
+        struct cnfobj *globalObject;
         struct cnfobj *namedObject;
         struct cnfobj *otherObject;
         struct cnfobj *anonymousObject;
@@ -751,18 +787,22 @@ int main(void) {
         namedInput->next = parameter("name", "named-before");
         CHECK(namedInput->next != NULL);
         moduleObject = object(CNFOBJ_MODULE, moduleParams, NULL);
+        globalObject = object(CNFOBJ_GLOBAL, parameter("config.reloadOnHUP", "on"), NULL);
         namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
         otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
         anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
-        CHECK(moduleObject != NULL && namedObject != NULL && otherObject != NULL && anonymousObject != NULL &&
-              otherObject->nvlst != NULL && anonymousObject->nvlst != NULL);
+        CHECK(moduleObject != NULL && globalObject != NULL && globalObject->nvlst != NULL && namedObject != NULL &&
+              otherObject != NULL && anonymousObject != NULL && otherObject->nvlst != NULL &&
+              anonymousObject->nvlst != NULL);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
+        rsReloadCandidateSourceCaptureObject(globalObject);
         rsReloadCandidateSourceCaptureObject(moduleObject);
         rsReloadCandidateSourceCaptureObject(namedObject);
         rsReloadCandidateSourceCaptureObject(otherObject);
         rsReloadCandidateSourceCaptureObject(anonymousObject);
         CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder, &observedSourceCatalog) == RS_RET_OK);
-        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 4);
+        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 5);
+        cnfobjDestruct(globalObject);
         cnfobjDestruct(moduleObject);
         cnfobjDestruct(namedObject);
         cnfobjDestruct(otherObject);
@@ -770,15 +810,17 @@ int main(void) {
         {
             objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
             CHECK(rsReloadCandidateVisitObjectsV1(observedSourceCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-            CHECK(catalogObserved.count == 4);
-            CHECK(catalogObserved.types[0] == CNFOBJ_MODULE);
-            CHECK(!strcmp(catalogObserved.discriminator[0], "imtcp"));
-            CHECK(catalogObserved.types[3] == CNFOBJ_INPUT);
-            CHECK(!strcmp(catalogObserved.discriminator[3], "ImTcP"));
+            CHECK(catalogObserved.count == 5);
+            CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
+            CHECK(catalogObserved.types[1] == CNFOBJ_MODULE);
+            CHECK(!strcmp(catalogObserved.discriminator[1], "imtcp"));
+            CHECK(catalogObserved.types[4] == CNFOBJ_INPUT);
+            CHECK(!strcmp(catalogObserved.discriminator[4], "ImTcP"));
         }
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
         CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
-        CHECK(sourceObserved.count == 4);
+        CHECK(sourceObserved.count == 5);
+        CHECK(findObserved(&sourceObserved, "global") != NULL);
         CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
         rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
         rsReloadCandidateDestruct(&observedSourceCatalog);
@@ -841,6 +883,19 @@ int main(void) {
         }
         CHECK(rsReloadCandidateCheckRulesetOnlyReportV1(report) == RS_RET_NOT_IMPLEMENTED);
         rsReloadReportDestructV1(&report);
+        {
+            rsReloadReportEntryV1_t globalEntry = {
+                .objectKind = RS_RELOAD_OBJ_GLOBAL, .diffKind = RS_RELOAD_DIFF_MODIFIED, .identity = (char *)"global"};
+            rsReloadReportV1_t globalReport = {.version = RS_RELOAD_REPORT_V1,
+                                               .structSize = sizeof(globalReport),
+                                               .entryCount = 1,
+                                               .entryStride = sizeof(globalEntry),
+                                               .entries = &globalEntry};
+            CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, globalCandidate, &globalReport,
+                                                           RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1) == RS_RET_OK);
+            CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, globalCandidate, &globalReport,
+                                                           RS_RELOAD_AUTHORIZE_IMTCP_V1) == RS_RET_NOT_IMPLEMENTED);
+        }
         rsReloadNormalizedGraphBuilderV1Destruct(&activeBuilder);
         rsReloadCandidateDestruct(&activeCandidate);
         rsReloadCandidateDestruct(&rulesetCandidate);

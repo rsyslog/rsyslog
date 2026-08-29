@@ -392,9 +392,7 @@ run_test_antipattern_scan() {
 	found_tests=0
 	while IFS= read -r file; do
 		case "$file" in
-		tests/*/*.sh)
-			;;
-		tests/*.sh)
+		tests/*.sh | tests/*.c | tests/*.cc | tests/*.cpp | tests/*.h | tests/*/*.c | tests/*/*.cc | tests/*/*.cpp | tests/*/*.h)
 			[ -f "$file" ] || continue
 			found_tests=1
 			;;
@@ -407,9 +405,7 @@ run_test_antipattern_scan() {
 		# This helper is advisory and exits successfully even with findings.
 		while IFS= read -r file; do
 			case "$file" in
-			tests/*/*.sh)
-				;;
-			tests/*.sh)
+			tests/*.sh | tests/*.c | tests/*.cc | tests/*.cpp | tests/*.h | tests/*/*.c | tests/*/*.cc | tests/*/*.cpp | tests/*/*.h)
 				[ -f "$file" ] || continue
 				devtools/check-test-antipatterns.sh "$file"
 				;;

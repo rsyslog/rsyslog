@@ -137,6 +137,7 @@ if [[ "$reload_status" != *"result=activated active_generation=7 unchanged=8 add
 	echo "FAIL: optimized array comparison did not activate: $reload_status"
 	error_exit 1
 fi
+cp "$CONF_FILE" "$CONF_FILE.active-generation-seven"
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002\n' >&9; then error_exit 1; fi
 wait_content 'msgnum:00000002' "$RSYSLOG_OUT_LOG"
 
@@ -201,6 +202,35 @@ if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=7"
 	error_exit 1
 fi
 wait_queueempty
+
+# A different global scalar must remain outside this first base capability.
+# Its rejection proves that authorizing reloadOnHUP does not widen the entire
+# global node merely because normalized reports use one aggregate identity.
+sed 's/processInternalMessages="on"/processInternalMessages="off"/' "$CONF_FILE.active-generation-seven" \
+	>"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=7 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: unrelated global change escaped the narrow base gate: $reload_status"
+	error_exit 1
+fi
+
+# config.reloadOnHUP is the first independently lowered base setting. Restore
+# the last active source, switch only that value, and prove both atomic graph
+# publication and the new policy by observing the following HUP as validate.
+sed 's/config.reloadOnHUP="on"/config.reloadOnHUP="validate"/' "$CONF_FILE.active-generation-seven" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=8 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: reload mode base profile was not activated: $reload_status"
+	error_exit 1
+fi
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=8 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
+	echo "FAIL: activated validate mode did not govern the next HUP: $reload_status"
+	error_exit 1
+fi
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
@@ -214,10 +244,11 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000005' "$RSYSLOG_OUT_LOG"
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=13'
-content_check 'reload_on_rejected_total=4'
-content_check 'reload_capability_rejected_total=3'
-content_check 'reload_legacy_hook_total=13'
+content_check 'reload_on_total=15'
+content_check 'reload_validate_total=1'
+content_check 'reload_on_rejected_total=5'
+content_check 'reload_capability_rejected_total=4'
+content_check 'reload_legacy_hook_total=16'
 assert_content_missing 'result=validated'
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 exit_test

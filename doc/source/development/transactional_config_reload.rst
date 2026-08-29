@@ -283,14 +283,21 @@ constructing replacement endpoints without consuming or mutating the candidate
 configuration.
 
 Release C extends that foundation with a deliberately narrow private compiler
-and batch-boundary activation path.  In ``on`` mode, only modifications to
-already existing rulesets can be prepared and atomically activated.  Added or
-removed rulesets and every change to actions, inputs, parsers, queues,
-templates, modules, or global settings remain rejected as
+and batch-boundary activation path.  Modifications to existing supported
+rulesets can be prepared and atomically activated.  Added or removed rulesets
+and every unclassified change to actions, parsers, queues, templates, modules,
+inputs, or global settings remain rejected as
 ``candidate_scope_unsupported``.  Unsupported ruleset syntax and consumer
-queues without a safe batch barrier are rejected before commit.  This is the
-first Release C scope; it does not imply that other configuration objects are
-live-reloadable.
+queues without a safe batch barrier are rejected before commit.
+
+The first base-setting exception is ``config.reloadOnHUP`` itself.  In ``on``
+mode, the controller builds a private last-write profile for this value and a
+separate fingerprint over every other ``global()`` parameter.  It authorizes
+the global report node only when that second fingerprint is unchanged, then
+publishes the new mode with the source graph under the same final commit guard.
+The next HUP therefore observes the activated ``off``, ``validate``, or ``on``
+policy.  This narrow exception does not make other global settings
+live-reloadable; in ``validate`` mode all candidate parsing remains report-only.
 
 The first Release E foundation coordinates that ruleset plan with an ``imtcp``
 event-loop/worker fence.  Compatible existing listeners and sessions are kept

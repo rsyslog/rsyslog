@@ -3,9 +3,9 @@
  * This owns request state, observability, and the active generation's
  * source-syntactic configuration graph. It parses candidates into an owned
  * representation without dispatching configuration objects into modules or
- * runtime globals. Existing ruleset plans and explicitly classified live
- * imtcp fields can be prepared and atomically activated; all other changes
- * remain fail-closed.
+ * runtime globals. Existing ruleset plans, explicitly classified imtcp
+ * profiles, and the independently lowered config.reloadOnHUP policy can be
+ * prepared and atomically activated; all other changes remain fail-closed.
  * Historic HUP hooks remain outside this manager.
  */
 #include "config.h"
@@ -74,6 +74,8 @@ static void *pendingSourceModuleCnf = NULL;
 static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
 static int pendingGenerationActivated = 0;
+static reloadOnHUPMode_t pendingReloadMode = RELOAD_ON_HUP_OFF;
+static int pendingReloadModeAuthorized = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -389,12 +391,54 @@ static cfgmodules_etry_t *findActiveInputModule(const char *const configName) {
     return NULL;
 }
 
+static rsRetVal parseCandidateReloadMode(const char *const value, reloadOnHUPMode_t *const mode) {
+    if (mode == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL || !strcasecmp(value, "off")) {
+        *mode = RELOAD_ON_HUP_OFF;
+    } else if (!strcasecmp(value, "validate")) {
+        *mode = RELOAD_ON_HUP_VALIDATE;
+    } else if (!strcasecmp(value, "on")) {
+        *mode = RELOAD_ON_HUP_ON;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
+static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
+    char *activeValue = NULL;
+    char *candidateValue = NULL;
+    char *activeOther = NULL;
+    char *candidateOther = NULL;
+    reloadOnHUPMode_t activeMode;
+    DEFiRet;
+
+    if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
+    if (activeSourceObjectCatalog == NULL || pendingSourceObjectCatalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "config.reloadonhup", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "config.reloadonhup", &candidateValue,
+                                                   &candidateOther));
+    if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    CHKiRet(parseCandidateReloadMode(activeValue, &activeMode));
+    CHKiRet(parseCandidateReloadMode(candidateValue, &pendingReloadMode));
+    if (activeMode != configuredMode) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    pendingReloadModeAuthorized = 1;
+
+finalize_it:
+    free(activeValue);
+    free(candidateValue);
+    free(activeOther);
+    free(candidateOther);
+    RETiRet;
+}
+
 static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report) {
     cfgmodules_etry_t *const activeModule = findActiveInputModule("imtcp");
     modReloadSourceBuildContextV1_t context;
 
     if (activeModule == NULL || !modReloadHasValidSourceInterfaceV1(activeModule->pMod)) return RS_RET_OK;
-    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
+    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL) && !pendingReloadModeAuthorized) return RS_RET_OK;
     memset(&context, 0, sizeof(context));
     context.version = MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1;
     context.structSize = sizeof(context);
@@ -586,6 +630,8 @@ void shadowReloadBeginRequest(void) {
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
     pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
     pendingSourceModuleCapabilityEvaluated = 0;
+    pendingReloadMode = configuredMode;
+    pendingReloadModeAuthorized = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -635,6 +681,13 @@ void shadowReloadBeginRequest(void) {
                         pendingFailurePhase = SHADOW_RELOAD_FAILURE_NORMALIZE;
                         goto candidate_done;
                     }
+                    if (configuredMode == RELOAD_ON_HUP_ON) {
+                        pendingCandidateResult = classifyReloadBase(pendingReport);
+                        if (pendingCandidateResult != RS_RET_OK) {
+                            pendingFailurePhase = sourceLoweringFailurePhase(pendingCandidateResult);
+                            goto candidate_done;
+                        }
+                    }
                     pendingCandidateResult = lowerImtcpSourceCandidate(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) {
                         pendingFailurePhase = sourceLoweringFailurePhase(pendingCandidateResult);
@@ -651,17 +704,17 @@ void shadowReloadBeginRequest(void) {
                                                   pendingSourceModuleCapability == eMOD_RELOAD_DRAIN_REPLACE);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    pendingCandidateResult = sourceReloadable
-                                                 ? rsReloadCandidateCheckRulesetImtcpReportV1(
-                                                       activeSourceObjectCatalog, pendingCandidate, pendingReport)
-                                                 : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                    unsigned authorizations = pendingReloadModeAuthorized ? RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 : 0;
+                    if (sourceReloadable) authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
+                    pendingCandidateResult = rsReloadCandidateCheckAuthorizedReportV1(
+                        activeSourceObjectCatalog, pendingCandidate, pendingReport, authorizations);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
                             runConf, activeSourceObjectCatalog, pendingCandidate, pendingReport,
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
-                            &pendingPlan);
+                            pendingReloadModeAuthorized, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         if (pendingCandidateResult == RS_RET_OK && moduleNeedsCommit) {
                             pendingCandidateResult =
@@ -891,6 +944,10 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingModuleReloadState != NULL) {
         modReloadCommit(pendingSourceModule, pendingModuleReloadState);
         pendingModuleReloadCommitted = 1;
+    }
+    if (pendingReloadModeAuthorized) {
+        configuredMode = pendingReloadMode;
+        runConf->globals.reloadOnHUP = pendingReloadMode;
     }
     publishActivatedGraph(context);
 }

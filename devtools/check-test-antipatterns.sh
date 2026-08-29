@@ -7,6 +7,8 @@ usage: devtools/check-test-antipatterns.sh [path ...]
 
 Advisory scan for testbench patterns that have caused flakes in past CI runs.
 The scanner prefers ripgrep when available and falls back to find + grep.
+Shell-specific checks inspect shell tests; the direct exit() check also covers
+C and C++ test sources and helpers.
 
 Findings are review prompts, not automatic failures. A match can be acceptable
 when the test header documents why the pattern is intentional and what oracle
@@ -20,49 +22,52 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
 fi
 
 tmpfiles="$(mktemp)"
+tmpsources="$(mktemp)"
 cleanup() {
-	rm -f "$tmpfiles"
+	rm -f "$tmpfiles" "$tmpsources"
 }
 trap cleanup EXIT
 
-add_shell_files() {
+add_test_files() {
 	local path
 	for path in "$@"; do
 		if [ -d "$path" ]; then
-			find "$path" -type f -name '*.sh' -print
+			find "$path" -type f \( -name '*.sh' -o -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' \) -print
 		elif [ -f "$path" ]; then
 			case "$path" in
-			*.sh) printf '%s\n' "$path" ;;
+			*.sh | *.c | *.cc | *.cpp | *.h) printf '%s\n' "$path" ;;
 			esac
 		fi
 	done
 }
 
 if [ "$#" -eq 0 ]; then
-	add_shell_files tests > "$tmpfiles"
+	add_test_files tests > "$tmpsources"
 else
-	add_shell_files "$@" > "$tmpfiles"
+	add_test_files "$@" > "$tmpsources"
 fi
 
-sort -u "$tmpfiles" -o "$tmpfiles"
+sort -u "$tmpsources" -o "$tmpsources"
+sed -n '/\.sh$/p' "$tmpsources" > "$tmpfiles"
 
-if [ ! -s "$tmpfiles" ]; then
-	printf 'No shell tests found.\n'
+if [ ! -s "$tmpsources" ]; then
+	printf 'No test sources found.\n'
 	exit 0
 fi
 
-print_matches() {
+print_matches_in() {
 	local title="$1"
 	local pattern="$2"
 	local rationale="$3"
+	local filelist="$4"
 	local matches
 
 	printf '\n## %s\n\n%s\n\n' "$title" "$rationale"
 	if command -v rg >/dev/null 2>&1; then
 		matches="$(xargs rg --line-number --with-filename --no-heading --color=never \
-			--regexp "$pattern" < "$tmpfiles" || true)"
+			--regexp "$pattern" < "$filelist" || true)"
 	else
-		matches="$(xargs grep -nH -E -- "$pattern" < "$tmpfiles" || true)"
+		matches="$(xargs grep -nH -E -- "$pattern" < "$filelist" || true)"
 	fi
 
 	if [ -n "$matches" ]; then
@@ -74,10 +79,21 @@ print_matches() {
 	return 1
 }
 
+print_matches() {
+	print_matches_in "$1" "$2" "$3" "$tmpfiles"
+}
+
 findings=0
 
 printf '# rsyslog test antipattern scan\n'
-printf '\nScanned %s shell test files.\n' "$(wc -l < "$tmpfiles")"
+printf '\nScanned %s test source files (%s shell tests).\n' "$(wc -l < "$tmpsources")" "$(wc -l < "$tmpfiles")"
+
+if print_matches_in "Direct exit() calls" \
+	'(^|[^[:alnum:]_.])exit[[:space:]]*\(' \
+	'Direct exit() calls are never acceptable in tests or test helpers because they bypass normal cleanup and can strand locks or worker threads. Return failure to the owning test thread and assert it after the lifecycle join. The testbench exit_test helper is not a direct exit() call.' \
+	"$tmpsources"; then
+	findings=$((findings + 1))
+fi
 
 if print_matches "Port preselection" \
 	'get_free_port|get_free_port[[:space:]]' \

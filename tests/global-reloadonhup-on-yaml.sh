@@ -137,6 +137,7 @@ if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=6 add
 	echo "FAIL: optimized YAML array comparison did not activate: $reload_status"
 	error_exit 1
 fi
+cp "$CONF_FILE" "$CONF_FILE.active-generation-six"
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002-first\n' >&9; then error_exit 1; fi
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000002-second\n' >&8; then error_exit 1; fi
 wait_content 'msgnum:00000002-first' "$RSYSLOG_OUT_LOG"
@@ -179,6 +180,34 @@ if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation
 fi
 printf '<167>Mar 10 01:00:00 host app: msgnum:00000004\n' >&9
 wait_queueempty
+
+# The global-node authorization is parameter-specific. Changing a second
+# global value must fail closed and retain both generation and TCP sessions.
+sed 's/debug.abortOnProgramError: "on"/debug.abortOnProgramError: "off"/' "$CONF_FILE.active-generation-six" \
+	>"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: unrelated YAML global change escaped the narrow base gate: $reload_status"
+	error_exit 1
+fi
+
+# Native YAML uses the same private base profile. Restore generation six,
+# change only config.reloadOnHUP, then use the next HUP as the runtime-policy
+# oracle: it must validate without publishing another generation.
+sed 's/config.reloadOnHUP: "on"/config.reloadOnHUP: "validate"/' "$CONF_FILE.active-generation-six" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=7 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: YAML reload mode base profile was not activated: $reload_status"
+	error_exit 1
+fi
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=7 unchanged=7 added=0 removed=0 modified=0 invalid=0"* ]]; then
+	echo "FAIL: activated YAML validate mode did not govern the next HUP: $reload_status"
+	error_exit 1
+fi
 exec 9>&-
 exec 8>&-
 shutdown_when_empty

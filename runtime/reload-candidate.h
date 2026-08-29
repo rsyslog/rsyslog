@@ -31,9 +31,11 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
-/* Build an independent, ordered catalog containing only module and input
- * declarations. This is the source material required by module-specific
- * effective-profile classifiers; unrelated scripts and objects are omitted. */
+/* Build an independent, ordered catalog containing global, module, and input
+ * declarations. This is the source material required by base and
+ * module-specific effective-profile classifiers; unrelated scripts and
+ * objects are omitted. Sequential global blocks retain parse order so a
+ * private lowerer can reproduce the startup last-write merge. */
 rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *candidate, rsReloadCandidate_t **ppCatalog);
 /* Identity and fragment are borrowed for the callback only. The visitor must
  * not mutate or retain them. Fragments are visited in effective parse order. */
@@ -54,6 +56,15 @@ rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *cand
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
 rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint);
 rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **borrowedName, size_t *nameLength);
+/* Build a private, frontend-neutral view of one string-valued global
+ * parameter. ownedValue is NULL when the parameter is omitted. The second
+ * output fingerprints the effective last-write map of every other global
+ * parameter, so callers can authorize one narrow base change without
+ * accidentally accepting an unrelated global mutation. */
+rsRetVal rsReloadCandidateGlobalStringProfileV1(const rsReloadCandidate_t *candidate,
+                                                const char *parameterName,
+                                                char **ownedValue,
+                                                char **ownedOtherFingerprint);
 
 /*
  * Conservative scope gate for the first live-ruleset milestone.
@@ -65,6 +76,17 @@ rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *rep
 rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *activeSourceCatalog,
                                                     const rsReloadCandidate_t *candidate,
                                                     const rsReloadReportV1_t *report);
+typedef enum rsReloadCandidateAuthorizationV1_e {
+    RS_RELOAD_AUTHORIZE_IMTCP_V1 = 1U << 0,
+    RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 = 1U << 1
+} rsReloadCandidateAuthorizationV1_t;
+/* Ruleset modifications remain the baseline capability. Additional report
+ * object kinds are accepted only when the caller has already prepared and
+ * authorized the corresponding private runtime transition. */
+rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *activeSourceCatalog,
+                                                  const rsReloadCandidate_t *candidate,
+                                                  const rsReloadReportV1_t *report,
+                                                  unsigned authorizations);
 
 /*
  * Normal startup observes the already-parsed source once, before regular
