@@ -1,0 +1,46 @@
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_da6959cb14e005 708,721-722,732,740,743,745,753,779,799
+  s_f2c089be484e12::t_362b0636875c7d 147-152
+  s_f2c089be484e12::t_dedcf8105f6fb2 329,336-337,341-346,422-423,434-439,757-758,763-765,768,772-773,775,780-793,796
+tools/rsyslogd.c
+  s_f2c089be484e12::t_9ede2eeecb60ed 1980,1983-1986,1993,1997-1998
+runtime/rsconf.c
+  s_f2c089be484e12::t_ca112099fbfa65 802-803
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_334d08db00b242 75-76
+  s_f2c089be484e12::t_5cd6528ad28907 34-37
+tools/shadow_reload.h
+  s_f2c089be484e12::t_e6b3a75a80de7c 16,22-23
+  s_f2c089be484e12::t_9ede2eeecb60ed 26-27
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_5c444e0e033a22 1238-1239,1249-1250,1252
+  s_f2c089be484e12::t_d96a17ff6c8be2 1247-1248,1251,1253-1254,1268,1270-1273
+  s_f2c089be484e12::t_a4cdf14dc197f6 1517-1535
+  s_f2c089be484e12::t_5cd6528ad28907 66-91,93-96
+  s_f2c089be484e12::t_156179dd0f5847 92
+  s_f2c089be484e12::t_ca112099fbfa65 1269
+  s_f2c089be484e12::t_334d08db00b242 49
+  s_f2c089be484e12::t_abc1d48806be31 1347-1348,1352-1354,1392-1393,1407
+tools/shadow_reload.c
+  s_f2c089be484e12::t_d939548e6de800 271
+  s_f2c089be484e12::t_2d39818fb22775 58-59,239-240,247-248,257,277,289-290
+  s_f2c089be484e12::t_3b2a856a9ac94b 63,231,453,704-705,794
+  s_f2c089be484e12::t_16595ff3abf5d6 703,793
+  s_f2c089be484e12::t_86dfe1bd67fc34 507-512
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "a765052e6613e950bf6bcc969d146d042f56b136",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
