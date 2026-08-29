@@ -777,6 +777,77 @@ static rsReloadObjectKind_t objectKind(const struct cnfobj *object) {
     }
 }
 
+static int equalFoldedString(const char *left, size_t leftLen, const char *right, size_t rightLen);
+
+static rsRetVal parseFixedTcpPort(const char *const text, const size_t length, unsigned *const port) {
+    unsigned value = 0;
+
+    if (text == NULL || length == 0) return RS_RET_NOT_FOUND;
+    for (size_t i = 0; i < length; ++i) {
+        if (text[i] < '0' || text[i] > '9') return RS_RET_NOT_FOUND;
+        if (value > (65535U - (unsigned)(text[i] - '0')) / 10U) return RS_RET_NOT_FOUND;
+        value = value * 10U + (unsigned)(text[i] - '0');
+    }
+    if (value == 0) return RS_RET_NOT_FOUND;
+    *port = value;
+    return RS_RET_OK;
+}
+
+static rsRetVal makeImtcpEndpointIdentity(const struct cnfobj *object, char **identity) {
+    const char *port;
+    const char *address;
+    const char *netns;
+    size_t portLen, addressLen, netnsLen;
+    unsigned portNumber;
+    int netnsPrefixLen, addressPrefixLen, portSuffixLen;
+    size_t totalLen;
+    char *cursor;
+
+    if (nvlstString(object->nvlst, "listenportfilename", NULL) != NULL) return RS_RET_NOT_FOUND;
+    port = nvlstString(object->nvlst, "port", &portLen);
+    if (parseFixedTcpPort(port, portLen, &portNumber) != RS_RET_OK) return RS_RET_NOT_FOUND;
+    address = nvlstString(object->nvlst, "address", &addressLen);
+    netns = nvlstString(object->nvlst, "networknamespace", &netnsLen);
+    if (address == NULL) {
+        address = "*";
+        addressLen = 1;
+    }
+    if (netns == NULL) {
+        netns = "";
+        netnsLen = 0;
+    }
+
+    /* Length-prefix the textual endpoint components so IPv6 addresses and
+     * namespace names containing separators cannot collide. The numeric port
+     * is canonicalized so equivalent spellings such as 0514 and 514 match. */
+    if (memchr(address, '\0', addressLen) != NULL || memchr(netns, '\0', netnsLen) != NULL) return RS_RET_PARAM_ERROR;
+    netnsPrefixLen = snprintf(NULL, 0, "input:imtcp:endpoint:n%zu:", netnsLen);
+    addressPrefixLen = snprintf(NULL, 0, "a%zu:", addressLen);
+    portSuffixLen = snprintf(NULL, 0, "p%u", portNumber);
+    if (netnsPrefixLen < 0 || addressPrefixLen < 0 || portSuffixLen < 0) return RS_RET_ERR;
+    totalLen = (size_t)netnsPrefixLen;
+    if (netnsLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += netnsLen;
+    if ((size_t)addressPrefixLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += (size_t)addressPrefixLen;
+    if (addressLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += addressLen;
+    if ((size_t)portSuffixLen > SIZE_MAX - totalLen) return RS_RET_OUT_OF_MEMORY;
+    totalLen += (size_t)portSuffixLen;
+    if (totalLen == SIZE_MAX) return RS_RET_OUT_OF_MEMORY;
+    *identity = malloc(totalLen + 1);
+    if (*identity == NULL) return RS_RET_OUT_OF_MEMORY;
+    cursor = *identity;
+    cursor += snprintf(cursor, totalLen + 1, "input:imtcp:endpoint:n%zu:", netnsLen);
+    memcpy(cursor, netns, netnsLen);
+    cursor += netnsLen;
+    cursor += snprintf(cursor, totalLen + 1 - (size_t)(cursor - *identity), "a%zu:", addressLen);
+    memcpy(cursor, address, addressLen);
+    cursor += addressLen;
+    snprintf(cursor, totalLen + 1 - (size_t)(cursor - *identity), "p%u", portNumber);
+    return RS_RET_OK;
+}
+
 static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, char **identity) {
     const char *value = NULL;
     const char *type = cnfobjType2str(object->objType);
@@ -804,6 +875,11 @@ static rsRetVal makeIdentity(const struct cnfobj *object, const size_t ordinal, 
             value = nvlstString(object->nvlst, key, &valueLen);
             if (value == NULL) {
                 const char *const inputType = nvlstString(object->nvlst, "type", &valueLen);
+                if (inputType != NULL && equalFoldedString(inputType, valueLen, "imtcp", sizeof("imtcp") - 1)) {
+                    const rsRetVal endpointRet = makeImtcpEndpointIdentity(object, identity);
+                    if (endpointRet == RS_RET_OK) return RS_RET_OK;
+                    if (endpointRet != RS_RET_NOT_FOUND) return endpointRet;
+                }
                 const int n = inputType == NULL
                                   ? snprintf(NULL, 0, "%s:anonymous:%zu", type, ordinal)
                                   : snprintf(NULL, 0, "%s:%.*s:anonymous:%zu", type, (int)valueLen, inputType, ordinal);
