@@ -231,6 +231,11 @@ rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
     }
     pthread_mutex_lock(&statusMut);
     activeGeneration = 1;
+    lastUnchangedCount = 0;
+    lastAddedCount = 0;
+    lastRemovedCount = 0;
+    lastModifiedCount = 0;
+    lastInvalidCount = 0;
     pthread_mutex_unlock(&statusMut);
     pendingGauge = signalRequestPending != 0;
     memset(&newGraph, 0, sizeof(newGraph));
@@ -520,7 +525,7 @@ static int rejectedResult(void) {
         const int expectedNormalizeFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_NORMALIZE &&
             (pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_CONF_PARAM_INVLD);
+             pendingCandidateResult == RS_RET_CONF_PARAM_INVLD || pendingCandidateResult == RS_RET_CONF_PARSE_ERROR);
         const int expectedCapabilityFailure =
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_CAPABILITY && pendingCandidateResult == RS_RET_NOT_IMPLEMENTED;
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure)

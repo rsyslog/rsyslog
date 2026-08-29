@@ -118,12 +118,20 @@ struct nvlst *rsconfTranslateCloneNvlst(const struct nvlst *list) {
 
     for (; list != NULL; list = list->next) {
         struct nvlst *copy;
+        es_str_t *value;
         if (list->val.datatype != 'S' || list->name == NULL || list->val.d.estr == NULL) {
             nvlstDestruct(head);
             return NULL;
         }
-        copy = parameter((const char *)es_getBufAddr(list->name), (const char *)es_getBufAddr(list->val.d.estr));
-        if (copy == NULL) {
+        value = es_strdup(list->val.d.estr);
+        if (value == NULL) {
+            nvlstDestruct(head);
+            return NULL;
+        }
+        copy = nvlstNewStr(value);
+        if (copy == NULL) es_deleteStr(value);
+        if (copy == NULL || (copy->name = es_strdup(list->name)) == NULL) {
+            nvlstDestruct(copy);
             nvlstDestruct(head);
             return NULL;
         }
@@ -141,10 +149,13 @@ void cnfstmtDestructLst(struct cnfstmt *list) {
         struct cnfstmt *next = list->next;
         if (list->nodetype == S_RELOAD_ACT)
             nvlstDestruct(list->d.reload_action);
-        else if (list->nodetype == S_RELOAD_PRIFILT)
+        else if (list->nodetype == S_RELOAD_PRIFILT) {
             cnfstmtDestructLst(list->d.s_prifilt.t_then);
-        else if (list->nodetype == S_RELOAD_PROPFILT)
+            cnfstmtDestructLst(list->d.s_prifilt.t_else);
+        } else if (list->nodetype == S_RELOAD_PROPFILT) {
             cnfstmtDestructLst(list->d.s_propfilt.t_then);
+            cnfstmtDestructLst(list->d.s_propfilt.t_else);
+        }
         free(list->printable);
         free(list);
         list = next;
@@ -229,6 +240,41 @@ static struct cnfstmt *propertyFilter(struct cnfstmt *child) {
     }
     result->nodetype = S_RELOAD_PROPFILT;
     result->d.s_propfilt.t_then = child;
+    return result;
+}
+
+static struct cnfstmt *propertyFilterBranches(struct cnfstmt *thenBranch, struct cnfstmt *elseBranch) {
+    struct cnfstmt *result = propertyFilter(thenBranch);
+
+    if (result == NULL) {
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    result->d.s_propfilt.t_else = elseBranch;
+    return result;
+}
+
+static struct cnfstmt *priorityFilterBranches(struct cnfstmt *thenBranch, struct cnfstmt *elseBranch) {
+    struct cnfstmt *result = calloc(1, sizeof(*result));
+
+    if (result == NULL || thenBranch == NULL || elseBranch == NULL) {
+        constructionFailed = 1;
+        free(result);
+        cnfstmtDestructLst(thenBranch);
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    result->printable = (uchar *)strdup("*.info");
+    if (result->printable == NULL) {
+        constructionFailed = 1;
+        free(result);
+        cnfstmtDestructLst(thenBranch);
+        cnfstmtDestructLst(elseBranch);
+        return NULL;
+    }
+    result->nodetype = S_RELOAD_PRIFILT;
+    result->d.s_prifilt.t_then = thenBranch;
+    result->d.s_prifilt.t_else = elseBranch;
     return result;
 }
 
@@ -374,6 +420,83 @@ int main(void) {
     }
     rsReloadNormalizedGraphBuilderV1Destruct(&builder);
     rsReloadCandidateDestruct(&candidate);
+
+    /* Both branches of legacy priority/property filters are part of the
+     * ruleset program and action graph. A change confined to t_else must
+     * therefore change the ruleset fingerprint and expose that branch's
+     * action node instead of being reported as a no-op. */
+    {
+        rsReloadCandidate_t *first = calloc(1, sizeof(*first));
+        rsReloadCandidate_t *second = calloc(1, sizeof(*second));
+        rsReloadCandidate_t *priorityFirst = calloc(1, sizeof(*priorityFirst));
+        rsReloadCandidate_t *prioritySecond = calloc(1, sizeof(*prioritySecond));
+        rsReloadNormalizedGraphBuilderV1_t *firstBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *secondBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *priorityFirstBuilder = NULL;
+        rsReloadNormalizedGraphBuilderV1_t *prioritySecondBuilder = NULL;
+        rsReloadNormalizedGraphV1_t firstGraph;
+        rsReloadNormalizedGraphV1_t secondGraph;
+        rsReloadNormalizedGraphV1_t priorityFirstGraph;
+        rsReloadNormalizedGraphV1_t prioritySecondGraph;
+        observed_t firstObserved = OBSERVED_INIT;
+        observed_t secondObserved = OBSERVED_INIT;
+        observed_t priorityFirstObserved = OBSERVED_INIT;
+        observed_t prioritySecondObserved = OBSERVED_INIT;
+        const rsReloadNormalizedNodeV1_t *firstRuleset;
+        const rsReloadNormalizedNodeV1_t *secondRuleset;
+        const rsReloadNormalizedNodeV1_t *priorityFirstRuleset;
+        const rsReloadNormalizedNodeV1_t *prioritySecondRuleset;
+
+        CHECK(first != NULL && second != NULL && priorityFirst != NULL && prioritySecond != NULL);
+        addObject(first, object(CNFOBJ_RULESET, parameter("name", "branches"),
+                                propertyFilterBranches(action("then-action", "same"), action("else-first", "same"))));
+        addObject(second, object(CNFOBJ_RULESET, parameter("name", "branches"),
+                                 propertyFilterBranches(action("then-action", "same"), action("else-second", "same"))));
+        addObject(priorityFirst, object(CNFOBJ_RULESET, parameter("name", "priority-branches"),
+                                        priorityFilterBranches(action("priority-then", "same"),
+                                                               action("priority-else-first", "same"))));
+        addObject(prioritySecond, object(CNFOBJ_RULESET, parameter("name", "priority-branches"),
+                                         priorityFilterBranches(action("priority-then", "same"),
+                                                                action("priority-else-second", "same"))));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(first, &firstBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(second, &secondBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(priorityFirst, &priorityFirstBuilder) == RS_RET_OK);
+        CHECK(rsReloadCandidateBuildNormalizedGraphV1(prioritySecond, &prioritySecondBuilder) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(firstBuilder, &firstGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(secondBuilder, &secondGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(priorityFirstBuilder, &priorityFirstGraph) == RS_RET_OK);
+        CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(prioritySecondBuilder, &prioritySecondGraph) == RS_RET_OK);
+        CHECK(firstGraph.enumerate(firstGraph.context, observe, &firstObserved) == RS_RET_OK);
+        CHECK(secondGraph.enumerate(secondGraph.context, observe, &secondObserved) == RS_RET_OK);
+        CHECK(priorityFirstGraph.enumerate(priorityFirstGraph.context, observe, &priorityFirstObserved) == RS_RET_OK);
+        CHECK(prioritySecondGraph.enumerate(prioritySecondGraph.context, observe, &prioritySecondObserved) ==
+              RS_RET_OK);
+        firstRuleset = findObserved(&firstObserved, "ruleset:branches");
+        secondRuleset = findObserved(&secondObserved, "ruleset:branches");
+        CHECK(firstRuleset != NULL && secondRuleset != NULL);
+        CHECK(strcmp(firstRuleset->fingerprint, secondRuleset->fingerprint));
+        CHECK(findObserved(&firstObserved, "action:else-first") != NULL);
+        CHECK(findObserved(&firstObserved, "action:then-action") != NULL);
+        CHECK(findObserved(&secondObserved, "action:else-second") != NULL);
+        CHECK(findObserved(&secondObserved, "action:then-action") != NULL);
+        priorityFirstRuleset = findObserved(&priorityFirstObserved, "ruleset:priority-branches");
+        prioritySecondRuleset = findObserved(&prioritySecondObserved, "ruleset:priority-branches");
+        CHECK(priorityFirstRuleset != NULL && prioritySecondRuleset != NULL);
+        CHECK(strcmp(priorityFirstRuleset->fingerprint, prioritySecondRuleset->fingerprint));
+        CHECK(findObserved(&priorityFirstObserved, "action:priority-else-first") != NULL);
+        CHECK(findObserved(&priorityFirstObserved, "action:priority-then") != NULL);
+        CHECK(findObserved(&prioritySecondObserved, "action:priority-else-second") != NULL);
+        CHECK(findObserved(&prioritySecondObserved, "action:priority-then") != NULL);
+        rsReloadNormalizedGraphBuilderV1Destruct(&firstBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&secondBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&priorityFirstBuilder);
+        rsReloadNormalizedGraphBuilderV1Destruct(&prioritySecondBuilder);
+        rsReloadCandidateDestruct(&first);
+        rsReloadCandidateDestruct(&second);
+        rsReloadCandidateDestruct(&priorityFirst);
+        rsReloadCandidateDestruct(&prioritySecond);
+    }
 
     /* Global fragments are a case-folded last-write map. Equivalent split
      * RainerScript and combined YAML blocks therefore hash identically. */

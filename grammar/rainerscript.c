@@ -5251,15 +5251,18 @@ static void cnfstmtDestruct(struct cnfstmt *stmt) {
             break;
         case S_RELOAD_PRIFILT:
             cnfstmtDestructLst(stmt->d.s_prifilt.t_then);
+            cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
             break;
         case S_PROPFILT:
             msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
             if (stmt->d.s_propfilt.regex_cache != NULL) rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
             if (stmt->d.s_propfilt.pCSCompValue != NULL) cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
             cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+            cnfstmtDestructLst(stmt->d.s_propfilt.t_else);
             break;
         case S_RELOAD_PROPFILT:
             cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
+            cnfstmtDestructLst(stmt->d.s_propfilt.t_else);
             break;
         case S_RELOAD_LOOKUP_TABLE:
             if (stmt->d.s_reload_lookup_table.table_name != NULL) {
@@ -5471,6 +5474,7 @@ struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
     if ((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
         cnfstmt->printable = (uchar *)propfilt;
         cnfstmt->d.s_propfilt.t_then = t_then;
+        cnfstmt->d.s_propfilt.t_else = NULL;
         cnfstmt->d.s_propfilt.regex_cache = NULL;
         cnfstmt->d.s_propfilt.pCSCompValue = NULL;
         if (rsReloadCandidateCaptureActive()) {
@@ -5543,6 +5547,11 @@ struct cnfstmt *cnfstmtNewBorrowedAct(struct action_s *const action) {
     if (action == NULL || (cnfstmt = cnfstmtNew(S_ACT)) == NULL) return NULL;
     cnfstmt->flags |= CNFSTMT_FLAG_BORROWED_ACTION;
     cnfstmt->d.act = action;
+    cnfstmt->printable = (uchar *)strdup((const char *)actionGetName(action));
+    if (cnfstmt->printable == NULL) {
+        free(cnfstmt);
+        return NULL;
+    }
     return cnfstmt;
 }
 
@@ -6468,20 +6477,47 @@ struct cnffuncexists *ATTR_NONNULL() cnffuncexistsNew(const char *const varname)
 
 static rsRetVal fatalParseError = RS_RET_OK;
 
-static void setFatalIncludeError(const int includeRet) {
-    const rsRetVal error = includeRet == 3 ? RS_RET_OUT_OF_MEMORY : RS_RET_IO_ERROR;
-    if (fatalParseError != RS_RET_OUT_OF_MEMORY || error == RS_RET_OUT_OF_MEMORY) fatalParseError = error;
+enum cnfIncludeResult {
+    CNF_INCLUDE_OK = 0,
+    CNF_INCLUDE_ERROR = 1,
+    CNF_INCLUDE_NOT_FOUND = 2,
+    CNF_INCLUDE_OOM = 3,
+    CNF_INCLUDE_IO = 4,
+    CNF_INCLUDE_PARSE = 5,
+};
+
+static int configErrorPriority(const rsRetVal error) {
+    if (error == RS_RET_OUT_OF_MEMORY) return 3;
+    if (error == RS_RET_IO_ERROR || error == RS_RET_FILE_OPEN_ERROR) return 2;
+    return error == RS_RET_OK ? 0 : 1;
+}
+
+static void setFatalConfigError(const rsRetVal error) {
+    if (configErrorPriority(error) >= configErrorPriority(fatalParseError)) fatalParseError = error;
     rsReloadCandidateNoteError(error);
+}
+
+void cnfNoteFatalParseError(const rsRetVal error) {
+    setFatalConfigError(error);
+}
+
+static void setFatalIncludeError(const int includeRet) {
+    const rsRetVal error = includeRet == CNF_INCLUDE_OOM ? RS_RET_OUT_OF_MEMORY : RS_RET_IO_ERROR;
+    setFatalConfigError(error);
 }
 
 static void mergeIncludeResult(int *const current, const int next) {
     if (next == 0) return;
-    if (*current == 3 || next == 3)
-        *current = 3;
-    else if (*current == 4 || next == 4)
-        *current = 4;
+    if (*current == CNF_INCLUDE_OOM || next == CNF_INCLUDE_OOM)
+        *current = CNF_INCLUDE_OOM;
+    else if (*current == CNF_INCLUDE_IO || next == CNF_INCLUDE_IO)
+        *current = CNF_INCLUDE_IO;
     else if (*current == 0)
         *current = next;
+}
+
+static int includePathIsMissing(const int error) {
+    return error == ENOENT || error == ENOTDIR;
 }
 
 /* returns 0 if everything is OK and config parsing shall continue,
@@ -6543,32 +6579,26 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     for (i = cfgFiles.gl_pathc - 1; i >= 0; i--) {
         cfgFile = cfgFiles.gl_pathv[i];
         if (lstat(cfgFile, &linkInfo) != 0) {
-            if (optional == 0) {
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
-                parser_errmsg(
-                    "error accessing config file or directory '%s' "
-                    "[cwd: %s]: %s",
-                    cfgFile, cwdBuf, errStr);
-                ret = 1;
-                goto done;
-            }
-            continue;
+            const int pathError = errno;
+            if (optional && includePathIsMissing(pathError)) continue;
+            rs_strerror_r(pathError, errStr, sizeof(errStr));
+            if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
+            parser_errmsg("error accessing config file or directory '%s' [cwd: %s]: %s", cfgFile, cwdBuf, errStr);
+            ret = includePathIsMissing(pathError) ? CNF_INCLUDE_ERROR : CNF_INCLUDE_IO;
+            if (ret == CNF_INCLUDE_IO) setFatalIncludeError(ret);
+            goto done;
         }
 
         if (S_ISLNK(linkInfo.st_mode)) {
             if (stat(cfgFile, &fileInfo) != 0) {
-                if (optional == 0) {
-                    rs_strerror_r(errno, errStr, sizeof(errStr));
-                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
-                    parser_errmsg(
-                        "error accessing config file or directory '%s' "
-                        "[cwd: %s]: %s",
-                        cfgFile, cwdBuf, errStr);
-                    ret = 1;
-                    goto done;
-                }
-                continue;
+                const int pathError = errno;
+                if (optional && includePathIsMissing(pathError)) continue;
+                rs_strerror_r(pathError, errStr, sizeof(errStr));
+                if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) RS_COPY_LITERAL(cwdBuf, "??getcwd() failed??");
+                parser_errmsg("error accessing config file or directory '%s' [cwd: %s]: %s", cfgFile, cwdBuf, errStr);
+                ret = includePathIsMissing(pathError) ? CNF_INCLUDE_ERROR : CNF_INCLUDE_IO;
+                if (ret == CNF_INCLUDE_IO) setFatalIncludeError(ret);
+                goto done;
             }
         } else {
             fileInfo = linkInfo;
@@ -6583,12 +6613,18 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
             if (is_yaml) {
                 const rsRetVal yamlRet = yamlconf_load(cfgFile);
                 if (yamlRet != RS_RET_OK) {
+                    if (optional && yamlRet == RS_RET_CONF_FILE_NOT_FOUND) continue;
                     rsReloadCandidateNoteError(yamlRet);
                     const int includeRet =
                         yamlRet == RS_RET_OUT_OF_MEMORY
-                            ? 3
-                            : (yamlRet == RS_RET_IO_ERROR || yamlRet == RS_RET_FILE_OPEN_ERROR ? 4 : 1);
-                    if (includeRet == 3 || includeRet == 4) setFatalIncludeError(includeRet);
+                            ? CNF_INCLUDE_OOM
+                            : (yamlRet == RS_RET_IO_ERROR || yamlRet == RS_RET_FILE_OPEN_ERROR
+                                   ? CNF_INCLUDE_IO
+                                   : (yamlRet == RS_RET_CONF_FILE_NOT_FOUND ? CNF_INCLUDE_ERROR : CNF_INCLUDE_PARSE));
+                    if (includeRet == CNF_INCLUDE_OOM || includeRet == CNF_INCLUDE_IO)
+                        setFatalIncludeError(includeRet);
+                    else if (includeRet == CNF_INCLUDE_PARSE)
+                        setFatalConfigError(yamlRet);
                     mergeIncludeResult(&ret, includeRet);
                 }
             } else {
@@ -6598,6 +6634,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                     if (lexRet == 2) {
                         const rsRetVal openRet =
                             errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+                        if (optional && openRet == RS_RET_CONF_FILE_NOT_FOUND) continue;
                         rsReloadCandidateNoteError(openRet);
                         if (openRet == RS_RET_FILE_OPEN_ERROR) includeRet = 4;
                     }
@@ -6619,6 +6656,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                     if (lexRet == 2) {
                         const rsRetVal openRet =
                             errno == ENOENT || errno == ENOTDIR ? RS_RET_CONF_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+                        if (optional && openRet == RS_RET_CONF_FILE_NOT_FOUND) continue;
                         rsReloadCandidateNoteError(openRet);
                         if (openRet == RS_RET_FILE_OPEN_ERROR) includeRet = 4;
                     }
@@ -6735,17 +6773,23 @@ int includeProcessCnf(struct nvlst *const lst) {
 
     if (inc_file != NULL) {
         const int includeRet = cnfDoInclude(inc_file, optional);
-        if ((includeRet == 3 || includeRet == 4) || (includeRet != 0 && abort_if_missing)) {
-            fatalParseError = includeRet == 3 ? RS_RET_OUT_OF_MEMORY
-                                              : (includeRet == 4 ? RS_RET_IO_ERROR : RS_RET_CONF_FILE_NOT_FOUND);
-            if (includeRet == 3)
+        if (includeRet == CNF_INCLUDE_OOM || includeRet == CNF_INCLUDE_IO || includeRet == CNF_INCLUDE_PARSE ||
+            (includeRet != CNF_INCLUDE_OK && abort_if_missing)) {
+            const rsRetVal includeError =
+                includeRet == CNF_INCLUDE_OOM
+                    ? RS_RET_OUT_OF_MEMORY
+                    : (includeRet == CNF_INCLUDE_IO ? RS_RET_IO_ERROR
+                                                    : (includeRet == CNF_INCLUDE_PARSE && fatalParseError != RS_RET_OK
+                                                           ? fatalParseError
+                                                           : RS_RET_CONF_FILE_NOT_FOUND));
+            setFatalConfigError(includeError);
+            if (includeRet == CNF_INCLUDE_OOM)
                 parser_errmsg("could not allocate state while including file '%s'", inc_file);
-            else if (includeRet == 4)
+            else if (includeRet == CNF_INCLUDE_IO)
                 parser_errmsg("I/O error while including file '%s'", inc_file);
-            else
+            else if (includeRet != CNF_INCLUDE_PARSE)
                 parser_errmsg("include file '%s' is missing and mode is abort-if-missing", inc_file);
-            rsReloadCandidateNoteError(fatalParseError);
-            ret = fatalParseError;
+            ret = includeError;
             goto done;
         }
     } else if (text != NULL) {

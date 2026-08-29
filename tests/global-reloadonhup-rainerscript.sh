@@ -46,11 +46,20 @@ global(processInternalMessages="on" config.reloadOnHUP="validate")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+# Configure starts a fresh manager lifecycle. No counts from an earlier
+# configuration/report may survive into its initial status snapshot.
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=idle active_generation=1 unchanged=0 added=0 removed=0 modified=0 invalid=0"* ]]; then
+	echo "FAIL: configure did not reset reload status counts: $reload_status"
+	error_exit 1
+fi
 # An unchanged candidate must produce a pure source-diff NOOP before the
 # later sentinel mutation exercises a targeted global-object modification.
+# candidate_objects counts five raw top-level objects here; the remaining
+# fields count the five nodes in the normalized source graph.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=0 invalid=0"* ]]; then
 	echo "FAIL: unchanged candidate did not validate report-only: $reload_status"
 	error_exit 1
 fi
@@ -61,7 +70,7 @@ printf '\nglobal(debug.logFile="%s")\n' "$RSYSLOG_DYNNAME.reload-sentinel" >>"$C
 cp "$CONF_FILE" "$CONF_FILE.valid"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=4 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unexpected reload status: $reload_status"
 	error_exit 1
 fi
@@ -112,6 +121,22 @@ fi
 injectmsg 2 1
 wait_queueempty
 
+# Duplicate case-folded keys are syntactically parseable but cannot form an
+# unambiguous normalized global map. This must be reported as normalization,
+# not as an internal reload-manager failure.
+cat >"$CONF_FILE" <<CONF_EOF
+global(config.reloadOnHUP="validate" duplicate="first" DuPlIcAtE="second")
+action(type="omfile" file="$RSYSLOG2_OUT_LOG")
+CONF_EOF
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_normalization_unsupported active_generation=1"* ]]; then
+	echo "FAIL: ambiguous normalized candidate was misclassified: $reload_status"
+	error_exit 1
+fi
+injectmsg 3 1
+wait_queueempty
+
 # Duplicate generation-global action identities make the normalized report
 # invalid. This is distinct from a parse failure and must remain a fail-closed
 # control-plane outcome; the active action still processes the next record.
@@ -130,7 +155,7 @@ if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=1"
 	echo "FAIL: duplicate action identity did not invalidate the report: $reload_status"
 	error_exit 1
 fi
-injectmsg 3 1
+injectmsg 4 1
 wait_queueempty
 
 # Restore a valid candidate and prove that lexer/include state was completely
@@ -138,7 +163,7 @@ wait_queueempty
 cp "$CONF_FILE.valid" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=1"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=4 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: parser did not recover after invalid candidate: $reload_status"
 	error_exit 1
 fi
@@ -163,5 +188,6 @@ content_check 'msgnum:00000000'
 content_check 'msgnum:00000001'
 content_check 'msgnum:00000002'
 content_check 'msgnum:00000003'
+content_check 'msgnum:00000004'
 
 exit_test

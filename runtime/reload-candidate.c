@@ -604,12 +604,14 @@ static rsRetVal appendStmt(es_str_t **out, const struct cnfstmt *stmt) {
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_prifilt.t_then));
+            CHKiRet(appendStmtList(out, stmt->d.s_prifilt.t_else));
             break;
         case S_RELOAD_PROPFILT:
         case S_PROPFILT:
             CHKiRet(
                 appendBytes(out, stmt->printable, stmt->printable == NULL ? 0 : strlen((const char *)stmt->printable)));
             CHKiRet(appendStmtList(out, stmt->d.s_propfilt.t_then));
+            CHKiRet(appendStmtList(out, stmt->d.s_propfilt.t_else));
             break;
         case S_RELOAD_LOOKUP_TABLE:
             CHKiRet(appendBytes(out, stmt->d.s_reload_lookup_table.table_name,
@@ -1001,8 +1003,10 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_foreach.body, ordinal));
         } else if (stmt->nodetype == S_RELOAD_PRIFILT || stmt->nodetype == S_PRIFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_prifilt.t_then, ordinal));
+            CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_prifilt.t_else, ordinal));
         } else if (stmt->nodetype == S_RELOAD_PROPFILT || stmt->nodetype == S_PROPFILT) {
             CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_propfilt.t_then, ordinal));
+            CHKiRet(addActionNodes(builder, rulesetIdentity, stmt->d.s_propfilt.t_else, ordinal));
         }
     }
 

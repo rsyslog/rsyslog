@@ -16,10 +16,6 @@ if [ "$rc" -ne 1 ]; then
 	cat "${RSYSLOG_DYNNAME}.log"
 	error_exit 1
 fi
-grep -F "is missing and mode is abort-if-missing" "${RSYSLOG_DYNNAME}.log" >/dev/null || {
-	echo "FAIL: abort-if-missing diagnostic absent"
-	cat "${RSYSLOG_DYNNAME}.log"
-	error_exit 1
-}
+content_check "is missing and mode is abort-if-missing" "${RSYSLOG_DYNNAME}.log"
 
 exit_test

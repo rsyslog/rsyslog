@@ -483,7 +483,16 @@ static void cnfPrintToken(const char *token);
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+,;]*	{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return LEGACY_ACTION; }
+[a-z0-9_][a-z0-9_\-\+,;]*	{
+				  cnfPrintToken(yytext);
+				  yylval.s = strdup(yytext);
+				  if(yylval.s == NULL) {
+					  cnfNoteFatalParseError(RS_RET_OUT_OF_MEMORY);
+					  parser_errmsg("out of memory while copying legacy action");
+					  return YYerror;
+				  }
+				  return LEGACY_ACTION;
+				  }
 <INOBJ>")"			{ cnfPrintToken(yytext); BEGIN INITIAL; return ENDOBJ; }
 <INOBJ>[a-z][a-z0-9_\.]*	{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
@@ -648,7 +657,8 @@ done:
 }
 
 
-/* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
+/* Set a new buffer. Returns 0 on success, 1 on parse/setup error,
+ * 2 when the file does not exist, 3 on allocation failure, and 4 on I/O error.
  * note: in case of error, errno must be kept valid!
  */
 int

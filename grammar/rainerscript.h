@@ -435,6 +435,7 @@ struct cnffparamlst *cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *
 int cnfDoInclude(const char *name, const int optional);
 void cnfClearFatalParseError(void);
 rsRetVal cnfTakeFatalParseError(void);
+void cnfNoteFatalParseError(rsRetVal error);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params, struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
