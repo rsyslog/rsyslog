@@ -266,6 +266,12 @@ The status field ``source_capability`` distinguishes an exact effective
 ``reuse`` comparison from a conservative ``restart_required`` result and from
 ``not_evaluated`` when parsing, lowering, legacy syntax, or an unsupported
 side-effectful setting prevented comparison.
+In ``on`` mode, a source change classified ``reuse`` publishes the candidate
+graph and owned source catalog as the next active comparison baseline while
+leaving the existing module runtime objects untouched.  This advances the
+configuration generation but requires neither an input fence nor a consumer
+queue barrier.  Repeating that source is then a true report-only no-op instead
+of rediscovering the same effective-equivalent change on every HUP.
 The first imtcp comparator pairs listener instances in source order; a pure
 reorder is therefore conservatively restart-required until endpoint-key
 reconciliation is connected to the runtime registry.

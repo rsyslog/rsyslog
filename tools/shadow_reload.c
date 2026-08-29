@@ -73,6 +73,7 @@ static void *pendingActiveSourceModuleCnf = NULL;
 static void *pendingSourceModuleCnf = NULL;
 static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
+static int pendingGenerationActivated = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -583,6 +584,7 @@ void shadowReloadBeginRequest(void) {
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
     pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
     pendingSourceModuleCapabilityEvaluated = 0;
+    pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
     if (moduleCleanupRet != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
@@ -639,17 +641,20 @@ void shadowReloadBeginRequest(void) {
                 }
                 if (pendingCandidateResult == RS_RET_OK && !stopBeginForTermination() &&
                     configuredMode == RELOAD_ON_HUP_ON && pendingReport->invalidCount == 0) {
-                    const int moduleLive = pendingSourceModuleCapabilityEvaluated &&
-                                           pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP;
+                    const int sourceReloadable = pendingSourceModuleCapabilityEvaluated &&
+                                                 (pendingSourceModuleCapability == eMOD_RELOAD_REUSE ||
+                                                  pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP);
+                    const int moduleLive = sourceReloadable && pendingSourceModuleCapability == eMOD_RELOAD_LIVE_SWAP;
                     pendingCandidateResult =
-                        moduleLive ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
-                                   : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
+                        sourceReloadable ? rsReloadCandidateCheckRulesetImtcpReportV1(pendingCandidate, pendingReport)
+                                         : rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                     if (pendingCandidateResult == RS_RET_OK) {
                         if (stopBeginForTermination()) goto candidate_done;
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
                             runConf, pendingCandidate, pendingReport,
-                            moduleLive ? eMOD_RELOAD_LIVE_SWAP : eMOD_RELOAD_RESTART_REQUIRED, &pendingPlan);
+                            sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
+                            &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         if (pendingCandidateResult == RS_RET_OK && moduleLive) {
                             pendingCandidateResult =
@@ -659,7 +664,8 @@ void shadowReloadBeginRequest(void) {
                                 pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         }
                         if (pendingCandidateResult == RS_RET_OK && pendingPlan != NULL &&
-                            (rsReloadRulesetPlanCountV1(pendingPlan) != 0 || pendingModuleReloadState != NULL)) {
+                            (pendingReport->modifiedCount != 0 || pendingReport->addedCount != 0 ||
+                             pendingReport->removedCount != 0)) {
                             pendingRulesetGraphBuilder = candidateBuilder;
                             pendingRulesetGraph = candidateGraph;
                             candidateBuilder = NULL;
@@ -867,6 +873,7 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
     lastInvalidCount = pendingReport == NULL ? 0 : pendingReport->invalidCount;
     lastSourceModuleCapability = pendingSourceModuleCapability;
     lastSourceModuleCapabilityEvaluated = pendingSourceModuleCapabilityEvaluated;
+    pendingGenerationActivated = 1;
     pthread_mutex_unlock(&statusMut);
 }
 
@@ -894,7 +901,7 @@ void shadowReloadProcess(void) {
         logState("request", "reported_only", "none", "none", pendingCandidateObjects, pendingReport, pendingReportHash);
     } else if (configuredMode == RELOAD_ON_HUP_ON && pendingCandidateResult == RS_RET_OK && pendingReport != NULL &&
                pendingReport->invalidCount == 0 && pendingPlan != NULL) {
-        if (rsReloadRulesetPlanCountV1(pendingPlan) != 0 || pendingModuleReloadState != NULL) {
+        if (pendingRulesetGraphBuilder != NULL) {
             struct timespec deadline;
             reloadCommitSignalGuard_t commitGuard = {0};
             uint64_t pauseUsec = 0;
@@ -925,12 +932,9 @@ void shadowReloadProcess(void) {
             accountDuration();
             requestInProgress = 0;
             pendingGauge = signalRequestPending != 0;
-            if (rsReloadRulesetPlanCountV1(pendingPlan) == 0 && !pendingModuleReloadCommitted)
-                publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
-            logState("request",
-                     rsReloadRulesetPlanCountV1(pendingPlan) == 0 && !pendingModuleReloadCommitted ? "reported_only"
-                                                                                                   : "activated",
-                     "none", "none", pendingCandidateObjects, pendingReport, pendingReportHash);
+            if (!pendingGenerationActivated) publishStatus(SHADOW_RELOAD_REPORTED, pendingReport);
+            logState("request", pendingGenerationActivated ? "activated" : "reported_only", "none", "none",
+                     pendingCandidateObjects, pendingReport, pendingReportHash);
         } else {
             pendingFailurePhase = SHADOW_RELOAD_FAILURE_ACTIVATION;
             goto rejected;

@@ -354,7 +354,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
     if (report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
         report->entryStride % _Alignof(rsReloadReportEntryV1_t) != 0)
         return RS_RET_PARAM_ERROR;
-    if (sourceCapability == eMOD_RELOAD_LIVE_SWAP) {
+    if (sourceCapability == eMOD_RELOAD_REUSE || sourceCapability == eMOD_RELOAD_LIVE_SWAP) {
         CHKiRet(rsReloadCandidateCheckRulesetImtcpReportV1(candidate, report));
     } else {
         CHKiRet(rsReloadCandidateCheckRulesetOnlyReportV1(report));

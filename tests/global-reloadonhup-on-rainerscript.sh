@@ -34,13 +34,21 @@ cp "$CONF_FILE" "$CONF_FILE.base"
 
 # Explicit and omitted module defaults must lower to the same effective
 # profile in RainerScript just as they do in YAML. The raw module node changes,
-# so the current runtime scope gate still rejects without advancing generation.
+# so the source baseline advances while the existing runtime objects are reused.
 sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="on")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
-	echo "FAIL: explicit RainerScript imtcp default was not classified reusable: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: explicit RainerScript imtcp default did not publish a reusable source baseline: $reload_status"
+	error_exit 1
+fi
+# Repeating the equivalent source must now compare against the newly published
+# baseline and stay report-only without another generation bump.
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=2 unchanged=9 added=0 removed=0 modified=0 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: reusable RainerScript source baseline was not retained: $reload_status"
 	error_exit 1
 fi
 
@@ -50,7 +58,7 @@ sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(lo
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: changed RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
@@ -60,7 +68,7 @@ fi
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: restored RainerScript imtcp module profile was not activated: $reload_status"
 	error_exit 1
 fi
@@ -72,7 +80,7 @@ sed 's/ruleset="prepared" config.enabled="on")/ruleset="prepared" config.enabled
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: valid imtcp candidate did not activate: $reload_status"
 	error_exit 1
 fi
@@ -88,7 +96,7 @@ sed 's/contains "msgnum"/contains "cutover-ack"/' "$CONF_FILE" >"$CONF_FILE.cand
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=7 added=0 removed=0 modified=2 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=7 added=0 removed=0 modified=2 invalid=0"* ]]; then
 	echo "FAIL: coordinated imtcp/ruleset materialization did not activate: $reload_status"
 	error_exit 1
 fi
@@ -96,7 +104,7 @@ fi
 # same candidate must be a no-op and must not advance the generation.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=5 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=reported_only active_generation=6 unchanged=9 added=0 removed=0 modified=0 invalid=0"* ]]; then
 	echo "FAIL: activated RainerScript graph was not retained as baseline: $reload_status"
 	error_exit 1
 fi
@@ -115,7 +123,7 @@ sed 's/$msg contains "cutover-ack"/["z-last", "match_me", "a-first"] == "match_m
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=7 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimized array comparison did not activate: $reload_status"
 	error_exit 1
 fi
@@ -129,7 +137,7 @@ sed 's/\["z-last", "match_me", "a-first"\] == "match_me"/0/' "$CONF_FILE" >"$CON
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=7 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimizer-eliminated action was not rejected: $reload_status"
 	error_exit 1
 fi
@@ -143,7 +151,7 @@ sed 's/if 0 then/if tolower($msg) == "never-match" then/' "$CONF_FILE" >"$CONF_F
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=7 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unsupported function was not rejected by private Prepare: $reload_status"
 	error_exit 1
 fi
@@ -157,7 +165,7 @@ sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=7"* ]]; then
 	echo "FAIL: action change was not rejected by the ruleset-only scope gate: $reload_status"
 	error_exit 1
 fi
@@ -178,7 +186,7 @@ ruleset(name="second") {
 CONF_EOF
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=6"* ]]; then
+if [[ "$reload_status" != *"result=candidate_report_invalid active_generation=7"* ]]; then
 	echo "FAIL: invalid ON report was hidden by the scope gate: $reload_status"
 	error_exit 1
 fi
@@ -195,10 +203,10 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000005' "$RSYSLOG_OUT_LOG"
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=12'
-content_check 'reload_on_rejected_total=5'
-content_check 'reload_capability_rejected_total=4'
-content_check 'reload_legacy_hook_total=12'
+content_check 'reload_on_total=13'
+content_check 'reload_on_rejected_total=4'
+content_check 'reload_capability_rejected_total=3'
+content_check 'reload_legacy_hook_total=13'
 assert_content_missing 'result=validated'
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 exit_test

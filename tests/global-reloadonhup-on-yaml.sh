@@ -46,19 +46,36 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=7
 fi
 cp "$CONF_FILE" "$CONF_FILE.base"
 
+# Making the inherited default explicit changes the source graph but not either
+# effective listener profile. Publish that source baseline without pausing the
+# two established sessions or replacing runtime objects.
+sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "on"' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: equivalent YAML module default did not publish a reusable source baseline: $reload_status"
+	error_exit 1
+fi
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=2 unchanged=7 added=0 removed=0 modified=0 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: reusable YAML source baseline was not retained: $reload_status"
+	error_exit 1
+fi
+
 # Module defaults use the same YAML lifecycle path as input overrides. Toggle
 # flow control off and back on while retaining both established TCP sessions.
 sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "off"' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=2 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: YAML module-level flow-control update did not activate: $reload_status"
 	error_exit 1
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=3 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=6 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: YAML module-level flow-control restore did not activate: $reload_status"
 	error_exit 1
 fi
@@ -71,16 +88,16 @@ sed -e 's/contains "msgnum"/contains "cutover-ack"/' \
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=4 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=live_swap"* ]]; then
-	echo "FAIL: coordinated YAML imtcp/ruleset activation did not publish generation four: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=5 added=0 removed=0 modified=2 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: coordinated YAML imtcp/ruleset activation did not publish generation five: $reload_status"
 	error_exit 1
 fi
 # The graph publication is part of the same commit boundary as the root swap.
-# Repeating the new file must therefore be a no-op against generation four.
+# Repeating the new file must therefore be a no-op against generation five.
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=reported_only active_generation=4 unchanged=7 added=0 removed=0 modified=0 invalid=0"* ]]; then
-	echo "FAIL: activated YAML graph was not retained as generation-four baseline: $reload_status"
+if [[ "$reload_status" != *"result=reported_only active_generation=5 unchanged=7 added=0 removed=0 modified=0 invalid=0"* ]]; then
+	echo "FAIL: activated YAML graph was not retained as generation-five baseline: $reload_status"
 	error_exit 1
 fi
 if ! printf '<167>Mar 10 01:00:00 host app: msgnum:00000001\n' >&9; then error_exit 1; fi
@@ -97,7 +114,7 @@ sed 's/$msg contains "cutover-ack"/"match_me" == ["z-last", "match_me", "a-first
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=5 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=6 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimized YAML array comparison did not activate: $reload_status"
 	error_exit 1
 fi
@@ -113,7 +130,7 @@ sed 's/"match_me" == \["z-last", "match_me", "a-first"\]/0/' "$CONF_FILE" >"$CON
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=5 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: optimizer-eliminated YAML action was not rejected: $reload_status"
 	error_exit 1
 fi
@@ -126,7 +143,7 @@ sed 's/if: '\''0'\''/if: '\''tolower($msg) == "never-match"'\''/' "$CONF_FILE" >
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=5 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unsupported YAML function was not rejected by private Prepare: $reload_status"
 	error_exit 1
 fi
@@ -137,7 +154,7 @@ sed "s|$RSYSLOG_OUT_LOG|$RSYSLOG2_OUT_LOG|" "$CONF_FILE" >"$CONF_FILE.candidate"
 mv "$CONF_FILE.candidate" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=5"* ]]; then
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6"* ]]; then
 	echo "FAIL: unexpected reload status: $reload_status"
 	error_exit 1
 fi
