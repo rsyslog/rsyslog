@@ -81,14 +81,95 @@ DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(nets
 /* Module static data */
 typedef struct tcpsrv_etry_s {
     tcpsrv_t *tcpsrv;
+    char *endpoint_key; /* canonical runtime socket identity, never a config name */
+    char *config_name; /* operator-facing inputname, retained separately for future diagnostics */
+    enum { IMTCP_ENDPOINT_ACTIVE, IMTCP_ENDPOINT_NO_ACCEPT, IMTCP_ENDPOINT_RETIRING } state;
     pthread_t tid; /* the worker's thread ID */
     int thread_started;
     struct tcpsrv_etry_s *next;
 } tcpsrv_etry_t;
-static tcpsrv_etry_t *tcpsrv_root = NULL;
-static int n_tcpsrv = 0;
+
+/* Runtime-owned registry foundation for a later reload lifecycle.  It is
+ * private to imtcp and deliberately has no lookup, activation, or message
+ * path role yet: retaining the current list ordering preserves all behavior. */
+static struct {
+    tcpsrv_etry_t *head;
+    int count;
+} endpoint_registry = {0};
 
 static permittedPeers_t *pPermPeersRoot = NULL;
+
+static rsRetVal endpointKeyBuild(const tcpLstnParams_t *const params,
+                                 const char *const networkNamespace,
+                                 char **const key) {
+    const char *const address = params->pszAddr == NULL ? "*" : (const char *)params->pszAddr;
+    const char *const port = params->pszPort == NULL ? "" : (const char *)params->pszPort;
+    const char *const ns = networkNamespace == NULL ? "" : networkNamespace;
+    char *end = NULL;
+    unsigned long numericPort;
+    int printed;
+    size_t required;
+
+    if (key == NULL || *key != NULL || params->pszLstnPortFileName != NULL || *port == '\0')
+        return RS_RET_NOT_IMPLEMENTED;
+    errno = 0;
+    numericPort = strtoul(port, &end, 10);
+    if (errno != 0 || end == port || *end != '\0' || numericPort == 0 || numericPort > UINT16_MAX)
+        return RS_RET_NOT_IMPLEMENTED;
+    printed = snprintf(NULL, 0, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
+                       (unsigned)numericPort);
+    if (printed < 0) return RS_RET_PARAM_ERROR;
+    required = (size_t)printed;
+    if ((*key = malloc(required + 1)) == NULL) return RS_RET_OUT_OF_MEMORY;
+    snprintf(*key, required + 1, "tcp|ns:%zu:%s|addr:%zu:%s|port:%u", strlen(ns), ns, strlen(address), address,
+             (unsigned)numericPort);
+    return RS_RET_OK;
+}
+
+static rsRetVal endpointRegistryAdd(tcpsrv_t *const server,
+                                    const tcpLstnParams_t *const params,
+                                    const char *const networkNamespace,
+                                    const uchar *const configName) {
+    tcpsrv_etry_t *entry = NULL;
+    const tcpsrv_etry_t *existing;
+    DEFiRet;
+
+    if (server == NULL || params == NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(entry = calloc(1, sizeof(*entry)));
+    iRet = endpointKeyBuild(params, networkNamespace, &entry->endpoint_key);
+    if (iRet == RS_RET_NOT_IMPLEMENTED)
+        iRet = RS_RET_OK; /* dynamic/service endpoints remain active but are not reload-keyable */
+    else if (iRet != RS_RET_OK)
+        ABORT_FINALIZE(iRet);
+    if (entry->endpoint_key != NULL) {
+        for (existing = endpoint_registry.head; existing != NULL; existing = existing->next) {
+            if (existing->endpoint_key != NULL && !strcmp(existing->endpoint_key, entry->endpoint_key))
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+        }
+    }
+    if (configName != NULL) CHKmalloc(entry->config_name = strdup((const char *)configName));
+    entry->tcpsrv = server;
+    entry->state = IMTCP_ENDPOINT_ACTIVE;
+    entry->next = endpoint_registry.head;
+    endpoint_registry.head = entry;
+    ++endpoint_registry.count;
+    entry = NULL;
+
+finalize_it:
+    if (entry != NULL) {
+        free(entry->endpoint_key);
+        free(entry->config_name);
+        free(entry);
+    }
+    RETiRet;
+}
+
+static void endpointRegistryRemove(tcpsrv_etry_t *const entry) {
+    entry->state = IMTCP_ENDPOINT_RETIRING;
+    free(entry->endpoint_key);
+    free(entry->config_name);
+    free(entry);
+}
 
 /* default number of workers to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
@@ -868,16 +949,14 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
         inst->cnf_params->bUseLegacyAllowedSender = 1;
     }
     CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, inst->cnf_params));
-    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
+    tcpLstnParams_t *const listenerParams = inst->cnf_params;
+    iRet = tcpsrv.configureTCPListen(pOurTcpsrv, listenerParams);
     inst->cnf_params = NULL; /* ownership transferred to tcpsrv, including setup failure cleanup */
     CHKiRet(iRet);
 
-    tcpsrv_etry_t *etry;
-    CHKmalloc(etry = (tcpsrv_etry_t *)calloc(1, sizeof(tcpsrv_etry_t)));
-    etry->tcpsrv = pOurTcpsrv;
-    etry->next = tcpsrv_root;
-    tcpsrv_root = etry;
-    ++n_tcpsrv;
+    CHKiRet(endpointRegistryAdd(pOurTcpsrv, listenerParams, ns,
+                                inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
+    pOurTcpsrv = NULL; /* endpoint registry owns the configured runtime server */
 
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -1359,8 +1438,8 @@ BEGINactivateCnfPrePrivDrop
         const rsRetVal localRet = addListner(runModConf, inst);
         if (runConf->globals.bRequireAllInputs && localRet != RS_RET_OK) ABORT_FINALIZE(localRet);
     }
-    if (tcpsrv_root == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
-    tcpsrv_etry_t *etry = tcpsrv_root;
+    if (endpoint_registry.head == NULL) ABORT_FINALIZE(RS_RET_NO_RUN);
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     while (etry != NULL) {
         CHKiRet(tcpsrv.ConstructFinalize(etry->tcpsrv));
         etry = etry->next;
@@ -1494,16 +1573,16 @@ static void stopSrvWrkr(tcpsrv_etry_t *const etry) {
  */
 BEGINrunInput
     CODESTARTrunInput;
-    tcpsrv_etry_t *etry = tcpsrv_root->next;
+    tcpsrv_etry_t *etry = endpoint_registry.head->next;
     while (etry != NULL) {
         startSrvWrkr(etry);
         etry = etry->next;
     }
 
-    iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
+    iRet = tcpsrv.Run(endpoint_registry.head->tcpsrv);
 
     /* de-init remaining servers */
-    etry = tcpsrv_root->next;
+    etry = endpoint_registry.head->next;
     while (etry != NULL) {
         stopSrvWrkr(etry);
         etry = etry->next;
@@ -1520,14 +1599,16 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
-    tcpsrv_etry_t *etry = tcpsrv_root;
+    tcpsrv_etry_t *etry = endpoint_registry.head;
     tcpsrv_etry_t *del;
     while (etry != NULL) {
         iRet = tcpsrv.Destruct(&etry->tcpsrv);
         del = etry;
         etry = etry->next;
-        free(del);
+        endpointRegistryRemove(del);
     }
+    endpoint_registry.head = NULL;
+    endpoint_registry.count = 0;
     net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
@@ -1597,7 +1678,8 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    CODEmodInit_QueryRegCFSLineHdlr tcpsrv_root = NULL;
+    CODEmodInit_QueryRegCFSLineHdlr endpoint_registry.head = NULL;
+    endpoint_registry.count = 0;
     /* request objects we use */
     CHKiRet(objUse(net, LM_NET_FILENAME));
     CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
