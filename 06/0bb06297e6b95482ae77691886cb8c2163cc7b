@@ -1,0 +1,77 @@
+runtime/wti.c
+  s_316e24de471f59::t_0857b63af23a08 81-82
+  s_316e24de471f59::t_916f945bf2708f 63,67-79
+  s_316e24de471f59::t_040bd9ea0e4839 360
+  s_668776917c3b9f::t_3317284482c7ba 84-85
+tests/reserved-egress-concurrent.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/Makefile.am
+  s_316e24de471f59::t_747f35d0b8cba6 2979-2980
+  s_316e24de471f59::t_040bd9ea0e4839 19,2975
+tests/reserved-egress-yaml.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/reserved-egress-basic.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/reserved-egress-crossed-targets.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/reserved-egress-legacy.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+configure.ac
+  s_316e24de471f59::t_040bd9ea0e4839 2213-2231
+tests/reserved-egress-unsupported.sh
+  s_316e24de471f59::t_916f945bf2708f 6-7,12
+  s_316e24de471f59::t_614aa592d5617b 8-10,47-51
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+runtime/queue.c
+  s_316e24de471f59::t_040bd9ea0e4839 4047,4057,4705,4817,4820,4822,4824
+  s_316e24de471f59::t_916f945bf2708f 684-691,4719-4724
+runtime/queue.h
+  s_316e24de471f59::t_040bd9ea0e4839 279,283,297
+runtime/glbl.c
+  s_316e24de471f59::t_916f945bf2708f 1414-1415,1421-1424
+tests/reserved-egress-crossed-targets-immediate.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/reserved-egress-selector-batch.sh
+  s_316e24de471f59::t_916f945bf2708f 6-12,21-22,26,35-36
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+doc/ai/reserved_batch_egress.md
+  s_316e24de471f59::t_916f945bf2708f 61-67,97-101
+  s_316e24de471f59::t_d3f8aa2334a988 69-73,82-83,85-90,102-106
+  s_316e24de471f59::t_03d784b7d9a3db 68
+tests/reserved-egress-immediate.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/reserved-egress-batching-stats.sh
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+  s_316e24de471f59::t_916f945bf2708f 6-12,15-16,22,36-37
+tests/reserved-egress-oom.sh
+  s_316e24de471f59::t_0857b63af23a08 7-13,16,18,24-40,48,52-57,60-65
+  s_316e24de471f59::t_f3cb80f4d3a7bf 2-5
+tests/diag.sh
+  s_316e24de471f59::t_916f945bf2708f 526-528
+tests/reserved-egress-immediate-tail.sh
+  s_316e24de471f59::t_040bd9ea0e4839 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "060bb06297e6b95482ae77691886cb8c2163cc7b",
+  "prompts": {},
+  "sessions": {
+    "s_316e24de471f59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-4985-7eb0-b319-81c6ebade807",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_668776917c3b9f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0397b-acd3-73f0-84e2-fa3f0f1f4c3d",
+        "model": "unknown"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
