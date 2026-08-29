@@ -262,6 +262,13 @@ lowerer may reject a syntactically captured but semantically invalid setting,
 but it must not construct runtime resources, change the active generation, or
 retain borrowed catalog data.  In ``validate`` mode this remains report-only;
 successful lowering is not permission to activate the module.
+The status field ``source_capability`` distinguishes an exact effective
+``reuse`` comparison from a conservative ``restart_required`` result and from
+``not_evaluated`` when parsing, lowering, legacy syntax, or an unsupported
+side-effectful setting prevented comparison.
+The first imtcp comparator pairs listener instances in source order; a pure
+reorder is therefore conservatively restart-required until endpoint-key
+reconciliation is connected to the runtime registry.
 
 Release C extends that foundation with a deliberately narrow private compiler
 and batch-boundary activation path.  In ``on`` mode, only modifications to

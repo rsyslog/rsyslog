@@ -70,6 +70,8 @@ static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
 static modInfo_t *pendingSourceModule = NULL;
 static void *pendingActiveSourceModuleCnf = NULL;
 static void *pendingSourceModuleCnf = NULL;
+static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
+static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
 static size_t pendingCandidateObjects = 0;
 static uint64_t pendingReportHash = 0;
@@ -78,6 +80,8 @@ static size_t lastAddedCount = 0;
 static size_t lastRemovedCount = 0;
 static size_t lastModifiedCount = 0;
 static size_t lastInvalidCount = 0;
+static eModReloadCapability_t lastSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
+static int lastSourceModuleCapabilityEvaluated = 0;
 static pthread_mutex_t statusMut = PTHREAD_MUTEX_INITIALIZER;
 static int baselineAvailable = 0;
 enum shadowReloadResult_e {
@@ -122,6 +126,8 @@ static void publishStatus(const int result, const rsReloadReportV1_t *const repo
     lastRemovedCount = report == NULL ? 0 : report->removedCount;
     lastModifiedCount = report == NULL ? 0 : report->modifiedCount;
     lastInvalidCount = report == NULL ? 0 : report->invalidCount;
+    lastSourceModuleCapability = pendingSourceModuleCapability;
+    lastSourceModuleCapabilityEvaluated = pendingSourceModuleCapabilityEvaluated;
     pthread_mutex_unlock(&statusMut);
 }
 /* Scrapeable counters are separate from the always-on log state above. */
@@ -150,6 +156,23 @@ static const char *modeName(const reloadOnHUPMode_t mode) {
     }
 }
 
+static const char *sourceCapabilityName(const eModReloadCapability_t capability, const int evaluated) {
+    if (!evaluated) return "not_evaluated";
+    switch (capability) {
+        case eMOD_RELOAD_REUSE:
+            return "reuse";
+        case eMOD_RELOAD_LIVE_SWAP:
+            return "live_swap";
+        case eMOD_RELOAD_NEW_SESSIONS:
+            return "new_sessions";
+        case eMOD_RELOAD_DRAIN_REPLACE:
+            return "drain_replace";
+        case eMOD_RELOAD_RESTART_REQUIRED:
+        default:
+            return "restart_required";
+    }
+}
+
 static sbool monotonicUsec(uint64_t *const value) {
     struct timespec ts;
 
@@ -173,7 +196,8 @@ static void logState(const char *const event,
         " rejected_total=%" PRIu64 " reload_validate_rejected_total=%" PRIu64 " reload_on_rejected_total=%" PRIu64
         " reload_capability_rejected_total=%" PRIu64 " reload_legacy_hook_total=%" PRIu64
         " in_progress=%d pending=%d active_generation=%u duration_total_usec=%" PRIu64 " last_duration_usec=%" PRIu64
-        " quiesce_pause_total_usec=%" PRIu64 " last_quiesce_pause_usec=%" PRIu64 " rejected_mode=%s rejected_reason=%s",
+        " quiesce_pause_total_usec=%" PRIu64 " last_quiesce_pause_usec=%" PRIu64
+        " source_capability=%s rejected_mode=%s rejected_reason=%s",
         event, result, modeName(configuredMode), candidateObjects, report == NULL ? 0 : report->unchangedCount,
         report == NULL ? 0 : report->addedCount, report == NULL ? 0 : report->removedCount,
         report == NULL ? 0 : report->modifiedCount, report == NULL ? 0 : report->invalidCount,
@@ -181,7 +205,9 @@ static void logState(const char *const event,
         (uint64_t)validateTotal, (uint64_t)onTotal, (uint64_t)rejectedTotal, (uint64_t)rejectedValidateTotal,
         (uint64_t)rejectedOnTotal, (uint64_t)capabilityRejectedTotal, (uint64_t)legacyHookTotal, requestInProgress,
         signalRequestPending != 0, activeGeneration, (uint64_t)durationTotalUsec, (uint64_t)lastDurationUsec,
-        (uint64_t)quiescePauseTotalUsec, (uint64_t)lastQuiescePauseUsec, rejectedMode, rejectedReason);
+        (uint64_t)quiescePauseTotalUsec, (uint64_t)lastQuiescePauseUsec,
+        sourceCapabilityName(pendingSourceModuleCapability, pendingSourceModuleCapabilityEvaluated), rejectedMode,
+        rejectedReason);
 }
 
 rsRetVal shadowReloadInit(void) {
@@ -359,15 +385,21 @@ static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report
     pendingSourceModule = activeModule->pMod;
     context.sourceCatalog = activeSourceObjectCatalog;
     rsRetVal ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingActiveSourceModuleCnf);
-    if (ret == RS_RET_NOT_FOUND) {
-        /* Legacy imtcp syntax has no v2 source objects to lower. It remains
-         * governed by the existing conservative scope gate. */
+    if (ret == RS_RET_NOT_FOUND || ret == RS_RET_NOT_IMPLEMENTED) {
+        /* Legacy syntax and source settings that require side-effectful
+         * runtime lowering have no private V1 snapshot. They remain governed
+         * by the existing conservative scope gate. */
         pendingSourceModule = NULL;
         return RS_RET_OK;
     }
     if (ret != RS_RET_OK) return ret;
     context.sourceCatalog = pendingSourceObjectCatalog;
-    return modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingSourceModuleCnf);
+    ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingSourceModuleCnf);
+    if (ret != RS_RET_OK) return ret;
+    ret = modReloadClassifySourceCandidateV1(pendingSourceModule, pendingActiveSourceModuleCnf, pendingSourceModuleCnf,
+                                             &pendingSourceModuleCapability);
+    if (ret == RS_RET_OK) pendingSourceModuleCapabilityEvaluated = 1;
+    return ret;
 }
 
 static enum shadowReloadFailurePhase_e sourceLoweringFailurePhase(const rsRetVal ret) {
@@ -421,6 +453,8 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     size_t removed = 0;
     size_t modified = 0;
     size_t invalid = 0;
+    eModReloadCapability_t sourceCapability;
+    int sourceCapabilityEvaluated;
     int n;
 
     if (buffer == NULL || bufferSize == 0) return RS_RET_PARAM_ERROR;
@@ -432,6 +466,8 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     removed = lastRemovedCount;
     modified = lastModifiedCount;
     invalid = lastInvalidCount;
+    sourceCapability = lastSourceModuleCapability;
+    sourceCapabilityEvaluated = lastSourceModuleCapabilityEvaluated;
     pthread_mutex_unlock(&statusMut);
     switch (resultCode) {
         case SHADOW_RELOAD_IN_PROGRESS:
@@ -479,8 +515,10 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
             break;
     }
     n = snprintf(buffer, bufferSize,
-                 "result=%s active_generation=%u unchanged=%zu added=%zu removed=%zu modified=%zu invalid=%zu", result,
-                 generation, unchanged, added, removed, modified, invalid);
+                 "result=%s active_generation=%u unchanged=%zu added=%zu removed=%zu modified=%zu invalid=%zu "
+                 "source_capability=%s",
+                 result, generation, unchanged, added, removed, modified, invalid,
+                 sourceCapabilityName(sourceCapability, sourceCapabilityEvaluated));
     return n < 0 || (size_t)n >= bufferSize ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
 }
 
@@ -527,6 +565,8 @@ void shadowReloadBeginRequest(void) {
     pendingReportHash = 0;
     lastQuiescePauseUsec = 0;
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
+    pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
+    pendingSourceModuleCapabilityEvaluated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = RS_RET_OK;
     if (configuredMode != RELOAD_ON_HUP_OFF) {
@@ -796,6 +836,8 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
     lastRemovedCount = pendingReport == NULL ? 0 : pendingReport->removedCount;
     lastModifiedCount = pendingReport == NULL ? 0 : pendingReport->modifiedCount;
     lastInvalidCount = pendingReport == NULL ? 0 : pendingReport->invalidCount;
+    lastSourceModuleCapability = pendingSourceModuleCapability;
+    lastSourceModuleCapabilityEvaluated = pendingSourceModuleCapabilityEvaluated;
     pthread_mutex_unlock(&statusMut);
 }
 

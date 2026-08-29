@@ -24,7 +24,35 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=9
 	echo "FAIL: unchanged on candidate unexpectedly advanced activation: $reload_status"
 	error_exit 1
 fi
+if [[ "$reload_status" != *"source_capability=reuse"* ]]; then
+	echo "FAIL: unchanged RainerScript imtcp profile was not classified reusable: $reload_status"
+	error_exit 1
+fi
 cp "$CONF_FILE" "$CONF_FILE.base"
+
+# Explicit and omitted module defaults must lower to the same effective
+# profile in RainerScript just as they do in YAML. The raw module node changes,
+# so the current runtime scope gate still rejects without advancing generation.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="on")|' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: explicit RainerScript imtcp default was not classified reusable: $reload_status"
+	error_exit 1
+fi
+
+# A real module-default change reaches every input that does not override it
+# and is conservatively restart-required until imtcp profile commit exists.
+sed 's|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on")|module(load="../plugins/imtcp/.libs/imtcp" config.enabled="on" flowControl="off")|' \
+	"$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0 source_capability=restart_required"* ]]; then
+	echo "FAIL: changed RainerScript imtcp module profile was not classified conservatively: $reload_status"
+	error_exit 1
+fi
+cp "$CONF_FILE.base" "$CONF_FILE"
 
 # The imtcp source lowerer must parse a valid changed input through the same
 # descriptor/default path as startup before the still-conservative capability
@@ -35,6 +63,10 @@ issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=8 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: valid imtcp candidate did not reach the capability boundary: $reload_status"
+	error_exit 1
+fi
+if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
+	echo "FAIL: changed RainerScript imtcp profile was not classified conservatively: $reload_status"
 	error_exit 1
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"
@@ -147,10 +179,10 @@ content_check 'msgnum:00000004' "$RSYSLOG_OUT_LOG"
 content_check 'msgnum:00000005' "$RSYSLOG_OUT_LOG"
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=8'
-content_check 'reload_on_rejected_total=4'
-content_check 'reload_capability_rejected_total=3'
-content_check 'reload_legacy_hook_total=8'
+content_check 'reload_on_total=10'
+content_check 'reload_on_rejected_total=6'
+content_check 'reload_capability_rejected_total=5'
+content_check 'reload_legacy_hook_total=10'
 assert_content_missing 'result=validated'
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 exit_test

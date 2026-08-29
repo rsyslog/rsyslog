@@ -45,6 +45,29 @@ void modReloadDestructSourceCandidateV1(const modInfo_t *const pMod, void **cons
     if (modReloadHasValidSourceInterfaceV1(pMod)) pMod->reloadSourceV1.destructCandidate(pCandidateCnf);
 }
 
+rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *const pMod,
+                                            const void *const pOldCnf,
+                                            const void *const pNewCnf,
+                                            eModReloadCapability_t *const pCapability) {
+    eModReloadCapability_t classified = eMOD_RELOAD_RESTART_REQUIRED;
+    const size_t classifierSize = offsetof(modReloadSourceInterfaceV1_t, classifyCandidate) +
+                                  sizeof(((modReloadSourceInterfaceV1_t *)0)->classifyCandidate);
+    rsRetVal ret;
+    if (!modReloadHasValidSourceInterfaceV1(pMod) || pOldCnf == NULL || pNewCnf == NULL || pCapability == NULL)
+        return RS_RET_PARAM_ERROR;
+    *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
+    if (pMod->reloadSourceV1.structSize < classifierSize || pMod->reloadSourceV1.classifyCandidate == NULL)
+        return RS_RET_OK;
+    ret = pMod->reloadSourceV1.classifyCandidate(pOldCnf, pNewCnf, &classified);
+    if (ret != RS_RET_OK) return ret;
+    if (classified != eMOD_RELOAD_RESTART_REQUIRED && classified != eMOD_RELOAD_LIVE_SWAP &&
+        classified != eMOD_RELOAD_NEW_SESSIONS && classified != eMOD_RELOAD_DRAIN_REPLACE &&
+        classified != eMOD_RELOAD_REUSE)
+        return RS_RET_PARAM_ERROR;
+    *pCapability = classified;
+    return RS_RET_OK;
+}
+
 sbool modReloadHasLifecycleHooks(const modInfo_t *pMod) {
     const unsigned requiredFlags = eMOD_RELOAD_CAP_VALIDATE_PRIVATE | eMOD_RELOAD_CAP_PREPARE | eMOD_RELOAD_CAP_REUSE |
                                    eMOD_RELOAD_CAP_COMMIT | eMOD_RELOAD_CAP_RETIRE;
@@ -61,6 +84,8 @@ eModReloadCapability_t modReloadClassify(const modInfo_t *pMod, const void *pOld
     if (pMod->reloadV1.classify(pOldCnf, pNewCnf, &capability) != RS_RET_OK) return eMOD_RELOAD_RESTART_REQUIRED;
 
     switch (capability) {
+        case eMOD_RELOAD_REUSE:
+            return capability;
         case eMOD_RELOAD_LIVE_SWAP:
         case eMOD_RELOAD_NEW_SESSIONS:
         case eMOD_RELOAD_DRAIN_REPLACE:

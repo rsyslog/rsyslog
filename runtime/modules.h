@@ -105,7 +105,8 @@ typedef enum eModReloadCapability_ {
     eMOD_RELOAD_RESTART_REQUIRED = 0, /* the conservative zero/default */
     eMOD_RELOAD_LIVE_SWAP = 1, /* switch existing users to the replacement */
     eMOD_RELOAD_NEW_SESSIONS = 2, /* existing users retain the old configuration */
-    eMOD_RELOAD_DRAIN_REPLACE = 3 /* drain old users before using the replacement */
+    eMOD_RELOAD_DRAIN_REPLACE = 3, /* drain old users before using the replacement */
+    eMOD_RELOAD_REUSE = 4 /* effective configuration is unchanged */
 } eModReloadCapability_t;
 
 /*
@@ -176,11 +177,16 @@ typedef struct modReloadSourceBuildContextV1_s {
  * source catalog only if commit succeeds. */
 typedef rsRetVal (*modReloadSourceBuildV1_t)(const modReloadSourceBuildContextV1_t *context, void **pCandidateCnf);
 typedef void (*modReloadSourceDestructV1_t)(void **pCandidateCnf);
+typedef rsRetVal (*modReloadSourceClassifyV1_t)(const void *pOldCnf,
+                                                const void *pNewCnf,
+                                                eModReloadCapability_t *pCapability);
 typedef struct modReloadSourceInterfaceV1_s {
     unsigned version;
     size_t structSize;
     modReloadSourceBuildV1_t buildCandidate;
     modReloadSourceDestructV1_t destructCandidate;
+    /* Optional exact comparison of two independently lowered snapshots. */
+    modReloadSourceClassifyV1_t classifyCandidate;
 } modReloadSourceInterfaceV1_t;
 #define eMOD_RELOAD_SOURCE_INTERFACE_V1 1
 typedef rsRetVal (*modReloadSourceGetInterfaceV1_t)(modReloadSourceInterfaceV1_t *pInterface);
@@ -280,6 +286,10 @@ rsRetVal modReloadBuildSourceCandidateV1(const modInfo_t *pMod,
                                          const modReloadSourceBuildContextV1_t *context,
                                          void **pCandidateCnf);
 void modReloadDestructSourceCandidateV1(const modInfo_t *pMod, void **pCandidateCnf);
+rsRetVal modReloadClassifySourceCandidateV1(const modInfo_t *pMod,
+                                            const void *pOldCnf,
+                                            const void *pNewCnf,
+                                            eModReloadCapability_t *pCapability);
 
 /*
  * Classify a module change without enabling reload.  Legacy modules and

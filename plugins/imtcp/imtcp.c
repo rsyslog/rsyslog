@@ -316,6 +316,8 @@ struct modConfData_s {
     uint64_t compressionMaxDecompressedBytesPerReceive;
     uint64_t compressionMaxTotalZstdWindowBytes;
     sbool compressionMaxTotalZstdWindowBytesSet;
+    /* Exact module origin, owned only by private reload snapshots. */
+    char *reloadModuleLoadName;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -1451,6 +1453,180 @@ typedef struct imtcpReloadBuildContext_s {
     int moduleSeen;
 } imtcpReloadBuildContext_t;
 
+static int reloadStringEqual(const char *const left, const char *const right) {
+    return left == right || (left != NULL && right != NULL && !strcmp(left, right));
+}
+
+static int reloadUStringEqual(const uchar *const left, const uchar *const right) {
+    return reloadStringEqual((const char *)left, (const char *)right);
+}
+
+static int reloadRulesetNameEqual(const uchar *const left, const uchar *const right) {
+    return left == right || (left != NULL && right != NULL && !strcasecmp((const char *)left, (const char *)right));
+}
+
+static int reloadPermittedPeersEqual(const permittedPeers_t *left, const permittedPeers_t *right) {
+    while (left != NULL && right != NULL) {
+        if (!reloadUStringEqual(left->pszID, right->pszID)) return 0;
+        left = left->pNext;
+        right = right->pNext;
+    }
+    return left == NULL && right == NULL;
+}
+
+static int reloadSockaddrEqual(const struct sockaddr *const left, const struct sockaddr *const right) {
+    if (left == right) return 1;
+    if (left == NULL || right == NULL || left->sa_family != right->sa_family) return 0;
+    if (left->sa_family == AF_INET) {
+        const struct sockaddr_in *const left4 = (const struct sockaddr_in *)(const void *)left;
+        const struct sockaddr_in *const right4 = (const struct sockaddr_in *)(const void *)right;
+        return left4->sin_addr.s_addr == right4->sin_addr.s_addr;
+    }
+    if (left->sa_family == AF_INET6) {
+        const struct sockaddr_in6 *const left6 = (const struct sockaddr_in6 *)(const void *)left;
+        const struct sockaddr_in6 *const right6 = (const struct sockaddr_in6 *)(const void *)right;
+        return left6->sin6_scope_id == right6->sin6_scope_id &&
+               !memcmp(&left6->sin6_addr, &right6->sin6_addr, sizeof(left6->sin6_addr));
+    }
+    return SALEN((struct sockaddr *)left) == SALEN((struct sockaddr *)right) &&
+           !memcmp(left, right, SALEN((struct sockaddr *)left));
+}
+
+static int reloadAllowedSendersEqual(const struct AllowedSenders *left, const struct AllowedSenders *right) {
+    while (left != NULL && right != NULL) {
+        if (left->SignificantBits != right->SignificantBits || left->allowedSender.flags != right->allowedSender.flags)
+            return 0;
+        if (F_ISSET(left->allowedSender.flags, ADDR_NAME)) {
+            if (!reloadStringEqual(left->allowedSender.addr.HostWildcard, right->allowedSender.addr.HostWildcard))
+                return 0;
+        } else if (!reloadSockaddrEqual(left->allowedSender.addr.NetAddr, right->allowedSender.addr.NetAddr)) {
+            return 0;
+        }
+        left = left->pNext;
+        right = right->pNext;
+    }
+    return left == NULL && right == NULL;
+}
+
+static const uchar *reloadEffectiveString(const uchar *const inputValue, const uchar *const moduleValue) {
+    return inputValue == NULL ? moduleValue : inputValue;
+}
+
+static const char *reloadEffectiveNamespace(const instanceConf_t *const inst, const modConfData_t *const module) {
+    return inst->pszNetworkNamespace == NULL ? module->pszNetworkNamespace : inst->pszNetworkNamespace;
+}
+
+static const permittedPeers_t *reloadEffectivePermittedPeers(const instanceConf_t *const inst,
+                                                             const modConfData_t *const module) {
+    return inst->pPermPeersRoot == NULL ? module->pPermPeersRoot : inst->pPermPeersRoot;
+}
+
+static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instanceConf_t *const inst,
+                                                                  const modConfData_t *const module,
+                                                                  int *const usesLegacy) {
+    if (inst->bAllowedSendersSet) {
+        *usesLegacy = 0;
+        return inst->pAllowedSendersRoot;
+    }
+    if (module->bAllowedSendersSet) {
+        *usesLegacy = 0;
+        return module->pAllowedSendersRoot;
+    }
+    *usesLegacy = 1;
+    return NULL;
+}
+
+static int reloadInstanceEqual(const instanceConf_t *const left,
+                               const modConfData_t *const leftModule,
+                               const instanceConf_t *const right,
+                               const modConfData_t *const rightModule) {
+    int leftLegacyAcl;
+    int rightLegacyAcl;
+    const struct AllowedSenders *const leftAllowed = reloadEffectiveAllowedSenders(left, leftModule, &leftLegacyAcl);
+    const struct AllowedSenders *const rightAllowed =
+        reloadEffectiveAllowedSenders(right, rightModule, &rightLegacyAcl);
+    const tcpLstnParams_t *const leftParams = left->cnf_params;
+    const tcpLstnParams_t *const rightParams = right->cnf_params;
+
+    if (leftParams == NULL || rightParams == NULL) return 0;
+    return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
+           left->numWrkr == right->numWrkr && reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+           reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
+                              right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
+           reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
+                              right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ) &&
+           left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
+           left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
+           left->maxFrameSize == right->maxFrameSize && left->bUseFlowControl == right->bUseFlowControl &&
+           left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
+           left->bEmitMsgOnClose == right->bEmitMsgOnClose && left->bEmitMsgOnOpen == right->bEmitMsgOnOpen &&
+           left->bPreserveCase == right->bPreserveCase && left->iSynBacklog == right->iSynBacklog &&
+           reloadStringEqual(reloadEffectiveNamespace(left, leftModule),
+                             reloadEffectiveNamespace(right, rightModule)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrName, leftModule->pszStrmDrvrName),
+                              reloadEffectiveString(right->pszStrmDrvrName, rightModule->pszStrmDrvrName)) &&
+           left->iStrmDrvrMode == right->iStrmDrvrMode &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrAuthMode, leftModule->pszStrmDrvrAuthMode),
+                              reloadEffectiveString(right->pszStrmDrvrAuthMode, rightModule->pszStrmDrvrAuthMode)) &&
+           reloadUStringEqual(
+               reloadEffectiveString(left->pszStrmDrvrPermitExpiredCerts, leftModule->pszStrmDrvrPermitExpiredCerts),
+               reloadEffectiveString(right->pszStrmDrvrPermitExpiredCerts,
+                                     rightModule->pszStrmDrvrPermitExpiredCerts)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCAFile, leftModule->pszStrmDrvrCAFile),
+                              reloadEffectiveString(right->pszStrmDrvrCAFile, rightModule->pszStrmDrvrCAFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCRLFile, leftModule->pszStrmDrvrCRLFile),
+                              reloadEffectiveString(right->pszStrmDrvrCRLFile, rightModule->pszStrmDrvrCRLFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrKeyFile, leftModule->pszStrmDrvrKeyFile),
+                              reloadEffectiveString(right->pszStrmDrvrKeyFile, rightModule->pszStrmDrvrKeyFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->pszStrmDrvrCertFile, leftModule->pszStrmDrvrCertFile),
+                              reloadEffectiveString(right->pszStrmDrvrCertFile, rightModule->pszStrmDrvrCertFile)) &&
+           reloadUStringEqual(reloadEffectiveString(left->gnutlsPriorityString, leftModule->gnutlsPriorityString),
+                              reloadEffectiveString(right->gnutlsPriorityString, rightModule->gnutlsPriorityString)) &&
+           left->iStrmDrvrExtendedCertCheck == right->iStrmDrvrExtendedCertCheck &&
+           left->iStrmDrvrSANPreference == right->iStrmDrvrSANPreference &&
+           left->iStrmTlsVerifyDepth == right->iStrmTlsVerifyDepth &&
+           left->iStrmTlsRevocationCheck == right->iStrmTlsRevocationCheck && left->bKeepAlive == right->bKeepAlive &&
+           left->iKeepAliveIntvl == right->iKeepAliveIntvl && left->iKeepAliveProbes == right->iKeepAliveProbes &&
+           left->iKeepAliveTime == right->iKeepAliveTime && left->starvationMaxReads == right->starvationMaxReads &&
+           left->compressionMode == right->compressionMode && left->compressionDriver == right->compressionDriver &&
+           left->compressionMaxExpansionRatio == right->compressionMaxExpansionRatio &&
+           left->compressionMaxDecompressedBytesPerReceive == right->compressionMaxDecompressedBytesPerReceive &&
+           left->compressionMaxTotalZstdWindowBytes == right->compressionMaxTotalZstdWindowBytes &&
+           left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet &&
+           reloadUStringEqual(leftParams->pszPort, rightParams->pszPort) &&
+           reloadUStringEqual(leftParams->pszAddr, rightParams->pszAddr) &&
+           leftParams->bSuppOctetFram == rightParams->bSuppOctetFram &&
+           reloadUStringEqual(leftParams->pszLstnPortFileName, rightParams->pszLstnPortFileName) &&
+           leftParams->bMultiLine == rightParams->bMultiLine &&
+           reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
+           reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
+           leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
+           reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
+                                     reloadEffectivePermittedPeers(right, rightModule));
+}
+
+static rsRetVal classifyReloadSourceCandidateV1(const void *const pOldCnf,
+                                                const void *const pNewCnf,
+                                                eModReloadCapability_t *const pCapability) {
+    const modConfData_t *const oldConfig = pOldCnf;
+    const modConfData_t *const newConfig = pNewCnf;
+    const instanceConf_t *oldInst;
+    const instanceConf_t *newInst;
+
+    if (oldConfig == NULL || newConfig == NULL || pCapability == NULL) return RS_RET_PARAM_ERROR;
+    *pCapability = eMOD_RELOAD_RESTART_REQUIRED;
+    if (!reloadStringEqual(oldConfig->reloadModuleLoadName, newConfig->reloadModuleLoadName)) return RS_RET_OK;
+    oldInst = oldConfig->root;
+    newInst = newConfig->root;
+    while (oldInst != NULL && newInst != NULL) {
+        if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig)) return RS_RET_OK;
+        oldInst = oldInst->next;
+        newInst = newInst->next;
+    }
+    if (oldInst == NULL && newInst == NULL) *pCapability = eMOD_RELOAD_REUSE;
+    return RS_RET_OK;
+}
+
 static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
                                         const size_t __attribute__((unused)) parseOrdinal,
                                         void *const context) {
@@ -1461,8 +1637,11 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     DEFiRet;
 
     if (object->objType == CNFOBJ_MODULE && sourceModuleIsImtcp(object)) {
+        const struct nvlst *const load = findSourceParam(object->nvlst, "load");
         if (build->moduleSeen) ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
+        if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         CHKiRet(validateSourceParams(object->nvlst, &modpblk, "load"));
+        CHKmalloc(build->config->reloadModuleLoadName = es_str2cstr(load->val.d.estr, NULL));
         CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
         pvals = nvlstGetParams(paramsClone, &modpblk, NULL);
         if (pvals == NULL) ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
@@ -1472,6 +1651,7 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     }
     if (object->objType != CNFOBJ_INPUT || !sourceInputIsImtcp(object)) FINALIZE;
     if (!build->moduleSeen) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     CHKiRet(validateSourceParams(object->nvlst, &inppblk, "type"));
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
     pvals = nvlstGetParams(paramsClone, &inppblk, NULL);
@@ -1518,6 +1698,13 @@ static rsRetVal buildReloadSourceCandidateV1(const modReloadSourceBuildContextV1
     for (inst = candidate->root; inst != NULL; inst = inst->next) {
         if (inst->cnf_params->bSuppOctetFram == FRAMING_UNSET)
             inst->cnf_params->bSuppOctetFram = candidate->bSuppOctetFram;
+        if (inst->cnf_params->pszLstnPortFileName == NULL &&
+            reloadUStringEqual(inst->cnf_params->pszPort, UCHAR_CONSTANT("0"))) {
+            uchar *normalizedPort = (uchar *)strdup("514");
+            CHKmalloc(normalizedPort);
+            free((void *)inst->cnf_params->pszPort);
+            inst->cnf_params->pszPort = normalizedPort;
+        }
     }
     *pCandidateCnf = candidate;
     candidate = NULL;
@@ -1540,11 +1727,16 @@ static void destructReloadSourceCandidateV1(void **const pCandidateCnf) {
 }
 
 static rsRetVal getReloadSourceInterfaceV1(modReloadSourceInterfaceV1_t *const interface) {
+    const size_t minimumSize =
+        offsetof(modReloadSourceInterfaceV1_t, destructCandidate) + sizeof(interface->destructCandidate);
+    const size_t classifierSize =
+        offsetof(modReloadSourceInterfaceV1_t, classifyCandidate) + sizeof(interface->classifyCandidate);
     if (interface == NULL || interface->version != eMOD_RELOAD_SOURCE_INTERFACE_V1 ||
-        interface->structSize < sizeof(*interface))
+        interface->structSize < minimumSize)
         return RS_RET_MISSING_INTERFACE;
     interface->buildCandidate = buildReloadSourceCandidateV1;
     interface->destructCandidate = destructReloadSourceCandidateV1;
+    if (interface->structSize >= classifierSize) interface->classifyCandidate = classifyReloadSourceCandidateV1;
     return RS_RET_OK;
 }
 
@@ -1660,6 +1852,7 @@ static void destructModuleConfigContents(modConfData_t *const pModConf) {
     instanceConf_t *inst, *del;
     if (pModConf == NULL) return;
     free(pModConf->gnutlsPriorityString);
+    free(pModConf->reloadModuleLoadName);
     free(pModConf->pszNetworkNamespace);
     free(pModConf->pszStrmDrvrName);
     free(pModConf->pszStrmDrvrAuthMode);

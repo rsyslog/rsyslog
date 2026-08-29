@@ -16,6 +16,7 @@ add_yaml_conf '    config.enabled: "on"'
 add_yaml_conf '    port: "0"'
 add_yaml_conf '    listenPortFileName: "'$RSYSLOG_DYNNAME'.tcpflood_port"'
 add_yaml_conf '    ruleset: main'
+add_yaml_conf '    streamdriver.TlsVerifyDepth: 3'
 add_yaml_conf 'rulesets:'
 add_yaml_conf '  - name: main'
 add_yaml_conf '    actions:'
@@ -33,7 +34,32 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=6
 	echo "FAIL: unexpected YAML no-op reload status: $reload_status"
 	error_exit 1
 fi
+if [[ "$reload_status" != *"source_capability=reuse"* ]]; then
+	echo "FAIL: unchanged YAML imtcp profile was not classified reusable: $reload_status"
+	error_exit 1
+fi
 cp "$CONF_FILE" "$CONF_FILE.base"
+
+# An explicit module default must compare equal to the omitted form after
+# effective lowering, even though the source graph records a syntax change.
+sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    flowControl: "on"' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: explicit YAML imtcp default was not classified reusable: $reload_status"
+	error_exit 1
+fi
+
+# An input override masks a changed module TLS default in the effective
+# listener profile. This exercises string/typed inheritance rather than a raw
+# module-structure comparison.
+sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    streamdriver.TlsVerifyDepth: 4' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: YAML input TLS override did not mask the module default: $reload_status"
+	error_exit 1
+fi
 
 # Module defaults use the same private lowering path as input overrides. This
 # report-only change proves the module descriptor loop is not bypassed.
@@ -42,6 +68,20 @@ issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: valid YAML imtcp module candidate did not lower report-only: $reload_status"
+	error_exit 1
+fi
+if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
+	echo "FAIL: changed YAML imtcp module profile was not classified conservatively: $reload_status"
+	error_exit 1
+fi
+
+# The module load origin is part of the effective source identity. A different
+# path must never compare reusable merely because its basename is still imtcp.
+sed 's|../plugins/imtcp/.libs/imtcp|./imtcp|' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=1 removed=1 modified=0 invalid=0 source_capability=restart_required"* ]]; then
+	echo "FAIL: changed YAML imtcp module origin was classified reusable: $reload_status"
 	error_exit 1
 fi
 
@@ -55,6 +95,10 @@ if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5
 	echo "FAIL: valid YAML imtcp candidate did not lower report-only: $reload_status"
 	error_exit 1
 fi
+if [[ "$reload_status" != *"source_capability=restart_required"* ]]; then
+	echo "FAIL: changed YAML imtcp input profile was not classified conservatively: $reload_status"
+	error_exit 1
+fi
 
 # Known parameters with invalid effective values are candidate validation
 # failures, not internal daemon errors. maxFrameSize=0 exercises the shared
@@ -66,6 +110,20 @@ if [[ "$reload_status" != *"result=candidate_normalization_unsupported active_ge
 	echo "FAIL: invalid YAML imtcp value was misclassified: $reload_status"
 	error_exit 1
 fi
+if [[ "$reload_status" != *"source_capability=not_evaluated"* ]]; then
+	echo "FAIL: invalid YAML imtcp value claimed a capability: $reload_status"
+	error_exit 1
+fi
+
+# Hostname ACL lowering may resolve DNS and depends on parser-global state.
+# The private snapshot path must reject it before invoking that side effect.
+sed '/ruleset: main/a\    allowedSender: ["*.example.invalid"]' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0 source_capability=not_evaluated"* ]]; then
+	echo "FAIL: YAML hostname ACL was not rejected before private lowering: $reload_status"
+	error_exit 1
+fi
 
 # Unknown imtcp parameters are syntactically capturable but cannot form an
 # effective module snapshot. The module lowerer must reject them before any
@@ -75,6 +133,10 @@ issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0"* ]]; then
 	echo "FAIL: unknown YAML imtcp parameter was not rejected by source lowering: $reload_status"
+	error_exit 1
+fi
+if [[ "$reload_status" != *"source_capability=not_evaluated"* ]]; then
+	echo "FAIL: unknown YAML imtcp parameter claimed a capability: $reload_status"
 	error_exit 1
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"
