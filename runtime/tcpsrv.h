@@ -424,6 +424,7 @@ int tcpsrvFenceTerminated(void);
  * the caller must hold a successfully acquired tcpsrv fence. */
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
+void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

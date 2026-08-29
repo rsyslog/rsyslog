@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include "rsyslog.h"
+#include "ruleset.h"
 #include "tcpsrv.h"
 
 /* Include the small production state machine so the unit can drive its
@@ -283,12 +284,34 @@ static int defaultTZSnapshot(void) {
     return 0;
 }
 
+static int rulesetSnapshot(void) {
+    tcpsrv_t server = {0};
+    tcps_sess_t first = {0};
+    tcps_sess_t second = {0};
+    tcps_sess_t *sessions[] = {&first, NULL, &second};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t secondParams = {0};
+    tcpLstnPortList_t secondListener = {.cnf_params = &secondParams};
+    tcpLstnPortList_t firstListener = {.cnf_params = &firstParams, .pNext = &secondListener};
+    ruleset_t target = {0};
+    server.iSessMax = 3;
+    server.pSessions = sessions;
+    server.pLstnPorts = &firstListener;
+    tcpsrvApplyRulesetLive(&server, &target);
+    CHECK(firstParams.pRuleset == &target);
+    CHECK(secondParams.pRuleset == &target);
+    CHECK(first.pRuleset == &target);
+    CHECK(second.pRuleset == &target);
+    return 0;
+}
+
 int main(void) {
     if (singleWorkerRoundTrip() != 0) return 1;
     if (timeoutDrainAndRetry() != 0) return 1;
     if (termWhileParked() != 0) return 1;
     if (flowControlSnapshot() != 0) return 1;
     if (defaultTZSnapshot() != 0) return 1;
+    if (rulesetSnapshot() != 0) return 1;
     puts("tcpsrv reload fence tests passed");
     return 0;
 }

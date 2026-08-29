@@ -263,3 +263,16 @@ void tcpsrvApplyDefaultTZLive(tcpsrv_t *const server, const uchar *const default
         if (session != NULL) u_cstr_copy(session->dfltTZ, value, sizeof(session->dfltTZ));
     }
 }
+
+void tcpsrvApplyRulesetLive(tcpsrv_t *const server, ruleset_t *const ruleset) {
+    tcpLstnPortList_t *listener;
+
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->cnf_params != NULL) listener->cnf_params->pRuleset = ruleset;
+    }
+    if (server->pSessions == NULL) return;
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = server->pSessions[i];
+        if (session != NULL) session->pRuleset = ruleset;
+    }
+}

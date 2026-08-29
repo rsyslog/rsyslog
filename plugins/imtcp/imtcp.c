@@ -1637,13 +1637,14 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
 
     if (leftParams == NULL || rightParams == NULL) return 0;
     return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
-           left->numWrkr == right->numWrkr && reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+           left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
            left->bSPFramingFix == right->bSPFramingFix && left->ratelimitInterval == right->ratelimitInterval &&
            left->ratelimitBurst == right->ratelimitBurst && left->iAddtlFrameDelim == right->iAddtlFrameDelim &&
            left->maxFrameSize == right->maxFrameSize &&
-           (ignoreLiveFields || (left->bUseFlowControl == right->bUseFlowControl &&
+           (ignoreLiveFields || (reloadRulesetNameEqual(left->pszBindRuleset, right->pszBindRuleset) &&
+                                 left->bUseFlowControl == right->bUseFlowControl &&
                                  reloadUStringEqual(left->dfltTZ == NULL ? UCHAR_CONSTANT("") : left->dfltTZ,
                                                     right->dfltTZ == NULL ? UCHAR_CONSTANT("") : right->dfltTZ))) &&
            left->bDisableLFDelim == right->bDisableLFDelim && left->discardTruncatedMsg == right->discardTruncatedMsg &&
@@ -1723,6 +1724,7 @@ typedef struct imtcpReloadEntryV1_s {
     tcpsrv_etry_t *runtime;
     int flowControl;
     uchar defaultTZ[8];
+    ruleset_t *ruleset;
     uint64_t fenceToken;
     int fenceAcquired;
 } imtcpReloadEntryV1_t;
@@ -1758,7 +1760,8 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
     size_t index = 0;
     DEFiRet;
 
-    if (oldConfig == NULL || newConfig == NULL || pReloadState == NULL || *pReloadState != NULL)
+    if (oldConfig == NULL || newConfig == NULL || newConfig->pConf == NULL || pReloadState == NULL ||
+        *pReloadState != NULL)
         return RS_RET_PARAM_ERROR;
     CHKiRet(classifyReloadSourceCandidateV1(oldConfig, newConfig, &capability));
     if (capability != eMOD_RELOAD_LIVE_SWAP && capability != eMOD_RELOAD_REUSE) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
@@ -1782,6 +1785,12 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         state->entries[index].flowControl = newInst->bUseFlowControl;
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
+        if (newInst->pszBindRuleset == NULL) {
+            state->entries[index].ruleset = newConfig->pConf->rulesets.pDflt;
+        } else {
+            CHKiRet(rulesetGetRuleset(newConfig->pConf, &state->entries[index].ruleset, newInst->pszBindRuleset));
+        }
+        if (state->entries[index].ruleset == NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         ++index;
     }
     *pReloadState = state;
@@ -1835,6 +1844,7 @@ static void commitReloadV1(void *const pReloadState) {
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
         tcpsrv.SetUseFlowControl(server, state->entries[i].flowControl);
         (void)tcpsrv.SetDfltTZ(server, state->entries[i].defaultTZ);
+        (void)tcpsrv.SetRuleset(server, state->entries[i].ruleset);
     }
 }
 

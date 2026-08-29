@@ -493,6 +493,7 @@ TESTS_DEFAULT = \
 	global-reloadonhup-off-hup.sh \
 	global-reloadonhup-dirty-baseline.sh \
 	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
+	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-on-rainerscript.sh \
 	global-reloadonhup-rainerscript.sh \
 	global-systemd-notifyreadydelay-rainerscript.sh \
@@ -1762,6 +1763,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
 	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-on-yaml.sh \
 	global-reloadonhup-ruleset-constructs-yaml.sh \
 	global-reloadonhup-validate-yaml.sh \
