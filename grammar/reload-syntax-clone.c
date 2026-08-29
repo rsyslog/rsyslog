@@ -11,10 +11,12 @@ rsRetVal cnfexprCloneReloadSafe(const struct cnfexpr *src, struct cnfexpr **out)
     DEFiRet;
     if (src == NULL || out == NULL || *out != NULL) return RS_RET_PARAM_ERROR;
     switch (src->nodetype) {
-        case 'N':
-            CHKmalloc(copy = malloc(sizeof(struct cnfnumval)));
-            *(struct cnfnumval *)copy = *(const struct cnfnumval *)src;
-            break;
+        case 'N': {
+            struct cnfnumval *target;
+            CHKmalloc(target = malloc(sizeof(*target)));
+            *target = *(const struct cnfnumval *)src;
+            copy = (struct cnfexpr *)target;
+        } break;
         case 'S': {
             const struct cnfstringval *value = (const struct cnfstringval *)src;
             struct cnfstringval *target;
@@ -156,7 +158,7 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal cnfstmtCloneReloadSyntax(const struct cnfstmt *src, struct cnfstmt **out) {
+rsRetVal cnfstmtCloneReloadSafe(const struct cnfstmt *src, struct cnfstmt **out) {
     struct cnfstmt *head = NULL;
     struct cnfstmt **next = &head;
     DEFiRet;
@@ -175,12 +177,12 @@ rsRetVal cnfstmtCloneReloadSyntax(const struct cnfstmt *src, struct cnfstmt **ou
                 break;
             case S_IF:
                 CHKiRet(cnfexprCloneReloadSafe(src->d.s_if.expr, &copy->d.s_if.expr));
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_if.t_then, &copy->d.s_if.t_then));
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_if.t_else, &copy->d.s_if.t_else));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_if.t_then, &copy->d.s_if.t_then));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_if.t_else, &copy->d.s_if.t_else));
                 break;
             case S_FOREACH:
                 CHKiRet(cnfIteratorCloneReloadSyntax(src->d.s_foreach.iter, &copy->d.s_foreach.iter));
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_foreach.body, &copy->d.s_foreach.body));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_foreach.body, &copy->d.s_foreach.body));
                 break;
             case S_SET:
                 if (src->d.s_set.varname == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -203,12 +205,12 @@ rsRetVal cnfstmtCloneReloadSyntax(const struct cnfstmt *src, struct cnfstmt **ou
                 CHKiRet(nvlstCloneReloadSafe(src->d.reload_action, &copy->d.reload_action));
                 break;
             case S_RELOAD_PRIFILT:
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_prifilt.t_then, &copy->d.s_prifilt.t_then));
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_prifilt.t_else, &copy->d.s_prifilt.t_else));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_prifilt.t_then, &copy->d.s_prifilt.t_then));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_prifilt.t_else, &copy->d.s_prifilt.t_else));
                 break;
             case S_RELOAD_PROPFILT:
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_propfilt.t_then, &copy->d.s_propfilt.t_then));
-                CHKiRet(cnfstmtCloneReloadSyntax(src->d.s_propfilt.t_else, &copy->d.s_propfilt.t_else));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_propfilt.t_then, &copy->d.s_propfilt.t_then));
+                CHKiRet(cnfstmtCloneReloadSafe(src->d.s_propfilt.t_else, &copy->d.s_propfilt.t_else));
                 break;
             default:
                 ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);

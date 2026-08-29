@@ -22,6 +22,7 @@
 #include "obj.h"
 #include "reload-candidate.h"
 #include "reload-report.h"
+#include "reload-ruleset-materializer.h"
 #include "shadow_reload.h"
 #include "statsobj.h"
 
@@ -54,6 +55,7 @@ static rsReloadNormalizedGraphV1_t activeRulesetGraph;
 static char *candidateConfigPath = NULL;
 static rsReloadCandidate_t *pendingCandidate = NULL;
 static rsReloadReportV1_t *pendingReport = NULL;
+static rsReloadRulesetPlanV1_t *pendingPlan = NULL;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
 static size_t pendingCandidateObjects = 0;
 static uint64_t pendingReportHash = 0;
@@ -209,6 +211,7 @@ finalize_it:
 void shadowReloadExit(void) {
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
+    rsReloadRulesetPlanDestructV1(&pendingPlan);
     free(candidateConfigPath);
     candidateConfigPath = NULL;
     rsReloadNormalizedGraphBuilderV1Destruct(&activeRulesetGraphBuilder);
@@ -407,6 +410,7 @@ void shadowReloadBeginRequest(void) {
     if (!monotonicUsec(&requestStartedUsec)) requestStartedUsec = 0;
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
+    rsReloadRulesetPlanDestructV1(&pendingPlan);
     pendingCandidateObjects = 0;
     pendingReportHash = 0;
     pendingFailurePhase = SHADOW_RELOAD_FAILURE_NONE;
@@ -451,6 +455,11 @@ void shadowReloadBeginRequest(void) {
                     pendingReport->invalidCount == 0) {
                     pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                    if (pendingCandidateResult == RS_RET_OK) {
+                        pendingCandidateResult =
+                            rsReloadRulesetPlanPrepareV1(runConf, pendingCandidate, pendingReport, &pendingPlan);
+                        if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
+                    }
                 }
             }
         }
@@ -617,4 +626,5 @@ void shadowReloadProcess(void) {
     }
     rsReloadCandidateDestruct(&pendingCandidate);
     rsReloadReportDestructV1(&pendingReport);
+    rsReloadRulesetPlanDestructV1(&pendingPlan);
 }

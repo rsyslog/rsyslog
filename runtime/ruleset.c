@@ -80,8 +80,9 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData) {
 
 
 /* iterate over all actions in a script (stmt subtree) */
-static void scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void *, void *), void *pParam) {
+static rsRetVal scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void *, void *), void *pParam) {
     struct cnfstmt *stmt;
+    DEFiRet;
     for (stmt = root; stmt != NULL; stmt = stmt->next) {
         switch (stmt->nodetype) {
             case S_NOP:
@@ -93,21 +94,24 @@ static void scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void
                 break;
             case S_ACT:
                 DBGPRINTF("iterateAllActions calling into action %p\n", stmt->d.act);
-                pFunc(stmt->d.act, pParam);
+                CHKiRet(pFunc(stmt->d.act, pParam));
                 break;
             case S_IF:
-                if (stmt->d.s_if.t_then != NULL) scriptIterateAllActions(stmt->d.s_if.t_then, pFunc, pParam);
-                if (stmt->d.s_if.t_else != NULL) scriptIterateAllActions(stmt->d.s_if.t_else, pFunc, pParam);
+                if (stmt->d.s_if.t_then != NULL) CHKiRet(scriptIterateAllActions(stmt->d.s_if.t_then, pFunc, pParam));
+                if (stmt->d.s_if.t_else != NULL) CHKiRet(scriptIterateAllActions(stmt->d.s_if.t_else, pFunc, pParam));
                 break;
             case S_FOREACH:
-                if (stmt->d.s_foreach.body != NULL) scriptIterateAllActions(stmt->d.s_foreach.body, pFunc, pParam);
+                if (stmt->d.s_foreach.body != NULL)
+                    CHKiRet(scriptIterateAllActions(stmt->d.s_foreach.body, pFunc, pParam));
                 break;
             case S_PRIFILT:
-                if (stmt->d.s_prifilt.t_then != NULL) scriptIterateAllActions(stmt->d.s_prifilt.t_then, pFunc, pParam);
-                if (stmt->d.s_prifilt.t_else != NULL) scriptIterateAllActions(stmt->d.s_prifilt.t_else, pFunc, pParam);
+                if (stmt->d.s_prifilt.t_then != NULL)
+                    CHKiRet(scriptIterateAllActions(stmt->d.s_prifilt.t_then, pFunc, pParam));
+                if (stmt->d.s_prifilt.t_else != NULL)
+                    CHKiRet(scriptIterateAllActions(stmt->d.s_prifilt.t_else, pFunc, pParam));
                 break;
             case S_PROPFILT:
-                scriptIterateAllActions(stmt->d.s_propfilt.t_then, pFunc, pParam);
+                CHKiRet(scriptIterateAllActions(stmt->d.s_propfilt.t_then, pFunc, pParam));
                 break;
             case S_RELOAD_LOOKUP_TABLE: /* this is a NOP */
                 break;
@@ -120,6 +124,8 @@ static void scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void
                 break;
         }
     }
+finalize_it:
+    RETiRet;
 }
 
 /* driver to iterate over all of this ruleset actions */
@@ -132,7 +138,8 @@ DEFFUNC_llExecFunc(doIterateAllActions) {
     DEFiRet;
     ruleset_t *pThis = (ruleset_t *)pData;
     iterateAllActions_t *pMyParam = (iterateAllActions_t *)pParam;
-    scriptIterateAllActions(pThis->root, pMyParam->pFunc, pMyParam->pParam);
+    iRet = scriptIterateAllActions(pThis->root, pMyParam->pFunc, pMyParam->pParam);
+    if (iRet == RS_RET_OK_DELETE_LISTENTRY) iRet = RS_RET_PARAM_ERROR;
     RETiRet;
 }
 /* iterate over ALL actions present in the WHOLE system.
@@ -150,6 +157,73 @@ static rsRetVal iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void *, void
 
 finalize_it:
     RETiRet;
+}
+
+typedef struct actionVisitorV1Context_s {
+    ruleset_t *ruleset;
+    rulesetActionVisitorV1_t visitor;
+    void *context;
+} actionVisitorV1Context_t;
+
+static rsRetVal scriptVisitAllActionsV1(struct cnfstmt *stmt, actionVisitorV1Context_t *visit) {
+    DEFiRet;
+    for (; stmt != NULL; stmt = stmt->next) {
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+            case S_SET:
+            case S_UNSET:
+            case S_CALL:
+            case S_CALL_INDIRECT:
+            case S_RELOAD_LOOKUP_TABLE:
+                break;
+            case S_ACT:
+                iRet = visit->visitor(visit->ruleset, stmt, stmt->d.act, visit->context);
+                if (iRet == RS_RET_OK_DELETE_LISTENTRY) iRet = RS_RET_PARAM_ERROR;
+                CHKiRet(iRet);
+                break;
+            case S_IF:
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_if.t_then, visit));
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_if.t_else, visit));
+                break;
+            case S_FOREACH:
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_foreach.body, visit));
+                break;
+            case S_PRIFILT:
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_prifilt.t_then, visit));
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_prifilt.t_else, visit));
+                break;
+            case S_PROPFILT:
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_propfilt.t_then, visit));
+                CHKiRet(scriptVisitAllActionsV1(stmt->d.s_propfilt.t_else, visit));
+                break;
+            default:
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        }
+    }
+finalize_it:
+    RETiRet;
+}
+
+typedef struct rulesetActionVisitorV1Context_s {
+    rulesetActionVisitorV1_t visitor;
+    void *context;
+} rulesetActionVisitorV1Context_t;
+
+DEFFUNC_llExecFunc(doVisitAllActionsV1) {
+    ruleset_t *const ruleset = (ruleset_t *)pData;
+    rulesetActionVisitorV1Context_t *const all = (rulesetActionVisitorV1Context_t *)pParam;
+    actionVisitorV1Context_t visit = {ruleset, all->visitor, all->context};
+    const rsRetVal ret = scriptVisitAllActionsV1(ruleset->root, &visit);
+    return ret == RS_RET_OK_DELETE_LISTENTRY ? RS_RET_PARAM_ERROR : ret;
+}
+
+rsRetVal rulesetVisitAllActionsV1(rsconf_t *conf, rulesetActionVisitorV1_t visitor, void *context) {
+    rulesetActionVisitorV1Context_t visit;
+    if (conf == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    visit.visitor = visitor;
+    visit.context = context;
+    return llExecFunc(&conf->rulesets.llRulesets, doVisitAllActionsV1, &visit);
 }
 
 /* driver to iterate over all rulesets */

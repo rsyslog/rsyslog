@@ -237,7 +237,7 @@ static int testStatementClone(void) {
     CHECK(filter->printable != NULL && filter->d.s_prifilt.t_then != NULL && filter->d.s_prifilt.t_else != NULL);
     source->d.s_if.t_else = filter;
 
-    CHECK(cnfstmtCloneReloadSyntax(source, &clone) == RS_RET_OK);
+    CHECK(cnfstmtCloneReloadSafe(source, &clone) == RS_RET_OK);
     cnfstmtDestructLst(source);
     CHECK(strcmp((char *)clone->printable, "if expression") == 0);
     CHECK(strcmp((char *)clone->d.s_if.t_then->d.s_set.varname, "$.route") == 0);
@@ -248,7 +248,7 @@ static int testStatementClone(void) {
 
     source = statement(S_RELOAD_LOOKUP_TABLE);
     CHECK(source != NULL);
-    CHECK(cnfstmtCloneReloadSyntax(source, &clone) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(cnfstmtCloneReloadSafe(source, &clone) == RS_RET_NOT_IMPLEMENTED);
     CHECK(clone == NULL);
     cnfstmtDestructLst(source);
     return 0;

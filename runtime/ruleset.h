@@ -80,6 +80,13 @@ PROTOTYPEObjDebugPrint(ruleset);
  * them and use plain c-style conventions at least inside core objects.
  */
 rsRetVal rulesetDestructForLinkedList(void *pData);
+typedef rsRetVal (*rulesetActionVisitorV1_t)(ruleset_t *ruleset,
+                                             struct cnfstmt *owner,
+                                             action_t *action,
+                                             void *context);
+/* Read-only preorder traversal. Callback status never has linked-list delete
+ * semantics; owner and action remain owned by the active configuration. */
+rsRetVal rulesetVisitAllActionsV1(rsconf_t *conf, rulesetActionVisitorV1_t visitor, void *context);
 rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
 
 /* Get name associated to ruleset. This function cannot fail (except,

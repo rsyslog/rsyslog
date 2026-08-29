@@ -984,12 +984,7 @@ static rsRetVal addActionNodes(rsReloadNormalizedGraphBuilderV1_t *builder,
                 CHKmalloc(identity = malloc(prefixLen + nameLen + 1));
                 snprintf(identity, prefixLen + nameLen + 1, "action:%.*s", (int)nameLen, name);
             }
-            CHKmalloc(serialized = es_newStr(128));
-            CHKiRet(appendToken(&serialized, "rsyslog.reload.action.v1;"));
-            CHKiRet(appendNvlst(&serialized, actionSyntax));
-            CHKiRet(sha256Fingerprint(serialized, &fingerprint));
-            es_deleteStr(serialized);
-            serialized = NULL;
+            CHKiRet(rsReloadActionSyntaxFingerprintV1(actionSyntax, &fingerprint));
             CHKiRet(rsReloadNormalizedGraphBuilderV1Add(builder, RS_RELOAD_OBJ_ACTION, identity, fingerprint));
             free(identity);
             identity = NULL;
@@ -1015,6 +1010,34 @@ finalize_it:
     free(fingerprint);
     if (serialized != NULL) es_deleteStr(serialized);
     RETiRet;
+}
+
+rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint) {
+    es_str_t *serialized = NULL;
+    DEFiRet;
+    if (syntax == NULL || ownedFingerprint == NULL || *ownedFingerprint != NULL) return RS_RET_PARAM_ERROR;
+    CHKmalloc(serialized = es_newStr(128));
+    CHKiRet(appendToken(&serialized, "rsyslog.reload.action.v1;"));
+    CHKiRet(appendNvlst(&serialized, syntax));
+    CHKiRet(sha256Fingerprint(serialized, ownedFingerprint));
+finalize_it:
+    if (serialized != NULL) es_deleteStr(serialized);
+    RETiRet;
+}
+
+rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *const syntax,
+                                    const char **const borrowedName,
+                                    size_t *const nameLength) {
+    const char *name;
+    size_t length;
+    if (syntax == NULL || borrowedName == NULL || nameLength == NULL) return RS_RET_PARAM_ERROR;
+    *borrowedName = NULL;
+    *nameLength = 0;
+    name = nvlstString(syntax, "name", &length);
+    if (name == NULL) return RS_RET_NOT_IMPLEMENTED;
+    *borrowedName = name;
+    *nameLength = length;
+    return RS_RET_OK;
 }
 
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
@@ -1087,10 +1110,12 @@ finalize_it:
 
 rsRetVal rsReloadCandidateCheckRulesetOnlyReportV1(const rsReloadReportV1_t *const report) {
     size_t i;
-    if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report))
+    if (report == NULL || report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
+        report->entryStride < sizeof(rsReloadReportEntryV1_t))
         return RS_RET_PARAM_ERROR;
     for (i = 0; i < report->entryCount; ++i) {
-        const rsReloadReportEntryV1_t *entry = &report->entries[i];
+        const rsReloadReportEntryV1_t *entry =
+            (const rsReloadReportEntryV1_t *)((const unsigned char *)report->entries + i * report->entryStride);
         if (entry->diffKind == RS_RELOAD_DIFF_UNCHANGED) continue;
         /* Added/removed rulesets alter call targets. Any changed action,
          * input, parser, queue, module, template, or global fails closed. */
@@ -1341,6 +1366,63 @@ void rsReloadCandidateNoteError(const rsRetVal error) {
 
 size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *const candidate) {
     return candidate == NULL ? 0 : candidate->objectCount;
+}
+
+typedef struct visitedRulesetIdentity_s {
+    char *identity;
+    int syntheticDefault;
+    struct visitedRulesetIdentity_s *next;
+} visitedRulesetIdentity_t;
+
+static void visitedRulesetIdentitiesDestruct(visitedRulesetIdentity_t *entry) {
+    while (entry != NULL) {
+        visitedRulesetIdentity_t *const next = entry->next;
+        free(entry->identity);
+        free(entry);
+        entry = next;
+    }
+}
+
+rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *candidate,
+                                                  rsReloadCandidateRulesetFragmentVisitorV1_t visitor,
+                                                  void *context) {
+    const rsReloadCandidateObject_t *entry;
+    visitedRulesetIdentity_t *visited = NULL;
+    DEFiRet;
+    if (candidate == NULL || visitor == NULL) return RS_RET_PARAM_ERROR;
+    for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        const struct cnfobj *object = entry->object;
+        visitedRulesetIdentity_t *seen;
+        char *identity = NULL;
+        int first = 1;
+        const int isSyntheticDefault = object != NULL && object->objType == CNFOBJ_RULESET && object->nvlst == NULL;
+        if (object == NULL || object->objType != CNFOBJ_RULESET) continue;
+        CHKiRet(makeIdentity(object, 0, &identity));
+        lowerRulesetIdentity(identity);
+        for (seen = visited; seen != NULL; seen = seen->next) {
+            if (strcmp(seen->identity, identity)) continue;
+            if (!isSyntheticDefault || !seen->syntheticDefault) {
+                free(identity);
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+            }
+            first = 0;
+            break;
+        }
+        if (seen == NULL) {
+            CHKmalloc(seen = calloc(1, sizeof(*seen)));
+            seen->identity = identity;
+            seen->syntheticDefault = isSyntheticDefault;
+            identity = NULL;
+            seen->next = visited;
+            visited = seen;
+        }
+        free(identity);
+        identity = NULL;
+        CHKiRet(visitor(seen->identity, object->script, first, isSyntheticDefault, context));
+    }
+finalize_it:
+    visitedRulesetIdentitiesDestruct(visited);
+    RETiRet;
 }
 
 rsRetVal rsReloadCandidateParse(const char *const path, rsReloadCandidate_t **const ppCandidate) {

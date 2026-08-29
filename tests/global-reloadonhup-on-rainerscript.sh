@@ -8,12 +8,40 @@ generate_conf
 add_conf '
 global(processInternalMessages="on" config.reloadOnHUP="on")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
+ruleset(name="prepared") {
+    if $msg contains "prepare-before" then
+        action(type="omfile" name="prepared_sink" file="'$RSYSLOG_OUT_LOG'")
+}
 '
 startup
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1"* ]]; then
+if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1 unchanged=7 added=0 removed=0 modified=0 invalid=0"* ]]; then
 	echo "FAIL: unchanged on candidate did not reach the activation gate: $reload_status"
+	error_exit 1
+fi
+
+# A ruleset-only expression change with an unchanged named action must pass
+# private materialization. The deterministic oracle is the later activation
+# boundary; a prepare failure would instead report candidate_scope_unsupported.
+sed 's/prepare-before/prepare-after/' "$CONF_FILE" >"$CONF_FILE.candidate"
+mv "$CONF_FILE.candidate" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activation_not_implemented active_generation=1 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: private ruleset materialization did not reach the activation boundary: $reload_status"
+	error_exit 1
+fi
+
+# A function remains deliberately outside B1 lowering. Although the graph
+# change is ruleset-only, Prepare must reject it without publishing or leaking
+# the already partially cloned plan.
+sed 's/$msg contains "prepare-after"/tolower($msg) == "prepare-after"/' "$CONF_FILE" >"$CONF_FILE.candidate"
+mv "$CONF_FILE.candidate" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=1 unchanged=6 added=0 removed=0 modified=1 invalid=0"* ]]; then
+	echo "FAIL: unsupported function was not rejected by private Prepare: $reload_status"
 	error_exit 1
 fi
 
@@ -52,10 +80,10 @@ shutdown_when_empty
 wait_shutdown
 content_check 'shadow_reload event=request result=rejected mode=on'
 content_check 'rejected_mode=on rejected_reason=candidate_report_invalid'
-content_check 'reload_on_total=3'
-content_check 'reload_on_rejected_total=3'
-content_check 'reload_capability_rejected_total=1'
-content_check 'reload_legacy_hook_total=3'
+content_check 'reload_on_total=5'
+content_check 'reload_on_rejected_total=5'
+content_check 'reload_capability_rejected_total=2'
+content_check 'reload_legacy_hook_total=5'
 assert_content_missing 'result=validated'
 check_file_not_exists "$RSYSLOG2_OUT_LOG"
 exit_test

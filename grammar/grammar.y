@@ -265,7 +265,9 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| '(' expr ')'			{ $$ = $2; }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
 	| EXISTS '(' VAR ')'		{
-		if(($$ = (struct cnfexpr*) cnffuncexistsNew($3)) == NULL)
+		char *const name = $3;
+		$3 = NULL; /* constructor owns name on success and failure */
+		if(($$ = (struct cnfexpr*) cnffuncexistsNew(name)) == NULL)
 			YYABORT;
 	}
 	| FUNC '(' ')'			{ $$ = (struct cnfexpr*) cnffuncNew($1, NULL); }
@@ -273,7 +275,9 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{
-		if(($$ = (struct cnfexpr*) cnfvarNew($1)) == NULL)
+		char *const name = $1;
+		$1 = NULL; /* constructor owns name on success and failure */
+		if(($$ = (struct cnfexpr*) cnfvarNew(name)) == NULL)
 			YYABORT;
 	}
 	| array				{ $$ = (struct cnfexpr*) $1; }
