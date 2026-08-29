@@ -1,7 +1,8 @@
 #!/bin/bash
-# Verify native YAML reloadOnHUP=on safely parses the candidate, then fails
-# closed at the unavailable activation phase. Both numbered records must use
-# the old active ruleset after HUP.
+# Verify native YAML reloadOnHUP=on safely parses candidates and fails closed
+# at both current boundaries: an eligible no-op reaches the unavailable
+# activation phase, while an action change stops at the ruleset-only scope
+# gate. Both numbered records must use the old active ruleset after HUP.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp

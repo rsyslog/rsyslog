@@ -442,7 +442,8 @@ void shadowReloadBeginRequest(void) {
                     pendingCandidateResult = RS_RET_NOT_IMPLEMENTED;
                 }
                 rsReloadNormalizedGraphBuilderV1Destruct(&candidateBuilder);
-                if (pendingCandidateResult == RS_RET_OK && configuredMode == RELOAD_ON_HUP_ON) {
+                if (pendingCandidateResult == RS_RET_OK && configuredMode == RELOAD_ON_HUP_ON &&
+                    pendingReport->invalidCount == 0) {
                     pendingCandidateResult = rsReloadCandidateCheckRulesetOnlyReportV1(pendingReport);
                     if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                 }
