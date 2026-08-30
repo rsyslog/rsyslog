@@ -1,0 +1,53 @@
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_4ed17a734d7423 924,926
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_d736820bbe7f3a 297-308
+runtime/glbl.h
+  s_f2c089be484e12::t_963ec683ceae57 163-164
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_963ec683ceae57 1476,1493
+grammar/reload-ruleset-materializer.c
+  s_f2c089be484e12::t_963ec683ceae57 349,360
+tests/global-reloadonhup-reportchild-rainerscript.sh
+  s_f2c089be484e12::t_d32fbde62342a3 7,70-84
+  s_f2c089be484e12::t_2cd1fe42a95818 1-6,8-69,85-90
+grammar/reload-ruleset-materializer.h
+  s_f2c089be484e12::t_963ec683ceae57 20-22,31
+runtime/reload-candidate.h
+  s_f2c089be484e12::t_963ec683ceae57 84-85
+runtime/glbl.c
+  s_f2c089be484e12::t_2fd0fd1f8bece8 111,1739,1753
+  s_f2c089be484e12::t_963ec683ceae57 108-110,720,722,724,934-943,949,952-953,1188
+doc/source/rainerscript/global.rst
+  s_f2c089be484e12::t_d736820bbe7f3a 765-770
+tests/global-reloadonhup-reportchild-yaml.sh
+  s_f2c089be484e12::t_2a6abdc179c679 5-6,24-25,27,29-30
+  s_f2c089be484e12::t_7104dd4428a9b1 4,10,33,38-42,60,62-64,77-79,92-94
+  s_f2c089be484e12::t_6a3a14874da5e3 46
+  s_f2c089be484e12::t_2cd1fe42a95818 1-3,7-9,11-23,26,28,31-32,34-37,43-45,47-59,61,65-76,80-91,95-104
+tools/shadow_reload.c
+  s_f2c089be484e12::t_758765a1559ce5 87-90,454-467,474,483-502,504-508,524,728-731,1075,1079
+  s_f2c089be484e12::t_dfcbf6d50fbe7d 25
+  s_f2c089be484e12::t_67f14e900562ee 804,814
+runtime/rsconf.c
+  s_f2c089be484e12::t_963ec683ceae57 338
+tests/Makefile.am
+  s_f2c089be484e12::t_7104dd4428a9b1 1248,2550,3431,3433-3434
+  s_f2c089be484e12::t_2cd1fe42a95818 1225,1249-1250,3432,3435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "d96860328f1c7069fbf500630b573aa9cddf668c",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
