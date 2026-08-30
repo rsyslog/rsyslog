@@ -298,8 +298,9 @@ queues without a safe batch barrier are rejected before commit.
 The first base-setting exceptions are ``config.reloadOnHUP`` itself,
 ``reportChildProcessExits``, ``oversizemsg.report``, ``compactJsonString``,
 ``parser.dropTrailingLFOnReception``,
-``parser.dropTrailingCROnReception``, and
-``parser.escapeControlCharactersOnReceive``.  In ``on`` mode, the controller builds
+``parser.dropTrailingCROnReception``,
+``parser.escapeControlCharactersOnReceive``, and
+``parser.spaceLFOnReceive``.  In ``on`` mode, the controller builds
 private last-write profiles for these values and separate fingerprints over
 every other ``global()`` parameter.  It authorizes the global report node only
 when exactly one supported scalar changed and that scalar's other-parameter
@@ -311,10 +312,10 @@ reload policy, child exits observed after the commit use the new ``none``,
 and subsequent JSON serialization uses the selected compact or traditional
 spaced representation.  Messages parsed after a trailing-LF or trailing-CR
 policy commit use the newly selected handling, and subsequent message parsing
-uses the selected control-character escaping policy.  Changing more than one
-supported scalar in one generation, or changing any other global setting,
-remains unsupported.  In ``validate`` mode all candidate parsing remains
-report-only.
+uses the selected control-character escaping and LF-spacing policies.  Changing
+more than one supported scalar in one generation, or changing any other global
+setting, remains unsupported.  In ``validate`` mode all candidate parsing
+remains report-only.
 
 The first Release E foundation coordinates that ruleset plan with an ``imtcp``
 event-loop/worker fence.  Compatible existing listeners and sessions are kept
