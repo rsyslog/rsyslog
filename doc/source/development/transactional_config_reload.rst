@@ -294,16 +294,17 @@ inputs, or global settings remain rejected as
 ``candidate_scope_unsupported``.  Unsupported ruleset syntax and consumer
 queues without a safe batch barrier are rejected before commit.
 
-The first base-setting exceptions are ``config.reloadOnHUP`` itself and
-``reportChildProcessExits``.  In ``on`` mode, the controller builds private
-last-write profiles for these values and separate fingerprints over every
-other ``global()`` parameter.  It authorizes the global report node only when
-exactly one supported scalar changed and that scalar's other-parameter
-fingerprint is unchanged.  The final commit guard then publishes either the
-new reload mode or the synchronized child-exit reporting policy together with
-the source graph.  The next HUP observes the activated ``off``, ``validate``,
-or ``on`` reload policy, and child exits observed after the commit use the new
-``none``, ``errors``, or ``all`` policy.  Changing both scalars in one
+The first base-setting exceptions are ``config.reloadOnHUP`` itself,
+``reportChildProcessExits``, and ``oversizemsg.report``.  In ``on`` mode, the
+controller builds private last-write profiles for these values and separate
+fingerprints over every other ``global()`` parameter.  It authorizes the
+global report node only when exactly one supported scalar changed and that
+scalar's other-parameter fingerprint is unchanged.  The final commit guard
+then publishes either the new reload mode or one synchronized reporting policy
+together with the source graph.  The next HUP observes the activated ``off``,
+``validate``, or ``on`` reload policy, child exits observed after the commit
+use the new ``none``, ``errors``, or ``all`` policy, and oversized messages use
+the new reporting flag.  Changing more than one supported scalar in one
 generation, or changing any other global setting, remains unsupported.  In
 ``validate`` mode all candidate parsing remains report-only.
 

@@ -603,6 +603,10 @@ The following parameters can be set:
   This parameter specifies if an error shall be reported when an oversized
   message is seen. The default is "on".
 
+  With ``config.reloadOnHUP="on"``, this flag can be changed transactionally
+  by HUP when it is the only changed base/global setting in that generation.
+  Oversized messages submitted after the commit use the new value.
+
 - **abortOnUncleanConfig** [boolean (on/off)] available 8.37.0+
 
   This parameter permits to prevent rsyslog from running when the

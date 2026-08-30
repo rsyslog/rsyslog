@@ -105,6 +105,7 @@ int glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
+DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
 /* Child termination can be reported by module workers as well as the main
  * reaper. Transactional base publication therefore uses the same synchronized
  * accessors as every reader instead of racing a plain configuration write. */
@@ -929,7 +930,13 @@ int glblGetOversizeMsgInputMode(rsconf_t *cnf) {
 }
 
 int glblReportOversizeMessage(rsconf_t *cnf) {
-    return cnf->globals.reportOversizeMsg;
+    if (cnf == NULL) return 1;
+    return ATOMIC_LOAD_32BIT(&cnf->globals.reportOversizeMsg, &mutReportOversizeMsg);
+}
+
+void glblSetReportOversizeMessage(rsconf_t *const cnf, const int enabled) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.reportOversizeMsg, &mutReportOversizeMsg, enabled);
 }
 
 int glblGetReportChildProcessExits(rsconf_t *const cnf) {
@@ -1195,7 +1202,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     loadConf->globals.systemdNotifyReadyDelay = 0;
     bPreserveFQDN = 0;
     loadConf->globals.iMaxLine = 8192;
-    loadConf->globals.reportOversizeMsg = 1;
+    glblSetReportOversizeMessage(loadConf, 1);
     loadConf->globals.parser.cCCEscapeChar = '#';
     loadConf->globals.parser.bDropTrailingLF = 1;
     loadConf->globals.parser.bDropTrailingCR = 0;
@@ -1462,7 +1469,7 @@ rsRetVal glblDoneLoadCnf(void) {
             free(loadConf->globals.oversizeMsgErrorFile);
             loadConf->globals.oversizeMsgErrorFile = (uchar *)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
         } else if (!strcmp(paramblk.descr[i].name, "oversizemsg.report")) {
-            loadConf->globals.reportOversizeMsg = (int)cnfparamvals[i].val.d.n;
+            glblSetReportOversizeMessage(loadConf, (int)cnfparamvals[i].val.d.n);
         } else if (!strcmp(paramblk.descr[i].name, "oversizemsg.input.mode")) {
             const char *const tmp = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
             setOversizeMsgInputMode((uchar *)tmp);
@@ -1749,6 +1756,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
         regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
+    INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 ENDObjClassInit(glbl)
 
@@ -1764,5 +1772,6 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     objRelease(prop, CORE_COMPONENT);
     if (propLocalHostNameToDelete != NULL) prop.Destruct(&propLocalHostNameToDelete);
     DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
+    DESTROY_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)

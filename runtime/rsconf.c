@@ -333,7 +333,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
     pThis->globals.pszDfltNetstrmDrvr = NULL;
     pThis->globals.oversizeMsgErrorFile = NULL;
-    pThis->globals.reportOversizeMsg = 1;
+    glblSetReportOversizeMessage(pThis, 1);
     pThis->globals.oversizeMsgInputMode = 0;
     glblSetReportChildProcessExits(pThis, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     pThis->globals.bActionReportSuspension = 1;

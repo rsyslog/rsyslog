@@ -824,6 +824,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(getReloadRulesetFingerprint(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreloadstatus"))) {
         CHKiRet(getReloadStatus(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("getreportoversizemsg"))) {
+        CHKiRet(sendResponse(pSess, "%d\n", glblReportOversizeMessage(runConf)));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setsegdiskfault"))) {

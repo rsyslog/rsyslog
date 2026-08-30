@@ -88,6 +88,8 @@ static int pendingReportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 static int pendingBaseAuthorized = 0;
 static int pendingReloadModeUpdate = 0;
 static int pendingReportChildProcessExitsUpdate = 0;
+static int pendingReportOversizeMsg = 1;
+static int pendingReportOversizeMsgUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -465,6 +467,20 @@ static rsRetVal parseCandidateReportChildProcessExits(const char *const value, i
     return RS_RET_OK;
 }
 
+static rsRetVal parseCandidateBinary(const char *const value, const int defaultValue, int *const parsed) {
+    if (parsed == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL) {
+        *parsed = defaultValue;
+    } else if (!strcasecmp(value, "on")) {
+        *parsed = 1;
+    } else if (!strcasecmp(value, "off")) {
+        *parsed = 0;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
 static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     char *activeValue = NULL;
     char *candidateValue = NULL;
@@ -472,6 +488,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     char *candidateOther = NULL;
     reloadOnHUPMode_t activeMode;
     int activeReportChildProcessExits;
+    int activeReportOversizeMsg;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -500,12 +517,33 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "reportchildprocessexits",
                                                    &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateReportChildProcessExits(activeValue, &activeReportChildProcessExits));
+        CHKiRet(parseCandidateReportChildProcessExits(candidateValue, &pendingReportChildProcessExits));
+        if (activeReportChildProcessExits != glblGetReportChildProcessExits(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingReportChildProcessExitsUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "oversizemsg.report", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "oversizemsg.report", &candidateValue,
+                                                   &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateReportChildProcessExits(activeValue, &activeReportChildProcessExits));
-    CHKiRet(parseCandidateReportChildProcessExits(candidateValue, &pendingReportChildProcessExits));
-    if (activeReportChildProcessExits != glblGetReportChildProcessExits(runConf)) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    CHKiRet(parseCandidateBinary(activeValue, 1, &activeReportOversizeMsg));
+    CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingReportOversizeMsg));
+    if (activeReportOversizeMsg != glblReportOversizeMessage(runConf)) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingReportChildProcessExitsUpdate = 1;
+    pendingReportOversizeMsgUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -726,9 +764,11 @@ void shadowReloadBeginRequest(void) {
     pendingSourceModuleCapabilityEvaluated = 0;
     pendingReloadMode = configuredMode;
     pendingReportChildProcessExits = glblGetReportChildProcessExits(runConf);
+    pendingReportOversizeMsg = glblReportOversizeMessage(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
+    pendingReportOversizeMsgUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1077,6 +1117,7 @@ static void publishActivatedGeneration(void *const context) {
         runConf->globals.reloadOnHUP = pendingReloadMode;
     }
     if (pendingReportChildProcessExitsUpdate) glblSetReportChildProcessExits(runConf, pendingReportChildProcessExits);
+    if (pendingReportOversizeMsgUpdate) glblSetReportOversizeMessage(runConf, pendingReportOversizeMsg);
     publishActivatedGraph(context);
 }
 
