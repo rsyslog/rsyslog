@@ -320,6 +320,12 @@ Prepare validates the next pattern before the allocation-free commit.  TLS,
 endpoint-in-place replacement, ACL, named rate-limit policy, and
 listener-structure fields remain conservatively restart-required until their
 corresponding prepare, ownership, and reconciliation contracts are implemented.
+An endpoint change that resolves to a distinct fixed socket tuple is reconciled
+as a prepared addition plus drain-removal: the old accept socket closes at
+commit, its established sessions retain the retired listener generation, and
+the replacement begins accepting on the newly published tuple.  Dynamic or
+service-name replacements that cannot bind privately without publishing a
+port-file side effect remain restart-required.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
