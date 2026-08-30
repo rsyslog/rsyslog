@@ -157,7 +157,7 @@ jobs:
             if timeout 90s git clone --depth 1 --branch "$ALPINE_BRANCH" \
               --filter=blob:none --sparse \
               https://gitlab.alpinelinux.org/alpine/aports.git "$baseline_dir"; then
-              if git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
+              if timeout 90s git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
                 baseline_fetched=true
                 break
               fi
@@ -169,7 +169,6 @@ jobs:
             echo "::error::could not fetch the Alpine $ALPINE_BRANCH packaging baseline"
             exit 1
           }
-          git -C "$baseline_dir" sparse-checkout set main/rsyslog
           baseline_sha="$(git -C "$baseline_dir" rev-parse HEAD)"
           echo "baseline_sha=$baseline_sha" >> "$GITHUB_OUTPUT"
 
