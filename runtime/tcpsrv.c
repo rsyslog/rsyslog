@@ -483,6 +483,7 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
             ABORT_FINALIZE(RS_RET_ERR);
         }
         pEntry->bHasStartRegex = 1;
+        pEntry->bStartRegexCompiled = 1;
     }
 #else
     if (cnf_params->pszStartRegex != NULL) {
@@ -533,7 +534,7 @@ finalize_it:
                 statsobj.Destruct(&pEntry->stats);
             }
 #ifdef FEATURE_REGEXP
-            if (pEntry->bHasStartRegex) {
+            if (pEntry->bStartRegexCompiled) {
                 regexp.regfree(&pEntry->start_preg);
             }
 #endif
@@ -697,7 +698,7 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
     pEntry = pThis->pLstnPorts;
     while (pEntry != NULL) {
 #ifdef FEATURE_REGEXP
-        if (pEntry->bHasStartRegex) {
+        if (pEntry->bStartRegexCompiled) {
             regexp.regfree(&pEntry->start_preg);
         }
 #endif
@@ -2396,8 +2397,28 @@ static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const t
         pThis, profile->compressionMode, profile->compressionDriver, profile->compressionMaxExpansionRatio,
         profile->compressionMaxDecompressedBytesPerReceive, profile->compressionMaxTotalZstdWindowBytes);
     tcpsrvApplyMultiLineForNewSessions(pThis, profile->multiLine);
+    tcpsrvApplyStartRegexForNewSessions(pThis, profile->startRegex);
     tcpsrvApplyDefaultTZLive(pThis, profile->defaultTZ);
     tcpsrvApplyRulesetLive(pThis, profile->ruleset);
+}
+
+void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *const server, uchar *const preparedRegex) {
+    tcpLstnPortList_t *const listener = server->pLstnPorts;
+
+    /* imtcp constructs one tcpsrv per configured input. Rejecting any other
+     * shape happens during prepare so commit can remain allocation-free. */
+    assert(listener != NULL && listener->pNext == NULL && listener->cnf_params != NULL);
+#ifdef FEATURE_REGEXP
+    if (listener->bStartRegexCompiled) {
+        regexp.regfree(&listener->start_preg);
+        listener->bStartRegexCompiled = RSFALSE;
+    }
+    free((void *)listener->cnf_params->pszStartRegex);
+    listener->cnf_params->pszStartRegex = preparedRegex;
+    listener->bHasStartRegex = preparedRegex != NULL;
+#else
+    assert(preparedRegex == NULL);
+#endif
 }
 
 

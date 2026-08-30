@@ -113,6 +113,11 @@ struct tcps_sess_s {
 #ifdef FEATURE_REGEXP
         sbool bHasStartRegex;
         regex_t *pStartRegex;
+        /* Session-owned compiled delimiter. This is appended so v4 field
+         * offsets remain stable while listener generations can replace their
+         * accept profile without invalidating established sessions. */
+        sbool bOwnStartRegex;
+        regex_t ownedStartRegex;
 #endif
 };
 

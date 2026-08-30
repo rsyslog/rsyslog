@@ -1839,7 +1839,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
              left->compressionMaxTotalZstdWindowBytesSet == right->compressionMaxTotalZstdWindowBytesSet)) &&
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
-           reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex) &&
+           (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
            leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
            reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
@@ -2054,6 +2054,7 @@ typedef struct imtcpReloadEntryV1_s {
     uint64_t compressionMaxDecompressedBytesPerReceive;
     uint64_t compressionMaxTotalZstdWindowBytes;
     int multiLine;
+    uchar *startRegex;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
     uint64_t fenceToken;
@@ -2064,6 +2065,42 @@ typedef struct imtcpReloadStateV1_s {
     size_t count;
     imtcpReloadEntryV1_t entries[];
 } imtcpReloadStateV1_t;
+
+static rsRetVal prepareReloadStartRegex(const uchar *const source, uchar **const prepared) {
+    DEFiRet;
+
+    if (prepared == NULL || *prepared != NULL) return RS_RET_PARAM_ERROR;
+    if (source == NULL) FINALIZE;
+#ifdef FEATURE_REGEXP
+    regex_t validationRegex;
+    CHKmalloc(*prepared = ustrdup(source));
+    const int errcode = regcomp(&validationRegex, (const char *)source, REG_EXTENDED);
+    if (errcode != 0) {
+        char errbuff[512];
+        regerror(errcode, &validationRegex, errbuff, sizeof(errbuff));
+        LogError(0, RS_RET_INVALID_VALUE, "imtcp: invalid reload framing.delimiter.regex: %s", errbuff);
+        ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    }
+    regfree(&validationRegex);
+#else
+    ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+#endif
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(*prepared);
+        *prepared = NULL;
+    }
+    RETiRet;
+}
+
+static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
+    if (state == NULL) return;
+    for (size_t i = 0; i < state->count; ++i) {
+        free(state->entries[i].startRegex);
+        state->entries[i].startRegex = NULL;
+    }
+}
 
 static rsRetVal startSrvWrkr(tcpsrv_etry_t *etry, int parked);
 static void authorizeSrvWrkr(tcpsrv_etry_t *etry);
@@ -2201,6 +2238,9 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
         }
         if (state->entries[index].runtime == NULL || state->entries[index].runtime->state != IMTCP_ENDPOINT_ACTIVE)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        if (state->entries[index].runtime->tcpsrv->pLstnPorts == NULL ||
+            state->entries[index].runtime->tcpsrv->pLstnPorts->pNext != NULL)
+            ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->count = index + 1;
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
@@ -2226,6 +2266,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             newInst->compressionMaxDecompressedBytesPerReceive;
         state->entries[index].compressionMaxTotalZstdWindowBytes = newInst->compressionMaxTotalZstdWindowBytes;
         state->entries[index].multiLine = newInst->cnf_params->bMultiLine;
+        CHKiRet(prepareReloadStartRegex(newInst->cnf_params->pszStartRegex, &state->entries[index].startRegex));
         u_cstr_copy(state->entries[index].defaultTZ, newInst->dfltTZ == NULL ? UCHAR_CONSTANT("") : newInst->dfltTZ,
                     sizeof(state->entries[index].defaultTZ));
         if (newInst->pszBindRuleset == NULL) {
@@ -2259,6 +2300,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
 
 finalize_it:
     destructUnpublishedAdditions(state);
+    freeReloadPreparedValues(state);
     free(state);
     RETiRet;
 }
@@ -2336,10 +2378,12 @@ static void commitReloadV1(void *const pReloadState) {
             .compressionMaxDecompressedBytesPerReceive = state->entries[i].compressionMaxDecompressedBytesPerReceive,
             .compressionMaxTotalZstdWindowBytes = state->entries[i].compressionMaxTotalZstdWindowBytes,
             .multiLine = state->entries[i].multiLine,
+            .startRegex = state->entries[i].startRegex,
             .ruleset = state->entries[i].ruleset,
         };
         u_cstr_copy(profile.defaultTZ, state->entries[i].defaultTZ, sizeof(profile.defaultTZ));
         tcpsrv.ApplyReloadProfile(server, &profile);
+        state->entries[i].startRegex = NULL;
     }
     for (size_t i = 0; i < state->count; ++i) {
         imtcpReloadEntryV1_t *const entry = &state->entries[i];
@@ -2360,6 +2404,7 @@ static void abortReloadV1(void *const pReloadState) {
     if (pReloadState == NULL) return;
     (void)resumeReloadV1(pReloadState);
     destructUnpublishedAdditions(pReloadState);
+    freeReloadPreparedValues(pReloadState);
     free(pReloadState);
 }
 
@@ -2386,6 +2431,7 @@ static rsRetVal retireReloadV1(void *const pReloadState) {
         endpointRegistryRemove(reloadEntry->runtime);
         reloadEntry->runtime = NULL;
     }
+    freeReloadPreparedValues(state);
     free(pReloadState);
     return RS_RET_OK;
 }
@@ -2672,6 +2718,7 @@ static void destructModuleConfigContents(modConfData_t *const pModConf) {
             free((void *)inst->cnf_params->pszNetworkNamespace);
             free((void *)inst->cnf_params->pszStrmDrvrName);
             free((void *)inst->cnf_params->pszInputName);
+            free((void *)inst->cnf_params->pszStartRegex);
             free((void *)inst->cnf_params->pszRatelimitName);
             free((void *)inst->cnf_params);
         }

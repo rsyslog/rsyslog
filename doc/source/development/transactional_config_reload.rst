@@ -314,11 +314,12 @@ keepalive enablement, interval, probe count, and idle time use the same
 correction, the additional delimiter, maximum frame size, LF-delimiter
 disablement, and truncated-message policy—also changes only for later
 connections, as do octet-counted framing support and the compression mode,
-driver, and resource limits.  Multiline framing without a changed delimiter
-regex is also an accept-profile update.  Regular expression framing, TLS,
-endpoint, ACL, named rate-limit policy, and listener-structure fields remain
-conservatively restart-required until their corresponding prepare, ownership,
-and reconciliation contracts are implemented.
+driver, and resource limits.  Multiline framing and its delimiter regex are
+accept-profile updates: each established session owns its compiled regex while
+Prepare validates the next pattern before the allocation-free commit.  TLS,
+endpoint-in-place replacement, ACL, named rate-limit policy, and
+listener-structure fields remain conservatively restart-required until their
+corresponding prepare, ownership, and reconciliation contracts are implemented.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

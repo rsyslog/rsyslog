@@ -842,8 +842,8 @@ static int rejectedResult(void) {
             pendingFailurePhase == SHADOW_RELOAD_FAILURE_ACTIVATION &&
             (pendingCandidateResult == RS_RET_NO_RUN || pendingCandidateResult == RS_RET_TIMED_OUT ||
              pendingCandidateResult == RS_RET_NOT_IMPLEMENTED || pendingCandidateResult == RS_RET_PARAM_ERROR ||
-             pendingCandidateResult == RS_RET_ERR || pendingCandidateResult == RS_RET_COULD_NOT_BIND ||
-             pendingCandidateResult == RS_RET_RETRY);
+             pendingCandidateResult == RS_RET_INVALID_VALUE || pendingCandidateResult == RS_RET_ERR ||
+             pendingCandidateResult == RS_RET_COULD_NOT_BIND || pendingCandidateResult == RS_RET_RETRY);
         if (!expectedParseFailure && !expectedNormalizeFailure && !expectedCapabilityFailure &&
             !expectedActivationFailure)
             return SHADOW_RELOAD_REJECTED_INTERNAL;

@@ -96,6 +96,12 @@ struct tcpLstnPortList_s {
     sbool bHasStartRegex;
 #endif
     tcpLstnPortList_t *pNext; /**< next port or NULL */
+#ifdef FEATURE_REGEXP
+    /* Whether start_preg itself owns compiled state. bHasStartRegex describes
+     * the accept profile and may remain true after a reload transfers only a
+     * prevalidated pattern for session-local compilation. */
+    sbool bStartRegexCompiled;
+#endif
 };
 
 /* Fully validated control-path values applied while a reload fence is held.
@@ -125,6 +131,7 @@ typedef struct tcpsrv_reload_profile_s {
     uint64_t compressionMaxDecompressedBytesPerReceive;
     uint64_t compressionMaxTotalZstdWindowBytes;
     int multiLine;
+    uchar *startRegex; /* prepared ownership transfers during commit */
     uchar defaultTZ[8];
     ruleset_t *ruleset;
 } tcpsrv_reload_profile_t;
@@ -428,9 +435,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     void (*DisableAcceptWhileFenced)(tcpsrv_t *pThis);
     /* added v38 -- infallibly publish a validated live/accept profile */
     void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
+    /* v39 extends the reload profile with a prevalidated session regex */
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 38 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 39 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -489,6 +497,7 @@ void tcpsrvApplyCompressionForNewSessions(tcpsrv_t *pThis,
                                           uint64_t maxDecompressedBytesPerReceive,
                                           uint64_t maxTotalZstdWindowBytes);
 void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
+void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *pThis, uchar *preparedRegex);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
 
