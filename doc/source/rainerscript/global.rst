@@ -267,6 +267,18 @@ The following parameters can be set:
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
+- **parser.dropTrailingLFOnReception** [on/off] available 8.6.0+
+
+  **Default:** on
+
+  If "on", remove one line feed (LF) character from the end of each received
+  message before parser control-character handling runs.
+
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
+
 - **parser.dropTrailingCROnReception** [on/off] available 8.2606.0+
 
   **Default:** off

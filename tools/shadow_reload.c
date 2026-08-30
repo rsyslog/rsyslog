@@ -92,6 +92,8 @@ static int pendingReportOversizeMsg = 1;
 static int pendingReportOversizeMsgUpdate = 0;
 static int pendingCompactJsonString = 0;
 static int pendingCompactJsonStringUpdate = 0;
+static int pendingParserDropTrailingLF = 1;
+static int pendingParserDropTrailingLFUpdate = 0;
 static int pendingParserDropTrailingCR = 0;
 static int pendingParserDropTrailingCRUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
@@ -494,6 +496,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeReportChildProcessExits;
     int activeReportOversizeMsg;
     int activeCompactJsonString;
+    int activeParserDropTrailingLF;
     int activeParserDropTrailingCR;
     DEFiRet;
 
@@ -570,6 +573,27 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
         if (activeCompactJsonString != glblGetCompactJsonString()) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
         pendingBaseAuthorized = 1;
         pendingCompactJsonStringUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.droptrailinglfonreception",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailinglfonreception",
+                                                   &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserDropTrailingLF));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserDropTrailingLF));
+        if (activeParserDropTrailingLF != glblGetParserDropTrailingLFOnReception(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserDropTrailingLFUpdate = 1;
         FINALIZE;
     }
     free(activeValue);
@@ -813,12 +837,14 @@ void shadowReloadBeginRequest(void) {
     pendingReportChildProcessExits = glblGetReportChildProcessExits(runConf);
     pendingReportOversizeMsg = glblReportOversizeMessage(runConf);
     pendingCompactJsonString = glblGetCompactJsonString();
+    pendingParserDropTrailingLF = glblGetParserDropTrailingLFOnReception(runConf);
     pendingParserDropTrailingCR = glblGetParserDropTrailingCROnReception(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
     pendingReportOversizeMsgUpdate = 0;
     pendingCompactJsonStringUpdate = 0;
+    pendingParserDropTrailingLFUpdate = 0;
     pendingParserDropTrailingCRUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
@@ -1170,6 +1196,7 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingReportChildProcessExitsUpdate) glblSetReportChildProcessExits(runConf, pendingReportChildProcessExits);
     if (pendingReportOversizeMsgUpdate) glblSetReportOversizeMessage(runConf, pendingReportOversizeMsg);
     if (pendingCompactJsonStringUpdate) glblSetCompactJsonString(pendingCompactJsonString);
+    if (pendingParserDropTrailingLFUpdate) glblSetParserDropTrailingLFOnReception(runConf, pendingParserDropTrailingLF);
     if (pendingParserDropTrailingCRUpdate) glblSetParserDropTrailingCROnReception(runConf, pendingParserDropTrailingCR);
     publishActivatedGraph(context);
 }

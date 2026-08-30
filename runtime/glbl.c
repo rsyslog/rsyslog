@@ -108,6 +108,7 @@ pid_t glbl_ourpid;
 /* JSON serialization runs in message workers while transactional publication
  * runs in the main thread, so both sides use the synchronized accessor. */
 DEF_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
+DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
 DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
 /* Child termination can be reported by module workers as well as the main
@@ -298,7 +299,6 @@ SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar *)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar *)
 SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
-SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
 SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
 SIMP_PROP_GET(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
 SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
@@ -307,6 +307,10 @@ SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
+
+static int GetParserDropTrailingLFOnReception(rsconf_t *const cnf) {
+    return glblGetParserDropTrailingLFOnReception(cnf);
+}
 
 static int GetParserDropTrailingCROnReception(rsconf_t *const cnf) {
     return glblGetParserDropTrailingCROnReception(cnf);
@@ -951,6 +955,16 @@ int glblGetCompactJsonString(void) {
 void glblSetCompactJsonString(const int enabled) {
     const int formatOpt = enabled ? JSON_C_TO_STRING_PLAIN : JSON_C_TO_STRING_SPACED;
     ATOMIC_STORE_32BIT(&glblJsonFormatOpt, &mutJsonFormatOpt, formatOpt);
+}
+
+void glblSetParserDropTrailingLFOnReception(rsconf_t *const cnf, const int enabled) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bDropTrailingLF, &mutParserDropTrailingLFOnReception, enabled);
+}
+
+int glblGetParserDropTrailingLFOnReception(rsconf_t *const cnf) {
+    if (cnf == NULL) return 1;
+    return ATOMIC_LOAD_32BIT(&cnf->globals.parser.bDropTrailingLF, &mutParserDropTrailingLFOnReception);
 }
 
 void glblSetParserDropTrailingCROnReception(rsconf_t *const cnf, const int enabled) {
@@ -1774,6 +1788,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
     INIT_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
+    INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
     INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
@@ -1793,6 +1808,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
     DESTROY_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
     DESTROY_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)

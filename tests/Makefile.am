@@ -220,6 +220,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	global-reloadonhup-droptrailinglf-rainerscript.sh \
 	global-reloadonhup-droptrailingcr-rainerscript.sh \
 	global-reloadonhup-compactjson-rainerscript.sh \
 	global-reloadonhup-oversizemsg-report-rainerscript.sh \
@@ -811,6 +812,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	global-reloadonhup-droptrailinglf-yaml.sh \
 	global-reloadonhup-droptrailingcr-yaml.sh \
 	global-reloadonhup-compactjson-yaml.sh \
 	global-reloadonhup-oversizemsg-report-yaml.sh \
