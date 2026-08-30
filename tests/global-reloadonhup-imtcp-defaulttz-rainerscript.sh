@@ -3,11 +3,10 @@
 # established TCP session. Visible timestamp offsets prove defaultTZ snapshot
 # updates; exact live-swap generations plus records on the same socket prove
 # module- and input-level starvation plus unnamed and named rate-limit profiles
-# publish without reconnecting. The named-policy oracle accepts exactly one of
-# two ordered frames and waits for a fresh first-drop diagnostic, then
-# proves the same TCP stream survives a second policy swap. The focused tcpsrv
-# unit verifies the scalar and pointer propagation performed by the fenced
-# commit helper.
+# publish without reconnecting. Exact accepted counts and fresh first-drop
+# diagnostics prove policy add, update, removal, and limiter ownership transfer
+# while the same TCP stream remains usable. The focused tcpsrv unit verifies
+# the scalar and pointer propagation performed by the fenced commit helper.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
@@ -234,6 +233,34 @@ wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.sta
 wait_queueempty
 content_count_check 'changed-policy-' 2 "$RSYSLOG_OUT_LOG"
 check_not_present 'changed-policy-3' "$RSYSLOG_OUT_LOG"
+
+# Removing an imtcp-exclusive simple policy is safe once the same candidate
+# switches its last listener to a privately prepared unnamed limiter. The
+# persistent stream and exact three-message bucket prove the removal and
+# limiter ownership transfer completed at one safepoint.
+: >"$RSYSLOG_DYNNAME.started"
+sed -e '/ratelimit(name="policy_added"/d' \
+	-e 's/ratelimit[.]name="policy_added" flowControl="on"/ratelimit.interval="60" ratelimit.burst="3" flowControl="on"/' \
+	"$CONF_FILE" >"$CONF_FILE.removed-policy"
+mv "$CONF_FILE.removed-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=13"* ||
+      "$reload_status" != *"added=0 removed=1 modified=1"* ||
+      "$reload_status" != *"invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript removed named rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-1' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-2' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-3' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-4' >&9 || error_exit 1
+wait_content 'removed-policy-3' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'removed-policy-' 3 "$RSYSLOG_OUT_LOG"
+check_not_present 'removed-policy-4' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

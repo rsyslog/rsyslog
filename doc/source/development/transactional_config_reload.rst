@@ -317,9 +317,12 @@ and ``burst`` may be declared and bound by imtcp in the same transaction.  Its
 private shared bucket follows the active module-source generation.  A simple
 active definition may change when both source generations prove that every
 reference belongs to imtcp; Prepare constructs a fresh shared bucket and the
-fenced commit redirects all participating listeners together.  Cross-module
-or action sharing, removal, and broader per-source/file/template contracts
-remain outside this slice and are rejected.  An effective
+fenced commit redirects all participating listeners together.  Such a policy
+can also be removed when the same candidate removes its last reference: each
+affected listener first swaps to another privately prepared limiter, then
+retirement releases the old shared bucket.  Cross-module or action sharing and
+broader per-source/file/template contracts remain outside this slice and are
+rejected.  An effective
 ``preserveCase`` change is classified ``new_sessions``: established sessions
 retain their already resolved peer identity and socket options, while the
 listener accept profile changes atomically for later connections.  TCP

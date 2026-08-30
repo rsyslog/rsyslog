@@ -1513,6 +1513,20 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
                 !candidateUsage.otherReferenceFound)
                 continue;
         }
+        if (entry->diffKind == RS_RELOAD_DIFF_REMOVED && entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
+            rsReloadRatelimitUsageV1_t activeUsage;
+            rsReloadRatelimitUsageV1_t candidateUsage;
+            rsRetVal ret;
+            if (activeSourceCatalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+            ret = candidateRatelimitUsage(activeSourceCatalog, entry->identity, &activeUsage);
+            if (ret != RS_RET_OK) return ret;
+            ret = candidateRatelimitUsage(candidate, entry->identity, &candidateUsage);
+            if (ret != RS_RET_OK) return ret;
+            if (activeUsage.declarationFound && activeUsage.imtcpReferenceFound && !activeUsage.otherReferenceFound &&
+                !candidateUsage.declarationFound && !candidateUsage.imtcpReferenceFound &&
+                !candidateUsage.otherReferenceFound)
+                continue;
+        }
         if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind != RS_RELOAD_OBJ_INPUT)
             return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {

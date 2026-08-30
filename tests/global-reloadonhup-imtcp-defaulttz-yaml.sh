@@ -2,10 +2,10 @@
 # Verify native YAML parity for live imtcp session/control scalar updates. The
 # same open TCP stream emits changed/restored timezone offsets and remains
 # usable after module- and input-level starvation plus unnamed and named
-# rate-limit generations. The named-policy oracle accepts exactly one of two
-# ordered frames, waits for a fresh drop diagnostic, and then proves
-# that the same stream survives a second policy swap. The focused tcpsrv unit
-# verifies scalar and limiter-pointer propagation.
+# rate-limit generations. Exact accepted counts and fresh drop diagnostics
+# prove policy add, update, removal, and limiter ownership transfer while the
+# same stream remains usable. The focused tcpsrv unit verifies scalar and
+# limiter-pointer propagation.
 # A constant RainerScript include only routes internal diagnostics to a test
 # file; every imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
@@ -245,6 +245,35 @@ wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.sta
 wait_queueempty
 content_count_check 'changed-policy-' 2 "$RSYSLOG_OUT_LOG"
 check_not_present 'changed-policy-3' "$RSYSLOG_OUT_LOG"
+
+# Remove the imtcp-exclusive definition while atomically switching its last
+# listener to a prepared unnamed limiter. The same TCP stream then observes
+# exactly the new three-message bucket, proving safe registry retirement.
+: >"$RSYSLOG_DYNNAME.started"
+sed -e '/  - name: policy_added/{N;N;d;}' \
+	-e '/    ratelimit.name: policy_added/d' \
+	-e '/    flowControl: "on"/a\    ratelimit.interval: 60\
+    ratelimit.burst: 3' \
+	"$CONF_FILE" >"$CONF_FILE.removed-policy"
+mv "$CONF_FILE.removed-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=13"* ||
+      "$reload_status" != *"added=0 removed=1 modified=1"* ||
+      "$reload_status" != *"invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML removed named rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-1' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-2' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-3' \
+	'<167>Mar 10 01:00:00 host removed-policy: removed-policy-4' >&9 || error_exit 1
+wait_content 'removed-policy-3' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'removed-policy-' 3 "$RSYSLOG_OUT_LOG"
+check_not_present 'removed-policy-4' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
