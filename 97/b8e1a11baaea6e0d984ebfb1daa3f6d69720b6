@@ -1,0 +1,40 @@
+runtime/wtp.h
+  s_f2c089be484e12::t_7efc1bbf8d1d24 97-98,102
+tests/unit/wtp_quiesce_test.c
+  s_f2c089be484e12::t_a16303e3fe388f 48,145,353-354,384-385,387-437,475
+  s_f2c089be484e12::t_42d34f99c1b11d 85-91,135-144,355-383
+  s_f2c089be484e12::t_c45d6c77da0366 6-8,24-32,34-36,38-42,46-47,155-160,216,220,239,250,262,267,284,291,311,316,322,325-329,331-334,342,346-352
+  s_f2c089be484e12::t_61eefe926c6338 438-466,476
+  s_8768f69f136360::t_88a6c38a64f322 49,146,386
+runtime/queue.h
+  s_f2c089be484e12::t_7efc1bbf8d1d24 82-84,306
+runtime/queue-barrier.c
+  s_f2c089be484e12::t_7efc1bbf8d1d24 6,13,16-26,30-40,52,58,63,77,85,88,90-93,96
+  s_f2c089be484e12::t_61eefe926c6338 62,64-66
+runtime/wtp-quiesce.c
+  s_f2c089be484e12::t_7efc1bbf8d1d24 9,13,23,42,44,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "97b8e1a11baaea6e0d984ebfb1daa3f6d69720b6",
+  "prompts": {},
+  "sessions": {
+    "s_8768f69f136360": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04d90-4fb2-7670-8e76-44840adb0f11",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

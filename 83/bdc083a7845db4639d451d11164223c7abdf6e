@@ -1,0 +1,24 @@
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_7c355c30826918 6-7
+  s_f2c089be484e12::t_dfe57625cb9a3f 89
+  s_f2c089be484e12::t_81b4ec2556c8c3 13-15
+  s_f2c089be484e12::t_be32025f0ce41f 87-88,90,99-110
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_be32025f0ce41f 78-82,91-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "83bdc083a7845db4639d451d11164223c7abdf6e",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

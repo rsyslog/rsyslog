@@ -1,0 +1,46 @@
+tests/unit/reload_syntax_clone_test.c
+  s_f2c089be484e12::t_f3dcabfc43d1be 1,5-11,14,16,125-132,163,166-169,182-183,188-190,201-206,213-214,220-222,224-228,235-236,239-246,248-250,252-261
+  s_f2c089be484e12::t_525628171711a3 2-4,17-19,22,32-34,36-124,136-154,157-162,164-165,170-177,179-181,191-194,196-200,207-212,215-219,223,229-234,237-238,251
+  s_f2c089be484e12::t_b8deef7d836961 20-21,23-31,35,178,184-186,195
+  s_f2c089be484e12::t_c775acb28a9c45 12-13
+  s_f2c089be484e12::t_8a956c09b36949 15
+  s_f2c089be484e12::t_e003453bd4b6a0 133-135,155-156,187,247
+grammar/reload-syntax-clone.c
+  s_f2c089be484e12::t_6b6a6b6a828ee9 1-6,8-42,45-223
+  s_f2c089be484e12::t_5deb22641d07ba 43-44
+  s_f2c089be484e12::t_de984d868d2a25 7
+grammar/Makefile.am
+  s_f2c089be484e12::t_6b6a6b6a828ee9 11
+runtime/msg.c
+  s_f2c089be484e12::t_76355d889633d7 5514-5516,5616
+grammar/grammar.y
+  s_f2c089be484e12::t_eb2d98bf999077 249-252,257-260
+grammar/rainerscript.h
+  s_f2c089be484e12::t_3687ee10f7a051 416
+  s_f2c089be484e12::t_03cd4ed1fa9c9b 417,455
+  s_f2c089be484e12::t_21859f748fc808 413-415
+grammar/rainerscript.c
+  s_f2c089be484e12::t_e30b4277d2da2a 4678-4681
+  s_f2c089be484e12::t_454a1db359290a 5108,6280
+  s_f2c089be484e12::t_e30bd6fee1aabd 5099-5102,5105-5106,5109-5111,6271-6272,6274,6277-6278,6281-6283
+tests/Makefile.am
+  s_f2c089be484e12::t_f3dcabfc43d1be 2684,2688,2730-2732,2820
+  s_f2c089be484e12::t_525628171711a3 2836
+  s_f2c089be484e12::t_a592e789aff2bb 2821
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7ca20d1421831140bb8f6d4af1ab5a561171f416",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}

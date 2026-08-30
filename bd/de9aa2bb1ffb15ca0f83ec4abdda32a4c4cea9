@@ -1,0 +1,23 @@
+tests/testconfgen.c
+  s_f2c089be484e12::t_76a569f4e035c9 46,51-52,60-66,70-74,80-88
+tests/journal_print.c
+  s_f2c089be484e12::t_76a569f4e035c9 42,51,57,64,69,73
+tests/randomgen.c
+  s_f2c089be484e12::t_76a569f4e035c9 58,60,62,69,81-82,91-92,97-102,128,134-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bdde9aa2bb1ffb15ca0f83ec4abdda32a4c4cea9",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
