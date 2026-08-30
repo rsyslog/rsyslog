@@ -1,0 +1,24 @@
+tests/imfile-bad-state-file.sh
+  s_93f01af3679066::t_8be79179bd4526 3-4,26,42
+tests/diskqueue-oncorruption-missing-segment.sh
+  s_93f01af3679066::t_8be79179bd4526 4-6,100-103
+  s_93f01af3679066::t_c271fd1ab875bc 66
+tests/imfile-persist-state-1.sh
+  s_93f01af3679066::t_8be79179bd4526 2-4,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "55ecdf1d50338dc35779927998664371c2b1275b",
+  "prompts": {},
+  "sessions": {
+    "s_93f01af3679066": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0526f-7050-7ca0-8b16-908c16907bef",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}
