@@ -114,6 +114,7 @@ DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
 DEF_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
 DEF_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
 DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
+DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
 DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
 /* Child termination can be reported by module workers as well as the main
  * reaper. Transactional base publication therefore uses the same synchronized
@@ -293,7 +294,6 @@ static struct cnfobj *GetmainqCnfObj(void) {
 
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
-SIMP_PROP(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
 SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
 /* We omit setter on purpose, because we want to customize it */
@@ -330,6 +330,16 @@ static int GetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf) {
 
 static int GetParserEscapeControlCharacterTab(rsconf_t *const cnf) {
     return glblGetParserEscapeControlCharacterTab(cnf);
+}
+
+static rsRetVal SetParserEscapeControlCharactersCStyle(const int enabled) {
+    if (loadConf == NULL) return RS_RET_INTERNAL_ERROR;
+    glblSetParserEscapeControlCharactersCStyle(loadConf, enabled);
+    return RS_RET_OK;
+}
+
+static int GetParserEscapeControlCharactersCStyle(rsconf_t *const cnf) {
+    return glblGetParserEscapeControlCharactersCStyle(cnf);
 }
 
 /* return global input termination status
@@ -1031,6 +1041,16 @@ void glblSetParserEscapeControlCharacterTab(rsconf_t *const cnf, const int enabl
 int glblGetParserEscapeControlCharacterTab(rsconf_t *const cnf) {
     if (cnf == NULL) return 1;
     return ATOMIC_LOAD_32BIT(&cnf->globals.parser.bEscapeTab, &mutParserEscapeControlCharacterTab);
+}
+
+void glblSetParserEscapeControlCharactersCStyle(rsconf_t *const cnf, const int enabled) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bParserEscapeCCCStyle, &mutParserEscapeControlCharactersCStyle, enabled);
+}
+
+int glblGetParserEscapeControlCharactersCStyle(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return ATOMIC_LOAD_32BIT(&cnf->globals.parser.bParserEscapeCCCStyle, &mutParserEscapeControlCharactersCStyle);
 }
 
 void glblSetReportOversizeMessage(rsconf_t *const cnf, const int enabled) {
@@ -1850,6 +1870,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     INIT_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
     INIT_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
     INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
     INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 ENDObjClassInit(glbl)
@@ -1867,6 +1888,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     if (propLocalHostNameToDelete != NULL) prop.Destruct(&propLocalHostNameToDelete);
     DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
     DESTROY_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersCStyle);
     DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharacterTab);
     DESTROY_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
     DESTROY_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);

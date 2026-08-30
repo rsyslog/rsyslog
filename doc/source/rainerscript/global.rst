@@ -409,6 +409,15 @@ The following parameters can be set:
      reception. If you intend to use these property replacer options, you
      must turn off *parser.escapeControlCharactersOnReceive*.
 
+- **parser.escapeControlCharactersCStyle** [on/off]
+
+  **Default:** off
+
+  If enabled, control characters are escaped with C-style sequences such as
+  ``\\a`` instead of the traditional prefixed octal form such as ``#007``.
+  A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
+
 - **parser.spaceLFOnReceive** [on/off]
 
   **Default:** off
