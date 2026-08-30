@@ -975,3 +975,9 @@ readability for humans, but needs more resources (disk, transfer, computation)
 in automated pipelines.
 To keep things as compatible as possible, we leave the default as "off" but
 recommend that this option is turned on for use in data pipelines.
+
+When ``config.reloadOnHUP`` is ``on``, a candidate that changes only
+``compactJsonString`` can activate this setting transactionally.  JSON values
+serialized after the commit use the new representation.  A candidate that
+combines this change with another global setting remains unsupported and does
+not partially change the active format.

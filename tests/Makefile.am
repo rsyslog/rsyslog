@@ -239,6 +239,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 
 TESTS_DEFAULT = \
 	record-container-validation.sh \
+	global-reloadonhup-compactjson-rainerscript.sh \
 	global-reloadonhup-oversizemsg-report-rainerscript.sh \
 	codex-pre-push-container-gate.sh \
 	backtick-cat-procfs.sh \
@@ -835,6 +836,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	global-reloadonhup-compactjson-yaml.sh \
 	global-reloadonhup-oversizemsg-report-yaml.sh \
 	config-translate-rs-to-yaml.sh \
 	config-translate-rs-filter-actions.sh \

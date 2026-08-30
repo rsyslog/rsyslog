@@ -1126,7 +1126,7 @@ static const char *jsonToString(struct json_object *const json) {
      * - json->_pb is reset/overwritten on every serialization or mutation.
      * - The returned pointer becomes invalid immediately after that.
      */
-    return json_object_to_json_string_ext(json, glblJsonFormatOpt);
+    return json_object_to_json_string_ext(json, glblGetJsonFormatOpt());
 }
 
 /* This method serializes a message object. That means the whole

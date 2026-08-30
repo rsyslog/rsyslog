@@ -120,6 +120,9 @@ ENDinterface(glbl)
 PROTOTYPEObj(glbl);
 
 extern int glblJsonFormatOpt;
+int glblGetJsonFormatOpt(void);
+int glblGetCompactJsonString(void);
+void glblSetCompactJsonString(int enabled);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;

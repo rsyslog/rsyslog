@@ -105,6 +105,9 @@ int glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
+/* JSON serialization runs in message workers while transactional publication
+ * runs in the main thread, so both sides use the synchronized accessor. */
+DEF_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
 DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
 /* Child termination can be reported by module workers as well as the main
  * reaper. Transactional base publication therefore uses the same synchronized
@@ -934,6 +937,19 @@ int glblReportOversizeMessage(rsconf_t *cnf) {
     return ATOMIC_LOAD_32BIT(&cnf->globals.reportOversizeMsg, &mutReportOversizeMsg);
 }
 
+int glblGetJsonFormatOpt(void) {
+    return ATOMIC_LOAD_32BIT(&glblJsonFormatOpt, &mutJsonFormatOpt);
+}
+
+int glblGetCompactJsonString(void) {
+    return glblGetJsonFormatOpt() == JSON_C_TO_STRING_PLAIN;
+}
+
+void glblSetCompactJsonString(const int enabled) {
+    const int formatOpt = enabled ? JSON_C_TO_STRING_PLAIN : JSON_C_TO_STRING_SPACED;
+    ATOMIC_STORE_32BIT(&glblJsonFormatOpt, &mutJsonFormatOpt, formatOpt);
+}
+
 void glblSetReportOversizeMessage(rsconf_t *const cnf, const int enabled) {
     if (cnf == NULL) return;
     ATOMIC_STORE_32BIT(&cnf->globals.reportOversizeMsg, &mutReportOversizeMsg, enabled);
@@ -1454,7 +1470,7 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "preservefqdn")) {
             bPreserveFQDN = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "compactjsonstring")) {
-            glblJsonFormatOpt = cnfparamvals[i].val.d.n ? JSON_C_TO_STRING_PLAIN : JSON_C_TO_STRING_SPACED;
+            glblSetCompactJsonString((int)cnfparamvals[i].val.d.n);
         } else if (!strcmp(paramblk.descr[i].name, "dropmsgswithmaliciousdnsptrrecords")) {
             loadConf->globals.bDropMalPTRMsgs = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
@@ -1756,6 +1772,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
         regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
+    INIT_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 ENDObjClassInit(glbl)
@@ -1773,5 +1790,6 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     if (propLocalHostNameToDelete != NULL) prop.Destruct(&propLocalHostNameToDelete);
     DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
     DESTROY_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
+    DESTROY_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
