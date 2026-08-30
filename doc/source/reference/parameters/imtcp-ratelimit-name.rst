@@ -32,9 +32,12 @@ Using a named policy allows sharing rate limits across multiple inputs or managi
 When ``global(config.reloadOnHUP="on")`` is active, an imtcp listener can switch
 between unchanged named policies, or between named and unnamed limiting,
 without closing established sessions.  The new listener-local limiter starts
-with a fresh bucket at the transactional reload safepoint.  Editing the
-top-level named policy definition itself is not part of this live operation and
-remains restart-required.
+with a fresh bucket at the transactional reload safepoint.  A new policy that
+uses only ``name``, ``interval``, and ``burst`` can be added and selected by an
+imtcp input in the same HUP; all imtcp inputs in that candidate share its
+prepared policy bucket.  Editing or removing an already active definition, and
+new policies using broader per-source, file, or template settings, remain
+restart-required.
 
 .. warning::
    This parameter is mutually exclusive with :ref:`param-imtcp-ratelimit-interval` and :ref:`param-imtcp-ratelimit-burst`.

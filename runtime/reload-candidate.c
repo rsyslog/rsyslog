@@ -745,6 +745,10 @@ finalize_it:
     RETiRet;
 }
 
+rsRetVal rsReloadObjectSyntaxFingerprintV1(const struct cnfobj *const object, char **const ownedFingerprint) {
+    return objectFingerprint(object, ownedFingerprint);
+}
+
 static rsRetVal defaultRulesetFingerprint(const rsReloadCandidate_t *candidate, char **fingerprint) {
     const rsReloadCandidateObject_t *entry;
     es_str_t *serialized = NULL;
@@ -1303,6 +1307,36 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal candidateHasImtcpRatelimitIdentity(const rsReloadCandidate_t *const candidate,
+                                                   const char *const wantedIdentity,
+                                                   int *const found) {
+    const rsReloadCandidateObject_t *candidateEntry;
+    const char *wantedName;
+    size_t wantedNameLength;
+    int declarationFound = 0;
+    int inputFound = 0;
+
+    if (candidate == NULL || wantedIdentity == NULL || found == NULL || strncmp(wantedIdentity, "ratelimit:", 10))
+        return RS_RET_PARAM_ERROR;
+    *found = 0;
+    wantedName = wantedIdentity + 10;
+    wantedNameLength = strlen(wantedName);
+    for (candidateEntry = candidate->head; candidateEntry != NULL; candidateEntry = candidateEntry->next) {
+        const struct cnfobj *const object = candidateEntry->object;
+        size_t nameLength;
+        const char *name;
+        if (object->objType == CNFOBJ_RATELIMIT) {
+            name = nvlstString(object->nvlst, "name", &nameLength);
+            declarationFound |= name != NULL && nameLength == wantedNameLength && !memcmp(name, wantedName, nameLength);
+        } else if (isImtcpInput(object)) {
+            name = nvlstString(object->nvlst, "ratelimit.name", &nameLength);
+            inputFound |= name != NULL && nameLength == wantedNameLength && !memcmp(name, wantedName, nameLength);
+        }
+    }
+    *found = declarationFound && inputFound;
+    return RS_RET_OK;
+}
+
 rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *const activeSourceCatalog,
                                                   const rsReloadCandidate_t *const candidate,
                                                   const rsReloadReportV1_t *const report,
@@ -1328,6 +1362,12 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
         if (entry->objectKind == RS_RELOAD_OBJ_GLOBAL && (authorizations & RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1) != 0)
             continue;
         if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
+        if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
+            int found;
+            const rsRetVal ret = candidateHasImtcpRatelimitIdentity(candidate, entry->identity, &found);
+            if (ret != RS_RET_OK) return ret;
+            if (found) continue;
+        }
         if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind != RS_RELOAD_OBJ_INPUT)
             return RS_RET_NOT_IMPLEMENTED;
         if (entry->objectKind == RS_RELOAD_OBJ_MODULE || entry->objectKind == RS_RELOAD_OBJ_INPUT) {

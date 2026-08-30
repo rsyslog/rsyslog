@@ -172,6 +172,57 @@ wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.sta
 wait_queueempty
 content_count_check 'unnamed-again-' 2 "$RSYSLOG_OUT_LOG"
 check_not_present 'unnamed-again-3' "$RSYSLOG_OUT_LOG"
+
+# A new simple named policy can be declared and bound by imtcp in one
+# transaction. The candidate owns its private shared bucket for the active
+# generation; a fresh drop diagnostic proves the listener uses that bucket.
+: >"$RSYSLOG_DYNNAME.started"
+sed -e '/ratelimit(name="policy_wide"/a\ratelimit(name="policy_added" interval="60" burst="1")' \
+	-e 's/ratelimit.interval="60" ratelimit.burst="2"/ratelimit.name="policy_added"/' \
+	"$CONF_FILE" >"$CONF_FILE.added-policy"
+mv "$CONF_FILE.added-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=10"* ||
+      "$reload_status" != *"added=1 removed=0 modified=1"* ||
+      "$reload_status" != *"invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript added named rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host added-policy: added-policy-accepted' \
+	'<167>Mar 10 01:00:00 host added-policy: added-policy-dropped' >&9 || error_exit 1
+wait_content 'added-policy-accepted' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'added-policy-' 1 "$RSYSLOG_OUT_LOG"
+check_not_present 'added-policy-dropped' "$RSYSLOG_OUT_LOG"
+
+# An explicit effective default advances the source graph as REUSE but must
+# retain the module snapshot that owns the active policy bucket.
+sed 's/ratelimit[.]name="policy_added"/ratelimit.name="policy_added" flowControl="on"/' \
+	"$CONF_FILE" >"$CONF_FILE.reuse"
+mv "$CONF_FILE.reuse" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=11"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: RainerScript source-equivalent policy generation did not activate: $reload_status"
+	error_exit 1
+fi
+
+# Updating an already active named definition remains fail-closed until a
+# complete cross-consumer policy replacement contract exists.
+sed 's/name="policy_added" interval="60" burst="1"/name="policy_added" interval="60" burst="2"/' \
+	"$CONF_FILE" >"$CONF_FILE.changed-policy"
+mv "$CONF_FILE.changed-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=11"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript changed named rate limit was not rejected: $reload_status"
+	error_exit 1
+fi
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

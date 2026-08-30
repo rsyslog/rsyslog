@@ -56,6 +56,7 @@ rsRetVal rsReloadCandidateVisitRulesetFragmentsV1(const rsReloadCandidate_t *can
  */
 rsRetVal rsReloadCandidateBuildNormalizedGraphV1(const rsReloadCandidate_t *candidate,
                                                  rsReloadNormalizedGraphBuilderV1_t **ppBuilder);
+rsRetVal rsReloadObjectSyntaxFingerprintV1(const struct cnfobj *object, char **ownedFingerprint);
 rsRetVal rsReloadActionSyntaxFingerprintV1(const struct nvlst *syntax, char **ownedFingerprint);
 rsRetVal rsReloadActionSyntaxNameV1(const struct nvlst *syntax, const char **borrowedName, size_t *nameLength);
 /* Build a private, frontend-neutral view of one string-valued global

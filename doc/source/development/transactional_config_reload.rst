@@ -312,8 +312,12 @@ and burst values are reset on the listener-local limiter under the same fence.
 Changing between unnamed and named limiting, or between two unchanged named
 policies, privately constructs a fresh listener-local limiter and swaps its
 ownership at commit; the retired bucket is destroyed only after the fence is
-released.  Changes to the named policy definitions themselves remain outside
-this slice and are rejected.  An effective
+released.  A new simple named policy containing only ``name``, ``interval``,
+and ``burst`` may be declared and bound by imtcp in the same transaction.  Its
+private shared bucket follows the active module-source generation.  Changing
+or removing an already active named definition, or adding a policy with a
+broader per-source/file/template contract, remains outside this slice and is
+rejected.  An effective
 ``preserveCase`` change is classified ``new_sessions``: established sessions
 retain their already resolved peer identity and socket options, while the
 listener accept profile changes atomically for later connections.  TCP

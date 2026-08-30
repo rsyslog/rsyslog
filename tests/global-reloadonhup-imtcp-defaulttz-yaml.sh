@@ -183,6 +183,57 @@ wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.sta
 wait_queueempty
 content_count_check 'unnamed-again-' 2 "$RSYSLOG_OUT_LOG"
 check_not_present 'unnamed-again-3' "$RSYSLOG_OUT_LOG"
+
+# Add a simple named policy and bind it in the same native-YAML candidate. The
+# active module snapshot owns the shared bucket for the committed generation.
+: >"$RSYSLOG_DYNNAME.started"
+sed -e '/  - name: policy_wide/i\  - name: policy_added\
+    interval: 60\
+    burst: 1' \
+	-e '/    ratelimit.interval: 60/d' \
+	-e 's/    ratelimit.burst: 2/    ratelimit.name: policy_added/' \
+	"$CONF_FILE" >"$CONF_FILE.added-policy"
+mv "$CONF_FILE.added-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=10"* ||
+      "$reload_status" != *"added=1 removed=0 modified=1"* ||
+      "$reload_status" != *"invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML added named rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host added-policy: added-policy-accepted' \
+	'<167>Mar 10 01:00:00 host added-policy: added-policy-dropped' >&9 || error_exit 1
+wait_content 'added-policy-accepted' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'added-policy-' 1 "$RSYSLOG_OUT_LOG"
+check_not_present 'added-policy-dropped' "$RSYSLOG_OUT_LOG"
+
+# Publish an effective-default-only source change as REUSE. The runtime still
+# references the preceding active snapshot and its policy registry.
+sed '/    ratelimit.name: policy_added/a\    flowControl: "on"' "$CONF_FILE" >"$CONF_FILE.reuse"
+mv "$CONF_FILE.reuse" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=11"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=reuse"* ]]; then
+	echo "FAIL: YAML source-equivalent policy generation did not activate: $reload_status"
+	error_exit 1
+fi
+
+# Existing named definition changes remain outside the safe policy-lifecycle
+# scope and must leave the active generation untouched.
+sed '/  - name: policy_added/{n;n;s/burst: 1/burst: 2/;}' "$CONF_FILE" >"$CONF_FILE.changed-policy"
+mv "$CONF_FILE.changed-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=11"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML changed named rate limit was not rejected: $reload_status"
+	error_exit 1
+fi
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

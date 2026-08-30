@@ -932,15 +932,25 @@ int main(void) {
 
     /* The broadened materializer gate is authorized only for candidate-side
      * imtcp objects already classified LIVE_SWAP. Existing imtcp inputs and
-     * newly added and active-catalog removed imtcp inputs are accepted; other
-     * modules/inputs and module additions remain fail-closed. */
+     * newly added and active-catalog removed imtcp inputs are accepted. A new
+     * named rate-limit declaration is accepted only when an imtcp input binds
+     * it in the same candidate; modifications/removals and unrelated policies
+     * remain fail-closed alongside other modules/inputs. */
     candidate = calloc(1, sizeof(*candidate));
     rsReloadCandidate_t *activeCatalog = calloc(1, sizeof(*activeCatalog));
     CHECK(candidate != NULL && activeCatalog != NULL);
     addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
     addObject(candidate, object(CNFOBJ_MODULE, parameter("load", "omfile"), NULL));
-    addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "tcp1"), NULL));
+    {
+        struct nvlst *tcpInput = parameterPair("type", "imtcp", "name", "tcp1");
+        CHECK(tcpInput != NULL && tcpInput->next != NULL);
+        tcpInput->next->next = parameter("ratelimit.name", "new-policy");
+        CHECK(tcpInput->next->next != NULL);
+        addObject(candidate, object(CNFOBJ_INPUT, tcpInput, NULL));
+    }
     addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "name", "udp1"), NULL));
+    addObject(candidate, object(CNFOBJ_RATELIMIT, parameter("name", "new-policy"), NULL));
+    addObject(candidate, object(CNFOBJ_RATELIMIT, parameter("name", "unrelated-policy"), NULL));
     addObject(activeCatalog, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
     addObject(activeCatalog, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "retired"), NULL));
     CHECK(!constructionFailed);
@@ -962,6 +972,14 @@ int main(void) {
           RS_RET_OK);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:tcp1") ==
           RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_ADDED,
+                          "ratelimit:new-policy") == RS_RET_OK);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_ADDED,
+                          "ratelimit:unrelated-policy") == RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_MODIFIED,
+                          "ratelimit:new-policy") == RS_RET_NOT_IMPLEMENTED);
+    CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_REMOVED,
+                          "ratelimit:new-policy") == RS_RET_NOT_IMPLEMENTED);
     rsReloadCandidateDestruct(&activeCatalog);
     rsReloadCandidateDestruct(&candidate);
     puts("reload candidate graph tests passed");

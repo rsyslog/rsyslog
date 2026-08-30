@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <limits.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -332,6 +333,14 @@ struct instanceConf_s {
     struct instanceConf_s *next;
 };
 
+typedef struct reloadRateProfile_s {
+    char *name;
+    char *fingerprint;
+    unsigned interval;
+    unsigned burst;
+    sbool simple;
+    struct reloadRateProfile_s *next;
+} reloadRateProfile_t;
 
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
@@ -385,6 +394,9 @@ struct modConfData_s {
     /* Exact module origin, owned only by private reload snapshots. */
     char *reloadModuleLoadName;
     sbool reloadSnapshot;
+    rsconf_t *reloadRateConfig;
+    sbool reloadRateConfigInitialized;
+    reloadRateProfile_t *reloadRateProfiles;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -1746,12 +1758,144 @@ typedef struct imtcpReloadBuildContext_s {
     int moduleSeen;
 } imtcpReloadBuildContext_t;
 
+static void reloadRateProfilesDestruct(reloadRateProfile_t **const head) {
+    reloadRateProfile_t *profile;
+
+    if (head == NULL) return;
+    while ((profile = *head) != NULL) {
+        *head = profile->next;
+        free(profile->name);
+        free(profile->fingerprint);
+        free(profile);
+    }
+}
+
+static const reloadRateProfile_t *reloadRateProfileFind(const modConfData_t *const config, const uchar *const name) {
+    const reloadRateProfile_t *profile;
+
+    if (config == NULL || name == NULL) return NULL;
+    for (profile = config->reloadRateProfiles; profile != NULL; profile = profile->next)
+        if (!strcmp(profile->name, (const char *)name)) return profile;
+    return NULL;
+}
+
+static rsRetVal reloadRateNonNegativeInt(const struct nvlst *const parameter, unsigned *const value) {
+    char *text = NULL;
+    char *end;
+    long parsed;
+
+    if (parameter == NULL || value == NULL) return RS_RET_PARAM_ERROR;
+    if (parameter->val.datatype == 'N') {
+        if (parameter->val.d.n < 0 || parameter->val.d.n > INT_MAX) return RS_RET_INVALID_VALUE;
+        *value = (unsigned)parameter->val.d.n;
+        return RS_RET_OK;
+    }
+    if (parameter->val.datatype != 'S' || parameter->val.d.estr == NULL) return RS_RET_INVALID_VALUE;
+    text = es_str2cstr(parameter->val.d.estr, NULL);
+    if (text == NULL) return RS_RET_OUT_OF_MEMORY;
+    errno = 0;
+    parsed = strtol(text, &end, 10);
+    if (errno != 0 || *text == '\0' || *end != '\0' || parsed < 0 || parsed > INT_MAX) {
+        free(text);
+        return RS_RET_INVALID_VALUE;
+    }
+    *value = (unsigned)parsed;
+    free(text);
+    return RS_RET_OK;
+}
+
+static rsRetVal lowerReloadRateProfile(const struct cnfobj *const object, modConfData_t *const config) {
+    const struct nvlst *nameParameter;
+    const struct nvlst *parameter;
+    reloadRateProfile_t *profile = NULL;
+    reloadRateProfile_t **tail;
+    DEFiRet;
+
+    if (object == NULL || object->objType != CNFOBJ_RATELIMIT || config == NULL || config->reloadRateConfig == NULL ||
+        !config->reloadRateConfigInitialized)
+        return RS_RET_PARAM_ERROR;
+    nameParameter = findSourceParam(object->nvlst, "name");
+    if (nameParameter == NULL || nameParameter->val.datatype != 'S' || nameParameter->val.d.estr == NULL)
+        return RS_RET_CONF_PARSE_ERROR;
+    CHKmalloc(profile = calloc(1, sizeof(*profile)));
+    CHKmalloc(profile->name = es_str2cstr(nameParameter->val.d.estr, NULL));
+    if (*profile->name == '\0') ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+    if (reloadRateProfileFind(config, (const uchar *)profile->name) != NULL) ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    CHKiRet(rsReloadObjectSyntaxFingerprintV1(object, &profile->fingerprint));
+    profile->interval = 0;
+    profile->burst = 10000;
+    profile->simple = RSTRUE;
+    for (parameter = object->nvlst; parameter != NULL; parameter = parameter->next) {
+        if (nvlstNameEquals(parameter->name, "name") || nvlstNameEquals(parameter->name, "config.enabled")) continue;
+        if (nvlstNameEquals(parameter->name, "interval")) {
+            CHKiRet(reloadRateNonNegativeInt(parameter, &profile->interval));
+        } else if (nvlstNameEquals(parameter->name, "burst")) {
+            CHKiRet(reloadRateNonNegativeInt(parameter, &profile->burst));
+        } else {
+            profile->simple = RSFALSE;
+        }
+    }
+    if (profile->simple)
+        CHKiRet(ratelimitAddConfig(config->reloadRateConfig, profile->name, profile->interval, profile->burst, -1, NULL,
+                                   RSFALSE, NULL, RSFALSE, NULL, NULL, 0, 0, RSTRUE, RSFALSE));
+    tail = &config->reloadRateProfiles;
+    while (*tail != NULL) tail = &(*tail)->next;
+    *tail = profile;
+    profile = NULL;
+
+finalize_it:
+    if (profile != NULL) {
+        free(profile->name);
+        free(profile->fingerprint);
+        free(profile);
+    }
+    RETiRet;
+}
+
 static int reloadStringEqual(const char *const left, const char *const right) {
     return left == right || (left != NULL && right != NULL && !strcmp(left, right));
 }
 
 static int reloadUStringEqual(const uchar *const left, const uchar *const right) {
     return reloadStringEqual((const char *)left, (const char *)right);
+}
+
+static int reloadNamedRateProfileEqual(const instanceConf_t *const left,
+                                       const modConfData_t *const leftConfig,
+                                       const instanceConf_t *const right,
+                                       const modConfData_t *const rightConfig) {
+    const uchar *const leftName = left->cnf_params->pszRatelimitName;
+    const uchar *const rightName = right->cnf_params->pszRatelimitName;
+    const reloadRateProfile_t *leftProfile;
+    const reloadRateProfile_t *rightProfile;
+
+    if (!reloadUStringEqual(leftName, rightName)) return 0;
+    if (leftName == NULL) return 1;
+    leftProfile = reloadRateProfileFind(leftConfig, leftName);
+    rightProfile = reloadRateProfileFind(rightConfig, rightName);
+    if (leftProfile == NULL || rightProfile == NULL) return leftProfile == rightProfile;
+    return !strcmp(leftProfile->fingerprint, rightProfile->fingerprint);
+}
+
+static int reloadNamedRateProfileChangeSupported(const instanceConf_t *const left,
+                                                 const modConfData_t *const leftConfig,
+                                                 const instanceConf_t *const right,
+                                                 const modConfData_t *const rightConfig) {
+    const uchar *const leftName = left->cnf_params->pszRatelimitName;
+    const uchar *const rightName = right->cnf_params->pszRatelimitName;
+    const reloadRateProfile_t *leftProfile;
+    const reloadRateProfile_t *rightProfile;
+
+    if (!reloadUStringEqual(leftName, rightName)) {
+        rightProfile = reloadRateProfileFind(rightConfig, rightName);
+        leftProfile = reloadRateProfileFind(leftConfig, rightName);
+        return rightProfile == NULL || rightProfile->simple || leftProfile != NULL;
+    }
+    if (leftName == NULL) return 1;
+    leftProfile = reloadRateProfileFind(leftConfig, leftName);
+    rightProfile = reloadRateProfileFind(rightConfig, rightName);
+    if (leftProfile == NULL || rightProfile == NULL || !leftProfile->simple || !rightProfile->simple) return 0;
+    return 1;
 }
 
 static int reloadRulesetNameEqual(const uchar *const left, const uchar *const right) {
@@ -1984,7 +2128,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
-           (ignoreLiveFields || reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName)) &&
+           (ignoreLiveFields || reloadNamedRateProfileEqual(left, leftModule, right, rightModule)) &&
            (ignoreLiveFields ||
             (leftLegacyAcl == rightLegacyAcl && reloadAllowedSenderConfigEqual(left, leftModule, right, rightModule) &&
              reloadAllowedSendersEqual(leftAllowed, rightAllowed))) &&
@@ -2113,6 +2257,7 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     int newSessionsChanged;
 
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    if (!reloadNamedRateProfileChangeSupported(oldInst, oldConfig, newInst, newConfig)) return 0;
     if (!reloadAllowedSenderConfigEqual(oldInst, oldConfig, newInst, newConfig) &&
         !reloadAllowedSenderChangeSupported(oldInst, oldConfig, newInst, newConfig))
         return 0;
@@ -2273,24 +2418,34 @@ finalize_it:
 }
 
 static rsRetVal prepareReloadRateLimiter(imtcpReloadEntryV1_t *const entry,
+                                         const modConfData_t *const oldConfig,
                                          const instanceConf_t *const newInst,
                                          const modConfData_t *const newConfig) {
     tcpLstnPortList_t *listener;
     const uchar *newName;
+    const reloadRateProfile_t *oldProfile;
+    const reloadRateProfile_t *newProfile;
     DEFiRet;
 
-    if (entry == NULL || entry->runtime == NULL || entry->runtime->tcpsrv == NULL || newInst == NULL ||
-        newInst->cnf_params == NULL || newConfig == NULL || newConfig->pConf == NULL)
+    if (entry == NULL || entry->runtime == NULL || entry->runtime->tcpsrv == NULL || oldConfig == NULL ||
+        newInst == NULL || newInst->cnf_params == NULL || newConfig == NULL || newConfig->pConf == NULL)
         return RS_RET_PARAM_ERROR;
     listener = entry->runtime->tcpsrv->pLstnPorts;
     if (listener == NULL || listener->pNext != NULL || listener->cnf_params == NULL) return RS_RET_NOT_IMPLEMENTED;
     newName = newInst->cnf_params->pszRatelimitName;
-    if (reloadUStringEqual(listener->cnf_params->pszRatelimitName, newName)) FINALIZE;
+    oldProfile = reloadRateProfileFind(oldConfig, listener->cnf_params->pszRatelimitName);
+    newProfile = reloadRateProfileFind(newConfig, newName);
+    if (reloadUStringEqual(listener->cnf_params->pszRatelimitName, newName) &&
+        ((oldProfile == NULL && newProfile == NULL) ||
+         (oldProfile != NULL && newProfile != NULL && !strcmp(oldProfile->fingerprint, newProfile->fingerprint))))
+        FINALIZE;
 
     if (newName != NULL) {
         CHKmalloc(entry->preparedRatelimitName = ustrdup(newName));
-        CHKiRet(ratelimitNewFromConfig(&entry->preparedRateLimiter, newConfig->pConf, (const char *)newName, "tcpsrv",
-                                       NULL));
+        CHKiRet(ratelimitNewFromConfig(
+            &entry->preparedRateLimiter,
+            newProfile != NULL && newProfile->simple ? newConfig->reloadRateConfig : newConfig->pConf,
+            (const char *)newName, "tcpsrv", NULL));
     } else {
         CHKiRet(ratelimitNew(&entry->preparedRateLimiter, "tcpsrv", NULL));
         ratelimitSetLinuxLike(entry->preparedRateLimiter, (unsigned)newInst->ratelimitInterval,
@@ -2556,7 +2711,7 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             CHKmalloc(tables->descriptors = calloc((size_t)tables->capacity, sizeof(tables->descriptors[0])));
         }
         if (!state->entries[index].addition)
-            CHKiRet(prepareReloadRateLimiter(&state->entries[index], newInst, newConfig));
+            CHKiRet(prepareReloadRateLimiter(&state->entries[index], oldConfig, newInst, newConfig));
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].applyRateLimitScalars =
@@ -2859,6 +3014,10 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     instanceConf_t *inst = NULL;
     DEFiRet;
 
+    if (object->objType == CNFOBJ_RATELIMIT) {
+        CHKiRet(lowerReloadRateProfile(object, build->config));
+        FINALIZE;
+    }
     if (object->objType == CNFOBJ_MODULE && sourceModuleIsImtcp(object)) {
         const struct nvlst *const load = findSourceParam(object->nvlst, "load");
         if (build->moduleSeen) ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
@@ -2911,6 +3070,9 @@ static rsRetVal buildReloadSourceCandidateV1(const modReloadSourceBuildContextV1
         return RS_RET_PARAM_ERROR;
     CHKmalloc(candidate = calloc(1, sizeof(*candidate)));
     candidate->pConf = (rsconf_t *)context->activeBase;
+    CHKmalloc(candidate->reloadRateConfig = calloc(1, sizeof(*candidate->reloadRateConfig)));
+    CHKiRet(ratelimit_cfgsInit(&candidate->reloadRateConfig->ratelimit_cfgs));
+    candidate->reloadRateConfigInitialized = RSTRUE;
     initModuleDefaults(candidate);
     candidate->reloadSnapshot = RSTRUE;
     build.config = candidate;
@@ -3073,6 +3235,13 @@ ENDactivateCnf
 static void destructModuleConfigContents(modConfData_t *const pModConf) {
     instanceConf_t *inst, *del;
     if (pModConf == NULL) return;
+    reloadRateProfilesDestruct(&pModConf->reloadRateProfiles);
+    if (pModConf->reloadRateConfig != NULL) {
+        if (pModConf->reloadRateConfigInitialized) ratelimit_cfgsDestruct(&pModConf->reloadRateConfig->ratelimit_cfgs);
+        free(pModConf->reloadRateConfig);
+        pModConf->reloadRateConfig = NULL;
+        pModConf->reloadRateConfigInitialized = RSFALSE;
+    }
     free(pModConf->gnutlsPriorityString);
     free(pModConf->reloadModuleLoadName);
     freeReloadAllowedSenderSpecs(&pModConf->reloadAllowedSenderSpecs, &pModConf->reloadAllowedSenderSpecCount);
