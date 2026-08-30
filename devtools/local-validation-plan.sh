@@ -301,7 +301,9 @@ run_shellcheck() {
 	fi
 	if command -v shellcheck >/dev/null 2>&1; then
 		while IFS= read -r file; do
-			shellcheck -S warning "$file"
+			if ! shellcheck -S warning "$file"; then
+				echo "warning: shellcheck reported advisory findings in $file" >&2
+			fi
 		done < "$tmp_shell"
 	else
 		echo "warning: shellcheck not installed; skipping shell lint" >&2
@@ -311,7 +313,9 @@ run_shellcheck() {
 			read -r first_line < "$file" || first_line=
 			case "$first_line" in
 			'#!/bin/sh' | '#!/usr/bin/sh' | '#!/usr/bin/env sh')
-				checkbashisms -p "$file"
+				if ! checkbashisms -p "$file"; then
+					echo "warning: checkbashisms reported advisory findings in $file" >&2
+				fi
 				;;
 			esac
 		done < "$tmp_shell"
