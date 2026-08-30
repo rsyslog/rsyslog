@@ -18,6 +18,9 @@
 
 rsRetVal shadowReloadInit(void);
 void shadowReloadExit(void);
+/* Release module-owned source snapshots after runConf teardown, while module
+ * destructor callbacks are still loaded. */
+void shadowReloadExitModuleSnapshots(void);
 
 /* Configure the reload manager after the active configuration exists.
  * Ownership of both source artifacts is transferred on every return path. */

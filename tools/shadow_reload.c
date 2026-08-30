@@ -68,6 +68,10 @@ static rsReloadRulesetPlanV1_t *pendingPlan = NULL;
 static rsReloadNormalizedGraphBuilderV1_t *pendingRulesetGraphBuilder = NULL;
 static rsReloadNormalizedGraphV1_t pendingRulesetGraph;
 static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
+static modInfo_t *activeSourceModule = NULL;
+static void *activeSourceModuleCnf = NULL;
+static modInfo_t *retiredSourceModule = NULL;
+static void *retiredSourceModuleCnf = NULL;
 static modInfo_t *pendingSourceModule = NULL;
 static void *pendingActiveSourceModuleCnf = NULL;
 static void *pendingSourceModuleCnf = NULL;
@@ -136,6 +140,8 @@ static rsRetVal destructPendingSourceModule(void) {
         pendingModuleReloadState = NULL;
         pendingModuleReloadCommitted = 0;
     }
+    modReloadDestructSourceCandidateV1(retiredSourceModule, &retiredSourceModuleCnf);
+    retiredSourceModule = NULL;
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
     pendingSourceModule = NULL;
@@ -310,6 +316,16 @@ void shadowReloadExit(void) {
     objRelease(statsobj, CORE_COMPONENT);
 }
 
+void shadowReloadExitModuleSnapshots(void) {
+    /* Active module runtimes may borrow prepared data from the active source
+     * snapshot. deinitAll() therefore calls this only after runConf teardown
+     * has destroyed those runtimes, but before their module code is unloaded. */
+    modReloadDestructSourceCandidateV1(activeSourceModule, &activeSourceModuleCnf);
+    activeSourceModule = NULL;
+    modReloadDestructSourceCandidateV1(retiredSourceModule, &retiredSourceModuleCnf);
+    retiredSourceModule = NULL;
+}
+
 rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
                                const char *const configPath,
                                rsReloadNormalizedGraphBuilderV1_t *newBuilder,
@@ -447,6 +463,7 @@ finalize_it:
 static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report) {
     cfgmodules_etry_t *const activeModule = findActiveInputModule("imtcp");
     modReloadSourceBuildContextV1_t context;
+    const void *oldSourceModuleCnf;
 
     if (activeModule == NULL || !modReloadHasValidSourceInterfaceV1(activeModule->pMod)) return RS_RET_OK;
     if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL) && !pendingReloadModeAuthorized) return RS_RET_OK;
@@ -456,20 +473,26 @@ static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report
     context.flags = MOD_RELOAD_SOURCE_BASE_UNCHANGED;
     context.activeBase = runConf;
     pendingSourceModule = activeModule->pMod;
-    context.sourceCatalog = activeSourceObjectCatalog;
-    rsRetVal ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingActiveSourceModuleCnf);
-    if (ret == RS_RET_NOT_FOUND || ret == RS_RET_NOT_IMPLEMENTED) {
-        /* Legacy syntax and source settings that require side-effectful
-         * runtime lowering have no private V1 snapshot. They remain governed
-         * by the existing conservative scope gate. */
-        pendingSourceModule = NULL;
-        return RS_RET_OK;
+    if (activeSourceModuleCnf != NULL) {
+        if (activeSourceModule != pendingSourceModule) return RS_RET_NOT_IMPLEMENTED;
+        oldSourceModuleCnf = activeSourceModuleCnf;
+    } else {
+        context.sourceCatalog = activeSourceObjectCatalog;
+        rsRetVal ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingActiveSourceModuleCnf);
+        if (ret == RS_RET_NOT_FOUND || ret == RS_RET_NOT_IMPLEMENTED) {
+            /* Legacy syntax and source settings that require side-effectful
+             * runtime lowering have no private V1 snapshot. They remain governed
+             * by the existing conservative scope gate. */
+            pendingSourceModule = NULL;
+            return RS_RET_OK;
+        }
+        if (ret != RS_RET_OK) return ret;
+        oldSourceModuleCnf = pendingActiveSourceModuleCnf;
     }
-    if (ret != RS_RET_OK) return ret;
     context.sourceCatalog = pendingSourceObjectCatalog;
-    ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingSourceModuleCnf);
+    rsRetVal ret = modReloadBuildSourceCandidateV1(pendingSourceModule, &context, &pendingSourceModuleCnf);
     if (ret != RS_RET_OK) return ret;
-    ret = modReloadClassifySourceCandidateV1(pendingSourceModule, pendingActiveSourceModuleCnf, pendingSourceModuleCnf,
+    ret = modReloadClassifySourceCandidateV1(pendingSourceModule, oldSourceModuleCnf, pendingSourceModuleCnf,
                                              &pendingSourceModuleCapability);
     if (ret == RS_RET_OK) pendingSourceModuleCapabilityEvaluated = 1;
     return ret;
@@ -730,9 +753,10 @@ void shadowReloadBeginRequest(void) {
                             pendingReloadModeAuthorized, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         if (pendingCandidateResult == RS_RET_OK && moduleNeedsCommit) {
-                            pendingCandidateResult =
-                                modReloadPrepare(pendingSourceModule, pendingActiveSourceModuleCnf,
-                                                 pendingSourceModuleCnf, &pendingModuleReloadState);
+                            pendingCandidateResult = modReloadPrepare(
+                                pendingSourceModule,
+                                activeSourceModuleCnf != NULL ? activeSourceModuleCnf : pendingActiveSourceModuleCnf,
+                                pendingSourceModuleCnf, &pendingModuleReloadState);
                             if (pendingCandidateResult != RS_RET_OK)
                                 pendingFailurePhase = pendingCandidateResult == RS_RET_NOT_IMPLEMENTED
                                                           ? SHADOW_RELOAD_FAILURE_CAPABILITY
@@ -938,6 +962,26 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
     retiredSourceObjectCatalog = activeSourceObjectCatalog;
     activeSourceObjectCatalog = pendingSourceObjectCatalog;
     pendingSourceObjectCatalog = NULL;
+    if (pendingSourceModule != NULL && pendingSourceModuleCnf != NULL) {
+        if (pendingSourceModuleCapability == eMOD_RELOAD_REUSE) {
+            /* Runtime objects remain bound to the old effective snapshot. On
+             * the first equivalent commit retain the freshly lowered active
+             * baseline; later equivalent candidates stay disposable. */
+            if (activeSourceModuleCnf == NULL) {
+                activeSourceModule = pendingSourceModule;
+                activeSourceModuleCnf = pendingActiveSourceModuleCnf;
+                pendingActiveSourceModuleCnf = NULL;
+            }
+        } else {
+            retiredSourceModule = activeSourceModule != NULL ? activeSourceModule : pendingSourceModule;
+            retiredSourceModuleCnf =
+                activeSourceModuleCnf != NULL ? activeSourceModuleCnf : pendingActiveSourceModuleCnf;
+            activeSourceModule = pendingSourceModule;
+            activeSourceModuleCnf = pendingSourceModuleCnf;
+            pendingActiveSourceModuleCnf = NULL;
+            pendingSourceModuleCnf = NULL;
+        }
+    }
     memset(&pendingRulesetGraph, 0, sizeof(pendingRulesetGraph));
     ++activeGeneration;
     ATOMIC_STORE_uint64(&ctrActiveGeneration, &mutCtrActiveGeneration, activeGeneration);
