@@ -213,7 +213,12 @@ jobs:
                     dnf -q -y install \
                       curl git mock mock-core-configs python3 rpm-build tar gzip
                 ) 2>&1 | tee "$bootstrap_log"
-                bootstrap_status="${PIPESTATUS[0]}"
+                pipeline_status=("${PIPESTATUS[@]}")
+                bootstrap_status="${pipeline_status[0]}"
+                tee_status="${pipeline_status[1]}"
+                if [ "$bootstrap_status" -eq 0 ] && [ "$tee_status" -ne 0 ]; then
+                  bootstrap_status="$tee_status"
+                fi
                 set -e
                 [ "$bootstrap_status" -eq 0 ] && break
                 if ! grep -Fq "No URLs in mirrorlist" "$bootstrap_log"; then
