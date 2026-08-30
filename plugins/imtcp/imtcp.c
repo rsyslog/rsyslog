@@ -2116,12 +2116,12 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     if (!reloadAllowedSenderConfigEqual(oldInst, oldConfig, newInst, newConfig) &&
         !reloadAllowedSenderChangeSupported(oldInst, oldConfig, newInst, newConfig))
         return 0;
-    /* Growing the session table is allocation-free at commit because Prepare
-     * reserves the replacement table.  Shrinking remains fail-closed, as does
-     * a growth that would change cold-start listen-backlog semantics. */
+    /* Resizing the session table is allocation-free at commit because Prepare
+     * reserves the replacement table. Shrink eligibility is checked while
+     * the listener is fenced; changing cold-start backlog semantics remains
+     * fail-closed here. */
     if (oldInst->iTCPSessMax != newInst->iTCPSessMax &&
-        (newInst->iTCPSessMax < oldInst->iTCPSessMax ||
-         reloadEffectiveSynBacklog(oldInst) != reloadEffectiveSynBacklog(newInst)))
+        reloadEffectiveSynBacklog(oldInst) != reloadEffectiveSynBacklog(newInst))
         return 0;
     if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) return 0;
     liveChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 1);
@@ -2228,6 +2228,7 @@ typedef struct imtcpReloadEntryV1_s {
     int useLegacyAllowedSender;
     int applyAllowedSenders;
     unsigned char *sessionAllowed;
+    size_t sessionAllowedCount;
 } imtcpReloadEntryV1_t;
 
 typedef struct imtcpReloadStateV1_s {
@@ -2465,16 +2466,19 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             } else {
                 CHKiRet(net.cloneAllowedSenders(allowed, &state->entries[index].preparedAllowedSenders, &allowedLast));
                 state->entries[index].applyAllowedSenders = 1;
-                if (!state->entries[index].addition)
+                if (!state->entries[index].addition) {
+                    state->entries[index].sessionAllowedCount =
+                        (size_t)(state->entries[index].sessionMax > state->entries[index].runtime->tcpsrv->iSessMax
+                                     ? state->entries[index].sessionMax
+                                     : state->entries[index].runtime->tcpsrv->iSessMax);
                     CHKmalloc(state->entries[index].sessionAllowed =
-                                  calloc((size_t)state->entries[index].sessionMax,
+                                  calloc(state->entries[index].sessionAllowedCount,
                                          sizeof(state->entries[index].sessionAllowed[0])));
+                }
             }
         }
         if (!state->entries[index].addition &&
             state->entries[index].sessionMax != state->entries[index].runtime->tcpsrv->iSessMax) {
-            if (state->entries[index].sessionMax < state->entries[index].runtime->tcpsrv->iSessMax)
-                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
             CHKmalloc(state->entries[index].preparedSessionSlots =
                           calloc((size_t)state->entries[index].sessionMax,
                                  sizeof(state->entries[index].preparedSessionSlots[0])));
@@ -2557,12 +2561,28 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
     if (ret == RS_RET_OK) {
         for (size_t i = 0; i < state->count; ++i) {
             imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            tcpsrv_t *server;
+            if (entry->preparedSessionSlots == NULL) continue;
+            server = entry->runtime->tcpsrv;
+            if (entry->sessionMax >= server->iSessMax) continue;
+            for (int slot = entry->sessionMax; slot < server->iSessMax; ++slot) {
+                if (server->pSessions[slot] != NULL) {
+                    ret = RS_RET_NOT_IMPLEMENTED;
+                    break;
+                }
+            }
+            if (ret != RS_RET_OK) break;
+        }
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
             imtcpAclEvaluation_t acl;
             if (entry->addition || !entry->applyAllowedSenders) continue;
             acl.root = entry->preparedAllowedSenders;
             acl.useLegacy = entry->useLegacyAllowedSender;
             ret = tcpsrv.EvaluateSessionPolicyWhileFenced(entry->runtime->tcpsrv, evaluateReloadAclSession, &acl,
-                                                          entry->sessionAllowed, (size_t)entry->sessionMax);
+                                                          entry->sessionAllowed, entry->sessionAllowedCount);
             if (ret != RS_RET_OK) break;
         }
     }
@@ -2573,7 +2593,8 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
             if (entry->preparedSessionSlots == NULL) continue;
             server = entry->runtime->tcpsrv;
             memcpy(entry->preparedSessionSlots, server->pSessions,
-                   (size_t)server->iSessMax * sizeof(entry->preparedSessionSlots[0]));
+                   (size_t)(server->iSessMax < entry->sessionMax ? server->iSessMax : entry->sessionMax) *
+                       sizeof(entry->preparedSessionSlots[0]));
         }
     }
     if (ret == RS_RET_OK) {
