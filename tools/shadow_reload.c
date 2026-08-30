@@ -31,7 +31,7 @@
 #include "modules.h"
 
 DEFobjStaticHelpers;
-DEFobjCurrIf(statsobj);
+DEFobjCurrIf(module) DEFobjCurrIf(statsobj);
 
 static volatile sig_atomic_t signalRequestPending = 0;
 static reloadOnHUPMode_t configuredMode = RELOAD_ON_HUP_OFF;
@@ -70,10 +70,12 @@ static rsReloadNormalizedGraphV1_t pendingRulesetGraph;
 static rsReloadNormalizedGraphBuilderV1_t *retiredRulesetGraphBuilder = NULL;
 static modInfo_t *activeSourceModule = NULL;
 static void *activeSourceModuleCnf = NULL;
+static int activeSourceModuleRefHeld = 0;
 static modInfo_t *retiredSourceModule = NULL;
 static void *retiredSourceModuleCnf = NULL;
 static modInfo_t *pendingSourceModule = NULL;
 static void *pendingActiveSourceModuleCnf = NULL;
+static int pendingSourceModuleRefHeld = 0;
 static void *pendingSourceModuleCnf = NULL;
 static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
@@ -144,6 +146,10 @@ static rsRetVal destructPendingSourceModule(void) {
     retiredSourceModule = NULL;
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
+    if (pendingSourceModuleRefHeld) {
+        (void)module.Release(__FILE__, &pendingSourceModule);
+        pendingSourceModuleRefHeld = 0;
+    }
     pendingSourceModule = NULL;
     lastRetirementError = RS_RET_OK;
     pthread_mutex_lock(&statusMut);
@@ -247,10 +253,13 @@ static void logState(const char *const event,
 }
 
 rsRetVal shadowReloadInit(void) {
+    int moduleObjUsed = 0;
     DEFiRet;
 
     CHKiRet(objGetObjInterface(&obj));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(objUse(module, CORE_COMPONENT));
+    moduleObjUsed = 1;
     STATSCOUNTER_INIT(ctrRequests, mutCtrRequests);
     STATSCOUNTER_INIT(ctrOff, mutCtrOff);
     STATSCOUNTER_INIT(ctrValidate, mutCtrValidate);
@@ -294,6 +303,7 @@ rsRetVal shadowReloadInit(void) {
     CHKiRet(statsobj.ConstructFinalize(reloadStats));
 finalize_it:
     if (iRet != RS_RET_OK && reloadStats != NULL) statsobj.Destruct(&reloadStats);
+    if (iRet != RS_RET_OK && moduleObjUsed) objRelease(module, CORE_COMPONENT);
     if (iRet != RS_RET_OK) objRelease(statsobj, CORE_COMPONENT);
     RETiRet;
 }
@@ -321,9 +331,14 @@ void shadowReloadExitModuleSnapshots(void) {
      * snapshot. deinitAll() therefore calls this only after runConf teardown
      * has destroyed those runtimes, but before their module code is unloaded. */
     modReloadDestructSourceCandidateV1(activeSourceModule, &activeSourceModuleCnf);
+    if (activeSourceModuleRefHeld) {
+        (void)module.Release(__FILE__, &activeSourceModule);
+        activeSourceModuleRefHeld = 0;
+    }
     activeSourceModule = NULL;
     modReloadDestructSourceCandidateV1(retiredSourceModule, &retiredSourceModuleCnf);
     retiredSourceModule = NULL;
+    objRelease(module, CORE_COMPONENT);
 }
 
 rsRetVal shadowReloadConfigure(const reloadOnHUPMode_t mode,
@@ -487,6 +502,9 @@ static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report
             return RS_RET_OK;
         }
         if (ret != RS_RET_OK) return ret;
+        ret = module.Use(__FILE__, pendingSourceModule);
+        if (ret != RS_RET_OK) return ret;
+        pendingSourceModuleRefHeld = 1;
         oldSourceModuleCnf = pendingActiveSourceModuleCnf;
     }
     context.sourceCatalog = pendingSourceObjectCatalog;
@@ -971,6 +989,8 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
                 activeSourceModule = pendingSourceModule;
                 activeSourceModuleCnf = pendingActiveSourceModuleCnf;
                 pendingActiveSourceModuleCnf = NULL;
+                activeSourceModuleRefHeld = pendingSourceModuleRefHeld;
+                pendingSourceModuleRefHeld = 0;
             }
         } else {
             retiredSourceModule = activeSourceModule != NULL ? activeSourceModule : pendingSourceModule;
@@ -978,6 +998,10 @@ static void publishActivatedGraph(void __attribute__((unused)) *const context) {
                 activeSourceModuleCnf != NULL ? activeSourceModuleCnf : pendingActiveSourceModuleCnf;
             activeSourceModule = pendingSourceModule;
             activeSourceModuleCnf = pendingSourceModuleCnf;
+            if (!activeSourceModuleRefHeld) {
+                activeSourceModuleRefHeld = pendingSourceModuleRefHeld;
+                pendingSourceModuleRefHeld = 0;
+            }
             pendingActiveSourceModuleCnf = NULL;
             pendingSourceModuleCnf = NULL;
         }
