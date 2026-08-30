@@ -254,6 +254,20 @@ static struct cnfstmt *action(const char *name, const char *secret) {
     return result;
 }
 
+static struct cnfstmt *actionWithRatelimit(const char *name, const char *policy) {
+    struct cnfstmt *result = action(name, "same-secret");
+    struct nvlst *tail;
+    if (result == NULL) return NULL;
+    tail = result->d.reload_action;
+    while (tail->next != NULL) tail = tail->next;
+    tail->next = parameter("action.ratelimit.name", policy);
+    if (tail->next == NULL) {
+        cnfstmtDestructLst(result);
+        return NULL;
+    }
+    return result;
+}
+
 static struct cnfstmt *propertyFilter(struct cnfstmt *child) {
     struct cnfstmt *result = calloc(1, sizeof(*result));
     if (result == NULL || child == NULL) {
@@ -934,8 +948,9 @@ int main(void) {
      * imtcp objects already classified LIVE_SWAP. Existing imtcp inputs and
      * newly added and active-catalog removed imtcp inputs are accepted. A new
      * named rate-limit declaration is accepted only when an imtcp input binds
-     * it in the same candidate; modifications/removals and unrelated policies
-     * remain fail-closed alongside other modules/inputs. */
+     * it in the same candidate. A modified declaration is accepted only when
+     * both generations reference it exclusively from imtcp; removals,
+     * unrelated policies, and shared non-imtcp consumers remain fail-closed. */
     candidate = calloc(1, sizeof(*candidate));
     rsReloadCandidate_t *activeCatalog = calloc(1, sizeof(*activeCatalog));
     CHECK(candidate != NULL && activeCatalog != NULL);
@@ -949,10 +964,18 @@ int main(void) {
         addObject(candidate, object(CNFOBJ_INPUT, tcpInput, NULL));
     }
     addObject(candidate, object(CNFOBJ_INPUT, parameterPair("type", "imudp", "name", "udp1"), NULL));
-    addObject(candidate, object(CNFOBJ_RATELIMIT, parameter("name", "new-policy"), NULL));
+    addObject(candidate, object(CNFOBJ_RATELIMIT, parameterPair("name", "new-policy", "burst", "2"), NULL));
     addObject(candidate, object(CNFOBJ_RATELIMIT, parameter("name", "unrelated-policy"), NULL));
     addObject(activeCatalog, object(CNFOBJ_MODULE, parameter("load", "imtcp"), NULL));
+    {
+        struct nvlst *tcpInput = parameterPair("type", "imtcp", "name", "tcp1");
+        CHECK(tcpInput != NULL && tcpInput->next != NULL);
+        tcpInput->next->next = parameter("ratelimit.name", "new-policy");
+        CHECK(tcpInput->next->next != NULL);
+        addObject(activeCatalog, object(CNFOBJ_INPUT, tcpInput, NULL));
+    }
     addObject(activeCatalog, object(CNFOBJ_INPUT, parameterPair("type", "imtcp", "name", "retired"), NULL));
+    addObject(activeCatalog, object(CNFOBJ_RATELIMIT, parameterPair("name", "new-policy", "burst", "1"), NULL));
     CHECK(!constructionFailed);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_MODULE, RS_RELOAD_DIFF_MODIFIED, "module:imtcp") ==
           RS_RET_OK);
@@ -971,17 +994,73 @@ int main(void) {
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:retired") ==
           RS_RET_OK);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_INPUT, RS_RELOAD_DIFF_REMOVED, "input:tcp1") ==
-          RS_RET_NOT_IMPLEMENTED);
+          RS_RET_OK);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_ADDED,
                           "ratelimit:new-policy") == RS_RET_OK);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_ADDED,
                           "ratelimit:unrelated-policy") == RS_RET_NOT_IMPLEMENTED);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_MODIFIED,
-                          "ratelimit:new-policy") == RS_RET_NOT_IMPLEMENTED);
+                          "ratelimit:new-policy") == RS_RET_OK);
     CHECK(imtcpGateResult(activeCatalog, candidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_REMOVED,
                           "ratelimit:new-policy") == RS_RET_NOT_IMPLEMENTED);
     rsReloadCandidateDestruct(&activeCatalog);
     rsReloadCandidateDestruct(&candidate);
+    {
+        rsReloadCandidate_t *sharedActive = calloc(1, sizeof(*sharedActive));
+        rsReloadCandidate_t *sharedCandidate = calloc(1, sizeof(*sharedCandidate));
+        struct nvlst *activeTcp = parameterPair("type", "imtcp", "name", "tcp1");
+        struct nvlst *candidateTcp = parameterPair("type", "imtcp", "name", "tcp1");
+        struct nvlst *activeUdp = parameterPair("type", "imudp", "name", "udp1");
+        struct nvlst *candidateUdp = parameterPair("type", "imudp", "name", "udp1");
+        CHECK(sharedActive != NULL && sharedCandidate != NULL && activeTcp != NULL && candidateTcp != NULL &&
+              activeUdp != NULL && candidateUdp != NULL);
+        activeTcp->next->next = parameter("ratelimit.name", "shared-policy");
+        candidateTcp->next->next = parameter("ratelimit.name", "shared-policy");
+        activeUdp->next->next = parameter("ratelimit.name", "shared-policy");
+        candidateUdp->next->next = parameter("ratelimit.name", "shared-policy");
+        CHECK(activeTcp->next->next != NULL && candidateTcp->next->next != NULL && activeUdp->next->next != NULL &&
+              candidateUdp->next->next != NULL);
+        addObject(sharedActive, object(CNFOBJ_INPUT, activeTcp, NULL));
+        addObject(sharedCandidate, object(CNFOBJ_INPUT, candidateTcp, NULL));
+        addObject(sharedActive, object(CNFOBJ_INPUT, activeUdp, NULL));
+        addObject(sharedCandidate, object(CNFOBJ_INPUT, candidateUdp, NULL));
+        addObject(sharedActive, object(CNFOBJ_RATELIMIT, parameterPair("name", "shared-policy", "burst", "1"), NULL));
+        addObject(sharedCandidate,
+                  object(CNFOBJ_RATELIMIT, parameterPair("name", "shared-policy", "burst", "2"), NULL));
+        CHECK(!constructionFailed);
+        CHECK(imtcpGateResult(sharedActive, sharedCandidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_MODIFIED,
+                              "ratelimit:shared-policy") == RS_RET_NOT_IMPLEMENTED);
+        rsReloadCandidateDestruct(&sharedActive);
+        rsReloadCandidateDestruct(&sharedCandidate);
+    }
+    {
+        rsReloadCandidate_t *sharedActiveSource = calloc(1, sizeof(*sharedActiveSource));
+        rsReloadCandidate_t *sharedActiveCatalog = NULL;
+        rsReloadCandidate_t *sharedCandidate = calloc(1, sizeof(*sharedCandidate));
+        struct nvlst *activeTcp = parameterPair("type", "imtcp", "name", "tcp1");
+        struct nvlst *candidateTcp = parameterPair("type", "imtcp", "name", "tcp1");
+        CHECK(sharedActiveSource != NULL && sharedCandidate != NULL && activeTcp != NULL && candidateTcp != NULL);
+        activeTcp->next->next = parameter("ratelimit.name", "shared-policy");
+        candidateTcp->next->next = parameter("ratelimit.name", "shared-policy");
+        CHECK(activeTcp->next->next != NULL && candidateTcp->next->next != NULL);
+        addObject(sharedActiveSource, object(CNFOBJ_INPUT, activeTcp, NULL));
+        addObject(sharedCandidate, object(CNFOBJ_INPUT, candidateTcp, NULL));
+        addObject(sharedActiveSource,
+                  object(CNFOBJ_RATELIMIT, parameterPair("name", "shared-policy", "burst", "1"), NULL));
+        addObject(sharedCandidate,
+                  object(CNFOBJ_RATELIMIT, parameterPair("name", "shared-policy", "burst", "2"), NULL));
+        addObject(sharedActiveSource,
+                  object(CNFOBJ_RULESET, NULL, actionWithRatelimit("active-action", "shared-policy")));
+        addObject(sharedCandidate,
+                  object(CNFOBJ_RULESET, NULL, actionWithRatelimit("candidate-action", "shared-policy")));
+        CHECK(!constructionFailed);
+        CHECK(rsReloadCandidateBuildObjectCatalogV1(sharedActiveSource, &sharedActiveCatalog) == RS_RET_OK);
+        CHECK(imtcpGateResult(sharedActiveCatalog, sharedCandidate, RS_RELOAD_OBJ_RATELIMIT, RS_RELOAD_DIFF_MODIFIED,
+                              "ratelimit:shared-policy") == RS_RET_NOT_IMPLEMENTED);
+        rsReloadCandidateDestruct(&sharedActiveCatalog);
+        rsReloadCandidateDestruct(&sharedActiveSource);
+        rsReloadCandidateDestruct(&sharedCandidate);
+    }
     puts("reload candidate graph tests passed");
     return 0;
 }

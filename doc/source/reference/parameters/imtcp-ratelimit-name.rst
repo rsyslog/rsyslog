@@ -35,9 +35,11 @@ without closing established sessions.  The new listener-local limiter starts
 with a fresh bucket at the transactional reload safepoint.  A new policy that
 uses only ``name``, ``interval``, and ``burst`` can be added and selected by an
 imtcp input in the same HUP; all imtcp inputs in that candidate share its
-prepared policy bucket.  Editing or removing an already active definition, and
-new policies using broader per-source, file, or template settings, remain
-restart-required.
+prepared policy bucket.  An already active simple definition can also change
+when both generations reference it exclusively from imtcp.  The replacement
+uses a fresh shared bucket at the transactional safepoint.  Definitions shared
+with another module or action, removals, and policies using broader per-source,
+file, or template settings remain restart-required.
 
 .. warning::
    This parameter is mutually exclusive with :ref:`param-imtcp-ratelimit-interval` and :ref:`param-imtcp-ratelimit-burst`.

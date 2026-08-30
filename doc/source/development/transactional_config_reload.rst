@@ -314,10 +314,12 @@ policies, privately constructs a fresh listener-local limiter and swaps its
 ownership at commit; the retired bucket is destroyed only after the fence is
 released.  A new simple named policy containing only ``name``, ``interval``,
 and ``burst`` may be declared and bound by imtcp in the same transaction.  Its
-private shared bucket follows the active module-source generation.  Changing
-or removing an already active named definition, or adding a policy with a
-broader per-source/file/template contract, remains outside this slice and is
-rejected.  An effective
+private shared bucket follows the active module-source generation.  A simple
+active definition may change when both source generations prove that every
+reference belongs to imtcp; Prepare constructs a fresh shared bucket and the
+fenced commit redirects all participating listeners together.  Cross-module
+or action sharing, removal, and broader per-source/file/template contracts
+remain outside this slice and are rejected.  An effective
 ``preserveCase`` change is classified ``new_sessions``: established sessions
 retain their already resolved peer identity and socket options, while the
 listener accept profile changes atomically for later connections.  TCP

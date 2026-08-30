@@ -36,12 +36,19 @@ typedef struct rsReloadCandidateObject_s {
     struct rsReloadCandidateObject_s *next;
 } rsReloadCandidateObject_t;
 
+typedef struct rsReloadRatelimitReference_s {
+    char *name;
+    size_t nameLength;
+    struct rsReloadRatelimitReference_s *next;
+} rsReloadRatelimitReference_t;
+
 struct rsReloadCandidate_s {
     rsReloadCandidateObject_t *head;
     rsReloadCandidateObject_t *tail;
     size_t objectCount;
     int parseError;
     rsRetVal captureError;
+    rsReloadRatelimitReference_t *otherRatelimitReferences;
 };
 
 static rsReloadCandidate_t *captureCandidate = NULL;
@@ -1307,18 +1314,130 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal candidateHasImtcpRatelimitIdentity(const rsReloadCandidate_t *const candidate,
-                                                   const char *const wantedIdentity,
-                                                   int *const found) {
+typedef struct rsReloadRatelimitUsageV1_s {
+    int declarationFound;
+    int imtcpReferenceFound;
+    int otherReferenceFound;
+} rsReloadRatelimitUsageV1_t;
+
+static int nvlstNameHasFoldedSuffix(const es_str_t *const name, const char *const suffix) {
+    const char *const value = name == NULL ? NULL : (const char *)es_getBufAddr((es_str_t *)name);
+    const size_t valueLength = name == NULL ? 0 : es_strlen((es_str_t *)name);
+    const size_t suffixLength = strlen(suffix);
+
+    return value != NULL && valueLength >= suffixLength &&
+           equalFoldedString(value + valueLength - suffixLength, suffixLength, suffix, suffixLength);
+}
+
+static int nvlstReferencesRatelimit(const struct nvlst *list,
+                                    const char *const wantedName,
+                                    const size_t wantedNameLength) {
+    for (; list != NULL; list = list->next) {
+        if (!nvlstNameHasFoldedSuffix(list->name, "ratelimit.name") || list->val.datatype != 'S' ||
+            list->val.d.estr == NULL || es_strlen(list->val.d.estr) != wantedNameLength)
+            continue;
+        if (!memcmp(es_getBufAddr(list->val.d.estr), wantedName, wantedNameLength)) return 1;
+    }
+    return 0;
+}
+
+static rsRetVal appendOtherRatelimitReferences(rsReloadCandidate_t *const candidate, const struct nvlst *list) {
+    rsReloadRatelimitReference_t *entry = NULL;
+    size_t length;
+    DEFiRet;
+
+    if (candidate == NULL) return RS_RET_PARAM_ERROR;
+    for (; list != NULL; list = list->next) {
+        if (!nvlstNameHasFoldedSuffix(list->name, "ratelimit.name") || list->val.datatype != 'S' ||
+            list->val.d.estr == NULL)
+            continue;
+        length = es_strlen(list->val.d.estr);
+        if (length == SIZE_MAX) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        CHKmalloc(entry = calloc(1, sizeof(*entry)));
+        CHKmalloc(entry->name = malloc(length + 1));
+        if (length != 0) memcpy(entry->name, es_getBufAddr(list->val.d.estr), length);
+        entry->name[length] = '\0';
+        entry->nameLength = length;
+        entry->next = candidate->otherRatelimitReferences;
+        candidate->otherRatelimitReferences = entry;
+        entry = NULL;
+    }
+
+finalize_it:
+    if (entry != NULL) {
+        free(entry->name);
+        free(entry);
+    }
+    RETiRet;
+}
+
+static rsRetVal collectStatementRatelimitReferences(rsReloadCandidate_t *const candidate, const struct cnfstmt *stmt) {
+    DEFiRet;
+    for (; stmt != NULL; stmt = stmt->next) {
+        if (stmt->nodetype == S_RELOAD_ACT || stmt->nodetype == S_ACT) {
+            const struct nvlst *const syntax = stmt->nodetype == S_RELOAD_ACT
+                                                   ? stmt->d.reload_action
+                                                   : (stmt->d.act == NULL ? NULL : stmt->d.act->pSyntaxLst);
+            CHKiRet(appendOtherRatelimitReferences(candidate, syntax));
+        }
+        if (stmt->nodetype == S_IF) {
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_if.t_then));
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_if.t_else));
+        } else if (stmt->nodetype == S_FOREACH) {
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_foreach.body));
+        } else if (stmt->nodetype == S_RELOAD_PRIFILT || stmt->nodetype == S_PRIFILT) {
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_prifilt.t_then));
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_prifilt.t_else));
+        } else if (stmt->nodetype == S_RELOAD_PROPFILT || stmt->nodetype == S_PROPFILT) {
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_propfilt.t_then));
+            CHKiRet(collectStatementRatelimitReferences(candidate, stmt->d.s_propfilt.t_else));
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static int statementsReferenceRatelimit(const struct cnfstmt *stmt,
+                                        const char *const wantedName,
+                                        const size_t wantedNameLength) {
+    for (; stmt != NULL; stmt = stmt->next) {
+        if (stmt->nodetype == S_RELOAD_ACT || stmt->nodetype == S_ACT) {
+            const struct nvlst *const syntax = stmt->nodetype == S_RELOAD_ACT
+                                                   ? stmt->d.reload_action
+                                                   : (stmt->d.act == NULL ? NULL : stmt->d.act->pSyntaxLst);
+            if (nvlstReferencesRatelimit(syntax, wantedName, wantedNameLength)) return 1;
+        }
+        if (stmt->nodetype == S_IF) {
+            if (statementsReferenceRatelimit(stmt->d.s_if.t_then, wantedName, wantedNameLength) ||
+                statementsReferenceRatelimit(stmt->d.s_if.t_else, wantedName, wantedNameLength))
+                return 1;
+        } else if (stmt->nodetype == S_FOREACH) {
+            if (statementsReferenceRatelimit(stmt->d.s_foreach.body, wantedName, wantedNameLength)) return 1;
+        } else if (stmt->nodetype == S_RELOAD_PRIFILT || stmt->nodetype == S_PRIFILT) {
+            if (statementsReferenceRatelimit(stmt->d.s_prifilt.t_then, wantedName, wantedNameLength) ||
+                statementsReferenceRatelimit(stmt->d.s_prifilt.t_else, wantedName, wantedNameLength))
+                return 1;
+        } else if (stmt->nodetype == S_RELOAD_PROPFILT || stmt->nodetype == S_PROPFILT) {
+            if (statementsReferenceRatelimit(stmt->d.s_propfilt.t_then, wantedName, wantedNameLength) ||
+                statementsReferenceRatelimit(stmt->d.s_propfilt.t_else, wantedName, wantedNameLength))
+                return 1;
+        }
+    }
+    return 0;
+}
+
+static rsRetVal candidateRatelimitUsage(const rsReloadCandidate_t *const candidate,
+                                        const char *const wantedIdentity,
+                                        rsReloadRatelimitUsageV1_t *const usage) {
     const rsReloadCandidateObject_t *candidateEntry;
+    const rsReloadRatelimitReference_t *reference;
     const char *wantedName;
     size_t wantedNameLength;
-    int declarationFound = 0;
-    int inputFound = 0;
 
-    if (candidate == NULL || wantedIdentity == NULL || found == NULL || strncmp(wantedIdentity, "ratelimit:", 10))
+    if (candidate == NULL || wantedIdentity == NULL || usage == NULL || strncmp(wantedIdentity, "ratelimit:", 10))
         return RS_RET_PARAM_ERROR;
-    *found = 0;
+    memset(usage, 0, sizeof(*usage));
     wantedName = wantedIdentity + 10;
     wantedNameLength = strlen(wantedName);
     for (candidateEntry = candidate->head; candidateEntry != NULL; candidateEntry = candidateEntry->next) {
@@ -1327,13 +1446,25 @@ static rsRetVal candidateHasImtcpRatelimitIdentity(const rsReloadCandidate_t *co
         const char *name;
         if (object->objType == CNFOBJ_RATELIMIT) {
             name = nvlstString(object->nvlst, "name", &nameLength);
-            declarationFound |= name != NULL && nameLength == wantedNameLength && !memcmp(name, wantedName, nameLength);
-        } else if (isImtcpInput(object)) {
+            usage->declarationFound |=
+                name != NULL && nameLength == wantedNameLength && !memcmp(name, wantedName, nameLength);
+        }
+        if (nvlstReferencesRatelimit(object->nvlst, wantedName, wantedNameLength)) {
             name = nvlstString(object->nvlst, "ratelimit.name", &nameLength);
-            inputFound |= name != NULL && nameLength == wantedNameLength && !memcmp(name, wantedName, nameLength);
+            if (isImtcpInput(object) && name != NULL && nameLength == wantedNameLength &&
+                !memcmp(name, wantedName, nameLength))
+                usage->imtcpReferenceFound = 1;
+            else
+                usage->otherReferenceFound = 1;
+        }
+        if (statementsReferenceRatelimit(object->script, wantedName, wantedNameLength)) usage->otherReferenceFound = 1;
+    }
+    for (reference = candidate->otherRatelimitReferences; reference != NULL; reference = reference->next) {
+        if (reference->nameLength == wantedNameLength && !memcmp(reference->name, wantedName, wantedNameLength)) {
+            usage->otherReferenceFound = 1;
+            break;
         }
     }
-    *found = declarationFound && inputFound;
     return RS_RET_OK;
 }
 
@@ -1363,10 +1494,24 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
             continue;
         if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
         if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
-            int found;
-            const rsRetVal ret = candidateHasImtcpRatelimitIdentity(candidate, entry->identity, &found);
+            rsReloadRatelimitUsageV1_t usage;
+            const rsRetVal ret = candidateRatelimitUsage(candidate, entry->identity, &usage);
             if (ret != RS_RET_OK) return ret;
-            if (found) continue;
+            if (usage.declarationFound && usage.imtcpReferenceFound && !usage.otherReferenceFound) continue;
+        }
+        if (entry->diffKind == RS_RELOAD_DIFF_MODIFIED && entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
+            rsReloadRatelimitUsageV1_t activeUsage;
+            rsReloadRatelimitUsageV1_t candidateUsage;
+            rsRetVal ret;
+            if (activeSourceCatalog == NULL) return RS_RET_NOT_IMPLEMENTED;
+            ret = candidateRatelimitUsage(activeSourceCatalog, entry->identity, &activeUsage);
+            if (ret != RS_RET_OK) return ret;
+            ret = candidateRatelimitUsage(candidate, entry->identity, &candidateUsage);
+            if (ret != RS_RET_OK) return ret;
+            if (activeUsage.declarationFound && activeUsage.imtcpReferenceFound && !activeUsage.otherReferenceFound &&
+                candidateUsage.declarationFound && candidateUsage.imtcpReferenceFound &&
+                !candidateUsage.otherReferenceFound)
+                continue;
         }
         if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind != RS_RELOAD_OBJ_INPUT)
             return RS_RET_NOT_IMPLEMENTED;
@@ -1422,6 +1567,10 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     rsRetVal ret;
 
     if (sourceBuilder == NULL || sourceError || object == NULL) return;
+    if (collectStatementRatelimitReferences(sourceObjectCatalog, object->script) != RS_RET_OK) {
+        sourceError = 1;
+        return;
+    }
     if (object->objType == CNFOBJ_GLOBAL || object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT ||
         object->objType == CNFOBJ_RATELIMIT) {
         if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
@@ -1584,12 +1733,19 @@ static void objectDestruct(struct cnfobj *const object) {
 void rsReloadCandidateDestruct(rsReloadCandidate_t **const ppCandidate) {
     rsReloadCandidateObject_t *entry;
     rsReloadCandidateObject_t *next;
+    rsReloadRatelimitReference_t *reference;
+    rsReloadRatelimitReference_t *nextReference;
 
     if (ppCandidate == NULL || *ppCandidate == NULL) return;
     for (entry = (*ppCandidate)->head; entry != NULL; entry = next) {
         next = entry->next;
         objectDestruct(entry->object);
         free(entry);
+    }
+    for (reference = (*ppCandidate)->otherRatelimitReferences; reference != NULL; reference = nextReference) {
+        nextReference = reference->next;
+        free(reference->name);
+        free(reference);
     }
     free(*ppCandidate);
     *ppCandidate = NULL;
@@ -1681,6 +1837,7 @@ rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *const 
     if (candidate == NULL || ppCatalog == NULL || *ppCatalog != NULL) return RS_RET_PARAM_ERROR;
     CHKmalloc(catalog = calloc(1, sizeof(*catalog)));
     for (entry = candidate->head; entry != NULL; entry = entry->next) {
+        CHKiRet(collectStatementRatelimitReferences(catalog, entry->object->script));
         CHKiRet(appendObjectCatalogClone(catalog, entry->object));
     }
     *ppCatalog = catalog;

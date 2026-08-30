@@ -211,18 +211,29 @@ if [[ "$reload_status" != *"result=activated active_generation=11"* ||
 	error_exit 1
 fi
 
-# Updating an already active named definition remains fail-closed until a
-# complete cross-consumer policy replacement contract exists.
+# Updating an imtcp-exclusive simple named definition prepares a fresh shared
+# bucket and swaps it at the same safepoint. Exactly two accepted frames prove
+# that the new burst is active; the drop diagnostic orders the negative oracle.
+: >"$RSYSLOG_DYNNAME.started"
 sed 's/name="policy_added" interval="60" burst="1"/name="policy_added" interval="60" burst="2"/' \
 	"$CONF_FILE" >"$CONF_FILE.changed-policy"
 mv "$CONF_FILE.changed-policy" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=11"* ||
+if [[ "$reload_status" != *"result=activated active_generation=12"* ||
       "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
-	echo "FAIL: RainerScript changed named rate limit was not rejected: $reload_status"
+	echo "FAIL: RainerScript changed named rate limit did not activate: $reload_status"
 	error_exit 1
 fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host changed-policy: changed-policy-1' \
+	'<167>Mar 10 01:00:00 host changed-policy: changed-policy-2' \
+	'<167>Mar 10 01:00:00 host changed-policy: changed-policy-3' >&9 || error_exit 1
+wait_content 'changed-policy-2' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'changed-policy-' 2 "$RSYSLOG_OUT_LOG"
+check_not_present 'changed-policy-3' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
