@@ -38,7 +38,8 @@ imtcp input in the same HUP; all imtcp inputs in that candidate share its
 prepared policy bucket.  An already active simple definition can also change
 when both generations reference it exclusively from imtcp.  The replacement
 uses a fresh shared bucket at the transactional safepoint.  An exclusively
-imtcp-owned simple definition can also be removed when the same candidate
+imtcp-owned simple definition can also change its ``severity`` threshold or be
+removed when the same candidate
 switches its last listener away from it; the old shared bucket is released only
 after the transactional fence.  Definitions shared with another module or
 action and policies using broader per-source, file, or template settings remain

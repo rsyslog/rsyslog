@@ -3,9 +3,9 @@
 # same open TCP stream emits changed/restored timezone offsets and remains
 # usable after module- and input-level starvation plus unnamed and named
 # rate-limit generations. Exact accepted counts and fresh drop diagnostics
-# prove policy add, update, removal, and limiter ownership transfer while the
-# same stream remains usable. The focused tcpsrv unit verifies scalar and
-# limiter-pointer propagation.
+# prove policy add, update, severity, removal, and limiter ownership transfer
+# while the same stream remains usable. The focused tcpsrv unit verifies scalar
+# and limiter-pointer propagation.
 # A constant RainerScript include only routes internal diagnostics to a test
 # file; every imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
@@ -246,11 +246,34 @@ wait_queueempty
 content_count_check 'changed-policy-' 2 "$RSYSLOG_OUT_LOG"
 check_not_present 'changed-policy-3' "$RSYSLOG_OUT_LOG"
 
+# Severity is a prepared scalar in the same private policy bucket. Info bypasses
+# the debug-only limiter while the second debug record is dropped.
+: >"$RSYSLOG_DYNNAME.started"
+sed 's/    burst: 2/    burst: 1\
+    severity: debug/' "$CONF_FILE" >"$CONF_FILE.severity-policy"
+mv "$CONF_FILE.severity-policy" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=13"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML severity rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<166>Mar 10 01:00:00 host severity-policy: severity-policy-info' \
+	'<167>Mar 10 01:00:00 host severity-policy: severity-policy-debug-1' \
+	'<167>Mar 10 01:00:00 host severity-policy: severity-policy-debug-2' >&9 || error_exit 1
+wait_content 'severity-policy-debug-1' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'severity-policy-' 2 "$RSYSLOG_OUT_LOG"
+check_not_present 'severity-policy-debug-2' "$RSYSLOG_OUT_LOG"
+
 # Remove the imtcp-exclusive definition while atomically switching its last
 # listener to a prepared unnamed limiter. The same TCP stream then observes
 # exactly the new three-message bucket, proving safe registry retirement.
 : >"$RSYSLOG_DYNNAME.started"
-sed -e '/  - name: policy_added/{N;N;d;}' \
+sed -e '/  - name: policy_added/{N;N;N;d;}' \
 	-e '/    ratelimit.name: policy_added/d' \
 	-e '/    flowControl: "on"/a\    ratelimit.interval: 60\
     ratelimit.burst: 3' \
@@ -258,7 +281,7 @@ sed -e '/  - name: policy_added/{N;N;d;}' \
 mv "$CONF_FILE.removed-policy" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=activated active_generation=13"* ||
+if [[ "$reload_status" != *"result=activated active_generation=14"* ||
       "$reload_status" != *"added=0 removed=1 modified=1"* ||
       "$reload_status" != *"invalid=0 source_capability=live_swap"* ]]; then
 	echo "FAIL: YAML removed named rate limit did not activate: $reload_status"

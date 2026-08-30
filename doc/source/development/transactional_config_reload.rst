@@ -322,8 +322,11 @@ can also be removed when the same candidate removes its last reference: each
 affected listener first swaps to another privately prepared limiter, then
 retirement releases the old shared bucket.  Cross-module or action sharing and
 broader per-source/file/template contracts remain outside this slice and are
-rejected.  An effective
-``preserveCase`` change is classified ``new_sessions``: established sessions
+rejected.  The severity threshold is also a supported scalar in these simple
+policies;
+changing it constructs a new shared bucket without retaining the old threshold
+or counters.  An effective ``preserveCase`` change is classified
+``new_sessions``: established sessions
 retain their already resolved peer identity and socket options, while the
 listener accept profile changes atomically for later connections.  TCP
 keepalive enablement, interval, probe count, and idle time use the same

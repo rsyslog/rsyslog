@@ -338,6 +338,7 @@ typedef struct reloadRateProfile_s {
     char *fingerprint;
     unsigned interval;
     unsigned burst;
+    int severity;
     sbool simple;
     struct reloadRateProfile_s *next;
 } reloadRateProfile_t;
@@ -1824,6 +1825,7 @@ static rsRetVal lowerReloadRateProfile(const struct cnfobj *const object, modCon
     CHKiRet(rsReloadObjectSyntaxFingerprintV1(object, &profile->fingerprint));
     profile->interval = 0;
     profile->burst = 10000;
+    profile->severity = -1;
     profile->simple = RSTRUE;
     for (parameter = object->nvlst; parameter != NULL; parameter = parameter->next) {
         if (nvlstNameEquals(parameter->name, "name") || nvlstNameEquals(parameter->name, "config.enabled")) continue;
@@ -1831,13 +1833,19 @@ static rsRetVal lowerReloadRateProfile(const struct cnfobj *const object, modCon
             CHKiRet(reloadRateNonNegativeInt(parameter, &profile->interval));
         } else if (nvlstNameEquals(parameter->name, "burst")) {
             CHKiRet(reloadRateNonNegativeInt(parameter, &profile->burst));
+        } else if (nvlstNameEquals(parameter->name, "severity")) {
+            char *severity;
+            if (parameter->val.datatype != 'S' || parameter->val.d.estr == NULL) ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            CHKmalloc(severity = es_str2cstr(parameter->val.d.estr, NULL));
+            profile->severity = decodeSyslogName((uchar *)severity, syslogPriNames);
+            free(severity);
         } else {
             profile->simple = RSFALSE;
         }
     }
     if (profile->simple)
-        CHKiRet(ratelimitAddConfig(config->reloadRateConfig, profile->name, profile->interval, profile->burst, -1, NULL,
-                                   RSFALSE, NULL, RSFALSE, NULL, NULL, 0, 0, RSTRUE, RSFALSE));
+        CHKiRet(ratelimitAddConfig(config->reloadRateConfig, profile->name, profile->interval, profile->burst,
+                                   profile->severity, NULL, RSFALSE, NULL, RSFALSE, NULL, NULL, 0, 0, RSTRUE, RSFALSE));
     tail = &config->reloadRateProfiles;
     while (*tail != NULL) tail = &(*tail)->next;
     *tail = profile;
