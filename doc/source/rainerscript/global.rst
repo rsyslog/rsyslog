@@ -384,6 +384,11 @@ The following parameters can be set:
   (ctrl-g) is included in the message, it would be converted to '#007'.
   To be compatible to sysklogd, this option must be turned on.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; a candidate that also changes another global parameter is rejected
+  without partially publishing either change.
+
   **Warning:**
 
   -  turning on this option most probably destroys non-western character
