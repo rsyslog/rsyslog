@@ -1787,7 +1787,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
     const tcpLstnParams_t *const rightParams = right->cnf_params;
 
     if (leftParams == NULL || rightParams == NULL) return 0;
-    return left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax &&
+    return (ignoreLiveFields || left->iTCPSessMax == right->iTCPSessMax) && left->iTCPLstnMax == right->iTCPLstnMax &&
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
@@ -1963,6 +1963,12 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     int newSessionsChanged;
 
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    /* Growing the session table is allocation-free at commit because Prepare
+     * reserves the replacement table.  Shrinking remains fail-closed, and an
+     * implicit backlog would change cold-start socket semantics with maxSessions. */
+    if (oldInst->iTCPSessMax != newInst->iTCPSessMax &&
+        (newInst->iTCPSessMax < oldInst->iTCPSessMax || oldInst->iSynBacklog == 0 || newInst->iSynBacklog == 0))
+        return 0;
     if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) return 0;
     liveChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 1);
     newSessionsChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 0);
@@ -2057,6 +2063,9 @@ typedef struct imtcpReloadEntryV1_s {
     uchar *startRegex;
     uchar defaultTZ[8];
     ruleset_t *ruleset;
+    tcps_sess_t **preparedSessionSlots;
+    tcps_sess_t **retiredSessionSlots;
+    int sessionMax;
     uint64_t fenceToken;
     int fenceAcquired;
 } imtcpReloadEntryV1_t;
@@ -2099,6 +2108,10 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
     for (size_t i = 0; i < state->count; ++i) {
         free(state->entries[i].startRegex);
         state->entries[i].startRegex = NULL;
+        free(state->entries[i].preparedSessionSlots);
+        state->entries[i].preparedSessionSlots = NULL;
+        free(state->entries[i].retiredSessionSlots);
+        state->entries[i].retiredSessionSlots = NULL;
     }
 }
 
@@ -2242,6 +2255,15 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             state->entries[index].runtime->tcpsrv->pLstnPorts->pNext != NULL)
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->count = index + 1;
+        state->entries[index].sessionMax = newInst->iTCPSessMax;
+        if (!state->entries[index].addition &&
+            state->entries[index].sessionMax != state->entries[index].runtime->tcpsrv->iSessMax) {
+            if (state->entries[index].sessionMax < state->entries[index].runtime->tcpsrv->iSessMax)
+                ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            CHKmalloc(state->entries[index].preparedSessionSlots =
+                          calloc((size_t)state->entries[index].sessionMax,
+                                 sizeof(state->entries[index].preparedSessionSlots[0])));
+        }
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
         state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
@@ -2319,6 +2341,16 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
     }
     if (ret == RS_RET_OK) {
         for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            tcpsrv_t *server;
+            if (entry->preparedSessionSlots == NULL) continue;
+            server = entry->runtime->tcpsrv;
+            memcpy(entry->preparedSessionSlots, server->pSessions,
+                   (size_t)server->iSessMax * sizeof(entry->preparedSessionSlots[0]));
+        }
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
             if (!state->entries[i].addition) continue;
             ret = tcpsrv.ActivatePreparedListeners(state->entries[i].runtime->tcpsrv);
             if (ret != RS_RET_OK) break;
@@ -2354,6 +2386,12 @@ static void commitReloadV1(void *const pReloadState) {
     for (size_t i = 0; i < state->count; ++i) {
         if (state->entries[i].removal) continue;
         tcpsrv_t *const server = state->entries[i].runtime->tcpsrv;
+        if (state->entries[i].preparedSessionSlots != NULL) {
+            state->entries[i].retiredSessionSlots = server->pSessions;
+            server->pSessions = state->entries[i].preparedSessionSlots;
+            server->iSessMax = state->entries[i].sessionMax;
+            state->entries[i].preparedSessionSlots = NULL;
+        }
         tcpsrv_reload_profile_t profile = {
             .useFlowControl = state->entries[i].flowControl,
             .starvationMaxReads = state->entries[i].starvationMaxReads,

@@ -493,6 +493,7 @@ TESTS_DEFAULT = \
 	global-reloadonhup-off-hup.sh \
 	global-reloadonhup-dirty-baseline.sh \
 	global-reloadonhup-imtcp-defaulttz-rainerscript.sh \
+	global-reloadonhup-imtcp-maxsessions-rainerscript.sh \
 	global-reloadonhup-imtcp-regex-rainerscript.sh \
 	global-reloadonhup-imtcp-ruleset-rainerscript.sh \
 	global-reloadonhup-imtcp-reorder-rainerscript.sh \
@@ -1767,6 +1768,7 @@ TESTS_LIBYAML_IMTCP = \
 	yaml-queue-mutex-contention-stats.sh \
 	global-reloadonhup-off-yaml.sh \
 	global-reloadonhup-imtcp-defaulttz-yaml.sh \
+	global-reloadonhup-imtcp-maxsessions-yaml.sh \
 	global-reloadonhup-imtcp-regex-yaml.sh \
 	global-reloadonhup-imtcp-ruleset-yaml.sh \
 	global-reloadonhup-imtcp-reorder-yaml.sh \
