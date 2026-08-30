@@ -1487,7 +1487,7 @@ static rsRetVal acquireProgramName(smsg_t *const pM) {
     assert(pM != NULL);
     pszTag = (uchar *)((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
     for (i = 0; (i < pM->iLenTAG) && isprint((int)pszTag[i]) && (pszTag[i] != '\0') && (pszTag[i] != ':') &&
-                (pszTag[i] != '[') && (runConf->globals.parser.bPermitSlashInProgramname || (pszTag[i] != '/'));
+                (pszTag[i] != '[') && (glblGetParserPermitSlashInProgramName(runConf) || (pszTag[i] != '/'));
          ++i); /* just search end of PROGNAME */
     if (i < CONF_PROGNAME_BUFSIZE) {
         pszProgName = pM->PROGNAME.szBuf;

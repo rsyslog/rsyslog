@@ -137,6 +137,8 @@ void glblSetParserEscapeControlCharacterTab(rsconf_t *cnf, int enabled);
 int glblGetParserEscapeControlCharacterTab(rsconf_t *cnf);
 void glblSetParserEscapeControlCharactersCStyle(rsconf_t *cnf, int enabled);
 int glblGetParserEscapeControlCharactersCStyle(rsconf_t *cnf);
+void glblSetParserPermitSlashInProgramName(rsconf_t *cnf, int enabled);
+int glblGetParserPermitSlashInProgramName(rsconf_t *cnf);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;
