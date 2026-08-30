@@ -1,0 +1,19 @@
+tools/shadow_reload.c
+  s_f2c089be484e12::t_3497ae2c1a52f0 34,73,78,149-152,256,261-262,306,334-337,341,505-507,992-993,1001-1004
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "1671a561513cd100ce3cd9211ca482eea783dc68",
+  "prompts": {},
+  "sessions": {
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
