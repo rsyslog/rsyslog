@@ -31,15 +31,29 @@ sed 's/input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSY
 	"$CONF_FILE.startup" >"$CONF_FILE.base"
 
 # Retire the kernel-assigned seed before reusing its port as a fixed endpoint.
-# No seed session exists, so retirement must complete in the HUP request.
+# The listener control thread may finish retirement just after HUP publication,
+# even without sessions. The bounded polls are only a hang guard: an unchanged
+# generation with retirement_pending=1 followed by 0 is the completion oracle.
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+for ((seed_retire_try = 1; seed_retire_try <= 50; ++seed_retire_try)); do
+	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+	if [[ "$reload_status" == *"result=activated active_generation=2"* &&
+	      "$reload_status" == *"added=0 removed=1"* &&
+	      "$reload_status" == *"source_capability=drain_replace"* &&
+	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activated active_generation=2"* ||
+	      "$reload_status" != *"added=0 removed=1"* ||
+	      "$reload_status" != *"source_capability=drain_replace"* ||
+	      "$reload_status" != *"retirement_pending=1"* ]]; then
+		echo "FAIL: unexpected status while retiring seed endpoint: $reload_status"
+		error_exit 1
+	fi
+	"$TESTTOOL_DIR/msleep" 100
+done
 if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-      "$reload_status" != *"added=0 removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: seed endpoint was not synchronously retired: $reload_status"
+	echo "FAIL: seed endpoint did not finish retirement after $((seed_retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi
 if (exec 7<>"/dev/tcp/127.0.0.1/$ADDED_PORT") 2>/dev/null; then

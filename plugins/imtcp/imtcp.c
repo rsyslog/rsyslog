@@ -310,6 +310,9 @@ struct instanceConf_s {
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
+    char **reloadAllowedSenderSpecs;
+    size_t reloadAllowedSenderSpecCount;
+    sbool reloadAllowedSendersMaterialized;
     uchar *gnutlsPriorityString;
     int iStrmDrvrExtendedCertCheck;
     int iStrmDrvrSANPreference;
@@ -367,6 +370,9 @@ struct modConfData_s {
     struct AllowedSenders *pAllowedSendersRoot;
     struct AllowedSenders *pAllowedSendersLast;
     sbool bAllowedSendersSet;
+    char **reloadAllowedSenderSpecs;
+    size_t reloadAllowedSenderSpecCount;
+    sbool reloadAllowedSendersMaterialized;
     sbool configSetViaV2Method;
     sbool bPreserveCase; /* preserve case of fromhost; true by default */
     unsigned starvationMaxReads;
@@ -378,6 +384,7 @@ struct modConfData_s {
     sbool compressionMaxTotalZstdWindowBytesSet;
     /* Exact module origin, owned only by private reload snapshots. */
     char *reloadModuleLoadName;
+    sbool reloadSnapshot;
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -781,6 +788,7 @@ static void initModuleDefaults(modConfData_t *const config) {
     config->compressionMaxExpansionRatio = TCPSRV_COMPRESS_MAX_EXPANSION_RATIO_DEFAULT;
     config->compressionMaxDecompressedBytesPerReceive = TCPSRV_COMPRESS_MAX_DECOMPRESSED_BYTES_PER_RECEIVE_DEFAULT;
     config->compressionMaxTotalZstdWindowBytes = TCPSRV_COMPRESS_MAX_TOTAL_ZSTD_WINDOW_BYTES_DEFAULT;
+    config->reloadAllowedSendersMaterialized = RSTRUE;
 }
 
 static void initInstanceDefaults(instanceConf_t *const inst, const modConfData_t *const moduleConfig) {
@@ -815,6 +823,48 @@ static void initInstanceDefaults(instanceConf_t *const inst, const modConfData_t
     inst->compressionMaxDecompressedBytesPerReceive = moduleConfig->compressionMaxDecompressedBytesPerReceive;
     inst->compressionMaxTotalZstdWindowBytes = moduleConfig->compressionMaxTotalZstdWindowBytes;
     inst->compressionMaxTotalZstdWindowBytesSet = moduleConfig->compressionMaxTotalZstdWindowBytesSet;
+    inst->reloadAllowedSendersMaterialized = RSTRUE;
+}
+
+static void freeReloadAllowedSenderSpecs(char ***const specs, size_t *const count) {
+    if (specs == NULL || count == NULL) return;
+    if (*specs != NULL) {
+        for (size_t i = 0; i < *count; ++i) free((*specs)[i]);
+        free(*specs);
+    }
+    *specs = NULL;
+    *count = 0;
+}
+
+static rsRetVal captureReloadAllowedSenderSpecs(const struct cnfarray *const values,
+                                                char ***const specs,
+                                                size_t *const count,
+                                                int *const allNumeric) {
+    char **captured = NULL;
+    DEFiRet;
+
+    if (values == NULL || specs == NULL || count == NULL || allNumeric == NULL || *specs != NULL || *count != 0)
+        return RS_RET_PARAM_ERROR;
+    if (values->nmemb < 0 || (size_t)values->nmemb > SIZE_MAX / sizeof(captured[0])) return RS_RET_OUT_OF_MEMORY;
+    CHKmalloc(captured = calloc((size_t)values->nmemb, sizeof(captured[0])));
+    *allNumeric = 1;
+    for (int i = 0; i < values->nmemb; ++i) {
+        int numeric;
+        CHKmalloc(captured[i] = es_str2cstr(values->arr[i], NULL));
+        *count = (size_t)i + 1;
+        CHKiRet(net.allowedSenderEntryIsNumeric((uchar *)captured[i], &numeric));
+        if (!numeric) *allNumeric = 0;
+    }
+    *specs = captured;
+    captured = NULL;
+
+finalize_it:
+    if (captured != NULL) {
+        for (size_t i = 0; i < *count; ++i) free(captured[i]);
+        free(captured);
+        *count = 0;
+    }
+    RETiRet;
 }
 
 
@@ -934,6 +984,7 @@ finalize_it:
 
 static void freeRuntimeListenerParams(tcpLstnParams_t *const params) {
     if (params == NULL) return;
+    if (params->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&params->pAllowedSenderRoot);
     free((void *)params->pszPort);
     free((void *)params->pszAddr);
     free((void *)params->pszLstnPortFileName);
@@ -947,6 +998,7 @@ static void freeRuntimeListenerParams(tcpLstnParams_t *const params) {
 
 static rsRetVal cloneRuntimeListenerParams(const tcpLstnParams_t *const source, tcpLstnParams_t **const destination) {
     tcpLstnParams_t *clone = NULL;
+    struct AllowedSenders *allowedLast = NULL;
     DEFiRet;
 
     if (source == NULL || destination == NULL || *destination != NULL) return RS_RET_PARAM_ERROR;
@@ -956,8 +1008,11 @@ static rsRetVal cloneRuntimeListenerParams(const tcpLstnParams_t *const source, 
     clone->bPreserveCase = source->bPreserveCase;
     clone->bMultiLine = source->bMultiLine;
     clone->pRuleset = source->pRuleset;
-    clone->pAllowedSenderRoot = source->pAllowedSenderRoot;
     clone->bUseLegacyAllowedSender = source->bUseLegacyAllowedSender;
+    if (source->pAllowedSenderRoot != NULL) {
+        CHKiRet(net.cloneAllowedSenders(source->pAllowedSenderRoot, &clone->pAllowedSenderRoot, &allowedLast));
+        clone->bOwnAllowedSenderRoot = 1;
+    }
     memcpy(clone->dfltTZ, source->dfltTZ, sizeof(clone->dfltTZ));
     if (source->pszPort != NULL) CHKmalloc(clone->pszPort = ustrdup(source->pszPort));
     if (source->pszAddr != NULL) CHKmalloc(clone->pszAddr = ustrdup(source->pszAddr));
@@ -1085,13 +1140,24 @@ static rsRetVal prepareListenerServer(modConfData_t *const modConf,
         listenerParams->pszPort = newPort;
     }
     if (inst->bAllowedSendersSet) {
-        listenerParams->pAllowedSenderRoot = inst->pAllowedSendersRoot;
+        if (listenerParams->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&listenerParams->pAllowedSenderRoot);
+        listenerParams->bOwnAllowedSenderRoot = 0;
+        struct AllowedSenders *allowedLast = NULL;
+        CHKiRet(net.cloneAllowedSenders(inst->pAllowedSendersRoot, &listenerParams->pAllowedSenderRoot, &allowedLast));
+        listenerParams->bOwnAllowedSenderRoot = 1;
         listenerParams->bUseLegacyAllowedSender = 0;
     } else if (modConf->bAllowedSendersSet) {
-        listenerParams->pAllowedSenderRoot = modConf->pAllowedSendersRoot;
+        if (listenerParams->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&listenerParams->pAllowedSenderRoot);
+        listenerParams->bOwnAllowedSenderRoot = 0;
+        struct AllowedSenders *allowedLast = NULL;
+        CHKiRet(
+            net.cloneAllowedSenders(modConf->pAllowedSendersRoot, &listenerParams->pAllowedSenderRoot, &allowedLast));
+        listenerParams->bOwnAllowedSenderRoot = 1;
         listenerParams->bUseLegacyAllowedSender = 0;
     } else {
+        if (listenerParams->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&listenerParams->pAllowedSenderRoot);
         listenerParams->pAllowedSenderRoot = NULL;
+        listenerParams->bOwnAllowedSenderRoot = 0;
         listenerParams->bUseLegacyAllowedSender = 1;
     }
     CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, listenerParams));
@@ -1298,6 +1364,7 @@ finalize_it:
 
 static rsRetVal applyInputRateCompressionParam(const char *const name,
                                                const struct cnfparamvals *const value,
+                                               const modConfData_t *const moduleConfig,
                                                instanceConf_t *const inst,
                                                const sbool emitDiagnostics,
                                                int *const handled) {
@@ -1305,16 +1372,21 @@ static rsRetVal applyInputRateCompressionParam(const char *const name,
 
     *handled = 1;
     if (!strcmp(name, "allowedsender")) {
+        int allNumeric;
         if (value->val.d.ar == NULL || value->val.d.ar->nmemb == 0) {
             if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
             ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
         }
         inst->bAllowedSendersSet = 1;
+        CHKiRet(captureReloadAllowedSenderSpecs(value->val.d.ar, &inst->reloadAllowedSenderSpecs,
+                                                &inst->reloadAllowedSenderSpecCount, &allNumeric));
+        inst->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allNumeric;
+        if (!inst->reloadAllowedSendersMaterialized) FINALIZE;
         for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
             uchar *sender = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
             CHKmalloc(sender);
-            const rsRetVal entryRet =
-                net.addAllowedSenderEntry(&inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
+            const rsRetVal entryRet = net.addAllowedSenderEntryForConfig(
+                moduleConfig->pConf, &inst->pAllowedSendersRoot, &inst->pAllowedSendersLast, sender);
             free(sender);
             CHKiRet(entryRet);
         }
@@ -1366,7 +1438,8 @@ static rsRetVal applyInputParams(const modConfData_t *const moduleConfig,
         if (handled) continue;
         CHKiRet(applyInputMessageParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
         if (handled) continue;
-        CHKiRet(applyInputRateCompressionParam(inppblk.descr[i].name, &pvals[i], inst, emitDiagnostics, &handled));
+        CHKiRet(applyInputRateCompressionParam(inppblk.descr[i].name, &pvals[i], moduleConfig, inst, emitDiagnostics,
+                                               &handled));
         if (!handled) dbgprintf("imtcp: program error, non-handled param '%s'\n", inppblk.descr[i].name);
     }
 
@@ -1523,16 +1596,22 @@ static rsRetVal applyModuleParams(modConfData_t *const moduleConfig,
                 free(peer);
             }
         } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
+            int allNumeric;
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
                 if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
             moduleConfig->bAllowedSendersSet = 1;
+            CHKiRet(captureReloadAllowedSenderSpecs(pvals[i].val.d.ar, &moduleConfig->reloadAllowedSenderSpecs,
+                                                    &moduleConfig->reloadAllowedSenderSpecCount, &allNumeric));
+            moduleConfig->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allNumeric;
+            if (!moduleConfig->reloadAllowedSendersMaterialized) continue;
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
                 CHKmalloc(sender);
-                const rsRetVal entryRet = net.addAllowedSenderEntry(&moduleConfig->pAllowedSendersRoot,
-                                                                    &moduleConfig->pAllowedSendersLast, sender);
+                const rsRetVal entryRet =
+                    net.addAllowedSenderEntryForConfig(moduleConfig->pConf, &moduleConfig->pAllowedSendersRoot,
+                                                       &moduleConfig->pAllowedSendersLast, sender);
                 free(sender);
                 CHKiRet(entryRet);
             }
@@ -1719,6 +1798,16 @@ static int reloadAllowedSendersEqual(const struct AllowedSenders *left, const st
     return left == NULL && right == NULL;
 }
 
+static int reloadAllowedSenderSpecsEqual(char *const *const left,
+                                         const size_t leftCount,
+                                         char *const *const right,
+                                         const size_t rightCount) {
+    if (leftCount != rightCount) return 0;
+    for (size_t i = 0; i < leftCount; ++i)
+        if (!reloadStringEqual(left[i], right[i])) return 0;
+    return 1;
+}
+
 static const uchar *reloadEffectiveString(const uchar *const inputValue, const uchar *const moduleValue) {
     return inputValue == NULL ? moduleValue : inputValue;
 }
@@ -1745,6 +1834,58 @@ static const struct AllowedSenders *reloadEffectiveAllowedSenders(const instance
     }
     *usesLegacy = 1;
     return NULL;
+}
+
+static void reloadEffectiveAllowedSenderSpecs(const instanceConf_t *const inst,
+                                              const modConfData_t *const module,
+                                              char *const **const specs,
+                                              size_t *const count,
+                                              int *const materialized) {
+    if (inst->bAllowedSendersSet) {
+        *specs = inst->reloadAllowedSenderSpecs;
+        *count = inst->reloadAllowedSenderSpecCount;
+        *materialized = inst->reloadAllowedSendersMaterialized;
+    } else if (module->bAllowedSendersSet) {
+        *specs = module->reloadAllowedSenderSpecs;
+        *count = module->reloadAllowedSenderSpecCount;
+        *materialized = module->reloadAllowedSendersMaterialized;
+    } else {
+        *specs = NULL;
+        *count = 0;
+        *materialized = 1;
+    }
+}
+
+static int reloadAllowedSenderConfigEqual(const instanceConf_t *const left,
+                                          const modConfData_t *const leftModule,
+                                          const instanceConf_t *const right,
+                                          const modConfData_t *const rightModule) {
+    char *const *leftSpecs;
+    char *const *rightSpecs;
+    size_t leftCount;
+    size_t rightCount;
+    int leftMaterialized;
+    int rightMaterialized;
+
+    reloadEffectiveAllowedSenderSpecs(left, leftModule, &leftSpecs, &leftCount, &leftMaterialized);
+    reloadEffectiveAllowedSenderSpecs(right, rightModule, &rightSpecs, &rightCount, &rightMaterialized);
+    (void)leftMaterialized;
+    (void)rightMaterialized;
+    return reloadAllowedSenderSpecsEqual(leftSpecs, leftCount, rightSpecs, rightCount);
+}
+
+static int reloadAllowedSenderChangeSupported(const instanceConf_t *const left,
+                                              const modConfData_t *const leftModule,
+                                              const instanceConf_t *const right,
+                                              const modConfData_t *const rightModule) {
+    char *const *specs;
+    size_t count;
+    int leftMaterialized;
+    int rightMaterialized;
+
+    reloadEffectiveAllowedSenderSpecs(left, leftModule, &specs, &count, &leftMaterialized);
+    reloadEffectiveAllowedSenderSpecs(right, rightModule, &specs, &count, &rightMaterialized);
+    return leftMaterialized && rightMaterialized;
 }
 
 static int reloadEndpointConfigEqual(const instanceConf_t *const left,
@@ -1841,7 +1982,9 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
            reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
-           leftLegacyAcl == rightLegacyAcl && reloadAllowedSendersEqual(leftAllowed, rightAllowed) &&
+           (ignoreLiveFields ||
+            (leftLegacyAcl == rightLegacyAcl && reloadAllowedSenderConfigEqual(left, leftModule, right, rightModule) &&
+             reloadAllowedSendersEqual(leftAllowed, rightAllowed))) &&
            reloadPermittedPeersEqual(reloadEffectivePermittedPeers(left, leftModule),
                                      reloadEffectivePermittedPeers(right, rightModule));
 }
@@ -1967,6 +2110,9 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
     int newSessionsChanged;
 
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
+    if (!reloadAllowedSenderConfigEqual(oldInst, oldConfig, newInst, newConfig) &&
+        !reloadAllowedSenderChangeSupported(oldInst, oldConfig, newInst, newConfig))
+        return 0;
     /* Growing the session table is allocation-free at commit because Prepare
      * reserves the replacement table.  Shrinking remains fail-closed, as does
      * a growth that would change cold-start listen-backlog semantics. */
@@ -2073,6 +2219,12 @@ typedef struct imtcpReloadEntryV1_s {
     int sessionMax;
     uint64_t fenceToken;
     int fenceAcquired;
+    struct AllowedSenders *preparedAllowedSenders;
+    struct AllowedSenders *retiredAllowedSenders;
+    int retiredAllowedSendersOwned;
+    int useLegacyAllowedSender;
+    int applyAllowedSenders;
+    unsigned char *sessionAllowed;
 } imtcpReloadEntryV1_t;
 
 typedef struct imtcpReloadStateV1_s {
@@ -2117,7 +2269,41 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
         state->entries[i].preparedSessionSlots = NULL;
         free(state->entries[i].retiredSessionSlots);
         state->entries[i].retiredSessionSlots = NULL;
+        net.DestructAllowedSenders(&state->entries[i].preparedAllowedSenders);
+        if (state->entries[i].retiredAllowedSendersOwned)
+            net.DestructAllowedSenders(&state->entries[i].retiredAllowedSenders);
+        state->entries[i].retiredAllowedSenders = NULL;
+        state->entries[i].retiredAllowedSendersOwned = 0;
+        free(state->entries[i].sessionAllowed);
+        state->entries[i].sessionAllowed = NULL;
     }
+}
+
+static rsRetVal discardReloadAclMessage(tcps_sess_t *const session, uchar *const message, const int length) {
+    (void)message;
+    (void)length;
+    if (session != NULL && session->pLstnInfo != NULL)
+        STATSCOUNTER_INC(session->pLstnInfo->ctrReloadAclDropped, session->pLstnInfo->mutCtrReloadAclDropped);
+    return RS_RET_OK;
+}
+
+typedef struct imtcpAclEvaluation_s {
+    struct AllowedSenders *root;
+    int useLegacy;
+} imtcpAclEvaluation_t;
+
+static rsRetVal evaluateReloadAclSession(tcps_sess_t *const session, void *const context, int *const allowed) {
+    imtcpAclEvaluation_t *const acl = context;
+    struct sockaddr *address = NULL;
+    rsRetVal ret;
+
+    if (session == NULL || acl == NULL || allowed == NULL) return RS_RET_PARAM_ERROR;
+    ret = netstrm.GetRemAddr(session->pStrm, &address);
+    if (ret != RS_RET_OK) return ret;
+    const char *const hostname = propGetSzStrOrDefault(session->fromHost, "(hostname unknown)");
+    *allowed = acl->useLegacy ? net.isAllowedSender2(UCHAR_CONSTANT("TCP"), address, hostname, 1)
+                              : net.isAllowedSenderList(acl->root, address, hostname, 1);
+    return RS_RET_OK;
 }
 
 static rsRetVal startSrvWrkr(tcpsrv_etry_t *etry, int parked);
@@ -2261,6 +2447,27 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
             ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         state->count = index + 1;
         state->entries[index].sessionMax = newInst->iTCPSessMax;
+        {
+            char *const *aclSpecs;
+            size_t aclSpecCount;
+            int aclMaterialized;
+            struct AllowedSenders *allowedLast = NULL;
+            const struct AllowedSenders *const allowed =
+                reloadEffectiveAllowedSenders(newInst, newConfig, &state->entries[index].useLegacyAllowedSender);
+            reloadEffectiveAllowedSenderSpecs(newInst, newConfig, &aclSpecs, &aclSpecCount, &aclMaterialized);
+            (void)aclSpecs;
+            (void)aclSpecCount;
+            if (!aclMaterialized) {
+                if (state->entries[index].addition) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+            } else {
+                CHKiRet(net.cloneAllowedSenders(allowed, &state->entries[index].preparedAllowedSenders, &allowedLast));
+                state->entries[index].applyAllowedSenders = 1;
+                if (!state->entries[index].addition)
+                    CHKmalloc(state->entries[index].sessionAllowed =
+                                  calloc((size_t)state->entries[index].sessionMax,
+                                         sizeof(state->entries[index].sessionAllowed[0])));
+            }
+        }
         if (!state->entries[index].addition &&
             state->entries[index].sessionMax != state->entries[index].runtime->tcpsrv->iSessMax) {
             if (state->entries[index].sessionMax < state->entries[index].runtime->tcpsrv->iSessMax)
@@ -2347,6 +2554,18 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
     if (ret == RS_RET_OK) {
         for (size_t i = 0; i < state->count; ++i) {
             imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            imtcpAclEvaluation_t acl;
+            if (entry->addition || !entry->applyAllowedSenders) continue;
+            acl.root = entry->preparedAllowedSenders;
+            acl.useLegacy = entry->useLegacyAllowedSender;
+            ret = tcpsrv.EvaluateSessionPolicyWhileFenced(entry->runtime->tcpsrv, evaluateReloadAclSession, &acl,
+                                                          entry->sessionAllowed, (size_t)entry->sessionMax);
+            if (ret != RS_RET_OK) break;
+        }
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
             tcpsrv_t *server;
             if (entry->preparedSessionSlots == NULL) continue;
             server = entry->runtime->tcpsrv;
@@ -2396,6 +2615,14 @@ static void commitReloadV1(void *const pReloadState) {
             server->pSessions = state->entries[i].preparedSessionSlots;
             server->iSessMax = state->entries[i].sessionMax;
             state->entries[i].preparedSessionSlots = NULL;
+        }
+        if (!state->entries[i].addition && state->entries[i].applyAllowedSenders) {
+            tcpsrv.SwapAllowedSendersLive(
+                server, state->entries[i].preparedAllowedSenders, state->entries[i].useLegacyAllowedSender,
+                &state->entries[i].retiredAllowedSenders, &state->entries[i].retiredAllowedSendersOwned);
+            state->entries[i].preparedAllowedSenders = NULL;
+            tcpsrv.ApplySessionPolicyLive(server, state->entries[i].sessionAllowed,
+                                          (size_t)state->entries[i].sessionMax, discardReloadAclMessage);
         }
         tcpsrv_reload_profile_t profile = {
             .useFlowControl = state->entries[i].flowControl,
@@ -2511,7 +2738,6 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     if (object->objType == CNFOBJ_MODULE && sourceModuleIsImtcp(object)) {
         const struct nvlst *const load = findSourceParam(object->nvlst, "load");
         if (build->moduleSeen) ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
-        if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
         CHKiRet(validateSourceParams(object->nvlst, &modpblk, "load"));
         CHKmalloc(build->config->reloadModuleLoadName = es_str2cstr(load->val.d.estr, NULL));
         CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
@@ -2523,7 +2749,6 @@ static rsRetVal lowerReloadSourceObject(const struct cnfobj *const object,
     }
     if (object->objType != CNFOBJ_INPUT || !sourceInputIsImtcp(object)) FINALIZE;
     if (!build->moduleSeen) ABORT_FINALIZE(RS_RET_NOT_FOUND);
-    if (findSourceParam(object->nvlst, "allowedsender") != NULL) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     CHKiRet(validateSourceParams(object->nvlst, &inppblk, "type"));
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &paramsClone));
     pvals = nvlstGetParams(paramsClone, &inppblk, NULL);
@@ -2563,6 +2788,7 @@ static rsRetVal buildReloadSourceCandidateV1(const modReloadSourceBuildContextV1
     CHKmalloc(candidate = calloc(1, sizeof(*candidate)));
     candidate->pConf = (rsconf_t *)context->activeBase;
     initModuleDefaults(candidate);
+    candidate->reloadSnapshot = RSTRUE;
     build.config = candidate;
     build.moduleSeen = 0;
     CHKiRet(rsReloadCandidateVisitObjectsV1(context->sourceCatalog, lowerReloadSourceObject, &build));
@@ -2725,6 +2951,7 @@ static void destructModuleConfigContents(modConfData_t *const pModConf) {
     if (pModConf == NULL) return;
     free(pModConf->gnutlsPriorityString);
     free(pModConf->reloadModuleLoadName);
+    freeReloadAllowedSenderSpecs(&pModConf->reloadAllowedSenderSpecs, &pModConf->reloadAllowedSenderSpecCount);
     free(pModConf->pszNetworkNamespace);
     free(pModConf->pszStrmDrvrName);
     free(pModConf->pszStrmDrvrAuthMode);
@@ -2741,6 +2968,7 @@ static void destructModuleConfigContents(modConfData_t *const pModConf) {
     }
 
     for (inst = pModConf->root; inst != NULL;) {
+        freeReloadAllowedSenderSpecs(&inst->reloadAllowedSenderSpecs, &inst->reloadAllowedSenderSpecCount);
         free((void *)inst->pszBindRuleset);
         free((void *)inst->pszStrmDrvrAuthMode);
         free((void *)inst->pszNetworkNamespace);

@@ -49,12 +49,26 @@ if [[ "$(grep -c '^  - type: imtcp$' "$CONF_FILE.base")" -ne 1 ]]; then
 fi
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+# Listener-thread retirement may finish just after HUP publication. The polls
+# only bound hangs; stable generation 2 with pending 1 -> 0 proves completion.
+for ((seed_retire_try = 1; seed_retire_try <= 50; ++seed_retire_try)); do
+	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+	if [[ "$reload_status" == *"result=activated active_generation=2"* &&
+	      "$reload_status" == *"removed=1"* &&
+	      "$reload_status" == *"source_capability=drain_replace"* &&
+	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activated active_generation=2"* ||
+	      "$reload_status" != *"removed=1"* ||
+	      "$reload_status" != *"source_capability=drain_replace"* ||
+	      "$reload_status" != *"retirement_pending=1"* ]]; then
+		echo "FAIL: unexpected YAML status while retiring replacement seed: $reload_status"
+		error_exit 1
+	fi
+	"$TESTTOOL_DIR/msleep" 100
+done
 if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-      "$reload_status" != *"removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: YAML replacement seed did not retire: $reload_status"
+	echo "FAIL: YAML replacement seed did not finish retirement after $((seed_retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi
 if (exec 7<>"/dev/tcp/127.0.0.1/$REPLACEMENT_PORT") 2>/dev/null; then

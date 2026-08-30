@@ -201,9 +201,11 @@ When an endpoint is removed, it stops accepting new sessions but its existing
 sessions remain alive.  For those sessions, TLS, framing, and compression are
 frozen for the lifetime of the session.  A compatible ruleset update changes a
 session's ruleset-shell pointer through an event-loop control event at the
-safepoint, namely before the next complete message is processed.  An ACL change
-is evaluated for the next message and may drop that message without
-disconnecting the session.  Removing a ruleset still bound to a preserved
+safepoint, namely before the next complete message is processed.  A supported
+numeric ``allowedSender`` change is evaluated for every established session at
+that safepoint and may drop its next message without disconnecting it.  Changed
+hostname and wildcard ACLs remain restart-required because private preparation
+must not perform DNS resolution.  Removing a ruleset still bound to a preserved
 session rejects the candidate; no fallback rebinding is permitted.
 
 If a listener is incompatible, the candidate must prepare the replacement
@@ -316,10 +318,14 @@ disablement, and truncated-message policy—also changes only for later
 connections, as do octet-counted framing support and the compression mode,
 driver, and resource limits.  Multiline framing and its delimiter regex are
 accept-profile updates: each established session owns its compiled regex while
-Prepare validates the next pattern before the allocation-free commit.  TLS,
-endpoint-in-place replacement, ACL, named rate-limit policy, and
-listener-structure fields remain conservatively restart-required until their
-corresponding prepare, ownership, and reconciliation contracts are implemented.
+Prepare validates the next pattern before the allocation-free commit.  Numeric
+``allowedSender`` lists are prepared privately and swapped at the same fence;
+the existing session submit hook accounts denied records in
+``reload_acl_message_dropped_total`` without adding work to the allowed-message
+path.  Hostname and wildcard ACL changes, TLS, endpoint-in-place replacement,
+named rate-limit policy, and listener-structure fields remain conservatively
+restart-required until their corresponding prepare, ownership, and
+reconciliation contracts are implemented.
 An endpoint change that resolves to a distinct fixed socket tuple is reconciled
 as a prepared addition plus drain-removal: the old accept socket closes at
 commit, its established sessions retain the retired listener generation, and

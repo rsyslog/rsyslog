@@ -27,12 +27,26 @@ sed 's/input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSY
 	"$CONF_FILE.startup" >"$CONF_FILE.base"
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
-reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+# Listener-thread retirement can complete just after publication. Polling is
+# only a hang bound; stable generation 2 and pending 1 -> 0 prove completion.
+for ((seed_retire_try = 1; seed_retire_try <= 50; ++seed_retire_try)); do
+	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+	if [[ "$reload_status" == *"result=activated active_generation=2"* &&
+	      "$reload_status" == *"removed=1"* &&
+	      "$reload_status" == *"source_capability=drain_replace"* &&
+	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activated active_generation=2"* ||
+	      "$reload_status" != *"removed=1"* ||
+	      "$reload_status" != *"source_capability=drain_replace"* ||
+	      "$reload_status" != *"retirement_pending=1"* ]]; then
+		echo "FAIL: unexpected status while retiring replacement seed: $reload_status"
+		error_exit 1
+	fi
+	"$TESTTOOL_DIR/msleep" 100
+done
 if [[ "$reload_status" != *"result=activated active_generation=2"* ||
-      "$reload_status" != *"removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ||
       "$reload_status" != *"retirement_pending=0"* ]]; then
-	echo "FAIL: replacement seed did not retire: $reload_status"
+	echo "FAIL: replacement seed did not finish retirement after $((seed_retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi
 if (exec 7<>"/dev/tcp/127.0.0.1/$REPLACEMENT_PORT") 2>/dev/null; then

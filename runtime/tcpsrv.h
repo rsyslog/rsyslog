@@ -69,6 +69,7 @@ struct tcpLstnParams_s {
     struct AllowedSenders *pAllowedSenderRoot; /**< source-address ACL list */
     sbool bUseLegacyAllowedSender; /**< if true, use protocol-global legacy ACLs */
     sbool bDeferListen; /**< control-path prepare binds without accepting connections */
+    sbool bOwnAllowedSenderRoot; /**< listener owns and destroys its private ACL clone */
 };
 
 /* list of tcp listen ports */
@@ -78,6 +79,7 @@ struct tcpLstnPortList_s {
     statsobj_t *stats; /**< associated stats object */
     ratelimit_t *ratelimiter;
     STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+    STATSCOUNTER_DEF(ctrReloadAclDropped, mutCtrReloadAclDropped)
     STATSCOUNTER_DEF(ctrBytesRcvd, mutCtrBytesRcvd)
     STATSCOUNTER_DEF(ctrBytesDecompressed, mutCtrBytesDecompressed)
     STATSCOUNTER_DEF(ctrDecompressErr, mutCtrDecompressErr)
@@ -135,6 +137,8 @@ typedef struct tcpsrv_reload_profile_s {
     uchar defaultTZ[8];
     ruleset_t *ruleset;
 } tcpsrv_reload_profile_t;
+
+typedef rsRetVal (*tcpsrv_reload_session_policy_eval_t)(tcps_sess_t *session, void *context, int *allowed);
 
 
 typedef struct tcpsrvWrkrData_s {
@@ -436,9 +440,16 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* added v38 -- infallibly publish a validated live/accept profile */
     void (*ApplyReloadProfile)(tcpsrv_t *pThis, const tcpsrv_reload_profile_t *profile);
     /* v39 extends the reload profile with a prevalidated session regex */
+    /* v40 adds fenced ACL evaluation and infallible policy publication. */
+    rsRetVal (*EvaluateSessionPolicyWhileFenced)(tcpsrv_t *server, tcpsrv_reload_session_policy_eval_t evaluate,
+                                                 void *context, unsigned char *allowed, size_t allowedCount);
+    void (*ApplySessionPolicyLive)(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount,
+                                   rsRetVal (*blockedSubmit)(tcps_sess_t *, uchar *, int));
+    void (*SwapAllowedSendersLive)(tcpsrv_t *server, struct AllowedSenders *preparedRoot, int useLegacy,
+                                   struct AllowedSenders **retiredRoot, int *retiredOwned);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 39 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 40 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -500,6 +511,20 @@ void tcpsrvApplyMultiLineForNewSessions(tcpsrv_t *pThis, int enabled);
 void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *pThis, uchar *preparedRegex);
 void tcpsrvApplyDefaultTZLive(tcpsrv_t *pThis, const uchar *defaultTZ);
 void tcpsrvApplyRulesetLive(tcpsrv_t *pThis, ruleset_t *ruleset);
+rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *server,
+                                                tcpsrv_reload_session_policy_eval_t evaluate,
+                                                void *context,
+                                                unsigned char *allowed,
+                                                size_t allowedCount);
+void tcpsrvApplySessionPolicyLive(tcpsrv_t *server,
+                                  const unsigned char *allowed,
+                                  size_t allowedCount,
+                                  rsRetVal (*blockedSubmit)(tcps_sess_t *, uchar *, int));
+void tcpsrvSwapAllowedSendersLive(tcpsrv_t *server,
+                                  struct AllowedSenders *preparedRoot,
+                                  int useLegacy,
+                                  struct AllowedSenders **retiredRoot,
+                                  int *retiredOwned);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

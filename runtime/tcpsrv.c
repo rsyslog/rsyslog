@@ -430,6 +430,7 @@ static void freeLstnParams(tcpLstnParams_t *cnf_params) {
     if (cnf_params->pInputName != NULL) {
         prop.Destruct(&cnf_params->pInputName);
     }
+    if (cnf_params->bOwnAllowedSenderRoot) net.DestructAllowedSenders(&cnf_params->pAllowedSenderRoot);
     free((void *)cnf_params->pszInputName);
     free((void *)cnf_params->pszPort);
     free((void *)cnf_params->pszAddr);
@@ -507,11 +508,14 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     CHKiRet(statsobj.SetName(pEntry->stats, statname));
     CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
     STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
+    STATSCOUNTER_INIT(pEntry->ctrReloadAclDropped, pEntry->mutCtrReloadAclDropped);
     STATSCOUNTER_INIT(pEntry->ctrBytesRcvd, pEntry->mutCtrBytesRcvd);
     STATSCOUNTER_INIT(pEntry->ctrBytesDecompressed, pEntry->mutCtrBytesDecompressed);
     STATSCOUNTER_INIT(pEntry->ctrDecompressErr, pEntry->mutCtrDecompressErr);
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pEntry->ctrSubmit)));
+    CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("reload_acl_message_dropped_total"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(pEntry->ctrReloadAclDropped)));
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.received"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pEntry->ctrBytesRcvd)));
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.decompressed"), ctrType_IntCtr,
@@ -2402,6 +2406,56 @@ static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const t
     tcpsrvApplyRulesetLive(pThis, profile->ruleset);
 }
 
+rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *const server,
+                                                tcpsrv_reload_session_policy_eval_t evaluate,
+                                                void *const context,
+                                                unsigned char *const allowed,
+                                                const size_t allowedCount) {
+    if (server == NULL || evaluate == NULL || allowed == NULL || allowedCount < (size_t)server->iSessMax)
+        return RS_RET_PARAM_ERROR;
+    if (!server->fenceAcquired || !server->fenceOwnerValid || !pthread_equal(server->fenceOwner, pthread_self()))
+        return RS_RET_PARAM_ERROR;
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = TCPSessTblLoad(server, i);
+        int permitted = 1;
+        if (session != NULL) {
+            const rsRetVal ret = evaluate(session, context, &permitted);
+            if (ret != RS_RET_OK) return ret;
+        }
+        allowed[i] = permitted != 0;
+    }
+    return RS_RET_OK;
+}
+
+void tcpsrvApplySessionPolicyLive(tcpsrv_t *const server,
+                                  const unsigned char *const allowed,
+                                  const size_t allowedCount,
+                                  rsRetVal (*const blockedSubmit)(tcps_sess_t *, uchar *, int)) {
+    (void)allowedCount;
+    assert(server != NULL && allowed != NULL && allowedCount >= (size_t)server->iSessMax && blockedSubmit != NULL);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    for (int i = 0; i < server->iSessMax; ++i) {
+        tcps_sess_t *const session = TCPSessTblLoad(server, i);
+        if (session != NULL) session->DoSubmitMessage = allowed[i] ? NULL : blockedSubmit;
+    }
+}
+
+void tcpsrvSwapAllowedSendersLive(tcpsrv_t *const server,
+                                  struct AllowedSenders *const preparedRoot,
+                                  const int useLegacy,
+                                  struct AllowedSenders **const retiredRoot,
+                                  int *const retiredOwned) {
+    tcpLstnPortList_t *const listener = server->pLstnPorts;
+    assert(listener != NULL && listener->pNext == NULL && listener->cnf_params != NULL);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    assert(retiredRoot != NULL && *retiredRoot == NULL && retiredOwned != NULL);
+    *retiredRoot = listener->cnf_params->pAllowedSenderRoot;
+    *retiredOwned = listener->cnf_params->bOwnAllowedSenderRoot;
+    listener->cnf_params->pAllowedSenderRoot = preparedRoot;
+    listener->cnf_params->bOwnAllowedSenderRoot = preparedRoot != NULL;
+    listener->cnf_params->bUseLegacyAllowedSender = useLegacy;
+}
+
 void tcpsrvApplyStartRegexForNewSessions(tcpsrv_t *const server, uchar *const preparedRegex) {
     tcpLstnPortList_t *const listener = server->pLstnPorts;
 
@@ -2790,6 +2844,9 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->ActivatePreparedListeners = tcpsrvActivatePreparedListeners;
     pIf->DisableAcceptWhileFenced = tcpsrvDisableAcceptWhileFenced;
     pIf->ApplyReloadProfile = ApplyReloadProfile;
+    pIf->EvaluateSessionPolicyWhileFenced = tcpsrvEvaluateSessionPolicyWhileFenced;
+    pIf->ApplySessionPolicyLive = tcpsrvApplySessionPolicyLive;
+    pIf->SwapAllowedSendersLive = tcpsrvSwapAllowedSendersLive;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

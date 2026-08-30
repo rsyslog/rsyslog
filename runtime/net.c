@@ -601,10 +601,11 @@ static void DestructAllowedSenders(struct AllowedSenders **ppRoot) {
  * If a hostname is given there are possible multiple entries
  * added (all addresses from that host).
  */
-static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
-                                 struct AllowedSenders **ppLast,
-                                 struct NetAddr *iAllow,
-                                 uint8_t iSignificantBits) {
+static rsRetVal AddAllowedSenderForConfig(rsconf_t *const config,
+                                          struct AllowedSenders **ppRoot,
+                                          struct AllowedSenders **ppLast,
+                                          struct NetAddr *iAllow,
+                                          uint8_t iSignificantBits) {
     struct addrinfo *restmp = NULL;
     DEFiRet;
 
@@ -657,13 +658,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
         iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
     } else {
         /* we need to process a hostname ACL */
-        if (glbl.GetDisableDNS(loadConf)) {
+        if (config == NULL) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        if (glbl.GetDisableDNS(config)) {
             LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
             ABORT_FINALIZE(RS_RET_OK);
         }
 
         if (!strchr(iAllow->addr.HostWildcard, '*') && !strchr(iAllow->addr.HostWildcard, '?') &&
-            loadConf->globals.ACLDontResolve == 0) {
+            config->globals.ACLDontResolve == 0) {
             /* single host - in this case, we pull its IP addresses from DNS
              * and add IP-based ACLs.
              */
@@ -680,7 +682,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
             if (getaddrinfo(iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
                 LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 
-                if (loadConf->globals.ACLAddHostnameOnFail) {
+                if (config->globals.ACLAddHostnameOnFail) {
                     LogError(0, NO_ERRCODE,
                              "Adding hostname \"%s\" to ACL as a wildcard "
                              "entry.",
@@ -767,6 +769,13 @@ finalize_it:
         freeaddrinfo(restmp);
     }
     RETiRet;
+}
+
+static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
+                                 struct AllowedSenders **ppLast,
+                                 struct NetAddr *iAllow,
+                                 uint8_t iSignificantBits) {
+    return AddAllowedSenderForConfig(loadConf, ppRoot, ppLast, iAllow, iSignificantBits);
 }
 
 
@@ -900,9 +909,10 @@ static rsRetVal addAllowedSenderLine(char *pName, uchar **ppRestOfConfLine) {
 }
 
 
-static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
-                                      struct AllowedSenders **ppLast,
-                                      uchar *pszAllowedSender) {
+rsRetVal netAddAllowedSenderEntryForConfig(rsconf_t *const config,
+                                           struct AllowedSenders **ppRoot,
+                                           struct AllowedSenders **ppLast,
+                                           uchar *pszAllowedSender) {
     rsParsObj *pPars = NULL;
     struct NetAddr *uIP = NULL;
     int iBits;
@@ -918,7 +928,7 @@ static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
         LogError(0, RS_RET_INVALID_PARAMS, "Invalid extra data after allowedSender entry '%s'", pszAllowedSender);
         ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
     }
-    iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits);
+    iRet = AddAllowedSenderForConfig(config, ppRoot, ppLast, uIP, iBits);
     if (iRet == RS_RET_NOENTRY) {
         LogError(0, iRet, "Error %d adding allowedSender entry '%s' - ignoring.", iRet, pszAllowedSender);
         iRet = RS_RET_OK;
@@ -931,6 +941,85 @@ finalize_it:
     }
     if (pPars != NULL) {
         rsParsDestruct(pPars);
+    }
+    RETiRet;
+}
+
+static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
+                                      struct AllowedSenders **ppLast,
+                                      uchar *pszAllowedSender) {
+    return netAddAllowedSenderEntryForConfig(loadConf, ppRoot, ppLast, pszAllowedSender);
+}
+
+rsRetVal netAllowedSenderEntryIsNumeric(uchar *const allowedSender, int *const isNumeric) {
+    rsParsObj *parser = NULL;
+    struct NetAddr *address = NULL;
+    uchar *parseText = NULL;
+    int bits;
+    DEFiRet;
+
+    if (allowedSender == NULL || isNumeric == NULL) return RS_RET_PARAM_ERROR;
+    *isNumeric = 0;
+    const size_t length = strlen((const char *)allowedSender);
+    if (length > SIZE_MAX - 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(parseText = malloc(length + 2));
+    memcpy(parseText, allowedSender, length);
+    /* parsAddrWithBits historically peeks at the delimiter after the address.
+     * Supply an initialized delimiter instead of making this read depend on
+     * cstr's spare byte at the logical end of an exact input string. */
+    parseText[length] = ' ';
+    parseText[length + 1] = '\0';
+    CHKiRet(rsParsConstructFromSz(&parser, parseText));
+    CHKiRet(parsAddrWithBits(parser, &address, &bits));
+    if (!parsIsAtEndOfParseString(parser)) ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    *isNumeric = !F_ISSET(address->flags, ADDR_NAME);
+
+finalize_it:
+    if (address != NULL) {
+        if (F_ISSET(address->flags, ADDR_NAME))
+            free(address->addr.HostWildcard);
+        else
+            free(address->addr.NetAddr);
+        free(address);
+    }
+    if (parser != NULL) rsParsDestruct(parser);
+    free(parseText);
+    RETiRet;
+}
+
+void netDestructAllowedSenders(struct AllowedSenders **const root) {
+    DestructAllowedSenders(root);
+}
+
+rsRetVal netCloneAllowedSenders(const struct AllowedSenders *source,
+                                struct AllowedSenders **const root,
+                                struct AllowedSenders **const last) {
+    DEFiRet;
+
+    if (root == NULL || last == NULL || *root != NULL || *last != NULL) return RS_RET_PARAM_ERROR;
+    for (; source != NULL; source = source->pNext) {
+        struct NetAddr address = {.flags = source->allowedSender.flags};
+        if (F_ISSET(address.flags, ADDR_NAME)) {
+            CHKmalloc(address.addr.HostWildcard = strdup(source->allowedSender.addr.HostWildcard));
+        } else {
+            const socklen_t length = SALEN(source->allowedSender.addr.NetAddr);
+            CHKmalloc(address.addr.NetAddr = malloc(length));
+            memcpy(address.addr.NetAddr, source->allowedSender.addr.NetAddr, length);
+        }
+        iRet = AddAllowedSenderEntry(root, last, &address, source->SignificantBits);
+        if (iRet != RS_RET_OK) {
+            if (F_ISSET(address.flags, ADDR_NAME))
+                free(address.addr.HostWildcard);
+            else
+                free(address.addr.NetAddr);
+            FINALIZE;
+        }
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        netDestructAllowedSenders(root);
+        *last = NULL;
     }
     RETiRet;
 }
@@ -1703,6 +1792,9 @@ BEGINobjQueryInterface(net)
     pIf->CmpHost = CmpHost;
     pIf->HasRestrictions = HasRestrictions;
     pIf->isAllowedSenderList = isAllowedSenderList;
+    pIf->addAllowedSenderEntryForConfig = netAddAllowedSenderEntryForConfig;
+    pIf->cloneAllowedSenders = netCloneAllowedSenders;
+    pIf->allowedSenderEntryIsNumeric = netAllowedSenderEntryIsNumeric;
     pIf->GetIFIPAddr = getIFIPAddr;
 
     pIf->netns_save = netns_save;
