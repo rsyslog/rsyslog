@@ -22,9 +22,12 @@
     do {                                                                                    \
         if (!(condition)) {                                                                 \
             fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
-            exit(1);                                                                        \
+            testFailed = 1;                                                                 \
+            goto finalize_it;                                                               \
         }                                                                                   \
     } while (0)
+
+static int testFailed;
 
 typedef struct observedNodes_s {
     const rsReloadNormalizedNodeV1_t *nodes[4];
@@ -34,7 +37,10 @@ typedef struct observedNodes_s {
 static rsRetVal observeNode(const rsReloadNormalizedNodeV1_t *node, void *context) {
     observedNodes_t *observed = context;
 
-    CHECK(observed->count < sizeof(observed->nodes) / sizeof(observed->nodes[0]));
+    if (observed->count >= sizeof(observed->nodes) / sizeof(observed->nodes[0])) {
+        fprintf(stderr, "observed-node capacity exceeded\n");
+        return RS_RET_ERR;
+    }
     observed->nodes[observed->count++] = node;
     return RS_RET_OK;
 }
@@ -110,6 +116,10 @@ int main(void) {
     rsReloadReportDestructV1(&report);
     rsReloadNormalizedGraphBuilderV1Destruct(&newBuilder);
     rsReloadNormalizedGraphBuilderV1Destruct(&oldBuilder);
-    puts("reload normalized graph tests passed");
-    return 0;
+finalize_it:
+    rsReloadReportDestructV1(&report);
+    rsReloadNormalizedGraphBuilderV1Destruct(&newBuilder);
+    rsReloadNormalizedGraphBuilderV1Destruct(&oldBuilder);
+    if (!testFailed) puts("reload normalized graph tests passed");
+    return testFailed;
 }

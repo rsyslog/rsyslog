@@ -18,14 +18,19 @@
     do {                                                                                    \
         if (!(condition)) {                                                                 \
             fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
-            exit(1);                                                                        \
+            testFailed = 1;                                                                 \
+            goto finalize_it;                                                               \
         }                                                                                   \
     } while (0)
+
+static int testFailed;
 
 typedef struct graphFixture_s {
     const rsReloadNormalizedNodeV1_t *nodes;
     size_t count;
 } graphFixture_t;
+
+static rsRetVal enumerateFailure(void *context, rsReloadGraphVisitorV1_t visitor, void *visitorContext);
 
 static rsRetVal enumerateFixture(void *context, rsReloadGraphVisitorV1_t visitor, void *visitorContext) {
     graphFixture_t *fixture = context;
@@ -44,7 +49,13 @@ static rsReloadNormalizedGraphV1_t graphFor(const rsReloadNormalizedNodeV1_t *no
     graphFixture_t *fixture;
     rsReloadNormalizedGraphV1_t graph;
 
-    CHECK(next < sizeof(fixtures) / sizeof(fixtures[0]));
+    if (next >= sizeof(fixtures) / sizeof(fixtures[0])) {
+        fprintf(stderr, "graph fixture capacity exceeded\n");
+        testFailed = 1;
+        memset(&graph, 0, sizeof(graph));
+        graph.enumerate = enumerateFailure;
+        return graph;
+    }
     fixture = &fixtures[next++];
     fixture->nodes = nodes;
     fixture->count = count;
@@ -252,6 +263,10 @@ int main(void) {
     CHECK(rsReloadReportBuildV1(&oldGraph, &newGraph, &report) == RS_RET_ERR);
     CHECK(report == NULL);
 
-    puts("reload report tests passed");
-    return 0;
+finalize_it:
+    rsReloadReportDestructV1(&edgeReport);
+    rsReloadReportDestructV1(&reorderedReport);
+    rsReloadReportDestructV1(&report);
+    if (!testFailed) puts("reload report tests passed");
+    return testFailed;
 }
