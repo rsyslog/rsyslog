@@ -70,7 +70,8 @@ static rsRetVal appendObjectCatalogClone(rsReloadCandidate_t *const catalog, con
     DEFiRet;
 
     if (catalog == NULL || object == NULL) return RS_RET_PARAM_ERROR;
-    if (object->objType != CNFOBJ_GLOBAL && object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT)
+    if (object->objType != CNFOBJ_GLOBAL && object->objType != CNFOBJ_MODULE && object->objType != CNFOBJ_INPUT &&
+        object->objType != CNFOBJ_RATELIMIT)
         return RS_RET_OK;
     CHKiRet(nvlstCloneReloadSafe(object->nvlst, &parameters));
     copy = cnfobjNew(object->objType, parameters);
@@ -1381,7 +1382,8 @@ void rsReloadCandidateSourceCaptureObject(const struct cnfobj *object) {
     rsRetVal ret;
 
     if (sourceBuilder == NULL || sourceError || object == NULL) return;
-    if (object->objType == CNFOBJ_GLOBAL || object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT) {
+    if (object->objType == CNFOBJ_GLOBAL || object->objType == CNFOBJ_MODULE || object->objType == CNFOBJ_INPUT ||
+        object->objType == CNFOBJ_RATELIMIT) {
         if (appendObjectCatalogClone(sourceObjectCatalog, object) != RS_RET_OK) {
             sourceError = 1;
             return;

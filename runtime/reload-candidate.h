@@ -31,11 +31,13 @@ size_t rsReloadCandidateObjectCount(const rsReloadCandidate_t *candidate);
 rsRetVal rsReloadCandidateVisitObjectsV1(const rsReloadCandidate_t *candidate,
                                          rsReloadCandidateObjectVisitorV1_t visitor,
                                          void *context);
-/* Build an independent, ordered catalog containing global, module, and input
- * declarations. This is the source material required by base and
- * module-specific effective-profile classifiers; unrelated scripts and
+/* Build an independent, ordered catalog containing global, module, input, and
+ * named rate-limit declarations. This is the source material required by base
+ * and module-specific effective-profile classifiers; unrelated scripts and
  * objects are omitted. Sequential global blocks retain parse order so a
- * private lowerer can reproduce the startup last-write merge. */
+ * private lowerer can reproduce the startup last-write merge. Rate-limit
+ * declarations remain syntax-only until a capability-specific Prepare path
+ * validates and materializes them. */
 rsRetVal rsReloadCandidateBuildObjectCatalogV1(const rsReloadCandidate_t *candidate, rsReloadCandidate_t **ppCatalog);
 /* Identity and fragment are borrowed for the callback only. The visitor must
  * not mutate or retain them. Fragments are visited in effective parse order. */

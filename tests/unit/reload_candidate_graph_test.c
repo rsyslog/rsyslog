@@ -3,8 +3,9 @@
  * checks structural-only graph behavior without parsing, modules, a daemon,
  * or activation: default fragments merge, ruleset identities fold, secrets
  * never appear in digests, duplicate parameter keys fail, the source catalog
- * retains owned global/module/input syntax, fixed imtcp endpoint identities
- * are canonical and collision-safe, and enumeration is deterministic.
+ * retains owned global/module/input/ratelimit syntax, fixed imtcp endpoint
+ * identities are canonical and collision-safe, and enumeration is
+ * deterministic.
  */
 #include "config.h"
 
@@ -71,6 +72,8 @@ const char *cnfobjType2str(const enum cnfobjType type) {
             return "template";
         case CNFOBJ_MAINQ:
             return "main_queue";
+        case CNFOBJ_RATELIMIT:
+            return "ratelimit";
         case CNFOBJ_PROPERTY:
         case CNFOBJ_CONSTANT:
         case CNFOBJ_LOOKUP_TABLE:
@@ -78,7 +81,6 @@ const char *cnfobjType2str(const enum cnfobjType type) {
         case CNFOBJ_TIMEZONE:
         case CNFOBJ_DYN_STATS:
         case CNFOBJ_PERCTILE_STATS:
-        case CNFOBJ_RATELIMIT:
         default:
             return "opaque";
     }
@@ -361,7 +363,11 @@ static rsRetVal observeObject(const struct cnfobj *const object, const size_t pa
 
     if (observed->count >= sizeof(observed->types) / sizeof(observed->types[0])) return RS_RET_OUT_OF_MEMORY;
     observed->types[observed->count] = object->objType;
-    value = nvlstString(object->nvlst, object->objType == CNFOBJ_MODULE ? "load" : "type", &length);
+    const char *const key = object->objType == CNFOBJ_MODULE      ? "load"
+                            : object->objType == CNFOBJ_INPUT     ? "type"
+                            : object->objType == CNFOBJ_RATELIMIT ? "name"
+                                                                  : "type";
+    value = nvlstString(object->nvlst, key, &length);
     if (value != NULL) {
         if (length >= sizeof(observed->discriminator[observed->count])) return RS_RET_OUT_OF_MEMORY;
         memcpy(observed->discriminator[observed->count], value, length);
@@ -436,6 +442,7 @@ int main(void) {
     addObject(candidate, object(CNFOBJ_RULESET, named, propertyFilter(action("named-action", "supersecret"))));
     addObject(candidate, object(CNFOBJ_RULESET, NULL, action("first", "supersecret")));
     addObject(candidate, object(CNFOBJ_RULESET, NULL, action("second", "supersecret")));
+    addObject(candidate, object(CNFOBJ_RATELIMIT, parameter("name", "candidate-policy"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     addObject(candidate, object(CNFOBJ_INPUT, parameter("type", "imtcp"), NULL));
     CHECK(!constructionFailed);
@@ -448,18 +455,20 @@ int main(void) {
         CHECK(rsReloadCandidateVisitObjectsV1(NULL, observeObject, &objectObserved) == RS_RET_PARAM_ERROR);
         CHECK(rsReloadCandidateVisitObjectsV1(candidate, NULL, &objectObserved) == RS_RET_PARAM_ERROR);
         CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &objectObserved) == RS_RET_OK);
-        CHECK(objectObserved.count == 6);
+        CHECK(objectObserved.count == 7);
         CHECK(objectObserved.types[0] == CNFOBJ_GLOBAL && objectObserved.ordinals[0] == 0);
         CHECK(objectObserved.types[1] == CNFOBJ_RULESET && objectObserved.ordinals[1] == 1);
-        CHECK(objectObserved.types[5] == CNFOBJ_INPUT && objectObserved.ordinals[5] == 5);
+        CHECK(objectObserved.types[6] == CNFOBJ_INPUT && objectObserved.ordinals[6] == 6);
         CHECK(rsReloadCandidateVisitObjectsV1(candidate, observeObject, &failedObserved) == RS_RET_NOT_IMPLEMENTED);
         CHECK(failedObserved.count == 3);
         CHECK(rsReloadCandidateBuildObjectCatalogV1(candidate, &objectCatalog) == RS_RET_OK);
         CHECK(rsReloadCandidateVisitObjectsV1(objectCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-        CHECK(catalogObserved.count == 3);
+        CHECK(catalogObserved.count == 4);
         CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
-        CHECK(catalogObserved.types[1] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[1], "imtcp"));
+        CHECK(catalogObserved.types[1] == CNFOBJ_RATELIMIT &&
+              !strcmp(catalogObserved.discriminator[1], "candidate-policy"));
         CHECK(catalogObserved.types[2] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[2], "imtcp"));
+        CHECK(catalogObserved.types[3] == CNFOBJ_INPUT && !strcmp(catalogObserved.discriminator[3], "imtcp"));
         rsReloadCandidateDestruct(&objectCatalog);
     }
     /* A narrow base classifier can extract one effective global string while
@@ -498,7 +507,7 @@ int main(void) {
     CHECK(rsReloadCandidateBuildNormalizedGraphV1(candidate, &builder) == RS_RET_OK);
     CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(builder, &graph) == RS_RET_OK);
     CHECK(graph.enumerate(graph.context, observe, &observed) == RS_RET_OK);
-    CHECK(observed.count == 8);
+    CHECK(observed.count == 9);
     CHECK(!strcmp(observed.nodes[0]->identity, "global"));
     CHECK(!strncmp(observed.nodes[0]->fingerprint, "sha256:", strlen("sha256:")));
     CHECK(strstr(observed.nodes[0]->fingerprint, "supersecret") == NULL);
@@ -777,6 +786,7 @@ int main(void) {
         struct nvlst *moduleParams = parameter("load", "imtcp");
         struct cnfobj *moduleObject;
         struct cnfobj *globalObject;
+        struct cnfobj *ratelimitObject;
         struct cnfobj *namedObject;
         struct cnfobj *otherObject;
         struct cnfobj *anonymousObject;
@@ -788,39 +798,45 @@ int main(void) {
         CHECK(namedInput->next != NULL);
         moduleObject = object(CNFOBJ_MODULE, moduleParams, NULL);
         globalObject = object(CNFOBJ_GLOBAL, parameter("config.reloadOnHUP", "on"), NULL);
+        ratelimitObject = object(CNFOBJ_RATELIMIT, parameter("name", "source-policy"), NULL);
         namedObject = object(CNFOBJ_INPUT, namedInput, NULL);
         otherObject = object(CNFOBJ_INPUT, parameter("type", "imudp"), NULL);
         anonymousObject = object(CNFOBJ_INPUT, parameter("type", "ImTcP"), NULL);
-        CHECK(moduleObject != NULL && globalObject != NULL && globalObject->nvlst != NULL && namedObject != NULL &&
-              otherObject != NULL && anonymousObject != NULL && otherObject->nvlst != NULL &&
-              anonymousObject->nvlst != NULL);
+        CHECK(moduleObject != NULL && globalObject != NULL && globalObject->nvlst != NULL && ratelimitObject != NULL &&
+              ratelimitObject->nvlst != NULL && namedObject != NULL && otherObject != NULL && anonymousObject != NULL &&
+              otherObject->nvlst != NULL && anonymousObject->nvlst != NULL);
         CHECK(rsReloadCandidateSourceBegin() == RS_RET_OK);
         rsReloadCandidateSourceCaptureObject(globalObject);
         rsReloadCandidateSourceCaptureObject(moduleObject);
+        rsReloadCandidateSourceCaptureObject(ratelimitObject);
         rsReloadCandidateSourceCaptureObject(namedObject);
         rsReloadCandidateSourceCaptureObject(otherObject);
         rsReloadCandidateSourceCaptureObject(anonymousObject);
         CHECK(rsReloadCandidateSourceFinish(&observedSourceBuilder, &observedSourceCatalog) == RS_RET_OK);
-        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 5);
+        CHECK(rsReloadCandidateObjectCount(observedSourceCatalog) == 6);
         cnfobjDestruct(globalObject);
         cnfobjDestruct(moduleObject);
+        cnfobjDestruct(ratelimitObject);
         cnfobjDestruct(namedObject);
         cnfobjDestruct(otherObject);
         cnfobjDestruct(anonymousObject);
         {
             objectObserved_t catalogObserved = {.failAt = SIZE_MAX};
             CHECK(rsReloadCandidateVisitObjectsV1(observedSourceCatalog, observeObject, &catalogObserved) == RS_RET_OK);
-            CHECK(catalogObserved.count == 5);
+            CHECK(catalogObserved.count == 6);
             CHECK(catalogObserved.types[0] == CNFOBJ_GLOBAL);
             CHECK(catalogObserved.types[1] == CNFOBJ_MODULE);
             CHECK(!strcmp(catalogObserved.discriminator[1], "imtcp"));
-            CHECK(catalogObserved.types[4] == CNFOBJ_INPUT);
-            CHECK(!strcmp(catalogObserved.discriminator[4], "ImTcP"));
+            CHECK(catalogObserved.types[2] == CNFOBJ_RATELIMIT);
+            CHECK(!strcmp(catalogObserved.discriminator[2], "source-policy"));
+            CHECK(catalogObserved.types[5] == CNFOBJ_INPUT);
+            CHECK(!strcmp(catalogObserved.discriminator[5], "ImTcP"));
         }
         CHECK(rsReloadNormalizedGraphBuilderV1GetGraph(observedSourceBuilder, &sourceGraph) == RS_RET_OK);
         CHECK(sourceGraph.enumerate(sourceGraph.context, observe, &sourceObserved) == RS_RET_OK);
-        CHECK(sourceObserved.count == 5);
+        CHECK(sourceObserved.count == 6);
         CHECK(findObserved(&sourceObserved, "global") != NULL);
+        CHECK(findObserved(&sourceObserved, "ratelimit:source-policy") != NULL);
         CHECK(findObserved(&sourceObserved, "input:imtcp:anonymous:1") != NULL);
         rsReloadNormalizedGraphBuilderV1Destruct(&observedSourceBuilder);
         rsReloadCandidateDestruct(&observedSourceCatalog);
