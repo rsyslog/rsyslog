@@ -351,6 +351,10 @@ The following parameters can be set:
   character escaping (see option
   *parser.escapeControlCharactersOnReceive*).
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Escapes produced after the commit use the new
+  prefix; combined global changes remain fail-closed.
+
 - **parser.escape8BitCharactersOnReceive** [on/off]
 
   **Default:** off

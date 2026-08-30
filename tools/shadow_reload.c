@@ -108,6 +108,8 @@ static int pendingParserEscapeControlCharactersCStyle = 0;
 static int pendingParserEscapeControlCharactersCStyleUpdate = 0;
 static int pendingParserPermitSlashInProgramName = 0;
 static int pendingParserPermitSlashInProgramNameUpdate = 0;
+static uchar pendingParserControlCharacterEscapePrefix = '#';
+static int pendingParserControlCharacterEscapePrefixUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -499,6 +501,18 @@ static rsRetVal parseCandidateBinary(const char *const value, const int defaultV
     return RS_RET_OK;
 }
 
+static rsRetVal parseCandidateChar(const char *const value, const uchar defaultValue, uchar *const parsed) {
+    if (parsed == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL) {
+        *parsed = defaultValue;
+    } else if (value[0] != '\0' && value[1] == '\0') {
+        *parsed = (uchar)value[0];
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
 static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     char *activeValue = NULL;
     char *candidateValue = NULL;
@@ -516,6 +530,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeParserEscapeControlCharacterTab;
     int activeParserEscapeControlCharactersCStyle;
     int activeParserPermitSlashInProgramName;
+    uchar activeParserControlCharacterEscapePrefix;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -751,13 +766,34 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeValue, &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.permitslashinprogramname",
                                                    &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserPermitSlashInProgramName));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserPermitSlashInProgramName));
+        if (activeParserPermitSlashInProgramName != glblGetParserPermitSlashInProgramName(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserPermitSlashInProgramNameUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.controlcharacterescapeprefix",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.controlcharacterescapeprefix",
+                                                   &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserPermitSlashInProgramName));
-    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserPermitSlashInProgramName));
-    if (activeParserPermitSlashInProgramName != glblGetParserPermitSlashInProgramName(runConf))
+    CHKiRet(parseCandidateChar(activeValue, '#', &activeParserControlCharacterEscapePrefix));
+    CHKiRet(parseCandidateChar(candidateValue, '#', &pendingParserControlCharacterEscapePrefix));
+    if (activeParserControlCharacterEscapePrefix != glblGetParserControlCharacterEscapePrefix(runConf))
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingParserPermitSlashInProgramNameUpdate = 1;
+    pendingParserControlCharacterEscapePrefixUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -988,6 +1024,7 @@ void shadowReloadBeginRequest(void) {
     pendingParserEscapeControlCharacterTab = glblGetParserEscapeControlCharacterTab(runConf);
     pendingParserEscapeControlCharactersCStyle = glblGetParserEscapeControlCharactersCStyle(runConf);
     pendingParserPermitSlashInProgramName = glblGetParserPermitSlashInProgramName(runConf);
+    pendingParserControlCharacterEscapePrefix = glblGetParserControlCharacterEscapePrefix(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
@@ -1001,6 +1038,7 @@ void shadowReloadBeginRequest(void) {
     pendingParserEscapeControlCharacterTabUpdate = 0;
     pendingParserEscapeControlCharactersCStyleUpdate = 0;
     pendingParserPermitSlashInProgramNameUpdate = 0;
+    pendingParserControlCharacterEscapePrefixUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1364,6 +1402,8 @@ static void publishActivatedGeneration(void *const context) {
         glblSetParserEscapeControlCharactersCStyle(runConf, pendingParserEscapeControlCharactersCStyle);
     if (pendingParserPermitSlashInProgramNameUpdate)
         glblSetParserPermitSlashInProgramName(runConf, pendingParserPermitSlashInProgramName);
+    if (pendingParserControlCharacterEscapePrefixUpdate)
+        glblSetParserControlCharacterEscapePrefix(runConf, pendingParserControlCharacterEscapePrefix);
     publishActivatedGraph(context);
 }
 

@@ -108,6 +108,7 @@ pid_t glbl_ourpid;
 /* JSON serialization runs in message workers while transactional publication
  * runs in the main thread, so both sides use the synchronized accessor. */
 DEF_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
+DEF_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
@@ -303,11 +304,13 @@ SIMP_PROP_GET(DfltNetstrmDrvrCRLF, pszDfltNetstrmDrvrCRLF, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar *)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar *)
-SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
-
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
+
+static uchar GetParserControlCharacterEscapePrefix(rsconf_t *const cnf) {
+    return glblGetParserControlCharacterEscapePrefix(cnf);
+}
 
 static int GetParserDropTrailingLFOnReception(rsconf_t *const cnf) {
     return glblGetParserDropTrailingLFOnReception(cnf);
@@ -658,7 +661,7 @@ finalize_it:
 
 static rsRetVal setParserControlCharacterEscapePrefix(void __attribute__((unused)) * pVal, uchar *pNewVal) {
     DEFiRet;
-    loadConf->globals.parser.cCCEscapeChar = *pNewVal;
+    glblSetParserControlCharacterEscapePrefix(loadConf, *pNewVal);
     RETiRet;
 }
 
@@ -977,6 +980,16 @@ int glblGetJsonFormatOpt(void) {
 
 int glblGetCompactJsonString(void) {
     return glblGetJsonFormatOpt() == JSON_C_TO_STRING_PLAIN;
+}
+
+void glblSetParserControlCharacterEscapePrefix(rsconf_t *const cnf, const uchar prefix) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.cCCEscapeChar, &mutParserControlCharacterEscapePrefix, prefix);
+}
+
+uchar glblGetParserControlCharacterEscapePrefix(rsconf_t *const cnf) {
+    if (cnf == NULL) return '#';
+    return (uchar)ATOMIC_LOAD_32BIT(&cnf->globals.parser.cCCEscapeChar, &mutParserControlCharacterEscapePrefix);
 }
 
 void glblSetCompactJsonString(const int enabled) {
@@ -1875,6 +1888,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
     INIT_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
+    INIT_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
     INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
@@ -1908,6 +1922,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
     DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
     DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserControlCharacterEscapePrefix);
     DESTROY_ATOMIC_HELPER_MUT(mutJsonFormatOpt);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
