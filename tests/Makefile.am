@@ -437,6 +437,7 @@ TESTS_DEFAULT = \
 	omelasticsearch_ratelimit_name.sh \
 	omelasticsearch-bulk-readonly-retry.sh \
 	omelasticsearch-dynsearch-template.sh \
+	omelasticsearch-maxbytes-boundary.sh \
 	omelasticsearch-bulk-metadata-escape.sh \
 	omelasticsearch-searchtype-deprecated.sh \
 	omhttp_ratelimit_name.sh \
