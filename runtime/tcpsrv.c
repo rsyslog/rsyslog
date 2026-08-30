@@ -508,14 +508,11 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     CHKiRet(statsobj.SetName(pEntry->stats, statname));
     CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
     STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
-    STATSCOUNTER_INIT(pEntry->ctrReloadAclDropped, pEntry->mutCtrReloadAclDropped);
     STATSCOUNTER_INIT(pEntry->ctrBytesRcvd, pEntry->mutCtrBytesRcvd);
     STATSCOUNTER_INIT(pEntry->ctrBytesDecompressed, pEntry->mutCtrBytesDecompressed);
     STATSCOUNTER_INIT(pEntry->ctrDecompressErr, pEntry->mutCtrDecompressErr);
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pEntry->ctrSubmit)));
-    CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("reload_acl_message_dropped_total"), ctrType_IntCtr,
-                                CTR_FLAG_RESETTABLE, &(pEntry->ctrReloadAclDropped)));
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.received"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(pEntry->ctrBytesRcvd)));
     CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("bytes.decompressed"), ctrType_IntCtr,
@@ -969,19 +966,25 @@ finalize_it:
 /**
  * \brief Close a TCP session and release associated resources.
  *
- * Closes the session referenced by \p pioDescr, runs the module-specific
- * close hook, and updates the event notification set. On EPOLL builds the
- * I/O descriptor is heap-allocated and is freed here after best-effort
- * removal from the epoll set.
+ * Closes the session, runs the module-specific regular or error close hook,
+ * and updates the event notification set. On EPOLL builds the I/O descriptor
+ * is heap-allocated and is freed here after best-effort removal from the epoll
+ * set. A NULL descriptor is accepted for fenced policy closure on poll builds
+ * (where descriptors are transient).
  *
  * No locking is performed; callers are responsible for any required
  * mutex handling before/after this call.
  *
  * \param[in] pThis    Server instance.
- * \param[in] pioDescr I/O descriptor for the session to close
- *                     (pioDescr->ptrType == NSD_PTR_TYPE_SESS).
+ * \param[in] pioDescr I/O descriptor for the session to close, or NULL when
+ *                     closing a transient poll descriptor.
+ * \param[in] pSess    Session to close.
+ * \param[in] sessionSlot Session-table slot occupied by pSess.
+ * \param[in] errorClose If nonzero, use the error-close hook and discard any
+ *                       partial frame; otherwise use regular-close semantics.
  *
- * \pre  \p pioDescr and its \c pSess are valid.
+ * \pre  If \p pioDescr is non-NULL, it references \p pSess and has type
+ *       NSD_PTR_TYPE_SESS.
  * \post The session object is destroyed. On EPOLL builds, \p pioDescr is
  *       freed; on non-EPOLL builds, the session table entry is cleared.
  * \post Callers must not access \p pioDescr or \c pSess after return.
@@ -991,22 +994,33 @@ finalize_it:
  *
  * \retval RS_RET_OK
  */
-static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+static rsRetVal closeSessWithMode(tcpsrv_t *const pThis,
+                                  tcpsrv_io_descr_t *const pioDescr,
+                                  tcps_sess_t *pSess,
+                                  const int sessionSlot,
+                                  const int errorClose) {
     DEFiRet;
-    assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
-    tcps_sess_t *pSess = pioDescr->ptr.pSess;
+    assert(pThis != NULL && pSess != NULL);
+    assert(sessionSlot >= 0 && sessionSlot < pThis->iSessMax);
+    if (pioDescr != NULL) assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS && pioDescr->ptr.pSess == pSess);
 
 #if defined(ENABLE_IMTCP_EPOLL)
     /* note: we do not check the result of epoll_Ctl because we cannot do
      * anything against a failure BUT we need to do the cleanup in any case.
      */
-    epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
+    if (pioDescr != NULL) epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
-    assert(pThis->pOnRegularClose != NULL);
-    pThis->pOnRegularClose(pSess);
+    if (errorClose) {
+        assert(pThis->pOnErrClose != NULL);
+        pThis->pOnErrClose(pSess);
+    } else {
+        assert(pThis->pOnRegularClose != NULL);
+        pThis->pOnRegularClose(pSess);
+    }
 
+    if (pSess->pIODescr == pioDescr) pSess->pIODescr = NULL;
     tcps_sess.Destruct(&pSess);
-    TCPSessTblStore(pThis, pioDescr->id, NULL);
+    TCPSessTblStore(pThis, sessionSlot, NULL);
     if (pThis->retireWhenDrained && pThis->controlPipe[1] >= 0) {
         const unsigned char wake = 1;
         const ssize_t writeRet = write(pThis->controlPipe[1], &wake, sizeof(wake));
@@ -1014,10 +1028,24 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     }
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, pioDescr is dynamically allocated */
-    DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
-    free(pioDescr);
+    if (pioDescr != NULL) {
+        DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
+        free(pioDescr);
+    }
 #endif
     RETiRet;
+}
+
+static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+    assert(pioDescr != NULL && pioDescr->ptrType == NSD_PTR_TYPE_SESS);
+    return closeSessWithMode(pThis, pioDescr, pioDescr->ptr.pSess, pioDescr->id, 0);
+}
+
+/* Policy changes run while the event loop and all workers are fenced. Close a
+ * newly denied session synchronously so its session slot and persistent epoll
+ * descriptor are both reclaimed before new peers may be accepted. */
+static void closeDeniedSession(tcpsrv_t *const pThis, tcps_sess_t *const pSess, const int sessionSlot) {
+    closeSessWithMode(pThis, pSess->pIODescr, pSess, sessionSlot, 1);
 }
 
 
@@ -1253,6 +1281,7 @@ static rsRetVal ATTR_NONNULL(1) doSingleAccept(tcpsrv_io_descr_t *const pioDescr
         CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
         pDescrNew->ptr.pSess = pNewSess;
         CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
+        pNewSess->pIODescr = pDescrNew;
 #endif
 
         DBGPRINTF("New session created with NSD %p.\n", pNewSess);
@@ -2425,14 +2454,13 @@ rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *const server,
 
 void tcpsrvApplySessionPolicyLive(tcpsrv_t *const server,
                                   const unsigned char *const allowed,
-                                  const size_t allowedCount,
-                                  rsRetVal (*const blockedSubmit)(tcps_sess_t *, uchar *, int)) {
+                                  const size_t allowedCount) {
     (void)allowedCount;
-    assert(server != NULL && allowed != NULL && allowedCount >= (size_t)server->iSessMax && blockedSubmit != NULL);
+    assert(server != NULL && allowed != NULL && allowedCount >= (size_t)server->iSessMax);
     assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
     for (int i = 0; i < server->iSessMax; ++i) {
         tcps_sess_t *const session = TCPSessTblLoad(server, i);
-        if (session != NULL) session->DoSubmitMessage = allowed[i] ? NULL : blockedSubmit;
+        if (session != NULL && !allowed[i]) closeDeniedSession(server, session, i);
     }
 }
 

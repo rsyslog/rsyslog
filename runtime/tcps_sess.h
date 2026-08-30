@@ -29,6 +29,7 @@
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
+struct tcpsrv_io_descr_s;
 
 #define TCPSRV_COMPRESS_NEVER 0
 #define TCPSRV_COMPRESS_STREAM_ALWAYS 2
@@ -119,6 +120,11 @@ struct tcps_sess_s {
         sbool bOwnStartRegex;
         regex_t ownedStartRegex;
 #endif
+
+        /* Appended so the public session layout above remains stable. The
+         * tcpsrv event loop owns this reverse association for persistent
+         * epoll descriptors; it is NULL for transient poll descriptors. */
+        struct tcpsrv_io_descr_s *pIODescr;
 };
 
 

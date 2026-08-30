@@ -2505,14 +2505,6 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
     }
 }
 
-static rsRetVal discardReloadAclMessage(tcps_sess_t *const session, uchar *const message, const int length) {
-    (void)message;
-    (void)length;
-    if (session != NULL && session->pLstnInfo != NULL)
-        STATSCOUNTER_INC(session->pLstnInfo->ctrReloadAclDropped, session->pLstnInfo->mutCtrReloadAclDropped);
-    return RS_RET_OK;
-}
-
 typedef struct imtcpAclEvaluation_s {
     struct AllowedSenders *root;
     int useLegacy;
@@ -2897,7 +2889,7 @@ static void commitReloadV1(void *const pReloadState) {
                 &state->entries[i].retiredAllowedSenders, &state->entries[i].retiredAllowedSendersOwned);
             state->entries[i].preparedAllowedSenders = NULL;
             tcpsrv.ApplySessionPolicyLive(server, state->entries[i].sessionAllowed,
-                                          (size_t)state->entries[i].sessionMax, discardReloadAclMessage);
+                                          (size_t)state->entries[i].sessionMax);
         }
         if (!state->entries[i].addition && state->entries[i].swapRateLimiter) {
             tcpsrv.SwapRateLimiterLive(server, state->entries[i].preparedRateLimiter,
