@@ -104,6 +104,8 @@ struct tcpLstnPortList_s {
 typedef struct tcpsrv_reload_profile_s {
     int useFlowControl;
     unsigned starvationMaxReads;
+    unsigned ratelimitInterval;
+    unsigned ratelimitBurst;
     int notifyOnConnectionClose;
     int notifyOnConnectionOpen;
     int preserveCase;
@@ -469,6 +471,7 @@ int tcpsrvFenceTerminated(void);
  * update listener/session copies before the fence is released. */
 void tcpsrvApplyFlowControlLive(tcpsrv_t *pThis, int useFlowControl);
 void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *pThis, unsigned maxReads);
+void tcpsrvApplyRateLimitLive(tcpsrv_t *pThis, unsigned interval, unsigned burst);
 void tcpsrvApplyNotificationsLive(tcpsrv_t *pThis, int onOpen, int onClose);
 void tcpsrvApplyPreserveCaseForNewSessions(tcpsrv_t *pThis, int preserveCase);
 void tcpsrvApplyKeepAliveForNewSessions(tcpsrv_t *pThis, int enabled, int interval, int probes, int time);

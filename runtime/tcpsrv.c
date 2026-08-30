@@ -2374,6 +2374,7 @@ static rsRetVal ATTR_NONNULL(1) SetRuleset(tcpsrv_t *const pThis, ruleset_t *con
 static void ATTR_NONNULL(1, 2) ApplyReloadProfile(tcpsrv_t *const pThis, const tcpsrv_reload_profile_t *const profile) {
     tcpsrvApplyFlowControlLive(pThis, profile->useFlowControl);
     tcpsrvApplyStarvationMaxReadsLive(pThis, profile->starvationMaxReads);
+    tcpsrvApplyRateLimitLive(pThis, profile->ratelimitInterval, profile->ratelimitBurst);
     tcpsrvApplyNotificationsLive(pThis, profile->notifyOnConnectionOpen, profile->notifyOnConnectionClose);
     tcpsrvApplyPreserveCaseForNewSessions(pThis, profile->preserveCase);
     tcpsrvApplyKeepAliveForNewSessions(pThis, profile->keepAlive, profile->keepAliveInterval, profile->keepAliveProbes,

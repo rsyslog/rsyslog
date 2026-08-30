@@ -20,6 +20,20 @@
 #include "ruleset.h"
 #include "tcpsrv.h"
 
+static ratelimit_t *rateLimitCalls[4];
+static unsigned rateLimitIntervals[4];
+static unsigned rateLimitBursts[4];
+static size_t rateLimitCallCount;
+
+void ratelimitSetLinuxLike(ratelimit_t *const limiter, const unsigned interval, const unsigned burst) {
+    if (rateLimitCallCount < sizeof(rateLimitCalls) / sizeof(rateLimitCalls[0])) {
+        rateLimitCalls[rateLimitCallCount] = limiter;
+        rateLimitIntervals[rateLimitCallCount] = interval;
+        rateLimitBursts[rateLimitCallCount] = burst;
+    }
+    ++rateLimitCallCount;
+}
+
 /* Include the small production state machine so the unit can drive its
  * event-loop and worker safepoints without constructing network objects. */
 #include "../../runtime/tcpsrv-fence.c"
@@ -266,6 +280,35 @@ static int starvationMaxReadsSnapshot(void) {
     return 0;
 }
 
+/* The event-loop/worker fence excludes concurrent limiter use while the
+ * control path resets the unnamed listener buckets. Named policy objects are
+ * intentionally excluded because their ownership/configuration is separate. */
+static int rateLimitSnapshot(void) {
+    tcpsrv_t server = {.ratelimitInterval = 0, .ratelimitBurst = 10000};
+    tcpLstnParams_t firstParams = {0};
+    tcpLstnParams_t namedParams = {.pszRatelimitName = UCHAR_CONSTANT("shared-policy")};
+    tcpLstnParams_t thirdParams = {0};
+    ratelimit_t firstLimiter = {0};
+    ratelimit_t namedLimiter = {0};
+    ratelimit_t thirdLimiter = {0};
+    tcpLstnPortList_t thirdListener = {.cnf_params = &thirdParams, .ratelimiter = &thirdLimiter};
+    tcpLstnPortList_t namedListener = {
+        .cnf_params = &namedParams, .ratelimiter = &namedLimiter, .pNext = &thirdListener};
+    tcpLstnPortList_t firstListener = {
+        .cnf_params = &firstParams, .ratelimiter = &firstLimiter, .pNext = &namedListener};
+    server.pLstnPorts = &firstListener;
+    rateLimitCallCount = 0;
+    tcpsrvApplyRateLimitLive(&server, 60, 12000);
+    CHECK(server.ratelimitInterval == 60);
+    CHECK(server.ratelimitBurst == 12000);
+    CHECK(rateLimitCallCount == 2);
+    CHECK(rateLimitCalls[0] == &firstLimiter);
+    CHECK(rateLimitCalls[1] == &thirdLimiter);
+    CHECK(rateLimitIntervals[0] == 60 && rateLimitIntervals[1] == 60);
+    CHECK(rateLimitBursts[0] == 12000 && rateLimitBursts[1] == 12000);
+    return 0;
+}
+
 static int notificationSnapshot(void) {
     tcpsrv_t server = {.bEmitMsgOnOpen = 0, .bEmitMsgOnClose = 1};
     tcpsrvApplyNotificationsLive(&server, 1, 0);
@@ -411,6 +454,7 @@ int main(void) {
     if (termWhileParked() != 0) return 1;
     if (flowControlSnapshot() != 0) return 1;
     if (starvationMaxReadsSnapshot() != 0) return 1;
+    if (rateLimitSnapshot() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;

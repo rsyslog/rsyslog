@@ -54,6 +54,7 @@ runtime_ratelimit:
 runtime_tcpsrv:
   paths:
     - "runtime/tcpsrv.c"
+    - "runtime/tcpsrv-fence.c"
     - "runtime/tcpsrv.h"
     - "runtime/tcps_sess.c"
     - "runtime/tcps_sess.h"
@@ -61,6 +62,7 @@ runtime_tcpsrv:
   notes:
     - imtcp sessions own independent decompressor state.
     - A finite zstd aggregate-window limit uses a listener-local 64-bit atomic reservation counter; only platforms without 64-bit atomics use the helper-mutex fallback.
+    - Transactional imtcp profile updates acquire the event-loop/worker fence before mutating listener or session snapshots; unnamed Linux-like limiter counters are reset only inside that safepoint.
 
 runtime_msg:
   paths: ["runtime/msg.c", "runtime/msg.h"]

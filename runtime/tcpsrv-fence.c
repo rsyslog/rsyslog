@@ -8,6 +8,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "ratelimit.h"
 #include "tcpsrv.h"
 #include "unicode-helper.h"
 
@@ -250,6 +251,18 @@ void tcpsrvApplyFlowControlLive(tcpsrv_t *const server, const int useFlowControl
 
 void tcpsrvApplyStarvationMaxReadsLive(tcpsrv_t *const server, const unsigned maxReads) {
     server->starvationMaxReads = maxReads;
+}
+
+void tcpsrvApplyRateLimitLive(tcpsrv_t *const server, const unsigned interval, const unsigned burst) {
+    tcpLstnPortList_t *listener;
+
+    server->ratelimitInterval = interval;
+    server->ratelimitBurst = burst;
+    for (listener = server->pLstnPorts; listener != NULL; listener = listener->pNext) {
+        if (listener->ratelimiter != NULL && listener->cnf_params != NULL &&
+            listener->cnf_params->pszRatelimitName == NULL)
+            ratelimitSetLinuxLike(listener->ratelimiter, interval, burst);
+    }
 }
 
 void tcpsrvApplyNotificationsLive(tcpsrv_t *const server, const int onOpen, const int onClose) {

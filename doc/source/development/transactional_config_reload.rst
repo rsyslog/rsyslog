@@ -303,19 +303,22 @@ The first Release E foundation coordinates that ruleset plan with an ``imtcp``
 event-loop/worker fence.  Compatible existing listeners and sessions are kept
 open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
 ``starvationProtection.maxReads`` values and connection-open/close notification
-policy are published at the safepoint.  An effective ``preserveCase`` change is
-classified ``new_sessions``: established sessions retain their already
-resolved peer identity and socket options, while the listener accept profile
-changes atomically for later connections.  TCP keepalive enablement, interval,
-probe count, and idle time use the same ``new_sessions`` contract.  The scalar
-framing profile—Cisco framing correction, the additional delimiter, maximum
-frame size, LF-delimiter disablement, and truncated-message policy—also changes
-only for later connections, as do octet-counted framing support and the
-compression mode, driver, and resource limits.  Multiline framing without a
-changed delimiter regex is also an accept-profile update.  Regular expression
-framing, TLS, endpoint, ACL, rate-limit, and
-listener-structure fields remain conservatively restart-required until their
-corresponding prepare, ownership, and reconciliation contracts are implemented.
+policy are published at the safepoint.  Unnamed Linux-like rate-limit interval
+and burst values are reset on the listener-local limiter under the same fence;
+named rate-limit policies remain restart-required.  An effective
+``preserveCase`` change is classified ``new_sessions``: established sessions
+retain their already resolved peer identity and socket options, while the
+listener accept profile changes atomically for later connections.  TCP
+keepalive enablement, interval, probe count, and idle time use the same
+``new_sessions`` contract.  The scalar framing profile—Cisco framing
+correction, the additional delimiter, maximum frame size, LF-delimiter
+disablement, and truncated-message policy—also changes only for later
+connections, as do octet-counted framing support and the compression mode,
+driver, and resource limits.  Multiline framing without a changed delimiter
+regex is also an accept-profile update.  Regular expression framing, TLS,
+endpoint, ACL, named rate-limit policy, and listener-structure fields remain
+conservatively restart-required until their corresponding prepare, ownership,
+and reconciliation contracts are implemented.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute
