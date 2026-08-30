@@ -96,6 +96,8 @@ static int pendingParserDropTrailingLF = 1;
 static int pendingParserDropTrailingLFUpdate = 0;
 static int pendingParserDropTrailingCR = 0;
 static int pendingParserDropTrailingCRUpdate = 0;
+static int pendingParserEscapeControlCharacters = 1;
+static int pendingParserEscapeControlCharactersUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -498,6 +500,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeCompactJsonString;
     int activeParserDropTrailingLF;
     int activeParserDropTrailingCR;
+    int activeParserEscapeControlCharacters;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -608,13 +611,34 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeValue, &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailingcronreception",
                                                    &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
+        if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserDropTrailingCRUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escapecontrolcharactersonreceive",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(
+        pendingSourceObjectCatalog, "parser.escapecontrolcharactersonreceive", &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
-    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
-    if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+    CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserEscapeControlCharacters));
+    CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserEscapeControlCharacters));
+    if (activeParserEscapeControlCharacters != glblGetParserEscapeControlCharactersOnReceive(runConf))
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingParserDropTrailingCRUpdate = 1;
+    pendingParserEscapeControlCharactersUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -839,6 +863,7 @@ void shadowReloadBeginRequest(void) {
     pendingCompactJsonString = glblGetCompactJsonString();
     pendingParserDropTrailingLF = glblGetParserDropTrailingLFOnReception(runConf);
     pendingParserDropTrailingCR = glblGetParserDropTrailingCROnReception(runConf);
+    pendingParserEscapeControlCharacters = glblGetParserEscapeControlCharactersOnReceive(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
@@ -846,6 +871,7 @@ void shadowReloadBeginRequest(void) {
     pendingCompactJsonStringUpdate = 0;
     pendingParserDropTrailingLFUpdate = 0;
     pendingParserDropTrailingCRUpdate = 0;
+    pendingParserEscapeControlCharactersUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1198,6 +1224,8 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingCompactJsonStringUpdate) glblSetCompactJsonString(pendingCompactJsonString);
     if (pendingParserDropTrailingLFUpdate) glblSetParserDropTrailingLFOnReception(runConf, pendingParserDropTrailingLF);
     if (pendingParserDropTrailingCRUpdate) glblSetParserDropTrailingCROnReception(runConf, pendingParserDropTrailingCR);
+    if (pendingParserEscapeControlCharactersUpdate)
+        glblSetParserEscapeControlCharactersOnReceive(runConf, pendingParserEscapeControlCharacters);
     publishActivatedGraph(context);
 }
 
