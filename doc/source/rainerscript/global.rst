@@ -277,6 +277,11 @@ The following parameters can be set:
   payload. The default is "off" so existing configurations keep the CR
   byte when it is part of the original message.
 
+  When ``config.reloadOnHUP`` is ``on``, a candidate that changes only this
+  setting can activate it transactionally. Messages parsed after the commit
+  use the new policy. Combining it with another global change remains
+  unsupported and leaves the active parser policy unchanged.
+
 - **parser.parseHostnameAndTag** [on/off] available 8.6.0+
 
   **Default:** on

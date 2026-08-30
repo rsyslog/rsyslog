@@ -123,6 +123,8 @@ extern int glblJsonFormatOpt;
 int glblGetJsonFormatOpt(void);
 int glblGetCompactJsonString(void);
 void glblSetCompactJsonString(int enabled);
+void glblSetParserDropTrailingCROnReception(rsconf_t *cnf, int enabled);
+int glblGetParserDropTrailingCROnReception(rsconf_t *cnf);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;

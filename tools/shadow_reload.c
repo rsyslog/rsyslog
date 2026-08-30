@@ -92,6 +92,8 @@ static int pendingReportOversizeMsg = 1;
 static int pendingReportOversizeMsgUpdate = 0;
 static int pendingCompactJsonString = 0;
 static int pendingCompactJsonStringUpdate = 0;
+static int pendingParserDropTrailingCR = 0;
+static int pendingParserDropTrailingCRUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -492,6 +494,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeReportChildProcessExits;
     int activeReportOversizeMsg;
     int activeCompactJsonString;
+    int activeParserDropTrailingCR;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -561,12 +564,33 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "compactjsonstring", &candidateValue,
                                                    &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 0, &activeCompactJsonString));
+        CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingCompactJsonString));
+        if (activeCompactJsonString != glblGetCompactJsonString()) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingCompactJsonStringUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.droptrailingcronreception",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.droptrailingcronreception",
+                                                   &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateBinary(activeValue, 0, &activeCompactJsonString));
-    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingCompactJsonString));
-    if (activeCompactJsonString != glblGetCompactJsonString()) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserDropTrailingCR));
+    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserDropTrailingCR));
+    if (activeParserDropTrailingCR != glblGetParserDropTrailingCROnReception(runConf))
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingCompactJsonStringUpdate = 1;
+    pendingParserDropTrailingCRUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -789,11 +813,13 @@ void shadowReloadBeginRequest(void) {
     pendingReportChildProcessExits = glblGetReportChildProcessExits(runConf);
     pendingReportOversizeMsg = glblReportOversizeMessage(runConf);
     pendingCompactJsonString = glblGetCompactJsonString();
+    pendingParserDropTrailingCR = glblGetParserDropTrailingCROnReception(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
     pendingReportOversizeMsgUpdate = 0;
     pendingCompactJsonStringUpdate = 0;
+    pendingParserDropTrailingCRUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1144,6 +1170,7 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingReportChildProcessExitsUpdate) glblSetReportChildProcessExits(runConf, pendingReportChildProcessExits);
     if (pendingReportOversizeMsgUpdate) glblSetReportOversizeMessage(runConf, pendingReportOversizeMsg);
     if (pendingCompactJsonStringUpdate) glblSetCompactJsonString(pendingCompactJsonString);
+    if (pendingParserDropTrailingCRUpdate) glblSetParserDropTrailingCROnReception(runConf, pendingParserDropTrailingCR);
     publishActivatedGraph(context);
 }
 
