@@ -401,6 +401,14 @@ The following parameters can be set:
      reception. If you intend to use these property replacer options, you
      must turn off *parser.escapeControlCharactersOnReceive*.
 
+- **parser.spaceLFOnReceive** [on/off]
+
+  **Default:** off
+
+  This parameter replaces embedded LF control characters with spaces during
+  message reception. A sole change can be activated transactionally by
+  ``config.reloadOnHUP="on"``; combined global changes remain fail-closed.
+
 
 - **senders.keepTrack** [on/off] available 8.17.0+
 

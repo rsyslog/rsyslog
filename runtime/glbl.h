@@ -129,6 +129,8 @@ void glblSetParserDropTrailingCROnReception(rsconf_t *cnf, int enabled);
 int glblGetParserDropTrailingCROnReception(rsconf_t *cnf);
 void glblSetParserEscapeControlCharactersOnReceive(rsconf_t *cnf, int enabled);
 int glblGetParserEscapeControlCharactersOnReceive(rsconf_t *cnf);
+void glblSetParserSpaceLFOnReceive(rsconf_t *cnf, int enabled);
+int glblGetParserSpaceLFOnReceive(rsconf_t *cnf);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;
