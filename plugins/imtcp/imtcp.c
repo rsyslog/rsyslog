@@ -1931,7 +1931,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
     const tcpLstnParams_t *const rightParams = right->cnf_params;
 
     if (leftParams == NULL || rightParams == NULL) return 0;
-    return (ignoreLiveFields || left->iTCPSessMax == right->iTCPSessMax) && left->iTCPLstnMax == right->iTCPLstnMax &&
+    return (ignoreLiveFields || (left->iTCPSessMax == right->iTCPSessMax && left->iTCPLstnMax == right->iTCPLstnMax)) &&
            left->numWrkr == right->numWrkr &&
            reloadUStringEqual(left->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : left->pszInputName,
                               right->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : right->pszInputName) &&
@@ -2226,6 +2226,8 @@ typedef struct imtcpReloadEntryV1_s {
     tcps_sess_t **preparedSessionSlots;
     tcps_sess_t **retiredSessionSlots;
     int sessionMax;
+    tcpsrv_listener_tables_t preparedListenerTables;
+    tcpsrv_listener_tables_t retiredListenerTables;
     uint64_t fenceToken;
     int fenceAcquired;
     struct AllowedSenders *preparedAllowedSenders;
@@ -2318,6 +2320,14 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
         state->entries[i].preparedSessionSlots = NULL;
         free(state->entries[i].retiredSessionSlots);
         state->entries[i].retiredSessionSlots = NULL;
+        free(state->entries[i].preparedListenerTables.streams);
+        free(state->entries[i].preparedListenerTables.ports);
+        free(state->entries[i].preparedListenerTables.descriptors);
+        memset(&state->entries[i].preparedListenerTables, 0, sizeof(state->entries[i].preparedListenerTables));
+        free(state->entries[i].retiredListenerTables.streams);
+        free(state->entries[i].retiredListenerTables.ports);
+        free(state->entries[i].retiredListenerTables.descriptors);
+        memset(&state->entries[i].retiredListenerTables, 0, sizeof(state->entries[i].retiredListenerTables));
         net.DestructAllowedSenders(&state->entries[i].preparedAllowedSenders);
         if (state->entries[i].retiredAllowedSendersOwned)
             net.DestructAllowedSenders(&state->entries[i].retiredAllowedSenders);
@@ -2536,6 +2546,15 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
                           calloc((size_t)state->entries[index].sessionMax,
                                  sizeof(state->entries[index].preparedSessionSlots[0])));
         }
+        if (!state->entries[index].addition &&
+            newInst->iTCPLstnMax != state->entries[index].runtime->tcpsrv->iLstnMax) {
+            tcpsrv_listener_tables_t *const tables = &state->entries[index].preparedListenerTables;
+            CHKiRet(tcpsrv.ValidateListenerTableCapacity(state->entries[index].runtime->tcpsrv, newInst->iTCPLstnMax));
+            tables->capacity = newInst->iTCPLstnMax;
+            CHKmalloc(tables->streams = calloc((size_t)tables->capacity, sizeof(tables->streams[0])));
+            CHKmalloc(tables->ports = calloc((size_t)tables->capacity, sizeof(tables->ports[0])));
+            CHKmalloc(tables->descriptors = calloc((size_t)tables->capacity, sizeof(tables->descriptors[0])));
+        }
         if (!state->entries[index].addition)
             CHKiRet(prepareReloadRateLimiter(&state->entries[index], newInst, newConfig));
         state->entries[index].flowControl = newInst->bUseFlowControl;
@@ -2634,6 +2653,19 @@ static rsRetVal quiesceReloadV1(void *const pReloadState, const struct timespec 
     if (ret == RS_RET_OK) {
         for (size_t i = 0; i < state->count; ++i) {
             imtcpReloadEntryV1_t *const entry = &state->entries[i];
+            tcpsrv_listener_tables_t *const tables = &entry->preparedListenerTables;
+            tcpsrv_t *server;
+            if (tables->streams == NULL) continue;
+            server = entry->runtime->tcpsrv;
+            memcpy(tables->streams, server->ppLstn, (size_t)server->iLstnCurr * sizeof(tables->streams[0]));
+            memcpy(tables->ports, server->ppLstnPort, (size_t)server->iLstnCurr * sizeof(tables->ports[0]));
+            memcpy(tables->descriptors, server->ppioDescrPtr,
+                   (size_t)server->iLstnCurr * sizeof(tables->descriptors[0]));
+        }
+    }
+    if (ret == RS_RET_OK) {
+        for (size_t i = 0; i < state->count; ++i) {
+            imtcpReloadEntryV1_t *const entry = &state->entries[i];
             imtcpAclEvaluation_t acl;
             if (entry->addition || !entry->applyAllowedSenders) continue;
             acl.root = entry->preparedAllowedSenders;
@@ -2697,6 +2729,9 @@ static void commitReloadV1(void *const pReloadState) {
             server->iSessMax = state->entries[i].sessionMax;
             state->entries[i].preparedSessionSlots = NULL;
         }
+        if (state->entries[i].preparedListenerTables.streams != NULL)
+            tcpsrv.SwapListenerTablesLive(server, &state->entries[i].preparedListenerTables,
+                                          &state->entries[i].retiredListenerTables);
         if (!state->entries[i].addition && state->entries[i].applyAllowedSenders) {
             tcpsrv.SwapAllowedSendersLive(
                 server, state->entries[i].preparedAllowedSenders, state->entries[i].useLegacyAllowedSender,

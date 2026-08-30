@@ -333,6 +333,55 @@ static int rateLimiterSwap(void) {
     return 0;
 }
 
+/* Listener capacity reload owns only the pointer arrays. The runtime listener
+ * and descriptor objects stay stable, and each epoll descriptor must point at
+ * the newly published stream array after the fenced transfer. */
+static int listenerTableSwap(void) {
+    tcpsrv_t server = {0};
+    char firstStreamStorage;
+    char secondStreamStorage;
+    netstrm_t *const firstStream = (netstrm_t *)&firstStreamStorage;
+    netstrm_t *const secondStream = (netstrm_t *)&secondStreamStorage;
+    netstrm_t *oldStreams[] = {firstStream, secondStream};
+    tcpLstnPortList_t firstPort = {0};
+    tcpLstnPortList_t secondPort = {0};
+    tcpLstnPortList_t *oldPorts[] = {&firstPort, &secondPort};
+    tcpsrv_io_descr_t firstDescriptor = {0};
+    tcpsrv_io_descr_t secondDescriptor = {0};
+    tcpsrv_io_descr_t *oldDescriptors[] = {&firstDescriptor, &secondDescriptor};
+    netstrm_t *newStreams[3] = {firstStream, secondStream, NULL};
+    tcpLstnPortList_t *newPorts[3] = {&firstPort, &secondPort, NULL};
+    tcpsrv_io_descr_t *newDescriptors[3] = {&firstDescriptor, &secondDescriptor, NULL};
+    tcpsrv_listener_tables_t prepared = {
+        .streams = newStreams, .ports = newPorts, .descriptors = newDescriptors, .capacity = 3};
+    tcpsrv_listener_tables_t retired = {0};
+    server.ppLstn = oldStreams;
+    server.ppLstnPort = oldPorts;
+    server.ppioDescrPtr = oldDescriptors;
+    server.iLstnCurr = 2;
+    server.iLstnMax = 2;
+    server.fenceAcquired = 1;
+    server.fenceOwnerValid = 1;
+    server.fenceOwner = pthread_self();
+    firstDescriptor.ptr.ppLstn = oldStreams;
+    secondDescriptor.ptr.ppLstn = oldStreams;
+
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 1) == RS_RET_NOT_IMPLEMENTED);
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 2) == RS_RET_OK);
+    CHECK(tcpsrvValidateListenerTableCapacity(&server, 3) == RS_RET_OK);
+    tcpsrvSwapListenerTablesLive(&server, &prepared, &retired);
+    CHECK(server.ppLstn == newStreams);
+    CHECK(server.ppLstnPort == newPorts);
+    CHECK(server.ppioDescrPtr == newDescriptors);
+    CHECK(server.iLstnMax == 3);
+    CHECK(firstDescriptor.ptr.ppLstn == newStreams);
+    CHECK(secondDescriptor.ptr.ppLstn == newStreams);
+    CHECK(retired.streams == oldStreams && retired.ports == oldPorts && retired.descriptors == oldDescriptors);
+    CHECK(retired.capacity == 2);
+    CHECK(prepared.streams == NULL && prepared.ports == NULL && prepared.descriptors == NULL && prepared.capacity == 0);
+    return 0;
+}
+
 static int notificationSnapshot(void) {
     tcpsrv_t server = {.bEmitMsgOnOpen = 0, .bEmitMsgOnClose = 1};
     tcpsrvApplyNotificationsLive(&server, 1, 0);
@@ -480,6 +529,7 @@ int main(void) {
     if (starvationMaxReadsSnapshot() != 0) return 1;
     if (rateLimitSnapshot() != 0) return 1;
     if (rateLimiterSwap() != 0) return 1;
+    if (listenerTableSwap() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;

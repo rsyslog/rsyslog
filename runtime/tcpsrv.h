@@ -139,6 +139,16 @@ typedef struct tcpsrv_reload_profile_s {
     ruleset_t *ruleset;
 } tcpsrv_reload_profile_t;
 
+/* Listener table storage prepared off-path and transferred while the event
+ * loop and workers are parked at the reload fence. The table entries remain
+ * borrowed runtime objects; only the three pointer arrays are owned here. */
+typedef struct tcpsrv_listener_tables_s {
+    netstrm_t **streams;
+    tcpLstnPortList_t **ports;
+    tcpsrv_io_descr_t **descriptors;
+    int capacity;
+} tcpsrv_listener_tables_t;
+
 typedef rsRetVal (*tcpsrv_reload_session_policy_eval_t)(tcps_sess_t *session, void *context, int *allowed);
 
 
@@ -451,9 +461,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* v41 swaps a fully prepared listener-local rate limiter while fenced. */
     void (*SwapRateLimiterLive)(tcpsrv_t *server, ratelimit_t *preparedLimiter, uchar *preparedName,
                                 ratelimit_t **retiredLimiter, uchar **retiredName);
+    /* v42 validates and transfers listener pointer-table capacity. */
+    rsRetVal (*ValidateListenerTableCapacity)(const tcpsrv_t *server, int capacity);
+    void (*SwapListenerTablesLive)(tcpsrv_t *server, tcpsrv_listener_tables_t *prepared,
+                                   tcpsrv_listener_tables_t *retired);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 41 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 42 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -534,6 +548,10 @@ void tcpsrvSwapRateLimiterLive(tcpsrv_t *server,
                                uchar *preparedName,
                                ratelimit_t **retiredLimiter,
                                uchar **retiredName);
+rsRetVal tcpsrvValidateListenerTableCapacity(const tcpsrv_t *server, int capacity);
+void tcpsrvSwapListenerTablesLive(tcpsrv_t *server,
+                                  tcpsrv_listener_tables_t *prepared,
+                                  tcpsrv_listener_tables_t *retired);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

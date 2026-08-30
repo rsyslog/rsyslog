@@ -349,6 +349,11 @@ implicit backlog remains in the same ``maxSessions / 10 + 5`` bucket.  Shrink
 is supported only when every active session already occupies an index retained
 by the smaller table; an occupied truncated slot rejects that activation before
 publication.  Crossing an implicit-backlog bucket stays restart-required.
+The ``maxListeners`` capacity uses the same prepare-and-swap discipline for
+the listener stream, port-profile, and event-descriptor pointer tables.  A
+growth or a shrink that still contains every opened listener is live; shrinking
+below the number of opened sockets is rejected before publication.  Listener
+objects, sockets, and descriptor identities remain unchanged.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

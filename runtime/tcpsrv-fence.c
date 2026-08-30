@@ -281,6 +281,37 @@ void tcpsrvSwapRateLimiterLive(tcpsrv_t *const server,
     listener->cnf_params->pszRatelimitName = preparedName;
 }
 
+rsRetVal tcpsrvValidateListenerTableCapacity(const tcpsrv_t *const server, const int capacity) {
+    if (server == NULL || capacity < 1) return RS_RET_PARAM_ERROR;
+    /* Listener cardinality is immutable after server construction. The fence
+     * is required for table publication, not for this prepare-time check. */
+    return capacity < server->iLstnCurr ? RS_RET_NOT_IMPLEMENTED : RS_RET_OK;
+}
+
+void tcpsrvSwapListenerTablesLive(tcpsrv_t *const server,
+                                  tcpsrv_listener_tables_t *const prepared,
+                                  tcpsrv_listener_tables_t *const retired) {
+    assert(server != NULL && prepared != NULL && retired != NULL);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    assert(prepared->streams != NULL && prepared->ports != NULL && prepared->descriptors != NULL &&
+           prepared->capacity >= server->iLstnCurr);
+    assert(retired->streams == NULL && retired->ports == NULL && retired->descriptors == NULL &&
+           retired->capacity == 0);
+
+    retired->streams = server->ppLstn;
+    retired->ports = server->ppLstnPort;
+    retired->descriptors = server->ppioDescrPtr;
+    retired->capacity = server->iLstnMax;
+    server->ppLstn = prepared->streams;
+    server->ppLstnPort = prepared->ports;
+    server->ppioDescrPtr = prepared->descriptors;
+    server->iLstnMax = prepared->capacity;
+    for (int i = 0; i < server->iLstnCurr; ++i) {
+        if (server->ppioDescrPtr[i] != NULL) server->ppioDescrPtr[i]->ptr.ppLstn = server->ppLstn;
+    }
+    memset(prepared, 0, sizeof(*prepared));
+}
+
 void tcpsrvApplyNotificationsLive(tcpsrv_t *const server, const int onOpen, const int onClose) {
     server->bEmitMsgOnOpen = onOpen;
     server->bEmitMsgOnClose = onClose;

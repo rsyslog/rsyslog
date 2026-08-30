@@ -8,7 +8,10 @@
 # preserving the two remaining sessions. The close notification is the
 # deterministic oracle that the third slot is free before retry; a subsequent
 # third-peer rejection proves the smaller table is active rather than a no-op
-# commit. A growth across the next implicit-backlog bucket remains rejected.
+# commit. Module-level listener-table growth and an input-level shrink then
+# preserve both sessions; the fenced pointer-table unit test is the exact
+# ownership oracle because this capacity is otherwise intentionally invisible
+# to traffic. A growth across the next implicit-backlog bucket remains rejected.
 # Values one through three share one bucket, proving resize without changing
 # the active backlog.
 . ${srcdir:=.}/diag.sh init
@@ -107,10 +110,40 @@ wait_file_lines "${RSYSLOG_DYNNAME}.started" $((reject_line_count + 1))
 content_count_check 'too many tcp sessions - dropping incoming request' 2 "${RSYSLOG_DYNNAME}.started"
 exec 7>&-
 
+cp "$CONF_FILE" "$CONF_FILE.listener-base"
+sed 's/maxSessions="2")/maxSessions="2" maxListeners="40")/' "$CONF_FILE.listener-base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=5"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: module maxListeners growth did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: listeners-grow-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: listeners-grow-second\n' >&8 || error_exit 1
+wait_content 'listeners-grow-first' "$RSYSLOG_OUT_LOG"
+wait_content 'listeners-grow-second' "$RSYSLOG_OUT_LOG"
+
+cp "$CONF_FILE" "$CONF_FILE.listener-grow"
+sed 's/maxSessions="2" ruleset/maxSessions="2" maxListeners="1" ruleset/' "$CONF_FILE.listener-grow" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=6"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: input maxListeners shrink did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: listeners-shrink-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: listeners-shrink-second\n' >&8 || error_exit 1
+wait_content 'listeners-shrink-first' "$RSYSLOG_OUT_LOG"
+wait_content 'listeners-shrink-second' "$RSYSLOG_OUT_LOG"
+
 sed 's/maxSessions="3"/maxSessions="10"/' "$CONF_FILE.input-grow" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=4"* ||
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6"* ||
       "$reload_status" != *"source_capability=restart_required"* ]]; then
 	echo "FAIL: implicit-backlog bucket change was not rejected: $reload_status"
 	error_exit 1

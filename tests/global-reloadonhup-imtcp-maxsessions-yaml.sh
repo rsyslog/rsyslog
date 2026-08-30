@@ -5,9 +5,12 @@
 # shrink fails at the fenced runtime check; after the third peer's close
 # notification proves that slot is free, the same candidate activates and the
 # remaining sessions survive. A subsequent third-peer rejection proves the
-# smaller table is active rather than a no-op commit. A growth across the next
-# implicit-backlog bucket remains restart-required. Values one through three
-# share one bucket.
+# smaller table is active rather than a no-op commit. Module-level listener
+# capacity growth and an input-level shrink then preserve both sessions; the
+# fenced pointer-table unit test is the exact ownership oracle because this
+# capacity is otherwise intentionally invisible to traffic. A growth across
+# the next implicit-backlog bucket remains restart-required. Values one through
+# three share one bucket.
 # A constant RainerScript include captures only internal diagnostics; every
 # imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
@@ -117,10 +120,40 @@ wait_file_lines "${RSYSLOG_DYNNAME}.started" $((reject_line_count + 1))
 content_count_check 'too many tcp sessions - dropping incoming request' 2 "${RSYSLOG_DYNNAME}.started"
 exec 7>&-
 
+cp "$CONF_FILE" "$CONF_FILE.listener-base"
+sed '0,/^    maxSessions: 2$/s//    maxSessions: 2\n    maxListeners: 40/' "$CONF_FILE.listener-base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=5"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML module maxListeners growth did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: yaml-listeners-grow-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: yaml-listeners-grow-second\n' >&8 || error_exit 1
+wait_content 'yaml-listeners-grow-first' "$RSYSLOG_OUT_LOG"
+wait_content 'yaml-listeners-grow-second' "$RSYSLOG_OUT_LOG"
+
+cp "$CONF_FILE" "$CONF_FILE.listener-grow"
+sed '/^    ruleset: main$/a\    maxListeners: 1' "$CONF_FILE.listener-grow" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=6"* ||
+      "$reload_status" != *"modified=1 invalid=0"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML input maxListeners shrink did not activate: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: yaml-listeners-shrink-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: yaml-listeners-shrink-second\n' >&8 || error_exit 1
+wait_content 'yaml-listeners-shrink-first' "$RSYSLOG_OUT_LOG"
+wait_content 'yaml-listeners-shrink-second' "$RSYSLOG_OUT_LOG"
+
 sed 's/maxSessions: 3/maxSessions: 10/' "$CONF_FILE.input-grow" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=4"* ||
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=6"* ||
       "$reload_status" != *"source_capability=restart_required"* ]]; then
 	echo "FAIL: YAML implicit-backlog bucket change was not rejected: $reload_status"
 	error_exit 1
