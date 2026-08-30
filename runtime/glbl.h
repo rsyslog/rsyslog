@@ -133,6 +133,8 @@ void glblSetParserSpaceLFOnReceive(rsconf_t *cnf, int enabled);
 int glblGetParserSpaceLFOnReceive(rsconf_t *cnf);
 void glblSetParserEscape8BitCharactersOnReceive(rsconf_t *cnf, int enabled);
 int glblGetParserEscape8BitCharactersOnReceive(rsconf_t *cnf);
+void glblSetParserEscapeControlCharacterTab(rsconf_t *cnf, int enabled);
+int glblGetParserEscapeControlCharacterTab(rsconf_t *cnf);
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;

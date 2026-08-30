@@ -335,6 +335,10 @@ The following parameters can be set:
   Note that escaping is the traditional behavior and existing scripts
   may get into trouble if this is changed to "off".
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
+
 - **parser.controlCharacterEscapePrefix** [char]
 
   **Default:** '#'
