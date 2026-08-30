@@ -17,9 +17,9 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
 
 /* sourceCapability authorizes additional imtcp module/input report entries
  * only when the caller has already obtained a reloadable result from the
- * private effective module classifier. reloadModeAuthorized independently
- * authorizes the global node only after the controller proved that
- * config.reloadOnHUP is the sole base change. Every other object kind remains
+ * private effective module classifier. baseAuthorized independently
+ * authorizes the global node only after the controller proved that one
+ * explicitly supported base value is the sole global change. Every other object kind remains
  * fail-closed. The accepted source capabilities are REUSE, LIVE_SWAP,
  * NEW_SESSIONS, LIVE_AND_NEW_SESSIONS, and DRAIN_REPLACE. REUSE can publish a
  * new source baseline without changing runtime objects. */
@@ -28,7 +28,7 @@ rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *candidate,
                                       const rsReloadReportV1_t *report,
                                       eModReloadCapability_t sourceCapability,
-                                      int reloadModeAuthorized,
+                                      int baseAuthorized,
                                       rsReloadRulesetPlanV1_t **out);
 void rsReloadRulesetPlanDestructV1(rsReloadRulesetPlanV1_t **plan);
 size_t rsReloadRulesetPlanCountV1(const rsReloadRulesetPlanV1_t *plan);

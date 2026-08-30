@@ -294,14 +294,18 @@ inputs, or global settings remain rejected as
 ``candidate_scope_unsupported``.  Unsupported ruleset syntax and consumer
 queues without a safe batch barrier are rejected before commit.
 
-The first base-setting exception is ``config.reloadOnHUP`` itself.  In ``on``
-mode, the controller builds a private last-write profile for this value and a
-separate fingerprint over every other ``global()`` parameter.  It authorizes
-the global report node only when that second fingerprint is unchanged, then
-publishes the new mode with the source graph under the same final commit guard.
-The next HUP therefore observes the activated ``off``, ``validate``, or ``on``
-policy.  This narrow exception does not make other global settings
-live-reloadable; in ``validate`` mode all candidate parsing remains report-only.
+The first base-setting exceptions are ``config.reloadOnHUP`` itself and
+``reportChildProcessExits``.  In ``on`` mode, the controller builds private
+last-write profiles for these values and separate fingerprints over every
+other ``global()`` parameter.  It authorizes the global report node only when
+exactly one supported scalar changed and that scalar's other-parameter
+fingerprint is unchanged.  The final commit guard then publishes either the
+new reload mode or the synchronized child-exit reporting policy together with
+the source graph.  The next HUP observes the activated ``off``, ``validate``,
+or ``on`` reload policy, and child exits observed after the commit use the new
+``none``, ``errors``, or ``all`` policy.  Changing both scalars in one
+generation, or changing any other global setting, remains unsupported.  In
+``validate`` mode all candidate parsing remains report-only.
 
 The first Release E foundation coordinates that ruleset plan with an ``imtcp``
 event-loop/worker fence.  Compatible existing listeners and sessions are kept

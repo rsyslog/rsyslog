@@ -22,6 +22,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "glbl.h"
 #include "obj.h"
 #include "reload-candidate.h"
 #include "reload-report.h"
@@ -83,7 +84,10 @@ static int retirementPending = 0;
 static rsRetVal lastRetirementError = RS_RET_OK;
 static int pendingGenerationActivated = 0;
 static reloadOnHUPMode_t pendingReloadMode = RELOAD_ON_HUP_OFF;
-static int pendingReloadModeAuthorized = 0;
+static int pendingReportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+static int pendingBaseAuthorized = 0;
+static int pendingReloadModeUpdate = 0;
+static int pendingReportChildProcessExitsUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -447,12 +451,27 @@ static rsRetVal parseCandidateReloadMode(const char *const value, reloadOnHUPMod
     return RS_RET_OK;
 }
 
+static rsRetVal parseCandidateReportChildProcessExits(const char *const value, int *const mode) {
+    if (mode == NULL) return RS_RET_PARAM_ERROR;
+    if (value == NULL || !strcasecmp(value, "errors")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    } else if (!strcasecmp(value, "none")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_NONE;
+    } else if (!strcasecmp(value, "all")) {
+        *mode = REPORT_CHILD_PROCESS_EXITS_ALL;
+    } else {
+        return RS_RET_CONF_PARAM_INVLD;
+    }
+    return RS_RET_OK;
+}
+
 static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     char *activeValue = NULL;
     char *candidateValue = NULL;
     char *activeOther = NULL;
     char *candidateOther = NULL;
     reloadOnHUPMode_t activeMode;
+    int activeReportChildProcessExits;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -461,11 +480,32 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "config.reloadonhup", &candidateValue,
                                                    &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateReloadMode(activeValue, &activeMode));
+        CHKiRet(parseCandidateReloadMode(candidateValue, &pendingReloadMode));
+        if (activeMode != configuredMode) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingReloadModeUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "reportchildprocessexits", &activeValue,
+                                                   &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "reportchildprocessexits",
+                                                   &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateReloadMode(activeValue, &activeMode));
-    CHKiRet(parseCandidateReloadMode(candidateValue, &pendingReloadMode));
-    if (activeMode != configuredMode) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-    pendingReloadModeAuthorized = 1;
+    CHKiRet(parseCandidateReportChildProcessExits(activeValue, &activeReportChildProcessExits));
+    CHKiRet(parseCandidateReportChildProcessExits(candidateValue, &pendingReportChildProcessExits));
+    if (activeReportChildProcessExits != glblGetReportChildProcessExits(runConf)) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    pendingBaseAuthorized = 1;
+    pendingReportChildProcessExitsUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -481,7 +521,7 @@ static rsRetVal lowerImtcpSourceCandidate(const rsReloadReportV1_t *const report
     const void *oldSourceModuleCnf;
 
     if (activeModule == NULL || !modReloadHasValidSourceInterfaceV1(activeModule->pMod)) return RS_RET_OK;
-    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL) && !pendingReloadModeAuthorized) return RS_RET_OK;
+    if (reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL) && !pendingBaseAuthorized) return RS_RET_OK;
     memset(&context, 0, sizeof(context));
     context.version = MOD_RELOAD_SOURCE_BUILD_CONTEXT_V1;
     context.structSize = sizeof(context);
@@ -685,7 +725,10 @@ void shadowReloadBeginRequest(void) {
     pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
     pendingSourceModuleCapabilityEvaluated = 0;
     pendingReloadMode = configuredMode;
-    pendingReloadModeAuthorized = 0;
+    pendingReportChildProcessExits = glblGetReportChildProcessExits(runConf);
+    pendingBaseAuthorized = 0;
+    pendingReloadModeUpdate = 0;
+    pendingReportChildProcessExitsUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -758,7 +801,7 @@ void shadowReloadBeginRequest(void) {
                                                   pendingSourceModuleCapability == eMOD_RELOAD_DRAIN_REPLACE);
                     const int moduleNeedsCommit =
                         sourceReloadable && pendingSourceModuleCapability != eMOD_RELOAD_REUSE;
-                    unsigned authorizations = pendingReloadModeAuthorized ? RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 : 0;
+                    unsigned authorizations = pendingBaseAuthorized ? RS_RELOAD_AUTHORIZE_BASE_V1 : 0;
                     if (sourceReloadable) authorizations |= RS_RELOAD_AUTHORIZE_IMTCP_V1;
                     pendingCandidateResult = rsReloadCandidateCheckAuthorizedReportV1(
                         activeSourceObjectCatalog, pendingCandidate, pendingReport, authorizations);
@@ -768,7 +811,7 @@ void shadowReloadBeginRequest(void) {
                         pendingCandidateResult = rsReloadRulesetPlanPrepareV1(
                             runConf, activeSourceObjectCatalog, pendingCandidate, pendingReport,
                             sourceReloadable ? pendingSourceModuleCapability : eMOD_RELOAD_RESTART_REQUIRED,
-                            pendingReloadModeAuthorized, &pendingPlan);
+                            pendingBaseAuthorized, &pendingPlan);
                         if (pendingCandidateResult != RS_RET_OK) pendingFailurePhase = SHADOW_RELOAD_FAILURE_CAPABILITY;
                         if (pendingCandidateResult == RS_RET_OK && moduleNeedsCommit) {
                             pendingCandidateResult = modReloadPrepare(
@@ -1029,10 +1072,11 @@ static void publishActivatedGeneration(void *const context) {
         retirementPending = 1;
         pthread_mutex_unlock(&statusMut);
     }
-    if (pendingReloadModeAuthorized) {
+    if (pendingReloadModeUpdate) {
         configuredMode = pendingReloadMode;
         runConf->globals.reloadOnHUP = pendingReloadMode;
     }
+    if (pendingReportChildProcessExitsUpdate) glblSetReportChildProcessExits(runConf, pendingReportChildProcessExits);
     publishActivatedGraph(context);
 }
 

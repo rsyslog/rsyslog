@@ -778,6 +778,12 @@ Historically these options were referenced in source code and change logs as
   indicating this). This specific error message (if any) is not affected by this
   global setting.
 
+  With ``config.reloadOnHUP="on"``, this policy can be changed transactionally
+  by HUP when it is the only changed base/global setting in that generation.
+  Child exits observed after the commit use the new value.  A candidate that
+  also changes ``config.reloadOnHUP`` or another global parameter is rejected
+  without changing the active configuration.
+
 
 - **default.ruleset.queue.timeoutshutdown**
 - **default.ruleset.queue.timeoutactioncompletion**

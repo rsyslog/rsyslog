@@ -1473,7 +1473,7 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
                                                   const rsReloadReportV1_t *const report,
                                                   const unsigned authorizations) {
     size_t i;
-    if ((authorizations & ~(RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1)) != 0 ||
+    if ((authorizations & ~(RS_RELOAD_AUTHORIZE_IMTCP_V1 | RS_RELOAD_AUTHORIZE_BASE_V1)) != 0 ||
         ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) != 0 && candidate == NULL) || report == NULL ||
         report->version != RS_RELOAD_REPORT_V1 || report->structSize < sizeof(*report) ||
         report->entryStride < sizeof(rsReloadReportEntryV1_t) ||
@@ -1490,8 +1490,7 @@ rsRetVal rsReloadCandidateCheckAuthorizedReportV1(const rsReloadCandidate_t *con
             if (entry->diffKind == RS_RELOAD_DIFF_MODIFIED) continue;
             return RS_RET_NOT_IMPLEMENTED;
         }
-        if (entry->objectKind == RS_RELOAD_OBJ_GLOBAL && (authorizations & RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1) != 0)
-            continue;
+        if (entry->objectKind == RS_RELOAD_OBJ_GLOBAL && (authorizations & RS_RELOAD_AUTHORIZE_BASE_V1) != 0) continue;
         if ((authorizations & RS_RELOAD_AUTHORIZE_IMTCP_V1) == 0) return RS_RET_NOT_IMPLEMENTED;
         if (entry->diffKind == RS_RELOAD_DIFF_ADDED && entry->objectKind == RS_RELOAD_OBJ_RATELIMIT) {
             rsReloadRatelimitUsageV1_t usage;

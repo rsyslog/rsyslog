@@ -335,7 +335,7 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.oversizeMsgErrorFile = NULL;
     pThis->globals.reportOversizeMsg = 1;
     pThis->globals.oversizeMsgInputMode = 0;
-    pThis->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    glblSetReportChildProcessExits(pThis, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     pThis->globals.bActionReportSuspension = 1;
     pThis->globals.bActionReportSuspensionCont = 0;
     pThis->globals.janitorInterval = 10;

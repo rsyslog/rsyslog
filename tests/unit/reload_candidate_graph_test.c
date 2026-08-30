@@ -921,8 +921,9 @@ int main(void) {
                                                .entryCount = 1,
                                                .entryStride = sizeof(globalEntry),
                                                .entries = &globalEntry};
+            CHECK(RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 == RS_RELOAD_AUTHORIZE_BASE_V1);
             CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, globalCandidate, &globalReport,
-                                                           RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1) == RS_RET_OK);
+                                                           RS_RELOAD_AUTHORIZE_BASE_V1) == RS_RET_OK);
             CHECK(rsReloadCandidateCheckAuthorizedReportV1(NULL, globalCandidate, &globalReport,
                                                            RS_RELOAD_AUTHORIZE_IMTCP_V1) == RS_RET_NOT_IMPLEMENTED);
         }

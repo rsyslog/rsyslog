@@ -105,6 +105,10 @@ int glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
+/* Child termination can be reported by module workers as well as the main
+ * reaper. Transactional base publication therefore uses the same synchronized
+ * accessors as every reader instead of racing a plain configuration write. */
+DEF_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif
 #ifdef USE_UNLIMITED_SELECT
@@ -714,11 +718,11 @@ static rsRetVal ATTR_NONNULL() setOversizeMsgInputMode(const uchar *const mode) 
 static rsRetVal ATTR_NONNULL() setReportChildProcessExits(const uchar *const mode) {
     DEFiRet;
     if (!strcmp((char *)mode, "none")) {
-        loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_NONE;
+        glblSetReportChildProcessExits(loadConf, REPORT_CHILD_PROCESS_EXITS_NONE);
     } else if (!strcmp((char *)mode, "errors")) {
-        loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+        glblSetReportChildProcessExits(loadConf, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     } else if (!strcmp((char *)mode, "all")) {
-        loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ALL;
+        glblSetReportChildProcessExits(loadConf, REPORT_CHILD_PROCESS_EXITS_ALL);
     } else {
         LogError(0, RS_RET_CONF_PARAM_INVLD,
                  "invalid value '%s' for global parameter reportChildProcessExits -- ignored", mode);
@@ -928,16 +932,26 @@ int glblReportOversizeMessage(rsconf_t *cnf) {
     return cnf->globals.reportOversizeMsg;
 }
 
+int glblGetReportChildProcessExits(rsconf_t *const cnf) {
+    if (cnf == NULL) return REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    return ATOMIC_LOAD_32BIT(&cnf->globals.reportChildProcessExits, &mutReportChildProcessExits);
+}
+
+void glblSetReportChildProcessExits(rsconf_t *const cnf, const int mode) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.reportChildProcessExits, &mutReportChildProcessExits, mode);
+}
+
 
 /* logs a message indicating that a child process has terminated.
  * If name != NULL, prints it as the program name.
  */
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status) {
+    const int reportMode = glblGetReportChildProcessExits(cnf);
     DBGPRINTF("waitpid for child %ld returned status: %2.2x\n", (long)pid, status);
 
-    if (cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE ||
-        (cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS && WIFEXITED(status) &&
-         WEXITSTATUS(status) == 0)) {
+    if (reportMode == REPORT_CHILD_PROCESS_EXITS_NONE ||
+        (reportMode == REPORT_CHILD_PROCESS_EXITS_ERRORS && WIFEXITED(status) && WEXITSTATUS(status) == 0)) {
         return;
     }
 
@@ -1172,7 +1186,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     free(loadConf->globals.oversizeMsgErrorFile);
     loadConf->globals.oversizeMsgErrorFile = NULL;
     loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
-    loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+    glblSetReportChildProcessExits(loadConf, REPORT_CHILD_PROCESS_EXITS_ERRORS);
     free(loadConf->globals.pszWorkDir);
     loadConf->globals.pszWorkDir = NULL;
     free((void *)loadConf->globals.operatingStateFile);
@@ -1735,6 +1749,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
         regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
     INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
+    INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 ENDObjClassInit(glbl)
 
 
@@ -1748,5 +1763,6 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     free(LocalFQDNName);
     objRelease(prop, CORE_COMPONENT);
     if (propLocalHostNameToDelete != NULL) prop.Destruct(&propLocalHostNameToDelete);
+    DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
     DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)

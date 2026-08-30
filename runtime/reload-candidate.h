@@ -81,7 +81,8 @@ rsRetVal rsReloadCandidateCheckRulesetImtcpReportV1(const rsReloadCandidate_t *a
                                                     const rsReloadReportV1_t *report);
 typedef enum rsReloadCandidateAuthorizationV1_e {
     RS_RELOAD_AUTHORIZE_IMTCP_V1 = 1U << 0,
-    RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 = 1U << 1
+    RS_RELOAD_AUTHORIZE_BASE_V1 = 1U << 1,
+    RS_RELOAD_AUTHORIZE_RELOAD_MODE_V1 = RS_RELOAD_AUTHORIZE_BASE_V1
 } rsReloadCandidateAuthorizationV1_t;
 /* Ruleset modifications remain the baseline capability. Additional report
  * object kinds are accepted only when the caller has already prepared and
