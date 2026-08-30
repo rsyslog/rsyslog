@@ -326,6 +326,10 @@ The following parameters can be set:
   ``app/foo[1234]`` will result in a ``programname`` value of
   ``app/foo``.
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Program names evaluated after the commit use
+  the new value; combined global changes remain fail-closed.
+
 - **parser.escapeControlCharacterTab** [on/off] available since 8.7.0
 
   **Default:** on

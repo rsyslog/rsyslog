@@ -301,7 +301,8 @@ The first base-setting exceptions are ``config.reloadOnHUP`` itself,
 ``parser.dropTrailingCROnReception``,
 ``parser.escapeControlCharactersOnReceive``, ``parser.spaceLFOnReceive``,
 ``parser.escape8BitCharactersOnReceive``, ``parser.escapeControlCharacterTab``,
-and ``parser.escapeControlCharactersCStyle``.  In ``on`` mode, the controller builds
+``parser.escapeControlCharactersCStyle``, and
+``parser.permitSlashInProgramName``.  In ``on`` mode, the controller builds
 private last-write profiles for these values and separate fingerprints over
 every other ``global()`` parameter.  It authorizes the global report node only
 when exactly one supported scalar changed and that scalar's other-parameter
