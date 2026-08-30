@@ -76,6 +76,7 @@
 #include "atomic.h"
 #include "unicode-helper.h"
 #include "ruleset.h"
+#include "rainerscript.h"
 #include "prop.h"
 #include "msg_replace_helper.h"
 #include "net.h"
@@ -3327,6 +3328,86 @@ finalize_it:
 }
 
 
+/* Get a JSON-based variable as an expression value.
+ *
+ * JSON strings are copied directly into an es_str_t while the selected root
+ * lock is held. This avoids the temporary strdup() result used by
+ * msgGetJSONPropJSONorString(). The C-string getter historically truncates
+ * JSON strings at their first embedded NUL, so retain that behavior here.
+ * Non-string values remain deep-copied JSON objects because message mutation
+ * may otherwise invalidate them after the lock is released.
+ */
+rsRetVal msgGetJSONPropSVar(smsg_t *const pMsg, msgPropDescr_t *pProp, struct svar *out) {
+    struct json_object **jroot;
+    uchar *leaf;
+    struct json_object *parent;
+    pthread_mutex_t *mut = NULL;
+    DEFiRet;
+
+    out->datatype = 'S';
+    out->d.estr = NULL;
+
+#ifdef HAVE_LOGNORM_TURBO
+    /* Keep the existing snapshot precedence guard: once $! was mutated, the
+     * merge-aware path below must materialize and read the message JSON. */
+    if (pProp->id == PROP_CEE && pMsg->json == NULL && pMsg->turbo_result != NULL &&
+        pMsg->turbo_result_get_str != NULL) {
+        const uchar *val;
+        rs_size_t vlen;
+        if (pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
+            const size_t len = strnlen((const char *)val, vlen);
+            out->d.estr = es_newStrFromCStr((const char *)val, len);
+            if (out->d.estr != NULL) {
+                return RS_RET_OK;
+            }
+        }
+    }
+#endif
+
+    CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
+    pthread_mutex_lock(mut);
+#ifdef HAVE_LOGNORM_TURBO
+    msgMaterializeTurboJSON(pMsg);
+#endif
+    if (!strcmp((char *)pProp->name, "!")) {
+        out->d.json = *jroot;
+        if (out->d.json != NULL) {
+            out->datatype = 'J';
+        }
+        FINALIZE;
+    }
+    if (*jroot == NULL) {
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+    leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
+    CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
+    if (jsonVarExtract(parent, (char *)leaf, &out->d.json) == FALSE) {
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+    if (out->d.json == NULL) {
+        /* A JSON null is represented as an empty expression string. */
+        out->d.estr = es_newStrFromCStr("", 0);
+    } else if (json_object_get_type(out->d.json) == json_type_string) {
+        const char *const str = json_object_get_string(out->d.json);
+        const size_t len = strnlen(str, json_object_get_string_len(out->d.json));
+        out->d.estr = es_newStrFromCStr(str, len);
+    } else {
+        out->datatype = 'J';
+    }
+
+finalize_it:
+    if (out->datatype == 'J') {
+        out->d.json = jsonDeepCopy(out->d.json);
+        if (out->d.json == NULL) {
+            out->datatype = 'S';
+            out->d.estr = NULL;
+        }
+    }
+    if (mut != NULL) pthread_mutex_unlock(mut);
+    RETiRet;
+}
+
+
 /* Get a JSON-based-variable as native json object */
 rsRetVal msgGetJSONPropJSON(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object **pjson) {
     struct json_object **jroot;
@@ -5370,11 +5451,19 @@ rsRetVal msgSetJSONFromVar(smsg_t *const pMsg, uchar *varname, struct svar *v, i
     char *cstr;
     DEFiRet;
     switch (v->datatype) {
-        case 'S': /* string */
-            CHKmalloc(cstr = es_str2cstr(v->d.estr, NULL));
-            json = json_object_new_string(cstr);
-            free(cstr);
+        case 'S': { /* string */
+            const es_size_t len = es_strlen(v->d.estr);
+            if (len <= INT_MAX && memchr(es_getBufAddr(v->d.estr), '\0', len) == NULL) {
+                json = json_object_new_string_len((const char *)es_getBufAddr(v->d.estr), (int)len);
+            } else {
+                /* es_str2cstr(..., NULL) drops every embedded NUL. Retain
+                 * that established behavior for values outside the fast path. */
+                CHKmalloc(cstr = es_str2cstr(v->d.estr, NULL));
+                json = json_object_new_string(cstr);
+                free(cstr);
+            }
             break;
+        }
         case 'N': /* number (integer) */
             json = json_object_new_int64(v->d.n);
             break;
