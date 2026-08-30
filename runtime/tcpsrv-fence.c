@@ -265,6 +265,22 @@ void tcpsrvApplyRateLimitLive(tcpsrv_t *const server, const unsigned interval, c
     }
 }
 
+void tcpsrvSwapRateLimiterLive(tcpsrv_t *const server,
+                               ratelimit_t *const preparedLimiter,
+                               uchar *const preparedName,
+                               ratelimit_t **const retiredLimiter,
+                               uchar **const retiredName) {
+    tcpLstnPortList_t *const listener = server->pLstnPorts;
+    assert(listener != NULL && listener->pNext == NULL && listener->cnf_params != NULL);
+    assert(server->fenceAcquired && server->fenceOwnerValid && pthread_equal(server->fenceOwner, pthread_self()));
+    assert(preparedLimiter != NULL && retiredLimiter != NULL && *retiredLimiter == NULL && retiredName != NULL &&
+           *retiredName == NULL);
+    *retiredLimiter = listener->ratelimiter;
+    *retiredName = listener->cnf_params->pszRatelimitName;
+    listener->ratelimiter = preparedLimiter;
+    listener->cnf_params->pszRatelimitName = preparedName;
+}
+
 void tcpsrvApplyNotificationsLive(tcpsrv_t *const server, const int onOpen, const int onClose) {
     server->bEmitMsgOnOpen = onOpen;
     server->bEmitMsgOnClose = onClose;

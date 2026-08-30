@@ -2,15 +2,20 @@
 # Verify RainerScript live reload of imtcp session/control scalars on an
 # established TCP session. Visible timestamp offsets prove defaultTZ snapshot
 # updates; exact live-swap generations plus records on the same socket prove
-# module- and input-level starvation and unnamed rate-limit profiles publish
-# without reconnecting. The focused tcpsrv unit verifies the scalar and limiter
-# propagation performed by the fenced commit helper.
+# module- and input-level starvation plus unnamed and named rate-limit profiles
+# publish without reconnecting. The named-policy oracle accepts exactly one of
+# two ordered frames and waits for a fresh first-drop diagnostic, then
+# proves the same TCP stream survives a second policy swap. The focused tcpsrv
+# unit verifies the scalar and pointer propagation performed by the fenced
+# commit helper.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
 add_conf '
 global(config.reloadOnHUP="on")
 module(load="../plugins/imtcp/.libs/imtcp")
+ratelimit(name="policy_tight" interval="60" burst="1")
+ratelimit(name="policy_wide" interval="60" burst="100")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="main")
 ruleset(name="main") {
     action(type="omfile" name="tz_sink" file="'$RSYSLOG_OUT_LOG'")
@@ -100,6 +105,73 @@ wait_queueempty
 content_count_check 'ratelimit-live-' 3 "$RSYSLOG_OUT_LOG"
 check_not_present 'ratelimit-live-4' "$RSYSLOG_OUT_LOG"
 check_not_present 'ratelimit-live-5' "$RSYSLOG_OUT_LOG"
+
+# Switching from the listener-local limiter to a named policy prepares a new
+# instance before the fence and swaps its ownership at commit. Truncating the
+# internal diagnostic sink first makes the next first-drop message a fresh
+# state oracle proving the second frame reached the new one-message bucket.
+cp "$CONF_FILE" "$CONF_FILE.unnamed-live"
+: >"$RSYSLOG_DYNNAME.started"
+sed 's/ratelimit.interval="60" ratelimit.burst="3"/ratelimit.name="policy_tight"/' \
+	"$CONF_FILE.unnamed-live" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=7"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript named tight rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host named-tight: named-tight-accepted' \
+	'<167>Mar 10 01:00:00 host named-tight: named-tight-dropped' >&9 || error_exit 1
+wait_content 'named-tight-accepted' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'named-tight-' 1 "$RSYSLOG_OUT_LOG"
+check_not_present 'named-tight-dropped' "$RSYSLOG_OUT_LOG"
+
+# A second prepared swap resets listener-local bucket state and keeps the same
+# accepted session alive. All three frames fit the wide policy.
+sed 's/ratelimit[.]name="policy_tight"/ratelimit.name="policy_wide"/' "$CONF_FILE" >"$CONF_FILE.wide"
+mv "$CONF_FILE.wide" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=8"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript named wide rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-1' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-2' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-3' >&9 || error_exit 1
+wait_content 'named-wide-3' "$RSYSLOG_OUT_LOG"
+wait_queueempty
+content_count_check 'named-wide-' 3 "$RSYSLOG_OUT_LOG"
+
+# The reverse transition owns no prepared name but must retire the current one
+# after the fence. A fresh two-message unnamed bucket proves that direction of
+# the pointer swap while the established stream remains usable.
+: >"$RSYSLOG_DYNNAME.started"
+sed 's/ratelimit[.]name="policy_wide"/ratelimit.interval="60" ratelimit.burst="2"/' \
+	"$CONF_FILE" >"$CONF_FILE.unnamed-again"
+mv "$CONF_FILE.unnamed-again" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=9"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: RainerScript unnamed rate limit restore did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-1' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-2' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-3' >&9 || error_exit 1
+wait_content 'unnamed-again-2' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'unnamed-again-' 2 "$RSYSLOG_OUT_LOG"
+check_not_present 'unnamed-again-3' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

@@ -3,8 +3,9 @@
  * oracle drives the production Request/Wait/Release and event-loop/worker
  * safepoints directly: single-worker acquisition, multi-worker timeout with
  * automatic abort/drain followed by a fresh generation, and TERM while all
- * participants are parked. Bounded absolute deadlines prevent a broken fence
- * from hanging the unit test.
+ * participants are parked. It also verifies fenced listener snapshot and
+ * ownership swaps, including a prepared rate limiter. Bounded absolute
+ * deadlines prevent a broken fence from hanging the unit test.
  */
 #include "config.h"
 
@@ -309,6 +310,29 @@ static int rateLimitSnapshot(void) {
     return 0;
 }
 
+static int rateLimiterSwap(void) {
+    tcpsrv_t server = {0};
+    uchar oldName[] = "old-policy";
+    tcpLstnParams_t params = {.pszRatelimitName = oldName};
+    ratelimit_t oldLimiter = {0};
+    ratelimit_t preparedLimiter = {0};
+    ratelimit_t *retiredLimiter = NULL;
+    uchar *retiredName = NULL;
+    uchar preparedName[] = "new-policy";
+    tcpLstnPortList_t listener = {.cnf_params = &params, .ratelimiter = &oldLimiter};
+    server.pLstnPorts = &listener;
+    server.fenceAcquired = 1;
+    server.fenceOwnerValid = 1;
+    server.fenceOwner = pthread_self();
+
+    tcpsrvSwapRateLimiterLive(&server, &preparedLimiter, preparedName, &retiredLimiter, &retiredName);
+    CHECK(listener.ratelimiter == &preparedLimiter);
+    CHECK(listener.cnf_params->pszRatelimitName == preparedName);
+    CHECK(retiredLimiter == &oldLimiter);
+    CHECK(retiredName == oldName);
+    return 0;
+}
+
 static int notificationSnapshot(void) {
     tcpsrv_t server = {.bEmitMsgOnOpen = 0, .bEmitMsgOnClose = 1};
     tcpsrvApplyNotificationsLive(&server, 1, 0);
@@ -455,6 +479,7 @@ int main(void) {
     if (flowControlSnapshot() != 0) return 1;
     if (starvationMaxReadsSnapshot() != 0) return 1;
     if (rateLimitSnapshot() != 0) return 1;
+    if (rateLimiterSwap() != 0) return 1;
     if (notificationSnapshot() != 0) return 1;
     if (preserveCaseNewSessions() != 0) return 1;
     if (keepAliveNewSessions() != 0) return 1;

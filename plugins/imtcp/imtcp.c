@@ -1984,7 +1984,7 @@ static int reloadInstanceEqual(const instanceConf_t *const left,
            (ignoreNewSessionFields || leftParams->bSuppOctetFram == rightParams->bSuppOctetFram) &&
            (ignoreNewSessionFields || leftParams->bMultiLine == rightParams->bMultiLine) &&
            (ignoreNewSessionFields || reloadUStringEqual(leftParams->pszStartRegex, rightParams->pszStartRegex)) &&
-           reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName) &&
+           (ignoreLiveFields || reloadUStringEqual(leftParams->pszRatelimitName, rightParams->pszRatelimitName)) &&
            (ignoreLiveFields ||
             (leftLegacyAcl == rightLegacyAcl && reloadAllowedSenderConfigEqual(left, leftModule, right, rightModule) &&
              reloadAllowedSendersEqual(leftAllowed, rightAllowed))) &&
@@ -2193,8 +2193,14 @@ typedef struct imtcpReloadEntryV1_s {
     int removal;
     int flowControl;
     unsigned starvationMaxReads;
+    int applyRateLimitScalars;
     unsigned ratelimitInterval;
     unsigned ratelimitBurst;
+    int swapRateLimiter;
+    ratelimit_t *preparedRateLimiter;
+    ratelimit_t *retiredRateLimiter;
+    uchar *preparedRatelimitName;
+    uchar *retiredRatelimitName;
     int notifyOnConnectionClose;
     int notifyOnConnectionOpen;
     int preserveCase;
@@ -2264,6 +2270,45 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal prepareReloadRateLimiter(imtcpReloadEntryV1_t *const entry,
+                                         const instanceConf_t *const newInst,
+                                         const modConfData_t *const newConfig) {
+    tcpLstnPortList_t *listener;
+    const uchar *newName;
+    DEFiRet;
+
+    if (entry == NULL || entry->runtime == NULL || entry->runtime->tcpsrv == NULL || newInst == NULL ||
+        newInst->cnf_params == NULL || newConfig == NULL || newConfig->pConf == NULL)
+        return RS_RET_PARAM_ERROR;
+    listener = entry->runtime->tcpsrv->pLstnPorts;
+    if (listener == NULL || listener->pNext != NULL || listener->cnf_params == NULL) return RS_RET_NOT_IMPLEMENTED;
+    newName = newInst->cnf_params->pszRatelimitName;
+    if (reloadUStringEqual(listener->cnf_params->pszRatelimitName, newName)) FINALIZE;
+
+    if (newName != NULL) {
+        CHKmalloc(entry->preparedRatelimitName = ustrdup(newName));
+        CHKiRet(ratelimitNewFromConfig(&entry->preparedRateLimiter, newConfig->pConf, (const char *)newName, "tcpsrv",
+                                       NULL));
+    } else {
+        CHKiRet(ratelimitNew(&entry->preparedRateLimiter, "tcpsrv", NULL));
+        ratelimitSetLinuxLike(entry->preparedRateLimiter, (unsigned)newInst->ratelimitInterval,
+                              (unsigned)newInst->ratelimitBurst);
+    }
+    ratelimitSetThreadSafe(entry->preparedRateLimiter);
+    entry->swapRateLimiter = 1;
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (entry->preparedRateLimiter != NULL) {
+            ratelimitDestruct(entry->preparedRateLimiter);
+            entry->preparedRateLimiter = NULL;
+        }
+        free(entry->preparedRatelimitName);
+        entry->preparedRatelimitName = NULL;
+    }
+    RETiRet;
+}
+
 static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
     if (state == NULL) return;
     for (size_t i = 0; i < state->count; ++i) {
@@ -2280,6 +2325,14 @@ static void freeReloadPreparedValues(imtcpReloadStateV1_t *const state) {
         state->entries[i].retiredAllowedSendersOwned = 0;
         free(state->entries[i].sessionAllowed);
         state->entries[i].sessionAllowed = NULL;
+        if (state->entries[i].preparedRateLimiter != NULL) ratelimitDestruct(state->entries[i].preparedRateLimiter);
+        state->entries[i].preparedRateLimiter = NULL;
+        if (state->entries[i].retiredRateLimiter != NULL) ratelimitDestruct(state->entries[i].retiredRateLimiter);
+        state->entries[i].retiredRateLimiter = NULL;
+        free(state->entries[i].preparedRatelimitName);
+        state->entries[i].preparedRatelimitName = NULL;
+        free(state->entries[i].retiredRatelimitName);
+        state->entries[i].retiredRatelimitName = NULL;
     }
 }
 
@@ -2483,8 +2536,12 @@ static rsRetVal prepareReloadV1(const void *const pOldCnf, const void *const pNe
                           calloc((size_t)state->entries[index].sessionMax,
                                  sizeof(state->entries[index].preparedSessionSlots[0])));
         }
+        if (!state->entries[index].addition)
+            CHKiRet(prepareReloadRateLimiter(&state->entries[index], newInst, newConfig));
         state->entries[index].flowControl = newInst->bUseFlowControl;
         state->entries[index].starvationMaxReads = newInst->starvationMaxReads;
+        state->entries[index].applyRateLimitScalars =
+            newInst->cnf_params->pszRatelimitName == NULL && !state->entries[index].swapRateLimiter;
         state->entries[index].ratelimitInterval = (unsigned)newInst->ratelimitInterval;
         state->entries[index].ratelimitBurst = (unsigned)newInst->ratelimitBurst;
         state->entries[index].notifyOnConnectionClose = newInst->bEmitMsgOnClose;
@@ -2648,9 +2705,17 @@ static void commitReloadV1(void *const pReloadState) {
             tcpsrv.ApplySessionPolicyLive(server, state->entries[i].sessionAllowed,
                                           (size_t)state->entries[i].sessionMax, discardReloadAclMessage);
         }
+        if (!state->entries[i].addition && state->entries[i].swapRateLimiter) {
+            tcpsrv.SwapRateLimiterLive(server, state->entries[i].preparedRateLimiter,
+                                       state->entries[i].preparedRatelimitName, &state->entries[i].retiredRateLimiter,
+                                       &state->entries[i].retiredRatelimitName);
+            state->entries[i].preparedRateLimiter = NULL;
+            state->entries[i].preparedRatelimitName = NULL;
+        }
         tcpsrv_reload_profile_t profile = {
             .useFlowControl = state->entries[i].flowControl,
             .starvationMaxReads = state->entries[i].starvationMaxReads,
+            .applyRateLimitScalars = state->entries[i].applyRateLimitScalars,
             .ratelimitInterval = state->entries[i].ratelimitInterval,
             .ratelimitBurst = state->entries[i].ratelimitBurst,
             .notifyOnConnectionClose = state->entries[i].notifyOnConnectionClose,

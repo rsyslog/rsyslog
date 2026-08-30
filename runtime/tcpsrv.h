@@ -112,6 +112,7 @@ struct tcpLstnPortList_s {
 typedef struct tcpsrv_reload_profile_s {
     int useFlowControl;
     unsigned starvationMaxReads;
+    int applyRateLimitScalars;
     unsigned ratelimitInterval;
     unsigned ratelimitBurst;
     int notifyOnConnectionClose;
@@ -447,9 +448,12 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
                                    rsRetVal (*blockedSubmit)(tcps_sess_t *, uchar *, int));
     void (*SwapAllowedSendersLive)(tcpsrv_t *server, struct AllowedSenders *preparedRoot, int useLegacy,
                                    struct AllowedSenders **retiredRoot, int *retiredOwned);
+    /* v41 swaps a fully prepared listener-local rate limiter while fenced. */
+    void (*SwapRateLimiterLive)(tcpsrv_t *server, ratelimit_t *preparedLimiter, uchar *preparedName,
+                                ratelimit_t **retiredLimiter, uchar **retiredName);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 40 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 41 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -525,6 +529,11 @@ void tcpsrvSwapAllowedSendersLive(tcpsrv_t *server,
                                   int useLegacy,
                                   struct AllowedSenders **retiredRoot,
                                   int *retiredOwned);
+void tcpsrvSwapRateLimiterLive(tcpsrv_t *server,
+                               ratelimit_t *preparedLimiter,
+                               uchar *preparedName,
+                               ratelimit_t **retiredLimiter,
+                               uchar **retiredName);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

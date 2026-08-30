@@ -308,8 +308,12 @@ event-loop/worker fence.  Compatible existing listeners and sessions are kept
 open while effective ``flowControl``, ``defaultTZ``, ruleset binding, and
 ``starvationProtection.maxReads`` values and connection-open/close notification
 policy are published at the safepoint.  Unnamed Linux-like rate-limit interval
-and burst values are reset on the listener-local limiter under the same fence;
-named rate-limit policies remain restart-required.  An effective
+and burst values are reset on the listener-local limiter under the same fence.
+Changing between unnamed and named limiting, or between two unchanged named
+policies, privately constructs a fresh listener-local limiter and swaps its
+ownership at commit; the retired bucket is destroyed only after the fence is
+released.  Changes to the named policy definitions themselves remain outside
+this slice and are rejected.  An effective
 ``preserveCase`` change is classified ``new_sessions``: established sessions
 retain their already resolved peer identity and socket options, while the
 listener accept profile changes atomically for later connections.  TCP
@@ -327,8 +331,8 @@ the existing session submit hook accounts denied records in
 path.  Numeric entries and textual hostname wildcards are prepared without
 resolver activity.  Bare hostnames are supported only when the unchanged base
 already disables ACL hostname resolution; otherwise they remain
-restart-required.  TLS, endpoint-in-place replacement, named rate-limit policy,
-and listener-structure fields remain conservatively restart-required until
+restart-required.  TLS, endpoint-in-place replacement, and remaining
+listener-structure fields remain conservatively restart-required until
 their corresponding prepare, ownership, and reconciliation contracts are
 implemented.
 An endpoint change that resolves to a distinct fixed socket tuple is reconciled

@@ -1,8 +1,11 @@
 #!/bin/bash
 # Verify native YAML parity for live imtcp session/control scalar updates. The
 # same open TCP stream emits changed/restored timezone offsets and remains
-# usable after module- and input-level starvation and unnamed rate-limit
-# generations. The focused tcpsrv unit verifies scalar and limiter propagation.
+# usable after module- and input-level starvation plus unnamed and named
+# rate-limit generations. The named-policy oracle accepts exactly one of two
+# ordered frames, waits for a fresh drop diagnostic, and then proves
+# that the same stream survives a second policy swap. The focused tcpsrv unit
+# verifies scalar and limiter-pointer propagation.
 # A constant RainerScript include only routes internal diagnostics to a test
 # file; every imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
@@ -15,6 +18,13 @@ add_yaml_conf 'include:'
 add_yaml_conf '  - path: "'$RSYSLOG_DYNNAME'.internal.conf"'
 add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
+add_yaml_conf 'ratelimits:'
+add_yaml_conf '  - name: policy_tight'
+add_yaml_conf '    interval: 60'
+add_yaml_conf '    burst: 1'
+add_yaml_conf '  - name: policy_wide'
+add_yaml_conf '    interval: 60'
+add_yaml_conf '    burst: 100'
 add_yaml_conf 'inputs:'
 add_yaml_conf '  - type: imtcp'
 add_yaml_conf '    port: "0"'
@@ -108,6 +118,71 @@ wait_queueempty
 content_count_check 'ratelimit-live-' 3 "$RSYSLOG_OUT_LOG"
 check_not_present 'ratelimit-live-4' "$RSYSLOG_OUT_LOG"
 check_not_present 'ratelimit-live-5' "$RSYSLOG_OUT_LOG"
+
+# Replace the unnamed bucket with a privately prepared named limiter. Clearing
+# the internal sink first makes its next first-drop diagnostic synchronize the
+# negative assertion without relying on elapsed time.
+cp "$CONF_FILE" "$CONF_FILE.unnamed-live"
+: >"$RSYSLOG_DYNNAME.started"
+sed -e '/    ratelimit.interval: 60/d' \
+	-e 's/    ratelimit.burst: 3/    ratelimit.name: policy_tight/' \
+	"$CONF_FILE.unnamed-live" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=7"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML named tight rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host named-tight: named-tight-accepted' \
+	'<167>Mar 10 01:00:00 host named-tight: named-tight-dropped' >&9 || error_exit 1
+wait_content 'named-tight-accepted' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'named-tight-' 1 "$RSYSLOG_OUT_LOG"
+check_not_present 'named-tight-dropped' "$RSYSLOG_OUT_LOG"
+
+# Swap to a second named policy while retaining the accepted connection.
+sed 's/    ratelimit.name: policy_tight/    ratelimit.name: policy_wide/' "$CONF_FILE" >"$CONF_FILE.wide"
+mv "$CONF_FILE.wide" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=8"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML named wide rate limit did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-1' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-2' \
+	'<167>Mar 10 01:00:00 host named-wide: named-wide-3' >&9 || error_exit 1
+wait_content 'named-wide-3' "$RSYSLOG_OUT_LOG"
+wait_queueempty
+content_count_check 'named-wide-' 3 "$RSYSLOG_OUT_LOG"
+
+# Exercise the reverse ownership transfer: the prepared standalone limiter has
+# no name, while the retired named policy and its string survive until Resume.
+: >"$RSYSLOG_DYNNAME.started"
+sed 's/    ratelimit.name: policy_wide/    ratelimit.interval: 60\
+    ratelimit.burst: 2/' "$CONF_FILE" >"$CONF_FILE.unnamed-again"
+mv "$CONF_FILE.unnamed-again" "$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=9"* ||
+      "$reload_status" != *"modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML unnamed rate limit restore did not activate: $reload_status"
+	error_exit 1
+fi
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-1' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-2' \
+	'<167>Mar 10 01:00:00 host unnamed-again: unnamed-again-3' >&9 || error_exit 1
+wait_content 'unnamed-again-2' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'unnamed-again-' 2 "$RSYSLOG_OUT_LOG"
+check_not_present 'unnamed-again-3' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
