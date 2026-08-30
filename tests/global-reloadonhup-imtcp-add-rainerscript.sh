@@ -6,8 +6,10 @@
 # leading zeroes proves endpoint matching and effective comparison use the same
 # canonical socket identity. Removal must stop new
 # accepts while the already established session keeps delivering. After that
-# session closes, bounded HUP/status retries prove asynchronous drain retirement
-# completes without changing the activated generation. The testbench-selected
+# session closes, bounded 100 ms status polling proves the controller retries
+# asynchronous drain retirement without another HUP and without changing the
+# activated generation. The 50 polls are only a hang bound; completion is the
+# retirement_pending=0 state, not elapsed time. The testbench-selected
 # free port is only stimulus; production prepare validates the bind pre-commit.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
@@ -76,7 +78,8 @@ issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=activated active_generation=4"* ||
       "$reload_status" != *"removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ]]; then
+      "$reload_status" != *"source_capability=drain_replace"* ||
+      "$reload_status" != *"retirement_pending=1"* ]]; then
 	echo "FAIL: endpoint removal was not activated: $reload_status"
 	error_exit 1
 fi
@@ -88,16 +91,19 @@ if ! printf '<167>Mar 10 01:00:00 host app: remove-existing-session-survives\n' 
 wait_content 'remove-existing-session-survives' "$RSYSLOG_OUT_LOG"
 
 exec 8>&-
-for ((retire_try = 1; retire_try <= 20; ++retire_try)); do
-	issue_HUP
+for ((retire_try = 1; retire_try <= 50; ++retire_try)); do
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=reported_only active_generation=4"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activation_failed active_generation=4"* ]]; then
+	if [[ "$reload_status" == *"result=activated active_generation=4"* &&
+	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activated active_generation=4"* ||
+	      "$reload_status" != *"retirement_pending=1"* ]]; then
 		echo "FAIL: unexpected status while retiring drained endpoint: $reload_status"
 		error_exit 1
 	fi
+	"$TESTTOOL_DIR/msleep" 100
 done
-if [[ "$reload_status" != *"result=reported_only active_generation=4"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4"* ||
+      "$reload_status" != *"retirement_pending=0"* ]]; then
 	echo "FAIL: removed endpoint did not finish retirement after $((retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi

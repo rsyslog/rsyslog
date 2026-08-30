@@ -192,9 +192,9 @@ if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation
 	error_exit 1
 fi
 
-# Native YAML uses the same private base profile. Restore generation six,
-# change only config.reloadOnHUP, then use the next HUP as the runtime-policy
-# oracle: it must validate without publishing another generation.
+# Native YAML uses the same private base profile. The first HUP publishes the
+# config.reloadOnHUP change as generation seven; the following no-op HUP is the
+# runtime-policy oracle and must report only, without another publication.
 sed 's/config.reloadOnHUP: "on"/config.reloadOnHUP: "validate"/' "$CONF_FILE.active-generation-six" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"

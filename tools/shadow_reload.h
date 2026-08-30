@@ -49,4 +49,9 @@ void shadowReloadLegacyHooksCompleted(void);
 /* Called by doHUP() after the historic HUP hooks have completed. */
 void shadowReloadProcess(void);
 
+/* The main thread retries committed module retirement independently of HUP so
+ * drained listener generations are released within a bounded interval. */
+int shadowReloadRetirementPending(void);
+void shadowReloadRetryRetirement(void);
+
 #endif /* INCLUDED_SHADOW_RELOAD_H */

@@ -63,6 +63,10 @@ print_matches_in() {
 	local matches
 
 	printf '\n## %s\n\n%s\n\n' "$title" "$rationale"
+	if [ ! -s "$filelist" ]; then
+		printf 'No matches.\n'
+		return 1
+	fi
 	if command -v rg >/dev/null 2>&1; then
 		matches="$(xargs rg --line-number --with-filename --no-heading --color=never \
 			--regexp "$pattern" < "$filelist" || true)"
@@ -79,6 +83,89 @@ print_matches_in() {
 	return 1
 }
 
+print_direct_exit_matches() {
+	local matches
+
+	printf '\n## Direct exit() calls\n\n'
+	printf '%s\n\n' \
+		'Direct exit() calls are never acceptable in tests or test helpers because they bypass normal cleanup and can strand locks or worker threads. Return failure to the owning test thread and assert it after the lifecycle join. The testbench exit_test helper is not a direct exit() call.'
+	matches="$(python3 - "$tmpsources" <<'PY'
+import pathlib
+import re
+import sys
+
+
+def strip_literals_and_comments(source):
+    result = []
+    state = "code"
+    index = 0
+    while index < len(source):
+        char = source[index]
+        nxt = source[index + 1] if index + 1 < len(source) else ""
+        if state == "code":
+            if char == "/" and nxt == "/":
+                result.extend("  ")
+                index += 2
+                state = "line_comment"
+                continue
+            if char == "/" and nxt == "*":
+                result.extend("  ")
+                index += 2
+                state = "block_comment"
+                continue
+            if char == '"':
+                result.append(" ")
+                state = "string"
+            elif char == "'":
+                result.append(" ")
+                state = "character"
+            else:
+                result.append(char)
+        elif state == "line_comment":
+            result.append("\n" if char == "\n" else " ")
+            if char == "\n":
+                state = "code"
+        elif state == "block_comment":
+            if char == "*" and nxt == "/":
+                result.extend("  ")
+                index += 2
+                state = "code"
+                continue
+            result.append("\n" if char == "\n" else " ")
+        else:
+            if char == "\\" and nxt:
+                result.append(" ")
+                result.append("\n" if nxt == "\n" else " ")
+                index += 2
+                continue
+            result.append("\n" if char == "\n" else " ")
+            if (state == "string" and char == '"') or (state == "character" and char == "'"):
+                state = "code"
+        index += 1
+    return "".join(result)
+
+
+source_list = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+pattern = re.compile(r"(?<![A-Za-z0-9_.])exit\s*\(")
+for filename in source_list:
+    if pathlib.Path(filename).suffix not in {".c", ".cc", ".cpp", ".h"}:
+        continue
+    original = pathlib.Path(filename).read_text(encoding="utf-8", errors="replace")
+    stripped = strip_literals_and_comments(original)
+    original_lines = original.splitlines()
+    for match in pattern.finditer(stripped):
+        line_number = stripped.count("\n", 0, match.start()) + 1
+        print(f"{filename}:{line_number}:{original_lines[line_number - 1].strip()}")
+PY
+)"
+	if [ -n "$matches" ]; then
+		printf '```text\n%s\n```\n' "$matches"
+		return 0
+	fi
+	printf 'No matches.\n'
+	return 1
+}
+
 print_matches() {
 	print_matches_in "$1" "$2" "$3" "$tmpfiles"
 }
@@ -88,10 +175,7 @@ findings=0
 printf '# rsyslog test antipattern scan\n'
 printf '\nScanned %s test source files (%s shell tests).\n' "$(wc -l < "$tmpsources")" "$(wc -l < "$tmpfiles")"
 
-if print_matches_in "Direct exit() calls" \
-	'(^|[^[:alnum:]_.])exit[[:space:]]*\(' \
-	'Direct exit() calls are never acceptable in tests or test helpers because they bypass normal cleanup and can strand locks or worker threads. Return failure to the owning test thread and assert it after the lifecycle join. The testbench exit_test helper is not a direct exit() call.' \
-	"$tmpsources"; then
+if print_direct_exit_matches; then
 	findings=$((findings + 1))
 fi
 

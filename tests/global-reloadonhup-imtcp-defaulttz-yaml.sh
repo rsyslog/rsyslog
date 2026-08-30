@@ -2,7 +2,7 @@
 # Verify native YAML parity for live imtcp session/control scalar updates. The
 # same open TCP stream emits changed/restored timezone offsets and remains
 # usable after module- and input-level starvation and unnamed rate-limit
-# generations. The focused tcpsrv unit verifies limiter propagation.
+# generations. The focused tcpsrv unit verifies scalar and limiter propagation.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -49,8 +49,9 @@ fi
 printf '<167>Mar 10 01:00:00 host app: tz-restored\n' >&9 || error_exit 1
 wait_content '01:00:00+00:00 host app: tz-restored' "$RSYSLOG_OUT_LOG"
 
-# The module default is lowered into the effective input profile and applied
-# only after the event-loop/worker fence drains the old receive dispatch.
+# The module default exercises native-YAML effective-profile classification and
+# persistent-session publication. The focused unit checks the fenced scalar
+# update directly instead of inferring receive-dispatch behavior from timing.
 sed '/load: "..\/plugins\/imtcp\/.libs\/imtcp"/a\    starvationProtection.maxReads: 1' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP

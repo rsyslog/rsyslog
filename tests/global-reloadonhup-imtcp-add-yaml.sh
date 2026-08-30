@@ -3,8 +3,9 @@
 # RainerScript. A connection to the new fixed port plus records from both
 # persistent sockets prove publication and session retention. Rewriting that
 # port with leading zeroes proves canonical endpoint matching. Removal stops new
-# accepts while the old session stays usable; bounded HUP/status retries after
-# closing it prove the asynchronously drained endpoint is retired.
+# accepts while the old session stays usable. After closing it, bounded 100 ms
+# status polling proves automatic retirement without another HUP. The 50 polls
+# are only a hang bound; retirement_pending=0 is the completion oracle.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -62,13 +63,33 @@ if [[ "$reload_status" != *"result=activated active_generation=3"* ||
 fi
 if ! printf '<167>Mar 10 01:00:00 host app: yaml-canonical-endpoint-session\n' >&8; then error_exit 1; fi
 wait_content 'yaml-canonical-endpoint-session' "$RSYSLOG_OUT_LOG"
+cp "$CONF_FILE" "$CONF_FILE.added"
+
+# The already-bound imdiag port makes listener preparation fail
+# deterministically. Generation three and both existing sessions prove that
+# the YAML candidate was rolled back before publication.
+sed '/^rulesets:/i\  - type: imtcp\
+    address: "127.0.0.1"\
+    port: "'$IMDIAG_PORT'"\
+    name: bind-conflict\
+    ruleset: main' "$CONF_FILE.added" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activation_failed active_generation=3"* ||
+      "$reload_status" != *"added=1"* ]]; then
+	echo "FAIL: YAML listener bind failure did not roll back prepare: $reload_status"
+	error_exit 1
+fi
+if ! printf '<167>Mar 10 01:00:00 host app: yaml-add-survives-bind-failure\n' >&8; then error_exit 1; fi
+wait_content 'yaml-add-survives-bind-failure' "$RSYSLOG_OUT_LOG"
 
 cp "$CONF_FILE.base" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=activated active_generation=4"* ||
       "$reload_status" != *"removed=1"* ||
-      "$reload_status" != *"source_capability=drain_replace"* ]]; then
+      "$reload_status" != *"source_capability=drain_replace"* ||
+      "$reload_status" != *"retirement_pending=1"* ]]; then
 	echo "FAIL: YAML endpoint removal was not activated: $reload_status"
 	error_exit 1
 fi
@@ -80,16 +101,19 @@ if ! printf '<167>Mar 10 01:00:00 host app: yaml-remove-existing-session-survive
 wait_content 'yaml-remove-existing-session-survives' "$RSYSLOG_OUT_LOG"
 
 exec 8>&-
-for ((retire_try = 1; retire_try <= 20; ++retire_try)); do
-	issue_HUP
+for ((retire_try = 1; retire_try <= 50; ++retire_try)); do
 	reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-	if [[ "$reload_status" == *"result=reported_only active_generation=4"* ]]; then break; fi
-	if [[ "$reload_status" != *"result=activation_failed active_generation=4"* ]]; then
+	if [[ "$reload_status" == *"result=activated active_generation=4"* &&
+	      "$reload_status" == *"retirement_pending=0"* ]]; then break; fi
+	if [[ "$reload_status" != *"result=activated active_generation=4"* ||
+	      "$reload_status" != *"retirement_pending=1"* ]]; then
 		echo "FAIL: unexpected YAML status while retiring drained endpoint: $reload_status"
 		error_exit 1
 	fi
+	"$TESTTOOL_DIR/msleep" 100
 done
-if [[ "$reload_status" != *"result=reported_only active_generation=4"* ]]; then
+if [[ "$reload_status" != *"result=activated active_generation=4"* ||
+      "$reload_status" != *"retirement_pending=0"* ]]; then
 	echo "FAIL: YAML removed endpoint did not finish retirement after $((retire_try - 1)) attempts: $reload_status"
 	error_exit 1
 fi

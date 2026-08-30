@@ -20,8 +20,9 @@ typedef void (*rsReloadCommitLeaveV1_t)(void *context);
  * private effective module classifier. reloadModeAuthorized independently
  * authorizes the global node only after the controller proved that
  * config.reloadOnHUP is the sole base change. Every other object kind remains
- * fail-closed. REUSE can publish a new source baseline without changing
- * runtime objects. */
+ * fail-closed. The accepted source capabilities are REUSE, LIVE_SWAP,
+ * NEW_SESSIONS, LIVE_AND_NEW_SESSIONS, and DRAIN_REPLACE. REUSE can publish a
+ * new source baseline without changing runtime objects. */
 rsRetVal rsReloadRulesetPlanPrepareV1(rsconf_t *active,
                                       const rsReloadCandidate_t *activeSourceCatalog,
                                       const rsReloadCandidate_t *candidate,

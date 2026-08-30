@@ -2,8 +2,9 @@
 # Verify RainerScript live reload of imtcp session/control scalars on an
 # established TCP session. Visible timestamp offsets prove defaultTZ snapshot
 # updates; exact live-swap generations plus records on the same socket prove
-# module- and input-level starvation and unnamed rate-limit profiles commit
-# without reconnecting. The focused tcpsrv unit verifies limiter propagation.
+# module- and input-level starvation and unnamed rate-limit profiles publish
+# without reconnecting. The focused tcpsrv unit verifies the scalar and limiter
+# propagation performed by the fenced commit helper.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 generate_conf
@@ -43,8 +44,9 @@ fi
 printf '<167>Mar 10 01:00:00 host app: tz-restored\n' >&9 || error_exit 1
 wait_content '01:00:00+00:00 host app: tz-restored' "$RSYSLOG_OUT_LOG"
 
-# starvationProtection.maxReads is sampled once per receive dispatch. The
-# input fence drains the old dispatch before this module default is published.
+# The module starvation setting exercises effective-profile classification and
+# persistent-session publication. The focused unit directly checks the fenced
+# scalar update; this shell oracle does not infer dispatch counts from timing.
 sed 's|module(load="../plugins/imtcp/.libs/imtcp")|module(load="../plugins/imtcp/.libs/imtcp" starvationProtection.maxReads="1")|' \
 	"$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP

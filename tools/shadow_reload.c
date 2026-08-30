@@ -73,6 +73,8 @@ static void *pendingActiveSourceModuleCnf = NULL;
 static void *pendingSourceModuleCnf = NULL;
 static void *pendingModuleReloadState = NULL;
 static int pendingModuleReloadCommitted = 0;
+static int retirementPending = 0;
+static rsRetVal lastRetirementError = RS_RET_OK;
 static int pendingGenerationActivated = 0;
 static reloadOnHUPMode_t pendingReloadMode = RELOAD_ON_HUP_OFF;
 static int pendingReloadModeAuthorized = 0;
@@ -122,7 +124,12 @@ static rsRetVal destructPendingSourceModule(void) {
     if (pendingModuleReloadState != NULL) {
         if (pendingModuleReloadCommitted) {
             const rsRetVal ret = modReloadRetire(pendingSourceModule, pendingModuleReloadState);
-            if (ret != RS_RET_OK) return ret;
+            if (ret != RS_RET_OK) {
+                pthread_mutex_lock(&statusMut);
+                retirementPending = 1;
+                pthread_mutex_unlock(&statusMut);
+                return ret;
+            }
         } else {
             modReloadAbort(pendingSourceModule, pendingModuleReloadState);
         }
@@ -132,6 +139,10 @@ static rsRetVal destructPendingSourceModule(void) {
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingActiveSourceModuleCnf);
     modReloadDestructSourceCandidateV1(pendingSourceModule, &pendingSourceModuleCnf);
     pendingSourceModule = NULL;
+    lastRetirementError = RS_RET_OK;
+    pthread_mutex_lock(&statusMut);
+    retirementPending = 0;
+    pthread_mutex_unlock(&statusMut);
     return RS_RET_OK;
 }
 
@@ -517,6 +528,7 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     size_t invalid = 0;
     eModReloadCapability_t sourceCapability;
     int sourceCapabilityEvaluated;
+    int retirementIsPending;
     int n;
 
     if (buffer == NULL || bufferSize == 0) return RS_RET_PARAM_ERROR;
@@ -530,6 +542,7 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     invalid = lastInvalidCount;
     sourceCapability = lastSourceModuleCapability;
     sourceCapabilityEvaluated = lastSourceModuleCapabilityEvaluated;
+    retirementIsPending = retirementPending;
     pthread_mutex_unlock(&statusMut);
     switch (resultCode) {
         case SHADOW_RELOAD_IN_PROGRESS:
@@ -578,9 +591,9 @@ rsRetVal shadowReloadGetStatus(char *const buffer, const size_t bufferSize) {
     }
     n = snprintf(buffer, bufferSize,
                  "result=%s active_generation=%u unchanged=%zu added=%zu removed=%zu modified=%zu invalid=%zu "
-                 "source_capability=%s",
+                 "source_capability=%s retirement_pending=%d",
                  result, generation, unchanged, added, removed, modified, invalid,
-                 sourceCapabilityName(sourceCapability, sourceCapabilityEvaluated));
+                 sourceCapabilityName(sourceCapability, sourceCapabilityEvaluated), retirementIsPending);
     return n < 0 || (size_t)n >= bufferSize ? RS_RET_OUT_OF_MEMORY : RS_RET_OK;
 }
 
@@ -944,12 +957,37 @@ static void publishActivatedGeneration(void *const context) {
     if (pendingModuleReloadState != NULL) {
         modReloadCommit(pendingSourceModule, pendingModuleReloadState);
         pendingModuleReloadCommitted = 1;
+        pthread_mutex_lock(&statusMut);
+        retirementPending = 1;
+        pthread_mutex_unlock(&statusMut);
     }
     if (pendingReloadModeAuthorized) {
         configuredMode = pendingReloadMode;
         runConf->globals.reloadOnHUP = pendingReloadMode;
     }
     publishActivatedGraph(context);
+}
+
+int shadowReloadRetirementPending(void) {
+    int pending;
+
+    pthread_mutex_lock(&statusMut);
+    pending = retirementPending;
+    pthread_mutex_unlock(&statusMut);
+    return pending;
+}
+
+void shadowReloadRetryRetirement(void) {
+    rsRetVal ret;
+
+    if (!shadowReloadRetirementPending()) return;
+    ret = destructPendingSourceModule();
+    if (ret == RS_RET_OK) {
+        lastRetirementError = RS_RET_OK;
+    } else if (ret != RS_RET_RETRY && ret != lastRetirementError) {
+        LogError(0, ret, "shadow_reload: module reload retirement failed and remains pending");
+        lastRetirementError = ret;
+    }
 }
 
 void shadowReloadProcess(void) {
@@ -1042,7 +1080,9 @@ void shadowReloadProcess(void) {
     rsReloadNormalizedGraphBuilderV1Destruct(&retiredRulesetGraphBuilder);
     rsReloadCandidateDestruct(&retiredSourceObjectCatalog);
     const rsRetVal retirementRet = destructPendingSourceModule();
-    if (retirementRet != RS_RET_OK && retirementRet != RS_RET_RETRY)
+    if (retirementRet != RS_RET_OK && retirementRet != RS_RET_RETRY && retirementRet != lastRetirementError) {
         LogError(0, retirementRet, "shadow_reload: module reload retirement failed and remains pending");
+        lastRetirementError = retirementRet;
+    }
     rsReloadCandidateDestruct(&pendingSourceObjectCatalog);
 }

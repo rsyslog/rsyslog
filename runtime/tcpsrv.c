@@ -2076,7 +2076,16 @@ static rsRetVal ATTR_NONNULL() tcpsrvActivatePreparedListeners(tcpsrv_t *pThis) 
     for (int i = 0; i < pThis->iLstnCurr; ++i) {
         if (!pThis->ppLstnPort[i]->cnf_params->bDeferListen) continue;
         CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &sock));
-        if (listen(sock, backlog) != 0 && listen(sock, 32) != 0) ABORT_FINALIZE(RS_RET_IO_ERROR);
+        if (listen(sock, backlog) != 0 && listen(sock, 32) != 0) {
+            const int listenErrno = errno;
+            const tcpLstnParams_t *const params = pThis->ppLstnPort[i]->cnf_params;
+            LogError(listenErrno, RS_RET_IO_ERROR,
+                     "tcpsrv: could not activate prepared listener input '%s' on address '%s' port '%s'",
+                     params->pszInputName == NULL ? "**UNSPECIFIED**" : (const char *)params->pszInputName,
+                     params->pszAddr == NULL ? "**UNSPECIFIED**" : (const char *)params->pszAddr,
+                     params->pszPort == NULL ? "**UNSPECIFIED**" : (const char *)params->pszPort);
+            ABORT_FINALIZE(RS_RET_IO_ERROR);
+        }
     }
     for (int i = 0; i < pThis->iLstnCurr; ++i) pThis->ppLstnPort[i]->cnf_params->bDeferListen = 0;
 
