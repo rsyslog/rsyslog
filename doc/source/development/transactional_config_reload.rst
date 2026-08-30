@@ -203,7 +203,8 @@ frozen for the lifetime of the session.  A compatible ruleset update changes a
 session's ruleset-shell pointer through an event-loop control event at the
 safepoint, namely before the next complete message is processed.  A supported
 numeric ``allowedSender`` change is evaluated for every established session at
-that safepoint and may drop its next message without disconnecting it.  Hostname
+that safepoint; newly denied sessions are synchronously closed with error-close
+semantics, while still-permitted sessions remain established.  Hostname
 wildcards use the same path because their textual match requires no DNS; bare
 hostnames are also eligible when the unchanged active base has
 ``net.aclResolveHostname="off"``.  A bare hostname that would require DNS
@@ -241,7 +242,7 @@ backlog, and the following target monotonic counters: ``reload_hup_off_total``,
 ``reload_activated_total``, ``reload_retirement_pending_total``,
 ``reload_retired_total``, ``reload_retirement_failed_total``,
 ``reload_listener_preserved_total``, ``reload_listener_replaced_total``,
-``reload_session_preserved_total``, ``reload_acl_message_dropped_total``, and
+``reload_session_preserved_total`` and
 ``reload_legacy_hook_total``.  It must log the generation IDs, diff/capability
 result, and commit outcome at an operator-visible level.  Metrics and debug
 diagnostics must allow a maintainer to answer: which generation is active, why
@@ -348,9 +349,9 @@ driver, and resource limits.  Multiline framing and its delimiter regex are
 accept-profile updates: each established session owns its compiled regex while
 Prepare validates the next pattern before the allocation-free commit.  Numeric
 ``allowedSender`` lists are prepared privately and swapped at the same fence;
-the existing session submit hook accounts denied records in
-``reload_acl_message_dropped_total`` without adding work to the allowed-message
-path.  Numeric entries and textual hostname wildcards are prepared without
+newly denied sessions are synchronously removed from the session table and
+closed with error-close semantics, without flushing a partial legacy frame.
+Numeric entries and textual hostname wildcards are prepared without
 resolver activity.  Bare hostnames are supported only when the unchanged base
 already disables ACL hostname resolution; otherwise they remain
 restart-required.  TLS, endpoint-in-place replacement, and remaining
@@ -411,8 +412,10 @@ Release E
   Add endpoint-tuple reconciliation for ``imtcp``.  A removed listener stops
   accepting only; established sessions preserve frozen TLS, framing, and
   compression.  Session ruleset-shell updates use the event-loop control event
-  at the safepoint/next complete message, ACL changes drop the next message
-  without disconnecting, and bound-ruleset removal rejects the reload.
+  at the safepoint/next complete message; ACL changes synchronously close
+  newly denied sessions without flushing partial legacy frames, while
+  still-permitted sessions remain established; and bound-ruleset removal
+  rejects the reload.
 
 Release F
   Expand the capability matrix and supported object set, complete hardening and
@@ -425,7 +428,7 @@ and resource cleanup.  Stages that introduce reuse must test both compatible
 preservation and incompatible replacement.  ``imtcp`` functional tests keep a
 TCP connection open while numbered messages are sent before, during, and after
 HUP.  They must prove the stated event-loop boundary and preservation,
-ACL/drop, exact-delivery, and ordering behaviour without relying on sleeps.
+ACL-close, exact-delivery, and ordering behaviour without relying on sleeps.
 
 The mandatory performance gate runs *after focused tests, rollback tests,
 ASAN/UBSAN, lifecycle TSAN, static analysis, and PR-ready container validation

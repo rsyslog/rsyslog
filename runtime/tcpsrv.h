@@ -79,7 +79,6 @@ struct tcpLstnPortList_s {
     statsobj_t *stats; /**< associated stats object */
     ratelimit_t *ratelimiter;
     STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
-    STATSCOUNTER_DEF(ctrReloadAclDropped, mutCtrReloadAclDropped)
     STATSCOUNTER_DEF(ctrBytesRcvd, mutCtrBytesRcvd)
     STATSCOUNTER_DEF(ctrBytesDecompressed, mutCtrBytesDecompressed)
     STATSCOUNTER_DEF(ctrDecompressErr, mutCtrDecompressErr)
@@ -454,8 +453,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* v40 adds fenced ACL evaluation and infallible policy publication. */
     rsRetVal (*EvaluateSessionPolicyWhileFenced)(tcpsrv_t *server, tcpsrv_reload_session_policy_eval_t evaluate,
                                                  void *context, unsigned char *allowed, size_t allowedCount);
-    void (*ApplySessionPolicyLive)(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount,
-                                   rsRetVal (*blockedSubmit)(tcps_sess_t *, uchar *, int));
+    /* v43 closes newly denied sessions synchronously while the fence is held. */
+    void (*ApplySessionPolicyLive)(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount);
     void (*SwapAllowedSendersLive)(tcpsrv_t *server, struct AllowedSenders *preparedRoot, int useLegacy,
                                    struct AllowedSenders **retiredRoot, int *retiredOwned);
     /* v41 swaps a fully prepared listener-local rate limiter while fenced. */
@@ -467,7 +466,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
                                    tcpsrv_listener_tables_t *retired);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 42 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 43 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
@@ -534,10 +533,8 @@ rsRetVal tcpsrvEvaluateSessionPolicyWhileFenced(tcpsrv_t *server,
                                                 void *context,
                                                 unsigned char *allowed,
                                                 size_t allowedCount);
-void tcpsrvApplySessionPolicyLive(tcpsrv_t *server,
-                                  const unsigned char *allowed,
-                                  size_t allowedCount,
-                                  rsRetVal (*blockedSubmit)(tcps_sess_t *, uchar *, int));
+/* Closes newly denied established sessions while the caller-owned fence is held. */
+void tcpsrvApplySessionPolicyLive(tcpsrv_t *server, const unsigned char *allowed, size_t allowedCount);
 void tcpsrvSwapAllowedSendersLive(tcpsrv_t *server,
                                   struct AllowedSenders *preparedRoot,
                                   int useLegacy,
