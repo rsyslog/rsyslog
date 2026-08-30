@@ -117,6 +117,7 @@ rsRetVal netCloneAllowedSenders(const struct AllowedSenders *source,
                                 struct AllowedSenders **root,
                                 struct AllowedSenders **last);
 rsRetVal netAllowedSenderEntryIsNumeric(uchar *allowedSender, int *isNumeric);
+rsRetVal netAllowedSenderEntryIsReloadSafe(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
 void netDestructAllowedSenders(struct AllowedSenders **root);
 
 
@@ -253,8 +254,9 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*cloneAllowedSenders)(const struct AllowedSenders *source, struct AllowedSenders **root,
                                     struct AllowedSenders **last);
     rsRetVal (*allowedSenderEntryIsNumeric)(uchar *allowedSender, int *isNumeric);
+    rsRetVal (*allowedSenderEntryIsReloadSafe)(struct rsconf_s *config, uchar *allowedSender, int *isReloadSafe);
 ENDinterface(net)
-#define netCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

@@ -1,7 +1,8 @@
 #!/bin/bash
-# Verify native YAML reloadOnHUP=validate parses a changed candidate without
-# constructing its action, and leaves the active route unchanged. The same
-# daemon and listener must continue writing through the old YAML ruleset.
+# Verify native YAML reloadOnHUP=validate parses and privately classifies a
+# changed candidate without constructing its action or resolving DNS, and
+# leaves the active route unchanged. The same daemon and listener must continue
+# writing through the old YAML ruleset.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -115,14 +116,24 @@ if [[ "$reload_status" != *"source_capability=not_evaluated"* ]]; then
 	error_exit 1
 fi
 
-# Hostname ACL lowering must not resolve DNS or depend on parser-global state.
-# The private snapshot retains the exact source form and validate reports the
-# conservative restart boundary without mutating the active listener.
+# A hostname wildcard is privately materializable without DNS.  Validate must
+# classify it live-capable while remaining report-only.
 sed '/ruleset: main/a\    allowedSender: ["*.example.invalid"]' "$CONF_FILE.base" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0 source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML wildcard ACL was not classified live-capable: $reload_status"
+	error_exit 1
+fi
+
+# A bare hostname under the default resolving base would call getaddrinfo at
+# cold start.  Private reload lowering must not perform that external lookup,
+# so the candidate remains a report-only restart boundary.
+sed '/ruleset: main/a\    allowedSender: ["localhost"]' "$CONF_FILE.base" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
 if [[ "$reload_status" != *"result=reported_only active_generation=1 unchanged=5 added=0 removed=0 modified=1 invalid=0 source_capability=restart_required"* ]]; then
-	echo "FAIL: YAML hostname ACL did not remain a report-only restart boundary: $reload_status"
+	echo "FAIL: DNS-resolved YAML ACL did not remain a restart boundary: $reload_status"
 	error_exit 1
 fi
 

@@ -951,15 +951,23 @@ static rsRetVal addAllowedSenderEntry(struct AllowedSenders **ppRoot,
     return netAddAllowedSenderEntryForConfig(loadConf, ppRoot, ppLast, pszAllowedSender);
 }
 
-rsRetVal netAllowedSenderEntryIsNumeric(uchar *const allowedSender, int *const isNumeric) {
+static void destructParsedAllowedSender(struct NetAddr **const address) {
+    if (address == NULL || *address == NULL) return;
+    if (F_ISSET((*address)->flags, ADDR_NAME))
+        free((*address)->addr.HostWildcard);
+    else
+        free((*address)->addr.NetAddr);
+    free(*address);
+    *address = NULL;
+}
+
+static rsRetVal parseAllowedSenderEntry(uchar *const allowedSender, struct NetAddr **const address) {
     rsParsObj *parser = NULL;
-    struct NetAddr *address = NULL;
     uchar *parseText = NULL;
     int bits;
     DEFiRet;
 
-    if (allowedSender == NULL || isNumeric == NULL) return RS_RET_PARAM_ERROR;
-    *isNumeric = 0;
+    if (allowedSender == NULL || address == NULL || *address != NULL) return RS_RET_PARAM_ERROR;
     const size_t length = strlen((const char *)allowedSender);
     if (length > SIZE_MAX - 2) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     CHKmalloc(parseText = malloc(length + 2));
@@ -970,20 +978,51 @@ rsRetVal netAllowedSenderEntryIsNumeric(uchar *const allowedSender, int *const i
     parseText[length] = ' ';
     parseText[length + 1] = '\0';
     CHKiRet(rsParsConstructFromSz(&parser, parseText));
-    CHKiRet(parsAddrWithBits(parser, &address, &bits));
+    CHKiRet(parsAddrWithBits(parser, address, &bits));
     if (!parsIsAtEndOfParseString(parser)) ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+
+finalize_it:
+    if (iRet != RS_RET_OK) destructParsedAllowedSender(address);
+    if (parser != NULL) rsParsDestruct(parser);
+    free(parseText);
+    RETiRet;
+}
+
+rsRetVal netAllowedSenderEntryIsNumeric(uchar *const allowedSender, int *const isNumeric) {
+    struct NetAddr *address = NULL;
+    DEFiRet;
+
+    if (allowedSender == NULL || isNumeric == NULL) return RS_RET_PARAM_ERROR;
+    *isNumeric = 0;
+    CHKiRet(parseAllowedSenderEntry(allowedSender, &address));
     *isNumeric = !F_ISSET(address->flags, ADDR_NAME);
 
 finalize_it:
-    if (address != NULL) {
-        if (F_ISSET(address->flags, ADDR_NAME))
-            free(address->addr.HostWildcard);
-        else
-            free(address->addr.NetAddr);
-        free(address);
+    destructParsedAllowedSender(&address);
+    RETiRet;
+}
+
+rsRetVal netAllowedSenderEntryIsReloadSafe(struct rsconf_s *const config,
+                                           uchar *const allowedSender,
+                                           int *const isReloadSafe) {
+    struct NetAddr *address = NULL;
+    DEFiRet;
+
+    if (config == NULL || allowedSender == NULL || isReloadSafe == NULL) return RS_RET_PARAM_ERROR;
+    *isReloadSafe = 0;
+    CHKiRet(parseAllowedSenderEntry(allowedSender, &address));
+    if (!F_ISSET(address->flags, ADDR_NAME)) {
+        *isReloadSafe = 1;
+    } else if (glbl.GetDisableDNS(config) || config->globals.ACLDontResolve ||
+               strchr(address->addr.HostWildcard, '*') != NULL || strchr(address->addr.HostWildcard, '?') != NULL) {
+        /* These paths mirror AddAllowedSenderForConfig without getaddrinfo():
+         * disabled DNS ignores the entry, while wildcard and explicitly
+         * unresolved hostnames remain owned textual ACL entries. */
+        *isReloadSafe = 1;
     }
-    if (parser != NULL) rsParsDestruct(parser);
-    free(parseText);
+
+finalize_it:
+    destructParsedAllowedSender(&address);
     RETiRet;
 }
 
@@ -1795,6 +1834,7 @@ BEGINobjQueryInterface(net)
     pIf->addAllowedSenderEntryForConfig = netAddAllowedSenderEntryForConfig;
     pIf->cloneAllowedSenders = netCloneAllowedSenders;
     pIf->allowedSenderEntryIsNumeric = netAllowedSenderEntryIsNumeric;
+    pIf->allowedSenderEntryIsReloadSafe = netAllowedSenderEntryIsReloadSafe;
     pIf->GetIFIPAddr = getIFIPAddr;
 
     pIf->netns_save = netns_save;

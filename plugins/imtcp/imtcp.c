@@ -837,23 +837,25 @@ static void freeReloadAllowedSenderSpecs(char ***const specs, size_t *const coun
 }
 
 static rsRetVal captureReloadAllowedSenderSpecs(const struct cnfarray *const values,
+                                                rsconf_t *const config,
                                                 char ***const specs,
                                                 size_t *const count,
-                                                int *const allNumeric) {
+                                                int *const allReloadSafe) {
     char **captured = NULL;
     DEFiRet;
 
-    if (values == NULL || specs == NULL || count == NULL || allNumeric == NULL || *specs != NULL || *count != 0)
+    if (values == NULL || config == NULL || specs == NULL || count == NULL || allReloadSafe == NULL || *specs != NULL ||
+        *count != 0)
         return RS_RET_PARAM_ERROR;
     if (values->nmemb < 0 || (size_t)values->nmemb > SIZE_MAX / sizeof(captured[0])) return RS_RET_OUT_OF_MEMORY;
     CHKmalloc(captured = calloc((size_t)values->nmemb, sizeof(captured[0])));
-    *allNumeric = 1;
+    *allReloadSafe = 1;
     for (int i = 0; i < values->nmemb; ++i) {
-        int numeric;
+        int reloadSafe;
         CHKmalloc(captured[i] = es_str2cstr(values->arr[i], NULL));
         *count = (size_t)i + 1;
-        CHKiRet(net.allowedSenderEntryIsNumeric((uchar *)captured[i], &numeric));
-        if (!numeric) *allNumeric = 0;
+        CHKiRet(net.allowedSenderEntryIsReloadSafe(config, (uchar *)captured[i], &reloadSafe));
+        if (!reloadSafe) *allReloadSafe = 0;
     }
     *specs = captured;
     captured = NULL;
@@ -1372,15 +1374,15 @@ static rsRetVal applyInputRateCompressionParam(const char *const name,
 
     *handled = 1;
     if (!strcmp(name, "allowedsender")) {
-        int allNumeric;
+        int allReloadSafe;
         if (value->val.d.ar == NULL || value->val.d.ar->nmemb == 0) {
             if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
             ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
         }
         inst->bAllowedSendersSet = 1;
-        CHKiRet(captureReloadAllowedSenderSpecs(value->val.d.ar, &inst->reloadAllowedSenderSpecs,
-                                                &inst->reloadAllowedSenderSpecCount, &allNumeric));
-        inst->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allNumeric;
+        CHKiRet(captureReloadAllowedSenderSpecs(value->val.d.ar, moduleConfig->pConf, &inst->reloadAllowedSenderSpecs,
+                                                &inst->reloadAllowedSenderSpecCount, &allReloadSafe));
+        inst->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allReloadSafe;
         if (!inst->reloadAllowedSendersMaterialized) FINALIZE;
         for (int j = 0; j < value->val.d.ar->nmemb; ++j) {
             uchar *sender = (uchar *)es_str2cstr(value->val.d.ar->arr[j], NULL);
@@ -1596,15 +1598,16 @@ static rsRetVal applyModuleParams(modConfData_t *const moduleConfig,
                 free(peer);
             }
         } else if (!strcmp(modpblk.descr[i].name, "allowedsender")) {
-            int allNumeric;
+            int allReloadSafe;
             if (pvals[i].val.d.ar == NULL || pvals[i].val.d.ar->nmemb == 0) {
                 if (emitDiagnostics) LogError(0, RS_RET_INVALID_PARAMS, "imtcp: allowedSender array must not be empty");
                 ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
             }
             moduleConfig->bAllowedSendersSet = 1;
-            CHKiRet(captureReloadAllowedSenderSpecs(pvals[i].val.d.ar, &moduleConfig->reloadAllowedSenderSpecs,
-                                                    &moduleConfig->reloadAllowedSenderSpecCount, &allNumeric));
-            moduleConfig->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allNumeric;
+            CHKiRet(captureReloadAllowedSenderSpecs(pvals[i].val.d.ar, moduleConfig->pConf,
+                                                    &moduleConfig->reloadAllowedSenderSpecs,
+                                                    &moduleConfig->reloadAllowedSenderSpecCount, &allReloadSafe));
+            moduleConfig->reloadAllowedSendersMaterialized = !moduleConfig->reloadSnapshot || allReloadSafe;
             if (!moduleConfig->reloadAllowedSendersMaterialized) continue;
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
                 uchar *sender = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);

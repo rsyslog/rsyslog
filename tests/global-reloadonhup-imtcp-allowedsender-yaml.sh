@@ -1,7 +1,8 @@
 #!/bin/bash
-# Verify the native YAML frontend reaches the same live numeric allowedSender
-# path.  impstats proves the established session was denied after the fence;
-# successful delivery on that same descriptor after reallow proves retention.
+# Verify the native YAML frontend reaches the same live numeric and DNS-free
+# textual allowedSender paths.  impstats proves the established session was
+# denied after each fence; successful delivery on that same descriptor after
+# reallow proves retention.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
@@ -9,6 +10,7 @@ require_plugin impstats
 export STATSFILE="$RSYSLOG_DYNNAME.stats"
 generate_conf --yaml-only
 sed -i '/debug.abortOnProgramError:/a\  config.reloadOnHUP: "on"' "${TESTCONF_NM}.yaml"
+sed -i '/config.reloadOnHUP:/a\  net.aclResolveHostname: "off"' "${TESTCONF_NM}.yaml"
 add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
 add_yaml_conf '    allowedSender: ["127.0.0.1/32"]'
@@ -80,19 +82,53 @@ fi
 printf '<167>Mar 10 01:00:00 host app: acl-yaml-final\n' >&9 || error_exit 1
 wait_content 'acl-yaml-final' "$RSYSLOG_OUT_LOG"
 
-# A changed hostname ACL remains restart-required because live preparation may
-# not perform DNS.  Rejection must preserve generation 5 and the restored
-# numeric policy on this same connection.
+# A hostname wildcard requires no DNS.  It must update the established session
+# at the fence, while '*' restores delivery on the same descriptor.
 sed 's/127\.0\.0\.1\/32/\*.example.invalid/' "$CONF_FILE.allowed" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
-if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=5"* ||
-      "$reload_status" != *"source_capability=restart_required"* ]]; then
-	echo "FAIL: YAML hostname ACL did not reject atomically: $reload_status"
+if [[ "$reload_status" != *"result=activated active_generation=6"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML wildcard ACL did not activate live: $reload_status"
 	error_exit 1
 fi
-printf '<167>Mar 10 01:00:00 host app: acl-yaml-after-reject\n' >&9 || error_exit 1
-wait_content 'acl-yaml-after-reject' "$RSYSLOG_OUT_LOG"
+printf '<167>Mar 10 01:00:00 host app: acl-yaml-wildcard-denied\n' >&9 || error_exit 1
+wait_content 'reload_acl_message_dropped_total=3' "$STATSFILE"
+assert_content_missing 'acl-yaml-wildcard-denied' "$RSYSLOG_OUT_LOG"
+
+sed 's/127\.0\.0\.1\/32/*/' "$CONF_FILE.allowed" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=7"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: YAML wildcard ACL reallow did not activate live: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: acl-yaml-wildcard-allowed\n' >&9 || error_exit 1
+wait_content 'acl-yaml-wildcard-allowed' "$RSYSLOG_OUT_LOG"
+
+# With hostname resolution disabled in the unchanged base, a bare hostname is
+# a textual policy too.  Deny and restore on the established YAML session.
+sed 's/127\.0\.0\.1\/32/definitely-no-match.example.invalid/' "$CONF_FILE.allowed" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=8"* ||
+      "$reload_status" != *"source_capability=live_swap"* ]]; then
+	echo "FAIL: unresolved YAML hostname ACL did not activate live: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: acl-yaml-hostname-denied\n' >&9 || error_exit 1
+wait_content 'reload_acl_message_dropped_total=4' "$STATSFILE"
+assert_content_missing 'acl-yaml-hostname-denied' "$RSYSLOG_OUT_LOG"
+sed 's/127\.0\.0\.1\/32/*/' "$CONF_FILE.allowed" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=activated active_generation=9"* ]]; then
+	echo "FAIL: YAML hostname ACL reallow did not activate live: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: acl-yaml-hostname-allowed\n' >&9 || error_exit 1
+wait_content 'acl-yaml-hostname-allowed' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
