@@ -1,0 +1,42 @@
+tests/global-reloadonhup-imtcp-defaulttz-rainerscript.sh
+  s_f2c089be484e12::t_5cdfb903af8c15 236-263
+  s_f2c089be484e12::t_7127c7e93f2ff4 6-9
+runtime/reload-candidate.c
+  s_f2c089be484e12::t_b8ee21c3da933a 1516-1528
+  s_93f01af3679066::t_ea31f84b748703 1515
+tests/global-reloadonhup-imtcp-defaulttz-yaml.sh
+  s_f2c089be484e12::t_e1ea7a1d3ebce5 248-276
+  s_f2c089be484e12::t_7127c7e93f2ff4 5-8
+doc/source/reference/parameters/imtcp-ratelimit-name.rst
+  s_f2c089be484e12::t_46306a9d47a22c 40-45
+doc/source/development/transactional_config_reload.rst
+  s_f2c089be484e12::t_46306a9d47a22c 320-325
+tests/unit/reload_candidate_graph_test.c
+  s_f2c089be484e12::t_7698ff8ea95e61 1013,1017-1018
+  s_f2c089be484e12::t_85897a9f53ab59 952-954,1009-1012,1014-1016,1019-1024
+  s_f2c089be484e12::t_7127c7e93f2ff4 1057,1060-1061,1075,1080-1081,1085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "0b8676348dafe77a7316e3b4d206f65d16359bc0",
+  "prompts": {},
+  "sessions": {
+    "s_93f01af3679066": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0526f-7050-7ca0-8b16-908c16907bef",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
+    "s_f2c089be484e12": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04346-bf50-7041-80ff-497ceacb4c4b",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
