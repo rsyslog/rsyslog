@@ -112,6 +112,7 @@ DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingLFOnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
 DEF_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
 DEF_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
+DEF_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
 DEF_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
 /* Child termination can be reported by module workers as well as the main
  * reaper. Transactional base publication therefore uses the same synchronized
@@ -301,7 +302,6 @@ SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar *)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar *)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar *)
 SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
-SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
 SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
 
 #undef SIMP_PROP
@@ -322,6 +322,10 @@ static int GetParserEscapeControlCharactersOnReceive(rsconf_t *const cnf) {
 
 static int GetParserSpaceLFOnReceive(rsconf_t *const cnf) {
     return glblGetParserSpaceLFOnReceive(cnf);
+}
+
+static int GetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf) {
+    return glblGetParserEscape8BitCharactersOnReceive(cnf);
 }
 
 /* return global input termination status
@@ -1003,6 +1007,16 @@ void glblSetParserSpaceLFOnReceive(rsconf_t *const cnf, const int enabled) {
 int glblGetParserSpaceLFOnReceive(rsconf_t *const cnf) {
     if (cnf == NULL) return 0;
     return ATOMIC_LOAD_32BIT(&cnf->globals.parser.bSpaceLFOnRcv, &mutParserSpaceLFOnReceive);
+}
+
+void glblSetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf, const int enabled) {
+    if (cnf == NULL) return;
+    ATOMIC_STORE_32BIT(&cnf->globals.parser.bEscape8BitChars, &mutParserEscape8BitCharactersOnReceive, enabled);
+}
+
+int glblGetParserEscape8BitCharactersOnReceive(rsconf_t *const cnf) {
+    if (cnf == NULL) return 0;
+    return ATOMIC_LOAD_32BIT(&cnf->globals.parser.bEscape8BitChars, &mutParserEscape8BitCharactersOnReceive);
 }
 
 void glblSetReportOversizeMessage(rsconf_t *const cnf, const int enabled) {
@@ -1820,6 +1834,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     INIT_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);
     INIT_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
     INIT_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
+    INIT_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
     INIT_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
     INIT_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
 ENDObjClassInit(glbl)
@@ -1837,6 +1852,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
     if (propLocalHostNameToDelete != NULL) prop.Destruct(&propLocalHostNameToDelete);
     DESTROY_ATOMIC_HELPER_MUT(mutReportChildProcessExits);
     DESTROY_ATOMIC_HELPER_MUT(mutReportOversizeMsg);
+    DESTROY_ATOMIC_HELPER_MUT(mutParserEscape8BitCharactersOnReceive);
     DESTROY_ATOMIC_HELPER_MUT(mutParserSpaceLFOnReceive);
     DESTROY_ATOMIC_HELPER_MUT(mutParserEscapeControlCharactersOnReceive);
     DESTROY_ATOMIC_HELPER_MUT(mutParserDropTrailingCROnReception);

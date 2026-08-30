@@ -358,6 +358,10 @@ The following parameters can be set:
   converted to a 3-digit octal number and be prefixed with the
   *parser.controlCharacterEscapePrefix* character (being '#' by default).
 
+  A sole change to this parameter can be activated transactionally by
+  ``config.reloadOnHUP="on"``. Messages parsed after the commit use the new
+  value; combined global changes remain fail-closed.
+
   **Warning:**
 
   -  turning on this option most probably destroys non-western character

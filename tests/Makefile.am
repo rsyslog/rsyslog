@@ -220,6 +220,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	global-reloadonhup-escape8bit-rainerscript.sh \
 	global-reloadonhup-spacelf-rainerscript.sh \
 	global-reloadonhup-escapecontrol-rainerscript.sh \
 	global-reloadonhup-droptrailinglf-rainerscript.sh \
@@ -814,6 +815,7 @@ TESTS_DEFAULT_VALGRIND = \
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
 TESTS_LIBYAML = \
+	global-reloadonhup-escape8bit-yaml.sh \
 	global-reloadonhup-spacelf-yaml.sh \
 	global-reloadonhup-escapecontrol-yaml.sh \
 	global-reloadonhup-droptrailinglf-yaml.sh \
