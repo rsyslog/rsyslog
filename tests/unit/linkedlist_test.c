@@ -68,13 +68,38 @@ static rsRetVal exec_sum_or_delete(void *pData, void *pParam) {
 static int *new_int(int value) {
     int *ptr = malloc(sizeof(*ptr));
 
-    if (ptr == NULL) {
-        fprintf(stderr, "malloc failed\n");
-        exit(2);
-    }
+    if (ptr == NULL) return NULL;
 
     *ptr = value;
     return ptr;
+}
+
+static rsRetVal append_int(linkedList_t *const list, const int value) {
+    int *const data = new_int(value);
+    rsRetVal ret;
+
+    if (data == NULL) return RS_RET_OUT_OF_MEMORY;
+    ret = llAppend(list, NULL, data);
+    if (ret != RS_RET_OK) free(data);
+    return ret;
+}
+
+static rsRetVal append_keyed_int(linkedList_t *const list, const int keyValue, const int dataValue) {
+    int *const key = new_int(keyValue);
+    int *const data = new_int(dataValue);
+    rsRetVal ret;
+
+    if (key == NULL || data == NULL) {
+        free(key);
+        free(data);
+        return RS_RET_OUT_OF_MEMORY;
+    }
+    ret = llAppend(list, key, data);
+    if (ret != RS_RET_OK) {
+        free(key);
+        free(data);
+    }
+    return ret;
 }
 
 static int test_init_and_empty_state(void) {
@@ -100,9 +125,9 @@ static int test_append_iterate_and_count(void) {
     int count = -1;
 
     CHECK(llInit(&list, int_destructor, NULL, NULL) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(1)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(2)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(3)) == RS_RET_OK);
+    CHECK(append_int(&list, 1) == RS_RET_OK);
+    CHECK(append_int(&list, 2) == RS_RET_OK);
+    CHECK(append_int(&list, 3) == RS_RET_OK);
 
     CHECK(list.pRoot != NULL);
     CHECK(list.pLast != NULL);
@@ -131,16 +156,16 @@ static int test_destroy_root_variants(void) {
     int count = -1;
 
     CHECK(llInit(&list, int_destructor, NULL, NULL) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(11)) == RS_RET_OK);
+    CHECK(append_int(&list, 11) == RS_RET_OK);
     CHECK(llDestroyRootElt(&list) == RS_RET_OK);
     CHECK(list.pRoot == NULL);
     CHECK(list.pLast == NULL);
     CHECK(llGetNumElts(&list, &count) == RS_RET_OK);
     CHECK(count == 0);
 
-    CHECK(llAppend(&list, NULL, new_int(21)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(22)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(23)) == RS_RET_OK);
+    CHECK(append_int(&list, 21) == RS_RET_OK);
+    CHECK(append_int(&list, 22) == RS_RET_OK);
+    CHECK(append_int(&list, 23) == RS_RET_OK);
     CHECK(llDestroyRootElt(&list) == RS_RET_OK);
     CHECK(list.pRoot != NULL);
     CHECK(*(int *)list.pRoot->pData == 22);
@@ -159,9 +184,9 @@ static int test_find_and_delete_keyed_entries(void) {
     int key = 202;
 
     CHECK(llInit(&list, int_destructor, int_destructor, int_cmp) == RS_RET_OK);
-    CHECK(llAppend(&list, new_int(101), new_int(1)) == RS_RET_OK);
-    CHECK(llAppend(&list, new_int(202), new_int(2)) == RS_RET_OK);
-    CHECK(llAppend(&list, new_int(303), new_int(3)) == RS_RET_OK);
+    CHECK(append_keyed_int(&list, 101, 1) == RS_RET_OK);
+    CHECK(append_keyed_int(&list, 202, 2) == RS_RET_OK);
+    CHECK(append_keyed_int(&list, 303, 3) == RS_RET_OK);
 
     CHECK(llFind(&list, &key, &data) == RS_RET_OK);
     CHECK(*(int *)data == 2);
@@ -196,9 +221,9 @@ static int test_exec_func_delete_entry(void) {
     int count = -1;
 
     CHECK(llInit(&list, int_destructor, NULL, NULL) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(1)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(2)) == RS_RET_OK);
-    CHECK(llAppend(&list, NULL, new_int(3)) == RS_RET_OK);
+    CHECK(append_int(&list, 1) == RS_RET_OK);
+    CHECK(append_int(&list, 2) == RS_RET_OK);
+    CHECK(append_int(&list, 3) == RS_RET_OK);
 
     CHECK(llExecFunc(&list, exec_sum_or_delete, &state) == RS_RET_OK);
     CHECK(state.seen == 3);
