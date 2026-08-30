@@ -157,8 +157,10 @@ jobs:
             if timeout 90s git clone --depth 1 --branch "$ALPINE_BRANCH" \
               --filter=blob:none --sparse \
               https://gitlab.alpinelinux.org/alpine/aports.git "$baseline_dir"; then
-              baseline_fetched=true
-              break
+              if git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
+                baseline_fetched=true
+                break
+              fi
             fi
             echo "::warning::Alpine baseline fetch failed (attempt $attempt/3)"
             [ "$attempt" -eq 3 ] || sleep "$((attempt * 15))"
