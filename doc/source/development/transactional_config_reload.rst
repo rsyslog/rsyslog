@@ -326,11 +326,12 @@ commit, its established sessions retain the retired listener generation, and
 the replacement begins accepting on the newly published tuple.  Dynamic or
 service-name replacements that cannot bind privately without publishing a
 port-file side effect remain restart-required.
-An effective ``maxSessions`` increase is live when ``socketBacklog`` is
-explicit and unchanged: Prepare reserves a larger session-slot table and the
-fenced commit swaps it without disturbing established session indices.
-Shrinking the table, or changing its size while the listen backlog remains an
-implicit derivative of ``maxSessions``, stays restart-required.
+An effective ``maxSessions`` increase is live when the effective listen backlog
+stays unchanged: Prepare reserves a larger session-slot table and the fenced
+commit swaps it without disturbing established session indices.  This includes
+an unchanged explicit ``socketBacklog`` and implicit-backlog increases that
+remain in the same ``maxSessions / 10 + 5`` bucket.  Shrinking the table or
+crossing an implicit-backlog bucket stays restart-required.
 
 Diagnostics must avoid dumping message contents, credentials, or TLS material.
 Generation identifiers are operational correlation values, not a substitute

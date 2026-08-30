@@ -1,9 +1,10 @@
 #!/bin/bash
 # Native-YAML parity for fenced imtcp maxSessions growth. A full initial table
 # is proved by the server's own drop diagnostic. Module and input growth each
-# add one usable slot while older sessions stay connected; shrinking remains
-# restart-required and leaves all active sessions intact. The explicit socket
-# backlog isolates the session-table change from listen(2) backlog semantics.
+# add one usable slot while older sessions stay connected. A shrink and a
+# growth across the next implicit-backlog bucket remain restart-required and
+# leave all active sessions intact. Values one through three share one bucket,
+# proving growth without changing listen(2) backlog semantics.
 # A constant RainerScript include captures only internal diagnostics; every
 # imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
@@ -23,7 +24,6 @@ add_yaml_conf '    address: 127.0.0.1'
 add_yaml_conf '    port: "0"'
 add_yaml_conf '    listenPortFileName: "'$RSYSLOG_DYNNAME'.tcpflood_port"'
 add_yaml_conf '    name: sessions'
-add_yaml_conf '    socketBacklog: 32'
 add_yaml_conf '    ruleset: main'
 add_yaml_conf 'rulesets:'
 add_yaml_conf '  - name: main'
@@ -56,7 +56,7 @@ printf '<167>Mar 10 01:00:00 host app: yaml-module-grow-new\n' >&8 || error_exit
 wait_content 'yaml-module-grow-old' "$RSYSLOG_OUT_LOG"
 wait_content 'yaml-module-grow-new' "$RSYSLOG_OUT_LOG"
 
-sed '/socketBacklog: 32/a\    maxSessions: 3' "$CONF_FILE.module-grow" >"$CONF_FILE.input-grow"
+sed '/ruleset: main/a\    maxSessions: 3' "$CONF_FILE.module-grow" >"$CONF_FILE.input-grow"
 cp "$CONF_FILE.input-grow" "$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -88,6 +88,21 @@ printf '<167>Mar 10 01:00:00 host app: yaml-shrink-kept-third\n' >&7 || error_ex
 wait_content 'yaml-shrink-kept-first' "$RSYSLOG_OUT_LOG"
 wait_content 'yaml-shrink-kept-second' "$RSYSLOG_OUT_LOG"
 wait_content 'yaml-shrink-kept-third' "$RSYSLOG_OUT_LOG"
+
+sed 's/maxSessions: 3/maxSessions: 10/' "$CONF_FILE.input-grow" >"$CONF_FILE"
+issue_HUP
+reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
+if [[ "$reload_status" != *"result=candidate_scope_unsupported active_generation=3"* ||
+      "$reload_status" != *"source_capability=restart_required"* ]]; then
+	echo "FAIL: YAML implicit-backlog bucket change was not rejected: $reload_status"
+	error_exit 1
+fi
+printf '<167>Mar 10 01:00:00 host app: yaml-backlog-kept-first\n' >&9 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: yaml-backlog-kept-second\n' >&8 || error_exit 1
+printf '<167>Mar 10 01:00:00 host app: yaml-backlog-kept-third\n' >&7 || error_exit 1
+wait_content 'yaml-backlog-kept-first' "$RSYSLOG_OUT_LOG"
+wait_content 'yaml-backlog-kept-second' "$RSYSLOG_OUT_LOG"
+wait_content 'yaml-backlog-kept-third' "$RSYSLOG_OUT_LOG"
 
 exec 7>&-
 exec 8>&-

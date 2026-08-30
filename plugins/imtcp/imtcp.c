@@ -1954,6 +1954,10 @@ static void mergeReloadCapability(eModReloadCapability_t *const capability,
         *capability = eMOD_RELOAD_NEW_SESSIONS;
 }
 
+static int reloadEffectiveSynBacklog(const instanceConf_t *const inst) {
+    return inst->iSynBacklog == 0 ? inst->iTCPSessMax / 10 + 5 : inst->iSynBacklog;
+}
+
 static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
                                          const modConfData_t *const oldConfig,
                                          const instanceConf_t *const newInst,
@@ -1964,10 +1968,11 @@ static int mergeReloadInstanceCapability(const instanceConf_t *const oldInst,
 
     if (reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 0)) return 1;
     /* Growing the session table is allocation-free at commit because Prepare
-     * reserves the replacement table.  Shrinking remains fail-closed, and an
-     * implicit backlog would change cold-start socket semantics with maxSessions. */
+     * reserves the replacement table.  Shrinking remains fail-closed, as does
+     * a growth that would change cold-start listen-backlog semantics. */
     if (oldInst->iTCPSessMax != newInst->iTCPSessMax &&
-        (newInst->iTCPSessMax < oldInst->iTCPSessMax || oldInst->iSynBacklog == 0 || newInst->iSynBacklog == 0))
+        (newInst->iTCPSessMax < oldInst->iTCPSessMax ||
+         reloadEffectiveSynBacklog(oldInst) != reloadEffectiveSynBacklog(newInst)))
         return 0;
     if (!reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 1, 1)) return 0;
     liveChanged = !reloadInstanceEqual(oldInst, oldConfig, newInst, newConfig, 0, 1);
