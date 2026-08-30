@@ -104,6 +104,8 @@ static int pendingParserEscape8BitCharacters = 0;
 static int pendingParserEscape8BitCharactersUpdate = 0;
 static int pendingParserEscapeControlCharacterTab = 1;
 static int pendingParserEscapeControlCharacterTabUpdate = 0;
+static int pendingParserEscapeControlCharactersCStyle = 0;
+static int pendingParserEscapeControlCharactersCStyleUpdate = 0;
 static eModReloadCapability_t pendingSourceModuleCapability = eMOD_RELOAD_RESTART_REQUIRED;
 static int pendingSourceModuleCapabilityEvaluated = 0;
 static rsRetVal pendingCandidateResult = RS_RET_OK;
@@ -510,6 +512,7 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
     int activeParserSpaceLF;
     int activeParserEscape8BitCharacters;
     int activeParserEscapeControlCharacterTab;
+    int activeParserEscapeControlCharactersCStyle;
     DEFiRet;
 
     if (!reportChangesObjectKind(report, RS_RELOAD_OBJ_GLOBAL)) return RS_RET_OK;
@@ -703,13 +706,34 @@ static rsRetVal classifyReloadBase(const rsReloadReportV1_t *const report) {
                                                    &activeValue, &activeOther));
     CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.escapecontrolcharactertab",
                                                    &candidateValue, &candidateOther));
+    if (!strcmp(activeOther, candidateOther)) {
+        CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserEscapeControlCharacterTab));
+        CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserEscapeControlCharacterTab));
+        if (activeParserEscapeControlCharacterTab != glblGetParserEscapeControlCharacterTab(runConf))
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        pendingBaseAuthorized = 1;
+        pendingParserEscapeControlCharacterTabUpdate = 1;
+        FINALIZE;
+    }
+    free(activeValue);
+    activeValue = NULL;
+    free(candidateValue);
+    candidateValue = NULL;
+    free(activeOther);
+    activeOther = NULL;
+    free(candidateOther);
+    candidateOther = NULL;
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(activeSourceObjectCatalog, "parser.escapecontrolcharacterscstyle",
+                                                   &activeValue, &activeOther));
+    CHKiRet(rsReloadCandidateGlobalStringProfileV1(pendingSourceObjectCatalog, "parser.escapecontrolcharacterscstyle",
+                                                   &candidateValue, &candidateOther));
     if (strcmp(activeOther, candidateOther)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-    CHKiRet(parseCandidateBinary(activeValue, 1, &activeParserEscapeControlCharacterTab));
-    CHKiRet(parseCandidateBinary(candidateValue, 1, &pendingParserEscapeControlCharacterTab));
-    if (activeParserEscapeControlCharacterTab != glblGetParserEscapeControlCharacterTab(runConf))
+    CHKiRet(parseCandidateBinary(activeValue, 0, &activeParserEscapeControlCharactersCStyle));
+    CHKiRet(parseCandidateBinary(candidateValue, 0, &pendingParserEscapeControlCharactersCStyle));
+    if (activeParserEscapeControlCharactersCStyle != glblGetParserEscapeControlCharactersCStyle(runConf))
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     pendingBaseAuthorized = 1;
-    pendingParserEscapeControlCharacterTabUpdate = 1;
+    pendingParserEscapeControlCharactersCStyleUpdate = 1;
 
 finalize_it:
     free(activeValue);
@@ -938,6 +962,7 @@ void shadowReloadBeginRequest(void) {
     pendingParserSpaceLF = glblGetParserSpaceLFOnReceive(runConf);
     pendingParserEscape8BitCharacters = glblGetParserEscape8BitCharactersOnReceive(runConf);
     pendingParserEscapeControlCharacterTab = glblGetParserEscapeControlCharacterTab(runConf);
+    pendingParserEscapeControlCharactersCStyle = glblGetParserEscapeControlCharactersCStyle(runConf);
     pendingBaseAuthorized = 0;
     pendingReloadModeUpdate = 0;
     pendingReportChildProcessExitsUpdate = 0;
@@ -949,6 +974,7 @@ void shadowReloadBeginRequest(void) {
     pendingParserSpaceLFUpdate = 0;
     pendingParserEscape8BitCharactersUpdate = 0;
     pendingParserEscapeControlCharacterTabUpdate = 0;
+    pendingParserEscapeControlCharactersCStyleUpdate = 0;
     pendingGenerationActivated = 0;
     publishStatus(SHADOW_RELOAD_IN_PROGRESS, NULL);
     pendingCandidateResult = moduleCleanupRet;
@@ -1308,6 +1334,8 @@ static void publishActivatedGeneration(void *const context) {
         glblSetParserEscape8BitCharactersOnReceive(runConf, pendingParserEscape8BitCharacters);
     if (pendingParserEscapeControlCharacterTabUpdate)
         glblSetParserEscapeControlCharacterTab(runConf, pendingParserEscapeControlCharacterTab);
+    if (pendingParserEscapeControlCharactersCStyleUpdate)
+        glblSetParserEscapeControlCharactersCStyle(runConf, pendingParserEscapeControlCharactersCStyle);
     publishActivatedGraph(context);
 }
 
