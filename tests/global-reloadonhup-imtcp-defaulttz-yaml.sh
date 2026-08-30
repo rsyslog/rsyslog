@@ -3,11 +3,16 @@
 # same open TCP stream emits changed/restored timezone offsets and remains
 # usable after module- and input-level starvation and unnamed rate-limit
 # generations. The focused tcpsrv unit verifies scalar and limiter propagation.
+# A constant RainerScript include only routes internal diagnostics to a test
+# file; every imtcp setting and reload candidate remains native YAML.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin imtcp
 generate_conf --yaml-only
 sed -i '/debug.abortOnProgramError:/a\  config.reloadOnHUP: "on"' "${TESTCONF_NM}.yaml"
+printf 'action(type="omfile" file="%s")\n' "$RSYSLOG_DYNNAME.started" >"$RSYSLOG_DYNNAME.internal.conf"
+add_yaml_conf 'include:'
+add_yaml_conf '  - path: "'$RSYSLOG_DYNNAME'.internal.conf"'
 add_yaml_conf 'modules:'
 add_yaml_conf '  - load: "../plugins/imtcp/.libs/imtcp"'
 add_yaml_conf 'inputs:'
@@ -79,9 +84,10 @@ printf '<167>Mar 10 01:00:00 host app: starvation-input-live\n' >&9 || error_exi
 wait_content 'starvation-input-live' "$RSYSLOG_OUT_LOG"
 cp "$CONF_FILE" "$CONF_FILE.input-live"
 
-# The integration oracle covers native-YAML classification, atomic publication,
-# and session preservation; the unit test directly checks both limiter scalars.
-sed '/ruleset: main/a\    ratelimit.interval: 60\n    ratelimit.burst: 12000' \
+# Five frames in one TCP write exercise the live limiter directly. Exactly
+# three records plus the first-drop diagnostic prove that the remaining frames
+# reached the limiter; this is a state oracle rather than an elapsed-time test.
+sed '/ruleset: main/a\    ratelimit.interval: 60\n    ratelimit.burst: 3' \
 	"$CONF_FILE.input-live" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -90,8 +96,18 @@ if [[ "$reload_status" != *"result=activated active_generation=6"* ||
 	echo "FAIL: YAML unnamed rate limit did not activate: $reload_status"
 	error_exit 1
 fi
-printf '<167>Mar 10 01:00:00 host app: ratelimit-live\n' >&9 || error_exit 1
-wait_content 'ratelimit-live' "$RSYSLOG_OUT_LOG"
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-1' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-2' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-3' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-4' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-5' >&9 || error_exit 1
+wait_content 'ratelimit-live-3' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'ratelimit-live-' 3 "$RSYSLOG_OUT_LOG"
+check_not_present 'ratelimit-live-4' "$RSYSLOG_OUT_LOG"
+check_not_present 'ratelimit-live-5' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown

@@ -75,10 +75,11 @@ printf '<167>Mar 10 01:00:00 host app: starvation-input-live\n' >&9 || error_exi
 wait_content 'starvation-input-live' "$RSYSLOG_OUT_LOG"
 cp "$CONF_FILE" "$CONF_FILE.input-live"
 
-# Unnamed Linux-like rate limiting owns listener-local runtime state. The
-# acquired input fence makes resetting that state race-free; this integration
-# oracle covers classification, publication, and persistent-session lifetime.
-sed 's/ruleset="main"/ruleset="main" ratelimit.interval="60" ratelimit.burst="12000"/' \
+# Unnamed Linux-like rate limiting owns listener-local runtime state. A burst
+# of five frames in one TCP write must emit exactly three records plus the
+# limiter's first-drop diagnostic. That diagnostic is the synchronization
+# oracle proving the remaining frames reached the limiter; no sleep is used.
+sed 's/ruleset="main"/ruleset="main" ratelimit.interval="60" ratelimit.burst="3"/' \
 	"$CONF_FILE.input-live" >"$CONF_FILE"
 issue_HUP
 reload_status="$(echo getreloadstatus | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")"
@@ -87,8 +88,18 @@ if [[ "$reload_status" != *"result=activated active_generation=6"* ||
 	echo "FAIL: RainerScript unnamed rate limit did not activate: $reload_status"
 	error_exit 1
 fi
-printf '<167>Mar 10 01:00:00 host app: ratelimit-live\n' >&9 || error_exit 1
-wait_content 'ratelimit-live' "$RSYSLOG_OUT_LOG"
+printf '%s\n' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-1' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-2' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-3' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-4' \
+	'<167>Mar 10 01:00:00 host app: ratelimit-live-5' >&9 || error_exit 1
+wait_content 'ratelimit-live-3' "$RSYSLOG_OUT_LOG"
+wait_content 'begin to drop messages due to rate-limiting' "$RSYSLOG_DYNNAME.started"
+wait_queueempty
+content_count_check 'ratelimit-live-' 3 "$RSYSLOG_OUT_LOG"
+check_not_present 'ratelimit-live-4' "$RSYSLOG_OUT_LOG"
+check_not_present 'ratelimit-live-5' "$RSYSLOG_OUT_LOG"
 exec 9>&-
 shutdown_when_empty
 wait_shutdown
