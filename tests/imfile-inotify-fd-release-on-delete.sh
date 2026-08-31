@@ -25,7 +25,9 @@ if $msg contains "msgnum:" then
 startup
 wait_file_lines "$RSYSLOG_OUT_LOG" $TESTMESSAGES $RETRIES
 
-PID=$(cat "$RSYSLOG_PIDBASE".pid)
+# The imdiag startup marker can precede pid-file creation on slow CI workers.
+# Wait for a populated, valid pid before inspecting the daemon's file handles.
+PID=$(getpid)
 if [ -z "$PID" ]; then
 	printf 'FAIL: could not read rsyslog PID\n'
 	error_exit 1
