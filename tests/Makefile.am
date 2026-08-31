@@ -59,6 +59,9 @@ EXTRA_DIST += $(TESTS_RSCRIPT_OBJECT_STRINGS)
 TESTS_RSCRIPT_REPLACE_OVERLAP = rscript_replace-overlap.sh
 EXTRA_DIST += $(TESTS_RSCRIPT_REPLACE_OVERLAP)
 
+TESTS_PRIFILT_TRAILING_SEPARATOR = prifilt-trailing-separator.sh prifilt-trailing-separator-vg.sh
+EXTRA_DIST += $(TESTS_PRIFILT_TRAILING_SEPARATOR)
+
 TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
@@ -543,6 +546,7 @@ TESTS_DEFAULT = \
 	rscript_stop2.sh \
 	rscript_prifilt.sh \
 	rscript_prifilt_negated_exact.sh \
+	$(TESTS_PRIFILT_TRAILING_SEPARATOR) \
 	rscript_optimizer1.sh \
 	rscript_optimizer_const_cmp.sh \
 	rscript_ruleset_call.sh \
