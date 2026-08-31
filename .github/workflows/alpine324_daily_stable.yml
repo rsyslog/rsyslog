@@ -150,11 +150,26 @@ jobs:
       - name: Fetch official Alpine 3.24 packaging baseline
         id: packaging
         run: |
-          git clone --depth 1 --branch "$ALPINE_BRANCH" --filter=blob:none \
-            --sparse https://gitlab.alpinelinux.org/alpine/aports.git \
-            "$RUNNER_TEMP/alpine-aports"
-          git -C "$RUNNER_TEMP/alpine-aports" sparse-checkout set main/rsyslog
-          baseline_sha="$(git -C "$RUNNER_TEMP/alpine-aports" rev-parse HEAD)"
+          baseline_dir="$RUNNER_TEMP/alpine-aports"
+          baseline_fetched=false
+          for attempt in 1 2 3; do
+            rm -rf "$baseline_dir"
+            if timeout 90s git clone --depth 1 --branch "$ALPINE_BRANCH" \
+              --filter=blob:none --sparse \
+              https://gitlab.alpinelinux.org/alpine/aports.git "$baseline_dir"; then
+              if timeout 90s git -C "$baseline_dir" sparse-checkout set main/rsyslog; then
+                baseline_fetched=true
+                break
+              fi
+            fi
+            echo "::warning::Alpine baseline fetch failed (attempt $attempt/3)"
+            [ "$attempt" -eq 3 ] || sleep "$((attempt * 15))"
+          done
+          [ "$baseline_fetched" = true ] || {
+            echo "::error::could not fetch the Alpine $ALPINE_BRANCH packaging baseline"
+            exit 1
+          }
+          baseline_sha="$(git -C "$baseline_dir" rev-parse HEAD)"
           echo "baseline_sha=$baseline_sha" >> "$GITHUB_OUTPUT"
 
       - name: Generate rsyslog dist tarball
