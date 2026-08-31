@@ -380,7 +380,7 @@ BEGINparseSelectorAct
         return RS_RET_CONFLINE_UNPROCESSED;
     }
 
-    CODE_STD_STRING_REQUESTparseSelectorAct(1) CHKmalloc(pData->pipe = malloc(512));
+    CODE_STD_STRING_REQUESTparseSelectorAct(1) CHKmalloc(pData->pipe = malloc(MAXFNAME));
     ++p;
     CHKiRet(cflineParseFileName(p, (uchar *)pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
 
