@@ -36,7 +36,10 @@ startup
 tcpflood -m"$NUMMESSAGES"
 # the queue must really be the segmented disk engine: its files carry the
 # configured prefix in the work directory
-segfiles=$(ls "$RSYSLOG_DYNNAME.spool" 2>/dev/null | grep -c '^turbo-segdisk')
+segfiles=0
+for f in "$RSYSLOG_DYNNAME.spool"/turbo-segdisk*; do
+	[ -e "$f" ] && segfiles=$((segfiles + 1))
+done
 if [ "$segfiles" -eq 0 ]; then
 	printf 'no segmented disk queue files in %s.spool:\n' "$RSYSLOG_DYNNAME"
 	ls -la "$RSYSLOG_DYNNAME.spool" 2>&1
