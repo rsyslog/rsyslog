@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # A discard match "%.:json%" gives every captured key a name that begins with
 # the discard dot, so an input key of "." yields an all-dot field name. The
 # turbo materializer split such names on "." and handed the leading token to
