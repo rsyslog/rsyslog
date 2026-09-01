@@ -14,19 +14,7 @@ POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.test_policy_hup.yaml"
 export POLICY_FILE
 
 wait_for_policy_reload() {
-    local retries=0
-    local reload_message="ratelimit: HUP reloaded policy 'hup_limiter'"
-
-    while [ "$retries" -lt 40 ]; do
-        if [ -f "${RSYSLOG_DYNNAME}.started" ] && grep -qF "$reload_message" "${RSYSLOG_DYNNAME}.started"; then
-            return 0
-        fi
-        retries=$((retries + 1))
-        ./msleep 250
-    done
-
-    echo "FAIL: timed out waiting for HUP reload of policy 'hup_limiter'"
-    error_exit 1
+	wait_content "ratelimit: HUP reloaded policy 'hup_limiter'" "${RSYSLOG_DYNNAME}.started"
 }
 
 # Create initial policy (High limits)

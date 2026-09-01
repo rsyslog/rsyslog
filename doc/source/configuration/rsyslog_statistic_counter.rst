@@ -66,7 +66,7 @@ the name of the action).
 
 -  **mutex.contention** - number of steady-state queue mutex acquisitions that found the mutex already held. This is a contention signal, not a count of waiting threads. It is available only when that queue has ``queue.mutexContentionStats="on"``.
 
--  **mutex.wait_ns** - cumulative monotonic-clock waiting time in nanoseconds for the acquisitions counted by ``mutex.contention``. Scheduler delay is included, so this is not a mutex hold-time measurement. Divide it by ``mutex.contention`` to obtain the observed mean wait time for the reporting interval. Enable it only while diagnosing a specific queue via ``queue.mutexContentionStats="on"``.
+-  **mutex.wait_ns** - cumulative monotonic-clock waiting time in nanoseconds for the acquisitions counted by ``mutex.contention``. Scheduler delay is included, so this is not a mutex hold-time measurement. Divide it by ``mutex.contention`` to obtain the observed mean wait time over the counters' current accumulation period (or the reporting interval when ``resetCounters="on"`` is configured). Enable it only while diagnosing a specific queue via ``queue.mutexContentionStats="on"``.
 
 Actions
 -------

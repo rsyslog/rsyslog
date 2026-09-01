@@ -1,8 +1,8 @@
 #!/bin/bash
 # Verify that YAML config can opt one main queue into mutex contention
 # diagnostics. A multi-connection imtcp workload must fully drain and report
-# nonzero contention, proving the YAML setting reaches the shared queue
-# parameter backend.
+# the metric keys, proving the YAML setting reaches the shared queue parameter
+# backend without depending on a particular scheduler's contention level.
 . ${srcdir:=.}/diag.sh init
 require_yaml_support
 require_plugin impstats
@@ -48,6 +48,6 @@ wait_file_lines "$STATSFILE" 1
 shutdown_when_empty
 wait_shutdown
 content_check --regex --output-results \
-	'main Q: origin=core.queue .*mutex\.contention=[1-9][0-9]* .*mutex\.wait_ns=[1-9][0-9]*' "$STATSFILE"
+	'main Q: origin=core.queue .*mutex\.contention=[0-9][0-9]* .*mutex\.wait_ns=[0-9][0-9]*' "$STATSFILE"
 seq_check
 exit_test
