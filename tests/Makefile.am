@@ -987,7 +987,8 @@ TESTS_IMPTCP_FROMHOST_PORT = \
 	imptcp-fromhost-port.sh
 
 TESTS_IMTCP_IMPSTATS = \
-	imtcp-impstats.sh
+	imtcp-impstats.sh \
+	queue-mutex-contention-impstats.sh
 
 TESTS_SNMP_MINIMAL = \
 	omsnmp_errmsg_no_params.sh

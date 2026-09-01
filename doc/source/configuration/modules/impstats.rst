@@ -410,6 +410,9 @@ Line 2: shows details for the main queue:
 - ``full``, how often was the queue was full
 - ``maxqsize``, the maximum amount of messages that have passed through the
   queue since rsyslog was started
+- ``mutex.contention``, queue mutex acquisitions that observed another holder
+- ``mutex.wait_ns``, cumulative observed waiting time for those acquisitions;
+  divide by ``mutex.contention`` for the mean observed wait time
 
 See Also
 ========

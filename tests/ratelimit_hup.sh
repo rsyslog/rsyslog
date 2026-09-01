@@ -1,7 +1,10 @@
 #!/bin/bash
-# Test HUP reloading of external rate limit policies
-# 1. Start with high limit (pass all)
-# 2. HUP to low limit (drop all)
+# Verify HUP reloading of an external input rate-limit policy: an initial high
+# burst passes all messages, then HUP reloads a zero-burst policy that drops
+# every subsequent message.  The oracle waits for rsyslog's policy-specific
+# reload confirmation rather than relying on a fixed delay, because the HUP
+# diagnostic handshake can time out before a slow or sanitizer-instrumented
+# worker has reloaded the policy.
 
 . ${srcdir:=.}/diag.sh init
 
@@ -9,6 +12,22 @@
 export PORT_RCVR_FILE="${RSYSLOG_DYNNAME}.imudp_port"
 POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.test_policy_hup.yaml"
 export POLICY_FILE
+
+wait_for_policy_reload() {
+    local retries=0
+    local reload_message="ratelimit: HUP reloaded policy 'hup_limiter'"
+
+    while [ "$retries" -lt 40 ]; do
+        if [ -f "${RSYSLOG_DYNNAME}.started" ] && grep -qF "$reload_message" "${RSYSLOG_DYNNAME}.started"; then
+            return 0
+        fi
+        retries=$((retries + 1))
+        ./msleep 250
+    done
+
+    echo "FAIL: timed out waiting for HUP reload of policy 'hup_limiter'"
+    error_exit 1
+}
 
 # Create initial policy (High limits)
 echo "interval: 1" > $POLICY_FILE
@@ -57,10 +76,9 @@ echo "severity: 0" >> $POLICY_FILE
 
 echo "Sending HUP..."
 issue_HUP
+wait_for_policy_reload
 echo "Checking rsyslog process:"
 ps aux | grep rsyslogd | grep -v grep
-
-./msleep 1000 # wait for HUP to be processed
 
 # Send 20 messages. 0 should pass.
 tcpflood -Tudp -p$PORT_RCVR -m $SENDMESSAGES -M "msgnum:"
