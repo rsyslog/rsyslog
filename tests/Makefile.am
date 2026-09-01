@@ -988,6 +988,7 @@ TESTS_IMPTCP_FROMHOST_PORT = \
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh \
+	queue-mutex-contention-impstats-default.sh \
 	queue-mutex-contention-impstats.sh
 
 TESTS_SNMP_MINIMAL = \
@@ -1708,6 +1709,7 @@ TESTS_OMSTDOUT = \
 TESTS_LIBYAML_IMTCP = \
 	config-translate-rs-roundtrip.sh \
 	config-translate-yaml-roundtrip.sh \
+	yaml-queue-mutex-contention-stats.sh \
 	yaml-include-recursion.sh
 
 TESTS_LIBYAML_IMTCP_OSSL = \

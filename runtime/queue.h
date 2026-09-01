@@ -265,6 +265,7 @@ struct queue_s {
         int segdiskDematerializations;
         int segdiskIdleCleanupFailures;
         int iSmpInterval; /* line interval of sampling logs */
+        sbool bMutexContentionStats; /* opt-in mutex contention diagnostics */
         int isRunning;
 };
 

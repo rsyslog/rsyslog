@@ -309,6 +309,7 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.cry.provider", eCmdHdlrGetWord, 0},
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
                                            {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
+                                           {"queue.mutexcontentionstats", eCmdHdlrBinary, 0},
                                            {"queue.oncorruption", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
@@ -478,6 +479,7 @@ void qqueueDbgPrint(qqueue_t *pThis) {
               (pThis->pszFilePrefix == NULL) ? "[NONE]" : (char *)pThis->pszFilePrefix);
     dbgoprint((obj_t *)pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
     dbgoprint((obj_t *)pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
+    dbgoprint((obj_t *)pThis, "queue.mutexcontentionstats: %d\n", pThis->bMutexContentionStats);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize: %d\n", pThis->iMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize.timeout: %d\n", pThis->toMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.maxdiskspace: %lld\n", pThis->sizeOnDiskMax);
@@ -532,11 +534,12 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
 
 /*
  * Acquire the queue mutex while optionally recording observable contention.
- * The normal no-statistics path deliberately remains a plain mutex lock.
+ * The normal path deliberately remains a plain mutex lock. The diagnostic
+ * path is selected explicitly per queue because trylock affects throughput.
  * Observed wait time includes scheduler delay and is not mutex hold time.
  */
 static inline void qqueueLock(qqueue_t *const pThis) {
-    if (!STATSCOUNTER_ENABLED()) {
+    if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
         d_pthread_mutex_lock(pThis->mut);
         return;
     }
@@ -2748,6 +2751,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -2780,6 +2784,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -4070,10 +4075,12 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrNFDscrd));
 
-    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.contention"), ctrType_IntCtr,
-                                CTR_FLAG_RESETTABLE, &pThis->ctrMutexContention));
-    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.wait_ns"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pThis->ctrMutexWaitNs));
+    if (pThis->bMutexContentionStats) {
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.contention"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexContention));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.wait_ns"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexWaitNs));
+    }
 
     pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"), ctrType_Int, CTR_FLAG_NONE,
@@ -5097,6 +5104,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             pThis->iSmpInterval = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.takeflowctlfrommsg")) {
             pThis->takeFlowCtlFromMsg = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.mutexcontentionstats")) {
+            pThis->bMutexContentionStats = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.oncorruption")) {
             char *mode;
             CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -5222,8 +5231,8 @@ int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
             NUM_EQUALS(toActShutdown) && NUM_EQUALS(toEnq) && NUM_EQUALS(toWrkShutdown) &&
             NUM_EQUALS(iMinMsgsPerWrkr) && NUM_EQUALS(iMaxFileSize) && NUM_EQUALS(bSaveOnShutdown) &&
             NUM_EQUALS(iDeqSlowdown) && NUM_EQUALS(iDeqtWinFromHr) && NUM_EQUALS(iDeqtWinToHr) &&
-            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(takeFlowCtlFromMsg) && qdaLifecycleConfigEqual(&old_da, &new_da) &&
-            USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
+            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(bMutexContentionStats) && NUM_EQUALS(takeFlowCtlFromMsg) &&
+            qdaLifecycleConfigEqual(&old_da, &new_da) && USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
 }
 
 
