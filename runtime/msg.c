@@ -37,12 +37,14 @@
  *            run under pMsg->mut (mmnormalize, MsgReleaseTurboResult).
  *   Legacy : pMsg->json / localvars. Always mutated under pMsg->mut.
  *
- * Every read of the snapshot slots or of pMsg->json from a message that
- * another thread can reach takes pMsg->mut. Action queues and the DA
- * consumer share the same smsg_t through MsgAddRef(), so iRefCount > 1
- * is the shared case. A sole holder (iRefCount == 1) is the only thread
- * able to touch the message and reads without the lock; see
- * msgTurboGetStr().
+ * Every read of the snapshot slots or of pMsg->json takes pMsg->mut,
+ * including on a sole holder. Action queues share the same smsg_t
+ * through MsgAddRef(); a later turbo mmnormalize overwrites the
+ * snapshot under that mutex. An atomic load of iRefCount is not a
+ * happens-before with that write, so a refcount-gated lock-free
+ * getter races it. mmnormalize-turbo-shared-getter-tsan.sh covers
+ * that topology. The mutex is not recursive: a caller that already
+ * holds it must not call msgTurboGetStr() (today's callers do not).
  *
  * Materialize is the one-way turbo -> legacy projection. It runs under
  * pMsg->mut, is idempotent (turbo_json_ready), and does not clear the
@@ -1420,10 +1422,9 @@ finalize_it:
  *
  * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
  *
- * The caller must already hold a reference to pM (iRefCount >= 1), and a
+ * The caller must already hold a reference to pM (iRefCount >= 1). A
  * thread must never access a message through a pointer it did not obtain
- * with MsgAddRef(), MsgDup() or construction: msgTurboGetStr() relies on
- * iRefCount == 1 meaning that the calling thread is the only holder.
+ * with MsgAddRef(), MsgDup() or construction.
  */
 smsg_t *MsgAddRef(smsg_t *const pM) {
     assert(pM != NULL);
@@ -3226,15 +3227,12 @@ finalize_it:
  *
  * The snapshot is authoritative only while pMsg->json is NULL: once
  * anything wrote the tree (materialize, set statements, enrichment, imfile
- * metadata) the JSON path honours later-writer-wins. That guard and the
- * slot reads must be coherent with the writers, which all hold pMsg->mut,
- * so the read takes the mutex whenever another thread can reach the
- * message. A sole holder (iRefCount == 1) is by construction the only
- * thread able to touch the message: a second reference can only be
- * published by a thread that already holds one. It therefore reads without
- * the lock, which keeps the direct-queue pipeline lock-free. The copy
- * happens inside the locked region because the callback returns a pointer
- * into the snapshot, which a concurrent overwrite may release. With pRes
+ * metadata) the JSON path honours later-writer-wins. Writers of those
+ * slots hold pMsg->mut (mmnormalize attach/overwrite, MsgReleaseTurboResult,
+ * materialize). The getter takes the same mutex for the json == NULL
+ * guard, the slot loads, the get_str callback, and the copy out of the
+ * snapshot. A concurrent overwrite may free the snapshot, so the pointer
+ * the callback returns is only valid inside this locked region. With pRes
  * NULL the function only probes for the field (exists()). */
 static int msgTurboGetStr(smsg_t *const pMsg,
                           const msgPropDescr_t *const pProp,
@@ -3243,19 +3241,9 @@ static int msgTurboGetStr(smsg_t *const pMsg,
     const uchar *val;
     rs_size_t vlen;
     int hit = 0;
-    int locked = 0;
 
     if (pProp->id != PROP_CEE) return 0;
-    #ifdef HAVE_ATOMIC_BUILTINS
-    assert(ATOMIC_LOAD_32BIT(&pMsg->iRefCount, NULL) >= 1);
-    if (ATOMIC_LOAD_32BIT(&pMsg->iRefCount, NULL) != 1) {
-        MsgLock(pMsg);
-        locked = 1;
-    }
-    #else
     MsgLock(pMsg);
-    locked = 1;
-    #endif
     if (pMsg->json == NULL && pMsg->turbo_result != NULL && pMsg->turbo_result_get_str != NULL &&
         pMsg->turbo_result_get_str(pMsg->turbo_result, pProp->name, pProp->nameLen, &val, &vlen) == 0) {
         if (pRes == NULL) {
@@ -3270,7 +3258,7 @@ static int msgTurboGetStr(smsg_t *const pMsg,
             }
         }
     }
-    if (locked) MsgUnlock(pMsg);
+    MsgUnlock(pMsg);
     return hit;
 }
 #endif
