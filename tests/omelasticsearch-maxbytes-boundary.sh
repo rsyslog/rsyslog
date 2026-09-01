@@ -141,7 +141,7 @@ python3 - "$STATS_FILE" <<'PY'
 import json
 import sys
 
-stats = None
+stats = []
 for line in open(sys.argv[1], encoding="utf-8"):
     json_start = line.find("{")
     if json_start < 0:
@@ -151,15 +151,15 @@ for line in open(sys.argv[1], encoding="utf-8"):
     except json.JSONDecodeError:
         continue
     if record.get("origin") == "omelasticsearch" and record.get("requests.count"):
-        stats = record
+        stats.append(record)
 
-if stats is None:
+if not stats:
     raise SystemExit("missing omelasticsearch request-duration impstats record")
 
-count = stats["requests.count"]
-total = stats["requests.time_ms"]
-minimum = stats["requests.time_ms.min"]
-maximum = stats["requests.time_ms.max"]
+count = sum(record["requests.count"] for record in stats)
+total = sum(record["requests.time_ms"] for record in stats)
+minimum = min(record["requests.time_ms.min"] for record in stats)
+maximum = max(record["requests.time_ms.max"] for record in stats)
 if count != 2 or total < count or not 1 <= minimum < maximum <= total or maximum - minimum < 20:
     raise SystemExit(f"invalid request-duration stats: {stats}")
 PY
