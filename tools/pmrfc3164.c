@@ -431,7 +431,12 @@ BEGINparse2
                 int isHostName = 0;
                 if (i > 0) {
                     if (bHadSBracket) {
-                        if (p2parse[i] == ']') {
+                        /* the scan loop above only reserves room for the string
+                         * terminator, so we must check that the closing bracket
+                         * still fits as well - otherwise this is not a hostname
+                         * we can represent.
+                         */
+                        if (p2parse[i] == ']' && i < CONF_HOSTNAME_MAXSIZE - 1) {
                             bufParseHOSTNAME[i] = ']';
                             ++i;
                             isHostName = 1;

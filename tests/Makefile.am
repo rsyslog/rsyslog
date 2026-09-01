@@ -370,6 +370,7 @@ TESTS_DEFAULT = \
 	rfc5424parser.sh \
 	pmrfc3164-msgFirstSpace.sh \
 	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-SquareBracketsInHostname-oversize.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-parsehostnameandtag-off.sh \
