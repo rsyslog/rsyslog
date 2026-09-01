@@ -193,8 +193,8 @@ int rsconfTranslateHasFatal(void) {
 }
 
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wformat_nonliteral static char *__attribute__((format(printf, 1, 0)))
-translateVasprintf(const char *fmt, va_list ap) {
+PRAGMA_IGNORE_Wformat_nonliteral static char *__attribute__((format(printf, 1, 0))) translateVasprintf(const char *fmt,
+                                                                                                       va_list ap) {
     va_list ap_copy;
     char *buf;
     int len;
@@ -215,8 +215,8 @@ translateVasprintf(const char *fmt, va_list ap) {
     return buf;
 }
 
-PRAGMA_IGNORE_Wformat_nonliteral static void __attribute__((format(printf, 2, 3)))
-addWarning(struct rsconfTranslateWarning_s **head, const char *fmt, ...) {
+PRAGMA_IGNORE_Wformat_nonliteral static void __attribute__((format(printf, 2, 3))) addWarning(
+    struct rsconfTranslateWarning_s **head, const char *fmt, ...) {
     va_list ap;
     char *buf;
     struct rsconfTranslateWarning_s *w;
