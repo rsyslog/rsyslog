@@ -1,6 +1,8 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 #
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH.
+#
 # A json-typed parser captures its value as a well-formed JSON span and marks
 # it LN_FFIELD_RAW_JSON. The turbo materializer must reparse that span into a
 # nested object; storing it as an opaque string turns {"kc":{...}} into
