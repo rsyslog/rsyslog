@@ -82,8 +82,38 @@ STATSCOUNTER_DEF(indexBadArgument, mutIndexBadArgument)
 STATSCOUNTER_DEF(indexBulkRejection, mutIndexBulkRejection)
 STATSCOUNTER_DEF(indexOtherResponse, mutIndexOtherResponse)
 STATSCOUNTER_DEF(rebinds, mutRebinds)
+STATSCOUNTER_DEF(indexRequestCount, mutIndexRequestCount)
+STATSCOUNTER_DEF(indexRequestTimeMs, mutIndexRequestTimeMs)
+STATSCOUNTER_DEF(indexRequestTimeMsMin, mutIndexRequestTimeMsMin)
+STATSCOUNTER_DEF(indexRequestTimeMsMax, mutIndexRequestTimeMsMax)
 
 static prop_t *pInputName = NULL;
+
+/*
+ * Keep the request-duration summary lock-free. The statistics subsystem
+ * deliberately permits a scrape/reset race, and these compare-and-swap loops
+ * preserve that best-effort behavior without serializing output workers.
+ * A value of zero marks an empty reporting interval, so callers clamp an
+ * observed duration to at least one millisecond before calling this helper.
+ */
+static inline void updateRequestDurationStats(const uint64_t duration_ms) {
+    uint64_t old_value;
+
+    STATSCOUNTER_INC(indexRequestCount, mutIndexRequestCount);
+    STATSCOUNTER_ADD(indexRequestTimeMs, mutIndexRequestTimeMs, duration_ms);
+
+    old_value = ATOMIC_LOAD_uint64(&indexRequestTimeMsMin, &mutIndexRequestTimeMsMin);
+    while ((old_value == 0 || duration_ms < old_value) &&
+           !ATOMIC_CAS_uint64(&indexRequestTimeMsMin, old_value, duration_ms, &mutIndexRequestTimeMsMin)) {
+        old_value = ATOMIC_LOAD_uint64(&indexRequestTimeMsMin, &mutIndexRequestTimeMsMin);
+    }
+
+    old_value = ATOMIC_LOAD_uint64(&indexRequestTimeMsMax, &mutIndexRequestTimeMsMax);
+    while (duration_ms > old_value &&
+           !ATOMIC_CAS_uint64(&indexRequestTimeMsMax, old_value, duration_ms, &mutIndexRequestTimeMsMax)) {
+        old_value = ATOMIC_LOAD_uint64(&indexRequestTimeMsMax, &mutIndexRequestTimeMsMax);
+    }
+}
 
 #define META_STRT "{\"index\":{\"_index\": \""
 #define META_STRT_CREATE "{\"create\":{" /* \"_index\": \" */
@@ -2136,6 +2166,16 @@ static rsRetVal ATTR_NONNULL(1, 2)
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
+    if (STATSCOUNTER_ENABLED()) {
+        double total_time = 0;
+        uint64_t total_time_ms;
+
+        /* libcurl exposes total transfer time after every completed attempt. */
+        (void)curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &total_time);
+        total_time_ms = (uint64_t)(total_time * 1000);
+        if (total_time_ms == 0) total_time_ms = 1;
+        updateRequestDurationStats(total_time_ms);
+    }
     DBGPRINTF("curl returned %lld\n", (long long)code);
     if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
@@ -2939,6 +2979,18 @@ BEGINmodInit()
                                 &indexOtherResponse));
     STATSCOUNTER_INIT(rebinds, mutRebinds);
     CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"rebinds", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &rebinds));
+    STATSCOUNTER_INIT(indexRequestCount, mutIndexRequestCount);
+    CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"requests.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &indexRequestCount));
+    STATSCOUNTER_INIT(indexRequestTimeMs, mutIndexRequestTimeMs);
+    CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"requests.time_ms", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &indexRequestTimeMs));
+    STATSCOUNTER_INIT(indexRequestTimeMsMin, mutIndexRequestTimeMsMin);
+    CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"requests.time_ms.min", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &indexRequestTimeMsMin));
+    STATSCOUNTER_INIT(indexRequestTimeMsMax, mutIndexRequestTimeMsMax);
+    CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"requests.time_ms.max", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &indexRequestTimeMsMax));
     CHKiRet(statsobj.ConstructFinalize(indexStats));
     CHKiRet(prop.Construct(&pInputName));
     CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omelasticsearch"), sizeof("omelasticsearch") - 1));
