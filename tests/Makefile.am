@@ -1791,6 +1791,7 @@ TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh \
 	mmnormalize-turbo-json-discard.sh \
 	mmnormalize-turbo-json-nested.sh \
+	mmnormalize-turbo-truncated-stat.sh \
 	mmnormalize-turbo-hup-tsan.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
