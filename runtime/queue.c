@@ -681,6 +681,14 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
 
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+    /* A test-only gate lets focused tests form a source batch without
+     * queue.minDequeueBatchSize. Removing the named file and submitting one
+     * release message restores the ordinary immediate worker advice path. */
+    const char *const egressWorkerGate = getenv("RSYSLOG_TEST_EGRESS_WORKER_GATE");
+    if (egressWorkerGate != NULL && access(egressWorkerGate, F_OK) == 0) return RS_RET_OK;
+#endif
+
     if (!pThis->bEnqOnly) {
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
@@ -4036,6 +4044,18 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrNFDscrd));
 
+#ifdef ENABLE_RESERVED_EGRESS_STATS
+    STATSCOUNTER_INIT(pThis->ctrEgressPublishedBatches, pThis->mutCtrEgressPublishedBatches);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("egress.published.batches"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrEgressPublishedBatches));
+    STATSCOUNTER_INIT(pThis->ctrEgressPublishedMessages, pThis->mutCtrEgressPublishedMessages);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("egress.published.messages"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrEgressPublishedMessages));
+    STATSCOUNTER_INIT(pThis->ctrEgressPublicationAdvice, pThis->mutCtrEgressPublicationAdvice);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("egress.publication.advice"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrEgressPublicationAdvice));
+#endif
+
     pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"), ctrType_Int, CTR_FLAG_NONE,
                                 &pThis->ctrMaxqsize));
@@ -4263,6 +4283,7 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(qqueue);
+    assert(pThis->nEgressReservations == 0);
     DBGOPRINT((obj_t *)pThis, "shutdown: begin to destruct queue\n");
     if (ourConf->globals.shutdownQueueDoubleSize) {
         pThis->iHighWtrMrk *= 2;
@@ -4436,7 +4457,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     STATSCOUNTER_ADD(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued, (uint64_t)pMsg->iLenRawMsg);
     /* first check if we need to discard this message (which will cause CHKiRet() to exit)
      */
-    CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg));
+    CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize + pThis->nEgressReservations, pMsg));
 
     /* handle flow control
      * There are two different flow control mechanisms: basic and advanced flow control.
@@ -4514,7 +4535,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
      * is not the case, basic flow control enters the field, which means we wait for
      * the queue to become ready or drop the new message. -- rgerhards, 2008-03-14
      */
-    while ((pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize) ||
+    while ((pThis->iMaxQueueSize > 0 && pThis->iQueueSize + pThis->nEgressReservations >= pThis->iMaxQueueSize) ||
            ((pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) && pThis->sizeOnDiskMax != 0 &&
             pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax) ||
            (pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->sizeOnDiskMax != 0 &&
@@ -4676,6 +4697,133 @@ finalize_it:
     RETiRet;
 }
 
+int qqueueSupportsReservedEgress(const qqueue_t *const pThis) {
+    return pThis != NULL && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY) &&
+           pThis->pszFilePrefix == NULL && !pThis->bIsDA && pThis->iSmpInterval == 0 && pThis->iMaxQueueSize > 0;
+}
+
+rsRetVal qqueueEgressPrepare(qqueue_t *const pThis, smsg_t *const pMsg, qqueue_egress_entry_t *const pEntry) {
+    DEFiRet;
+    memset(pEntry, 0, sizeof(*pEntry));
+    pEntry->pMsg = pMsg;
+    if (!qqueueSupportsReservedEgress(pThis)) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    if (pThis->qType == QUEUETYPE_LINKEDLIST) {
+        CHKmalloc(pEntry->pLinkedListEntry = malloc(sizeof(qLinkedList_t)));
+        pEntry->pLinkedListEntry->pNext = NULL;
+        pEntry->pLinkedListEntry->pMsg = pMsg;
+    }
+finalize_it:
+    RETiRet;
+}
+
+/* The first attempt accounts admission and checks discard policy exactly once,
+ * including when it is a tryOnly probe. If that probe finds capacity pressure,
+ * it returns RS_RET_RETRY without incrementing full/discard counters, waiting,
+ * or transferring ownership so the WTI can first publish its own invisible
+ * reservations. A later non-tryOnly retry reuses the recorded admission and
+ * performs the ordinary full observation, wait, timeout, and drop accounting. */
+rsRetVal qqueueEgressReserve(qqueue_t *const pThis, qqueue_egress_entry_t *const pEntry, const int tryOnly) {
+    struct timespec t;
+    DEFiRet;
+
+    assert(pEntry != NULL);
+    assert(pEntry->pMsg != NULL);
+    if (!qqueueSupportsReservedEgress(pThis)) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+
+    d_pthread_mutex_lock(pThis->mut);
+    if (!pEntry->admissionCounted) {
+        STATSCOUNTER_INC(pThis->ctrEnqueued, pThis->mutCtrEnqueued);
+        STATSCOUNTER_ADD(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued, (uint64_t)pEntry->pMsg->iLenRawMsg);
+        pEntry->admissionCounted = 1;
+        const int occupancy = pThis->iQueueSize + pThis->nEgressReservations;
+        iRet = qqueueChkDiscardMsg(pThis, occupancy, pEntry->pMsg);
+        if (iRet != RS_RET_OK) {
+            pEntry->pMsg = NULL;
+            goto unlock;
+        }
+    }
+    if (tryOnly && pThis->iMaxQueueSize > 0 && pThis->iQueueSize + pThis->nEgressReservations >= pThis->iMaxQueueSize) {
+        iRet = RS_RET_RETRY;
+        goto unlock;
+    }
+    while (pThis->iMaxQueueSize > 0 && pThis->iQueueSize + pThis->nEgressReservations >= pThis->iMaxQueueSize) {
+        STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
+        if (pThis->toEnq == 0 || pThis->bEnqOnly) {
+            STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+            msgDestruct(&pEntry->pMsg);
+            iRet = RS_RET_QUEUE_FULL;
+            goto unlock;
+        }
+        qqueueAdviseMaxWorkers(pThis);
+        if (glbl.GetGlobalInputTermState()) {
+            msgDestruct(&pEntry->pMsg);
+            iRet = RS_RET_FORCE_TERM;
+            goto unlock;
+        }
+        timeoutComp(&t, pThis->toEnq);
+        const int r = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
+        if (r != 0) {
+            STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+            msgDestruct(&pEntry->pMsg);
+            iRet = RS_RET_QUEUE_FULL;
+            goto unlock;
+        }
+    }
+    ++pThis->nEgressReservations;
+    pEntry->state = QQUEUE_EGRESS_STAGED;
+
+unlock:
+    d_pthread_mutex_unlock(pThis->mut);
+finalize_it:
+    if (iRet != RS_RET_OK && iRet != RS_RET_RETRY) {
+        free(pEntry->pLinkedListEntry);
+        pEntry->pLinkedListEntry = NULL;
+        if (pEntry->pMsg != NULL) msgDestruct(&pEntry->pMsg);
+    }
+    RETiRet;
+}
+
+void qqueueEgressPublish(qqueue_t *const pThis, qqueue_egress_entry_t *const pEntries, const size_t nEntries) {
+    assert(qqueueSupportsReservedEgress(pThis));
+    assert(nEntries <= INT_MAX);
+    d_pthread_mutex_lock(pThis->mut);
+    assert(pThis->nEgressReservations >= (int)nEntries);
+    for (size_t i = 0; i < nEntries; ++i) {
+        assert(pEntries[i].pMsg != NULL);
+        if (pThis->qType == QUEUETYPE_LINKEDLIST) {
+            qLinkedList_t *const node = pEntries[i].pLinkedListEntry;
+            assert(node != NULL);
+            if (pThis->tVars.linklist.pDelRoot == NULL) {
+                pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = node;
+            } else {
+                pThis->tVars.linklist.pLast->pNext = node;
+                if (pThis->tVars.linklist.pDeqRoot == NULL) pThis->tVars.linklist.pDeqRoot = node;
+            }
+            pThis->tVars.linklist.pLast = node;
+            pEntries[i].pLinkedListEntry = NULL;
+        } else {
+            const rsRetVal r = qAddFixedArray(pThis, pEntries[i].pMsg);
+            assert(r == RS_RET_OK);
+            (void)r;
+        }
+        pEntries[i].pMsg = NULL;
+        pEntries[i].state = QQUEUE_EGRESS_PUBLISHED;
+    }
+    pThis->nEgressReservations -= (int)nEntries;
+    qqueueAddPhysicalQueueSize(pThis, (int)nEntries);
+    qqueueAddOverallQueueSize((int)nEntries);
+    STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
+    qqueueChkPersist(pThis, (int)nEntries);
+#ifdef ENABLE_RESERVED_EGRESS_STATS
+    STATSCOUNTER_INC(pThis->ctrEgressPublishedBatches, pThis->mutCtrEgressPublishedBatches);
+    STATSCOUNTER_ADD(pThis->ctrEgressPublishedMessages, pThis->mutCtrEgressPublishedMessages, nEntries);
+#endif
+    qqueueAdviseMaxWorkers(pThis);
+#ifdef ENABLE_RESERVED_EGRESS_STATS
+    STATSCOUNTER_INC(pThis->ctrEgressPublicationAdvice, pThis->mutCtrEgressPublicationAdvice);
+#endif
+    d_pthread_mutex_unlock(pThis->mut);
+}
 
 /* are any queue params set at all? 1 - yes, 0 - no
  * We need to evaluate the param block for this function, which is somewhat

@@ -33,6 +33,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+    #include <pthread.h>
+#endif
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -41,6 +44,7 @@
 #include "ruleset.h"
 #include "errmsg.h"
 #include "parser.h"
+#include "parserif.h"
 #include "batch.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
@@ -66,6 +70,62 @@ static struct cnfparamblk rspblk = {CNFPARAMBLK_VERSION, sizeof(rspdescr) / size
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
 static rsRetVal scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti);
+
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+static int egressSelectorFlipConsumed;
+static int egressSelectorOverride = -1;
+static pthread_mutex_t egressSelectorOverrideMut ATTR_UNUSED = PTHREAD_MUTEX_INITIALIZER;
+
+static int executionEngineSelectedForBatch(const rsconf_t *const batchConfig) {
+    if (getenv("RSYSLOG_TEST_EGRESS_FLIP_AFTER_FIRST") != NULL) {
+        const int override = ATOMIC_LOAD_32BIT(&egressSelectorOverride, &egressSelectorOverrideMut);
+        if (override != -1) return override;
+    }
+    return batchConfig->executionEngine;
+}
+
+static void testFlipEgressSelectorAfterFirst(const int capturedEngine,
+                                             const int sourceIndex,
+                                             const smsg_t *const pMsg) {
+    if (sourceIndex != 0 || getenv("RSYSLOG_TEST_EGRESS_FLIP_AFTER_FIRST") == NULL ||
+        strstr((const char *)pMsg->pszRawMsg, "msgnum:00000000") == NULL)
+        return;
+    if (ATOMIC_CAS(&egressSelectorFlipConsumed, 0, 1, &egressSelectorOverrideMut))
+        ATOMIC_STORE_32BIT(&egressSelectorOverride, &egressSelectorOverrideMut, capturedEngine == 1 ? 0 : 1);
+}
+#else
+    #define executionEngineSelectedForBatch(batchConfig) ((batchConfig)->executionEngine)
+#endif
+
+static rsRetVal validateReservedEgressQueue(const rsconf_t *const conf,
+                                            const ruleset_t *const ruleset,
+                                            const qqueue_t *const queue) {
+    if (conf->executionEngine != 1 || queue == NULL || queue->qType == QUEUETYPE_DIRECT) return RS_RET_OK;
+    if (qqueueSupportsReservedEgress(queue)) return RS_RET_OK;
+    parser_errmsg(
+        "ruleset '%s': global executionEngine=reservedBatch supports only non-disk-assisted "
+        "bounded LinkedList and FixedArray queued rulesets",
+        ruleset->pszName);
+    return RS_RET_PARAM_ERROR;
+}
+
+DEFFUNC_llExecFunc(doValidateReservedEgressQueues) {
+    ruleset_t *const ruleset = (ruleset_t *)pData;
+    const rsconf_t *const conf = (const rsconf_t *)pParam;
+    return validateReservedEgressQueue(conf, ruleset, ruleset->pQueue);
+}
+
+rsRetVal rulesetValidateQueues(rsconf_t *const conf) {
+    return llExecFunc(&conf->rulesets.llRulesets, doValidateReservedEgressQueues, conf);
+}
+
+rsRetVal rulesetValidateMainQueue(rsconf_t *const conf) {
+    if (conf->executionEngine == 1 && (conf->pMsgQueue == NULL || conf->pMsgQueue->qType == QUEUETYPE_DIRECT)) {
+        parser_errmsg("global executionEngine=reservedBatch requires a non-Direct main queue");
+        return RS_RET_PARAM_ERROR;
+    }
+    return RS_RET_OK;
+}
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -157,13 +217,16 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues) {
     DEFiRet;
     ruleset_t *pThis = (ruleset_t *)pData;
     dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n", pThis->pQueue, pThis->pszName);
-    if (pThis->pQueue != NULL) startMainQueue(runConf, pThis->pQueue);
+    if (pThis->pQueue != NULL) {
+        CHKiRet(validateReservedEgressQueue(runConf, pThis, pThis->pQueue));
+        CHKiRet(startMainQueue(runConf, pThis->pQueue));
+    }
+finalize_it:
     RETiRet;
 }
 /* activate all ruleset queues */
 rsRetVal activateRulesetQueues(void) {
-    llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
-    return RS_RET_OK;
+    return llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
 }
 
 
@@ -245,7 +308,7 @@ static rsRetVal execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 
     cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg, pWti);
     uchar *const rsName = (uchar *)var2CString(&result, &bMustFree);
-    const rsRetVal localRet = rulesetGetRuleset(runConf, &pRuleset, rsName);
+    const rsRetVal localRet = rulesetGetRuleset((rsconf_t *)pWti->egress.batchConfig, &pRuleset, rsName);
     if (localRet != RS_RET_OK) {
         /* in that case, we accept that a NOP will "survive" */
         LogError(0, RS_RET_RULESET_NOT_FOUND,
@@ -264,7 +327,11 @@ static rsRetVal execCallIndirect(struct cnfstmt *const __restrict__ stmt,
         /* Note: we intentionally use submitMsg2() here, as we process messages
          * that were already run through the rate-limiter.
          */
-        submitMsg2(pMsg);
+        if (pWti->egress.enabled) {
+            CHKiRet(wtiEgressStage(pWti, pRuleset->pQueue, pMsg));
+        } else {
+            submitMsg2(pMsg);
+        }
     } else {
         CHKiRet(execSynchronousRulesetCall(pRuleset->root, (const char *)rsName, ustrlen(rsName), pMsg, pWti));
     }
@@ -287,7 +354,11 @@ static rsRetVal execCall(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti) {
         /* Note: we intentionally use submitMsg2() here, as we process messages
          * that were already run through the rate-limiter.
          */
-        submitMsg2(pMsg);
+        if (pWti->egress.enabled) {
+            CHKiRet(wtiEgressStage(pWti, stmt->d.s_call.ruleset->pQueue, pMsg));
+        } else {
+            submitMsg2(pMsg);
+        }
     }
 finalize_it:
     RETiRet;
@@ -601,17 +672,21 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
     smsg_t *pMsg;
     ruleset_t *pRuleset;
     rsRetVal localRet;
+    rsRetVal egressRet = RS_RET_OK;
     DEFiRet;
 
     DBGPRINTF("processBATCH: batch of %d elements must be processed\n", pBatch->nElem);
 
     wtiResetExecState(pWti, pBatch);
+    rsconf_t *const batchConfig = runConf;
+    const int batchExecutionEngine = executionEngineSelectedForBatch(batchConfig);
+    wtiEgressBegin(pWti, batchConfig, batchExecutionEngine == 1);
 
     /* execution phase */
     for (i = 0; i < batchNumMsgs(pBatch) && !wtiIsShutdownImmediate(pWti); ++i) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
-        pRuleset = (pMsg->pRuleset == NULL) ? runConf->rulesets.pDflt : pMsg->pRuleset;
+        pRuleset = (pMsg->pRuleset == NULL) ? batchConfig->rulesets.pDflt : pMsg->pRuleset;
         localRet = scriptExec(pRuleset->root, pMsg, pWti);
         /* the most important case here is that processing may be aborted
          * due to pbShutdownImmediate, in which case we MUST NOT flag this
@@ -622,6 +697,9 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
             batchSetElemState(pBatch, i, BATCH_STATE_COMM);
         else if (localRet == RS_RET_SUSPENDED)
             --i;
+#ifdef ENABLE_RESERVED_EGRESS_TEST_HOOKS
+        testFlipEgressSelectorAfterFirst(batchExecutionEngine, i, pMsg);
+#endif
     }
 
     /* commit phase */
@@ -629,9 +707,13 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
         "END batch execution phase, entering to commit phase "
         "[processed %d of %d messages]\n",
         i, batchNumMsgs(pBatch));
+    if (pWti->egress.enabled) wtiEgressPublish(pWti);
     actionCommitAllDirect(pWti);
+    if (pWti->egress.enabled) egressRet = pWti->egress.error;
+    wtiEgressCleanup(pWti);
 
     DBGPRINTF("processBATCH: batch of %d elements has been processed\n", pBatch->nElem);
+    iRet = egressRet;
     RETiRet;
 }
 
@@ -1035,6 +1117,7 @@ rsRetVal rulesetProcessCnf(struct cnfobj *o) {
         }
         DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s', mode %d\n", rsname, qtype);
         CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, o->nvlst));
+        CHKiRet(validateReservedEgressQueue(loadConf, pRuleset, pRuleset->pQueue));
     }
 
 finalize_it:

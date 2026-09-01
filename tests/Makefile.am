@@ -14,6 +14,27 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_RESERVED_EGRESS = \
+	reserved-egress-basic.sh \
+	reserved-egress-immediate-tail.sh \
+	reserved-egress-concurrent.sh \
+	reserved-egress-crossed-targets.sh \
+	reserved-egress-crossed-targets-immediate.sh \
+	reserved-egress-immediate.sh \
+	reserved-egress-legacy.sh \
+	reserved-egress-unsupported.sh
+EXTRA_DIST += $(TESTS_RESERVED_EGRESS)
+
+TESTS_RESERVED_EGRESS_HOOKS = \
+	reserved-egress-oom.sh \
+	reserved-egress-selector-batch.sh
+TESTS_RESERVED_EGRESS_IMPSTATS = reserved-egress-batching-stats.sh
+TESTS_RESERVED_EGRESS_LIBYAML_IMTCP = reserved-egress-yaml.sh
+EXTRA_DIST += \
+	$(TESTS_RESERVED_EGRESS_HOOKS) \
+	$(TESTS_RESERVED_EGRESS_IMPSTATS) \
+	$(TESTS_RESERVED_EGRESS_LIBYAML_IMTCP)
+
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
@@ -2954,6 +2975,22 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+if ENABLE_IMDIAG
+TESTS += $(TESTS_RESERVED_EGRESS)
+if ENABLE_RESERVED_EGRESS_TEST_HOOKS
+TESTS += $(TESTS_RESERVED_EGRESS_HOOKS)
+if ENABLE_RESERVED_EGRESS_STATS
+if ENABLE_IMPSTATS
+TESTS += $(TESTS_RESERVED_EGRESS_IMPSTATS)
+endif
+endif
+endif
+if HAVE_LIBYAML
+if ENABLE_IMTCP_TESTS
+TESTS += $(TESTS_RESERVED_EGRESS_LIBYAML_IMTCP)
+endif
+endif
+endif
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
 if ENABLE_SEGQUEUE_TOOL

@@ -866,13 +866,17 @@ static rsRetVal msgConsumer(void __attribute__((unused)) * notNeeded, batch_t *p
     DEFiRet;
     assert(pBatch != NULL);
     preprocessBatch(pBatch, pWti);
-    ruleset.ProcessBatch(pBatch, pWti);
+    /* The legacy ruleset engine returns OK and retains the historical blanket
+     * commit below. The experimental reserved-batch engine propagates prepare
+     * failures so its per-source states remain retryable. */
+    CHKiRet(ruleset.ProcessBatch(pBatch, pWti));
     // TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we
     // do not have this yet and so we emulate -- 2010-06-10
     int i;
     for (i = 0; i < pBatch->nElem && !wtiIsShutdownImmediate(pWti); i++) {
         pBatch->eltState[i] = BATCH_STATE_COMM;
     }
+finalize_it:
     RETiRet;
 }
 
