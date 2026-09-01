@@ -490,8 +490,11 @@ queue.mutexContentionStats
 
 Enables mutex contention diagnostics for this queue only. When enabled together
 with impstats, the queue reports ``mutex.contention`` and ``mutex.wait_ns``.
-The diagnostic probes every steady-state mutex acquisition with ``trylock``;
-enable it temporarily for the queue under investigation rather than globally.
+The diagnostic probes runtime producer and consumer mutex acquisition paths
+with ``trylock``; startup and shutdown coordination are intentionally outside
+the metric's scope. Enable it temporarily for the queue under investigation
+rather than globally. Configure this option before starting the queue; changing
+queue parameters on reload can replace a queue and its pending in-memory work.
 Action queues use the same parameter with the ``queue.`` prefix, for example
 ``queue.mutexContentionStats="on"`` in an action definition. In YAML,
 configure ``queue.mutexContentionStats: on`` under the corresponding

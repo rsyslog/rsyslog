@@ -410,8 +410,9 @@ Line 2: shows details for the main queue:
 - ``full``, how often was the queue was full
 - ``maxqsize``, the maximum amount of messages that have passed through the
   queue since rsyslog was started
-- ``mutex.contention``, queue mutex acquisitions that observed another holder;
-  present only when that queue enables ``queue.mutexContentionStats="on"``
+- ``mutex.contention``, instrumented runtime producer and consumer queue mutex
+  acquisitions that observed another holder; present only when that queue
+  enables ``queue.mutexContentionStats="on"``
 - ``mutex.wait_ns``, cumulative observed waiting time for those acquisitions;
   divide by ``mutex.contention`` for the mean observed wait time. This is an
   opt-in diagnostic because it probes each selected queue mutex acquisition.
