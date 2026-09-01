@@ -1753,6 +1753,7 @@ TESTS_MMNORMALIZE_YAML = \
 
 TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh \
+	mmnormalize-turbo-truncated-stat.sh \
 	mmnormalize-turbo-hup-tsan.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
