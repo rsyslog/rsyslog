@@ -309,6 +309,7 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.cry.provider", eCmdHdlrGetWord, 0},
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
                                            {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
+                                           {"queue.mutexcontentionstats", eCmdHdlrBinary, 0},
                                            {"queue.oncorruption", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
@@ -478,6 +479,7 @@ void qqueueDbgPrint(qqueue_t *pThis) {
               (pThis->pszFilePrefix == NULL) ? "[NONE]" : (char *)pThis->pszFilePrefix);
     dbgoprint((obj_t *)pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
     dbgoprint((obj_t *)pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
+    dbgoprint((obj_t *)pThis, "queue.mutexcontentionstats: %d\n", pThis->bMutexContentionStats);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize: %d\n", pThis->iMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.mindequeuebatchsize.timeout: %d\n", pThis->toMinDeqBatchSize);
     dbgoprint((obj_t *)pThis, "queue.maxdiskspace: %lld\n", pThis->sizeOnDiskMax);
@@ -528,6 +530,39 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
         segdiskStoreMayHaveData(pThis->tVars.segdisk))
         return 1;
     return size;
+}
+
+/*
+ * Acquire the queue mutex while optionally recording observable contention.
+ * The normal path deliberately remains a plain mutex lock. The diagnostic
+ * path is selected explicitly per queue because trylock affects throughput.
+ * Observed wait time includes scheduler delay and is not mutex hold time.
+ */
+static inline void qqueueLock(qqueue_t *const pThis) {
+    if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
+        d_pthread_mutex_lock(pThis->mut);
+        return;
+    }
+
+    const int trylock_ret = d_pthread_mutex_trylock(pThis->mut);
+    if (trylock_ret == 0) return;
+    if (trylock_ret != EBUSY) {
+        d_pthread_mutex_lock(pThis->mut);
+        return;
+    }
+
+    STATSCOUNTER_INC(pThis->ctrMutexContention, pThis->mutCtrMutexContention);
+    struct timespec before;
+    const int have_before = clock_gettime(CLOCK_MONOTONIC, &before) == 0;
+    d_pthread_mutex_lock(pThis->mut);
+    if (have_before) {
+        struct timespec after;
+        if (clock_gettime(CLOCK_MONOTONIC, &after) == 0) {
+            const int64_t wait_ns =
+                ((int64_t)(after.tv_sec - before.tv_sec) * 1000000000LL) + (int64_t)(after.tv_nsec - before.tv_nsec);
+            if (wait_ns >= 0) STATSCOUNTER_ADD(pThis->ctrMutexWaitNs, pThis->mutCtrMutexWaitNs, (uint64_t)wait_ns);
+        }
+    }
 }
 
 static int64 getQueueDiskBytes(qqueue_t *pThis) {
@@ -2674,6 +2709,8 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
     INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
     INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
     INIT_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+    STATSCOUNTER_INIT(pThis->ctrMutexContention, pThis->mutCtrMutexContention);
+    STATSCOUNTER_INIT(pThis->ctrMutexWaitNs, pThis->mutCtrMutexWaitNs);
     CHKiRet(qqueueSetiNumWorkerThreads(pThis, iWorkerThreads));
 
 finalize_it:
@@ -2714,6 +2751,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -2746,6 +2784,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->bMutexContentionStats = 0;
     pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
@@ -3538,7 +3577,7 @@ static rsRetVal RateLimiter(qqueue_t *pThis) {
         pthread_mutex_unlock(pThis->mut);
         DBGOPRINT((obj_t *)pThis, "outside dequeue time window, delaying %d seconds\n", iDelay);
         srSleep(iDelay, 0);
-        pthread_mutex_lock(pThis->mut);
+        qqueueLock(pThis);
     }
 
     RETiRet;
@@ -3613,7 +3652,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
         DBGOPRINT((obj_t *)pThis, "got 'file not found' error %d, queue defunct\n", iRet);
         iRet = queueSwitchToEmergencyMode(pThis, iRet);
         // TODO: think about what to return as iRet -- keep RS_RET_FILE_NOT_FOUND?
-        d_pthread_mutex_lock(pThis->mut);
+        qqueueLock(pThis);
     }
     if (iRet != RS_RET_OK) {
         FINALIZE;
@@ -3656,7 +3695,7 @@ finalize_it:
               getPhysicalQueueSize(pThis));
 
     /* now we are done, but potentially need to re-acquire the mutex */
-    if (bNeedReLock) d_pthread_mutex_lock(pThis->mut);
+    if (bNeedReLock) qqueueLock(pThis);
 
     RETiRet;
 }
@@ -3750,7 +3789,7 @@ finalize_it:
     }
 
     /* now we are done, but potentially need to re-acquire the mutex */
-    if (bNeedReLock) d_pthread_mutex_lock(pThis->mut);
+    if (bNeedReLock) qqueueLock(pThis);
 
     RETiRet;
 }
@@ -4035,6 +4074,13 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     STATSCOUNTER_INIT(pThis->ctrNFDscrd, pThis->mutCtrNFDscrd);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("discarded.nf"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrNFDscrd));
+
+    if (pThis->bMutexContentionStats) {
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.contention"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexContention));
+        CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("mutex.wait_ns"), ctrType_IntCtr,
+                                    CTR_FLAG_RESETTABLE, &pThis->ctrMutexWaitNs));
+    }
 
     pThis->ctrMaxqsize = 0; /* no mutex needed, thus no init call */
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("maxqsize"), ctrType_Int, CTR_FLAG_NONE,
@@ -4345,6 +4391,8 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
         DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
 
         /* type-specific destructor */
         iRet = pThis->qDestruct(pThis);
@@ -4607,7 +4655,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
     assert(pMultiSub != NULL);
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    d_pthread_mutex_lock(pThis->mut);
+    qqueueLock(pThis);
     for (i = 0; i < pMultiSub->nElem; ++i) {
         localRet = doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void *)pMultiSub->ppMsgs[i]);
         if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) ABORT_FINALIZE(localRet);
@@ -4656,7 +4704,7 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
 
     if (isNonDirectQ) {
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-        d_pthread_mutex_lock(pThis->mut);
+        qqueueLock(pThis);
     }
 
     CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));
@@ -5056,6 +5104,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             pThis->iSmpInterval = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.takeflowctlfrommsg")) {
             pThis->takeFlowCtlFromMsg = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.mutexcontentionstats")) {
+            pThis->bMutexContentionStats = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.oncorruption")) {
             char *mode;
             CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -5181,8 +5231,8 @@ int queuesEqual(qqueue_t *pOld, qqueue_t *pNew) {
             NUM_EQUALS(toActShutdown) && NUM_EQUALS(toEnq) && NUM_EQUALS(toWrkShutdown) &&
             NUM_EQUALS(iMinMsgsPerWrkr) && NUM_EQUALS(iMaxFileSize) && NUM_EQUALS(bSaveOnShutdown) &&
             NUM_EQUALS(iDeqSlowdown) && NUM_EQUALS(iDeqtWinFromHr) && NUM_EQUALS(iDeqtWinToHr) &&
-            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(takeFlowCtlFromMsg) && qdaLifecycleConfigEqual(&old_da, &new_da) &&
-            USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
+            NUM_EQUALS(iSmpInterval) && NUM_EQUALS(bMutexContentionStats) && NUM_EQUALS(takeFlowCtlFromMsg) &&
+            qdaLifecycleConfigEqual(&old_da, &new_da) && USTR_EQUALS(pszFilePrefix) && USTR_EQUALS(cryprovName));
 }
 
 

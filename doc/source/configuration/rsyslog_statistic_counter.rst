@@ -64,6 +64,10 @@ the name of the action).
 
 -  **discarded.nf** - number of messages discarded because the queue was nearly full. Starting at this point, messages of lower-than-configured severity are discarded to save space for higher severity ones.
 
+-  **mutex.contention** - number of instrumented runtime queue mutex acquisitions that found the mutex already held. This is a contention signal, not a count of waiting threads; startup and shutdown coordination are outside its scope. It is available only when that queue has ``queue.mutexContentionStats="on"``.
+
+-  **mutex.wait_ns** - cumulative monotonic-clock waiting time in nanoseconds for the acquisitions counted by ``mutex.contention``. Scheduler delay is included, so this is not a mutex hold-time measurement. Divide it by ``mutex.contention`` to obtain the observed mean wait time over the counters' current accumulation period (or the reporting interval when ``resetCounters="on"`` is configured). Enable it only while diagnosing a specific queue via ``queue.mutexContentionStats="on"``.
+
 Actions
 -------
 

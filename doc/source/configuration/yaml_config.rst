@@ -148,6 +148,7 @@ mapping of parameter names to values.
      type: linkedlist
      size: 100000
      dequeuebatchsize: 1024
+     queue.mutexContentionStats: on  # opt-in diagnostics for this queue
 
 Parameter names are identical to their RainerScript counterparts (see
 :doc:`global configuration parameters <global/index>` and

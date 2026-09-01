@@ -241,6 +241,8 @@ struct queue_s {
         STATSCOUNTER_DEF(ctrFull, mutCtrFull)
         STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd)
         STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
+        STATSCOUNTER_DEF(ctrMutexContention, mutCtrMutexContention)
+        STATSCOUNTER_DEF(ctrMutexWaitNs, mutCtrMutexWaitNs)
         int ctrMaxqsize; /* NOT guarded by a mutex */
         int segdiskBytes;
         int segdiskSegments;
@@ -263,6 +265,7 @@ struct queue_s {
         int segdiskDematerializations;
         int segdiskIdleCleanupFailures;
         int iSmpInterval; /* line interval of sampling logs */
+        sbool bMutexContentionStats; /* opt-in mutex contention diagnostics */
         int isRunning;
 };
 

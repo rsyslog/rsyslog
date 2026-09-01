@@ -478,6 +478,29 @@ It provides a way to sample data each N events, instead of processing all, in or
 to reduce resources usage (disk, bandwidth...)
 
 
+queue.mutexContentionStats
+--------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Enables mutex contention diagnostics for this queue only. When enabled together
+with impstats, the queue reports ``mutex.contention`` and ``mutex.wait_ns``.
+The diagnostic probes runtime producer and consumer mutex acquisition paths
+with ``trylock``; startup and shutdown coordination are intentionally outside
+the metric's scope. Enable it temporarily for the queue under investigation
+rather than globally. Configure this option before starting the queue; changing
+queue parameters on reload can replace a queue and its pending in-memory work.
+Action queues use the same parameter with the ``queue.`` prefix, for example
+``queue.mutexContentionStats="on"`` in an action definition. In YAML,
+configure ``queue.mutexContentionStats: on`` under the corresponding
+``mainqueue``.
+
+
 queue.type
 ----------
 
