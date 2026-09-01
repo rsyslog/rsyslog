@@ -10,11 +10,15 @@
 # attaches a new one while the action worker may still be inside the $!num
 # property getter. Under ThreadSanitizer an unsynchronized getter reports a
 # race on the snapshot slots; under AddressSanitizer it can read freed
-# snapshot memory. The post-fix oracle is: no sanitizer report, every
-# sequence number present in the shared-action output, and every sequence
-# number present in the direct output written after the second
-# normalization. Both rules extract the same num value, so the shared
-# reader's per-record value is deterministic whichever snapshot it sees.
+# snapshot memory. Gating the getter lock on iRefCount == 1 is not enough:
+# an acquire load of the refcount is not a happens-before with the locked
+# overwrite, and TSan still reports the race. The getter must take pMsg->mut
+# for the slot load and the copy. The post-fix oracle is: no sanitizer
+# report, every sequence number present in the shared-action output, and
+# every sequence number present in the direct output written after the
+# second normalization. Both rules extract the same num value, so the
+# shared reader's per-record value is deterministic whichever snapshot
+# it sees.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin mmnormalize
@@ -22,6 +26,8 @@ require_plugin mmnormalize
 export NUMMESSAGES="${NUMMESSAGES:-5000}"
 TSAN_LOG="$PWD/$RSYSLOG_DYNNAME.tsan"
 export TSAN_OPTIONS="${TSAN_OPTIONS:+$TSAN_OPTIONS:}log_path=$TSAN_LOG"
+# Keep the live symbolizer off: Clang 21 can block inside it on a dlopen'ed
+# module (see mmnormalize-turbo-hup-tsan.sh). Raw offsets stay deterministic.
 if [[ "$TSAN_OPTIONS" != *"symbolize="* ]]; then
 	export TSAN_OPTIONS="$TSAN_OPTIONS:symbolize=0"
 fi
