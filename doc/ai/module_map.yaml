@@ -56,8 +56,9 @@ runtime_msg:
   requires_serialization: true
   notes:
     - MsgGetRcvFromProp returns fromhost, fromhost-ip, or fromhost-port with the stored prop length; it resolves DNS only when NEEDS_DNSRESOL is still set.
-    - MsgDup locks the source message while coherently copying JSON state and the lazy turbo snapshot callbacks.
-    - Turbo parse snapshots are immutable and may be shared by MsgDup copies through an atomic reference count; each owner must release only through MsgReleaseTurboResult while holding the message lock or exclusive access.
+    - Turbo snapshots are write-once at attach and immutable afterwards. Attach, overwrite, release and every read from a shared message (iRefCount > 1) happen under the message mutex; a sole holder reads the snapshot without the lock (msgTurboGetStr). Materialize is an idempotent one-way projection into pMsg->json under the message mutex and does not clear turbo callbacks; jsonFind, msgGetJSONMESG and msgDelJSON materialize too, and unset $! releases the snapshot.
+    - MsgDup locks the source message to publish the lazy turbo_result_refs counter, copy turbo slots against a concurrent overwrite, and jsonDeepCopy the legacy tree. Counter malloc failure fails the duplicate; it does not materialize.
+    - Each owner releases only through MsgReleaseTurboResult while holding the message lock or exclusive access.
 
 mmnormalize:
   paths: ["plugins/mmnormalize/"]

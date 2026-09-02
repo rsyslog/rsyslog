@@ -164,6 +164,7 @@ EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
+EXTRA_DIST += unit/turbo_msgdup_test.c
 
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
@@ -1765,7 +1766,17 @@ TESTS_MMNORMALIZE_YAML = \
 
 TESTS_MMNORMALIZE_TURBO = \
 	mmnormalize-turbo-message-lifecycle.sh \
-	mmnormalize-turbo-hup-tsan.sh
+	mmnormalize-turbo-hup-tsan.sh \
+	mmnormalize-turbo-msgdup-share.sh \
+	mmnormalize-turbo-msgdup-concurrent-tsan.sh \
+	mmnormalize-turbo-shared-getter-tsan.sh \
+	mmnormalize-turbo-shared-set-tsan.sh \
+	mmnormalize-turbo-exists.sh \
+	mmnormalize-turbo-jsonmesg.sh \
+	mmnormalize-turbo-unset.sh \
+	mmnormalize-turbo-second-normalize.sh \
+	mmnormalize-turbo-subtree-template.sh \
+	mmnormalize-turbo-segdisk-lifecycle.sh
 
 TESTS_MMNORMALIZE_TURBO_YAML = \
 	yaml-mmnormalize-turbo.sh
@@ -2755,6 +2766,34 @@ runtime_unit_imbeats_parser_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	$(ZLIB_CFLAGS)
 runtime_unit_imbeats_parser_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
+endif
+
+if LOGNORM_TURBO_SUPPORTED
+check_PROGRAMS += runtime_unit_turbo_msgdup
+TESTS += runtime_unit_turbo_msgdup
+
+runtime_unit_turbo_msgdup_SOURCES = \
+	unit/turbo_msgdup_test.c
+
+runtime_unit_turbo_msgdup_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
+# Drives the full message runtime, so it links the runtime and the config
+# grammar like rsyslogd does. The whole runtime archive goes in and is
+# exported: the helper modules the runtime loads at init (lmnet, ...)
+# resolve their symbols from the executable, and the runtime and grammar
+# archives reference each other.
+if OS_APPLE
+runtime_unit_turbo_msgdup_LDFLAGS = -export-dynamic \
+	-Wl,-force_load,$(top_builddir)/runtime/.libs/librsyslog.a
+else
+runtime_unit_turbo_msgdup_LDFLAGS = -export-dynamic \
+	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+endif
+runtime_unit_turbo_msgdup_LDADD = $(top_builddir)/grammar/libgrammar.la \
+	$(top_builddir)/runtime/librsyslog.la $(top_builddir)/compat/compat.la \
+	$(ZLIB_LIBS) $(ZSTD_LIBS) $(PTHREADS_LIBS) $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) \
+	$(LIBSYSTEMD_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(HASH_XXHASH_LIBS) \
+	$(LIBRESOLV_LIBS) $(LIBYAML_LIBS)
 endif
 
 runtime_unit_linkedlist_CPPFLAGS = \
