@@ -729,7 +729,8 @@ static void qqueueAdviseMaxWorkersLocked(qqueue_t *pThis, qqueue_worker_advice_t
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
             pAdvice->daWorkers = 1;
-            wtpWakeIdleWorkers(pThis->pWtpDA, 1);
+            if (ATOMIC_LOAD_32BIT(&pThis->pWtpDA->iCurNumWrkThrd, &pThis->pWtpDA->mutCurNumWrkThrd) >= 1)
+                wtpWakeIdleWorkers(pThis->pWtpDA, 1);
             /* The DA transfer pool intentionally has one worker. */
         }
         if (getLogicalQueueSize(pThis) == 0) {
@@ -740,9 +741,12 @@ static void qqueueAdviseMaxWorkersLocked(qqueue_t *pThis, qqueue_worker_advice_t
             iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
         }
         pAdvice->regWorkers = iMaxWorkers;
-        const int active = ATOMIC_LOAD_32BIT(&pThis->pWtpReg->iCurNumWrkThrd, &pThis->pWtpReg->mutCurNumWrkThrd);
-        const int busy = active - pThis->pWtpReg->nIdleWorkers;
-        wtpWakeIdleWorkers(pThis->pWtpReg, iMaxWorkers > busy ? iMaxWorkers - busy : 0);
+        /* Preserve wtpAdviseMaxWorkers() semantics: if capacity is missing,
+         * start it after releasing this mutex; otherwise wake existing workers.
+         * Waking idle workers while also creating missing capacity can let both
+         * drain a FIFO DA queue concurrently and reorder its output. */
+        if (ATOMIC_LOAD_32BIT(&pThis->pWtpReg->iCurNumWrkThrd, &pThis->pWtpReg->mutCurNumWrkThrd) >= iMaxWorkers)
+            wtpWakeIdleWorkers(pThis->pWtpReg, iMaxWorkers);
     }
 }
 
@@ -4334,7 +4338,8 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     workerAdvice.regWorkers = 0;
     workerAdvice.daWorkers = 1;
     d_pthread_mutex_lock(pThis->mut);
-    wtpWakeIdleWorkers(pThis->pWtpDA, 1);
+    if (ATOMIC_LOAD_32BIT(&pThis->pWtpDA->iCurNumWrkThrd, &pThis->pWtpDA->mutCurNumWrkThrd) >= 1)
+        wtpWakeIdleWorkers(pThis->pWtpDA, 1);
     d_pthread_mutex_unlock(pThis->mut);
     (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, PERMIT_WORKER_START_DURING_SHUTDOWN);
 
