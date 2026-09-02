@@ -745,8 +745,11 @@ static void qqueueAdviseMaxWorkersLocked(qqueue_t *pThis, qqueue_worker_advice_t
          * start it after releasing this mutex; otherwise wake existing workers.
          * Waking idle workers while also creating missing capacity can let both
          * drain a FIFO DA queue concurrently and reorder its output. */
-        if (ATOMIC_LOAD_32BIT(&pThis->pWtpReg->iCurNumWrkThrd, &pThis->pWtpReg->mutCurNumWrkThrd) >= iMaxWorkers)
-            wtpWakeIdleWorkers(pThis->pWtpReg, iMaxWorkers);
+        const int active = ATOMIC_LOAD_32BIT(&pThis->pWtpReg->iCurNumWrkThrd, &pThis->pWtpReg->mutCurNumWrkThrd);
+        if (active >= iMaxWorkers) {
+            const int busy = active - pThis->pWtpReg->nIdleWorkers;
+            wtpWakeIdleWorkers(pThis->pWtpReg, iMaxWorkers > busy ? iMaxWorkers - busy : 0);
+        }
     }
 }
 
