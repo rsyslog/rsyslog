@@ -295,15 +295,46 @@ finalize_it:
 
 static rsRetVal execIf(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti) {
     int bRet;
+    struct cnfstmt *cur = stmt;
+    struct cnfstmt *selected = NULL;
+    struct rscript_var_cache cache = {0};
+    struct rscript_var_cache *const previous_cache = pWti->execState.var_cache;
     DEFiRet;
-    bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg, pWti);
-    DBGPRINTF("if condition result is %d\n", bRet);
-    if (bRet) {
-        if (stmt->d.s_if.t_then != NULL) CHKiRet(scriptExec(stmt->d.s_if.t_then, pMsg, pWti));
+
+    if (stmt->d.s_if.cache_slots == 0) {
+        bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg, pWti);
+        DBGPRINTF("if condition result is %d\n", bRet);
+        selected = bRet ? stmt->d.s_if.t_then : stmt->d.s_if.t_else;
     } else {
-        if (stmt->d.s_if.t_else != NULL) CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
+        cache.n_entries = stmt->d.s_if.cache_slots;
+        cache.entries = calloc(cache.n_entries, sizeof(*cache.entries));
+        if (cache.entries == NULL) {
+            /* Allocation failure preserves the old interpreter path. */
+            bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg, pWti);
+            selected = bRet ? stmt->d.s_if.t_then : stmt->d.s_if.t_else;
+        } else {
+            pWti->execState.var_cache = &cache;
+            for (;;) {
+                bRet = cnfexprEvalBool(cur->d.s_if.expr, pMsg, pWti);
+                DBGPRINTF("if condition result is %d\n", bRet);
+                if (bRet) {
+                    selected = cur->d.s_if.t_then;
+                    break;
+                }
+                selected = cur->d.s_if.t_else;
+                if (selected == NULL || selected->nodetype != S_IF || !selected->d.s_if.is_else_if) break;
+                cur = selected;
+            }
+            pWti->execState.var_cache = previous_cache;
+            for (unsigned short i = 0; i < cache.n_entries; ++i) {
+                if (cache.entries[i].populated) varFreeMembers(&cache.entries[i].value);
+            }
+            free(cache.entries);
+        }
     }
+    if (selected != NULL) CHKiRet(scriptExec(selected, pMsg, pWti));
 finalize_it:
+    pWti->execState.var_cache = previous_cache;
     RETiRet;
 }
 

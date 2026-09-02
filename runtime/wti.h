@@ -29,6 +29,8 @@
 #include "batch.h"
 #include "action.h"
 
+struct rscript_var_cache;
+
 
 #define ACT_STATE_RDY 0 /* action ready, waiting for new transaction */
 #define ACT_STATE_ITX 1 /* transaction active, waiting for new data or commit */
@@ -93,6 +95,7 @@ struct wti_s {
                                     * also be added as a user-selectable option (not implemented yet)
                                     */
             uint16_t rulesetCallDepth; /* synchronous ruleset call nesting depth */
+            struct rscript_var_cache *var_cache; /* selector-local RainerScript snapshots */
         } execState; /* state for the execution engine */
 };
 
@@ -151,6 +154,7 @@ static inline void __attribute__((unused)) wtiResetExecState(wti_t *const pWti, 
     pWti->execState.bPrevWasSuspended = 0;
     pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
     pWti->execState.rulesetCallDepth = 0;
+    pWti->execState.var_cache = NULL;
 }
 
 
