@@ -353,6 +353,10 @@ static void wtiWorkerCancelCleanup(void *arg) {
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
+static void wtiWaitCancelCleanup(void *arg) {
+    wtiClearWaitReservation((wti_t *)arg);
+}
+
 
 /* wait for queue to become non-empty or timeout
  * this is introduced as helper to support queue minimum batch sizes, but may
@@ -365,11 +369,16 @@ int ATTR_NONNULL() wtiWaitNonEmpty(wti_t *const pThis, const struct timespec tim
     int r;
 
     DBGOPRINT((obj_t *)pThis, "waiting on queue to become non-empty\n");
+    pThis->bWaitingForWork = 1;
+    pThis->bWakeupReserved = 0;
+    pthread_cleanup_push(wtiWaitCancelCleanup, pThis);
     if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &timeout) != 0) {
         r = 0;
     } else {
         r = 1;
     }
+    pthread_cleanup_pop(0);
+    wtiClearWaitReservation(pThis);
     DBGOPRINT((obj_t *)pThis, "waited on queue to become non-empty, result %d\n", r);
     return r;
 }
@@ -385,6 +394,9 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
 
     DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 
+    pThis->bWaitingForWork = 1;
+    pThis->bWakeupReserved = 0;
+    pthread_cleanup_push(wtiWaitCancelCleanup, pThis);
     if (pThis->bAlwaysRunning) {
         /* never shut down any started worker */
         d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
@@ -397,6 +409,8 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
             *pbInactivityTOOccurred = 1; /* indicate we had a timeout */
         }
     }
+    pthread_cleanup_pop(0);
+    wtiClearWaitReservation(pThis);
     DBGOPRINT((obj_t *)pThis, "worker awoke from idle processing\n");
 }
 

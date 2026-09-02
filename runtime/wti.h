@@ -89,6 +89,12 @@ struct wti_s {
         /* Queue-local deferred batch cleanup is bounded by batch.maxElem. */
         smsg_t **p_deferred_msgs;
         int n_deferred_msgs;
+        /* Both fields are protected by pWtp->pmutUsr, the queue mutex used
+         * with pcondBusy. A producer reserves a registered waiter before it
+         * signals, preventing one enqueue from being spent on a running slot.
+         */
+        uint8_t bWaitingForWork;
+        uint8_t bWakeupReserved;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
@@ -111,6 +117,18 @@ static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
 #endif
 }
 
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1) wtiReserveWakeup(wti_t *const pWti) {
+    if (!pWti->bWaitingForWork || pWti->bWakeupReserved) return 0;
+    pWti->bWakeupReserved = 1;
+    return 1;
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiClearWaitReservation(wti_t *const pWti) {
+    pWti->bWaitingForWork = 0;
+    pWti->bWakeupReserved = 0;
+}
 /* prototypes */
 rsRetVal wtiConstruct(wti_t **ppThis);
 rsRetVal wtiConstructFinalize(wti_t *const pThis);
