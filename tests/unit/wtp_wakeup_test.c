@@ -251,6 +251,7 @@ int main(void) {
 
     memset(waiters, 0, sizeof(waiters));
     for (i = 0; i < 3; ++i) {
+        INIT_ATOMIC_HELPER_MUT(waiters[i].wti.mutIsRunning);
         CHECK(pthread_cond_init(&waiters[i].cond, NULL) == 0);
         waiters[i].mutex = &mutex;
         waiters[i].registered = &registered;
@@ -272,6 +273,7 @@ int main(void) {
         CHECK(waiters[i].result == 0);
         CHECK(!waiters[i].wti.bWaitingForWork && !waiters[i].wti.bWakeupReserved);
         CHECK(pthread_cond_destroy(&waiters[i].cond) == 0);
+        DESTROY_ATOMIC_HELPER_MUT(waiters[i].wti.mutIsRunning);
     }
 
     int timeout_gate_open = 0;
@@ -282,6 +284,7 @@ int main(void) {
                                .gate_open = &timeout_gate_open,
                                .timeout_ms = 0};
     pthread_t timeout_thread;
+    INIT_ATOMIC_HELPER_MUT(timeout_waiter.wti.mutIsRunning);
     CHECK(pthread_cond_init(&timeout_waiter.cond, NULL) == 0);
     CHECK(pthread_create(&timeout_thread, NULL, waiter_main, &timeout_waiter) == 0);
     CHECK(wait_until_registered(&mutex, &registered, &registered_count, 4) == 0);
@@ -295,6 +298,7 @@ int main(void) {
     CHECK(timeout_waiter.result == ETIMEDOUT);
     CHECK(!timeout_waiter.wti.bWaitingForWork && !timeout_waiter.wti.bWakeupReserved);
     CHECK(pthread_cond_destroy(&timeout_waiter.cond) == 0);
+    DESTROY_ATOMIC_HELPER_MUT(timeout_waiter.wti.mutIsRunning);
 
     int cancel_gate_open = 0;
     int cancel_entered_wait_count = 0;
@@ -307,6 +311,7 @@ int main(void) {
                               .entered_wait_count = &cancel_entered_wait_count,
                               .timeout_ms = -1};
     pthread_t cancel_thread;
+    INIT_ATOMIC_HELPER_MUT(cancel_waiter.wti.mutIsRunning);
     CHECK(pthread_cond_init(&cancel_waiter.cond, NULL) == 0);
     CHECK(pthread_create(&cancel_thread, NULL, waiter_main, &cancel_waiter) == 0);
     CHECK(wait_until_registered(&mutex, &registered, &registered_count, 5) == 0);
@@ -321,6 +326,7 @@ int main(void) {
     CHECK(pthread_join(cancel_thread, NULL) == 0);
     CHECK(!cancel_waiter.wti.bWaitingForWork && !cancel_waiter.wti.bWakeupReserved);
     CHECK(pthread_cond_destroy(&cancel_waiter.cond) == 0);
+    DESTROY_ATOMIC_HELPER_MUT(cancel_waiter.wti.mutIsRunning);
 
     CHECK(pthread_cond_destroy(&registered) == 0);
     CHECK(pthread_cond_destroy(&timeout_gate) == 0);
