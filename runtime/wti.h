@@ -84,6 +84,11 @@ struct wti_s {
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
+        /* Intrusive membership in the pool's idle list.  These fields, and the
+         * pool list itself, are protected exclusively by pWtp->pmutUsr. */
+        struct wti_s *pIdlePrev;
+        struct wti_s *pIdleNext;
+        sbool bIdleListed;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */

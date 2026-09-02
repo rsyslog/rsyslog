@@ -710,16 +710,26 @@ static void queueDrain(qqueue_t *pThis) {
  * this point in time. The mutex must be locked when
  * ths function is called. -- rgerhards, 2008-01-25
  */
-static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
-    DEFiRet;
+typedef struct qqueue_worker_advice_s {
+    int regWorkers;
+    int daWorkers;
+} qqueue_worker_advice_t;
+
+/* Called with the queue mutex locked.  It computes the existing autoscaling
+ * target and reserves only workers that are already waiting.  Thread creation
+ * is intentionally deferred until after unlocking this mutex. */
+static void qqueueAdviseMaxWorkersLocked(qqueue_t *pThis, qqueue_worker_advice_t *const pAdvice) {
     int iMaxWorkers;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
+    pAdvice->regWorkers = 0;
+    pAdvice->daWorkers = 0;
 
     if (!pThis->bEnqOnly) {
         if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
-            wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+            pAdvice->daWorkers = 1;
+            wtpWakeIdleWorkers(pThis->pWtpDA, 1);
             /* The DA transfer pool intentionally has one worker. */
         }
         if (getLogicalQueueSize(pThis) == 0) {
@@ -729,9 +739,20 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
         } else {
             iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
         }
-        wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers, DENY_WORKER_START_DURING_SHUTDOWN);
+        pAdvice->regWorkers = iMaxWorkers;
+        const int active = ATOMIC_LOAD_32BIT(&pThis->pWtpReg->iCurNumWrkThrd, &pThis->pWtpReg->mutCurNumWrkThrd);
+        const int busy = active - pThis->pWtpReg->nIdleWorkers;
+        wtpWakeIdleWorkers(pThis->pWtpReg, iMaxWorkers > busy ? iMaxWorkers - busy : 0);
     }
+}
 
+static rsRetVal qqueueEnsureAdvisedWorkers(qqueue_t *pThis,
+                                           const qqueue_worker_advice_t *const pAdvice,
+                                           const int permit_during_shutdown) {
+    DEFiRet;
+    if (pAdvice->daWorkers > 0) CHKiRet(wtpEnsureWorkers(pThis->pWtpDA, pAdvice->daWorkers, permit_during_shutdown));
+    if (pAdvice->regWorkers > 0) CHKiRet(wtpEnsureWorkers(pThis->pWtpReg, pAdvice->regWorkers, permit_during_shutdown));
+finalize_it:
     RETiRet;
 }
 
@@ -910,6 +931,7 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     DEFiRet;
     uchar pszBuf[64];
     size_t lenBuf;
+    qqueue_worker_advice_t workerAdvice;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
     if (bLockMutex == LOCK_MUTEX) {
@@ -946,6 +968,15 @@ finalize_it:
     if (iRet != RS_RET_OK) pThis->bIsDA = 0;
     if (bLockMutex == LOCK_MUTEX) {
         d_pthread_mutex_unlock(pThis->mut);
+        /* The DA child shares this mutex. qqueueStart() could therefore only
+         * reserve its wakeup while the parent was locked; create any missing
+         * child workers after releasing the shared queue mutex. */
+        if (pThis->pqDA != NULL) {
+            qqueueLock(pThis->pqDA);
+            qqueueAdviseMaxWorkersLocked(pThis->pqDA, &workerAdvice);
+            d_pthread_mutex_unlock(pThis->pqDA->mut);
+            (void)qqueueEnsureAdvisedWorkers(pThis->pqDA, &workerAdvice, DENY_WORKER_START_DURING_SHUTDOWN);
+        }
     }
     RETiRet;
 }
@@ -2400,12 +2431,15 @@ static rsRetVal ATTR_NONNULL(1) tryShutdownWorkersWithinQueueTimeout(qqueue_t *c
         DBGOPRINT((obj_t *)pThis, "setting EnqOnly mode for DA worker\n");
         pThis->pqDA->bEnqOnly = 1;
         wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE);
-        wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+        wtpWakeupAllWrkr(pThis->pWtpDA);
         DBGOPRINT((obj_t *)pThis, "awoke DA worker, told it to shut down.\n");
 
         /* also tell the DA queue worker to shut down, so that it already knows... */
         wtpSetState(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN);
-        wtpAdviseMaxWorkers(pThis->pqDA->pWtpReg, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+        /* The DA child uses its parent's queue mutex. We already hold it, so
+         * taking the child mutex here would self-deadlock during shutdown. */
+        assert(pThis->pqDA->mut == pThis->mut);
+        wtpWakeupAllWrkr(pThis->pqDA->pWtpReg);
         /* awake its lone worker */
         DBGOPRINT((obj_t *)pThis, "awoke DA queue regular worker, told it to shut down when done.\n");
 
@@ -3623,8 +3657,9 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     int iCancelStateSave;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+    const int nElemDeq = pWti->batch.nElemDeq;
     DeleteProcessedBatch(pThis, &pWti->batch);
-    qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    qqueueChkPersist(pThis, nElemDeq);
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
@@ -3854,6 +3889,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     int wrk;
     uchar *qName;
     size_t lenBuf;
+    qqueue_worker_advice_t workerAdvice;
 
     assert(pThis != NULL);
 
@@ -4044,7 +4080,14 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     /* if the queue already contains data, we need to start the correct number of worker threads. This can be
      * the case when a disk queue has been loaded. If we did not start it here, it would never start.
      */
-    qqueueAdviseMaxWorkers(pThis);
+    /* A DA child shares its parent's mutex. InitDA() holds that mutex while
+     * starting the child, and finishes worker creation after it releases it. */
+    if (pThis->pqParent == NULL) {
+        qqueueLock(pThis);
+        qqueueAdviseMaxWorkersLocked(pThis, &workerAdvice);
+        d_pthread_mutex_unlock(pThis->mut);
+        (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, DENY_WORKER_START_DURING_SHUTDOWN);
+    }
 
     /* support statistics gathering */
     qName = obj.GetName((obj_t *)pThis);
@@ -4276,6 +4319,7 @@ finalize_it:
 static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     struct timespec tTimeout;
     rsRetVal iRetLocal;
+    qqueue_worker_advice_t workerAdvice;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
@@ -4287,7 +4331,12 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     qqueueSetShutdownImmediate(pThis, 0); /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
-    wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
+    workerAdvice.regWorkers = 0;
+    workerAdvice.daWorkers = 1;
+    d_pthread_mutex_lock(pThis->mut);
+    wtpWakeIdleWorkers(pThis->pWtpDA, 1);
+    d_pthread_mutex_unlock(pThis->mut);
+    (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, PERMIT_WORKER_START_DURING_SHUTDOWN);
 
     DBGOPRINT((obj_t *)pThis, "waiting for DA worker to terminate...\n");
     timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
@@ -4579,10 +4628,14 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
             ABORT_FINALIZE(RS_RET_QUEUE_FULL);
         } else {
             DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
-            /* Multi-submit and single-message enqueue normally advise workers
-             * only after doEnqSingleObj() returns. If this call blocks first,
-             * an already-idle worker would never be awakened to make room. */
-            qqueueAdviseMaxWorkers(pThis);
+            /* An already-idle worker must be awakened before this producer
+             * waits.  Thread creation is deliberately performed after dropping
+             * the queue mutex, then the full predicate is checked again. */
+            qqueue_worker_advice_t workerAdvice;
+            qqueueAdviseMaxWorkersLocked(pThis, &workerAdvice);
+            d_pthread_mutex_unlock(pThis->mut);
+            (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, DENY_WORKER_START_DURING_SHUTDOWN);
+            d_pthread_mutex_lock(pThis->mut);
             if (glbl.GetGlobalInputTermState()) {
                 DBGOPRINT((obj_t *)pThis,
                           "doEnqSingleObject: queue FULL, discard due to "
@@ -4649,6 +4702,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
     int iCancelStateSave;
     int i;
     rsRetVal localRet;
+    qqueue_worker_advice_t workerAdvice;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
@@ -4664,9 +4718,10 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
 
 finalize_it:
     /* make sure at least one worker is running. */
-    qqueueAdviseMaxWorkers(pThis);
+    qqueueAdviseMaxWorkersLocked(pThis, &workerAdvice);
     /* and release the mutex */
     d_pthread_mutex_unlock(pThis->mut);
+    (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, DENY_WORKER_START_DURING_SHUTDOWN);
     pthread_setcancelstate(iCancelStateSave, NULL);
     DBGOPRINT((obj_t *)pThis, "MultiEnqObj advised worker start\n");
 
@@ -4698,6 +4753,7 @@ finalize_it:
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) {
     DEFiRet;
     int iCancelStateSave;
+    qqueue_worker_advice_t workerAdvice;
     ISOBJ_TYPE_assert(pThis, qqueue);
 
     const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
@@ -4714,9 +4770,10 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
 finalize_it:
     if (isNonDirectQ) {
         /* make sure at least one worker is running. */
-        qqueueAdviseMaxWorkers(pThis);
+        qqueueAdviseMaxWorkersLocked(pThis, &workerAdvice);
         /* and release the mutex */
         d_pthread_mutex_unlock(pThis->mut);
+        (void)qqueueEnsureAdvisedWorkers(pThis, &workerAdvice, DENY_WORKER_START_DURING_SHUTDOWN);
         pthread_setcancelstate(iCancelStateSave, NULL);
         DBGOPRINT((obj_t *)pThis, "EnqueueMsg advised worker start\n");
     }

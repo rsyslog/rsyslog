@@ -340,7 +340,12 @@ static void wtiWorkerCancelCleanup(void *arg) {
     ISOBJ_TYPE_assert(pWtp, wtp);
 
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+    /* ConsumerReg releases the queue mutex around cancel-safe output work.
+     * Restoring/committing a batch changes queue and retry state, so it must
+     * run under the same mutex as the regular callback path. */
+    d_pthread_mutex_lock(pWtp->pmutUsr);
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+    d_pthread_mutex_unlock(pWtp->pmutUsr);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
@@ -352,11 +357,10 @@ static void wtiWorkerCancelCleanup(void *arg) {
  * @returns 0 if timeout occurs (queue still empty), something else otherwise
  */
 int ATTR_NONNULL() wtiWaitNonEmpty(wti_t *const pThis, const struct timespec timeout) {
-    wtp_t *__restrict__ const pWtp = pThis->pWtp;
     int r;
 
     DBGOPRINT((obj_t *)pThis, "waiting on queue to become non-empty\n");
-    if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &timeout) != 0) {
+    if (wtpWaitForWork(pThis, &timeout) != 0) {
         r = 0;
     } else {
         r = 1;
@@ -378,12 +382,12 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
 
     if (pThis->bAlwaysRunning) {
         /* never shut down any started worker */
-        d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
+        wtpWaitForWork(pThis, NULL);
     } else {
         const int timeout =
             pThis->workerIndex == 0 && pWtp->toFirstWrkShutdown != -2 ? pWtp->toFirstWrkShutdown : pWtp->toWrkShutdown;
         timeoutComp(&t, timeout); /* get absolute timeout */
-        if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &t) != 0) {
+        if (wtpWaitForWork(pThis, &t) != 0) {
             DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
             *pbInactivityTOOccurred = 1; /* indicate we had a timeout */
         }
