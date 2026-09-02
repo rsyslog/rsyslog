@@ -66,7 +66,8 @@ struct wtp_s {
         pthread_mutex_t *pmutUsr;
         rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
         rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int *); /* obtains max dequeue count from queue config */
-        rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti); /* indicate user object is processed */
+        /* Called with pmutUsr held; commits or restores the worker batch. */
+        rsRetVal (*pfObjProcessed)(void *pUsr, wti_t *pWti);
         rsRetVal (*pfRateLimiter)(void *pUsr);
         rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
         rsRetVal (*pfIdleTimeout)(void *pUsr);

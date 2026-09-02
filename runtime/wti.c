@@ -340,7 +340,12 @@ static void wtiWorkerCancelCleanup(void *arg) {
     ISOBJ_TYPE_assert(pWtp, wtp);
 
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+    /* ConsumerReg releases the queue mutex around cancel-safe output work.
+     * Restoring/committing a batch changes queue and retry state, so it must
+     * run under the same mutex as the regular callback path. */
+    d_pthread_mutex_lock(pWtp->pmutUsr);
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+    d_pthread_mutex_unlock(pWtp->pmutUsr);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 

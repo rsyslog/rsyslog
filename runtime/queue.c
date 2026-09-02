@@ -3623,8 +3623,9 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     int iCancelStateSave;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+    const int nElemDeq = pWti->batch.nElemDeq;
     DeleteProcessedBatch(pThis, &pWti->batch);
-    qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    qqueueChkPersist(pThis, nElemDeq);
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
