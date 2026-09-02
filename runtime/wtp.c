@@ -545,25 +545,25 @@ finalize_it:
  * independent of mutWtp: producer wakeups must not contend with creates,
  * joins, or pool lifecycle operations. */
 static void ATTR_NONNULL() wtpIdleAddLocked(wtp_t *const pThis, wti_t *const pWti) {
-    assert(pWti->bIdleListed == 0);
-    pWti->pIdlePrev = NULL;
-    pWti->pIdleNext = pThis->pIdleWorkers;
-    if (pThis->pIdleWorkers != NULL) pThis->pIdleWorkers->pIdlePrev = pWti;
+    assert(pWti->b_idle_listed == 0);
+    pWti->p_idle_prev = NULL;
+    pWti->p_idle_next = pThis->pIdleWorkers;
+    if (pThis->pIdleWorkers != NULL) pThis->pIdleWorkers->p_idle_prev = pWti;
     pThis->pIdleWorkers = pWti;
-    pWti->bIdleListed = 1;
+    pWti->b_idle_listed = 1;
     ++pThis->nIdleWorkers;
 }
 
 static void ATTR_NONNULL() wtpIdleRemoveLocked(wtp_t *const pThis, wti_t *const pWti) {
-    if (!pWti->bIdleListed) return; /* already reserved by a producer */
-    if (pWti->pIdlePrev != NULL)
-        pWti->pIdlePrev->pIdleNext = pWti->pIdleNext;
+    if (!pWti->b_idle_listed) return; /* already reserved by a producer */
+    if (pWti->p_idle_prev != NULL)
+        pWti->p_idle_prev->p_idle_next = pWti->p_idle_next;
     else
-        pThis->pIdleWorkers = pWti->pIdleNext;
-    if (pWti->pIdleNext != NULL) pWti->pIdleNext->pIdlePrev = pWti->pIdlePrev;
-    pWti->pIdlePrev = NULL;
-    pWti->pIdleNext = NULL;
-    pWti->bIdleListed = 0;
+        pThis->pIdleWorkers = pWti->p_idle_next;
+    if (pWti->p_idle_next != NULL) pWti->p_idle_next->p_idle_prev = pWti->p_idle_prev;
+    pWti->p_idle_prev = NULL;
+    pWti->p_idle_next = NULL;
+    pWti->b_idle_listed = 0;
     --pThis->nIdleWorkers;
 }
 

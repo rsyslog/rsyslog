@@ -86,9 +86,9 @@ struct wti_s {
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
         /* Intrusive membership in the pool's idle list.  These fields, and the
          * pool list itself, are protected exclusively by pWtp->pmutUsr. */
-        struct wti_s *pIdlePrev;
-        struct wti_s *pIdleNext;
-        sbool bIdleListed;
+        struct wti_s *p_idle_prev;
+        struct wti_s *p_idle_next;
+        sbool b_idle_listed;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
