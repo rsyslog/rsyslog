@@ -2783,7 +2783,8 @@ runtime_unit_segdisk_state_CPPFLAGS = \
 runtime_unit_queue_da_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_wtp_wakeup_CPPFLAGS = \
-	$(runtime_unit_linkedlist_CPPFLAGS)
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-Wno-inline
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -2792,7 +2793,7 @@ runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
 runtime_unit_queue_da_LDADD =
-runtime_unit_wtp_wakeup_LDADD = ../runtime/librsyslog.la $(PTHREADS_LIBS) $(SOL_LIBS)
+runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)

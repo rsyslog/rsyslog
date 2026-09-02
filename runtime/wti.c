@@ -353,63 +353,6 @@ static void wtiWorkerCancelCleanup(void *arg) {
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
-int wtiReserveWakeup(wti_t *const pWti) {
-    if (ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) || !pWti->bWaitingForWork || pWti->bWakeupReserved)
-        return 0;
-    pWti->bWakeupReserved = 1;
-    return 1;
-}
-
-int wtiCountsTowardWorkerBudget(wti_t *const pWti) {
-    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
-
-    return state == WRKTHRD_RUNNING && !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
-           (!pWti->bWaitingForWork || pWti->bWakeupReserved);
-}
-
-int wtiCountsTowardWorkerStartBudget(wti_t *const pWti) {
-    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
-
-    return !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
-           (state == WRKTHRD_INITIALIZING || state == WRKTHRD_RUNNING);
-}
-
-int wtiGetWorkerStartBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
-    int i;
-    int nLive = 0;
-
-    for (i = 0; i < nWorkers; ++i) {
-        if (wtiCountsTowardWorkerStartBudget(ppWti[i])) ++nLive;
-    }
-
-    return nLive < nMaxWrkr ? nMaxWrkr - nLive : 0;
-}
-
-int wtiGetWakeupBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
-    int i;
-    int nAvailable = 0;
-
-    for (i = 0; i < nWorkers; ++i) {
-        if (wtiCountsTowardWorkerBudget(ppWti[i])) ++nAvailable;
-    }
-
-    return nAvailable < nMaxWrkr ? nMaxWrkr - nAvailable : 0;
-}
-
-void wtiClearWaitReservation(wti_t *const pWti) {
-    pWti->bWaitingForWork = 0;
-    pWti->bWakeupReserved = 0;
-}
-
-void wtiMarkExiting(wti_t *const pWti) {
-    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 1);
-    wtiClearWaitReservation(pWti);
-}
-
-void wtiClearExiting(wti_t *const pWti) {
-    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 0);
-}
-
 static void wtiWaitCancelCleanup(void *arg) {
     wtiClearWaitReservation((wti_t *)arg);
 }
