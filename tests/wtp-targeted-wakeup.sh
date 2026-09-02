@@ -19,6 +19,18 @@ count_w1_starts() {
 	fi
 }
 
+first_worker_remains_live() {
+	if test ! -f "$RSYSLOG_DEBUGLOG"; then
+		echo 0
+		return
+	fi
+	awk '
+		/main Q:Reg\/w0.*:.*worker starting/ { ++starts }
+		/main Q:Reg\/w0.*Worker thread [0-9a-f]+, terminated/ { exited = 1 }
+		END { print starts == 1 && !exited ? 1 : 0 }
+	' "$RSYSLOG_DEBUGLOG"
+}
+
 # queue.c emits the first two events around wtiWaitNonEmpty(). wtp.c emits the
 # last event only after w1's state has become WAIT_JOIN and its active-worker
 # count has been decremented. The w1 lifecycle is ordered, while the generic
@@ -55,6 +67,10 @@ startup
 injectmsg 0 2
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" 2
 wait_file_lines --count-function completed_w1_lifecycle "$RSYSLOG_DEBUGLOG" 1
+# For regular classic queues w0 is always-running: w1 may time out, but the
+# final consumer remains available to handle the next burst without any
+# exit/re-entry handoff.
+wait_file_lines --count-function first_worker_remains_live "$RSYSLOG_DEBUGLOG" 1
 
 # This reaches the same queue but is filtered from the output action. Its
 # lifecycle effect is to require the already-terminated nonzero worker slot to
@@ -63,6 +79,7 @@ wait_file_lines --count-function completed_w1_lifecycle "$RSYSLOG_DEBUGLOG" 1
 w1_starts_before_restart=$(count_w1_starts)
 injectmsg_literal 'wtp targeted restart trigger'
 wait_file_lines --count-function count_w1_starts "$RSYSLOG_DEBUGLOG" $((w1_starts_before_restart + 1))
+wait_file_lines --count-function first_worker_remains_live "$RSYSLOG_DEBUGLOG" 1
 
 shutdown_when_empty
 wait_shutdown
