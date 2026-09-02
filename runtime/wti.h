@@ -84,6 +84,12 @@ struct wti_s {
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
+        /* Both fields are protected by pWtp->pmutUsr, the queue mutex used
+         * with pcondBusy. A producer reserves a registered waiter before it
+         * signals, preventing one enqueue from being spent on a running slot.
+         */
+        uint8_t bWaitingForWork;
+        uint8_t bWakeupReserved;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
@@ -103,6 +109,19 @@ static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
 #else
     return ATOMIC_LOAD_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
 #endif
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1) wtiReserveWakeup(wti_t *const pWti) {
+    if (!pWti->bWaitingForWork || pWti->bWakeupReserved) return 0;
+    pWti->bWakeupReserved = 1;
+    return 1;
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiClearWaitReservation(wti_t *const pWti) {
+    pWti->bWaitingForWork = 0;
+    pWti->bWakeupReserved = 0;
 }
 
 

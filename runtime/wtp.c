@@ -580,9 +580,12 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
             CHKiRet(wtpStartWrkr(pThis, permit_during_shutdown));
         }
     } else {
-        /* we have needed number of workers, but they may be sleeping */
+        /* The queue mutex is held by qqueueAdviseMaxWorkers(). Select actual
+         * condvar waiters and reserve each before signalling, so a burst
+         * cannot repeatedly spend wakeups on workers that are still running.
+         */
         for (i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
-            if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
+            if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED && wtiReserveWakeup(pThis->pWrkr[i])) {
                 pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
                 nRunning++;
             }
@@ -597,11 +600,11 @@ finalize_it:
 
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
     if (pThis == NULL) return RS_RET_PARAM_ERROR;
-    d_pthread_mutex_lock(&pThis->mutWtp);
+    /* The caller holds pmutUsr, which is the mutex associated with pcondBusy.
+     * Do not use mutWtp here: it cannot serialize condition predicates. */
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
         if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
     }
-    d_pthread_mutex_unlock(&pThis->mutWtp);
     return RS_RET_OK;
 }
 
