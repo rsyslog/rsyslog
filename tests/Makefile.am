@@ -65,6 +65,9 @@ EXTRA_DIST += $(TESTS_PRIFILT_TRAILING_SEPARATOR)
 TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
+TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh
+EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
+
 TESTS_SEGQUEUE_TOOL = rsyslog-segqueue-tool.py rsyslog-segqueue-runtime.sh
 EXTRA_DIST += $(TESTS_SEGQUEUE_TOOL)
 
@@ -2677,9 +2680,11 @@ check_LTLIBRARIES =
 
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
+	runtime_unit_wtp_wakeup
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
-	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils
+	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
+	runtime_unit_wtp_wakeup
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2708,6 +2713,9 @@ runtime_unit_queue_da_SOURCES = \
 
 runtime_unit_omazuredce_utils_SOURCES = \
 	unit/omazuredce_utils_test.c
+
+runtime_unit_wtp_wakeup_SOURCES = \
+	unit/wtp_wakeup_test.c
 
 runtime_unit_omazuredce_utils_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
@@ -2785,6 +2793,9 @@ runtime_unit_segdisk_state_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_queue_da_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_wtp_wakeup_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-Wno-inline
 
 runtime_unit_linkedlist_LDADD = $(RSRT_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_stringbuf_LDADD = $(LIBESTR_LIBS) $(LIBFASTJSON_LIBS) $(LIBSYSTEMD_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
@@ -2793,6 +2804,7 @@ runtime_unit_msg_replace_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
 runtime_unit_queue_da_LDADD =
+runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -2958,6 +2970,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+TESTS += $(TESTS_WTP_TARGETED_WAKEUP)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
 if ENABLE_SEGQUEUE_TOOL

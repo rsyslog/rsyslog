@@ -4287,7 +4287,13 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     qqueueSetShutdownImmediate(pThis, 0); /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
+    /* Unlike the normal enqueue advice path, destruction does not already
+     * hold this pool's queue mutex. The targeted-wakeup predicates are
+     * protected by that mutex, including a worker's exiting transition.
+     */
+    d_pthread_mutex_lock(pThis->pWtpDA->pmutUsr);
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
+    d_pthread_mutex_unlock(pThis->pWtpDA->pmutUsr);
 
     DBGOPRINT((obj_t *)pThis, "waiting for DA worker to terminate...\n");
     timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
