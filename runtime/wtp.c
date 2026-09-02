@@ -589,10 +589,15 @@ int wtpWaitForWork(wti_t *const pWti, const struct timespec *const timeout) {
 
 rsRetVal ATTR_NONNULL() wtpWakeIdleWorkers(wtp_t *const pThis, int nMaxWrkr) {
     ISOBJ_TYPE_assert(pThis, wtp);
-    while (nMaxWrkr-- > 0 && pThis->pIdleWorkers != NULL) {
-        wti_t *const pWti = pThis->pIdleWorkers;
-        wtpIdleRemoveLocked(pThis, pWti);
-        pthread_cond_signal(&pWti->pcondBusy);
+    /* Keep the established advice semantics: workers are not reserved before
+     * signalling.  A reservation can hide a worker from a second enqueue while
+     * it is transitioning out of its condition wait, which risks a lost wakeup.
+     * The caller holds pmutUsr, just as the original advice path did. */
+    for (int i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
+        if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
+            pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
+            ++nRunning;
+        }
     }
     return RS_RET_OK;
 }
