@@ -454,9 +454,7 @@ PRAGMA_IGNORE_Wempty_body static void *wtpWorker(
 PRAGMA_DIAGNOSTIC_POP
 
 /* start a new worker */
-/* Caller holds mutWtp.  Keeping slot allocation and the INITIALIZING count
- * under this one lock makes concurrent ensure requests respect the target. */
-static rsRetVal ATTR_NONNULL() wtpStartWrkrLocked(wtp_t *const pThis, const int permit_during_shutdown) {
+static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit_during_shutdown) {
     wti_t *pWti;
     int i;
     int iState;
@@ -470,6 +468,8 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkrLocked(wtp_t *const pThis, const int 
                 ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     }
 
+    d_pthread_mutex_lock(&pThis->mutWtp);
+
     /* Check state under mutex to prevent TOCTOU race where worker could be
      * created during shutdown. Must hold mutWtp to ensure state doesn't change
      * between check and worker creation.
@@ -480,6 +480,7 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkrLocked(wtp_t *const pThis, const int 
      */
     const wtpState_t wtpState = (wtpState_t)ATOMIC_LOAD_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
     if (wtpState != wtpState_RUNNING && !permit_during_shutdown) {
+        d_pthread_mutex_unlock(&pThis->mutWtp);
         DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
         if (dbgTimeoutToStderr) {
             fprintf(stderr, "rsyslog debug: %s: worker start requested during shutdown - ignored\n",
@@ -537,102 +538,70 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkrLocked(wtp_t *const pThis, const int 
     }
 
 finalize_it:
+    d_pthread_mutex_unlock(&pThis->mutWtp);
     RETiRet;
 }
 
 
-/* Idle-list operations are called with pmutUsr locked. This is deliberately
- * independent of mutWtp: producer wakeups must not contend with creates,
- * joins, or pool lifecycle operations. */
-static void ATTR_NONNULL() wtpIdleAddLocked(wtp_t *const pThis, wti_t *const pWti) {
-    assert(pWti->b_idle_listed == 0);
-    pWti->p_idle_prev = NULL;
-    pWti->p_idle_next = pThis->pIdleWorkers;
-    if (pThis->pIdleWorkers != NULL) pThis->pIdleWorkers->p_idle_prev = pWti;
-    pThis->pIdleWorkers = pWti;
-    pWti->b_idle_listed = 1;
-    ++pThis->nIdleWorkers;
-}
-
-static void ATTR_NONNULL() wtpIdleRemoveLocked(wtp_t *const pThis, wti_t *const pWti) {
-    if (!pWti->b_idle_listed) return; /* already reserved by a producer */
-    if (pWti->p_idle_prev != NULL)
-        pWti->p_idle_prev->p_idle_next = pWti->p_idle_next;
-    else
-        pThis->pIdleWorkers = pWti->p_idle_next;
-    if (pWti->p_idle_next != NULL) pWti->p_idle_next->p_idle_prev = pWti->p_idle_prev;
-    pWti->p_idle_prev = NULL;
-    pWti->p_idle_next = NULL;
-    pWti->b_idle_listed = 0;
-    --pThis->nIdleWorkers;
-}
-
-static void wtpIdleWaitCancelCleanup(void *arg) {
-    wti_t *const pWti = (wti_t *)arg;
-    wtpIdleRemoveLocked(pWti->pWtp, pWti);
-}
-
-int wtpWaitForWork(wti_t *const pWti, const struct timespec *const timeout) {
-    wtp_t *const pWtp = pWti->pWtp;
-    int r;
-
-    wtpIdleAddLocked(pWtp, pWti);
-    pthread_cleanup_push(wtpIdleWaitCancelCleanup, pWti);
-    if (timeout == NULL)
-        r = d_pthread_cond_wait(&pWti->pcondBusy, pWtp->pmutUsr);
-    else
-        r = d_pthread_cond_timedwait(&pWti->pcondBusy, pWtp->pmutUsr, timeout);
-    pthread_cleanup_pop(0);
-    wtpIdleRemoveLocked(pWtp, pWti);
-    return r;
-}
-
-rsRetVal ATTR_NONNULL() wtpWakeIdleWorkers(wtp_t *const pThis, int nMaxWrkr) {
-    ISOBJ_TYPE_assert(pThis, wtp);
-    /* Keep the established advice semantics: workers are not reserved before
-     * signalling.  A reservation can hide a worker from a second enqueue while
-     * it is transitioning out of its condition wait, which risks a lost wakeup.
-     * The caller holds pmutUsr, just as the original advice path did. */
-    for (int i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
-        if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
-            pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
-            ++nRunning;
-        }
-    }
-    return RS_RET_OK;
-}
-
-/* Start missing slots after the producer released pmutUsr. INITIALIZING slots
- * increment iCurNumWrkThrd before the creator waits for initialization, so
- * concurrent ensure requests cannot exceed the configured maximum. */
-rsRetVal ATTR_NONNULL() wtpEnsureWorkers(wtp_t *const pThis, int nMaxWrkr, const int permit_during_shutdown) {
+/* set the number of worker threads that should be running. If less than currently running,
+ * a new worker may be started. Please note that there is no guarantee the number of workers
+ * said will be running after we exit this function. It is just a hint. If the number is
+ * higher than one, and no worker is started, the "busy" condition is signaled to awake a worker.
+ * So the caller can assume that there is at least one worker re-checking if there is "work to do"
+ * after this function call.
+ * Parameter "permit_during_shutdown" if true, permits worker starts while the system is
+ * in shutdown state. The prime use case for this is persisting disk queues in enqueue only
+ * mode, which is activated during shutdown.
+ */
+rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, const int permit_during_shutdown) {
     DEFiRet;
-    int curNumWrkThrd;
+    int nMissing; /* number workers missing to run */
+    int i, nRunning;
 
     ISOBJ_TYPE_assert(pThis, wtp);
-    if (nMaxWrkr <= 0) return RS_RET_OK;
-    if (nMaxWrkr > pThis->iNumWorkerThreads) nMaxWrkr = pThis->iNumWorkerThreads;
-    d_pthread_mutex_lock(&pThis->mutWtp);
-    while ((curNumWrkThrd = ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd)) < nMaxWrkr) {
+
+    if (nMaxWrkr == 0) FINALIZE;
+
+    if (nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
+        nMaxWrkr = pThis->iNumWorkerThreads;
+
+    const int curNumWrkThrd = ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
+    nMissing = nMaxWrkr - curNumWrkThrd;
+
+    if (nMissing > 0) {
         if (curNumWrkThrd > 0) {
             LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
-                   "%s: high activity - starting an additional worker thread, currently %d active worker threads.",
-                   wtpGetDbgHdr(pThis), curNumWrkThrd);
+                   "%s: high activity - starting %d additional worker thread(s), "
+                   "currently %d active worker threads.",
+                   wtpGetDbgHdr(pThis), nMissing, curNumWrkThrd);
         }
-        CHKiRet(wtpStartWrkrLocked(pThis, permit_during_shutdown));
+        /* start the rqtd nbr of workers */
+        for (i = 0; i < nMissing; ++i) {
+            CHKiRet(wtpStartWrkr(pThis, permit_during_shutdown));
+        }
+    } else {
+        /* we have needed number of workers, but they may be sleeping */
+        for (i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
+            if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
+                pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
+                nRunning++;
+            }
+        }
     }
 
+
 finalize_it:
-    d_pthread_mutex_unlock(&pThis->mutWtp);
     RETiRet;
 }
 
 
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis) {
     if (pThis == NULL) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
     for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
         if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
     }
+    d_pthread_mutex_unlock(&pThis->mutWtp);
     return RS_RET_OK;
 }
 
