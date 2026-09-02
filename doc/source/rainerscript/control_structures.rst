@@ -39,6 +39,19 @@ if/else-if/else
    }
 
 
+Selector variable snapshots
+===========================
+
+Within one ``if``/``else if``/``else`` selector, repeated direct reads of the
+same variable use the value from its first evaluation in that selector. The
+snapshot is created lazily, applies only while conditions are being selected,
+and is discarded before the selected branch body runs. As a result, a
+condition-side operation that changes a variable after its first read does not
+affect a later condition in the same selector; the selected branch observes
+the message's actual current value. ``exists()`` keeps its normal independent
+existence check behavior.
+
+
 foreach
 =======
 
@@ -135,4 +148,3 @@ continue
 ========
 
 A NOP, useful e.g. inside the ``then`` part of an if-structure.
-
