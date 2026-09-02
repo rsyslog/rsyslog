@@ -3707,9 +3707,9 @@ finalize_it:
     if (nParamsEvaluated >= 2) varFreeMembers(&srcVal[2]);
 }
 
-static void evalVar(struct cnfvar *__restrict__ const var,
-                    void *__restrict__ const usrptr,
-                    struct svar *__restrict__ const ret) {
+static void evalVarUncached(struct cnfvar *__restrict__ const var,
+                            void *__restrict__ const usrptr,
+                            struct svar *__restrict__ const ret) {
     rs_size_t propLen;
     uchar *pszProp = NULL;
     unsigned short bMustBeFreed = 0;
@@ -3757,6 +3757,39 @@ static void evalVar(struct cnfvar *__restrict__ const var,
         DBGPRINTF("rainerscript: (string) var %d: '%s'\n", var->prop.id, pszProp);
         if (bMustBeFreed) free(pszProp);
     }
+}
+
+/* A selector cache owns the first value read for its lifetime.  Each
+ * expression evaluation receives its own reference/copy because normal
+ * evaluation releases returned svar members after use. */
+static void copyCachedVar(const struct svar *const src, struct svar *const dst) {
+    dst->datatype = src->datatype;
+    if (src->datatype == 'S') {
+        dst->d.estr = es_strdup(src->d.estr);
+    } else if (src->datatype == 'J') {
+        dst->d.json = json_object_get(src->d.json);
+    } else {
+        dst->d.n = src->d.n;
+    }
+}
+
+static void evalVar(struct cnfvar *__restrict__ const var,
+                    void *__restrict__ const usrptr,
+                    wti_t *const pWti,
+                    struct svar *__restrict__ const ret) {
+    struct rscript_var_cache *const cache = pWti->execState.var_cache;
+
+    if (cache == NULL || var->cache_slot < 0 || (unsigned int)var->cache_slot >= cache->n_entries) {
+        evalVarUncached(var, usrptr, ret);
+        return;
+    }
+
+    struct rscript_var_cache_entry *const entry = &cache->entries[var->cache_slot];
+    if (!entry->populated) {
+        evalVarUncached(var, usrptr, &entry->value);
+        entry->populated = 1;
+    }
+    copyCachedVar(&entry->value, ret);
 }
 
 /* perform a string comparision operation against a while array. Semantic is
@@ -4165,7 +4198,7 @@ void ATTR_NONNULL() cnfexprEval(const struct cnfexpr *__restrict__ const expr,
             ret->d.estr = es_strdup(((struct cnfarray *)expr)->arr[0]);
             break;
         case 'V':
-            evalVar((struct cnfvar *)expr, usrptr, ret);
+            evalVar((struct cnfvar *)expr, usrptr, pWti, ret);
             break;
         case '&':
             /* TODO: think about optimization, should be possible ;) */
@@ -5068,6 +5101,7 @@ struct cnfvar *cnfvarNew(char *name) {
         var->nodetype = 'V';
         var->name = name;
         msgPropDescrFill(&var->prop, (uchar *)var->name, strlen(var->name));
+        var->cache_slot = -1;
     }
     return var;
 }
@@ -5078,6 +5112,10 @@ struct cnfstmt *cnfstmtNew(unsigned s_type) {
         cnfstmt->nodetype = s_type;
         cnfstmt->printable = NULL;
         cnfstmt->next = NULL;
+        if (s_type == S_IF) {
+            cnfstmt->d.s_if.cache_slots = 0;
+            cnfstmt->d.s_if.is_else_if = 0;
+        }
     }
     return cnfstmt;
 }
@@ -5846,6 +5884,128 @@ static void cnfstmtOptimizeForeach(struct cnfstmt *stmt) {
     stmt->d.s_foreach.body = cnfstmtOptimize(stmt->d.s_foreach.body);
 }
 
+struct if_cache_var_use {
+    struct cnfvar *var;
+    unsigned short count;
+};
+
+static int same_var_property(const struct cnfvar *const a, const struct cnfvar *const b) {
+    if (a->prop.id != b->prop.id) return 0;
+
+    /* Native properties are identified solely by their fixed property ID.
+     * Their descriptor name fields are not initialized. */
+    if (a->prop.id != PROP_CEE && a->prop.id != PROP_LOCAL_VAR && a->prop.id != PROP_GLOBAL_VAR) return 1;
+
+    return a->prop.nameLen == b->prop.nameLen &&
+           (a->prop.nameLen == 0 || !memcmp(a->prop.name, b->prop.name, a->prop.nameLen));
+}
+
+static void collect_if_cache_vars(struct cnfexpr *expr, struct if_cache_var_use **uses, size_t *n_uses, size_t *cap) {
+    size_t i;
+    struct cnffunc *func;
+
+    if (expr == NULL) return;
+    switch (expr->nodetype) {
+        case 'V':
+            ((struct cnfvar *)expr)->cache_slot = -1;
+            for (i = 0; i < *n_uses; ++i) {
+                if (same_var_property((*uses)[i].var, (struct cnfvar *)expr)) {
+                    ++(*uses)[i].count;
+                    return;
+                }
+            }
+            if (*n_uses == *cap) {
+                const size_t new_cap = (*cap == 0) ? 8 : *cap * 2;
+                struct if_cache_var_use *const grown = realloc(*uses, new_cap * sizeof(**uses));
+                if (grown == NULL) return;
+                *uses = grown;
+                *cap = new_cap;
+            }
+            (*uses)[*n_uses].var = (struct cnfvar *)expr;
+            (*uses)[*n_uses].count = 1;
+            ++*n_uses;
+            break;
+        case 'F':
+            func = (struct cnffunc *)expr;
+            for (i = 0; i < func->nParams; ++i) collect_if_cache_vars(func->expr[i], uses, n_uses, cap);
+            break;
+        case NOT:
+        case 'M':
+            collect_if_cache_vars(expr->r, uses, n_uses, cap);
+            break;
+        case 'N':
+        case 'S':
+        case 'A':
+        case S_FUNC_EXISTS:
+            break;
+        default:
+            collect_if_cache_vars(expr->l, uses, n_uses, cap);
+            collect_if_cache_vars(expr->r, uses, n_uses, cap);
+            break;
+    }
+}
+
+static void assign_if_cache_slots(struct cnfexpr *expr, const struct if_cache_var_use *uses, const size_t n_uses) {
+    size_t i;
+    struct cnffunc *func;
+
+    if (expr == NULL) return;
+    switch (expr->nodetype) {
+        case 'V':
+            for (i = 0; i < n_uses; ++i) {
+                if (uses[i].var->cache_slot >= 0 && same_var_property(uses[i].var, (struct cnfvar *)expr)) {
+                    ((struct cnfvar *)expr)->cache_slot = uses[i].var->cache_slot;
+                    break;
+                }
+            }
+            break;
+        case 'F':
+            func = (struct cnffunc *)expr;
+            for (i = 0; i < func->nParams; ++i) assign_if_cache_slots(func->expr[i], uses, n_uses);
+            break;
+        case NOT:
+        case 'M':
+            assign_if_cache_slots(expr->r, uses, n_uses);
+            break;
+        case 'N':
+        case 'S':
+        case 'A':
+        case S_FUNC_EXISTS:
+            break;
+        default:
+            assign_if_cache_slots(expr->l, uses, n_uses);
+            assign_if_cache_slots(expr->r, uses, n_uses);
+            break;
+    }
+}
+
+/* A false if condition executes no branch body.  Consequently every direct
+ * variable read in one structural else-if selector may share a lazy snapshot
+ * until the selector chooses its branch. */
+static void cnfstmt_optimize_if_cache(struct cnfstmt *const stmt) {
+    struct cnfstmt *cur = stmt;
+    struct if_cache_var_use *uses = NULL;
+    size_t n_uses = 0, cap = 0, i;
+    unsigned short slot = 0;
+
+    do {
+        cur->d.s_if.cache_slots = 0;
+        collect_if_cache_vars(cur->d.s_if.expr, &uses, &n_uses, &cap);
+        cur = cur->d.s_if.t_else;
+    } while (cur != NULL && cur->nodetype == S_IF && cur->d.s_if.is_else_if);
+
+    for (i = 0; i < n_uses; ++i) {
+        if (uses[i].count >= 2 && slot < USHRT_MAX) uses[i].var->cache_slot = slot++;
+    }
+    cur = stmt;
+    do {
+        assign_if_cache_slots(cur->d.s_if.expr, uses, n_uses);
+        cur = cur->d.s_if.t_else;
+    } while (cur != NULL && cur->nodetype == S_IF && cur->d.s_if.is_else_if);
+    stmt->d.s_if.cache_slots = slot;
+    free(uses);
+}
+
 
 static void cnfstmtOptimizeIf(struct cnfstmt *stmt) {
     struct cnfstmt *t_then, *t_else;
@@ -5899,6 +6059,7 @@ static void cnfstmtOptimizeIf(struct cnfstmt *stmt) {
             cnfstmtOptimizePRIFilt(stmt);
         }
     }
+    if (stmt->nodetype == S_IF) cnfstmt_optimize_if_cache(stmt);
 done:
     return;
 }
