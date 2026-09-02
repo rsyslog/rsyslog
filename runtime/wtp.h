@@ -23,7 +23,6 @@
 #define WTP_H_INCLUDED
 
 #include <pthread.h>
-#include <time.h>
 #include "obj.h"
 #include "atomic.h"
 
@@ -53,8 +52,6 @@ struct wtp_s {
         int iNumWorkerThreads; /* number of worker threads to use */
         int iCurNumWrkThrd; /* current number of active worker threads */
         struct wti_s **pWrkr; /* array with control structure for the worker thread(s) associated with this wtp */
-        struct wti_s *pIdleWorkers; /* waiters on pcondBusy, protected by pmutUsr */
-        int nIdleWorkers; /* number of entries in pIdleWorkers, protected by pmutUsr */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
         int toFirstWrkShutdown; /* slot-zero override, -2 means use toWrkShutdown */
         rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
@@ -91,18 +88,15 @@ struct wtp_s {
 rsRetVal wtpConstruct(wtp_t **ppThis);
 rsRetVal wtpConstructFinalize(wtp_t *pThis);
 rsRetVal wtpDestruct(wtp_t **ppThis);
-/** Caller holds pmutUsr. Wakes up to nMaxWrkr workers that are actually idle. */
-rsRetVal wtpWakeIdleWorkers(wtp_t *pThis, int nMaxWrkr);
-rsRetVal wtpEnsureWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during_shutdown);
-int wtpWaitForWork(wti_t *pWti, const struct timespec *timeout);
+rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during_shutdown);
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
 /** Wake every existing worker without creating a stopped worker.
  *
  * The caller must hold the pool's pmutUsr mutex so the queue predicate and
- * pthread condition signal cannot race. This is intentionally a full wakeup
- * for shutdown; normal producers use wtpWakeIdleWorkers().
+ * pthread condition signal cannot race. The helper serializes only the worker
+ * table walk with mutWtp; it does not acquire pmutUsr itself.
  */
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
 rsRetVal wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj);
