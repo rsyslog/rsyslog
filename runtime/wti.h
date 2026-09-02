@@ -90,6 +90,12 @@ struct wti_s {
          */
         uint8_t bWaitingForWork;
         uint8_t bWakeupReserved;
+        /* Set immediately before wtiWorker leaves its queue loop. The thread
+         * may still release action-worker state afterwards, but it must no
+         * longer be budgeted as a queue consumer. It is atomic because cancel
+         * cleanup may race a producer holding pmutUsr.
+         */
+        int bExiting;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
@@ -113,15 +119,78 @@ static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
 
 /* The caller must hold pWti->pWtp->pmutUsr. */
 static inline int ATTR_NONNULL(1) wtiReserveWakeup(wti_t *const pWti) {
-    if (!pWti->bWaitingForWork || pWti->bWakeupReserved) return 0;
+    if (ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) || !pWti->bWaitingForWork || pWti->bWakeupReserved)
+        return 0;
     pWti->bWakeupReserved = 1;
     return 1;
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. A worker that is
+ * executing queue work counts toward the requested parallelism. A registered
+ * waiter counts only after a producer has reserved its signal: until then it
+ * cannot make progress on the current enqueue. WAIT_JOIN is deliberately not
+ * counted, because it can no longer consume queue work even before its slot
+ * is reset to STOPPED.
+ */
+static inline int ATTR_NONNULL(1) wtiCountsTowardWorkerBudget(wti_t *const pWti) {
+    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
+
+    return state == WRKTHRD_RUNNING && !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
+           (!pWti->bWaitingForWork || pWti->bWakeupReserved);
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. A registered waiter is
+ * live capacity because it can be signalled; an exiting worker is not, even
+ * though its thread has not yet reached WAIT_JOIN.
+ */
+static inline int ATTR_NONNULL(1) wtiCountsTowardWorkerStartBudget(wti_t *const pWti) {
+    const int state = ATOMIC_LOAD_32BIT(&pWti->bIsRunning, &pWti->mutIsRunning);
+
+    return !ATOMIC_LOAD_32BIT(&pWti->bExiting, &pWti->mutIsRunning) &&
+           (state == WRKTHRD_INITIALIZING || state == WRKTHRD_RUNNING);
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1)
+    wtiGetWorkerStartBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
+    int i;
+    int nLive = 0;
+
+    for (i = 0; i < nWorkers; ++i) {
+        if (wtiCountsTowardWorkerStartBudget(ppWti[i])) ++nLive;
+    }
+
+    return nLive < nMaxWrkr ? nMaxWrkr - nLive : 0;
+}
+
+/* The caller must hold every worker's pWtp->pmutUsr. */
+static inline int ATTR_NONNULL(1)
+    wtiGetWakeupBudget(wti_t *const *const ppWti, const int nWorkers, const int nMaxWrkr) {
+    int i;
+    int nAvailable = 0;
+
+    for (i = 0; i < nWorkers; ++i) {
+        if (wtiCountsTowardWorkerBudget(ppWti[i])) ++nAvailable;
+    }
+
+    return nAvailable < nMaxWrkr ? nMaxWrkr - nAvailable : 0;
 }
 
 /* The caller must hold pWti->pWtp->pmutUsr. */
 static inline void ATTR_NONNULL(1) wtiClearWaitReservation(wti_t *const pWti) {
     pWti->bWaitingForWork = 0;
     pWti->bWakeupReserved = 0;
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiMarkExiting(wti_t *const pWti) {
+    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 1);
+    wtiClearWaitReservation(pWti);
+}
+
+/* The caller must hold pWti->pWtp->pmutUsr. */
+static inline void ATTR_NONNULL(1) wtiClearExiting(wti_t *const pWti) {
+    ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 0);
 }
 
 

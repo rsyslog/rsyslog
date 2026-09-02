@@ -374,6 +374,9 @@ static void wtpWrkrExecCancelCleanup(void *arg) {
     ISOBJ_TYPE_assert(pThis, wtp);
     DBGPRINTF("%s: Worker thread %lx requested to be cancelled.\n", wtpGetDbgHdr(pThis), (unsigned long)pWti);
 
+    d_pthread_mutex_lock(pThis->pmutUsr);
+    wtiMarkExiting(pWti);
+    d_pthread_mutex_unlock(pThis->pmutUsr);
     wtpWrkrExecCleanup(pWti);
 
     pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
@@ -507,6 +510,9 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
     }
 
     pWti = pThis->pWrkr[i];
+    /* The caller holds pmutUsr. A reused slot may still carry the marker from
+     * its previous normal exit until it is started again. */
+    wtiClearExiting(pWti);
     iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void *)pWti);
     if (iState != 0) {
         wtiSetState(pWti, WRKTHRD_STOPPED);
@@ -556,7 +562,9 @@ finalize_it:
 rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, const int permit_during_shutdown) {
     DEFiRet;
     int nMissing; /* number workers missing to run */
-    int i, nRunning;
+    int nWakeups;
+    int nStartable;
+    int i;
 
     ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -566,7 +574,7 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
         nMaxWrkr = pThis->iNumWorkerThreads;
 
     const int curNumWrkThrd = ATOMIC_LOAD_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
-    nMissing = nMaxWrkr - curNumWrkThrd;
+    nMissing = wtiGetWorkerStartBudget(pThis->pWrkr, pThis->iNumWorkerThreads, nMaxWrkr);
 
     if (nMissing > 0) {
         if (curNumWrkThrd > 0) {
@@ -575,23 +583,34 @@ rsRetVal ATTR_NONNULL() wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, co
                    "currently %d active worker threads.",
                    wtpGetDbgHdr(pThis), nMissing, curNumWrkThrd);
         }
-        /* start the rqtd nbr of workers */
-        for (i = 0; i < nMissing; ++i) {
-            CHKiRet(wtpStartWrkr(pThis, permit_during_shutdown));
-        }
-    } else {
-        /* The queue mutex is held by qqueueAdviseMaxWorkers(). Select actual
-         * condvar waiters and reserve each before signalling, so a burst
-         * cannot repeatedly spend wakeups on workers that are still running.
+        /* Start only actually free slots. Exiting slots remain owned by their
+         * terminating threads; the persistent first worker remains available
+         * in regular classic queue pools. A start failure still falls through
+         * to the useful waiter-wakeup pass below.
          */
-        for (i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
-            if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED && wtiReserveWakeup(pThis->pWrkr[i])) {
-                pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
-                nRunning++;
-            }
+        nStartable = 0;
+        for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
+            const int workerState = wtiGetState(pThis->pWrkr[i]);
+            if (workerState == WRKTHRD_STOPPED || workerState == WRKTHRD_WAIT_JOIN) ++nStartable;
+        }
+        if (nStartable > nMissing) nStartable = nMissing;
+        for (i = 0; i < nStartable; ++i) {
+            const rsRetVal startRet = wtpStartWrkr(pThis, permit_during_shutdown);
+            if (startRet != RS_RET_OK && iRet == RS_RET_OK) iRet = startRet;
         }
     }
 
+    /* The queue mutex is held by qqueueAdviseMaxWorkers(). Re-evaluate after
+     * each synchronous worker start: initialized workers consume budget, while
+     * existing waiters still need individual signals for the remaining slots.
+     */
+    nWakeups = wtiGetWakeupBudget(pThis->pWrkr, pThis->iNumWorkerThreads, nMaxWrkr);
+    for (i = 0; i < pThis->iNumWorkerThreads && nWakeups > 0; ++i) {
+        if (wtiReserveWakeup(pThis->pWrkr[i])) {
+            pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
+            --nWakeups;
+        }
+    }
 
 finalize_it:
     RETiRet;
