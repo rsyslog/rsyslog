@@ -3,12 +3,18 @@
 #
 # Copyright 2026 Rainer Gerhards and Adiscon GmbH.
 #
-# Regression test for the Codex pre-push gate's explicit validation bypass.
-# It proves that direct, env-prefixed, and shell-wrapped inline overrides are
-# accepted, while ordinary and shell-wrapped pushes, false overrides, and
-# mixed command lists still produce the hook's deny decision. Empty output is
-# the allow oracle; the JSON permissionDecision=deny response is the block
-# oracle. The shell-wrapped blocked case proves wrapper push recognition.
+# Regression test for the Codex pre-push gate's explicit validation bypass and
+# non-runtime exemption. It proves that direct, env-prefixed, and shell-wrapped
+# inline overrides are accepted, that documentation, README, and AGENTS-only
+# deltas are accepted, and that ordinary and shell-wrapped pushes, false
+# overrides, and mixed command lists still produce the hook's deny decision.
+# Empty output is the allow oracle; the JSON permissionDecision=deny response
+# is the block oracle. The shell-wrapped blocked case proves wrapper push
+# recognition. The non-runtime case uses a synthetic origin/main base and
+# committed documentation, README, and AGENTS files, so branch-delta
+# classification is the oracle. Subsequent synthetic runtime, build, metadata,
+# and tooling files must return the gate to its blocked state, proving that the
+# exemption cannot cover inputs that require container validation.
 # This is intentionally standalone rather than a diag.sh scenario: it exercises
 # only hook command parsing and needs neither rsyslogd nor testbench helpers.
 # The hook is intentionally absent from release tarballs, so this test skips
@@ -22,6 +28,7 @@ test_srcdir="${srcdir:-$(dirname "$0")}"
 gate_source="$test_srcdir/../.codex/pre_push_container_gate.sh"
 [ -f "$gate_source" ] || exit 77
 command -v python3 >/dev/null 2>&1 || exit 77
+command -v git >/dev/null 2>&1 || exit 77
 
 mkdir -p "$tmpdir/.codex"
 cp "$gate_source" "$tmpdir/.codex/"
@@ -80,3 +87,36 @@ assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'env --unset=SKIP_CONTAINER
 assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'env -uSKIP_CONTAINER_VALIDATION git push origin topic'"
 assert_blocked "SKIP_CONTAINER_VALIDATION=1 bash -lc 'unset SKIP_CONTAINER_VALIDATION; git push origin topic'"
 assert_blocked 'SKIP_CONTAINER_VALIDATION=1 git push origin topic; git push origin other'
+
+assert_runtime_delta_blocked() {
+	path="$1"
+	content="$2"
+	mkdir -p "$tmpdir/$(dirname "$path")"
+	printf '%s\n' "$content" > "$tmpdir/$path"
+	git -C "$tmpdir" add "$path"
+	git -C "$tmpdir" commit -qm "add $path"
+	assert_blocked 'git push origin topic'
+	git -C "$tmpdir" reset --hard -q HEAD~1
+}
+
+git -C "$tmpdir" init -q
+git -C "$tmpdir" config user.email 'codex-test@example.invalid'
+git -C "$tmpdir" config user.name 'Codex Gate Test'
+git -C "$tmpdir" config commit.gpgsign false
+printf 'base\n' > "$tmpdir/README"
+git -C "$tmpdir" add README
+git -C "$tmpdir" commit -qm 'base'
+git -C "$tmpdir" branch -M main
+git -C "$tmpdir" update-ref refs/remotes/origin/main HEAD
+mkdir "$tmpdir/doc"
+printf 'documentation-only change\n' > "$tmpdir/doc/example.rst"
+printf 'readme-only change\n' >> "$tmpdir/README"
+printf 'agent instructions\n' > "$tmpdir/AGENTS.md"
+git -C "$tmpdir" add doc/example.rst README AGENTS.md
+git -C "$tmpdir" commit -qm 'non-runtime change'
+assert_allowed 'git push origin topic'
+
+assert_runtime_delta_blocked 'runtime/example.c' 'int example;'
+assert_runtime_delta_blocked 'Dockerfile' 'FROM scratch'
+assert_runtime_delta_blocked 'MODULE_METADATA.yaml' 'module: example'
+assert_runtime_delta_blocked 'devtools/example.py' 'print("example")'
