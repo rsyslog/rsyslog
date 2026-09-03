@@ -247,6 +247,36 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/.." && pwd)"
 cd "${repo_root}"
 
+# GitHub's run_checks.yml classifies its runtime lane from the PR delta. Keep
+# this local gate aligned with that policy: documentation, README, AGENTS, and
+# other non-runtime changes do not need a runtime-container validation marker.
+# Use the PR base, rather than the marker, so an old marker cannot make
+# unrelated main-branch changes look like part of the local push.
+is_non_runtime_push_delta() {
+  local base_ref
+
+  for base_ref in "${RSYSLOG_LOCAL_VALIDATION_BASE:-}" origin/main upstream/main '@{upstream}'; do
+    [ -n "${base_ref}" ] || continue
+    if git rev-parse --verify "${base_ref}^{commit}" >/dev/null 2>&1; then
+      base_ref="$(git merge-base HEAD "${base_ref}")" || return 1
+      break
+    fi
+    base_ref=''
+  done
+
+  [ -n "${base_ref:-}" ] || return 1
+
+  local changed_files
+  changed_files="$(git diff --name-only "${base_ref}"...HEAD)"
+  [ -n "${changed_files}" ] || return 1
+  ! grep -Ev '^doc/' <<<"${changed_files}" |
+    grep -Eq '(^|/).*\.(c|h)$|^grammar/(lexer\.l|grammar\.y)$|^tests/[^/]+\.sh$|^diag\.sh$|(^|/)Makefile\.am$|^configure\.ac$|^\.github/workflows/run_checks\.yml$'
+}
+
+if is_non_runtime_push_delta; then
+  exit 0
+fi
+
 # Check if SKIP_CONTAINER_VALIDATION is set
 if [[ "${SKIP_CONTAINER_VALIDATION:-0}" == "1" ]]; then
   exit 0
