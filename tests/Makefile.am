@@ -316,6 +316,7 @@ TESTS_DEFAULT = \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile-outchannel.sh \
+	omfile-sizelimitcmd-async.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	msgvar-concurrency.sh \

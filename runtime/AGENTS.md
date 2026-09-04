@@ -37,6 +37,10 @@ collection, and process orchestration).
   - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
   - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
+- **Existing smoke coverage:** `tests/omfile-sizelimitcmd-async.sh` covers
+  `stream.c` size-limit rotation with `asyncWriting="on"`, i.e. that the async
+  writer thread survives a rotation. `tests/omfile-sizelimitcmd-many.sh` covers
+  the same rotation path with the default synchronous writer.
 - When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 ## Coding expectations
