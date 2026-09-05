@@ -2950,7 +2950,15 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
             /* awake possibly waiting enq process */
             pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
         }
-    } else { /* memory queue */
+    } else if (pThis->qType == QUEUETYPE_FIXED_ARRAY) {
+        /* RAM retirement releases completed counts, not the original slots of
+         * this batch: another worker may finish an older batch later. Batch
+         * pointers own the messages independently of these reusable slots.
+         * Subtraction avoids overflowing head + nElem near INT_MAX. */
+        const int remaining = pThis->iMaxQueueSize - pThis->tVars.farray.head;
+        assert(nElem >= 0 && nElem <= pThis->iMaxQueueSize);
+        pThis->tVars.farray.head = nElem >= remaining ? nElem - remaining : pThis->tVars.farray.head + nElem;
+    } else { /* linked-list memory queue */
         for (i = 0; i < nElem; ++i) {
             pThis->qDel(pThis);
         }
@@ -2991,9 +2999,9 @@ typedef enum tdlPhase_e { TDL_EMPTY, TDL_PROCESS_HEAD, TDL_QUEUE } tdlPhase_t;
  *   current batch.
  * - TDL_QUEUE:  current batch cannot be deleted and is queued for later.
  *
- * The dequeue identifier advances strictly monotonically, ensuring
- * deterministic order and proper resource release for both disk and
- * memory queue implementations.
+ * RAM batches release completed counts, including out-of-order worker
+ * completions when the list is empty. Do not turn this into an ordered RAM
+ * retirement frontier: workers already own independent message references.
  */
 static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
     toDeleteLst_t *pTdl;
@@ -3049,12 +3057,47 @@ finalize_it:
 }
 
 
+/* Concurrency & Locking: completed batch references move to a worker-owned
+ * buffer under the queue mutex, after store commit. The buffer holds at most
+ * one batch and is drained without the queue mutex and with cancellation
+ * disabled. No other worker, producer, or shutdown path accesses this buffer.
+ */
+static void qqueueDrainDeferred(wti_t *const pWti) {
+    for (int i = 0; i < pWti->nDeferredMsgs; ++i) {
+        msgDestruct(&pWti->pDeferredMsgs[i]);
+    }
+    pWti->nDeferredMsgs = 0;
+}
+
+/* Exceptional idle/minbatch/cleanup path: never retain a completed batch
+ * across a condition wait. Recheck queue predicates after reacquiring. */
+static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) {
+    if (pWti->nDeferredMsgs != 0) {
+        d_pthread_mutex_unlock(pThis->mut);
+        qqueueDrainDeferred(pWti);
+        qqueueLock(pThis);
+    }
+}
+
+static void qqueueDeferBatch(wti_t *const pWti) {
+    batch_t *const pBatch = &pWti->batch;
+    assert(pWti->nDeferredMsgs == 0);
+    assert(pBatch->nElem <= pBatch->maxElem);
+    for (int i = 0; i < pBatch->nElem; ++i) {
+        pWti->pDeferredMsgs[i] = pBatch->pElem[i].pMsg;
+        pBatch->pElem[i].pMsg = NULL;
+    }
+    pWti->nDeferredMsgs = pBatch->nElem;
+    pBatch->nElem = pBatch->nElemDeq = 0;
+}
+
 /* Delete a batch of processed user objects from the queue, which includes
  * destructing the objects themself. Any entries not marked as finally
  * processed are enqueued again. The new enqueue is necessary because we have a
  * rgerhards, 2009-05-13
  */
-static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
+static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
+    batch_t *const pBatch = &pWti->batch;
     int i;
     smsg_t *pMsg;
     int nEnqueued = 0;
@@ -3069,11 +3112,6 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
         int retried = 0;
         iRet = pThis->qCompleteBatch(pThis, pBatch, &committed, &retried);
         if (iRet != RS_RET_OK) RETiRet;
-        for (i = 0; i < pBatch->nElem; ++i) {
-            pMsg = pBatch->pElem[i].pMsg;
-            msgDestruct(&pMsg);
-            pBatch->pElem[i].pMsg = NULL;
-        }
         /* committed is the physical-record count. It intentionally includes
          * salvaged corrupt records because recovery included those records in
          * iQueueSize; retried counts only decoded messages appended again. */
@@ -3090,7 +3128,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
             qqueueAddOverallQueueSize(added);
         }
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
-        pBatch->nElem = pBatch->nElemDeq = 0;
+        qqueueDeferBatch(pWti);
         pBatch->storeData = NULL;
         RETiRet;
     }
@@ -3108,7 +3146,6 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
                     localRet);
             }
         }
-        msgDestruct(&pMsg);
     }
 
     DBGPRINTF("DeleteProcessedBatch: we deleted %d objects and enqueued %d objects\n", i - nEnqueued, nEnqueued);
@@ -3117,7 +3154,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
 
     iRet = DeleteBatchFromQStore(pThis, pBatch);
 
-    pBatch->nElem = pBatch->nElemDeq = 0; /* reset batch */  // TODO: more fine init, new fields! 2010-06-14
+    qqueueDeferBatch(pWti);
 
     RETiRet;
 }
@@ -3149,7 +3186,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     DEFiRet;
 
     nDeleted = pWti->batch.nElemDeq;
-    localRet = DeleteProcessedBatch(pThis, &pWti->batch);
+    localRet = DeleteProcessedBatch(pThis, pWti);
     if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
 
     nDequeued = nDiscarded = 0;
@@ -3381,6 +3418,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
         pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
         ++nDequeued;
         if (nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
+            qqueueDrainDeferredLocked(pThis, pWti);
             while (!qqueueIsShutdownImmediate(pThis) && keep_running && nDequeued < iMinDeqBatchSize &&
                    getLogicalQueueSize(pThis) == 0) {
                 dbgprintf(
@@ -3594,12 +3632,18 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
-
 finalize_it:
+    if (iRet != RS_RET_OK && pWti->nDeferredMsgs != 0) {
+        qqueueDrainDeferredLocked(pThis, pWti);
+        /* An enqueue during disposal could not signal us as a waiter yet.
+         * Retest under the mutex before returning IDLE to the wait loop. */
+        if (iRet == RS_RET_IDLE && getLogicalQueueSize(pThis) > 0) goto retry_dequeue;
+    }
     RETiRet;
 }
 
@@ -3623,8 +3667,9 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     int iCancelStateSave;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DeleteProcessedBatch(pThis, &pWti->batch);
+    DeleteProcessedBatch(pThis, pWti);
     qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    qqueueDrainDeferredLocked(pThis, pWti);
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
@@ -3636,7 +3681,7 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
  * rgerhards, 2008-01-21
  */
 static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
-    int iCancelStateSave;
+    int iCancelStateSave = PTHREAD_CANCEL_DISABLE;
     int bNeedReLock = 0; /**< do we need to lock the mutex again? */
     int skippedMsgs = 0; /**< did the queue loose any messages (can happen with
                           ** disk queue if .qi file is corrupt */
@@ -3661,6 +3706,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
     bNeedReLock = 1;
+    qqueueDrainDeferred(pWti);
 
     /* report errors, now that we are outside of queue lock */
     if (skippedMsgs > 0) {
@@ -3687,10 +3733,10 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
         srSleep(pThis->iDeqSlowdown / 1000000, pThis->iDeqSlowdown % 1000000);
     }
 
-    /* but now cancellation is no longer permitted */
-    pthread_setcancelstate(iCancelStateSave, NULL);
-
 finalize_it:
+    /* Consumer errors also leave cancellation disabled before taking the
+     * queue mutex. The cancel handler therefore always enters unlocked. */
+    pthread_setcancelstate(iCancelStateSave, NULL);
     DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet, getLogicalQueueSize(pThis),
               getPhysicalQueueSize(pThis));
 
@@ -3712,7 +3758,7 @@ finalize_it:
  */
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     int i;
-    int iCancelStateSave;
+    int iCancelStateSave = PTHREAD_CANCEL_DISABLE;
     int bNeedReLock = 0; /**< do we need to lock the mutex again? */
     int skippedMsgs = 0;
     DEFiRet;
@@ -3725,6 +3771,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
     /* we now have a non-idle batch of work, so we can release the queue mutex and process it */
     d_pthread_mutex_unlock(pThis->mut);
     bNeedReLock = 1;
+    qqueueDrainDeferred(pWti);
 
     /* at this spot, we may be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
@@ -3758,10 +3805,9 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
         pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
     }
 
-    /* but now cancellation is no longer permitted */
-    pthread_setcancelstate(iCancelStateSave, NULL);
-
 finalize_it:
+    /* Early errors must also restore the queue-locked cancellation contract. */
+    pthread_setcancelstate(iCancelStateSave, NULL);
     /*	Check the last return state of qqueueEnqMsg. If an error was returned, we acknowledge it only.
      *	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.
      *	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the

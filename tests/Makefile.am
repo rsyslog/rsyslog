@@ -65,6 +65,9 @@ EXTRA_DIST += $(TESTS_PRIFILT_TRAILING_SEPARATOR)
 TESTS_TEMPLATE_PARAMETER_ERRORS = template-parameter-errors.sh
 EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 
+TESTS_QUEUE_DEFERRED_IDLE_WAKEUP = queue-deferred-idle-wakeup.sh queue-deferred-idle-shutdown.sh
+EXTRA_DIST += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP) override_queue_disposal.c
+
 TESTS_SEGQUEUE_TOOL = rsyslog-segqueue-tool.py rsyslog-segqueue-runtime.sh
 EXTRA_DIST += $(TESTS_SEGQUEUE_TOOL)
 
@@ -1210,6 +1213,7 @@ TESTS_MMDARWIN_VALGRIND = \
 	mmdarwin_errmsg_no_sock-vg.sh
 
 TESTS_OMPROG = \
+	queue-fixedarray-outoforder.sh \
 	omprog-defaults.sh \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
@@ -2819,6 +2823,13 @@ liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 
+check_LTLIBRARIES += liboverride_queue_disposal.la
+liboverride_queue_disposal_la_SOURCES = override_queue_disposal.c
+liboverride_queue_disposal_la_CPPFLAGS = $(runtime_unit_linkedlist_CPPFLAGS)
+liboverride_queue_disposal_la_CFLAGS =
+liboverride_queue_disposal_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liboverride_queue_disposal_la_LIBADD = $(LIBFASTJSON_LIBS) $(DL_LIBS) $(PTHREADS_LIBS)
+
 if ENABLE_IMPTCP
 check_LTLIBRARIES += liboverride_epoll_ctl.la
 liboverride_epoll_ctl_la_SOURCES = override_epoll_ctl.c
@@ -2958,6 +2969,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+TESTS += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP)
 TESTS += $(TESTS_JSON_OMITIFZERO)
 TESTS += $(TESTS_SEGMENTED_DISK_QUEUE)
 if ENABLE_SEGQUEUE_TOOL
