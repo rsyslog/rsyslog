@@ -278,6 +278,8 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
     }
     /* actual destruction */
     batchFree(&pThis->batch);
+    assert(pThis->nDeferredMsgs == 0);
+    free(pThis->pDeferredMsgs);
     free(pThis->actWrkrInfo);
     pthread_cond_destroy(&pThis->pcondBusy);
     DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
@@ -319,6 +321,8 @@ rsRetVal wtiConstructFinalize(wti_t *pThis) {
     /* we now alloc the array for user pointers. We obtain the max from the queue itself. */
     CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
     CHKiRet(batchInit(&pThis->batch, iDeqBatchSize));
+    CHKmalloc(pThis->pDeferredMsgs = calloc((size_t)iDeqBatchSize, sizeof(smsg_t *)));
+    pThis->nDeferredMsgs = 0;
 
 finalize_it:
     RETiRet;
@@ -340,7 +344,12 @@ static void wtiWorkerCancelCleanup(void *arg) {
     ISOBJ_TYPE_assert(pWtp, wtp);
 
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+    /* The consumer releases the queue mutex only around cancel-safe output
+     * work. Restoring or committing its batch, including deferred cleanup,
+     * must use the same mutex as the ordinary callback path. */
+    d_pthread_mutex_lock(pWtp->pmutUsr);
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+    d_pthread_mutex_unlock(pWtp->pmutUsr);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
@@ -442,6 +451,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         /* first check if we are in shutdown process (but evaluate a bit later) */
         terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
         if (terminateRet == RS_RET_TERMINATE_NOW) {
+        terminate_now:
             /* we now need to free the old batch */
             localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
             DBGOPRINT((obj_t *)pThis,
@@ -457,6 +467,11 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         if (localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
             break; /* end of loop */
         } else if (localRet == RS_RET_IDLE) {
+            /* Even an idle callback can release the queue mutex to dispose
+             * its completed batch. Shutdown may have signalled during that
+             * interval, before this worker registered an idle wait. */
+            terminateRet = wtpChkStopWrkr(pWtp, MUTEX_ALREADY_LOCKED);
+            if (terminateRet == RS_RET_TERMINATE_NOW) goto terminate_now;
             if (terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccurred) {
                 if (bInactivityTOOccurred && pWtp->pfIdleTimeout != NULL && pWtp->pWrkr[0] == pThis &&
                     pWtp->pfIdleTimeout(pWtp->pUsr) == RS_RET_RETRY) {

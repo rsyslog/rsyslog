@@ -84,6 +84,9 @@ struct wti_s {
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
+        /* Queue-local deferred batch cleanup is bounded by batch.maxElem. */
+        smsg_t **pDeferredMsgs;
+        int nDeferredMsgs;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */
@@ -104,7 +107,6 @@ static inline int wtiIsShutdownImmediate(const wti_t *const pWti) {
     return ATOMIC_LOAD_32BIT(pWti->pbShutdownImmediate, pWti->pmutShutdownImmediate);
 #endif
 }
-
 
 /* prototypes */
 rsRetVal wtiConstruct(wti_t **ppThis);

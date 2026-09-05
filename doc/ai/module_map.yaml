@@ -8,12 +8,16 @@ runtime_queue:
     - "runtime/queue.h"
     - "runtime/queue_da.c"
     - "runtime/queue_da.h"
+    - "runtime/wti.c"
+    - "runtime/wti.h"
     - "runtime/segdisk_store.c"
     - "runtime/segdisk_store.h"
   requires_serialization: true
   notes:
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
+    - Completed message references move to a bounded worker buffer after store completion and are destroyed outside the queue mutex, before callbacks or waits; cancellation is disabled during this transfer and disposal.
+    - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
     - The segmented store is lazy only for a disk-assisted child, and dematerialization requires an empty store with no recovery, batch, retry, or completion work pending.
 
