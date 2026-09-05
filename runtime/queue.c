@@ -2950,7 +2950,15 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
             /* awake possibly waiting enq process */
             pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
         }
-    } else { /* memory queue */
+    } else if (pThis->qType == QUEUETYPE_FIXED_ARRAY) {
+        /* RAM retirement releases completed counts, not the original slots of
+         * this batch: another worker may finish an older batch later. Batch
+         * pointers own the messages independently of these reusable slots.
+         * Subtraction avoids overflowing head + nElem near INT_MAX. */
+        const int remaining = pThis->iMaxQueueSize - pThis->tVars.farray.head;
+        assert(nElem >= 0 && nElem <= pThis->iMaxQueueSize);
+        pThis->tVars.farray.head = nElem >= remaining ? nElem - remaining : pThis->tVars.farray.head + nElem;
+    } else { /* linked-list memory queue */
         for (i = 0; i < nElem; ++i) {
             pThis->qDel(pThis);
         }
@@ -2991,9 +2999,9 @@ typedef enum tdlPhase_e { TDL_EMPTY, TDL_PROCESS_HEAD, TDL_QUEUE } tdlPhase_t;
  *   current batch.
  * - TDL_QUEUE:  current batch cannot be deleted and is queued for later.
  *
- * The dequeue identifier advances strictly monotonically, ensuring
- * deterministic order and proper resource release for both disk and
- * memory queue implementations.
+ * RAM batches release completed counts, including out-of-order worker
+ * completions when the list is empty. Do not turn this into an ordered RAM
+ * retirement frontier: workers already own independent message references.
  */
 static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
     toDeleteLst_t *pTdl;
