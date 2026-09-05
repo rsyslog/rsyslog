@@ -763,6 +763,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
 
         // Start DTLS Listen and Session
         do {
+            /* Clear stale queue entries so a non-empty queue after the call
+             * reliably indicates a failure of this call. */
+            ERR_clear_error();
             ret = DTLSv1_listen(ssl, client_addr);
             if (ret > 0) {
                 dbgprintf("imdtls: DTLSHandleSessions DTLSv1_listen SUCCESS\n");
@@ -833,7 +836,9 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
                 break;
             } else {
                 err = SSL_get_error(ssl, ret);
-                if ((ret == 0 && err == SSL_ERROR_SYSCALL) || (err == SSL_ERROR_SYSCALL && errno == EAGAIN)) {
+                /* Retry on EAGAIN (recv timeout, no datagram) and on ret == 0
+                 * with an empty error queue (no usable handshake data yet). */
+                if (err == SSL_ERROR_SYSCALL && (errno == EAGAIN || (ret == 0 && ERR_peek_error() == 0))) {
                     DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), retry\n", ret, err, errno);
                     // Wait little and retry DTLSv1_listen
                     srSleep(0, 100000);
