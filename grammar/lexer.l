@@ -408,6 +408,7 @@ static void cnfPrintToken(const char *token);
 "{"				{ cnfPrintToken(yytext); return '{'; }
 "}"				{ cnfPrintToken(yytext); return '}'; }
 "stop"				{ cnfPrintToken(yytext); return STOP; }
+"else"[ \t\r\n]+"if"	{ cnfPrintToken(yytext); BEGIN EXPR; return ELSEIF; }
 "else"				{ cnfPrintToken(yytext); return ELSE; }
 "call"				{ cnfPrintToken(yytext); BEGIN INCALL; return CALL; }
 "call_indirect"			{ cnfPrintToken(yytext); BEGIN EXPR; return CALL_INDIRECT; }
