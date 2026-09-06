@@ -1166,21 +1166,33 @@ static int stmtListToString(es_str_t **out,
                     estrAppendVarName(out, (char *)stmt->d.s_unset.varname) != 0 || estrAppendCstr(out, ";\n") != 0)
                     return -1;
                 break;
-            case S_IF:
-                if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "if ") != 0 ||
-                    exprToString(out, stmt->d.s_if.expr, warnings) != 0 || estrAppendCstr(out, " then {\n") != 0 ||
-                    stmtListToString(out, stmt->d.s_if.t_then, indent + 1, warnings) != 0)
-                    return -1;
-                if (appendIndent(out, indent) != 0) return -1;
-                if (stmt->d.s_if.t_else != NULL) {
-                    if (estrAppendCstr(out, "} else {\n") != 0 ||
-                        stmtListToString(out, stmt->d.s_if.t_else, indent + 1, warnings) != 0 ||
-                        appendIndent(out, indent) != 0 || estrAppendCstr(out, "}\n") != 0)
+            case S_IF: {
+                const struct cnfstmt *if_stmt = stmt;
+
+                for (;;) {
+                    if (appendIndent(out, indent) != 0 ||
+                        estrAppendCstr(out, if_stmt == stmt ? "if " : "} else if ") != 0 ||
+                        exprToString(out, if_stmt->d.s_if.expr, warnings) != 0 ||
+                        estrAppendCstr(out, " then {\n") != 0 ||
+                        stmtListToString(out, if_stmt->d.s_if.t_then, indent + 1, warnings) != 0)
                         return -1;
-                } else if (estrAppendCstr(out, "}\n") != 0) {
-                    return -1;
+                    if (if_stmt->d.s_if.t_else != NULL && if_stmt->d.s_if.t_else->nodetype == S_IF &&
+                        if_stmt->d.s_if.t_else->next == NULL && if_stmt->d.s_if.t_else->d.s_if.is_else_if) {
+                        if_stmt = if_stmt->d.s_if.t_else;
+                        continue;
+                    }
+                    if (appendIndent(out, indent) != 0) return -1;
+                    if (if_stmt->d.s_if.t_else != NULL) {
+                        if (estrAppendCstr(out, "} else {\n") != 0 ||
+                            stmtListToString(out, if_stmt->d.s_if.t_else, indent + 1, warnings) != 0 ||
+                            appendIndent(out, indent) != 0 || estrAppendCstr(out, "}\n") != 0)
+                            return -1;
+                    } else if (estrAppendCstr(out, "}\n") != 0) {
+                        return -1;
+                    }
+                    break;
                 }
-                break;
+            } break;
             case S_FOREACH:
                 if (appendIndent(out, indent) != 0 || estrAppendCstr(out, "foreach (") != 0 ||
                     estrAppendVarName(out, stmt->d.s_foreach.iter->var) != 0 || estrAppendCstr(out, " in ") != 0 ||

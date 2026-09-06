@@ -136,6 +136,8 @@ struct cnfstmt {
             struct cnfexpr *expr;
             struct cnfstmt *t_then;
             struct cnfstmt *t_else;
+            unsigned short cache_slots;
+            sbool is_else_if;
         } s_if;
         struct {
             uchar *varname;
@@ -205,7 +207,18 @@ struct cnfvar {
     unsigned nodetype;
     char *name;
     msgPropDescr_t prop;
+    int cache_slot;
 } __attribute__((aligned(8)));
+
+struct rscript_var_cache_entry {
+    struct svar value;
+    sbool populated;
+};
+
+struct rscript_var_cache {
+    struct rscript_var_cache_entry *entries;
+    unsigned short n_entries;
+};
 
 struct cnfarray {
     unsigned nodetype;
