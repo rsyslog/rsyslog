@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
 # Full daemon lifecycle, with exact delivery checked outside the timed phase.
 # Run from a configured build's tests directory using the standard testbench.
 #

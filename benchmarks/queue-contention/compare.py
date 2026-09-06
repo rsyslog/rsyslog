@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
 # This file is part of rsyslog.
 # Released under ASL 2.0
 """Alternate full-lifecycle, exact-delivery trials in two isolated builds."""
@@ -32,6 +34,8 @@ if args.messages <= 0:
 if args.workload == 'multi' and min(args.input_workers, args.consumer_workers,
                                     args.connections, args.payload) <= 0:
     parser.error('--input-workers, --consumer-workers, --connections, and --payload must be positive for multi')
+if args.workload == 'multi' and args.messages % args.connections != 0:
+    parser.error('--messages must be divisible by --connections for multi')
 if not math.isfinite(args.trial_timeout) or args.trial_timeout <= 0:
     parser.error('--trial-timeout must be finite and positive')
 args.output.mkdir(parents=True, exist_ok=True)
@@ -48,6 +52,34 @@ def checkout_state(path):
                            check=False, text=True)
     return {'path': str(path), 'revision': revision.stdout.strip() if revision.returncode == 0 else None,
             'dirty': bool(dirty.stdout.strip()) if dirty.returncode == 0 else None}
+
+
+def resolve_image():
+    command = ['docker', 'image', 'inspect', '--format', '{{.Id}}', args.image]
+    inspected = subprocess.run(command, capture_output=True, check=False, text=True)
+    if inspected.returncode != 0:
+        subprocess.run(['docker', 'pull', args.image], check=True)
+        inspected = subprocess.run(command, capture_output=True, check=True, text=True)
+    image_id = inspected.stdout.strip()
+    if not image_id:
+        raise ValueError('docker image inspect returned an empty image ID')
+    return image_id
+
+
+def read_metrics(path):
+    raw = path.read_text()
+    if args.workload == 'lifecycle':
+        metrics = {'lifecycle_ns': int(raw)}
+    else:
+        metrics = json.loads(raw)
+        if not isinstance(metrics, dict):
+            raise ValueError(f'{path} must contain a JSON object')
+        required = ('lifecycle_ns', 'work_ns', 'generator_ns', 'drain_ns')
+        if any(name not in metrics for name in required):
+            raise ValueError(f'{path} is missing required metrics')
+    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in metrics.values()):
+        raise ValueError(f'{path} contains invalid metric values')
+    return metrics
 
 
 image_id = None
@@ -100,8 +132,7 @@ def write_report(status, failure=None):
 
 
 try:
-    image_id = subprocess.run(['docker', 'image', 'inspect', '--format', '{{.Id}}', args.image],
-                              capture_output=True, check=True, text=True).stdout.strip()
+    image_id = resolve_image()
     for pair in range(-1, args.pairs):
         sample = {'pair': pair}
         order = ['before', 'after'] if pair % 2 == 0 else ['after', 'before']
@@ -125,11 +156,13 @@ try:
                                    timeout=args.trial_timeout)
                 except subprocess.TimeoutExpired:
                     subprocess.run(['docker', 'rm', '--force', container_name], stdout=log,
-                                   stderr=subprocess.STDOUT, check=False)
+                                   stderr=subprocess.STDOUT, check=False, timeout=30)
                     raise
-            raw = (output / f'{name}.ns').read_text()
-            metrics = json.loads(raw) if args.workload == 'multi' else {'lifecycle_ns': int(raw)}
-            sample[label] = metrics.get('work_ns', metrics['lifecycle_ns']) / 1e9
+            metrics = read_metrics(output / f'{name}.ns')
+            primary = 'work_ns' if args.workload == 'multi' else 'lifecycle_ns'
+            if metrics[primary] == 0:
+                raise ValueError(f'{name}.ns has a non-positive primary metric')
+            sample[label] = metrics[primary] / 1e9
             sample[label + '_metrics'] = {
                 key.replace('_ns', '_seconds'): value / 1e9 for key, value in metrics.items()
             }

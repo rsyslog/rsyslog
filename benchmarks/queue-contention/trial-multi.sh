@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Rainer Gerhards and Adiscon GmbH
 # Eight imtcp workers consume concurrent TCP connections and submit to a
 # four/eight-worker FixedArray main queue. tcpflood -Y uses one sending thread
 # per connection and disjoint message-ID ranges; its supervised completion and
