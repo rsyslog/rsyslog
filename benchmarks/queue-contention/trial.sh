@@ -1,6 +1,9 @@
 #!/bin/bash
 # Full daemon lifecycle, with exact delivery checked outside the timed phase.
 # Run from a configured build's tests directory using the standard testbench.
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=${BENCH_MESSAGES:-100000}
 generate_conf

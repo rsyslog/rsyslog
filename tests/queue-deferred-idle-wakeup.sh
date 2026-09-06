@@ -6,6 +6,9 @@
 # the queue after disposal instead of losing that enqueue's wakeup. FIFO
 # readiness/release determines ordering; time limits only diagnose a deadlock.
 # The test-only hook cannot coexist with ASan's runtime-first load order.
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "test requires shared-library interposition"
 skip_ASAN "LD_PRELOAD conflicts with ASan runtime load order"

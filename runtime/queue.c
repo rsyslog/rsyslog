@@ -3063,16 +3063,16 @@ finalize_it:
  * disabled. No other worker, producer, or shutdown path accesses this buffer.
  */
 static void qqueueDrainDeferred(wti_t *const pWti) {
-    for (int i = 0; i < pWti->nDeferredMsgs; ++i) {
-        msgDestruct(&pWti->pDeferredMsgs[i]);
+    for (int i = 0; i < pWti->n_deferred_msgs; ++i) {
+        msgDestruct(&pWti->p_deferred_msgs[i]);
     }
-    pWti->nDeferredMsgs = 0;
+    pWti->n_deferred_msgs = 0;
 }
 
 /* Exceptional idle/minbatch/cleanup path: never retain a completed batch
  * across a condition wait. Recheck queue predicates after reacquiring. */
 static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) {
-    if (pWti->nDeferredMsgs != 0) {
+    if (pWti->n_deferred_msgs != 0) {
         d_pthread_mutex_unlock(pThis->mut);
         qqueueDrainDeferred(pWti);
         qqueueLock(pThis);
@@ -3081,13 +3081,13 @@ static void qqueueDrainDeferredLocked(qqueue_t *const pThis, wti_t *const pWti) 
 
 static void qqueueDeferBatch(wti_t *const pWti) {
     batch_t *const pBatch = &pWti->batch;
-    assert(pWti->nDeferredMsgs == 0);
+    assert(pWti->n_deferred_msgs == 0);
     assert(pBatch->nElem <= pBatch->maxElem);
     for (int i = 0; i < pBatch->nElem; ++i) {
-        pWti->pDeferredMsgs[i] = pBatch->pElem[i].pMsg;
+        pWti->p_deferred_msgs[i] = pBatch->pElem[i].pMsg;
         pBatch->pElem[i].pMsg = NULL;
     }
-    pWti->nDeferredMsgs = pBatch->nElem;
+    pWti->n_deferred_msgs = pBatch->nElem;
     pBatch->nElem = pBatch->nElemDeq = 0;
 }
 
@@ -3638,7 +3638,7 @@ retry_dequeue:
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
 finalize_it:
-    if (iRet != RS_RET_OK && pWti->nDeferredMsgs != 0) {
+    if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
         qqueueDrainDeferredLocked(pThis, pWti);
         /* An enqueue during disposal could not signal us as a waiter yet.
          * Retest under the mutex before returning IDLE to the wait loop. */

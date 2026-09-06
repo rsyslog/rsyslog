@@ -5,6 +5,9 @@
 # Bounded proper termination proves the worker rechecks stop state after this
 # unlock instead of losing shutdown's wakeup. Limits diagnose a deadlock;
 # ordering comes from the FIFO and the post-signal shutdown marker.
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "test requires shared-library interposition"
 skip_ASAN "LD_PRELOAD conflicts with ASan runtime load order"

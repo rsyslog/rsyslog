@@ -5,10 +5,21 @@
 # exact final IDs prove the generators and all daemon workers completed.
 # Timing separates startup/shutdown from generation-plus-drain work. The output
 # line count is the drain barrier; no fixed sleep participates in the oracle.
-. ${srcdir:=.}/diag.sh init
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
 export NUMMESSAGES=${BENCH_MESSAGES:-1000000}
 : "${BENCH_INPUT_WORKERS:=8}" "${BENCH_CONSUMER_WORKERS:=4}"
 : "${BENCH_CONNECTIONS:=16}" "${BENCH_PAYLOAD:=512}"
+if (( BENCH_CONNECTIONS <= 0 )); then
+    echo "BENCH_CONNECTIONS must be positive" >&2
+    exit 1
+fi
+if (( NUMMESSAGES % BENCH_CONNECTIONS != 0 )); then
+    echo "BENCH_MESSAGES ($NUMMESSAGES) must be divisible by BENCH_CONNECTIONS ($BENCH_CONNECTIONS)" >&2
+    exit 1
+fi
+. ${srcdir:=.}/diag.sh init
 PORT_FILE="$PWD/$RSYSLOG_DYNNAME.input.port"
 generate_conf
 add_conf '

@@ -278,8 +278,8 @@ BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODE
     }
     /* actual destruction */
     batchFree(&pThis->batch);
-    assert(pThis->nDeferredMsgs == 0);
-    free(pThis->pDeferredMsgs);
+    assert(pThis->n_deferred_msgs == 0);
+    free(pThis->p_deferred_msgs);
     free(pThis->actWrkrInfo);
     pthread_cond_destroy(&pThis->pcondBusy);
     DESTROY_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
@@ -321,8 +321,8 @@ rsRetVal wtiConstructFinalize(wti_t *pThis) {
     /* we now alloc the array for user pointers. We obtain the max from the queue itself. */
     CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
     CHKiRet(batchInit(&pThis->batch, iDeqBatchSize));
-    CHKmalloc(pThis->pDeferredMsgs = calloc((size_t)iDeqBatchSize, sizeof(smsg_t *)));
-    pThis->nDeferredMsgs = 0;
+    CHKmalloc(pThis->p_deferred_msgs = calloc((size_t)iDeqBatchSize, sizeof(smsg_t *)));
+    pThis->n_deferred_msgs = 0;
 
 finalize_it:
     RETiRet;

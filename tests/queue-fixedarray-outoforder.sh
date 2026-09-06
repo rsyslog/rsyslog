@@ -7,6 +7,9 @@
 # sequence coverage and proper termination detect overwritten pointers, loss,
 # duplicates, and cleanup errors. JSON trees exercise final reference cleanup.
 # The 120-second omprog timeout is only a hang bound, never synchronization.
+#
+# This file is part of rsyslog.
+# Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=4097
 

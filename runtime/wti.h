@@ -85,8 +85,8 @@ struct wti_s {
                           (sized for max nbr of actions in config!) */
         pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
         /* Queue-local deferred batch cleanup is bounded by batch.maxElem. */
-        smsg_t **pDeferredMsgs;
-        int nDeferredMsgs;
+        smsg_t **p_deferred_msgs;
+        int n_deferred_msgs;
         DEF_ATOMIC_HELPER_MUT(mutIsRunning);
         struct {
             uint8_t script_errno; /* errno-type interface for RainerScript functions */

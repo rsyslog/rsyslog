@@ -12,6 +12,14 @@ python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/session-1
 ```
 
+`--pairs`, `--messages`, and `--trial-timeout` must be positive; multi runs
+also require positive worker, connection, and payload values. The driver first
+resolves the image ID, then pins every trial to it. `result.json` records the
+requested and completed pairs, fixed queue settings, image ID, and the
+revision/dirty state of the harness and each build checkout. A failed or
+in-progress session has `status: "incomplete"` and `summary_accepted: false`;
+do not use it for a benchmark summary.
+
 Repeat the session independently. Before measurement, declare an improvement
 target (10% median lifecycle reduction here) and regression guardrail (5%).
 Compare one factor at a time using adjacent isolated revisions. Report median
