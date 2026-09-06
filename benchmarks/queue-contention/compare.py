@@ -56,10 +56,12 @@ def checkout_state(path):
 
 def resolve_image():
     command = ['docker', 'image', 'inspect', '--format', '{{.Id}}', args.image]
-    inspected = subprocess.run(command, capture_output=True, check=False, text=True)
+    inspected = subprocess.run(command, capture_output=True, check=False, text=True,
+                               timeout=args.trial_timeout)
     if inspected.returncode != 0:
-        subprocess.run(['docker', 'pull', args.image], check=True)
-        inspected = subprocess.run(command, capture_output=True, check=True, text=True)
+        subprocess.run(['docker', 'pull', args.image], check=True, timeout=args.trial_timeout)
+        inspected = subprocess.run(command, capture_output=True, check=True, text=True,
+                                   timeout=args.trial_timeout)
     image_id = inspected.stdout.strip()
     if not image_id:
         raise ValueError('docker image inspect returned an empty image ID')

@@ -12,7 +12,8 @@ python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/session-1
 ```
 
-`--pairs`, `--messages`, and `--trial-timeout` must be positive; multi runs
+`--pairs`, `--messages`, and `--trial-timeout` must be positive; the timeout
+bounds each image setup and trial operation separately. Multi runs
 also require positive worker, connection, and payload values. The driver first
 resolves the image ID, then pins every trial to it. `result.json` records the
 requested and completed pairs, fixed queue settings, image ID, and the
