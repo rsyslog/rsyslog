@@ -20,7 +20,8 @@ if $msg contains "msgnum:" then {
 	set $!snap = "before";
 	if ($!snap == "before" and parse_json("{\"snap\":\"after\"}", "\$!") == 0 and $msg == "never") then {
 		set $.selector = "wrong";
-	} else if ($!snap == "before" and $msg contains "msgnum:") then {
+	} else /* block comments */ # line comments also retain else-if selector semantics
+	if ($!snap == "before" and $msg contains "msgnum:") then {
 		set $.selector = "snapshot";
 	} else {
 		set $.selector = "wrong";
@@ -41,6 +42,20 @@ if $msg contains "msgnum:" then {
 	}
 	action(type="omfile" file="'"$RSYSLOG_OUT_LOG"'" template="outfmt")
 }
+
+if $msg contains "msgnum:" then {
+	set $!snap = "before";
+	if ($!snap == "before" and parse_json("{\"snap\":\"after\"}", "\$!") == 0 and $msg == "never") then {
+		set $.selector = "wrong";
+	} else if (prifilt("local4.*") and $!snap == "before") then {
+		if ($!snap == "before") then {
+			set $.selector = "prifilt-snapshot";
+		} else {
+			set $.selector = "prifilt-live";
+		}
+	}
+	action(type="omfile" file="'"$RSYSLOG_OUT_LOG"'" template="outfmt")
+}
 '
 
 startup
@@ -49,6 +64,7 @@ shutdown_when_empty
 wait_shutdown
 
 export EXPECTED='snapshot|after
-nested-live|after'
+nested-live|after
+prifilt-live|after'
 cmp_exact
 exit_test

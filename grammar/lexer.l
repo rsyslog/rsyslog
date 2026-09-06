@@ -284,6 +284,8 @@ expand_backticks(char *const param)
 	 * wrote this ugly, but the price needed to pay in order to remain
 	 * compatible to the previous format.
 	 */
+%x ELSE_IF
+	/* ELSE_IF preserves the structural else-if link while skipping comments. */
 %{
 #include <ctype.h>
 #include <stdio.h>
@@ -408,8 +410,12 @@ static void cnfPrintToken(const char *token);
 "{"				{ cnfPrintToken(yytext); return '{'; }
 "}"				{ cnfPrintToken(yytext); return '}'; }
 "stop"				{ cnfPrintToken(yytext); return STOP; }
-"else"[ \t\r\n]+"if"	{ cnfPrintToken(yytext); BEGIN EXPR; return ELSEIF; }
-"else"				{ cnfPrintToken(yytext); return ELSE; }
+"else"				{ cnfPrintToken(yytext); BEGIN ELSE_IF; }
+<ELSE_IF>[ \t\r\n]+		{ cnfPrintToken(yytext); }
+<ELSE_IF>"/*"			{ cnfPrintToken(yytext); preCommentState = YY_START; BEGIN COMMENT; }
+<ELSE_IF>#.*\n			{ cnfPrintToken(yytext); }
+<ELSE_IF>"if"			{ cnfPrintToken(yytext); BEGIN EXPR; return ELSEIF; }
+<ELSE_IF>.				{ yyless(0); BEGIN INITIAL; return ELSE; }
 "call"				{ cnfPrintToken(yytext); BEGIN INCALL; return CALL; }
 "call_indirect"			{ cnfPrintToken(yytext); BEGIN EXPR; return CALL_INDIRECT; }
 "set"				{ cnfPrintToken(yytext); BEGIN EXPR; return SET; }

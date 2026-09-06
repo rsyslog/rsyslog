@@ -6040,7 +6040,7 @@ static void cnfstmtOptimizeIf(struct cnfstmt *stmt) {
     }
 
     assert(stmt->nodetype == S_IF);
-    if (stmt->d.s_if.expr->nodetype == 'F') {
+    if (!stmt->d.s_if.is_else_if && stmt->d.s_if.expr->nodetype == 'F') {
         func = (struct cnffunc *)expr;
         if (func->fPtr == doFunct_Prifilt) {
             DBGPRINTF("optimizer: change IF to PRIFILT\n");
