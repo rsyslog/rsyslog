@@ -937,13 +937,10 @@ rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd) {
         dbgprintf("osslPostHandshakeCheck: Debug Shared ciphers = %s\n", szDbg);
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(ENABLE_WOLFSSL)
-    if (SSL_get_shared_curve(pNsd->pNetOssl->ssl, -1) == 0) {
-        // This is not a failure
-        LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
-               "nsd_ossl: "
-               "Information, no shared curve between syslog client '%s' and server",
-               fromHostIP);
-    }
+    /* Shared-group enumeration can return zero for successful sessions, including
+     * client-side queries and RSA key exchange. It is not a handshake failure. */
+    dbgprintf("osslPostHandshakeCheck: Debug Shared group query result = %ld\n",
+              SSL_get_shared_curve(pNsd->pNetOssl->ssl, -1));
 #endif
     dbgprintf("osslPostHandshakeCheck: Debug Protocol Version: %s\n", SSL_get_version(pNsd->pNetOssl->ssl));
 

@@ -64,3 +64,13 @@ collection, and process orchestration).
   `tests/diag.sh`) when chasing race conditions.
 - Use the testbench Valgrind helpers by running the corresponding `*-vg.sh`
   scripts to flush out memory and threading regressions.
+
+## OpenSSL handshake diagnostics
+
+- A zero shared-group query result is not proof of a failed handshake.
+  Client-side queries and successful group-free TLS 1.2 key exchange can
+  report zero. Keep this information debug-only; handshake and certificate
+  failures retain their existing error paths.
+- `sndrcv_tls_ossl_group_diagnostic.sh` and its `_rsa.sh` variant verify
+  successful ECDHE/RSA delivery and inspect normal logs at both endpoints.
+  Operator context lives in `doc/source/concepts/ns_ossl.rst`.

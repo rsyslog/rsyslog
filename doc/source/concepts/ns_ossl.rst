@@ -9,11 +9,28 @@ openssl Network Stream Driver
 ===========================  ===========================================================================
 
 
+.. meta::
+   :description: TLS transport, authentication, and diagnostics for the rsyslog OpenSSL network stream driver.
+   :keywords: rsyslog, OpenSSL, TLS, authentication, diagnostics
+
 Purpose
 =======
 
+.. summary-start
+
 This network stream driver implements a TLS protected transport
 via the `OpenSSL library <https://www.openssl.org/>`_.
+
+.. summary-end
+
+Handshake diagnostics
+=====================
+
+Shared-group query results are debug information, not a connection-failure
+indicator. A successful connection can report zero shared groups on the
+client, or when TLS 1.2 uses key exchange that does not need a group. This
+condition does not produce a normal ``no shared curve`` log message.
+Actual handshake and certificate-validation failures continue to be logged.
 
 
 Supported Driver Modes
