@@ -49,6 +49,14 @@
 #ifdef HAVE_LOGNORM_TURBO
     #include <lognorm-features.h>
     #include <lognorm-turbo.h>
+/* Compat shim: older liblognorm public headers keep LN_FFIELD_RAW_JSON
+ * internal.  Fall back to 0 so the %name:json% reparse in fast_result_to_json
+ * degrades to the plain-string path and mmnormalize builds against them
+ * without a hard liblognorm version dependency (remove once the exposed flag
+ * is guaranteed). */
+    #ifndef LN_FFIELD_RAW_JSON
+        #define LN_FFIELD_RAW_JSON 0u
+    #endif
 #endif
 #include "conf.h"
 #include "syslogd-types.h"
@@ -524,17 +532,38 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
         int64_t ival = 0;
         double dval = 0;
         struct json_object *jval = NULL;
+        unsigned fflags = 0;
+        int is_null = 0;
 
-        /* flags out-param is NULL: nesting is detected via memchr below,
-         * which does not rely on the LN_FFIELD_NESTED flag being set. */
-        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len, &ftype, NULL, &sval, &slen, &ival, &dval) !=
-            0)
+        /* Request field flags.  LN_FFIELD_RAW_JSON marks a string value that a
+         * json-typed parser (%name:json%) already captured as well-formed JSON;
+         * it must be parsed into a nested json_object, not stored as a quoted
+         * string, or {"kc":{...}} degrades to {"kc":"{...}"} and downstream
+         * $!kc!field lookups resolve to nothing.  Dotted (nested) names are
+         * still detected via memchr below, so LN_FFIELD_NESTED is not needed
+         * here. */
+        if (ln_fast_result_get_field_typed(result, i, &fname, &fname_len, &ftype, &fflags, &sval, &slen, &ival,
+                                           &dval) != 0)
             continue;
 
         switch (ftype) {
             case LN_FTYPE_STRING:
             case LN_FTYPE_STRING_INLINE:
-                jval = json_object_new_string_len(sval, (int)slen);
+                if ((fflags & LN_FFIELD_RAW_JSON) && sval != NULL) {
+                    /* Length-bounded parse: the flat-store value is not
+                     * guaranteed NUL-terminated, so json_tokener_parse() could
+                     * over-read.  parse_ex() with slen stays in bounds. */
+                    struct json_tokener *jtok = json_tokener_new();
+                    if (jtok != NULL) {
+                        jval = json_tokener_parse_ex(jtok, sval, (int)slen);
+                        json_tokener_free(jtok);
+                    }
+                    /* Fall back to the raw string if it is not valid JSON after
+                     * all, so the field is never silently dropped. */
+                    if (jval == NULL) jval = json_object_new_string_len(sval, (int)slen);
+                } else {
+                    jval = json_object_new_string_len(sval, (int)slen);
+                }
                 break;
             case LN_FTYPE_INT:
                 jval = json_object_new_int64(ival);
@@ -545,11 +574,18 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
             case LN_FTYPE_BOOL:
                 jval = json_object_new_boolean((json_bool)ival);
                 break;
+            case LN_FTYPE_NULL:
+                /* A JSON null is stored by adding the key with a NULL value,
+                 * so jval stays NULL here and the guard below must let it
+                 * through.  Dropping it would make the field absent rather
+                 * than null, which is not what the standard parser yields. */
+                is_null = 1;
+                break;
             default:
                 continue;
         }
 
-        if (jval == NULL) continue;
+        if (jval == NULL && !is_null) continue;
 
         /* Field name: stack buffer for common short names, heap
          * fallback for names >= MMNORM_MAX_FIELDNAME.  Silently
@@ -581,10 +617,10 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
         /* Handle nested fields (dotted names).
          * Detect dots directly -- LN_FFIELD_NESTED flag is not
          * always set by liblognorm rule compilation. */
-        if (memchr(fname, '.', fname_len) != NULL) {
+        char *saveptr = NULL;
+        char *tok = (memchr(fname, '.', fname_len) != NULL) ? strtok_r(name_ptr, ".", &saveptr) : NULL;
+        if (tok != NULL) {
             struct json_object *parent = root;
-            char *saveptr = NULL;
-            char *tok = strtok_r(name_ptr, ".", &saveptr);
             char *next = strtok_r(NULL, ".", &saveptr);
 
             while (next != NULL) {
@@ -599,6 +635,10 @@ static struct json_object *fast_result_to_json(const ln_fast_result_t *result) {
             }
             json_object_object_add(parent, tok, jval);
         } else {
+            /* Flat name, or a degenerate all-dot name (".", "..") produced by a
+             * discard match such as %.:json%: strtok_r() returns NULL there and
+             * json_object_object_add(key=NULL) does strdup(NULL) -> SIGSEGV.
+             * Add under the literal (possibly empty) name instead. */
             json_object_object_add(root, name_ptr, jval);
         }
 
