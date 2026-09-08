@@ -1,0 +1,28 @@
+.codex/pre_push_container_gate.sh
+  s_c54d3f9b31c8fc::t_f8a4ae38e57da4 257-258,260-272,275-276,278-280
+  s_c54d3f9b31c8fc::t_48e72b7c14e712 250-252,259
+  s_c54d3f9b31c8fc::t_d21b4dcb980ca9 256,277
+  s_c54d3f9b31c8fc::t_9d495bdf1f9809 253-255,273-274
+tests/codex-pre-push-container-gate.sh
+  s_c54d3f9b31c8fc::t_48e72b7c14e712 7-9,13-14,113-116
+  s_c54d3f9b31c8fc::t_f8a4ae38e57da4 6,10-12,31,90,102-104,106-112,117
+  s_c54d3f9b31c8fc::t_9d495bdf1f9809 15-17,91-101,119-122
+  s_c54d3f9b31c8fc::t_001f4922518f0b 105
+  s_c54d3f9b31c8fc::t_435903ae60bf4c 118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e73d73cb6edc3f1ca96bd3a6423a37b4e6758cad",
+  "prompts": {},
+  "sessions": {
+    "s_c54d3f9b31c8fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06658-99e7-76c1-96cd-422e9b578afc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": null
+    }
+  }
+}
