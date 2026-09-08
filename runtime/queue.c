@@ -3665,10 +3665,13 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     int iCancelStateSave;
+    /* DeleteProcessedBatch() defers final message destruction by resetting
+     * the batch counters, so retain the dequeue count for checkpointing. */
+    const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     DeleteProcessedBatch(pThis, pWti);
-    qqueueChkPersist(pThis, pWti->batch.nElemDeq);
+    qqueueChkPersist(pThis, nElemDeq);
     qqueueDrainDeferredLocked(pThis, pWti);
     pthread_setcancelstate(iCancelStateSave, NULL);
 
