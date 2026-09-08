@@ -613,6 +613,7 @@ queue.timeoutEnqueue
 
 This timeout value is used when the queue is full. If rsyslog cannot
 enqueue a message within the timeout period, the message is discarded.
+A value of ``0`` discards the message immediately when the queue is full.
 Note that this is setting of last resort (assuming defaults are used
 for the queue settings or proper parameters are set): all delayable
 inputs (like imtcp or imfile) have already been pushed back at this
