@@ -939,7 +939,7 @@ rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd) {
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(ENABLE_WOLFSSL)
     /* Shared-group enumeration can return zero for successful sessions, including
      * client-side queries and RSA key exchange. It is not a handshake failure. */
-    dbgprintf("osslPostHandshakeCheck: Debug Shared group query result = %d\n",
+    dbgprintf("osslPostHandshakeCheck: Debug Shared group query result = %ld\n",
               SSL_get_shared_curve(pNsd->pNetOssl->ssl, -1));
 #endif
     dbgprintf("osslPostHandshakeCheck: Debug Protocol Version: %s\n", SSL_get_version(pNsd->pNetOssl->ssl));
