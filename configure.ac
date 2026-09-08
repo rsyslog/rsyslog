@@ -1805,6 +1805,16 @@ if test "x$enable_mmnormalize" = "xyes"; then
 			AC_CHECK_HEADER([lognorm-turbo.h],[],
 				[lognorm_turbo_supported="no"; lognorm_turbo_header_missing="yes"])
 		fi
+		# ln_fast_result_is_truncated() post-dates the first public turbo
+		# header, so LOGNORM_TURBO_SUPPORTED does not imply it. Probe for it
+		# separately; mmnormalize only declines a truncated result when the
+		# installed liblognorm can report one.
+		if test "x$lognorm_turbo_supported" = "xyes"; then
+			AC_CHECK_DECL([ln_fast_result_is_truncated],
+				[AC_DEFINE(HAVE_LN_FAST_RESULT_IS_TRUNCATED, 1,
+					[liblognorm exposes ln_fast_result_is_truncated()])],
+				[], [[#include <lognorm-turbo.h>]])
+		fi
 		if test "x$enable_turbo" = "xyes" -a "x$lognorm_turbo_supported" != "xyes"; then
 			if test "x$lognorm_turbo_header_missing" = "xyes"; then
 				AC_MSG_ERROR([--enable-turbo was requested but the public header lognorm-turbo.h is missing. Upgrade liblognorm to >= 2.1.0 (built with --enable-turbo).])
