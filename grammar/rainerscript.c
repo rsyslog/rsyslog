@@ -1349,6 +1349,16 @@ int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals) {
     return 0;
 }
 
+/* Check whether a named parameter was explicitly supplied. */
+int cnfparamvalsIsSetByName(const struct cnfparamblk *params, const struct cnfparamvals *vals, const char *name) {
+    int i;
+
+    if (params == NULL || vals == NULL || name == NULL || params->version != CNFPARAMBLK_VERSION) return 0;
+    for (i = 0; i < params->nParams; ++i) {
+        if (vals[i].bUsed && !strcmp(params->descr[i].name, name)) return 1;
+    }
+    return 0;
+}
 
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals) {
     int i;
