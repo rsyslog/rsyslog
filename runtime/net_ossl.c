@@ -1140,7 +1140,7 @@ static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pSt
     if (subject == NULL) {
         FINALIZE;
     }
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+#if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(ENABLE_WOLFSSL)
     idx = X509_NAME_get_index_by_NID((X509_NAME *)subject, NID_commonName, -1);
 #else
     idx = X509_NAME_get_index_by_NID(subject, NID_commonName, -1);
