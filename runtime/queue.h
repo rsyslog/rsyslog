@@ -212,6 +212,11 @@ struct queue_s {
                 qLinkedList_t *pDeqRoot;
                 qLinkedList_t *pDelRoot;
                 qLinkedList_t *pLast;
+                /* Optional preallocated cell for the next qAddLinkedList().
+                 * Set only immediately before qqueueAdd() so flow-control
+                 * waits cannot let another producer overwrite it.
+                 */
+                qLinkedList_t *pEnqNode;
             } linklist;
             struct {
                 int64 sizeOnDisk; /* current amount of disk space used */
