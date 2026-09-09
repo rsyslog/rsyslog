@@ -1,0 +1,52 @@
+tests/wtp-targeted-wakeup.sh
+  s_c592d11247db49::t_c4f51f516b5b7f 2-5,7-9,22-23,26-32,35,38-40,57,60-62
+  s_c592d11247db49::t_baa46e8a999e83 11
+  s_c592d11247db49::t_2f87409505eb5d 45
+  s_c592d11247db49::t_4d60e977a67c4b 50,72
+  s_c592d11247db49::t_df89fc42ef9c13 6,24-25,33-34,37
+  s_c592d11247db49::t_91fbb869beba03 63,65
+  s_c592d11247db49::t_9fe4d1ba7bb572 36,49
+  s_c592d11247db49::t_c3398e528ac1b2 43-44
+  s_c592d11247db49::t_548af57d48dd01 56,69
+  s_c592d11247db49::t_ab5d21f8228cdd 70-71
+  s_c592d11247db49::t_e6629423bcfd06 1,10,41-42,51-54,66-68,73
+  s_c592d11247db49::t_cdbabe91849b37 14,16,46-48,55,58-59,64
+  s_c592d11247db49::t_5238a0732647e6 12-13,15,17-21
+tests/Makefile.am
+  s_c592d11247db49::t_4d37ea25b3cd1c 70,72,2985
+  s_c592d11247db49::t_09574d2286e72e 71
+  s_c592d11247db49::t_e6629423bcfd06 2688-2689,2691-2692,2722-2724,2801-2802,2811
+runtime/wtp.h
+  s_c592d11247db49::t_ea6212906ac745 97-98
+tests/unit/wtp_wakeup_test.c
+  s_c592d11247db49::t_e6629423bcfd06 1-2,6-9,11,15,17-26,79,135-136
+  s_c592d11247db49::t_ea6212906ac745 3-5,12-14,27-48,50-52,54-58,60-78,80-134
+  s_c592d11247db49::t_ad6740d0ded619 16
+  s_c592d11247db49::t_5a845f96957eef 10,49,53,59
+  s_c592d11247db49::t_f4f351f6b35716 137-138
+runtime/wtp.c
+  s_c592d11247db49::t_e6629423bcfd06 585-586,588,603-604
+  s_c592d11247db49::t_0290996f4a1557 583-584
+runtime/wti.h
+  s_c592d11247db49::t_e6629423bcfd06 92-97,120-124
+  s_c592d11247db49::t_ea6212906ac745 125,127-131
+  s_c592d11247db49::t_0dadb39b36e29e 126
+runtime/wti.c
+  s_c592d11247db49::t_e6629423bcfd06 356-359,372-374,380-381,397-399,412-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "775f124eb0d0b08edf8e48af5dc1db3f833e802f",
+  "prompts": {},
+  "sessions": {
+    "s_c592d11247db49": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a060f9-b729-7090-b79a-bbfb0eaff4a3",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
