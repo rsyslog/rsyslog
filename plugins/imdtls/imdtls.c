@@ -764,8 +764,10 @@ static void DTLSHandleSessions(instanceConf_t *inst) {
         // Start DTLS Listen and Session
         do {
             /* Clear stale queue entries so a non-empty queue after the call
-             * reliably indicates a failure of this call. */
+             * reliably indicates a failure of this call.  Also reset errno so
+             * the post-call errno check is meaningful. */
             ERR_clear_error();
+            errno = 0;
             ret = DTLSv1_listen(ssl, client_addr);
             if (ret > 0) {
                 dbgprintf("imdtls: DTLSHandleSessions DTLSv1_listen SUCCESS\n");
