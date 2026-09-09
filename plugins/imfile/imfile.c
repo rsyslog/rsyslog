@@ -2729,7 +2729,7 @@ static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
         goto done;
     }
 
-    DBGPRINTF("in_processEvent process Event %x for %s\n", ev->mask, ev->name);
+    DBGPRINTF("in_processEvent process Event %x for %s\n", ev->mask, ev->len > 0 ? ev->name : "");
     const wd_map_t *const etry = wdmapLookup(ev->wd);
     if (ev->mask & IN_IGNORED) {
         if (etry != NULL) {
