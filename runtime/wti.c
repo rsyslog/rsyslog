@@ -361,7 +361,13 @@ static void wtiWorkerCancelCleanup(void *arg) {
 }
 
 static void wtiWaitCancelCleanup(void *arg) {
-    wtiClearWaitReservation((wti_t *)arg);
+    wti_t *const pThis = (wti_t *)arg;
+
+    wtiClearWaitReservation(pThis);
+    /* POSIX cancellation of pthread_cond_wait() invokes cleanup handlers
+     * after reacquiring the associated mutex. Release it before the outer
+     * worker cleanup handler restores the queue batch under that mutex. */
+    d_pthread_mutex_unlock(pThis->pWtp->pmutUsr);
 }
 
 
