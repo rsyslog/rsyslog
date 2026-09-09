@@ -191,7 +191,6 @@ static inline void ATTR_NONNULL(1) wtiClearWaitReservation(wti_t *const pWti) {
 /* The caller must hold pWti->pWtp->pmutUsr. */
 static inline void ATTR_NONNULL(1) wtiMarkExiting(wti_t *const pWti) {
     ATOMIC_STORE_32BIT(&pWti->bExiting, &pWti->mutIsRunning, 1);
-    wtiClearWaitReservation(pWti);
 }
 
 /* The caller must hold pWti->pWtp->pmutUsr. */
