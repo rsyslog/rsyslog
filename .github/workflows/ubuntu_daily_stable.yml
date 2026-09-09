@@ -285,7 +285,7 @@ jobs:
             (steps.archive_self_test.outcome == 'failure' ||
              steps.package_build.outcome == 'failure')
           }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: Ubuntu 26.04 daily stable package build
 
@@ -736,7 +736,7 @@ jobs:
             (steps.published_metadata.outcome == 'failure' ||
              steps.published_install.outcome == 'failure')
           }}
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: Ubuntu 26.04 daily stable publication verification
 

@@ -40,7 +40,7 @@ EXPECTED_UPLOADS = {
 TEST_COMMAND_RE = re.compile(r"run-ci\.sh|make\s+[^\n]*\b(?:check|distcheck)\b|devtools/test-[^\s]+\.sh")
 UPLOAD_RE = re.compile(
     r"^(?:      - |        )uses:\s+"
-    r"\./\.github/actions/upload-flake-evidence\s*(?:#.*)?$",
+    r"(?:\./|\$/)\.github/actions/upload-flake-evidence\s*(?:#.*)?$",
     re.MULTILINE,
 )
 STEP_IF_RE = re.compile(r"^(?:      - |        )if:\s*(.*)$", re.MULTILINE)

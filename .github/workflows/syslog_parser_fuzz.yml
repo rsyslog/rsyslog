@@ -109,7 +109,7 @@ jobs:
           failure() &&
           steps.smoke.outcome == 'failure' &&
           env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: syslog-parser-fuzz-smoke
 
@@ -227,6 +227,6 @@ jobs:
           failure() &&
           steps.fuzz.outcome == 'failure' &&
           env.RSYSLOG_UPLOAD_FAILURE_ARTIFACTS == '1'
-        uses: ./.github/actions/upload-flake-evidence
+        uses: $/.github/actions/upload-flake-evidence
         with:
           job-name: syslog-parser-fuzz-daily
