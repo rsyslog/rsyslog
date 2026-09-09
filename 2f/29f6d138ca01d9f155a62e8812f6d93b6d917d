@@ -17,6 +17,7 @@ runtime/wti.h
   s_c592d11247db49::t_ea6212906ac745 191
   s_c592d11247db49::t_3efe6e38eb654c 103,128-129,145-146,156-157,194,200
   s_c592d11247db49::t_65c3c2be783b97 192-193,195-196,199,201
+  s_70c1b127a24bce::t_728e1c6e2f0092 190
 tests/unit/wtp_wakeup_test.c
   s_c592d11247db49::t_c4f3f1756659de 93-98,100-102,104-143,147,149-156,159,161-165,247
   s_c592d11247db49::t_de3678fffb9b97 99,144-146,148,157-158,160
@@ -47,6 +48,14 @@ runtime/wtp.c
   "base_commit_sha": "2f29f6d138ca01d9f155a62e8812f6d93b6d917d",
   "prompts": {},
   "sessions": {
+    "s_70c1b127a24bce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085a6-4f7a-7802-96f0-28e97b06eeb1",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    },
     "s_c592d11247db49": {
       "agent_id": {
         "tool": "codex",
