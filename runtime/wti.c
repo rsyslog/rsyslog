@@ -347,12 +347,11 @@ static void wtiWorkerCancelCleanup(void *arg) {
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
     /* The consumer releases the queue mutex only around cancel-safe output
      * work. Restoring or committing its batch, including deferred cleanup,
-     * must use the same mutex as the ordinary callback path. */
-    d_pthread_mutex_lock(pWtp->pmutUsr);
-    /* Cancellation is enabled only while the queue consumer has released
-     * pmutUsr. Publish that this slot will not consume further queue work
-     * before restoring its batch: an enqueue during batch cleanup must wake or
-     * replace another consumer instead of counting this cancelling worker.
+     * must use the same mutex as the ordinary callback path. Cancellation is
+     * enabled only while the queue consumer has released pmutUsr. Publish
+     * that this slot will not consume further queue work before restoring its
+     * batch: an enqueue during batch cleanup must wake or replace another
+     * consumer instead of counting this cancelling worker.
      */
     d_pthread_mutex_lock(pWtp->pmutUsr);
     wtiMarkExiting(pThis);
