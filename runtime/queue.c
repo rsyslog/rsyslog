@@ -242,7 +242,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 
 
 /* forward-definitions */
-static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
+static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg, qLinkedList_t **ppLlPrealloc);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis);
@@ -1069,6 +1069,7 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t *pMsg) {
 
     /* qqueueEnqMsg() may hand in a node allocated before the mutex. Consume
      * it here so abort paths can still free an unused leftover after unlock.
+     * The cell is published on this queue only immediately before qqueueAdd().
      */
     pEntry = pThis->tVars.linklist.pEnqNode;
     if (pEntry != NULL) {
@@ -3148,7 +3149,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("DeleteProcessedBatch: etry %d state %d\n", i, pBatch->eltState[i]);
         if (pBatch->eltState[i] == BATCH_STATE_RDY || pBatch->eltState[i] == BATCH_STATE_SUB) {
-            localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
+            localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg), NULL);
             ++nEnqueued;
             if (localRet != RS_RET_OK) {
                 DBGPRINTF(
@@ -4533,7 +4534,7 @@ finalize_it:
  * Note that the queue mutex MUST already be locked when this function is called.
  * rgerhards, 2009-06-16
  */
-static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) {
+static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg, qLinkedList_t **ppLlPrealloc) {
     DEFiRet;
     int err;
     struct timespec t;
@@ -4672,6 +4673,15 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         }
     }
 
+    /* Hand a preallocated LinkedList cell to qAdd only here. Flow-control
+     * waits above release the mutex, so parking the cell on the queue
+     * object earlier lets another producer overwrite and leak it.
+     */
+    if (ppLlPrealloc != NULL && *ppLlPrealloc != NULL && pThis->qType == QUEUETYPE_LINKEDLIST) {
+        pThis->tVars.linklist.pEnqNode = *ppLlPrealloc;
+        *ppLlPrealloc = NULL;
+    }
+
     /* and finally enqueue the message */
     CHKiRet(qqueueAdd(pThis, pMsg));
     STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
@@ -4717,7 +4727,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     qqueueLock(pThis);
     for (i = 0; i < pMultiSub->nElem; ++i) {
-        localRet = doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void *)pMultiSub->ppMsgs[i]);
+        localRet = doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void *)pMultiSub->ppMsgs[i], NULL);
         if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) ABORT_FINALIZE(localRet);
     }
     qqueueChkPersist(pThis, pMultiSub->nElem);
@@ -4781,13 +4791,9 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
         qqueueLock(pThis);
         bLocked = 1;
-        if (pUnusedNode != NULL) {
-            pThis->tVars.linklist.pEnqNode = pUnusedNode;
-            pUnusedNode = NULL;
-        }
     }
 
-    CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));
+    CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg, &pUnusedNode));
 
     qqueueChkPersist(pThis, 1);
 
