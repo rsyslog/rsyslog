@@ -2,8 +2,8 @@
 # LinkedList action queues are filled via qqueueEnqMsg(), which now allocates
 # the list node before taking the queue mutex. A normal (non-direct) main
 # queue feeds the action so inject uses MultiEnq on the main queue and
-# qqueueEnqMsg() on the action queue. Oracle: every injected message is
-# written in order after shutdown-when-empty.
+# qqueueEnqMsg() on the action queue. Oracle: seq_check sorts the output and
+# verifies the complete, duplicate-free sequence after shutdown-when-empty.
 #
 # This file is part of rsyslog.
 # Released under ASL 2.0
