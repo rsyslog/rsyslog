@@ -1,0 +1,57 @@
+.github/workflows/run_macos_weekly.yml
+  s_71800fbc5b3967::t_265be12839cf04 143
+devtools/check-flake-evidence-coverage.py
+  s_71800fbc5b3967::t_7a5b5d02a797a8 43
+.github/workflows/imhttp_prometheus_scrape.yml
+  s_71800fbc5b3967::t_265be12839cf04 48
+.github/workflows/fedora44_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 252,668
+.github/workflows/imbeats.yml
+  s_71800fbc5b3967::t_265be12839cf04 118
+.github/workflows/syslog_parser_fuzz.yml
+  s_71800fbc5b3967::t_265be12839cf04 112,230
+.github/workflows/alpine324_daily_stable.yml
+  s_71800fbc5b3967::t_dd60ba526b47e6 298
+  s_71800fbc5b3967::t_d64cee2a4214f9 564
+.github/workflows/impstats_push_victoriametrics.yml
+  s_71800fbc5b3967::t_265be12839cf04 178
+.github/workflows/amazonlinux2023_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 253,669
+.github/workflows/debian_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 287,727
+.github/workflows/run_cross_arch_weekly.yml
+  s_71800fbc5b3967::t_265be12839cf04 146
+.github/workflows/daily_focused_tests.yml
+  s_71800fbc5b3967::t_265be12839cf04 407
+.github/workflows/el10_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 283,682
+.github/workflows/run_checks.yml
+  s_71800fbc5b3967::t_265be12839cf04 663,1129,1232,1316,1470,1720,1870
+.github/workflows/run_distro_daily.yml
+  s_71800fbc5b3967::t_265be12839cf04 124
+.github/workflows/ubuntu_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 288,739
+.github/workflows/imtcp_session_fuzz.yml
+  s_71800fbc5b3967::t_265be12839cf04 107,201
+.github/workflows/opensuse_leap160_daily_stable.yml
+  s_71800fbc5b3967::t_265be12839cf04 271,689
+.github/actionlint.yaml
+  s_71800fbc5b3967::t_6290b3b936af27 1-2
+  s_71800fbc5b3967::t_a779fdb814030e 3-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "67871b5d56ebd456e1a4854425e8545ee2a4e757",
+  "prompts": {},
+  "sessions": {
+    "s_71800fbc5b3967": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08659-3dd7-7d00-8783-8424cf045730",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
