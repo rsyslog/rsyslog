@@ -4800,8 +4800,12 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
 finalize_it:
     if (bLocked) {
         if (pThis->qType == QUEUETYPE_LINKEDLIST) {
-            pUnusedNode = pThis->tVars.linklist.pEnqNode;
+            qLinkedList_t *const pLeftover = pThis->tVars.linklist.pEnqNode;
             pThis->tVars.linklist.pEnqNode = NULL;
+            if (pLeftover != NULL) {
+                free(pUnusedNode);
+                pUnusedNode = pLeftover;
+            }
         }
         /* make sure at least one worker is running. */
         qqueueAdviseMaxWorkers(pThis);
