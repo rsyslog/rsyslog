@@ -1,0 +1,38 @@
+tests/Makefile.am
+  s_a84ad1a36f7145::t_4f069aaf90f17a 74
+  s_a84ad1a36f7145::t_0aa8033e3fa97c 2979
+  s_a84ad1a36f7145::t_1deec1215d755b 71-73
+  s_a84ad1a36f7145::t_d953358b723a91 3028
+runtime/queue.h
+  s_a84ad1a36f7145::t_93de79952ed95d 215-219
+runtime/queue.c
+  s_a84ad1a36f7145::t_535daf842880cd 4796-4799
+  s_a84ad1a36f7145::t_e85ae90e3f66bc 1046
+  s_a84ad1a36f7145::t_992f133c99875c 1070-1078
+  s_a84ad1a36f7145::t_dc3b463e6d19a3 1147
+  s_a84ad1a36f7145::t_14705cec7ce46b 2717
+  s_a84ad1a36f7145::t_5e4dd9f17ef2dc 4761-4762,4767-4779,4783-4787,4795,4807
+tests/queue-linkedlist-enq-prealloc.sh
+  s_a84ad1a36f7145::t_d507203b3915dd 11
+  s_a84ad1a36f7145::t_abda3c86d7e7c7 1-2,7-10,12-26
+  s_a84ad1a36f7145::t_5f00f5725e7fc2 3-6
+tests/queue-linkedlist-enq-prealloc-vg.sh
+  s_a84ad1a36f7145::t_c430971fc83735 6
+  s_a84ad1a36f7145::t_b6f9a9c2432696 1-5,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "b8f08160f659c5cc18e804dfb18abb7a887d3671",
+  "prompts": {},
+  "sessions": {
+    "s_a84ad1a36f7145": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34781d95-dea8-4bae-8586-cf3ef14f9291",
+        "model": "grok-4.6"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
