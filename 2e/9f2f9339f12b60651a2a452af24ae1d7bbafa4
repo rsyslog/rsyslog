@@ -1,0 +1,78 @@
+runtime/action.c
+  s_c9b3574ecc6267::t_aa67bede73593a 2231-2251
+runtime/ruleset.c
+  s_c9b3574ecc6267::t_aa67bede73593a 646-663
+doc/ai/module_map.yaml
+  s_c9b3574ecc6267::t_374102fd51574a 21
+tests/Makefile.am
+  s_c9b3574ecc6267::t_f67444d1928a71 71-73,76-77,1225,2983
+  s_c9b3574ecc6267::t_36f4db04b2bb18 74-75
+runtime/queue.c
+  s_c9b3574ecc6267::t_aa67bede73593a 4776-4791,4793-4797,4800-4802,4804-4809,4811-4812,4814-4821
+  s_c9b3574ecc6267::t_b6248a85224192 4792,4798-4799,4810,4813
+  s_c9b3574ecc6267::t_0df66e274ff263 4803
+tests/action-enqueue-pair-discard.sh
+  s_c9b3574ecc6267::t_dd682e6f313e1e 3-7,29,33-34
+  s_c9b3574ecc6267::t_58800ed94bd03b 22
+  s_c9b3574ecc6267::t_36f4db04b2bb18 1-2,8-21,23-28,30-32,35-40
+benchmarks/queue-contention/README.md
+  s_c9b3574ecc6267::t_59f8ff1770624b 47-68
+  s_c9b3574ecc6267::t_d4d635a97cc5a6 69-72
+tests/action-enqueue-pair-copymessage.sh
+  s_c9b3574ecc6267::t_e13790c02955dc 20
+  s_c9b3574ecc6267::t_f67444d1928a71 1-15,28-29,31-33,35-36
+  s_c9b3574ecc6267::t_2156bbdb7af50a 21-27,30
+  s_c9b3574ecc6267::t_4f348002a710dd 17-19
+  s_c9b3574ecc6267::t_5da75e290a1fc0 16,34
+tests/action-enqueue-pair-transactions.sh
+  s_c9b3574ecc6267::t_f67444d1928a71 1-16,18,32-33,35-40,42
+  s_c9b3574ecc6267::t_4f348002a710dd 19-21
+  s_c9b3574ecc6267::t_e13790c02955dc 22
+  s_c9b3574ecc6267::t_2156bbdb7af50a 23-31,34
+  s_c9b3574ecc6267::t_5da75e290a1fc0 17,41
+runtime/queue.h
+  s_c9b3574ecc6267::t_aa67bede73593a 283-292
+benchmarks/queue-contention/trial-action.sh
+  s_c9b3574ecc6267::t_029ce0d9543b3b 36-40
+  s_c9b3574ecc6267::t_ea0ddb37ced60f 1-35,41-61
+benchmarks/queue-contention/compare.py
+  s_c9b3574ecc6267::t_691b38438ba498 21,24-25,36-43,134-135,168
+  s_c9b3574ecc6267::t_0eb19dba4587d0 181
+  s_c9b3574ecc6267::t_63443abc9f3bd1 99-123,128,136,160-161,170
+tests/action-enqueue-pair-capacity-decline.sh
+  s_c9b3574ecc6267::t_2156bbdb7af50a 21-27,30
+  s_c9b3574ecc6267::t_f67444d1928a71 1-15,28-29,31-34,36
+  s_c9b3574ecc6267::t_5da75e290a1fc0 16,35
+  s_c9b3574ecc6267::t_e13790c02955dc 20
+  s_c9b3574ecc6267::t_4f348002a710dd 17-19
+runtime/action.h
+  s_c9b3574ecc6267::t_aa67bede73593a 170-175
+tests/action-enqueue-pair.sh
+  s_c9b3574ecc6267::t_4f348002a710dd 21-23
+  s_c9b3574ecc6267::t_2156bbdb7af50a 26-31,34
+  s_c9b3574ecc6267::t_f2837f138dd5fd 37-39
+  s_c9b3574ecc6267::t_5da75e290a1fc0 20,40
+  s_c9b3574ecc6267::t_e13790c02955dc 24
+  s_c9b3574ecc6267::t_f67444d1928a71 1-4,8-19,32,35-36,41
+  s_c9b3574ecc6267::t_b12f0c733e8836 5-7,25,33
+benchmarks/queue-contention/action-pair-results.json
+  s_c9b3574ecc6267::t_26c3f454faaad9 1-1216
+benchmarks/queue-contention/action-pair-results.md
+  s_c9b3574ecc6267::t_f31a2bfa2b159f 1-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "2e9f2f9339f12b60651a2a452af24ae1d7bbafa4",
+  "prompts": {},
+  "sessions": {
+    "s_c9b3574ecc6267": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a085c2-522e-74a3-ba3e-7231a07cfdfc",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rainer Gerhards <rgerhards@adiscon.com>"
+    }
+  }
+}
