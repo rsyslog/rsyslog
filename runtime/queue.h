@@ -212,6 +212,11 @@ struct queue_s {
                 qLinkedList_t *pDeqRoot;
                 qLinkedList_t *pDelRoot;
                 qLinkedList_t *pLast;
+                /* Caller-allocated node for qqueueEnqMsg(), valid only while
+                 * the queue mutex is held. MultiEnq and re-enqueue leave this
+                 * NULL so qAddLinkedList() still allocates under the lock.
+                 */
+                qLinkedList_t *pEnqNode;
             } linklist;
             struct {
                 int64 sizeOnDisk; /* current amount of disk space used */

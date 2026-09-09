@@ -1043,6 +1043,7 @@ static rsRetVal qConstructLinkedList(qqueue_t *pThis) {
     pThis->tVars.linklist.pDeqRoot = NULL;
     pThis->tVars.linklist.pDelRoot = NULL;
     pThis->tVars.linklist.pLast = NULL;
+    pThis->tVars.linklist.pEnqNode = NULL;
 
     qqueueChkIsDA(pThis);
 
@@ -1066,7 +1067,15 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t *pMsg) {
     qLinkedList_t *pEntry;
     DEFiRet;
 
-    CHKmalloc((pEntry = (qLinkedList_t *)malloc(sizeof(qLinkedList_t))));
+    /* qqueueEnqMsg() may hand in a node allocated before the mutex. Consume
+     * it here so abort paths can still free an unused leftover after unlock.
+     */
+    pEntry = pThis->tVars.linklist.pEnqNode;
+    if (pEntry != NULL) {
+        pThis->tVars.linklist.pEnqNode = NULL;
+    } else {
+        CHKmalloc((pEntry = (qLinkedList_t *)malloc(sizeof(qLinkedList_t))));
+    }
 
     pEntry->pNext = NULL;
     pEntry->pMsg = pMsg;
@@ -1135,6 +1144,7 @@ static void qqueueSetupLinkedList(qqueue_t *pThis) {
     pThis->qDeq = qDeqLinkedList;
     pThis->qDel = qDelLinkedList;
     pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
+    pThis->tVars.linklist.pEnqNode = NULL;
 }
 
 static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
@@ -2704,6 +2714,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
 
     pThis->pszFilePrefix = NULL;
     pThis->qType = qType;
+    pThis->tVars.linklist.pEnqNode = NULL;
 
 
     INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
@@ -4747,13 +4758,33 @@ finalize_it:
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) {
     DEFiRet;
     int iCancelStateSave;
+    int bLocked = 0;
+    qLinkedList_t *pUnusedNode = NULL;
     ISOBJ_TYPE_assert(pThis, qqueue);
 
     const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
 
+    /* Allocate the LinkedList cell before taking the queue mutex so a slow
+     * malloc does not stall every other producer or worker on this queue.
+     * MultiEnq still allocates under the lock; that is a later step.
+     */
+    if (isNonDirectQ && pThis->qType == QUEUETYPE_LINKEDLIST) {
+        pUnusedNode = (qLinkedList_t *)malloc(sizeof(qLinkedList_t));
+        if (pUnusedNode == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        pUnusedNode->pNext = NULL;
+        pUnusedNode->pMsg = pMsg;
+    }
+
     if (isNonDirectQ) {
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
         qqueueLock(pThis);
+        bLocked = 1;
+        if (pUnusedNode != NULL) {
+            pThis->tVars.linklist.pEnqNode = pUnusedNode;
+            pUnusedNode = NULL;
+        }
     }
 
     CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));
@@ -4761,7 +4792,11 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
     qqueueChkPersist(pThis, 1);
 
 finalize_it:
-    if (isNonDirectQ) {
+    if (bLocked) {
+        if (pThis->qType == QUEUETYPE_LINKEDLIST) {
+            pUnusedNode = pThis->tVars.linklist.pEnqNode;
+            pThis->tVars.linklist.pEnqNode = NULL;
+        }
         /* make sure at least one worker is running. */
         qqueueAdviseMaxWorkers(pThis);
         /* and release the mutex */
@@ -4769,6 +4804,7 @@ finalize_it:
         pthread_setcancelstate(iCancelStateSave, NULL);
         DBGOPRINT((obj_t *)pThis, "EnqueueMsg advised worker start\n");
     }
+    free(pUnusedNode);
 
     RETiRet;
 }
