@@ -2264,12 +2264,13 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
-                                        rsconf_t *conf,
-                                        const char *configname,
-                                        const char *modname,
-                                        const char *dynname,
-                                        ratelimit_scope_t scope) {
+static rsRetVal ratelimitNewFromConfigForScopeWithThreadMode(ratelimit_t **ppThis,
+                                                             rsconf_t *conf,
+                                                             const char *configname,
+                                                             const char *modname,
+                                                             const char *dynname,
+                                                             ratelimit_scope_t scope,
+                                                             sbool bSingleThreaded) {
     DEFiRet;
     ratelimit_shared_t *shared;
     ratelimit_cfg_bucket_t *bucket;
@@ -2298,7 +2299,7 @@ rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
     pthread_rwlock_unlock(&bucket->lock);
 
     /* We use ratelimitNew to allocate the instance, but we override the shared ptr */
-    CHKiRet(ratelimitNew(ppThis, modname, dynname));
+    CHKiRet(ratelimitNewWithThreadMode(ppThis, modname, dynname, bSingleThreaded));
 
     /* Re-pointing to the global shared object */
     /* First, free the default one created by ratelimitNew */
@@ -2323,7 +2324,27 @@ finalize_it:
 
 rsRetVal ratelimitNewFromConfig(
     ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname) {
-    return ratelimitNewFromConfigForScope(ppThis, conf, configname, modname, dynname, RATELIMIT_SCOPE_INPUT);
+    return ratelimitNewFromConfigForScopeWithThreadMode(ppThis, conf, configname, modname, dynname,
+                                                        RATELIMIT_SCOPE_INPUT, 0);
+}
+
+rsRetVal ratelimitNewFromConfigWithThreadMode(ratelimit_t **ppThis,
+                                              rsconf_t *conf,
+                                              const char *configname,
+                                              const char *modname,
+                                              const char *dynname,
+                                              sbool bSingleThreaded) {
+    return ratelimitNewFromConfigForScopeWithThreadMode(ppThis, conf, configname, modname, dynname,
+                                                        RATELIMIT_SCOPE_INPUT, bSingleThreaded);
+}
+
+rsRetVal ratelimitNewFromConfigForScope(ratelimit_t **ppThis,
+                                        rsconf_t *conf,
+                                        const char *configname,
+                                        const char *modname,
+                                        const char *dynname,
+                                        ratelimit_scope_t scope) {
+    return ratelimitNewFromConfigForScopeWithThreadMode(ppThis, conf, configname, modname, dynname, scope, 0);
 }
 
 /* generate a "repeated n times" message */
@@ -2353,7 +2374,7 @@ static rsRetVal doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg
     int bNeedUnlockMutex = 0;
     DEFiRet;
 
-    if (ratelimit->bThreadSafe) {
+    if (!ratelimit->bSingleThreaded) {
         pthread_mutex_lock(&ratelimit->mut);
         bNeedUnlockMutex = 1;
     }
@@ -2411,7 +2432,7 @@ static int ATTR_NONNULL()
     int ret;
     uchar msgbuf[1024];
 
-    if (ratelimit->bThreadSafe) {
+    if (!ratelimit->bSingleThreaded) {
         pthread_mutex_lock(&ratelimit->mut);
     }
 
@@ -2459,7 +2480,7 @@ static int ATTR_NONNULL()
     }
 
 finalize_it:
-    if (ratelimit->bThreadSafe) {
+    if (!ratelimit->bSingleThreaded) {
         pthread_mutex_unlock(&ratelimit->mut);
     }
 
@@ -2501,7 +2522,7 @@ rsRetVal ratelimitMsgCountWait(ratelimit_t *__restrict__ const ratelimit,
     (void)appname;
     *wait_usec = 0;
 
-    if (ratelimit->bThreadSafe) {
+    if (!ratelimit->bSingleThreaded) {
         pthread_mutex_lock(&ratelimit->mut);
     }
 
@@ -2532,7 +2553,7 @@ rsRetVal ratelimitMsgCountWait(ratelimit_t *__restrict__ const ratelimit,
     }
 
 finalize_it:
-    if (ratelimit->bThreadSafe) {
+    if (!ratelimit->bSingleThreaded) {
         pthread_mutex_unlock(&ratelimit->mut);
     }
     RETiRet;
@@ -2832,7 +2853,10 @@ finalize_it:
  * dynamic information, e.g. PID or listener IP, ...
  * Both values should be kept brief.
  */
-rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname) {
+rsRetVal ratelimitNewWithThreadMode(ratelimit_t **ppThis,
+                                    const char *modname,
+                                    const char *dynname,
+                                    sbool bSingleThreaded) {
     ratelimit_t *pThis = NULL;
     char namebuf[256];
     DEFiRet;
@@ -2848,6 +2872,8 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
         pThis->name = strdup(namebuf);
     }
 
+    pThis->bSingleThreaded = bSingleThreaded;
+
     /* Allocate default shared structure for standalone instance */
     CHKmalloc(pThis->pShared = calloc(1, sizeof(ratelimit_shared_t)));
     pThis->bOwnsShared = 1;
@@ -2857,7 +2883,12 @@ rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dyn
     pthread_mutex_init(&pThis->pShared->per_source_policy_mut, NULL);
     pthread_mutex_init(&pThis->pShared->per_source_key_policy_mut, NULL);
 
-    DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);
+    /* Initialize mutex only if not single-threaded */
+    if (!bSingleThreaded) {
+        pthread_mutex_init(&pThis->mut, NULL);
+    }
+
+    DBGPRINTF("ratelimit:%s:new ratelimiter (singleThreaded=%d)\n", pThis->name, bSingleThreaded);
     *ppThis = pThis;
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -2867,6 +2898,10 @@ finalize_it:
         }
     }
     RETiRet;
+}
+
+rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname) {
+    return ratelimitNewWithThreadMode(ppThis, modname, dynname, 0);
 }
 
 
@@ -2880,26 +2915,19 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
 }
 
 
-static void ratelimitEnsureMutexInitialized(ratelimit_t *ratelimit) {
-    if (!ratelimit->bMutInitialized) {
-        pthread_mutex_init(&ratelimit->mut, NULL);
-        ratelimit->bMutInitialized = 1;
-    }
-}
-
-/* enable thread-safe operations mode. This make sure that
- * a single ratelimiter can be called from multiple threads. As
- * this causes some overhead and is not always required, it needs
- * to be explicitely enabled. This operation cannot be undone
- * (think: why should one do that???)
+/* Thread-safe operation is now the default and is selected at construction.
+ * This compatibility function cannot change a limiter that was constructed
+ * for single-threaded use after its mutable state may have been accessed.
  */
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit) {
-    ratelimit->bThreadSafe = 1;
-    ratelimitEnsureMutexInitialized(ratelimit);
+    /* If already single-threaded, we cannot change it (mutable state may already exist) */
+    if (ratelimit->bSingleThreaded) {
+        /* Cannot make single-threaded ratelimiter thread-safe after creation */
+        return;
+    }
 }
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
     ratelimit->bNoTimeCache = 1;
-    ratelimitEnsureMutexInitialized(ratelimit);
 }
 
 /* Severity level determines which messages are subject to
@@ -2919,7 +2947,7 @@ void ratelimitDestruct(ratelimit_t *ratelimit) {
         msgDestruct(&ratelimit->pMsg);
     }
     tellLostCnt(ratelimit);
-    if (ratelimit->bMutInitialized) pthread_mutex_destroy(&ratelimit->mut);
+    if (!ratelimit->bSingleThreaded) pthread_mutex_destroy(&ratelimit->mut);
 
     if (ratelimit->bOwnsShared && ratelimit->pShared != NULL) {
         pthread_mutex_destroy(&ratelimit->pShared->mut);

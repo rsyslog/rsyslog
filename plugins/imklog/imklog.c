@@ -431,10 +431,10 @@ ENDactivateCnfPrePrivDrop
 BEGINactivateCnf
     CODESTARTactivateCnf;
     if (runModConf->pszRatelimitName != NULL) {
-        CHKiRet(ratelimitNewFromConfig(&runModConf->ratelimiter, runModConf->pConf,
-                                       (char *)runModConf->pszRatelimitName, "imklog", NULL));
+        CHKiRet(ratelimitNewFromConfigWithThreadMode(&runModConf->ratelimiter, runModConf->pConf,
+                                                     (char *)runModConf->pszRatelimitName, "imklog", NULL, 1));
     } else {
-        CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
+        CHKiRet(ratelimitNewWithThreadMode(&runModConf->ratelimiter, "imklog", NULL, 1));
         ratelimitSetLinuxLike(runModConf->ratelimiter, (unsigned)runModConf->ratelimitInterval,
                               (unsigned)runModConf->ratelimitBurst);
     }
