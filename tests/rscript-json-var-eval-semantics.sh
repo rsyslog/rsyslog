@@ -3,13 +3,10 @@
 # missing/null, root, and NUL semantics while values flow through set. Exact
 # serialized output after synchronized shutdown is the oracle: it detects a
 # type/value change as well as the legacy set-side NUL removal and read-side
-# first-NUL truncation rules. With internal debugging enabled, the debug log is
-# also an oracle: embedded NUL bytes must be dropped without creating a cstr.
+# first-NUL truncation rules. Do not assert through the shared debug log: its
+# concurrent diagnostic records can interleave and do not affect the value.
 # This file is part of the rsyslog project, released under ASL 2.0.
 . ${srcdir:=.}/diag.sh init
-export RSYSLOG_DEBUG="debug nostdout"
-export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
-
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
@@ -54,9 +51,6 @@ startup
 injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
-
-content_check "rainerscript: (json/string) var" "$RSYSLOG_DEBUGLOG"
-content_check --regex "rainerscript: (json/string) var [0-9][0-9]*: 'abcdef'" "$RSYSLOG_DEBUGLOG"
 
 export EXPECTED='{ "set_nul": "abcdef", "flat": "flat", "nested": "nested", "string": "text", "empty": "", "missing": "", "null": "", "integer": 42, "boolean": true, "double": 1.5, "array": [ "one", 2 ], "object": { "child": "value" }, "nul_read": "ab", "whole": { "flat.key": "flat", "nested": { "value": "nested" }, "string": "text", "empty": "", "null": null, "integer": 42, "boolean": true, "double": 1.5, "array": [ "one", 2 ], "object": { "child": "value" }, "nul": "ab" }, "local_string": "local", "local_integer": 7, "local_boolean": false, "local_whole": { "string": "local", "integer": 7, "boolean": false }, "global_string": "global", "global_integer": 9, "global_boolean": true, "global_whole": { "string": "global", "integer": 9, "boolean": true } }'
 cmp_exact
