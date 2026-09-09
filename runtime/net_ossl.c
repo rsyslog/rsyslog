@@ -919,7 +919,13 @@ static rsRetVal ossl_asn1_string_to_cstr(const ASN1_STRING *const str, uchar **c
     }
     data = utf8;
 #else
+    /* wolfSSL and OpenSSL before 1.1.0 declare this read-only accessor's
+     * argument mutable. Keep the conversion helper const-correct. */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    len = ASN1_STRING_length((ASN1_STRING *)str);
+    #else
     len = ASN1_STRING_length(str);
+    #endif
     data = ossl_asn1_string_data(str);
 #endif
     if (len < 0 || data == NULL) {
@@ -1134,15 +1140,30 @@ static rsRetVal net_ossl_match_cn(net_ossl_t *pThis, X509 *certpeer, cstr_t *pSt
     if (subject == NULL) {
         FINALIZE;
     }
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    idx = X509_NAME_get_index_by_NID((X509_NAME *)subject, NID_commonName, -1);
+#else
     idx = X509_NAME_get_index_by_NID(subject, NID_commonName, -1);
+#endif
     if (idx < 0) {
         FINALIZE;
     }
+    /* OpenSSL before 1.1.0 and wolfSSL expose these read-only accessors
+     * without const-qualified arguments. Keep the local API const-correct,
+     * and cast only at the compatibility boundary. */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    entry = X509_NAME_get_entry((X509_NAME *)subject, idx);
+#else
     entry = X509_NAME_get_entry(subject, idx);
+#endif
     if (entry == NULL) {
         FINALIZE;
     }
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(ENABLE_WOLFSSL)
+    cn = X509_NAME_ENTRY_get_data((X509_NAME_ENTRY *)entry);
+#else
     cn = X509_NAME_ENTRY_get_data(entry);
+#endif
     CHKiRet(ossl_asn1_string_to_cstr(cn, &cnName));
     if (cnName == NULL) {
         FINALIZE;
