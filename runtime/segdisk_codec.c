@@ -212,6 +212,10 @@ rsRetVal segdiskCodecEncode(smsg_t *msg, unsigned char **buf, size_t *len) {
     text = getRcvFromPort(msg);
     ADD(add_bytes(&b, F_RCVFROMPORT, text, strlen((char *)text)));
     if (msg->pszStrucData != NULL) ADD(add_bytes(&b, F_STRUCTURED_DATA, msg->pszStrucData, msg->lenStrucData));
+#ifdef HAVE_LOGNORM_TURBO
+    /* the turbo snapshot is module-owned and cannot cross a queue file */
+    ADD(MsgTurboMaterialize(msg));
+#endif
     ADD(add_json(&b, F_JSON, msg, msg->json));
     ADD(add_json(&b, F_LOCALVARS, msg, msg->localvars));
     ADD(add_cstr(&b, F_APPNAME, msg, msg->pCSAPPNAME));
