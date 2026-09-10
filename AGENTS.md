@@ -116,6 +116,11 @@ validation as the final validation gate when container tooling is available.
   relevant documentation/style checks. If the same change also touches code,
   tests, workflows, build files, or scripts, validate those touched areas via
   the container-testing skill.
+- Internal `doc/ai/**` catalogs that are not Sphinx inputs share this exception
+  because they affect agent guidance only, not runtime behavior, tests,
+  workflows, build files, or rendered documentation. Validate them with text,
+  link, and YAML checks; use the full validation path when a change also
+  touches an in-scope runtime or documentation input.
 - User-facing documentation edits that affect rendered Sphinx docs under
   `doc/source/**`, or Sphinx support files for that tree, should run a
   high-concurrency docs build instead of local runtime CI:
