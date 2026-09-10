@@ -51,6 +51,13 @@ collection, and process orchestration).
   when you modify reusable primitives.
 
 ## Coordination & documentation
+- Before changing queue locking, waiter wakeup, or enqueue allocation
+  timing, read
+  [`doc/ai/rejected_engineering_paths.md`](../doc/ai/rejected_engineering_paths.md)
+  and the
+  [`rsyslog_rejected_paths`](../.agent/skills/rsyslog_rejected_paths/SKILL.md)
+  skill. Do not revive a dated `rejected` or `parked` design without
+  meeting its `reopen_if` conditions and refreshing measurements.
 - Notify module owners (via metadata or review notes) when adjusting
   `module-template.h`, initialization flows, or statistics surfaces consumed by
   plugins.

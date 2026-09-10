@@ -7,6 +7,7 @@ This file defines specific guidelines for AI assistants working on the documenta
 - **Authoring Guidelines:** [`doc/ai/authoring_guidelines.md`](./authoring_guidelines.md)
 - **Structure and Paths:** [`doc/ai/structure_and_paths.md`](./structure_and_paths.md)
 - **Terminology:** [`doc/ai/terminology.md`](./terminology.md)
+- **Rejected engineering paths:** [`doc/ai/rejected_engineering_paths.md`](./rejected_engineering_paths.md)
 - **Security Triage Rubric:** [`doc/ai/security_triage_rubric.md`](./security_triage_rubric.md)
 - **Project Threat Model:** [`doc/security/project-threat-model.md`](../security/project-threat-model.md)
 - **Threat-Model Routing:** [`doc/security/threat-model-components.json`](../security/threat-model-components.json)
