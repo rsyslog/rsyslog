@@ -4093,7 +4093,15 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     /* if the queue already contains data, we need to start the correct number of worker threads. This can be
      * the case when a disk queue has been loaded. If we did not start it here, it would never start.
      */
+    /* qqueueAdviseMaxWorkers() publishes worker wakeup reservations under
+     * the queue mutex. A top-level queue is started without that mutex held;
+     * a DA child is started from InitDA(), which already holds its parent's
+     * shared mutex. Keep the child path lock-free here to avoid relocking the
+     * non-recursive parent mutex. */
+    const int bNeedQueueLock = pThis->pqParent == NULL;
+    if (bNeedQueueLock) qqueueLock(pThis);
     qqueueAdviseMaxWorkers(pThis);
+    if (bNeedQueueLock) d_pthread_mutex_unlock(pThis->mut);
 
     /* support statistics gathering */
     qName = obj.GetName((obj_t *)pThis);
@@ -4336,7 +4344,13 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
     qqueueSetShutdownImmediate(pThis, 0); /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
+    /* Unlike the normal enqueue advice path, destruction does not already
+     * hold this pool's queue mutex. The targeted-wakeup predicates are
+     * protected by that mutex, including a worker's exiting transition.
+     */
+    d_pthread_mutex_lock(pThis->pWtpDA->pmutUsr);
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
+    d_pthread_mutex_unlock(pThis->pWtpDA->pmutUsr);
 
     DBGOPRINT((obj_t *)pThis, "waiting for DA worker to terminate...\n");
     timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);

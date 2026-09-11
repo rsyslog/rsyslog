@@ -292,6 +292,7 @@ ENDobjDestruct(wti)
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
     INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
     pthread_cond_init(&pThis->pcondBusy, NULL);
+    pThis->bExiting = 0;
 ENDobjConstruct(wti)
 
 
@@ -346,11 +347,27 @@ static void wtiWorkerCancelCleanup(void *arg) {
     DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
     /* The consumer releases the queue mutex only around cancel-safe output
      * work. Restoring or committing its batch, including deferred cleanup,
-     * must use the same mutex as the ordinary callback path. */
+     * must use the same mutex as the ordinary callback path. Cancellation is
+     * enabled only while the queue consumer has released pmutUsr. Publish
+     * that this slot will not consume further queue work before restoring its
+     * batch: an enqueue during batch cleanup must wake or replace another
+     * consumer instead of counting this cancelling worker.
+     */
     d_pthread_mutex_lock(pWtp->pmutUsr);
+    wtiMarkExiting(pThis);
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
+}
+
+static void wtiWaitCancelCleanup(void *arg) {
+    wti_t *const pThis = (wti_t *)arg;
+
+    wtiClearWaitReservation(pThis);
+    /* POSIX cancellation of pthread_cond_wait() invokes cleanup handlers
+     * after reacquiring the associated mutex. Release it before the outer
+     * worker cleanup handler restores the queue batch under that mutex. */
+    d_pthread_mutex_unlock(pThis->pWtp->pmutUsr);
 }
 
 
@@ -365,11 +382,16 @@ int ATTR_NONNULL() wtiWaitNonEmpty(wti_t *const pThis, const struct timespec tim
     int r;
 
     DBGOPRINT((obj_t *)pThis, "waiting on queue to become non-empty\n");
+    pThis->bWaitingForWork = 1;
+    pThis->bWakeupReserved = 0;
+    pthread_cleanup_push(wtiWaitCancelCleanup, pThis);
     if (d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &timeout) != 0) {
         r = 0;
     } else {
         r = 1;
     }
+    pthread_cleanup_pop(0);
+    wtiClearWaitReservation(pThis);
     DBGOPRINT((obj_t *)pThis, "waited on queue to become non-empty, result %d\n", r);
     return r;
 }
@@ -385,6 +407,9 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
 
     DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 
+    pThis->bWaitingForWork = 1;
+    pThis->bWakeupReserved = 0;
+    pthread_cleanup_push(wtiWaitCancelCleanup, pThis);
     if (pThis->bAlwaysRunning) {
         /* never shut down any started worker */
         d_pthread_cond_wait(&pThis->pcondBusy, pWtp->pmutUsr);
@@ -397,6 +422,8 @@ static void ATTR_NONNULL() doIdleProcessing(wti_t *const pThis, wtp_t *const pWt
             *pbInactivityTOOccurred = 1; /* indicate we had a timeout */
         }
     }
+    pthread_cleanup_pop(0);
+    wtiClearWaitReservation(pThis);
     DBGOPRINT((obj_t *)pThis, "worker awoke from idle processing\n");
 }
 
@@ -491,6 +518,12 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         bInactivityTOOccurred = 0; /* reset for next run */
     }
 
+    /* While the action-worker objects are released below an additional or
+     * always-running worker can no longer consume queue data. Publish that
+     * transition before releasing the queue mutex so an enqueue does not
+     * count this slot as active capacity.
+     */
+    wtiMarkExiting(pThis);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
 
     DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);

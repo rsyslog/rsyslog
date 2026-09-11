@@ -16,6 +16,13 @@ runtime_queue:
   notes:
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
+    - >-
+      Targeted worker wakeups in wtpAdviseMaxWorkers track registered waiters
+      with bWaitingForWork and bWakeupReserved under each pool's pmutUsr (the
+      queue mutex paired with pcondBusy); producers reserve a waiter before
+      signaling, and normal or cancellation wait cleanup clears the
+      reservation under that mutex. Both wtpAdviseMaxWorkers and
+      wtpWakeupAllWrkr require callers to hold pmutUsr.
     - Completed message references move to a bounded worker buffer after store completion and are destroyed outside the queue mutex, before callbacks or waits; cancellation is disabled during this transfer and disposal.
     - RAM retirement releases completed counts independently of batch order; segmentedDisk retains its ordered persistent frontier.
     - queue_da resolves the durable disk-child engine at startup and atomically publishes its marker before first persistent data; engines never switch while a process is running.
