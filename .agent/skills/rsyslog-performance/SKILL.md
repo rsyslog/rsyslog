@@ -56,8 +56,12 @@ measurement time.
 
 Retain a candidate only when both independent sessions meet the declared
 target and every guardrail. Revert neutral, noisy, unsafe, overly complex, or
-questionable changes. Record rejected candidates because they prevent repeated
-low-value work.
+questionable changes. Record rejected candidates in
+[doc/ai/rejected_engineering_paths.md](../../../doc/ai/rejected_engineering_paths.md)
+using the [`rsyslog_rejected_paths`](../rsyslog_rejected_paths/SKILL.md)
+skill so later sessions do not retry the same path. Consult that catalog
+before proposing queue wakeup, allocator-off-lock, or disk-queue descriptor
+experiments.
 
 ## Validate and report
 
@@ -78,7 +82,9 @@ Report:
 
 For a concise example of evidence that shaped this workflow, read
 [campaign-lessons.md](references/campaign-lessons.md). Keep component-specific
-commands and detailed results in that subsystem's benchmark directory.
+commands and detailed results in that subsystem's benchmark directory. The
+dated abandon/retry policy lives in the rejected-paths catalog, not in this
+skill.
 
 ## Extend the method
 
