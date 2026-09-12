@@ -38,13 +38,11 @@
     {
       "name": "0001-fix-RainerScript-replace-heap-buffer-overflow.patch",
       "sha256": "465e3fbeaa800f22fe674481d1482a26dd584695b6325ff1fb3c5d904ea1d4d2",
-      "upstream_commit": "667e3f61aec5ee02c5c2ee6f0f8accf6fe4301a9",
       "reason": "Already present in current main's replace() sizing pass."
     },
     {
       "name": "0001-gtls-guard-early-debug-level-lookup.patch",
       "sha256": "4eeeb6fa3b26a0b319119724c0f8f8b5c232ed26385cdb9b4d8f8b6e8f3218fb",
-      "upstream_commit": "d6684c589d718cba6b70dcd10a2336902ebf2d10",
       "reason": "Already present in current main's early GnuTLS initialization guard."
     }
   ]
