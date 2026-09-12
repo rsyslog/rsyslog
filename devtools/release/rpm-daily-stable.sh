@@ -249,12 +249,12 @@ PY
               if ! curl --fail --location --retry 4 --retry-delay 5 --connect-timeout 20 \
                 --output "$source_tmp" "$fallback_url"; then
                 rm -f "$source_tmp"
-                exit 1
+                return 1
               fi
               ;;
             *)
               rm -f "$source_tmp"
-              exit 1
+              return 1
               ;;
           esac
         fi
