@@ -5,6 +5,10 @@
       "reason": "Ubuntu 26.04 carries the 2 GiB imfile timeout increase that current upstream already includes with later test updates."
     },
     {
+      "patch": "Skip-imfile-logrotate-async.sh.patch",
+      "reason": "Ubuntu's skip predates current main's deterministic inotify logrotate regression test, which replaced the flaky timing assumptions."
+    },
+    {
       "patch": "gnusort-in-tests.patch",
       "reason": "Ubuntu 26.04 carries an armhf GNU sort test workaround whose patch context is superseded by later upstream testbench changes."
     },

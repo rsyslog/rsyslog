@@ -238,8 +238,27 @@ PY
   while IFS= read -r source_url; do
     case "$source_url" in
       http://*|https://*)
-        curl --fail --location --retry 4 --retry-delay 5 \
-          --output "$sources_dir/${source_url##*/}" "$source_url"
+        source_file="$sources_dir/${source_url##*/}"
+        source_tmp="$(mktemp "$sources_dir/.source.XXXXXX")"
+        if ! curl --fail --location --retry 4 --retry-delay 5 --connect-timeout 20 \
+          --output "$source_tmp" "$source_url"; then
+          case "$source_url" in
+            https://archive.apache.org/dist/*)
+              fallback_url="https://downloads.apache.org/${source_url#https://archive.apache.org/dist/}"
+              echo "warning: retrying unavailable Apache archive source via $fallback_url" >&2
+              if ! curl --fail --location --retry 4 --retry-delay 5 --connect-timeout 20 \
+                --output "$source_tmp" "$fallback_url"; then
+                rm -f "$source_tmp"
+                exit 1
+              fi
+              ;;
+            *)
+              rm -f "$source_tmp"
+              exit 1
+              ;;
+          esac
+        fi
+        mv "$source_tmp" "$source_file"
         ;;
     esac
   done < <(
