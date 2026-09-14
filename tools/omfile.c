@@ -42,6 +42,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <limits.h>
 #include <errno.h>
 #include <ctype.h>
 #include <libgen.h>
@@ -160,6 +161,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
  * file output action.
  */
 typedef struct _instanceData {
+    sbool localNumericError; /* retain original numeric domain for local qualification */
     pthread_mutex_t mutWrite; /**< guard against multiple instances writing to single file */
     uchar *fname; /**< file or template name (display only) */
     uchar *tplName; /**< name of assigned template */
@@ -552,6 +554,7 @@ uchar *pszFileDfltTplName; /**< name of the default template to use */
  */
 struct modConfData_s {
     rsconf_t *pConf; /**< our overall config object */
+    sbool localNumericError;
     uchar *tplName; /**< default template */
     int fCreateMode; /**< default mode to use when creating files */
     int fDirCreateMode; /**< default mode to use when creating files */
@@ -1406,6 +1409,9 @@ BEGINsetModCnf
             continue;
         }
 
+        if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
+            loadModConf->localNumericError = 1;
+
         if (!strcmp(modpblk.descr[i].name, "template")) {
             CHKmalloc(loadModConf->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             if (pszFileDfltTplName != NULL) {
@@ -1673,6 +1679,7 @@ ENDcommitTransaction
  * @param pData Pointer to the `instanceData` structure to be initialized.
  */
 static void setInstParamDefaults(instanceData *__restrict__ const pData) {
+    pData->localNumericError = loadModConf->localNumericError;
     pData->fname = NULL;
     pData->tplName = NULL;
     pData->dynaFileBasePath = NULL;
@@ -1888,6 +1895,10 @@ BEGINnewActInst
 
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
+        if (pvals[i].val.datatype == 'N' && ((pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX) ||
+                                             (!strcmp(actpblk.descr[i].name, "closetimeout") &&
+                                              (pvals[i].val.d.n < SHRT_MIN || pvals[i].val.d.n > SHRT_MAX))))
+            pData->localNumericError = 1;
         if (!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
             pData->iDynaFileCacheSize = (int)pvals[i].val.d.n;
             const rsRetVal localRet = normalizeDynaFileCacheSize(&pData->iDynaFileCacheSize);
@@ -2194,8 +2205,23 @@ BEGINmodExit
 ENDmodExit
 
 
+/* Optional private S2 capability: inspect resolved settings, including legacy
+ * and module defaults. File I/O may block; this is a narrow transactional
+ * qualification, never a generic nonblocking-output claim. */
+static rsRetVal localQueueCheckAction(void *const instance) {
+    const instanceData *const pData = instance;
+    if (pData == NULL || pData->localNumericError || pData->fname == NULL || pData->fname[0] != '/' ||
+        pData->bDynamicName || pData->bUseAsyncWriter || pData->iZipLevel != 0 || pData->bVeryRobustZip ||
+        pData->bSyncFile || pData->iSizeLimit != 0 || pData->pszSizeLimitCmd != NULL || pData->useSigprov ||
+        pData->sigprovName != NULL || pData->useCryprov || pData->cryprovName != NULL || !pData->bFlushOnTXEnd ||
+        pData->iCloseTimeout != -1)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    return RS_RET_OK;
+}
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;

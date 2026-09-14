@@ -394,8 +394,32 @@ BEGINmodExit
 ENDmodExit
 
 
+/* Only a testbench build may qualify controlled blocking/error injection. */
+static rsRetVal localQueueCheckAction(void *const instance) {
+#ifdef ENABLE_IMDIAG
+    const instanceData *const pData = instance;
+    if (pData != NULL && pData->iWaitSeconds >= 0 && pData->iWaitUSeconds >= 0) {
+        switch (pData->mode) {
+            case MD_SLEEP:
+            case MD_FAIL:
+            case MD_ALWAYS_SUSPEND:
+            case MD_BARRIER_ERROR:
+            case MD_BARRIER_SUSPEND:
+                return RS_RET_OK;
+            case MD_RANDFAIL:
+            default:
+                break;
+        }
+    }
+#else
+    (void)instance;
+#endif
+    return RS_RET_LOCAL_QUEUE_CONFIG;
+}
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckAction")) *pEtryPoint = (rsRetVal(*)())localQueueCheckAction;
     CODEqueryEtryPt_STD_OMOD_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;

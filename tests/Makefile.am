@@ -154,6 +154,10 @@ EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 
+TESTS_LOCAL_QUEUE_CONFIG = local-queue-config.sh
+TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -2878,7 +2882,10 @@ if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
-TESTS += $(TESTRUNS)
+TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+endif
 
 if ENABLE_GSSAPI
 TESTS += $(TESTS_GSSAPI)

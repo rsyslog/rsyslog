@@ -790,6 +790,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             glblProcessTimezone(o);
             break;
         case CNFOBJ_MAINQ:
+            qqueueNoteLocalConfigIntent(o->nvlst);
             glblProcessMainQCnf(o);
             bDestructObj = 0;
             break;
@@ -809,6 +810,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             perctile_processCnf(o);
             break;
         case CNFOBJ_PARSER:
+            loadConf->bLocalCustomParser = 1;
             parserProcessCnf(o);
             break;
         case CNFOBJ_RATELIMIT:
@@ -818,6 +820,7 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             if (tplProcessCnf(o) != RS_RET_OK) parser_errmsg("error processing template object");
             break;
         case CNFOBJ_RULESET:
+            qqueueNoteLocalConfigIntent(o->nvlst);
             rulesetProcessCnf(o);
             break;
         case CNFOBJ_PROPERTY:
@@ -1754,6 +1757,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     CHKiRet(checkParserInstances());
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
+    CHKiRet(rulesetValidateLocalQueues(loadConf));
 
     if (iConfigVerify && !rsconfTranslateEnabled()) {
         if (iRet == RS_RET_OK) iRet = RS_RET_VALIDATION_RUN;
@@ -1771,6 +1775,12 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     rsconfDebugPrint(loadConf);
 
 finalize_it:
+    if (loadConf != NULL && (loadConf->bLocalConfigRequested || loadConf->bLocalConfigError) &&
+        (loadConf->bLocalConfigError || hadErrMsgs() || (iRet != RS_RET_OK && iRet != RS_RET_VALIDATION_RUN) ||
+         delayed_iRet != RS_RET_OK)) {
+        loadConf->bLocalConfigError = 1;
+        iRet = RS_RET_LOCAL_QUEUE_CONFIG;
+    }
     if (iRet == RS_RET_OK && delayed_iRet != RS_RET_OK) {
         iRet = delayed_iRet;
     }

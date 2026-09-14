@@ -98,6 +98,14 @@ struct queue_s {
         struct qqueueLocal_s *local; /* logical family; NULL for global queues */
         struct qqueueLocalStats_s *localStats; /* unlink before any local worker pool is destroyed */
         struct qqueueLocalFrontend_s *localSource; /* private FE source, never a DA parent */
+        /* Experimental local configuration; immutable after the shared activation gate. */
+        sbool bLocalScope;
+        int localFrontendSize;
+        int localMaxFrontends;
+        sbool localFrontendStats;
+        sbool bLocalConfigValidated;
+        sbool bLocalConfigError;
+        uint64_t localExplicitParams;
         int nLogDeq; /* number of elements currently logically dequeued */
         int bShutdownImmediate; /* should all workers cease processing messages? */
         DEF_ATOMIC_HELPER_MUT(mutShutdownImmediate);
@@ -286,11 +294,13 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
 rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal qqueueValidateLocalConfig(qqueue_t *pThis);
 rsRetVal qqueueConstruct(qqueue_t **ppThis,
                          queueType_t qType,
                          int iWorkerThreads,
                          int iMaxQueueSize,
                          rsRetVal (*pConsumer)(void *, batch_t *, wti_t *));
+void qqueueNoteLocalConfigIntent(struct nvlst *lst);
 int queueCnfParamsSet(struct nvlst *lst);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);

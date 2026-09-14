@@ -60,6 +60,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2427,6 +2428,10 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
 
     for (i = 0; i < pblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
+        /* Record for later local-graph qualification even if this action was
+         * declared before scope=local. Preserve existing global conversions. */
+        if (pvals[i].val.datatype == 'N' && (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX))
+            pAction->bLocalQueueNumericError = 1;
         if (!strcmp(pblk.descr[i].name, "name")) {
             pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "type")) {

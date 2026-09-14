@@ -313,7 +313,11 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
                                            {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
                                            {"queue.mutexcontentionstats", eCmdHdlrBinary, 0},
-                                           {"queue.oncorruption", eCmdHdlrGetWord, 0}};
+                                           {"queue.oncorruption", eCmdHdlrGetWord, 0},
+                                           {"queue.scope", eCmdHdlrGetWord, 0},
+                                           {"queue.local.frontendsize", eCmdHdlrInt, 0},
+                                           {"queue.local.maxfrontends", eCmdHdlrInt, 0},
+                                           {"queue.local.frontendstats", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
 /* support to detect duplicate queue file names */
@@ -3996,6 +4000,13 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
 
     assert(pThis != NULL);
 
+    if (pThis->bLocalScope) {
+        if (!pThis->bLocalConfigValidated || pThis->bLocalConfigError) ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
+        /* Replaced by S2 worker startup when routing is integrated. Config-only
+         * candidates must never silently run the shared global queue path. */
+        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+    }
+
     /* do not modify the queue if it's already running(happens when dynamic config reload is invoked
      * and the queue is used in the new config as well)
      */
@@ -5012,6 +5023,25 @@ finalize_it:
 }
 
 
+/* Called even when conversion reports that no usable queue parameter exists. */
+void qqueueNoteLocalConfigIntent(struct nvlst *const lst) {
+    if (loadConf == NULL) return;
+    for (struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+        if (nv->name == NULL) continue;
+        if (!es_strcasebufcmp(nv->name, (uchar *)"queue.scope", 11)) {
+            if (nv->val.datatype != 'S') {
+                loadConf->bLocalConfigRequested = loadConf->bLocalConfigError = 1;
+            } else if (es_strcasebufcmp(nv->val.d.estr, (uchar *)"global", 6)) {
+                loadConf->bLocalConfigRequested = 1;
+                if (es_strcasebufcmp(nv->val.d.estr, (uchar *)"local", 5)) loadConf->bLocalConfigError = 1;
+            }
+        } else if (es_strlen(nv->name) >= 12 &&
+                   !strncasecmp((const char *)es_getBufAddr(nv->name), "queue.local.", 12)) {
+            loadConf->bLocalConfigRequested = 1;
+        }
+    }
+}
+
 /* are any queue params set at all? 1 - yes, 0 - no
  * We need to evaluate the param block for this function, which is somewhat
  * inefficient. HOWEVER, this is only done during config load, so we really
@@ -5021,6 +5051,7 @@ int queueCnfParamsSet(struct nvlst *lst) {
     int r;
     struct cnfparamvals *pvals;
 
+    qqueueNoteLocalConfigIntent(lst);
     pvals = nvlstGetParams(lst, &pblk, NULL);
     r = cnfparamvalsIsSet(&pblk, pvals);
     cnfparamvalsDestruct(pvals, &pblk);
@@ -5251,6 +5282,91 @@ void qqueueCorrectParams(qqueue_t *pThis) {
     }
 }
 
+/* Preserve raw intent even if parameter conversion rejects or drops a value.
+ * The ordinal mask refers to this immutable config descriptor table, not storage
+ * layout. This cold path has no effect on ordinary global queue admission. */
+static void qqueueNoteLocalParams(qqueue_t *const pThis, struct nvlst *const lst) {
+    assert(pblk.nParams <= 64);
+    for (struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+        if (nv->name == NULL) continue;
+        for (int i = 0; i < pblk.nParams; ++i) {
+            if (!es_strcasebufcmp(nv->name, (uchar *)pblk.descr[i].name, strlen(pblk.descr[i].name))) {
+                pThis->localExplicitParams |= UINT64_C(1) << i;
+                if (!strcmp(pblk.descr[i].name, "queue.scope")) {
+                    if (nv->val.datatype != 'S' || es_strcasebufcmp(nv->val.d.estr, (uchar *)"global", 6)) {
+                        loadConf->bLocalConfigRequested = 1;
+                        if (nv->val.datatype == 'S' && !es_strcasebufcmp(nv->val.d.estr, (uchar *)"local", 5))
+                            pThis->bLocalScope = 1;
+                    }
+                } else if (!strncmp(pblk.descr[i].name, "queue.local.", 12)) {
+                    loadConf->bLocalConfigRequested = 1;
+                }
+                break;
+            }
+        }
+    }
+}
+
+static int qqueueLocalParamExplicit(const qqueue_t *const pThis, const char *const name) {
+    const int idx = cnfparamGetIdx(&pblk, name);
+    return idx >= 0 && (pThis->localExplicitParams & (UINT64_C(1) << idx)) != 0;
+}
+
+/* Validate before corrections can hide invalid values, and again at the shared
+ * graph gate. Only that gate may mark bLocalConfigValidated. */
+rsRetVal qqueueValidateLocalConfig(qqueue_t *const pThis) {
+    static const char *const unsupported[] = {
+        "queue.filename",      "queue.spooldirectory",       "queue.mindequeuebatchsize.timeout",
+        "queue.maxdiskspace",  "queue.highwatermark",        "queue.lowwatermark",
+        "queue.discardmark",   "queue.checkpointinterval",   "queue.syncqueuefiles",
+        "queue.diskqueuetype", "queue.diskqueueautoupgrade", "queue.diskqueueidletimeout",
+        "queue.maxfilesize",   "queue.dequeuetimebegin",     "queue.dequeuetimeend",
+        "queue.cry.provider",  "queue.oncorruption"};
+    if (!pThis->bLocalScope) {
+        if (pThis->bLocalConfigError || qqueueLocalParamExplicit(pThis, "queue.local.frontendsize") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.maxfrontends") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.frontendstats"))
+            goto invalid;
+        return RS_RET_OK;
+    }
+    if (pThis->bLocalConfigError || pThis->pAction != NULL || pThis->qType != QUEUETYPE_FIXED_ARRAY ||
+        pThis->pszFilePrefix != NULL || pThis->iMaxQueueSize <= 0 || pThis->iDeqBatchSize <= 0 ||
+        pThis->iNumWorkerThreads <= 0 || pThis->localFrontendSize <= 0 || pThis->localMaxFrontends <= 0 ||
+        !qqueueLocalParamExplicit(pThis, "queue.local.frontendsize") ||
+        !qqueueLocalParamExplicit(pThis, "queue.local.maxfrontends") || pThis->iMinDeqBatchSize != 0 ||
+        pThis->iDiscardSeverity != 8 || pThis->iSmpInterval != 0 || pThis->iDeqSlowdown != 0 ||
+        pThis->iDeqtWinFromHr != 0 || pThis->iDeqtWinToHr != 25 || pThis->useCryprov || pThis->cryprovName != NULL ||
+        pThis->sizeOnDiskMax != 0 || pThis->iPersistUpdCnt != 0 || pThis->bSyncQueueFiles || pThis->toQShutdown < 0 ||
+        pThis->toActShutdown < 0 || pThis->toEnq < 0 || pThis->toWrkShutdown < 0 || pThis->iFullDlyMrk < -1 ||
+        pThis->iFullDlyMrk == 0 || pThis->iFullDlyMrk > pThis->iMaxQueueSize || pThis->iLightDlyMrk < -1 ||
+        pThis->iLightDlyMrk > pThis->iMaxQueueSize ||
+        (qqueueLocalParamExplicit(pThis, "queue.saveonshutdown") && pThis->bSaveOnShutdown))
+        goto invalid;
+    for (size_t i = 0; i < sizeof(unsupported) / sizeof(unsupported[0]); ++i) {
+        if (qqueueLocalParamExplicit(pThis, unsupported[i])) {
+            parser_errmsg("local queue '%s': unsupported S2 parameter '%s'", objGetName((obj_t *)pThis),
+                          unsupported[i]);
+            goto invalid;
+        }
+    }
+    /* B + N*(F+D): BE physical size includes active entries; FE active holdings
+     * are separately bounded by D. Ensure both accounting and pointer buffers fit. */
+    const uint64_t f = (uint64_t)pThis->localFrontendSize;
+    const uint64_t d =
+        (uint64_t)((pThis->iDeqBatchSize < pThis->localFrontendSize) ? pThis->iDeqBatchSize : pThis->localFrontendSize);
+    const uint64_t n = (uint64_t)pThis->localMaxFrontends;
+    if (n > (UINT64_MAX - (uint64_t)pThis->iMaxQueueSize) / (f + d) || f > SIZE_MAX / sizeof(smsg_t *) ||
+        n > SIZE_MAX / (f * sizeof(smsg_t *)))
+        goto invalid;
+    return RS_RET_OK;
+invalid:
+    pThis->bLocalConfigError = 1;
+    if (loadConf != NULL) loadConf->bLocalConfigError = 1;
+    parser_errmsg("local queue '%s': configuration is outside the experimental memory-only S2 contract",
+                  objGetName((obj_t *)pThis));
+    return RS_RET_LOCAL_QUEUE_CONFIG;
+}
+
 /* apply all params from param block to queue. Must be called before
  * finalizing. This supports the v6 config system. Defaults were already
  * set during queue creation. The pvals object is destructed by this
@@ -5262,6 +5378,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
     int n_params_set = 0;
     DEFiRet;
 
+    qqueueNoteLocalConfigIntent(lst);
+    qqueueNoteLocalParams(pThis, lst);
     pvals = nvlstGetParams(lst, &pblk, NULL);
     if (pvals == NULL) {
         parser_errmsg("error processing queue config parameters");
@@ -5272,9 +5390,44 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         cnfparamsPrint(&pblk, pvals);
     }
     for (i = 0; i < pblk.nParams; ++i) {
-        if (!pvals[i].bUsed) continue;
+        if (!pvals[i].bUsed) {
+            if ((pThis->localExplicitParams & (UINT64_C(1) << i)) && loadConf->bLocalConfigRequested)
+                pThis->bLocalConfigError = 1;
+            continue;
+        }
         n_params_set++;
-        if (!strcmp(pblk.descr[i].name, "queue.filename")) {
+        /* Inspect the wide source value before any legacy int assignment can
+         * wrap into an allowed S2 zero/disabled/default value. Keep processing
+         * scope itself so invalid local configuration remains identifiable. */
+        if (pThis->bLocalScope && pvals[i].val.datatype == 'N' &&
+            (pvals[i].val.d.n < INT_MIN || pvals[i].val.d.n > INT_MAX)) {
+            pThis->bLocalConfigError = 1;
+            loadConf->bLocalConfigError = 1;
+            continue;
+        }
+        if (!strcmp(pblk.descr[i].name, "queue.scope")) {
+            if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"local", 5)) {
+                pThis->bLocalScope = 1;
+            } else if (!es_strcasebufcmp(pvals[i].val.d.estr, (uchar *)"global", 6)) {
+                pThis->bLocalScope = 0;
+            } else {
+                pThis->bLocalConfigError = 1;
+                loadConf->bLocalConfigError = 1;
+                parser_errmsg("queue.scope must be 'global' or experimental 'local'");
+            }
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.frontendsize")) {
+            if (pvals[i].val.d.n <= 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localFrontendSize = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.frontendstats")) {
+            pThis->localFrontendStats = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.maxfrontends")) {
+            if (pvals[i].val.d.n <= 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localMaxFrontends = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.filename")) {
             CHKmalloc(pThis->pszFilePrefix = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
             pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
         } else if (!strcmp(pblk.descr[i].name, "queue.cry.provider")) {
@@ -5415,6 +5568,8 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         }
     }
 
+    CHKiRet(qqueueValidateLocalConfig(pThis));
+
     const sbool is_da_memory_queue =
         (pThis->qType == QUEUETYPE_FIXED_ARRAY || pThis->qType == QUEUETYPE_LINKEDLIST) && pThis->pszFilePrefix != NULL;
     /* These are deliberately parser_errmsg(), not advisory warnings:
@@ -5493,8 +5648,13 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
         CHKiRet(initCryprov(pThis, lst));
     }
 
-    cnfparamvalsDestruct(pvals, &pblk);
 finalize_it:
+    cnfparamvalsDestruct(pvals, &pblk);
+    if (iRet != RS_RET_OK && loadConf->bLocalConfigRequested) {
+        pThis->bLocalConfigError = 1;
+        loadConf->bLocalConfigError = 1;
+        iRet = RS_RET_LOCAL_QUEUE_CONFIG;
+    }
     RETiRet;
 }
 

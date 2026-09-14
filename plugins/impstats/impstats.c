@@ -829,8 +829,22 @@ BEGINafterRun
 #endif
 ENDafterRun
 
+/* Independent file statistics are the sole S2 impstats input exception.
+ * Runtime diagnostics remain core internal messages and use BE fallback. */
+static rsRetVal localQueueCheckInput(void *const config) {
+    const modConfData_t *const cfg = config;
+    if (cfg == NULL || cfg->bLogToSyslog || cfg->pszBindRuleset != NULL || cfg->logfile == NULL ||
+        cfg->logfile[0] != '/')
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+#ifdef ENABLE_IMPSTATS_PUSH
+    if (cfg->bPushEnabled) return RS_RET_LOCAL_QUEUE_CONFIG;
+#endif
+    return RS_RET_OK;
+}
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    if (!strcmp((char *)name, "localQueueCheckInput")) *pEtryPoint = (rsRetVal(*)())localQueueCheckInput;
     CODEqueryEtryPt_STD_IMOD_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;

@@ -40,11 +40,13 @@
 #include "msg.h"
 #include "ruleset.h"
 #include "errmsg.h"
+#include "parserif.h"
 #include "parser.h"
 #include "batch.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
 #include "action.h"
+#include "template.h"
 #include "rainerscript.h"
 #include "srUtils.h"
 #include "modules.h"
@@ -157,13 +159,16 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues) {
     DEFiRet;
     ruleset_t *pThis = (ruleset_t *)pData;
     dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n", pThis->pQueue, pThis->pszName);
-    if (pThis->pQueue != NULL) startMainQueue(runConf, pThis->pQueue);
+    if (pThis->pQueue != NULL) {
+        const rsRetVal ret = startMainQueue(runConf, pThis->pQueue);
+        if (pThis->pQueue->bLocalScope) CHKiRet(ret);
+    }
+finalize_it:
     RETiRet;
 }
 /* activate all ruleset queues */
 rsRetVal activateRulesetQueues(void) {
-    llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
-    return RS_RET_OK;
+    return llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
 }
 
 
@@ -920,6 +925,148 @@ rsRetVal rulesetOptimizeAll(rsconf_t *conf) {
     RETiRet;
 }
 
+
+/* Experimental local mode permits only the closed, audited S2 graph. All
+ * objects are immutable and no input/queue workers have started during this
+ * validation. Do not use the action iterator here: it intentionally skips calls
+ * and does not propagate callback failures. */
+static int localQueueModuleNamed(const modInfo_t *const mod, const char *const name) {
+    return mod != NULL && mod->cnfName != NULL && !strcmp((const char *)mod->cnfName, name);
+}
+
+static rsRetVal localQueueCheckAction(const action_t *const act) {
+    rsRetVal (*check)(void *) = NULL;
+    if (act == NULL || act->bLocalQueueNumericError || act->pQueue == NULL || act->pQueue->bLocalScope ||
+        act->pQueue->bLocalConfigError || act->pQueue->qType != QUEUETYPE_DIRECT || act->ratelimiter != NULL ||
+        act->pszRatelimitName != NULL || act->iExecEveryNthOccur > 1 || act->iExecEveryNthOccurTO != 0 ||
+        act->iSecsExecOnceInterval != 0 || act->bExecWhenPrevSusp || act->iResumeRetryCount != 0 ||
+        act->pszErrFile != NULL || act->pszExternalStateFile != NULL || act->bRepMsgHasMsg || act->bUsesMsgPassingMode)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    if (!localQueueModuleNamed(act->pMod, "omfile") && !localQueueModuleNamed(act->pMod, "omtesting"))
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    /* Generated/plugin templates and subtree rendering are outside the first
+     * ordinary property/string-template qualification. */
+    for (int i = 0; i < act->iNumTpls; ++i) {
+        const struct template *const tpl = act->ppTpl[i];
+        if (tpl == NULL || tpl->pStrgen != NULL || tpl->bHaveSubtree) return RS_RET_LOCAL_QUEUE_CONFIG;
+        for (const struct templateEntry *e = tpl->pEntryRoot; e != NULL; e = e->pNext) {
+            if (e->eEntryType != CONSTANT && e->eEntryType != FIELD) return RS_RET_LOCAL_QUEUE_CONFIG;
+            if (e->eEntryType == FIELD) {
+                if (e->data.field.msgProp.id == PROP_GLOBAL_VAR) return RS_RET_LOCAL_QUEUE_CONFIG;
+#ifdef FEATURE_REGEXP
+                if (e->data.field.has_regex) return RS_RET_LOCAL_QUEUE_CONFIG;
+#endif
+            }
+        }
+    }
+    if (act->pMod->modQueryEtryPt((uchar *)"localQueueCheckAction", (rsRetVal(**)()) & check) != RS_RET_OK ||
+        check == NULL)
+        return RS_RET_LOCAL_QUEUE_CONFIG;
+    return check(act->pModData);
+}
+
+static rsRetVal localQueueCheckScript(const struct cnfstmt *stmt, const unsigned depth) {
+    if (depth > 256) return RS_RET_LOCAL_QUEUE_CONFIG;
+    for (; stmt != NULL; stmt = stmt->next) {
+        switch (stmt->nodetype) {
+            case S_NOP:
+            case S_STOP:
+                break;
+            case S_ACT:
+                if (localQueueCheckAction(stmt->d.act) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_SET:
+                if (!cnfvarIsLocalQueueSafe(stmt->d.s_set.varname) || !cnfexprIsLocalQueueSafe(stmt->d.s_set.expr))
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_UNSET:
+                if (!cnfvarIsLocalQueueSafe(stmt->d.s_unset.varname)) return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_IF:
+                if (!cnfexprIsLocalQueueSafe(stmt->d.s_if.expr) ||
+                    localQueueCheckScript(stmt->d.s_if.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(stmt->d.s_if.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_PRIFILT:
+                if (localQueueCheckScript(stmt->d.s_prifilt.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(stmt->d.s_prifilt.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            case S_PROPFILT:
+                if ((stmt->d.s_propfilt.operation != FIOP_CONTAINS && stmt->d.s_propfilt.operation != FIOP_ISEQUAL &&
+                     stmt->d.s_propfilt.operation != FIOP_STARTSWITH && stmt->d.s_propfilt.operation != FIOP_ENDSWITH &&
+                     stmt->d.s_propfilt.operation != FIOP_ISEMPTY) ||
+                    localQueueCheckScript(stmt->d.s_propfilt.t_then, depth + 1) != RS_RET_OK ||
+                    localQueueCheckScript(stmt->d.s_propfilt.t_else, depth + 1) != RS_RET_OK)
+                    return RS_RET_LOCAL_QUEUE_CONFIG;
+                break;
+            default:
+                return RS_RET_LOCAL_QUEUE_CONFIG;
+        }
+    }
+    return RS_RET_OK;
+}
+
+DEFFUNC_llExecFunc(localQueueCheckRuleset) {
+    ruleset_t *const rs = pData;
+    if (rs->pQueue != NULL && qqueueValidateLocalConfig(rs->pQueue) != RS_RET_OK) return RS_RET_LOCAL_QUEUE_CONFIG;
+    const rsRetVal ret = localQueueCheckScript(rs->root, 0);
+    if (ret != RS_RET_OK)
+        parser_errmsg("experimental local queue: ruleset '%s' contains an unsupported statement, expression or action",
+                      rs->pszName);
+    return ret;
+}
+
+DEFFUNC_llExecFunc(localQueueMarkValidated) {
+    ruleset_t *const rs = pData;
+    if (rs->pQueue != NULL && rs->pQueue->bLocalScope) rs->pQueue->bLocalConfigValidated = 1;
+    return RS_RET_OK;
+}
+
+rsRetVal rulesetValidateLocalQueues(rsconf_t *const conf) {
+    if (!conf->bLocalConfigRequested && !conf->bLocalConfigError) return RS_RET_OK;
+    if (conf->bLocalConfigError || conf->bLocalLegacyNumericError || conf->bLocalCustomParser ||
+        conf->pMsgQueue == NULL || runConf != NULL || qqueueValidateLocalConfig(conf->pMsgQueue) != RS_RET_OK)
+        goto invalid;
+    /* Conservative whole-config input whitelist prevents hidden producers and
+     * cross-ruleset graph escapes. Optional checks inspect resolved module state;
+     * an arbitrary module cannot attest itself into this named whitelist. */
+    for (cfgmodules_etry_t *node = conf->modules.root; node != NULL; node = node->next) {
+        if (node->pMod->eType != eMOD_IN) continue;
+        if (!node->canActivate) goto invalid;
+        if (localQueueModuleNamed(node->pMod, "imtcp")) continue;
+#ifdef ENABLE_IMDIAG
+        if (localQueueModuleNamed(node->pMod, "imdiag")) continue;
+#endif
+        if (localQueueModuleNamed(node->pMod, "impstats")) {
+            rsRetVal (*check)(void *) = NULL;
+            if (node->pMod->modQueryEtryPt((uchar *)"localQueueCheckInput", (rsRetVal(**)()) & check) == RS_RET_OK &&
+                check != NULL && check(node->modCnf) == RS_RET_OK)
+                continue;
+        }
+        parser_errmsg("experimental local queue: input module '%s' is not supported", node->pMod->pszName);
+        goto invalid;
+    }
+    /* Parsing runs inside the queue callback too. A custom parser has not been
+     * qualified merely because its input and ruleset statements are supported. */
+    for (const parserList_t *entry = conf->parsers.pParsLstRoot; entry != NULL; entry = entry->pNext) {
+        const modInfo_t *const mod = entry->pParser->pModule;
+        if (mod == NULL || mod->pszName == NULL ||
+            (strcmp((const char *)mod->pszName, "builtin:pmrfc3164") &&
+             strcmp((const char *)mod->pszName, "builtin:pmrfc5424"))) {
+            parser_errmsg("experimental local queue: custom parser '%s' is not supported", entry->pParser->pName);
+            goto invalid;
+        }
+    }
+    if (llExecFunc(&conf->rulesets.llRulesets, localQueueCheckRuleset, NULL) != RS_RET_OK) goto invalid;
+    if (conf->pMsgQueue->bLocalScope) conf->pMsgQueue->bLocalConfigValidated = 1;
+    return llExecFunc(&conf->rulesets.llRulesets, localQueueMarkValidated, NULL);
+invalid:
+    conf->bLocalConfigError = 1;
+    parser_errmsg("experimental local queue configuration rejected before activation");
+    return RS_RET_LOCAL_QUEUE_CONFIG;
+}
 
 /* Create a ruleset-specific "main" queue for this ruleset. If one is already
  * defined, an error message is emitted but nothing else is done.
