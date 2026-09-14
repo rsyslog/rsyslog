@@ -62,6 +62,9 @@
 #include "ratelimit.h"
 #include "queue.h"
 #include "queue_local_stats.h"
+#ifdef ENABLE_TESTBENCH
+    #include "queue_local.h"
+#endif
 #include "rsconf.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
@@ -734,6 +737,158 @@ static rsRetVal local_queue_stop_check(uchar *const command, tcps_sess_t *pSess)
 finalize_it:
     RETiRet;
 }
+
+/* Submit deliberately sized arrays through the live local-queue wrapper.  This
+ * is not an imdiag ingress shortcut: qqueueLocalSubmit() owns the actual
+ * message references and selects the configured FE or BE.  The shell fixture
+ * holds message zero in the FE callback before it sends the later arrays, so
+ * the four-message array fills F=4 and the two-message array must take the
+ * whole-batch no-fit path. */
+enum localQueueSubmitFixtureStage { LOCAL_QUEUE_SUBMIT_IDLE, LOCAL_QUEUE_SUBMIT_PRIMED, LOCAL_QUEUE_SUBMIT_BATCHED };
+static enum localQueueSubmitFixtureStage localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_IDLE;
+static unsigned localQueueSubmitFixtureNextId;
+
+static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
+    smsg_t *messages[5] = {0};
+    struct syslogTime stTime;
+    time_t ttGenTime;
+    size_t i;
+    int submitted = 0;
+    rsRetVal ret;
+    DEFiRet;
+
+    if (count > sizeof(messages) / sizeof(messages[0])) return RS_RET_PARAM_ERROR;
+    if (count == 0) return qqueueLocalSubmit(runConf->pMsgQueue, NULL, 0, 0);
+    datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
+    for (i = 0; i < count; ++i) {
+        char raw[128];
+
+        CHKiRet(msgConstructWithTime(&messages[i], &stTime, ttGenTime));
+        snprintf(raw, sizeof(raw), "<167>Mar  1 01:00:00 192.0.2.8 tag msgnum:%8.8u:", localQueueSubmitFixtureNextId++);
+        MsgSetRawMsg(messages[i], raw, strlen(raw));
+        MsgSetInputName(messages[i], pInputName);
+        MsgSetFlowControlType(messages[i], eFLOWCTL_NO_DELAY);
+        messages[i]->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
+        MsgSetRcvFrom(messages[i], pRcvDummy);
+        CHKiRet(MsgSetRcvFromIP(messages[i], pRcvIPDummy));
+    }
+    qqueueLocalProducerEnter();
+    ret = qqueueLocalSubmit(runConf->pMsgQueue, messages, count, 0);
+    qqueueLocalProducerLeave();
+    submitted = 1;
+    if (ret != RS_RET_OK) ABORT_FINALIZE(ret);
+    /* qqueueLocalSubmit() accepted ownership of every nonempty supplied
+     * array, including its BE fallback path. */
+    return RS_RET_OK;
+
+finalize_it:
+    if (!submitted) {
+        for (i = 0; i < count; ++i) msgDestruct(&messages[i]);
+    }
+    RETiRet;
+}
+
+static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
+    qqueueLocalSnapshot_t before;
+    qqueueLocalSnapshot_t snapshot;
+    uchar mode[32] = {0};
+    DEFiRet;
+
+    getFirstWord(&argument, mode, sizeof(mode), TO_LOWERCASE);
+    if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: local main queue is not initialized\n"));
+        FINALIZE;
+    }
+    if (!ustrcmp(mode, UCHAR_CONSTANT("prime"))) {
+        if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_IDLE) {
+            CHKiRet(sendResponse(pSess, "ERROR: fixture is already primed\n"));
+            FINALIZE;
+        }
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &before);
+        CHKiRet(localQueueSubmitFixtureBatch(0));
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+        if (memcmp(&before, &snapshot, sizeof(snapshot)) != 0) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        CHKiRet(localQueueSubmitFixtureBatch(1));
+        localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_PRIMED;
+        CHKiRet(sendResponse(pSess, "OK expected.messages=12\n"));
+    } else if (!ustrcmp(mode, UCHAR_CONSTANT("batches"))) {
+        if (localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_PRIMED) {
+            CHKiRet(sendResponse(pSess, "ERROR: fixture needs prime\n"));
+            FINALIZE;
+        }
+        CHKiRet(localQueueSubmitFixtureBatch(4));
+        CHKiRet(localQueueSubmitFixtureBatch(2));
+        CHKiRet(localQueueSubmitFixtureBatch(5));
+        localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_BATCHED;
+        CHKiRet(sendResponse(pSess, "OK expected.messages=12 fe.messages=5 be.messages=7\n"));
+    } else if (!ustrcmp(mode, UCHAR_CONSTANT("snapshot"))) {
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+        CHKiRet(sendResponse(pSess,
+                             "OK attempts=%" PRIu64 " admitted=%" PRIu64 " terminal=%" PRIu64 " outstanding=%" PRIu64
+                             " fe=%" PRIu64 " be=%" PRIu64 " be_nofit=%" PRIu64 " be_oversized=%" PRIu64 "\n",
+                             snapshot.attempts, snapshot.admitted, snapshot.terminal, snapshot.outstanding,
+                             snapshot.route_fe_messages, snapshot.route_be_messages, snapshot.be_nofit,
+                             snapshot.be_oversized));
+    } else {
+        CHKiRet(sendResponse(pSess, "ERROR: expected prime, batches, or snapshot\n"));
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue submit fixture failed: %d\n", iRet));
+    RETiRet;
+}
+
+typedef struct localQueueRedirectSubmitResult_s {
+    rsRetVal result;
+} localQueueRedirectSubmitResult_t;
+
+static void *localQueueRedirectSubmit(void *const context) {
+    localQueueRedirectSubmitResult_t *const result = context;
+
+    result->result = localQueueSubmitFixtureBatch(1);
+    return NULL;
+}
+
+/* Force the only relevant interleave: the producer has set publishing but has
+ * not performed the RUNNING recheck when local shutdown changes the family to
+ * REDIRECT. qqueueLocalShutdown() releases the testbench gate before waiting
+ * for publishing to clear, so the same real wrapper must route this reference
+ * to BE. The backend may close before that submission acquires its mutex; the
+ * result is then one classified pre-admission rejection instead of a terminal
+ * BE delivery. Both outcomes consumed the supplied reference exactly once. */
+static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
+    localQueueRedirectSubmitResult_t submit_result = {.result = RS_RET_ERR};
+    qqueueLocalSnapshot_t snapshot;
+    pthread_t producer;
+    rsRetVal shutdown_result;
+    const char *outcome;
+    DEFiRet;
+
+    if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL ||
+        localQueueSubmitFixtureStage != LOCAL_QUEUE_SUBMIT_IDLE) {
+        CHKiRet(sendResponse(pSess, "ERROR: redirect fixture requires a fresh local main queue\n"));
+        FINALIZE;
+    }
+    qqueueLocalTestRedirectArm();
+    if (pthread_create(&producer, NULL, localQueueRedirectSubmit, &submit_result) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    qqueueLocalTestRedirectWaitPublisher();
+    shutdown_result = qqueueLocalShutdown(runConf->pMsgQueue);
+    if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+    CHKiRet(shutdown_result);
+    qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+    if ((submit_result.result != RS_RET_OK && submit_result.result != RS_RET_FORCE_TERM) || snapshot.attempts != 1 ||
+        snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected ||
+        snapshot.admitted != snapshot.terminal || snapshot.outstanding != 0 || snapshot.route_fe_messages != 0 ||
+        snapshot.route_be_messages != 1 || snapshot.be_shutdown_redirect != 1 ||
+        (snapshot.terminal != 1 && snapshot.preadmission_rejected != 1))
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    outcome = snapshot.terminal == 1 ? "terminal" : "preadmission-rejected";
+    CHKiRet(sendResponse(pSess, "OK redirect.messages=1 outcome=%s\n", outcome));
+
+finalize_it:
+    if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet));
+    RETiRet;
+}
 #endif
 
 /* Function to handle received messages. This is our core function!
@@ -789,6 +944,10 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(local_queue_stats_lifetime_test(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestopcheck"))) {
         CHKiRet(local_queue_stop_check(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuesubmittest"))) {
+        CHKiRet(local_queue_submit_test(pszMsg, pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueueredirecttest"))) {
+        CHKiRet(local_queue_redirect_test(pSess));
 #endif
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;
