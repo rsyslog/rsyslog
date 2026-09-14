@@ -3848,8 +3848,7 @@ rsRetVal qqueueTestLeaseCompletionPaths(void) {
     worker.batch.maxElem = 1;
     worker.batch.nElemDeq = 1;
     worker.batch.storeData = &store_context;
-    worker.p_deferred_msgs = calloc(1, sizeof(smsg_t *));
-    if (worker.p_deferred_msgs == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    CHKmalloc(worker.p_deferred_msgs = calloc(1, sizeof(smsg_t *)));
 
     source.qCompleteBatch = qqueueLeaseTestCompleteOK;
     d_pthread_mutex_lock(&source_mut);
@@ -3987,6 +3986,7 @@ finalize_it:
 
     /* now we are done, but potentially need to re-acquire the mutex */
     if (bNeedReLock) qqueueLock(pThis);
+    if (pThis->local != NULL && wtiIsShutdownImmediate(pWti)) qqueueLocalRetainAmbiguous(pWti);
 
     RETiRet;
 }

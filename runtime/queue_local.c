@@ -88,12 +88,15 @@ typedef struct localCache_s {
 
 typedef struct localProducer_s {
     localCache_t *cache;
-    unsigned trustedDepth;
 } localProducer_t;
 
 static pthread_once_t producerOnce = PTHREAD_ONCE_INIT;
 static pthread_key_t producerKey;
 static unsigned producerKeyValid;
+/* Trust is execution provenance, independent of cache allocation success.
+ * This compiler-TLS scalar is available on the same GCC/Clang local backend
+ * that supplies the required always-lock-free atomics. */
+static __thread unsigned producerTrustedDepth;
 /* Startup sets this before inputs run. No reload is supported and the flag
  * never resets while threads can inspect it; global-only runs avoid TLS work. */
 static unsigned localEnabled;
@@ -135,6 +138,7 @@ int qqueueLocalEnabled(void) {
 void qqueueLocalProducerEnter(void) {
     localProducer_t *producer;
     if (!qqueueLocalEnabled()) return;
+    ++producerTrustedDepth;
     pthread_once(&producerOnce, makeProducerKey);
     if (!stateRead(&producerKeyValid)) return;
     producer = pthread_getspecific(producerKey);
@@ -146,16 +150,15 @@ void qqueueLocalProducerEnter(void) {
             return;
         }
     }
-    ++producer->trustedDepth;
 }
 
 void qqueueLocalProducerLeave(void) {
-    localProducer_t *const producer = stateRead(&producerKeyValid) ? pthread_getspecific(producerKey) : NULL;
-    if (producer != NULL && producer->trustedDepth != 0) --producer->trustedDepth;
+    if (producerTrustedDepth != 0) --producerTrustedDepth;
 }
 
 void qqueueLocalProducerExit(void *const unused) {
     (void)unused;
+    producerTrustedDepth = 0;
     localProducer_t *const producer = stateRead(&producerKeyValid) ? pthread_getspecific(producerKey) : NULL;
     if (producer == NULL) return;
     /* Called by tcpsrv Run/worker cleanup, before input joins and queue teardown.
@@ -294,6 +297,7 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     ret = fe->owner->pConsumer(fe->owner->pAction, batch, worker);
     pthread_setcancelstate(oldCancel, NULL);
     pthread_mutex_lock(queue->mut);
+    if (wtiIsShutdownImmediate(worker)) qqueueLocalRetainAmbiguous(worker);
     /* Completion is source-bound on the next iteration or exit. Callback
      * errors cannot bypass disabled cancellation before reacquiring mutex. */
     (void)ret;
@@ -445,9 +449,16 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
     enum qqueueLocalRouteReason reason = QLOCAL_UNCLASSIFIED;
     int internal = 0;
     for (size_t i = 0; i < count && !internal; ++i) internal = (messages[i]->msgFlags & INTERNAL_MSG) != 0;
-    const int trusted = !internal && producer != NULL && producer->trustedDepth != 0 && owner->local != NULL;
+    const int trusted = !internal && producerTrustedDepth != 0 && owner->local != NULL;
     if (internal) reason = QLOCAL_INTERNAL;
-    if (trusted) fe = registerFrontend(owner, producer, &reason);
+    if (trusted) {
+        if (producer != NULL) {
+            fe = registerFrontend(owner, producer, &reason);
+        } else {
+            reason = QLOCAL_REGISTRATION;
+            __atomic_fetch_add(&owner->local->registrationFailures, 1, __ATOMIC_RELAXED);
+        }
+    }
     if (fe != NULL) {
         counterAdd(&fe->attempts, count);
         counterAdd(&fe->submittedBatches, 1);
@@ -504,6 +515,18 @@ int qqueueLocalIsClosed(const qqueue_t *const owner) {
 int qqueueLocalWorker(const wti_t *const worker) {
     const qqueue_t *const source = worker->pWtp == NULL ? NULL : worker->pWtp->pUsr;
     return source != NULL && (source->local != NULL || source->localSource != NULL);
+}
+
+void qqueueLocalRetainAmbiguous(wti_t *const worker) {
+    if (!qqueueLocalWorker(worker)) return;
+    /* ruleset completion marks COMM before committing Direct transactions.
+     * Neither cancellation nor cooperative immediate-stop proves delivery.
+     * Retrying this whole message may duplicate earlier successful actions
+     * and repeat script mutations; preserve that uncertainty, never silently
+     * retire it as a successful terminal result. */
+    for (int i = 0; i < worker->batch.nElem; ++i) {
+        if (worker->batch.eltState[i] == BATCH_STATE_COMM) worker->batch.eltState[i] = BATCH_STATE_RDY;
+    }
 }
 
 void qqueueLocalBackendRoute(qqueue_t *const owner, const size_t n, const enum qqueueLocalRouteReason reason) {
@@ -903,6 +926,9 @@ int qqueueLocalIsClosed(const qqueue_t *owner) {
 int qqueueLocalWorker(const wti_t *worker) {
     (void)worker;
     return 0;
+}
+void qqueueLocalRetainAmbiguous(wti_t *worker) {
+    (void)worker;
 }
 void qqueueLocalBackendRoute(qqueue_t *owner, size_t count, enum qqueueLocalRouteReason reason) {
     (void)owner;

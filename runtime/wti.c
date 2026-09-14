@@ -393,6 +393,7 @@ static void wtiWorkerCancelCleanup(void *arg) {
     d_pthread_mutex_lock(pWtp->pmutUsr);
     wtiMarkExiting(pThis);
     if (qqueueLocalWorker(pThis)) {
+        qqueueLocalRetainAmbiguous(pThis);
         /* Cancelled callbacks can still have parameter caches referring to
          * their messages. Dispose those caches before source completion can
          * release terminal references. The retained lease stays in this wti

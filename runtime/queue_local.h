@@ -51,6 +51,9 @@ rsRetVal qqueueLocalShutdown(qqueue_t *owner);
 void qqueueLocalDestruct(qqueue_t *owner);
 int qqueueLocalIsClosed(const qqueue_t *owner);
 int qqueueLocalWorker(const wti_t *worker);
+/* Caller owns the physical source mutex. Preserve DISC; COMM is ambiguous
+ * on interrupted callbacks and must remain an accepted obligation. */
+void qqueueLocalRetainAmbiguous(wti_t *worker);
 void qqueueLocalRefreshLegacy(qqueue_t *owner);
 void qqueueLocalGetSnapshot(const qqueue_t *owner, qqueueLocalSnapshot_t *snapshot);
 int qqueueLocalGetFrontendSnapshot(const qqueue_t *owner, uint32_t index, qqueueLocalFrontendSnapshot_t *snapshot);

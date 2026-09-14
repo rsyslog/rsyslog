@@ -2342,6 +2342,20 @@ PRAGMA_DIAGNOSTIC_POP
 DEFFUNC_llExecFunc(doActivateActions) {
     rsRetVal localRet;
     action_t *const pThis = (action_t *)pData;
+    rsRetVal *const preparationResult = pParam;
+    if (*preparationResult != RS_RET_OK) return *preparationResult;
+    if (runConf->bLocalConfigRequested && pThis->pMod->cnfName != NULL &&
+        !strcmp((const char *)pThis->pMod->cnfName, "omfile")) {
+        rsRetVal (*prepare)(void *) = NULL;
+        localRet = pThis->pMod->modQueryEtryPt((uchar *)"localQueuePrepareAction", (rsRetVal(**)()) & prepare);
+        if (localRet == RS_RET_OK && prepare != NULL) localRet = prepare(pThis->pModData);
+        if (localRet != RS_RET_OK || prepare == NULL) {
+            *preparationResult = localRet == RS_RET_OK ? RS_RET_LOCAL_QUEUE_CONFIG : localRet;
+            LogError(0, localRet, "local queue: cannot prepare qualified omfile action '%s' before input startup",
+                     pThis->pszName);
+            return *preparationResult;
+        }
+    }
     setSuspendMessageConfVars(pThis);
     localRet = qqueueStart(runConf, pThis->pQueue);
     if (localRet != RS_RET_OK) {
@@ -2372,7 +2386,12 @@ DEFFUNC_llExecFunc(doActivateActions) {
  */
 rsRetVal activateActions(void) {
     DEFiRet;
-    iRet = ruleset.IterateAllActions(runConf, doActivateActions, NULL);
+    /* The script action iterator intentionally ignores callback returns.
+     * Preserve the first local preparation failure in an explicit context so
+     * rsconf activation aborts before main/ruleset queues and inputs run. */
+    rsRetVal preparationResult = RS_RET_OK;
+    iRet = ruleset.IterateAllActions(runConf, doActivateActions, &preparationResult);
+    if (iRet == RS_RET_OK) iRet = preparationResult;
     RETiRet;
 }
 
