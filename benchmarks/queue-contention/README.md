@@ -95,25 +95,33 @@ docker run --rm -u "$(id -u):$(id -g)" \
 ```
 
 `--queue-size`, `--dequeue-batch-size`, and `--worker-minimum` parameterize
-the FixedArray configuration. `--before-queue-size` and
-`--after-queue-size`, plus their consumer-worker counterparts, make future
-S2 resource-matched comparisons explicit in `result.json`; they do not change
-the default screening workload. `--frontend-capacity` records the planned
-local-front reservation cap without implying global MPMC has fronts.
+the FixedArray configuration. Per-side `--before-queue-size` and
+`--after-queue-size`, `--before-consumer-workers` and
+`--after-consumer-workers`, and `--before-scope`/`--after-scope` make an S2
+comparison explicit in `result.json`. Both scopes default to `global`; the
+driver then emits neither `queue.scope` nor a `queue.local.*` parameter, so
+the frozen S0 configuration stays unchanged. A side using `local` must also
+supply `--{side}-frontend-size` and `--{side}-max-frontends`; those are passed
+only to that local daemon. `--print-configuration` validates these arguments
+and prints the resolved bounds without starting Docker, which is useful when
+reviewing a campaign command.
 
-For the S0 10K/1M MPMC capacity baseline, use the actual planned imtcp worker
-front cap, not TCP connection count. Eight fronts reserve 1,080,000 waiting
-slots. Since FE slots are released at acquisition, add eight active batches of
-1024 for the obligation-matched MPMC capacity of 1,088,192. Report allocation
-bytes and RSS separately:
+For the S2 10K/1M matched capacity comparison, use the planned imtcp worker
+front cap, not TCP connection count. `queue-size` means global capacity for
+the control and backend capacity for the local candidate. The bounded local
+reservation is `B + N * (F + D)`, so eight fronts with `F=10000`, backend
+`B=1000000`, and `D=1024` require 1,088,192 slots. The global control uses
+that total as its single queue size; the candidate uses eight FE workers and
+two backend workers while the control uses ten global workers:
 
 ```
 python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/10k-1m \
-  --workload multi --messages 4000000 --pairs 11 --input-workers 8 \
-  --connections 16 --consumer-workers 10 --queue-size 1088192 \
-  --worker-minimum 1 --dequeue-batch-size 1024 --payload 512 \
-  --frontend-capacity 8
+  --workload multi --messages 1000000 --pairs 3 --input-workers 8 \
+  --connections 16 --worker-minimum 1 --dequeue-batch-size 1024 --payload 512 \
+  --before-scope global --before-queue-size 1088192 --before-consumer-workers 10 \
+  --after-scope local --after-queue-size 1000000 --after-consumer-workers 2 \
+  --after-frontend-size 10000 --after-max-frontends 8
 ```
 
 `--producer-mode balanced` uses all configured TCP connections. `--producer-mode

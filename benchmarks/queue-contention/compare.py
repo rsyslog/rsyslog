@@ -30,7 +30,15 @@ parser.add_argument('--dequeue-batch-size', type=int, default=1024)
 parser.add_argument('--worker-minimum', type=int, default=1024)
 parser.add_argument('--producer-mode', choices=['balanced', 'skew'], default='balanced')
 parser.add_argument('--frontend-capacity', type=int,
-                    help='future local-front capacity for a resource-matched MPMC baseline')
+                    help='deprecated alias for reporting a local frontend count; use per-side max-frontends')
+parser.add_argument('--before-scope', choices=['global', 'local'], default='global')
+parser.add_argument('--after-scope', choices=['global', 'local'], default='global')
+parser.add_argument('--before-frontend-size', type=int)
+parser.add_argument('--after-frontend-size', type=int)
+parser.add_argument('--before-max-frontends', type=int)
+parser.add_argument('--after-max-frontends', type=int)
+parser.add_argument('--print-configuration', action='store_true',
+                    help='validate and print resolved per-side configuration without starting Docker')
 parser.add_argument('--before-consumer-workers', type=int)
 parser.add_argument('--after-consumer-workers', type=int)
 parser.add_argument('--impstats', action='store_true',
@@ -54,6 +62,17 @@ for label in ('before', 'after'):
         value = getattr(args, f'{label}_{field}')
         if value is not None and value <= 0:
             parser.error(f'--{label}-{field.replace("_", "-")} must be positive')
+    scope = getattr(args, f'{label}_scope')
+    frontend_size = getattr(args, f'{label}_frontend_size')
+    max_frontends = getattr(args, f'{label}_max_frontends')
+    if scope == 'local' and (frontend_size is None or max_frontends is None):
+        parser.error(f'--{label}-scope local requires --{label}-frontend-size and --{label}-max-frontends')
+    if scope == 'global' and (frontend_size is not None or max_frontends is not None):
+        parser.error(f'--{label}-frontend-size and --{label}-max-frontends require --{label}-scope local')
+    if frontend_size is not None and frontend_size <= 0:
+        parser.error(f'--{label}-frontend-size must be positive')
+    if max_frontends is not None and max_frontends <= 0:
+        parser.error(f'--{label}-max-frontends must be positive')
 active_connections = 1 if args.producer_mode == 'skew' else args.connections
 if args.workload == 'multi' and args.messages % active_connections != 0:
     parser.error('--messages must be divisible by active connections')
@@ -112,18 +131,32 @@ workload_checkout = checkout_state(harness.parents[1])
 
 
 def build_configuration(label):
-    """Resolve per-build queue and consumer budgets for fair future comparisons."""
+    """Resolve per-build resource bounds while leaving legacy global configs unchanged."""
     queue_size = getattr(args, f'{label}_queue_size')
     consumer_workers = getattr(args, f'{label}_consumer_workers')
+    scope = getattr(args, f'{label}_scope')
+    frontend_size = getattr(args, f'{label}_frontend_size')
+    max_frontends = getattr(args, f'{label}_max_frontends')
+    backend_queue_size = args.queue_size if queue_size is None else queue_size
+    total_slot_bound = backend_queue_size
+    if scope == 'local':
+        total_slot_bound += max_frontends * (frontend_size + args.dequeue_batch_size)
     return {
-        'queue_size': args.queue_size if queue_size is None else queue_size,
+        'scope': scope,
+        'queue_size': backend_queue_size,
         'consumer_workers': args.consumer_workers if consumer_workers is None else consumer_workers,
         'dequeue_batch_size': args.dequeue_batch_size,
         'worker_minimum_messages': args.worker_minimum,
+        'frontend_size': frontend_size,
+        'max_frontends': max_frontends,
+        'total_slot_bound': total_slot_bound,
     }
 
 
 per_build_configuration = {label: build_configuration(label) for label in ('before', 'after')}
+if args.print_configuration:
+    print(json.dumps({'per_build_configuration': per_build_configuration}, sort_keys=True))
+    raise SystemExit(0)
 
 
 def write_report(status, failure=None):
@@ -203,6 +236,12 @@ try:
                 '-e', f'BENCH_IMPSTATS_FILE={impstats_metric}',
                 image_id, 'bash', f'/campaign/trial{"-multi" if args.workload == "multi" else ""}.sh',
             ]
+            if configuration['scope'] == 'local':
+                command[command.index(image_id):command.index(image_id)] = [
+                    '-e', 'BENCH_SCOPE=local',
+                    '-e', f'BENCH_FRONTEND_SIZE={configuration["frontend_size"]}',
+                    '-e', f'BENCH_MAX_FRONTENDS={configuration["max_frontends"]}',
+                ]
             with (output / f'{name}.log').open('w') as log:
                 try:
                     subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True,

@@ -19,6 +19,8 @@ export NUMMESSAGES=${BENCH_MESSAGES:-1000000}
 : "${BENCH_QUEUE_SIZE:=32768}" "${BENCH_DEQUEUE_BATCH_SIZE:=1024}"
 : "${BENCH_WORKER_MINIMUM:=1024}" "${BENCH_PRODUCER_MODE:=balanced}"
 : "${BENCH_IMPSTATS:=no}" "${BENCH_IMPSTATS_FILE:=}"
+: "${BENCH_SCOPE:=global}" "${BENCH_FRONTEND_SIZE:=}" "${BENCH_MAX_FRONTENDS:=}"
+: "${BENCH_CONFIG_ONLY:=no}"
 if (( BENCH_CONNECTIONS <= 0 )); then
     echo "BENCH_CONNECTIONS must be positive" >&2
     exit 1
@@ -58,6 +60,47 @@ no)
     exit 1
     ;;
 esac
+case "$BENCH_SCOPE" in
+global)
+    # Keep this emitted FixedArray configuration byte-for-byte identical to
+    # the frozen S0 control. In particular, S0 does not know local options.
+    BENCH_LOCAL_QUEUE_CONF=''
+    BENCH_TOTAL_SLOT_BOUND=$BENCH_QUEUE_SIZE
+    ;;
+local)
+    if [[ ! "$BENCH_FRONTEND_SIZE" =~ ^[1-9][0-9]*$ || ! "$BENCH_MAX_FRONTENDS" =~ ^[1-9][0-9]*$ ]]; then
+        echo "local scope requires positive BENCH_FRONTEND_SIZE and BENCH_MAX_FRONTENDS" >&2
+        exit 1
+    fi
+    BENCH_LOCAL_QUEUE_CONF=' queue.scope="local" queue.local.frontendSize="'$BENCH_FRONTEND_SIZE'" queue.local.maxFrontends="'$BENCH_MAX_FRONTENDS'"'
+    BENCH_TOTAL_SLOT_BOUND=$((BENCH_QUEUE_SIZE + BENCH_MAX_FRONTENDS * (BENCH_FRONTEND_SIZE + BENCH_DEQUEUE_BATCH_SIZE)))
+    ;;
+*)
+    echo "BENCH_SCOPE must be global or local" >&2
+    exit 1
+    ;;
+esac
+# The fragment is inserted into RainerScript, so shellcheck cannot parse its
+# deliberate embedded quoting. The global string matches the frozen S0 stanza.
+# shellcheck disable=SC2089
+MAIN_QUEUE_CONF='main_queue(queue.type="FixedArray" queue.size="'$BENCH_QUEUE_SIZE'"
+    queue.workerThreads="'$BENCH_CONSUMER_WORKERS'" queue.workerThreadMinimumMessages="'$BENCH_WORKER_MINIMUM'"
+    queue.dequeueBatchSize="'$BENCH_DEQUEUE_BATCH_SIZE'" queue.mutexContentionStats="'$BENCH_MUTEX_CONTENTION_STATS'"'$BENCH_LOCAL_QUEUE_CONF')'
+case "$BENCH_CONFIG_ONLY" in
+yes)
+    printf 'scope=%s\nbackend_queue_size=%s\ndequeue_batch_size=%s\ntotal_slot_bound=%s\nmain_queue_conf=%s\n' \
+        "$BENCH_SCOPE" "$BENCH_QUEUE_SIZE" "$BENCH_DEQUEUE_BATCH_SIZE" "$BENCH_TOTAL_SLOT_BOUND" "$MAIN_QUEUE_CONF"
+    if [[ "$BENCH_SCOPE" == local ]]; then
+        printf 'frontend_size=%s\nmax_frontends=%s\n' "$BENCH_FRONTEND_SIZE" "$BENCH_MAX_FRONTENDS"
+    fi
+    exit 0
+    ;;
+no) ;;
+*)
+    echo "BENCH_CONFIG_ONLY must be yes or no" >&2
+    exit 1
+    ;;
+esac
 if (( NUMMESSAGES % BENCH_ACTIVE_CONNECTIONS != 0 )); then
     echo "BENCH_MESSAGES ($NUMMESSAGES) must be divisible by active connections ($BENCH_ACTIVE_CONNECTIONS)" >&2
     exit 1
@@ -71,14 +114,13 @@ if [[ "$BENCH_IMPSTATS" == yes ]]; then
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json" log.syslog="off")
 '
 fi
+# shellcheck disable=SC2090
 add_conf '
 global(processInternalMessages="off" abortOnUncleanConfig="on")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
     listenPortFileName="'$PORT_FILE'" workerThreads="'$BENCH_INPUT_WORKERS'")
-main_queue(queue.type="FixedArray" queue.size="'$BENCH_QUEUE_SIZE'"
-    queue.workerThreads="'$BENCH_CONSUMER_WORKERS'" queue.workerThreadMinimumMessages="'$BENCH_WORKER_MINIMUM'"
-    queue.dequeueBatchSize="'$BENCH_DEQUEUE_BATCH_SIZE'" queue.mutexContentionStats="'$BENCH_MUTEX_CONTENTION_STATS'")
+'$MAIN_QUEUE_CONF'
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
     set $.parseStatus = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}", "\$!payload");
