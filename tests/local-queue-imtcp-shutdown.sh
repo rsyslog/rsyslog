@@ -30,13 +30,13 @@ main_queue(queue.scope="local" queue.type="FixedArray" queue.size="16"
 	queue.timeoutShutdown="1" queue.timeoutActionCompletion="1"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqfmt" type="string" string="%msg%\n")
-if ($msg contains "localq-block") then :omtesting:file_barrier '$ENTERFILE' '$RELEASEFIFO';localqfmt
-if ($msg contains "localq-") then
+if ($msg contains "msgnum:00000000:") then :omtesting:file_barrier '$ENTERFILE' '$RELEASEFIFO';localqfmt
+if ($msg contains "msgnum:") then
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="localqfmt" queue.type="Direct"
 		asyncWriting="off" flushOnTXEnd="on")
 '
 startup
-tcpflood -m1 -M'localq-block'
+tcpflood -m1 -i0
 wait_file_lines "$ENTERFILE" 1
 # imdiag has no trusted imtcp producer tag. Its distinct literal must enter BE,
 # and the FE count must remain one while the callback is held.

@@ -45,14 +45,14 @@ main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
 	queue.timeoutShutdown="1" queue.timeoutActionCompletion="1"
 	queue.local.frontendSize="4" queue.local.maxFrontends="2" queue.local.frontendStats="on")
 template(name="localqfmt" type="string" string="%msg%\n")
-if ($msg contains "localq-cancel") then
+if ($msg contains "msgnum:") then
 	:omtesting:cancel_cleanup_barrier '$ENTERFILE' '$CANCEL_BLOCK' '$FIRST_CLEANUP' '$SECOND_CLEANUP' '$CLEANUP_RELEASE';localqfmt
 '
 startup
 
 # The first callback stays blocked while its producer exits normally. It keeps
 # a live FE lease, so the following input must allocate the unused second FE.
-tcpflood -m1 -M'localq-cancel' &
+tcpflood -m1 -i0 &
 sender_first=$!
 wait_file_lines "$ENTERFILE" 1
 wait "$sender_first" || error_exit $?
@@ -60,7 +60,7 @@ localq_wait_stats "$STATSFILE" "main Q.local" \
 	"fe.registered=1" "fe.started=1" "fe.producerless=1" \
 	"fe.inflight.messages=1" "outstanding.messages=1"
 
-tcpflood -m1 -M'localq-cancel' &
+tcpflood -m1 -i1 &
 sender_second=$!
 wait_file_lines "$ENTERFILE" 2
 wait "$sender_second" || error_exit $?

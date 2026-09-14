@@ -28,7 +28,7 @@ main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
 	queue.local.frontendSize="8" queue.local.maxFrontends="2" queue.local.frontendStats="on")
 template(name="localqfmt" type="string" string="%msg:F,58:2%\n")
-if ($msg contains "msgnum:") then :omtesting:barrier_error 2;localqfmt
+if ($msg contains "msgnum:") then :omtesting:barrier_error 2 ;localqfmt
 if ($msg contains "msgnum:") then
 	action(type="omfile" file="'$NORMAL_OUT'" template="localqfmt" queue.type="Direct"
 		asyncWriting="off" flushOnTXEnd="on")

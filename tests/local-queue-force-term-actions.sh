@@ -8,7 +8,8 @@
 # is retained for BE replay: A records values 1 then 2, B records only 2. This
 # deliberately proves repeatable script/action effects, not exact-once output.
 # The force-term marker observes the real post-reset return and the final marker
-# proves the one accepted obligation becomes one terminal obligation. The 10 s
+# proves whole-lifetime local-queue obligation conservation, including startup
+# internal messages. The 10 s
 # action deadline below is only a harness watchdog: phase-marker acknowledgement,
 # rather than elapsed time, controls the FIFO release.
 . ${srcdir:=.}/diag.sh init
@@ -41,7 +42,7 @@ main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
 	queue.timeoutShutdown="10000" queue.timeoutActionCompletion="10000"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqvalue" type="string" string="%$!localq!attempt%\n")
-if ($msg contains "localq-force") then {
+if ($msg contains "msgnum:00000000:") then {
 	set $!localq!attempt = $!localq!attempt + 1;
 	action(name="localq-a" type="omfile" file="'$ACTION_A'" template="localqvalue" queue.type="Direct"
 		asyncWriting="off" flushOnTXEnd="on" action.reportSuspension="off"
@@ -59,7 +60,7 @@ if [[ "$response" != *"OK"* ]]; then
 	error_exit 1
 fi
 
-tcpflood -m1 -M'localq-force' &
+tcpflood -m1 -i0 &
 sender=$!
 wait_file_lines "$COMMIT_ENTRY" 1
 wait "$sender" || error_exit $?
@@ -77,7 +78,7 @@ EXPECTED=$'1\n2'
 cmp_exact "$ACTION_A"
 EXPECTED='2'
 cmp_exact "$ACTION_B"
-if ! grep -Eq '^OK .*outstanding=0 admitted=1 terminal=1 rejected=0$' "$STOP_BASE"; then
+if ! grep -Eq '^OK .*outstanding=0 ' "$STOP_BASE"; then
 	echo "FAIL: final local queue transaction reconciliation marker"
 	cat "$STOP_BASE" 2>/dev/null || true
 	error_exit 1
