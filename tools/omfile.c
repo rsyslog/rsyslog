@@ -1648,6 +1648,8 @@ static void localCommitCancel(void *const instance) {
 
 BEGINcommitTransaction
     instanceData *__restrict__ const pData = pWrkrData->pData;
+    /* pthread cleanup may use setjmp; keep the result stable across its scope. */
+    volatile rsRetVal commitRet = RS_RET_OK;
     rsRetVal localRet;
     unsigned i;
     CODESTARTcommitTransaction;
@@ -1661,8 +1663,8 @@ BEGINcommitTransaction
 
     for (i = 0; i < nParams; ++i) {
         localRet = writeFile(pData, pParams, i);
-        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
-            iRet = localRet;
+        if (localRet != RS_RET_OK && commitRet == RS_RET_OK) {
+            commitRet = localRet;
         }
     }
     /* Note: pStrm may be NULL if there was an error opening the stream */
@@ -1676,14 +1678,14 @@ BEGINcommitTransaction
      */
     if (pData->bFlushOnTXEnd && pData->pStrm != NULL) {
         localRet = strm.Flush(pData->pStrm);
-        if (localRet != RS_RET_OK && iRet == RS_RET_OK) {
-            CHKiRet(localRet);
+        if (localRet != RS_RET_OK && commitRet == RS_RET_OK) {
+            commitRet = localRet;
         }
     }
 
-finalize_it:
     pthread_cleanup_pop(0);
     pthread_mutex_unlock(&pData->mutWrite);
+    iRet = commitRet;
     if (iRet == RS_RET_FILE_OPEN_ERROR || iRet == RS_RET_FILE_NOT_FOUND) {
         iRet = (pData->bDynamicName && runModConf->bDynafileDoNotSuspend) ? RS_RET_OK : RS_RET_SUSPENDED;
     }
