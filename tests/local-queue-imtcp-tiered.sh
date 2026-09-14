@@ -42,13 +42,23 @@ startup
 
 tcpflood -m1 -i0
 wait_file_lines "$FE_ENTER" 1
+# Record BE startup traffic only after the first FE exists. The two route
+# assertions below use a delta, so rsyslog's own startup diagnostics cannot
+# masquerade as the five test messages.
+localq_wait_stats "$STATSFILE" "main Q.local" "route.fe.messages=1" "fe.registered=1"
+be_baseline=$(grep -F "main Q.local: origin=core.queue.local " "$STATSFILE" | tail -n 1 | \
+	sed -n 's/.* route.be.messages=\([0-9][0-9]*\).*/\1/p')
+case "$be_baseline" in
+	''|*[!0-9]*) echo "FAIL: unable to read local BE baseline: $be_baseline"; error_exit 1 ;;
+esac
+be_after_overflow=$((be_baseline + 5))
 # Four messages fit the blocked FE; the following five-message submission is
 # deliberately larger than F and must use the shared BE as one whole batch.
 tcpflood -m4 -i1
 tcpflood -m5 -i5
 wait_file_lines "$BE_ENTER" 1
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"route.fe.messages=5" "route.be.messages=5" "fe.queued.messages=4" "be.physical.messages=4"
+	"route.fe.messages=5" "route.be.messages=$be_after_overflow" "fe.queued.messages=4"
 
 # Releasing only the FE returns four slots while the BE callback remains
 # blocked.  A fitting two-ID submission must therefore re-enter FE instead of
@@ -56,7 +66,7 @@ localq_wait_stats "$STATSFILE" "main Q.local" \
 localq_release_barrier "$FE_RELEASE"
 tcpflood -m2 -i10
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"route.fe.messages=7" "route.be.messages=5" "be.physical.messages=4"
+	"route.fe.messages=7" "route.be.messages=$be_after_overflow"
 
 localq_release_barrier "$BE_RELEASE"
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
