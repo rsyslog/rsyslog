@@ -50,9 +50,14 @@ offered rate, polling interval, synchronous omfile flush policy, dequeue batch,
 and worker-minimum policy per side. Per-side queue/consumer/scope resources are
 recorded rather than inferred. Every sample rejects missing or duplicate IDs,
 invalid output, timestamp mismatch, send errors, rate drift above two percent,
-sender lateness above ten milliseconds, or reader polling gaps above five
-milliseconds. The healthy-output p99 guardrail is accepted only when all samples
-are valid and `after <= before + max(10% of before, 1 ms)`.
+sender lateness or reader polling gaps above 400 microseconds. These two limits
+are below the one-millisecond decision floor; their sum is reported as the
+observation uncertainty bound, and an over-budget run is invalid rather than a
+latency conclusion. After clean shutdown, the helper reparses the entire sink,
+including late duplicate/extra lines and trailing bytes. The healthy-output p99
+guardrail is accepted only when every pair is valid and each satisfies
+`after <= before + max(10% of before, 1 ms)`; paired p99 margin median and MAD
+are reported as dispersion, not substituted for the per-pair rule.
 
 Use the multi-producer screening workload for queue contention. It runs 16
 concurrent sending threads/connections, 8 imtcp input workers, and 4 main-queue

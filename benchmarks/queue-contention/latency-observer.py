@@ -16,7 +16,7 @@ import statistics
 import threading
 import time
 
-LINE = re.compile(r'^latency:([0-9]+):([0-9]+)$')
+LINE = re.compile(r'^latency:([0-9]+):([0-9]+)(?:\|x*)?$')
 
 
 def percentile(values, fraction):
@@ -68,6 +68,28 @@ class Observer:
         self._stop.set()
 
 
+def final_oracle(output, expected):
+    """Parse the complete post-shutdown sink, including a trailing fragment."""
+    data = Path(output).read_bytes() if Path(output).exists() else b''
+    lines = data.split(b'\n')
+    trailing = lines.pop()
+    seen, duplicates, invalid = set(), 0, int(bool(trailing))
+    for raw in lines:
+        match = LINE.fullmatch(raw.decode('ascii', errors='replace').rstrip('\r'))
+        if match is None:
+            invalid += 1
+            continue
+        identifier = int(match.group(1))
+        if identifier in seen:
+            duplicates += 1
+        elif identifier not in expected:
+            invalid += 1
+        else:
+            seen.add(identifier)
+    return {'received': len(seen), 'missing': sorted(expected - seen), 'duplicates': duplicates,
+            'invalid_output': invalid, 'trailing_bytes': len(trailing)}
+
+
 def run(args):
     if min(args.messages, args.connections, args.rate, args.poll_us) <= 0:
         raise ValueError('messages, connections, rate, and poll-us must be positive')
@@ -90,7 +112,9 @@ def run(args):
                         time.sleep(delay / 1e9)
                     sent_ns = time.monotonic_ns()  # immediately before this exact sendall
                     identifier = args.id_start + ordinal
-                    stream.sendall(('latency:%d:%d\n' % (identifier, sent_ns)).encode('ascii'))
+                    record = 'latency:%d:%d' % (identifier, sent_ns)
+                    body = record + '|' + 'x' * max(0, args.payload - len(record) - 1)
+                    stream.sendall(('<13>1 2026-01-01T00:00:00Z - - - %s\n' % body).encode('ascii'))
                     with lock:
                         sent[identifier] = sent_ns
                         lateness.append(max(0, sent_ns - deadline))
@@ -118,8 +142,8 @@ def run(args):
     rate_drift_percent = abs(achieved_rate - args.rate) * 100 / args.rate
     valid = (not errors and not missing and not observer.duplicates and not observer.invalid and not timestamp_mismatch
              and len(sent) == args.messages and rate_is_valid(args.rate, achieved_rate, args.max_rate_drift_percent)
-             and max(lateness, default=0) <= args.max_lateness_ms * 1_000_000
-             and observer.max_poll_gap_ns <= args.max_poll_gap_ms * 1_000_000)
+             and max(lateness, default=0) <= args.max_lateness_us * 1000
+             and observer.max_poll_gap_ns <= args.max_poll_gap_us * 1000)
     return {
         'schema_version': 1, 'status': 'completed' if valid else 'invalid', 'latency_definition':
         'monotonic sendall-to-complete-file-line observation; includes output flush, polling, and scheduler delay',
@@ -127,40 +151,60 @@ def run(args):
         'achieved_rate_per_second': achieved_rate, 'offered_duration_ns': offered_duration_ns,
         'rate_drift_percent': rate_drift_percent,
         'scheduler_lateness_ns': {'p99': percentile(lateness, .99), 'max': max(lateness, default=0),
-                                   'limit': args.max_lateness_ms * 1_000_000},
+                                   'limit': args.max_lateness_us * 1000},
         'reader': {'poll_interval_ns': args.poll_us * 1000, 'max_poll_gap_ns': observer.max_poll_gap_ns,
-                   'max_poll_gap_limit_ns': args.max_poll_gap_ms * 1_000_000,
+                   'max_poll_gap_limit_ns': args.max_poll_gap_us * 1000,
                    'observation_bound': 'complete-line polling/scheduling delay is included, not subtracted'},
         'latency_ns': {'p50': percentile(observations, .50), 'p95': percentile(observations, .95),
                        'p99': percentile(observations, .99), 'max': max(observations, default=None)},
         'oracle': {'received': len(observer.seen), 'missing': missing, 'duplicates': observer.duplicates,
                    'invalid_output': observer.invalid, 'timestamp_mismatch': timestamp_mismatch, 'send_errors': errors},
         'validity_thresholds': {'max_rate_drift_percent': args.max_rate_drift_percent,
-                                'max_scheduler_lateness_ms': args.max_lateness_ms,
-                                'max_reader_poll_gap_ms': args.max_poll_gap_ms}}
+                                'max_scheduler_lateness_us': args.max_lateness_us,
+                                'max_reader_poll_gap_us': args.max_poll_gap_us,
+                                'observation_uncertainty_upper_bound_ns':
+                                (args.max_lateness_us + args.max_poll_gap_us) * 1000}}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--host', required=True)
-    parser.add_argument('--port', required=True, type=int)
+    parser.add_argument('--host')
+    parser.add_argument('--port', type=int)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--result', required=True, type=Path)
     parser.add_argument('--messages', required=True, type=int)
-    parser.add_argument('--connections', required=True, type=int)
-    parser.add_argument('--rate', required=True, type=float)
+    parser.add_argument('--connections', type=int)
+    parser.add_argument('--rate', type=float)
+    parser.add_argument('--payload', type=int)
     parser.add_argument('--id-start', type=int, default=0)
     parser.add_argument('--poll-us', type=int, default=100)
     parser.add_argument('--warmup-ms', type=int, default=100)
     parser.add_argument('--completion-timeout', type=int, default=30)
     parser.add_argument('--connect-timeout', type=int, default=10)
     parser.add_argument('--max-rate-drift-percent', type=float, default=2.0)
-    parser.add_argument('--max-lateness-ms', type=float, default=10.0)
-    parser.add_argument('--max-poll-gap-ms', type=float, default=5.0)
+    parser.add_argument('--max-lateness-us', type=float, default=400.0)
+    parser.add_argument('--max-poll-gap-us', type=float, default=400.0)
+    parser.add_argument('--finalize', action='store_true', help='validate the complete sink after daemon shutdown')
+    parser.add_argument('--allow-invalid', action='store_true',
+                        help='write a provisional invalid result for finalization')
     args = parser.parse_args()
+    if args.finalize:
+        result = json.loads(args.result.read_text())
+        final = final_oracle(args.output, set(range(args.id_start, args.id_start + args.messages)))
+        result['final_oracle'] = final
+        if final['missing'] or final['duplicates'] or final['invalid_output']:
+            result['status'] = 'invalid'
+        args.result.write_text(json.dumps(result, indent=2) + '\n')
+        if result['status'] != 'completed':
+            raise SystemExit('post-shutdown latency oracle invalid: ' + json.dumps(final))
+        return
+    if args.host is None or args.port is None:
+        parser.error('--host and --port are required unless --finalize is used')
+    if args.connections is None or args.rate is None or args.payload is None:
+        parser.error('--connections, --rate, and --payload are required unless --finalize is used')
     result = run(args)
     args.result.write_text(json.dumps(result, indent=2) + '\n')
-    if result['status'] != 'completed':
+    if result['status'] != 'completed' and not args.allow_invalid:
         raise SystemExit('latency observation invalid: ' + json.dumps(result['oracle']))
 
 

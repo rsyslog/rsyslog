@@ -21,7 +21,10 @@ def read_fixture(text, expected):
         result = observer.Observer(output, expected, 1)
         thread = __import__('threading').Thread(target=result.run)
         thread.start()
-        time.sleep(.01)
+        deadline = time.monotonic() + 1
+        while len(result.seen) + result.invalid + result.duplicates < len(text.splitlines()):
+            assert time.monotonic() < deadline
+            time.sleep(.001)
         result.stop()
         thread.join()
         return result
@@ -37,6 +40,12 @@ invalid = read_fixture('not-a-latency-line\n', {0})
 assert invalid.invalid == 1
 assert not observer.rate_is_valid(100, 90, 2.0)  # fixed offered-rate invalidation threshold
 
+with tempfile.TemporaryDirectory() as directory:
+    output = Path(directory) / 'sink'
+    output.write_text('latency:0:1\nlatency:0:1\nlate-fragment')
+    final = observer.final_oracle(output, {0})
+    assert final['duplicates'] == 1 and final['trailing_bytes'] == len('late-fragment')
+
 
 with tempfile.TemporaryDirectory() as directory:
     output = Path(directory) / 'sink'
@@ -49,14 +58,15 @@ with tempfile.TemporaryDirectory() as directory:
             connection, _ = listener.accept()
             with connection:
                 while data := connection.recv(4096):
-                    file.write(data)
-                    file.flush()
+                    for line in data.splitlines():
+                        file.write(line.split(b' - - - ', 1)[1] + b'\n')
+                        file.flush()
 
     server = threading.Thread(target=sink)
     server.start()
     result = observer.run(SimpleNamespace(host='127.0.0.1', port=listener.getsockname()[1], output=output,
                           messages=4, connections=1, rate=100, id_start=0, poll_us=100, warmup_ms=5,
                           completion_timeout=2, connect_timeout=2, max_rate_drift_percent=20,
-                          max_lateness_ms=100, max_poll_gap_ms=100))
+                          max_lateness_us=100000, max_poll_gap_us=100000, payload=128))
     server.join()
     assert result['status'] == 'completed' and result['oracle']['received'] == 4

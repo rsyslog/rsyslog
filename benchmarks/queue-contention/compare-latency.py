@@ -49,7 +49,7 @@ def report(status, failure=None):
     accepted = status == 'completed' and all(r['before']['status'] == r['after']['status'] == 'completed' for r in rows)
     body = {'schema_version': 1, 'status': status, 'summary_accepted': accepted, 'timing_accepted': accepted,
             'latency_definition': 'same-process monotonic sendall-to-complete-file-line observation; polling included',
-            'guardrail': 'after p99 <= before p99 + max(0.10 * before p99, 0.001 seconds)',
+            'guardrail': 'each pair: after p99 <= before p99 + max(0.10 * before p99, 0.001 seconds)',
             'workload': {'messages': a.messages, 'connections': a.connections, 'input_workers': a.input_workers,
                          'offered_rate': a.offered_rate, 'poll_us': a.poll_us, 'omfile_flush_policy': a.flush_policy,
                          'frontend_capacity': a.frontend_capacity, 'frontend_max': a.frontend_max,
@@ -60,10 +60,19 @@ def report(status, failure=None):
             'builds': {s: state(getattr(a, s).resolve()) for s in ('before', 'after')},
             'pairs': rows, 'failure': failure}
     if accepted:
-        before = statistics.median(r['before']['latency_ns']['p99'] for r in rows) / 1e9
-        after = statistics.median(r['after']['latency_ns']['p99'] for r in rows) / 1e9
-        body.update({'median_p99_seconds': {'before': before, 'after': after},
-                     'guardrail_passed': after <= before + max(.10 * before, .001)})
+        margins = []
+        for row in rows:
+            before = row['before']['latency_ns']['p99'] / 1e9
+            after = row['after']['latency_ns']['p99'] / 1e9
+            allowance = max(.10 * before, .001)
+            row['paired_p99'] = {'before_seconds': before, 'after_seconds': after,
+                                 'allowance_seconds': allowance, 'margin_seconds': after - before,
+                                 'guardrail_passed': after - before <= allowance}
+            margins.append(after - before)
+        median_margin = statistics.median(margins)
+        body.update({'paired_margin_seconds': {'median': median_margin,
+                     'mad': statistics.median(abs(value - median_margin) for value in margins)},
+                     'guardrail_passed': all(row['paired_p99']['guardrail_passed'] for row in rows)})
         body['summary_accepted'] = body['timing_accepted'] = body['guardrail_passed']
     (output / 'result.json').write_text(json.dumps(body, indent=2) + '\n')
 
@@ -83,8 +92,11 @@ try:
                        '-w', '/rsyslog/tests', '-e', 'BENCH_METRIC_FILE=/results/' + metric.name,
                        '-e', 'BENCH_MESSAGES=%d' % a.messages, '-e', 'BENCH_CONNECTIONS=%d' % a.connections,
                        '-e', 'BENCH_INPUT_WORKERS=%d' % a.input_workers, '-e', 'BENCH_OFFERED_RATE=%s' % a.offered_rate,
+                       '-e', 'BENCH_PAYLOAD=%d' % a.payload,
                        '-e', 'BENCH_QUEUE_SIZE=%d' % getattr(a, side + '_queue_size'),
                        '-e', 'BENCH_CONSUMER_WORKERS=%d' % getattr(a, side + '_consumer_workers'),
+                       '-e', 'BENCH_DEQUEUE_BATCH_SIZE=%d' % a.dequeue_batch_size,
+                       '-e', 'BENCH_WORKER_MINIMUM=%d' % a.worker_minimum,
                        '-e', 'BENCH_SCOPE=%s' % getattr(a, side + '_scope'), '-e', 'BENCH_POLL_US=%d' % a.poll_us,
                        '-e', 'BENCH_FRONTEND_CAPACITY=%d' % a.frontend_capacity,
                        '-e', 'BENCH_FRONTEND_MAX=%d' % a.frontend_max,
