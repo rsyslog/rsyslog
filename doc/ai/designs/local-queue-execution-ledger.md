@@ -27,7 +27,7 @@ or favorable isolated timing does not alone establish acceptance.
 | Stage | Status | Evidence / next gate |
 |---|---|---|
 | S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
-| S1 | Integrated; acceptance pending | Attribution at `bb567e97a` plus allocation-style follow-up; focused tests passed, sanitizer and neutral-performance gates pending. |
+| S1 | Implemented; original performance gate unresolved | Reviewed attribution through `c9a51be21`; targeted correctness and sanitizer checks passed with documented debug-only TSan isolation. Maintainer authorized continued S2 work and methodology review. |
 | S2 | Conditional source preparation | Ring, strict configuration, worker integration, stats and tests in isolated worktrees; not integrated. |
 
 ## Assignments
@@ -271,3 +271,76 @@ omfile: its shared write mutex and stream state must remain reusable after an
 interrupted write. A bounded local-only preparation/write/HUP boundary is under
 implementation and independent review. Until that boundary and deterministic
 cancellation tests pass, S2 output qualification is unresolved.
+
+## S1 measurements and methodology review
+
+The measured S1 candidate is `c9a51be21`, compared with the frozen S0 runtime.
+Each session used one discarded calibration pair and eleven alternating pairs,
+four million messages, and the previously recorded compiler/configuration.
+
+| Session | Median candidate/baseline elapsed time | Ratio MAD | Original gate result |
+|---|---|---|---|
+| Balanced 1 | 0.9772665755 | 0.0734337015 | Inconclusive |
+| Balanced 2 | 0.9744435943 | 0.0293889681 | Pass |
+| Low load 1 | 0.9972346547 | 0.0054784295 | Pass |
+| Low load 2 | 1.0018154705 | 0.0187414154 | Pass |
+| Balanced 1, permitted rerun | 1.0564956619 | 0.0376971066 | Inconclusive |
+
+These are whole-pipeline observations, including sender generation, TCP input,
+JSON execution, shared synchronous omfile output and scheduling. They do not
+isolate queue contention. No FE performance campaign has run yet. Preserve all
+sessions, including unfavorable and inconclusive ones; S1 performance acceptance
+under the original contract remains unresolved.
+
+The corrected latency observer's baseline-only feasibility trial delivered all
+100,000 messages at an offered 10,000 messages/second, with exact post-shutdown
+payload/timestamp verification. Its maximum dispatch lateness was 4,302,031 ns
+and reader iteration interval 7,746,632 ns, exceeding the frozen 400,000 ns
+validity limits. This is an invalid latency measurement, not a queue latency
+regression. Raw evidence remains in the session artifact directory.
+
+On 2026-09-14 the maintainer clarified that disappointing benchmark results must
+prompt examination of representativeness rather than abandonment of the design.
+Continue S2 implementation and correctness validation while independently
+reviewing the method. Investigate generator/output bottlenecks, actual submission
+and dequeue shapes, sustained versus finite workloads, worker/resource matching,
+and scheduling noise. Define the purpose and interpretation of revised
+experiments before running them, and distinguish their results from the original
+campaigns. Do not retroactively relabel the existing results as passing or relax
+correctness requirements.
+
+The maintainer further specified hundreds to thousands of clients, several
+hundred thousand messages per minute, and larger production machines. Use those
+absolute offered rates and connection populations for representative sustained
+profiles. The existing sixteen-connection, four-million-message peak burst
+remains a separate stress control. At a fixed offered rate below capacity,
+sender-paced completion time is not a useful optimization target; compare CPU
+per message, latency, backlog, actual batch shapes and routing, with identical
+work offered to both implementations. Parameterize larger machine/worker
+budgets, but do not infer their scaling from this heterogeneous WSL host.
+
+The stated targets include Elasticsearch with material request latency and queue
+buildup; the maintainer does not expect a faithful reproduction in this local
+environment. Local performance work therefore remains diagnostic. Controlled
+delay/failure tests establish queue mechanisms and ownership behavior, not
+Elasticsearch throughput or bulk-request behavior. Continue the S2 MVP and its
+correctness gates without claiming representative production performance.
+Prepare a target-environment measurement recipe that correlates queue growth,
+CPU/locking costs, actual batches, and Elasticsearch bulk-request sizes,
+latencies, retries and completion rates. Production action qualification and
+performance evidence remain explicit later work; existing failed/inconclusive
+measurements retain their original classifications.
+
+S1 targeted ASan/UBSan paths executed successfully with instrumented binaries.
+The direct build did not apply CI compiler exclusion files; queue code was also
+fully instrumented for TSan. Five focused TSan paths passed, but the debug-enabled
+shutdown test stopped on a debug/imdiag startup race. The unchanged baseline
+reproduced that same race in `debug.c:156` before queue stimulus. A temporary
+debug-source-only compiler exclusion then allowed the deferred-shutdown and
+native FixedArray DA paths to pass under TSan; queue, worker and test sources
+remained instrumented. No broad queue exclusion or new tracked suppression was
+added. These targeted checks do not establish full container validation.
+
+Normalized S1 performance evidence, including the original classifications and
+binary hashes, is stored in
+[`benchmarks/queue-contention/evidence/local-queue-s1/`](../../../benchmarks/queue-contention/evidence/local-queue-s1/).
