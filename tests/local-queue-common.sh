@@ -67,3 +67,18 @@ localq_wait_stats_regex() {
 localq_release_barrier() {
 	printf 'release\n' > "$1" || error_exit $?
 }
+
+# Local queues qualify every action, including diag.sh's own startup marker.
+# The checker requires that omfile destination to be absolute. Rewrite only
+# this generated per-test marker after generate_conf, before add_conf appends
+# the local-queue graph.
+localq_make_startup_marker_absolute() {
+	local config="${TESTCONF_NM}.conf"
+	local relative="./${RSYSLOG_DYNNAME}.started"
+	local absolute="$PWD/${RSYSLOG_DYNNAME}.started"
+	# Define the ordinary template before the generated action. The local graph
+	# deliberately rejects the default generated template because it is a
+	# generated template rather than the explicit string template contract.
+	sed -i '/# Capture rsyslogd own messages/i template(name="localdiag" type="string" string="%msg%\\n")' "$config" || error_exit $?
+	sed -i "s|file=\"${relative}\"|file=\"${absolute}\" template=\"localdiag\"|" "$config" || error_exit $?
+}

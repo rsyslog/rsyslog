@@ -21,6 +21,7 @@ BE_RELEASE="$PWD/${RSYSLOG_DYNNAME}.be.release"
 mkfifo "$FE_RELEASE" "$BE_RELEASE"
 
 generate_conf
+localq_make_startup_marker_absolute
 add_conf '
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1")
 module(load="../plugins/imtcp/.libs/imtcp")
