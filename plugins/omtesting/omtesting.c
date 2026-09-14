@@ -257,10 +257,10 @@ static void cancelCleanupBarrierCleanup(void *const arg) {
      * Keep the FIFO hold immune to a repeated cancellation request. */
     (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-    if (pthread_mutex_lock(&pData->mut) == 0) {
-        ordinal = ++pData->barrier_cancel_cleanup_count;
-        pthread_mutex_unlock(&pData->mut);
-    }
+    /* Cleanup handlers execute during pthread cancellation.  Give the two
+     * independent callbacks an atomic election, so the ordinal remains visible
+     * to race detectors without depending on cleanup-unwind mutex bookkeeping. */
+    ordinal = __atomic_add_fetch(&pData->barrier_cancel_cleanup_count, 1u, __ATOMIC_RELAXED);
     if (ordinal == 1) {
         const int fd = open(pData->barrier_cleanup_release_fifo, O_RDWR | O_CLOEXEC);
         writeBarrierMarker(pData->barrier_cancel_first_file, 0);
