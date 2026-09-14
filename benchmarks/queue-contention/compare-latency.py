@@ -48,7 +48,8 @@ def state(path):
 def report(status, failure=None):
     accepted = status == 'completed' and all(r['before']['status'] == r['after']['status'] == 'completed' for r in rows)
     body = {'schema_version': 1, 'status': status, 'summary_accepted': accepted, 'timing_accepted': accepted,
-            'latency_definition': 'same-process monotonic sendall-to-complete-file-line observation; polling included',
+            'latency_definition': 'same-process monotonic pre-framing-payload-timestamp-to-complete-file-line '
+            'observation; polling included',
             'guardrail': 'each pair: after p99 <= before p99 + max(0.10 * before p99, 0.001 seconds)',
             'workload': {'messages': a.messages, 'connections': a.connections, 'input_workers': a.input_workers,
                          'offered_rate': a.offered_rate, 'poll_us': a.poll_us, 'omfile_flush_policy': a.flush_policy,

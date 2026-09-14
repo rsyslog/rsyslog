@@ -44,7 +44,9 @@ callback or wire-service-time measurement.
 python3 benchmarks/queue-contention/compare-latency.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/latency-session \
   --offered-rate 10000 --connections 16 --before-scope global --after-scope local \
-  --before-queue-size 1088192 --after-queue-size 1000000 --frontend-capacity 10000 --frontend-max 8
+  --before-queue-size 1088192 --before-consumer-workers 10 \
+  --after-queue-size 1000000 --after-consumer-workers 2 \
+  --frontend-capacity 10000 --frontend-max 8 --worker-minimum 1
 ```
 
 The driver alternates builds and requires the same input workers, connections,

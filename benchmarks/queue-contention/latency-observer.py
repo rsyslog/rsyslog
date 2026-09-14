@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Fixed-rate TCP sender and exact-ID file-observation latency oracle.
 
-Latency is sendall-to-complete-output-line observation in this one process's
-monotonic clock domain.  It includes omfile visibility, reader polling, and
-scheduler delay; no observation overhead is subtracted.
+Latency is pre-framing-payload-timestamp-to-complete-output-line observation in
+this one process's monotonic clock domain. It includes framing, sendall, omfile
+visibility, and reader scheduling; no observation overhead is subtracted.
 """
 import argparse
 import json
