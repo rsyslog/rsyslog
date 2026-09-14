@@ -1618,6 +1618,11 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
     tcpsrv_io_descr_t workset[NSPOLL_MAX_EVENTS_PER_WAIT];
     const int sizeWorkset = sizeof(workset) / sizeof(tcpsrv_io_descr_t);
     rsRetVal localRet;
+    #ifdef ENABLE_TESTBENCH
+    const char *testShutdownMarker = pThis->pszOrigin != NULL && !strcmp((const char *)pThis->pszOrigin, "imtcp")
+                                         ? getenv("RSYSLOG_TEST_POLL_SHUTDOWN_MARKER")
+                                         : NULL;
+    #endif
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     DBGPRINTF("tcpsrv uses poll() [ex-select()] interface\n");
@@ -1663,8 +1668,46 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
         assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
         pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
         /* wait for io to become ready */
-        CHKiRet(poll_Poll(pThis, &nfds));
+    #ifdef ENABLE_TESTBENCH
+        /* A synthetic ready listener leaves no real readable descriptor behind.
+         * The barrier below then selects the inner FORCE_TERM branch exactly. */
+        if (testShutdownMarker != NULL) {
+            nfds = 1;
+        } else
+    #endif
+        {
+            CHKiRet(poll_Poll(pThis, &nfds));
+        }
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
+    #ifdef ENABLE_TESTBENCH
+        if (testShutdownMarker != NULL) {
+            sigset_t waitSet, savedSet;
+            int signalNumber;
+            sigemptyset(&waitSet);
+            sigaddset(&waitSet, SIGTTIN);
+            if (pthread_sigmask(SIG_BLOCK, &waitSet, &savedSet) != 0) return RS_RET_CONC_CTRL_ERR;
+            FILE *const marker = fopen(testShutdownMarker, "w");
+            if (marker == NULL) {
+                pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+                return RS_RET_IO_ERROR;
+            }
+            const int written = fputs("ready\n", marker);
+            const int closed = fclose(marker);
+            if (written == EOF || closed != 0) {
+                pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+                return RS_RET_IO_ERROR;
+            }
+            testShutdownMarker = NULL;
+            /* Consume the real input-stop signal so it cannot later wake an
+             * incorrectly retried poll and hide the lost FORCE_TERM result. */
+            int signalResult;
+            do {
+                signalResult = sigwait(&waitSet, &signalNumber);
+            } while (signalResult == 0 && glbl.GetGlobalInputTermState() == 0);
+            const int maskResult = pthread_sigmask(SIG_SETMASK, &savedSet, NULL);
+            if (signalResult != 0 || maskResult != 0) return RS_RET_CONC_CTRL_ERR;
+        }
+    #endif
 
         iWorkset = 0;
         for (i = 0; i < pThis->iLstnCurr && nfds; ++i) {
@@ -1727,6 +1770,13 @@ PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const
                   * crashed, which made sense (the rest of the engine was not prepared for
                   * that) -- rgerhards, 2008-05-19
                   */
+        /* An inner workset shutdown check must not retry the blocking poll.
+         * Like the post-poll check, this is a successful input stop.
+         * RunInternal still performs the ordinary worker/event cleanup. */
+        if (iRet == RS_RET_FORCE_TERM) {
+            iRet = RS_RET_OK;
+            break;
+        }
         continue; /* keep compiler happy, block end after label is non-standard */
     }
 
