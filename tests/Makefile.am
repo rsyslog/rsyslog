@@ -72,6 +72,10 @@ EXTRA_DIST += $(TESTS_TEMPLATE_PARAMETER_ERRORS)
 TESTS_QUEUE_BENCHMARK_ORACLE = queue-benchmark-oracle.sh
 EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_ORACLE) ../benchmarks/queue-contention/selftest.sh
 
+TESTS_QUEUE_BENCHMARK_LATENCY_ORACLE = queue-benchmark-latency-oracle.sh
+EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_LATENCY_ORACLE) ../benchmarks/queue-contention/latency-observer.py \
+	../benchmarks/queue-contention/latency-observer-selftest.py
+
 TESTS_QUEUE_DEFERRED_IDLE_WAKEUP = queue-deferred-idle-wakeup.sh queue-deferred-idle-shutdown.sh
 EXTRA_DIST += $(TESTS_QUEUE_DEFERRED_IDLE_WAKEUP) override_queue_disposal.c
 TESTS_QUEUE_LEASE = queue-discard-only-lease.sh queue-lease-attribution.sh

@@ -30,6 +30,30 @@ state are uncontrolled. Raw logs and host paths belong in ignored artifacts.
 This compact workload is a screening result, not broad performance acceptance;
 small per-batch improvements may be hidden by startup and testbench overhead.
 
+## Fixed-offered-rate latency observation
+
+`compare-latency.py` is a separate workload and does not alter the primary
+throughput trial. It uses one Python monotonic clock domain for timestamps made
+immediately before `sendall` and for complete-line observations in the omfile
+sink. The reported latency includes omfile visibility, file polling, and reader
+scheduling. It is not a callback or wire-service-time measurement.
+
+```
+python3 benchmarks/queue-contention/compare-latency.py --before /path/to/baseline \
+  --after /path/to/candidate --output /path/to/ignored/latency-session \
+  --offered-rate 10000 --connections 16 --before-scope global --after-scope local \
+  --before-queue-size 1080000 --after-queue-size 1000000 --frontend-capacity 10000 --frontend-max 8
+```
+
+The driver alternates builds and requires the same input workers, connections,
+offered rate, polling interval, synchronous omfile flush policy, dequeue batch,
+and worker-minimum policy per side. Per-side queue/consumer/scope resources are
+recorded rather than inferred. Every sample rejects missing or duplicate IDs,
+invalid output, timestamp mismatch, send errors, rate drift above two percent,
+sender lateness above ten milliseconds, or reader polling gaps above five
+milliseconds. The healthy-output p99 guardrail is accepted only when all samples
+are valid and `after <= before + max(10% of before, 1 ms)`.
+
 Use the multi-producer screening workload for queue contention. It runs 16
 concurrent sending threads/connections, 8 imtcp input workers, and 4 main-queue
 consumers (configurable with `--consumer-workers 8`). Each trial checks exact
