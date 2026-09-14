@@ -302,7 +302,6 @@ static rsRetVal doCancelCleanupBarrier(instanceData *const pData) {
     }
     pthread_cleanup_pop(0);
 
-finalize_it:
     RETiRet;
 }
 
