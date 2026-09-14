@@ -168,6 +168,7 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-tiered.sh \
 	local-queue-imtcp-partial-batch.sh \
 	local-queue-imtcp-shutdown.sh \
+	local-queue-force-term-actions.sh \
 	local-queue-stats-reconciliation.sh \
 	local-queue-stats-lifetime.sh \
 	local-queue-submit-batches.sh \
