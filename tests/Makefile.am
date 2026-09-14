@@ -178,9 +178,9 @@ TESTS_LOCAL_QUEUE_FAILURES = \
 	local-queue-startup-failure.sh \
 	local-queue-imtcp-tls-failure.sh \
 	local-queue-imtcp-cache-failure.sh \
-	local-queue-imtcp-worker-failure.sh \
-	local-queue-imtcp-producer-exit.sh
-EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES)
+	local-queue-imtcp-worker-failure.sh
+TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE = local-queue-imtcp-producer-exit.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
 
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
@@ -2923,7 +2923,8 @@ TESTS += $(TESTS_LOCAL_QUEUE)
 TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
 if ENABLE_IMTCP_EPOLL
 TESTS += $(TESTS_LOCAL_QUEUE_EPOLL)
-endif # ENABLE_IMTCP_EPOLL
+TESTS += $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
+endif
 endif
 endif
 endif
