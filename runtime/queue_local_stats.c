@@ -23,6 +23,7 @@
 #include "unicode-helper.h"
 
 DEFobjStaticHelpers;
+DEFobjCurrIf(obj);
 DEFobjCurrIf(statsobj);
 
 enum localLogicalCounter {
