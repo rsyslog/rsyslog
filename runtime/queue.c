@@ -4648,7 +4648,8 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
         FINALIZE;
     }
     DBGOPRINT((obj_t *)pThis, "shutdown: begin to destruct queue\n");
-    if (ourConf->globals.shutdownQueueDoubleSize) {
+    /* The local FixedArray allocation and accepted-work bound are immutable. */
+    if (!pThis->bLocalScope && ourConf->globals.shutdownQueueDoubleSize) {
         pThis->iHighWtrMrk *= 2;
         pThis->iMaxQueueSize *= 2;
     }
