@@ -128,13 +128,14 @@ if [[ "$BENCH_IMPSTATS" == yes ]]; then
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json" log.syslog="off")
 '
 fi
-# shellcheck disable=SC2090
-add_conf '
+BENCH_RAINERSCRIPT='
 global(processInternalMessages="off" abortOnUncleanConfig="on")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
     listenPortFileName="'$PORT_FILE'" workerThreads="'$BENCH_INPUT_WORKERS'")
-'$MAIN_QUEUE_CONF'
+'
+BENCH_RAINERSCRIPT+="$MAIN_QUEUE_CONF"
+BENCH_RAINERSCRIPT+='
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
     set $.parseStatus = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}", "\$!payload");
@@ -142,6 +143,7 @@ if ($msg contains "msgnum:") then {
         action(type="omfile" file="'$BENCH_OMFILE_PATH'" template="outfmt")
 }
 '
+add_conf "$BENCH_RAINERSCRIPT"
 start_ns=$(date +%s%N)
 startup
 assign_file_content INPUT_PORT "$PORT_FILE"
