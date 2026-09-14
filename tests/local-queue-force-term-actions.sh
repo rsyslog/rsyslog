@@ -74,8 +74,11 @@ wait_file_lines "$ACTION_B" 1
 wait_shutdown
 wait_file_lines "$STOP_BASE" 1
 
+# cmp_exact, sourced from diag.sh, reads this intentional global fixture value.
+# shellcheck disable=SC2034
 EXPECTED=$'1\n2'
 cmp_exact "$ACTION_A"
+# shellcheck disable=SC2034
 EXPECTED='2'
 cmp_exact "$ACTION_B"
 if ! grep -Eq '^OK .*outstanding=0 ' "$STOP_BASE"; then
