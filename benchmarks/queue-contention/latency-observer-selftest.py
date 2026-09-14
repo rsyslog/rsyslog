@@ -14,11 +14,16 @@ observer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(observer)
 
 
-def read_fixture(text, expected):
+def payload_line(identifier, timestamp, payload=32):
+    record = 'latency:%d:%d' % (identifier, timestamp)
+    return record + '|' + 'x' * (payload - len(record) - 1)
+
+
+def read_fixture(text, expected, payload=32):
     with tempfile.TemporaryDirectory() as directory:
         output = Path(directory) / 'sink'
         output.write_text(text)
-        result = observer.Observer(output, expected, 1)
+        result = observer.Observer(output, expected, payload, 1)
         thread = __import__('threading').Thread(target=result.run)
         thread.start()
         deadline = time.monotonic() + 1
@@ -30,21 +35,26 @@ def read_fixture(text, expected):
         return result
 
 
-good = read_fixture('latency:0:1\nlatency:1:2\n', {0, 1})
+good = read_fixture(payload_line(0, 1) + '\n' + payload_line(1, 2) + '\n', {0, 1})
 assert set(good.seen) == {0, 1} and not good.invalid and not good.duplicates
-missing = read_fixture('latency:0:1\n', {0, 1})
+missing = read_fixture(payload_line(0, 1) + '\n', {0, 1})
 assert set(missing.expected) - set(missing.seen) == {1}
-duplicate = read_fixture('latency:0:1\nlatency:0:1\n', {0})
+duplicate = read_fixture(payload_line(0, 1) + '\n' + payload_line(0, 1) + '\n', {0})
 assert duplicate.duplicates == 1
 invalid = read_fixture('not-a-latency-line\n', {0})
 assert invalid.invalid == 1
+truncated = read_fixture(payload_line(0, 1)[:-1] + '\n', {0})
+assert truncated.invalid == 1
 assert not observer.rate_is_valid(100, 90, 2.0)  # fixed offered-rate invalidation threshold
 
 with tempfile.TemporaryDirectory() as directory:
     output = Path(directory) / 'sink'
-    output.write_text('latency:0:1\nlatency:0:1\nlate-fragment')
-    final = observer.final_oracle(output, {0})
+    output.write_text(payload_line(0, 1) + '\n' + payload_line(0, 1) + '\nlate-fragment')
+    final = observer.final_oracle(output, {0}, 32, {0: 1})
     assert final['duplicates'] == 1 and final['trailing_bytes'] == len('late-fragment')
+    output.write_text(payload_line(0, 2) + '\n')
+    final = observer.final_oracle(output, {0}, 32, {0: 1})
+    assert final['timestamp_mismatch'] == 1
 
 
 with tempfile.TemporaryDirectory() as directory:
@@ -57,16 +67,27 @@ with tempfile.TemporaryDirectory() as directory:
         with listener, output.open('wb') as file:
             connection, _ = listener.accept()
             with connection:
+                pending = b''
                 while data := connection.recv(4096):
-                    for line in data.splitlines():
-                        file.write(line.split(b' - - - ', 1)[1] + b'\n')
+                    pending += data
+                    while b' ' in pending:
+                        length, message = pending.split(b' ', 1)
+                        if len(message) < int(length):
+                            break
+                        message, pending = message[:int(length)], message[int(length):]
+                        file.write(message.rsplit(b' - ', 1)[1] + b'\n')
                         file.flush()
+                assert not pending
 
     server = threading.Thread(target=sink)
     server.start()
+    expected = Path(directory) / 'expected'
     result = observer.run(SimpleNamespace(host='127.0.0.1', port=listener.getsockname()[1], output=output,
+                          expected=expected,
                           messages=4, connections=1, rate=100, id_start=0, poll_us=100, warmup_ms=5,
                           completion_timeout=2, connect_timeout=2, max_rate_drift_percent=20,
                           max_lateness_us=100000, max_poll_gap_us=100000, payload=128))
     server.join()
-    assert result['status'] == 'completed' and result['oracle']['received'] == 4
+    final = observer.final_oracle(output, {0, 1, 2, 3}, 128,
+                                  observer.load_expected(expected, {0, 1, 2, 3}))
+    assert result['status'] == 'completed' and result['oracle']['received'] == 4 and not final['missing']

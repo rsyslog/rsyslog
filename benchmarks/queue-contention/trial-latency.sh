@@ -27,6 +27,7 @@ if [[ "$BENCH_OMFILE_FLUSH_POLICY" != sync ]]; then
 fi
 . ${srcdir:=.}/diag.sh init
 PORT_FILE="$PWD/$RSYSLOG_DYNNAME.latency.port"
+EXPECTED_FILE=${BENCH_EXPECTED_FILE:-"$BENCH_METRIC_FILE.expected"}
 generate_conf
 # The quoted fragment below is intentionally emitted into RainerScript.
 # shellcheck disable=SC2090
@@ -41,8 +42,9 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="latencyfmt" flushOnTXEn
 startup
 assign_file_content INPUT_PORT "$PORT_FILE"
 rm -f "$BENCH_METRIC_FILE"
+rm -f "$EXPECTED_FILE"
 python3 "$OBSERVER_DIR/latency-observer.py" --host 127.0.0.1 --port "$INPUT_PORT" --output "$RSYSLOG_OUT_LOG" \
-    --result "$BENCH_METRIC_FILE" --messages "$NUMMESSAGES" --connections "$BENCH_CONNECTIONS" --rate "$BENCH_OFFERED_RATE" \
+    --result "$BENCH_METRIC_FILE" --expected "$EXPECTED_FILE" --messages "$NUMMESSAGES" --connections "$BENCH_CONNECTIONS" --rate "$BENCH_OFFERED_RATE" \
     --payload "$BENCH_PAYLOAD" --poll-us "$BENCH_POLL_US" --max-lateness-us "$BENCH_MAX_LATENESS_US" \
     --max-poll-gap-us "$BENCH_MAX_POLL_GAP_US" --allow-invalid || exit 1
 shutdown_when_empty
@@ -51,5 +53,5 @@ if [[ -n ${BENCH_RAW_OUTPUT_FILE:-} ]]; then
     cp -- "$RSYSLOG_OUT_LOG" "$BENCH_RAW_OUTPUT_FILE" || exit 1
 fi
 python3 "$OBSERVER_DIR/latency-observer.py" --finalize --output "$RSYSLOG_OUT_LOG" --result "$BENCH_METRIC_FILE" \
-    --messages "$NUMMESSAGES" --payload "$BENCH_PAYLOAD" || exit 1
+    --expected "$EXPECTED_FILE" --messages "$NUMMESSAGES" --payload "$BENCH_PAYLOAD" || exit 1
 exit_test

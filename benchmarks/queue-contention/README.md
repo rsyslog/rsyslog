@@ -34,15 +34,17 @@ small per-batch improvements may be hidden by startup and testbench overhead.
 
 `compare-latency.py` is a separate workload and does not alter the primary
 throughput trial. It uses one Python monotonic clock domain for timestamps made
-immediately before `sendall` and for complete-line observations in the omfile
-sink. The reported latency includes omfile visibility, file polling, and reader
-scheduling. It is not a callback or wire-service-time measurement.
+immediately before payload framing and for complete-line observations in the
+omfile sink. It separately records the timestamp-to-immediately-before-`sendall`
+preparation interval and dispatch lateness. The reported latency includes that
+preparation, `sendall`, omfile visibility, and reader scheduling. It is not a
+callback or wire-service-time measurement.
 
 ```
 python3 benchmarks/queue-contention/compare-latency.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/latency-session \
   --offered-rate 10000 --connections 16 --before-scope global --after-scope local \
-  --before-queue-size 1080000 --after-queue-size 1000000 --frontend-capacity 10000 --frontend-max 8
+  --before-queue-size 1088192 --after-queue-size 1000000 --frontend-capacity 10000 --frontend-max 8
 ```
 
 The driver alternates builds and requires the same input workers, connections,
@@ -50,11 +52,14 @@ offered rate, polling interval, synchronous omfile flush policy, dequeue batch,
 and worker-minimum policy per side. Per-side queue/consumer/scope resources are
 recorded rather than inferred. Every sample rejects missing or duplicate IDs,
 invalid output, timestamp mismatch, send errors, rate drift above two percent,
-sender lateness or reader polling gaps above 400 microseconds. These two limits
-are below the one-millisecond decision floor; their sum is reported as the
-observation uncertainty bound, and an over-budget run is invalid rather than a
-latency conclusion. After clean shutdown, the helper reparses the entire sink,
-including late duplicate/extra lines and trailing bytes. The healthy-output p99
+dispatch lateness, timestamp-to-dispatch preparation, or completed reader
+iteration intervals above 400 microseconds. These configured instrumentation
+budgets are below the one-millisecond decision floor; they are not an aggregate
+measurement-error bound. A delay inside or after `sendall`, the daemon, kernel,
+or filesystem cannot be independently bounded by this observer. After clean
+shutdown, the helper reparses the entire sink against the sender's exact
+ID/timestamp manifest, including required payload padding, late duplicate/extra
+lines, and trailing bytes. The healthy-output p99
 guardrail is accepted only when every pair is valid and each satisfies
 `after <= before + max(10% of before, 1 ms)`; paired p99 margin median and MAD
 are reported as dispersion, not substituted for the per-pair rule.
