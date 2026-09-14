@@ -1,19 +1,27 @@
 #!/bin/bash
 # Verify a local family requests cancellation for every blocked FE before it
-# waits for any one cleanup. Two real imtcp callbacks enter one controlled
-# omtesting action and block in cancellation points; this proves two actual FE
-# callbacks without assigning either TCP connection an FE identity. On shutdown
-# the first cleanup publishes FIRST and holds a FIFO. SECOND must publish before
-# that FIFO is released, which is impossible for the former sequential
-# cancel-and-join loop. The armed runtime final snapshot then proves both FEs
-# joined STOPPED and all two accepted obligations became terminal/discarded;
-# wait_shutdown is the bounded daemon watchdog and clean-termination oracle.
+# waits for any one cleanup. The ENABLE_TESTBENCH producer-retire fault retires
+# the actual worker after its first FE publication. The second message therefore
+# uses the one remaining actual input worker and must create a distinct FE; the
+# script proves that setup from registered/producerless/inflight counters rather
+# than mapping either TCP connection to a producer. Both FE callbacks then block
+# in the controlled omtesting action. On shutdown the first cleanup publishes
+# FIRST and holds a FIFO. SECOND must publish before that FIFO is released,
+# which is impossible for the former sequential cancel-and-join loop. The armed
+# runtime final snapshot then proves both FEs joined STOPPED and all two accepted
+# obligations became terminal/discarded; wait_shutdown is the bounded daemon
+# watchdog and clean-termination oracle.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin imdiag
 require_plugin impstats
 require_plugin omtesting
+
+# Retire exactly the worker that made the first successful FE publication. This
+# is a test-only one-shot fault. It establishes a second actual producer without
+# treating a connection count as a worker count.
+export RSYSLOG_LOCAL_QUEUE_TEST_FAULT=producer-retire
 
 STATSFILE="$PWD/${RSYSLOG_DYNNAME}.stats"
 ENTERFILE="$PWD/${RSYSLOG_DYNNAME}.entered"
@@ -42,15 +50,23 @@ if ($msg contains "localq-cancel") then
 '
 startup
 
+# The first callback stays blocked while its producer exits normally. It keeps
+# a live FE lease, so the following input must allocate the unused second FE.
 tcpflood -m1 -M'localq-cancel' &
-sender_a=$!
-tcpflood -m1 -M'localq-cancel' &
-sender_b=$!
-wait_file_lines "$ENTERFILE" 2
-wait "$sender_a" || error_exit $?
-wait "$sender_b" || error_exit $?
+sender_first=$!
+wait_file_lines "$ENTERFILE" 1
+wait "$sender_first" || error_exit $?
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"fe.registered=2" "fe.started=2" "fe.inflight.messages=2" "outstanding.messages=2"
+	"fe.registered=1" "fe.started=1" "fe.producerless=1" \
+	"fe.inflight.messages=1" "outstanding.messages=1"
+
+tcpflood -m1 -M'localq-cancel' &
+sender_second=$!
+wait_file_lines "$ENTERFILE" 2
+wait "$sender_second" || error_exit $?
+localq_wait_stats "$STATSFILE" "main Q.local" \
+	"fe.registered=2" "fe.started=2" "fe.producerless=1" \
+	"fe.inflight.messages=2" "outstanding.messages=2"
 
 # Arm the ENABLE_TESTBENCH final snapshot before shutdown destroys the adapter.
 # The command records a marker only after both FE states are joined/stopped and
