@@ -365,6 +365,30 @@ rsRetVal wtpRequestShutdown(wtp_t *const pThis, const wtpState_t command) {
     return RS_RET_OK;
 }
 
+/* The local family has already exhausted its shared cooperative phase.
+ * Request every cancellation before joining any worker: the legacy helper
+ * waits and joins each slot and would serialize another grace period per FE.
+ * mutWtp keeps each pthread ID owned until its request is issued; startup and
+ * terminal WAIT_JOIN publication use the same mutex. No logging, sleep or join
+ * may reenter a queue or wait for worker cleanup while holding this mutex. */
+rsRetVal wtpRequestCancelAll(wtp_t *const pThis) {
+    rsRetVal result = RS_RET_OK;
+    if (!pThis->monotonicTermination) return RS_RET_PARAM_ERROR;
+    d_pthread_mutex_lock(&pThis->mutWtp);
+    for (int i = 0; i < pThis->iNumWorkerThreads; ++i) {
+        wti_t *const worker = pThis->pWrkr[i];
+        const int state = wtiGetState(worker);
+        if (state == WRKTHRD_RUNNING || state == WRKTHRD_INITIALIZING) {
+            const int cancelResult = pthread_cancel(worker->thrdID);
+            const int signalResult = pthread_kill(worker->thrdID, SIGTTIN);
+            if ((cancelResult != 0 && cancelResult != ESRCH) || (signalResult != 0 && signalResult != ESRCH))
+                result = RS_RET_ERR;
+        }
+    }
+    d_pthread_mutex_unlock(&pThis->mutWtp);
+    return result;
+}
+
 /* NULL deadline is reserved for joining after cancellation: resource lifetime
  * cannot be bounded by a policy deadline while a callback still executes. */
 rsRetVal wtpWaitShutdownUntil(wtp_t *const pThis, const struct timespec *const deadline) {
@@ -407,7 +431,10 @@ static void wtpWrkrExecCleanup(wti_t *pWti) {
     const int numWorkersNow = ATOMIC_LOAD_32BIT_RELAXED(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
     DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n", wtpGetDbgHdr(pThis), (unsigned long)pWti,
               numWorkersNow);
-    if (numWorkersNow > 0) {
+    /* Local terminal publication must remain under mutWtp until broadcast.
+     * Emitting a queue message here could recurse into that local BE/pool.
+     * Debug output and the explicit local lifetime counters remain available. */
+    if (numWorkersNow > 0 && !pThis->monotonicTermination) {
         // TODO: did the thread ID experiment (pthread_self) work out? rgerhards, 2024-07-25
         LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
                "%s: worker thread %lx (%" PRIuPTR ") terminated, now %d active worker threads", wtpGetDbgHdr(pThis),

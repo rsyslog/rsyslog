@@ -703,7 +703,7 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
          * fresh timeout: it is required for safe lifetime even after expiry. */
         for (unsigned i = 0; i < family->count; ++i) {
             qqueueLocalFrontend_t *const fe = &family->fronts[i];
-            if (stateRead(&fe->state) == FE_RUNNING) wtpCancelAll(fe->pool, (const uchar *)"local FE shutdown");
+            if (stateRead(&fe->state) == FE_RUNNING) wtpRequestCancelAll(fe->pool);
         }
         for (unsigned i = 0; i < family->count; ++i) {
             qqueueLocalFrontend_t *const fe = &family->fronts[i];
@@ -739,7 +739,7 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
         wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
         (void)wtpWaitShutdownUntil(owner->pWtpReg, &action);
     }
-    wtpCancelAll(owner->pWtpReg, (const uchar *)"local BE shutdown");
+    wtpRequestCancelAll(owner->pWtpReg);
     wtpWaitShutdownUntil(owner->pWtpReg, NULL);
     /* All module state is disposed and threads joined. Every failed transfer
      * still belongs to its FE; classify the residual memory loss exactly once. */

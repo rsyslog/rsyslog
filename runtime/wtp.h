@@ -106,6 +106,8 @@ rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *
  * their realtime condition. A local family requests every pool before waiting. */
 rsRetVal wtpUseMonotonicTermination(wtp_t *pThis);
 rsRetVal wtpRequestShutdown(wtp_t *pThis, wtpState_t command);
+/* Local-only cancellation request: no delay or join; family waits afterwards. */
+rsRetVal wtpRequestCancelAll(wtp_t *pThis);
 rsRetVal wtpWaitShutdownUntil(wtp_t *pThis, const struct timespec *monotonicDeadline);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEObjClassExit(wtp);
