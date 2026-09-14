@@ -9,11 +9,12 @@
 . ${srcdir:=.}/diag.sh init
 python3 "$srcdir/../benchmarks/queue-contention/latency-observer-selftest.py" || error_exit 1
 require_plugin imtcp
+metric_file="$PWD/$RSYSLOG_DYNNAME.latency.json"
 (
     unset RSYSLOG_DYNNAME TESTCONF_NM
     BENCH_MESSAGES=4 BENCH_CONNECTIONS=1 BENCH_OFFERED_RATE=100 BENCH_PAYLOAD=128 \
         BENCH_MAX_LATENESS_US=100000 BENCH_MAX_POLL_GAP_US=100000 \
-        BENCH_METRIC_FILE="$PWD/$RSYSLOG_DYNNAME.latency.json" \
+        BENCH_METRIC_FILE="$metric_file" \
         bash "$srcdir/../benchmarks/queue-contention/trial-latency.sh"
 ) || error_exit 1
 exit_test
