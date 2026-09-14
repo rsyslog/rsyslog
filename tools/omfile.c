@@ -2214,7 +2214,7 @@ static rsRetVal localQueueCheckAction(void *const instance) {
         pData->bDynamicName || pData->bUseAsyncWriter || pData->iZipLevel != 0 || pData->bVeryRobustZip ||
         pData->bSyncFile || pData->iSizeLimit != 0 || pData->pszSizeLimitCmd != NULL || pData->useSigprov ||
         pData->sigprovName != NULL || pData->useCryprov || pData->cryprovName != NULL || !pData->bFlushOnTXEnd ||
-        pData->iCloseTimeout != -1)
+        pData->iCloseTimeout != 0)
         return RS_RET_LOCAL_QUEUE_CONFIG;
     return RS_RET_OK;
 }

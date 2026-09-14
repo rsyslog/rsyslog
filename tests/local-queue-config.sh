@@ -30,6 +30,7 @@ write_config() {
             params[queue.scope]=global
             unset 'params[queue.local.frontendsize]' 'params[queue.local.maxfrontends]'
             preamble='$ActionResumeRetryCount 2147483648'
+            statement='*.* /dev/null;local_test'
             ;;
         valid-imtcp) module_name=imtcp; input_type=imtcp ;;
         invalid-input) module_name=imptcp; input_type=imptcp ;;
@@ -44,7 +45,7 @@ write_config() {
         custom-parser)
             preamble='parser(name="custom.local_test" type="pmrfc3164" detect.headerless="on" headerless.ruleset="main")'
             ;;
-        inherited-action) preamble='$ActionResumeRetryCount 1' ;;
+        inherited-action) preamble='$ActionResumeRetryCount 1'; statement='*.* /dev/null;local_test' ;;
         inherited-wrapped-action) preamble='$ActionResumeRetryCount 2147483648' ;;
         inherited-wrapped-then-reset) preamble=$'$ActionResumeRetryCount 2147483648\n$ActionResumeRetryCount 0' ;;
         inherited-file) preamble='$OMFileAsyncWriting on'; statement='*.* /dev/null;local_test' ;;
@@ -56,6 +57,7 @@ write_config() {
         developer-bypass) global_extra='internal.developeronly.options="1"'; params[queue.scope]=locla ;;
         wrapped-minimum) params[queue.mindequeuebatchsize]=4294967296 ;;
         wrapped-sampling) params[queue.samplinginterval]=4294967296 ;;
+        wrapped-severity) params[queue.discardseverity]=4294967304 ;;
         wrapped-timeout) params[queue.timeoutshutdown]=4294967296 ;;
         overflow-timeout) params[queue.timeoutshutdown]=2147483648 ;;
         negative-timeout) params[queue.timeoutshutdown]=-1 ;;
@@ -164,7 +166,7 @@ positive=(valid valid-json valid-global valid-disabled valid-int-boundary valid-
 negative=(bad-scope missing-bound negative-bound oversized-bound disk direct minimum sampling
     discard disk-option deleted-local dropped-local asyncfile syncfile unflushed-file queued-action
     unsafe-function unsafe-destination malformed-destination shared-variable call indirect
-    wrapped-minimum wrapped-sampling wrapped-timeout overflow-timeout negative-timeout
+    wrapped-minimum wrapped-sampling wrapped-severity wrapped-timeout overflow-timeout negative-timeout
     wrapped-action wrapped-retry wrapped-file wrapped-close custom-parser inherited-action
     inherited-wrapped-action inherited-wrapped-then-reset inherited-file inherited-module global-graph-escape
     duplicate-main developer-bypass)
@@ -202,6 +204,24 @@ for scenario in "${negative[@]}"; do
             cat "$log"
             error_exit 1
         fi
+        # These configurations must reach their intended qualification branch;
+        # an unrelated syntax or module-loading error would be a false positive.
+        case "$scenario" in
+            invalid-input|invalid-impstats)
+                grep -F "input module" "$log" > /dev/null || { cat "$log"; error_exit 1; }
+                ;;
+            custom-parser)
+                grep -F "explicit parser instances" "$log" > /dev/null || { cat "$log"; error_exit 1; }
+                ;;
+        esac
+        case "$scenario" in
+            invalid-input|invalid-impstats|custom-parser|inherited-*|wrapped-*)
+                if grep -E 'syntax error|could not load module|parameter .* not known' "$log" > /dev/null; then
+                    cat "$log"
+                    error_exit 1
+                fi
+                ;;
+        esac
     done
 done
 exit_test

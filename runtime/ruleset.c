@@ -1026,8 +1026,12 @@ DEFFUNC_llExecFunc(localQueueMarkValidated) {
 
 rsRetVal rulesetValidateLocalQueues(rsconf_t *const conf) {
     if (!conf->bLocalConfigRequested && !conf->bLocalConfigError) return RS_RET_OK;
-    if (conf->bLocalConfigError || conf->bLocalLegacyNumericError || conf->bLocalCustomParser ||
-        conf->pMsgQueue == NULL || runConf != NULL || qqueueValidateLocalConfig(conf->pMsgQueue) != RS_RET_OK)
+    if (conf->bLocalCustomParser) {
+        parser_errmsg("experimental local queue: explicit parser instances are not supported");
+        goto invalid;
+    }
+    if (conf->bLocalConfigError || conf->bLocalLegacyNumericError || conf->pMsgQueue == NULL || runConf != NULL ||
+        qqueueValidateLocalConfig(conf->pMsgQueue) != RS_RET_OK)
         goto invalid;
     /* Conservative whole-config input whitelist prevents hidden producers and
      * cross-ruleset graph escapes. Optional checks inspect resolved module state;

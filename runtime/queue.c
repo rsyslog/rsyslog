@@ -5381,6 +5381,18 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
 
     qqueueNoteLocalConfigIntent(lst);
     qqueueNoteLocalParams(pThis, lst);
+    /* Facility-name conversion returns int before populating pvals. For S2's
+     * disabled severity policy, qualify the raw value instead of accepting an
+     * oversized number that that historical conversion can wrap into eight. */
+    if (pThis->bLocalScope) {
+        for (const struct nvlst *nv = lst; nv != NULL; nv = nv->next) {
+            if (nv->name != NULL && !es_strcasebufcmp(nv->name, (uchar *)"queue.discardseverity", 21) &&
+                (nv->val.datatype != 'S' || es_strbufcmp(nv->val.d.estr, (uchar *)"8", 1))) {
+                pThis->bLocalConfigError = 1;
+                loadConf->bLocalConfigError = 1;
+            }
+        }
+    }
     pvals = nvlstGetParams(lst, &pblk, NULL);
     if (pvals == NULL) {
         parser_errmsg("error processing queue config parameters");
