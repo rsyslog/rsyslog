@@ -325,9 +325,13 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
         return RS_RET_INTERNAL_ERROR;
     FILE *const output = fopen(marker, "w");
     if (output == NULL) return RS_RET_IO_ERROR;
-    const int written = fprintf(output, "OK fe.joined=%u outstanding=0 admitted=%llu terminal=%llu rejected=%llu\n",
-                                joined, (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
-                                (unsigned long long)snapshot.preadmission_rejected);
+    const int written =
+        fprintf(output,
+                "OK fe.joined=%u fe.registered=%llu shutdown.discarded=%llu outstanding=0 "
+                "admitted=%llu terminal=%llu rejected=%llu\n",
+                joined, (unsigned long long)snapshot.fe_registered, (unsigned long long)snapshot.shutdown_discarded,
+                (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
+                (unsigned long long)snapshot.preadmission_rejected);
     const int closed = fclose(output);
     return written < 0 || closed != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
 }
