@@ -164,8 +164,10 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-tiered.sh \
 	local-queue-imtcp-partial-batch.sh \
 	local-queue-imtcp-registration.sh \
+	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-shutdown.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE) local-queue-common.sh
+EXTRA_DIST += unit/local_queue_stats_lifetime_test.c
 
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
@@ -2835,6 +2837,22 @@ runtime_unit_queue_da_LDADD =
 runtime_unit_queue_lease_LDADD = $(PTHREADS_LIBS)
 runtime_unit_queue_spsc_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
+
+if ENABLE_TESTBENCH
+check_PROGRAMS += runtime_unit_local_queue_stats_lifetime
+TESTS += runtime_unit_local_queue_stats_lifetime
+
+runtime_unit_local_queue_stats_lifetime_SOURCES = \
+	unit/local_queue_stats_lifetime_test.c \
+	$(top_srcdir)/runtime/queue_local_stats.c
+runtime_unit_local_queue_stats_lifetime_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS) \
+	-DENABLE_TESTBENCH
+runtime_unit_local_queue_stats_lifetime_LDADD = \
+	$(top_builddir)/runtime/librsyslog.la \
+	$(PTHREADS_LIBS) \
+	$(SOL_LIBS)
+endif
 
 if ENABLE_LIBLOGGING_STDLOG
 runtime_unit_linkedlist_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
