@@ -8,13 +8,13 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Proposed / upcoming work; not implemented** |
+| Status | **Full design remains upcoming; restricted S2 MVP integrated, final validation pending** |
 | Created / last reviewed | 2026-09-14 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |
 | Source inspection | Core paths first inspected at `82af24be1b1fea24feca2831b236ef6346639364`; the core files cited below are unchanged between these revisions |
 | Scope | Architecture and implementation planning; no measured performance claim |
-| Configuration status | `scope="local"` is a proposed concept, not an available option; exact parameter names remain to be settled |
+| Configuration status | The experimental S2 implements `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
 
 <!-- .. summary-start -->
 One logical queue gains private single-producer/single-consumer (SPSC) memory
@@ -25,6 +25,10 @@ consumers process locally and help the back end when locally idle. Shutdown
 consolidates outstanding front-end work into the back end; restart does not
 reconstruct the old producer topology.
 <!-- .. summary-end -->
+
+The [execution ledger](local-queue-execution-ledger.md) identifies implemented
+scope and validation. In particular, S2 does not include disk assistance, backend
+helping, local action queues, or Elasticsearch qualification.
 
 The companion [implementation plan](local-queue-implementation-plan.md) defines
 stages from an experimental MVP through full initial qualification, with

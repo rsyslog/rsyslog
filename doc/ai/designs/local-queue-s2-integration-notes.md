@@ -168,8 +168,9 @@ worker.logical_owner == fe.logicalOwner
 worker.pWtp.pmutUsr == fe.source_queue.mut == &fe.mutex
 ```
 
-Install the logical owner's immediate-shutdown pointer before executing its
-callback. Do not swap `pmutUsr` to the BE mutex. The callback uses this worker's
+Install the physical source's immediate-shutdown pointer before executing the
+logical owner's callback. This supersedes the original logical-owner-pointer
+proposal: an FE must stop cooperatively while BE remains available for transfer. Do not swap `pmutUsr` to the BE mutex. The callback uses this worker's
 own `actWrkrInfo`, transaction parameters, execution state and deferred buffer.
 The FE descriptor and logical owner outlive the thread, active lease and cached
 producer reference.
@@ -366,22 +367,27 @@ destruction. Do not hold the registry mutex across callback joins or BE waits.
 
 Request every FE to stop acquiring after its current callback. Let active
 callbacks finish within the one logical graceful deadline. Pool immediate-stop
-state can stop the next acquisition while the logical callback's immediate flag
+state can stop the next acquisition while the physical source's immediate flag
 remains unset; these are distinct controls. Complete or retain the active lease,
 join the FE thread, and let maintenance transfer residual work to the still-running
 BE. BE must not terminate merely because it is temporarily empty before transfers
 finish. After all accepted upstream/FE obligations are settled, request BE drain
 and wait using the remainder of the same deadline.
 
-At graceful deadline expiry, publish the logical immediate flag and request the
-appropriate stop transition on all remaining FE/BE pools before waiting for any
-one of them. Use one new action-completion deadline for the entire phase. Then
-request cancellation for all remaining workers before joining them. If BE cannot
-consume further transfers, retain the exact residual ownership until explicit
-terminal memory-shutdown discard. Do not restart BE implicitly or multiply a
-full timeout by N. Cancellation/join may exceed the policy deadline while safe
-thread termination completes; do not claim a hard wall-time bound for an
-uncooperative callback.
+At graceful deadline expiry with unfinished FE obligations, set each running
+FE physical source's immediate flag and request its stop transition. Preserve BE
+service while FE callbacks finish and maintenance transfers residuals. Use one
+new action-completion deadline for the family. Request cancellation on all
+unfinished FEs before joining any of them. After FE transfer attempts, close BE
+admission, settle existing submissions, and request BE drain. BE escalation uses
+the remaining action deadline, or starts that single deadline if no FE needed
+it. This supersedes the original simultaneous FE/BE immediate-stop proposal.
+
+If BE cannot consume further transfers, retain the exact residual ownership
+until explicit terminal memory-shutdown discard. Do not restart BE implicitly
+or multiply a full timeout by N. Cancellation/join may exceed the policy
+deadline while safe thread termination completes; do not claim a hard wall-time
+bound for an uncooperative callback.
 
 ### 8.1 Required worker-pool wait seam
 
@@ -411,7 +417,7 @@ until the family reaches its final reconciled state.
 |---|---|---|
 | Standalone SPSC primitive | New `runtime` primitive; runtime manifest; tests registered in `tests/Makefile.am` | Exact/no fit, cached-full refresh, partial reads, wrap, publication ordering |
 | FE source and one-worker adapter | `runtime/queue.[ch]`, narrow worker hooks | Private WID/source identity, start failure, registration cap, producer departure, empty-to-park wake |
-| Lease completion/retry and cancellation | `runtime/queue.c`, `runtime/wti.[ch]` | Partial terminal states, no replay of completed scripts, retained retry without spin, cancellation/action cleanup |
+| Lease completion/retry and cancellation | `runtime/queue.c`, `runtime/wti.[ch]` | Partial terminal states, no spontaneous replay during an ordinary retained lease, deliberate ambiguous shutdown replay, retained retry without spin, cancellation/action cleanup |
 | Internal transfer and family deadline | `runtime/queue.c`, `runtime/wtp.[ch]` | Full BE, partial transfer, callback cancellation, late internal messages, N-front shared deadlines |
 
 Registration/configuration and stats registration remain separately assigned
