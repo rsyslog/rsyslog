@@ -3824,7 +3824,8 @@ rsRetVal qqueueTestLeaseCompletionPaths(void) {
     objInfo_t queue_info = {.pszID = UCHAR_CONSTANT("qqueue")};
     objInfo_t wti_info = {.pszID = UCHAR_CONSTANT("wti")};
     int store_context;
-    batch_obj_t retained_element = {.pMsg = (smsg_t *)&store_context};
+    smsg_t retained_message;
+    batch_obj_t retained_element = {.pMsg = &retained_message};
     batch_state_t retained_state = BATCH_STATE_COMM;
     DEFiRet;
 
@@ -3883,7 +3884,7 @@ rsRetVal qqueueTestLeaseCompletionPaths(void) {
         source.nLogDeq != 1 || callback_owner.segdiskCorruptionEvents != 0 || worker.source_queue != &source ||
         worker.logical_owner != &callback_owner || worker.batch.storeData != &store_context ||
         worker.batch.nElem != 1 || worker.batch.nElemDeq != 1 || worker.batch.pElem != &retained_element ||
-        worker.batch.eltState != &retained_state || retained_element.pMsg != (smsg_t *)&store_context ||
+        worker.batch.eltState != &retained_state || retained_element.pMsg != &retained_message ||
         retained_state != BATCH_STATE_COMM || worker.n_deferred_msgs != 0) {
         iRet = RS_RET_INTERNAL_ERROR;
         goto finalize_it;
