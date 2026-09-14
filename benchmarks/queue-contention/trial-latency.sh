@@ -15,7 +15,9 @@ OBSERVER_DIR=${BENCH_CAMPAIGN_DIR:-$(cd "$(dirname "$0")" && pwd)}
 # This is deliberately an rsyslog configuration fragment, not shell code.
 # shellcheck disable=SC2089
 case "$BENCH_SCOPE" in
-    global) QUEUE_SCOPE_CONF='queue.scope="global"' ;;
+    # S0/baseline has no queue.scope parameter. Its historical global queue is
+    # the matched global control, so emit no experimental option on that side.
+    global) QUEUE_SCOPE_CONF='' ;;
     local) QUEUE_SCOPE_CONF="queue.scope=\"local\" queue.local.frontendSize=\"$BENCH_FRONTEND_CAPACITY\" queue.local.maxFrontends=\"$BENCH_FRONTEND_MAX\"" ;;
     *) echo "BENCH_SCOPE must be global or local" >&2; exit 1 ;;
 esac
@@ -34,7 +36,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_FILE'" workerThreads="'$BENCH_INPUT_WORKERS'")
 main_queue(queue.type="FixedArray" queue.size="'$BENCH_QUEUE_SIZE'" queue.workerThreads="'$BENCH_CONSUMER_WORKERS'" queue.workerThreadMinimumMessages="'$BENCH_WORKER_MINIMUM'" queue.dequeueBatchSize="'$BENCH_DEQUEUE_BATCH_SIZE'" '$QUEUE_SCOPE_CONF')
 template(name="latencyfmt" type="string" string="%msg%\n")
-if ($msg startswith "latency:") then { action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="latencyfmt") }
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="latencyfmt" flushOnTXEnd="on")
 '
 startup
 assign_file_content INPUT_PORT "$PORT_FILE"
@@ -45,6 +47,9 @@ python3 "$OBSERVER_DIR/latency-observer.py" --host 127.0.0.1 --port "$INPUT_PORT
     --max-poll-gap-us "$BENCH_MAX_POLL_GAP_US" --allow-invalid || exit 1
 shutdown_when_empty
 wait_shutdown
+if [[ -n ${BENCH_RAW_OUTPUT_FILE:-} ]]; then
+    cp -- "$RSYSLOG_OUT_LOG" "$BENCH_RAW_OUTPUT_FILE" || exit 1
+fi
 python3 "$OBSERVER_DIR/latency-observer.py" --finalize --output "$RSYSLOG_OUT_LOG" --result "$BENCH_METRIC_FILE" \
     --messages "$NUMMESSAGES" --payload "$BENCH_PAYLOAD" || exit 1
 exit_test

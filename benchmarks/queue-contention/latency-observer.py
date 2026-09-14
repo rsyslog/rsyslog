@@ -16,7 +16,7 @@ import statistics
 import threading
 import time
 
-LINE = re.compile(r'^latency:([0-9]+):([0-9]+)(?:\|x*)?$')
+LINE = re.compile(r'^\s*latency:([0-9]+):([0-9]+)(?:\|x*)?$')
 
 
 def percentile(values, fraction):
@@ -114,7 +114,11 @@ def run(args):
                     identifier = args.id_start + ordinal
                     record = 'latency:%d:%d' % (identifier, sent_ns)
                     body = record + '|' + 'x' * max(0, args.payload - len(record) - 1)
-                    stream.sendall(('<13>1 2026-01-01T00:00:00Z - - - %s\n' % body).encode('ascii'))
+                    # RFC5424 requires hostname, app-name, procid, msgid,
+                    # and structured-data before MSG.  The five NILVALUE
+                    # fields keep body in $msg for the stock parser.
+                    message = '<13>1 2026-01-01T00:00:00Z - - - - - %s' % body
+                    stream.sendall(('%d %s' % (len(message), message)).encode('ascii'))
                     with lock:
                         sent[identifier] = sent_ns
                         lateness.append(max(0, sent_ns - deadline))
