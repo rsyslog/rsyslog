@@ -3221,6 +3221,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     qqueueDeferBatch(pWti);
     if (iRet == RS_RET_OK && hadResponsibility) CHKiRet(qqueueClearWtiSource(pThis, pWti));
 
+finalize_it:
     RETiRet;
 }
 
@@ -5778,6 +5779,7 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
     CHKiRet(objUse(strm, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CHKiRet(qqueueLocalStatsClassInit());
 
     /* now set our own handlers */
     OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

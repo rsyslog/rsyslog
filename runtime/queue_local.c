@@ -522,6 +522,7 @@ void qqueueLocalBackendRoute(qqueue_t *const owner, const size_t n, const enum q
         case QLOCAL_REDIRECT:
             counterAdd(&family->beRedirect, n);
             break;
+        default:
         case QLOCAL_UNCLASSIFIED:
             counterAdd(&family->beUnclassified, n);
             break;
