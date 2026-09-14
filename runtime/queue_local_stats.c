@@ -20,6 +20,8 @@
 #include "queue_local_stats.h"
 #include "statsobj.h"
 
+DEFobjCurrIf(statsobj);
+
 enum localLogicalCounter {
     localLogicalIngressMessages,
     localLogicalAcceptedMessages,
