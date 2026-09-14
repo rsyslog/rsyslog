@@ -39,11 +39,11 @@ if ($msg contains "msgnum:") then
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="lifecyclefmt")
 '
 startup
-content_check 'local queue test fault: producer-retire' "${RSYSLOG_DYNNAME}.fault.log"
 tcpflood -m1 -i0
 wait_file_lines "$ENTERFILE" 1
 localq_wait_stats "$STATSFILE" 'main Q.local' \
     'fe.registered=1' 'fe.started=1' 'fe.producerless=1' 'fe.inflight.messages=1'
+content_check 'local queue test fault: producer-retire' "${RSYSLOG_DYNNAME}.fault.log"
 localq_wait_stats "$STATSFILE" 'main Q.local.frontend.1' \
     'registration.id=1' 'registration.generation=1' 'producer.exited=1' \
     'inflight.fe=1' 'admitted.messages=1'

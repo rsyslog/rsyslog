@@ -34,9 +34,9 @@ if ($msg contains "msgnum:") then
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="failurefmt")
 '
 startup
-content_check "local queue test fault: $RSYSLOG_LOCAL_QUEUE_TEST_FAULT" "${RSYSLOG_DYNNAME}.fault.log"
 tcpflood -m "$NUMMESSAGES"
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
+content_check "local queue test fault: $RSYSLOG_LOCAL_QUEUE_TEST_FAULT" "${RSYSLOG_DYNNAME}.fault.log"
 localq_wait_stats_regex "$STATSFILE" 'main Q.local' \
     "fe.registered=$registered" 'fe.started=0' 'route.fe.messages=0' \
     "route.be.reason.registration_fallback.messages=$NUMMESSAGES" \
