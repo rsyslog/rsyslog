@@ -167,6 +167,7 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-shutdown.sh \
 	local-queue-imtcp-shutdown-multi-fe.sh \
+	local-queue-stats-reconciliation.sh \
 	local-queue-stats-lifetime.sh \
 	local-queue-submit-batches.sh \
 	local-queue-redirect-publication.sh
