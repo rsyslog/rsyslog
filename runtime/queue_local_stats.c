@@ -119,7 +119,7 @@ struct qqueueLocalStats_s {
 
 typedef struct localCounterDescriptor_s {
     const char *name;
-    size_t offset;
+    size_t index;
 } localCounterDescriptor_t;
 
 rsRetVal qqueueLocalStatsClassInit(void) {
@@ -131,7 +131,7 @@ finalize_it:
 }
 
 #define LOCAL_COUNTER(name, member) \
-    { name, offsetof(qqueueLocalStats_t, logical_counters) + sizeof(intctr_t) * member }
+    { name, member }
 static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("ingress.messages", localLogicalIngressMessages),
     LOCAL_COUNTER("accepted.messages", localLogicalAcceptedMessages),
@@ -174,7 +174,7 @@ static const localCounterDescriptor_t logicalCounters[] = {
 #undef LOCAL_COUNTER
 
 #define FRONTEND_COUNTER(name, member) \
-    { name, offsetof(localFrontendStats_t, counters) + sizeof(intctr_t) * member }
+    { name, member }
 static const localCounterDescriptor_t frontendCounters[] = {
     FRONTEND_COUNTER("registration.id", localFrontendRegistrationId),
     FRONTEND_COUNTER("registration.generation", localFrontendGeneration),
@@ -305,12 +305,12 @@ static void localFrontendStatsPreRead(statsobj_t *const object, void *const cont
 }
 
 static rsRetVal localStatsAddCounters(statsobj_t *const object,
-                                      void *const counter_base,
+                                      intctr_t *const counters,
                                       const localCounterDescriptor_t *const descriptors,
                                       const size_t count) {
     DEFiRet;
     for (size_t i = 0; i < count; ++i) {
-        intctr_t *const storage = (intctr_t *)((char *)counter_base + descriptors[i].offset);
+        intctr_t *const storage = &counters[descriptors[i].index];
         PREFER_STORE_uint64(storage, 0);
         CHKiRet(
             statsobj.AddCounter(object, (const uchar *)descriptors[i].name, ctrType_IntCtr, CTR_FLAG_NONE, storage));
@@ -323,14 +323,14 @@ static rsRetVal localStatsConstructObject(statsobj_t **const out,
                                           const uchar *const name,
                                           void (*const callback)(statsobj_t *, void *),
                                           void *const context,
-                                          void *const counter_base,
+                                          intctr_t *const counters,
                                           const localCounterDescriptor_t *const descriptors,
                                           const size_t descriptor_count) {
     DEFiRet;
     CHKiRet(statsobj.Construct(out));
     CHKiRet(statsobj.SetName(*out, (uchar *)name));
     CHKiRet(statsobj.SetOrigin(*out, UCHAR_CONSTANT("core.queue.local")));
-    CHKiRet(localStatsAddCounters(*out, counter_base, descriptors, descriptor_count));
+    CHKiRet(localStatsAddCounters(*out, counters, descriptors, descriptor_count));
     CHKiRet(statsobj.SetPreReadNotifier(*out, callback, context));
     CHKiRet(statsobj.ConstructFinalize(*out));
 finalize_it:
@@ -513,8 +513,9 @@ rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
     stats->owner = owner;
     stats->frontend_limit = frontend_detail ? frontend_limit : 0;
     if (asprintf(&object_name, "%s.local", logical_name) < 0) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-    CHKiRet(localStatsConstructObject(&stats->logical, (const uchar *)object_name, localStatsPreRead, stats, stats,
-                                      logicalCounters, sizeof(logicalCounters) / sizeof(logicalCounters[0])));
+    CHKiRet(localStatsConstructObject(&stats->logical, (const uchar *)object_name, localStatsPreRead, stats,
+                                      stats->logical_counters, logicalCounters,
+                                      sizeof(logicalCounters) / sizeof(logicalCounters[0])));
     free(object_name);
     object_name = NULL;
 
@@ -527,7 +528,7 @@ rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
             if (asprintf(&object_name, "%s.local.frontend.%u", logical_name, i + 1) < 0)
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             CHKiRet(localStatsConstructObject(&frontend->object, (const uchar *)object_name, localFrontendStatsPreRead,
-                                              frontend, frontend, frontendCounters,
+                                              frontend, frontend->counters, frontendCounters,
                                               sizeof(frontendCounters) / sizeof(frontendCounters[0])));
             free(object_name);
             object_name = NULL;
