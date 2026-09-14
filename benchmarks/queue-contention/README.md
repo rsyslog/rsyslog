@@ -33,9 +33,12 @@ small per-batch improvements may be hidden by startup and testbench overhead.
 Use the multi-producer screening workload for queue contention. It runs 16
 concurrent sending threads/connections, 8 imtcp input workers, and 4 main-queue
 consumers (configurable with `--consumer-workers 8`). Each trial checks exact
-IDs, generator success, complete drain, and clean daemon shutdown. The primary
-metric is generation plus drain; raw data also separates generation, drain,
-and full lifecycle. Drain polling uses 10 ms intervals to reduce quantization. Start with 3 measured pairs, then expand if the effect is
+IDs, generator success, complete receiver line barrier, and clean daemon
+shutdown. The primary metric is generation plus receiver line barrier; raw data
+also separates generation, drain, full lifecycle, and post-shutdown exact-ID
+verification time. The latter is deliberately excluded from the timing metric,
+but a verification failure makes the trial fail. Drain polling uses 10 ms
+intervals to reduce quantization. Start with 3 measured pairs, then expand if the effect is
 clear. Keep the single-imdiag-producer workload as a low-contention guardrail.
 
 ```
@@ -43,6 +46,54 @@ python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/multi-screen \
   --workload multi --messages 1000000 --pairs 3
 ```
+
+Run the exact-ID oracle selftest against a built testbench binary before a
+baseline campaign. It must reject both fixture corruptions:
+
+```
+docker run --rm -u "$(id -u):$(id -g)" \
+  -v /path/to/baseline:/rsyslog \
+  -v "$(pwd)/benchmarks/queue-contention:/campaign:ro" \
+  -w /rsyslog/tests rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+  bash /campaign/selftest.sh ./chkseq
+```
+
+`--queue-size`, `--dequeue-batch-size`, and `--worker-minimum` parameterize
+the FixedArray configuration. `--before-queue-size` and
+`--after-queue-size`, plus their consumer-worker counterparts, make future
+S2 resource-matched comparisons explicit in `result.json`; they do not change
+the default screening workload. `--frontend-capacity` records the planned
+local-front reservation cap without implying global MPMC has fronts.
+
+For the S0 10K/1M MPMC capacity baseline, use the actual planned imtcp worker
+front cap, not TCP connection count. With eight fronts, this is 1,080,000
+queue slots (`8 * 10000 + 1000000`), before separately reporting active batch
+holdings:
+
+```
+python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
+  --after /path/to/candidate --output /path/to/ignored/10k-1m \
+  --workload multi --messages 1000000 --pairs 3 --input-workers 8 \
+  --connections 16 --consumer-workers 10 --queue-size 1080000 \
+  --worker-minimum 1 --dequeue-batch-size 1024 --payload 512 \
+  --frontend-capacity 8
+```
+
+`--producer-mode balanced` uses all configured TCP connections. `--producer-mode
+skew` retains the configured imtcp and consumer worker budgets but uses one
+active TCP connection for the finite connection-skew control. imtcp's dynamic
+scheduling means this does not establish hot producer identity. It is an MPMC
+baseline only: it does not claim to instantiate inactive local fronts.
+
+Pass `--impstats` only for a diagnostic run. It enables queue mutex-contention
+statistics and copies the raw JSON `log.file` output into the result directory
+for every trial. Those runs are not timing evidence: impstats changes the
+workload and still does not provide actual batch-size distributions.
+
+Configured dequeue sizes are not actual-batch evidence. imtcp may submit
+variable batches, and this harness currently records no producer-submit or
+queue-dequeue histogram. Add diagnostic instrumentation before making claims
+about actual producer, dequeue, or output-request batch distributions.
 
 ## Measured results, 2026-09-05
 
