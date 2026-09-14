@@ -16,7 +16,7 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 printf '0\n1\n2\n' > "$tmpdir/good"
 printf '0\n2\n' > "$tmpdir/missing"
-printf '0\n1\n1\n' > "$tmpdir/duplicate"
+printf '0\n1\n1\n2\n' > "$tmpdir/duplicate"
 
 "$chkseq" -s0 -e2 < "$tmpdir/good"
 if "$chkseq" -s0 -e2 < "$tmpdir/missing"; then

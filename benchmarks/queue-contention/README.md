@@ -95,6 +95,21 @@ variable batches, and this harness currently records no producer-submit or
 queue-dequeue histogram. Add diagnostic instrumentation before making claims
 about actual producer, dequeue, or output-request batch distributions.
 
+## S0 mutation-fixture correction, 2026-09-14
+
+The current built-in `parse_json` takes JSON and a destination path and returns a
+status. The former one-argument fixture did not establish the claimed mutation.
+Both trial scripts now call the two-argument form, require the expected nested
+value before writing an ID, and abort on an unclean configuration. Missing
+mutation therefore prevents exact-ID success. Treat the measurements below as
+historical; do not compare them directly with the corrected workload or infer
+that they measured this mutation. The S0 campaign establishes a fresh baseline.
+
+The initial eight-front reference has 1,080,000 waiting slots. When front slots
+are released at acquisition, its accepted-obligation bound also includes eight
+active batches of 1024: use `--queue-size 1088192` for the obligation-matched MPMC
+comparison. Allocation bytes and RSS must be reported separately.
+
 ## Measured results, 2026-09-05
 
 The retained runtime candidate is `454b340a1`, compared with `8b8ffb19c`.

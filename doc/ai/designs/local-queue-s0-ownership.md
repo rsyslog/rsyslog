@@ -61,7 +61,7 @@ worker never obtains work from another store. See
 | Single input submission | [`submitMsg2`](../../../tools/rsyslogd.c#L1282-L1297) selects the main or ruleset queue and calls [`qqueueEnqMsg`](../../../runtime/queue.c#L4761-L4788). | `submitMsg2` does not inspect the enqueue return. A successful memory admission transfers the supplied reference to the queue; an error can leave it with the caller, depending on the storage path below. |
 | Multi-input submission | [`multiSubmitMsg2`](../../../tools/rsyslogd.c#L1304-L1327) calls `pQueue->MultiEnq` and then clears `nElem`. | [`qqueueMultiEnqObjNonDirect`](../../../runtime/queue.c#L4711-L4737) handles entries individually under one queue mutex. `RS_RET_QUEUE_FULL` is accepted for that entry and processing continues; another error ends the loop. This is not an atomic all-or-none admission contract. |
 | Queued action fan-out | [`doSubmitToActionQ`](../../../runtime/action.c#L2189-L2220) adds a message reference or duplicate, then calls `qqueueEnqMsg`. | The action queue receives a distinct delivery reference. Even while an upstream worker has a larger batch, this route submits one message at its mutation-sensitive execution point. |
-| DA transfer | [`ConsumerDA`](../../../runtime/queue.c#L3762-L3844) gives the child `MsgAddRef(message)`. | The parent entry is marked committed only after the child path accepts it. A segmented-child failure leaves the current and following parent entries retryable. |
+| DA transfer | [`ConsumerDA`](../../../runtime/queue.c#L3762-L3844) gives the child `MsgAddRef(message)`. | Successful child submission marks the parent entry committed. Segmented-child failure leaves the current and following entries retryable; classic-child non-emergency errors can still mark the parent entry committed. S1 preserves this existing distinction. |
 
 `doEnqSingleObj` accounts arrival first, then applies discard, flow control, and
 the storage add. It requires the source queue mutex. See
@@ -131,7 +131,7 @@ allocated capacity, not an ownership or retirement count.
 | Worker start/join table | `wtp_t::mutWtp` plus atomic worker state | A worker slot remains owned until joined. [`wtpStartWrkr`](../../../runtime/wtp.c#L460-L549) and cancellation coordinate this state. |
 | Pool shutdown state | `mutWtpState` atomic helper | A start checks it while holding `mutWtp`; normal new work is denied after shutdown starts. |
 | Queue immediate-stop state | `bShutdownImmediate` atomic helper | Before a callback, [`qqueueSetWtiShutdownImmediate`](../../../runtime/queue.c#L662-L677) makes `pWti` read the source queue's flag. |
-| Cancellation cleanup | Queue mutex via `pWtp->pmutUsr`, cancellation disabled by cleanup entry | [`wtiWorkerCancelCleanup`](../../../runtime/wti.c#L333-L361) marks the worker exiting, completes the active batch, and returns with no live lease. |
+| Cancellation cleanup | Queue mutex via `pWtp->pmutUsr`, cancellation disabled by cleanup entry | [`wtiWorkerCancelCleanup`](../../../runtime/wti.c#L333-L361) marks the worker exiting and attempts active-batch completion. A failed completion can retain batch/store context; see the baseline limitation below. |
 | Deferred destruction | Worker-private `p_deferred_msgs` | The queue mutex protects the move into the buffer; only that worker destroys entries after releasing it. [`qqueueDrainDeferred`](../../../runtime/queue.c#L3060-L3092). |
 
 The worker framework assumes `pfDoWork` temporarily unlocks and then re-locks
@@ -192,6 +192,28 @@ counters, or wake a producer. A separate different-mutex test must be rejected.
 Native DA parent/child tests prove the physical/logical split without relaxing
 the source-to-pool relationship. Preserve the inactive-batch completion path,
 because worker shutdown can call `pfObjProcessed` when no batch was acquired.
+
+### 6.1 Baseline terminal-completion limitation (SC1)
+
+S1 is an attribution refactor, not a repair of all existing disk error handling.
+At the baseline, `batchProcessed` ignores a failed `DeleteProcessedBatch` return.
+A segmented retry append or checkpoint failure can leave `batch.storeData` and
+message references in a worker whose thread subsequently exits; `wti` destruction
+does not perform source-aware reconciliation. The source store's pending records
+and the worker's retained references are distinct responsibilities. Existing disk
+recovery behavior alone does not prove that the in-memory context is cleaned up,
+nor does retaining two pointers extend ownership beyond worker destruction.
+
+S1 must preserve the tag while that failed batch remains in the worker, must not
+assert that thread exit means successful completion, and must not claim to fix
+this baseline limitation. Add deterministic failed-completion/terminal-path
+coverage proving that the attribution seam does not clear or overwrite the
+unresolved context or advance the source on failure. Record the inherited final
+destruction limitation separately from passing ordinary lifecycle cases. Do not
+claim leak-free disk terminal-error handling on this evidence. A source-owned
+orphan/cleanup protocol requires a separate reviewed fix before local disk support
+in S5; it is not introduced incidentally in S1. S2 rejects disk and DA completely
+and must implement its own complete memory-only terminal-ownership policy.
 
 ## 7. S1 and S2 test mapping
 

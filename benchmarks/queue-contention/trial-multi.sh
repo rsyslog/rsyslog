@@ -68,11 +68,11 @@ STATS_FILE="$PWD/$RSYSLOG_DYNNAME.queue.impstats.json"
 generate_conf
 if [[ "$BENCH_IMPSTATS" == yes ]]; then
     add_conf '
-module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json")
+module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json" log.syslog="off")
 '
 fi
 add_conf '
-global(processInternalMessages="off")
+global(processInternalMessages="off" abortOnUncleanConfig="on")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
     listenPortFileName="'$PORT_FILE'" workerThreads="'$BENCH_INPUT_WORKERS'")
@@ -81,8 +81,9 @@ main_queue(queue.type="FixedArray" queue.size="'$BENCH_QUEUE_SIZE'"
     queue.dequeueBatchSize="'$BENCH_DEQUEUE_BATCH_SIZE'" queue.mutexContentionStats="'$BENCH_MUTEX_CONTENTION_STATS'")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
-    set $!payload = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}");
-    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+    set $.parseStatus = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}", "\$!payload");
+    if ($.parseStatus == 0 and $!payload!nested!text == "queue contention benchmark payload") then
+        action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 start_ns=$(date +%s%N)
@@ -91,7 +92,7 @@ assign_file_content INPUT_PORT "$PORT_FILE"
 work_start_ns=$(date +%s%N)
 tcpflood -p"$INPUT_PORT" -c"$BENCH_ACTIVE_CONNECTIONS" -Y -m"$NUMMESSAGES" -d"$BENCH_PAYLOAD" >/dev/null
 generator_end_ns=$(date +%s%N)
-wait_file_lines --delay 10 "$RSYSLOG_OUT_LOG" "$NUMMESSAGES" 120
+wait_file_lines --delay 10 --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES" 120
 receiver_line_barrier_ns=$(date +%s%N)
 shutdown_when_empty
 wait_shutdown

@@ -161,7 +161,8 @@ def write_report(status, failure=None):
         'limitations': ['Non-exclusive host', 'Uncontrolled caches',
                         'Bounded JSON workload; exact delivery required',
                         'Configured batches are not actual-batch distributions'],
-        'timing_accepted': not args.impstats,
+        'timing_accepted': status == 'completed' and not args.impstats,
+        'summary_accepted': status == 'completed' and not args.impstats,
     }
     if status == 'completed':
         median = statistics.median(ratios)
