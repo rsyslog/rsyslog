@@ -24,28 +24,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "rsyslog.h"
+#include "unicode-helper.h"
 #include "obj.h"
 #include "queue.h"
 #include "queue_local.h"
 #include "queue_local_stats.h"
-#include "rsyslog.h"
 #include "statsobj.h"
 
-DEFobjCurrIf(obj) DEFobjCurrIf(statsobj)
-#define CHECK(condition)                                                                     \
-    do {                                                                                     \
-        if (!(condition)) {                                                                  \
-            fprintf(stderr, "CHECK failed at %s:%d: %s\\n", __FILE__, __LINE__, #condition); \
-            exit(1);                                                                         \
-        }                                                                                    \
+DEFobjCurrIf(obj);
+DEFobjCurrIf(statsobj);
+#define CHECK(condition)                                                                    \
+    do {                                                                                    \
+        if (!(condition)) {                                                                 \
+            fprintf(stderr, "CHECK failed at %s:%d: %s\n", __FILE__, __LINE__, #condition); \
+            exit(1);                                                                        \
+        }                                                                                   \
     } while (0)
 
-    /*
-     * The adapter queries these lock-free snapshot entry points after the test
-     * hook. Their zero snapshot is sufficient here: this is a real adapter/list
-     * lifetime test, rather than a duplicate of queue routing accounting tests.
-     */
-    void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *const snapshot) {
+/*
+ * The adapter queries these lock-free snapshot entry points after the test
+ * hook. Their zero snapshot is sufficient here: this is a real adapter/list
+ * lifetime test, rather than a duplicate of queue routing accounting tests.
+ */
+void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *const snapshot) {
     (void)owner;
     memset(snapshot, 0, sizeof(*snapshot));
 }
