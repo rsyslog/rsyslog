@@ -135,7 +135,14 @@ static pthread_once_t testFaultOnce = PTHREAD_ONCE_INIT;
 static unsigned testFaultFired;
 static __thread unsigned testProducerRetire;
 static pthread_mutex_t testRedirectMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t testRedirectCond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t testRedirectCond;
+static pthread_once_t testRedirectOnce = PTHREAD_ONCE_INIT;
+static int testRedirectInitResult;
+static int initMonotonicCond(pthread_cond_t *condition);
+static struct timespec deadlineAfter(int milliseconds);
+static void testInitRedirectCond(void) {
+    testRedirectInitResult = initMonotonicCond(&testRedirectCond);
+}
 enum { TEST_REDIRECT_OFF, TEST_REDIRECT_ARMED, TEST_REDIRECT_BLOCKED, TEST_REDIRECT_RELEASED };
 static unsigned testRedirectState;
 
@@ -172,17 +179,25 @@ int qqueueLocalTestProducerShouldExit(void) {
 }
 
 void qqueueLocalTestRedirectArm(void) {
+    pthread_once(&testRedirectOnce, testInitRedirectCond);
+    assert(testRedirectInitResult == 0);
     pthread_mutex_lock(&testRedirectMutex);
     assert(stateRead(&testRedirectState) == TEST_REDIRECT_OFF);
     stateSet(&testRedirectState, TEST_REDIRECT_ARMED);
     pthread_mutex_unlock(&testRedirectMutex);
 }
 
-void qqueueLocalTestRedirectWaitPublisher(void) {
+int qqueueLocalTestRedirectWaitPublisher(const unsigned timeout_ms) {
+    pthread_once(&testRedirectOnce, testInitRedirectCond);
+    if (testRedirectInitResult != 0 || timeout_ms > INT_MAX) return 0;
+    const struct timespec deadline = deadlineAfter((int)timeout_ms);
+    int waitResult = 0;
     pthread_mutex_lock(&testRedirectMutex);
-    while (stateRead(&testRedirectState) != TEST_REDIRECT_BLOCKED)
-        pthread_cond_wait(&testRedirectCond, &testRedirectMutex);
+    while (stateRead(&testRedirectState) != TEST_REDIRECT_BLOCKED && waitResult == 0)
+        waitResult = pthread_cond_timedwait(&testRedirectCond, &testRedirectMutex, &deadline);
+    const int blocked = stateRead(&testRedirectState) == TEST_REDIRECT_BLOCKED;
     pthread_mutex_unlock(&testRedirectMutex);
+    return blocked;
 }
 
 static void testGatePublisher(void) {
@@ -198,11 +213,13 @@ static void testGatePublisher(void) {
     pthread_mutex_unlock(&testRedirectMutex);
 }
 
-static void testReleasePublisher(void) {
+void qqueueLocalTestRedirectRelease(void) {
     pthread_mutex_lock(&testRedirectMutex);
-    if (stateRead(&testRedirectState) == TEST_REDIRECT_BLOCKED ||
-        stateRead(&testRedirectState) == TEST_REDIRECT_ARMED) {
+    if (stateRead(&testRedirectState) == TEST_REDIRECT_BLOCKED) {
         stateSet(&testRedirectState, TEST_REDIRECT_RELEASED);
+        pthread_cond_broadcast(&testRedirectCond);
+    } else if (stateRead(&testRedirectState) == TEST_REDIRECT_ARMED) {
+        stateSet(&testRedirectState, TEST_REDIRECT_OFF);
         pthread_cond_broadcast(&testRedirectCond);
     }
     pthread_mutex_unlock(&testRedirectMutex);
@@ -831,7 +848,7 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     stateSet(&family->state, LOCAL_REDIRECT);
     pthread_mutex_unlock(&family->registry);
     #ifdef ENABLE_TESTBENCH
-    testReleasePublisher();
+    qqueueLocalTestRedirectRelease();
     #endif
     /* Registration is frozen. A publisher with a stale RUNNING observation
      * finishes its notification before maintenance takes its endpoint. */
@@ -1087,7 +1104,11 @@ rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath
     return RS_RET_NOT_IMPLEMENTED;
 }
 void qqueueLocalTestRedirectArm(void) {}
-void qqueueLocalTestRedirectWaitPublisher(void) {}
+int qqueueLocalTestRedirectWaitPublisher(unsigned timeout_ms) {
+    (void)timeout_ms;
+    return 0;
+}
+void qqueueLocalTestRedirectRelease(void) {}
     #endif
 /* Unsupported local targets preserve the global build and fail activation. */
 int qqueueLocalEnabled(void) {

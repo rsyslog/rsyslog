@@ -49,7 +49,8 @@ void qqueueLocalProducerExit(void *unused);
 int qqueueLocalTestProducerShouldExit(void);
 rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath);
 void qqueueLocalTestRedirectArm(void);
-void qqueueLocalTestRedirectWaitPublisher(void);
+int qqueueLocalTestRedirectWaitPublisher(unsigned timeout_ms);
+void qqueueLocalTestRedirectRelease(void);
 #endif
 
 
