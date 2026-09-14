@@ -4965,7 +4965,15 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
     /* and finally enqueue the message */
     CHKiRet(qqueueAdd(pThis, pMsg));
-    STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
+    /* Queue writers are serialized by pThis->mut, but impstats reads this
+     * legacy max-size counter independently. Keep the reader and this write
+     * atomic without changing the generic set-max helper's contract. */
+    if (STATSCOUNTER_ENABLED()) {
+        const int queue_size = PREFER_LOAD_INT(&pThis->iQueueSize);
+        if (queue_size > PREFER_LOAD_INT(&pThis->ctrMaxqsize)) {
+            PREFER_STORE_INT(&pThis->ctrMaxqsize, queue_size);
+        }
+    }
 
     /* check if we had a file rollover and need to persist
      * the .qi file for robustness reasons.
