@@ -8,7 +8,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **S0 source audit; no runtime implementation** |
+| Status | **Historical S0 baseline audit; subsequent implementation tracked in the execution ledger** |
 | Created / reviewed | 2026-09-14 |
 | Design authority | [Local queue front ends](local-queue-frontends.md) and [implementation plan](local-queue-implementation-plan.md) |
 | Documentation baseline | `8debb0a697158b7ccd2c243a2262dc2537b7c64a` |
@@ -25,7 +25,8 @@ paths. Enqueue outcomes consume message references differently by path; local
 routing must preserve those distinctions.
 <!-- .. summary-end -->
 
-This is a source inventory for the staged local-queue design. It describes the
+This is a source inventory for the staged local-queue design. See the
+[execution ledger](local-queue-execution-ledger.md) for subsequent implementation. It describes the
 observed baseline, not an implemented local-scope feature. Proposed S1 seams are
 explicitly labeled and do not change the S2 support decision, option matrix, or
 activation whitelist.

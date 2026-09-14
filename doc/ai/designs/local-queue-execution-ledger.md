@@ -28,7 +28,7 @@ or favorable isolated timing does not alone establish acceptance.
 |---|---|---|
 | S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
 | S1 | Implemented; original performance gate unresolved | Reviewed attribution through `c9a51be21`; targeted correctness and sanitizer checks passed with documented debug-only TSan isolation. Maintainer authorized continued S2 work and methodology review. |
-| S2 | Integrated MVP; final validation in progress | Runtime and corrected focused tests merged at `1fee0c63d`; harness at `beaee67c7`; statistics portability fix at `de10dce30`. Focused container checks passed; broad checks, sanitizer/portability lanes and final review remain pending. |
+| S2 | Implemented; default container gate passed with documented specialist limits | Final runtime `536f5db06`: 1,595 passes, 69 skips, zero failures. Analyzer has one understood baseline warning; specialist outcomes and review limits below. Performance qualification remains deferred by maintainer direction. |
 
 ## Assignments
 
@@ -399,3 +399,194 @@ These are local-session paths, not durable packaged artifacts. No hosted PR
 review has run because no PR has been published. Final acceptance remains
 pending the broad container check, analyzer, applicable specialist lanes,
 current security receipt and late memory/concurrency/test-plumbing audits.
+
+
+## S2 final qualification work
+
+The final runtime checkpoint is `536f5db06`. The complete S0/S1 evidence remains
+unchanged. The following refinements were made during integration and validation:
+
+- `de10dce30`: typed statistics counter-array indexing for Clang portability.
+- `1a83c7aa0`: remove an unread final shutdown-phase assignment reported by the
+  static analyzer; deadline behavior is unchanged.
+- `8da6e0301`: quote the assembled benchmark configuration as one `add_conf`
+  argument and add an eight-message actual local imtcp/omfile exact-ID test.
+  Earlier S0/S1 measured binaries and configurations are unaffected. No timing
+  campaign ran with the broken new local-mode assembly.
+- `60ae1a061`: use an atomic ordinal election in the cancellation test harness.
+  The initial TSan report at its mutex-protected increment was not established
+  as a C race; the subsequent blocking-read control explains the tool limitation.
+- `e727da459`: independently exercise a cooperative BE-origin transaction
+  interruption. With zero FE registrations and one active BE obligation, the
+  real action FORCE_TERM/reset path leaves A written once and B empty. Final
+  accepted obligations after the blocked snapshot must all be explicitly
+  shutdown-discarded, accounting for late internal diagnostics. This closes
+  the earlier BE-origin test gap without claiming successful BE replay or
+  clean TSan coverage of asynchronous cancellation.
+- `55118815f`: fix the inherited no-epoll inner FORCE_TERM path that retried the
+  blocking poll after observing shutdown. The same imtcp-scoped deterministic
+  test fails before and passes after this branch fix. It is not a general poll
+  wakeup redesign.
+- `43e7e4d19`: select the historical epoll teardown test only for epoll, and the
+  new poll branch test for no-epoll. Both remain distributed. The independent
+  reviewer verified original test intent and the limited meaning of this change.
+- `536f5db06`: match the queue maximum counter's atomic reader with atomic
+  writer accesses, retaining its existing writer mutex and enabled-statistics
+  guard. There is no new lock or read-modify-write operation. The generic
+  counter macro and unrelated modules are unchanged. Platforms where PREFER
+  helpers fall back to plain access retain that inherited limitation.
+
+### Sanitizer and portability outcomes
+
+Ubuntu 26.04 ASan/UBSan passed twelve focused daemon cases and the subsequently
+added BE transaction case. Leak detection was disabled in this lane; these
+results do not establish absence of leaks. The ring primitive has separate
+sanitizer evidence. Clang 21/NDEBUG and GCC 15/GNU23 debug builds passed. A final
+Clang no-epoll, testbench-disabled object build covers the poll and atomic-counter
+fixes and confirms that the test marker is absent.
+
+TSan passed twelve non-cancellation S2 cases with only the stock runtime
+suppression file. Queue, local queue, new statistics, and worker sources remained
+instrumented; no compiler blacklist was used. The temporary `getIntValue`
+suppression is absent from final runs after the maximum-counter repair. One
+internal-message oracle timed out without a TSan diagnostic and passed an
+isolated retry; all outcomes are retained.
+
+Forced cancellation during blocking `read()` is excluded from the clean TSan
+claim. A standalone two-thread control reproduces a reported counter race inside
+cleanup despite both writers holding the same mutex; an analogous condition-wait
+control passes. The production action creation/removal accesses also use the
+same live mutex, confirmed by independent review. No production locking change
+or tracked suppression was introduced to silence this report. Actual multi-FE
+cancellation passes ordinary and ASan/UBSan testing.
+
+### No-epoll limitations retained
+
+The original no-epoll candidate run had 237 passes, 44 skips and one failure:
+its pending-accept test exceeded a 15-second watchdog while the input waited
+for the 60-second cancellation fallback. Nine standalone baseline attempts and
+one full baseline run passed, while one of four paired candidate attempts failed.
+The full baseline result was 220 passes, 44 skips, zero failures. The candidate
+incidence remains unexplained; do not describe it as fixed or baseline-equivalent.
+Source review found an inherited lost-wakeup window before blocking poll, but no
+new signal-mask or cancellation-type change from local provenance wrappers.
+
+After the applicability correction and deterministic branch fix, the selected
+no-epoll suite again had 237 passes, 44 skips and one failure: an existing
+`omfwd_fast_imuxsock.sh` exact-maximum assertion saw 97 instead of 100 despite
+100,000 messages enqueued/sent and zero discarded. An unchanged rerun passed.
+Four targeted tests passed after the atomic-counter fix: stats reconciliation,
+stats lifetime, omfwd, and the new poll regression. These passes do not erase
+the earlier full-run failures or establish an unconditional clean no-epoll lane.
+
+The no-epoll variation enabled impstats and omtesting to exercise local queues;
+other module selections followed the CI specialist lane. Its 44 skips were
+missing PKCS11 tooling (40), missing GnuTLS CLI (1), tcpflood TLS-backend mismatch
+(1), unavailable network namespace capability (1), and an existing TLS test under
+review (1). Local-queue tests were not skipped; tests requiring distinct epoll
+input workers were excluded by their applicability conditions.
+
+### Review and reproducibility
+
+Astra/medium applied `ai/rsyslog_memory_auditor/base_prompt.txt` and
+`ai/rsyslog_bug_finder/base_prompt.txt`, then reviewed late deltas through
+`536f5db06`. No new concrete memory/ownership/concurrency blocker was found.
+The review explicitly retains the poll timing limitation and inherited disk
+SC1 cleanup outside this memory-only MVP. The project-standards check verified
+conditional test registration with unconditional distribution, executable scripts,
+quoted configuration assembly and real runtime oracles. Changed C formatting,
+ShellCheck, Python style, metadata, relative links and whitespace checks passed.
+Advisory test-pattern matches were documented watchdogs, marker-synchronized
+background senders that are waited, and diagnostic configuration assertions.
+
+Detailed command/environment/source records and raw results are retained under
+`/home/rger/rsyslog-local-queue-artifacts/s2-validation/`, including
+`rsyslog-s2-sanitizer-evidence.md`, `rsyslog-s2-portability-evidence.md`, and
+`rsyslog-s2-be-force-term-validation.md`. These are local session artifacts;
+this ledger supplies the durable qualification summary. All use the Ubuntu
+26.04 image ID above, with ten-way specialist builds/checks. No performance
+campaign or hosted PR review was run during this qualification work.
+
+
+### Final default container gate
+
+At runtime `536f5db069f9abc57ae79bbe9c7be58fe1acec5e`, the final Ubuntu 26.04
+`run-ci.sh` check completed in 401.72 seconds: **1,664 total, 1,595 passed,
+69 skipped, zero failures/errors**. This is the broad default local container
+gate, not merely the focused local-queue test selection. All selected new local
+queue tests passed, including BE interruption and multi-FE cancellation.
+
+The analyzer was run first on the same source and completed in 201.87 seconds.
+Its command exited nonzero for one understood pre-existing
+`tools/rsyslogd.c:1871` null-dereference report, unchanged from the baseline.
+No new analyzer finding remains. This is not a claim of a zero-warning analyzer.
+The container skill permits proceeding after findings are understood; the
+subsequent broad check passed. The late memory/concurrency audit is recorded
+above; security discovery covered all 76 expected source/test paths with no
+introduced-or-worsened candidate. Its ignored, digest-bound receipt is finalized
+after the final evidence documentation commit; no hosted AI review ran.
+
+The broad lane applied the normal relevance helper against the frozen base,
+with no forced TESTS selection and no additional module exclusions. Kafka,
+MySQL, imfile, imtcp, imbeats, RabbitMQ and local queues ran. Elasticsearch was
+built, but its service tests were disabled by the standard image's configuration,
+not excluded by the relevance helper. The separate Elasticsearch CI lane and
+actual target qualification remain outstanding. Image-default imdocker test
+exclusion also remains. Skips include missing PKCS11 tools (40), Azure DCE
+endpoint/credentials (11), namespace capabilities (3), raw-socket/root
+requirements (4), and eleven other environment/configuration prerequisites.
+The preserved skip inventory names every test.
+
+An earlier broad run at `8da6e0301` had 1,593 passes, 69 skips and one failure
+in 447.48 seconds. `omprog-restart-terminated-vg.sh` observed 46 descriptors at
+start and 45 at end, with a clean Valgrind result and daemon exit. Its unchanged
+isolated rerun passed in 11.37 seconds; the final full run also passed it. Keep
+this transient, non-reproduced result without claiming proven baseline or
+local-queue causation.
+
+The combined mock distribution run at `43e7e4d19` passed in 83.98 seconds:
+1,519 mock passes, ten skips, zero failures, with archive, out-of-tree build,
+installation/uninstallation and cleanup checks. It includes every new file/test.
+The later queue-maximum fix changes no manifests and is covered by the final
+broad build/run. Mock results are packaging evidence, not daemon test evidence.
+
+Exact broad command shape (clean dedicated validation worktree):
+
+```sh
+export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:26.04'
+export RSYSLOG_TESTBENCH_CHANGED_FILES="$(git diff --name-only b0d9f971f007f06db3f734543cef5dfb312c5090...HEAD | sort -u)"
+export CC=gcc CFLAGS=-g CI_CONFIGURE_CACHE=1
+export CI_MAKE_OPT=-j30 CI_MAKE_CHECK_OPT=-j30 CI_CHECK_CMD=check VERBOSE=1
+. devtools/apply-service-relevance.sh
+rsyslog_apply_default_pr_service_suppressions
+/usr/bin/time -p devtools/devcontainer.sh --rm devtools/run-ci.sh
+```
+
+The source checkout was clean; subsequent changes only record internal evidence.
+Thirty-way broad concurrency plus ten-way specialist jobs stayed within the
+machine's 60-way aggregate capacity. The explicit image tag and immutable image
+ID are given above. The full analyzer command was:
+
+```sh
+/usr/bin/time -p env \
+  RSYSLOG_DEV_CONTAINER=rsyslog/rsyslog_dev_base_ubuntu:26.04 \
+  SCAN_BUILD=scan-build SCAN_BUILD_CC=clang \
+  SCAN_BUILD_REPORT_DIR=scan-build-report CI_MAKE_OPT=-j30 \
+  DOCKER_RUN_EXTRA_OPTS='-e SCAN_BUILD -e SCAN_BUILD_CC -e SCAN_BUILD_REPORT_DIR' \
+  RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch --disable-elasticsearch-tests --disable-imkafka --disable-omkafka --disable-kafka-tests --disable-mysql --disable-mysql-tests' \
+  devtools/devcontainer.sh --rm devtools/run-static-analyzer.sh
+```
+
+These analyzer module exclusions match its documented lane. The combined mock
+lane used the same image with `CI_MAKE_OPT=-j30`, `CI_MAKE_CHECK_OPT=-j30`,
+`CI_CHECK_CMD=distcheck`, `TEST_RUN_TYPE=MOCK-OK`,
+`DOCKER_RUN_EXTRA_OPTS='-e TEST_RUN_TYPE'`, `ABORT_ALL_ON_TEST_FAIL=YES`,
+`VERBOSE=1`, and `/usr/bin/time -p devtools/devcontainer.sh --rm devtools/run-ci.sh`.
+Full commands, logs and exact source provenance are preserved in
+`rsyslog-s2-final-container-evidence.md` in the artifact directory above.
+
+The default PR-ready local container sequence is complete with the understood
+baseline analyzer warning and current source reviews; the separate no-epoll
+full-run discrepancies and forced-cancellation TSan limitation are explicitly
+not described as passing. Performance acceptance and broader production action
+qualification remain deferred. No push, PR, deployment or release was performed.

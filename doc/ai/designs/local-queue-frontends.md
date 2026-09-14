@@ -8,7 +8,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Full design remains upcoming; restricted S2 MVP integrated, final validation pending** |
+| Status | **Full design remains upcoming; restricted S2 MVP integrated with recorded qualification limits** |
 | Created / last reviewed | 2026-09-14 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |

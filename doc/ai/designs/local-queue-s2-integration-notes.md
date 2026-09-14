@@ -9,7 +9,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Implemented MVP; final qualification pending (see execution ledger)** |
+| Status | **Implemented MVP; validation results and limits in the execution ledger** |
 | Recorded | 2026-09-14 |
 | Note branch baseline | `8730dd23eeccac83c1772e6003bea5da148cab5b` |
 | Runtime audited | `b0d9f971f007f06db3f734543cef5dfb312c5090` |

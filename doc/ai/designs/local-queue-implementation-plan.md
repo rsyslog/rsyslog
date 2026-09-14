@@ -8,10 +8,10 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Proposed plan; runtime implementation has not started** |
+| Status | **S0 accepted; S1/S2 implemented with recorded validation limits; performance qualification deferred** |
 | Created / reviewed | 2026-09-14 |
 | Design authority | [Local queue front ends with shared overflow](local-queue-frontends.md) |
-| Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; refresh and record the actual implementation baseline before S0 |
+| Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; immutable implementation baseline recorded in the execution ledger |
 | Reviewer | Existing Astra / medium architecture reviewer; findings and revision status in Section 16 |
 | Completion target | Full initial design, reached through gated stages beginning with an experimental MVP |
 
@@ -29,8 +29,11 @@ speed alone, and no intermediate MVP is presented as the completed feature.
 The linked design supplies behavioral invariants I1–I15, open decisions O1–O12,
 and Astra findings AR1–AR5. This plan describes implementation order and evidence
 requirements; it does not override the architecture or claim that proposed APIs
-already exist. User authorization for this document and review does not itself
-start runtime implementation.
+already exist. The maintainer subsequently authorized autonomous S0–S2
+implementation. The [execution ledger](local-queue-execution-ledger.md) records
+actual progress and the later decision to continue correctness work while
+deferring representative performance data. Original performance classifications
+remain unchanged; later stages below remain upcoming.
 
 The full initial target includes:
 

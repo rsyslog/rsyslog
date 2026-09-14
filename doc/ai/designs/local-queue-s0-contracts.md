@@ -1,24 +1,25 @@
 <!--
 .. meta::
-   :description: Draft S0 activation, producer, resource, and queue option contracts for the experimental local queue MVP.
+   :description: Accepted S0 activation, producer, resource, and queue option contracts for the experimental local queue MVP.
    :keywords: rsyslog, local queue, S0, S2, activation, producer registration, option matrix
 -->
 
-# Local queue S0 contract draft
+# Local queue S0 contracts
 
 | Metadata | Value |
 |---|---|
-| Status | **Draft for coordinator and architecture review; no runtime implementation or qualification** |
+| Status | **Accepted S0 contracts; experimental S2 implementation qualification tracked in the execution ledger** |
 | Recorded | 2026-09-14 |
 | Source baseline | `8debb0a69` |
 | Authority | [Design](local-queue-frontends.md), [implementation plan](local-queue-implementation-plan.md) |
 | Scope | S0 producer, activation, and resource decisions needed by S2; lease details require the companion ownership audit |
 
 <!-- .. summary-start -->
-Propose a fail-closed memory MVP: bounded per-thread fronts, shared BE overflow,
+The accepted contracts define a fail-closed memory MVP: bounded per-thread fronts, shared BE overflow,
 trusted imtcp producer registration, audited Direct actions, and explicit
-configuration rejection before activation. These are proposed implementation
-contracts, not implemented behavior or evidence of runtime correctness.
+configuration rejection before activation. The
+[execution ledger](local-queue-execution-ledger.md) distinguishes implemented
+behavior, executed evidence and remaining qualification gates.
 <!-- .. summary-end -->
 
 ## 1. Decisions and ownership
