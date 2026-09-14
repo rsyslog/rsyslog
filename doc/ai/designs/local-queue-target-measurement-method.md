@@ -19,6 +19,11 @@ This complements the [execution ledger](local-queue-execution-ledger.md) and
 [implementation plan](local-queue-implementation-plan.md). It is a prospective
 method, not an S2 acceptance result.
 
+The user reports a target system of roughly 80 cores with a complex rsyslog
+configuration. This is provisional planning context, not a measured hardware or
+configuration fact. Capture the effective configuration and measured inventory
+before selecting worker budgets or interpreting a comparison.
+
 The existing queue-contention harness has exact post-shutdown ID checks and is
 useful for configuration, corruption, and controlled queue-mechanism diagnostics.
 Its static omfile output, local loopback TCP, and synthetic JSON mutation do not
@@ -60,10 +65,17 @@ local mode uses a configured FE-plus-BE budget of `W`.
 
 Report configured frontend slots, registered frontends, started/running FE workers,
 BE workers, and global workers separately. A frontend slot is an allocation bound,
-not a worker. Record actual inventories at warmup completion, throughout the steady
-window, and at quiescence. Also retain cgroup CPU and memory deltas, PSI where
-available, context switches, mutex wait count/time, and CPU topology. Results from
-one heterogeneous WSL host do not establish scaling for larger servers.
+not a worker. Record the actual inventory at warmup completion, throughout the
+steady window, and at quiescence: imtcp workers, queue workers, action/output
+workers, helper/module workers, and their CPU-set and affinity placement. Record
+the effective configuration fingerprint and relevant ruleset/action queue topology
+without retaining credentials or payloads.
+
+Also retain cgroup CPU and memory deltas, PSI where available, context switches,
+mutex wait count/time, and CPU topology: sockets, NUMA nodes, cores, SMT layout,
+memory-node placement, and the CPU/NUMA placement of rsyslog, the sender, and
+Elasticsearch. Results from one heterogeneous WSL host do not establish scaling
+for larger servers.
 
 ## Outcomes and denominators
 
