@@ -24,18 +24,14 @@ static int (*real_lock)(pthread_mutex_t *);
 static _Thread_local pthread_mutex_t *last_lock;
 static _Atomic(pthread_mutex_t *) output_lock;
 static atomic_int claimed;
-static atomic_int waiting;
+static int waiting;
+static int stopping;
+static pthread_mutex_t monitor_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t monitor_cond = PTHREAD_COND_INITIALIZER;
+static pthread_t monitor;
 static atomic_int cancelled;
 static const char *target;
 static const char *events;
-
-static void __attribute__((constructor)) initialize(void) {
-    real_write = (ssize_t(*)(int, const void *, size_t))dlsym(RTLD_NEXT, "write");
-    real_lock = (int (*)(pthread_mutex_t *))dlsym(RTLD_NEXT, "pthread_mutex_lock");
-    target = getenv("RSYSLOG_OMFILE_CANCEL_TARGET");
-    events = getenv("RSYSLOG_OMFILE_CANCEL_EVENTS");
-    if (real_write == NULL || real_lock == NULL || target == NULL || events == NULL) _exit(2);
-}
 
 static void mark(const char *const text) {
     const size_t len = strlen(text);
@@ -43,10 +39,43 @@ static void mark(const char *const text) {
     if (fd == -1 || real_write(fd, text, len) != (ssize_t)len || close(fd) != 0) _exit(2);
 }
 
+/* Publish readiness from a separate observer. The actual waiter must have no
+ * cancellation point between declaring its lock attempt and acquiring mutWrite;
+ * writing the marker from that waiter would introduce precisely such a gap. */
+static void *observe_waiter(void *unused) {
+    (void)unused;
+    real_lock(&monitor_mutex);
+    while (!waiting && !stopping) pthread_cond_wait(&monitor_cond, &monitor_mutex);
+    const int observed = waiting;
+    pthread_mutex_unlock(&monitor_mutex);
+    if (observed) mark("waiting\n");
+    return NULL;
+}
+
+static void __attribute__((constructor)) initialize(void) {
+    real_write = (ssize_t(*)(int, const void *, size_t))dlsym(RTLD_NEXT, "write");
+    real_lock = (int (*)(pthread_mutex_t *))dlsym(RTLD_NEXT, "pthread_mutex_lock");
+    target = getenv("RSYSLOG_OMFILE_CANCEL_TARGET");
+    events = getenv("RSYSLOG_OMFILE_CANCEL_EVENTS");
+    if (real_write == NULL || real_lock == NULL || target == NULL || events == NULL) _exit(2);
+    if (pthread_create(&monitor, NULL, observe_waiter, NULL) != 0) _exit(2);
+}
+
+static void __attribute__((destructor)) finalize(void) {
+    real_lock(&monitor_mutex);
+    stopping = 1;
+    pthread_cond_signal(&monitor_cond);
+    pthread_mutex_unlock(&monitor_mutex);
+    if (pthread_join(monitor, NULL) != 0) _exit(2);
+}
+
 int pthread_mutex_lock(pthread_mutex_t *const mutex) {
-    if (atomic_load_explicit(&output_lock, memory_order_acquire) == mutex &&
-        atomic_exchange_explicit(&waiting, 1, memory_order_relaxed) == 0)
-        mark("waiting\n");
+    if (atomic_load_explicit(&output_lock, memory_order_acquire) == mutex) {
+        real_lock(&monitor_mutex);
+        waiting = 1;
+        pthread_cond_signal(&monitor_cond);
+        pthread_mutex_unlock(&monitor_mutex);
+    }
     const int result = real_lock(mutex);
     if (result == 0) last_lock = mutex;
     return result;
@@ -69,10 +98,10 @@ ssize_t write(int fd, const void *buf, size_t len) {
         actual.st_ino != expected.st_ino)
         return real_write(fd, buf, len);
     if (atomic_exchange_explicit(&claimed, 1, memory_order_relaxed) == 0) {
+        pthread_cleanup_push(cancelled_writer, NULL);
         if (last_lock == NULL || len < 3 || real_write(fd, buf, 3) != 3) _exit(2);
         atomic_store_explicit(&output_lock, last_lock, memory_order_release);
         mark("entered\n");
-        pthread_cleanup_push(cancelled_writer, NULL);
         struct timespec remaining = {.tv_sec = 60, .tv_nsec = 0};
         while (nanosleep(&remaining, &remaining) != 0 && errno == EINTR) {
         }

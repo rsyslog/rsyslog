@@ -14,6 +14,9 @@ export RSYSLOG_OMFILE_CANCEL_EVENTS="$PWD/$RSYSLOG_DYNNAME.events"
 export RSYSLOG_PRELOAD="./.libs/liblocal_queue_omfile_cancel_preload.so"
 
 generate_conf
+# The local callback contract also applies to the harness diagnostic output.
+sed -i '1i template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf"
+sed -i "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" "${TESTCONF_NM}.conf"
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
@@ -28,7 +31,7 @@ if ($msg contains "cancel") then
         queue.type="Direct" asyncWriting="off" flushOnTXEnd="on")
 '
 startup
-tcpflood -m1 -M'first-cancel'
+tcpflood -m1 -M'<167>Mar  1 01:00:00 host tag: first-cancel'
 wait_file_lines "$RSYSLOG_OMFILE_CANCEL_EVENTS" 1
 content_check 'entered' "$RSYSLOG_OMFILE_CANCEL_EVENTS"
 injectmsg_literal '<167>Mar  1 01:00:00 host tag sibling-after-cancel'

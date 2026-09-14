@@ -14,8 +14,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
-TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-activation.sh
-EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL)
+TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-activation.sh local-queue-omfile-hup.sh
+TESTS_LOCAL_OMFILE_YAML = yaml-local-queue-omfile-activation.sh
+EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL) $(TESTS_LOCAL_OMFILE_YAML)
 
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
@@ -2864,9 +2865,12 @@ endif
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
-if ENABLE_IMTCP
+if ENABLE_IMTCP_TESTS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LOCAL_OMFILE_YAML)
+endif
 check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
 liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
 liblocal_queue_omfile_cancel_preload_la_CFLAGS =
