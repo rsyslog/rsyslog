@@ -20,6 +20,7 @@ typedef struct qqueueLocalFrontendSnapshot_s {
     uint64_t active, retry, overflow, nofit, oversized, transferred, shutdown_discarded;
     uint64_t queued, bytes, batches, producer_exited;
     uint64_t generation, published_batches, dequeue_max, dequeue_messages;
+    uint64_t submitted_batches, submitted_max, overflow_batches, oversized_batches;
     unsigned state;
 } qqueueLocalFrontendSnapshot_t;
 
@@ -32,6 +33,8 @@ typedef struct qqueueLocalSnapshot_s {
         route_be_batches;
     uint64_t be_nofit, be_oversized, be_registration_fallback, be_shutdown_redirect, be_unclassified;
     uint64_t fe_consumers, be_consumers;
+    uint64_t be_internal, be_capacity_exhausted, capacity_exhaustions;
+    uint64_t be_dequeue_batches, be_dequeue_messages, be_dequeue_max;
 } qqueueLocalSnapshot_t;
 
 /* Called only by actual tcpsrv execution, never inferred from message inputname.
@@ -54,6 +57,7 @@ int qqueueLocalGetFrontendSnapshot(const qqueue_t *owner, uint32_t index, qqueue
 
 /* BE accounting calls are serialized by owner->mut; snapshot readers use
  * atomic loads only. These are lifetime totals, not resettable impstats data. */
+void qqueueLocalBackendAcquired(qqueue_t *owner, uint64_t count);
 void qqueueLocalBackendAttempt(qqueue_t *owner, uint64_t count);
 void qqueueLocalBackendAdmitted(qqueue_t *owner, uint64_t count);
 void qqueueLocalBackendRejected(qqueue_t *owner, uint64_t count);
@@ -68,7 +72,9 @@ enum qqueueLocalRouteReason {
     QLOCAL_OVERSIZED,
     QLOCAL_REGISTRATION,
     QLOCAL_REDIRECT,
-    QLOCAL_UNCLASSIFIED
+    QLOCAL_UNCLASSIFIED,
+    QLOCAL_INTERNAL,
+    QLOCAL_CAPACITY
 };
 void qqueueLocalBackendRoute(qqueue_t *owner, size_t count, enum qqueueLocalRouteReason reason);
 

@@ -59,6 +59,7 @@ struct qqueueLocalFrontend_s {
     uint64_t attempts, published, dequeued, terminal, active, retry;
     uint64_t overflow, nofit, oversized, transferred, shutdownDiscarded, bytes, batches;
     uint64_t publishedBatches, dequeueMax, dequeueMessages;
+    uint64_t submittedBatches, submittedMax, overflowBatches, oversizedBatches;
 };
 
 struct qqueueLocal_s {
@@ -73,6 +74,8 @@ struct qqueueLocal_s {
     uint64_t beAttempted, beAdmitted, beRejected, beTerminal, beDiscarded;
     uint64_t registrationFailures, allocationBytes;
     uint64_t beBatches, beNofit, beOversized, beRegistration, beRedirect, beUnclassified;
+    uint64_t beInternal, beCapacity, capacityExhaustions;
+    uint64_t beDequeueBatches, beDequeueMessages, beDequeueMax;
     uint64_t legacyPublished, legacyBytes; /* stats-list-serialized reader only */
 };
 
@@ -80,6 +83,7 @@ typedef struct localCache_s {
     struct localCache_s *next;
     qqueue_t *owner;
     qqueueLocalFrontend_t *frontend;
+    enum qqueueLocalRouteReason failureReason;
 } localCache_t;
 
 typedef struct localProducer_s {
@@ -351,8 +355,8 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     family->count = (unsigned)owner->localMaxFrontends;
     const uint32_t capacity = (uint32_t)owner->localFrontendSize;
     const uint32_t batchSize = capacity < (uint32_t)owner->iDeqBatchSize ? capacity : (uint32_t)owner->iDeqBatchSize;
-    if (capacity > UINT32_MAX / 2 || capacity > SIZE_MAX / sizeof(void *) ||
-        family->count > SIZE_MAX / sizeof(*family->fronts))
+    if (capacity > UINT32_MAX / 2 || sizeof(void *) > SIZE_MAX / capacity ||
+        sizeof(*family->fronts) > SIZE_MAX / family->count)
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     if (pthread_mutex_init(&family->registry, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
     family->registryInitialized = 1;
@@ -381,22 +385,33 @@ finalize_it:
     RETiRet;
 }
 
-static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner, localProducer_t *const producer) {
+static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner,
+                                               localProducer_t *const producer,
+                                               enum qqueueLocalRouteReason *const reason) {
     for (localCache_t *cache = producer->cache; cache != NULL; cache = cache->next) {
-        if (cache->owner == owner) return cache->frontend;
+        if (cache->owner == owner) {
+            *reason = cache->failureReason;
+            return cache->frontend;
+        }
     }
+    *reason = QLOCAL_REGISTRATION;
     localCache_t *const cache = calloc(1, sizeof(*cache));
     qqueueLocal_t *const family = owner->local;
     if (cache == NULL) {
-        /* Rare allocation-failure accounting has multiple producers. */
         __atomic_fetch_add(&family->registrationFailures, 1, __ATOMIC_RELAXED);
         return NULL;
     }
     cache->owner = owner;
+    cache->failureReason = QLOCAL_REGISTRATION;
     cache->next = producer->cache;
     producer->cache = cache;
     pthread_mutex_lock(&family->registry);
-    if (stateRead(&family->state) == LOCAL_RUNNING && family->nextRegistration < family->count) {
+    if (stateRead(&family->state) != LOCAL_RUNNING) {
+        cache->failureReason = QLOCAL_REDIRECT;
+    } else if (family->nextRegistration == family->count) {
+        cache->failureReason = QLOCAL_CAPACITY;
+        __atomic_fetch_add(&family->capacityExhaustions, 1, __ATOMIC_RELAXED);
+    } else {
         qqueueLocalFrontend_t *const fe = &family->fronts[family->nextRegistration++];
         stateSet(&fe->state, FE_REGISTERING);
         __atomic_fetch_add(&family->registered, 1, __ATOMIC_RELAXED);
@@ -408,10 +423,11 @@ static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner, localProdu
             __atomic_fetch_add(&family->started, 1, __ATOMIC_RELAXED);
         } else {
             stateSet(&fe->state, FE_FAILED);
+            __atomic_fetch_add(&family->registrationFailures, 1, __ATOMIC_RELAXED);
         }
         pthread_mutex_unlock(&fe->mutex);
     }
-    if (cache->frontend == NULL) __atomic_fetch_add(&family->registrationFailures, 1, __ATOMIC_RELAXED);
+    *reason = cache->failureReason;
     pthread_mutex_unlock(&family->registry);
     return cache->frontend;
 }
@@ -427,14 +443,15 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
     localProducer_t *const producer = stateRead(&producerKeyValid) ? pthread_getspecific(producerKey) : NULL;
     qqueueLocalFrontend_t *fe = NULL;
     enum qqueueLocalRouteReason reason = QLOCAL_UNCLASSIFIED;
-    int trusted = producer != NULL && producer->trustedDepth != 0 && owner->local != NULL;
-    for (size_t i = 0; trusted && i < count; ++i) trusted = !(messages[i]->msgFlags & INTERNAL_MSG);
-    if (trusted) {
-        fe = registerFrontend(owner, producer);
-        reason = QLOCAL_REGISTRATION;
-    }
+    int internal = 0;
+    for (size_t i = 0; i < count && !internal; ++i) internal = (messages[i]->msgFlags & INTERNAL_MSG) != 0;
+    const int trusted = !internal && producer != NULL && producer->trustedDepth != 0 && owner->local != NULL;
+    if (internal) reason = QLOCAL_INTERNAL;
+    if (trusted) fe = registerFrontend(owner, producer, &reason);
     if (fe != NULL) {
         counterAdd(&fe->attempts, count);
+        counterAdd(&fe->submittedBatches, 1);
+        if (count > counterRead(&fe->submittedMax)) __atomic_store_n(&fe->submittedMax, count, __ATOMIC_RELAXED);
         /* Seq-cst two-sided handshake: either shutdown observes publishing,
          * or a publisher beginning later observes REDIRECT and never writes. */
         stateSet(&fe->publishing, 1);
@@ -464,6 +481,8 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
             }
             reason = count > fe->capacity ? QLOCAL_OVERSIZED : QLOCAL_NOFIT;
             counterAdd(&fe->overflow, count);
+            counterAdd(&fe->overflowBatches, 1);
+            if (count > fe->capacity) counterAdd(&fe->oversizedBatches, 1);
             counterAdd(count > fe->capacity ? &fe->oversized : &fe->nofit, count);
         }
         pthread_mutex_lock(&fe->mutex);
@@ -506,9 +525,22 @@ void qqueueLocalBackendRoute(qqueue_t *const owner, const size_t n, const enum q
         case QLOCAL_UNCLASSIFIED:
             counterAdd(&family->beUnclassified, n);
             break;
+        case QLOCAL_INTERNAL:
+            counterAdd(&family->beInternal, n);
+            break;
+        case QLOCAL_CAPACITY:
+            counterAdd(&family->beCapacity, n);
+            break;
     }
 }
 
+void qqueueLocalBackendAcquired(qqueue_t *const owner, const uint64_t n) {
+    if (owner->local == NULL || n == 0) return;
+    counterAdd(&owner->local->beDequeueBatches, 1);
+    counterAdd(&owner->local->beDequeueMessages, n);
+    if (n > counterRead(&owner->local->beDequeueMax))
+        __atomic_store_n(&owner->local->beDequeueMax, n, __ATOMIC_RELAXED);
+}
 void qqueueLocalBackendAttempt(qqueue_t *const owner, const uint64_t n) {
     counterAdd(&owner->local->beAttempted, n);
 }
@@ -735,6 +767,10 @@ int qqueueLocalGetFrontendSnapshot(const qqueue_t *const owner,
     if (snapshot->state == FE_UNUSED) return 0;
     snapshot->identity = (uint64_t)index + 1;
     snapshot->generation = 1;
+    snapshot->submitted_batches = counterRead(&fe->submittedBatches);
+    snapshot->submitted_max = counterRead(&fe->submittedMax);
+    snapshot->overflow_batches = counterRead(&fe->overflowBatches);
+    snapshot->oversized_batches = counterRead(&fe->oversizedBatches);
     snapshot->published_batches = counterRead(&fe->publishedBatches);
     snapshot->dequeue_max = counterRead(&fe->dequeueMax);
     snapshot->dequeue_messages = counterRead(&fe->dequeueMessages);
@@ -781,6 +817,9 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
     memset(snapshot, 0, sizeof(*snapshot));
     const qqueueLocal_t *const family = owner->local;
     if (family == NULL) return;
+    snapshot->be_dequeue_batches = counterRead(&family->beDequeueBatches);
+    snapshot->be_dequeue_messages = counterRead(&family->beDequeueMessages);
+    snapshot->be_dequeue_max = counterRead(&family->beDequeueMax);
     snapshot->be_attempted = counterRead(&family->beAttempted);
     snapshot->be_admitted = counterRead(&family->beAdmitted);
     snapshot->be_terminal = counterRead(&family->beTerminal);
@@ -799,6 +838,9 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
     snapshot->be_registration_fallback = counterRead(&family->beRegistration);
     snapshot->be_shutdown_redirect = counterRead(&family->beRedirect);
     snapshot->be_unclassified = counterRead(&family->beUnclassified);
+    snapshot->be_internal = counterRead(&family->beInternal);
+    snapshot->be_capacity_exhausted = counterRead(&family->beCapacity);
+    snapshot->capacity_exhaustions = counterRead(&family->capacityExhaustions);
     snapshot->be_consumers = (uint64_t)__atomic_load_n(&owner->pWtpReg->iCurNumWrkThrd, __ATOMIC_RELAXED);
     snapshot->fe_registered = __atomic_load_n(&family->registered, __ATOMIC_RELAXED);
     snapshot->fe_started = __atomic_load_n(&family->started, __ATOMIC_RELAXED);
@@ -871,6 +913,7 @@ void qqueueLocalBackendRoute(qqueue_t *owner, size_t count, enum qqueueLocalRout
             (void)owner;                             \
             (void)count;                             \
         }
+LOCAL_COUNTER_STUB(qqueueLocalBackendAcquired)
 LOCAL_COUNTER_STUB(qqueueLocalBackendAttempt)
 LOCAL_COUNTER_STUB(qqueueLocalBackendAdmitted)
 LOCAL_COUNTER_STUB(qqueueLocalBackendRejected)

@@ -3527,6 +3527,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
               nDiscarded, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 #endif
 
+    if (pThis->local != NULL) qqueueLocalBackendAcquired(pThis, (uint64_t)nDequeued);
     pWti->batch.nElem = nDequeued;
     pWti->batch.nElemDeq = nDequeued + nDiscarded;
     pWti->batch.deqID = getNextDeqID(pThis);
@@ -3715,7 +3716,8 @@ finalize_it:
      * completed through a callback owner's queue by mistake. */
     if (iRet == RS_RET_IDLE &&
         !qqueueLeaseHasResponsibility(pWti->batch.nElem, pWti->batch.nElemDeq, pWti->batch.storeData)) {
-        CHKiRet(qqueueClearWtiSource(pThis, pWti));
+        const rsRetVal clearRet = qqueueClearWtiSource(pThis, pWti);
+        if (clearRet != RS_RET_OK) iRet = clearRet;
     }
     if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
         qqueueDrainDeferredLocked(pThis, pWti);
@@ -3754,7 +3756,6 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
         /* pThis is the callback owner. S1 never permits it to stand in for a
          * different physical source, even if the queues share a DA mutex. */
         CHKiRet(qqueueBindWtiSource(pSource, pWti));
-        if (pSource != pThis) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
     iRet = DeleteProcessedBatch(pSource == NULL ? pThis : pSource, pWti);
     if (iRet == RS_RET_OK) qqueueChkPersist(pSource == NULL ? pThis : pSource, nElemDeq);
@@ -3813,7 +3814,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-    qqueueSetWtiShutdownImmediate(pWti->source_queue, pWti);
+    qqueueSetWtiShutdownImmediate(pWti->source_queue != NULL ? pWti->source_queue : pThis, pWti);
     CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
 
     /* we now need to check if we should deliberately delay processing a bit
@@ -4002,9 +4003,9 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
 
     if (pThis->bLocalScope) {
         if (!pThis->bLocalConfigValidated || pThis->bLocalConfigError) ABORT_FINALIZE(RS_RET_LOCAL_QUEUE_CONFIG);
-        /* Replaced by S2 worker startup when routing is integrated. Config-only
-         * candidates must never silently run the shared global queue path. */
-        ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+        /* The regular FixedArray pool remains the physical BE. After its
+         * construction, local startup preallocates the FE family and enables
+         * the local-only admission wrapper. Any failure is fatal to startup. */
     }
 
     /* do not modify the queue if it's already running(happens when dynamic config reload is invoked
