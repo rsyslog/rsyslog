@@ -715,11 +715,12 @@ finalize_it:
  * never writes outside the harness work directory by relative resolution. */
 static rsRetVal local_queue_stop_check(uchar *const command, tcps_sess_t *pSess) {
     uchar marker[PATH_MAX] = {0};
+    uchar *cursor = command;
     DEFiRet;
 
-    getFirstWord(&command, marker, sizeof(marker), 0);
-    while (*command == ' ' || *command == '\t' || *command == '\r' || *command == '\n') ++command;
-    if (marker[0] != '/' || *command != '\0') {
+    getFirstWord(&cursor, marker, sizeof(marker), 0);
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') ++cursor;
+    if (marker[0] != '/' || *cursor != '\0') {
         CHKiRet(sendResponse(pSess, "ERROR: local queue stop-check requires one absolute marker path\n"));
         FINALIZE;
     }
