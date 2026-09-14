@@ -76,6 +76,10 @@ localq_make_startup_marker_absolute() {
 	local config="${TESTCONF_NM}.conf"
 	local relative="./${RSYSLOG_DYNNAME}.started"
 	local absolute="$PWD/${RSYSLOG_DYNNAME}.started"
+	case "$RSYSLOG_OUT_LOG" in
+		/*) ;;
+		*) export RSYSLOG_OUT_LOG="$PWD/$RSYSLOG_OUT_LOG" ;;
+	esac
 	# Define the ordinary template before the generated action. The local graph
 	# deliberately rejects the default generated template because it is a
 	# generated template rather than the explicit string template contract.
