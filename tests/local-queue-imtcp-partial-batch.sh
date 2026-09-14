@@ -42,7 +42,7 @@ localq_wait_stats "$STATSFILE" "main Q.local" "route.fe.messages=6" "fe.queued.m
 localq_release_barrier "$RELEASEFIFO"
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
 localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
-	"batch.fe_dequeue.count=3" "batch.fe_dequeue.messages.sum=6" "batch.fe_dequeue.max=3"
+	"batch.fe_dequeue.count=3" "batch.fe_dequeue.messages.sum=6" "batch.fe_dequeue.messages.max=3"
 shutdown_when_empty
 wait_shutdown
 seq_check
