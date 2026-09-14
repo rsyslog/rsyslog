@@ -109,6 +109,20 @@ fi
 PORT_FILE="$PWD/$RSYSLOG_DYNNAME.input.port"
 STATS_FILE="$PWD/$RSYSLOG_DYNNAME.queue.impstats.json"
 generate_conf
+case "$BENCH_SCOPE" in
+global)
+    BENCH_OMFILE_PATH=$RSYSLOG_OUT_LOG
+    ;;
+local)
+    # Local omfile activation preopens every omfile action. Qualify both the
+    # diagnostic preamble and benchmark sink before input startup; the global
+    # control keeps its frozen generated configuration unchanged.
+    BENCH_OMFILE_PATH="$PWD/$RSYSLOG_OUT_LOG"
+    sed -i '1i template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf"
+    sed -i "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" \
+        "${TESTCONF_NM}.conf"
+    ;;
+esac
 if [[ "$BENCH_IMPSTATS" == yes ]]; then
     add_conf '
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json" log.syslog="off")
@@ -125,7 +139,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
     set $.parseStatus = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}", "\$!payload");
     if ($.parseStatus == 0 and $!payload!nested!text == "queue contention benchmark payload") then
-        action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+        action(type="omfile" file="'$BENCH_OMFILE_PATH'" template="outfmt")
 }
 '
 start_ns=$(date +%s%N)
