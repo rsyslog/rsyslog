@@ -81,6 +81,7 @@ librsyslog_la_SOURCES = \
 	queue_local.h \
 	queue_local_stats.c \
 	queue_local_stats.h \
+	queue_spsc.c \
 	queue_spsc.h \
 	queue_lease.h \
 	queue_da.c \

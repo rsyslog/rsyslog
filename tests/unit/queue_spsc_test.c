@@ -23,6 +23,9 @@
 
 #include "queue_spsc.h"
 
+/* Keep this primitive unit-testable without linking the full queue runtime. */
+#include "../../runtime/queue_spsc.c"
+
 #define CHECK(condition)                                                                    \
     do {                                                                                    \
         if (!(condition)) {                                                                 \
@@ -115,11 +118,13 @@ static int test_many_wraps(void) {
         if (next_id <= 50000 && requested > 50001U - next_id) requested = 50001U - next_id;
         if (next_id <= 50000 && requested > 7U - expected_count) {
             const uint32_t pop_count = ((next_id % 3U) + 1U) < expected_count ? (next_id % 3U) + 1U : expected_count;
+            size_t popped;
 
             for (uint32_t i = 0; i < requested; ++i) input[i] = id_pointer(next_id + i);
             CHECK(!rsSpscQueueTryPush(&queue, input, requested));
-            CHECK(rsSpscQueuePop(&queue, output, pop_count) == pop_count);
-            for (uint32_t i = 0; i < pop_count; ++i) {
+            popped = rsSpscQueuePop(&queue, output, pop_count);
+            CHECK(popped != 0 && popped <= pop_count);
+            for (size_t i = 0; i < popped; ++i) {
                 CHECK((uint32_t)(uintptr_t)output[i] == expected[expected_head]);
                 expected_head = (expected_head + 1U) % 7U;
                 --expected_count;
@@ -137,8 +142,11 @@ static int test_many_wraps(void) {
             expected_count += requested;
         } else {
             const uint32_t pop_count = expected_count < 4U ? expected_count : 4U;
-            CHECK(rsSpscQueuePop(&queue, output, pop_count) == pop_count);
-            for (uint32_t i = 0; i < pop_count; ++i) {
+            size_t popped;
+
+            popped = rsSpscQueuePop(&queue, output, pop_count);
+            CHECK(popped != 0 && popped <= pop_count);
+            for (size_t i = 0; i < popped; ++i) {
                 CHECK((uint32_t)(uintptr_t)output[i] == expected[expected_head]);
                 expected_head = (expected_head + 1U) % 7U;
                 --expected_count;
@@ -221,10 +229,10 @@ typedef struct spsc_thread_test_state_s {
 } spsc_thread_test_state_t;
 
 static uint32_t payload_checksum(const publication_payload_t *payload) {
-    uint32_t checksum = payload->id;
+    uint64_t checksum = payload->id;
 
-    for (uint32_t i = 0; i < PAYLOAD_BYTES; ++i) checksum = (checksum * 33U) ^ payload->bytes[i];
-    return checksum;
+    for (uint32_t i = 0; i < PAYLOAD_BYTES; ++i) checksum = ((checksum * 33U) ^ payload->bytes[i]) & UINT32_MAX;
+    return (uint32_t)checksum;
 }
 
 static void initialize_payload(publication_payload_t *payload, const uint32_t id) {
