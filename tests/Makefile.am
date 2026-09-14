@@ -171,6 +171,7 @@ EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 EXTRA_DIST += unit/impcap_arp_parser_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
+EXTRA_DIST += unit/queue_spsc_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 
@@ -2690,10 +2691,10 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2722,6 +2723,8 @@ runtime_unit_queue_da_SOURCES = \
 
 runtime_unit_queue_lease_SOURCES = \
 	unit/queue_lease_test.c
+runtime_unit_queue_spsc_SOURCES = \
+	unit/queue_spsc_test.c
 
 runtime_unit_omazuredce_utils_SOURCES = \
 	unit/omazuredce_utils_test.c
@@ -2807,6 +2810,8 @@ runtime_unit_queue_da_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_queue_lease_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_queue_spsc_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
@@ -2819,6 +2824,7 @@ runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
 runtime_unit_queue_da_LDADD =
 runtime_unit_queue_lease_LDADD = $(PTHREADS_LIBS)
+runtime_unit_queue_spsc_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
