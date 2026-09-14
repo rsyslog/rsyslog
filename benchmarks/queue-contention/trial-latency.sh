@@ -1,9 +1,10 @@
 #!/bin/bash
 # SPDX-License-Identifier: Apache-2.0
 # Latency observation is separate from the throughput trial. A single Python
-# process timestamps each exact ID immediately before sendall and when its
-# complete omfile line is observed. The Python oracle rejects loss, duplicates,
-# invalid output, sender lateness, offered-rate drift, and polling-gap excess.
+# process timestamps each exact ID immediately before payload framing and when
+# its complete omfile line is observed. The Python oracle rejects loss,
+# duplicates, invalid output, sender timing excess, offered-rate drift, and
+# reader-iteration excess.
 export NUMMESSAGES=${BENCH_MESSAGES:-100000}
 OBSERVER_DIR=${BENCH_CAMPAIGN_DIR:-$(cd "$(dirname "$0")" && pwd)}
 : "${BENCH_INPUT_WORKERS:=8}" "${BENCH_CONSUMER_WORKERS:=4}" "${BENCH_CONNECTIONS:=16}"
@@ -29,6 +30,19 @@ fi
 PORT_FILE="$PWD/$RSYSLOG_DYNNAME.latency.port"
 EXPECTED_FILE=${BENCH_EXPECTED_FILE:-"$BENCH_METRIC_FILE.expected"}
 generate_conf
+case "$BENCH_SCOPE" in
+global)
+    BENCH_OMFILE_PATH=$RSYSLOG_OUT_LOG
+    ;;
+local)
+    # Local omfile activation preopens every omfile action. Qualify the
+    # generated diagnostic preamble and the measured sink before input startup.
+    BENCH_OMFILE_PATH="$PWD/$RSYSLOG_OUT_LOG"
+    sed -i '1i template(name="localdiag" type="string" string="%msg%\\n")' "${TESTCONF_NM}.conf"
+    sed -i "s|file=\"./$RSYSLOG_DYNNAME.started\"|file=\"$PWD/$RSYSLOG_DYNNAME.started\" template=\"localdiag\"|" \
+        "${TESTCONF_NM}.conf"
+    ;;
+esac
 # The quoted fragment below is intentionally emitted into RainerScript.
 # shellcheck disable=SC2090
 add_conf '
@@ -37,7 +51,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$PORT_FILE'" workerThreads="'$BENCH_INPUT_WORKERS'")
 main_queue(queue.type="FixedArray" queue.size="'$BENCH_QUEUE_SIZE'" queue.workerThreads="'$BENCH_CONSUMER_WORKERS'" queue.workerThreadMinimumMessages="'$BENCH_WORKER_MINIMUM'" queue.dequeueBatchSize="'$BENCH_DEQUEUE_BATCH_SIZE'" '$QUEUE_SCOPE_CONF')
 template(name="latencyfmt" type="string" string="%msg%\n")
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="latencyfmt" flushOnTXEnd="on")
+action(type="omfile" file="'$BENCH_OMFILE_PATH'" template="latencyfmt" flushOnTXEnd="on")
 '
 startup
 assign_file_content INPUT_PORT "$PORT_FILE"
