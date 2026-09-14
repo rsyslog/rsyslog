@@ -11,6 +11,7 @@
  */
 #include "config.h"
 
+#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -355,6 +356,143 @@ void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *const stats,
     if (stats == NULL) return;
     stats->test_pre_read_hook = hook;
     stats->test_pre_read_context = context;
+}
+
+/* The test runs through imdiag after the daemon constructed a real local
+ * queue. The hook is invoked by statsobj.GetAllCounters while the global
+ * stats-object list mutex is held. A concurrent adapter destruction must
+ * therefore remain blocked until the hook's condition is released. */
+typedef struct localStatsLifetimePhase_s {
+    pthread_mutex_t mutex;
+    pthread_cond_t condition;
+    int pre_read_entered;
+    int release_pre_read;
+    int destroy_started;
+    int destroy_returned;
+    rsRetVal reader_status;
+} localStatsLifetimePhase_t;
+
+typedef struct localStatsLifetimeContext_s {
+    qqueue_t *owner;
+    localStatsLifetimePhase_t phase;
+} localStatsLifetimeContext_t;
+
+static void localStatsLifetimePreRead(void *const context) {
+    localStatsLifetimeContext_t *const fixture = context;
+    localStatsLifetimePhase_t *const phase = &fixture->phase;
+
+    if (pthread_mutex_lock(&phase->mutex) != 0) return;
+    phase->pre_read_entered = 1;
+    pthread_cond_broadcast(&phase->condition);
+    while (!phase->release_pre_read) pthread_cond_wait(&phase->condition, &phase->mutex);
+    pthread_mutex_unlock(&phase->mutex);
+}
+
+static rsRetVal localStatsLifetimeCountLocal(void *const context,
+                                             const uchar *const object_name __attribute__((unused)),
+                                             const uchar *const object_origin,
+                                             const uchar *const counter_name __attribute__((unused)),
+                                             const statsCtrType_t counter_type __attribute__((unused)),
+                                             const uint64_t value __attribute__((unused)),
+                                             const int8_t flags __attribute__((unused))) {
+    unsigned *const count = context;
+    if (object_origin != NULL && !strcmp((const char *)object_origin, "core.queue.local")) ++*count;
+    return RS_RET_OK;
+}
+
+static void *localStatsLifetimeRead(void *const context) {
+    localStatsLifetimeContext_t *const fixture = context;
+    fixture->phase.reader_status = statsobj.GetAllCounters(localStatsLifetimeCountLocal, &(unsigned){0});
+    return NULL;
+}
+
+static void *localStatsLifetimeDestruct(void *const context) {
+    localStatsLifetimeContext_t *const fixture = context;
+    localStatsLifetimePhase_t *const phase = &fixture->phase;
+
+    if (pthread_mutex_lock(&phase->mutex) == 0) {
+        phase->destroy_started = 1;
+        pthread_cond_broadcast(&phase->condition);
+        pthread_mutex_unlock(&phase->mutex);
+    }
+    qqueueLocalStatsDestruct(&fixture->owner->localStats);
+    if (pthread_mutex_lock(&phase->mutex) == 0) {
+        phase->destroy_returned = 1;
+        pthread_cond_broadcast(&phase->condition);
+        pthread_mutex_unlock(&phase->mutex);
+    }
+    return NULL;
+}
+
+static rsRetVal localStatsLifetimeWait(localStatsLifetimePhase_t *const phase, int *const predicate) {
+    int err = 0;
+
+    if ((err = pthread_mutex_lock(&phase->mutex)) != 0) return RS_RET_CONC_CTRL_ERR;
+    while (!*predicate && err == 0) err = pthread_cond_wait(&phase->condition, &phase->mutex);
+    if (pthread_mutex_unlock(&phase->mutex) != 0) err = 1;
+    return err == 0 ? RS_RET_OK : RS_RET_CONC_CTRL_ERR;
+}
+
+rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *const owner) {
+    localStatsLifetimeContext_t fixture = {.owner = owner};
+    qqueueLocalStats_t *stats;
+    pthread_t reader;
+    pthread_t destructor;
+    int mutex_initialized = 0;
+    int condition_initialized = 0;
+    int reader_started = 0;
+    int destructor_started = 0;
+    unsigned local_objects = 0;
+    DEFiRet;
+
+    if (owner == NULL || owner->localStats == NULL) return RS_RET_PARAM_ERROR;
+    stats = owner->localStats;
+    if (pthread_mutex_init(&fixture.phase.mutex, NULL) != 0) return RS_RET_CONC_CTRL_ERR;
+    mutex_initialized = 1;
+    if (pthread_cond_init(&fixture.phase.condition, NULL) != 0) {
+        pthread_mutex_destroy(&fixture.phase.mutex);
+        return RS_RET_CONC_CTRL_ERR;
+    }
+    condition_initialized = 1;
+    qqueueLocalStatsSetTestPreReadHook(stats, localStatsLifetimePreRead, &fixture);
+    CHKiConcCtrl(pthread_create(&reader, NULL, localStatsLifetimeRead, &fixture));
+    reader_started = 1;
+    CHKiRet(localStatsLifetimeWait(&fixture.phase, &fixture.phase.pre_read_entered));
+    CHKiConcCtrl(pthread_create(&destructor, NULL, localStatsLifetimeDestruct, &fixture));
+    destructor_started = 1;
+    CHKiRet(localStatsLifetimeWait(&fixture.phase, &fixture.phase.destroy_started));
+
+    CHKiConcCtrl(pthread_mutex_lock(&fixture.phase.mutex));
+    if (fixture.phase.destroy_returned) {
+        pthread_mutex_unlock(&fixture.phase.mutex);
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    fixture.phase.release_pre_read = 1;
+    CHKiConcCtrl(pthread_cond_broadcast(&fixture.phase.condition));
+    CHKiConcCtrl(pthread_mutex_unlock(&fixture.phase.mutex));
+
+finalize_it:
+    if (reader_started || destructor_started) {
+        if (pthread_mutex_lock(&fixture.phase.mutex) == 0) {
+            fixture.phase.release_pre_read = 1;
+            pthread_cond_broadcast(&fixture.phase.condition);
+            pthread_mutex_unlock(&fixture.phase.mutex);
+        }
+    }
+    if (reader_started && pthread_join(reader, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
+    if (destructor_started && pthread_join(destructor, NULL) != 0 && iRet == RS_RET_OK) iRet = RS_RET_CONC_CTRL_ERR;
+    if (fixture.phase.reader_status != RS_RET_OK && iRet == RS_RET_OK) iRet = fixture.phase.reader_status;
+    if (owner->localStats != NULL && iRet == RS_RET_OK) {
+        qqueueLocalStatsSetTestPreReadHook(owner->localStats, NULL, NULL);
+        iRet = RS_RET_INTERNAL_ERROR;
+    }
+    if (iRet == RS_RET_OK) {
+        CHKiRet(statsobj.GetAllCounters(localStatsLifetimeCountLocal, &local_objects));
+        if (local_objects != 0) iRet = RS_RET_INTERNAL_ERROR;
+    }
+    if (condition_initialized) pthread_cond_destroy(&fixture.phase.condition);
+    if (mutex_initialized) pthread_mutex_destroy(&fixture.phase.mutex);
+    RETiRet;
 }
 #endif
 

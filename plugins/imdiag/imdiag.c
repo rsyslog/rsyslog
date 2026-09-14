@@ -61,6 +61,7 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "queue.h"
+#include "queue_local_stats.h"
 #include "rsconf.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
@@ -684,6 +685,27 @@ static rsRetVal queue_lease_test(tcps_sess_t *pSess) {
 finalize_it:
     RETiRet;
 }
+
+/* Exercise the real local-queue stats adapter after daemon initialization.
+ * The runtime fixture creates a blocked native reader and concurrent adapter
+ * destruction, then confirms list unlinking before this command replies. */
+static rsRetVal local_queue_stats_lifetime_test(tcps_sess_t *pSess) {
+    DEFiRet;
+
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+    } else {
+        iRet = qqueueLocalStatsTestLifetime(runConf->pMsgQueue);
+        if (iRet == RS_RET_OK) {
+            CHKiRet(sendResponse(pSess, "OK\n"));
+        } else {
+            CHKiRet(sendResponse(pSess, "ERROR: local queue stats lifetime fixture failed: %d\n", iRet));
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
 #endif
 
 /* Function to handle received messages. This is our core function!
@@ -735,6 +757,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
 #ifdef ENABLE_TESTBENCH
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("queueleasetest"))) {
         CHKiRet(queue_lease_test(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestatslifetimetest"))) {
+        CHKiRet(local_queue_stats_lifetime_test(pSess));
 #endif
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;

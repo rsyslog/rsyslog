@@ -41,6 +41,10 @@ typedef void (*qqueueLocalStatsTestPreReadHook_t)(void *context);
 void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *stats,
                                         qqueueLocalStatsTestPreReadHook_t hook,
                                         void *context);
+
+/* Exercise real stats-list reader/destruction serialization on an initialized
+ * local queue. This destructive test fixture is available only to imdiag. */
+rsRetVal qqueueLocalStatsTestLifetime(qqueue_t *owner);
 #endif
 
 #endif
