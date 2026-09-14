@@ -238,7 +238,9 @@ static int writeFully(const int fd, const char *buf, size_t len) {
  * explicit phase transition rather than a timing delay.
  */
 static rsRetVal doFileBarrier(instanceData *const pData) {
-    DEFiRet;
+    /* pthread_cleanup_push() may be a setjmp-based macro. Keep the return
+     * state volatile across the cancellation cleanup regions. */
+    volatile rsRetVal iRet = RS_RET_OK;
     int fd;
     ssize_t nread;
     char release[32];
