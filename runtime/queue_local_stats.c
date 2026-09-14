@@ -39,7 +39,7 @@ enum localLogicalCounter {
     localLogicalRouteBeMessages,
     localLogicalRouteBeBatches,
     localLogicalRouteBeAcceptedMessages,
-    localLogicalRouteBeTerminalMessages,
+    localLogicalBeTerminalMessages,
     localLogicalRouteBeNoFitMessages,
     localLogicalRouteBeOversizedMessages,
     localLogicalRouteBeRegistrationFallbackMessages,
@@ -144,7 +144,8 @@ static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("route.be.messages", localLogicalRouteBeMessages),
     LOCAL_COUNTER("route.be.batches", localLogicalRouteBeBatches),
     LOCAL_COUNTER("route.be.accepted.messages", localLogicalRouteBeAcceptedMessages),
-    LOCAL_COUNTER("route.be.terminal.messages", localLogicalRouteBeTerminalMessages),
+    /* Physical backend terminal completions include FE-to-BE transfers. */
+    LOCAL_COUNTER("be.terminal.messages", localLogicalBeTerminalMessages),
     LOCAL_COUNTER("route.be.reason.nofit.messages", localLogicalRouteBeNoFitMessages),
     LOCAL_COUNTER("route.be.reason.oversized.messages", localLogicalRouteBeOversizedMessages),
     LOCAL_COUNTER("route.be.reason.registration_fallback.messages", localLogicalRouteBeRegistrationFallbackMessages),
@@ -236,7 +237,7 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
     localStatsStore(&stats->logical_counters[localLogicalRouteBeMessages], snapshot.route_be_messages);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeBatches], snapshot.route_be_batches);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeAcceptedMessages], snapshot.be_admitted);
-    localStatsStore(&stats->logical_counters[localLogicalRouteBeTerminalMessages], snapshot.be_terminal);
+    localStatsStore(&stats->logical_counters[localLogicalBeTerminalMessages], snapshot.be_terminal);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeNoFitMessages], snapshot.be_nofit);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeOversizedMessages], snapshot.be_oversized);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeRegistrationFallbackMessages],
