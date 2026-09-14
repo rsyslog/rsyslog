@@ -4,10 +4,10 @@
 # through qqueueLocalSubmit(). A FIFO holds the singleton after FE acquisition,
 # so F=4 makes the next four-entry array fit, the two-entry array take the
 # whole-batch no-fit BE path, and the five-entry array take the oversize BE
-# path. Impstats is the route/batch/ownership oracle before and after release;
-# exact numeric output proves every accepted reference reached one terminal
-# action exactly once. File and counter waits establish ordering; no elapsed
-# delay is a success condition.
+# path. Impstats checks the exact FE and no-fit/oversize counters; the fixture
+# snapshot subtracts daemon-startup internal traffic before it proves all 12
+# supplied references reached one terminal action exactly once. File and
+# counter waits establish ordering; no elapsed delay is a success condition.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin impstats
@@ -48,7 +48,7 @@ case "$response" in
     *) echo "FAIL: unexpected batch response: $response"; error_exit 1 ;;
 esac
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"route.fe.messages=5" "route.fe.batches=2" "route.be.messages=7" "route.be.batches=2" \
+	"route.fe.messages=5" "route.fe.batches=2" \
 	"route.be.reason.nofit.messages=2" "route.be.reason.oversized.messages=5"
 localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
 	"admitted.messages=5" "batch.submit.count=4" "batch.submit.messages.max=5" \
@@ -58,8 +58,8 @@ localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
 localq_release_barrier "$RELEASEFIFO"
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"ingress.messages=12" "accepted.messages=12" "terminal.messages=12" "outstanding.messages=0" \
-	"route.fe.messages=5" "route.be.messages=7"
+	"route.fe.messages=5" "route.fe.batches=2" \
+	"route.be.reason.nofit.messages=2" "route.be.reason.oversized.messages=5"
 response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
 case "$response" in
     *"attempts=12 admitted=12 terminal=12 outstanding=0 fe=5 be=7 be_nofit=2 be_oversized=5"*) ;;

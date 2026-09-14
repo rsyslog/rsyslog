@@ -749,6 +749,33 @@ enum localQueueSubmitFixtureStage { LOCAL_QUEUE_SUBMIT_IDLE, LOCAL_QUEUE_SUBMIT_
 static enum localQueueSubmitFixtureStage localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_IDLE;
 static unsigned localQueueSubmitFixtureNextId;
 enum { LOCAL_QUEUE_REDIRECT_GATE_TIMEOUT_MS = 5000 };
+static qqueueLocalSnapshot_t localQueueSubmitFixtureBaseline;
+static int localQueueSubmitFixtureBaselineValid;
+
+static uint64_t localQueueSubmitFixtureDelta(const uint64_t current, const uint64_t baseline) {
+    return current >= baseline ? current - baseline : 0;
+}
+
+/* The initialized daemon may have already sent internal messages through BE.
+ * Fixture replies therefore describe only references submitted by this test
+ * command, while impstats still exposes the complete lifetime totals. */
+static void localQueueSubmitFixtureSubtractBaseline(qqueueLocalSnapshot_t *const snapshot,
+                                                    const qqueueLocalSnapshot_t *const baseline) {
+    snapshot->attempts = localQueueSubmitFixtureDelta(snapshot->attempts, baseline->attempts);
+    snapshot->admitted = localQueueSubmitFixtureDelta(snapshot->admitted, baseline->admitted);
+    snapshot->preadmission_rejected =
+        localQueueSubmitFixtureDelta(snapshot->preadmission_rejected, baseline->preadmission_rejected);
+    snapshot->terminal = localQueueSubmitFixtureDelta(snapshot->terminal, baseline->terminal);
+    snapshot->route_fe_messages =
+        localQueueSubmitFixtureDelta(snapshot->route_fe_messages, baseline->route_fe_messages);
+    snapshot->route_be_messages =
+        localQueueSubmitFixtureDelta(snapshot->route_be_messages, baseline->route_be_messages);
+    snapshot->be_nofit = localQueueSubmitFixtureDelta(snapshot->be_nofit, baseline->be_nofit);
+    snapshot->be_oversized = localQueueSubmitFixtureDelta(snapshot->be_oversized, baseline->be_oversized);
+    snapshot->be_shutdown_redirect =
+        localQueueSubmitFixtureDelta(snapshot->be_shutdown_redirect, baseline->be_shutdown_redirect);
+    snapshot->outstanding = snapshot->admitted >= snapshot->terminal ? snapshot->admitted - snapshot->terminal : 0;
+}
 
 static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const size_t count) {
     struct syslogTime stTime;
@@ -826,6 +853,8 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         CHKiRet(localQueueSubmitFixtureBatch(0));
         qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
         if (memcmp(&before, &snapshot, sizeof(snapshot)) != 0) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        localQueueSubmitFixtureBaseline = before;
+        localQueueSubmitFixtureBaselineValid = 1;
         CHKiRet(localQueueSubmitFixtureBatch(1));
         localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_PRIMED;
         CHKiRet(sendResponse(pSess, "OK expected.messages=12\n"));
@@ -840,7 +869,9 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_BATCHED;
         CHKiRet(sendResponse(pSess, "OK expected.messages=12 fe.messages=5 be.messages=7\n"));
     } else if (!ustrcmp(mode, UCHAR_CONSTANT("snapshot"))) {
+        if (!localQueueSubmitFixtureBaselineValid) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+        localQueueSubmitFixtureSubtractBaseline(&snapshot, &localQueueSubmitFixtureBaseline);
         CHKiRet(sendResponse(pSess,
                              "OK attempts=%" PRIu64 " admitted=%" PRIu64 " terminal=%" PRIu64 " outstanding=%" PRIu64
                              " fe=%" PRIu64 " be=%" PRIu64 " be_nofit=%" PRIu64 " be_oversized=%" PRIu64 "\n",
@@ -877,6 +908,7 @@ static void *localQueueRedirectSubmit(void *const context) {
  * BE delivery. Both outcomes consumed the supplied reference exactly once. */
 static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
     localQueueRedirectSubmitResult_t submit_result = {.result = RS_RET_ERR};
+    qqueueLocalSnapshot_t baseline;
     qqueueLocalSnapshot_t snapshot;
     pthread_t producer;
     rsRetVal shutdown_result;
@@ -889,6 +921,7 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
         CHKiRet(sendResponse(pSess, "ERROR: redirect fixture requires a fresh local main queue\n"));
         FINALIZE;
     }
+    qqueueLocalGetSnapshot(runConf->pMsgQueue, &baseline);
     CHKiRet(localQueueSubmitFixtureCreate(&submit_result.message, 1));
     qqueueLocalTestRedirectArm();
     if (pthread_create(&producer, NULL, localQueueRedirectSubmit, &submit_result) != 0) ABORT_FINALIZE(RS_RET_ERR);
@@ -906,6 +939,7 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
     if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
     CHKiRet(shutdown_result);
     qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
+    localQueueSubmitFixtureSubtractBaseline(&snapshot, &baseline);
     if ((submit_result.result != RS_RET_OK && submit_result.result != RS_RET_FORCE_TERM) || snapshot.attempts != 1 ||
         snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected ||
         snapshot.admitted != snapshot.terminal || snapshot.outstanding != 0 || snapshot.route_fe_messages != 0 ||
