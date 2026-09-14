@@ -95,6 +95,9 @@ struct queue_s {
     BEGINobjInstance
         ;
         queueType_t qType;
+        struct qqueueLocal_s *local; /* logical family; NULL for global queues */
+        struct qqueueLocalStats_s *localStats; /* unlink before any local worker pool is destroyed */
+        struct qqueueLocalFrontend_s *localSource; /* private FE source, never a DA parent */
         int nLogDeq; /* number of elements currently logically dequeued */
         int bShutdownImmediate; /* should all workers cease processing messages? */
         DEF_ATOMIC_HELPER_MUT(mutShutdownImmediate);

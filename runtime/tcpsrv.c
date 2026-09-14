@@ -69,6 +69,7 @@
 #include "srUtils.h"
 #include "conf.h"
 #include "tcpsrv.h"
+#include "queue_local.h"
 #include "obj.h"
 #include "glbl.h"
 #include "netstrms.h"
@@ -1228,12 +1229,19 @@ static rsRetVal ATTR_NONNULL(1)
     processWorksetItem(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
     DEFiRet;
 
+    /* pszOrigin is set by the input module, independently of configurable
+     * inputname. Provenance follows the actual imtcp execution thread; session
+     * and listener identity never identify an FE producer. */
+    const int localOrigin = qqueueLocalEnabled() && pioDescr->pSrv->pszOrigin != NULL &&
+                            !strcmp((const char *)pioDescr->pSrv->pszOrigin, "imtcp");
+    if (localOrigin) qqueueLocalProducerEnter();
     DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
     if (pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
         iRet = doAccept(pioDescr, wrkrData);
     } else {
         iRet = doReceive(pioDescr, wrkrData);
     }
+    if (localOrigin) qqueueLocalProducerLeave();
 
     RETiRet;
 }
@@ -1442,7 +1450,7 @@ static void ATTR_NONNULL() enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
 }
 
 /* Worker thread function */
-static void ATTR_NONNULL() * wrkr(void *arg) {
+static void ATTR_NONNULL() * wrkrRun(void *arg) {
     tcpsrv_t *const pThis = (tcpsrv_t *)arg;
     workQueue_t *const queue = &pThis->workQueue;
     tcpsrv_io_descr_t *pioDescr;
@@ -1547,6 +1555,18 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
     }
 
     return NULL;
+}
+
+
+/* Input workers exit/join before logical queues are destroyed. The explicit
+ * cleanup marks producerless registrations on normal and cancellation paths;
+ * the later TLS destructor never dereferences queue storage. */
+static void ATTR_NONNULL() * wrkr(void *arg) {
+    void *result;
+    pthread_cleanup_push(qqueueLocalProducerExit, NULL);
+    result = wrkrRun(arg);
+    pthread_cleanup_pop(1);
+    return result;
 }
 
 
@@ -1780,7 +1800,7 @@ finalize_it:
  * select() equivalent.
  * rgerhards, 2009-11-18
  */
-static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() RunInternal(tcpsrv_t *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -1817,6 +1837,17 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
 
 finalize_it:
     RETiRet;
+}
+
+
+/* Single-thread poll/epoll executes submissions on the input thread itself.
+ * Keep the same explicit producer-departure cleanup as pool workers. */
+static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
+    rsRetVal result;
+    pthread_cleanup_push(qqueueLocalProducerExit, NULL);
+    result = RunInternal(pThis);
+    pthread_cleanup_pop(1);
+    return result;
 }
 
 

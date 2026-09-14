@@ -205,6 +205,8 @@
 
 #include "rsyslog.h"
 #include "queue.h"
+#include "queue_local.h"
+#include "queue_local_stats.h"
 #include "queue_lease.h"
 #include "stringbuf.h"
 #include "srUtils.h"
@@ -1002,7 +1004,12 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis) {
 
     assert(pThis != NULL);
 
-    queueDrain(pThis); /* discard any remaining queue entries */
+    if (pThis->bLocalScope) {
+        /* Local family shutdown already reconciled every retained reference. */
+        assert(pThis->iQueueSize == 0);
+    } else {
+        queueDrain(pThis); /* discard any remaining queue entries */
+    }
     free(pThis->tVars.farray.pBuf);
 
     RETiRet;
@@ -2403,6 +2410,8 @@ static rsRetVal ATTR_NONNULL(1) tryShutdownWorkersWithinQueueTimeout(qqueue_t *c
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
+    if (pThis->local != NULL) return qqueueLocalShutdown(pThis);
+
     assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
     if (pThis->bIsDA) {
@@ -3105,6 +3114,40 @@ static void qqueueDeferBatch(wti_t *const pWti) {
     pBatch->nElem = pBatch->nElemDeq = 0;
 }
 
+/* Local FixedArray completion returns retry references to capacity released
+ * by this same batch, under the BE mutex. This is an internal ownership move:
+ * it neither enters external admission nor waits/discards on a full queue. */
+static rsRetVal qqueueCompleteLocalBackend(qqueue_t *const queue, wti_t *const worker) {
+    batch_t *const batch = &worker->batch;
+    if (batch->nElemDeq == 0) return RS_RET_OK;
+    if (queue->qType != QUEUETYPE_FIXED_ARRAY || queue->toDeleteLst != NULL || batch->nElem != batch->nElemDeq ||
+        worker->source_queue != queue)
+        return RS_RET_INTERNAL_ERROR;
+    const rsRetVal ret = DoDeleteBatchFromQStore(queue, batch->nElemDeq);
+    if (ret != RS_RET_OK) return ret;
+    uint64_t terminal = 0;
+    assert(worker->n_deferred_msgs == 0);
+    for (int i = 0; i < batch->nElem; ++i) {
+        smsg_t *const message = batch->pElem[i].pMsg;
+        if (batch->eltState[i] == BATCH_STATE_RDY || batch->eltState[i] == BATCH_STATE_SUB) {
+            assert(queue->iQueueSize < queue->iMaxQueueSize);
+            /* FixedArray add does not allocate or fail. Sampling is rejected
+             * by local activation, and no external producer holds this mutex. */
+            qqueueAdd(queue, message);
+        } else {
+            worker->p_deferred_msgs[worker->n_deferred_msgs++] = message;
+            ++terminal;
+        }
+        batch->pElem[i].pMsg = NULL;
+    }
+    batch->nElem = batch->nElemDeq = 0;
+    qqueueLocalBackendTerminal(queue, terminal, 0);
+    pthread_cond_broadcast(&queue->notFull);
+    pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
+    qqueueLocalBackendWakeSpace(queue);
+    return qqueueClearWtiSource(queue, worker);
+}
+
 /* Delete a batch of processed user objects from the queue, which includes
  * destructing the objects themself. Any entries not marked as finally
  * processed are enqueued again. The new enqueue is necessary because we have a
@@ -3121,6 +3164,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
 
     ISOBJ_TYPE_assert(pThis, qqueue);
     assert(pBatch != NULL);
+    if (pThis->local != NULL) return qqueueCompleteLocalBackend(pThis, pWti);
 
     if (pThis->qCompleteBatch != NULL && pBatch->storeData != NULL) {
         int committed = 0;
@@ -3204,7 +3248,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
 
     nDeleted = pWti->batch.nElemDeq;
     localRet = DeleteProcessedBatch(pThis, pWti);
-    if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
+    if (pThis->qCompleteBatch != NULL || pThis->local != NULL) CHKiRet(localRet);
     /* The previous lease was cleared only after retirement. Bind before every
      * outcome of the next acquisition, including idle and store errors. */
     CHKiRet(qqueueBindWtiSource(pThis, pWti));
@@ -3932,6 +3976,12 @@ static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal) {
 }
 
 
+static void qqueueLocalLegacyRead(statsobj_t *const stats, void *const owner) {
+    (void)stats;
+    qqueueLocalRefreshLegacy(owner);
+}
+
+
 /* start up the queue - it must have been constructed and parameters defined
  * before.
  */
@@ -4112,6 +4162,7 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
         CHKiRet(wtpSetbAllowFirstWorkerToTimeout(pThis->pWtpReg, 0));
     }
     CHKiRet(wtpSetpUsr(pThis->pWtpReg, pThis));
+    if (pThis->bLocalScope) CHKiRet(wtpUseMonotonicTermination(pThis->pWtpReg));
     CHKiRet(wtpConstructFinalize(pThis->pWtpReg));
 
     /* Validate queue configuration before starting */
@@ -4229,11 +4280,18 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     }
 
     CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
+    if (pThis->bLocalScope) {
+        CHKiRet(qqueueLocalStart(pThis));
+        CHKiRet(statsobj.SetPreReadNotifier(pThis->statsobj, qqueueLocalLegacyRead, pThis));
+        CHKiRet(qqueueLocalStatsConstruct(pThis, qName, (uint32_t)pThis->localMaxFrontends, pThis->localFrontendStats,
+                                          &pThis->localStats));
+    }
 
 finalize_it:
     if (iRet != RS_RET_OK) {
         /* note: a child uses it's parent mutex, so do not delete it! */
-        if (pThis->pqParent == NULL && pThis->mut != NULL) free(pThis->mut);
+        if (pThis->pqParent == NULL && pThis->mut != NULL && !(pThis->bLocalScope && pThis->bQueueStarted))
+            free(pThis->mut);
     } else {
         pThis->isRunning = 1;
     }
@@ -4412,6 +4470,18 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(qqueue);
+    if (pThis->localSource != NULL) {
+        assert(pThis->pWtpReg == NULL);
+        /* FE descriptor owns its mutex; all leases and the pool were disposed
+         * before the queue-shaped source's final object destruction. */
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutShutdownImmediate);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexContention);
+        DESTROY_ATOMIC_HELPER_MUT64(pThis->mutCtrMutexWaitNs);
+        free(pThis->pszSpoolDir);
+        FINALIZE;
+    }
     DBGOPRINT((obj_t *)pThis, "shutdown: begin to destruct queue\n");
     if (ourConf->globals.shutdownQueueDoubleSize) {
         pThis->iHighWtrMrk *= 2;
@@ -4425,6 +4495,10 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
          */
         if (pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL && pThis->pWtpReg != NULL)
             qqueueShutdownWorkers(pThis);
+
+        /* Snapshot objects hold pointers into both BE and FE pools. Unlink
+         * them under the stats-list lock before either pool can be destroyed. */
+        qqueueLocalStatsDestruct(&pThis->localStats);
 
         /* Destroy the now-joined regular pool before inspecting the remaining
          * size or starting save-on-shutdown. It is no longer needed, and this
@@ -4512,6 +4586,7 @@ BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and C
 
     /* some queues do not provide stats and thus have no statsobj! */
     if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
+    qqueueLocalDestruct(pThis);
 ENDobjDestruct(qqueue)
 
 
@@ -4585,6 +4660,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     /* size.enqueued mirrors enqueued: counted on arrival, before discard checks,
      * so it represents inbound byte volume (rejected slice tracked by ctrFDscrd). */
     STATSCOUNTER_ADD(pThis->ctrSizeEnqueued, pThis->mutCtrSizeEnqueued, (uint64_t)pMsg->iLenRawMsg);
+    if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
     /* first check if we need to discard this message (which will cause CHKiRet() to exit)
      */
     CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg));
@@ -4613,7 +4689,8 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         flowCtlType = pMsg->flowCtlType;
     }
     if (flowCtlType == eFLOWCTL_FULL_DELAY) {
-        while (pThis->iQueueSize >= pThis->iFullDlyMrk && !glbl.GetGlobalInputTermState()) {
+        while (pThis->iQueueSize >= pThis->iFullDlyMrk && !glbl.GetGlobalInputTermState() &&
+               !qqueueLocalIsClosed(pThis)) {
             /* We have a problem during shutdown if we block eternally. In that
              * case, the the input thread cannot be terminated. So we wake up
              * from time to time to check for termination.
@@ -4670,6 +4747,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
             pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax) ||
            (pThis->qType == QUEUETYPE_SEGMENTED_DISK && pThis->sizeOnDiskMax != 0 &&
             getQueueDiskBytes(pThis) >= pThis->sizeOnDiskMax)) {
+        if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
         STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
         if (pThis->toEnq == 0 || pThis->bEnqOnly) {
             DBGOPRINT((obj_t *)pThis,
@@ -4715,6 +4793,9 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
         }
     }
 
+    /* Closure leaves this reference with the local wrapper, which also
+     * consumes any unprocessed suffix. Global ownership remains unchanged. */
+    if (qqueueLocalIsClosed(pThis)) ABORT_FINALIZE(RS_RET_FORCE_TERM);
     /* and finally enqueue the message */
     CHKiRet(qqueueAdd(pThis, pMsg));
     STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
@@ -4734,6 +4815,106 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
 
 finalize_it:
     RETiRet;
+}
+
+/* The local wrapper has a total reference-consumption contract. Queue full
+ * already consumed the current reference; FORCE_TERM did not. A fixed-array
+ * insertion cannot otherwise fail after the checked local activation gate. */
+rsRetVal qqueueLocalSubmitBackend(qqueue_t *const owner,
+                                  smsg_t *const *const messages,
+                                  const size_t count,
+                                  const int singleFlowControl,
+                                  const enum qqueueLocalRouteReason reason) {
+    rsRetVal result = RS_RET_OK;
+    pthread_mutex_lock(owner->mut);
+    qqueueLocalBackendBegin(owner);
+    qqueueLocalBackendAttempt(owner, count);
+    qqueueLocalBackendRoute(owner, count, reason);
+    for (size_t i = 0; i < count; ++i) {
+        const flowControl_t flow = singleFlowControl < 0 ? messages[i]->flowCtlType : (flowControl_t)singleFlowControl;
+        const rsRetVal ret = doEnqSingleObj(owner, flow, messages[i]);
+        if (ret == RS_RET_OK) {
+            qqueueLocalBackendAdmitted(owner, 1);
+        } else if (ret == RS_RET_QUEUE_FULL) {
+            qqueueLocalBackendRejected(owner, 1);
+        } else {
+            /* With FixedArray and disabled sampling/severity discard, errors
+             * reaching here leave the current reference with this wrapper. */
+            qqueueLocalBackendRejected(owner, count - i);
+            uint64_t tailBytes = 0;
+            for (size_t tail = i + 1; tail < count; ++tail) tailBytes += (uint64_t)messages[tail]->iLenRawMsg;
+            STATSCOUNTER_ADD(owner->ctrEnqueued, owner->mutCtrEnqueued, count - i - 1);
+            STATSCOUNTER_ADD(owner->ctrSizeEnqueued, owner->mutCtrSizeEnqueued, tailBytes);
+            pthread_mutex_unlock(owner->mut);
+            for (size_t tail = i; tail < count; ++tail) {
+                smsg_t *message = messages[tail];
+                msgDestruct(&message);
+            }
+            pthread_mutex_lock(owner->mut);
+            result = ret;
+            break;
+        }
+    }
+    if (!qqueueLocalIsClosed(owner)) qqueueAdviseMaxWorkers(owner);
+    qqueueLocalBackendEnd(owner);
+    pthread_mutex_unlock(owner->mut);
+    return result;
+}
+
+/* Already-accepted transfer: failure retains the exact supplied reference.
+ * Callers hold no FE mutex, and may transfer only after taking its consumer
+ * endpoint through producer quiescence and worker join. */
+rsRetVal qqueueLocalTransferBackend(qqueue_t *const owner,
+                                    smsg_t *const message,
+                                    const struct timespec *const deadline) {
+    rsRetVal ret = RS_RET_OK;
+    pthread_mutex_lock(owner->mut);
+    if (owner->qType != QUEUETYPE_FIXED_ARRAY || owner->local == NULL || qqueueLocalIsClosed(owner)) {
+        ret = RS_RET_FORCE_TERM;
+        goto done;
+    }
+    struct timespec now;
+    if (deadline == NULL || clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec > deadline->tv_sec ||
+        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
+        ret = RS_RET_TIMED_OUT;
+        goto done;
+    }
+    while (owner->iQueueSize >= owner->iMaxQueueSize) {
+        qqueueAdviseMaxWorkers(owner);
+        if (deadline == NULL || qqueueLocalBackendWaitSpace(owner, deadline) != 0 || qqueueLocalIsClosed(owner)) {
+            ret = RS_RET_TIMED_OUT;
+            goto done;
+        }
+    }
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec > deadline->tv_sec ||
+        (now.tv_sec == deadline->tv_sec && now.tv_nsec >= deadline->tv_nsec)) {
+        ret = RS_RET_TIMED_OUT;
+        goto done;
+    }
+    ret = qqueueAdd(owner, message);
+    if (ret == RS_RET_OK) qqueueAdviseMaxWorkers(owner);
+done:
+    pthread_mutex_unlock(owner->mut);
+    return ret;
+}
+
+void qqueueLocalDiscardBackend(qqueue_t *const owner) {
+    pthread_mutex_lock(owner->mut);
+    assert(owner->nLogDeq == 0);
+    while (owner->iQueueSize > 0) {
+        smsg_t *message = NULL;
+        qDeqFixedArray(owner, &message);
+        qDelFixedArray(owner);
+        ATOMIC_DEC(&owner->iQueueSize, &owner->mutQueueSize);
+        qqueueSubtractOverallQueueSize(1);
+        qqueueLocalBackendTerminal(owner, 1, 1);
+        /* No workers or external admissions remain; final destruction need
+         * not hold the BE mutex and can emit an internal diagnostic safely. */
+        pthread_mutex_unlock(owner->mut);
+        msgDestruct(&message);
+        pthread_mutex_lock(owner->mut);
+    }
+    pthread_mutex_unlock(owner->mut);
 }
 
 /* ------------------------------ multi-enqueue functions ------------------------------ */
@@ -4756,6 +4937,7 @@ static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMul
 
     ISOBJ_TYPE_assert(pThis, qqueue);
     assert(pMultiSub != NULL);
+    if (pThis->local != NULL) return qqueueLocalSubmit(pThis, pMultiSub->ppMsgs, (size_t)pMultiSub->nElem, -1);
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     qqueueLock(pThis);
@@ -4802,6 +4984,8 @@ rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg) 
     DEFiRet;
     int iCancelStateSave;
     ISOBJ_TYPE_assert(pThis, qqueue);
+
+    if (pThis->local != NULL) return qqueueLocalSubmit(pThis, &pMsg, 1, (int)flowCtlType);
 
     const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
 

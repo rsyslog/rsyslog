@@ -6,6 +6,8 @@ runtime_queue:
   paths:
     - "runtime/queue.c"
     - "runtime/queue.h"
+    - "runtime/queue_local.c"
+    - "runtime/queue_local.h"
     - "runtime/queue_da.c"
     - "runtime/queue_da.h"
     - "runtime/wti.c"
@@ -14,6 +16,18 @@ runtime_queue:
     - "runtime/segdisk_store.h"
   requires_serialization: true
   notes:
+    - >-
+      Experimental local memory scope uses bounded producer-owned SPSC front ends
+      and the existing FixedArray backend. Each front end has its own worker pool,
+      source identity and module worker state. Front ends never borrow backend
+      work or re-enqueue retries into their own ring. This implementation remains
+      subject to the staged local-queue qualification gates.
+    - >-
+      Local routing quiescence and source-specific immediate flags let frontend
+      workers stop and join before maintenance transfers their retained references
+      to the still-running backend. Shutdown phases share monotonic deadlines;
+      expiry never authorizes freeing live callback state. Snapshot objects are
+      unlinked before worker pools and fixed frontend descriptors are freed.
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
     - >-
