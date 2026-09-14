@@ -21,7 +21,7 @@ int main(void) {
     int source_a_object;
     int source_b_object;
     int parent_object;
-    int store_context;
+    int store_context = 0;
     struct queue_s *source_a = (struct queue_s *)&source_a_object;
     struct queue_s *source_b = (struct queue_s *)&source_b_object;
     struct queue_s *parent = (struct queue_s *)&parent_object;
