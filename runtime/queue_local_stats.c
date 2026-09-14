@@ -78,6 +78,7 @@ enum localFrontendCounter {
     localFrontendAdmittedMessages,
     localFrontendAdmittedBatches,
     localFrontendSubmittedBatches,
+    localFrontendSubmittedMessages,
     localFrontendSubmittedMax,
     localFrontendTerminalMessages,
     localFrontendOverflowMessages,
@@ -184,6 +185,7 @@ static const localCounterDescriptor_t frontendCounters[] = {
     FRONTEND_COUNTER("admitted.messages", localFrontendAdmittedMessages),
     FRONTEND_COUNTER("admitted.batches", localFrontendAdmittedBatches),
     FRONTEND_COUNTER("batch.submit.count", localFrontendSubmittedBatches),
+    FRONTEND_COUNTER("batch.submit.messages.sum", localFrontendSubmittedMessages),
     FRONTEND_COUNTER("batch.submit.messages.max", localFrontendSubmittedMax),
     FRONTEND_COUNTER("terminal.messages", localFrontendTerminalMessages),
     FRONTEND_COUNTER("overflow.messages", localFrontendOverflowMessages),
@@ -282,6 +284,7 @@ static void localFrontendStatsPreRead(statsobj_t *const object, void *const cont
     localStatsStore(&frontend->counters[localFrontendAdmittedMessages], snapshot.published);
     localStatsStore(&frontend->counters[localFrontendAdmittedBatches], snapshot.published_batches);
     localStatsStore(&frontend->counters[localFrontendSubmittedBatches], snapshot.submitted_batches);
+    localStatsStore(&frontend->counters[localFrontendSubmittedMessages], snapshot.attempts);
     localStatsStore(&frontend->counters[localFrontendSubmittedMax], snapshot.submitted_max);
     localStatsStore(&frontend->counters[localFrontendTerminalMessages], snapshot.terminal);
     localStatsStore(&frontend->counters[localFrontendOverflowMessages], snapshot.overflow);
