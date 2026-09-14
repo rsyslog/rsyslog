@@ -26,9 +26,9 @@ or favorable isolated timing does not alone establish acceptance.
 
 | Stage | Status | Evidence / next gate |
 |---|---|---|
-| S0 | Active | Source audits, option decisions, harness validation and baseline measurements pending. |
-| S1 | Not started | Requires reviewed S0 contracts and baseline. |
-| S2 | Not started | Requires accepted S1 and enforced MVP support boundary. |
+| S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
+| S1 | Conditional source preparation | Attribution patch reviewed; idle-path fix and actual completion/failure tests in progress; not integrated. |
+| S2 | Conditional source preparation | Ring, strict configuration, worker integration, stats and tests in isolated worktrees; not integrated. |
 
 ## Assignments
 
@@ -132,3 +132,107 @@ measurements, and none of these prepared patches enters the measured runtime or
 counts as an accepted stage. S1 integration remains conditional on S0; S2 routing
 integration remains conditional on S1. This preserves the stage gates while
 allowing source review and mechanical work to overlap baseline waiting time.
+
+## S0 evidence collected
+
+Normalized reports and exact binary hashes are under
+[queue benchmark evidence](../../../benchmarks/queue-contention/evidence/local-queue-s0/).
+Both measured runtimes still use baseline source `b0d9f971f`; later checkout
+commits changed documents and the shared harness, not either measured binary.
+The initial candidate build used checkout `8debb0a69`. Recorded checkout states
+are retained separately from binary provenance.
+
+| Unchanged-runtime control | Pairs | Median time ratio | MAD |
+|---|---:|---:|---:|
+| Balanced session 1 | 11 | 0.970646 | 0.026817 |
+| Balanced session 2 | 11 | 0.989448 | 0.016864 |
+| Low-contention session 1 | 11 | 1.001221 | 0.008113 |
+| Low-contention session 2 | 11 | 1.003247 | 0.005416 |
+| Connection-skew characterization | 11 | 0.998742 | 0.006026 |
+
+All recorded trials passed exact delivery and clean shutdown. These are baseline
+noise controls, not optimization results. Both balanced and low controls passed two independent sessions. The skew
+session characterizes the unchanged MPMC baseline; it is not a candidate
+performance acceptance comparison. No session exceeded the MAD noise threshold.
+
+A separate impstats diagnostic accepted four million messages without queue-full
+or discard events. Final main-queue snapshots recorded 1614–1657 contended
+acquisitions and approximately 80–81 ms cumulative observed wait, with maximum
+queue size 732011–757869. This counter covers `qqueueLock`, not every worker-pool
+mutex acquisition; observed wait includes scheduling delay and is not hold time.
+Concurrent validation builds were permitted for this diagnostic, so its durations
+are excluded from performance interpretation. It does not establish that locking
+dominates this workload.
+
+The registered `queue-benchmark-oracle.sh` passed in the Ubuntu 26.04 dev image.
+A separate checkout at `62ecf4804` passed configure, `make -j60 check
+TESTS="queue-benchmark-oracle.sh"`, and `make distcheck TEST_RUN_TYPE=MOCK-OK
+-j60`. Mock distcheck verifies packaging/build/distribution mechanics; it is not
+a full test-suite run. No hosted AI review or final PR-ready container gate has
+run for the eventual implementation; the work is **not fully
+container-validated**.
+
+A separate debugger-observed 20,000-message diagnostic passed exact delivery.
+It observed 130 producer submissions of 16–230 messages and 90 nonempty
+consumer acquisitions of 16–706 messages, plus 111 empty acquisition attempts,
+under a dequeue ceiling of 1024. Both weighted histograms sum to 20,000.
+This demonstrates variable actual counts and producer groups being split or
+coalesced; debugger scheduling changes make it unsuitable as the uninstrumented
+workload's batch distribution. Output request boundaries were not observed.
+
+## S1 review findings under correction
+
+During preparation, Astra caught an empty-dequeue regression: assigning the successful source-clear
+return value replaced `RS_RET_IDLE` with `RS_RET_OK`. The implementation now
+preserves the original result, pending rerun and independent verification.
+Other corrections register the new header for distribution and permit a generic
+completion callback argument to differ from the actual source. Source identity
+must still match the worker pool and held mutex.
+
+The reviewer requested actual queue-path tests beyond pointer helper tests:
+discard-only acquisition, source-versus-decoy completion, retained segmented
+completion failure, native DA attribution and worker cleanup. Failed completion
+must retain its context and references. S1 does not claim to repair the inherited
+terminal disk cleanup limitation described in the ownership audit.
+
+
+## Prepared S2 components and pending validation
+
+Preparation branches contain the SPSC primitive (`40d46828f`), strict shared
+configuration enforcement (`f7b080671`), runtime integration checkpoint
+(`d1e34b567`), snapshot stats adapter (`b5946879a` and `c9b45c19e`), daemon tests
+(`649c8c5a6`), and latency harness (`098b090e5`, corrected by `abbfa9aeb`). These
+are dependency components, not independently accepted stages or the main
+integration branch. Component formatting passed; runtime and the latest test
+revisions still need compilation/execution and integrated review.
+
+Configuration review caught wide-number narrowing that could disguise an
+unsupported setting. Qualification now retains raw numeric-domain failures,
+including inherited legacy edge cases, without changing global-mode behavior.
+It also rejects explicit custom parser instances: a built-in parser module can
+have an instance configured to reroute messages. `queue.local.frontendStats` is
+the opt-in bounded per-FE statistics flag; logical lifetime summaries remain
+separate from resettable legacy arrival counters.
+
+The independent SPSC review found no publication/wrap correctness defect. It
+corrected a test that wrongly demanded a full pop despite cached consumer state,
+added skip behavior for unsupported atomics and a concurrent-test watchdog, and
+qualified the cache-spacing claim. Execution and sanitizers remain required.
+
+Latency review corrected a malformed syslog stimulus, missing workload settings,
+early termination of the exact-ID oracle, marginal rather than paired comparison,
+and excessive observation jitter allowances. The observer now requires complete
+post-shutdown output validation; source review alone does not establish a usable
+measurement on this shared host.
+
+
+## S0 acceptance
+
+Astra/medium reviewed the complete normalized evidence and frozen contract and
+accepted S0. No material S0 blocker remains. Balanced controls satisfy the
+MAD < 0.03 noise rule and remain more than twice their MAD below the S1
+throughput-degradation time boundary `1/0.95`; low controls are tighter.
+This permits S1 integration, correctness testing and neutral-performance
+measurement. It does not accept S1/S2 or establish a feature speedup.
+The corrected fixed-rate latency observer and matched S2 latency baseline remain
+S2 prerequisites, not a reason to delay the attribution-only S1 stage.

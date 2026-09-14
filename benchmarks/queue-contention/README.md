@@ -66,15 +66,16 @@ the default screening workload. `--frontend-capacity` records the planned
 local-front reservation cap without implying global MPMC has fronts.
 
 For the S0 10K/1M MPMC capacity baseline, use the actual planned imtcp worker
-front cap, not TCP connection count. With eight fronts, this is 1,080,000
-queue slots (`8 * 10000 + 1000000`), before separately reporting active batch
-holdings:
+front cap, not TCP connection count. Eight fronts reserve 1,080,000 waiting
+slots. Since FE slots are released at acquisition, add eight active batches of
+1024 for the obligation-matched MPMC capacity of 1,088,192. Report allocation
+bytes and RSS separately:
 
 ```
 python3 benchmarks/queue-contention/compare.py --before /path/to/baseline \
   --after /path/to/candidate --output /path/to/ignored/10k-1m \
-  --workload multi --messages 1000000 --pairs 3 --input-workers 8 \
-  --connections 16 --consumer-workers 10 --queue-size 1080000 \
+  --workload multi --messages 4000000 --pairs 11 --input-workers 8 \
+  --connections 16 --consumer-workers 10 --queue-size 1088192 \
   --worker-minimum 1 --dequeue-batch-size 1024 --payload 512 \
   --frontend-capacity 8
 ```
@@ -109,6 +110,17 @@ The initial eight-front reference has 1,080,000 waiting slots. When front slots
 are released at acquisition, its accepted-obligation bound also includes eight
 active batches of 1024: use `--queue-size 1088192` for the obligation-matched MPMC
 comparison. Allocation bytes and RSS must be reported separately.
+
+## Local-queue S0 evidence, 2026-09-14
+
+The [execution ledger](../../doc/ai/designs/local-queue-execution-ledger.md)
+tracks stage acceptance and the frozen workload/guardrails.
+[Normalized evidence](evidence/local-queue-s0/) retains paired samples, binary
+hashes and diagnostic limitations. Both S0 runtimes are unchanged controls;
+their ratio is not a local-queue speedup. Balanced and low controls have two
+independent sessions; connection skew has a separate characterization session.
+The small debugger-observed batch diagnostic demonstrates actual variable
+counts, but its scheduling is perturbed and its timings are excluded.
 
 ## Measured results, 2026-09-05
 

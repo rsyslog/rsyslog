@@ -1,0 +1,292 @@
+{
+  "schema_version": 2,
+  "status": "completed",
+  "requested_pairs": 1,
+  "workload": {
+    "name": "multi",
+    "script": "trial-multi.sh",
+    "revision": "62ecf480411f9d8eaedc2efa20bea077d84b4df7",
+    "dirty": false,
+    "messages": 4000000,
+    "input_workers": 8,
+    "configured_consumer_workers": 10,
+    "configured_connections": 16,
+    "active_connections": 16,
+    "producer_mode": "balanced",
+    "frontend_capacity": 8,
+    "impstats_enabled": true,
+    "actual_batch_distributions": "not_observed",
+    "payload": 512,
+    "queue_type": "FixedArray",
+    "per_build_configuration": {
+      "before": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      }
+    }
+  },
+  "image": {
+    "reference": "rsyslog/rsyslog_dev_base_ubuntu:26.04",
+    "id": "sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09"
+  },
+  "builds": {
+    "before": {
+      "revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "dirty": false
+    },
+    "after": {
+      "revision": "62ecf480411f9d8eaedc2efa20bea077d84b4df7",
+      "dirty": false
+    }
+  },
+  "trial_timeout_seconds": 180,
+  "pairs": [
+    {
+      "pair": 0,
+      "before": 3.947155163,
+      "before_metrics": {
+        "lifecycle_seconds": 5.066630503,
+        "work_seconds": 3.947155163,
+        "generator_seconds": 3.387373651,
+        "drain_seconds": 0.559781512,
+        "receiver_line_barrier_seconds": 3.947155163,
+        "post_shutdown_exact_verification_seconds": 1.777051748
+      },
+      "before_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "before_impstats_file": "01-before.impstats.json",
+      "after": 3.594249277,
+      "after_metrics": {
+        "lifecycle_seconds": 4.702497008,
+        "work_seconds": 3.594249277,
+        "generator_seconds": 3.147256144,
+        "drain_seconds": 0.446993133,
+        "receiver_line_barrier_seconds": 3.594249277,
+        "post_shutdown_exact_verification_seconds": 1.810943606
+      },
+      "after_configuration": {
+        "queue_size": 1088192,
+        "consumer_workers": 10,
+        "dequeue_batch_size": 1024,
+        "worker_minimum_messages": 1
+      },
+      "after_impstats_file": "01-after.impstats.json",
+      "ratio": 0.9105923452647406
+    }
+  ],
+  "completed_pairs": 1,
+  "metric": "sender generation through receiver line barrier seconds; post-shutdown exact-ID verification is required and reported separately",
+  "limitations": [
+    "Non-exclusive host",
+    "Uncontrolled caches",
+    "Bounded JSON workload; exact delivery required",
+    "Configured batches are not actual-batch distributions",
+    "Concurrent source-validation builds; diagnostic counts only.",
+    "Observed queue-lock wait is not hold time and excludes direct worker-pool mutex acquisition."
+  ],
+  "timing_accepted": false,
+  "summary_accepted": false,
+  "median_after_before": 0.9105923452647406,
+  "ratio_mad": 0.0,
+  "binary_provenance": {
+    "before": {
+      "runtime_source_revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "checkout_at_initial_build": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "sha256": {
+        "tools/rsyslogd": "1af854c3696f712d79b0d96cc806021773105f25a7e1ae027e39873b17ace15c",
+        "runtime/.libs/librsyslog.a": "d0a34b3300d62dbd4109d68f47edb5016dfe912ad3eb1988d91e3e42413023f7",
+        "runtime/.libs/lmtcpsrv.so": "6f30c491cf811983ad85df86a5bec266f85a1d1d8ca69e9e9dab187845640b2c",
+        "plugins/imtcp/.libs/imtcp.so": "a90f16cc5c828ba11ec6029586177932e36a613f4aea31dc5579f01d30b403b9",
+        "plugins/impstats/.libs/impstats.so": "da93b1a23b5158ecc032766948d44ea626f80d3e955c80a5e1563133a3924907",
+        "tests/tcpflood": "99d7cfe4a6779633d3ba330ac97a1c0759e634a85e69bd1abae43f6be8ba4934",
+        "tests/chkseq": "92326dca4c16fa53f6fdf3c50e45ea4fbe5228651dd3673e97286b7f8deb1eb1"
+      }
+    },
+    "after": {
+      "runtime_source_revision": "b0d9f971f007f06db3f734543cef5dfb312c5090",
+      "checkout_at_initial_build": "8debb0a697158b7ccd2c243a2262dc2537b7c64a",
+      "sha256": {
+        "tools/rsyslogd": "1af854c3696f712d79b0d96cc806021773105f25a7e1ae027e39873b17ace15c",
+        "runtime/.libs/librsyslog.a": "d0a34b3300d62dbd4109d68f47edb5016dfe912ad3eb1988d91e3e42413023f7",
+        "runtime/.libs/lmtcpsrv.so": "6f30c491cf811983ad85df86a5bec266f85a1d1d8ca69e9e9dab187845640b2c",
+        "plugins/imtcp/.libs/imtcp.so": "a90f16cc5c828ba11ec6029586177932e36a613f4aea31dc5579f01d30b403b9",
+        "plugins/impstats/.libs/impstats.so": "da93b1a23b5158ecc032766948d44ea626f80d3e955c80a5e1563133a3924907",
+        "tests/tcpflood": "99d7cfe4a6779633d3ba330ac97a1c0759e634a85e69bd1abae43f6be8ba4934",
+        "tests/chkseq": "92326dca4c16fa53f6fdf3c50e45ea4fbe5228651dd3673e97286b7f8deb1eb1"
+      }
+    }
+  },
+  "stage_accepted": true,
+  "campaign_interpretation": "S0 unchanged runtime control; no implementation speedup claimed.",
+  "build_configuration": {
+    "compiler": "GCC 15.2.0",
+    "CFLAGS": "-O2 -g",
+    "configure_options": "--enable-testbench --enable-imdiag --enable-omstdout --enable-impstats --enable-imtcp --enable-imptcp --enable-omtesting --enable-elasticsearch --enable-debug",
+    "debug_logging_during_timing": false,
+    "build_jobs": 60
+  },
+  "host": {
+    "cpu": "Intel Core i7-14700K",
+    "logical_cpus": 28,
+    "kernel": "5.15.167.4-microsoft-standard-WSL2",
+    "exclusive": false
+  },
+  "harness_provenance": {
+    "committed_revision": "62ecf4804",
+    "note": "Earlier session checkout metadata predates commitment of repaired fixture; measured harness included the two-argument parse_json/status-and-mutation check."
+  },
+  "main_queue_samples": {
+    "01-after.impstats": [
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 215901,
+        "enqueued": 996608,
+        "size.enqueued": 568066560,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 441,
+        "mutex.wait_ns": 41443850,
+        "maxqsize": 215901
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 460129,
+        "enqueued": 2340612,
+        "size.enqueued": 1334148840,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1037,
+        "mutex.wait_ns": 62437913,
+        "maxqsize": 461030
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 674131,
+        "enqueued": 3624698,
+        "size.enqueued": 2066079000,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1505,
+        "mutex.wait_ns": 75955769,
+        "maxqsize": 674143
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 0,
+        "enqueued": 4000000,
+        "size.enqueued": 2280000000,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1657,
+        "mutex.wait_ns": 80379950,
+        "maxqsize": 732011
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 0,
+        "enqueued": 4000000,
+        "size.enqueued": 2280000000,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1657,
+        "mutex.wait_ns": 80379950,
+        "maxqsize": 732011
+      }
+    ],
+    "01-before.impstats": [
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 235384,
+        "enqueued": 998449,
+        "size.enqueued": 569115930,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 449,
+        "mutex.wait_ns": 43474554,
+        "maxqsize": 235384
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 463919,
+        "enqueued": 2212072,
+        "size.enqueued": 1260881040,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 968,
+        "mutex.wait_ns": 61958654,
+        "maxqsize": 463919
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 660103,
+        "enqueued": 3395392,
+        "size.enqueued": 1935373440,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1383,
+        "mutex.wait_ns": 74887805,
+        "maxqsize": 660649
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 114759,
+        "enqueued": 4000000,
+        "size.enqueued": 2280000000,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1614,
+        "mutex.wait_ns": 81449007,
+        "maxqsize": 757869
+      },
+      {
+        "name": "main Q",
+        "origin": "core.queue",
+        "size": 0,
+        "enqueued": 4000000,
+        "size.enqueued": 2280000000,
+        "full": 0,
+        "discarded.full": 0,
+        "discarded.nf": 0,
+        "mutex.contention": 1614,
+        "mutex.wait_ns": 81449007,
+        "maxqsize": 757869
+      }
+    ]
+  },
+  "harness_sha256": {
+    "benchmarks/queue-contention/compare.py": "747d4d5b4a51a4b07d787f873a82c3e7a35a3beea47c6c5fa9d94dc27a4c19a7",
+    "benchmarks/queue-contention/trial-multi.sh": "442a234ebd53a89601524a01d39eb73419bf6efd371131a5edf0e73eaa44ea1d",
+    "benchmarks/queue-contention/selftest.sh": "007819c008b454537a2061ef800f350727fc1f16255f563f5bfa98d479b3f445"
+  },
+  "stage_acceptance_scope": "S0 baseline/contracts only; no S1/S2 feature acceptance or PR-readiness claim."
+}
