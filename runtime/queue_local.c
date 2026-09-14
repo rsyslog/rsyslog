@@ -78,7 +78,10 @@ struct qqueueLocal_s {
     uint64_t beDequeueBatches, beDequeueMessages, beDequeueMax;
     uint64_t legacyPublished, legacyBytes; /* stats-list-serialized reader only */
     #ifdef ENABLE_TESTBENCH
-    char *testShutdownMarker; /* armed under registry; consumed after shutdown freeze */
+    char *testShutdownMarker; /* release publishes all immutable marker paths */
+    char *testActionMarker;
+    char *testForceTermMarker;
+    unsigned testForceTermNoted;
     #endif
 };
 
@@ -180,7 +183,7 @@ int qqueueLocalTestProducerShouldExit(void) {
 
 void qqueueLocalTestRedirectArm(void) {
     pthread_once(&testRedirectOnce, testInitRedirectCond);
-    assert(testRedirectInitResult == 0);
+    if (testRedirectInitResult != 0) return;
     pthread_mutex_lock(&testRedirectMutex);
     assert(stateRead(&testRedirectState) == TEST_REDIRECT_OFF);
     stateSet(&testRedirectState, TEST_REDIRECT_ARMED);
@@ -225,17 +228,70 @@ void qqueueLocalTestRedirectRelease(void) {
     pthread_mutex_unlock(&testRedirectMutex);
 }
 
+static char *testMarkerPath(const char *const base, const char *const suffix) {
+    const size_t length = strlen(base), extra = strlen(suffix);
+    if (length > SIZE_MAX - extra - 1) return NULL;
+    char *const path = malloc(length + extra + 1);
+    if (path != NULL) {
+        memcpy(path, base, length);
+        memcpy(path + length, suffix, extra + 1);
+    }
+    return path;
+}
+
 rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *const owner, const char *const markerPath) {
     if (owner == NULL || owner->local == NULL || markerPath == NULL || markerPath[0] != '/') return RS_RET_PARAM_ERROR;
-    char *const marker = strdup(markerPath);
-    if (marker == NULL) return RS_RET_OUT_OF_MEMORY;
+    char *const marker = testMarkerPath(markerPath, "");
+    char *const actionMarker = testMarkerPath(markerPath, ".action-phase");
+    char *const forceTermMarker = testMarkerPath(markerPath, ".force-term");
+    if (marker == NULL || actionMarker == NULL || forceTermMarker == NULL) {
+        free(marker);
+        free(actionMarker);
+        free(forceTermMarker);
+        return RS_RET_OUT_OF_MEMORY;
+    }
     qqueueLocal_t *const family = owner->local;
     pthread_mutex_lock(&family->registry);
-    const int allowed = stateRead(&family->state) == LOCAL_RUNNING && family->testShutdownMarker == NULL;
-    if (allowed) family->testShutdownMarker = marker;
+    const int allowed = stateRead(&family->state) == LOCAL_RUNNING &&
+                        __atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE) == NULL;
+    if (allowed) {
+        family->testActionMarker = actionMarker;
+        family->testForceTermMarker = forceTermMarker;
+        __atomic_store_n(&family->testShutdownMarker, marker, __ATOMIC_RELEASE);
+    }
     pthread_mutex_unlock(&family->registry);
-    if (!allowed) free(marker);
+    if (!allowed) {
+        free(marker);
+        free(actionMarker);
+        free(forceTermMarker);
+    }
     return allowed ? RS_RET_OK : RS_RET_PARAM_ERROR;
+}
+
+static void testWritePhaseMarker(const char *const path, const char *const text) {
+    FILE *const output = fopen(path, "w");
+    if (output != NULL) {
+        fputs(text, output);
+        fclose(output);
+    }
+}
+
+static void testNoteActionPhase(qqueueLocal_t *const family) {
+    if (__atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE) != NULL)
+        testWritePhaseMarker(family->testActionMarker, "immediate=1\n");
+}
+
+void qqueueLocalTestNoteForceTerm(wti_t *const worker, const int currentIParams) {
+    if (currentIParams != 0 || !qqueueLocalWorker(worker) || worker->source_queue == NULL) return;
+    qqueue_t *const owner = worker->logical_owner;
+    if (owner == NULL || owner->local == NULL) return;
+    qqueueLocal_t *const family = owner->local;
+    if (__atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE) == NULL ||
+        __atomic_exchange_n(&family->testForceTermNoted, 1, __ATOMIC_RELAXED))
+        return;
+    /* The caller has already reset the real transaction's parameter count.
+     * Source ownership remains live; this observation changes no batch state. */
+    testWritePhaseMarker(family->testForceTermMarker, "force_term=1 currIParam=0\n");
 }
 
 static int testWorkerSettled(wti_t *const worker) {
@@ -246,7 +302,8 @@ static int testWorkerSettled(wti_t *const worker) {
 
 static rsRetVal testCheckShutdown(qqueue_t *const owner) {
     qqueueLocal_t *const family = owner->local;
-    if (family->testShutdownMarker == NULL) return RS_RET_OK;
+    const char *const marker = __atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE);
+    if (marker == NULL) return RS_RET_OK;
     qqueueLocalSnapshot_t snapshot;
     qqueueLocalGetSnapshot(owner, &snapshot);
     unsigned joined = 0;
@@ -266,7 +323,7 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
         snapshot.be_physical != 0 || snapshot.be_active != 0 || snapshot.admitted != snapshot.terminal ||
         snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected)
         return RS_RET_INTERNAL_ERROR;
-    FILE *const output = fopen(family->testShutdownMarker, "w");
+    FILE *const output = fopen(marker, "w");
     if (output == NULL) return RS_RET_IO_ERROR;
     const int written = fprintf(output, "OK fe.joined=%u outstanding=0 admitted=%llu terminal=%llu rejected=%llu\n",
                                 joined, (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
@@ -885,6 +942,9 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
                 wtpRequestShutdown(fe->pool, wtpState_SHUTDOWN_IMMEDIATE);
             }
         }
+    #ifdef ENABLE_TESTBENCH
+        testNoteActionPhase(family);
+    #endif
         for (unsigned i = 0; i < family->count; ++i) {
             qqueueLocalFrontend_t *const fe = &family->fronts[i];
             if (stateRead(&fe->state) == FE_RUNNING && wtpWaitShutdownUntil(fe->pool, &action) == RS_RET_OK)
@@ -928,6 +988,9 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
         }
         ATOMIC_STORE_32BIT(&owner->bShutdownImmediate, &owner->mutShutdownImmediate, 1);
         wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
+    #ifdef ENABLE_TESTBENCH
+        testNoteActionPhase(family);
+    #endif
         (void)wtpWaitShutdownUntil(owner->pWtpReg, &action);
     }
     wtpRequestCancelAll(owner->pWtpReg);
@@ -970,7 +1033,9 @@ void qqueueLocalDestruct(qqueue_t *const owner) {
         free(family->fronts);
     }
     #ifdef ENABLE_TESTBENCH
-    free(family->testShutdownMarker);
+    free(__atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE));
+    free(family->testActionMarker);
+    free(family->testForceTermMarker);
     #endif
     if (family->admissionInitialized) pthread_cond_destroy(&family->admissionDone);
     if (family->spaceInitialized) pthread_cond_destroy(&family->space);
@@ -1109,6 +1174,10 @@ int qqueueLocalTestRedirectWaitPublisher(unsigned timeout_ms) {
     return 0;
 }
 void qqueueLocalTestRedirectRelease(void) {}
+void qqueueLocalTestNoteForceTerm(wti_t *worker, int currentIParams) {
+    (void)worker;
+    (void)currentIParams;
+}
     #endif
 /* Unsupported local targets preserve the global build and fail activation. */
 int qqueueLocalEnabled(void) {

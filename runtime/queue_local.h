@@ -51,6 +51,7 @@ rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath
 void qqueueLocalTestRedirectArm(void);
 int qqueueLocalTestRedirectWaitPublisher(unsigned timeout_ms);
 void qqueueLocalTestRedirectRelease(void);
+void qqueueLocalTestNoteForceTerm(wti_t *worker, int currentIParams);
 #endif
 
 

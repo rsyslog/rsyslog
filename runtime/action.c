@@ -83,6 +83,9 @@
 #include "errmsg.h"
 #include "batch.h"
 #include "wti.h"
+#ifdef ENABLE_TESTBENCH
+    #include "queue_local.h"
+#endif
 #include "rsconf.h"
 #include "datetime.h"
 #include "unicode-helper.h"
@@ -1946,6 +1949,10 @@ finalize_it:
         free(iparams);
     }
     wrkrInfo->p.tx.currIParam = 0; /* reset to beginning */
+#ifdef ENABLE_TESTBENCH
+    if (iRet == RS_RET_FORCE_TERM && pThis->isTransactional)
+        qqueueLocalTestNoteForceTerm(pWti, wrkrInfo->p.tx.currIParam);
+#endif
     RETiRet;
 }
 
