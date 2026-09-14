@@ -28,7 +28,7 @@ or favorable isolated timing does not alone establish acceptance.
 |---|---|---|
 | S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
 | S1 | Implemented; original performance gate unresolved | Reviewed attribution through `c9a51be21`; targeted correctness and sanitizer checks passed with documented debug-only TSan isolation. Maintainer authorized continued S2 work and methodology review. |
-| S2 | Conditional source preparation | Ring, strict configuration, worker integration, stats and tests in isolated worktrees; not integrated. |
+| S2 | Integrated MVP; final validation in progress | Runtime and corrected focused tests merged at `1fee0c63d`; harness at `beaee67c7`; statistics portability fix at `de10dce30`. Focused container checks passed; broad checks, sanitizer/portability lanes and final review remain pending. |
 
 ## Assignments
 
@@ -46,8 +46,8 @@ Docker is usable. The available Ubuntu 26.04 development image is
 `sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`.
 The exact C formatter `clang-format-18` is installed. Local broad build/check
 concurrency is 60 as specified by the machine overlay; benchmark concurrency is
-specified separately by each workload. No implementation validation or stage
-acceptance is claimed yet.
+specified separately by each workload. Targeted results are recorded below;
+full implementation acceptance requires the remaining final gates.
 
 ## Measurement contract frozen before candidate timing
 
@@ -344,3 +344,58 @@ added. These targeted checks do not establish full container validation.
 Normalized S1 performance evidence, including the original classifications and
 binary hashes, is stored in
 [`benchmarks/queue-contention/evidence/local-queue-s1/`](../../../benchmarks/queue-contention/evidence/local-queue-s1/).
+
+
+## S2 integrated checkpoint, 2026-09-14
+
+Runtime assembly `5051c6d91` and the final integration-test corrections were
+merged into the coordinator branch at `1fee0c63d`. S0/S1 evidence and the built
+S1 performance control remain preserved. The combined benchmark tooling and
+[target measurement method](local-queue-target-measurement-method.md) are
+integrated at `beaee67c7`. No S2 performance campaign has run. The maintainer
+reported a roughly 80-core machine with a very complex configuration; this is
+provisional context, not a measured topology. Target configuration and
+performance-data work is deferred to the next discussion.
+
+The implemented scope remains the restricted, memory-only S2 MVP: local
+main/ruleset queues, FixedArray backend, actual imtcp producer attribution,
+preallocated bounded SPSC front ends, dedicated consumers, strict callback
+qualification, and one logical queue with explicit physical-source ownership.
+It does not qualify Elasticsearch actions or implement disk assistance,
+backend helping, local action queues, or arbitrary queued graphs.
+
+### Targeted evidence before the broad gate
+
+All container results below use Ubuntu 26.04 image
+`sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`.
+Owner builds/checks used `-j10` each. These are focused container results, not a
+completed PR-ready container gate.
+
+| Area | Executed result | Limits |
+|---|---|---|
+| Configuration and allocation/registration failures | Seven tests passed, no skips | Both config frontends; actual producer retirement test requires epoll. |
+| SPSC primitive and actual submission arrays | Unit passed; submission and REDIRECT tests passed at `2d6d80ee2` | Includes non-power-of-two capacity, variable arrays and publication race; not production throughput evidence. |
+| Routing and lifecycle | Nine individual tests passed | FE/BE/FE reentry, partial batches, registration fallback, internal traffic, single/multiple FE shutdown, stats lifetime/reset and transactional replay. |
+| Qualified omfile | Four actual tests passed in a clean VPATH build at `a9166037d` | Cancellation proves shared stream/lock reuse; unknown externally written prefixes can duplicate. |
+| Production build guard | Testbench-disabled build passed at `2d6d80ee2` | Linked daemon/modules contain no local test symbols, fields, environment settings or fixture commands. |
+| Distribution | Runtime mock distcheck passed at `2d6d80ee2`; combined harness mock distcheck passed separately | The fully merged archive is checked again in the final gate. Mock tests establish packaging, not runtime correctness. |
+
+The reviewer found no concrete blocker in the corrected transactional seam.
+The actual two-Direct-action test passed: action A observes mutation values
+1 then 2 after replay, action B observes 2, and the real FORCE_TERM parameter
+reset plus final ownership reconciliation are asserted. This FE-origin case
+does not independently establish BE-origin interrupted-transaction coverage.
+
+The Clang 21 no-debug lane initially rejected an alignment-increasing cast in
+statistics registration. Commit `de10dce30` replaces byte offsets with typed
+counter-array indices, preserving exported fields and their storage. The owner
+reported the corrected compile passed; broader portability and sanitizer
+results are recorded when complete.
+
+Raw session evidence includes `/tmp/localq-failure-validation.md`,
+`/tmp/rsyslog-s2-production-validation.md`,
+`/tmp/local-queue-omfile-dist-real-tests.log`, and the owners' focused test logs.
+These are local-session paths, not durable packaged artifacts. No hosted PR
+review has run because no PR has been published. Final acceptance remains
+pending the broad container check, analyzer, applicable specialist lanes,
+current security receipt and late memory/concurrency/test-plumbing audits.

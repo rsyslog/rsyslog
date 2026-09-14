@@ -1,6 +1,6 @@
 <!--
 .. meta::
-   :description: Reviewed S2 worker integration proposal for bounded memory-only local queue front ends, awaiting implementation.
+   :description: S2 worker integration rationale and refinements for bounded memory-only local queue front ends.
    :keywords: rsyslog, local queue, S2, SPSC, worker, lease, cancellation, shutdown
 -->
 
@@ -9,7 +9,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Reviewed proposal awaiting code; no implementation qualification** |
+| Status | **Implemented MVP; final qualification pending (see execution ledger)** |
 | Recorded | 2026-09-14 |
 | Note branch baseline | `8730dd23eeccac83c1772e6003bea5da148cab5b` |
 | Runtime audited | `b0d9f971f007f06db3f734543cef5dfb312c5090` |
@@ -18,8 +18,54 @@
 <!-- .. summary-start -->
 Reuse one existing worker pool per FE, with private source identity,
 bounded leases, FE-local notification and coordinated shutdown.
-This proposal guides S2 implementation; it does not replace the design.
+The original proposal and implementation refinements explain S2; the execution
+ledger records current validation. This does not replace the overall design.
 <!-- .. summary-end -->
+
+## Implementation refinements after review
+
+The MVP is integrated. These refinements supersede corresponding provisional
+details below; they do not establish stage acceptance. See the
+[execution ledger](local-queue-execution-ledger.md) for evidence and remaining gates.
+
+- S1 source/mutex attribution is independently approved at c9a51be21. The
+  attribution seam preserves inherited disk completion context but does not
+  repair SC1 final orphan cleanup. S2 remains memory-only.
+- COMM is not delivery proof: ruleset execution marks it before Direct action
+  transactions commit. Local interrupted callbacks conservatively restore
+  ambiguous COMM obligations before disposing private action state and source
+  completion. Explicit discards remain terminal. Unknown external prefixes
+  can produce duplicates and repeated mutations; no exactly-once promise.
+- Qualified synchronous omfile uses a preopened regular append stream prepared
+  during activation after privilege drop. Configuration checking performs no
+  output creation. Cancellation discards pending stream bytes and unlocks the
+  shared instance without I/O. Worker callbacks cannot lazily reopen or close
+  this stream; main-thread HUP owns descriptor recovery. This does not make
+  regular-file I/O bounded. Joining remains necessary before freeing callback
+  state, even if the policy deadline has expired.
+- Local cancellation requests must reach all FEs before any post-cancellation
+  join. The legacy helper's per-worker sleep/join was unsuitable. The new
+  local-only pool operation protects thread identity under the pool mutex,
+  issues requests without logging or waits, then the family joins. Terminal
+  publication and its condition signal remain under the same mutex; local
+  queue-emitting lifecycle logging is omitted to avoid recursive admission.
+- Snapshot collection preserves one logical queue while reporting BE physical
+  size and explicit logical/FE inventories separately. FE submission count,
+  actual sum and maximum distinguish submission shape from dequeue shape.
+  Whole waves of TCP messages do not prove one equally sized enqueue batch.
+- Deterministic tests must cover actual arrays at qqueueLocalSubmit, publication
+  racing REDIRECT, failed registration/startup, producer exit with backlog and
+  no slot reuse, exact quiescent ownership counters, and stats teardown/reset.
+  Ring unit tests and normal TCP success tests do not replace these proofs.
+- Latency is a separate same-process monotonic user-space observation. Exact
+  output payload and timestamp manifests are checked after shutdown. Reader
+  cadence includes the final parsing pass; framing preparation and dispatch
+  lateness are distinct. The fixed 400us cadence limits are validity gates,
+  not a fabricated additive uncertainty bound for opaque kernel/sendall work.
+  Baseline-only feasibility must precede candidate latency acceptance.
+
+The following numbered sections preserve the original implementation rationale
+and its historical review context.
 
 ## 1. Review scope and accepted boundary
 
