@@ -55,6 +55,7 @@ write_config() {
         global-graph-escape) extra_ruleset='set $/shared = 1;' ;;
         duplicate-main) duplicate_main=1 ;;
         developer-bypass) global_extra='internal.developeronly.options="1"'; params[queue.scope]=locla ;;
+        shutdown-double-size) global_extra='shutdown.queue.doubleSize="on"' ;;
         wrapped-minimum) params[queue.mindequeuebatchsize]=4294967296 ;;
         wrapped-sampling) params[queue.samplinginterval]=4294967296 ;;
         wrapped-severity) params[queue.discardseverity]=4294967304 ;;
@@ -108,7 +109,10 @@ write_config() {
         conf="${RSYSLOG_DYNNAME}.${scenario}.yaml"
         {
             printf 'global:\n  abortOnUncleanConfig: "off"\n'
-            [ -z "$global_extra" ] || printf '  internal.developeronly.options: "1"\n'
+            case "$scenario" in
+                developer-bypass) printf '  internal.developeronly.options: "1"\n' ;;
+                shutdown-double-size) printf '  shutdown.queue.doubleSize: "on"\n' ;;
+            esac
             if [ -n "$module_name" ]; then
                 printf 'modules:\n  - load: "../plugins/%s/.libs/%s"\n' "$module_name" "$module_name"
                 [ -z "$module_yaml" ] || printf '%s\n' "$module_yaml"
@@ -169,7 +173,7 @@ negative=(bad-scope missing-bound negative-bound oversized-bound disk direct min
     wrapped-minimum wrapped-sampling wrapped-severity wrapped-timeout overflow-timeout negative-timeout
     wrapped-action wrapped-retry wrapped-file wrapped-close custom-parser inherited-action
     inherited-wrapped-action inherited-wrapped-then-reset inherited-file inherited-module global-graph-escape
-    duplicate-main developer-bypass)
+    duplicate-main developer-bypass shutdown-double-size)
 for module_name in imtcp imptcp impstats; do
     if [ ! -f "../plugins/$module_name/.libs/$module_name.so" ]; then
         echo "SKIP optional $module_name qualification cases: module not built"
