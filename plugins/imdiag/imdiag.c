@@ -678,7 +678,11 @@ finalize_it:
 static rsRetVal queue_lease_test(tcps_sess_t *pSess) {
     DEFiRet;
 
-    iRet = qqueueTestLeaseCompletionPaths();
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueueTestLeaseCompletionPaths(runConf->pMsgQueue);
     if (iRet == RS_RET_OK) {
         CHKiRet(sendResponse(pSess, "OK\n"));
     } else {

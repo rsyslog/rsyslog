@@ -545,7 +545,7 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
  * path is selected explicitly per queue because trylock affects throughput.
  * Observed wait time includes scheduler delay and is not mutex hold time.
  */
-static inline void qqueueLock(qqueue_t *const pThis) {
+static void qqueueLock(qqueue_t *const pThis) {
     if (!pThis->bMutexContentionStats || !STATSCOUNTER_ENABLED()) {
         d_pthread_mutex_lock(pThis->mut);
         return;
@@ -3771,6 +3771,8 @@ finalize_it:
 }
 
 #ifdef ENABLE_TESTBENCH
+static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti);
+
 /* This fixture reaches the production terminal-completion functions with a
  * source queue and a separate callback owner. It uses a completion callback
  * as a queue-layer fault seam: no store writes occur, but the source lease,
@@ -3811,10 +3813,69 @@ static void qqueueLeaseTestInitQueue(qqueue_t *const pThis, pthread_mutex_t *con
     INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
 }
 
+/* Exercise the real regular consumer against an empty, initialized local BE
+ * with a newly constructed worker. ConsumerReg() is normally entered from a
+ * worker thread with cancellation disabled, so preserve that caller contract
+ * while the imdiag command invokes it synchronously. The worker's shutdown
+ * pointer must remain NULL: an empty acquisition has no batch and must not
+ * need action-facing shutdown state. Both queue-flag values cover the idle
+ * finalizer without letting another BE worker observe the temporary flag,
+ * because this function holds the BE mutex until it restores zero. */
+static rsRetVal qqueueLeaseTestEmptyLocalBackend(qqueue_t *const owner) {
+    wti_t *worker = NULL;
+    int cancelState;
+    int locked = 0;
+    int shutdownChanged = 0;
+    DEFiRet;
+
+    if (owner == NULL || owner->local == NULL || owner->pWtpReg == NULL || owner->pWtpReg->pUsr != owner ||
+        owner->pWtpReg->pmutUsr != owner->mut)
+        return RS_RET_PARAM_ERROR;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+    CHKiRet(wtiConstruct(&worker));
+    CHKiRet(wtiSetpWtp(worker, owner->pWtpReg));
+    CHKiRet(wtiConstructFinalize(worker));
+    if (worker->pbShutdownImmediate != NULL || worker->source_queue != NULL || worker->logical_owner != NULL ||
+        qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) ||
+        worker->n_deferred_msgs != 0) {
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+
+    d_pthread_mutex_lock(owner->mut);
+    locked = 1;
+    if (getLogicalQueueSize(owner) != 0 || owner->nLogDeq != 0 || qqueueIsShutdownImmediate(owner)) {
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    for (int immediate = 0; immediate <= 1; ++immediate) {
+        shutdownChanged = 1;
+        qqueueSetShutdownImmediate(owner, immediate);
+        iRet = ConsumerReg(owner, worker);
+        qqueueSetShutdownImmediate(owner, 0);
+        shutdownChanged = 0;
+        if (iRet != RS_RET_IDLE || worker->pbShutdownImmediate != NULL || worker->source_queue != NULL ||
+            worker->logical_owner != NULL ||
+            qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) ||
+            worker->n_deferred_msgs != 0 || getLogicalQueueSize(owner) != 0 || owner->nLogDeq != 0) {
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        }
+    }
+    iRet = RS_RET_OK;
+
+finalize_it:
+    if (locked) {
+        if (shutdownChanged) qqueueSetShutdownImmediate(owner, 0);
+        d_pthread_mutex_unlock(owner->mut);
+    }
+    if (worker != NULL) wtiDestruct(&worker);
+    pthread_setcancelstate(cancelState, NULL);
+    RETiRet;
+}
+
 /* Exercise the real terminal completion path with a source queue distinct
- * from the callback owner. The imdiag testbench command invokes this from an
- * initialized daemon; no configured queue or worker is touched. */
-rsRetVal qqueueTestLeaseCompletionPaths(void) {
+ * from the callback owner, then calls the empty local-BE ConsumerReg fixture
+ * against the initialized daemon queue. */
+rsRetVal qqueueTestLeaseCompletionPaths(qqueue_t *const owner) {
     qqueue_t source;
     qqueue_t callback_owner;
     wtp_t pool;
@@ -3906,6 +3967,8 @@ rsRetVal qqueueTestLeaseCompletionPaths(void) {
         iRet = RS_RET_INTERNAL_ERROR;
     }
 
+    if (iRet == RS_RET_OK) iRet = qqueueLeaseTestEmptyLocalBackend(owner);
+
 finalize_it:
     free(worker.p_deferred_msgs);
     DESTROY_ATOMIC_HELPER_MUT(source.mutQueueSize);
@@ -3987,7 +4050,12 @@ finalize_it:
 
     /* now we are done, but potentially need to re-acquire the mutex */
     if (bNeedReLock) qqueueLock(pThis);
-    if (pThis->local != NULL && wtiIsShutdownImmediate(pWti)) qqueueLocalRetainAmbiguous(pWti);
+    /* The local BE is this pool's physical source (enforced by
+     * qqueueBindWtiSource). A first empty dequeue has not initialized the
+     * action-facing worker shutdown pointer, so read the queue flag directly.
+     * Keep this check on error exits too: failed callbacks can leave COMM
+     * entries whose delivery is ambiguous during immediate shutdown. */
+    if (pThis->local != NULL && qqueueIsShutdownImmediate(pThis)) qqueueLocalRetainAmbiguous(pWti);
 
     RETiRet;
 }

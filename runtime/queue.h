@@ -343,8 +343,8 @@ rsRetVal qqueueClearSegDiskTestFault(qqueue_t *pThis);
 #endif
 
 #ifdef ENABLE_TESTBENCH
-/* Testbench-only source-attribution terminal-completion fixture. */
-rsRetVal qqueueTestLeaseCompletionPaths(void);
+/* Testbench-only source-attribution and fresh-local-BE-idle fixtures. */
+rsRetVal qqueueTestLeaseCompletionPaths(qqueue_t *owner);
 #endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */
