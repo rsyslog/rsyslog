@@ -747,18 +747,14 @@ finalize_it:
 enum localQueueSubmitFixtureStage { LOCAL_QUEUE_SUBMIT_IDLE, LOCAL_QUEUE_SUBMIT_PRIMED, LOCAL_QUEUE_SUBMIT_BATCHED };
 static enum localQueueSubmitFixtureStage localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_IDLE;
 static unsigned localQueueSubmitFixtureNextId;
+enum { LOCAL_QUEUE_REDIRECT_GATE_TIMEOUT_MS = 5000 };
 
-static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
-    smsg_t *messages[5] = {0};
+static rsRetVal localQueueSubmitFixtureCreate(smsg_t **const messages, const size_t count) {
     struct syslogTime stTime;
     time_t ttGenTime;
     size_t i;
-    int submitted = 0;
-    rsRetVal ret;
     DEFiRet;
 
-    if (count > sizeof(messages) / sizeof(messages[0])) return RS_RET_PARAM_ERROR;
-    if (count == 0) return qqueueLocalSubmit(runConf->pMsgQueue, NULL, 0, 0);
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
     for (i = 0; i < count; ++i) {
         char raw[128];
@@ -772,9 +768,30 @@ static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
         MsgSetRcvFrom(messages[i], pRcvDummy);
         CHKiRet(MsgSetRcvFromIP(messages[i], pRcvIPDummy));
     }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal localQueueSubmitFixtureSubmit(smsg_t *const *const messages, const size_t count) {
+    rsRetVal ret;
+
     qqueueLocalProducerEnter();
     ret = qqueueLocalSubmit(runConf->pMsgQueue, messages, count, 0);
     qqueueLocalProducerLeave();
+    return ret;
+}
+
+static rsRetVal localQueueSubmitFixtureBatch(const size_t count) {
+    smsg_t *messages[5] = {0};
+    size_t i;
+    int submitted = 0;
+    rsRetVal ret;
+    DEFiRet;
+
+    if (count > sizeof(messages) / sizeof(messages[0])) return RS_RET_PARAM_ERROR;
+    if (count == 0) return localQueueSubmitFixtureSubmit(NULL, 0);
+    CHKiRet(localQueueSubmitFixtureCreate(messages, count));
+    ret = localQueueSubmitFixtureSubmit(messages, count);
     submitted = 1;
     if (ret != RS_RET_OK) ABORT_FINALIZE(ret);
     /* qqueueLocalSubmit() accepted ownership of every nonempty supplied
@@ -839,13 +856,14 @@ finalize_it:
 }
 
 typedef struct localQueueRedirectSubmitResult_s {
+    smsg_t *message;
     rsRetVal result;
 } localQueueRedirectSubmitResult_t;
 
 static void *localQueueRedirectSubmit(void *const context) {
     localQueueRedirectSubmitResult_t *const result = context;
 
-    result->result = localQueueSubmitFixtureBatch(1);
+    result->result = localQueueSubmitFixtureSubmit(&result->message, 1);
     return NULL;
 }
 
@@ -862,6 +880,7 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
     pthread_t producer;
     rsRetVal shutdown_result;
     const char *outcome;
+    int producer_created = 0;
     DEFiRet;
 
     if (runConf->pMsgQueue == NULL || runConf->pMsgQueue->local == NULL ||
@@ -869,10 +888,20 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
         CHKiRet(sendResponse(pSess, "ERROR: redirect fixture requires a fresh local main queue\n"));
         FINALIZE;
     }
+    CHKiRet(localQueueSubmitFixtureCreate(&submit_result.message, 1));
     qqueueLocalTestRedirectArm();
     if (pthread_create(&producer, NULL, localQueueRedirectSubmit, &submit_result) != 0) ABORT_FINALIZE(RS_RET_ERR);
-    qqueueLocalTestRedirectWaitPublisher();
+    producer_created = 1;
+    /* The blocked-state acknowledgement proves the handoff. This deadline is
+     * only a watchdog for a broken fixture or runtime regression; it never
+     * establishes success through elapsed time. */
+    if (!qqueueLocalTestRedirectWaitPublisher(LOCAL_QUEUE_REDIRECT_GATE_TIMEOUT_MS)) {
+        qqueueLocalTestRedirectRelease();
+        if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
     shutdown_result = qqueueLocalShutdown(runConf->pMsgQueue);
+    qqueueLocalTestRedirectRelease();
     if (pthread_join(producer, NULL) != 0) ABORT_FINALIZE(RS_RET_ERR);
     CHKiRet(shutdown_result);
     qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
@@ -886,6 +915,7 @@ static rsRetVal local_queue_redirect_test(tcps_sess_t *pSess) {
     CHKiRet(sendResponse(pSess, "OK redirect.messages=1 outcome=%s\n", outcome));
 
 finalize_it:
+    if (!producer_created) msgDestruct(&submit_result.message);
     if (iRet != RS_RET_OK) CHKiRet(sendResponse(pSess, "ERROR: local queue redirect fixture failed: %d\n", iRet));
     RETiRet;
 }
