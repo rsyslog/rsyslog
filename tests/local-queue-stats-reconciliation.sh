@@ -47,9 +47,16 @@ if [[ "$response" != *"OK"* ]]; then
 	echo "FAIL: local queue submit batches response: $response"
 	error_exit 1
 fi
+# The initialized daemon has startup INTERNAL_MSGs. The fixture snapshot is a
+# post-startup delta, so it is the exact logical 12/7/5 oracle. Raw impstats
+# still proves the FE and whole-batch overflow fields after one resettable scrape.
+response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
+case "$response" in
+	*"attempts=12"*"admitted=12"*"terminal=7"*"outstanding=5"*"fe=5"*"be=7"*"be_nofit=2"*"be_oversized=5"*) ;;
+	*) echo "FAIL: local queue pre-release snapshot response: $response"; error_exit 1 ;;
+esac
 localq_wait_stats "$STATSFILE" "main Q.local" \
-	"ingress.messages=12" "accepted.messages=12" "terminal.messages=7" "route.fe.messages=5" "route.fe.batches=2" \
-	"route.be.messages=7" "route.be.batches=2" "route.be.reason.nofit.messages=2" \
+	"route.fe.messages=5" "route.fe.batches=2" "route.be.reason.nofit.messages=2" \
 	"route.be.reason.oversized.messages=5" "outstanding.messages=5"
 localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
 	"admitted.messages=5" "admitted.batches=2" "batch.submit.count=4" "batch.submit.messages.max=5" \
@@ -64,9 +71,11 @@ case "$response" in
 	*) echo "FAIL: local queue submit snapshot response: $response"; error_exit 1 ;;
 esac
 
+# Repeated impstats records after resetCounters=on must retain the same
+# baseline-independent local counters. The final native delta above already
+# reconciles the target logical totals without assuming startup-message counts.
 localq_wait_stable_stats "$STATSFILE" "main Q.local" 2 \
-	"ingress.messages=12" "accepted.messages=12" "terminal.messages=12" "outstanding.messages=0" \
-	"route.fe.messages=5" "route.fe.batches=2" "route.be.messages=7" "route.be.batches=2" \
+	"outstanding.messages=0" "route.fe.messages=5" "route.fe.batches=2" \
 	"route.be.reason.nofit.messages=2" "route.be.reason.oversized.messages=5" \
 	"be.physical.messages=0" "be.active.messages=0" "fe.queued.messages=0" "fe.inflight.messages=0" "fe.retry.messages=0"
 localq_wait_stable_stats "$STATSFILE" "main Q.local.frontend.1" 2 \
