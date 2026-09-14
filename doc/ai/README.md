@@ -22,6 +22,18 @@
 | `module_map.yaml` | Module paths and locking hints |
 | `templates/` | RST templates for concept, tutorial, and module pages |
 
+## Upcoming designs
+
+These documents describe proposed work, not current runtime behavior.
+
+- [Local queue front ends with shared overflow](designs/local-queue-frontends.md):
+  private SPSC fast paths, shared MPMC overflow, BE helping, and existing disk
+  assistance within one logical queue.
+- [Local queue implementation plan](designs/local-queue-implementation-plan.md):
+  staged MVP-to-full delivery, threading validation, and performance gates.
+- [Local queue related work and synthesis](designs/local-queue-related-work.md):
+  primary-source precedents, cautious novelty assessment, and implementation lessons.
+
 ## RAG Knowledge Base
 
 The documentation build generates a machine-readable RAG dataset at
