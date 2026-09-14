@@ -32,4 +32,12 @@ rsRetVal qqueueLocalStatsConstruct(
  */
 void qqueueLocalStatsDestruct(qqueueLocalStats_t **stats);
 
+#ifdef ENABLE_TESTBENCH
+/* Test-only synchronization point inside the actual pre-read callback. */
+typedef void (*qqueueLocalStatsTestPreReadHook_t)(void *context);
+void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *stats,
+                                        qqueueLocalStatsTestPreReadHook_t hook,
+                                        void *context);
+#endif
+
 #endif

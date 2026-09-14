@@ -94,6 +94,10 @@ struct qqueueLocalStats_s {
     intctr_t logical_counters[localLogicalCounterCount];
     uint32_t frontend_limit;
     localFrontendStats_t *frontends;
+#ifdef ENABLE_TESTBENCH
+    qqueueLocalStatsTestPreReadHook_t test_pre_read_hook;
+    void *test_pre_read_context;
+#endif
 };
 
 typedef struct localCounterDescriptor_s {
@@ -170,11 +174,20 @@ static void localStatsStore(intctr_t *const counter, const uint64_t value) {
     PREFER_STORE_uint64(counter, value);
 }
 
+static void localStatsRunTestPreReadHook(qqueueLocalStats_t *const stats) {
+#ifdef ENABLE_TESTBENCH
+    if (stats->test_pre_read_hook != NULL) stats->test_pre_read_hook(stats->test_pre_read_context);
+#else
+    (void)stats;
+#endif
+}
+
 static void localStatsPreRead(statsobj_t *const object, void *const context) {
     (void)object;
     qqueueLocalStats_t *const stats = context;
     qqueueLocalSnapshot_t snapshot;
 
+    localStatsRunTestPreReadHook(stats);
     qqueueLocalGetSnapshot(stats->owner, &snapshot);
     localStatsStore(&stats->logical_counters[localLogicalIngressMessages], snapshot.attempts);
     localStatsStore(&stats->logical_counters[localLogicalAcceptedMessages], snapshot.admitted);
@@ -217,6 +230,7 @@ static void localFrontendStatsPreRead(statsobj_t *const object, void *const cont
     localFrontendStats_t *const frontend = context;
     qqueueLocalFrontendSnapshot_t snapshot;
 
+    localStatsRunTestPreReadHook(frontend->adapter);
     if (!qqueueLocalGetFrontendSnapshot(frontend->adapter->owner, frontend->index, &snapshot)) return;
     localStatsStore(&frontend->counters[localFrontendRegistrationId], snapshot.identity);
     localStatsStore(&frontend->counters[localFrontendGeneration], snapshot.generation);
@@ -289,6 +303,16 @@ void qqueueLocalStatsDestruct(qqueueLocalStats_t **const stats_ptr) {
     free(stats);
     *stats_ptr = NULL;
 }
+
+#ifdef ENABLE_TESTBENCH
+void qqueueLocalStatsSetTestPreReadHook(qqueueLocalStats_t *const stats,
+                                        qqueueLocalStatsTestPreReadHook_t const hook,
+                                        void *const context) {
+    if (stats == NULL) return;
+    stats->test_pre_read_hook = hook;
+    stats->test_pre_read_context = context;
+}
+#endif
 
 rsRetVal qqueueLocalStatsConstruct(qqueue_t *const owner,
                                    const uchar *const logical_name,
