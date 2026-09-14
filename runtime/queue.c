@@ -3825,7 +3825,6 @@ static rsRetVal qqueueLeaseTestEmptyLocalBackend(qqueue_t *const owner) {
     wti_t *worker = NULL;
     int cancelState;
     int locked = 0;
-    int shutdownChanged = 0;
     DEFiRet;
 
     if (owner == NULL || owner->local == NULL || owner->pWtpReg == NULL || owner->pWtpReg->pUsr != owner ||
@@ -3848,11 +3847,9 @@ static rsRetVal qqueueLeaseTestEmptyLocalBackend(qqueue_t *const owner) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
     for (int immediate = 0; immediate <= 1; ++immediate) {
-        shutdownChanged = 1;
         qqueueSetShutdownImmediate(owner, immediate);
         iRet = ConsumerReg(owner, worker);
         qqueueSetShutdownImmediate(owner, 0);
-        shutdownChanged = 0;
         if (iRet != RS_RET_IDLE || worker->pbShutdownImmediate != NULL || worker->source_queue != NULL ||
             worker->logical_owner != NULL ||
             qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) ||
@@ -3863,10 +3860,7 @@ static rsRetVal qqueueLeaseTestEmptyLocalBackend(qqueue_t *const owner) {
     iRet = RS_RET_OK;
 
 finalize_it:
-    if (locked) {
-        if (shutdownChanged) qqueueSetShutdownImmediate(owner, 0);
-        d_pthread_mutex_unlock(owner->mut);
-    }
+    if (locked) d_pthread_mutex_unlock(owner->mut);
     if (worker != NULL) wtiDestruct(&worker);
     pthread_setcancelstate(cancelState, NULL);
     RETiRet;
