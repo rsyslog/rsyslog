@@ -293,6 +293,8 @@ BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! 
     INIT_ATOMIC_HELPER_MUT(pThis->mutIsRunning);
     pthread_cond_init(&pThis->pcondBusy, NULL);
     pThis->bExiting = 0;
+    pThis->source_queue = NULL;
+    pThis->logical_owner = NULL;
 ENDobjConstruct(wti)
 
 

@@ -205,6 +205,7 @@
 
 #include "rsyslog.h"
 #include "queue.h"
+#include "queue_lease.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "obj.h"
@@ -674,6 +675,19 @@ static void qqueueSetWtiShutdownImmediate(qqueue_t *const pThis, wti_t *const pW
 #ifndef HAVE_ATOMIC_BUILTINS
     pWti->pmutShutdownImmediate = &pThis->mutShutdownImmediate;
 #endif
+}
+
+/* The worker framework holds pWtp->pmutUsr while it invokes queue callbacks.
+ * A shared mutex alone is not permission to service another queue: S1 only
+ * records batches acquired from the pool's own user queue. */
+static rsRetVal qqueueBindWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseBind(
+        &pWti->source_queue, &pWti->logical_owner, pThis, pThis->pqParent == NULL ? pThis : pThis->pqParent,
+        pWti->pWtp == NULL ? NULL : pWti->pWtp->pUsr, pWti->pWtp == NULL ? NULL : pWti->pWtp->pmutUsr, pThis->mut);
+}
+
+static rsRetVal qqueueClearWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseClear(&pWti->source_queue, &pWti->logical_owner, pThis);
 }
 
 
@@ -3098,6 +3112,7 @@ static void qqueueDeferBatch(wti_t *const pWti) {
  */
 static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     batch_t *const pBatch = &pWti->batch;
+    const int hadResponsibility = qqueueLeaseHasResponsibility(pBatch->nElem, pBatch->nElemDeq, pBatch->storeData);
     int i;
     smsg_t *pMsg;
     int nEnqueued = 0;
@@ -3130,6 +3145,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
         qqueueDeferBatch(pWti);
         pBatch->storeData = NULL;
+        if (hadResponsibility) CHKiRet(qqueueClearWtiSource(pThis, pWti));
         RETiRet;
     }
 
@@ -3155,6 +3171,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     iRet = DeleteBatchFromQStore(pThis, pBatch);
 
     qqueueDeferBatch(pWti);
+    if (iRet == RS_RET_OK && hadResponsibility) CHKiRet(qqueueClearWtiSource(pThis, pWti));
 
     RETiRet;
 }
@@ -3188,6 +3205,9 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     nDeleted = pWti->batch.nElemDeq;
     localRet = DeleteProcessedBatch(pThis, pWti);
     if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
+    /* The previous lease was cleared only after retirement. Bind before every
+     * outcome of the next acquisition, including idle and store errors. */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
 
     nDequeued = nDiscarded = 0;
     if (pThis->qDeqBatch != NULL) {
@@ -3632,12 +3652,23 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+    /* Do not overwrite a prior source before its completion at the front of
+     * DequeueConsumableElements(). */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
+
 retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
 finalize_it:
+    /* An idle acquisition has no batch to retire. All other non-OK paths keep
+     * their attribution so a store context or partial dequeue cannot be
+     * completed through a callback owner's queue by mistake. */
+    if (iRet == RS_RET_IDLE &&
+        !qqueueLeaseHasResponsibility(pWti->batch.nElem, pWti->batch.nElemDeq, pWti->batch.storeData)) {
+        CHKiRet(qqueueClearWtiSource(pThis, pWti));
+    }
     if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
         qqueueDrainDeferredLocked(pThis, pWti);
         /* An enqueue during disposal could not signal us as a waiter yet.
@@ -3665,14 +3696,23 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     int iCancelStateSave;
+    qqueue_t *const pSource = pWti->source_queue;
     /* DeleteProcessedBatch() defers final message destruction by resetting
      * the batch counters, so retain the dequeue count for checkpointing. */
     const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DeleteProcessedBatch(pThis, pWti);
-    qqueueChkPersist(pThis, nElemDeq);
-    qqueueDrainDeferredLocked(pThis, pWti);
+    if (pSource != NULL) {
+        /* pThis is the callback owner. S1 never permits it to stand in for a
+         * different physical source, even if the queues share a DA mutex. */
+        CHKiRet(qqueueBindWtiSource(pSource, pWti));
+        if (pSource != pThis) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+    iRet = DeleteProcessedBatch(pSource == NULL ? pThis : pSource, pWti);
+    if (iRet == RS_RET_OK) qqueueChkPersist(pSource == NULL ? pThis : pSource, nElemDeq);
+    qqueueDrainDeferredLocked(pSource == NULL ? pThis : pSource, pWti);
+
+finalize_it:
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
@@ -3725,7 +3765,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-    qqueueSetWtiShutdownImmediate(pThis, pWti);
+    qqueueSetWtiShutdownImmediate(pWti->source_queue, pWti);
     CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
 
     /* we now need to check if we should deliberately delay processing a bit

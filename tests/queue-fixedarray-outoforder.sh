@@ -14,6 +14,7 @@
 export NUMMESSAGES=4097
 
 generate_conf
+add_conf '$AbortOnUncleanConfig on'
 mkfifo "$RSYSLOG_DYNNAME.release"
 cat > "$RSYSLOG_DYNNAME.helper" <<HELPER
 #!/bin/bash
@@ -32,7 +33,8 @@ main_queue(queue.type="FixedArray" queue.size="128"
     queue.workerThreadMinimumMessages="1")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
-    set $!tree = parse_json("{\"nested\":{\"array\":[1,2,3],\"text\":\"payload\"}}");
+    set $.ret = parse_json("{\"nested\":{\"array\":[1,2,3],\"text\":\"payload\"}}", "\$!tree");
+    if ($!tree!nested!text != "payload") then stop
     if ($msg contains "msgnum:00000000:") then
         action(type="omprog" binary="'$PWD'/'$RSYSLOG_DYNNAME'.helper"
             confirmMessages="on" confirmTimeout="120000"
