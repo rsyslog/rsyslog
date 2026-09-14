@@ -39,7 +39,7 @@ input(type="imtcp" address="127.0.0.1" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
-	queue.timeoutShutdown="10000" queue.timeoutActionCompletion="10000"
+	queue.timeoutShutdown="1" queue.timeoutActionCompletion="10000"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqvalue" type="string" string="%$!localq!attempt%\n")
 if ($msg contains "msgnum:00000000:") then {
