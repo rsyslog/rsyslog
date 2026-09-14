@@ -5,9 +5,10 @@
 # so F=4 makes the next four-entry array fit, the two-entry array take the
 # whole-batch no-fit BE path, and the five-entry array take the oversize BE
 # path. Impstats checks the exact FE and no-fit/oversize counters; the fixture
-# snapshot subtracts daemon-startup internal traffic before it proves all 12
-# supplied references reached one terminal action exactly once. File and
-# counter waits establish ordering; no elapsed delay is a success condition.
+# snapshot baselines after the blocked singleton establishes FE startup, then
+# proves all 12 supplied references reached one terminal action exactly once.
+# File and counter waits establish ordering; no elapsed delay is a success
+# condition.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin impstats

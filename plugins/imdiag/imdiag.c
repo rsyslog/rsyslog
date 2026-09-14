@@ -757,8 +757,9 @@ static uint64_t localQueueSubmitFixtureDelta(const uint64_t current, const uint6
 }
 
 /* The initialized daemon may have already sent internal messages through BE.
- * Fixture replies therefore describe only references submitted by this test
- * command, while impstats still exposes the complete lifetime totals. */
+ * The array fixture captures its baseline after the blocked singleton proves
+ * FE startup is complete. Replies then describe only submitted references,
+ * while impstats still exposes the complete lifetime totals. */
 static void localQueueSubmitFixtureSubtractBaseline(qqueueLocalSnapshot_t *const snapshot,
                                                     const qqueueLocalSnapshot_t *const baseline) {
     snapshot->attempts = localQueueSubmitFixtureDelta(snapshot->attempts, baseline->attempts);
@@ -853,8 +854,6 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         CHKiRet(localQueueSubmitFixtureBatch(0));
         qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
         if (memcmp(&before, &snapshot, sizeof(snapshot)) != 0) ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-        localQueueSubmitFixtureBaseline = before;
-        localQueueSubmitFixtureBaselineValid = 1;
         CHKiRet(localQueueSubmitFixtureBatch(1));
         localQueueSubmitFixtureStage = LOCAL_QUEUE_SUBMIT_PRIMED;
         CHKiRet(sendResponse(pSess, "OK expected.messages=12\n"));
@@ -863,6 +862,10 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
             CHKiRet(sendResponse(pSess, "ERROR: fixture needs prime\n"));
             FINALIZE;
         }
+        /* The caller has observed the blocked singleton's callback. That
+         * establishes FE startup before we exclude prior internal traffic. */
+        qqueueLocalGetSnapshot(runConf->pMsgQueue, &localQueueSubmitFixtureBaseline);
+        localQueueSubmitFixtureBaselineValid = 1;
         CHKiRet(localQueueSubmitFixtureBatch(4));
         CHKiRet(localQueueSubmitFixtureBatch(2));
         CHKiRet(localQueueSubmitFixtureBatch(5));
@@ -872,6 +875,12 @@ static rsRetVal local_queue_submit_test(uchar *argument, tcps_sess_t *pSess) {
         if (!localQueueSubmitFixtureBaselineValid) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         qqueueLocalGetSnapshot(runConf->pMsgQueue, &snapshot);
         localQueueSubmitFixtureSubtractBaseline(&snapshot, &localQueueSubmitFixtureBaseline);
+        /* The singleton was published before the baseline but its blocked
+         * callback cannot become terminal until after it. */
+        ++snapshot.attempts;
+        ++snapshot.admitted;
+        ++snapshot.route_fe_messages;
+        snapshot.outstanding = snapshot.admitted >= snapshot.terminal ? snapshot.admitted - snapshot.terminal : 0;
         CHKiRet(sendResponse(pSess,
                              "OK attempts=%" PRIu64 " admitted=%" PRIu64 " terminal=%" PRIu64 " outstanding=%" PRIu64
                              " fe=%" PRIu64 " be=%" PRIu64 " be_nofit=%" PRIu64 " be_oversized=%" PRIu64 "\n",
