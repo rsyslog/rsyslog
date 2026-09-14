@@ -15,6 +15,7 @@
  * CURRENT SUPPORTED COMMANDS:
  *
  * :omtesting:sleep <seconds> <microseconds>
+ * :omtesting:file_barrier <entered-file> <release-fifo>
  *
  * Must be specified exactly as above. Keep in mind microseconds are a millionth
  * of a second!
@@ -49,13 +50,20 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 #include "conf.h"
 #include "cfsysline.h"
 #include "srUtils.h"
+
+#ifndef O_CLOEXEC
+    #define O_CLOEXEC 0
+#endif
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -66,7 +74,15 @@ MODULE_CNFNAME("omtesting")
 DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
-    enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND, MD_BARRIER_ERROR, MD_BARRIER_SUSPEND } mode;
+    enum {
+        MD_SLEEP,
+        MD_FAIL,
+        MD_RANDFAIL,
+        MD_ALWAYS_SUSPEND,
+        MD_BARRIER_ERROR,
+        MD_BARRIER_SUSPEND,
+        MD_FILE_BARRIER
+    } mode;
     int bEchoStdout;
     int iWaitSeconds;
     int iWaitUSeconds; /* micro-seconds (one millionth of a second, just to make sure...) */
@@ -80,6 +96,8 @@ typedef struct _instanceData {
     int barrier_target;
     int barrier_count;
     int barrier_triggered;
+    char *barrier_enter_file;
+    char *barrier_release_fifo;
     pthread_mutex_t mut;
     pthread_cond_t barrier_cond;
 } instanceData;
@@ -187,6 +205,79 @@ static rsRetVal doRandFail(void) {
 }
 
 
+/* The queue-shutdown path may cancel an action worker while it is waiting for
+ * a test release.  Make the descriptor cancellation-safe so a test cannot
+ * leave a FIFO reader behind after that expected cancellation.
+ */
+static void fileBarrierCloseFd(void *const arg) {
+    int *const fd = arg;
+    if (*fd >= 0) {
+        close(*fd);
+        *fd = -1;
+    }
+}
+
+
+static int writeFully(const int fd, const char *buf, size_t len) {
+    while (len != 0) {
+        const ssize_t written = write(fd, buf, len);
+        if (written < 0) {
+            if (errno == EINTR) continue;
+            return 0;
+        }
+        if (written == 0) return 0;
+        buf += written;
+        len -= (size_t)written;
+    }
+    return 1;
+}
+
+
+/* Publish entry before blocking on the test-owned FIFO.  The test opens its
+ * writer only after it has observed that file, so the FIFO release is an
+ * explicit phase transition rather than a timing delay.
+ */
+static rsRetVal doFileBarrier(instanceData *const pData) {
+    DEFiRet;
+    int fd;
+    ssize_t nread;
+    char release[32];
+
+    fd = open(pData->barrier_enter_file, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        LogError(errno, RS_RET_ERR, "omtesting file_barrier cannot publish entry to '%s'", pData->barrier_enter_file);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    pthread_cleanup_push(fileBarrierCloseFd, &fd);
+    if (!writeFully(fd, "entered\n", sizeof("entered\n") - 1)) {
+        LogError(errno, RS_RET_ERR, "omtesting file_barrier cannot write entry to '%s'", pData->barrier_enter_file);
+        iRet = RS_RET_ERR;
+    }
+    pthread_cleanup_pop(1);
+    if (iRet != RS_RET_OK) goto finalize_it;
+
+    fd = open(pData->barrier_release_fifo, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        LogError(errno, RS_RET_ERR, "omtesting file_barrier cannot open release FIFO '%s'",
+                 pData->barrier_release_fifo);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    pthread_cleanup_push(fileBarrierCloseFd, &fd);
+    do {
+        nread = read(fd, release, sizeof(release));
+    } while (nread < 0 && errno == EINTR);
+    if (nread <= 0) {
+        LogError(nread < 0 ? errno : 0, RS_RET_ERR, "omtesting file_barrier received no release from '%s'",
+                 pData->barrier_release_fifo);
+        iRet = RS_RET_ERR;
+    }
+    pthread_cleanup_pop(1);
+
+finalize_it:
+    RETiRet;
+}
+
+
 /* Synchronize action workers so TSan tests can exercise concurrent core paths.
  * Returns one for every worker in the first complete barrier generation and
  * zero for later calls.
@@ -232,6 +323,7 @@ BEGINtryResume
             break;
         case MD_BARRIER_ERROR:
         case MD_BARRIER_SUSPEND:
+        case MD_FILE_BARRIER:
             iRet = RS_RET_OK;
             break;
         default:
@@ -248,7 +340,9 @@ BEGINdoAction
     CODESTARTdoAction;
     dbgprintf("omtesting received msg '%s'\n", ppString[0]);
     pData = pWrkrData->pData;
-    if (pData->mode == MD_BARRIER_ERROR || pData->mode == MD_BARRIER_SUSPEND) {
+    if (pData->mode == MD_FILE_BARRIER) {
+        iRet = doFileBarrier(pData);
+    } else if (pData->mode == MD_BARRIER_ERROR || pData->mode == MD_BARRIER_SUSPEND) {
         const int triggered = barrier_trigger(pData);
         if (triggered && pData->mode == MD_BARRIER_ERROR) {
             LogError(0, RS_RET_ERR, "omtesting synchronized error");
@@ -272,6 +366,7 @@ BEGINdoAction
                 break;
             case MD_BARRIER_ERROR:
             case MD_BARRIER_SUSPEND:
+            case MD_FILE_BARRIER:
                 break;
             default:
                 // No action needed for other cases
@@ -290,6 +385,8 @@ ENDdoAction
 
 BEGINfreeInstance
     CODESTARTfreeInstance;
+    free(pData->barrier_enter_file);
+    free(pData->barrier_release_fifo);
     pthread_cond_destroy(&pData->barrier_cond);
     pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
@@ -298,6 +395,30 @@ ENDfreeInstance
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
+
+
+/* The legacy action parser owns the remainder of the selector line.  Consume
+ * exactly one unquoted nonempty argument, stopping before the template
+ * separator, so file_barrier cannot silently accept a malformed command.
+ */
+static rsRetVal parseFileBarrierArgument(uchar **const pp, char **const out) {
+    DEFiRet;
+    uchar *start;
+    size_t len;
+
+    while (isspace((int)**pp)) ++*pp;
+    if (**pp == '\0' || **pp == ';') ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    start = *pp;
+    while (**pp != '\0' && **pp != ';' && !isspace((int)**pp)) ++*pp;
+    len = (size_t)(*pp - start);
+    if (len == 0) ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    CHKmalloc(*out = malloc(len + 1));
+    memcpy(*out, start, len);
+    (*out)[len] = '\0';
+
+finalize_it:
+    RETiRet;
+}
 
 
 BEGINparseSelectorAct
@@ -378,6 +499,10 @@ BEGINparseSelectorAct
         if (pData->barrier_target < 2) {
             pData->barrier_target = 2;
         }
+    } else if (!strcmp((char *)szBuf, "file_barrier")) {
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_enter_file));
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_release_fifo));
+        pData->mode = MD_FILE_BARRIER;
     } else {
         dbgprintf("invalid mode '%s', doing 'sleep 1 0' - fix your config\n", szBuf);
     }
@@ -405,6 +530,12 @@ static rsRetVal localQueueCheckAction(void *const instance) {
             case MD_ALWAYS_SUSPEND:
             case MD_BARRIER_ERROR:
             case MD_BARRIER_SUSPEND:
+                return RS_RET_OK;
+            case MD_FILE_BARRIER:
+                if (pData->barrier_enter_file == NULL || pData->barrier_enter_file[0] == '\0' ||
+                    pData->barrier_release_fifo == NULL || pData->barrier_release_fifo[0] == '\0') {
+                    break;
+                }
                 return RS_RET_OK;
             case MD_RANDFAIL:
             default:

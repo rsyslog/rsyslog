@@ -158,6 +158,13 @@ TESTS_LOCAL_QUEUE_CONFIG = local-queue-config.sh
 TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
+TESTS_LOCAL_QUEUE = \
+	local-queue-imtcp-tiered.sh \
+	local-queue-imtcp-partial-batch.sh \
+	local-queue-imtcp-registration.sh \
+	local-queue-imtcp-shutdown.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE) local-queue-common.sh
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -2891,6 +2898,13 @@ endif # if ENABLE_JOURNAL_TESTS
 TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
 if HAVE_LIBYAML
 TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+endif
+if ENABLE_IMTCP_TESTS
+if ENABLE_IMPSTATS
+if ENABLE_IMDIAG
+TESTS += $(TESTS_LOCAL_QUEUE)
+endif
+endif
 endif
 
 if ENABLE_GSSAPI
