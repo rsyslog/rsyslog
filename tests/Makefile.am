@@ -170,6 +170,14 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-stats-lifetime.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE) local-queue-common.sh
 
+TESTS_LOCAL_QUEUE_FAILURES = \
+	local-queue-startup-failure.sh \
+	local-queue-imtcp-tls-failure.sh \
+	local-queue-imtcp-cache-failure.sh \
+	local-queue-imtcp-worker-failure.sh \
+	local-queue-imtcp-producer-exit.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES)
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -2908,6 +2916,7 @@ if ENABLE_IMTCP_TESTS
 if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE)
+TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
 endif
 endif
 endif
