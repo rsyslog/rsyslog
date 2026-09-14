@@ -33,6 +33,8 @@ These documents describe proposed work, not current runtime behavior.
   staged MVP-to-full delivery, threading validation, and performance gates.
 - [Local queue related work and synthesis](designs/local-queue-related-work.md):
   primary-source precedents, cautious novelty assessment, and implementation lessons.
+- [Local queue target measurement method](designs/local-queue-target-measurement-method.md):
+  target-environment evidence for persistent TCP inputs and Elasticsearch output.
 
 ## RAG Knowledge Base
 
