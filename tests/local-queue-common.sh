@@ -61,6 +61,46 @@ localq_wait_stats_regex() {
 	error_exit 1
 }
 
+# Wait for several consecutive completed impstats records after a known
+# quiescent point. Every record must carry the same lifetime fields: this is
+# the oracle that impstats resetCounters does not reset or double-count the
+# local adapter's CTR_FLAG_NONE snapshot values.
+localq_wait_stable_stats() {
+	local stats_file="$1"
+	local record="$2"
+	local sample_count="$3"
+	shift 3
+	local deadline=$(( $(date +%s) + TB_TEST_TIMEOUT ))
+	local lines line pattern complete line_count
+	while [ "$(date +%s)" -le "$deadline" ]; do
+		lines=$(grep -F "${record}: origin=core.queue.local " "$stats_file" 2>/dev/null | tail -n "$sample_count" || true)
+		line_count=$(printf '%s\n' "$lines" | sed '/^$/d' | wc -l)
+		complete=yes
+		if [ "$line_count" -eq "$sample_count" ]; then
+			while IFS= read -r line; do
+				for pattern in "$@"; do
+					case " $line " in
+						*" $pattern "*) ;;
+						*) complete=no; break 2 ;;
+					esac
+				done
+			done <<EOF
+$lines
+EOF
+		else
+			complete=no
+		fi
+		if [ "$complete" = yes ]; then
+			printf 'local queue stats stayed stable for %s samples: %s\n' "$sample_count" "$record"
+			return
+		fi
+		$TESTTOOL_DIR/msleep 100
+	done
+	printf 'FAIL: local queue stats did not stay stable for %s samples: %s\n' "$sample_count" "$record"
+	printf '%s\n' "$lines"
+	error_exit 1
+}
+
 # The callback opens this FIFO for reading after it has published enter_file.
 # Opening the writer is therefore an acknowledgement, not a duration-based
 # release.  Call only after wait_file_lines has observed the marker.
