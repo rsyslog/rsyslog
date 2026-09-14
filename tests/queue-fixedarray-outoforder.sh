@@ -5,8 +5,11 @@
 # All later message IDs must reach omfile BEFORE release, proving count-based
 # RAM reclamation does not wait for the oldest batch. After release, exact
 # sequence coverage and proper termination detect overwritten pointers, loss,
-# duplicates, and cleanup errors. JSON trees exercise final reference cleanup.
-# The 120-second omprog timeout is only a hang bound, never synchronization.
+# duplicates, and cleanup errors. Startup begins with an empty queue, then the
+# messageful queue drains to empty before a bounded shutdown; that lifecycle
+# oracle catches an idle callback reported as successful instead of idle. JSON
+# trees exercise final reference cleanup. The 120-second omprog timeout is only
+# a hang bound, never synchronization.
 #
 # This file is part of rsyslog.
 # Released under ASL 2.0
@@ -43,6 +46,11 @@ if ($msg contains "msgnum:") then {
 }
 '
 startup
+# The initial empty queue must not execute the ruleset before a real enqueue.
+if [ -e "$RSYSLOG_OUT_LOG" ]; then
+    echo "unexpected output while the queue is empty"
+    error_exit 1
+fi
 injectmsg 0 1
 wait_content '00000000' "$RSYSLOG_DYNNAME.entered"
 injectmsg 1 $((NUMMESSAGES - 1))
@@ -50,6 +58,6 @@ wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES - 1))
 check_not_present '00000000' "$RSYSLOG_OUT_LOG"
 printf 'release\n' > "$RSYSLOG_DYNNAME.release"
 shutdown_when_empty
-wait_shutdown
+wait_shutdown "" 120
 seq_check
 exit_test

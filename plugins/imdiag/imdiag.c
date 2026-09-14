@@ -667,6 +667,25 @@ finalize_it:
     RETiRet;
 }
 
+#ifdef ENABLE_TESTBENCH
+/* Run the queue-layer source-attribution fixture from an initialized daemon.
+ * The reply is the oracle; the fixture itself uses isolated queues and leaves
+ * the configured main queue untouched. */
+static rsRetVal queue_lease_test(tcps_sess_t *pSess) {
+    DEFiRet;
+
+    iRet = qqueueTestLeaseCompletionPaths();
+    if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else {
+        CHKiRet(sendResponse(pSess, "ERROR: queue lease fixture failed: %d\n", iRet));
+    }
+
+finalize_it:
+    RETiRet;
+}
+#endif
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -713,6 +732,10 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(set_seg_disk_fault(pszMsg, pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("clearsegdiskfault"))) {
         CHKiRet(clear_seg_disk_fault(pSess));
+#ifdef ENABLE_TESTBENCH
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("queueleasetest"))) {
+        CHKiRet(queue_lease_test(pSess));
+#endif
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;
         if (!parsePosLong(pszMsg, &val)) {

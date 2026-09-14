@@ -1,10 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /*
- * Verify the internal queue batch-source lease. The oracle is purely pointer
- * state: normal and partial batches retain their source, retry store context
- * retains it, cancellation clears only that source, and mismatched callback or
- * mutex identities leave an existing lease untouched. This test deliberately
- * avoids daemon timing and queue storage implementation details.
+ * Exercise the source lease's pure validation helpers. The daemon test
+ * queue-lease-attribution.sh runs the production terminal-completion fixture.
  */
 #include "config.h"
 
@@ -40,7 +37,7 @@ int main(void) {
     CHECK(qqueueLeaseHasResponsibility(0, 0, &store_context)); /* retry store context */
     CHECK(!qqueueLeaseHasResponsibility(0, 0, NULL));
 
-    /* A callback owner for another queue cannot complete source_a's batch. */
+    /* A second source cannot overwrite live source_a attribution. */
     CHECK(qqueueLeaseBind(&source_slot, &owner_slot, source_b, source_b, source_b, &mutex_b, &mutex_b) ==
           RS_RET_INTERNAL_ERROR);
     CHECK(source_slot == source_a && owner_slot == parent);
@@ -52,7 +49,7 @@ int main(void) {
 
     CHECK(qqueueLeaseClear(&source_slot, &owner_slot, source_b) == RS_RET_INTERNAL_ERROR);
     CHECK(source_slot == source_a && owner_slot == parent);
-    CHECK(qqueueLeaseClear(&source_slot, &owner_slot, source_a) == RS_RET_OK); /* cancellation completion */
+    CHECK(qqueueLeaseClear(&source_slot, &owner_slot, source_a) == RS_RET_OK); /* terminal retirement */
     CHECK(source_slot == NULL && owner_slot == NULL);
 
     return 0;

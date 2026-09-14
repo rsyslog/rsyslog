@@ -82,6 +82,7 @@ librsyslog_la_SOURCES = \
 	queue_local_stats.c \
 	queue_local_stats.h \
 	queue_spsc.h \
+	queue_lease.h \
 	queue_da.c \
 	queue_da.h \
 	segdisk_codec.c \
@@ -150,6 +151,10 @@ librsyslog_la_LIBADD += $(LIBLOGGING_STDLOG_LIBS)
 endif
 
 librsyslog_la_CPPFLAGS += -I\$(top_srcdir)/tools
+
+if ENABLE_TESTBENCH
+librsyslog_la_CPPFLAGS += -DENABLE_TESTBENCH
+endif
 
 #
 # regular expression support
