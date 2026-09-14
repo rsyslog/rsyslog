@@ -8,6 +8,8 @@
 # once and allow normal daemon termination. No connection is a producer identity.
 # Registered only with imtcp epoll support: the portable poll implementation
 # deliberately forces one thread and therefore cannot exercise pool departure.
+# The direct stderr hook marker confirms the actual retirement injection;
+# ordinary delivery is checked through the configured omfile output instead.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp

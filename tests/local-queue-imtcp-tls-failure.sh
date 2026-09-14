@@ -5,6 +5,8 @@
 # The worker-start case consumes one permanently failed descriptor; allocation
 # failures consume none. Snapshots and exact unique output are the oracle, with
 # normal daemon termination proving failed-registration cleanup is safe.
+# The direct stderr marker belongs to the test-only injection boundary; it
+# proves which fault fired without recursively submitting another queue message.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -42,6 +44,8 @@ localq_wait_stats_regex "$STATSFILE" 'main Q.local' \
     "route.be.reason.registration_fallback.messages=$NUMMESSAGES" \
     'fe.registration_failures=[1-9][0-9]*' 'outstanding.messages=0'
 if [ "$registered" -eq 1 ]; then
+    localq_wait_stats "$STATSFILE" 'main Q.local' 'fe.registration_failures=1' \
+        'route.be.reason.capacity_exhausted.messages=0'
     localq_wait_stats "$STATSFILE" 'main Q.local.frontend.1' \
         'registration.id=1' 'registration.generation=1' 'lifecycle.state=3' \
         'admitted.messages=0' 'inflight.fe=0' 'queued=0'
