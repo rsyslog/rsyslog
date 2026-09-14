@@ -83,7 +83,8 @@ TESTS_QUEUE_LEASE = queue-discard-only-lease.sh queue-lease-attribution.sh
 EXTRA_DIST += $(TESTS_QUEUE_LEASE)
 
 TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG = queue-benchmark-throughput-config.sh
-EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG) ../benchmarks/queue-contention/trial-multi.sh
+EXTRA_DIST += $(TESTS_QUEUE_BENCHMARK_THROUGHPUT_CONFIG) ../benchmarks/queue-contention/trial-multi.sh \
+	../benchmarks/queue-contention/compare.py
 TESTS_WTP_TARGETED_WAKEUP = wtp-targeted-wakeup.sh
 EXTRA_DIST += $(TESTS_WTP_TARGETED_WAKEUP) unit/wtp_wakeup_test.c
 
