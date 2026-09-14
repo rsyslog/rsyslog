@@ -706,6 +706,34 @@ static rsRetVal local_queue_stats_lifetime_test(tcps_sess_t *pSess) {
 finalize_it:
     RETiRet;
 }
+
+/* Arm the one-shot post-stop invariant check before local shutdown unlinks its
+ * stats adapter. The marker is test-owned and must be absolute so the daemon
+ * never writes outside the harness work directory by relative resolution. */
+static rsRetVal local_queue_stop_check(uchar *const command, tcps_sess_t *pSess) {
+    uchar marker[PATH_MAX] = {0};
+    DEFiRet;
+
+    getFirstWord(&command, marker, sizeof(marker), 0);
+    while (*command == ' ' || *command == '\t' || *command == '\r' || *command == '\n') ++command;
+    if (marker[0] != '/' || *command != '\0') {
+        CHKiRet(sendResponse(pSess, "ERROR: local queue stop-check requires one absolute marker path\n"));
+        FINALIZE;
+    }
+    if (runConf->pMsgQueue == NULL) {
+        CHKiRet(sendResponse(pSess, "ERROR: main queue not yet initialized\n"));
+        FINALIZE;
+    }
+    iRet = qqueueLocalTestArmShutdownCheck(runConf->pMsgQueue, (const char *)marker);
+    if (iRet == RS_RET_OK) {
+        CHKiRet(sendResponse(pSess, "OK\n"));
+    } else {
+        CHKiRet(sendResponse(pSess, "ERROR: local queue stop-check arm failed: %d\n", iRet));
+    }
+
+finalize_it:
+    RETiRet;
+}
 #endif
 
 /* Function to handle received messages. This is our core function!
@@ -759,6 +787,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
         CHKiRet(queue_lease_test(pSess));
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestatslifetimetest"))) {
         CHKiRet(local_queue_stats_lifetime_test(pSess));
+    } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("localqueuestopcheck"))) {
+        CHKiRet(local_queue_stop_check(pszMsg, pSess));
 #endif
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("setmainmsgqueuetimeoutshutdown"))) {
         long val;

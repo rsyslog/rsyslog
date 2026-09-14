@@ -166,6 +166,7 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-registration.sh \
 	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-shutdown.sh \
+	local-queue-imtcp-shutdown-multi-fe.sh \
 	local-queue-stats-lifetime.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE) local-queue-common.sh
 

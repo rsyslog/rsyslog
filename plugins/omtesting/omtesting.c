@@ -16,6 +16,7 @@
  *
  * :omtesting:sleep <seconds> <microseconds>
  * :omtesting:file_barrier <entered-file> <release-fifo>
+ * :omtesting:cancel_cleanup_barrier <entered-file> <block-fifo> <first-file> <second-file> <cleanup-fifo>
  *
  * Must be specified exactly as above. Keep in mind microseconds are a millionth
  * of a second!
@@ -81,7 +82,8 @@ typedef struct _instanceData {
         MD_ALWAYS_SUSPEND,
         MD_BARRIER_ERROR,
         MD_BARRIER_SUSPEND,
-        MD_FILE_BARRIER
+        MD_FILE_BARRIER,
+        MD_CANCEL_CLEANUP_BARRIER
     } mode;
     int bEchoStdout;
     int iWaitSeconds;
@@ -98,6 +100,10 @@ typedef struct _instanceData {
     int barrier_triggered;
     char *barrier_enter_file;
     char *barrier_release_fifo;
+    char *barrier_cancel_first_file;
+    char *barrier_cancel_second_file;
+    char *barrier_cleanup_release_fifo;
+    unsigned barrier_cancel_cleanup_count;
     pthread_mutex_t mut;
     pthread_cond_t barrier_cond;
 } instanceData;
@@ -232,6 +238,74 @@ static int writeFully(const int fd, const char *buf, size_t len) {
     return 1;
 }
 
+static void writeBarrierMarker(const char *const path, const int append) {
+    const int fd = open(path, O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC) | O_CLOEXEC, 0600);
+    if (fd < 0) return;
+    (void)writeFully(fd, "entered\n", sizeof("entered\n") - 1);
+    close(fd);
+}
+
+/* pthread cleanup executes with cancellation disabled. The first cancelled
+ * callback deliberately holds this FIFO after publishing its marker, while a
+ * second cleanup marker proves another cancellation request was issued before
+ * any local-family join waited for that first callback. */
+static void cancelCleanupBarrierCleanup(void *const arg) {
+    instanceData *const pData = arg;
+    unsigned ordinal = 0;
+
+    /* This handler runs only on cancellation and the worker exits after it.
+     * Keep the FIFO hold immune to a repeated cancellation request. */
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
+    if (pthread_mutex_lock(&pData->mut) == 0) {
+        ordinal = ++pData->barrier_cancel_cleanup_count;
+        pthread_mutex_unlock(&pData->mut);
+    }
+    if (ordinal == 1) {
+        const int fd = open(pData->barrier_cleanup_release_fifo, O_RDWR | O_CLOEXEC);
+        writeBarrierMarker(pData->barrier_cancel_first_file, 0);
+        if (fd >= 0) {
+            char release[32];
+            while (read(fd, release, sizeof(release)) < 0 && errno == EINTR) {
+            }
+            close(fd);
+        }
+    } else if (ordinal == 2) {
+        writeBarrierMarker(pData->barrier_cancel_second_file, 0);
+    }
+}
+
+/* Two real Direct callbacks append their entry markers and then wait in a
+ * cancellation point. The cleanup sequence, rather than a connection or FE
+ * index, elects which callback blocks cancellation progress. */
+static rsRetVal doCancelCleanupBarrier(instanceData *const pData) {
+    volatile rsRetVal iRet = RS_RET_OK;
+    int fd = -1;
+    ssize_t nread;
+    char release[32];
+
+    /* Install cleanup before entry publication: observing both entries proves
+     * both callbacks can publish cancellation cleanup immediately. */
+    pthread_cleanup_push(cancelCleanupBarrierCleanup, pData);
+    writeBarrierMarker(pData->barrier_enter_file, 1);
+    fd = open(pData->barrier_release_fifo, O_RDWR | O_CLOEXEC);
+    if (fd < 0) {
+        LogError(errno, RS_RET_ERR, "omtesting cancel_cleanup_barrier cannot open '%s'", pData->barrier_release_fifo);
+        iRet = RS_RET_ERR;
+    } else {
+        pthread_cleanup_push(fileBarrierCloseFd, &fd);
+        do {
+            nread = read(fd, release, sizeof(release));
+        } while (nread < 0 && errno == EINTR);
+        if (nread <= 0) iRet = RS_RET_ERR;
+        pthread_cleanup_pop(1);
+    }
+    pthread_cleanup_pop(0);
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* Publish entry before blocking on the test-owned FIFO.  The test opens its
  * writer only after it has observed that file, so the FIFO release is an
@@ -326,6 +400,7 @@ BEGINtryResume
         case MD_BARRIER_ERROR:
         case MD_BARRIER_SUSPEND:
         case MD_FILE_BARRIER:
+        case MD_CANCEL_CLEANUP_BARRIER:
             iRet = RS_RET_OK;
             break;
         default:
@@ -344,6 +419,8 @@ BEGINdoAction
     pData = pWrkrData->pData;
     if (pData->mode == MD_FILE_BARRIER) {
         iRet = doFileBarrier(pData);
+    } else if (pData->mode == MD_CANCEL_CLEANUP_BARRIER) {
+        iRet = doCancelCleanupBarrier(pData);
     } else if (pData->mode == MD_BARRIER_ERROR || pData->mode == MD_BARRIER_SUSPEND) {
         const int triggered = barrier_trigger(pData);
         if (triggered && pData->mode == MD_BARRIER_ERROR) {
@@ -369,6 +446,7 @@ BEGINdoAction
             case MD_BARRIER_ERROR:
             case MD_BARRIER_SUSPEND:
             case MD_FILE_BARRIER:
+            case MD_CANCEL_CLEANUP_BARRIER:
                 break;
             default:
                 // No action needed for other cases
@@ -389,6 +467,9 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->barrier_enter_file);
     free(pData->barrier_release_fifo);
+    free(pData->barrier_cancel_first_file);
+    free(pData->barrier_cancel_second_file);
+    free(pData->barrier_cleanup_release_fifo);
     pthread_cond_destroy(&pData->barrier_cond);
     pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
@@ -505,6 +586,13 @@ BEGINparseSelectorAct
         CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_enter_file));
         CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_release_fifo));
         pData->mode = MD_FILE_BARRIER;
+    } else if (!strcmp((char *)szBuf, "cancel_cleanup_barrier")) {
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_enter_file));
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_release_fifo));
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_cancel_first_file));
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_cancel_second_file));
+        CHKiRet(parseFileBarrierArgument(&p, &pData->barrier_cleanup_release_fifo));
+        pData->mode = MD_CANCEL_CLEANUP_BARRIER;
     } else {
         dbgprintf("invalid mode '%s', doing 'sleep 1 0' - fix your config\n", szBuf);
     }
@@ -536,6 +624,15 @@ static rsRetVal localQueueCheckAction(void *const instance) {
             case MD_FILE_BARRIER:
                 if (pData->barrier_enter_file == NULL || pData->barrier_enter_file[0] == '\0' ||
                     pData->barrier_release_fifo == NULL || pData->barrier_release_fifo[0] == '\0') {
+                    break;
+                }
+                return RS_RET_OK;
+            case MD_CANCEL_CLEANUP_BARRIER:
+                if (pData->barrier_enter_file == NULL || pData->barrier_enter_file[0] == '\0' ||
+                    pData->barrier_release_fifo == NULL || pData->barrier_release_fifo[0] == '\0' ||
+                    pData->barrier_cancel_first_file == NULL || pData->barrier_cancel_first_file[0] == '\0' ||
+                    pData->barrier_cancel_second_file == NULL || pData->barrier_cancel_second_file[0] == '\0' ||
+                    pData->barrier_cleanup_release_fifo == NULL || pData->barrier_cleanup_release_fifo[0] == '\0') {
                     break;
                 }
                 return RS_RET_OK;
