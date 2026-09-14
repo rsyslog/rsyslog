@@ -27,7 +27,7 @@ or favorable isolated timing does not alone establish acceptance.
 | Stage | Status | Evidence / next gate |
 |---|---|---|
 | S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
-| S1 | Conditional source preparation | Attribution patch reviewed; idle-path fix and actual completion/failure tests in progress; not integrated. |
+| S1 | Integrated; acceptance pending | Attribution at `bb567e97a` plus allocation-style follow-up; focused tests passed, sanitizer and neutral-performance gates pending. |
 | S2 | Conditional source preparation | Ring, strict configuration, worker integration, stats and tests in isolated worktrees; not integrated. |
 
 ## Assignments
@@ -236,3 +236,38 @@ This permits S1 integration, correctness testing and neutral-performance
 measurement. It does not accept S1/S2 or establish a feature speedup.
 The corrected fixed-rate latency observer and matched S2 latency baseline remain
 S2 prerequisites, not a reason to delay the attribution-only S1 stage.
+
+
+## S1 integration and validation
+
+S1 is integrated from reviewed source `50ab62e2a` as `bb567e97a`; the one-line
+allocation-helper cleanup from `c499ea212` follows without changing the measured
+production path. The source owner passed the native lease unit, initialized-daemon
+completion fixture, discard-only, out-of-order FixedArray, deferred idle/wakeup,
+discard-allmark and native DA FixedArray tests, plus mock distcheck.
+
+The first Ubuntu 26.04 matched-config run passed seven targeted tests. Its
+out-of-order test could not start because that fixture needs omprog, which is
+intentionally absent from the frozen S0 performance configuration. This is a
+configuration coverage gap, not an observed queue regression. Run that fixture
+with omprog in the separate correctness tree; do not change the performance
+build's configure options to accommodate it. A separate S1 sanitizer/portability
+worktree covers the threading/ownership paths. S1 is not accepted until its
+correctness and paired neutral-performance gates pass.
+
+## S2 review: interrupted Direct transactions
+
+`COMM` can precede Direct transaction commit. `actionCommit` clears parameter
+state even after cooperative `FORCE_TERM`, and `actionCommitAllDirect` ignores
+that return, so checking the surviving parameter count cannot prove delivery.
+The reviewed conservative local policy retains ambiguous `COMM` entries on
+cancellation and callback return under source immediate shutdown, before private
+state disposal and source completion; explicit discards remain terminal.
+This can repeat delivery and script mutations. Remaining deadline-expired
+obligations must be explicitly discarded/accounted in this memory-only stage.
+
+A separate qualification prerequisite is cancellation safety of synchronous
+omfile: its shared write mutex and stream state must remain reusable after an
+interrupted write. A bounded local-only preparation/write/HUP boundary is under
+implementation and independent review. Until that boundary and deterministic
+cancellation tests pass, S2 output qualification is unresolved.

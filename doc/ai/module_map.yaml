@@ -6,6 +6,7 @@ runtime_queue:
   paths:
     - "runtime/queue.c"
     - "runtime/queue.h"
+    - "runtime/queue_lease.h"
     - "runtime/queue_da.c"
     - "runtime/queue_da.h"
     - "runtime/wti.c"
@@ -14,6 +15,13 @@ runtime_queue:
     - "runtime/segdisk_store.h"
   requires_serialization: true
   notes:
+    - >-
+      Worker batches carry physical-source and logical-owner attribution.
+      Acquisition and completion require the source to match the worker pool
+      user and held mutex; a DA child keeps its parent as logical owner.
+      Returned store-completion failure retains the source lease and opaque
+      context. This attribution seam does not enable cross-pool work borrowing
+      or repair inherited terminal disk cleanup.
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
     - >-
