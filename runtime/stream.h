@@ -123,6 +123,7 @@ struct strm_s {
         uchar *pszDir; /* Directory */
         int lenDir;
         int fd; /* the file descriptor, -1 if closed */
+        sbool localOutput; /* preopened local-queue output: workers never reopen/close */
         int fdDir; /* the directory's descriptor, in case bSync is requested (-1 if closed) */
         int readTimeout; /* 0: do not timeout */
         time_t lastRead; /* for timeout processing */
@@ -243,6 +244,10 @@ ENDinterface(strm)
     /* V17, 2026-06-23: added bNoFollowFinal stream property setter */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
+
+/* Private built-in omfile support; callers serialize all access. */
+rsRetVal strmPrepareLocalOutput(strm_t *pThis);
+void strmDiscardLocalOutput(strm_t *pThis);
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);

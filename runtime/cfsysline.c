@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
@@ -256,6 +257,10 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void *, uid_t), void *
 
     CHKiRet(doGetSize(pp, NULL, &i));
     p = *pp;
+    /* The historical converter permits +2^31 and does not check INT_MIN.
+     * Retain that global behavior, but remember that a later experimental local
+     * graph cannot qualify an inherited value after narrowing loses its intent. */
+    if (loadConf != NULL && (i < INT_MIN || i > INT_MAX)) loadConf->bLocalLegacyNumericError = 1;
     if (i > 2147483648ll) { /*2^31*/
         LogError(0, RS_RET_INVALID_VALUE, "value %lld too large for integer argument.", i);
         ABORT_FINALIZE(RS_RET_INVALID_VALUE);

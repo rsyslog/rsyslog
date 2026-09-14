@@ -99,6 +99,7 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) * pData);
  */
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
+rsRetVal rulesetValidateLocalQueues(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
 rsRetVal activateRulesetQueues(void);
 

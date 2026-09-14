@@ -285,6 +285,9 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
     }
 #endif
 
+    /* Preparation verifies the resulting descriptor, including replacement races. */
+    if (pThis->localOutput) iFlags |= O_NONBLOCK;
+
     /* Keep lock held through open + init to avoid async close/open races. */
     if (bDoLock) d_pthread_mutex_lock(&pThis->mut);
     pThis->fd = open((char *)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
@@ -438,6 +441,31 @@ finalize_it:
     RETiRet;
 }
 
+
+/* Only called before worker startup or by the main-thread HUP owner while the
+ * instance mutex is held. O_NONBLOCK prevents accidentally waiting on a FIFO;
+ * fstat qualifies the actual open descriptor instead of a racy pathname check. */
+rsRetVal strmPrepareLocalOutput(strm_t *const pThis) {
+    struct stat st;
+    DEFiRet;
+    assert(!pThis->bAsyncWrite && !pThis->iZipLevel && !pThis->bSync && !pThis->cryprov);
+    assert(pThis->sType == STREAMTYPE_FILE_SINGLE && pThis->iSizeLimit == 0);
+    pThis->localOutput = 1;
+    CHKiRet(strmOpenFile(pThis));
+    if (fstat(pThis->fd, &st) != 0 || !S_ISREG(st.st_mode)) ABORT_FINALIZE(RS_RET_IO_ERROR);
+finalize_it:
+    RETiRet;
+}
+
+/* Cancellation cannot establish how much of a write reached the destination.
+ * Forget pending bytes without flushing or closing. The queue retains the
+ * unresolved source lease; a retry can duplicate external bytes. iCurrOffs is
+ * not authoritative after cancellation and this plain append mode never uses
+ * it for positioning, rotation or delivery accounting. */
+void strmDiscardLocalOutput(strm_t *const pThis) {
+    assert(pThis->localOutput && !pThis->bAsyncWrite && !pThis->iZipLevel && !pThis->cryprov);
+    pThis->iBufPtr = 0;
+}
 
 /* wait for the output writer thread to be done. This must be called before actions
  * that require data to be persisted. May be called in non-async mode and is a null
@@ -1413,6 +1441,9 @@ static rsRetVal ATTR_NONNULL(1, 2, 3) doWriteCall(strm_t *pThis, uchar *pBuf, si
         if (iWritten < 0) {
             const int err = errno;
             iWritten = 0; /* we have written NO bytes! */
+            /* The local omfile cancellation boundary keeps descriptor ownership
+             * stable throughout worker callbacks. Recovery requires main-thread HUP. */
+            if (pThis->localOutput && err != EINTR) ABORT_FINALIZE(RS_RET_IO_ERROR);
             if (err == EBADF) {
                 DBGPRINTF(
                     "file %s: errno %d, fd %d no longer valid, recovery by "
@@ -1691,7 +1722,10 @@ static rsRetVal strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf) {
     ISOBJ_TYPE_assert(pThis, strm);
 
     DBGPRINTF("strmPhysWrite, stream %p, len %u\n", pThis, (unsigned)lenBuf);
-    if (pThis->fd == -1) CHKiRet(strmOpenFile(pThis));
+    if (pThis->fd == -1) {
+        if (pThis->localOutput) ABORT_FINALIZE(RS_RET_IO_ERROR);
+        CHKiRet(strmOpenFile(pThis));
+    }
 
     /* here we place our crypto interface */
     if (pThis->cryprov != NULL) {

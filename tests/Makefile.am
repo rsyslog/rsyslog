@@ -14,6 +14,10 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-activation.sh local-queue-omfile-hup.sh
+TESTS_LOCAL_OMFILE_YAML = yaml-local-queue-omfile-activation.sh
+EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL) $(TESTS_LOCAL_OMFILE_YAML)
+
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
@@ -159,6 +163,33 @@ EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 
+TESTS_LOCAL_QUEUE_CONFIG = local-queue-config.sh
+TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+
+TESTS_LOCAL_QUEUE = \
+	local-queue-imtcp-tiered.sh \
+	local-queue-imtcp-partial-batch.sh \
+	local-queue-imtcp-shutdown.sh \
+	local-queue-force-term-actions.sh \
+	local-queue-stats-reconciliation.sh \
+	local-queue-stats-lifetime.sh \
+	local-queue-submit-batches.sh \
+	local-queue-redirect-publication.sh
+TESTS_LOCAL_QUEUE_EPOLL = \
+	local-queue-imtcp-registration.sh \
+	local-queue-imtcp-internal.sh \
+	local-queue-imtcp-shutdown-multi-fe.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE) $(TESTS_LOCAL_QUEUE_EPOLL) local-queue-common.sh
+
+TESTS_LOCAL_QUEUE_FAILURES = \
+	local-queue-startup-failure.sh \
+	local-queue-imtcp-tls-failure.sh \
+	local-queue-imtcp-cache-failure.sh \
+	local-queue-imtcp-worker-failure.sh
+TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE = local-queue-imtcp-producer-exit.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE_FAILURES) $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
+
 TESTS_IMFIFO = imfifo.sh imfifo-vg.sh yaml-imfifo.sh
 EXTRA_DIST += $(TESTS_IMFIFO)
 
@@ -172,6 +203,7 @@ EXTRA_DIST += $(TESTS_GSSAPI) $(TESTS_GSSAPI_LIBYAML) unit/gss_token_util_test.c
 EXTRA_DIST += unit/impcap_arp_parser_test.c
 EXTRA_DIST += unit/imbeats_seq_test.c
 EXTRA_DIST += unit/segdisk_state_test.c
+EXTRA_DIST += unit/queue_spsc_test.c
 EXTRA_DIST += unit/omazuredce_utils_test.c
 EXTRA_DIST += unit/imbeats_parser_test.c
 
@@ -2691,10 +2723,10 @@ check_LTLIBRARIES =
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc
 TESTS = runtime_unit_linkedlist runtime_unit_stringbuf runtime_unit_parser_pri runtime_unit_msg_replace \
 	runtime_unit_ommongodb_date runtime_unit_segdisk_state runtime_unit_queue_da runtime_unit_omazuredce_utils \
-	runtime_unit_wtp_wakeup runtime_unit_queue_lease
+	runtime_unit_wtp_wakeup runtime_unit_queue_lease runtime_unit_queue_spsc
 
 if ENABLE_FUZZING
 TESTS += $(TESTS_FUZZING)
@@ -2723,6 +2755,8 @@ runtime_unit_queue_da_SOURCES = \
 
 runtime_unit_queue_lease_SOURCES = \
 	unit/queue_lease_test.c
+runtime_unit_queue_spsc_SOURCES = \
+	unit/queue_spsc_test.c
 
 runtime_unit_omazuredce_utils_SOURCES = \
 	unit/omazuredce_utils_test.c
@@ -2808,6 +2842,8 @@ runtime_unit_queue_da_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_queue_lease_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS)
+runtime_unit_queue_spsc_CPPFLAGS = \
+	$(runtime_unit_linkedlist_CPPFLAGS)
 runtime_unit_wtp_wakeup_CPPFLAGS = \
 	$(runtime_unit_linkedlist_CPPFLAGS) \
 	-Wno-inline
@@ -2820,6 +2856,7 @@ runtime_unit_ommongodb_date_LDADD = $(runtime_unit_linkedlist_LDADD)
 runtime_unit_segdisk_state_LDADD =
 runtime_unit_queue_da_LDADD =
 runtime_unit_queue_lease_LDADD = $(PTHREADS_LIBS)
+runtime_unit_queue_spsc_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 runtime_unit_wtp_wakeup_LDADD = $(PTHREADS_LIBS) $(SOL_LIBS)
 
 if ENABLE_LIBLOGGING_STDLOG
@@ -2832,6 +2869,19 @@ endif
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
+if ENABLE_IMTCP_TESTS
+if ENABLE_IMDIAG
+TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LOCAL_OMFILE_YAML)
+endif
+check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
+liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
+liblocal_queue_omfile_cancel_preload_la_CFLAGS =
+liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
+endif
+endif
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
@@ -2883,7 +2933,22 @@ if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
 endif # if ENABLE_JOURNAL_TESTS
-TESTS += $(TESTRUNS)
+TESTS += $(TESTRUNS) $(TESTS_LOCAL_QUEUE_CONFIG)
+if HAVE_LIBYAML
+TESTS += $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
+endif
+if ENABLE_IMTCP_TESTS
+if ENABLE_IMPSTATS
+if ENABLE_IMDIAG
+TESTS += $(TESTS_LOCAL_QUEUE)
+TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
+if ENABLE_IMTCP_EPOLL
+TESTS += $(TESTS_LOCAL_QUEUE_EPOLL)
+TESTS += $(TESTS_LOCAL_QUEUE_PRODUCER_LIFECYCLE)
+endif
+endif
+endif
+endif
 
 if ENABLE_GSSAPI
 TESTS += $(TESTS_GSSAPI)

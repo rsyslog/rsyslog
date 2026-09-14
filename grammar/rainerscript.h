@@ -388,6 +388,8 @@ struct funcData_prifilt {
 #define RS_SCRIPT_EINVAL 1
 
 void varFreeMembers(const struct svar *r);
+int cnfexprIsLocalQueueSafe(const struct cnfexpr *expr);
+int cnfvarIsLocalQueueSafe(const uchar *name);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
 void readConfFile(FILE *fp, es_str_t **str);
 struct objlst *objlstNew(struct cnfobj *obj);
