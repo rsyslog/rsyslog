@@ -77,6 +77,9 @@ struct qqueueLocal_s {
     uint64_t beInternal, beCapacity, capacityExhaustions;
     uint64_t beDequeueBatches, beDequeueMessages, beDequeueMax;
     uint64_t legacyPublished, legacyBytes; /* stats-list-serialized reader only */
+    #ifdef ENABLE_TESTBENCH
+    char *testShutdownMarker; /* armed under registry; consumed after shutdown freeze */
+    #endif
 };
 
 typedef struct localCache_s {
@@ -116,6 +119,146 @@ static void stateSet(unsigned *const value, const unsigned state) {
     __atomic_store_n(value, state, __ATOMIC_SEQ_CST);
 }
 
+    #ifdef ENABLE_TESTBENCH
+enum localTestFault {
+    TEST_FAULT_NONE,
+    TEST_FAULT_STARTUP_FAMILY,
+    TEST_FAULT_STARTUP_FRONTEND,
+    TEST_FAULT_TLS,
+    TEST_FAULT_CACHE,
+    TEST_FAULT_WORKER,
+    TEST_FAULT_RETIRE
+};
+static enum localTestFault testFault;
+static const char *testFaultName;
+static pthread_once_t testFaultOnce = PTHREAD_ONCE_INIT;
+static unsigned testFaultFired;
+static __thread unsigned testProducerRetire;
+static pthread_mutex_t testRedirectMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t testRedirectCond = PTHREAD_COND_INITIALIZER;
+enum { TEST_REDIRECT_OFF, TEST_REDIRECT_ARMED, TEST_REDIRECT_BLOCKED, TEST_REDIRECT_RELEASED };
+static unsigned testRedirectState;
+
+static void readTestFault(void) {
+    const char *const value = getenv("RSYSLOG_LOCAL_QUEUE_TEST_FAULT");
+    static const char *const names[] = {"",
+                                        "startup-family",
+                                        "startup-frontend",
+                                        "producer-tls",
+                                        "producer-cache",
+                                        "frontend-worker",
+                                        "producer-retire"};
+    if (value == NULL) return;
+    for (unsigned i = 1; i < sizeof(names) / sizeof(names[0]); ++i) {
+        if (!strcmp(value, names[i])) {
+            testFault = (enum localTestFault)i;
+            testFaultName = names[i];
+            break;
+        }
+    }
+}
+
+/* Marker comes from the actual injected boundary, never mere configuration.
+ * This direct test diagnostic cannot recursively submit to a local queue. */
+static int hitTestFault(const enum localTestFault fault) {
+    if (testFault != fault) return 0;
+    const unsigned alreadyFired = __atomic_exchange_n(&testFaultFired, 1, __ATOMIC_RELAXED);
+    if (!alreadyFired) fprintf(stderr, "local queue test fault: %s\n", testFaultName);
+    return fault != TEST_FAULT_RETIRE || !alreadyFired;
+}
+
+int qqueueLocalTestProducerShouldExit(void) {
+    return testProducerRetire != 0;
+}
+
+void qqueueLocalTestRedirectArm(void) {
+    pthread_mutex_lock(&testRedirectMutex);
+    assert(stateRead(&testRedirectState) == TEST_REDIRECT_OFF);
+    stateSet(&testRedirectState, TEST_REDIRECT_ARMED);
+    pthread_mutex_unlock(&testRedirectMutex);
+}
+
+void qqueueLocalTestRedirectWaitPublisher(void) {
+    pthread_mutex_lock(&testRedirectMutex);
+    while (stateRead(&testRedirectState) != TEST_REDIRECT_BLOCKED)
+        pthread_cond_wait(&testRedirectCond, &testRedirectMutex);
+    pthread_mutex_unlock(&testRedirectMutex);
+}
+
+static void testGatePublisher(void) {
+    if (stateRead(&testRedirectState) != TEST_REDIRECT_ARMED) return;
+    pthread_mutex_lock(&testRedirectMutex);
+    if (stateRead(&testRedirectState) == TEST_REDIRECT_ARMED) {
+        stateSet(&testRedirectState, TEST_REDIRECT_BLOCKED);
+        pthread_cond_broadcast(&testRedirectCond);
+        while (stateRead(&testRedirectState) == TEST_REDIRECT_BLOCKED)
+            pthread_cond_wait(&testRedirectCond, &testRedirectMutex);
+        stateSet(&testRedirectState, TEST_REDIRECT_OFF);
+    }
+    pthread_mutex_unlock(&testRedirectMutex);
+}
+
+static void testReleasePublisher(void) {
+    pthread_mutex_lock(&testRedirectMutex);
+    if (stateRead(&testRedirectState) == TEST_REDIRECT_BLOCKED ||
+        stateRead(&testRedirectState) == TEST_REDIRECT_ARMED) {
+        stateSet(&testRedirectState, TEST_REDIRECT_RELEASED);
+        pthread_cond_broadcast(&testRedirectCond);
+    }
+    pthread_mutex_unlock(&testRedirectMutex);
+}
+
+rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *const owner, const char *const markerPath) {
+    if (owner == NULL || owner->local == NULL || markerPath == NULL || markerPath[0] != '/') return RS_RET_PARAM_ERROR;
+    char *const marker = strdup(markerPath);
+    if (marker == NULL) return RS_RET_OUT_OF_MEMORY;
+    qqueueLocal_t *const family = owner->local;
+    pthread_mutex_lock(&family->registry);
+    const int allowed = stateRead(&family->state) == LOCAL_RUNNING && family->testShutdownMarker == NULL;
+    if (allowed) family->testShutdownMarker = marker;
+    pthread_mutex_unlock(&family->registry);
+    if (!allowed) free(marker);
+    return allowed ? RS_RET_OK : RS_RET_PARAM_ERROR;
+}
+
+static int testWorkerSettled(wti_t *const worker) {
+    return wtiGetState(worker) == WRKTHRD_STOPPED && worker->source_queue == NULL && worker->logical_owner == NULL &&
+           !qqueueLeaseHasResponsibility(worker->batch.nElem, worker->batch.nElemDeq, worker->batch.storeData) &&
+           worker->n_deferred_msgs == 0;
+}
+
+static rsRetVal testCheckShutdown(qqueue_t *const owner) {
+    qqueueLocal_t *const family = owner->local;
+    if (family->testShutdownMarker == NULL) return RS_RET_OK;
+    qqueueLocalSnapshot_t snapshot;
+    qqueueLocalGetSnapshot(owner, &snapshot);
+    unsigned joined = 0;
+    for (unsigned i = 0; i < family->count; ++i) {
+        qqueueLocalFrontend_t *const fe = &family->fronts[i];
+        const unsigned state = stateRead(&fe->state);
+        if (state != FE_UNUSED && state != FE_FAILED && state != FE_JOINED) return RS_RET_INTERNAL_ERROR;
+        if (!testWorkerSettled(fe->pool->pWrkr[0])) return RS_RET_INTERNAL_ERROR;
+        if (state == FE_JOINED) {
+            ++joined;
+            if (rsSpscQueueConsumerAvailable(&fe->ring) != 0) return RS_RET_INTERNAL_ERROR;
+        }
+    }
+    for (int i = 0; i < owner->pWtpReg->iNumWorkerThreads; ++i)
+        if (!testWorkerSettled(owner->pWtpReg->pWrkr[i])) return RS_RET_INTERNAL_ERROR;
+    if (snapshot.outstanding != 0 || snapshot.fe_queued != 0 || snapshot.fe_active != 0 || snapshot.fe_retry != 0 ||
+        snapshot.be_physical != 0 || snapshot.be_active != 0 || snapshot.admitted != snapshot.terminal ||
+        snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected)
+        return RS_RET_INTERNAL_ERROR;
+    FILE *const output = fopen(family->testShutdownMarker, "w");
+    if (output == NULL) return RS_RET_IO_ERROR;
+    const int written = fprintf(output, "OK fe.joined=%u outstanding=0 admitted=%llu terminal=%llu rejected=%llu\n",
+                                joined, (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
+                                (unsigned long long)snapshot.preadmission_rejected);
+    const int closed = fclose(output);
+    return written < 0 || closed != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
+}
+    #endif
+
 static void freeProducer(void *const arg) {
     localProducer_t *const producer = arg;
     if (producer == NULL) return;
@@ -139,6 +282,9 @@ void qqueueLocalProducerEnter(void) {
     localProducer_t *producer;
     if (!qqueueLocalEnabled()) return;
     ++producerTrustedDepth;
+    #ifdef ENABLE_TESTBENCH
+    if (hitTestFault(TEST_FAULT_TLS)) return;
+    #endif
     pthread_once(&producerOnce, makeProducerKey);
     if (!stateRead(&producerKeyValid)) return;
     producer = pthread_getspecific(producerKey);
@@ -159,6 +305,9 @@ void qqueueLocalProducerLeave(void) {
 void qqueueLocalProducerExit(void *const unused) {
     (void)unused;
     producerTrustedDepth = 0;
+    #ifdef ENABLE_TESTBENCH
+    testProducerRetire = 0;
+    #endif
     localProducer_t *const producer = stateRead(&producerKeyValid) ? pthread_getspecific(producerKey) : NULL;
     if (producer == NULL) return;
     /* Called by tcpsrv Run/worker cleanup, before input joins and queue teardown.
@@ -319,6 +468,10 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     if (initMonotonicCond(&fe->publisherDone) != 0) return RS_RET_ERR;
     fe->condInitialized = 1;
     CHKmalloc(fe->slots = calloc(capacity, sizeof(void *)));
+    #ifdef ENABLE_TESTBENCH
+    /* With N>=2 this fails inside the second partially constructed FE. */
+    if (index == 1 && hitTestFault(TEST_FAULT_STARTUP_FRONTEND)) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    #endif
     CHKmalloc(fe->producerScratch = calloc(capacity, sizeof(void *)));
     CHKmalloc(fe->consumerScratch = calloc(batchSize, sizeof(void *)));
     if (!rsSpscQueueInit(&fe->ring, fe->slots, capacity)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
@@ -352,6 +505,10 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     if (owner->qType != QUEUETYPE_FIXED_ARRAY || owner->bIsDA || owner->localFrontendSize <= 0 ||
         owner->localMaxFrontends <= 0 || owner->iDeqBatchSize <= 0)
         return RS_RET_PARAM_ERROR;
+    #ifdef ENABLE_TESTBENCH
+    pthread_once(&testFaultOnce, readTestFault);
+    if (hitTestFault(TEST_FAULT_STARTUP_FAMILY)) return RS_RET_OUT_OF_MEMORY;
+    #endif
     qqueueLocal_t *family = calloc(1, sizeof(*family));
     if (family == NULL) return RS_RET_OUT_OF_MEMORY;
     owner->local = family; /* unpublished configuration startup */
@@ -399,7 +556,11 @@ static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner,
         }
     }
     *reason = QLOCAL_REGISTRATION;
-    localCache_t *const cache = calloc(1, sizeof(*cache));
+    localCache_t *const cache =
+    #ifdef ENABLE_TESTBENCH
+        hitTestFault(TEST_FAULT_CACHE) ? NULL :
+    #endif
+                                       calloc(1, sizeof(*cache));
     qqueueLocal_t *const family = owner->local;
     if (cache == NULL) {
         __atomic_fetch_add(&family->registrationFailures, 1, __ATOMIC_RELAXED);
@@ -420,7 +581,11 @@ static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner,
         stateSet(&fe->state, FE_REGISTERING);
         __atomic_fetch_add(&family->registered, 1, __ATOMIC_RELAXED);
         pthread_mutex_lock(&fe->mutex);
-        const rsRetVal ret = wtpAdviseMaxWorkers(fe->pool, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+        const rsRetVal ret =
+    #ifdef ENABLE_TESTBENCH
+            hitTestFault(TEST_FAULT_WORKER) ? RS_RET_ERR :
+    #endif
+                                            wtpAdviseMaxWorkers(fe->pool, 1, DENY_WORKER_START_DURING_SHUTDOWN);
         if (ret == RS_RET_OK && wtiGetState(fe->pool->pWrkr[0]) == WRKTHRD_RUNNING) {
             cache->frontend = fe;
             stateSet(&fe->state, FE_RUNNING);
@@ -466,6 +631,9 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
         /* Seq-cst two-sided handshake: either shutdown observes publishing,
          * or a publisher beginning later observes REDIRECT and never writes. */
         stateSet(&fe->publishing, 1);
+    #ifdef ENABLE_TESTBENCH
+        testGatePublisher();
+    #endif
         if (stateRead(&owner->local->state) == LOCAL_RUNNING && stateRead(&fe->state) == FE_RUNNING) {
             int published = 0;
             uint64_t bytes = 0;
@@ -479,6 +647,9 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
             if (published) {
                 /* Published references may already be destroyed by the
                  * consumer. Do not inspect messages after publication. */
+    #ifdef ENABLE_TESTBENCH
+                if (hitTestFault(TEST_FAULT_RETIRE)) testProducerRetire = 1;
+    #endif
                 counterAdd(&fe->published, count);
                 counterAdd(&fe->publishedBatches, 1);
                 counterAdd(&fe->bytes, bytes);
@@ -659,6 +830,9 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     pthread_mutex_lock(&family->registry);
     stateSet(&family->state, LOCAL_REDIRECT);
     pthread_mutex_unlock(&family->registry);
+    #ifdef ENABLE_TESTBENCH
+    testReleasePublisher();
+    #endif
     /* Registration is frozen. A publisher with a stale RUNNING observation
      * finishes its notification before maintenance takes its endpoint. */
     for (unsigned i = 0; i < family->count; ++i) {
@@ -749,8 +923,12 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     }
     qqueueLocalDiscardBackend(owner);
     stateSet(&family->state, LOCAL_STOPPED);
+    rsRetVal result = RS_RET_OK;
+    #ifdef ENABLE_TESTBENCH
+    result = testCheckShutdown(owner);
+    #endif
     pthread_setcancelstate(oldCancel, NULL);
-    return RS_RET_OK;
+    return result;
 }
 
 void qqueueLocalDestruct(qqueue_t *const owner) {
@@ -774,6 +952,9 @@ void qqueueLocalDestruct(qqueue_t *const owner) {
         }
         free(family->fronts);
     }
+    #ifdef ENABLE_TESTBENCH
+    free(family->testShutdownMarker);
+    #endif
     if (family->admissionInitialized) pthread_cond_destroy(&family->admissionDone);
     if (family->spaceInitialized) pthread_cond_destroy(&family->space);
     if (family->registryInitialized) pthread_mutex_destroy(&family->registry);
@@ -896,6 +1077,18 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
 }
 
 #else
+    #ifdef ENABLE_TESTBENCH
+int qqueueLocalTestProducerShouldExit(void) {
+    return 0;
+}
+rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath) {
+    (void)owner;
+    (void)markerPath;
+    return RS_RET_NOT_IMPLEMENTED;
+}
+void qqueueLocalTestRedirectArm(void) {}
+void qqueueLocalTestRedirectWaitPublisher(void) {}
+    #endif
 /* Unsupported local targets preserve the global build and fail activation. */
 int qqueueLocalEnabled(void) {
     return 0;

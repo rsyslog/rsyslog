@@ -44,6 +44,14 @@ int qqueueLocalEnabled(void);
 void qqueueLocalProducerEnter(void);
 void qqueueLocalProducerLeave(void);
 void qqueueLocalProducerExit(void *unused);
+#ifdef ENABLE_TESTBENCH
+/* Deterministic test controls; absent from production builds. */
+int qqueueLocalTestProducerShouldExit(void);
+rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath);
+void qqueueLocalTestRedirectArm(void);
+void qqueueLocalTestRedirectWaitPublisher(void);
+#endif
+
 
 rsRetVal qqueueLocalStart(qqueue_t *owner);
 rsRetVal qqueueLocalSubmit(qqueue_t *owner, smsg_t *const *messages, size_t count, int single_flow_control);

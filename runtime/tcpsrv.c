@@ -1547,6 +1547,11 @@ static void ATTR_NONNULL() * wrkrRun(void *arg) {
          */
         processWorksetItem(pioDescr, wrkrData);
         STATSCOUNTER_ADD(wrkrData->ctrRuns, wrkrData->mutCtrRuns, 1);
+#ifdef ENABLE_TESTBENCH
+        /* A real thread departure exercises producer-exit cleanup and retained
+         * FE lifetime. It is never inferred from a socket disconnection. */
+        if (qqueueLocalTestProducerShouldExit()) break;
+#endif
     }
 
     /**** de-init ****/

@@ -340,6 +340,9 @@ lmtcpsrv_la_SOURCES = \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+if ENABLE_TESTBENCH
+lmtcpsrv_la_CPPFLAGS += -DENABLE_TESTBENCH
+endif
 lmtcpsrv_la_LDFLAGS = -module -avoid-version $(ZLIB_LIBS)
 lmtcpsrv_la_LIBADD =
 
