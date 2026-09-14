@@ -984,7 +984,6 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     if (wtpWaitShutdownUntil(owner->pWtpReg, deadline) != RS_RET_OK) {
         if (!actionPhase) {
             action = deadlineAfter(owner->toActShutdown);
-            actionPhase = 1;
         }
         ATOMIC_STORE_32BIT(&owner->bShutdownImmediate, &owner->mutShutdownImmediate, 1);
         wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
