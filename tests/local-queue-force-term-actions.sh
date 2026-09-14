@@ -8,7 +8,9 @@
 # is retained for BE replay: A records values 1 then 2, B records only 2. This
 # deliberately proves repeatable script/action effects, not exact-once output.
 # The force-term marker observes the real post-reset return and the final marker
-# proves the one accepted obligation becomes one terminal obligation.
+# proves the one accepted obligation becomes one terminal obligation. The 10 s
+# action deadline below is only a harness watchdog: phase-marker acknowledgement,
+# rather than elapsed time, controls the FIFO release.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -36,15 +38,17 @@ input(type="imtcp" address="127.0.0.1" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
-	queue.timeoutShutdown="1" queue.timeoutActionCompletion="1"
+	queue.timeoutShutdown="10000" queue.timeoutActionCompletion="10000"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqvalue" type="string" string="%$!localq!attempt%\n")
 if ($msg contains "localq-force") then {
 	set $!localq!attempt = $!localq!attempt + 1;
 	action(name="localq-a" type="omfile" file="'$ACTION_A'" template="localqvalue" queue.type="Direct"
-		asyncWriting="off" flushOnTXEnd="on")
+		asyncWriting="off" flushOnTXEnd="on" action.reportSuspension="off"
+		action.reportSuspensionContinuation="off")
 	action(name="localq-b" type="omfile" file="'$ACTION_B'" template="localqvalue" queue.type="Direct"
-		asyncWriting="off" flushOnTXEnd="on")
+		asyncWriting="off" flushOnTXEnd="on" action.reportSuspension="off"
+		action.reportSuspensionContinuation="off")
 }
 '
 startup
