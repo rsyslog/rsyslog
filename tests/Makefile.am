@@ -163,15 +163,16 @@ EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 TESTS_LOCAL_QUEUE = \
 	local-queue-imtcp-tiered.sh \
 	local-queue-imtcp-partial-batch.sh \
-	local-queue-imtcp-registration.sh \
-	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-shutdown.sh \
-	local-queue-imtcp-shutdown-multi-fe.sh \
 	local-queue-stats-reconciliation.sh \
 	local-queue-stats-lifetime.sh \
 	local-queue-submit-batches.sh \
 	local-queue-redirect-publication.sh
-EXTRA_DIST += $(TESTS_LOCAL_QUEUE) local-queue-common.sh
+TESTS_LOCAL_QUEUE_EPOLL = \
+	local-queue-imtcp-registration.sh \
+	local-queue-imtcp-internal.sh \
+	local-queue-imtcp-shutdown-multi-fe.sh
+EXTRA_DIST += $(TESTS_LOCAL_QUEUE) $(TESTS_LOCAL_QUEUE_EPOLL) local-queue-common.sh
 
 TESTS_LOCAL_QUEUE_FAILURES = \
 	local-queue-startup-failure.sh \
@@ -2920,6 +2921,9 @@ if ENABLE_IMPSTATS
 if ENABLE_IMDIAG
 TESTS += $(TESTS_LOCAL_QUEUE)
 TESTS += $(TESTS_LOCAL_QUEUE_FAILURES)
+if ENABLE_IMTCP_EPOLL
+TESTS += $(TESTS_LOCAL_QUEUE_EPOLL)
+endif # ENABLE_IMTCP_EPOLL
 endif
 endif
 endif
