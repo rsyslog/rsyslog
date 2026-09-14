@@ -15,11 +15,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "rsyslog.h"
 #include "queue.h"
 #include "queue_local.h"
 #include "queue_local_stats.h"
 #include "statsobj.h"
+#include "unicode-helper.h"
 
+DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
 
 enum localLogicalCounter {
@@ -40,6 +43,8 @@ enum localLogicalCounter {
     localLogicalRouteBeRegistrationFallbackMessages,
     localLogicalRouteBeShutdownRedirectMessages,
     localLogicalRouteBeUnclassifiedMessages,
+    localLogicalRouteBeInternalMessages,
+    localLogicalRouteBeCapacityExhaustedMessages,
     localLogicalBePhysicalMessages,
     localLogicalBeActiveMessages,
     localLogicalFeQueuedMessages,
@@ -54,6 +59,9 @@ enum localLogicalCounter {
     localLogicalConfiguredFrontends,
     localLogicalTransferFeToBeMessages,
     localLogicalAllocationBytes,
+    localLogicalBeDequeueBatches,
+    localLogicalBeDequeueMessages,
+    localLogicalBeDequeueMax,
     localLogicalCounterCount
 };
 
@@ -69,10 +77,14 @@ enum localFrontendCounter {
     localFrontendIngressMessages,
     localFrontendAdmittedMessages,
     localFrontendAdmittedBatches,
+    localFrontendSubmittedBatches,
+    localFrontendSubmittedMax,
     localFrontendTerminalMessages,
     localFrontendOverflowMessages,
     localFrontendOverflowNoFitMessages,
     localFrontendOverflowOversizedMessages,
+    localFrontendOverflowBatches,
+    localFrontendOversizedBatches,
     localFrontendTransferToBeMessages,
     localFrontendShutdownDiscardedMessages,
     localFrontendProducerExited,
@@ -107,6 +119,14 @@ typedef struct localCounterDescriptor_s {
     size_t offset;
 } localCounterDescriptor_t;
 
+rsRetVal qqueueLocalStatsClassInit(void) {
+    DEFiRet;
+    CHKiRet(objGetObjInterface(&obj));
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+finalize_it:
+    RETiRet;
+}
+
 #define LOCAL_COUNTER(name, member) \
     { name, offsetof(qqueueLocalStats_t, logical_counters) + sizeof(intctr_t) * member }
 static const localCounterDescriptor_t logicalCounters[] = {
@@ -127,6 +147,8 @@ static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("route.be.reason.registration_fallback.messages", localLogicalRouteBeRegistrationFallbackMessages),
     LOCAL_COUNTER("route.be.reason.shutdown_redirect.messages", localLogicalRouteBeShutdownRedirectMessages),
     LOCAL_COUNTER("route.be.reason.unclassified.messages", localLogicalRouteBeUnclassifiedMessages),
+    LOCAL_COUNTER("route.be.reason.internal.messages", localLogicalRouteBeInternalMessages),
+    LOCAL_COUNTER("route.be.reason.capacity_exhausted.messages", localLogicalRouteBeCapacityExhaustedMessages),
     LOCAL_COUNTER("be.physical.messages", localLogicalBePhysicalMessages),
     LOCAL_COUNTER("be.active.messages", localLogicalBeActiveMessages),
     LOCAL_COUNTER("fe.queued.messages", localLogicalFeQueuedMessages),
@@ -141,6 +163,9 @@ static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("capacity.frontends", localLogicalConfiguredFrontends),
     LOCAL_COUNTER("transfer.fe_to_be.messages", localLogicalTransferFeToBeMessages),
     LOCAL_COUNTER("allocation.bytes", localLogicalAllocationBytes),
+    LOCAL_COUNTER("batch.be_dequeue.count", localLogicalBeDequeueBatches),
+    LOCAL_COUNTER("batch.be_dequeue.messages.sum", localLogicalBeDequeueMessages),
+    LOCAL_COUNTER("batch.be_dequeue.messages.max", localLogicalBeDequeueMax),
 };
 #undef LOCAL_COUNTER
 
@@ -158,10 +183,14 @@ static const localCounterDescriptor_t frontendCounters[] = {
     FRONTEND_COUNTER("ingress.messages", localFrontendIngressMessages),
     FRONTEND_COUNTER("admitted.messages", localFrontendAdmittedMessages),
     FRONTEND_COUNTER("admitted.batches", localFrontendAdmittedBatches),
+    FRONTEND_COUNTER("batch.submit.count", localFrontendSubmittedBatches),
+    FRONTEND_COUNTER("batch.submit.messages.max", localFrontendSubmittedMax),
     FRONTEND_COUNTER("terminal.messages", localFrontendTerminalMessages),
     FRONTEND_COUNTER("overflow.messages", localFrontendOverflowMessages),
     FRONTEND_COUNTER("overflow.nofit.messages", localFrontendOverflowNoFitMessages),
     FRONTEND_COUNTER("overflow.oversized.messages", localFrontendOverflowOversizedMessages),
+    FRONTEND_COUNTER("overflow.batches", localFrontendOverflowBatches),
+    FRONTEND_COUNTER("overflow.oversized_batches", localFrontendOversizedBatches),
     FRONTEND_COUNTER("transfer.fe_to_be.messages", localFrontendTransferToBeMessages),
     FRONTEND_COUNTER("shutdown.discarded.messages", localFrontendShutdownDiscardedMessages),
     FRONTEND_COUNTER("producer.exited", localFrontendProducerExited),
@@ -211,6 +240,9 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
     localStatsStore(&stats->logical_counters[localLogicalRouteBeShutdownRedirectMessages],
                     snapshot.be_shutdown_redirect);
     localStatsStore(&stats->logical_counters[localLogicalRouteBeUnclassifiedMessages], snapshot.be_unclassified);
+    localStatsStore(&stats->logical_counters[localLogicalRouteBeInternalMessages], snapshot.be_internal);
+    localStatsStore(&stats->logical_counters[localLogicalRouteBeCapacityExhaustedMessages],
+                    snapshot.be_capacity_exhausted);
     localStatsStore(&stats->logical_counters[localLogicalBePhysicalMessages], snapshot.be_physical);
     localStatsStore(&stats->logical_counters[localLogicalBeActiveMessages], snapshot.be_active);
     localStatsStore(&stats->logical_counters[localLogicalFeQueuedMessages], snapshot.fe_queued);
@@ -225,6 +257,9 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
     localStatsStore(&stats->logical_counters[localLogicalConfiguredFrontends], snapshot.configured_frontends);
     localStatsStore(&stats->logical_counters[localLogicalTransferFeToBeMessages], snapshot.transferred);
     localStatsStore(&stats->logical_counters[localLogicalAllocationBytes], snapshot.allocation_bytes);
+    localStatsStore(&stats->logical_counters[localLogicalBeDequeueBatches], snapshot.be_dequeue_batches);
+    localStatsStore(&stats->logical_counters[localLogicalBeDequeueMessages], snapshot.be_dequeue_messages);
+    localStatsStore(&stats->logical_counters[localLogicalBeDequeueMax], snapshot.be_dequeue_max);
 }
 
 static void localFrontendStatsPreRead(statsobj_t *const object, void *const context) {
@@ -246,10 +281,14 @@ static void localFrontendStatsPreRead(statsobj_t *const object, void *const cont
     localStatsStore(&frontend->counters[localFrontendIngressMessages], snapshot.attempts);
     localStatsStore(&frontend->counters[localFrontendAdmittedMessages], snapshot.published);
     localStatsStore(&frontend->counters[localFrontendAdmittedBatches], snapshot.published_batches);
+    localStatsStore(&frontend->counters[localFrontendSubmittedBatches], snapshot.submitted_batches);
+    localStatsStore(&frontend->counters[localFrontendSubmittedMax], snapshot.submitted_max);
     localStatsStore(&frontend->counters[localFrontendTerminalMessages], snapshot.terminal);
     localStatsStore(&frontend->counters[localFrontendOverflowMessages], snapshot.overflow);
     localStatsStore(&frontend->counters[localFrontendOverflowNoFitMessages], snapshot.nofit);
     localStatsStore(&frontend->counters[localFrontendOverflowOversizedMessages], snapshot.oversized);
+    localStatsStore(&frontend->counters[localFrontendOverflowBatches], snapshot.overflow_batches);
+    localStatsStore(&frontend->counters[localFrontendOversizedBatches], snapshot.oversized_batches);
     localStatsStore(&frontend->counters[localFrontendTransferToBeMessages], snapshot.transferred);
     localStatsStore(&frontend->counters[localFrontendShutdownDiscardedMessages], snapshot.shutdown_discarded);
     localStatsStore(&frontend->counters[localFrontendProducerExited], snapshot.producer_exited);

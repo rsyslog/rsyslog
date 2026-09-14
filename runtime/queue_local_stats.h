@@ -14,6 +14,9 @@
 typedef struct queue_s qqueue_t;
 typedef struct qqueueLocalStats_s qqueueLocalStats_t;
 
+/* Obtain the adapter's private statsobj interface before construction. */
+rsRetVal qqueueLocalStatsClassInit(void);
+
 /*
  * Construct the always-on logical summary and, when frontend_detail is set,
  * one fixed stats object for every configured frontend slot.  frontend_limit
