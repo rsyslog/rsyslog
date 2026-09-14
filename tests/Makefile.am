@@ -929,7 +929,6 @@ TESTS_IMTCP = \
 	imtcp-multiline.sh \
 	imtcp-spacelf-escape.sh \
 	imtcp-basic-hup.sh \
-	imtcp-shutdown-pending-accepts.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
 	imtcp-starvation-1.sh \
@@ -963,6 +962,9 @@ TESTS_IMTCP = \
 	omfile-dynafile-traversal-repro.sh \
 	omfile-dynafile-traversal-root-base.sh
 
+# The pending-accepts fixture exercises epoll's worker/listener teardown.
+# Poll has its own deterministic inner-workset shutdown regression.
+TESTS_IMTCP_EPOLL = imtcp-shutdown-pending-accepts.sh
 TESTS_IMTCP_POLL = imtcp-poll-shutdown-workset.sh
 
 TESTS_IMTCP_STREAM_ALWAYS_ZLIB = \
@@ -2528,6 +2530,7 @@ EXTRA_DIST += $(TESTS_LIBYAML_OSSL)
 EXTRA_DIST += $(TESTS_LIBYAML_IMHTTP)
 EXTRA_DIST += $(TESTS_LIBYAML_OMSTDOUT)
 EXTRA_DIST += $(TESTS_IMTCP)
+EXTRA_DIST += $(TESTS_IMTCP_EPOLL)
 EXTRA_DIST += $(TESTS_IMTCP_POLL)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB)
 EXTRA_DIST += $(TESTS_IMTCP_STREAM_ALWAYS_ZLIB_IMPSTATS)
@@ -3223,6 +3226,7 @@ endif # ENABLE_IMFILE_TESTS
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP)
 if ENABLE_IMTCP_EPOLL
+TESTS += $(TESTS_IMTCP_EPOLL)
 else
 TESTS += $(TESTS_IMTCP_POLL)
 endif
