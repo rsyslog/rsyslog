@@ -164,6 +164,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 typedef struct _instanceData {
     sbool localNumericError; /* retain original numeric domain for local qualification */
     sbool localQualified; /* preopened synchronous stream; cancellation cleanup owns mutWrite */
+    modConfData_t *localModConf; /* borrowed resolved module configuration, including legacy instances */
     pthread_mutex_t mutWrite; /**< guard against multiple instances writing to single file */
     uchar *fname; /**< file or template name (display only) */
     uchar *tplName; /**< name of assigned template */
@@ -1566,6 +1567,7 @@ ENDfreeCnf
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->pStrm = NULL;
+    pData->localModConf = loadModConf;
     pData->bAddLF = 1;
     pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
@@ -2231,11 +2233,12 @@ ENDmodExit
  * qualification, never a generic nonblocking-output claim. */
 static rsRetVal localQueueCheckAction(void *const instance) {
     instanceData *const pData = instance;
-    if (pData == NULL || pData->localNumericError || pData->fname == NULL || pData->fname[0] != '/' ||
-        pData->bDynamicName || pData->bUseAsyncWriter || pData->iZipLevel != 0 || pData->bVeryRobustZip ||
-        pData->bSyncFile || pData->iSizeLimit != 0 || pData->pszSizeLimitCmd != NULL || pData->useSigprov ||
-        pData->sigprovName != NULL || pData->useCryprov || pData->cryprovName != NULL || !pData->bFlushOnTXEnd ||
-        pData->iCloseTimeout != 0)
+    if (pData == NULL || pData->localNumericError || pData->localModConf == NULL ||
+        pData->localModConf->localNumericError || pData->localModConf->compressionDriver != STRM_COMPRESS_ZIP ||
+        pData->fname == NULL || pData->fname[0] != '/' || pData->bDynamicName || pData->bUseAsyncWriter ||
+        pData->iZipLevel != 0 || pData->bVeryRobustZip || pData->bSyncFile || pData->iSizeLimit != 0 ||
+        pData->pszSizeLimitCmd != NULL || pData->useSigprov || pData->sigprovName != NULL || pData->useCryprov ||
+        pData->cryprovName != NULL || !pData->bFlushOnTXEnd || pData->iCloseTimeout != 0)
         return RS_RET_LOCAL_QUEUE_CONFIG;
     pData->localQualified = 1;
     return RS_RET_OK;
