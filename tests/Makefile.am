@@ -14,6 +14,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag.sh \
 	unit/README.md
 
+TESTS_LOCAL_OMFILE_CANCEL = local-queue-omfile-cancel.sh local-queue-omfile-activation.sh
+EXTRA_DIST += $(TESTS_LOCAL_OMFILE_CANCEL)
+
 TESTS_FUZZING = \
 	fuzz-syslog-message-smoke.sh \
 	fuzz-imtcp-session-smoke.sh
@@ -2861,6 +2864,16 @@ endif
 TEST_LIBOVERRIDE_LDFLAGS = -module -shared -avoid-version -rpath $(abs_builddir)
 
 if ENABLE_TESTBENCH
+if ENABLE_IMTCP
+if ENABLE_IMDIAG
+TESTS += $(TESTS_LOCAL_OMFILE_CANCEL)
+check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
+liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
+liblocal_queue_omfile_cancel_preload_la_CFLAGS =
+liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
+liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
+endif
+endif
 check_LTLIBRARIES += liboverride_gethostname.la
 liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
