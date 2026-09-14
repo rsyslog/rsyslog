@@ -205,6 +205,7 @@
 
 #include "rsyslog.h"
 #include "queue.h"
+#include "queue_lease.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "obj.h"
@@ -674,6 +675,19 @@ static void qqueueSetWtiShutdownImmediate(qqueue_t *const pThis, wti_t *const pW
 #ifndef HAVE_ATOMIC_BUILTINS
     pWti->pmutShutdownImmediate = &pThis->mutShutdownImmediate;
 #endif
+}
+
+/* The worker framework holds pWtp->pmutUsr while it invokes queue callbacks.
+ * A shared mutex alone is not permission to service another queue: S1 only
+ * records batches acquired from the pool's own user queue. */
+static rsRetVal qqueueBindWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseBind(
+        &pWti->source_queue, &pWti->logical_owner, pThis, pThis->pqParent == NULL ? pThis : pThis->pqParent,
+        pWti->pWtp == NULL ? NULL : pWti->pWtp->pUsr, pWti->pWtp == NULL ? NULL : pWti->pWtp->pmutUsr, pThis->mut);
+}
+
+static rsRetVal qqueueClearWtiSource(qqueue_t *const pThis, wti_t *const pWti) {
+    return qqueueLeaseClear(&pWti->source_queue, &pWti->logical_owner, pThis);
 }
 
 
@@ -3098,6 +3112,7 @@ static void qqueueDeferBatch(wti_t *const pWti) {
  */
 static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     batch_t *const pBatch = &pWti->batch;
+    const int hadResponsibility = qqueueLeaseHasResponsibility(pBatch->nElem, pBatch->nElemDeq, pBatch->storeData);
     int i;
     smsg_t *pMsg;
     int nEnqueued = 0;
@@ -3130,6 +3145,10 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
         ATOMIC_SUB(&pThis->nLogDeq, committed, &pThis->mutLogDeq);
         qqueueDeferBatch(pWti);
         pBatch->storeData = NULL;
+        if (hadResponsibility) {
+            iRet = qqueueClearWtiSource(pThis, pWti);
+            if (iRet != RS_RET_OK) RETiRet;
+        }
         RETiRet;
     }
 
@@ -3155,6 +3174,7 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, wti_t *pWti) {
     iRet = DeleteBatchFromQStore(pThis, pBatch);
 
     qqueueDeferBatch(pWti);
+    if (iRet == RS_RET_OK && hadResponsibility) iRet = qqueueClearWtiSource(pThis, pWti);
 
     RETiRet;
 }
@@ -3188,6 +3208,9 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     nDeleted = pWti->batch.nElemDeq;
     localRet = DeleteProcessedBatch(pThis, pWti);
     if (pThis->qCompleteBatch != NULL) CHKiRet(localRet);
+    /* The previous lease was cleared only after retirement. Bind before every
+     * outcome of the next acquisition, including idle and store errors. */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
 
     nDequeued = nDiscarded = 0;
     if (pThis->qDeqBatch != NULL) {
@@ -3632,12 +3655,24 @@ static rsRetVal DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSki
     ISOBJ_TYPE_assert(pThis, qqueue);
     ISOBJ_TYPE_assert(pWti, wti);
 
+    /* Do not overwrite a prior source before its completion at the front of
+     * DequeueConsumableElements(). */
+    CHKiRet(qqueueBindWtiSource(pThis, pWti));
+
 retry_dequeue:
     CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
     if (pWti->batch.nElem == 0) ABORT_FINALIZE(RS_RET_IDLE);
 
 finalize_it:
+    /* An idle acquisition has no batch to retire. All other non-OK paths keep
+     * their attribution so a store context or partial dequeue cannot be
+     * completed through a callback owner's queue by mistake. */
+    if (iRet == RS_RET_IDLE &&
+        !qqueueLeaseHasResponsibility(pWti->batch.nElem, pWti->batch.nElemDeq, pWti->batch.storeData)) {
+        const rsRetVal clearRet = qqueueClearWtiSource(pThis, pWti);
+        if (clearRet != RS_RET_OK) iRet = clearRet;
+    }
     if (iRet != RS_RET_OK && pWti->n_deferred_msgs != 0) {
         qqueueDrainDeferredLocked(pThis, pWti);
         /* An enqueue during disposal could not signal us as a waiter yet.
@@ -3665,18 +3700,176 @@ static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti) {
     ISOBJ_TYPE_assert(pWti, wti);
 
     int iCancelStateSave;
+    qqueue_t *const pSource = pWti->source_queue;
     /* DeleteProcessedBatch() defers final message destruction by resetting
      * the batch counters, so retain the dequeue count for checkpointing. */
     const int nElemDeq = pWti->batch.nElemDeq;
     /* at this spot, we must not be cancelled */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-    DeleteProcessedBatch(pThis, pWti);
-    qqueueChkPersist(pThis, nElemDeq);
-    qqueueDrainDeferredLocked(pThis, pWti);
+    if (pSource != NULL) {
+        /* The callback owner can differ from the physical source. The source
+         * is authoritative after the pool-user and mutex validation above. */
+        CHKiRet(qqueueBindWtiSource(pSource, pWti));
+    }
+    iRet = DeleteProcessedBatch(pSource == NULL ? pThis : pSource, pWti);
+    if (iRet == RS_RET_OK) qqueueChkPersist(pSource == NULL ? pThis : pSource, nElemDeq);
+    qqueueDrainDeferredLocked(pSource == NULL ? pThis : pSource, pWti);
+
+finalize_it:
     pthread_setcancelstate(iCancelStateSave, NULL);
 
     RETiRet;
 }
+
+#ifdef ENABLE_TESTBENCH
+/* This fixture reaches the production terminal-completion functions with a
+ * source queue and a separate callback owner. It uses a completion callback
+ * as a queue-layer fault seam: no store writes occur, but the source lease,
+ * opaque storeData retention, counter, and deferred-cleanup branches execute.
+ * It intentionally does not construct segmented-store on-disk state. */
+static rsRetVal qqueueLeaseTestCompleteOK(qqueue_t *pThis,
+                                          batch_t __attribute__((unused)) * pBatch,
+                                          int *const committed,
+                                          int *const retried) {
+    ++pThis->segdiskCorruptionEvents;
+    *committed = 1;
+    *retried = 0;
+    return RS_RET_OK;
+}
+
+static rsRetVal qqueueLeaseTestCompleteFail(qqueue_t *pThis,
+                                            batch_t __attribute__((unused)) * pBatch,
+                                            int *const committed,
+                                            int *const retried) {
+    ++pThis->segdiskCorruptionEvents;
+    *committed = 0;
+    *retried = 0;
+    return RS_RET_IO_ERROR;
+}
+
+static void qqueueLeaseTestInitQueue(qqueue_t *const pThis, pthread_mutex_t *const mut, objInfo_t *const info) {
+    memset(pThis, 0, sizeof(*pThis));
+    pThis->objData.pObjInfo = info;
+    #ifndef NDEBUG
+    pThis->objData.iObjCooCKiE = 0xBADEFEE;
+    #endif
+    pThis->qType = QUEUETYPE_SEGMENTED_DISK;
+    pThis->mut = mut;
+    pthread_cond_init(&pThis->notFull, NULL);
+    pThis->iQueueSize = 1;
+    pThis->nLogDeq = 1;
+    INIT_ATOMIC_HELPER_MUT(pThis->mutQueueSize);
+    INIT_ATOMIC_HELPER_MUT(pThis->mutLogDeq);
+}
+
+/* Exercise the real terminal completion path with a source queue distinct
+ * from the callback owner. The imdiag testbench command invokes this from an
+ * initialized daemon; no configured queue or worker is touched. */
+rsRetVal qqueueTestLeaseCompletionPaths(void) {
+    qqueue_t source;
+    qqueue_t callback_owner;
+    wtp_t pool;
+    wti_t worker;
+    pthread_mutex_t source_mut = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t callback_mut = PTHREAD_MUTEX_INITIALIZER;
+    objInfo_t queue_info = {.pszID = UCHAR_CONSTANT("qqueue")};
+    objInfo_t wti_info = {.pszID = UCHAR_CONSTANT("wti")};
+    int store_context;
+    batch_obj_t retained_element = {.pMsg = (smsg_t *)&store_context};
+    batch_state_t retained_state = BATCH_STATE_COMM;
+    DEFiRet;
+
+    qqueueLeaseTestInitQueue(&source, &source_mut, &queue_info);
+    qqueueLeaseTestInitQueue(&callback_owner, &callback_mut, &queue_info);
+    /* Model a DA child whose logical root receives the completion callback. */
+    source.pqParent = &callback_owner;
+    callback_owner.iQueueSize = 17;
+    callback_owner.nLogDeq = 17;
+    memset(&pool, 0, sizeof(pool));
+    pool.pUsr = &source;
+    pool.pmutUsr = &source_mut;
+    memset(&worker, 0, sizeof(worker));
+    worker.objData.pObjInfo = &wti_info;
+    #ifndef NDEBUG
+    worker.objData.iObjCooCKiE = 0xBADEFEE;
+    #endif
+    worker.pWtp = &pool;
+    worker.source_queue = &source;
+    worker.logical_owner = &callback_owner;
+    worker.batch.maxElem = 1;
+    worker.batch.nElemDeq = 1;
+    worker.batch.storeData = &store_context;
+    worker.p_deferred_msgs = calloc(1, sizeof(smsg_t *));
+    if (worker.p_deferred_msgs == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+    source.qCompleteBatch = qqueueLeaseTestCompleteOK;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    /* The synthetic source is not registered with the daemon. Compensate the
+     * diagnostic aggregate that normal physical completion updates so this
+     * isolated fixture cannot perturb the initialized main queue's oracle. */
+    if (iRet == RS_RET_OK) qqueueAddOverallQueueSize(1);
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 1 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
+        callback_owner.segdiskCorruptionEvents != 0 || callback_owner.iQueueSize != 17 ||
+        callback_owner.nLogDeq != 17 || worker.source_queue != NULL || worker.logical_owner != NULL ||
+        worker.batch.storeData != NULL || worker.batch.nElemDeq != 0 || worker.n_deferred_msgs != 0) {
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+
+    source.iQueueSize = 1;
+    source.nLogDeq = 1;
+    source.segdiskCorruptionEvents = 0;
+    worker.source_queue = &source;
+    worker.logical_owner = &callback_owner;
+    worker.batch.nElem = 1;
+    worker.batch.nElemDeq = 1;
+    worker.batch.pElem = &retained_element;
+    worker.batch.eltState = &retained_state;
+    worker.batch.storeData = &store_context;
+    source.qCompleteBatch = qqueueLeaseTestCompleteFail;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    if (iRet != RS_RET_IO_ERROR || source.segdiskCorruptionEvents != 1 || source.iQueueSize != 1 ||
+        source.nLogDeq != 1 || callback_owner.segdiskCorruptionEvents != 0 || worker.source_queue != &source ||
+        worker.logical_owner != &callback_owner || worker.batch.storeData != &store_context ||
+        worker.batch.nElem != 1 || worker.batch.nElemDeq != 1 || worker.batch.pElem != &retained_element ||
+        worker.batch.eltState != &retained_state || retained_element.pMsg != (smsg_t *)&store_context ||
+        retained_state != BATCH_STATE_COMM || worker.n_deferred_msgs != 0) {
+        iRet = RS_RET_INTERNAL_ERROR;
+        goto finalize_it;
+    }
+
+    /* Restore a consuming completion callback and retire the retained opaque
+     * context through the same terminal path before dismantling the fixture. */
+    source.qCompleteBatch = qqueueLeaseTestCompleteOK;
+    worker.batch.nElem = 0;
+    worker.batch.pElem = NULL;
+    worker.batch.eltState = NULL;
+    d_pthread_mutex_lock(&source_mut);
+    iRet = batchProcessed(&callback_owner, &worker);
+    d_pthread_mutex_unlock(&source_mut);
+    if (iRet == RS_RET_OK) qqueueAddOverallQueueSize(1);
+    if (iRet != RS_RET_OK || source.segdiskCorruptionEvents != 2 || source.iQueueSize != 0 || source.nLogDeq != 0 ||
+        worker.source_queue != NULL || worker.logical_owner != NULL || worker.batch.storeData != NULL ||
+        worker.batch.nElemDeq != 0 || worker.n_deferred_msgs != 0) {
+        iRet = RS_RET_INTERNAL_ERROR;
+    }
+
+finalize_it:
+    free(worker.p_deferred_msgs);
+    DESTROY_ATOMIC_HELPER_MUT(source.mutQueueSize);
+    DESTROY_ATOMIC_HELPER_MUT(source.mutLogDeq);
+    DESTROY_ATOMIC_HELPER_MUT(callback_owner.mutQueueSize);
+    DESTROY_ATOMIC_HELPER_MUT(callback_owner.mutLogDeq);
+    pthread_cond_destroy(&source.notFull);
+    pthread_cond_destroy(&callback_owner.notFull);
+    pthread_mutex_destroy(&source_mut);
+    pthread_mutex_destroy(&callback_mut);
+    RETiRet;
+}
+#endif
 
 
 /* This is the queue consumer in the regular (non-DA) case. It is
@@ -3725,7 +3918,7 @@ static rsRetVal ConsumerReg(qqueue_t *pThis, wti_t *pWti) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
 
 
-    qqueueSetWtiShutdownImmediate(pThis, pWti);
+    qqueueSetWtiShutdownImmediate(pWti->source_queue == NULL ? pThis : pWti->source_queue, pWti);
     CHKiRet(pThis->pConsumer(pThis->pAction, &pWti->batch, pWti));
 
     /* we now need to check if we should deliberately delay processing a bit
