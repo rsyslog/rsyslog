@@ -31,6 +31,34 @@ localq_wait_stats() {
 	error_exit 1
 }
 
+# Wait for a numeric counter to exceed another counter or a literal bound.
+# Callers establish a stable phase: for example the held dedicated callback
+# fixes BE active holdings while any producer may add pending BE inventory.
+localq_wait_stats_greater() {
+    local stats_file="$1" record="$2" left="$3" right="$4"
+    local deadline=$(( $(date +%s) + TB_TEST_TIMEOUT ))
+    local line left_count right_count
+    while [ "$(date +%s)" -le "$deadline" ]; do
+        line=$(grep -F "${record}: origin=core.queue.local " "$stats_file" 2>/dev/null | tail -n 1 || true)
+        read -r left_count right_count < <(printf '%s\n' "$line" | awk -v lhs="$left" -v rhs="$right" '
+            BEGIN { r = rhs ~ /^[0-9]+$/ ? rhs : "" }
+            { for (i = 1; i <= NF; ++i) {
+                split($i, field, "=")
+                if (field[1] == lhs) l = field[2]
+                if (field[1] == rhs) r = field[2]
+            } }
+            END { print l, r }')
+        if [[ "$left_count" =~ ^[0-9]+$ && "$right_count" =~ ^[0-9]+$ ]] &&
+            [ "$left_count" -gt "$right_count" ]; then
+            printf 'local queue stats reached %s > %s: %s\n' "$left" "$right" "$line"
+            return
+        fi
+        $TESTTOOL_DIR/msleep 100
+    done
+    printf 'FAIL: local queue stats did not reach %s > %s; last record: %s\n' "$left" "$right" "$line"
+    error_exit 1
+}
+
 # As above, but use ERE field expressions when a counter is deliberately
 # nonzero and its exact scheduling-dependent value is not part of the contract.
 localq_wait_stats_regex() {

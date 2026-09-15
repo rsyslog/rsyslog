@@ -189,6 +189,7 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-help-wake-after.sh \
 	local-queue-help-wake-handoff.sh \
 	local-queue-imtcp-tiered.sh \
+	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-partial-batch.sh \
 	local-queue-imtcp-shutdown.sh \
 	local-queue-force-term-actions.sh \
@@ -199,7 +200,6 @@ TESTS_LOCAL_QUEUE = \
 	local-queue-redirect-publication.sh
 TESTS_LOCAL_QUEUE_EPOLL = \
 	local-queue-imtcp-registration.sh \
-	local-queue-imtcp-internal.sh \
 	local-queue-imtcp-shutdown-multi-fe.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE) $(TESTS_LOCAL_QUEUE_EPOLL) local-queue-common.sh
 

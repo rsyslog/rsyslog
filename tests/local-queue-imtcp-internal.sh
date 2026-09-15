@@ -1,12 +1,12 @@
 #!/bin/bash
-# Verify an actual INTERNAL_MSG enters the local queue's BE. Two concurrent
-# imtcp submissions meet omtesting's existing two-callback barrier; its ordinary
-# each callback emits one controlled INTERNAL_MSG. The qualified Direct marker
-# file is the exact two-message oracle, and a positive internal-route counter
-# proves that internal traffic is attributed to the BE. Startup diagnostics may
-# also be internal traffic, so their lifetime counter is intentionally nonzero
-# rather than a fixture-specific exact total. The test never assigns a connection to
-# an actual producer: only the barrier's two real callbacks release the phase.
+# Verify controlled INTERNAL_MSG records enter BE. One actual imtcp producer
+# first holds an FE callback at omtesting's two-callback barrier. Only after
+# that FE lease is observed does imdiag submit the second message directly to
+# BE, where the dedicated worker releases the barrier. Each callback emits one
+# controlled internal diagnostic. Exact normal/internal output counts, one FE
+# admission, and a BE internal-route increase of at least two prove the routes.
+# File/counter predicates establish the phases; a connection count is never
+# assumed to imply independent producers, and timeout is only a hang watchdog.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -25,7 +25,7 @@ module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.sys
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" address="127.0.0.1" port="0"
-	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="2")
+	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
 	queue.local.frontendSize="8" queue.local.maxFrontends="2" queue.local.frontendStats="on")
@@ -39,16 +39,21 @@ if ($msg contains "omtesting synchronized error") then
 		asyncWriting="off" flushOnTXEnd="on")
 '
 startup
-tcpflood -m1 -i0 &
-sender_a=$!
-tcpflood -m1 -i1 &
-sender_b=$!
-wait "$sender_a" || error_exit $?
-wait "$sender_b" || error_exit $?
+tcpflood -m1 -i0
+localq_wait_stats "$STATSFILE" "main Q.local" \
+    "fe.registered=1" "fe.inflight.messages=1" "fe.queued.messages=0"
+before_internal=$(grep -F "main Q.local: origin=core.queue.local " "$STATSFILE" | tail -n 1 | \
+    sed -n 's/.* route.be.reason.internal.messages=\([0-9][0-9]*\).*/\1/p')
+case "$before_internal" in ''|*[!0-9]*) error_exit 1 'missing internal-route baseline' ;; esac
 
-localq_wait_stats_regex "$STATSFILE" "main Q.local" "route.be.reason.internal.messages=[1-9][0-9]*"
+# The first callback cannot consume this unclassified imdiag submission from
+# its own FE ring. Its BE worker is a distinct execution context by construction.
+injectmsg 1 1
 wait_file_lines --abort-on-oversize "$NORMAL_OUT" 2
 wait_file_lines --abort-on-oversize "$INTERNAL_OUT" 2
+localq_wait_stats_greater "$STATSFILE" "main Q.local" \
+    route.be.reason.internal.messages "$((before_internal + 1))"
+localq_wait_stats "$STATSFILE" "main Q.local" "route.fe.messages=1"
 shutdown_when_empty
 wait_shutdown
 exit_test

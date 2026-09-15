@@ -56,11 +56,15 @@ tcpflood -m1 -i1
 wait_file_lines "$RSYSLOG_OUT_LOG" 1
 if [ -n "${LOCAL_QUEUE_HELP_GATE:-}" ]; then
     wait_file_lines "$GATE_ENTRY" 1
-    # The after-registration gate holds FE, so admission may block delivering
-    # its signal. Keep this producer owned and join it after external release.
+    # The after-registration gate holds FE, so any BE producer may own BE
+    # while waiting to deliver its signal. An internal diagnostic can arrive
+    # before imdiag; wait for pending BE inventory rather than requiring one
+    # particular producer to acquire that already-held mutex. The dedicated
+    # callback fixes active holdings until the later BE_RELEASE phase.
+    # Keep the imdiag producer owned and join it after external gate release.
     injectmsg 2 1 &
     inject_pid=$!
-    localq_wait_stats "$STATSFILE" "main Q.local" 'route.be.reason.unclassified.messages=2'
+    localq_wait_stats_greater "$STATSFILE" "main Q.local" be.physical.messages be.active.messages
     localq_release_barrier "$GATE_RELEASE"
     wait "$inject_pid" || error_exit 1
 else
