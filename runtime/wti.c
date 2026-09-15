@@ -404,6 +404,7 @@ static void wtiWorkerCancelCleanup(void *arg) {
     }
     pWtp->pfObjProcessed(pWtp->pUsr, pThis);
     d_pthread_mutex_unlock(pWtp->pmutUsr);
+    qqueueLocalProducerExit(NULL);
     DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 }
 
@@ -533,7 +534,10 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
         }
 
         /* try to execute and process whatever we have */
+        const int graphProducer = ((qqueue_t *)pWtp->pUsr)->localGraphConf != NULL;
+        if (graphProducer) qqueueLocalProducerEnter();
         localRet = pWtp->pfDoWork(pWtp->pUsr, pThis);
+        if (graphProducer) qqueueLocalProducerLeave();
 
         if (localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
             break; /* end of loop */
@@ -571,6 +575,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
     d_pthread_mutex_unlock(pWtp->pmutUsr);
 
     wtiDisposeActionState(pThis);
+    qqueueLocalProducerExit(NULL);
 
     /* indicate termination */
     pthread_cleanup_pop(0); /* remove cleanup handler */

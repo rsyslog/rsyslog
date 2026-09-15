@@ -100,6 +100,15 @@ struct queue_s {
         struct qqueueLocalFrontend_s *localSource; /* private FE source, never a DA parent */
         /* Experimental local configuration; immutable after the shared activation gate. */
         sbool bLocalScope;
+        struct queue_s *localRetiredDA; /* emergency-detached child, retained through graph join */
+        rsconf_t *localGraphConf; /* graph owner; NULL outside qualified local configurations */
+        sbool localGraphReady; /* queue mutex: all graph destinations initialized */
+        sbool localDAActive; /* BE mutex: DA transfer has priority over optional FE helpers */
+        sbool localDASaving; /* joined callback pools; existing persistence phase */
+        sbool localGraphStopped; /* shutdown-owner only, before object destruction */
+        sbool localGraphClosed; /* admission predicate, protected by queue mutex */
+        sbool localGraphDraining; /* deadline published under queue mutex */
+        struct timespec localGraphActionDeadline;
         int localFrontendSize;
         int localMaxFrontends;
         sbool localFrontendStats;
@@ -309,6 +318,9 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
+void qqueueActivateGraphNode(qqueue_t *queue);
+rsRetVal qqueueFinalizeGraphNode(qqueue_t *queue);
+rsRetVal qqueueShutdownGraphNode(qqueue_t *queue, const struct timespec *graceful, const struct timespec *action);
 void qqueueDoneLoadCnf(void);
 int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
 void qqueueCorrectParams(qqueue_t *pThis);

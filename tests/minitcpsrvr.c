@@ -36,7 +36,7 @@
     #include <netinet/in.h>
 #endif
 
-#define MAX_CONNECTIONS 10
+#define MAX_CONNECTIONS 32
 /* Keep complete testbench records buffered per connection. The segmented DA
  * TCP spill regression deliberately uses multi-kilobyte messages so TCP
  * backpressure cannot be hidden by buffers. The historic 1 KiB buffer treated

@@ -131,7 +131,8 @@ wait_shutdown
 wait_file_lines "$STOP_BASE" 1
 if [ "$borrowed" -eq 1 ]; then
     exec {dedicated_hold_fd}>&-
-    if ! grep -Eq ' transferred=0 help.completed=[1-9][0-9]* help.returned=1$' "$STOP_BASE"; then
+    # Match a complete counter value while allowing appended S5 outcome fields.
+    if ! grep -Eq ' transferred=0 help.completed=[1-9][0-9]* help.returned=1( |$)' "$STOP_BASE"; then
         error_exit 1 'borrowed lease was not returned once to its BE source'
     fi
 fi

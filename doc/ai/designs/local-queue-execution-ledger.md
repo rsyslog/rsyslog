@@ -663,3 +663,243 @@ The final immutable test snapshot is `2dac14fa2f682ecae9b798b09593d5ed7d437856`;
 Earlier broad attempts are not hidden: the first had four failures (1,600 PASS/69 SKIP), the second one (1,603 PASS/69 SKIP). Two fixture assumptions were corrected in `f35c8cb2`: the held wake gate must release after any BE pending admission, not a particular producer; and two TCP connections do not establish two producer identities. The internal-message fixture now constructs one FE and one BE callback explicitly. TLS readiness and segmented-DA event-property tests passed isolated checks. The remaining HUP fixture assumed BE routing selected a fresh, healthy dedicated worker; S3 helpers preserve their existing action suspension state. `2dac14fa2` pins that S2 HUP ownership oracle to helper limit zero, preserving failed-open/no-lazy-open/recovery checks. The final broad rerun then passed. These fixes change tests, not the measured runtime.
 
 Exact commands, per-test failures, image identity, source equivalence, isolated checks and final verdict are retained in `s3-campaign/final-validation`. Late memory/concurrency prompt audits are in `late-audit.md`; the independent concurrency review and TSan control evidence remain separate. The security review is a final digest-bound artifact in ignored `.codex/security-review/`; check its matching receipt before claiming PR readiness. Hosted checks/review threads still refer to the previously published PR head, and no push is part of these S3 measurements or local validation claims.
+
+## S4: memory queue graphs and output compatibility, 2026-09-15
+
+Implementation is based on S3 checkpoint `58570a0fd`, including the subsequent
+small omfwd benchmark experiment. The consumer API remains unchanged. Static
+ruleset calls and queued actions may lead to local or global memory queues;
+actual FE/BE execution threads register downstream producers. Synchronous calls
+retain worker state. `action.copyMsg` retains its existing meaning; the mutation
+test explicitly enables copying at the asynchronous action boundary.
+
+Configuration builds an immutable queue dependency graph. Elasticsearch retry
+destinations contribute explicit edges, including the main-queue destination
+when no separate retry queue is selected. Cycles and dynamic indirect calls are
+rejected. Global FixedArray/LinkedList nodes can merge upstream work and produce
+downstream local fronts. Local storage remains FixedArray; disk/DA is still S5.
+
+Graph shutdown joins upstream workers before closing downstream queues and
+retains every queue object until graph termination. The graph uses the maximum
+configured queue grace period and maximum action-completion period as two shared
+absolute monotonic deadlines, not renewed per node. Full downstream enqueue
+waits respect the action deadline instead of treating input termination as
+proof that no upstream producer remains. Destruction of Direct or unstarted
+graph members also stops the graph before freeing any graph-referenced queue.
+
+omfwd uses worker-local active connection counts for connection and suspension
+decisions; shared counts remain telemetry. Local networkNamespace is rejected
+because the saved namespace descriptor is shared mutable module state. The
+Elasticsearch module keeps its existing curl/bulk/partial-commit state and
+exposes retry destinations to graph validation. Tests distinguish early
+connection failure with script fallback from late transaction failure, which
+cannot retroactively select an earlier script branch.
+
+All eleven new focused tests passed in the pinned Ubuntu 26.04 image, including
+native RainerScript/YAML graph validation, mutation isolation, a global middle
+queue, Direct main, full-downstream shutdown, three TCP output scenarios and two
+actual Elasticsearch-module HTTP fixtures. The latter exercise mixed item
+success/429/400 results, an acyclic retry ruleset, and legacy partial flushes.
+They do not substitute for production Elasticsearch service qualification.
+Existing local configuration, default helping, wake handoff, borrowed replay and
+startup-failure regressions also passed. Independent core concurrency review
+found no additional required changes after the destructor lifetime fixes.
+
+Fixture corrections are recorded rather than hidden: the graph burst must be
+divisible across its two sender connections; shutdown FIFO descriptors are
+preopened so worker wake signals cannot interrupt a blocking FIFO open; and the
+legacy test-barrier module must load before Elasticsearch's no-legacy handler.
+The shutdown marker establishes graph entry before releases, and exact output
+inventory remains the success oracle.
+
+ASan/UBSan and TSan each passed all nine new runtime scenarios (the two
+configuration-only wrappers are covered separately), without a new suppression.
+Mock distcheck passed. Clang first rejected a declaration immediately after an
+omfwd label in the older C dialect; moving the declaration to function scope
+fixed that build error without changing behavior. Final container results and
+exact commands are recorded in
+`/home/rger/rsyslog-local-queue-artifacts/s4-campaign/`; the coordinator's focused
+logs and late audit are in the sibling `s4/` directory. No additional performance campaign
+has been performed for S4; production contention/performance qualification remains
+open. The previous single-run omfwd screen and baseline lock diagnostic remain
+in `omfwd-campaign/quick-three`, separate from stage correctness evidence.
+
+### Final S4 validation disposition
+
+S4 is implemented, but **not fully container-validated**. The first broad
+Ubuntu 26.04 run had 1,684 tests: 1,613 PASS, 69 SKIP, two FAIL. Both failures
+(`sndrcv_omsnmpv1_udp_dynsource.sh` and `mmnormalize-hup-reload.sh`) passed in
+isolation on unchanged source. One unchanged broad retry had 1,614 PASS,
+69 SKIP and one different failure, `omfwd-tls-gtls-module-files-mtls.sh`: its
+OpenSSL helper did not produce the port file. All eleven S4 tests passed in
+both broad runs. Isolated passes do not convert either broad run into a pass;
+no further retry campaign was performed.
+
+The analyzer reported only the known baseline `tools/rsyslogd.c:1871` warning.
+Final validation used `rsyslog/rsyslog_dev_base_ubuntu:26.04`, image ID
+`sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`,
+broad build/check concurrency 60 and analyzer/sanitizer build concurrency 20.
+Exact commands, source provenance, sanitizer results, lane restrictions and
+failure history are retained in
+`/home/rger/rsyslog-local-queue-artifacts/s4-campaign/final-validation/s4-final-validation-evidence.md`.
+Real Elasticsearch-node qualification was not run; the actual output module
+was exercised against controlled HTTP fixtures, following its module guide.
+The prior forced-cancellation TSan tooling limitation remains as recorded in
+S3; no new queue suppression was introduced.
+
+Security review is recorded separately in the ignored, digest-bound
+`.codex/security-review/receipt.json`; its current status must be checked
+against freshly generated input. Hosted PR checks and AI reviews cover the
+previously published head, not this local S4 work. No push is part of this step.
+
+## S5: existing DA integration, 2026-09-15
+
+Both classic and segmented disk assistance reuse their existing storage engines,
+engine-selection markers, logical spool names, disk controls, spill/recovery and
+save-on-shutdown behavior. No persistence format or consumer API changes were
+introduced. Local fronts still use the FixedArray memory BE; this is not a new
+pure-disk local queue type. Existing general option restrictions remain S6 work.
+
+The integration removes DA activation restrictions, constructs family state before
+recovery, and releases graph workers only after every queue destination has
+started. FE helping respects existing DA arbitration and remains memory-only.
+Accepted internal retry admission is distinguished from new external admission
+when a graph queue closes. A detached emergency disk child remains lifetime-owned
+for graph join/destruction while retaining the existing memory fallback policy.
+
+Graph shutdown now has two passes. The first closes/joins callback pools in
+upstream-to-downstream order under shared graceful/action deadlines. After all
+callbacks have stopped, the second consolidates retained FE work and invokes
+existing DA save/checkpoint operations. When FE consolidation fills BE, the
+existing save worker makes room. Persistence retains its existing potentially
+long phase; an expired callback deadline is not a new disk-save timeout.
+
+Local statistics distinguish `restored.messages`, `terminal.executed.messages`,
+`terminal.persisted.messages`, `terminal.discarded.messages`,
+`transfer.be_to_disk.messages`, and disk terminal/physical/active inventory.
+BE-to-disk transfer is not action execution. Final conservation is checked after
+checkpointing. Segmented recovery is lazy: restored counts increase as actual
+records are discovered, excluding the synthetic scheduling sentinel used by
+`getPhysicalQueueSize`. Unscanned durable records remain in the existing recovery
+store and are not represented by an invented one-record obligation. Corrupt-record
+removal follows existing engine policy and contributes its actual discard outcome.
+
+### Focused evidence and corrections
+
+All ten new S5 tests passed in the pinned Ubuntu 26.04 container: paired classic
+and segmented runtime spill, repeated persistence, graph shutdown, save-disabled
+and runtime store-failure fixtures. Both native and YAML configuration suites
+passed. Persistence forces 41 held FE messages through BE capacity 32, saves all
+66 accepted messages, changes worker counts and local/global/local scope, shuts
+down again during recovery, and verifies exact final IDs plus restored/executed
+accounting. Store-failure tests fail an already-active spool path, restore it,
+and reconcile unique delivery with the engine's existing discard policy.
+
+Initial failures were resolved before these passes: duplicate fallback stubs;
+a missed DA startup guard; recovery starting before downstream activation;
+a scheduling sentinel counted as an extra restored record; and a graph fixture
+burst exceeding its intentionally available upstream FE capacity. An initial
+coordinator bootstrap invocation also reset configure options and disabled
+imdiag; the established CI build profile was restored before runtime validation.
+
+Fresh independent lifecycle review identified unbounded save delaying downstream
+callback shutdown and missing corruption/lazy-discovery accounting. The two-pass
+shutdown and outcome hooks address those findings; the reviewer verified the
+corrections without reporting another blocker in the bounded review. Exact
+review hashes and evidence are in
+`/home/rger/rsyslog-local-queue-artifacts/s5/lifecycle-review.md`.
+Formatting afterward changed layout only. No generic disk-engine redesign or
+unrelated inherited-error cleanup was added.
+
+Focused run logs, corrected-profile builds, configuration checks and validation
+artifacts are in `/home/rger/rsyslog-local-queue-artifacts/s5/`. Sanitizer and final
+container results are recorded separately when complete. No new S5 throughput
+qualification is implied by the functional tests; production performance and
+real Elasticsearch-node qualification remain open. Hosted checks/reviews still
+refer to the published PR head; this local work has not been pushed.
+
+### Sanitizer-driven integration corrections
+
+The initial ASan spill run delivered 65 of 66 because one admission reached its
+configured two-second timeout. Its counters correctly reported one preadmission
+rejection and zero outstanding work. An isolated rerun passed, but source tracing
+identified a real low-water exit/refill window: advice cannot reuse an exiting
+DA worker slot, and its eventual availability does not notify the blocked
+producer. Graph DA workers now park at low water and wake through existing
+high-water advice. Lease cleanup, predicate recheck and idle registration share
+the BE mutex; shutdown/save bypass parking. The bounded independent reviewer
+verified this correction. Resource cost is one retained idle transfer thread per
+activated graph DA queue. Storage and high/low-water policies are unchanged.
+
+A TSan graph run initially appeared to miss IDs 18–63. Read-only segmented-spool
+inspection proved all 46 were validly persisted: 20 delivered plus 46 saved
+reconciled all 66. The graph fixture now restarts the same leaf spool with no new
+ingress and checks the final union. It no longer incorrectly requires execution
+before a save-enabled shutdown. The first failure and spool export remain in
+the validation artifacts.
+
+TSan's debug-enabled store-failure fixtures also exposed the existing
+`runtime/debug.c` `dbgprint.ptLastThrdID` race. An isolated rerun reproduced it
+for both engines. No unrelated debug fix or new suppression was added; this
+limits those TSan fixtures and is distinct from a queue/DA race finding.
+
+The final TSan spill run additionally exposed ordinary writes to existing
+segmented integer statistics mirrors racing their atomic impstats readers.
+All twenty live mirrors now use matching `PREFER_STORE_INT` publication;
+calculations and writer-side queue locking are unchanged. Local snapshots also
+capture the disk-child pointer once with acquire semantics, relying on retained
+child lifetime through statistics unlink. This is a statistics synchronization
+repair, not a disk-engine algorithm change.
+
+An existing global classic-DA retry test also reports a TSan race in
+`qqueueChkPersist`'s `iUpdsSincePersist` update. That function and global test
+configuration are unchanged by S5. It remains an explicitly recorded legacy
+TSan gap, without a new suppression or a general checkpoint rewrite in this
+stage. This is distinct from the corrected segmented statistics publication.
+
+### S5 final validation result
+
+The implementation and focused integration checks are finished. This candidate
+is **not fully container-validated**: the single broad run and analyzer command
+were non-passing. No broad retry campaign or unrelated repair was performed.
+
+- All ten optimized S5 fixtures passed. ASan/UBSan passed all ten plus eight
+  existing DA regression scripts (31 inner driver completions); the final atomic
+  statistics correction also passed targeted segmented-spill ASan coverage.
+  LeakSanitizer was disabled, so this is not whole-daemon leak qualification.
+- Cooperative TSan spill/graph and selected DA regression coverage passed after
+  the statistics repair. Forced read-cancellation cases retain the established
+  interceptor coverage limitation. Debug-enabled storage-failure cases and the
+  global classic checkpoint case retain the inherited races described above;
+  no new suppression or source exclusion was added.
+- The single Ubuntu 26.04 broad run reported **1694 total, 1618 pass, 69 skip,
+  7 fail, 0 error**. Three helper failures were a shared fixture's stale
+  `help.returned=1$` assertion: S5 appends outcome fields. Retained records
+  showed correct replay/discard results and zero outstanding messages. The
+  assertion now matches the complete value followed by whitespace or end;
+  all three affected tests passed in the cached container (3/3), with no
+  runtime change or broad rerun.
+- Four broad failures remain: `sndrcv_omsnmpv1_udp.sh` and its `_dynsource`
+  variant received 0/10 messages; `omfwd-tls-gtls-module-files-mtls.sh` lacked
+  its OpenSSL helper port file; `sndrcv_kafka_multi_topics.sh` failed during
+  Kafka shutdown/startup. These remain failed validation, not inferred passes.
+- Mock distcheck passed. The static analyzer command exited **1**, reporting
+  exactly one known baseline diagnostic at `tools/rsyslogd.c:1871`; it is not
+  a passing analyzer command. Late lifecycle/null and bug-finder prompt audits
+  found no additional S5 issue. Shell syntax, shellcheck, C formatting,
+  internal-document links/YAML and whitespace checks passed.
+
+Container image: `rsyslog/rsyslog_dev_base_ubuntu:26.04`, ID
+`sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`.
+Broad build/check concurrency was 60; sanitizer/analyzer concurrency was 20.
+Exact commands, configured service lanes, logs and limitations are consolidated
+in `/home/rger/rsyslog-local-queue-artifacts/s5/final-validation-evidence.md`.
+Real Elasticsearch-node qualification and production performance remain open;
+no S5 throughput claim follows from these tests.
+
+The local security review covered the full branch candidate with two disjoint
+fresh discovery shards and a fresh lead; no security candidate or model update
+was identified. Its final digest-bound receipt is generated after this evidence
+update and the bounded helper-assertion review. Hosted checks/reviews still cover
+only the older published PR head, not these uncommitted/unpushed S4/S5 changes.
+S6/S7 operator-facing completion and qualification remain upcoming work.

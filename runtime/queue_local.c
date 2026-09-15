@@ -1,4 +1,4 @@
-/* Experimental memory-only local queues.
+/* Experimental local queues with a shared memory/DA backend.
  * Copyright 2026 Adiscon GmbH.
  * Licensed under the Apache License, Version 2.0.
  *
@@ -84,6 +84,7 @@ struct qqueueLocal_s {
     unsigned state, count, nextRegistration, registered, started;
     unsigned beSubmitting; /* owner->mut */
     uint64_t beAttempted, beAdmitted, beRejected, beTerminal, beDiscarded;
+    uint64_t diskRestored, diskTransferred, diskTerminal, diskDiscarded, diskPersisted;
     uint64_t registrationFailures, allocationBytes;
     uint64_t beBatches, beNofit, beOversized, beRegistration, beRedirect, beUnclassified;
     uint64_t beInternal, beCapacity, capacityExhaustions;
@@ -338,19 +339,23 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
         snapshot.help_messages != snapshot.help_completed ||
         snapshot.help_completed != snapshot.help_terminal + snapshot.help_returned || snapshot.outstanding != 0 ||
         snapshot.fe_queued != 0 || snapshot.fe_active != 0 || snapshot.fe_retry != 0 || snapshot.be_physical != 0 ||
-        snapshot.be_active != 0 || snapshot.admitted != snapshot.terminal ||
-        snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected)
+        snapshot.be_active != 0 || snapshot.admitted + snapshot.restored != snapshot.terminal ||
+        snapshot.attempts + snapshot.restored != snapshot.terminal + snapshot.preadmission_rejected ||
+        snapshot.disk_active != 0 || snapshot.disk_physical != snapshot.persisted)
         return RS_RET_INTERNAL_ERROR;
     FILE *const output = fopen(marker, "w");
     if (output == NULL) return RS_RET_IO_ERROR;
     const int written =
         fprintf(output,
                 "OK fe.joined=%u fe.registered=%llu shutdown.discarded=%llu outstanding=0 "
-                "admitted=%llu terminal=%llu rejected=%llu transferred=%llu help.completed=%llu help.returned=%llu\n",
+                "admitted=%llu terminal=%llu rejected=%llu transferred=%llu help.completed=%llu help.returned=%llu "
+                "restored=%llu persisted=%llu executed=%llu discarded=%llu\n",
                 joined, (unsigned long long)snapshot.fe_registered, (unsigned long long)snapshot.shutdown_discarded,
                 (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
                 (unsigned long long)snapshot.preadmission_rejected, (unsigned long long)snapshot.transferred,
-                (unsigned long long)snapshot.help_completed, (unsigned long long)snapshot.help_returned);
+                (unsigned long long)snapshot.help_completed, (unsigned long long)snapshot.help_returned,
+                (unsigned long long)snapshot.restored, (unsigned long long)snapshot.persisted,
+                (unsigned long long)snapshot.executed, (unsigned long long)snapshot.discarded);
     const int closed = fclose(output);
     return written < 0 || closed != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
 }
@@ -431,7 +436,7 @@ void qqueueLocalProducerExit(void *const unused) {
     #endif
     localProducer_t *const producer = stateRead(&producerKeyValid) ? pthread_getspecific(producerKey) : NULL;
     if (producer == NULL) return;
-    /* Called by tcpsrv Run/worker cleanup, before input joins and queue teardown.
+    /* Called by input or graph-worker cleanup, before downstream queue teardown.
      * The explicit departure marks are not delegated to arbitrary TLS teardown. */
     for (localCache_t *cache = producer->cache; cache != NULL; cache = cache->next) {
         if (cache->frontend != NULL) stateSet(&cache->frontend->producerExited, 1);
@@ -498,8 +503,8 @@ static void unlinkHelper(qqueueLocalFrontend_t *const fe) {
 
 void qqueueLocalWakeBackendHelpers(qqueue_t *const owner) {
     qqueueLocal_t *const family = owner->local;
-    if (family == NULL || stateRead(&family->state) != LOCAL_RUNNING || owner->iQueueSize <= owner->nLogDeq ||
-        family->idleHelpers == NULL)
+    if (family == NULL || stateRead(&family->state) != LOCAL_RUNNING || owner->localDAActive ||
+        owner->iQueueSize <= owner->nLogDeq || family->idleHelpers == NULL)
         return;
     qqueueLocalFrontend_t *const fe = family->idleHelpers;
     pthread_mutex_lock(&fe->mutex);
@@ -751,6 +756,7 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     if (!rsSpscQueueInit(&fe->ring, fe->slots, capacity)) ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
     CHKiRet(qqueueConstruct(&fe->source, QUEUETYPE_FIXED_ARRAY, 1, 0, owner->pConsumer));
     fe->source->localSource = fe;
+    fe->source->localGraphConf = owner->localGraphConf;
     fe->source->mut = &fe->mutex;
     fe->source->iDeqBatchSize = (int)batchSize;
     CHKiRet(wtpConstruct(&fe->pool));
@@ -776,8 +782,8 @@ finalize_it:
 rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     DEFiRet;
     if (owner->local != NULL) return RS_RET_OK;
-    if (owner->qType != QUEUETYPE_FIXED_ARRAY || owner->bIsDA || owner->localFrontendSize <= 0 ||
-        owner->localMaxFrontends <= 0 || owner->iDeqBatchSize <= 0)
+    if (owner->qType != QUEUETYPE_FIXED_ARRAY || owner->localFrontendSize <= 0 || owner->localMaxFrontends <= 0 ||
+        owner->iDeqBatchSize <= 0)
         return RS_RET_PARAM_ERROR;
     #ifdef ENABLE_TESTBENCH
     pthread_once(&testFaultOnce, readTestFault);
@@ -979,12 +985,14 @@ int qqueueLocalIsClosed(const qqueue_t *const owner) {
 
 int qqueueLocalWorker(const wti_t *const worker) {
     const qqueue_t *const source = worker->pWtp == NULL ? NULL : worker->pWtp->pUsr;
-    return source != NULL && (source->local != NULL || source->localSource != NULL);
+    return source != NULL && (source->local != NULL || source->localSource != NULL || source->localGraphConf != NULL);
 }
 
 void qqueueLocalRetainAmbiguous(wti_t *const worker) {
     if (!qqueueLocalWorker(worker)) return;
     qqueue_t *const home = worker->pWtp->pUsr;
+    /* DA COMM acknowledges disk acceptance, not interrupted action execution. */
+    if (worker->pWtp == home->pWtpDA) return;
     qqueue_t *const borrowed =
         home->localSource != NULL && worker->source_queue == home->localSource->owner ? worker->source_queue : NULL;
     if (borrowed != NULL) {
@@ -1034,6 +1042,27 @@ void qqueueLocalBackendRoute(qqueue_t *const owner, const size_t n, const enum q
     }
 }
 
+void qqueueLocalNoteActionPhase(qqueue_t *const owner) {
+    #ifdef ENABLE_TESTBENCH
+    if (owner->local != NULL) testNoteActionPhase(owner->local);
+    #else
+    (void)owner;
+    #endif
+}
+void qqueueLocalDiskRestored(qqueue_t *const owner, const uint64_t count) {
+    if (owner->local != NULL) counterAdd(&owner->local->diskRestored, count);
+}
+void qqueueLocalDiskTransferred(qqueue_t *const owner, const uint64_t count) {
+    if (owner->local != NULL) counterAdd(&owner->local->diskTransferred, count);
+}
+void qqueueLocalDiskTerminal(qqueue_t *const owner, const uint64_t count, const uint64_t discarded) {
+    if (owner->local == NULL) return;
+    counterAdd(&owner->local->diskTerminal, count);
+    counterAdd(&owner->local->diskDiscarded, discarded);
+}
+void qqueueLocalDiskPersisted(qqueue_t *const owner, const uint64_t count) {
+    if (owner->local != NULL) __atomic_store_n(&owner->local->diskPersisted, count, __ATOMIC_RELAXED);
+}
 void qqueueLocalBackendAcquired(qqueue_t *const owner, const uint64_t n) {
     if (owner->local == NULL || n == 0) return;
     counterAdd(&owner->local->beDequeueBatches, 1);
@@ -1131,11 +1160,17 @@ static void drainFrontend(qqueueLocalFrontend_t *const fe, const struct timespec
 }
 
 rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
+    return qqueueLocalShutdownUntil(owner, NULL, NULL);
+}
+
+rsRetVal qqueueLocalShutdownUntil(qqueue_t *const owner,
+                                  const struct timespec *const graphGraceful,
+                                  const struct timespec *const graphAction) {
     qqueueLocal_t *const family = owner->local;
     if (family == NULL || stateRead(&family->state) == LOCAL_STOPPED) return RS_RET_OK;
     int oldCancel;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancel);
-    const struct timespec graceful = deadlineAfter(owner->toQShutdown);
+    const struct timespec graceful = graphGraceful != NULL ? *graphGraceful : deadlineAfter(owner->toQShutdown);
     struct timespec action = graceful;
     int actionPhase = 0;
     pthread_mutex_lock(&family->registry);
@@ -1178,7 +1213,7 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
         }
     }
     if (pending) {
-        action = deadlineAfter(owner->toActShutdown);
+        action = graphAction != NULL ? *graphAction : deadlineAfter(owner->toActShutdown);
         actionPhase = 1;
         /* One action deadline for the family, never renewed per FE. Its
          * callbacks consult FE source flags. BE remains a live consumer until
@@ -1228,20 +1263,34 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     pthread_cond_broadcast(&family->space);
     while (family->beSubmitting != 0) pthread_cond_wait(&family->admissionDone, owner->mut);
     pthread_mutex_unlock(owner->mut);
-    wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN);
-    if (wtpWaitShutdownUntil(owner->pWtpReg, deadline) != RS_RET_OK) {
-        if (!actionPhase) {
-            action = deadlineAfter(owner->toActShutdown);
+    if (!actionPhase) action = graphAction != NULL ? *graphAction : deadlineAfter(owner->toActShutdown);
+    (void)qqueueShutdownBackendUntil(owner, deadline, &action);
+    pthread_setcancelstate(oldCancel, NULL);
+    /* A graph first joins every callback pool. Its second pass persists
+     * residuals so slow disk I/O cannot defer a downstream callback deadline. */
+    return graphGraceful != NULL ? RS_RET_OK : qqueueLocalFinishShutdown(owner);
+}
+
+rsRetVal qqueueLocalFinishShutdown(qqueue_t *const owner) {
+    qqueueLocal_t *const family = owner->local;
+    if (family == NULL || stateRead(&family->state) == LOCAL_STOPPED) return RS_RET_OK;
+    int oldCancel;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancel);
+    /* Persistence retains the existing save-on-shutdown contract after the
+     * shared callback deadlines. Consolidation uses that same DA worker, not
+     * an expired action deadline, for the remaining accepted FE obligations. */
+    rsRetVal saveResult = RS_RET_OK;
+    if (owner->bIsDA && owner->bSaveOnShutdown) {
+        owner->localDASaving = 1;
+        for (unsigned i = 0; i < family->count; ++i) {
+            qqueueLocalFrontend_t *const fe = &family->fronts[i];
+            if (stateRead(&fe->state) == FE_JOINED) drainFrontend(fe, NULL, 0);
         }
-        ATOMIC_STORE_32BIT(&owner->bShutdownImmediate, &owner->mutShutdownImmediate, 1);
-        wtpRequestShutdown(owner->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE);
-    #ifdef ENABLE_TESTBENCH
-        testNoteActionPhase(family);
-    #endif
-        (void)wtpWaitShutdownUntil(owner->pWtpReg, &action);
+        saveResult = qqueueSaveLocalBackend(owner);
+        if (saveResult != RS_RET_OK) LogError(0, saveResult, "local queue: disk save did not drain the backend");
+        owner->localDASaving = 0;
     }
-    wtpRequestCancelAll(owner->pWtpReg);
-    wtpWaitShutdownUntil(owner->pWtpReg, NULL);
+    const rsRetVal diskResult = qqueueFinishLocalDisk(owner);
     /* All module state is disposed and threads joined. Every failed transfer
      * still belongs to its FE; classify the residual memory loss exactly once. */
     for (unsigned i = 0; i < family->count; ++i) {
@@ -1250,9 +1299,9 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     }
     qqueueLocalDiscardBackend(owner);
     stateSet(&family->state, LOCAL_STOPPED);
-    rsRetVal result = RS_RET_OK;
+    rsRetVal result = saveResult != RS_RET_OK ? saveResult : diskResult;
     #ifdef ENABLE_TESTBENCH
-    result = testCheckShutdown(owner);
+    if (result == RS_RET_OK) result = testCheckShutdown(owner);
     #endif
     pthread_setcancelstate(oldCancel, NULL);
     return result;
@@ -1378,7 +1427,17 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
     snapshot->shutdown_discarded = counterRead(&family->beDiscarded);
     snapshot->attempts = snapshot->be_attempted;
     snapshot->admitted = snapshot->be_admitted;
-    snapshot->terminal = snapshot->be_terminal;
+    snapshot->restored = counterRead(&family->diskRestored);
+    snapshot->persisted = counterRead(&family->diskPersisted);
+    snapshot->disk_terminal = counterRead(&family->diskTerminal);
+    snapshot->disk_transferred = counterRead(&family->diskTransferred);
+    snapshot->discarded = snapshot->shutdown_discarded + counterRead(&family->diskDiscarded);
+    snapshot->terminal = snapshot->be_terminal + snapshot->disk_terminal + snapshot->persisted;
+    const qqueue_t *const disk = __atomic_load_n(&owner->pqDA, __ATOMIC_ACQUIRE);
+    if (disk != NULL) {
+        snapshot->disk_physical = (uint64_t)__atomic_load_n(&disk->iQueueSize, __ATOMIC_ACQUIRE);
+        snapshot->disk_active = (uint64_t)__atomic_load_n(&disk->nLogDeq, __ATOMIC_ACQUIRE);
+    }
     snapshot->be_physical = (uint64_t)__atomic_load_n(&owner->iQueueSize, __ATOMIC_ACQUIRE);
     snapshot->be_active = (uint64_t)__atomic_load_n(&owner->nLogDeq, __ATOMIC_ACQUIRE);
     snapshot->configured_frontends = family->count;
@@ -1428,13 +1487,18 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
         snapshot->help_limit = fe.help_limit;
         snapshot->terminal += fe.terminal;
         snapshot->shutdown_discarded += fe.shutdown_discarded;
+        snapshot->discarded += fe.shutdown_discarded;
         snapshot->fe_queued += fe.queued;
         snapshot->fe_active += fe.active;
         snapshot->fe_retry += fe.retry;
         snapshot->transferred += fe.transferred;
         snapshot->fe_producerless += fe.producer_exited;
     }
-    snapshot->outstanding = snapshot->admitted >= snapshot->terminal ? snapshot->admitted - snapshot->terminal : 0;
+    const uint64_t obligations = snapshot->admitted + snapshot->restored;
+    snapshot->outstanding = obligations >= snapshot->terminal ? obligations - snapshot->terminal : 0;
+    snapshot->executed = snapshot->terminal >= snapshot->persisted + snapshot->discarded
+                             ? snapshot->terminal - snapshot->persisted - snapshot->discarded
+                             : 0;
 }
 
 #else
@@ -1474,10 +1538,20 @@ rsRetVal qqueueLocalStart(qqueue_t *owner) {
 rsRetVal qqueueLocalSubmit(qqueue_t *owner, smsg_t *const *messages, size_t count, int flow) {
     return qqueueLocalSubmitBackend(owner, messages, count, flow, QLOCAL_UNCLASSIFIED);
 }
+rsRetVal qqueueLocalFinishShutdown(qqueue_t *owner) {
+    (void)owner;
+    return RS_RET_NOT_IMPLEMENTED;
+}
 rsRetVal qqueueLocalShutdown(qqueue_t *owner) {
     (void)owner;
     return RS_RET_NOT_IMPLEMENTED;
 }
+rsRetVal qqueueLocalShutdownUntil(qqueue_t *owner, const struct timespec *graceful, const struct timespec *action) {
+    (void)graceful;
+    (void)action;
+    return qqueueLocalShutdown(owner);
+}
+
 void qqueueLocalDestruct(qqueue_t *owner) {
     (void)owner;
 }
@@ -1496,6 +1570,26 @@ void qqueueLocalBackendRoute(qqueue_t *owner, size_t count, enum qqueueLocalRout
     (void)owner;
     (void)count;
     (void)reason;
+}
+void qqueueLocalNoteActionPhase(qqueue_t *owner) {
+    (void)owner;
+}
+void qqueueLocalDiskRestored(qqueue_t *owner, uint64_t count) {
+    (void)owner;
+    (void)count;
+}
+void qqueueLocalDiskTransferred(qqueue_t *owner, uint64_t count) {
+    (void)owner;
+    (void)count;
+}
+void qqueueLocalDiskTerminal(qqueue_t *owner, uint64_t count, uint64_t discarded) {
+    (void)owner;
+    (void)count;
+    (void)discarded;
+}
+void qqueueLocalDiskPersisted(qqueue_t *owner, uint64_t count) {
+    (void)owner;
+    (void)count;
 }
     #define LOCAL_COUNTER_STUB(name)                 \
         void name(qqueue_t *owner, uint64_t count) { \

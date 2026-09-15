@@ -8,7 +8,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **S0 accepted; S1/S2 implemented with recorded validation limits; performance qualification deferred** |
+| Status | **S0–S5 implemented; validation limitations recorded; performance qualification open** |
 | Created / reviewed | 2026-09-14 |
 | Design authority | [Local queue front ends with shared overflow](local-queue-frontends.md) |
 | Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; immutable implementation baseline recorded in the execution ledger |
@@ -397,6 +397,14 @@ endpoint-bound workload; it may not claim a queue speedup from that result.
 
 ## 9. S5: runtime DA, graceful persistence and restart
 
+S5 reuses the existing BE disk assistance, disk formats and logical spool name.
+It is a lifecycle integration stage, not a second persistence architecture.
+The S4 implementation explicitly rejects DA and discards residual memory during
+shutdown, so enabling configuration alone is insufficient. Required patches
+connect FE consolidation, BE/DA arbitration, recovery-worker registration and
+logical outcome accounting to that existing machinery. The focused tests below
+must establish those contracts before this stage can be called complete.
+
 ### Implementation work
 
 Attach the shared BE to its existing disk assistance, coordinated by the logical
@@ -411,6 +419,14 @@ helping, settle existing BE leases, drain FE using a transfer API with explicit
 ownership on failure/partial acceptance, and keep BE/DA useful until transfers
 finish. Join a consumer before replacing it with a drainer.
 
+Preserve the existing distinction between callback shutdown and final persistence:
+shared graph graceful/action deadlines govern callback execution. Existing
+`DoSaveOnShutdown` may continue beyond those deadlines while its DA transfer
+worker saves remaining work. S5 must not reinterpret an expired action deadline
+as permission to discard FE obligations that are covered by save-on-shutdown.
+FE consolidation for persistence uses the existing BE/DA progress and failure
+policies; this stage does not introduce a new bounded disk-save guarantee.
+
 Recovery uses the stable logical spool namespace with fresh FEs. Support changed
 producer count and global/local transitions with compatible destinations. Recovery
 workers creating downstream local fronts participate in subsequent shutdown.
@@ -418,7 +434,8 @@ Distinguish executed, persisted and configured-discard outcomes (AR2).
 
 ### Correctness gate
 
-Test classic and supported segmented DA behavior separately. Include runtime spill,
+Test both classic and segmented DA behavior separately, preserving existing engine
+selection and compatibility policies. Include runtime spill,
 FE+BE backlog save, BE already full, disk full/unavailable, transfer interruption,
 reverse-declaration-order graph with active DA, different worker count restart,
 global/local switch, and second shutdown before recovery finishes. Test memory-only

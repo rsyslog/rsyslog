@@ -174,11 +174,30 @@ EXTRA_DIST += $(TESTS_SEGMENTED_DISK_QUEUE) $(TESTS_SEGMENTED_DISK_QUEUE_LIBYAML
 	testsuites/segmented-diskqueue-invalid-state-driver.sh \
 	testsuites/pure-disk-queue-scope-driver.sh
 
-TESTS_LOCAL_QUEUE_CONFIG = local-queue-config.sh
-TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh
+TESTS_LOCAL_QUEUE_CONFIG = local-queue-config.sh local-queue-s4-config.sh
+TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh local-queue-s4-config-yaml.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
 TESTS_LOCAL_QUEUE = \
+	local-queue-s5-store-failure.sh \
+	local-queue-s5-segmented-store-failure.sh \
+	local-queue-s5-save-disabled.sh \
+	local-queue-s5-segmented-save-disabled.sh \
+	local-queue-s5-graph-shutdown.sh \
+	local-queue-s5-segmented-graph-shutdown.sh \
+	local-queue-s5-spill.sh \
+	local-queue-s5-segmented-spill.sh \
+	local-queue-s5-persistence.sh \
+	local-queue-s5-segmented-persistence.sh \
+	local-queue-s4-output-tcp.sh \
+	local-queue-s4-output-tcp-recovery.sh \
+	local-queue-s4-output-tcp-fallback.sh \
+	local-queue-s4-output-es.sh \
+	local-queue-s4-output-es-partial.sh \
+	local-queue-s4-graph.sh \
+	local-queue-s4-global-boundary.sh \
+	local-queue-s4-direct-main.sh \
+	local-queue-s4-shutdown.sh \
 	local-queue-helper-force-term-actions.sh \
 	local-queue-helper-replay-actions.sh \
 	local-queue-helper-cancel-actions.sh \

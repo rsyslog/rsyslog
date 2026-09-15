@@ -20,7 +20,11 @@ export NUMMESSAGES=${BENCH_MESSAGES:-1000000}
 : "${BENCH_WORKER_MINIMUM:=1024}" "${BENCH_PRODUCER_MODE:=balanced}"
 : "${BENCH_IMPSTATS:=no}" "${BENCH_IMPSTATS_FILE:=}"
 : "${BENCH_SCOPE:=global}" "${BENCH_FRONTEND_SIZE:=}" "${BENCH_MAX_FRONTENDS:=}"
-: "${BENCH_CONFIG_ONLY:=no}"
+: "${BENCH_CONFIG_ONLY:=no}" "${BENCH_OUTPUT:=omfile}"
+case "$BENCH_OUTPUT" in
+omfile|omfwd) ;;
+*) echo "BENCH_OUTPUT must be omfile or omfwd" >&2; exit 1 ;;
+esac
 if (( BENCH_CONNECTIONS <= 0 )); then
     echo "BENCH_CONNECTIONS must be positive" >&2
     exit 1
@@ -128,6 +132,24 @@ if [[ "$BENCH_IMPSTATS" == yes ]]; then
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATS_FILE'" interval="1" format="json" log.syslog="off")
 '
 fi
+# The default omfile stanza remains unchanged. TCP uses a supervised receiver
+# without artificial delays; -K retains the listener through daemon shutdown.
+# The readiness marker acknowledges listen(), not just socket allocation.
+BENCH_OUTPUT_ACTION='action(type="omfile" file="'$BENCH_OMFILE_PATH'" template="outfmt")'
+if [[ "$BENCH_OUTPUT" == omfwd ]]; then
+    RECEIVER_KEEP="$PWD/$RSYSLOG_DYNNAME.receiver.keep"
+    RECEIVER_READY="$PWD/$RSYSLOG_DYNNAME.receiver.ready"
+    RECEIVER_PORT="$PWD/$RSYSLOG_DYNNAME.receiver.port"
+    RECEIVER_LOG="$PWD/$RSYSLOG_DYNNAME.receiver.log"
+    touch "$RECEIVER_KEEP"
+    ./minitcpsrv -t127.0.0.1 -p0 -P "$RECEIVER_PORT" -L "$RECEIVER_READY" \
+        -K "$RECEIVER_KEEP" -f "$RSYSLOG_OUT_LOG" >"$RECEIVER_LOG" 2>&1 &
+    RECEIVER_PID=$!
+    MINITCPSRVR_PIDS="${MINITCPSRVR_PIDS:-} $RECEIVER_PID"
+    wait_file_exists "$RECEIVER_READY"
+    assign_file_content OUTPUT_PORT "$RECEIVER_PORT"
+    BENCH_OUTPUT_ACTION='action(type="omfwd" target="127.0.0.1" port="'$OUTPUT_PORT'" protocol="tcp" streamDriver="ptcp" streamDriver.mode="0" template="outfmt")'
+fi
 BENCH_RAINERSCRIPT='
 global(processInternalMessages="off" abortOnUncleanConfig="on")
 module(load="../plugins/imtcp/.libs/imtcp")
@@ -140,7 +162,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
     set $.parseStatus = parse_json("{\"nested\":{\"array\":[1,2,3,4,5,6,7,8],\"text\":\"queue contention benchmark payload\"}}", "\$!payload");
     if ($.parseStatus == 0 and $!payload!nested!text == "queue contention benchmark payload") then
-        action(type="omfile" file="'$BENCH_OMFILE_PATH'" template="outfmt")
+        '"$BENCH_OUTPUT_ACTION"'
 }
 '
 add_conf "$BENCH_RAINERSCRIPT"
@@ -155,6 +177,14 @@ receiver_line_barrier_ns=$(date +%s%N)
 shutdown_when_empty
 wait_shutdown
 shutdown_end_ns=$(date +%s%N)
+if [[ "$BENCH_OUTPUT" == omfwd ]]; then
+    rm -f "$RECEIVER_KEEP"
+    wait "$RECEIVER_PID" || error_exit 1 "TCP receiver did not exit cleanly"
+    MINITCPSRVR_PIDS=""
+    if grep -q 'connection limit reached' "$RECEIVER_LOG"; then
+        error_exit 1 "TCP receiver dropped an excess connection"
+    fi
+fi
 if [[ "$BENCH_IMPSTATS" == yes ]]; then
     if [[ ! -s "$STATS_FILE" ]]; then
         echo "impstats file is missing or empty: $STATS_FILE" >&2

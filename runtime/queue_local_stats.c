@@ -32,6 +32,15 @@ enum localLogicalCounter {
     localLogicalAcceptedMessages,
     localLogicalRejectedPreadmissionMessages,
     localLogicalTerminalMessages,
+    localLogicalRestored,
+    localLogicalPersisted,
+    localLogicalExecuted,
+    localLogicalDiscarded,
+    localLogicalDiskTransferred,
+    localLogicalDiskTerminal,
+    localLogicalDiskPhysical,
+    localLogicalDiskActive,
+
     localLogicalTerminalShutdownDiscardedMessages,
     localLogicalOutstandingMessages,
     localLogicalRouteFeMessages,
@@ -167,6 +176,15 @@ static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("accepted.messages", localLogicalAcceptedMessages),
     LOCAL_COUNTER("rejected.preadmission.messages", localLogicalRejectedPreadmissionMessages),
     LOCAL_COUNTER("terminal.messages", localLogicalTerminalMessages),
+    LOCAL_COUNTER("restored.messages", localLogicalRestored),
+    LOCAL_COUNTER("terminal.persisted.messages", localLogicalPersisted),
+    LOCAL_COUNTER("terminal.executed.messages", localLogicalExecuted),
+    LOCAL_COUNTER("terminal.discarded.messages", localLogicalDiscarded),
+    LOCAL_COUNTER("transfer.be_to_disk.messages", localLogicalDiskTransferred),
+    LOCAL_COUNTER("disk.terminal.messages", localLogicalDiskTerminal),
+    LOCAL_COUNTER("disk.physical.messages", localLogicalDiskPhysical),
+    LOCAL_COUNTER("disk.active.messages", localLogicalDiskActive),
+
     LOCAL_COUNTER("terminal.shutdown_discarded.messages", localLogicalTerminalShutdownDiscardedMessages),
     LOCAL_COUNTER("outstanding.messages", localLogicalOutstandingMessages),
     LOCAL_COUNTER("route.fe.messages", localLogicalRouteFeMessages),
@@ -289,6 +307,15 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
     localStatsStore(&stats->logical_counters[localLogicalAcceptedMessages], snapshot.admitted);
     localStatsStore(&stats->logical_counters[localLogicalRejectedPreadmissionMessages], snapshot.preadmission_rejected);
     localStatsStore(&stats->logical_counters[localLogicalTerminalMessages], snapshot.terminal);
+    localStatsStore(&stats->logical_counters[localLogicalRestored], snapshot.restored);
+    localStatsStore(&stats->logical_counters[localLogicalPersisted], snapshot.persisted);
+    localStatsStore(&stats->logical_counters[localLogicalExecuted], snapshot.executed);
+    localStatsStore(&stats->logical_counters[localLogicalDiscarded], snapshot.discarded);
+    localStatsStore(&stats->logical_counters[localLogicalDiskTransferred], snapshot.disk_transferred);
+    localStatsStore(&stats->logical_counters[localLogicalDiskTerminal], snapshot.disk_terminal);
+    localStatsStore(&stats->logical_counters[localLogicalDiskPhysical], snapshot.disk_physical);
+    localStatsStore(&stats->logical_counters[localLogicalDiskActive], snapshot.disk_active);
+
     localStatsStore(&stats->logical_counters[localLogicalTerminalShutdownDiscardedMessages],
                     snapshot.shutdown_discarded);
     localStatsStore(&stats->logical_counters[localLogicalOutstandingMessages], snapshot.outstanding);

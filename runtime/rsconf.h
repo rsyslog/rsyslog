@@ -276,6 +276,7 @@ struct rsconf_s {
         sbool bLocalConfigError;
         sbool bLocalLegacyNumericError; /* whole-config local qualification only */
         sbool bLocalCustomParser; /* explicit parser instances are outside S2 */
+        struct localQueueGraph_s *localQueueGraph; /* immutable S4 queue dependency inventory */
         cfgmodules_t modules;
         globals_t globals;
         defaults_t defaults;

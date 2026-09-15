@@ -8,13 +8,13 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Full design remains upcoming; restricted S3 memory helping implemented; qualification remains open** |
+| Status | **S5 DA/restart integration implemented; validation limitations recorded** |
 | Created / last reviewed | 2026-09-14 / 2026-09-15 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |
 | Source inspection | Core paths first inspected at `82af24be1b1fea24feca2831b236ef6346639364`; the core files cited below are unchanged between these revisions |
 | Scope | Architecture and implementation planning; no measured performance claim |
-| Configuration status | The experimental memory implementation supports `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
+| Configuration status | The experimental implementation supports `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
 
 <!-- .. summary-start -->
 One logical queue gains private single-producer/single-consumer (SPSC) memory
@@ -27,15 +27,18 @@ reconstruct the old producer topology.
 <!-- .. summary-end -->
 
 The [execution ledger](local-queue-execution-ledger.md) identifies implemented
-scope and validation. S3 adds bounded memory-BE helping to S2. Disk assistance,
-local action queues, broader transactional/queue graphs, and Elasticsearch
-qualification remain later work. S3 is not yet a production qualification claim.
+scope and validation. S3 adds bounded memory-BE helping to S2. S4 adds local
+queued actions/rulesets, static acyclic graphs, dependency-order memory shutdown,
+and omfwd/omelasticsearch consumer compatibility. S5 integrates existing classic
+and segmented disk assistance, shutdown persistence and topology-changing
+restart. These stages are not a production performance qualification claim.
 
 The experimental `queue.local.helperBatchSize` parameter defaults to the allocated
 FE dequeue limit (`min(queue.dequeueBatchSize, queue.local.frontendSize)`). An
 explicit zero disables helping; a positive value must not exceed that limit.
 Helpers take available partial batches without waiting to fill the limit and
-recheck FE before another borrow. Existing S0 configuration restrictions remain. Borrowing preserves the worker's
+recheck FE before another borrow. S4 extends the original S0 configuration
+restrictions for memory queue graphs and tested outputs. Borrowing preserves the worker's
 existing action state, including suspension timers. Routing to BE does not imply
 execution by a dedicated BE worker or by a worker with fresh action state. Tests
 that require those identities must establish them explicitly or disable helping.
@@ -818,12 +821,30 @@ is known. Define behavior for disk-full and shutdown deadline exhaustion.
 
 ### 15.3 Graph-wide ordering
 
+S5 separates callback shutdown from final persistence:
+
+```mermaid
+flowchart TD
+    I["Stop external inputs; publish shared callback deadlines"] --> C["In upstream order: quiesce FE admission, drain within budget, close and join callback pools"]
+    C --> J{"All graph callback pools joined?"}
+    J -->|no| C
+    J -->|yes| P["For each logical queue: consolidate remaining FE work into BE; existing DA save makes room"]
+    P --> S["Existing disk save/checkpoint; record executed, persisted and discarded outcomes"]
+    S --> D["Release graph queue objects after all finalization"]
+```
+
 The execution graph is initially acyclic. Stop external input, then quiesce and
 drain logical queues in an order that keeps downstream queues available while
 upstream consumers can still submit. Recovery workers and helpers are producers
 of downstream queues too. New local registrations during drain must not escape
 shutdown enumeration. Do not multiply an intended logical shutdown deadline by
 the number of FEs without an explicit policy.
+
+The shared graceful/action deadlines govern callback execution. They do not
+introduce a new timeout for persistence: the existing `DoSaveOnShutdown` phase
+may continue past them while the DA transfer worker saves pending memory work.
+FE consolidation covered by save-on-shutdown must preserve that same distinction,
+rather than discarding work solely because an action deadline expired.
 
 Only after all FE obligations and upstream submissions are settled may BE run its
 final save/close phase. Existing DA transfer and disk consumer shutdown must be

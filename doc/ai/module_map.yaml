@@ -30,7 +30,7 @@ runtime_queue:
       change. Returned store-completion failure retains the source lease and
       opaque context; inherited terminal disk cleanup is not repaired here.
     - >-
-      Experimental local memory scope uses bounded producer-owned SPSC front ends
+      Experimental local scope uses bounded producer-owned SPSC front ends
       and the existing FixedArray backend. Each front end has its own worker pool,
       source identity and module worker state. An eligible worker checks its
       FE first and otherwise borrows one bounded available BE batch, with
@@ -40,13 +40,52 @@ runtime_queue:
       does not take the BE mutex. This implementation remains subject to the
       staged local-queue qualification gates.
     - >-
+      Local queue graphs register actual FE, BE and disk recovery execution workers as
+      downstream producers, including workers at global memory boundaries.
+      Static ruleset calls and module retry destinations contribute queue edges;
+      cycles and dynamic call targets are rejected before activation. Shutdown
+      joins upstream workers before closing downstream admission, retains all
+      queue objects until graph termination, and shares absolute graceful/action
+      deadlines across nodes. Full downstream enqueue waits respect that budget.
+      Asynchronous action copying still follows action.copyMsg; synchronous calls
+      retain the caller's worker state. Graph activation releases recovery only after
+      all destinations are initialized. Callback pools stop in topological order
+      before a second pass consolidates remaining FE obligations and invokes the
+      existing DA save/checkpoint machinery. The existing persistence phase may
+      extend beyond shared callback deadlines; it has no new bounded-save promise.
+    - >-
+      omfwd connection eligibility and transaction suspension use worker-local
+      active-target counts; shared target counts are telemetry only. Local omfwd
+      excludes networkNamespace because its saved namespace descriptor is shared.
+      omelasticsearch exposes its retry ruleset as an explicit graph edge;
+      retries to the same execution queue are rejected as cycles.
+    - >-
       Local routing quiescence and source-specific immediate flags let frontend
       workers stop and join before maintenance transfers their retained references
       to the still-running backend. Shutdown phases share monotonic deadlines;
       expiry never authorizes freeing live callback state. Snapshot objects are
       unlinked before worker pools and fixed frontend descriptors are freed.
+    - >-
+      Local DA reuses both classic and segmented disk assistance, engine selection,
+      spool identity and recovery formats. FE helpers borrow memory only when
+      existing DA arbitration permits it. An activated graph DA transfer worker
+      parks at low water and is awakened by existing high-water advice, retaining
+      one idle transfer thread instead of entering an unnotified exit/refill
+      window. Shutdown/save bypass parking. BE-to-disk transfer is not action
+      completion. Local outcome counters distinguish executed, persisted and
+      discarded obligations; segmented restored counts grow as lazy recovery
+      discovers actual records, excluding its scheduling sentinel. Unscanned
+      durable records remain in the existing recovery store and are not invented
+      as a one-record logical obligation. Detached emergency disk children remain
+      lifetime-owned for graph joining without changing the existing fallback.
     - Disk-assisted mode is an in-memory parent plus a first-class disk child; disk queue semantics apply to the child.
     - The queue mutex is shared by a disk-assisted parent and child; segmented store operations and idle dematerialization callbacks run under that lock.
+    - >-
+      Segmented integer statistics mirrors publish via PREFER_STORE_INT to match
+      statsobj's atomic readers. Writer-side queue locking alone does not
+      synchronize with the independent impstats reader. Local disk snapshots load
+      pqDA once with acquire semantics; a detached child remains lifetime-owned
+      until statistics unlink and graph teardown.
     - >-
       Targeted worker wakeups in wtpAdviseMaxWorkers track registered waiters
       with bWaitingForWork and bWakeupReserved under each pool's pmutUsr (the

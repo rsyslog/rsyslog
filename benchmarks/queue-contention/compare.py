@@ -23,6 +23,7 @@ parser.add_argument('--input-workers', type=int, default=8)
 parser.add_argument('--consumer-workers', type=int, default=4)
 parser.add_argument('--connections', type=int, default=16)
 parser.add_argument('--payload', type=int, default=512)
+parser.add_argument('--output-mode', choices=['omfile', 'omfwd'], default='omfile')
 parser.add_argument('--queue-size', type=int, default=32768)
 parser.add_argument('--before-queue-size', type=int)
 parser.add_argument('--after-queue-size', type=int)
@@ -47,6 +48,8 @@ parser.add_argument('--image', default='rsyslog/rsyslog_dev_base_ubuntu:26.04')
 parser.add_argument('--trial-timeout', type=float, default=180,
                     help='maximum seconds allowed for each container trial')
 args = parser.parse_args()
+if args.output_mode == 'omfwd' and args.workload != 'multi':
+    parser.error('--output-mode omfwd requires --workload multi')
 if args.pairs <= 0:
     parser.error('--pairs must be positive')
 if args.messages <= 0:
@@ -167,6 +170,7 @@ def write_report(status, failure=None):
         'requested_pairs': args.pairs,
         'workload': {
             'name': args.workload,
+            'output_mode': args.output_mode,
             'script': f'trial{"-multi" if args.workload == "multi" else ""}.sh',
             'revision': workload_checkout['revision'],
             'dirty': workload_checkout['dirty'],
@@ -232,6 +236,7 @@ try:
                 '-e', f'BENCH_DEQUEUE_BATCH_SIZE={configuration["dequeue_batch_size"]}',
                 '-e', f'BENCH_WORKER_MINIMUM={configuration["worker_minimum_messages"]}',
                 '-e', f'BENCH_PRODUCER_MODE={args.producer_mode}',
+                '-e', f'BENCH_OUTPUT={args.output_mode}',
                 '-e', f'BENCH_IMPSTATS={"yes" if args.impstats else "no"}',
                 '-e', f'BENCH_IMPSTATS_FILE={impstats_metric}',
                 image_id, 'bash', f'/campaign/trial{"-multi" if args.workload == "multi" else ""}.sh',

@@ -485,6 +485,7 @@ static void freeActionNames(rsconf_t *pThis) {
 /* destructor for the rsconf object */
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
+    rulesetFreeLocalGraph(pThis);
     freeCnf(pThis);
     tplDeleteAll(pThis);
     dynstats_destroyAllBuckets(pThis);
@@ -1278,6 +1279,7 @@ static rsRetVal activate(rsconf_t *cnf) {
     CHKiRet(activateActions());
     CHKiRet(activateRulesetQueues());
     CHKiRet(activateMainQueue());
+    rulesetActivateLocalGraph(cnf);
     /* finally let the inputs run... */
     runInputModules();
     qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */

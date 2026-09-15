@@ -1,5 +1,6 @@
 #!/bin/bash
-# Exercise the experimental local queue's fail-closed activation contract.
+# Exercise the experimental local queue's fail-closed activation contract,
+# including queued actions, bounded retry, and both S5 DA engines.
 # Valid configurations must pass -N1; each invalid case must exit with the
 # dedicated local-config error in -N1, partial validation, and ordinary startup
 # even when AbortOnUncleanConfig is off. Stderr is intentional: rejection must
@@ -85,7 +86,8 @@ write_config() {
         deleted-local)
             params[queue.scope]=global
             unset 'params[queue.local.frontendsize]' 'params[queue.local.maxfrontends]'
-            statement='if 0 then action(type="omfile" file="/dev/null" template="local_test" queue.scope="local" queue.type="FixedArray" queue.local.frontendSize="100" queue.local.maxFrontends="2")'
+            # An invalid local request must survive dead-branch optimization.
+            statement='if 0 then action(type="omfile" file="/dev/null" template="local_test" queue.scope="local" queue.type="FixedArray" queue.local.frontendSize="0" queue.local.maxFrontends="2")'
             ;;
         dropped-local)
             params[queue.scope]=global
@@ -102,6 +104,15 @@ write_config() {
         sampling) params[queue.samplinginterval]=2 ;;
         discard) params[queue.discardseverity]=5 ;;
         disk-option) params[queue.syncqueuefiles]=on ;;
+        valid-da-classic|valid-da-segmented|valid-da-save-disabled)
+            params[queue.filename]="${RSYSLOG_DYNNAME}.queue"
+            params[queue.saveonshutdown]=on
+            params[queue.diskqueuetype]=disk
+            [ "$scenario" != valid-da-segmented ] || params[queue.diskqueuetype]=segmentedDisk
+            [ "$scenario" != valid-da-save-disabled ] || params[queue.saveonshutdown]=off
+            ;;
+        valid-memory-save) params[queue.saveonshutdown]=on ;;
+
         asyncfile) action_extra='asyncWriting="on"' ;;
         syncfile) action_extra='sync="on"' ;;
         unflushed-file) action_extra='flushOnTXEnd="off"' ;;
@@ -111,7 +122,7 @@ write_config() {
         malformed-destination) statement='set $.v = parse_json("{}", "\$!a!!b");' ;;
         valid-json) statement='set $.v = parse_json("{\"n\":1}", "\$!bench");' ;;
         shared-variable) statement='set $/shared = 1;' ;;
-        call) statement='call main;' ;;
+        call) statement='call main' ;;
         indirect) statement='call_indirect "main";' ;;
         *) error_exit 1 ;;
     esac
@@ -176,12 +187,12 @@ YAML
     fi
 }
 
-positive=(valid-helper-default valid-helper-zero valid-helper-cap valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy)
+positive=(valid-da-classic valid-da-segmented valid-da-save-disabled valid-memory-save disk-option valid-helper-default valid-helper-zero valid-helper-cap valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy queued-action inherited-action)
 negative=(helper-negative helper-above-cap helper-overflow helper-global bad-scope missing-bound negative-bound oversized-bound disk direct minimum sampling
-    discard disk-option deleted-local dropped-local asyncfile syncfile unflushed-file queued-action
+    discard deleted-local dropped-local asyncfile syncfile unflushed-file
     unsafe-function unsafe-destination malformed-destination shared-variable call indirect
     wrapped-minimum wrapped-sampling wrapped-severity wrapped-timeout overflow-timeout negative-timeout
-    wrapped-action wrapped-retry wrapped-file wrapped-close custom-parser inherited-action
+    wrapped-action wrapped-retry wrapped-file wrapped-close custom-parser
     inherited-wrapped-action inherited-wrapped-then-reset inherited-file inherited-module global-graph-escape
     duplicate-main developer-bypass shutdown-double-size)
 for module_name in imtcp imptcp impstats; do

@@ -29,6 +29,7 @@ typedef struct qqueueLocalFrontendSnapshot_s {
 
 typedef struct qqueueLocalSnapshot_s {
     uint64_t attempts, admitted, preadmission_rejected, terminal, shutdown_discarded;
+    uint64_t restored, persisted, executed, discarded, disk_transferred, disk_terminal, disk_physical, disk_active;
     uint64_t be_attempted, be_admitted, be_terminal, be_physical, be_active;
     uint64_t fe_queued, fe_active, fe_retry, fe_registered, fe_started, fe_producerless;
     uint64_t registration_failures, transferred, allocation_bytes;
@@ -64,18 +65,28 @@ void qqueueLocalTestNoteForceTerm(wti_t *worker, int currentIParams);
 rsRetVal qqueueLocalStart(qqueue_t *owner);
 rsRetVal qqueueLocalSubmit(qqueue_t *owner, smsg_t *const *messages, size_t count, int single_flow_control);
 rsRetVal qqueueLocalShutdown(qqueue_t *owner);
+rsRetVal qqueueLocalFinishShutdown(qqueue_t *owner);
+rsRetVal qqueueLocalShutdownUntil(qqueue_t *owner, const struct timespec *graceful, const struct timespec *action);
 void qqueueLocalDestruct(qqueue_t *owner);
 int qqueueLocalIsClosed(const qqueue_t *owner);
 int qqueueLocalWorker(const wti_t *worker);
 /* Caller owns the worker home mutex. Borrowed sources are locked internally. Preserve DISC; COMM is ambiguous
  * on interrupted callbacks and must remain an accepted obligation. */
 void qqueueLocalRetainAmbiguous(wti_t *worker);
+void qqueueLocalNoteActionPhase(qqueue_t *owner);
 void qqueueLocalRefreshLegacy(qqueue_t *owner);
 void qqueueLocalGetSnapshot(const qqueue_t *owner, qqueueLocalSnapshot_t *snapshot);
 int qqueueLocalGetFrontendSnapshot(const qqueue_t *owner, uint32_t index, qqueueLocalFrontendSnapshot_t *snapshot);
 
 /* BE accounting calls are serialized by owner->mut; snapshot readers use
  * atomic loads only. These are lifetime totals, not resettable impstats data. */
+void qqueueLocalDiskRestored(qqueue_t *owner, uint64_t count);
+void qqueueLocalDiskTransferred(qqueue_t *owner, uint64_t count);
+void qqueueLocalDiskTerminal(qqueue_t *owner, uint64_t count, uint64_t discarded);
+void qqueueLocalDiskPersisted(qqueue_t *owner, uint64_t count);
+rsRetVal qqueueShutdownBackendUntil(qqueue_t *owner, const struct timespec *graceful, const struct timespec *action);
+rsRetVal qqueueSaveLocalBackend(qqueue_t *owner);
+rsRetVal qqueueFinishLocalDisk(qqueue_t *owner);
 void qqueueLocalBackendAcquired(qqueue_t *owner, uint64_t count);
 void qqueueLocalBackendAttempt(qqueue_t *owner, uint64_t count);
 void qqueueLocalBackendAdmitted(qqueue_t *owner, uint64_t count);
