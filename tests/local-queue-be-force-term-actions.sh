@@ -17,6 +17,10 @@
 # The cancellation wrapper leaves B inside its dispatch gate until pthread
 # cancellation, verifies no cooperative-return marker, and uses the same final
 # conservation/private-parameter disposal oracle.
+# The cooperative-replay wrapper instead releases the dedicated reader after
+# the real FORCE_TERM/reset marker. The returned borrowed obligation must then
+# replay on BE (A=1,2/B=2) with zero discards. This avoids forced read cancellation
+# while preserving the source-switch/cleanup oracle under ThreadSanitizer.
 # The 10s action deadline is only a watchdog; marker acknowledgements control
 # release, and no elapsed-time threshold determines success.
 . ${srcdir:=.}/diag.sh init
@@ -117,6 +121,11 @@ wait_file_lines "${STOP_BASE}.action-phase" 1
 if [ "${LOCAL_QUEUE_BORROWED_CANCEL:-0}" -eq 0 ]; then
     localq_release_barrier "$COMMIT_RELEASE"
     wait_file_lines "${STOP_BASE}.force-term" 1
+    if [ "${LOCAL_QUEUE_BORROWED_REPLAY:-0}" -eq 1 ]; then
+        # BE shutdown is requested only after joined helper source completion.
+        # If BE reaches idle before reinsertion, the return must wake it.
+        localq_release_barrier "$BE_HOLD_RELEASE"
+    fi
 fi
 wait_shutdown
 wait_file_lines "$STOP_BASE" 1
@@ -128,6 +137,22 @@ if [ "$borrowed" -eq 1 ]; then
 fi
 if [ "${LOCAL_QUEUE_BORROWED_CANCEL:-0}" -eq 1 ] && [ -e "${STOP_BASE}.force-term" ]; then
     error_exit 1 'cancellation fixture unexpectedly returned cooperatively'
+fi
+
+if [ "${LOCAL_QUEUE_BORROWED_REPLAY:-0}" -eq 1 ]; then
+    # Earlier shared checks establish one returned borrowed lease, zero FE
+    # transfers, joined workers and full accepted/terminal conservation.
+    # Output distinguishes actual replay from merely classifying a discard.
+    # shellcheck disable=SC2034
+    EXPECTED=$'1\n2'
+    cmp_exact "$ACTION_A"
+    # shellcheck disable=SC2034
+    EXPECTED='2'
+    cmp_exact "$ACTION_B"
+    if ! grep -Eq '^OK fe.joined=1 fe.registered=1 shutdown.discarded=0 outstanding=0 ' "$STOP_BASE"; then
+        error_exit 1 'cooperative borrowed replay did not finish without discards'
+    fi
+    exit_test
 fi
 
 # cmp_exact reads EXPECTED dynamically from diag.sh.

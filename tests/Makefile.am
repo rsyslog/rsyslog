@@ -180,6 +180,7 @@ EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
 TESTS_LOCAL_QUEUE = \
 	local-queue-helper-force-term-actions.sh \
+	local-queue-helper-replay-actions.sh \
 	local-queue-helper-cancel-actions.sh \
 	local-queue-helping.sh \
 	local-queue-help-capacity.sh \
