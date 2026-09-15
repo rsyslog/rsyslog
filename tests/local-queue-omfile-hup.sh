@@ -5,8 +5,9 @@
 # After a failed HUP, restore a creatable pathname and process a witnessed probe;
 # the primary file must remain absent (no worker lazy open). A later successful
 # HUP and final delivery prove the same action can recover explicitly.
-# The final probe uses BE so an FE worker's prior suspension timer cannot
-# obscure the shared stream's recovery; action retry timing is not this oracle.
+# Disable BE helping so the final BE probe uses a dedicated worker whose action
+# was not suspended by the failed-open FE probe. This isolates HUP ownership and
+# worker lazy-open behavior from helper scheduling and per-worker retry timers.
 . ${srcdir:=.}/diag.sh init
 require_plugin imtcp
 require_plugin imdiag
@@ -30,7 +31,8 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
     listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
-    queue.local.frontendSize="4" queue.local.maxFrontends="1")
+    queue.local.frontendSize="4" queue.local.maxFrontends="1"
+    queue.local.helperBatchSize="0")
 template(name="hupmsg" type="string" string="%msg%\n")
 if ($msg contains "sink-") then {
     action(type="omfile" file="'$PRIMARY'" template="hupmsg" queue.type="Direct")
