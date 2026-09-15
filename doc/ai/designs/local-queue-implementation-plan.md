@@ -307,6 +307,15 @@ for routing/locality only, not full transaction/disk readiness.
 
 ## 7. S3: bounded BE helping and wake protocols
 
+Implementation checkpoint: `005d661b` adds memory-BE helping, with test-only
+follow-ups `8faa24cf` and `4cce311a`. See the
+[execution ledger](local-queue-execution-ledger.md) for measured performance and
+validation limits; implementation is not full production qualification.
+`queue.local.helperBatchSize` inherits the allocated FE dequeue limit by default,
+accepts a smaller positive cap, and accepts explicit zero as a same-binary S2
+control. Generic queue lease binding remains strict; helpers use separately
+validated source acquisition/completion APIs with immutable home worker pools.
+
 ### Implementation work
 
 At a reusable batch boundary, an FE consumer checks FE first, otherwise borrows

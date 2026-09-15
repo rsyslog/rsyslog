@@ -8,13 +8,13 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **Full design remains upcoming; restricted S2 MVP integrated with recorded qualification limits** |
-| Created / last reviewed | 2026-09-14 |
+| Status | **Full design remains upcoming; restricted S3 memory helping implemented; qualification remains open** |
+| Created / last reviewed | 2026-09-14 / 2026-09-15 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |
 | Source inspection | Core paths first inspected at `82af24be1b1fea24feca2831b236ef6346639364`; the core files cited below are unchanged between these revisions |
 | Scope | Architecture and implementation planning; no measured performance claim |
-| Configuration status | The experimental S2 implements `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
+| Configuration status | The experimental memory implementation supports `queue.scope="local"` under the strict [S0 contracts](local-queue-s0-contracts.md); later-stage capabilities below remain proposed |
 
 <!-- .. summary-start -->
 One logical queue gains private single-producer/single-consumer (SPSC) memory
@@ -27,8 +27,27 @@ reconstruct the old producer topology.
 <!-- .. summary-end -->
 
 The [execution ledger](local-queue-execution-ledger.md) identifies implemented
-scope and validation. In particular, S2 does not include disk assistance, backend
-helping, local action queues, or Elasticsearch qualification.
+scope and validation. S3 adds bounded memory-BE helping to S2. Disk assistance,
+local action queues, broader transactional/queue graphs, and Elasticsearch
+qualification remain later work. S3 is not yet a production qualification claim.
+
+The experimental `queue.local.helperBatchSize` parameter defaults to the allocated
+FE dequeue limit (`min(queue.dequeueBatchSize, queue.local.frontendSize)`). An
+explicit zero disables helping; a positive value must not exceed that limit.
+Helpers take available partial batches without waiting to fill the limit and
+recheck FE before another borrow. Existing S0 configuration restrictions remain. Borrowing preserves the worker's
+existing action state, including suspension timers. Routing to BE does not imply
+execution by a dedicated BE worker or by a worker with fresh action state. Tests
+that require those identities must establish them explicitly or disable helping.
+
+S3 exposes family and optional per-FE `help.attempts`, `help.empty`,
+`batch.help.count`, `batch.help.messages.sum`, `batch.help.messages.max`,
+`batch.help.limit`, `inflight.help`, `retry.help`, `terminal.help`, `help.completed`,
+`help.returned`, `help.waits`, `help.wakes`, `wake.fe`, and `wake.shutdown`.
+Borrowing is not new ingress or an FE-to-BE transfer. Completed borrowed messages
+split into terminal retirement and returned BE work; unresolved obligations stay
+source-bound. `inflight.help` counts messages, not extra workers. Notification
+counts describe software notifications, not observed operating-system wakeups.
 
 The companion [implementation plan](local-queue-implementation-plan.md) defines
 stages from an experimental MVP through full initial qualification, with

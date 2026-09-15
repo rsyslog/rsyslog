@@ -29,6 +29,7 @@ or favorable isolated timing does not alone establish acceptance.
 | S0 | Accepted | Astra/medium accepted contracts and baseline evidence; no optimization or PR-readiness claim. |
 | S1 | Implemented; original performance gate unresolved | Reviewed attribution through `c9a51be21`; targeted correctness and sanitizer checks passed with documented debug-only TSan isolation. Maintainer authorized continued S2 work and methodology review. |
 | S2 | Implemented; default container gate passed with documented specialist limits | Final runtime `536f5db06`: 1,595 passes, 69 skips, zero failures. Analyzer has one understood baseline warning; specialist outcomes and review limits below. Performance qualification remains deferred by maintainer direction. |
+| S3 | Implemented; runtime/container gates passed; production qualification open | Bounded BE helping, independent concurrency review, sanitizer evidence and 4M/40M comparisons below. Final broad snapshot `2dac14fa2`: 1,604 passes, 69 skips, zero failures. |
 
 ## Assignments
 
@@ -590,3 +591,75 @@ baseline analyzer warning and current source reviews; the separate no-epoll
 full-run discrepancies and forced-cancellation TSan limitation are explicitly
 not described as passing. Performance acceptance and broader production action
 qualification remain deferred. No push, PR, deployment or release was performed.
+
+## S3 entry measurements, 2026-09-15
+
+The maintainer authorized S3 after collecting this S2 matrix. These are exploratory three-pair comparisons, not acceptance under the original eleven-pair/two-session qualification contract. Security review is postponed until the S3 candidate is stable.
+
+The original global baseline is `b0d9f971f007f06db3f734543cef5dfb312c5090`; the S2 candidate is `54dbe93612049a717920748325acdc52bb83459e`. The latter includes the empty-BE shutdown-pointer regression fix. Its focused sanitizer checks passed, but two subsequent broad container runs each failed a different test; both tests passed in isolation. Therefore this entry does not extend the earlier full-container claim to that candidate.
+
+Each configuration uses one discarded calibration pair and three measured pairs with alternating order. All 64 trials passed process completion and exact-ID verification. Input remains eight imtcp workers, sixteen TCP connections, 512-byte payload, JSON parsing/mutation and shared synchronous omfile; dequeue upper limit 1024 and worker activation minimum 1. The global queue retains ten consumers and 1,088,192 slots. Every local scenario has at most eight FEs and a one-million-slot BE. FE100K increases memory capacity; BE10 increases the total worker ceiling from ten to eighteen. Actual worker counts and batch distributions are not inferred from these settings.
+
+| Messages | FE slots each | BE workers | Global seconds | S2 seconds | Paired S2/global time | Ratio MAD |
+|---:|---:|---:|---:|---:|---:|---:|
+| 4,000,000 | 10,000 | 10 | 3.55 | 2.96 | 0.8362 | 0.0206 |
+| 4,000,000 | 10,000 | 2 | 3.53 | 4.70 | 1.3327 | 0.0127 |
+| 4,000,000 | 100,000 | 10 | 3.56 | 3.72 | 1.0481 | 0.0048 |
+| 4,000,000 | 100,000 | 2 | 3.55 | 3.68 | 1.0297 | 0.0001 |
+| 40,000,000 | 10,000 | 10 | 34.03 | 30.62 | 0.8997 | 0.0067 |
+| 40,000,000 | 10,000 | 2 | 33.37 | 36.24 | 1.0855 | 0.0052 |
+| 40,000,000 | 100,000 | 10 | 30.90 | 29.61 | 0.9540 | 0.0039 |
+| 40,000,000 | 100,000 | 2 | 31.73 | 34.99 | 1.0893 | 0.0106 |
+
+Seconds are medians from sender launch through the receiver completion barrier. Shutdown and exact-ID verification are required but outside this processing metric. Ratios are medians of paired ratios, not ratios of table medians. GCC 15.2.0, `-O2 -g`, runtime debug logging off; same pinned Ubuntu 26.04 image as above. No owned build/test jobs overlapped timing; the host and caches remain non-exclusive. The per-trial safety timeout was increased to 300 seconds to accommodate 40M delivery verification.
+
+Interpretation: at 40M, FE100K alone did not improve the BE2 comparison relative to global. Ten BE workers improved elapsed time, with additional worker capacity. The shorter runs magnify buffer/drain effects. These results motivate testing S3 at the same worker budget; they establish neither a production Elasticsearch speedup nor per-message tail latency.
+
+Reproduction: use `benchmarks/queue-contention/compare.py --workload multi --pairs 3 --messages {4000000,40000000} --input-workers 8 --connections 16 --payload 512 --worker-minimum 1 --dequeue-batch-size 1024 --before-queue-size 1088192 --before-consumer-workers 10 --after-scope local --after-max-frontends 8 --after-queue-size 1000000 --after-frontend-size {10000,100000} --after-consumer-workers {2,10} --trial-timeout 300`, supplying isolated `--before`, `--after`, and unique `--output` paths for each Cartesian-product scenario. Braces here denote alternatives, not a directly executable shell command.
+
+Raw commands, metrics, logs, and the normalized `s2-summary.json` are preserved under the coordinator artifact directory `s3-campaign`. The frozen S2 build was copied before S3 edits; its rsyslogd SHA-256 is `c441f34e92fde354b91eb5168f7e69c0ae1c9e53918e47166c6ab74a1729a86a`. No S3 implementation or validation claim is made by these S2 measurements.
+
+## S3 helping checkpoint and measurements, 2026-09-15
+
+Runtime checkpoint `005d661b00859f5f7f1f50800c1e914ae99dec46` adds bounded memory-BE helping. Test-only follow-ups are `8faa24cf8822599519fb7c0838e20946bf9ff21c` (gate eligibility) and `4cce311ac4b016560b2fe668ec10dcafc9b7a9cd` (cooperative borrowed replay). The final optimized binary was refreshed at runtime source `8faa24cf`; the later commit changes only fixtures. No S4 transaction/graph coverage, disk support, or production qualification is implied.
+
+The independent Astra/medium concurrency review found a selected-helper wake handoff defect: local work could take priority without waking another idle helper for pending BE work. A pending-selection flag and deterministic two-FE regression fixed it. The reviewer also required borrowed transactional interruption and partial-batch oracles; final R1–R3 verification closed all three findings. Generic lease binding remains strict; explicit helper APIs keep FE pool identity separate from BE completion ownership.
+
+### Same-resource S3 versus S2 performance
+
+The same method and matrix as above now compare frozen S2 `54dbe936` against S3. Each configuration has a discarded calibration pair plus three alternating measured pairs. All 64 final trials passed exact delivery and process completion. An earlier eight-trial FE10K/BE2 screen at `005d661b` also passed (time ratio 0.7499); the table uses only the final campaign.
+
+| Messages | FE slots each | BE workers | S2 seconds | S3 seconds | Paired S3/S2 time | Ratio MAD |
+|---:|---:|---:|---:|---:|---:|---:|
+| 4,000,000 | 10,000 | 10 | 2.89 | 2.83 | 0.9810 | 0.0038 |
+| 4,000,000 | 10,000 | 2 | 4.60 | 3.47 | 0.7516 | 0.0045 |
+| 4,000,000 | 100,000 | 10 | 3.69 | 3.62 | 0.9777 | 0.0106 |
+| 4,000,000 | 100,000 | 2 | 3.66 | 3.59 | 0.9815 | 0.0120 |
+| 40,000,000 | 10,000 | 10 | 27.98 | 27.87 | 0.9953 | 0.0015 |
+| 40,000,000 | 10,000 | 2 | 33.53 | 32.50 | 0.9660 | 0.0046 |
+| 40,000,000 | 100,000 | 10 | 29.43 | 29.39 | 1.0009 | 0.0011 |
+| 40,000,000 | 100,000 | 2 | 34.42 | 33.36 | 0.9633 | 0.0004 |
+
+The main short-run FE10K/BE2 improvement is 24.8 percent shorter elapsed time; its 40M improvement is 3.4 percent. FE100K/BE2 improves 3.7 percent at 40M. Both BE10 long-run comparisons are effectively neutral. These are exploratory results, not formal qualification or evidence for remote Elasticsearch workloads. The smaller long-run effect is consistent with final drain contributing less to total elapsed time. Absolute medians across separate campaigns must not be used as a new global/S3 comparison: host performance drifted; paired controls are authoritative.
+
+For reproduction, use the previous command shape with the frozen S2 tree as `--before`, `--before-scope local --before-queue-size 1000000 --before-frontend-size F --before-max-frontends 8 --before-consumer-workers W`, matching F/W on the S3 side. The final campaign uses a separate output directory for each configuration. Commands and normalized `s3-summary.json` are preserved in `s3-campaign`.
+
+A separate, untimed-interpretation diagnostic enabled family and per-FE stats at FE10K/BE2. It observed eight FE workers, two BE workers, and helper retirement of 403,456 BE messages in 394 batches (observed maximum 1024). All 4M messages were terminal, zero outstanding, helper completed=terminal=403,456 and returned=0. Eight per-FE snapshots were present. This confirms helping was active; it is not a latency measurement or a fixed-batch assumption.
+
+### Correctness and sanitizer evidence
+
+Ordinary optimized container tests passed configuration parity, priority, bounded capacity release, three idle/wake interleavings, partial helper batches, cooperative interruption, actual cancellation, and selected S2 shutdown/submission regressions. Nine new regression scripts are registered in the existing test-owning subtree. Source/configuration details and exact commands are retained in `s3-focused-evidence.md` beside raw logs.
+
+ASan/UBSan covered 13 distinct focused tests successfully, including forced borrower cancellation. The first sanitizer run exposed a fixture-only startup race: an after-registration gate could fire before the first local message completed while the shell waited for that completion. Requiring initial FE retirement before taking the test gate fixed the circular wait. Before-registration and handoff variants passed again; after-registration passed three repetitions. No production protocol change or sanitizer suppression was needed.
+
+TSan covered 12 distinct focused tests successfully, including cooperative borrowed replay and stats lifetime/reconciliation. The forced-read-cancellation path reported missing mutex synchronization during cleanup. The same clang-21/image reproduced that report in the independent minimal read-cancel control despite explicit mutex locking; the normal cleanup control passed. Current dedicated BE cleanup and main-thread borrowed retirement were traced to the same BE mutex. The forced-cancellation TSan path therefore remains a tooling coverage limit, not a passing test claim. Existing ordinary/ASan forced-cancellation tests remain intact; no queue suppression was added. A separate cooperative replay variant exercises real FORCE_TERM and borrowed BE return under TSan without that interceptor path.
+
+The pinned Ubuntu 26.04 image and compiler flags are recorded in `sanitizers.sh`; ASan uses clang-21 address/undefined checks, TSan uses clang-21 with stock `tests/tsan-rt.supp`. Leak detection is disabled, so there is no whole-daemon leak claim. Final refresh/sanitizer builds used `-j60`; original author-focused builds/checks used explicit `-j10`. C formatting, ShellCheck, and diff whitespace checks passed. Full container, distribution, production/portability, and security gates are recorded separately after this checkpoint; they are not implied by the focused results above.
+
+### Final S3 container validation
+
+The final immutable test snapshot is `2dac14fa2f682ecae9b798b09593d5ed7d437856`; runtime remains unchanged from the measured S3 code. Ubuntu 26.04 change-gated `run-ci.sh` passed: 1,673 total, 1,604 PASS, 69 SKIP, zero FAIL, 346.19 seconds, build/check `-j60`, same image ID recorded above. Conservative PR relevance rules were retained. The analyzer (`-j20`, 208.99 seconds) reported only the known baseline `tools/rsyslogd.c:initAll:1871` warning and no S3 issue. Clang21/no-debug and GCC15/GNU23-debug production builds with testbench disabled passed (build phases 16.89 and 17.76 seconds, `-j20`). Updated mock distcheck passed in 86.11 seconds.
+
+Earlier broad attempts are not hidden: the first had four failures (1,600 PASS/69 SKIP), the second one (1,603 PASS/69 SKIP). Two fixture assumptions were corrected in `f35c8cb2`: the held wake gate must release after any BE pending admission, not a particular producer; and two TCP connections do not establish two producer identities. The internal-message fixture now constructs one FE and one BE callback explicitly. TLS readiness and segmented-DA event-property tests passed isolated checks. The remaining HUP fixture assumed BE routing selected a fresh, healthy dedicated worker; S3 helpers preserve their existing action suspension state. `2dac14fa2` pins that S2 HUP ownership oracle to helper limit zero, preserving failed-open/no-lazy-open/recovery checks. The final broad rerun then passed. These fixes change tests, not the measured runtime.
+
+Exact commands, per-test failures, image identity, source equivalence, isolated checks and final verdict are retained in `s3-campaign/final-validation`. Late memory/concurrency prompt audits are in `late-audit.md`; the independent concurrency review and TSan control evidence remain separate. The security review is a final digest-bound artifact in ignored `.codex/security-review/`; check its matching receipt before claiming PR readiness. Hosted checks/review threads still refer to the previously published PR head, and no push is part of these S3 measurements or local validation claims.
