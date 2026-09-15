@@ -34,16 +34,28 @@ ruleset(name="normalize") {
 '
 startup
 tcpflood -m"$NUMMESSAGES"
-# the queue must really be the segmented disk engine: its files carry the
-# configured prefix in the work directory
+# tcpflood returning only proves the client finished sending. Wait until
+# the async segmented-disk action has actually created queue files.
 segfiles=0
-for f in "$RSYSLOG_DYNNAME.spool"/turbo-segdisk*; do
-	[ -e "$f" ] && segfiles=$((segfiles + 1))
+i=0
+while true; do
+    segfiles=0
+    for f in "$RSYSLOG_DYNNAME.spool"/turbo-segdisk*; do
+        [ -e "$f" ] && segfiles=$((segfiles + 1))
+    done
+    [ "$segfiles" -gt 0 ] && break
+    $TESTTOOL_DIR/msleep 100
+    i=$((i + 1))
+    if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+        printf 'ABORT! Timeout waiting for segmented disk queue files in %s.spool:\n' "$RSYSLOG_DYNNAME"
+        ls -la "$RSYSLOG_DYNNAME.spool" 2>&1
+        error_exit 1
+    fi
 done
 if [ "$segfiles" -eq 0 ]; then
-	printf 'no segmented disk queue files in %s.spool:\n' "$RSYSLOG_DYNNAME"
-	ls -la "$RSYSLOG_DYNNAME.spool" 2>&1
-	error_exit 1
+    printf 'no segmented disk queue files in %s.spool:\n' "$RSYSLOG_DYNNAME"
+    ls -la "$RSYSLOG_DYNNAME.spool" 2>&1
+    error_exit 1
 fi
 shutdown_when_empty
 wait_shutdown
