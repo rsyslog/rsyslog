@@ -28,6 +28,14 @@ DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj);
 
 enum localLogicalCounter {
+    localLogicalSampledOut,
+    localLogicalSeverityDiscarded,
+    localLogicalRetryFailed,
+    localLogicalReserved,
+    localLogicalBeCapacity,
+    localLogicalFeCapacity,
+    localLogicalFeActiveCapacity,
+
     localLogicalIngressMessages,
     localLogicalAcceptedMessages,
     localLogicalRejectedPreadmissionMessages,
@@ -172,6 +180,14 @@ finalize_it:
 #define LOCAL_COUNTER(name, member) \
     { name, member }
 static const localCounterDescriptor_t logicalCounters[] = {
+    LOCAL_COUNTER("policy.sampled_out.messages", localLogicalSampledOut),
+    LOCAL_COUNTER("policy.severity_discarded.messages", localLogicalSeverityDiscarded),
+    LOCAL_COUNTER("retry.enqueue_failed.messages", localLogicalRetryFailed),
+    LOCAL_COUNTER("resource.reserved.messages", localLogicalReserved),
+    LOCAL_COUNTER("resource.be.capacity.messages", localLogicalBeCapacity),
+    LOCAL_COUNTER("resource.fe.capacity.messages", localLogicalFeCapacity),
+    LOCAL_COUNTER("resource.fe.active.capacity.messages", localLogicalFeActiveCapacity),
+
     LOCAL_COUNTER("ingress.messages", localLogicalIngressMessages),
     LOCAL_COUNTER("accepted.messages", localLogicalAcceptedMessages),
     LOCAL_COUNTER("rejected.preadmission.messages", localLogicalRejectedPreadmissionMessages),
@@ -303,6 +319,14 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
 
     localStatsRunTestPreReadHook(stats);
     qqueueLocalGetSnapshot(stats->owner, &snapshot);
+    localStatsStore(&stats->logical_counters[localLogicalSampledOut], snapshot.sampled_out);
+    localStatsStore(&stats->logical_counters[localLogicalSeverityDiscarded], snapshot.severity_discarded);
+    localStatsStore(&stats->logical_counters[localLogicalRetryFailed], snapshot.retry_failed);
+    localStatsStore(&stats->logical_counters[localLogicalReserved], snapshot.reserved_messages);
+    localStatsStore(&stats->logical_counters[localLogicalBeCapacity], snapshot.be_capacity);
+    localStatsStore(&stats->logical_counters[localLogicalFeCapacity], snapshot.fe_capacity);
+    localStatsStore(&stats->logical_counters[localLogicalFeActiveCapacity], snapshot.fe_active_capacity);
+
     localStatsStore(&stats->logical_counters[localLogicalIngressMessages], snapshot.attempts);
     localStatsStore(&stats->logical_counters[localLogicalAcceptedMessages], snapshot.admitted);
     localStatsStore(&stats->logical_counters[localLogicalRejectedPreadmissionMessages], snapshot.preadmission_rejected);

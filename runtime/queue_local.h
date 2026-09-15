@@ -28,6 +28,8 @@ typedef struct qqueueLocalFrontendSnapshot_s {
 } qqueueLocalFrontendSnapshot_t;
 
 typedef struct qqueueLocalSnapshot_s {
+    uint64_t sampled_out, severity_discarded, retry_failed;
+    uint64_t reserved_messages, be_capacity, fe_capacity, fe_active_capacity;
     uint64_t attempts, admitted, preadmission_rejected, terminal, shutdown_discarded;
     uint64_t restored, persisted, executed, discarded, disk_transferred, disk_terminal, disk_physical, disk_active;
     uint64_t be_attempted, be_admitted, be_terminal, be_physical, be_active;
@@ -53,6 +55,7 @@ void qqueueLocalProducerLeave(void);
 void qqueueLocalProducerExit(void *unused);
 #ifdef ENABLE_TESTBENCH
 /* Deterministic test controls; absent from production builds. */
+int qqueueLocalTestFailNode(const qqueue_t *owner, int retry);
 int qqueueLocalTestProducerShouldExit(void);
 rsRetVal qqueueLocalTestArmShutdownCheck(qqueue_t *owner, const char *markerPath);
 void qqueueLocalTestRedirectArm(void);
@@ -80,6 +83,9 @@ int qqueueLocalGetFrontendSnapshot(const qqueue_t *owner, uint32_t index, qqueue
 
 /* BE accounting calls are serialized by owner->mut; snapshot readers use
  * atomic loads only. These are lifetime totals, not resettable impstats data. */
+rsRetVal qqueueLocalRateLimiter(void *source);
+void qqueueLocalBackendShutdownDiscarded(qqueue_t *owner);
+void qqueueLocalRetryFailed(qqueue_t *owner);
 void qqueueLocalDiskRestored(qqueue_t *owner, uint64_t count);
 void qqueueLocalDiskTransferred(qqueue_t *owner, uint64_t count);
 void qqueueLocalDiskTerminal(qqueue_t *owner, uint64_t count, uint64_t discarded);

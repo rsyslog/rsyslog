@@ -39,7 +39,7 @@ module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.sys
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
-main_queue(queue.scope="local" queue.type="FixedArray" queue.size="'$be_capacity'"
+main_queue(queue.scope="local" queue.type="'${LOCAL_QUEUE_TEST_BE_TYPE:-FixedArray}'" queue.size="'$be_capacity'"
  queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="3"
  queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on"
  '"$help_config"')

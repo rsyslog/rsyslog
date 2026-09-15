@@ -1,6 +1,6 @@
 #!/bin/bash
 # Exercise the experimental local queue's fail-closed activation contract,
-# including queued actions, bounded retry, and both S5 DA engines.
+# including queued actions, bounded retry, and both DA engines and S6 logical policies.
 # Valid configurations must pass -N1; each invalid case must exit with the
 # dedicated local-config error in -N1, partial validation, and ordinary startup
 # even when AbortOnUncleanConfig is off. Stderr is intentional: rejection must
@@ -101,6 +101,30 @@ write_config() {
         disk) params[queue.type]=Disk ;;
         direct) params[queue.type]=Direct ;;
         minimum) params[queue.mindequeuebatchsize]=10 ;;
+        valid-min-timeout) params[queue.mindequeuebatchsize]=10; params[queue.mindequeuebatchsize.timeout]=20 ;;
+        valid-linkedlist) params[queue.type]=LinkedList ;;
+        valid-slowdown) params[queue.dequeueslowdown]=1 ;;
+        valid-schedule) params[queue.dequeuetimebegin]=1; params[queue.dequeuetimeend]=23 ;;
+        valid-discard-mark) params[queue.discardseverity]=5; params[queue.discardmark]=3 ;;
+        valid-severity-name) params[queue.discardseverity]=warning ;;
+        valid-schedule-disabled) params[queue.dequeuetimeend]=25 ;;
+        severity-name-invalid) params[queue.discardseverity]=notaseverity ;;
+        minimum-timeout-overflow) params[queue.mindequeuebatchsize.timeout]=4294967296 ;;
+
+        negative-sampling) params[queue.samplinginterval]=-1 ;;
+        negative-minimum) params[queue.mindequeuebatchsize]=-1 ;;
+        minimum-above-batch) params[queue.mindequeuebatchsize]=129; params[queue.dequeuebatchsize]=128 ;;
+        negative-min-timeout) params[queue.mindequeuebatchsize.timeout]=-1 ;;
+        negative-slowdown) params[queue.dequeueslowdown]=-1 ;;
+        schedule-start-range) params[queue.dequeuetimebegin]=24 ;;
+        schedule-end-range) params[queue.dequeuetimeend]=24 ;;
+        schedule-overflow) params[queue.dequeuetimebegin]=4294967296 ;;
+        negative-severity) params[queue.discardseverity]=-1 ;;
+        severity-range) params[queue.discardseverity]=9 ;;
+        discard-above-reservation) params[queue.discardmark]=1401 ;;
+        allocation-overflow) params[queue.local.frontendsize]=2147483647; params[queue.local.maxfrontends]=2147483647 ;;
+
+
         sampling) params[queue.samplinginterval]=2 ;;
         discard) params[queue.discardseverity]=5 ;;
         disk-option) params[queue.syncqueuefiles]=on ;;
@@ -187,9 +211,11 @@ YAML
     fi
 }
 
-positive=(valid-da-classic valid-da-segmented valid-da-save-disabled valid-memory-save disk-option valid-helper-default valid-helper-zero valid-helper-cap valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy queued-action inherited-action)
-negative=(helper-negative helper-above-cap helper-overflow helper-global bad-scope missing-bound negative-bound oversized-bound disk direct minimum sampling
-    discard deleted-local dropped-local asyncfile syncfile unflushed-file
+positive=(valid-severity-name valid-schedule-disabled minimum sampling discard valid-min-timeout valid-linkedlist valid-slowdown valid-schedule valid-discard-mark valid-da-classic valid-da-segmented valid-da-save-disabled valid-memory-save disk-option valid-helper-default valid-helper-zero valid-helper-cap valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy queued-action inherited-action)
+negative=(severity-name-invalid minimum-timeout-overflow negative-sampling negative-minimum minimum-above-batch negative-min-timeout negative-slowdown
+    schedule-start-range schedule-end-range schedule-overflow negative-severity severity-range
+    discard-above-reservation allocation-overflow helper-negative helper-above-cap helper-overflow helper-global bad-scope missing-bound negative-bound oversized-bound disk direct
+    deleted-local dropped-local asyncfile syncfile unflushed-file
     unsafe-function unsafe-destination malformed-destination shared-variable call indirect
     wrapped-minimum wrapped-sampling wrapped-severity wrapped-timeout overflow-timeout negative-timeout
     wrapped-action wrapped-retry wrapped-file wrapped-close custom-parser

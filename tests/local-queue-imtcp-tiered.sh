@@ -28,7 +28,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" address="127.0.0.1" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
-main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
+main_queue(queue.scope="local" queue.type="'${LOCAL_QUEUE_TEST_BE_TYPE:-FixedArray}'" queue.size="64"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="3"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqfmt" type="string" string="%msg:F,58:2%\n")

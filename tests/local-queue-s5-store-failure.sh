@@ -73,7 +73,9 @@ import sys
 from pathlib import Path
 output, marker, engine = sys.argv[1:]
 ids = [int(line) for line in Path(output).read_text().splitlines()]
-fields = dict(re.findall(r'([a-z.]+)=(\d+)', Path(marker).read_text()))
+# Match complete keys: policy fields contain underscores and must not
+# overwrite the accepted-message 'discarded' outcome.
+fields = dict(re.findall(r'(?:^|\s)([a-z_.]+)=(\d+)', Path(marker).read_text()))
 assert len(ids) == len(set(ids)), ids
 assert set(ids) <= set(range(23)) and {0, 1, 2} <= set(ids), ids
 assert int(fields['admitted']) == 23, fields

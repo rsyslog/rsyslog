@@ -31,7 +31,7 @@ runtime_queue:
       opaque context; inherited terminal disk cleanup is not repaired here.
     - >-
       Experimental local scope uses bounded producer-owned SPSC front ends
-      and the existing FixedArray backend. Each front end has its own worker pool,
+      and an existing FixedArray or LinkedList backend. Each front end has its own worker pool,
       source identity and module worker state. An eligible worker checks its
       FE first and otherwise borrows one bounded available BE batch, with
       completion attributed to BE and a fresh FE check before further borrowing.
@@ -39,6 +39,21 @@ runtime_queue:
       notification use BE-before-FE locking; ordinary successful FE publication
       does not take the BE mutex. This implementation remains subject to the
       staged local-queue qualification gates.
+    - >-
+      Local sampling and severity discard are logical preadmission policies.
+      Enabled policies serialize sequence selection and sample aggregate FE/BE memory
+      pressure under the BE mutex; default FE routing does not acquire that mutex.
+      Surviving messages retain one whole-batch routing decision. Transfers and
+      source retries bypass sampling, including DA handoff. Policy drops are
+      separate from preadmission errors and accepted-message terminal discard.
+      LinkedList retry insertion failure must have an explicit ownership outcome.
+    - >-
+      Local queue.size and full/light delay marks remain BE-specific. Resource
+      reservation is B+N*(F+D), with D=min(dequeueBatchSize,F) and a lifetime FE
+      registration cap N. It bounds memory delivery obligations, not RSS or disk
+      backlog. Resource gauges and allocation estimates are reported separately.
+      FE minimum-batch waiting clamps to D; helper acquisition never waits for a
+      minimum. FE execution also honors dequeue time windows and slowdown.
     - >-
       Local queue graphs register actual FE, BE and disk recovery execution workers as
       downstream producers, including workers at global memory boundaries.

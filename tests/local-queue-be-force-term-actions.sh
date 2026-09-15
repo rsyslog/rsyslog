@@ -21,6 +21,8 @@
 # the real FORCE_TERM/reset marker. The returned borrowed obligation must then
 # replay on BE (A=1,2/B=2) with zero discards. This avoids forced read cancellation
 # while preserving the source-switch/cleanup oracle under ThreadSanitizer.
+# The S6 LinkedList wrapper fails borrowed retry allocation once; that exact
+# reference becomes terminal-discarded instead of returned, without re-admission.
 # The 10s action deadline is only a watchdog; marker acknowledgements control
 # release, and no elapsed-time threshold determines success.
 . ${srcdir:=.}/diag.sh init
@@ -28,6 +30,14 @@
 require_plugin imdiag
 require_plugin impstats
 borrowed=${LOCAL_QUEUE_BORROWED_FORCE_TERM:-0}
+backend_type=FixedArray
+internal_config=''
+if [ "${LOCAL_QUEUE_S6_RETRY_OOM:-0}" = 1 ]; then
+    backend_type=LinkedList
+    internal_config='global(processInternalMessages="off")'
+    export RSYSLOG_LOCAL_QUEUE_TEST_FAULT=retry-node
+    export RS_REDIR=">$PWD/$RSYSLOG_DYNNAME.fault.log 2>&1"
+fi
 expected_frontends=0
 borrow_preamble=''
 borrow_rule=''
@@ -61,9 +71,10 @@ export RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE="$COMMIT_RELEASE"
 generate_conf
 localq_make_startup_marker_absolute
 add_conf '
+'"$internal_config"'
 '"$borrow_preamble"'
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1")
-main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
+main_queue(queue.scope="local" queue.type="'$backend_type'" queue.size="32"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
 	queue.timeoutShutdown="1" queue.timeoutActionCompletion="10000"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1")
@@ -132,7 +143,9 @@ wait_file_lines "$STOP_BASE" 1
 if [ "$borrowed" -eq 1 ]; then
     exec {dedicated_hold_fd}>&-
     # Match a complete counter value while allowing appended S5 outcome fields.
-    if ! grep -Eq ' transferred=0 help.completed=[1-9][0-9]* help.returned=1( |$)' "$STOP_BASE"; then
+    expected_returned=1
+    [ "${LOCAL_QUEUE_S6_RETRY_OOM:-0}" != 1 ] || expected_returned=0
+    if ! grep -Eq " transferred=0 help.completed=[1-9][0-9]* help.returned=$expected_returned( |$)" "$STOP_BASE"; then
         error_exit 1 'borrowed lease was not returned once to its BE source'
     fi
 fi
@@ -164,6 +177,15 @@ if [ -s "$ACTION_B" ]; then
 	echo 'FAIL: stopped BE transaction unexpectedly invoked or replayed B'
 	cat "$ACTION_B"
 	error_exit 1
+fi
+if [ "${LOCAL_QUEUE_S6_RETRY_OOM:-0}" = 1 ]; then
+    # The failed borrowed retry is a terminal allocation-failure discard;
+    # only the separately held dedicated message is a shutdown discard.
+    custom_content_check 'local queue test fault: retry-node' "$PWD/$RSYSLOG_DYNNAME.fault.log"
+    custom_content_check 'shutdown.discarded=1 outstanding=0 admitted=4 terminal=4 rejected=0' "$STOP_BASE"
+    custom_content_check 'restored=0 persisted=0 executed=2 discarded=2' "$STOP_BASE"
+    custom_content_check 'retry_failed=1' "$STOP_BASE"
+    exit_test
 fi
 if ! grep -Eq "^OK fe.joined=$expected_frontends fe.registered=$expected_frontends shutdown.discarded=[1-9][0-9]* outstanding=0 " "$STOP_BASE"; then
 	echo 'FAIL: interrupted BE obligation was not explicitly shutdown-discarded'

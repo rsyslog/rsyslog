@@ -9,6 +9,8 @@
 # joined BE and invoke its existing save worker before accepting the suffix.
 # Barrier entry, FE inventory and the actual disk store are phase predicates;
 # shutdown timeouts merely force the existing cooperative/cancellation path.
+# S6 sampling wrappers supply three ingress IDs per saved ID; only each third
+# survives and must remain unchanged across FE/BE/disk transfers and recovery.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
@@ -16,6 +18,13 @@ require_plugin impstats
 require_plugin omtesting
 export NUMMESSAGES=66
 engine=${LOCAL_QUEUE_S5_ENGINE:-disk}
+sampling=${LOCAL_QUEUE_S6_SAMPLING:-0}
+input_multiplier=1
+policy_config=''
+if [ "$sampling" = 3 ]; then
+    input_multiplier=3
+    policy_config='queue.samplingInterval="3"'
+fi
 SPOOL="$PWD/$RSYSLOG_DYNNAME.spool"
 mkdir -p "$SPOOL"
 STATS="$PWD/$RSYSLOG_DYNNAME.stats"
@@ -46,11 +55,11 @@ module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/impstats/.libs/impstats" interval="1" log.syslog="off" log.file="'$STATS'")
 input(type="imtcp" address="127.0.0.1" port="0" workerThreads="1"
  listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
-main_queue(queue.type="FixedArray" queue.filename="s5queue" queue.size="32"
+main_queue(queue.type="'${LOCAL_QUEUE_TEST_BE_TYPE:-FixedArray}'" queue.filename="s5queue" queue.size="32"
  queue.highWatermark="8" queue.lowWatermark="4" queue.workerThreads="'$workers'"
  queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
  queue.timeoutShutdown="100" queue.timeoutActionCompletion="100" queue.saveOnShutdown="on"
- queue.diskQueueType="'$engine'" '"$local_config"')
+ queue.diskQueueType="'$engine'" '"$policy_config"' '"$local_config"')
 template(name="ids" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
  '"$barrier_config"'
@@ -83,12 +92,16 @@ assert_saved() {
 
 write_phase first local 1 yes
 startup
-tcpflood -m1 -i0
+tcpflood -m"$input_multiplier" -i0
 wait_file_lines "$ENTRY" 1
-tcpflood -m40 -i1
+tcpflood -m"$((40 * input_multiplier))" -i"$input_multiplier"
 localq_wait_stats "$STATS" 'main Q.local' 'fe.queued.messages=40' 'fe.inflight.messages=1'
-injectmsg 41 25
+injectmsg "$((41 * input_multiplier))" "$((25 * input_multiplier))"
 wait_store
+if [ "$sampling" = 3 ]; then
+    localq_wait_stats "$STATS" 'main Q.local' 'policy.sampled_out.messages=132' \
+        'policy.severity_discarded.messages=0' 'accepted.messages=66' 'ingress.messages=198' 'rejected.preadmission.messages=0'
+fi
 STOPMARK="$PWD/$RSYSLOG_DYNNAME.first-stop"
 response=$(printf 'localqueuestopcheck %s\n' "$STOPMARK" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")
 case "$response" in *OK*) ;; *) error_exit 1 'stop checker arm failed' ;; esac
@@ -117,7 +130,19 @@ response=$(printf 'localqueuestopcheck %s\n' "$STOPMARK" | "$TESTTOOL_DIR/diagta
 case "$response" in *OK*) ;; *) error_exit 1 'recovery stop checker arm failed' ;; esac
 shutdown_when_empty
 wait_shutdown
-seq_check
+if [ "$sampling" = 3 ]; then
+    # Every kept logical ingress ID must survive FE consolidation, disk transfer
+    # and two restarts. Reapplying either sampler loses known IDs here.
+    python3 - "$RSYSLOG_OUT_LOG" <<'PYORACLE'
+import sys
+from pathlib import Path
+ids = [int(line) for line in Path(sys.argv[1]).read_text().splitlines()]
+assert sorted(ids) == list(range(2, 198, 3)), ids
+PYORACLE
+    [ "$?" -eq 0 ] || error_exit 1 'sampling was repeated after logical admission'
+else
+    seq_check
+fi
 wait_file_lines "$STOPMARK" 1
 custom_content_check 'restored=66 persisted=0 executed=66 discarded=0' "$STOPMARK"
 exec {release_fd}>&-

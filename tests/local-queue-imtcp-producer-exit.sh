@@ -6,6 +6,8 @@
 # it must fall back to BE; neither the exited producer's descriptor nor generation
 # may be reused. Releasing the retained callback must deliver every ID exactly
 # once and allow normal daemon termination. No connection is a producer identity.
+# Completion reclaims obligations, not the lifetime registration reservation:
+# the exported bound remains 64+1*(8+1)=73 after outstanding reaches zero.
 # Registered only with imtcp epoll support: the portable poll implementation
 # deliberately forces one thread and therefore cannot exercise pool departure.
 # The direct stderr hook marker confirms the actual retirement injection;
@@ -65,7 +67,9 @@ localq_wait_stats "$STATSFILE" 'main Q.local.frontend.1' \
 localq_release_barrier "$RELEASEFIFO"
 wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" "$NUMMESSAGES"
 localq_wait_stats "$STATSFILE" 'main Q.local' \
-    'fe.registered=1' 'fe.producerless=1' 'outstanding.messages=0'
+    'fe.registered=1' 'fe.producerless=1' 'outstanding.messages=0' \
+    'resource.reserved.messages=73' 'resource.be.capacity.messages=64' \
+    'resource.fe.capacity.messages=8' 'resource.fe.active.capacity.messages=1'
 shutdown_when_empty
 wait_shutdown
 seq_check

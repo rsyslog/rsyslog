@@ -903,3 +903,160 @@ was identified. Its final digest-bound receipt is generated after this evidence
 update and the bounded helper-assertion review. Hosted checks/reviews still cover
 only the older published PR head, not these uncommitted/unpushed S4/S5 changes.
 S6/S7 operator-facing completion and qualification remain upcoming work.
+
+## S6: option and resource integration
+
+S6 starts from committed S4/S5 `a24c4ceda`. It retains partitioned capacities,
+existing storage engines and the lifetime registration cap. Work covers
+LinkedList memory backing, logical sampling/discard, FE dequeue controls and
+resource diagnostics. See the implementation plan for the precise adaptations.
+
+Validation will reuse existing ownership/helping/statistics/persistence fixtures
+with LinkedList, add focused policy and configuration-parity oracles, and run
+sanitizer and container checks on the stabilized candidate. An exploratory
+4M-message omfwd S5/S6 comparison uses the existing harness. It is not a substitute
+for the independent performance qualification required in S7.
+
+### S6 implemented behavior and focused evidence
+
+Local memory backing now accepts both FixedArray and LinkedList. Generic store
+operations preserve BE-source helping and shutdown consolidation. A failed
+LinkedList retry allocation has an explicit terminal discard and
+`retry.enqueue_failed.messages` outcome; external allocation failure rejects
+its unaccepted reference and later admission can still progress.
+
+Configured sampling runs once per logical ingress sequence. Severity shedding
+uses sampled FE+BE memory occupancy; disk backlog alone does not activate a
+memory watermark. Filtered survivors retain one whole-batch fit decision.
+Default FE routing bypasses this policy path. `policy.sampled_out.messages`
+and `policy.severity_discarded.messages` are preadmission outcomes distinct from
+rejected admission and accepted-message terminal discard. Legacy enqueued/byte
+and near-full discard statistics include the corresponding reset-compatible
+deltas. Named severity values use explicit local severity decoding; global
+configuration decoding remains unchanged.
+
+FE execution honors minimum-batch timeout with the FE ceiling, dequeue windows,
+and slowdown; helping never waits to accumulate a BE minimum. Scheduled graph
+workers use wakeable waits with a bounded pool-state recheck so shutdown cannot
+miss a long sleep. Resource gauges expose fixed BE/FE/active-slot reservations;
+combined allocation arithmetic is checked before allocation. The lifetime FE
+registration cap remains unchanged; exhaustion routes to BE without growing
+frontends. Neither the reservation nor allocation estimate is an RSS limit.
+
+All fifteen normal-build S6 runtime fixtures passed on the final draft, including
+LinkedList spill/helping/stats and classic/segmented persistence; once-only
+sampling through retry and both disk engines; parsed severity under FE-only
+pressure; minimum-batch timeout/clamping; schedule shutdown/recovery; slowdown;
+and injected initial/retry list-node allocation failures. Logs are in
+`/home/rger/rsyslog-local-queue-artifacts/s6/focused-final.log`.
+
+The first discard fixture incorrectly expected wire priority before main-queue
+parsing. It now routes through a parsed local ruleset using Direct main;
+consumer/parsing APIs were not changed. Configuration tests found and prompted
+the named-severity mapping correction. Independent lifecycle review identified
+the memory/disk pressure mismatch and verified its correction, plus the final
+allocation and scheduling changes. Review hashes and the root's late memory/
+path-sensitive prompt audit are retained in `s6/lifecycle-review.md` and
+`s6/late-audit.md` under the artifact directory. Final sanitizer/container and
+performance results follow when complete.
+
+### S6 sanitizer status
+
+Both sanitizer builds passed. ASan/UBSan completed with 29 successful test/driver
+records covering all fifteen S6 scripts and selected existing local/DA tests.
+Leak detection remained disabled as in earlier stages; this is not a daemon-wide
+leak qualification.
+
+TSan passed a subset but retains coverage gaps. The LinkedList persistence and
+retry-OOM fixtures use forced read cancellation; their cleanup traces reproduce
+the established interceptor limitation (the actual action worker-table mutex is
+held, but absent from TSan's cancellation stack). No new suppression or source
+exclusion was added. A later cooperative run stopped on the existing
+`runtime/debug.c` `ptLastThrdID` race in diagnostic header output. The known global
+classic checkpoint race was not rerun. Exact executed and unexecuted cases are
+recorded in the final validation evidence; these are not claimed as clean passes.
+
+The first S6 analyzer run flagged an unchecked FE pool pointer in the scheduled
+wait. Construction publishes that pool before worker startup and teardown clears
+it only after join; a reachable null was not established. The final code now
+asserts and checks the pool/worker array/worker before using its condition
+variable. The changed schedule path and analyzer are revalidated separately;
+prior sanitizer evidence still applies to the unchanged implementation paths.
+
+### S6 final container run
+
+The patched schedule test passed normally and under ASan/UBSan. Its TSan run
+stopped on the existing debug-header race before test startup, so it adds no clean
+TSan execution claim. The final analyzer rerun completed with **result 0 and no
+reports**, superseding its earlier pointer-invariant warning.
+
+The single broad run reported **1709 total, 1635 pass, 69 skip, 5 fail, 0 error**.
+Two local test defects were corrected without changing runtime code:
+`local-queue-s5-store-failure.sh` used a partial-key regex which read the new
+`severity_discarded=0` suffix as `discarded=0`, overwriting the actual terminal
+discard count. Complete whitespace-delimited keys now include underscores.
+`local-queue-s4-direct-main.sh` lacked its executable bit and exited 126; its mode
+is corrected. Their focused confirmations are recorded separately, not as a
+replacement passing broad run.
+
+Three broad failures remain: `sndrcv_omsnmpv1_udp_dynsource.sh` received 0/10
+traps; `omfwd-tls-ossl-files-mtls.sh` lacked the live helper's readiness port file;
+`imdtls-basic-timeout.sh` delivered 1566/2000 messages. No broad retry or unrelated
+service repair was undertaken. The work is **not fully container-validated**.
+
+All three corrected cached-build checks passed: classic and segmented storage
+failure, plus S4 Direct main. The classic raw shutdown record was always
+consistent (`executed=5`, `discarded=18`, `terminal=23`, `outstanding=0`). One
+intermediate validation copy still contained the old parser; in-container hash
+verification and the corrected rerun resolved that harness-copy mistake. It did
+not require another runtime change.
+
+### S6 performance screen and final status
+
+Corrected mock distcheck passed (exit 0). Native/YAML configuration and existing
+registration-cap/producer-exit checks also passed. The final source and
+subsequent test-only corrections passed bounded lifecycle/security review;
+the security receipt is bound after this final evidence update. No source
+changes followed the final schedule invariant check. S6 remains uncommitted and
+unpushed; hosted PR reviews/checks do not cover these local changes.
+
+The exploratory screen used the existing `trial-multi.sh` with 4M messages,
+8 imtcp workers, 16 connections, 512-byte payloads, 1M BE slots, batch ceiling
+1024, worker minimum 1, and omfwd to the existing mock TCP receiver. S5 and S6
+used the same pinned Ubuntu 26.04 image and GCC `CFLAGS=-g` (no optimization
+flag). Each cell has exactly one run per revision, with no independent repeat
+or variance estimate. All sixteen runs passed exact final message-ID checks.
+
+| FE slots | BE workers | Stats | S5 work seconds | S6 work seconds | Observed throughput change |
+|---:|---:|---|---:|---:|---:|
+| 10,000 | 2 | off | 4.021 | 3.724 | +8.0% |
+| 10,000 | 2 | on | 4.024 | 3.684 | +9.2% |
+| 10,000 | 10 | off | 3.216 | 3.028 | +6.2% |
+| 10,000 | 10 | on | 3.361 | 3.162 | +6.3% |
+| 100,000 | 2 | off | 4.387 | 3.833 | +14.5% |
+| 100,000 | 2 | on | 4.265 | 3.786 | +12.6% |
+| 100,000 | 10 | off | 4.046 | 3.797 | +6.6% |
+| 100,000 | 10 | on | 4.115 | 3.854 | +6.8% |
+
+“Stats on” enables one-second impstats collection and BE mutex contention
+instrumentation; it does not disable/enable FE descriptor allocation or the
+mandatory logical accounting. Eight impstats artifacts were retained. Policies
+were disabled, so this screens default-path overhead, not policy slow-path cost.
+BE capacity is matched within each S5/S6 pair; the different FE-size cells have
+different total reservations and are not equal-memory comparisons to each other.
+No production speedup, contention diagnosis, or final S7 performance qualification
+is inferred from this small, unoptimized, single-sample screen.
+
+Raw commands, compiler/binary/source identities, JSON and logs are under
+`/home/rger/rsyslog-local-queue-artifacts/s6/perf/omfwd-4m-16/`.
+Consolidated validation evidence is
+`/home/rger/rsyslog-local-queue-artifacts/s6/final-validation-evidence.md`.
+The pinned image is `rsyslog/rsyslog_dev_base_ubuntu:26.04`, ID
+`sha256:32ade478a405e4f27f077b5268ec5ecc59dd572843ad67ca2b6723594960ae09`;
+broad build/check concurrency was 60, analyzer/sanitizers 20. Exact lane
+commands, service relevance choices and sanitizer omissions are in that evidence.
+
+S0–S6 implementation is present. The three remaining broad failures and TSan
+coverage limitations prevent a fully container-validated claim. S7 operator
+manuals, complete acceptance/performance qualification, representative production
+and real Elasticsearch-node testing remain open.

@@ -8,7 +8,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **S0–S5 implemented; validation limitations recorded; performance qualification open** |
+| Status | **S0–S6 implemented; validation limitations recorded; S7 qualification open** |
 | Created / reviewed | 2026-09-14 |
 | Design authority | [Local queue front ends with shared overflow](local-queue-frontends.md) |
 | Source baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090`; immutable implementation baseline recorded in the execution ledger |
@@ -469,6 +469,41 @@ configuration errors across RainerScript/YAML frontends. Performance repeats all
 fast-path workloads with final accounting/stats enabled and disabled. Sweep FE
 capacity around the 10K reference without changing the equal-memory contract.
 This is where apparently cheap global counters often erase an earlier gain.
+
+### S6 implementation decisions
+
+The S0 matrix is the historical MVP restriction set. S6 lifts those restrictions
+through the following adaptations; the execution ledger records validation.
+
+- Keep partitioned reservations and the lifetime FE registration cap. Existing
+  `queue.size`, full/light delay marks and enqueue timeout remain BE-specific.
+  Report `B + N*(F+D)` as the conservative memory delivery-obligation bound,
+  where `D=min(queue.dequeueBatchSize,F)`. Disk capacity remains separately
+  governed by the existing disk settings. Allocation estimates are not RSS limits.
+- Enable LinkedList memory backing through its existing storage operations.
+  Explicitly handle allocation failure when reinserting already-owned messages;
+  failed insertion must not silently become successful consumption.
+- Apply sampling once at logical admission, before routing, using one sequence
+  per logical queue. Transfers and retry insertion do not create new admission
+  attempts or sample the same obligation again. Policy-filtered survivors are
+  submitted together, preserving the whole-batch FE fit decision.
+- Apply configured severity discard using aggregate FE/BE queued and active
+  inventory. This pressure observation is approximate, as in existing discard
+  behavior; it is not a hard aggregate capacity reservation. The policy uses
+  the message severity available at this boundary, as existing queue admission
+  does; it does not move parsing into the producer. Only enabled
+  policies introduce policy serialization, leaving the default FE route intact.
+- Honor FE minimum-batch waiting with the FE batch ceiling and configured
+  timeout. Helping remains a bounded, nonwaiting BE acquisition. Apply dequeue
+  time windows and slowdown to FE execution as well as dedicated consumers.
+- Expose tier capacities, aggregate reservation and allocation estimates through
+  the existing local impstats object (`resource.reserved.messages`,
+  `resource.be.capacity.messages`, `resource.fe.capacity.messages`, and
+  `resource.fe.active.capacity.messages`). Keep policy outcomes distinguishable from
+  shutdown discard and preadmission failure. Sampling/severity drops are
+  preadmission policy outcomes: ingress equals accepted plus rejected plus
+  policy-dropped messages at quiescence. Native and YAML configuration use
+  the same validation and behavior.
 
 ### S7: release candidate for the full initial design
 

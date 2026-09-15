@@ -9,7 +9,8 @@
 # deliberately proves repeatable script/action effects, not exact-once output.
 # The force-term marker observes the real post-reset return and the final marker
 # proves whole-lifetime local-queue obligation conservation, including startup
-# internal messages. The 10 s
+# internal messages. The S6 wrapper samples three ingress IDs down to ID2;
+# its unchanged A/B replay oracle also proves retry never samples again. The 10 s
 # action deadline below is only a harness watchdog: phase-marker acknowledgement,
 # rather than elapsed time, controls the FIFO release.
 . ${srcdir:=.}/diag.sh init
@@ -17,6 +18,14 @@
 require_plugin imtcp
 require_plugin imdiag
 
+sampling_config=''
+input_count=1
+blocked_id=00000000
+if [ "${LOCAL_QUEUE_S6_RETRY_SAMPLING:-0}" = 1 ]; then
+    sampling_config='queue.samplingInterval="3"'
+    input_count=3
+    blocked_id=00000002
+fi
 COMMIT_ENTRY="$PWD/${RSYSLOG_DYNNAME}.transaction-entry"
 COMMIT_RELEASE="$PWD/${RSYSLOG_DYNNAME}.transaction-release"
 STOP_BASE="$PWD/${RSYSLOG_DYNNAME}.transaction-stop"
@@ -34,15 +43,16 @@ export RSYSLOG_LOCAL_QUEUE_TEST_COMMIT_RELEASE="$COMMIT_RELEASE"
 generate_conf
 localq_make_startup_marker_absolute
 add_conf '
+global(processInternalMessages="off")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" address="127.0.0.1" port="0"
 	listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="32"
-	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1"
+	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="1" '"$sampling_config"'
 	queue.timeoutShutdown="1" queue.timeoutActionCompletion="10000"
 	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqvalue" type="string" string="%$!localq!attempt%\n")
-if ($msg contains "msgnum:00000000:") then {
+if ($msg contains "msgnum:'$blocked_id':") then {
 	set $!localq!attempt = $!localq!attempt + 1;
 	action(name="localq-a" type="omfile" file="'$ACTION_A'" template="localqvalue" queue.type="Direct"
 		asyncWriting="off" flushOnTXEnd="on" action.reportSuspension="off"
@@ -60,7 +70,7 @@ if [[ "$response" != *"OK"* ]]; then
 	error_exit 1
 fi
 
-tcpflood -m1 -i0 &
+tcpflood -m"$input_count" -i0 &
 sender=$!
 wait_file_lines "$COMMIT_ENTRY" 1
 wait "$sender" || error_exit $?

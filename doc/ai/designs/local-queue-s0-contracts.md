@@ -311,6 +311,10 @@ Stats source: [statsobj.c](../../../runtime/statsobj.c)
 
 ## 5. Exhaustive existing queue option matrix
 
+This is the historical **S2** option matrix, not the current support table.
+S4/S5 additions and the S6 adaptations are tracked in the
+[implementation plan](local-queue-implementation-plan.md) and execution ledger.
+
 All 35 entries in `runtime/queue.c` `cnfpdescr` at the recorded baseline appear
 below. No existing option is FE-specific; the two proposed local bounds are new.
 “Rejected” means a requested nontrivial feature is rejected for local scope;

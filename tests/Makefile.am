@@ -179,6 +179,21 @@ TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh local-queue-s4-config
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
 TESTS_LOCAL_QUEUE = \
+	local-queue-s6-linkedlist-oom.sh \
+	local-queue-s6-linkedlist-retry-oom.sh \
+	local-queue-s6-schedule.sh \
+	local-queue-s6-slowdown.sh \
+	local-queue-s6-sampling-retry.sh \
+	local-queue-s6-discard.sh \
+	local-queue-s6-linkedlist-discard.sh \
+	local-queue-s6-sampling.sh \
+	local-queue-s6-segmented-sampling.sh \
+	local-queue-s6-min-batch.sh \
+	local-queue-s6-linkedlist-tiered.sh \
+	local-queue-s6-linkedlist-help-capacity.sh \
+	local-queue-s6-linkedlist-stats.sh \
+	local-queue-s6-linkedlist-persistence.sh \
+	local-queue-s6-linkedlist-segmented-persistence.sh \
 	local-queue-s5-store-failure.sh \
 	local-queue-s5-segmented-store-failure.sh \
 	local-queue-s5-save-disabled.sh \

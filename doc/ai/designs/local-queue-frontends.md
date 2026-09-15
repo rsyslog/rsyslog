@@ -8,7 +8,7 @@
 
 | Metadata | Value |
 |---|---|
-| Status | **S5 DA/restart integration implemented; validation limitations recorded** |
+| Status | **S6 option/resource integration implemented; validation limitations recorded** |
 | Created / last reviewed | 2026-09-14 / 2026-09-15 |
 | Audience | Maintainers, implementers, human reviewers, AI agents |
 | Code baseline | `b0d9f971f007f06db3f734543cef5dfb312c5090` |

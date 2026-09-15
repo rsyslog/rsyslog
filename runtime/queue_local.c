@@ -39,6 +39,7 @@
 #include "errmsg.h"
 #include "rsconf.h"
 #include "action.h"
+#include "srUtils.h"
 
 /* Local scope fails closed when its atomic/monotonic primitives are absent.
  * In particular, do not emit out-of-line 64-bit atomics on unsupported targets
@@ -67,7 +68,7 @@ struct qqueueLocalFrontend_s {
     unsigned idleListed, helpWakePending;
     uint64_t help_attempts, help_empty, help_batches, help_messages, help_max, help_active, help_retry;
     uint64_t help_terminal, help_waits, help_wakes, help_completed, help_returned, wake_fe, wake_shutdown;
-    uint64_t attempts, published, dequeued, terminal, active, retry;
+    uint64_t attempts, published, dequeued, terminal, active, retry, discarded;
     uint64_t overflow, nofit, oversized, transferred, shutdownDiscarded, bytes, batches;
     uint64_t publishedBatches, dequeueMax, dequeueMessages;
     uint64_t submittedBatches, submittedMax, overflowBatches, oversizedBatches;
@@ -83,9 +84,12 @@ struct qqueueLocal_s {
     unsigned registryInitialized, spaceInitialized, admissionInitialized;
     unsigned state, count, nextRegistration, registered, started;
     unsigned beSubmitting; /* owner->mut */
-    uint64_t beAttempted, beAdmitted, beRejected, beTerminal, beDiscarded;
+    uint64_t beAttempted, beAdmitted, beRejected, beTerminal, beDiscarded, beShutdownDiscarded;
     uint64_t diskRestored, diskTransferred, diskTerminal, diskDiscarded, diskPersisted;
     uint64_t registrationFailures, allocationBytes;
+    uint64_t sampledOut, severityDiscarded, policyRejected, policyBytes, retryFailed;
+    unsigned samplingPosition; /* BE mutex, configured admission policy only */
+    uint64_t legacyPolicyMessages, legacyPolicyBytes, legacySeverityDiscarded; /* stats-list reader */
     uint64_t beBatches, beNofit, beOversized, beRegistration, beRedirect, beUnclassified;
     uint64_t beInternal, beCapacity, capacityExhaustions;
     uint64_t beDequeueBatches, beDequeueMessages, beDequeueMax;
@@ -146,7 +150,9 @@ enum localTestFault {
     TEST_FAULT_TLS,
     TEST_FAULT_CACHE,
     TEST_FAULT_WORKER,
-    TEST_FAULT_RETIRE
+    TEST_FAULT_RETIRE,
+    TEST_FAULT_BACKEND_NODE,
+    TEST_FAULT_RETRY_NODE
 };
 static enum localTestFault testFault;
 static const char *testFaultName;
@@ -173,7 +179,9 @@ static void readTestFault(void) {
                                         "producer-tls",
                                         "producer-cache",
                                         "frontend-worker",
-                                        "producer-retire"};
+                                        "producer-retire",
+                                        "backend-node",
+                                        "retry-node"};
     if (value == NULL) return;
     for (unsigned i = 1; i < sizeof(names) / sizeof(names[0]); ++i) {
         if (!strcmp(value, names[i])) {
@@ -190,7 +198,13 @@ static int hitTestFault(const enum localTestFault fault) {
     if (testFault != fault) return 0;
     const unsigned alreadyFired = __atomic_exchange_n(&testFaultFired, 1, __ATOMIC_RELAXED);
     if (!alreadyFired) fprintf(stderr, "local queue test fault: %s\n", testFaultName);
-    return fault != TEST_FAULT_RETIRE || !alreadyFired;
+    return (fault != TEST_FAULT_RETIRE && fault != TEST_FAULT_BACKEND_NODE && fault != TEST_FAULT_RETRY_NODE) ||
+           !alreadyFired;
+}
+
+int qqueueLocalTestFailNode(const qqueue_t *owner, const int retry) {
+    return owner->bLocalScope && owner->qType == QUEUETYPE_LINKEDLIST &&
+           hitTestFault(retry ? TEST_FAULT_RETRY_NODE : TEST_FAULT_BACKEND_NODE);
 }
 
 int qqueueLocalTestProducerShouldExit(void) {
@@ -340,7 +354,8 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
         snapshot.help_completed != snapshot.help_terminal + snapshot.help_returned || snapshot.outstanding != 0 ||
         snapshot.fe_queued != 0 || snapshot.fe_active != 0 || snapshot.fe_retry != 0 || snapshot.be_physical != 0 ||
         snapshot.be_active != 0 || snapshot.admitted + snapshot.restored != snapshot.terminal ||
-        snapshot.attempts + snapshot.restored != snapshot.terminal + snapshot.preadmission_rejected ||
+        snapshot.attempts + snapshot.restored !=
+            snapshot.terminal + snapshot.preadmission_rejected + snapshot.sampled_out + snapshot.severity_discarded ||
         snapshot.disk_active != 0 || snapshot.disk_physical != snapshot.persisted)
         return RS_RET_INTERNAL_ERROR;
     FILE *const output = fopen(marker, "w");
@@ -349,13 +364,16 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
         fprintf(output,
                 "OK fe.joined=%u fe.registered=%llu shutdown.discarded=%llu outstanding=0 "
                 "admitted=%llu terminal=%llu rejected=%llu transferred=%llu help.completed=%llu help.returned=%llu "
-                "restored=%llu persisted=%llu executed=%llu discarded=%llu\n",
+                "restored=%llu persisted=%llu executed=%llu discarded=%llu sampled_out=%llu severity_discarded=%llu "
+                "retry_failed=%llu\n",
                 joined, (unsigned long long)snapshot.fe_registered, (unsigned long long)snapshot.shutdown_discarded,
                 (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
                 (unsigned long long)snapshot.preadmission_rejected, (unsigned long long)snapshot.transferred,
                 (unsigned long long)snapshot.help_completed, (unsigned long long)snapshot.help_returned,
                 (unsigned long long)snapshot.restored, (unsigned long long)snapshot.persisted,
-                (unsigned long long)snapshot.executed, (unsigned long long)snapshot.discarded);
+                (unsigned long long)snapshot.executed, (unsigned long long)snapshot.discarded,
+                (unsigned long long)snapshot.sampled_out, (unsigned long long)snapshot.severity_discarded,
+                (unsigned long long)snapshot.retry_failed);
     const int closed = fclose(output);
     return written < 0 || closed != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
 }
@@ -603,10 +621,14 @@ static rsRetVal completeBorrow(qqueueLocalFrontend_t *const fe, wti_t *const wor
     const rsRetVal ret = qqueueLocalCompleteBorrowedBackend(fe->owner, worker);
     pthread_mutex_unlock(fe->owner->mut);
     if (ret == RS_RET_OK) {
+        unsigned returned = 0;
+        for (unsigned i = 0; i < terminal + retry; ++i)
+            if (worker->batch.eltState[i] == BATCH_STATE_RDY || worker->batch.eltState[i] == BATCH_STATE_SUB)
+                ++returned;
         feDrainDeferred(worker);
-        counterAdd(&fe->help_terminal, terminal);
+        counterAdd(&fe->help_terminal, terminal + retry - returned);
         counterAdd(&fe->help_completed, terminal + retry);
-        counterAdd(&fe->help_returned, retry);
+        counterAdd(&fe->help_returned, returned);
         __atomic_store_n(&fe->help_active, 0, __ATOMIC_RELAXED);
         __atomic_store_n(&fe->help_retry, 0, __ATOMIC_RELAXED);
     }
@@ -637,6 +659,7 @@ static rsRetVal feComplete(void *const source, wti_t *const worker) {
             worker->p_deferred_msgs[worker->n_deferred_msgs++] = batch->pElem[i].pMsg;
             batch->pElem[i].pMsg = NULL;
             ++terminal;
+            if (batch->eltState[i] == BATCH_STATE_DISC) counterAdd(&fe->discarded, 1);
         }
     }
     counterAdd(&fe->terminal, terminal);
@@ -683,6 +706,17 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
         if (ret != RS_RET_OK && ret != RS_RET_RETRY) return RS_RET_ERR_QUEUE_EMERGENCY;
     }
     if (worker->source_queue == NULL) {
+        const unsigned minimum = (unsigned)queue->iMinDeqBatchSize;
+        size_t available = rsSpscQueueConsumerAvailable(&fe->ring);
+        if (minimum > 0 && available > 0 && available < minimum) {
+            struct timespec deadline;
+            timeoutComp(&deadline, queue->toMinDeqBatchSize);
+            while (available < minimum && stateRead(&fe->owner->local->state) == LOCAL_RUNNING) {
+                if (pthread_cond_timedwait(&worker->pcondBusy, queue->mut, &deadline) == ETIMEDOUT) break;
+                available = rsSpscQueueConsumerAvailable(&fe->ring);
+            }
+            if (stateRead(&fe->owner->local->state) != LOCAL_RUNNING) return RS_RET_IDLE;
+        }
         ret = qqueueLeaseBind(&worker->source_queue, &worker->logical_owner, queue, fe->owner, worker->pWtp->pUsr,
                               worker->pWtp->pmutUsr, queue->mut);
         if (ret != RS_RET_OK) return RS_RET_ERR_QUEUE_EMERGENCY;
@@ -722,6 +756,7 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     int oldCancel;
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldCancel);
     ret = fe->owner->pConsumer(fe->owner->pAction, batch, worker);
+    if (fe->owner->iDeqSlowdown != 0) srSleep(fe->owner->iDeqSlowdown / 1000000, fe->owner->iDeqSlowdown % 1000000);
     pthread_setcancelstate(oldCancel, NULL);
     pthread_mutex_lock(queue->mut);
     if (wtiIsShutdownImmediate(worker)) qqueueLocalRetainAmbiguous(worker);
@@ -759,6 +794,10 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     fe->source->localGraphConf = owner->localGraphConf;
     fe->source->mut = &fe->mutex;
     fe->source->iDeqBatchSize = (int)batchSize;
+    fe->source->iMinDeqBatchSize = owner->iMinDeqBatchSize < (int)batchSize ? owner->iMinDeqBatchSize : (int)batchSize;
+    fe->source->toMinDeqBatchSize = owner->toMinDeqBatchSize;
+    fe->source->iDeqtWinFromHr = owner->iDeqtWinFromHr;
+    fe->source->iDeqtWinToHr = owner->iDeqtWinToHr;
     CHKiRet(wtpConstruct(&fe->pool));
     CHKiRet(wtpUseMonotonicTermination(fe->pool));
     CHKiRet(wtpSetpUsr(fe->pool, fe->source));
@@ -769,6 +808,7 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     CHKiRet(wtpSetpfChkStopWrkr(fe->pool, feCheckStop));
     CHKiRet(wtpSetpfGetDeqBatchSize(fe->pool, feBatchSize));
     CHKiRet(wtpSetpfDoWork(fe->pool, feDoWork));
+    if (owner->iDeqtWinToHr != 25) CHKiRet(wtpSetpfRateLimiter(fe->pool, qqueueLocalRateLimiter));
     CHKiRet(wtpSetpfObjProcessed(fe->pool, feComplete));
     char name[64];
     const int length = snprintf(name, sizeof(name), "local-fe-%u", index + 1);
@@ -782,8 +822,8 @@ finalize_it:
 rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     DEFiRet;
     if (owner->local != NULL) return RS_RET_OK;
-    if (owner->qType != QUEUETYPE_FIXED_ARRAY || owner->localFrontendSize <= 0 || owner->localMaxFrontends <= 0 ||
-        owner->iDeqBatchSize <= 0)
+    if ((owner->qType != QUEUETYPE_FIXED_ARRAY && owner->qType != QUEUETYPE_LINKEDLIST) ||
+        owner->localFrontendSize <= 0 || owner->localMaxFrontends <= 0 || owner->iDeqBatchSize <= 0)
         return RS_RET_PARAM_ERROR;
     #ifdef ENABLE_TESTBENCH
     pthread_once(&testFaultOnce, readTestFault);
@@ -900,10 +940,10 @@ static qqueueLocalFrontend_t *registerFrontend(qqueue_t *const owner,
     return cache->frontend;
 }
 
-rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
-                           smsg_t *const *const messages,
-                           const size_t count,
-                           const int singleFlowControl) {
+static rsRetVal submitSurvivors(qqueue_t *const owner,
+                                smsg_t *const *const messages,
+                                const size_t count,
+                                const int singleFlowControl) {
     if (count == 0) return RS_RET_OK;
     int oldCancel;
     rsRetVal ret;
@@ -977,6 +1017,82 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
 done:
     pthread_setcancelstate(oldCancel, NULL);
     return ret;
+}
+
+/* Sampling and severity are logical admission decisions. Only configured
+ * policies serialize here; the default FE path retains its lock-free ring.
+ * The inventory is a sampled aggregate, as severity shedding has always been:
+ * BE physical includes borrowed/dedicated active leases; FE active and retry
+ * are disjoint holdings. Disk inventory has its separate disk capacity policy.
+ * This is not an atomic quota. A compact vector preserves whole-survivor-batch fit.
+ */
+rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
+                           smsg_t *const *const messages,
+                           const size_t count,
+                           const int singleFlowControl) {
+    if (count == 0) return RS_RET_OK;
+    if (owner->iSmpInterval == 0 && (owner->iDiscardSeverity == 8 || owner->iDiscardMrk == 0))
+        return submitSurvivors(owner, messages, count, singleFlowControl);
+    int oldCancel;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldCancel);
+    smsg_t **survivors = count <= SIZE_MAX / sizeof(*survivors) ? malloc(count * sizeof(*survivors)) : NULL;
+    qqueueLocal_t *const family = owner->local;
+    pthread_mutex_lock(owner->mut);
+    qqueueLocalBackendBegin(owner);
+    size_t kept = 0;
+    int closed = 0;
+    qqueueLocalSnapshot_t inventory;
+    qqueueLocalGetSnapshot(owner, &inventory);
+    uint64_t occupied = inventory.be_physical + inventory.fe_queued + inventory.fe_active + inventory.fe_retry;
+    const uint64_t mark = owner->iDiscardMrk == -1
+                              ? inventory.reserved_messages / 100 * 98 + inventory.reserved_messages % 100 * 98 / 100
+                              : (uint64_t)owner->iDiscardMrk;
+    for (size_t i = 0; i < count; ++i) {
+        smsg_t *message = messages[i];
+        int drop = 0;
+        if (survivors == NULL || qqueueLocalIsClosed(owner) || owner->localGraphClosed) {
+            closed = qqueueLocalIsClosed(owner) || owner->localGraphClosed;
+            counterAdd(&family->policyRejected, 1);
+            drop = 1;
+        } else if (owner->iSmpInterval > 0 &&
+                   (family->samplingPosition = (family->samplingPosition + 1) % (unsigned)owner->iSmpInterval) != 0) {
+            counterAdd(&family->sampledOut, 1);
+            drop = 1;
+        } else if (owner->iDiscardSeverity < 8 && mark > 0 && occupied >= mark) {
+            int severity;
+            if (MsgGetSeverity(message, &severity) == RS_RET_OK && severity >= owner->iDiscardSeverity) {
+                counterAdd(&family->severityDiscarded, 1);
+                drop = 1;
+            }
+        }
+        if (drop) {
+            counterAdd(&family->policyBytes, (uint64_t)message->iLenRawMsg);
+            /* Reference destruction can emit diagnostics; no queue mutex may
+             * be held. Sequence selection remains serialized per element. */
+            pthread_mutex_unlock(owner->mut);
+            msgDestruct(&message);
+            pthread_mutex_lock(owner->mut);
+        } else {
+            survivors[kept++] = message;
+            ++occupied;
+        }
+    }
+    pthread_mutex_unlock(owner->mut);
+    const rsRetVal routed = submitSurvivors(owner, survivors, kept, singleFlowControl);
+    const rsRetVal ret = closed ? RS_RET_FORCE_TERM : survivors == NULL ? RS_RET_OUT_OF_MEMORY : routed;
+    pthread_mutex_lock(owner->mut);
+    qqueueLocalBackendEnd(owner);
+    pthread_mutex_unlock(owner->mut);
+    free(survivors);
+    pthread_setcancelstate(oldCancel, NULL);
+    return ret;
+}
+
+void qqueueLocalRetryFailed(qqueue_t *owner) {
+    counterAdd(&owner->local->retryFailed, 1);
+}
+void qqueueLocalBackendShutdownDiscarded(qqueue_t *owner) {
+    counterAdd(&owner->local->beShutdownDiscarded, 1);
 }
 
 int qqueueLocalIsClosed(const qqueue_t *const owner) {
@@ -1409,6 +1525,16 @@ void qqueueLocalRefreshLegacy(qqueue_t *const owner) {
     }
     __atomic_fetch_add(&owner->ctrEnqueued, published - family->legacyPublished, __ATOMIC_RELAXED);
     __atomic_fetch_add(&owner->ctrSizeEnqueued, bytes - family->legacyBytes, __ATOMIC_RELAXED);
+    const uint64_t policyMessages = counterRead(&family->sampledOut) + counterRead(&family->severityDiscarded) +
+                                    counterRead(&family->policyRejected);
+    const uint64_t policyBytes = counterRead(&family->policyBytes);
+    __atomic_fetch_add(&owner->ctrEnqueued, policyMessages - family->legacyPolicyMessages, __ATOMIC_RELAXED);
+    __atomic_fetch_add(&owner->ctrSizeEnqueued, policyBytes - family->legacyPolicyBytes, __ATOMIC_RELAXED);
+    const uint64_t severity = counterRead(&family->severityDiscarded);
+    __atomic_fetch_add(&owner->ctrNFDscrd, severity - family->legacySeverityDiscarded, __ATOMIC_RELAXED);
+    family->legacySeverityDiscarded = severity;
+    family->legacyPolicyMessages = policyMessages;
+    family->legacyPolicyBytes = policyBytes;
     family->legacyPublished = published;
     family->legacyBytes = bytes;
 }
@@ -1417,21 +1543,29 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
     memset(snapshot, 0, sizeof(*snapshot));
     const qqueueLocal_t *const family = owner->local;
     if (family == NULL) return;
+    snapshot->sampled_out = counterRead(&family->sampledOut);
+    snapshot->severity_discarded = counterRead(&family->severityDiscarded);
+    snapshot->retry_failed = counterRead(&family->retryFailed);
+    snapshot->be_capacity = (uint64_t)owner->iMaxQueueSize;
+    snapshot->fe_capacity = (uint64_t)family->count * family->fronts[0].capacity;
+    snapshot->fe_active_capacity = (uint64_t)family->count * family->fronts[0].batchSize;
+    snapshot->reserved_messages = snapshot->be_capacity + snapshot->fe_capacity + snapshot->fe_active_capacity;
     snapshot->be_dequeue_batches = counterRead(&family->beDequeueBatches);
     snapshot->be_dequeue_messages = counterRead(&family->beDequeueMessages);
     snapshot->be_dequeue_max = counterRead(&family->beDequeueMax);
     snapshot->be_attempted = counterRead(&family->beAttempted);
     snapshot->be_admitted = counterRead(&family->beAdmitted);
     snapshot->be_terminal = counterRead(&family->beTerminal);
-    snapshot->preadmission_rejected = counterRead(&family->beRejected);
-    snapshot->shutdown_discarded = counterRead(&family->beDiscarded);
-    snapshot->attempts = snapshot->be_attempted;
+    snapshot->preadmission_rejected = counterRead(&family->beRejected) + counterRead(&family->policyRejected);
+    snapshot->shutdown_discarded = counterRead(&family->beShutdownDiscarded);
+    snapshot->attempts = snapshot->be_attempted + counterRead(&family->policyRejected) + snapshot->sampled_out +
+                         snapshot->severity_discarded;
     snapshot->admitted = snapshot->be_admitted;
     snapshot->restored = counterRead(&family->diskRestored);
     snapshot->persisted = counterRead(&family->diskPersisted);
     snapshot->disk_terminal = counterRead(&family->diskTerminal);
     snapshot->disk_transferred = counterRead(&family->diskTransferred);
-    snapshot->discarded = snapshot->shutdown_discarded + counterRead(&family->diskDiscarded);
+    snapshot->discarded = counterRead(&family->beDiscarded) + counterRead(&family->diskDiscarded);
     snapshot->terminal = snapshot->be_terminal + snapshot->disk_terminal + snapshot->persisted;
     const qqueue_t *const disk = __atomic_load_n(&owner->pqDA, __ATOMIC_ACQUIRE);
     if (disk != NULL) {
@@ -1487,7 +1621,7 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
         snapshot->help_limit = fe.help_limit;
         snapshot->terminal += fe.terminal;
         snapshot->shutdown_discarded += fe.shutdown_discarded;
-        snapshot->discarded += fe.shutdown_discarded;
+        snapshot->discarded += fe.shutdown_discarded + counterRead(&family->fronts[i].discarded);
         snapshot->fe_queued += fe.queued;
         snapshot->fe_active += fe.active;
         snapshot->fe_retry += fe.retry;
@@ -1502,7 +1636,18 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
 }
 
 #else
+void qqueueLocalRetryFailed(qqueue_t *owner) {
+    (void)owner;
+}
+void qqueueLocalBackendShutdownDiscarded(qqueue_t *owner) {
+    (void)owner;
+}
     #ifdef ENABLE_TESTBENCH
+int qqueueLocalTestFailNode(const qqueue_t *owner, const int retry) {
+    (void)owner;
+    (void)retry;
+    return 0;
+}
 int qqueueLocalTestProducerShouldExit(void) {
     return 0;
 }
