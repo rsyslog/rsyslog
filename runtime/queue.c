@@ -317,7 +317,8 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.scope", eCmdHdlrGetWord, 0},
                                            {"queue.local.frontendsize", eCmdHdlrInt, 0},
                                            {"queue.local.maxfrontends", eCmdHdlrInt, 0},
-                                           {"queue.local.frontendstats", eCmdHdlrBinary, 0}};
+                                           {"queue.local.frontendstats", eCmdHdlrBinary, 0},
+                                           {"queue.local.helperbatchsize", eCmdHdlrInt, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
 /* support to detect duplicate queue file names */
@@ -3149,7 +3150,40 @@ static rsRetVal qqueueCompleteLocalBackend(qqueue_t *const queue, wti_t *const w
     pthread_cond_broadcast(&queue->notFull);
     pthread_cond_broadcast(&queue->belowLightDlyWtrMrk);
     qqueueLocalBackendWakeSpace(queue);
+    qqueueLocalWakeBackendHelpers(queue);
+    if (getLogicalQueueSize(queue) != 0 && !qqueueLocalIsClosed(queue)) qqueueAdviseMaxWorkers(queue);
     return qqueueClearWtiSource(queue, worker);
+}
+
+/* Explicit local-family authority, independent of the helper's immutable FE
+ * pool identity. Both operations require the BE mutex and exclusive WTI
+ * ownership with cancellation disabled; no maintenance accesses it before join. */
+rsRetVal qqueueLocalTryBorrowBackend(qqueue_t *const owner, wti_t *const worker, const unsigned limit) {
+    batch_t *const batch = &worker->batch;
+    if (!qqueueLocalBorrowWorker(owner, worker) || owner->qType != QUEUETYPE_FIXED_ARRAY ||
+        worker->source_queue != NULL || batch->nElem != 0 || batch->nElemDeq != 0 || batch->storeData != NULL ||
+        worker->n_deferred_msgs != 0 || limit > (unsigned)batch->maxElem)
+        return RS_RET_INTERNAL_ERROR;
+    unsigned count = (unsigned)getLogicalQueueSize(owner);
+    if (count > limit) count = limit;
+    if (count == 0) return RS_RET_IDLE;
+    worker->source_queue = owner;
+    worker->logical_owner = owner;
+    for (unsigned i = 0; i < count; ++i) {
+        qDeqFixedArray(owner, &batch->pElem[i].pMsg);
+        batch->eltState[i] = BATCH_STATE_RDY;
+    }
+    qqueueAddLogDeq(owner, (int)count);
+    batch->nElem = batch->nElemDeq = (int)count;
+    batch->deqID = getNextDeqID(owner);
+    qqueueLocalBackendAcquired(owner, count);
+    return RS_RET_OK;
+}
+
+rsRetVal qqueueLocalCompleteBorrowedBackend(qqueue_t *const owner, wti_t *const worker) {
+    if (!qqueueLocalBorrowWorker(owner, worker) || worker->source_queue != owner || worker->logical_owner != owner)
+        return RS_RET_INTERNAL_ERROR;
+    return qqueueCompleteLocalBackend(owner, worker);
 }
 
 /* Delete a batch of processed user objects from the queue, which includes
@@ -5072,6 +5106,8 @@ rsRetVal qqueueLocalSubmitBackend(qqueue_t *const owner,
         const rsRetVal ret = doEnqSingleObj(owner, flow, messages[i]);
         if (ret == RS_RET_OK) {
             qqueueLocalBackendAdmitted(owner, 1);
+            /* A later element may block on capacity: publish each accepted prefix. */
+            qqueueLocalWakeBackendHelpers(owner);
         } else if (ret == RS_RET_QUEUE_FULL) {
             qqueueLocalBackendRejected(owner, 1);
         } else {
@@ -5551,7 +5587,8 @@ rsRetVal qqueueValidateLocalConfig(qqueue_t *const pThis) {
     if (!pThis->bLocalScope) {
         if (pThis->bLocalConfigError || qqueueLocalParamExplicit(pThis, "queue.local.frontendsize") ||
             qqueueLocalParamExplicit(pThis, "queue.local.maxfrontends") ||
-            qqueueLocalParamExplicit(pThis, "queue.local.frontendstats"))
+            qqueueLocalParamExplicit(pThis, "queue.local.frontendstats") ||
+            qqueueLocalParamExplicit(pThis, "queue.local.helperbatchsize"))
             goto invalid;
         return RS_RET_OK;
     }
@@ -5580,6 +5617,9 @@ rsRetVal qqueueValidateLocalConfig(qqueue_t *const pThis) {
     const uint64_t f = (uint64_t)pThis->localFrontendSize;
     const uint64_t d =
         (uint64_t)((pThis->iDeqBatchSize < pThis->localFrontendSize) ? pThis->iDeqBatchSize : pThis->localFrontendSize);
+    if (pThis->localHelperBatchSizeSet &&
+        (pThis->localHelperBatchSize < 0 || (uint64_t)pThis->localHelperBatchSize > d))
+        goto invalid;
     const uint64_t n = (uint64_t)pThis->localMaxFrontends;
     if (n > (UINT64_MAX - (uint64_t)pThis->iMaxQueueSize) / (f + d) || f > SIZE_MAX / sizeof(smsg_t *) ||
         n > SIZE_MAX / (f * sizeof(smsg_t *)))
@@ -5658,6 +5698,12 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
                 pThis->bLocalConfigError = 1;
             else
                 pThis->localFrontendSize = (int)pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.local.helperbatchsize")) {
+            pThis->localHelperBatchSizeSet = 1;
+            if (pvals[i].val.d.n < 0 || pvals[i].val.d.n > INT_MAX)
+                pThis->bLocalConfigError = 1;
+            else
+                pThis->localHelperBatchSize = (int)pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.local.frontendstats")) {
             pThis->localFrontendStats = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.local.maxfrontends")) {

@@ -7,6 +7,7 @@
 # path. Impstats checks the exact FE and no-fit/oversize counters; the fixture
 # snapshot baselines after the blocked singleton establishes FE startup, then
 # proves all 12 supplied references reached one terminal action exactly once.
+# Explicit helperBatchSize=0 preserves the same-binary S2 control.
 # File and counter waits establish ordering; no elapsed delay is a success
 # condition.
 . ${srcdir:=.}/diag.sh init
@@ -27,7 +28,7 @@ module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.sys
 module(load="../plugins/omtesting/.libs/omtesting")
 main_queue(queue.scope="local" queue.type="FixedArray" queue.size="64"
 	queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="3"
-	queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
+	queue.local.helperBatchSize="0" queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on")
 template(name="localqfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:00000000:") then :omtesting:file_barrier '$ENTERFILE' '$RELEASEFIFO';localqfmt
 if ($msg contains "msgnum:") then

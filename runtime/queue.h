@@ -103,6 +103,8 @@ struct queue_s {
         int localFrontendSize;
         int localMaxFrontends;
         sbool localFrontendStats;
+        sbool localHelperBatchSizeSet;
+        int localHelperBatchSize; /* unset inherits min(frontend size, dequeue batch size); explicit 0 disables */
         sbool bLocalConfigValidated;
         sbool bLocalConfigError;
         uint64_t localExplicitParams;

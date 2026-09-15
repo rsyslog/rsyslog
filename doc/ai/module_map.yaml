@@ -23,17 +23,22 @@ runtime_queue:
   notes:
     - >-
       Worker batches carry physical-source and logical-owner attribution.
-      Acquisition and completion require the source to match the worker pool
-      user and held mutex; a DA child keeps its parent as logical owner.
-      Returned store-completion failure retains the source lease and opaque
-      context. This attribution seam does not enable cross-pool work borrowing
-      or repair inherited terminal disk cleanup.
+      Ordinary acquisition and completion require the source to match the
+      worker pool user and held mutex; a DA child keeps its parent as logical
+      owner. Local FE helpers use separate, explicitly validated memory-BE
+      borrowing/completion APIs. Their home pool and module worker state never
+      change. Returned store-completion failure retains the source lease and
+      opaque context; inherited terminal disk cleanup is not repaired here.
     - >-
       Experimental local memory scope uses bounded producer-owned SPSC front ends
       and the existing FixedArray backend. Each front end has its own worker pool,
-      source identity and module worker state. Front ends never borrow backend
-      work or re-enqueue retries into their own ring. This implementation remains
-      subject to the staged local-queue qualification gates.
+      source identity and module worker state. An eligible worker checks its
+      FE first and otherwise borrows one bounded available BE batch, with
+      completion attributed to BE and a fresh FE check before further borrowing.
+      Helpers never publish retries into their SPSC ring. Idle registration and
+      notification use BE-before-FE locking; ordinary successful FE publication
+      does not take the BE mutex. This implementation remains subject to the
+      staged local-queue qualification gates.
     - >-
       Local routing quiescence and source-specific immediate flags let frontend
       workers stop and join before maintenance transfers their retained references

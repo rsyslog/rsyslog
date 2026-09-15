@@ -25,6 +25,16 @@ write_config() {
     )
     case "$scenario" in
         valid) ;;
+        valid-helper-default) params[queue.dequeuebatchsize]=64 ;;
+        valid-helper-zero) params[queue.local.helperbatchsize]=0 ;;
+        valid-helper-cap) params[queue.local.helperbatchsize]=64; params[queue.dequeuebatchsize]=64 ;;
+        helper-negative) params[queue.local.helperbatchsize]=-1 ;;
+        helper-above-cap) params[queue.local.helperbatchsize]=65; params[queue.dequeuebatchsize]=64 ;;
+        helper-overflow) params[queue.local.helperbatchsize]=4294967296 ;;
+        helper-global)
+            params[queue.scope]=global; params[queue.local.helperbatchsize]=0
+            unset 'params[queue.local.frontendsize]' 'params[queue.local.maxfrontends]'
+            ;;
         valid-int-boundary) params[queue.timeoutshutdown]=2147483647 ;;
         valid-global-legacy)
             params[queue.scope]=global
@@ -166,8 +176,8 @@ YAML
     fi
 }
 
-positive=(valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy)
-negative=(bad-scope missing-bound negative-bound oversized-bound disk direct minimum sampling
+positive=(valid-helper-default valid-helper-zero valid-helper-cap valid valid-json valid-global valid-disabled valid-int-boundary valid-global-legacy)
+negative=(helper-negative helper-above-cap helper-overflow helper-global bad-scope missing-bound negative-bound oversized-bound disk direct minimum sampling
     discard disk-option deleted-local dropped-local asyncfile syncfile unflushed-file queued-action
     unsafe-function unsafe-destination malformed-destination shared-variable call indirect
     wrapped-minimum wrapped-sampling wrapped-severity wrapped-timeout overflow-timeout negative-timeout

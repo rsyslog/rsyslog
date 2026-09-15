@@ -17,6 +17,10 @@
 #include "config.h"
 #include <assert.h>
 #include <errno.h>
+#ifdef ENABLE_TESTBENCH
+    #include <fcntl.h>
+    #include <sys/stat.h>
+#endif
 #include <limits.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -34,6 +38,7 @@
 #include "wtp.h"
 #include "errmsg.h"
 #include "rsconf.h"
+#include "action.h"
 
 /* Local scope fails closed when its atomic/monotonic primitives are absent.
  * In particular, do not emit out-of-line 64-bit atomics on unsupported targets
@@ -55,7 +60,13 @@ struct qqueueLocalFrontend_s {
     pthread_mutex_t mutex;
     pthread_cond_t publisherDone;
     unsigned mutexInitialized, condInitialized, state, publishing, producerExited;
-    uint32_t index, capacity, batchSize;
+    uint32_t index, capacity, batchSize, helperLimit;
+    /* List links require BE mutex; membership transitions additionally hold FE.
+     * No FE publisher ever takes BE. */
+    struct qqueueLocalFrontend_s *idleNext, *idlePrev;
+    unsigned idleListed, helpWakePending;
+    uint64_t help_attempts, help_empty, help_batches, help_messages, help_max, help_active, help_retry;
+    uint64_t help_terminal, help_waits, help_wakes, help_completed, help_returned, wake_fe, wake_shutdown;
     uint64_t attempts, published, dequeued, terminal, active, retry;
     uint64_t overflow, nofit, oversized, transferred, shutdownDiscarded, bytes, batches;
     uint64_t publishedBatches, dequeueMax, dequeueMessages;
@@ -65,6 +76,7 @@ struct qqueueLocalFrontend_s {
 struct qqueueLocal_s {
     qqueue_t *owner;
     qqueueLocalFrontend_t *fronts;
+    qqueueLocalFrontend_t *idleHelpers; /* BE mutex */
     pthread_mutex_t registry;
     pthread_cond_t space;
     pthread_cond_t admissionDone;
@@ -82,6 +94,9 @@ struct qqueueLocal_s {
     char *testActionMarker;
     char *testForceTermMarker;
     unsigned testForceTermNoted;
+    unsigned testHelpGateStage, testHelpGateUsed;
+    int testHelpGateFd;
+    char *testHelpGateMarker;
     #endif
 };
 
@@ -319,8 +334,11 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
     }
     for (int i = 0; i < owner->pWtpReg->iNumWorkerThreads; ++i)
         if (!testWorkerSettled(owner->pWtpReg->pWrkr[i])) return RS_RET_INTERNAL_ERROR;
-    if (snapshot.outstanding != 0 || snapshot.fe_queued != 0 || snapshot.fe_active != 0 || snapshot.fe_retry != 0 ||
-        snapshot.be_physical != 0 || snapshot.be_active != 0 || snapshot.admitted != snapshot.terminal ||
+    if (family->idleHelpers != NULL || snapshot.help_active != 0 || snapshot.help_retry != 0 ||
+        snapshot.help_messages != snapshot.help_completed ||
+        snapshot.help_completed != snapshot.help_terminal + snapshot.help_returned || snapshot.outstanding != 0 ||
+        snapshot.fe_queued != 0 || snapshot.fe_active != 0 || snapshot.fe_retry != 0 || snapshot.be_physical != 0 ||
+        snapshot.be_active != 0 || snapshot.admitted != snapshot.terminal ||
         snapshot.attempts != snapshot.terminal + snapshot.preadmission_rejected)
         return RS_RET_INTERNAL_ERROR;
     FILE *const output = fopen(marker, "w");
@@ -328,12 +346,34 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
     const int written =
         fprintf(output,
                 "OK fe.joined=%u fe.registered=%llu shutdown.discarded=%llu outstanding=0 "
-                "admitted=%llu terminal=%llu rejected=%llu\n",
+                "admitted=%llu terminal=%llu rejected=%llu transferred=%llu help.completed=%llu help.returned=%llu\n",
                 joined, (unsigned long long)snapshot.fe_registered, (unsigned long long)snapshot.shutdown_discarded,
                 (unsigned long long)snapshot.admitted, (unsigned long long)snapshot.terminal,
-                (unsigned long long)snapshot.preadmission_rejected);
+                (unsigned long long)snapshot.preadmission_rejected, (unsigned long long)snapshot.transferred,
+                (unsigned long long)snapshot.help_completed, (unsigned long long)snapshot.help_returned);
     const int closed = fclose(output);
     return written < 0 || closed != 0 ? RS_RET_IO_ERROR : RS_RET_OK;
+}
+    #endif
+
+    #ifdef ENABLE_TESTBENCH
+/* The cold-selected one-shot fixture holds the worker immediately before BE
+ * registration, or after registration with FE retained but BE released. The
+ * latter exposes the exact signal/cond-wait handoff without changing normal
+ * build lock traffic. Shell FIFO release is independent of queue admission. */
+static void testHelpGate(qqueueLocalFrontend_t *const fe, const unsigned stage) {
+    qqueueLocal_t *const family = fe->owner->local;
+    if ((stage == 3 && fe->index != 1) || family->testHelpGateStage != stage ||
+        __atomic_exchange_n(&family->testHelpGateUsed, 1, __ATOMIC_RELAXED))
+        return;
+    FILE *const marker = fopen(family->testHelpGateMarker, "w");
+    if (marker != NULL) {
+        fputs("READY\n", marker);
+        fclose(marker);
+    }
+    char token;
+    while (read(family->testHelpGateFd, &token, 1) < 0 && errno == EINTR) {
+    }
 }
     #endif
 
@@ -438,11 +478,140 @@ static void feDrainDeferred(wti_t *const worker) {
     worker->n_deferred_msgs = 0;
 }
 
+/* Lock order is BE then FE. The FE worker enters/exits its adapter holding
+ * FE, dropping it before any BE acquisition. List membership covers the gap
+ * before the existing WTI condition wait: registration retains FE until that
+ * wait releases it, so a BE notification cannot be lost in that gap. */
+static void unlinkHelper(qqueueLocalFrontend_t *const fe) {
+    if (!fe->idleListed) return;
+    if (fe->idlePrev != NULL)
+        fe->idlePrev->idleNext = fe->idleNext;
+    else
+        fe->owner->local->idleHelpers = fe->idleNext;
+    if (fe->idleNext != NULL) fe->idleNext->idlePrev = fe->idlePrev;
+    fe->idleNext = fe->idlePrev = NULL;
+    fe->idleListed = 0;
+}
+
+void qqueueLocalWakeBackendHelpers(qqueue_t *const owner) {
+    qqueueLocal_t *const family = owner->local;
+    if (family == NULL || stateRead(&family->state) != LOCAL_RUNNING || owner->iQueueSize <= owner->nLogDeq ||
+        family->idleHelpers == NULL)
+        return;
+    qqueueLocalFrontend_t *const fe = family->idleHelpers;
+    pthread_mutex_lock(&fe->mutex);
+    unlinkHelper(fe);
+    fe->helpWakePending = 1;
+    counterAdd(&fe->help_wakes, 1);
+    pthread_cond_signal(&fe->pool->pWrkr[0]->pcondBusy);
+    pthread_mutex_unlock(&fe->mutex);
+}
+
+int qqueueLocalBorrowWorker(const qqueue_t *const owner, const wti_t *const worker) {
+    const qqueue_t *const home = worker->pWtp == NULL ? NULL : worker->pWtp->pUsr;
+    return owner->local != NULL && home != NULL && home->localSource != NULL && home->localSource->owner == owner &&
+           home->localSource->source == home && home->localSource->pool == worker->pWtp &&
+           worker->pWtp->pmutUsr == home->mut;
+}
+
+static int helperReusable(const wti_t *const worker) {
+    if (worker->source_queue != NULL || worker->batch.nElem != 0 || worker->batch.nElemDeq != 0 ||
+        worker->batch.storeData != NULL || worker->n_deferred_msgs != 0)
+        return 0;
+    for (int i = 0; i < runConf->actions.iActionNbr; ++i) {
+        const actWrkrInfo_t *const info = &worker->actWrkrInfo[i];
+        /* This is a reuse check, never evidence that an interrupted commit
+         * delivered its message. The source lease controls that decision. */
+        if (info->pAction != NULL && info->pAction->isTransactional && info->p.tx.currIParam != 0) return 0;
+    }
+    return 1;
+}
+
+/* Called before local acquisition when a previous wait was registered, and
+ * after a fresh empty-ring observation otherwise. RETRY means FE work won. */
+static rsRetVal tryHelp(qqueueLocalFrontend_t *const fe, wti_t *const worker) {
+    qqueue_t *const owner = fe->owner;
+    pthread_mutex_unlock(&fe->mutex);
+    #ifdef ENABLE_TESTBENCH
+    testHelpGate(fe, 1);
+    #endif
+    pthread_mutex_lock(owner->mut);
+    pthread_mutex_lock(&fe->mutex);
+    unlinkHelper(fe);
+    fe->helpWakePending = 0;
+    rsRetVal ret = RS_RET_IDLE;
+    if (stateRead(&owner->local->state) == LOCAL_RUNNING && helperReusable(worker)) {
+        if (rsSpscQueueConsumerAvailable(&fe->ring) != 0) {
+            ret = RS_RET_RETRY;
+        } else if (fe->helperLimit != 0) {
+            counterAdd(&fe->help_attempts, 1);
+            ret = qqueueLocalTryBorrowBackend(owner, worker, fe->helperLimit);
+            if (ret == RS_RET_OK) {
+                const uint64_t n = (uint64_t)worker->batch.nElem;
+                counterAdd(&fe->help_batches, 1);
+                counterAdd(&fe->help_messages, n);
+                if (n > counterRead(&fe->help_max)) __atomic_store_n(&fe->help_max, n, __ATOMIC_RELAXED);
+                __atomic_store_n(&fe->help_active, n, __ATOMIC_RELAXED);
+            } else if (ret == RS_RET_IDLE) {
+                counterAdd(&fe->help_empty, 1);
+                counterAdd(&fe->help_waits, 1);
+                fe->idleNext = owner->local->idleHelpers;
+                if (fe->idleNext != NULL) fe->idleNext->idlePrev = fe;
+                owner->local->idleHelpers = fe;
+                fe->idleListed = 1;
+            }
+        }
+    }
+    if (ret == RS_RET_IDLE) {
+        /* Keep FE locked through WTI's predicate check and condition wait. */
+        pthread_mutex_unlock(owner->mut);
+    #ifdef ENABLE_TESTBENCH
+        if (fe->idleListed) testHelpGate(fe, 2);
+    #endif
+    } else {
+        pthread_mutex_unlock(&fe->mutex);
+        /* Cascade at most one wake for remaining backlog, including when a
+         * selected helper instead chose its newly published FE batch. */
+        qqueueLocalWakeBackendHelpers(owner);
+        pthread_mutex_unlock(owner->mut);
+        pthread_mutex_lock(&fe->mutex);
+    }
+    return ret;
+}
+
+static rsRetVal completeBorrow(qqueueLocalFrontend_t *const fe, wti_t *const worker, const int joined) {
+    unsigned retry = 0;
+    for (int i = 0; i < worker->batch.nElem; ++i)
+        if (worker->batch.eltState[i] == BATCH_STATE_RDY || worker->batch.eltState[i] == BATCH_STATE_SUB) ++retry;
+    if (retry != 0 && !joined) {
+        /* Never switch sources with unresolved action state. Joined cleanup
+         * has disposed module parameters before reinserting these BE refs. */
+        __atomic_store_n(&fe->help_retry, retry, __ATOMIC_RELAXED);
+        return RS_RET_RETRY;
+    }
+    const uint64_t terminal = (uint64_t)worker->batch.nElem - retry;
+    pthread_mutex_unlock(&fe->mutex);
+    pthread_mutex_lock(fe->owner->mut);
+    const rsRetVal ret = qqueueLocalCompleteBorrowedBackend(fe->owner, worker);
+    pthread_mutex_unlock(fe->owner->mut);
+    if (ret == RS_RET_OK) {
+        feDrainDeferred(worker);
+        counterAdd(&fe->help_terminal, terminal);
+        counterAdd(&fe->help_completed, terminal + retry);
+        counterAdd(&fe->help_returned, retry);
+        __atomic_store_n(&fe->help_active, 0, __ATOMIC_RELAXED);
+        __atomic_store_n(&fe->help_retry, 0, __ATOMIC_RELAXED);
+    }
+    pthread_mutex_lock(&fe->mutex);
+    return ret;
+}
+
 static rsRetVal feComplete(void *const source, wti_t *const worker) {
     qqueue_t *const queue = source;
     qqueueLocalFrontend_t *const fe = queue->localSource;
     batch_t *const batch = &worker->batch;
     if (worker->source_queue == NULL) return RS_RET_OK;
+    if (worker->source_queue == fe->owner) return completeBorrow(fe, worker, 0);
     if (worker->source_queue != queue || worker->logical_owner != fe->owner || worker->pWtp->pUsr != queue ||
         worker->pWtp->pmutUsr != queue->mut)
         return RS_RET_INTERNAL_ERROR;
@@ -482,6 +651,13 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     qqueueLocalFrontend_t *const fe = queue->localSource;
     wti_t *const worker = workerArg;
     batch_t *const batch = &worker->batch;
+    #ifdef ENABLE_TESTBENCH
+    if (fe->helpWakePending && fe->owner->local->testHelpGateStage == 3) {
+        pthread_mutex_unlock(&fe->mutex);
+        testHelpGate(fe, 3);
+        pthread_mutex_lock(&fe->mutex);
+    }
+    #endif
     rsRetVal ret = feComplete(queue, worker);
     if (ret == RS_RET_RETRY) {
         /* Qualified action retry waits live inside their callback. An
@@ -492,27 +668,43 @@ static rsRetVal feDoWork(void *const source, void *const workerArg) {
     }
     if (ret != RS_RET_OK) return RS_RET_ERR_QUEUE_EMERGENCY;
     if (stateRead(&fe->owner->local->state) != LOCAL_RUNNING) return RS_RET_IDLE;
-    ret = qqueueLeaseBind(&worker->source_queue, &worker->logical_owner, queue, fe->owner, worker->pWtp->pUsr,
-                          worker->pWtp->pmutUsr, queue->mut);
-    if (ret != RS_RET_OK) return RS_RET_ERR_QUEUE_EMERGENCY;
-    const size_t count = rsSpscQueuePop(&fe->ring, fe->consumerScratch, fe->batchSize);
-    if (count == 0) {
-        qqueueLeaseClear(&worker->source_queue, &worker->logical_owner, queue);
-        return RS_RET_IDLE;
+    if (fe->idleListed || fe->helpWakePending ||
+        (fe->helperLimit != 0 && rsSpscQueueConsumerAvailable(&fe->ring) == 0)) {
+        ret = tryHelp(fe, worker);
+        if (ret == RS_RET_IDLE) return ret;
+        if (ret != RS_RET_OK && ret != RS_RET_RETRY) return RS_RET_ERR_QUEUE_EMERGENCY;
     }
-    for (size_t i = 0; i < count; ++i) {
-        batch->pElem[i].pMsg = fe->consumerScratch[i];
-        batch->eltState[i] = BATCH_STATE_RDY;
-        fe->consumerScratch[i] = NULL;
+    if (worker->source_queue == NULL) {
+        ret = qqueueLeaseBind(&worker->source_queue, &worker->logical_owner, queue, fe->owner, worker->pWtp->pUsr,
+                              worker->pWtp->pmutUsr, queue->mut);
+        if (ret != RS_RET_OK) return RS_RET_ERR_QUEUE_EMERGENCY;
+        const size_t count = rsSpscQueuePop(&fe->ring, fe->consumerScratch, fe->batchSize);
+        if (count == 0) {
+            qqueueLeaseClear(&worker->source_queue, &worker->logical_owner, queue);
+            /* A publisher can race the prior empty check. Register only after
+             * a second BE+FE-serialized check, never idle on FE alone. */
+            if (fe->helperLimit != 0) {
+                ret = tryHelp(fe, worker);
+                if (ret == RS_RET_RETRY) return RS_RET_OK;
+                if (ret != RS_RET_OK) return ret;
+            } else
+                return RS_RET_IDLE;
+        } else {
+            for (size_t i = 0; i < count; ++i) {
+                batch->pElem[i].pMsg = fe->consumerScratch[i];
+                batch->eltState[i] = BATCH_STATE_RDY;
+                fe->consumerScratch[i] = NULL;
+            }
+            batch->nElem = batch->nElemDeq = (int)count;
+            counterAdd(&fe->dequeued, count);
+            counterAdd(&fe->batches, 1);
+            counterAdd(&fe->dequeueMessages, count);
+            if (count > counterRead(&fe->dequeueMax)) __atomic_store_n(&fe->dequeueMax, count, __ATOMIC_RELAXED);
+            __atomic_store_n(&fe->active, count, __ATOMIC_RELAXED);
+        }
     }
-    batch->nElem = batch->nElemDeq = (int)count;
-    counterAdd(&fe->dequeued, count);
-    counterAdd(&fe->batches, 1);
-    counterAdd(&fe->dequeueMessages, count);
-    if (count > counterRead(&fe->dequeueMax)) __atomic_store_n(&fe->dequeueMax, count, __ATOMIC_RELAXED);
-    __atomic_store_n(&fe->active, count, __ATOMIC_RELAXED);
     /* Lifecycle belongs to the logical family; callback interruption belongs
-     * to the physical source. This lets FE callbacks settle while BE remains
+     * to the executing FE even while it borrows BE. This lets callbacks settle while BE remains
      * available for their residual obligations under the same phase deadline. */
     worker->pbShutdownImmediate = &queue->bShutdownImmediate;
     #ifndef HAVE_ATOMIC_BUILTINS
@@ -541,6 +733,7 @@ static rsRetVal constructFrontend(qqueueLocalFrontend_t *const fe,
     fe->index = index;
     fe->capacity = capacity;
     fe->batchSize = batchSize;
+    fe->helperLimit = owner->localHelperBatchSizeSet ? (unsigned)owner->localHelperBatchSize : batchSize;
     if (pthread_mutex_init(&fe->mutex, NULL) != 0) return RS_RET_ERR;
     fe->mutexInitialized = 1;
     if (initMonotonicCond(&fe->publisherDone) != 0) return RS_RET_ERR;
@@ -590,6 +783,25 @@ rsRetVal qqueueLocalStart(qqueue_t *const owner) {
     qqueueLocal_t *family = calloc(1, sizeof(*family));
     if (family == NULL) return RS_RET_OUT_OF_MEMORY;
     owner->local = family; /* unpublished configuration startup */
+    #ifdef ENABLE_TESTBENCH
+    family->testHelpGateFd = -1;
+    const char *const helpGate = getenv("RSYSLOG_LOCAL_QUEUE_TEST_HELP_GATE");
+    if (helpGate != NULL) {
+        const char *const marker = getenv("RSYSLOG_LOCAL_QUEUE_TEST_HELP_ENTRY");
+        const char *const release = getenv("RSYSLOG_LOCAL_QUEUE_TEST_HELP_RELEASE");
+        struct stat st;
+        family->testHelpGateStage = !strcmp(helpGate, "before")     ? 1
+                                    : !strcmp(helpGate, "after")    ? 2
+                                    : !strcmp(helpGate, "selected") ? 3
+                                                                    : 0;
+        if (!family->testHelpGateStage || marker == NULL || marker[0] != '/' || release == NULL || release[0] != '/')
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+        CHKmalloc(family->testHelpGateMarker = strdup(marker));
+        family->testHelpGateFd = open(release, O_RDWR | O_CLOEXEC);
+        if (family->testHelpGateFd < 0 || fstat(family->testHelpGateFd, &st) != 0 || !S_ISFIFO(st.st_mode))
+            ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+    #endif
     family->owner = owner;
     family->count = (unsigned)owner->localMaxFrontends;
     const uint32_t capacity = (uint32_t)owner->localFrontendSize;
@@ -732,6 +944,7 @@ rsRetVal qqueueLocalSubmit(qqueue_t *const owner,
                 counterAdd(&fe->publishedBatches, 1);
                 counterAdd(&fe->bytes, bytes);
                 pthread_mutex_lock(&fe->mutex);
+                counterAdd(&fe->wake_fe, 1);
                 pthread_cond_signal(&fe->pool->pWrkr[0]->pcondBusy);
                 stateSet(&fe->publishing, 0);
                 pthread_cond_broadcast(&fe->publisherDone);
@@ -768,6 +981,13 @@ int qqueueLocalWorker(const wti_t *const worker) {
 
 void qqueueLocalRetainAmbiguous(wti_t *const worker) {
     if (!qqueueLocalWorker(worker)) return;
+    qqueue_t *const home = worker->pWtp->pUsr;
+    qqueue_t *const borrowed =
+        home->localSource != NULL && worker->source_queue == home->localSource->owner ? worker->source_queue : NULL;
+    if (borrowed != NULL) {
+        pthread_mutex_unlock(home->mut);
+        pthread_mutex_lock(borrowed->mut);
+    }
     /* ruleset completion marks COMM before committing Direct transactions.
      * Neither cancellation nor cooperative immediate-stop proves delivery.
      * Retrying this whole message may duplicate earlier successful actions
@@ -775,6 +995,10 @@ void qqueueLocalRetainAmbiguous(wti_t *const worker) {
      * retire it as a successful terminal result. */
     for (int i = 0; i < worker->batch.nElem; ++i) {
         if (worker->batch.eltState[i] == BATCH_STATE_COMM) worker->batch.eltState[i] = BATCH_STATE_RDY;
+    }
+    if (borrowed != NULL) {
+        pthread_mutex_unlock(borrowed->mut);
+        pthread_mutex_lock(home->mut);
     }
 }
 
@@ -847,6 +1071,12 @@ static void drainFrontend(qqueueLocalFrontend_t *const fe, const struct timespec
     wti_t *const worker = fe->pool->pWrkr[0];
     batch_t *const batch = &worker->batch;
     assert(wtiGetState(worker) == WRKTHRD_STOPPED);
+    if (worker->source_queue == fe->owner) {
+        pthread_mutex_lock(&fe->mutex);
+        const rsRetVal ret = completeBorrow(fe, worker, 1);
+        pthread_mutex_unlock(&fe->mutex);
+        if (ret != RS_RET_OK) return;
+    }
     for (;;) {
         for (int i = 0; i < batch->nElem; ++i) {
             smsg_t *const message = batch->pElem[i].pMsg;
@@ -906,7 +1136,18 @@ rsRetVal qqueueLocalShutdown(qqueue_t *const owner) {
     struct timespec action = graceful;
     int actionPhase = 0;
     pthread_mutex_lock(&family->registry);
+    pthread_mutex_lock(owner->mut);
     stateSet(&family->state, LOCAL_REDIRECT);
+    while (family->idleHelpers != NULL) {
+        qqueueLocalFrontend_t *const fe = family->idleHelpers;
+        pthread_mutex_lock(&fe->mutex);
+        unlinkHelper(fe);
+        fe->helpWakePending = 0;
+        counterAdd(&fe->wake_shutdown, 1);
+        pthread_cond_signal(&fe->pool->pWrkr[0]->pcondBusy);
+        pthread_mutex_unlock(&fe->mutex);
+    }
+    pthread_mutex_unlock(owner->mut);
     pthread_mutex_unlock(&family->registry);
     #ifdef ENABLE_TESTBENCH
     qqueueLocalTestRedirectRelease();
@@ -1039,6 +1280,8 @@ void qqueueLocalDestruct(qqueue_t *const owner) {
     free(__atomic_load_n(&family->testShutdownMarker, __ATOMIC_ACQUIRE));
     free(family->testActionMarker);
     free(family->testForceTermMarker);
+    free(family->testHelpGateMarker);
+    if (family->testHelpGateFd >= 0) close(family->testHelpGateFd);
     #endif
     if (family->admissionInitialized) pthread_cond_destroy(&family->admissionDone);
     if (family->spaceInitialized) pthread_cond_destroy(&family->space);
@@ -1065,7 +1308,22 @@ int qqueueLocalGetFrontendSnapshot(const qqueue_t *const owner,
     snapshot->dequeue_max = counterRead(&fe->dequeueMax);
     snapshot->dequeue_messages = counterRead(&fe->dequeueMessages);
     snapshot->capacity = fe->capacity;
+    snapshot->help_limit = fe->helperLimit;
     #define SNAP(field) snapshot->field = counterRead(&fe->field)
+    SNAP(help_attempts);
+    SNAP(help_empty);
+    SNAP(help_batches);
+    SNAP(help_messages);
+    SNAP(help_max);
+    SNAP(help_active);
+    SNAP(help_retry);
+    SNAP(help_completed);
+    SNAP(help_returned);
+    SNAP(wake_fe);
+    SNAP(wake_shutdown);
+    SNAP(help_terminal);
+    SNAP(help_waits);
+    SNAP(help_wakes);
     SNAP(attempts);
     SNAP(published);
     SNAP(dequeued);
@@ -1150,6 +1408,21 @@ void qqueueLocalGetSnapshot(const qqueue_t *const owner, qqueueLocalSnapshot_t *
                 !__atomic_load_n(&worker->bExiting, __ATOMIC_ACQUIRE))
                 ++snapshot->fe_consumers;
         }
+        snapshot->help_attempts += fe.help_attempts;
+        snapshot->help_empty += fe.help_empty;
+        snapshot->help_batches += fe.help_batches;
+        snapshot->help_messages += fe.help_messages;
+        snapshot->help_active += fe.help_active;
+        snapshot->help_retry += fe.help_retry;
+        snapshot->help_completed += fe.help_completed;
+        snapshot->help_returned += fe.help_returned;
+        snapshot->wake_fe += fe.wake_fe;
+        snapshot->wake_shutdown += fe.wake_shutdown;
+        snapshot->help_terminal += fe.help_terminal;
+        snapshot->help_waits += fe.help_waits;
+        snapshot->help_wakes += fe.help_wakes;
+        if (fe.help_max > snapshot->help_max) snapshot->help_max = fe.help_max;
+        snapshot->help_limit = fe.help_limit;
         snapshot->terminal += fe.terminal;
         snapshot->shutdown_discarded += fe.shutdown_discarded;
         snapshot->fe_queued += fe.queued;
@@ -1245,6 +1518,14 @@ int qqueueLocalBackendWaitSpace(qqueue_t *owner, const struct timespec *deadline
     (void)owner;
     (void)deadline;
     return ENOTSUP;
+}
+int qqueueLocalBorrowWorker(const qqueue_t *owner, const wti_t *worker) {
+    (void)owner;
+    (void)worker;
+    return 0;
+}
+void qqueueLocalWakeBackendHelpers(qqueue_t *owner) {
+    (void)owner;
 }
 void qqueueLocalBackendWakeSpace(qqueue_t *owner) {
     (void)owner;

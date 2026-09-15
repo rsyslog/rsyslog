@@ -84,7 +84,10 @@ struct wti_s {
         batch_t batch; /* pointer to an object array meaningful for current user
                   pointer (e.g. queue pUsr data elemt) */
         /* Queue batch source and its logical owner. Both are protected by
-         * pWtp->pmutUsr and are NULL while no batch responsibility is live. */
+         * the source mutex (home mutex for ordinary workers) and are NULL
+         * while no responsibility is live. Local helpers change source only
+         * with cancellation disabled and exclusive ownership of this WTI;
+         * shutdown maintenance waits for join before accessing its lease. */
         struct queue_s *source_queue;
         struct queue_s *logical_owner;
         uchar *pszDbgHdr; /* header string for debug messages */

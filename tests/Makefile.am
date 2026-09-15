@@ -179,6 +179,14 @@ TESTS_LOCAL_QUEUE_CONFIG_YAML = local-queue-config-yaml.sh
 EXTRA_DIST += $(TESTS_LOCAL_QUEUE_CONFIG) $(TESTS_LOCAL_QUEUE_CONFIG_YAML)
 
 TESTS_LOCAL_QUEUE = \
+	local-queue-helper-force-term-actions.sh \
+	local-queue-helper-cancel-actions.sh \
+	local-queue-helping.sh \
+	local-queue-help-capacity.sh \
+	local-queue-helping-default.sh \
+	local-queue-help-wake-before.sh \
+	local-queue-help-wake-after.sh \
+	local-queue-help-wake-handoff.sh \
 	local-queue-imtcp-tiered.sh \
 	local-queue-imtcp-partial-batch.sh \
 	local-queue-imtcp-shutdown.sh \

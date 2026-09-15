@@ -64,6 +64,21 @@ enum localLogicalCounter {
     localLogicalBeDequeueBatches,
     localLogicalBeDequeueMessages,
     localLogicalBeDequeueMax,
+    localLogicalHelpAttempts,
+    localLogicalHelpEmpty,
+    localLogicalHelpBatches,
+    localLogicalHelpMessages,
+    localLogicalHelpMax,
+    localLogicalHelpActive,
+    localLogicalHelpRetry,
+    localLogicalHelpTerminal,
+    localLogicalHelpWaits,
+    localLogicalHelpWakes,
+    localLogicalHelpLimit,
+    localLogicalHelpCompleted,
+    localLogicalHelpReturned,
+    localLogicalHelpWakeFe,
+    localLogicalHelpWakeShutdown,
     localLogicalCounterCount
 };
 
@@ -95,6 +110,21 @@ enum localFrontendCounter {
     localFrontendDequeueMessages,
     localFrontendDequeueMax,
     localFrontendBytes,
+    localFrontendHelpAttempts,
+    localFrontendHelpEmpty,
+    localFrontendHelpBatches,
+    localFrontendHelpMessages,
+    localFrontendHelpMax,
+    localFrontendHelpActive,
+    localFrontendHelpRetry,
+    localFrontendHelpTerminal,
+    localFrontendHelpWaits,
+    localFrontendHelpWakes,
+    localFrontendHelpLimit,
+    localFrontendHelpCompleted,
+    localFrontendHelpReturned,
+    localFrontendHelpWakeFe,
+    localFrontendHelpWakeShutdown,
     localFrontendCounterCount
 };
 
@@ -170,6 +200,21 @@ static const localCounterDescriptor_t logicalCounters[] = {
     LOCAL_COUNTER("batch.be_dequeue.count", localLogicalBeDequeueBatches),
     LOCAL_COUNTER("batch.be_dequeue.messages.sum", localLogicalBeDequeueMessages),
     LOCAL_COUNTER("batch.be_dequeue.messages.max", localLogicalBeDequeueMax),
+    LOCAL_COUNTER("help.attempts", localLogicalHelpAttempts),
+    LOCAL_COUNTER("help.empty", localLogicalHelpEmpty),
+    LOCAL_COUNTER("batch.help.count", localLogicalHelpBatches),
+    LOCAL_COUNTER("batch.help.messages.sum", localLogicalHelpMessages),
+    LOCAL_COUNTER("batch.help.messages.max", localLogicalHelpMax),
+    LOCAL_COUNTER("inflight.help", localLogicalHelpActive),
+    LOCAL_COUNTER("retry.help", localLogicalHelpRetry),
+    LOCAL_COUNTER("terminal.help", localLogicalHelpTerminal),
+    LOCAL_COUNTER("help.waits", localLogicalHelpWaits),
+    LOCAL_COUNTER("help.wakes", localLogicalHelpWakes),
+    LOCAL_COUNTER("batch.help.limit", localLogicalHelpLimit),
+    LOCAL_COUNTER("help.completed", localLogicalHelpCompleted),
+    LOCAL_COUNTER("help.returned", localLogicalHelpReturned),
+    LOCAL_COUNTER("wake.fe", localLogicalHelpWakeFe),
+    LOCAL_COUNTER("wake.shutdown", localLogicalHelpWakeShutdown),
 };
 #undef LOCAL_COUNTER
 
@@ -203,6 +248,21 @@ static const localCounterDescriptor_t frontendCounters[] = {
     FRONTEND_COUNTER("batch.fe_dequeue.messages.sum", localFrontendDequeueMessages),
     FRONTEND_COUNTER("batch.fe_dequeue.messages.max", localFrontendDequeueMax),
     FRONTEND_COUNTER("admitted.raw_bytes", localFrontendBytes),
+    FRONTEND_COUNTER("help.attempts", localFrontendHelpAttempts),
+    FRONTEND_COUNTER("help.empty", localFrontendHelpEmpty),
+    FRONTEND_COUNTER("batch.help.count", localFrontendHelpBatches),
+    FRONTEND_COUNTER("batch.help.messages.sum", localFrontendHelpMessages),
+    FRONTEND_COUNTER("batch.help.messages.max", localFrontendHelpMax),
+    FRONTEND_COUNTER("inflight.help", localFrontendHelpActive),
+    FRONTEND_COUNTER("retry.help", localFrontendHelpRetry),
+    FRONTEND_COUNTER("terminal.help", localFrontendHelpTerminal),
+    FRONTEND_COUNTER("help.waits", localFrontendHelpWaits),
+    FRONTEND_COUNTER("help.wakes", localFrontendHelpWakes),
+    FRONTEND_COUNTER("batch.help.limit", localFrontendHelpLimit),
+    FRONTEND_COUNTER("help.completed", localFrontendHelpCompleted),
+    FRONTEND_COUNTER("help.returned", localFrontendHelpReturned),
+    FRONTEND_COUNTER("wake.fe", localFrontendHelpWakeFe),
+    FRONTEND_COUNTER("wake.shutdown", localFrontendHelpWakeShutdown),
 };
 #undef FRONTEND_COUNTER
 
@@ -265,6 +325,21 @@ static void localStatsPreRead(statsobj_t *const object, void *const context) {
     localStatsStore(&stats->logical_counters[localLogicalBeDequeueBatches], snapshot.be_dequeue_batches);
     localStatsStore(&stats->logical_counters[localLogicalBeDequeueMessages], snapshot.be_dequeue_messages);
     localStatsStore(&stats->logical_counters[localLogicalBeDequeueMax], snapshot.be_dequeue_max);
+    localStatsStore(&stats->logical_counters[localLogicalHelpAttempts], snapshot.help_attempts);
+    localStatsStore(&stats->logical_counters[localLogicalHelpEmpty], snapshot.help_empty);
+    localStatsStore(&stats->logical_counters[localLogicalHelpBatches], snapshot.help_batches);
+    localStatsStore(&stats->logical_counters[localLogicalHelpMessages], snapshot.help_messages);
+    localStatsStore(&stats->logical_counters[localLogicalHelpMax], snapshot.help_max);
+    localStatsStore(&stats->logical_counters[localLogicalHelpActive], snapshot.help_active);
+    localStatsStore(&stats->logical_counters[localLogicalHelpRetry], snapshot.help_retry);
+    localStatsStore(&stats->logical_counters[localLogicalHelpTerminal], snapshot.help_terminal);
+    localStatsStore(&stats->logical_counters[localLogicalHelpWaits], snapshot.help_waits);
+    localStatsStore(&stats->logical_counters[localLogicalHelpWakes], snapshot.help_wakes);
+    localStatsStore(&stats->logical_counters[localLogicalHelpLimit], snapshot.help_limit);
+    localStatsStore(&stats->logical_counters[localLogicalHelpCompleted], snapshot.help_completed);
+    localStatsStore(&stats->logical_counters[localLogicalHelpReturned], snapshot.help_returned);
+    localStatsStore(&stats->logical_counters[localLogicalHelpWakeFe], snapshot.wake_fe);
+    localStatsStore(&stats->logical_counters[localLogicalHelpWakeShutdown], snapshot.wake_shutdown);
 }
 
 static void localFrontendStatsPreRead(statsobj_t *const object, void *const context) {
@@ -302,6 +377,21 @@ static void localFrontendStatsPreRead(statsobj_t *const object, void *const cont
     localStatsStore(&frontend->counters[localFrontendDequeueMessages], snapshot.dequeue_messages);
     localStatsStore(&frontend->counters[localFrontendDequeueMax], snapshot.dequeue_max);
     localStatsStore(&frontend->counters[localFrontendBytes], snapshot.bytes);
+    localStatsStore(&frontend->counters[localFrontendHelpAttempts], snapshot.help_attempts);
+    localStatsStore(&frontend->counters[localFrontendHelpEmpty], snapshot.help_empty);
+    localStatsStore(&frontend->counters[localFrontendHelpBatches], snapshot.help_batches);
+    localStatsStore(&frontend->counters[localFrontendHelpMessages], snapshot.help_messages);
+    localStatsStore(&frontend->counters[localFrontendHelpMax], snapshot.help_max);
+    localStatsStore(&frontend->counters[localFrontendHelpActive], snapshot.help_active);
+    localStatsStore(&frontend->counters[localFrontendHelpRetry], snapshot.help_retry);
+    localStatsStore(&frontend->counters[localFrontendHelpTerminal], snapshot.help_terminal);
+    localStatsStore(&frontend->counters[localFrontendHelpWaits], snapshot.help_waits);
+    localStatsStore(&frontend->counters[localFrontendHelpWakes], snapshot.help_wakes);
+    localStatsStore(&frontend->counters[localFrontendHelpLimit], snapshot.help_limit);
+    localStatsStore(&frontend->counters[localFrontendHelpCompleted], snapshot.help_completed);
+    localStatsStore(&frontend->counters[localFrontendHelpReturned], snapshot.help_returned);
+    localStatsStore(&frontend->counters[localFrontendHelpWakeFe], snapshot.wake_fe);
+    localStatsStore(&frontend->counters[localFrontendHelpWakeShutdown], snapshot.wake_shutdown);
 }
 
 static rsRetVal localStatsAddCounters(statsobj_t *const object,

@@ -21,6 +21,9 @@ typedef struct qqueueLocalFrontendSnapshot_s {
     uint64_t queued, bytes, batches, producer_exited;
     uint64_t generation, published_batches, dequeue_max, dequeue_messages;
     uint64_t submitted_batches, submitted_max, overflow_batches, oversized_batches;
+    uint64_t help_attempts, help_empty, help_batches, help_messages, help_max, help_active, help_retry;
+    uint64_t help_terminal, help_waits, help_wakes, help_limit;
+    uint64_t help_completed, help_returned, wake_fe, wake_shutdown;
     unsigned state;
 } qqueueLocalFrontendSnapshot_t;
 
@@ -35,6 +38,9 @@ typedef struct qqueueLocalSnapshot_s {
     uint64_t fe_consumers, be_consumers;
     uint64_t be_internal, be_capacity_exhausted, capacity_exhaustions;
     uint64_t be_dequeue_batches, be_dequeue_messages, be_dequeue_max;
+    uint64_t help_attempts, help_empty, help_batches, help_messages, help_max, help_active, help_retry;
+    uint64_t help_terminal, help_waits, help_wakes, help_limit;
+    uint64_t help_completed, help_returned, wake_fe, wake_shutdown;
 } qqueueLocalSnapshot_t;
 
 /* Called only by actual tcpsrv execution, never inferred from message inputname.
@@ -61,7 +67,7 @@ rsRetVal qqueueLocalShutdown(qqueue_t *owner);
 void qqueueLocalDestruct(qqueue_t *owner);
 int qqueueLocalIsClosed(const qqueue_t *owner);
 int qqueueLocalWorker(const wti_t *worker);
-/* Caller owns the physical source mutex. Preserve DISC; COMM is ambiguous
+/* Caller owns the worker home mutex. Borrowed sources are locked internally. Preserve DISC; COMM is ambiguous
  * on interrupted callbacks and must remain an accepted obligation. */
 void qqueueLocalRetainAmbiguous(wti_t *worker);
 void qqueueLocalRefreshLegacy(qqueue_t *owner);
@@ -79,6 +85,11 @@ void qqueueLocalBackendBegin(qqueue_t *owner);
 void qqueueLocalBackendEnd(qqueue_t *owner);
 int qqueueLocalBackendWaitSpace(qqueue_t *owner, const struct timespec *deadline);
 void qqueueLocalBackendWakeSpace(qqueue_t *owner);
+/* BE mutex held. Wakes one pre-registered local helper; global queues are a no-op. */
+void qqueueLocalWakeBackendHelpers(qqueue_t *owner);
+int qqueueLocalBorrowWorker(const qqueue_t *owner, const wti_t *worker);
+rsRetVal qqueueLocalTryBorrowBackend(qqueue_t *owner, wti_t *worker, unsigned limit);
+rsRetVal qqueueLocalCompleteBorrowedBackend(qqueue_t *owner, wti_t *worker);
 
 enum qqueueLocalRouteReason {
     QLOCAL_NOFIT,
