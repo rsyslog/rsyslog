@@ -360,10 +360,13 @@ static rsRetVal testCheckShutdown(qqueue_t *const owner) {
 /* The cold-selected one-shot fixture holds the worker immediately before BE
  * registration, or after registration with FE retained but BE released. The
  * latter exposes the exact signal/cond-wait handoff without changing normal
- * build lock traffic. Shell FIFO release is independent of queue admission. */
+ * build lock traffic. Arm only after the initial local callback retires:
+ * otherwise a newly started empty worker can hold the gate before its first
+ * producer publishes, while the shell waits for that first message's output.
+ * Shell FIFO release is independent of queue admission. */
 static void testHelpGate(qqueueLocalFrontend_t *const fe, const unsigned stage) {
     qqueueLocal_t *const family = fe->owner->local;
-    if ((stage == 3 && fe->index != 1) || family->testHelpGateStage != stage ||
+    if ((stage == 3 && fe->index != 1) || family->testHelpGateStage != stage || counterRead(&fe->terminal) == 0 ||
         __atomic_exchange_n(&family->testHelpGateUsed, 1, __ATOMIC_RELAXED))
         return;
     FILE *const marker = fopen(family->testHelpGateMarker, "w");
