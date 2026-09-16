@@ -12,7 +12,6 @@
 # S6 sampling wrappers supply three ingress IDs per saved ID; only each third
 # survives and must remain unchanged across FE/BE/disk transfers and recovery.
 . ${srcdir:=.}/diag.sh init
-check_command_available python3
 . "$srcdir/local-queue-common.sh"
 require_plugin imtcp
 require_plugin impstats
@@ -23,6 +22,7 @@ sampling=${LOCAL_QUEUE_S6_SAMPLING:-0}
 input_multiplier=1
 policy_config=''
 if [ "$sampling" = 3 ]; then
+    check_command_available python3
     input_multiplier=3
     policy_config='queue.samplingInterval="3"'
 fi
