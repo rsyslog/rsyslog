@@ -1,4 +1,6 @@
 #!/bin/bash
+# This file is part of rsyslog.
+# Released under ASL 2.0.
 # Verify that minitcpsrv clears poll revents when it recycles an accepted slot.
 # A seed client closes after one record, proving the receiver compacted that
 # slot. The next client stays connected without data; a later marker client
