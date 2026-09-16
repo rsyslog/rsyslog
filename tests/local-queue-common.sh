@@ -144,6 +144,7 @@ localq_make_startup_marker_absolute() {
 	local config="${TESTCONF_NM}.conf"
 	local relative="./${RSYSLOG_DYNNAME}.started"
 	local absolute="$PWD/${RSYSLOG_DYNNAME}.started"
+	local temporary="${config}.localq"
 	case "$RSYSLOG_OUT_LOG" in
 		/*) ;;
 		*) export RSYSLOG_OUT_LOG="$PWD/$RSYSLOG_OUT_LOG" ;;
@@ -151,6 +152,13 @@ localq_make_startup_marker_absolute() {
 	# Define the ordinary template before the generated action. The local graph
 	# deliberately rejects the default generated template because it is a
 	# generated template rather than the explicit string template contract.
-	sed -i '/# Capture rsyslogd own messages/i template(name="localdiag" type="string" string="%msg%\\n")' "$config" || error_exit $?
-	sed -i "s|file=\"${relative}\"|file=\"${absolute}\" template=\"localdiag\"|" "$config" || error_exit $?
+	# Construct a replacement file rather than using sed's nonportable insert
+	# command: BSD sed and GNU sed use incompatible -i forms here.
+	{
+		printf '%s\n' 'template(name="localdiag" type="string" string="%msg%\\n")'
+		cat "$config"
+	} > "$temporary" || error_exit $?
+	mv "$temporary" "$config" || error_exit $?
+	sed -i.localq "s|file=\"${relative}\"|file=\"${absolute}\" template=\"localdiag\"|" "$config" || error_exit $?
+	rm -f "${config}.localq"
 }

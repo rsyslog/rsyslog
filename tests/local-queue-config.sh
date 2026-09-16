@@ -22,7 +22,10 @@ if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
 fi
 timeout_cmd=${timeout_cmd:-timeout}
 command -v "$timeout_cmd" >/dev/null 2>&1 || timeout_cmd=gtimeout
-command -v "$timeout_cmd" >/dev/null 2>&1 || error_exit 77 'no timeout command available'
+command -v "$timeout_cmd" >/dev/null 2>&1 || {
+    echo 'Testbench requires unavailable command: timeout or gtimeout'
+    exit 77
+}
 
 write_config() {
     local scenario="$1" key

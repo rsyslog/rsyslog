@@ -199,8 +199,8 @@ those BE improvements; do not introduce an ordered retirement frontier.
 ## 5. Configuration model
 
 **Agreed:** local scope is an option on existing logical queues, not a new storage
-type. Global scope preserves current behavior. The activation parameter is fixed as `queue.scope="local"` for S2 and
-later stages; `queue.scope="global"` preserves the default.
+type. Global scope preserves current behavior. The activation parameter is fixed
+as `queue.scope="local"` for S2 and later stages; `queue.scope="global"` preserves the default.
 
 | Concept | Intended meaning | Status |
 |---|---|---|

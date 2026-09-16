@@ -5,8 +5,8 @@
 # after graph shutdown entry checks producer authority and destination lifetime.
 # Establish the leaf BE callback before crossing its DA watermark; otherwise
 # the DA consumer may claim that barrier and block before reaching ID4.
-# The root FE holds the spill burst so its blocked BE cannot intercept it. Shutdown may execute or persist leaf
-# work under the existing DA deadline policy. A no-ingress restart reads the
+# The root FE holds the spill burst so its blocked BE cannot intercept it.
+# Shutdown may execute or persist leaf work under the existing DA deadline policy. A no-ingress restart reads the
 # same leaf spool with barriers disabled; exact combined 0..65 detects loss or
 # replay of already downstream-owned IDs.
 . ${srcdir:=.}/diag.sh init

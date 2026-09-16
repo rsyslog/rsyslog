@@ -8,8 +8,8 @@
 # is retained for BE replay: A records values 1 then 2, B records only 2. This
 # deliberately proves repeatable script/action effects, not exact-once output.
 # The force-term marker observes the real post-reset return and the final marker
-# proves whole-lifetime local-queue obligation conservation, including startup
-# internal messages. The S6 wrapper samples three ingress IDs down to ID2;
+# proves whole-lifetime local-queue obligation conservation for injected messages.
+# Internal messages are disabled so they do not alter the sampling oracle. The S6 wrapper samples three ingress IDs down to ID2;
 # its unchanged A/B replay oracle also proves retry never samples again. The 10 s
 # action deadline below is only a harness watchdog: phase-marker acknowledgement,
 # rather than elapsed time, controls the FIFO release.

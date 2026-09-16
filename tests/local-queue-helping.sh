@@ -4,8 +4,10 @@
 # the helper. While that borrowed callback is held, publish local ID3 and BE
 # IDs4..5. H=1 requires the helper to finish ID2, prefer ID3, then acquire each
 # remaining BE message. The default-cap wrapper uses H=3 and two remaining
-# messages, proving an immediately available partial batch. Exact output order proves source priority; inventory
-# and full shutdown conservation prove no extra admission/transfer accounting.
+# messages. Its FE batch-count increase of one and message-sum increase of two
+# prove one immediately available partial batch. Exact output order proves
+# source priority; inventory and full shutdown conservation prove no extra
+# admission or transfer accounting.
 # FIFO and impstats predicates establish ordering. Timeouts only detect hangs.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
@@ -13,6 +15,7 @@ require_plugin imtcp
 require_plugin impstats
 require_plugin omtesting
 export NUMMESSAGES=6
+
 help_config='queue.local.helperBatchSize="1"'
 help_limit=1
 be_capacity=${LOCAL_QUEUE_HELP_BE_CAPACITY:-64}
@@ -38,7 +41,8 @@ add_conf '
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1")
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
-input(type="imtcp" address="127.0.0.1" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
+input(type="imtcp" address="127.0.0.1" port="0"
+ listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerThreads="1")
 main_queue(queue.scope="local" queue.type="'${LOCAL_QUEUE_TEST_BE_TYPE:-FixedArray}'" queue.size="'$be_capacity'"
  queue.workerThreads="1" queue.workerThreadMinimumMessages="1" queue.dequeueBatchSize="3"
  queue.local.frontendSize="4" queue.local.maxFrontends="1" queue.local.frontendStats="on"
@@ -73,6 +77,20 @@ else
 fi
 wait_file_lines "$HELP_ENTER" 1
 localq_wait_stats "$STATSFILE" "main Q.local" 'inflight.help=1' 'be.active.messages=2' "batch.help.limit=$help_limit"
+if [ "$help_limit" -eq 3 ]; then
+    # Synchronize on the FE record itself before sampling. The aggregate main
+    # record may have advanced while the frontend impstats record is older.
+    help_before=$(localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
+        'inflight.help=1' 'batch.help.limit=3')
+    help_count_before=$(printf '%s\n' "$help_before" | sed -n 's/.* batch.help.count=\([0-9][0-9]*\).*/\1/p')
+    help_sum_before=$(printf '%s\n' "$help_before" | sed -n 's/.* batch.help.messages.sum=\([0-9][0-9]*\).*/\1/p')
+    case "$help_count_before" in
+        ''|*[!0-9]*) error_exit 1 'missing baseline helper batch count' ;;
+    esac
+    case "$help_sum_before" in
+        ''|*[!0-9]*) error_exit 1 'missing baseline helper batch message sum' ;;
+    esac
+fi
 tcpflood -m1 -i3
 if [ "$be_capacity" -eq 3 ]; then
     # The dedicated and borrowed active entries occupy two of B=3 slots.
@@ -92,7 +110,33 @@ EXPECTED=$'00000001\n00000002\n00000003\n00000004\n00000005'
 cmp_exact "$RSYSLOG_OUT_LOG"
 localq_wait_stats "$STATSFILE" "main Q.local" 'inflight.help=0' 'transfer.fe_to_be.messages=0'
 if [ "$help_limit" -eq 3 ]; then
-    localq_wait_stats "$STATSFILE" 'main Q.local.frontend.1' 'batch.help.messages.max=2' 'batch.help.messages.sum=3'
+    # impstats includes startup INTERNAL_MSG work, so its cumulative batch
+    # counters need a baseline. IDs4/5 are the only remaining BE work. One
+    # added helper batch carrying two messages proves their immediate borrow
+    # is partial under D=3, while the lifetime maximum remains bounded by D.
+    help_count_expected=$((help_count_before + 1))
+    help_sum_expected=$((help_sum_before + 2))
+    help_after=$(localq_wait_stats "$STATSFILE" "main Q.local.frontend.1" \
+        'inflight.help=0' 'batch.help.limit=3' \
+        "batch.help.count=$help_count_expected" "batch.help.messages.sum=$help_sum_expected")
+    help_count_after=$(printf '%s\n' "$help_after" | sed -n 's/.* batch.help.count=\([0-9][0-9]*\).*/\1/p')
+    help_sum_after=$(printf '%s\n' "$help_after" | sed -n 's/.* batch.help.messages.sum=\([0-9][0-9]*\).*/\1/p')
+    help_max_after=$(printf '%s\n' "$help_after" | sed -n 's/.* batch.help.messages.max=\([0-9][0-9]*\).*/\1/p')
+    case "$help_count_after" in
+        ''|*[!0-9]*) error_exit 1 'missing final helper batch count' ;;
+    esac
+    case "$help_sum_after" in
+        ''|*[!0-9]*) error_exit 1 'missing final helper batch message sum' ;;
+    esac
+    case "$help_max_after" in
+        ''|*[!0-9]*) error_exit 1 'missing final helper batch maximum' ;;
+    esac
+    [ "$((help_count_after - help_count_before))" -eq 1 ] ||
+        error_exit 1 "expected one final helper batch, saw $help_count_before -> $help_count_after"
+    [ "$((help_sum_after - help_sum_before))" -eq 2 ] ||
+        error_exit 1 "expected partial two-message helper batch, saw $help_sum_before -> $help_sum_after"
+    [ "$help_max_after" -le "$help_limit" ] ||
+        error_exit 1 "helper batch maximum exceeded $help_limit: $help_max_after"
 fi
 response=$(printf 'localqueuestopcheck %s\n' "$STOPMARK" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT")
 case "$response" in *OK*) ;; *) error_exit 1 ;; esac

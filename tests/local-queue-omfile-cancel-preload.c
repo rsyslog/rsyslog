@@ -57,6 +57,9 @@ static void __attribute__((constructor)) initialize(void) {
     target = getenv("RSYSLOG_OMFILE_CANCEL_TARGET");
     events = getenv("RSYSLOG_OMFILE_CANCEL_EVENTS");
     if (real_write == NULL || real_lock == NULL || target == NULL || events == NULL) _exit(2);
+    /* This fixture belongs to the daemon only. External sanitizer symbolizers
+     * must not inherit its write hooks or start their own monitor thread. */
+    if (unsetenv("LD_PRELOAD") != 0) _exit(2);
     if (pthread_create(&monitor, NULL, observe_waiter, NULL) != 0) _exit(2);
 }
 

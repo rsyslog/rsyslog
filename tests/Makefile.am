@@ -2945,7 +2945,17 @@ check_LTLIBRARIES += liblocal_queue_omfile_cancel_preload.la
 liblocal_queue_omfile_cancel_preload_la_SOURCES = local-queue-omfile-cancel-preload.c
 # External sanitizer symbolizers inherit LD_PRELOAD but do not link its runtime.
 # Keep the fixture uninstrumented; daemon synchronization remains intercepted.
-liblocal_queue_omfile_cancel_preload_la_CFLAGS = -fno-sanitize=all
+liblocal_queue_omfile_cancel_preload_la_CFLAGS =
+# Automake appends global CFLAGS after target CFLAGS, so an earlier disabling
+# flag is ineffective. Filter instrumentation from both compile and link flags
+# for this fixture only; also works with compilers predating -fno-sanitize=all.
+liblocal_queue_omfile_cancel_preload_la-local-queue-omfile-cancel-preload.lo: local-queue-omfile-cancel-preload.c $(top_builddir)/config.h
+	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile \
+		$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+		$(filter-out -fsanitize=%,$(CFLAGS)) -c -o $@ $(srcdir)/local-queue-omfile-cancel-preload.c
+liblocal_queue_omfile_cancel_preload_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(filter-out -fsanitize=%,$(CFLAGS)) \
+	$(liblocal_queue_omfile_cancel_preload_la_LDFLAGS) $(filter-out -fsanitize=%,$(LDFLAGS)) -o $@
 liblocal_queue_omfile_cancel_preload_la_LDFLAGS = $(TEST_LIBOVERRIDE_LDFLAGS)
 liblocal_queue_omfile_cancel_preload_la_LIBADD = $(DL_LIBS) $(PTHREADS_LIBS)
 endif

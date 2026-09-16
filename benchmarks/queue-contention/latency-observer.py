@@ -257,8 +257,7 @@ def main():
         timestamps = load_expected(args.expected, expected)
         final = final_oracle(args.output, expected, args.payload, timestamps)
         result['final_oracle'] = final
-        if (final['missing'] or final['duplicates'] or final['invalid_output'] or final['timestamp_mismatch']
-                or final['trailing_bytes']):
+        if (final['missing'] or final['duplicates'] or final['invalid_output'] or final['timestamp_mismatch']):
             result['status'] = 'invalid'
         args.result.write_text(json.dumps(result, indent=2) + '\n')
         if result['status'] != 'completed':

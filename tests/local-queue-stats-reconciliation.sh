@@ -54,13 +54,13 @@ fi
 # state while FE remains held; the watchdog only bounds a failed drain.
 deadline=$((SECONDS + 60))
 while :; do
-response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
-case "$response" in
-	*"attempts=12"*"admitted=12"*"terminal=7"*"outstanding=5"*"fe=5"*"be=7"*"be_nofit=2"*"be_oversized=5"*) break ;;
-	*) ;;
-esac
-    (( SECONDS < deadline )) || error_exit 1 "BE snapshot did not settle: $response"
-    $TESTTOOL_DIR/msleep 100
+	response=$(printf "localqueuesubmittest snapshot\n" | "$TESTTOOL_DIR/diagtalker" -p"$IMDIAG_PORT") || error_exit $?
+	case "$response" in
+		*"attempts=12"*"admitted=12"*"terminal=7"*"outstanding=5"*"fe=5"*"be=7"*"be_nofit=2"*"be_oversized=5"*) break ;;
+		*) ;;
+	esac
+	(( SECONDS < deadline )) || error_exit 1 "BE snapshot did not settle: $response"
+	$TESTTOOL_DIR/msleep 100
 done
 localq_wait_stats "$STATSFILE" "main Q.local" \
 	"route.fe.messages=5" "route.fe.batches=2" "route.be.reason.nofit.messages=2" \
