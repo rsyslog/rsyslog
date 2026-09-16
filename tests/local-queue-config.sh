@@ -247,7 +247,7 @@ done
 
 for scenario in "${positive[@]}"; do
     write_config "$scenario"
-    if ! $timeout_cmd -k 2 20 ../tools/rsyslogd -N1 -f "$conf" -M../runtime/.libs:../.libs \
+    if ! "$timeout_cmd" -k 2 20 ../tools/rsyslogd -N1 -f "$conf" -M../runtime/.libs:../.libs \
         > "${RSYSLOG_DYNNAME}.${scenario}.log" 2>&1; then
         cat "${RSYSLOG_DYNNAME}.${scenario}.log"
         error_exit 1
@@ -258,7 +258,7 @@ for scenario in "${negative[@]}"; do
     write_config "$scenario"
     for mode in -N1 -N3 -n; do
         log="${RSYSLOG_DYNNAME}.${scenario}.${mode}.log"
-        $timeout_cmd -k 2 20 ../tools/rsyslogd "$mode" -i "${RSYSLOG_DYNNAME}.pid" \
+        "$timeout_cmd" -k 2 20 ../tools/rsyslogd "$mode" -i "${RSYSLOG_DYNNAME}.pid" \
             -f "$conf" -M../runtime/.libs:../.libs > "$log" 2>&1
         result=$?
         if [ "$result" -eq 0 ] || [ "$result" -eq 124 ] || [ "$result" -eq 137 ] ||

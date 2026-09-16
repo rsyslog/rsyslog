@@ -47,7 +47,7 @@ else:
 Path(filename).write_text(text)
 PY
     LOG="$PWD/$RSYSLOG_DYNNAME.$scenario.log"
-    $timeout_cmd -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
+    "$timeout_cmd" -k 2 20 ../tools/rsyslogd -N1 -f "$CONF" -M../runtime/.libs:../.libs >"$LOG" 2>&1
     result=$?
     if [ "$scenario" = valid ]; then
         if [ "$result" -ne 0 ]; then cat "$LOG"; error_exit 1; fi

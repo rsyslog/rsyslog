@@ -37,7 +37,7 @@ for topology in main ruleset; do
     fi
     for fault in startup-family startup-frontend; do
         log="${RSYSLOG_DYNNAME}.${topology}.${fault}.log"
-        RSYSLOG_LOCAL_QUEUE_TEST_FAULT="$fault" $timeout_cmd -k 2 "$TB_TEST_TIMEOUT" \
+        RSYSLOG_LOCAL_QUEUE_TEST_FAULT="$fault" "$timeout_cmd" -k 2 "$TB_TEST_TIMEOUT" \
             ../tools/rsyslogd -n -f "$conf" -i "${RSYSLOG_DYNNAME}.pid" \
             -M../runtime/.libs:../.libs > "$log" 2>&1
         result=$?
