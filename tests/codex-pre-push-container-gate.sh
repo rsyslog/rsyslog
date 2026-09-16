@@ -212,10 +212,10 @@ unset SKIP_CONTAINER_VALIDATION
 
 # Grammar and the runtime CI workflow invalidate an otherwise current marker.
 for relevant_path in grammar/lexer.l grammar/grammar.y .github/workflows/run_checks.yml; do
-    git -C "$target_valid" rev-parse HEAD > "$target_valid/.codex/container_validated.marker"
-    mkdir -p "$target_valid/$(dirname "$relevant_path")"
-    printf 'relevant change\n' > "$target_valid/$relevant_path"
-    git -C "$target_valid" add "$relevant_path"
-    git -C "$target_valid" commit -qm 'grammar or runtime workflow changed'
-    assert_blocked "git -C '$target_valid' push origin topic"
+	git -C "$target_valid" rev-parse HEAD > "$target_valid/.codex/container_validated.marker"
+	mkdir -p "$target_valid/$(dirname "$relevant_path")"
+	printf 'relevant change\n' > "$target_valid/$relevant_path"
+	git -C "$target_valid" add "$relevant_path"
+	git -C "$target_valid" commit -qm 'grammar or runtime workflow changed'
+	assert_blocked "git -C '$target_valid' push origin topic"
 done
