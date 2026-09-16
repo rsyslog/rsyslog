@@ -418,6 +418,9 @@ int main(int argc, char *argv[]) {
 
                 fds[nfds].fd = conn_fd;
                 fds[nfds].events = POLLIN;
+                /* A compacted slot can retain readiness from its old socket.
+                 * The new connection has not participated in poll() yet. */
+                fds[nfds].revents = 0;
                 buffer_offs[nfds] = 0;
                 nfds++;
             } else {

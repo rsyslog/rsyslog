@@ -348,6 +348,7 @@ TESTS_DEFAULT = \
 	mangle_qi_usage_output.sh \
 	chkseq_usage_output.sh \
 	minitcpsrv_usage_output.sh \
+	minitcpsrv-reconnect.sh \
 	diagtalker-retry.sh \
 	test_id_usage_output.sh \
 	uxsockrcvr_usage_output.sh \
