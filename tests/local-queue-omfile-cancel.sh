@@ -25,11 +25,16 @@ export RSYSLOG_PRELOAD="./.libs/liblocal_queue_omfile_cancel_preload.so"
 # precede the cancellation shim in LD_PRELOAD. Static and non-ASan layouts have
 # no libasan entry and retain the shim-only preload.
 if command -v ldd >/dev/null 2>&1; then
-    asan_runtime=$(ldd ../tools/.libs/rsyslogd 2>/dev/null |
-        awk '$1 ~ /^libasan\.so/ && $2 == "=>" && $3 ~ /^\// { print $3; exit }')
-    if [ -n "$asan_runtime" ] && [ -r "$asan_runtime" ]; then
-        export RSYSLOG_PRELOAD="$asan_runtime:$RSYSLOG_PRELOAD"
-    fi
+    # Some builds place the ELF binary directly in tools; libtool wrapper
+    # builds place it in .libs instead. Inspect both supported layouts.
+    for daemon in ../tools/rsyslogd ../tools/.libs/rsyslogd; do
+        asan_runtime=$(ldd "$daemon" 2>/dev/null |
+            awk '$1 ~ /^libasan\.so/ && $2 == "=>" && $3 ~ /^\// { print $3; exit }')
+        if [ -n "$asan_runtime" ] && [ -r "$asan_runtime" ]; then
+            export RSYSLOG_PRELOAD="$asan_runtime:$RSYSLOG_PRELOAD"
+            break
+        fi
+    done
 fi
 
 generate_conf

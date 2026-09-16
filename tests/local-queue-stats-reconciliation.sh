@@ -7,6 +7,8 @@
 # native snapshot establish quiescence; two completed impstats samples carrying
 # identical totals prove a resettable scrape neither clears nor double-counts
 # logical or per-FE counters. Polling only waits for those observable records.
+# Internal-message ingress is disabled so late worker-startup diagnostics in
+# debug builds cannot change the exact submitted-message counter oracle.
 . ${srcdir:=.}/diag.sh init
 . "$srcdir/local-queue-common.sh"
 require_plugin imdiag
@@ -22,6 +24,7 @@ mkfifo "$RELEASEFIFO"
 generate_conf
 localq_make_startup_marker_absolute
 add_conf '
+global(processInternalMessages="off")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" log.syslog="off" interval="1" resetCounters="on")
 module(load="../plugins/omtesting/.libs/omtesting")
 main_queue(queue.scope="local" queue.type="'${LOCAL_QUEUE_TEST_BE_TYPE:-FixedArray}'" queue.size="64"
@@ -47,8 +50,8 @@ if [[ "$response" != *"OK"* ]]; then
 	echo "FAIL: local queue submit batches response: $response"
 	error_exit 1
 fi
-# The initialized daemon has startup INTERNAL_MSGs. The fixture snapshot is a
-# post-startup delta, so it is the exact logical 12/7/5 oracle. Raw impstats
+# The fixture snapshot is a post-startup delta with internal ingress disabled,
+# so it is the exact logical 12/7/5 oracle. Raw impstats
 # still proves the FE and whole-batch overflow fields after one resettable scrape.
 # Submission acknowledges BE admission, not completion. Poll its terminal
 # state while FE remains held; the watchdog only bounds a failed drain.

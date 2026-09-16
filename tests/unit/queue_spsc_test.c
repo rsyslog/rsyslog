@@ -11,12 +11,15 @@
  * varies producer and consumer batch sizes and checks every generated payload
  * exactly once. Its payload bytes and checksum are initialized before enqueue
  * and checked after dequeue, making visibility after release/acquire part of
- * the concurrent-publication oracle rather than only pointer-ID ordering. A
+ * the concurrent-publication oracle rather than only pointer-ID ordering. The
+ * full and empty retry paths yield after no progress, so their deliberate
+ * contention does not monopolize the scheduler under instrumentation. A
  * 60-second alarm bounds a regression hang; it is not the success oracle.
  */
 #include "config.h"
 
 #include <pthread.h>
+#include <sched.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -267,7 +270,10 @@ static void *producer_main(void *arg) {
             initialize_payload(payload, next_id + i);
             batch[i] = payload;
         }
-        if (rsSpscQueueTryPush(&state->queue, batch, count)) next_id += count;
+        if (rsSpscQueueTryPush(&state->queue, batch, count))
+            next_id += count;
+        else
+            (void)sched_yield();
     }
     return NULL;
 }
@@ -281,7 +287,10 @@ static void *consumer_main(void *arg) {
     while (received < CONCURRENT_ITEMS) {
         const size_t count = rsSpscQueuePop(&state->queue, batch, (received % 13U) + 1U);
 
-        if (count == 0) continue;
+        if (count == 0) {
+            (void)sched_yield();
+            continue;
+        }
         for (size_t i = 0; i < count; ++i) {
             const publication_payload_t *const payload = batch[i];
             const uint32_t id = payload->id;
