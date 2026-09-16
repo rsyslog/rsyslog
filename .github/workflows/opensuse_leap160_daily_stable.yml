@@ -212,9 +212,9 @@ jobs:
               # --build-deps-only does not download it on a clean runner.
               zypper -n source-install --download-only --no-build-deps rsyslog
               zypper -n source-install --build-deps-only rsyslog
-              # These four are already native conditional BuildRequires, but
-              # zypper source-install does not resolve them on Leap 16.0.
-              zypper -n install libnet-devel librdkafka-devel \
+              # These current-source and conditional BuildRequires are not
+              # resolved by zypper source-install on Leap 16.0.
+              zypper -n install autoconf-archive libnet-devel librdkafka-devel \
                 net-snmp-devel qpid-proton-devel \
                 libyaml-devel protobuf-c-devel snappy-devel
               mkdir -p /runner-temp/opensuse-leap160-baseline/rpmbuild
